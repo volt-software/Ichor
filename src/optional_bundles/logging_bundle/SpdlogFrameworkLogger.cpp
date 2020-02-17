@@ -17,38 +17,42 @@ Cppelix::SpdlogFrameworkLogger::SpdlogFrameworkLogger() : IFrameworkLogger(), Bu
 
     spdlog::set_default_logger(logger);
     spdlog::set_pattern("[%C-%m-%d %H:%M:%S.%e] [%s:%#] [%L] %v");
+
+    SPDLOG_TRACE("Starting SpdlogFrameworkLogger");
 }
 
 void Cppelix::SpdlogFrameworkLogger::trace(const char *filename_in, int line_in, const char *funcname_in,
-                                          fmt::basic_string_view<char> buf) {
-    spdlog::log(spdlog::source_loc{filename_in, line_in, funcname_in}, spdlog::level::trace, buf);
+                                          std::string_view format_str, fmt::format_args args) {
+    spdlog::log(spdlog::source_loc{filename_in, line_in, funcname_in}, spdlog::level::trace, fmt::vformat(format_str, args));
 }
 
 void Cppelix::SpdlogFrameworkLogger::debug(const char *filename_in, int line_in, const char *funcname_in,
-                                          fmt::basic_string_view<char> buf) {
-    spdlog::log(spdlog::source_loc{filename_in, line_in, funcname_in}, spdlog::level::debug, buf);
+                                          std::string_view format_str, fmt::format_args args) {
+    spdlog::log(spdlog::source_loc{filename_in, line_in, funcname_in}, spdlog::level::debug, fmt::vformat(format_str, args));
 }
 
 void Cppelix::SpdlogFrameworkLogger::info(const char *filename_in, int line_in, const char *funcname_in,
-                                          fmt::basic_string_view<char> buf) {
-    spdlog::log(spdlog::source_loc{filename_in, line_in, funcname_in}, spdlog::level::info, buf);
+                                          std::string_view format_str, fmt::format_args args) {
+    spdlog::log(spdlog::source_loc{filename_in, line_in, funcname_in}, spdlog::level::info, fmt::vformat(format_str, args));
 }
 
 void Cppelix::SpdlogFrameworkLogger::warn(const char *filename_in, int line_in, const char *funcname_in,
-                                          fmt::basic_string_view<char> buf) {
-    spdlog::log(spdlog::source_loc{filename_in, line_in, funcname_in}, spdlog::level::warn, buf);
+                                          std::string_view format_str, fmt::format_args args) {
+    spdlog::log(spdlog::source_loc{filename_in, line_in, funcname_in}, spdlog::level::warn, fmt::vformat(format_str, args));
 }
 
 void Cppelix::SpdlogFrameworkLogger::error(const char *filename_in, int line_in, const char *funcname_in,
-                                          fmt::basic_string_view<char> buf) {
-    spdlog::log(spdlog::source_loc{filename_in, line_in, funcname_in}, spdlog::level::err, buf);
+                                          std::string_view format_str, fmt::format_args args) {
+    spdlog::log(spdlog::source_loc{filename_in, line_in, funcname_in}, spdlog::level::err, fmt::vformat(format_str, args));
 }
 
 bool Cppelix::SpdlogFrameworkLogger::start() {
+    SPDLOG_TRACE("SpdlogFrameworkLogger started");
     return true;
 }
 
 bool Cppelix::SpdlogFrameworkLogger::stop() {
+    SPDLOG_TRACE("SpdlogFrameworkLogger stopped");
     return true;
 }
 

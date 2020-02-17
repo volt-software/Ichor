@@ -18,11 +18,11 @@ namespace Cppelix {
 
         static constexpr std::string_view version = "1.0.0";
 
-        void trace(const char *filename_in, int line_in, const char *funcname_in, fmt::basic_string_view<char> buf) final;
-        void debug(const char *filename_in, int line_in, const char *funcname_in, fmt::basic_string_view<char> buf) final;
-        void info(const char *filename_in, int line_in, const char *funcname_in, fmt::basic_string_view<char> buf) final;
-        void warn(const char *filename_in, int line_in, const char *funcname_in, fmt::basic_string_view<char> buf) final;
-        void error(const char *filename_in, int line_in, const char *funcname_in, fmt::basic_string_view<char> buf) final;
+        void trace(const char *filename_in, int line_in, const char *funcname_in, std::string_view format_str, fmt::format_args args) final;
+        void debug(const char *filename_in, int line_in, const char *funcname_in, std::string_view format_str, fmt::format_args args) final;
+        void info(const char *filename_in, int line_in, const char *funcname_in, std::string_view format_str, fmt::format_args args) final;
+        void warn(const char *filename_in, int line_in, const char *funcname_in, std::string_view format_str, fmt::format_args args) final;
+        void error(const char *filename_in, int line_in, const char *funcname_in, std::string_view format_str, fmt::format_args args) final;
 
 
         bool start() final;

@@ -51,6 +51,7 @@
 #include <sys/types.h> // for uint32_t; should be stdint.h instead; however, GCC 5 on OSX fails when compiling it (See issue #11)
 #include <functional>
 #include <string>
+#include <mutex>
 
 // public API
 

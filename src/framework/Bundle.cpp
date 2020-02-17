@@ -17,18 +17,15 @@ Cppelix::Bundle::~Bundle() {
 
 bool Cppelix::Bundle::internal_start() {
     if(_bundleState != INSTALLED) {
-        SPDLOG_ERROR("Cannot start bundle {}, current state {}", _bundleId, _bundleState);
         return false;
     }
 
     _bundleState = STARTING;
     if(start()) {
         _bundleState = ACTIVE;
-        SPDLOG_INFO("Bundle {} started", _bundleId);
         return true;
     } else {
         _bundleState = INSTALLED;
-        SPDLOG_ERROR("Bundle {} failed to start", _bundleId);
     }
 
     return false;
@@ -36,19 +33,20 @@ bool Cppelix::Bundle::internal_start() {
 
 bool Cppelix::Bundle::internal_stop() {
     if(_bundleState != ACTIVE) {
-        SPDLOG_ERROR("Cannot stop bundle {}, current state {}", _bundleId, _bundleState);
         return false;
     }
 
     _bundleState = STOPPING;
     if(start()) {
         _bundleState = INSTALLED;
-        SPDLOG_INFO("Bundle {} stopped", _bundleId);
         return true;
     } else {
         _bundleState = UNKNOWN;
-        SPDLOG_ERROR("Bundle {} failed to start", _bundleId);
     }
 
     return false;
+}
+
+Cppelix::BundleState Cppelix::Bundle::getState() {
+    return _bundleState;
 }

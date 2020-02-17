@@ -18,6 +18,9 @@ namespace Cppelix {
         UNKNOWN
     };
 
+    template <class T, class U>
+    concept Derived = std::is_base_of<U, T>::value;
+
     class Bundle {
     public:
         Bundle();
@@ -25,6 +28,7 @@ namespace Cppelix {
 
         [[nodiscard]] virtual bool start() = 0;
         [[nodiscard]] virtual bool stop() = 0;
+        [[nodiscard]] BundleState getState();
 
     private:
         [[nodiscard]] bool internal_start();
@@ -38,5 +42,7 @@ namespace Cppelix {
 
         friend class Framework;
         friend class DependencyManager;
+        template<class ComponentType, class Impl>
+        requires Derived<Impl, Bundle> friend class ComponentManager;
     };
 }
