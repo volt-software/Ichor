@@ -39,9 +39,8 @@ namespace Cppelix {
     concept Derived = std::is_base_of<U, T>::value;
 
     // TODO BundleInterface on actual interface fails due to pure virtual functions or something
-    template <class T>
-    concept BundleInterface = requires(T bundleInterface) {
-        { bundleInterface.name() } -> std::same_as<std::string_view>;
-        { bundleInterface.version() } -> std::same_as<InterfaceVersion>;
-    };
+//    template <class T>
+//    concept BundleInterface = requires(T bundleInterface) {
+//        { bundleInterface.version() } -> std::same_as<InterfaceVersion>;
+//    };
 }

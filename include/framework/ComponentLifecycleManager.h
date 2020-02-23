@@ -35,16 +35,16 @@ namespace Cppelix {
 
         DependencyInfo() : _dependencies() {}
 
-        template<BundleInterface Interface>
-        constexpr void addDependency() {
-            _dependencies.emplace_back(typeName<Interface>(), Interface::version());
+        template<class Interface>
+        constexpr void addDependency(bool required = true) {
+            _dependencies.emplace_back(typeName<Interface>(), Interface::version, required);
         }
 
         void addDependency(Dependency dependency) {
             _dependencies.emplace_back(dependency);
         }
 
-        template<BundleInterface Interface>
+        template<class Interface>
         constexpr void removeDependency() {
             std::erase(std::remove_if(begin(_dependencies), end(_dependencies), [](const auto& dep) noexcept { return dep.interfaceName == typeName<Interface>() && dep.interfaceVersion == Interface::version(); }), end(_dependencies));
         }
@@ -53,7 +53,7 @@ namespace Cppelix {
             _dependencies.erase(std::remove_if(begin(_dependencies), end(_dependencies), [dependency](const auto& dep) noexcept { return dep.interfaceName == dependency.interfaceName && dep.interfaceVersion == dependency.interfaceVersion; }), end(_dependencies));
         }
 
-        template<BundleInterface Interface>
+        template<class Interface>
         [[nodiscard]]
         constexpr bool contains() const {
             return cend(_dependencies) != std::find_if(cbegin(_dependencies), cend(_dependencies), [](const auto& dep) noexcept { return dep.interfaceName == typeName<Interface>() && dep.interfaceVersion == Interface::version(); });
@@ -82,7 +82,7 @@ namespace Cppelix {
     class LifecycleManager {
     public:
         constexpr virtual ~LifecycleManager() = default;
-        constexpr virtual void dependencyOnline(Dependency dependency) = 0;
+        constexpr virtual void dependencyOnline(std::shared_ptr<LifecycleManager> dependentComponent) = 0;
         constexpr virtual void dependencyOffline(Dependency dependency) = 0;
         [[nodiscard]] constexpr virtual bool start() = 0;
         [[nodiscard]] constexpr virtual bool stop() = 0;
@@ -91,43 +91,44 @@ namespace Cppelix {
         [[nodiscard]] constexpr virtual ComponentManagerState getComponentManagerState() const = 0;
         [[nodiscard]] constexpr virtual uint64_t getComponentId() const = 0;
         [[nodiscard]] constexpr virtual Dependency getSelfAsDependency() const = 0;
+        [[nodiscard]] constexpr virtual void* getComponentPointer() = 0;
     };
 
-    template<class Interface, class ComponentType>
+    template<class Interface, class ComponentType, typename... Dependencies>
     requires Derived<ComponentType, Bundle>
-    class ComponentLifecycleManager : public LifecycleManager {
+    class DependencyComponentLifecycleManager : public LifecycleManager {
     public:
-        explicit constexpr ComponentLifecycleManager(std::string_view name, DependencyInfo dependencies) : _componentManagerId(_componentManagerIdCounter++), _name(name), _dependencies(std::move(dependencies)), _satisfiedDependencies(), _component(), _logger(&_component), _componentManagerState(ComponentManagerState::INACTIVE) {
-            static_assert(std::is_same_v<Interface, IFrameworkLogger>, "Can only use this constructor if ComponentLifecycleManager is for IFrameworkLogger!");
+        explicit constexpr DependencyComponentLifecycleManager(IFrameworkLogger *logger, std::string_view name) : _componentManagerId(_componentManagerIdCounter++), _name(name), _dependencies(), _satisfiedDependencies(), _component(), _logger(logger), _componentManagerState(ComponentManagerState::INACTIVE) {
+            (_dependencies.addDependency<Dependencies>(), ...);
         }
 
-        explicit constexpr ComponentLifecycleManager(IFrameworkLogger *logger, std::string_view name, DependencyInfo dependencies) : _componentManagerId(_componentManagerIdCounter++), _name(name), _dependencies(std::move(dependencies)), _satisfiedDependencies(), _component(), _logger(logger), _componentManagerState(ComponentManagerState::INACTIVE) {}
-
-        constexpr ~ComponentLifecycleManager() final = default;
+        constexpr ~DependencyComponentLifecycleManager() final = default;
 
         [[nodiscard]]
-        static std::shared_ptr<ComponentLifecycleManager<Interface, ComponentType>> create(IFrameworkLogger *logger, std::string_view name, DependencyInfo dependencies) {
+        static std::shared_ptr<DependencyComponentLifecycleManager<Interface, ComponentType, Dependencies...>> create(IFrameworkLogger *logger, std::string_view name) {
             if (name.empty()) {
                 if constexpr (std::is_same_v<Interface, IFrameworkLogger>) {
-                    return std::make_shared<ComponentLifecycleManager<Interface, ComponentType>>(typeName<ComponentType>(), dependencies);
+                    return std::make_shared<DependencyComponentLifecycleManager<Interface, ComponentType, Dependencies...>>(typeName<Interface>());
                 }
-                return std::make_shared<ComponentLifecycleManager<Interface, ComponentType>>(logger, typeName<ComponentType>(), dependencies);
+                return std::make_shared<DependencyComponentLifecycleManager<Interface, ComponentType, Dependencies...>>(logger, typeName<Interface>());
             }
 
 
             if constexpr (std::is_same_v<Interface, IFrameworkLogger>) {
-                return std::make_shared<ComponentLifecycleManager<Interface, ComponentType>>(name, dependencies);
+                return std::make_shared<DependencyComponentLifecycleManager<Interface, ComponentType, Dependencies...>>(name);
             }
-            return std::make_shared<ComponentLifecycleManager<Interface, ComponentType>>(logger, name, dependencies);
+            return std::make_shared<DependencyComponentLifecycleManager<Interface, ComponentType, Dependencies...>>(logger, name);
         }
 
-        constexpr void dependencyOnline(Dependency dependency) final {
+        constexpr void dependencyOnline(std::shared_ptr<LifecycleManager> dependentComponent) final {
             std::scoped_lock l(_mutex);
+            auto dependency = dependentComponent->getSelfAsDependency();
             if(!_dependencies.contains(dependency) || _satisfiedDependencies.contains(dependency)) {
                 return;
             }
 
             _satisfiedDependencies.addDependency(dependency);
+            injectSelfInto<Dependencies...>(dependency.interfaceName, dependentComponent);
 
             if(_dependencies.requiredDependencies().size() == _satisfiedDependencies.requiredDependencies().size()) {
                 if(!_component.internal_start()) {
@@ -136,6 +137,17 @@ namespace Cppelix {
             }
         };
 
+        template<class Interface0, class ...Interfaces>
+        constexpr void injectSelfInto(std::string_view nameOfInterfaceToInject, std::shared_ptr<LifecycleManager> dependentComponent) {
+            if (typeName<Interface0>() == nameOfInterfaceToInject) {
+                _component.addDependencyInstance(static_cast<Interface0*>(dependentComponent->getComponentPointer()));
+            } else {
+                if constexpr (sizeof...(Interfaces) > 0) {
+                    injectSelfInto<Interfaces...>(nameOfInterfaceToInject, dependentComponent);
+                }
+            }
+        }
+
         constexpr void dependencyOffline(Dependency dependency) final {
             std::scoped_lock l(_mutex);
             if(!_dependencies.contains(dependency) || !_satisfiedDependencies.contains(dependency)) {
@@ -143,6 +155,7 @@ namespace Cppelix {
             }
 
             _satisfiedDependencies.removeDependency(dependency);
+            //_component.removeDependencyInstance(dependentComponent);
 
             if(_dependencies.requiredDependencies().size() != _satisfiedDependencies.requiredDependencies().size()) {
                 if(!_component.internal_stop()) {
@@ -211,11 +224,116 @@ namespace Cppelix {
             return Dependency{_name, Interface::version, false};
         }
 
+        [[nodiscard]] constexpr void* getComponentPointer() final {
+            return &_component;
+        }
+
     private:
         const uint64_t _componentManagerId;
         const std::string_view _name;
         DependencyInfo _dependencies;
         DependencyInfo _satisfiedDependencies;
+        ComponentType _component;
+        IFrameworkLogger *_logger;
+        ComponentManagerState _componentManagerState;
+        std::mutex _mutex;
+    };
+
+    template<class Interface, class ComponentType>
+    requires Derived<ComponentType, Bundle>
+    class ComponentLifecycleManager : public LifecycleManager {
+    public:
+        explicit constexpr ComponentLifecycleManager(std::string_view name) : _componentManagerId(_componentManagerIdCounter++), _name(name), _component(), _logger(&_component), _componentManagerState(ComponentManagerState::INACTIVE) {
+            static_assert(std::is_same_v<Interface, IFrameworkLogger>, "Can only use this constructor if ComponentLifecycleManager is for IFrameworkLogger!");
+        }
+
+        explicit constexpr ComponentLifecycleManager(IFrameworkLogger *logger, std::string_view name) : _componentManagerId(_componentManagerIdCounter++), _name(name), _component(), _logger(logger), _componentManagerState(ComponentManagerState::INACTIVE) {}
+
+        constexpr ~ComponentLifecycleManager() final = default;
+
+        [[nodiscard]]
+        static std::shared_ptr<ComponentLifecycleManager<Interface, ComponentType>> create(IFrameworkLogger *logger, std::string_view name) {
+            if (name.empty()) {
+                if constexpr (std::is_same_v<Interface, IFrameworkLogger>) {
+                    return std::make_shared<ComponentLifecycleManager<Interface, ComponentType>>(typeName<Interface>());
+                }
+                return std::make_shared<ComponentLifecycleManager<Interface, ComponentType>>(logger, typeName<Interface>());
+            }
+
+
+            if constexpr (std::is_same_v<Interface, IFrameworkLogger>) {
+                return std::make_shared<ComponentLifecycleManager<Interface, ComponentType>>(name);
+            }
+            return std::make_shared<ComponentLifecycleManager<Interface, ComponentType>>(logger, name);
+        }
+
+        constexpr void dependencyOnline(std::shared_ptr<LifecycleManager> dependentComponent) final {
+        };
+
+        constexpr void dependencyOffline(Dependency dependency) final {
+        };
+
+        [[nodiscard]]
+        constexpr bool start() final {
+            std::scoped_lock l(_mutex);
+            if(_component.getState() == BundleState::INSTALLED) {
+                return _component.internal_start();
+            }
+
+            return false;
+        }
+
+        [[nodiscard]]
+        constexpr bool stop() final {
+            std::scoped_lock l(_mutex);
+            if(_component.getState() == BundleState::ACTIVE) {
+                return _component.internal_stop();
+            }
+
+            return false;
+        }
+
+        [[nodiscard]]
+        constexpr bool shouldStart() final {
+            std::scoped_lock l(_mutex);
+            if(_component.getState() == BundleState::ACTIVE) {
+                return false;
+            }
+
+            return true;
+        }
+
+        [[nodiscard]]
+        constexpr std::string_view name() const final {
+            return _name;
+        }
+
+        [[nodiscard]]
+        constexpr ComponentType& getComponent() {
+            return _component;
+        }
+
+        [[nodiscard]]
+        constexpr ComponentManagerState getComponentManagerState() const final {
+            return _componentManagerState;
+        }
+
+        [[nodiscard]]
+        constexpr uint64_t getComponentId() const final {
+            return _componentManagerId;
+        }
+
+        [[nodiscard]] constexpr Dependency getSelfAsDependency() const final {
+            return Dependency{_name, Interface::version, false};
+        }
+
+        [[nodiscard]] constexpr void* getComponentPointer() final {
+            return &_component;
+        }
+
+    private:
+        const uint64_t _componentManagerId;
+        const std::string_view _name;
         ComponentType _component;
         IFrameworkLogger *_logger;
         ComponentManagerState _componentManagerState;

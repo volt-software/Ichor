@@ -13,21 +13,39 @@
 
 using namespace Cppelix;
 
-class TestBundle : public Bundle {
-
+struct ITestBundle {
+    static constexpr InterfaceVersion version = InterfaceVersion{1, 0, 0};
 };
 
-template <auto V>
-struct constant {
-    constexpr static decltype(V) value = V;
+class TestBundle : public ITestBundle, public Bundle {
+
+public:
+    ~TestBundle() final = default;
+    bool start() final {
+        LOG_INFO(_logger, "TestBundle started with dependency");
+        return true;
+    }
+
+    bool stop() final {
+        LOG_INFO(_logger, "TestBundle stopped with dependency");
+        return true;
+    }
+
+    void addDependencyInstance(IFrameworkLogger *logger) {
+        _logger = logger;
+        LOG_INFO(_logger, "Inserted logger");
+    }
+
+private:
+    IFrameworkLogger *_logger;
 };
 
 int main() {
     Framework fw{{}};
     DependencyManager dm{};
-    DependencyInfo dependencies;
-    auto mgr = dm.createComponentManager<IFrameworkLogger, SpdlogFrameworkLogger>(dependencies);
-    auto *logger = &mgr->getComponent();
+    auto logMgr = dm.createComponentManager<IFrameworkLogger, SpdlogFrameworkLogger>();
+    auto testMgr = dm.createDependencyComponentManager<ITestBundle, TestBundle, IFrameworkLogger>();
+    auto *logger = &logMgr->getComponent();
 
     LOG_INFO(logger, "typename: {}", typeName<TestBundle>());
     dm.start();

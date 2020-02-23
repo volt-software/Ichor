@@ -41,8 +41,17 @@ namespace Cppelix {
 
         friend class Framework;
         friend class DependencyManager;
+        template<class Interface, class ComponentType, typename... Dependencies>
+        requires Derived<ComponentType, Bundle>
+        friend class DependencyComponentLifecycleManager;
         template<class Interface, class ComponentType>
         requires Derived<ComponentType, Bundle>
         friend class ComponentLifecycleManager;
+    };
+
+    template <class T>
+    class BundleInjector {
+    public:
+        virtual void inject(T* type) = 0;
     };
 }
