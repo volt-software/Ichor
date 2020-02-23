@@ -9,7 +9,7 @@
 #include "test.h"
 #include "../include/framework/Bundle.h"
 #include "../include/framework/Framework.h"
-#include "../include/framework/ComponentManager.h"
+#include "framework/ComponentLifecycleManager.h"
 
 using namespace Cppelix;
 
@@ -25,9 +25,11 @@ struct constant {
 int main() {
     Framework fw{{}};
     DependencyManager dm{};
-    auto mgr = dm.createComponentManager<IFrameworkLogger, SpdlogFrameworkLogger>();
+    DependencyInfo dependencies;
+    auto mgr = dm.createComponentManager<IFrameworkLogger, SpdlogFrameworkLogger>(dependencies);
+    auto *logger = &mgr->getComponent();
 
-    SPDLOG_INFO("typename: {}", typeName<TestBundle>());
+    LOG_INFO(logger, "typename: {}", typeName<TestBundle>());
     dm.start();
 
     return 0;

@@ -3,12 +3,13 @@
 #include <cstdint>
 #include <atomic>
 #include "sole.hpp"
+#include "common.h"
 
 namespace Cppelix {
     class Framework;
     class DependencyManager;
 
-    enum BundleState {
+    enum class BundleState {
         UNINSTALLED,
         INSTALLED,
         RESOLVED,
@@ -18,21 +19,19 @@ namespace Cppelix {
         UNKNOWN
     };
 
-    template <class T, class U>
-    concept Derived = std::is_base_of<U, T>::value;
-
     class Bundle {
     public:
-        Bundle();
+        Bundle() noexcept;
         virtual ~Bundle();
 
+    protected:
         [[nodiscard]] virtual bool start() = 0;
         [[nodiscard]] virtual bool stop() = 0;
-        [[nodiscard]] BundleState getState();
 
     private:
         [[nodiscard]] bool internal_start();
         [[nodiscard]] bool internal_stop();
+        [[nodiscard]] BundleState getState() const noexcept;
 
 
         uint64_t _bundleId;
@@ -42,7 +41,8 @@ namespace Cppelix {
 
         friend class Framework;
         friend class DependencyManager;
-        template<class ComponentType, class Impl>
-        requires Derived<Impl, Bundle> friend class ComponentManager;
+        template<class Interface, class ComponentType>
+        requires Derived<ComponentType, Bundle>
+        friend class ComponentLifecycleManager;
     };
 }

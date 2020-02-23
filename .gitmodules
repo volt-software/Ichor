@@ -10,3 +10,7 @@
 	path = external/fmt
 	url = https://github.com/fmtlib/fmt.git
 	branch = 6.1.2
+[submodule "external/range-v3"]
+	path = external/range-v3
+	url = https://github.com/ericniebler/range-v3.git
+	branch = 0.10.0
