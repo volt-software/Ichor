@@ -5,7 +5,6 @@
 #include <unordered_map>
 #include <vector>
 #include <memory>
-#include <mutex>
 #include <framework/interfaces/IFrameworkLogger.h>
 #include <framework/Bundle.h>
 

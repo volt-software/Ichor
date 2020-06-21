@@ -3,7 +3,6 @@
 #include <vector>
 #include <unordered_map>
 #include <memory>
-#include <mutex>
 #include <cassert>
 #include <thread>
 #include <chrono>
@@ -57,9 +56,17 @@ namespace Cppelix {
         static constexpr uint64_t type = 3;
     };
 
+    struct DependencyTracker {
+        DependencyTracker(std::string_view _name, std::function<void(void*)> on, std::function<void(void*)> off) : name(_name), onlineFunc(std::move(on)), offlineFunc(std::move(off)) {}
+
+        std::string_view name;
+        std::function<void(void*)> onlineFunc;
+        std::function<void(void*)> offlineFunc;
+    };
+
     class DependencyManager {
     public:
-        DependencyManager() : _components(), _trackingComponents(), _logger(nullptr), _eventQueue{}, _producerToken{_eventQueue}, _consumerToken{_eventQueue} {}
+        DependencyManager() : _components(), _dependencyTrackers(), _logger(nullptr), _eventQueue{}, _producerToken{_eventQueue}, _consumerToken{_eventQueue} {}
 
         template<class Interface, class Impl, typename... Required, typename... Optional>
         requires Derived<Impl, Bundle> && Derived<Impl, Interface>
@@ -138,20 +145,47 @@ namespace Cppelix {
                                 if (possibleDependentLifecycleManager->shouldStart()) {
                                     if (possibleDependentLifecycleManager->start()) {
                                         LOG_DEBUG(_logger, "Started {}", possibleDependentLifecycleManager->name());
-                                        //_loop->handler<DependencyOnlineEvent>().publish(possibleDependentLifecycleManager), *_loop);
+                                        _eventQueue.enqueue(_producerToken, std::make_unique<DependencyOnlineEvent>(possibleDependentLifecycleManager));
                                     } else {
-                                        LOG_DEBUG(_logger, "Couldn't start {}",
-                                                  possibleDependentLifecycleManager->name());
+                                        LOG_DEBUG(_logger, "Couldn't start {}", possibleDependentLifecycleManager->name());
                                     }
+                                }
+                            }
+
+                            for(DependencyTracker &tracker : _dependencyTrackers) {
+                                if(tracker.name == depOnlineEvt->manager->type()) {
+                                    tracker.onlineFunc(depOnlineEvt->manager->getComponentPointer());
+                                }
+                            }
+                        }
+                            break;
+                        case DependencyOfflineEvent::type: {
+                            auto depOfflineEvt = dynamic_cast<DependencyOfflineEvent *>(evt.get());
+                            for (auto &possibleDependentLifecycleManager : _components) {
+                                possibleDependentLifecycleManager->dependencyOffline(depOfflineEvt->manager);
+
+                                if (possibleDependentLifecycleManager->shouldStop()) {
+                                    if (possibleDependentLifecycleManager->stop()) {
+                                        LOG_DEBUG(_logger, "stopped {}", possibleDependentLifecycleManager->name());
+                                        _eventQueue.enqueue(_producerToken, std::make_unique<DependencyOfflineEvent>(possibleDependentLifecycleManager));
+                                    } else {
+                                        LOG_DEBUG(_logger, "Couldn't stop {}", possibleDependentLifecycleManager->name());
+                                    }
+                                }
+                            }
+
+                            for(DependencyTracker &tracker : _dependencyTrackers) {
+                                if(tracker.name == depOfflineEvt->manager->type()) {
+                                    tracker.offlineFunc(depOfflineEvt->manager->getComponentPointer());
                                 }
                             }
                         }
                             break;
                         case DependencyRequestEvent::type: {
                             auto depReqEvt = dynamic_cast<DependencyRequestEvent *>(evt.get());
-                            for (auto &possibleTrackingManager : _trackingComponents) {
-
-                            }
+//                            for (auto &possibleTrackingManager : _trackingComponents) {
+//
+//                            }
                         }
                             break;
                     }
@@ -174,9 +208,14 @@ namespace Cppelix {
             }
         }
 
+        template <class Dependency>
+        void trackOnlineDependencies(std::function<void(void*)> on, std::function<void(void*)> off) {
+            _dependencyTrackers.emplace_back(typeName<Dependency>, std::move(on), std::move(off));
+        }
+
     private:
         std::vector<std::shared_ptr<LifecycleManager>> _components;
-        std::vector<std::shared_ptr<LifecycleManager>> _trackingComponents;
+        std::vector<DependencyTracker> _dependencyTrackers;
         IFrameworkLogger *_logger;
         moodycamel::ConcurrentQueue<std::unique_ptr<Event>> _eventQueue;
         moodycamel::ProducerToken _producerToken;

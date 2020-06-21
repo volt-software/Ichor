@@ -96,10 +96,11 @@ namespace Cppelix {
     public:
         CPPELIX_CONSTEXPR virtual ~LifecycleManager() = default;
         CPPELIX_CONSTEXPR virtual void dependencyOnline(std::shared_ptr<LifecycleManager> dependentComponent) = 0;
-        CPPELIX_CONSTEXPR virtual void dependencyOffline(Dependency dependency) = 0;
+        CPPELIX_CONSTEXPR virtual void dependencyOffline(std::shared_ptr<LifecycleManager> dependentComponent) = 0;
         [[nodiscard]] CPPELIX_CONSTEXPR virtual bool start() = 0;
         [[nodiscard]] CPPELIX_CONSTEXPR virtual bool stop() = 0;
         [[nodiscard]] CPPELIX_CONSTEXPR virtual bool shouldStart() = 0;
+        [[nodiscard]] CPPELIX_CONSTEXPR virtual bool shouldStop() = 0;
         [[nodiscard]] CPPELIX_CONSTEXPR virtual std::string_view name() const = 0;
         [[nodiscard]] CPPELIX_CONSTEXPR virtual std::string_view type() const = 0;
         [[nodiscard]] CPPELIX_CONSTEXPR virtual ComponentManagerState getComponentManagerState() const = 0;
@@ -126,24 +127,23 @@ namespace Cppelix {
 
             if constexpr (std::is_same_v<Interface, IFrameworkLogger>) {
                 auto mgr = std::make_shared<DependencyComponentLifecycleManager<Interface, ComponentType, Required..., Optional...>>(name);
-                mgr->template addDependencies<Optional...>(false);
-                mgr->template addDependencies<Required...>(true);
+                mgr->template setupDependencies<Optional...>(false);
+                mgr->template setupDependencies<Required...>(true);
                 return mgr;
             }
             auto mgr = std::make_shared<DependencyComponentLifecycleManager<Interface, ComponentType, Required..., Optional...>>(logger, name);
-            mgr->template addDependencies<Optional...>(false);
-            mgr->template addDependencies<Required...>(true);
+            mgr->template setupDependencies<Optional...>(false);
+            mgr->template setupDependencies<Required...>(true);
             return mgr;
         }
 
         //stupid bug where it complains about accessing private variables.
         template <typename... TempDependencies>
-        CPPELIX_CONSTEXPR void addDependencies(bool required) {
+        CPPELIX_CONSTEXPR void setupDependencies(bool required) {
             (_dependencies.template addDependency<TempDependencies>(required), ...);
         }
 
         CPPELIX_CONSTEXPR void dependencyOnline(std::shared_ptr<LifecycleManager> dependentComponent) final {
-            std::scoped_lock l(_mutex);
             auto dependency = dependentComponent->getSelfAsDependency();
             if(!_dependencies.contains(dependency) || _satisfiedDependencies.contains(dependency)) {
                 return;
@@ -157,7 +157,7 @@ namespace Cppelix {
                     LOG_ERROR(_logger, "Couldn't start component {}", _name);
                 }
             }
-        };
+        }
 
         template<class Interface0, class ...Interfaces>
         CPPELIX_CONSTEXPR void injectSelfInto(std::string_view nameOfInterfaceToInject, std::shared_ptr<LifecycleManager> dependentComponent) {
@@ -170,26 +170,36 @@ namespace Cppelix {
             }
         }
 
-        CPPELIX_CONSTEXPR void dependencyOffline(Dependency dependency) final {
-            std::scoped_lock l(_mutex);
+        CPPELIX_CONSTEXPR void dependencyOffline(std::shared_ptr<LifecycleManager> dependentComponent) final {
+            auto dependency = dependentComponent->getSelfAsDependency();
             if(!_dependencies.contains(dependency) || !_satisfiedDependencies.contains(dependency)) {
                 return;
             }
 
+            removeSelfInto<Dependencies...>(dependency.interfaceName, dependentComponent);
             _satisfiedDependencies.removeDependency(dependency);
-            //_component.removeDependencyInstance(dependentComponent);
 
             if(_dependencies.requiredDependencies().size() != _satisfiedDependencies.requiredDependencies().size()) {
                 if(!_component.internal_stop()) {
                     LOG_ERROR(_logger, "Couldn't stop component {}", _name);
                 }
             }
-        };
+        }
+
+        template<class Interface0, class ...Interfaces>
+        CPPELIX_CONSTEXPR void removeSelfInto(std::string_view nameOfInterfaceToInject, std::shared_ptr<LifecycleManager> dependentComponent) {
+            if (typeName<Interface0>() == nameOfInterfaceToInject) {
+                _component.removeDependencyInstance(static_cast<Interface0*>(dependentComponent->getComponentPointer()));
+            } else {
+                if constexpr (sizeof...(Interfaces) > 0) {
+                    removeSelfInto<Interfaces...>(nameOfInterfaceToInject, dependentComponent);
+                }
+            }
+        }
 
         [[nodiscard]]
         CPPELIX_CONSTEXPR bool start() final {
-            std::scoped_lock l(_mutex);
-            if(_dependencies.size() == _satisfiedDependencies.size() && _component.getState() == BundleState::INSTALLED) {
+            if(_dependencies.requiredDependencies().size() == _satisfiedDependencies.size() && _component.getState() == BundleState::INSTALLED) {
                 return _component.internal_start();
             }
 
@@ -198,7 +208,6 @@ namespace Cppelix {
 
         [[nodiscard]]
         CPPELIX_CONSTEXPR bool stop() final {
-            std::scoped_lock l(_mutex);
             if(_component.getState() == BundleState::ACTIVE) {
                 return _component.internal_stop();
             }
@@ -208,7 +217,6 @@ namespace Cppelix {
 
         [[nodiscard]]
         CPPELIX_CONSTEXPR bool shouldStart() final {
-            std::scoped_lock l(_mutex);
             if(_component.getState() == BundleState::ACTIVE) {
                 return false;
             }
@@ -220,6 +228,21 @@ namespace Cppelix {
             }
 
             return true;
+        }
+
+        [[nodiscard]]
+        CPPELIX_CONSTEXPR bool shouldStop() final {
+            if(_component.getState() != BundleState::ACTIVE) {
+                return false;
+            }
+
+            for(const auto *dep : _dependencies.requiredDependencies()) {
+                if(!_satisfiedDependencies.contains(*dep)) {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         [[nodiscard]]
@@ -263,7 +286,6 @@ namespace Cppelix {
         ComponentType _component;
         IFrameworkLogger *_logger;
         ComponentManagerState _componentManagerState;
-        std::mutex _mutex;
     };
 
     template<class Interface, class ComponentType>
@@ -295,14 +317,13 @@ namespace Cppelix {
         }
 
         CPPELIX_CONSTEXPR void dependencyOnline(std::shared_ptr<LifecycleManager> dependentComponent) final {
-        };
+        }
 
-        CPPELIX_CONSTEXPR void dependencyOffline(Dependency dependency) final {
-        };
+        CPPELIX_CONSTEXPR void dependencyOffline(std::shared_ptr<LifecycleManager> dependentComponent) final {
+        }
 
         [[nodiscard]]
         CPPELIX_CONSTEXPR bool start() final {
-            std::scoped_lock l(_mutex);
             if(_component.getState() == BundleState::INSTALLED) {
                 return _component.internal_start();
             }
@@ -312,7 +333,6 @@ namespace Cppelix {
 
         [[nodiscard]]
         CPPELIX_CONSTEXPR bool stop() final {
-            std::scoped_lock l(_mutex);
             if(_component.getState() == BundleState::ACTIVE) {
                 return _component.internal_stop();
             }
@@ -322,12 +342,16 @@ namespace Cppelix {
 
         [[nodiscard]]
         CPPELIX_CONSTEXPR bool shouldStart() final {
-            std::scoped_lock l(_mutex);
             if(_component.getState() == BundleState::ACTIVE) {
                 return false;
             }
 
             return true;
+        }
+
+        [[nodiscard]]
+        CPPELIX_CONSTEXPR bool shouldStop() final {
+            return false;
         }
 
         [[nodiscard]]
@@ -369,6 +393,5 @@ namespace Cppelix {
         ComponentType _component;
         IFrameworkLogger *_logger;
         ComponentManagerState _componentManagerState;
-        std::mutex _mutex;
     };
 }
