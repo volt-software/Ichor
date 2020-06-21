@@ -3,6 +3,8 @@
 #include "Common.h"
 #include <string>
 #include <string_view>
+#include <memory>
+#include <unordered_map>
 
 namespace Cppelix {
     class IProperty {
@@ -35,4 +37,6 @@ namespace Cppelix {
     private:
         int val;
     };
+
+    using CppelixProperties = std::unordered_map<std::string, std::unique_ptr<IProperty>>;
 }

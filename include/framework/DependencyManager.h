@@ -71,8 +71,8 @@ namespace Cppelix {
         template<class Interface, class Impl, typename... Required, typename... Optional>
         requires Derived<Impl, Bundle> && Derived<Impl, Interface>
         [[nodiscard]]
-        auto createDependencyComponentManager(RequiredList_t<Required...>, OptionalList_t<Optional...>) {
-            auto cmpMgr = DependencyComponentLifecycleManager<Interface, Impl>::template create(_logger, "", RequiredList<Required...>, OptionalList<Optional...>);
+        auto createDependencyComponentManager(RequiredList_t<Required...>, OptionalList_t<Optional...>, CppelixProperties properties = CppelixProperties{}) {
+            auto cmpMgr = DependencyComponentLifecycleManager<Interface, Impl>::template create(_logger, "", std::move(properties), RequiredList<Required...>, OptionalList<Optional...>);
 
             if(_logger != nullptr) {
                 LOG_DEBUG(_logger, "added ComponentManager<{}, {}>", typeName<Interface>(), typeName<Impl>());
@@ -80,8 +80,8 @@ namespace Cppelix {
 
             cmpMgr->getComponent().injectDependencyManager(this);
 
-            (_eventQueue.enqueue(_producerToken, std::make_unique<DependencyRequestEvent>(cmpMgr, typeName<Optional>(), Dependency{typeName<Interface>(), Interface::version, false, std::unordered_map<std::string, std::unique_ptr<IProperty>>{}})), ...);
-            (_eventQueue.enqueue(_producerToken, std::make_unique<DependencyRequestEvent>(cmpMgr, typeName<Required>(), Dependency{typeName<Interface>(), Interface::version, true, std::unordered_map<std::string, std::unique_ptr<IProperty>>{}})), ...);
+            (_eventQueue.enqueue(_producerToken, std::make_unique<DependencyRequestEvent>(cmpMgr, typeName<Optional>(), Dependency{typeName<Interface>(), Interface::version, false})), ...);
+            (_eventQueue.enqueue(_producerToken, std::make_unique<DependencyRequestEvent>(cmpMgr, typeName<Required>(), Dependency{typeName<Interface>(), Interface::version, true})), ...);
 
             _components.emplace_back(cmpMgr);
             return cmpMgr;
@@ -90,8 +90,8 @@ namespace Cppelix {
         template<class Interface, class Impl>
         requires Derived<Impl, Bundle> && Derived<Impl, Interface>
         [[nodiscard]]
-        std::shared_ptr<ComponentLifecycleManager<Interface, Impl>> createComponentManager() {
-            auto cmpMgr = ComponentLifecycleManager<Interface, Impl>::create(_logger, "");
+        std::shared_ptr<ComponentLifecycleManager<Interface, Impl>> createComponentManager(CppelixProperties properties = {}) {
+            auto cmpMgr = ComponentLifecycleManager<Interface, Impl>::create(_logger, "", std::move(properties));
 
             if constexpr (std::is_same<Interface, IFrameworkLogger>::value) {
                 _logger = &cmpMgr->getComponent();

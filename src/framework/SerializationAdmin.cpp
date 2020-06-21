@@ -64,12 +64,3 @@ void Cppelix::SerializationAdmin::removeDependencyInstance(IFrameworkLogger *log
 void Cppelix::SerializationAdmin::injectDependencyManager(Cppelix::DependencyManager *mng) {
     _mng = mng;
 }
-
-void Cppelix::SerializationAdmin::addDependencyInstance(Cppelix::ISerializer *serializer) {
-    LOG_INFO(_logger, "Inserted serializer");
-}
-
-void Cppelix::SerializationAdmin::removeDependencyInstance(Cppelix::ISerializer *serializer) {
-
-    LOG_INFO(_logger, "Removed serializer");
-}

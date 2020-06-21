@@ -22,9 +22,9 @@ struct TestMsg {
     std::string val;
 };
 
-class TestMsgSerializer : public ISerializer, public Bundle {
+class TestMsgJsonSerializer : public ISerializer, public Bundle {
 public:
-    ~TestMsgSerializer() final = default;
+    ~TestMsgJsonSerializer() final = default;
     bool start() final {
         LOG_INFO(_logger, "TestMsgSerializer started");
         return true;
@@ -126,8 +126,8 @@ public:
         _serializationAdmin = serializationAdmin;
         LOG_INFO(_logger, "Inserted serializationAdmin");
         TestMsg msg{20, "five hundred"};
-        auto res = _serializationAdmin->serialize(typeName<TestMsg>(), &msg);
-        auto msg2 = static_cast<TestMsg*>(_serializationAdmin->deserialize(typeName<TestMsg>(), res));
+        auto res = _serializationAdmin->serialize<TestMsg>(msg);
+        auto msg2 = _serializationAdmin->deserialize<TestMsg>(res);
         if(msg2->id != msg.id || msg2->val != msg.val) {
             LOG_ERROR(_logger, "serde incorrect!");
         } else {
@@ -151,9 +151,9 @@ int main() {
     Framework fw{{}};
     DependencyManager dm{};
     auto logMgr = dm.createComponentManager<IFrameworkLogger, SpdlogFrameworkLogger>();
-    auto serAdmin = dm.createDependencyComponentManager<ISerializationAdmin, SerializationAdmin>(RequiredList<IFrameworkLogger>, OptionalList<ISerializer>);
+    auto serAdmin = dm.createDependencyComponentManager<ISerializationAdmin, SerializationAdmin>(RequiredList<IFrameworkLogger>, OptionalList<>);
 #ifdef USE_RAPIDJSON
-    auto testMsgSerializer = dm.createDependencyComponentManager<ISerializer, TestMsgSerializer>(RequiredList<IFrameworkLogger, ISerializationAdmin>, OptionalList<>);
+    auto testMsgSerializer = dm.createDependencyComponentManager<ISerializer, TestMsgJsonSerializer>(RequiredList<IFrameworkLogger, ISerializationAdmin>, OptionalList<>);
 #endif
     auto testMgr = dm.createDependencyComponentManager<ITestBundle, TestBundle>(RequiredList<IFrameworkLogger, ISerializationAdmin>, OptionalList<>);
     dm.start();

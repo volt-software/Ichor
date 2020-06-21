@@ -22,7 +22,7 @@ namespace Cppelix {
     static std::atomic<uint64_t> _componentManagerIdCounter = 0;
 
     struct Dependency {
-        CPPELIX_CONSTEXPR Dependency(std::string_view _interfaceName, InterfaceVersion _interfaceVersion, bool _required, std::unordered_map<std::string, std::unique_ptr<IProperty>> _properties) noexcept : interfaceName(_interfaceName), interfaceVersion(_interfaceVersion), required(_required), properties(std::move(_properties)) {}
+        CPPELIX_CONSTEXPR Dependency(std::string_view _interfaceName, InterfaceVersion _interfaceVersion, bool _required) noexcept : interfaceName(_interfaceName), interfaceVersion(_interfaceVersion), required(_required) {}
         CPPELIX_CONSTEXPR Dependency(const Dependency &other) noexcept = delete;
         CPPELIX_CONSTEXPR Dependency(Dependency &&other) noexcept = default;
         CPPELIX_CONSTEXPR Dependency& operator=(const Dependency &other) noexcept = delete;
@@ -34,7 +34,6 @@ namespace Cppelix {
         std::string_view interfaceName;
         InterfaceVersion interfaceVersion;
         bool required;
-        std::unordered_map<std::string, std::unique_ptr<IProperty>> properties;
     };
 
     struct DependencyInfo {
@@ -43,7 +42,7 @@ namespace Cppelix {
 
         template<class Interface>
         CPPELIX_CONSTEXPR void addDependency(bool required = true) {
-            _dependencies.emplace_back(typeName<Interface>(), Interface::version, required, std::unordered_map<std::string, std::unique_ptr<IProperty>>{});
+            _dependencies.emplace_back(typeName<Interface>(), Interface::version, required);
         }
 
         CPPELIX_CONSTEXPR void addDependency(Dependency dependency) {
@@ -113,25 +112,19 @@ namespace Cppelix {
     requires Derived<ComponentType, Bundle>
     class DependencyComponentLifecycleManager : public LifecycleManager {
     public:
-        explicit CPPELIX_CONSTEXPR DependencyComponentLifecycleManager(IFrameworkLogger *logger, std::string_view name) : _componentManagerId(_componentManagerIdCounter++), _name(name), _dependencies(), _satisfiedDependencies(), _component(), _logger(logger), _componentManagerState(ComponentManagerState::INACTIVE) {
+        explicit CPPELIX_CONSTEXPR DependencyComponentLifecycleManager(IFrameworkLogger *logger, std::string_view name, CppelixProperties properties) : _componentManagerId(_componentManagerIdCounter++), _name(name), _properties(std::move(properties)), _dependencies(), _satisfiedDependencies(), _component(), _logger(logger), _componentManagerState(ComponentManagerState::INACTIVE) {
         }
 
         CPPELIX_CONSTEXPR ~DependencyComponentLifecycleManager() final = default;
 
         template<typename... Required, typename... Optional>
         [[nodiscard]]
-        static std::shared_ptr<DependencyComponentLifecycleManager<Interface, ComponentType, Required..., Optional...>> create(IFrameworkLogger *logger, std::string_view name, RequiredList_t<Required...>, OptionalList_t<Optional...>) {
+        static std::shared_ptr<DependencyComponentLifecycleManager<Interface, ComponentType, Required..., Optional...>> create(IFrameworkLogger *logger, std::string_view name, CppelixProperties properties, RequiredList_t<Required...>, OptionalList_t<Optional...>) {
             if (name.empty()) {
                 name = typeName<Interface>();
             }
 
-            if constexpr (std::is_same_v<Interface, IFrameworkLogger>) {
-                auto mgr = std::make_shared<DependencyComponentLifecycleManager<Interface, ComponentType, Required..., Optional...>>(name);
-                mgr->template setupDependencies<Optional...>(false);
-                mgr->template setupDependencies<Required...>(true);
-                return mgr;
-            }
-            auto mgr = std::make_shared<DependencyComponentLifecycleManager<Interface, ComponentType, Required..., Optional...>>(logger, name);
+            auto mgr = std::make_shared<DependencyComponentLifecycleManager<Interface, ComponentType, Required..., Optional...>>(logger, name, std::move(properties));
             mgr->template setupDependencies<Optional...>(false);
             mgr->template setupDependencies<Required...>(true);
             return mgr;
@@ -139,7 +132,7 @@ namespace Cppelix {
 
         //stupid bug where it complains about accessing private variables.
         template <typename... TempDependencies>
-        CPPELIX_CONSTEXPR void setupDependencies(bool required) {
+        CPPELIX_CONSTEXPR void setupDependencies([[maybe_unused]] bool required) {
             (_dependencies.template addDependency<TempDependencies>(required), ...);
         }
 
@@ -271,7 +264,7 @@ namespace Cppelix {
         }
 
         [[nodiscard]] CPPELIX_CONSTEXPR Dependency getSelfAsDependency() const final {
-            return Dependency{_name, Interface::version, false, std::unordered_map<std::string, std::unique_ptr<IProperty>>{}};
+            return Dependency{_name, Interface::version, false};
         }
 
         [[nodiscard]] CPPELIX_CONSTEXPR void* getComponentPointer() final {
@@ -281,6 +274,7 @@ namespace Cppelix {
     private:
         const uint64_t _componentManagerId;
         const std::string_view _name;
+        CppelixProperties _properties;
         DependencyInfo _dependencies;
         DependencyInfo _satisfiedDependencies;
         ComponentType _component;
@@ -292,28 +286,25 @@ namespace Cppelix {
     requires Derived<ComponentType, Bundle>
     class ComponentLifecycleManager : public LifecycleManager {
     public:
-        explicit CPPELIX_CONSTEXPR ComponentLifecycleManager(std::string_view name) : _componentManagerId(_componentManagerIdCounter++), _name(name), _component(), _logger(&_component), _componentManagerState(ComponentManagerState::INACTIVE) {
+        explicit CPPELIX_CONSTEXPR ComponentLifecycleManager(std::string_view name, CppelixProperties properties) : _componentManagerId(_componentManagerIdCounter++), _name(name), _properties(std::move(properties)), _component(), _logger(&_component), _componentManagerState(ComponentManagerState::INACTIVE) {
             static_assert(std::is_same_v<Interface, IFrameworkLogger>, "Can only use this constructor if ComponentLifecycleManager is for IFrameworkLogger!");
         }
 
-        explicit CPPELIX_CONSTEXPR ComponentLifecycleManager(IFrameworkLogger *logger, std::string_view name) : _componentManagerId(_componentManagerIdCounter++), _name(name), _component(), _logger(logger), _componentManagerState(ComponentManagerState::INACTIVE) {}
+        explicit CPPELIX_CONSTEXPR ComponentLifecycleManager(IFrameworkLogger *logger, std::string_view name, CppelixProperties properties) : _componentManagerId(_componentManagerIdCounter++), _name(name), _properties(std::move(properties)), _component(), _logger(logger), _componentManagerState(ComponentManagerState::INACTIVE) {}
 
         CPPELIX_CONSTEXPR ~ComponentLifecycleManager() final = default;
 
         [[nodiscard]]
-        static std::shared_ptr<ComponentLifecycleManager<Interface, ComponentType>> create(IFrameworkLogger *logger, std::string_view name) {
+        static std::shared_ptr<ComponentLifecycleManager<Interface, ComponentType>> create(IFrameworkLogger *logger, std::string_view name, CppelixProperties properties) {
             if (name.empty()) {
-                if constexpr (std::is_same_v<Interface, IFrameworkLogger>) {
-                    return std::make_shared<ComponentLifecycleManager<Interface, ComponentType>>(typeName<Interface>());
-                }
-                return std::make_shared<ComponentLifecycleManager<Interface, ComponentType>>(logger, typeName<Interface>());
+                name = typeName<Interface>();
             }
 
 
             if constexpr (std::is_same_v<Interface, IFrameworkLogger>) {
-                return std::make_shared<ComponentLifecycleManager<Interface, ComponentType>>(name);
+                return std::make_shared<ComponentLifecycleManager<Interface, ComponentType>>(name, std::move(properties));
             }
-            return std::make_shared<ComponentLifecycleManager<Interface, ComponentType>>(logger, name);
+            return std::make_shared<ComponentLifecycleManager<Interface, ComponentType>>(logger, name, std::move(properties));
         }
 
         CPPELIX_CONSTEXPR void dependencyOnline(std::shared_ptr<LifecycleManager> dependentComponent) final {
@@ -380,7 +371,7 @@ namespace Cppelix {
         }
 
         [[nodiscard]] CPPELIX_CONSTEXPR Dependency getSelfAsDependency() const final {
-            return Dependency{_name, Interface::version, false, {}};
+            return Dependency{_name, Interface::version, false};
         }
 
         [[nodiscard]] CPPELIX_CONSTEXPR void* getComponentPointer() final {
@@ -390,6 +381,7 @@ namespace Cppelix {
     private:
         const uint64_t _componentManagerId;
         const std::string_view _name;
+        CppelixProperties _properties;
         ComponentType _component;
         IFrameworkLogger *_logger;
         ComponentManagerState _componentManagerState;

@@ -19,8 +19,6 @@ namespace Cppelix {
 
         void addDependencyInstance(IFrameworkLogger *logger);
         void removeDependencyInstance(IFrameworkLogger *logger);
-        void addDependencyInstance(ISerializer *serializer);
-        void removeDependencyInstance(ISerializer *serializer);
         void injectDependencyManager(DependencyManager *mng) final;
 
         bool start() final;
