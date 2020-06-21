@@ -1,7 +1,7 @@
 #pragma once
 
 #include <fmt/format.h>
-#include "../common.h"
+#include "../Common.h"
 
 namespace Cppelix {
     class IFrameworkLogger {

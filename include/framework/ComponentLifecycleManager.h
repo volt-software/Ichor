@@ -6,7 +6,9 @@
 #include <unordered_set>
 #include "Bundle.h"
 #include "interfaces/IFrameworkLogger.h"
-#include "common.h"
+#include "Common.h"
+#include "Filter.h"
+#include "Property.h"
 #include <range/v3/view.hpp>
 
 namespace Cppelix {
@@ -20,115 +22,135 @@ namespace Cppelix {
     static std::atomic<uint64_t> _componentManagerIdCounter = 0;
 
     struct Dependency {
-        constexpr Dependency(std::string_view _interfaceName, InterfaceVersion _interfaceVersion, bool _required) noexcept : interfaceName(_interfaceName), interfaceVersion(_interfaceVersion), required(_required) {}
-        constexpr Dependency(const Dependency &other) noexcept = default;
-        constexpr Dependency(Dependency &&other) noexcept = default;
-        constexpr Dependency& operator=(const Dependency &other) noexcept = default;
-        constexpr Dependency& operator=(Dependency &&other) noexcept = default;
+        CPPELIX_CONSTEXPR Dependency(std::string_view _interfaceName, InterfaceVersion _interfaceVersion, bool _required, std::unordered_map<std::string, std::unique_ptr<IProperty>> _properties) noexcept : interfaceName(_interfaceName), interfaceVersion(_interfaceVersion), required(_required), properties(std::move(_properties)) {}
+        CPPELIX_CONSTEXPR Dependency(const Dependency &other) noexcept = delete;
+        CPPELIX_CONSTEXPR Dependency(Dependency &&other) noexcept = default;
+        CPPELIX_CONSTEXPR Dependency& operator=(const Dependency &other) noexcept = delete;
+        CPPELIX_CONSTEXPR Dependency& operator=(Dependency &&other) noexcept = default;
+        CPPELIX_CONSTEXPR bool operator==(const Dependency &other) const noexcept {
+            return interfaceName == other.interfaceName && interfaceVersion == other.interfaceVersion && required == other.required;
+        }
 
         std::string_view interfaceName;
         InterfaceVersion interfaceVersion;
         bool required;
+        std::unordered_map<std::string, std::unique_ptr<IProperty>> properties;
     };
 
     struct DependencyInfo {
 
-        DependencyInfo() : _dependencies() {}
+        CPPELIX_CONSTEXPR DependencyInfo() : _dependencies() {}
 
         template<class Interface>
-        constexpr void addDependency(bool required = true) {
-            _dependencies.emplace_back(typeName<Interface>(), Interface::version, required);
+        CPPELIX_CONSTEXPR void addDependency(bool required = true) {
+            _dependencies.emplace_back(typeName<Interface>(), Interface::version, required, std::unordered_map<std::string, std::unique_ptr<IProperty>>{});
         }
 
-        void addDependency(Dependency dependency) {
-            _dependencies.emplace_back(dependency);
+        CPPELIX_CONSTEXPR void addDependency(Dependency dependency) {
+            _dependencies.emplace_back(std::move(dependency));
         }
 
         template<class Interface>
-        constexpr void removeDependency() {
+        CPPELIX_CONSTEXPR void removeDependency() {
             std::erase(std::remove_if(begin(_dependencies), end(_dependencies), [](const auto& dep) noexcept { return dep.interfaceName == typeName<Interface>() && dep.interfaceVersion == Interface::version(); }), end(_dependencies));
         }
 
-        void removeDependency(Dependency dependency) {
-            _dependencies.erase(std::remove_if(begin(_dependencies), end(_dependencies), [dependency](const auto& dep) noexcept { return dep.interfaceName == dependency.interfaceName && dep.interfaceVersion == dependency.interfaceVersion; }), end(_dependencies));
+        CPPELIX_CONSTEXPR void removeDependency(const Dependency &dependency) {
+            _dependencies.erase(std::remove_if(begin(_dependencies), end(_dependencies), [&dependency](const auto& dep) noexcept { return dep.interfaceName == dependency.interfaceName && dep.interfaceVersion == dependency.interfaceVersion; }), end(_dependencies));
         }
 
         template<class Interface>
         [[nodiscard]]
-        constexpr bool contains() const {
+        CPPELIX_CONSTEXPR bool contains() const {
             return cend(_dependencies) != std::find_if(cbegin(_dependencies), cend(_dependencies), [](const auto& dep) noexcept { return dep.interfaceName == typeName<Interface>() && dep.interfaceVersion == Interface::version(); });
         }
 
         [[nodiscard]]
-        constexpr bool contains(Dependency dependency) const {
+        CPPELIX_CONSTEXPR bool contains(const Dependency &dependency) const {
             return cend(_dependencies) != std::find_if(cbegin(_dependencies), cend(_dependencies), [&dependency](const auto& dep) noexcept { return dep.interfaceName == dependency.interfaceName && dep.interfaceVersion == dependency.interfaceVersion; });
         }
 
         [[nodiscard]]
-        size_t size() const noexcept {
+        CPPELIX_CONSTEXPR size_t size() const noexcept {
             return _dependencies.size();
         }
 
         [[nodiscard]]
-        std::vector<Dependency> requiredDependencies() const {
-            std::vector<Dependency> requiredDeps;
-            std::copy_if(begin(_dependencies), end(_dependencies), std::back_inserter(requiredDeps), [](const auto& dep){ return dep.required; });
+        CPPELIX_CONSTEXPR std::vector<const Dependency *> requiredDependencies() const {
+            // bloody ranges doesn't deliver on what it promises.
+            // using namespace ranges;
+            //return _dependencies | view::filter([](const auto& dep){ return dep.required; }) | to<std::vector>;
+            std::vector<const Dependency *> requiredDeps;
+            for(auto &dep : _dependencies) {
+                if(dep.required) {
+                    requiredDeps.push_back(&dep);
+                }
+            }
             return requiredDeps;
         }
 
-        std::vector<Dependency> _dependencies;
+        CPPELIX_CONSTEXPR std::vector<Dependency> _dependencies;
     };
 
     class LifecycleManager {
     public:
-        constexpr virtual ~LifecycleManager() = default;
-        constexpr virtual void dependencyOnline(std::shared_ptr<LifecycleManager> dependentComponent) = 0;
-        constexpr virtual void dependencyOffline(Dependency dependency) = 0;
-        [[nodiscard]] constexpr virtual bool start() = 0;
-        [[nodiscard]] constexpr virtual bool stop() = 0;
-        [[nodiscard]] constexpr virtual bool shouldStart() = 0;
-        [[nodiscard]] constexpr virtual std::string_view name() const = 0;
-        [[nodiscard]] constexpr virtual ComponentManagerState getComponentManagerState() const = 0;
-        [[nodiscard]] constexpr virtual uint64_t getComponentId() const = 0;
-        [[nodiscard]] constexpr virtual Dependency getSelfAsDependency() const = 0;
-        [[nodiscard]] constexpr virtual void* getComponentPointer() = 0;
+        CPPELIX_CONSTEXPR virtual ~LifecycleManager() = default;
+        CPPELIX_CONSTEXPR virtual void dependencyOnline(std::shared_ptr<LifecycleManager> dependentComponent) = 0;
+        CPPELIX_CONSTEXPR virtual void dependencyOffline(Dependency dependency) = 0;
+        [[nodiscard]] CPPELIX_CONSTEXPR virtual bool start() = 0;
+        [[nodiscard]] CPPELIX_CONSTEXPR virtual bool stop() = 0;
+        [[nodiscard]] CPPELIX_CONSTEXPR virtual bool shouldStart() = 0;
+        [[nodiscard]] CPPELIX_CONSTEXPR virtual std::string_view name() const = 0;
+        [[nodiscard]] CPPELIX_CONSTEXPR virtual std::string_view type() const = 0;
+        [[nodiscard]] CPPELIX_CONSTEXPR virtual ComponentManagerState getComponentManagerState() const = 0;
+        [[nodiscard]] CPPELIX_CONSTEXPR virtual uint64_t getComponentId() const = 0;
+        [[nodiscard]] CPPELIX_CONSTEXPR virtual Dependency getSelfAsDependency() const = 0;
+        [[nodiscard]] CPPELIX_CONSTEXPR virtual void* getComponentPointer() = 0;
     };
 
     template<class Interface, class ComponentType, typename... Dependencies>
     requires Derived<ComponentType, Bundle>
     class DependencyComponentLifecycleManager : public LifecycleManager {
     public:
-        explicit constexpr DependencyComponentLifecycleManager(IFrameworkLogger *logger, std::string_view name) : _componentManagerId(_componentManagerIdCounter++), _name(name), _dependencies(), _satisfiedDependencies(), _component(), _logger(logger), _componentManagerState(ComponentManagerState::INACTIVE) {
-            (_dependencies.addDependency<Dependencies>(), ...);
+        explicit CPPELIX_CONSTEXPR DependencyComponentLifecycleManager(IFrameworkLogger *logger, std::string_view name) : _componentManagerId(_componentManagerIdCounter++), _name(name), _dependencies(), _satisfiedDependencies(), _component(), _logger(logger), _componentManagerState(ComponentManagerState::INACTIVE) {
         }
 
-        constexpr ~DependencyComponentLifecycleManager() final = default;
+        CPPELIX_CONSTEXPR ~DependencyComponentLifecycleManager() final = default;
 
+        template<typename... Required, typename... Optional>
         [[nodiscard]]
-        static std::shared_ptr<DependencyComponentLifecycleManager<Interface, ComponentType, Dependencies...>> create(IFrameworkLogger *logger, std::string_view name) {
+        static std::shared_ptr<DependencyComponentLifecycleManager<Interface, ComponentType, Required..., Optional...>> create(IFrameworkLogger *logger, std::string_view name, RequiredList_t<Required...>, OptionalList_t<Optional...>) {
             if (name.empty()) {
-                if constexpr (std::is_same_v<Interface, IFrameworkLogger>) {
-                    return std::make_shared<DependencyComponentLifecycleManager<Interface, ComponentType, Dependencies...>>(typeName<Interface>());
-                }
-                return std::make_shared<DependencyComponentLifecycleManager<Interface, ComponentType, Dependencies...>>(logger, typeName<Interface>());
+                name = typeName<Interface>();
             }
-
 
             if constexpr (std::is_same_v<Interface, IFrameworkLogger>) {
-                return std::make_shared<DependencyComponentLifecycleManager<Interface, ComponentType, Dependencies...>>(name);
+                auto mgr = std::make_shared<DependencyComponentLifecycleManager<Interface, ComponentType, Required..., Optional...>>(name);
+                mgr->template addDependencies<Optional...>(false);
+                mgr->template addDependencies<Required...>(true);
+                return mgr;
             }
-            return std::make_shared<DependencyComponentLifecycleManager<Interface, ComponentType, Dependencies...>>(logger, name);
+            auto mgr = std::make_shared<DependencyComponentLifecycleManager<Interface, ComponentType, Required..., Optional...>>(logger, name);
+            mgr->template addDependencies<Optional...>(false);
+            mgr->template addDependencies<Required...>(true);
+            return mgr;
         }
 
-        constexpr void dependencyOnline(std::shared_ptr<LifecycleManager> dependentComponent) final {
+        //stupid bug where it complains about accessing private variables.
+        template <typename... TempDependencies>
+        CPPELIX_CONSTEXPR void addDependencies(bool required) {
+            (_dependencies.template addDependency<TempDependencies>(required), ...);
+        }
+
+        CPPELIX_CONSTEXPR void dependencyOnline(std::shared_ptr<LifecycleManager> dependentComponent) final {
             std::scoped_lock l(_mutex);
             auto dependency = dependentComponent->getSelfAsDependency();
             if(!_dependencies.contains(dependency) || _satisfiedDependencies.contains(dependency)) {
                 return;
             }
 
-            _satisfiedDependencies.addDependency(dependency);
             injectSelfInto<Dependencies...>(dependency.interfaceName, dependentComponent);
+            _satisfiedDependencies.addDependency(std::move(dependency));
 
             if(_dependencies.requiredDependencies().size() == _satisfiedDependencies.requiredDependencies().size()) {
                 if(!_component.internal_start()) {
@@ -138,7 +160,7 @@ namespace Cppelix {
         };
 
         template<class Interface0, class ...Interfaces>
-        constexpr void injectSelfInto(std::string_view nameOfInterfaceToInject, std::shared_ptr<LifecycleManager> dependentComponent) {
+        CPPELIX_CONSTEXPR void injectSelfInto(std::string_view nameOfInterfaceToInject, std::shared_ptr<LifecycleManager> dependentComponent) {
             if (typeName<Interface0>() == nameOfInterfaceToInject) {
                 _component.addDependencyInstance(static_cast<Interface0*>(dependentComponent->getComponentPointer()));
             } else {
@@ -148,7 +170,7 @@ namespace Cppelix {
             }
         }
 
-        constexpr void dependencyOffline(Dependency dependency) final {
+        CPPELIX_CONSTEXPR void dependencyOffline(Dependency dependency) final {
             std::scoped_lock l(_mutex);
             if(!_dependencies.contains(dependency) || !_satisfiedDependencies.contains(dependency)) {
                 return;
@@ -165,7 +187,7 @@ namespace Cppelix {
         };
 
         [[nodiscard]]
-        constexpr bool start() final {
+        CPPELIX_CONSTEXPR bool start() final {
             std::scoped_lock l(_mutex);
             if(_dependencies.size() == _satisfiedDependencies.size() && _component.getState() == BundleState::INSTALLED) {
                 return _component.internal_start();
@@ -175,7 +197,7 @@ namespace Cppelix {
         }
 
         [[nodiscard]]
-        constexpr bool stop() final {
+        CPPELIX_CONSTEXPR bool stop() final {
             std::scoped_lock l(_mutex);
             if(_component.getState() == BundleState::ACTIVE) {
                 return _component.internal_stop();
@@ -185,14 +207,14 @@ namespace Cppelix {
         }
 
         [[nodiscard]]
-        constexpr bool shouldStart() final {
+        CPPELIX_CONSTEXPR bool shouldStart() final {
             std::scoped_lock l(_mutex);
             if(_component.getState() == BundleState::ACTIVE) {
                 return false;
             }
 
-            for(const auto& dep : _dependencies.requiredDependencies()) {
-                if(!_satisfiedDependencies.contains(dep)) {
+            for(const auto *dep : _dependencies.requiredDependencies()) {
+                if(!_satisfiedDependencies.contains(*dep)) {
                     return false;
                 }
             }
@@ -201,30 +223,35 @@ namespace Cppelix {
         }
 
         [[nodiscard]]
-        constexpr std::string_view name() const final {
+        CPPELIX_CONSTEXPR std::string_view name() const final {
             return _name;
         }
 
         [[nodiscard]]
-        constexpr ComponentType& getComponent() {
+        CPPELIX_CONSTEXPR std::string_view type() const final {
+            return typeName<ComponentType>();
+        }
+
+        [[nodiscard]]
+        CPPELIX_CONSTEXPR ComponentType& getComponent() {
             return _component;
         }
 
         [[nodiscard]]
-        constexpr ComponentManagerState getComponentManagerState() const final {
+        CPPELIX_CONSTEXPR ComponentManagerState getComponentManagerState() const final {
             return _componentManagerState;
         }
 
         [[nodiscard]]
-        constexpr uint64_t getComponentId() const final {
+        CPPELIX_CONSTEXPR uint64_t getComponentId() const final {
             return _componentManagerId;
         }
 
-        [[nodiscard]] constexpr Dependency getSelfAsDependency() const final {
-            return Dependency{_name, Interface::version, false};
+        [[nodiscard]] CPPELIX_CONSTEXPR Dependency getSelfAsDependency() const final {
+            return Dependency{_name, Interface::version, false, std::unordered_map<std::string, std::unique_ptr<IProperty>>{}};
         }
 
-        [[nodiscard]] constexpr void* getComponentPointer() final {
+        [[nodiscard]] CPPELIX_CONSTEXPR void* getComponentPointer() final {
             return &_component;
         }
 
@@ -243,13 +270,13 @@ namespace Cppelix {
     requires Derived<ComponentType, Bundle>
     class ComponentLifecycleManager : public LifecycleManager {
     public:
-        explicit constexpr ComponentLifecycleManager(std::string_view name) : _componentManagerId(_componentManagerIdCounter++), _name(name), _component(), _logger(&_component), _componentManagerState(ComponentManagerState::INACTIVE) {
+        explicit CPPELIX_CONSTEXPR ComponentLifecycleManager(std::string_view name) : _componentManagerId(_componentManagerIdCounter++), _name(name), _component(), _logger(&_component), _componentManagerState(ComponentManagerState::INACTIVE) {
             static_assert(std::is_same_v<Interface, IFrameworkLogger>, "Can only use this constructor if ComponentLifecycleManager is for IFrameworkLogger!");
         }
 
-        explicit constexpr ComponentLifecycleManager(IFrameworkLogger *logger, std::string_view name) : _componentManagerId(_componentManagerIdCounter++), _name(name), _component(), _logger(logger), _componentManagerState(ComponentManagerState::INACTIVE) {}
+        explicit CPPELIX_CONSTEXPR ComponentLifecycleManager(IFrameworkLogger *logger, std::string_view name) : _componentManagerId(_componentManagerIdCounter++), _name(name), _component(), _logger(logger), _componentManagerState(ComponentManagerState::INACTIVE) {}
 
-        constexpr ~ComponentLifecycleManager() final = default;
+        CPPELIX_CONSTEXPR ~ComponentLifecycleManager() final = default;
 
         [[nodiscard]]
         static std::shared_ptr<ComponentLifecycleManager<Interface, ComponentType>> create(IFrameworkLogger *logger, std::string_view name) {
@@ -267,14 +294,14 @@ namespace Cppelix {
             return std::make_shared<ComponentLifecycleManager<Interface, ComponentType>>(logger, name);
         }
 
-        constexpr void dependencyOnline(std::shared_ptr<LifecycleManager> dependentComponent) final {
+        CPPELIX_CONSTEXPR void dependencyOnline(std::shared_ptr<LifecycleManager> dependentComponent) final {
         };
 
-        constexpr void dependencyOffline(Dependency dependency) final {
+        CPPELIX_CONSTEXPR void dependencyOffline(Dependency dependency) final {
         };
 
         [[nodiscard]]
-        constexpr bool start() final {
+        CPPELIX_CONSTEXPR bool start() final {
             std::scoped_lock l(_mutex);
             if(_component.getState() == BundleState::INSTALLED) {
                 return _component.internal_start();
@@ -284,7 +311,7 @@ namespace Cppelix {
         }
 
         [[nodiscard]]
-        constexpr bool stop() final {
+        CPPELIX_CONSTEXPR bool stop() final {
             std::scoped_lock l(_mutex);
             if(_component.getState() == BundleState::ACTIVE) {
                 return _component.internal_stop();
@@ -294,7 +321,7 @@ namespace Cppelix {
         }
 
         [[nodiscard]]
-        constexpr bool shouldStart() final {
+        CPPELIX_CONSTEXPR bool shouldStart() final {
             std::scoped_lock l(_mutex);
             if(_component.getState() == BundleState::ACTIVE) {
                 return false;
@@ -304,30 +331,35 @@ namespace Cppelix {
         }
 
         [[nodiscard]]
-        constexpr std::string_view name() const final {
+        CPPELIX_CONSTEXPR std::string_view name() const final {
             return _name;
         }
 
         [[nodiscard]]
-        constexpr ComponentType& getComponent() {
+        CPPELIX_CONSTEXPR std::string_view type() const final {
+            return typeName<ComponentType>();
+        }
+
+        [[nodiscard]]
+        CPPELIX_CONSTEXPR ComponentType& getComponent() {
             return _component;
         }
 
         [[nodiscard]]
-        constexpr ComponentManagerState getComponentManagerState() const final {
+        CPPELIX_CONSTEXPR ComponentManagerState getComponentManagerState() const final {
             return _componentManagerState;
         }
 
         [[nodiscard]]
-        constexpr uint64_t getComponentId() const final {
+        CPPELIX_CONSTEXPR uint64_t getComponentId() const final {
             return _componentManagerId;
         }
 
-        [[nodiscard]] constexpr Dependency getSelfAsDependency() const final {
-            return Dependency{_name, Interface::version, false};
+        [[nodiscard]] CPPELIX_CONSTEXPR Dependency getSelfAsDependency() const final {
+            return Dependency{_name, Interface::version, false, {}};
         }
 
-        [[nodiscard]] constexpr void* getComponentPointer() final {
+        [[nodiscard]] CPPELIX_CONSTEXPR void* getComponentPointer() final {
             return &_component;
         }
 

@@ -3,7 +3,7 @@
 #include <cstdint>
 #include <atomic>
 #include "sole.hpp"
-#include "common.h"
+#include "Common.h"
 
 namespace Cppelix {
     class Framework;
@@ -27,6 +27,7 @@ namespace Cppelix {
     protected:
         [[nodiscard]] virtual bool start() = 0;
         [[nodiscard]] virtual bool stop() = 0;
+        virtual void injectDependencyManager(DependencyManager *mng) = 0;
 
     private:
         [[nodiscard]] bool internal_start();
@@ -47,11 +48,5 @@ namespace Cppelix {
         template<class Interface, class ComponentType>
         requires Derived<ComponentType, Bundle>
         friend class ComponentLifecycleManager;
-    };
-
-    template <class T>
-    class BundleInjector {
-    public:
-        virtual void inject(T* type) = 0;
     };
 }

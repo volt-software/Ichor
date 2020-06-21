@@ -14,3 +14,15 @@
 	path = external/range-v3
 	url = https://github.com/ericniebler/range-v3.git
 	branch = 0.10.0
+[submodule "external/rapidjson"]
+	path = external/rapidjson
+	url = https://github.com/Tencent/rapidjson.git
+[submodule "external/uvw"]
+	path = external/uvw
+	url = https://github.com/skypjack/uvw.git
+[submodule "external/libuv"]
+	path = external/libuv
+	url = https://github.com/libuv/libuv.git
+[submodule "external/concurrentqueue"]
+	path = external/concurrentqueue
+	url = https://github.com/cameron314/concurrentqueue.git

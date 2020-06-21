@@ -16,8 +16,6 @@ namespace Cppelix {
         SpdlogFrameworkLogger();
         ~SpdlogFrameworkLogger() final = default;
 
-        static constexpr std::string_view version = "1.0.0";
-
         void trace(const char *filename_in, int line_in, const char *funcname_in, std::string_view format_str, fmt::format_args args) final;
         void debug(const char *filename_in, int line_in, const char *funcname_in, std::string_view format_str, fmt::format_args args) final;
         void info(const char *filename_in, int line_in, const char *funcname_in, std::string_view format_str, fmt::format_args args) final;
@@ -27,6 +25,7 @@ namespace Cppelix {
 
         bool start() final;
         bool stop() final;
+        void injectDependencyManager(DependencyManager *mng) final {}
     };
 }
 

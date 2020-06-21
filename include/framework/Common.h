@@ -1,5 +1,15 @@
 #pragma once
 
+#if __cpp_lib_constexpr_string >= 201907L
+#if __cpp_lib_constexpr_vector >= 201907L
+#define CPPELIX_CONSTEXPR constexpr
+#else
+#define CPPELIX_CONSTEXPR
+#endif
+#else
+#define CPPELIX_CONSTEXPR
+#endif
+
 namespace Cppelix {
     template<typename INTERFACE_TYPENAME>
     [[nodiscard]] constexpr auto typeName() {
@@ -34,6 +44,23 @@ namespace Cppelix {
         uint64_t minor;
         uint64_t patch;
     };
+
+    template<typename...>
+    struct typeList {};
+
+    template<typename... Type>
+    struct OptionalList_t: typeList<Type...>{};
+
+    template<typename... Type>
+    struct RequiredList_t: typeList<Type...>{};
+
+    template<typename... Type>
+    inline constexpr OptionalList_t<Type...> OptionalList{};
+
+    template<typename... Type>
+    inline constexpr RequiredList_t<Type...> RequiredList{};
+
+    // concepts
 
     template <class T, class U>
     concept Derived = std::is_base_of<U, T>::value;

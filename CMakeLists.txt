@@ -18,6 +18,7 @@ set(EXECUTABLE_OUTPUT_PATH ${CMAKE_BINARY_DIR})
 set(LIBRARY_OUTPUT_PATH ${CMAKE_BINARY_DIR})
 
 option(USE_SPDLOG "Use spdlog as framework logging implementation" OFF)
+option(USE_RAPIDJSON "Add RapidJSON as a possible serializer implementation" OFF)
 option(USE_SANITIZERS "Enable sanitizers, catching potential errors but slowing down compilation and execution speed" ON)
 
 if(USE_SPDLOG)
@@ -42,18 +43,58 @@ file(GLOB_RECURSE FMT_SOURCES ${EXTERNAL_DIR}/fmt/src/*.cc)
 file(GLOB_RECURSE CPPELIX_FRAMEWORK_SOURCES ${TOP_DIR}/src/framework/*.cpp)
 file(GLOB_RECURSE CPPELIX_OPTIONAL_BUNDLES_SOURCES ${TOP_DIR}/src/optional_bundles/*.cpp)
 
+set(uv_sources
+        ${EXTERNAL_DIR}/libuv/src/fs-poll.c
+        ${EXTERNAL_DIR}/libuv/src/idna.c
+        ${EXTERNAL_DIR}/libuv/src/inet.c
+        ${EXTERNAL_DIR}/libuv/src/random.c
+        ${EXTERNAL_DIR}/libuv/src/strscpy.c
+        ${EXTERNAL_DIR}/libuv/src/threadpool.c
+        ${EXTERNAL_DIR}/libuv/src/timer.c
+        ${EXTERNAL_DIR}/libuv/src/uv-common.c
+        ${EXTERNAL_DIR}/libuv/src/uv-data-getter-setters.c
+        ${EXTERNAL_DIR}/libuv/src/version.c
+        ${EXTERNAL_DIR}/libuv/src/unix/async.c
+        ${EXTERNAL_DIR}/libuv/src/unix/core.c
+        ${EXTERNAL_DIR}/libuv/src/unix/dl.c
+        ${EXTERNAL_DIR}/libuv/src/unix/fs.c
+        ${EXTERNAL_DIR}/libuv/src/unix/getaddrinfo.c
+        ${EXTERNAL_DIR}/libuv/src/unix/getnameinfo.c
+        ${EXTERNAL_DIR}/libuv/src/unix/loop-watcher.c
+        ${EXTERNAL_DIR}/libuv/src/unix/loop.c
+        ${EXTERNAL_DIR}/libuv/src/unix/pipe.c
+        ${EXTERNAL_DIR}/libuv/src/unix/poll.c
+        ${EXTERNAL_DIR}/libuv/src/unix/process.c
+        ${EXTERNAL_DIR}/libuv/src/unix/random-devurandom.c
+        ${EXTERNAL_DIR}/libuv/src/unix/signal.c
+        ${EXTERNAL_DIR}/libuv/src/unix/stream.c
+        ${EXTERNAL_DIR}/libuv/src/unix/tcp.c
+        ${EXTERNAL_DIR}/libuv/src/unix/thread.c
+        ${EXTERNAL_DIR}/libuv/src/unix/tty.c
+        ${EXTERNAL_DIR}/libuv/src/unix/udp.c
+        ${EXTERNAL_DIR}/libuv/src/unix/linux-core.c
+        ${EXTERNAL_DIR}/libuv/src/unix/linux-inotify.c
+        ${EXTERNAL_DIR}/libuv/src/unix/linux-syscalls.c
+        ${EXTERNAL_DIR}/libuv/src/unix/procfs-exepath.c
+        ${EXTERNAL_DIR}/libuv/src/unix/random-getrandom.c
+        ${EXTERNAL_DIR}/libuv/src/unix/random-sysctl-linux.c)
+
+set(uv_defines -D _GNU_SOURCE -D _POSIX_C_SOURCE=200112)
+
 if(USE_SPDLOG)
-    file(GLOB SPDLOG_SOURCE ${EXTERNAL_DIR}/spdlog/src/*.cpp)
+    file(GLOB SPDLOG_SOURCES ${EXTERNAL_DIR}/spdlog/src/*.cpp)
 endif()
 
-add_library(cppelix ${SPDLOG_SOURCE} ${FMT_SOURCES} ${CPPELIX_FRAMEWORK_SOURCES} ${CPPELIX_OPTIONAL_BUNDLES_SOURCES})
+add_library(cppelix ${uv_sources} ${FMT_SOURCES} ${CPPELIX_FRAMEWORK_SOURCES} ${CPPELIX_OPTIONAL_BUNDLES_SOURCES})
 if(USE_SPDLOG)
     target_sources(cppelix PRIVATE ${SPDLOG_SOURCES})
 endif()
 target_link_libraries(cppelix ${CMAKE_THREAD_LIBS_INIT})
+target_link_libraries(cppelix -ldl -lrt)
+target_compile_definitions(cppelix PRIVATE ${uv_defines})
 
 file(GLOB_RECURSE PROJECT_TEST_SOURCES ${TOP_DIR}/test/*.cpp)
-add_executable(cppelix_test ${FMT_SOURCES} ${CPPELIX_FRAMEWORK_SOURCES} ${CPPELIX_OPTIONAL_BUNDLES_SOURCES} ${PROJECT_TEST_SOURCES})
+add_executable(cppelix_test ${PROJECT_TEST_SOURCES})
 if(USE_SPDLOG)
     target_sources(cppelix_test PRIVATE ${SPDLOG_SOURCES})
 endif()
@@ -61,7 +102,7 @@ add_test(NAME MyTest COMMAND cppelix_test)
 target_link_libraries(cppelix_test ${CMAKE_THREAD_LIBS_INIT})
 
 file(GLOB_RECURSE PROJECT_EXAMPLE_SOURCES ${TOP_DIR}/examples/*.cpp)
-add_executable(cppelix_example ${SPDLOG_SOURCE} ${FMT_SOURCES} ${PROJECT_EXAMPLE_SOURCES})
+add_executable(cppelix_example ${PROJECT_EXAMPLE_SOURCES})
 if(USE_SPDLOG)
     target_sources(cppelix_example PRIVATE ${SPDLOG_SOURCES})
 endif()
@@ -70,9 +111,18 @@ target_link_libraries(cppelix_example cppelix)
 
 
 include_directories("${EXTERNAL_DIR}/Catch2/single_include")
+include_directories("${EXTERNAL_DIR}/fmt/include")
+include_directories("${EXTERNAL_DIR}/range-v3/include")
+include_directories("${EXTERNAL_DIR}/uvw/src")
+include_directories("${EXTERNAL_DIR}/libuv/include")
+include_directories("${EXTERNAL_DIR}/libuv/src")
+include_directories("${EXTERNAL_DIR}/concurrentqueue")
+include_directories("${TOP_DIR}/include")
+
 if(USE_SPDLOG)
     include_directories("${EXTERNAL_DIR}/spdlog/include")
 endif()
-include_directories("${EXTERNAL_DIR}/fmt/include")
-include_directories("${EXTERNAL_DIR}/range-v3/include")
-include_directories("${TOP_DIR}/include")
+
+if(USE_RAPIDJSON)
+    include_directories("${EXTERNAL_DIR}/rapidjson/include")
+endif()

@@ -1,7 +1,3 @@
-//
-// Created by oipo on 13-02-20.
-//
-
 #include <spdlog/spdlog.h>
 #include <framework/DependencyManager.h>
 #include <framework/interfaces/IFrameworkLogger.h>
@@ -36,6 +32,8 @@ public:
         LOG_INFO(_logger, "Inserted logger");
     }
 
+    void injectDependencyManager(DependencyManager *mng) final {}
+
 private:
     IFrameworkLogger *_logger;
 };
@@ -44,10 +42,7 @@ int main() {
     Framework fw{{}};
     DependencyManager dm{};
     auto logMgr = dm.createComponentManager<IFrameworkLogger, SpdlogFrameworkLogger>();
-    auto testMgr = dm.createDependencyComponentManager<ITestBundle, TestBundle, IFrameworkLogger>();
-    auto *logger = &logMgr->getComponent();
-
-    LOG_INFO(logger, "typename: {}", typeName<TestBundle>());
+    auto testMgr = dm.createDependencyComponentManager<ITestBundle, TestBundle>(RequiredList<IFrameworkLogger>, OptionalList<>);
     dm.start();
 
     return 0;
