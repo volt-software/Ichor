@@ -38,9 +38,10 @@ namespace Cppelix {
     };
 
     struct QuitEvent : public Event {
-        QuitEvent() noexcept : Event(type) {}
+        QuitEvent(bool _dependenciesStopped = false) noexcept : Event(type), dependenciesStopped(_dependenciesStopped) {}
         ~QuitEvent() final = default;
 
+        bool dependenciesStopped;
         static constexpr uint64_t type = 4;
     };
 

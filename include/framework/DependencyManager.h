@@ -161,7 +161,17 @@ namespace Cppelix {
                         }
                             break;
                         case QuitEvent::type: {
-                            quit.store(true, std::memory_order_release);
+                            auto quitEvt = dynamic_cast<QuitEvent *>(evt.get());
+                            if(!quitEvt->dependenciesStopped) {
+                                for(auto &possibleManager : _components) {
+                                    _eventQueue.enqueue(_producerToken, std::make_unique<DependencyOfflineEvent>(possibleManager));
+                                    _eventQueue.enqueue(_producerToken, std::make_unique<StopBundleEvent>(stopBundleEvt->bundleId, true));
+                                }
+
+                                _eventQueue.enqueue(_producerToken, std::make_unique<QuitEvent>(true));
+                            } else {
+                                quit.store(true, std::memory_order_release);
+                            }
                         }
                             break;
                         case StopBundleEvent::type: {
