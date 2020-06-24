@@ -3,7 +3,7 @@
 
 std::atomic<uint64_t> Cppelix::Bundle::_bundleIdCounter = 0;
 
-Cppelix::Bundle::Bundle() noexcept : _bundleId(_bundleIdCounter++), _bundleGid(sole::uuid4()), _bundleState(BundleState::INSTALLED) {
+Cppelix::Bundle::Bundle() noexcept : IBundle(), _bundleId(_bundleIdCounter++), _bundleGid(sole::uuid4()), _bundleState(BundleState::INSTALLED) {
 
 }
 
@@ -37,7 +37,7 @@ bool Cppelix::Bundle::internal_stop() {
     }
 
     _bundleState = BundleState::STOPPING;
-    if(start()) {
+    if(stop()) {
         _bundleState = BundleState::INSTALLED;
         return true;
     } else {

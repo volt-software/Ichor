@@ -102,6 +102,7 @@ namespace Cppelix {
         [[nodiscard]] CPPELIX_CONSTEXPR virtual bool shouldStop() = 0;
         [[nodiscard]] CPPELIX_CONSTEXPR virtual std::string_view name() const = 0;
         [[nodiscard]] CPPELIX_CONSTEXPR virtual std::string_view type() const = 0;
+        [[nodiscard]] CPPELIX_CONSTEXPR virtual uint64_t bundleId() const = 0;
         [[nodiscard]] CPPELIX_CONSTEXPR virtual ComponentManagerState getComponentManagerState() const = 0;
         [[nodiscard]] CPPELIX_CONSTEXPR virtual uint64_t getComponentId() const = 0;
         [[nodiscard]] CPPELIX_CONSTEXPR virtual Dependency getSelfAsDependency() const = 0;
@@ -249,6 +250,11 @@ namespace Cppelix {
         }
 
         [[nodiscard]]
+        CPPELIX_CONSTEXPR uint64_t bundleId() const final {
+            return _component.get_bundle_id();
+        }
+
+        [[nodiscard]]
         CPPELIX_CONSTEXPR ComponentType& getComponent() {
             return _component;
         }
@@ -353,6 +359,11 @@ namespace Cppelix {
         [[nodiscard]]
         CPPELIX_CONSTEXPR std::string_view type() const final {
             return typeName<ComponentType>();
+        }
+
+        [[nodiscard]]
+        CPPELIX_CONSTEXPR uint64_t bundleId() const final {
+            return _component.get_bundle_id();
         }
 
         [[nodiscard]]

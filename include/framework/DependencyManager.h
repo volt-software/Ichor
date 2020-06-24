@@ -16,6 +16,7 @@
 #include "ServiceListener.h"
 #include "Bundle.h"
 #include "ComponentLifecycleManager.h"
+#include "Events.h"
 
 using namespace std::chrono_literals;
 
@@ -26,35 +27,6 @@ namespace Cppelix {
     void on_sigint([[maybe_unused]] int sig) {
         quit.store(true, std::memory_order_release);
     }
-
-    struct Event {
-        Event(uint64_t type) noexcept : _type{type} {}
-        virtual ~Event() = default;
-        uint64_t _type;
-    };
-
-    struct DependencyOnlineEvent : public Event {
-        explicit DependencyOnlineEvent(const std::shared_ptr<LifecycleManager> _manager) noexcept : Event(type), manager(std::move(_manager)) {}
-
-        const std::shared_ptr<LifecycleManager> manager;
-        static constexpr uint64_t type = 1;
-    };
-
-    struct DependencyOfflineEvent : public Event {
-        explicit DependencyOfflineEvent(const std::shared_ptr<LifecycleManager> _manager) noexcept : Event(type), manager(std::move(_manager)) {}
-
-        const std::shared_ptr<LifecycleManager> manager;
-        static constexpr uint64_t type = 2;
-    };
-
-    struct DependencyRequestEvent : public Event {
-        explicit DependencyRequestEvent(const std::shared_ptr<LifecycleManager> _manager, const std::string_view _requestedType, Dependency _dependency) noexcept : Event(type), manager(std::move(_manager)), requestedType(_requestedType), dependency(std::move(_dependency)) {}
-
-        const std::shared_ptr<LifecycleManager> manager;
-        const std::string_view requestedType;
-        const Dependency dependency;
-        static constexpr uint64_t type = 3;
-    };
 
     struct DependencyTracker {
         DependencyTracker(std::string_view _name, std::function<void(void*)> on, std::function<void(void*)> off) : name(_name), onlineFunc(std::move(on)), offlineFunc(std::move(off)) {}
@@ -188,6 +160,48 @@ namespace Cppelix {
 //                            }
                         }
                             break;
+                        case QuitEvent::type: {
+                            quit.store(true, std::memory_order_release);
+                        }
+                            break;
+                        case StopBundleEvent::type: {
+                            auto stopBundleEvt = dynamic_cast<StopBundleEvent *>(evt.get());
+
+                            if(stopBundleEvt->dependenciesStopped) {
+                                for(auto &possibleManager : _components) {
+                                    if(possibleManager->bundleId() == stopBundleEvt->bundleId) {
+                                        if(!possibleManager->stop()) {
+                                            LOG_ERROR(_logger, "Couldn't stop component {} but all dependencies stopped", stopBundleEvt->bundleId);
+                                        }
+                                        break;
+                                    }
+                                }
+                            } else {
+                                for(auto &possibleManager : _components) {
+                                    if(possibleManager->bundleId() == stopBundleEvt->bundleId) {
+                                        _eventQueue.enqueue(_producerToken, std::make_unique<DependencyOfflineEvent>(possibleManager));
+                                        _eventQueue.enqueue(_producerToken, std::make_unique<StopBundleEvent>(stopBundleEvt->bundleId, true));
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                            break;
+                        case StartBundleEvent::type: {
+                            auto startBundleEvt = dynamic_cast<StartBundleEvent *>(evt.get());
+
+
+                            for(auto &possibleManager : _components) {
+                                if(possibleManager->bundleId() == startBundleEvt->bundleId) {
+                                    if(possibleManager->shouldStart()) {
+                                        possibleManager->start();
+                                        _eventQueue.enqueue(_producerToken, std::make_unique<DependencyOnlineEvent>(possibleManager));
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                            break;
                     }
                 }
 
@@ -197,6 +211,11 @@ namespace Cppelix {
             for(auto &manager : _components) {
                 manager->stop();
             }
+        }
+
+        template <typename T, typename... Args>
+        void PushEvent(Args&&... args){
+            _eventQueue.enqueue(std::make_unique<T, Args...>(std::forward<Args>(args)...));
         }
 
         template <class Impl, class Dependency>

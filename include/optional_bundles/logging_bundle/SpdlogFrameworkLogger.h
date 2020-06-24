@@ -24,7 +24,6 @@ namespace Cppelix {
 
         bool start() final;
         bool stop() final;
-        void injectDependencyManager(DependencyManager *mng) final {}
     };
 }
 

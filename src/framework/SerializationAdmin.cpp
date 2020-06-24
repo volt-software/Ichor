@@ -2,7 +2,9 @@
 #include <framework/SerializationAdmin.h>
 
 Cppelix::SerializationAdmin::SerializationAdmin() {
+}
 
+Cppelix::SerializationAdmin::~SerializationAdmin() {
 }
 
 std::vector<uint8_t> Cppelix::SerializationAdmin::serialize(const std::string_view type, const void* obj) {
@@ -10,17 +12,15 @@ std::vector<uint8_t> Cppelix::SerializationAdmin::serialize(const std::string_vi
     if(serializer == end(_serializers)) {
         throw std::runtime_error(fmt::format("Couldn't find serializer for type {}", type));
     }
-    LOG_INFO(_logger, "Serializing for type {}", type);
     return serializer->second->serialize(obj);
 }
 
-void* Cppelix::SerializationAdmin::deserialize(const std::string_view type, const std::vector<uint8_t> &bytes) {
+void* Cppelix::SerializationAdmin::deserialize(const std::string_view type, std::vector<uint8_t> &&bytes) {
     auto serializer = _serializers.find(type);
     if(serializer == end(_serializers)) {
         throw std::runtime_error(fmt::format("Couldn't find serializer for type {}", type));
     }
-    LOG_INFO(_logger, "Deserializing for type {}", type);
-    return serializer->second->deserialize(bytes);
+    return serializer->second->deserialize(std::move(bytes));
 }
 
 void Cppelix::SerializationAdmin::addSerializer(const std::string_view type, Cppelix::ISerializer* _serializer) {
@@ -43,7 +43,6 @@ void Cppelix::SerializationAdmin::removeSerializer(const std::string_view type) 
 
 bool Cppelix::SerializationAdmin::start() {
     LOG_INFO(_logger, "Start");
-    //_mng->trackDependencyRequests()
     return true;
 }
 
@@ -59,8 +58,4 @@ void Cppelix::SerializationAdmin::addDependencyInstance(IFrameworkLogger *logger
 
 void Cppelix::SerializationAdmin::removeDependencyInstance(IFrameworkLogger *logger) {
     _logger = nullptr;
-}
-
-void Cppelix::SerializationAdmin::injectDependencyManager(Cppelix::DependencyManager *mng) {
-    _mng = mng;
 }

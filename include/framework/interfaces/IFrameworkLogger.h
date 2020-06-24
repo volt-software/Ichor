@@ -2,9 +2,10 @@
 
 #include <fmt/format.h>
 #include "../Common.h"
+#include "../Bundle.h"
 
 namespace Cppelix {
-    class IFrameworkLogger {
+    class IFrameworkLogger : public virtual IBundle {
     public:
         virtual void trace(const char *filename_in, int line_in, const char *funcname_in, std::string_view format_str, fmt::format_args args) = 0;
         virtual void debug(const char *filename_in, int line_in, const char *funcname_in, std::string_view format_str, fmt::format_args args) = 0;

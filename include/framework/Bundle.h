@@ -19,16 +19,33 @@ namespace Cppelix {
         UNKNOWN
     };
 
-    class Bundle {
+    class IBundle {
+    public:
+        virtual ~IBundle() {}
+
+        virtual uint64_t get_bundle_id() const = 0;
+    };
+
+    class Bundle : virtual public IBundle {
     public:
         Bundle() noexcept;
-        virtual ~Bundle();
+        ~Bundle() override;
+
+
+
+        void injectDependencyManager(DependencyManager *mng) {
+            _manager = mng;
+        }
+
+        uint64_t get_bundle_id() const final {
+            return _bundleId;
+        }
 
     protected:
         [[nodiscard]] virtual bool start() = 0;
         [[nodiscard]] virtual bool stop() = 0;
-        virtual void injectDependencyManager(DependencyManager *mng) = 0;
 
+        DependencyManager *_manager;
     private:
         [[nodiscard]] bool internal_start();
         [[nodiscard]] bool internal_stop();

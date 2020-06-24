@@ -12,7 +12,7 @@ namespace Cppelix {
         virtual ~ISerializer() = default;
 
         virtual std::vector<uint8_t> serialize(const void* obj) = 0;
-        virtual void* deserialize(const std::vector<uint8_t> &stream) = 0;
+        virtual void* deserialize(std::vector<uint8_t> &&stream) = 0;
     };
 
     class ISerializationAdmin {
@@ -28,14 +28,19 @@ namespace Cppelix {
         }
 
         template <typename T>
+        std::unique_ptr<T> deserialize(std::vector<uint8_t> &&stream) {
+            return std::unique_ptr<T>(static_cast<T*>(deserialize(typeName<T>(), std::move(stream))));
+        }
+
+        template <typename T>
         std::unique_ptr<T> deserialize(const std::vector<uint8_t> &stream) {
-            return std::unique_ptr<T>(static_cast<T*>(deserialize(typeName<T>(), stream)));
+            return std::unique_ptr<T>(static_cast<T*>(deserialize(typeName<T>(), std::move(stream))));
         }
 
     protected:
         virtual ~ISerializationAdmin() = default;
 
         virtual std::vector<uint8_t> serialize(const std::string_view type, const void* obj) = 0;
-        virtual void* deserialize(const std::string_view type, const std::vector<uint8_t> &bytes) = 0;
+        virtual void* deserialize(const std::string_view type, std::vector<uint8_t> &&bytes) = 0;
     };
 }
