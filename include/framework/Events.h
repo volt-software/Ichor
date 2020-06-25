@@ -45,20 +45,20 @@ namespace Cppelix {
         static constexpr uint64_t type = 4;
     };
 
-    struct StopBundleEvent : public Event {
-        StopBundleEvent(uint64_t _bundleId, bool _dependenciesStopped = false) noexcept : Event(type), bundleId(_bundleId), dependenciesStopped(_dependenciesStopped) {}
-        ~StopBundleEvent() final = default;
+    struct StopServiceEvent : public Event {
+        StopServiceEvent(uint64_t _serviceId, bool _dependenciesStopped = false) noexcept : Event(type), serviceId(_serviceId), dependenciesStopped(_dependenciesStopped) {}
+        ~StopServiceEvent() final = default;
 
-        uint64_t bundleId;
+        uint64_t serviceId;
         bool dependenciesStopped;
         static constexpr uint64_t type = 5;
     };
 
-    struct StartBundleEvent : public Event {
-        StartBundleEvent(uint64_t _bundleId) noexcept : Event(type), bundleId(_bundleId) {}
-        ~StartBundleEvent() final = default;
+    struct StartServiceEvent : public Event {
+        StartServiceEvent(uint64_t _serviceId) noexcept : Event(type), serviceId(_serviceId) {}
+        ~StartServiceEvent() final = default;
 
-        uint64_t bundleId;
+        uint64_t serviceId;
         static constexpr uint64_t type = 6;
     };
 }

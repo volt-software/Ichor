@@ -1,13 +1,13 @@
 #pragma once
 
 #include <unordered_map>
-#include <framework/Bundle.h>
+#include <framework/Service.h>
 #include <framework/interfaces/ISerializationAdmin.h>
 #include <framework/interfaces/IFrameworkLogger.h>
 
 namespace Cppelix {
 
-    class SerializationAdmin : public ISerializationAdmin, public Bundle {
+    class SerializationAdmin : public ISerializationAdmin, public Service {
     public:
         SerializationAdmin();
         ~SerializationAdmin() final;

@@ -4,7 +4,7 @@
 #include <memory>
 #include <atomic>
 #include <unordered_set>
-#include "Bundle.h"
+#include "Service.h"
 #include "interfaces/IFrameworkLogger.h"
 #include "Common.h"
 #include "Filter.h"
@@ -102,15 +102,20 @@ namespace Cppelix {
         [[nodiscard]] CPPELIX_CONSTEXPR virtual bool shouldStop() = 0;
         [[nodiscard]] CPPELIX_CONSTEXPR virtual std::string_view name() const = 0;
         [[nodiscard]] CPPELIX_CONSTEXPR virtual std::string_view type() const = 0;
-        [[nodiscard]] CPPELIX_CONSTEXPR virtual uint64_t bundleId() const = 0;
+        [[nodiscard]] CPPELIX_CONSTEXPR virtual uint64_t serviceId() const = 0;
         [[nodiscard]] CPPELIX_CONSTEXPR virtual ComponentManagerState getComponentManagerState() const = 0;
         [[nodiscard]] CPPELIX_CONSTEXPR virtual uint64_t getComponentId() const = 0;
         [[nodiscard]] CPPELIX_CONSTEXPR virtual Dependency getSelfAsDependency() const = 0;
         [[nodiscard]] CPPELIX_CONSTEXPR virtual void* getComponentPointer() = 0;
+
+        template <typename T>
+        [[nodiscard]] CPPELIX_CONSTEXPR T* getComponent() {
+            return static_cast<T*>(getComponentPointer());
+        }
     };
 
     template<class Interface, class ComponentType, typename... Dependencies>
-    requires Derived<ComponentType, Bundle>
+    requires Derived<ComponentType, Service>
     class DependencyComponentLifecycleManager : public LifecycleManager {
     public:
         explicit CPPELIX_CONSTEXPR DependencyComponentLifecycleManager(IFrameworkLogger *logger, std::string_view name, CppelixProperties properties) : _componentManagerId(_componentManagerIdCounter++), _name(name), _properties(std::move(properties)), _dependencies(), _satisfiedDependencies(), _component(), _logger(logger), _componentManagerState(ComponentManagerState::INACTIVE) {
@@ -193,7 +198,7 @@ namespace Cppelix {
 
         [[nodiscard]]
         CPPELIX_CONSTEXPR bool start() final {
-            if(_dependencies.requiredDependencies().size() == _satisfiedDependencies.size() && _component.getState() == BundleState::INSTALLED) {
+            if(_dependencies.requiredDependencies().size() == _satisfiedDependencies.size() && _component.getState() == ServiceState::INSTALLED) {
                 return _component.internal_start();
             }
 
@@ -202,16 +207,16 @@ namespace Cppelix {
 
         [[nodiscard]]
         CPPELIX_CONSTEXPR bool stop() final {
-            if(_component.getState() == BundleState::ACTIVE) {
+            if(_component.getState() == ServiceState::ACTIVE) {
                 return _component.internal_stop();
             }
 
-            return false;
+            return true;
         }
 
         [[nodiscard]]
         CPPELIX_CONSTEXPR bool shouldStart() final {
-            if(_component.getState() == BundleState::ACTIVE) {
+            if(_component.getState() == ServiceState::ACTIVE) {
                 return false;
             }
 
@@ -226,7 +231,7 @@ namespace Cppelix {
 
         [[nodiscard]]
         CPPELIX_CONSTEXPR bool shouldStop() final {
-            if(_component.getState() != BundleState::ACTIVE) {
+            if(_component.getState() != ServiceState::ACTIVE) {
                 return false;
             }
 
@@ -250,8 +255,8 @@ namespace Cppelix {
         }
 
         [[nodiscard]]
-        CPPELIX_CONSTEXPR uint64_t bundleId() const final {
-            return _component.get_bundle_id();
+        CPPELIX_CONSTEXPR uint64_t serviceId() const final {
+            return _component.get_service_id();
         }
 
         [[nodiscard]]
@@ -289,7 +294,7 @@ namespace Cppelix {
     };
 
     template<class Interface, class ComponentType>
-    requires Derived<ComponentType, Bundle>
+    requires Derived<ComponentType, Service>
     class ComponentLifecycleManager : public LifecycleManager {
     public:
         explicit CPPELIX_CONSTEXPR ComponentLifecycleManager(std::string_view name, CppelixProperties properties) : _componentManagerId(_componentManagerIdCounter++), _name(name), _properties(std::move(properties)), _component(), _logger(&_component), _componentManagerState(ComponentManagerState::INACTIVE) {
@@ -321,7 +326,7 @@ namespace Cppelix {
 
         [[nodiscard]]
         CPPELIX_CONSTEXPR bool start() final {
-            if(_component.getState() == BundleState::INSTALLED) {
+            if(_component.getState() == ServiceState::INSTALLED) {
                 return _component.internal_start();
             }
 
@@ -330,7 +335,7 @@ namespace Cppelix {
 
         [[nodiscard]]
         CPPELIX_CONSTEXPR bool stop() final {
-            if(_component.getState() == BundleState::ACTIVE) {
+            if(_component.getState() == ServiceState::ACTIVE) {
                 return _component.internal_stop();
             }
 
@@ -339,7 +344,7 @@ namespace Cppelix {
 
         [[nodiscard]]
         CPPELIX_CONSTEXPR bool shouldStart() final {
-            if(_component.getState() == BundleState::ACTIVE) {
+            if(_component.getState() == ServiceState::ACTIVE) {
                 return false;
             }
 
@@ -362,8 +367,8 @@ namespace Cppelix {
         }
 
         [[nodiscard]]
-        CPPELIX_CONSTEXPR uint64_t bundleId() const final {
-            return _component.get_bundle_id();
+        CPPELIX_CONSTEXPR uint64_t serviceId() const final {
+            return _component.get_service_id();
         }
 
         [[nodiscard]]

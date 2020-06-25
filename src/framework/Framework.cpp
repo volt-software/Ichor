@@ -10,5 +10,5 @@ Cppelix::Framework::Framework(std::unordered_map<std::string, std::string> confi
         _globallyInitialized = true;
     }
 
-    //_bundle = std::make_unique<Bundle>();
+    //_service = std::make_unique<Service>();
 }

@@ -3,7 +3,7 @@
 #include <spdlog/spdlog.h>
 #include <framework/DependencyManager.h>
 #include <framework/interfaces/IFrameworkLogger.h>
-#include "../include/framework/Bundle.h"
+#include "../include/framework/Service.h"
 #include "../include/framework/Framework.h"
 #include "../include/framework/SerializationAdmin.h"
 #include "framework/ComponentLifecycleManager.h"
@@ -14,7 +14,7 @@
 
 using namespace Cppelix;
 
-class TestMsgJsonSerializer : public ISerializer, public Bundle {
+class TestMsgJsonSerializer : public ISerializer, public Service {
 public:
     ~TestMsgJsonSerializer() final = default;
     bool start() final {
@@ -63,11 +63,6 @@ public:
         writer.EndObject();
         auto *ret = sb.GetString();
         return std::vector<uint8_t>(ret, ret + sb.GetSize());
-//        std::string str = sb.GetString();
-//        std::vector<uint8_t> ret;
-//        ret.reserve(str.length());
-//        std::move(str.begin(), str.end(), std::back_inserter(ret));
-//        return ret;
     }
 
     void* deserialize(std::vector<uint8_t> &&stream) final {

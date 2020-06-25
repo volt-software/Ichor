@@ -34,7 +34,7 @@ namespace Cppelix {
 
         template <typename T>
         std::unique_ptr<T> deserialize(const std::vector<uint8_t> &stream) {
-            return std::unique_ptr<T>(static_cast<T*>(deserialize(typeName<T>(), std::move(stream))));
+            return std::unique_ptr<T>(static_cast<T*>(deserialize(typeName<T>(), std::vector<uint8_t>{stream})));
         }
 
     protected:

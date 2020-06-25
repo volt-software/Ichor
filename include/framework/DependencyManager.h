@@ -12,9 +12,9 @@
 #include <concurrentqueue.h>
 #include <framework/interfaces/IFrameworkLogger.h>
 #include "FrameworkListener.h"
-#include "BundleListener.h"
 #include "ServiceListener.h"
-#include "Bundle.h"
+#include "ServiceListener.h"
+#include "Service.h"
 #include "ComponentLifecycleManager.h"
 #include "Events.h"
 
@@ -41,7 +41,7 @@ namespace Cppelix {
         DependencyManager() : _components(), _dependencyTrackers(), _logger(nullptr), _eventQueue{}, _producerToken{_eventQueue}, _consumerToken{_eventQueue} {}
 
         template<class Interface, class Impl, typename... Required, typename... Optional>
-        requires Derived<Impl, Bundle> && Derived<Impl, Interface>
+        requires Derived<Impl, Service> && Derived<Impl, Interface>
         [[nodiscard]]
         auto createDependencyComponentManager(RequiredList_t<Required...>, OptionalList_t<Optional...>, CppelixProperties properties = CppelixProperties{}) {
             auto cmpMgr = DependencyComponentLifecycleManager<Interface, Impl>::template create(_logger, "", std::move(properties), RequiredList<Required...>, OptionalList<Optional...>);
@@ -60,7 +60,7 @@ namespace Cppelix {
         }
 
         template<class Interface, class Impl>
-        requires Derived<Impl, Bundle> && Derived<Impl, Interface>
+        requires Derived<Impl, Service> && Derived<Impl, Interface>
         [[nodiscard]]
         std::shared_ptr<ComponentLifecycleManager<Interface, Impl>> createComponentManager(CppelixProperties properties = {}) {
             auto cmpMgr = ComponentLifecycleManager<Interface, Impl>::create(_logger, "", std::move(properties));
@@ -164,8 +164,7 @@ namespace Cppelix {
                             auto quitEvt = dynamic_cast<QuitEvent *>(evt.get());
                             if(!quitEvt->dependenciesStopped) {
                                 for(auto &possibleManager : _components) {
-                                    _eventQueue.enqueue(_producerToken, std::make_unique<DependencyOfflineEvent>(possibleManager));
-                                    _eventQueue.enqueue(_producerToken, std::make_unique<StopBundleEvent>(stopBundleEvt->bundleId, true));
+                                    _eventQueue.enqueue(_producerToken, std::make_unique<StopServiceEvent>(possibleManager->serviceId()));
                                 }
 
                                 _eventQueue.enqueue(_producerToken, std::make_unique<QuitEvent>(true));
@@ -174,35 +173,35 @@ namespace Cppelix {
                             }
                         }
                             break;
-                        case StopBundleEvent::type: {
-                            auto stopBundleEvt = dynamic_cast<StopBundleEvent *>(evt.get());
+                        case StopServiceEvent::type: {
+                            auto stopServiceEvt = dynamic_cast<StopServiceEvent *>(evt.get());
 
-                            if(stopBundleEvt->dependenciesStopped) {
+                            if(stopServiceEvt->dependenciesStopped) {
                                 for(auto &possibleManager : _components) {
-                                    if(possibleManager->bundleId() == stopBundleEvt->bundleId) {
+                                    if(possibleManager->serviceId() == stopServiceEvt->serviceId) {
                                         if(!possibleManager->stop()) {
-                                            LOG_ERROR(_logger, "Couldn't stop component {} but all dependencies stopped", stopBundleEvt->bundleId);
+                                            LOG_ERROR(_logger, "Couldn't stop component {}: {} but all dependencies stopped", stopServiceEvt->serviceId, possibleManager->name());
                                         }
                                         break;
                                     }
                                 }
                             } else {
                                 for(auto &possibleManager : _components) {
-                                    if(possibleManager->bundleId() == stopBundleEvt->bundleId) {
+                                    if(possibleManager->serviceId() == stopServiceEvt->serviceId) {
                                         _eventQueue.enqueue(_producerToken, std::make_unique<DependencyOfflineEvent>(possibleManager));
-                                        _eventQueue.enqueue(_producerToken, std::make_unique<StopBundleEvent>(stopBundleEvt->bundleId, true));
+                                        _eventQueue.enqueue(_producerToken, std::make_unique<StopServiceEvent>(stopServiceEvt->serviceId, true));
                                         break;
                                     }
                                 }
                             }
                         }
                             break;
-                        case StartBundleEvent::type: {
-                            auto startBundleEvt = dynamic_cast<StartBundleEvent *>(evt.get());
+                        case StartServiceEvent::type: {
+                            auto startServiceEvt = dynamic_cast<StartServiceEvent *>(evt.get());
 
 
                             for(auto &possibleManager : _components) {
-                                if(possibleManager->bundleId() == startBundleEvt->bundleId) {
+                                if(possibleManager->serviceId() == startServiceEvt->serviceId) {
                                     if(possibleManager->shouldStart()) {
                                         possibleManager->start();
                                         _eventQueue.enqueue(_producerToken, std::make_unique<DependencyOnlineEvent>(possibleManager));

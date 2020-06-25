@@ -3,7 +3,7 @@
 #include <spdlog/spdlog.h>
 #include <framework/DependencyManager.h>
 #include <framework/interfaces/IFrameworkLogger.h>
-#include "../include/framework/Bundle.h"
+#include "../include/framework/Service.h"
 #include "../include/framework/Framework.h"
 #include "../include/framework/SerializationAdmin.h"
 #include "framework/ComponentLifecycleManager.h"
@@ -14,7 +14,7 @@
 
 using namespace Cppelix;
 
-class TestMsgJsonSerializer : public ISerializer, public Bundle {
+class TestMsgJsonSerializer : public ISerializer, public Service {
 public:
     ~TestMsgJsonSerializer() final = default;
     bool start() final {
@@ -67,10 +67,9 @@ public:
         std::move(str.begin(), str.end(), std::back_inserter(ret));
         return ret;
     }
-    void* deserialize(const std::vector<uint8_t> &stream) final {
-        std::string s{stream.begin(), stream.end()};
+    void* deserialize(std::vector<uint8_t> &&stream) final {
         rapidjson::Document d;
-        d.ParseInsitu(s.data());
+        d.ParseInsitu(reinterpret_cast<char*>(stream.data()));
 
         if(d.HasParseError() || !d.HasMember("id") || !d.HasMember("val")) {
             LOG_ERROR(_logger, "stream not valid json");

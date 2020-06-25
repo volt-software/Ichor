@@ -2,20 +2,20 @@
 
 #include <framework/DependencyManager.h>
 #include <framework/interfaces/IFrameworkLogger.h>
-#include "framework/Bundle.h"
+#include "framework/Service.h"
 #include "framework/Framework.h"
 #include "framework/ComponentLifecycleManager.h"
 
 using namespace Cppelix;
 
 
-struct ITestBundle : virtual public IBundle {
+struct ITestService : virtual public IService {
     static constexpr InterfaceVersion version = InterfaceVersion{1, 0, 0};
 };
 
-class TestBundle : public ITestBundle, public Bundle {
+class TestService : public ITestService, public Service {
 public:
-    ~TestBundle() final = default;
+    ~TestService() final = default;
     bool start() final {
         return true;
     }

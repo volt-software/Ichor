@@ -5,10 +5,16 @@
 
 namespace Cppelix {
     enum class ServiceEvent {
-        MODIFIED,
-        MODIFIED_ENDMATCH,
-        REGISTERED,
-        UNREGISTERING
+        INSTALLED,
+        LAZY_ACTIVATION,
+        RESOLVED,
+        STARTED,
+        STARTING,
+        STOPPED,
+        STOPPING,
+        UNINSTALLED,
+        UNRESOLVED,
+        UPDATED
     };
 
     class ServiceListener {

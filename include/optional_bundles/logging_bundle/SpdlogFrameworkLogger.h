@@ -6,11 +6,11 @@
 #include <vector>
 #include <memory>
 #include <framework/interfaces/IFrameworkLogger.h>
-#include <framework/Bundle.h>
+#include <framework/Service.h>
 
 namespace Cppelix {
 
-    class SpdlogFrameworkLogger : public IFrameworkLogger, public Bundle {
+    class SpdlogFrameworkLogger : public IFrameworkLogger, public Service {
     public:
         SpdlogFrameworkLogger();
         ~SpdlogFrameworkLogger() final = default;

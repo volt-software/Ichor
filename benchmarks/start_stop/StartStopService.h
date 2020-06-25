@@ -4,20 +4,20 @@
 #include <spdlog/spdlog.h>
 #include <framework/DependencyManager.h>
 #include <framework/interfaces/IFrameworkLogger.h>
-#include "framework/Bundle.h"
+#include "framework/Service.h"
 #include "framework/Framework.h"
 #include "framework/ComponentLifecycleManager.h"
 
 using namespace Cppelix;
 
 
-struct IStartStopBundle {
+struct IStartStopService {
     static constexpr InterfaceVersion version = InterfaceVersion{1, 0, 0};
 };
 
-class StartStopBundle : public IStartStopBundle, public Bundle {
+class StartStopService : public IStartStopService, public Service {
 public:
-    ~StartStopBundle() final = default;
+    ~StartStopService() final = default;
     bool start() final {
         if(startCount == 0) {
 
@@ -25,7 +25,7 @@ public:
         }
         startCount++;
         if(startCount < 1'000'00) {
-            _manager->PushEvent<StopBundleEvent>(_testBundleId);
+            _manager->PushEvent<StopServiceEvent>(_testServiceId);
         } else {
             auto end = std::chrono::system_clock::now();
             _manager->PushEvent<QuitEvent>();
@@ -35,7 +35,7 @@ public:
     }
 
     bool stop() final {
-        _manager->PushEvent<StartBundleEvent>(_testBundleId);
+        _manager->PushEvent<StartServiceEvent>(_testServiceId);
         return true;
     }
 
@@ -47,16 +47,16 @@ public:
         _logger = nullptr;
     }
 
-    void addDependencyInstance(ITestBundle *bnd) {
-        _testBundleId = bnd->get_bundle_id();
+    void addDependencyInstance(ITestService *bnd) {
+        _testServiceId = bnd->get_service_id();
     }
 
-    void removeDependencyInstance(ITestBundle *bnd) {
+    void removeDependencyInstance(ITestService *bnd) {
     }
 
 private:
     IFrameworkLogger *_logger{nullptr};
-    uint64_t _testBundleId{0};
+    uint64_t _testServiceId{0};
     std::chrono::system_clock::time_point _start{};
     static uint64_t startCount;
 };

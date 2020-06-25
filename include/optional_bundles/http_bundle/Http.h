@@ -4,7 +4,7 @@
 #include <vector>
 #include <memory>
 #include <mutex>
-#include <framework/Bundle.h>
+#include <framework/Service.h>
 
 namespace Cppelix {
 
@@ -21,7 +21,7 @@ namespace Cppelix {
 
     };
 
-    class Serialization : public IHttp, public Bundle {
+    class Serialization : public IHttp, public Service {
     public:
         Serialization();
         ~Serialization() final = default;

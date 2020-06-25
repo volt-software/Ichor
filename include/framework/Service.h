@@ -9,7 +9,7 @@ namespace Cppelix {
     class Framework;
     class DependencyManager;
 
-    enum class BundleState {
+    enum class ServiceState {
         UNINSTALLED,
         INSTALLED,
         RESOLVED,
@@ -19,17 +19,17 @@ namespace Cppelix {
         UNKNOWN
     };
 
-    class IBundle {
+    class IService {
     public:
-        virtual ~IBundle() {}
+        virtual ~IService() {}
 
-        virtual uint64_t get_bundle_id() const = 0;
+        virtual uint64_t get_service_id() const = 0;
     };
 
-    class Bundle : virtual public IBundle {
+    class Service : virtual public IService {
     public:
-        Bundle() noexcept;
-        ~Bundle() override;
+        Service() noexcept;
+        ~Service() override;
 
 
 
@@ -37,8 +37,8 @@ namespace Cppelix {
             _manager = mng;
         }
 
-        uint64_t get_bundle_id() const final {
-            return _bundleId;
+        uint64_t get_service_id() const final {
+            return _serviceId;
         }
 
     protected:
@@ -49,21 +49,21 @@ namespace Cppelix {
     private:
         [[nodiscard]] bool internal_start();
         [[nodiscard]] bool internal_stop();
-        [[nodiscard]] BundleState getState() const noexcept;
+        [[nodiscard]] ServiceState getState() const noexcept;
 
 
-        uint64_t _bundleId;
-        sole::uuid _bundleGid;
-        BundleState _bundleState;
-        static std::atomic<uint64_t> _bundleIdCounter;
+        uint64_t _serviceId;
+        sole::uuid _serviceGid;
+        ServiceState _serviceState;
+        static std::atomic<uint64_t> _serviceIdCounter;
 
         friend class Framework;
         friend class DependencyManager;
         template<class Interface, class ComponentType, typename... Dependencies>
-        requires Derived<ComponentType, Bundle>
+        requires Derived<ComponentType, Service>
         friend class DependencyComponentLifecycleManager;
         template<class Interface, class ComponentType>
-        requires Derived<ComponentType, Bundle>
+        requires Derived<ComponentType, Service>
         friend class ComponentLifecycleManager;
     };
 }

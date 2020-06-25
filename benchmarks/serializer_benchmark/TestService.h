@@ -1,9 +1,10 @@
 #pragma once
 
+#include <chrono>
 #include <spdlog/spdlog.h>
 #include <framework/DependencyManager.h>
 #include <framework/interfaces/IFrameworkLogger.h>
-#include "framework/Bundle.h"
+#include "framework/Service.h"
 #include "framework/Framework.h"
 #include "framework/SerializationAdmin.h"
 #include "framework/ComponentLifecycleManager.h"
@@ -12,20 +13,20 @@
 using namespace Cppelix;
 
 
-struct ITestBundle : virtual public IBundle {
+struct ITestService : virtual public IService {
     static constexpr InterfaceVersion version = InterfaceVersion{1, 0, 0};
 };
 
-class TestBundle : public ITestBundle, public Bundle {
+class TestService : public ITestService, public Service {
 public:
-    ~TestBundle() final = default;
+    ~TestService() final = default;
     bool start() final {
-        LOG_INFO(_logger, "TestBundle started with dependency");
+        LOG_INFO(_logger, "TestService started with dependency");
         return true;
     }
 
     bool stop() final {
-        LOG_INFO(_logger, "TestBundle stopped with dependency");
+        LOG_INFO(_logger, "TestService stopped with dependency");
         return true;
     }
 
@@ -42,13 +43,16 @@ public:
         _serializationAdmin = serializationAdmin;
         LOG_INFO(_logger, "Inserted serializationAdmin");
         TestMsg msg{20, "five hundred"};
-        auto res = _serializationAdmin->serialize<TestMsg>(msg);
-        auto msg2 = _serializationAdmin->deserialize<TestMsg>(res);
-        if(msg2->id != msg.id || msg2->val != msg.val) {
-            LOG_ERROR(_logger, "serde incorrect!");
-        } else {
-            LOG_ERROR(_logger, "serde correct!");
+        auto start = std::chrono::system_clock::now();
+        for(uint64_t i = 0; i < 1'000'000; i++) {
+            auto res = _serializationAdmin->serialize<TestMsg>(msg);
+            auto msg2 = _serializationAdmin->deserialize<TestMsg>(std::move(res));
+            if(msg2->id != msg.id || msg2->val != msg.val) {
+                LOG_ERROR(_logger, "serde incorrect!");
+            }
         }
+        auto end = std::chrono::system_clock::now();
+        LOG_INFO(_logger, "finished in {:n} µs", std::chrono::duration_cast<std::chrono::microseconds>(end-start).count());
         _manager->PushEvent<QuitEvent>();
     }
 
