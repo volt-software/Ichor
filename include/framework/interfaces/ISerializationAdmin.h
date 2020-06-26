@@ -24,17 +24,17 @@ namespace Cppelix {
 
         template <typename T>
         std::vector<uint8_t> serialize(const T &obj) {
-            return serialize(typeName<T>(), static_cast<const void*>(&obj));
+            return serialize(typeNameHash<T>(), static_cast<const void*>(&obj));
         }
 
         template <typename T>
         std::unique_ptr<T> deserialize(std::vector<uint8_t> &&stream) {
-            return std::unique_ptr<T>(static_cast<T*>(deserialize(typeName<T>(), std::move(stream))));
+            return std::unique_ptr<T>(static_cast<T*>(deserialize(typeNameHash<T>(), std::move(stream))));
         }
 
         template <typename T>
         std::unique_ptr<T> deserialize(const std::vector<uint8_t> &stream) {
-            return std::unique_ptr<T>(static_cast<T*>(deserialize(typeName<T>(), std::vector<uint8_t>{stream})));
+            return std::unique_ptr<T>(static_cast<T*>(deserialize(typeNameHash<T>(), std::vector<uint8_t>{stream})));
         }
 
     protected:

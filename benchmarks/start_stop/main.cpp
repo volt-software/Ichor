@@ -9,10 +9,10 @@ int main() {
 
     Framework fw{{}};
     DependencyManager dm{};
-    auto logMgr = dm.createComponentManager<IFrameworkLogger, SpdlogFrameworkLogger>();
+    auto logMgr = dm.createServiceManager<IFrameworkLogger, SpdlogFrameworkLogger>();
     spdlog::set_level(spdlog::level::info);
-    auto testMgr = dm.createDependencyComponentManager<ITestService, TestService>(RequiredList<IFrameworkLogger>, OptionalList<>);
-    auto startStopMgr = dm.createDependencyComponentManager<IStartStopService, StartStopService>(RequiredList<IFrameworkLogger, ITestService>, OptionalList<>);
+    auto testMgr = dm.createDependencyServiceManager<ITestService, TestService>(RequiredList<IFrameworkLogger>, OptionalList<>);
+    auto startStopMgr = dm.createDependencyServiceManager<IStartStopService, StartStopService>(RequiredList<IFrameworkLogger, ITestService>, OptionalList<>);
     dm.start();
 
     return 0;

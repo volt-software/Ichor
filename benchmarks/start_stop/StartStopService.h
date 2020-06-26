@@ -6,7 +6,7 @@
 #include <framework/interfaces/IFrameworkLogger.h>
 #include "framework/Service.h"
 #include "framework/Framework.h"
-#include "framework/ComponentLifecycleManager.h"
+#include "framework/ServiceLifecycleManager.h"
 
 using namespace Cppelix;
 
@@ -20,22 +20,24 @@ public:
     ~StartStopService() final = default;
     bool start() final {
         if(startCount == 0) {
+            _manager->registerCompletionCallback<StartServiceEvent>(getServiceId(), this);
+            _manager->registerCompletionCallback<StopServiceEvent>(getServiceId(), this);
 
             _start = std::chrono::system_clock::now();
-        }
-        startCount++;
-        if(startCount < 1'000'00) {
-            _manager->PushEvent<StopServiceEvent>(_testServiceId);
+            _manager->PushEvent<StopServiceEvent>(getServiceId(), _testServiceId);
+        } else if(startCount < 1'000'000) {
+            _manager->PushEvent<StopServiceEvent>(getServiceId(), _testServiceId);
         } else {
             auto end = std::chrono::system_clock::now();
-            _manager->PushEvent<QuitEvent>();
+            _manager->PushEvent<QuitEvent>(getServiceId());
             LOG_INFO(_logger, "finished in {:n} µs", std::chrono::duration_cast<std::chrono::microseconds>(end-_start).count());
         }
+        startCount++;
         return true;
     }
 
     bool stop() final {
-        _manager->PushEvent<StartServiceEvent>(_testServiceId);
+        _manager->PushEvent<StartServiceEvent>(getServiceId(), _testServiceId);
         return true;
     }
 
@@ -48,10 +50,16 @@ public:
     }
 
     void addDependencyInstance(ITestService *bnd) {
-        _testServiceId = bnd->get_service_id();
+        _testServiceId = bnd->getServiceId();
     }
 
     void removeDependencyInstance(ITestService *bnd) {
+    }
+
+    void handleCompletion(StartServiceEvent const * const evt) {
+    }
+
+    void handleCompletion(StopServiceEvent const * const evt) {
     }
 
 private:

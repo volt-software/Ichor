@@ -1,9 +1,9 @@
 #include <spdlog/spdlog.h>
 #include "framework/Service.h"
 
-std::atomic<uint64_t> Cppelix::Service::_serviceIdCounter = 0;
+std::atomic<uint64_t> Cppelix::Service::_serviceIdCounter = 1;
 
-Cppelix::Service::Service() noexcept : IService(), _serviceId(_serviceIdCounter++), _serviceGid(sole::uuid4()), _serviceState(ServiceState::INSTALLED) {
+Cppelix::Service::Service() noexcept : IService(), _serviceId(_serviceIdCounter.fetch_add(1, std::memory_order_acq_rel)), _serviceGid(sole::uuid4()), _serviceState(ServiceState::INSTALLED) {
 
 }
 

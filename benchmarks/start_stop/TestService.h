@@ -4,7 +4,7 @@
 #include <framework/interfaces/IFrameworkLogger.h>
 #include "framework/Service.h"
 #include "framework/Framework.h"
-#include "framework/ComponentLifecycleManager.h"
+#include "framework/ServiceLifecycleManager.h"
 
 using namespace Cppelix;
 

@@ -23,7 +23,7 @@ namespace Cppelix {
     public:
         virtual ~IService() {}
 
-        virtual uint64_t get_service_id() const = 0;
+        virtual uint64_t getServiceId() const = 0;
     };
 
     class Service : virtual public IService {
@@ -31,13 +31,11 @@ namespace Cppelix {
         Service() noexcept;
         ~Service() override;
 
-
-
         void injectDependencyManager(DependencyManager *mng) {
             _manager = mng;
         }
 
-        uint64_t get_service_id() const final {
+        uint64_t getServiceId() const final {
             return _serviceId;
         }
 
@@ -59,11 +57,11 @@ namespace Cppelix {
 
         friend class Framework;
         friend class DependencyManager;
-        template<class Interface, class ComponentType, typename... Dependencies>
-        requires Derived<ComponentType, Service>
-        friend class DependencyComponentLifecycleManager;
-        template<class Interface, class ComponentType>
-        requires Derived<ComponentType, Service>
-        friend class ComponentLifecycleManager;
+        template<class Interface, class ServiceType, typename... Dependencies>
+        requires Derived<ServiceType, Service>
+        friend class DependencyServiceLifecycleManager;
+        template<class Interface, class ServiceType>
+        requires Derived<ServiceType, Service>
+        friend class ServiceLifecycleManager;
     };
 }

@@ -1,5 +1,7 @@
 #pragma once
 
+#include "framework/ConstevalHash.h"
+
 #if __cpp_lib_constexpr_string >= 201907L
 #if __cpp_lib_constexpr_vector >= 201907L
 #define CPPELIX_CONSTEXPR constexpr
@@ -12,7 +14,7 @@
 
 namespace Cppelix {
     template<typename INTERFACE_TYPENAME>
-    [[nodiscard]] constexpr auto typeName() {
+    [[nodiscard]] consteval auto typeName() {
         constexpr std::string_view result = __PRETTY_FUNCTION__;
         constexpr std::string_view templateStr = "INTERFACE_TYPENAME = ";
 
@@ -30,6 +32,12 @@ namespace Cppelix {
 
             return result.substr(bpos, len);
         }
+    }
+
+    template<typename INTERFACE_TYPENAME>
+    [[nodiscard]] consteval auto typeNameHash() {
+        std::string_view name = typeName<INTERFACE_TYPENAME>();
+        return consteval_wyhash(&name[0], name.size(), 0);
     }
 
     struct InterfaceVersion {
@@ -64,6 +72,12 @@ namespace Cppelix {
 
     template <class T, class U>
     concept Derived = std::is_base_of<U, T>::value;
+
+    template <class ImplT, class EventT>
+    concept ImplementsCompletionHandler = requires(ImplT impl, EventT const * const evt) {
+        { impl.handleCompletion(evt) } -> std::same_as<void>;
+    };
+
 
     // TODO ServiceInterface on actual interface fails due to pure virtual functions or something
 //    template <class T>

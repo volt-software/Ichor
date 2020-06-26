@@ -6,7 +6,7 @@
 #include "../include/framework/Service.h"
 #include "../include/framework/Framework.h"
 #include "../include/framework/SerializationAdmin.h"
-#include "framework/ComponentLifecycleManager.h"
+#include "framework/ServiceLifecycleManager.h"
 #include "TestMsg.h"
 
 #include <rapidjson/document.h>
@@ -39,7 +39,7 @@ public:
     void addDependencyInstance(ISerializationAdmin *serializationAdmin) {
         _serializationAdmin = serializationAdmin;
         LOG_INFO(_logger, "Inserted serializationAdmin");
-        _serializationAdmin->addSerializer(typeName<TestMsg>(), this);
+        _serializationAdmin->addSerializer(typeNameHash<TestMsg>(), this);
     }
 
     void removeDependencyInstance(ISerializationAdmin *serializationAdmin) {

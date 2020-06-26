@@ -6,7 +6,7 @@
 #include "framework/Service.h"
 #include "framework/Framework.h"
 #include "framework/SerializationAdmin.h"
-#include "framework/ComponentLifecycleManager.h"
+#include "framework/ServiceLifecycleManager.h"
 #include "TestMsg.h"
 
 using namespace Cppelix;
@@ -49,7 +49,7 @@ public:
         } else {
             LOG_ERROR(_logger, "serde correct!");
         }
-        _manager->PushEvent<QuitEvent>();
+        _manager->PushEvent<QuitEvent>(getServiceId());
     }
 
     void removeDependencyInstance(ISerializationAdmin *serializationAdmin) {

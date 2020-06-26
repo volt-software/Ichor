@@ -26,3 +26,6 @@
 [submodule "external/concurrentqueue"]
 	path = external/concurrentqueue
 	url = https://github.com/cameron314/concurrentqueue.git
+[submodule "external/wyhash"]
+	path = external/wyhash
+	url = https://github.com/wangyi-fudan/wyhash.git

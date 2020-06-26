@@ -7,7 +7,7 @@
 #include "framework/Service.h"
 #include "framework/Framework.h"
 #include "framework/SerializationAdmin.h"
-#include "framework/ComponentLifecycleManager.h"
+#include "framework/ServiceLifecycleManager.h"
 #include "TestMsg.h"
 
 using namespace Cppelix;
@@ -53,7 +53,7 @@ public:
         }
         auto end = std::chrono::system_clock::now();
         LOG_INFO(_logger, "finished in {:n} µs", std::chrono::duration_cast<std::chrono::microseconds>(end-start).count());
-        _manager->PushEvent<QuitEvent>();
+        _manager->PushEvent<QuitEvent>(getServiceId());
     }
 
     void removeDependencyInstance(ISerializationAdmin *serializationAdmin) {
