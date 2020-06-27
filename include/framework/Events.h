@@ -16,7 +16,7 @@ namespace Cppelix {
         ~DependencyOnlineEvent() final = default;
 
         const std::shared_ptr<LifecycleManager> manager;
-        static constexpr uint64_t TYPE = 1;
+        static constexpr uint64_t TYPE = typeNameHash<DependencyOnlineEvent>();
     };
 
     struct DependencyOfflineEvent : public Event {
@@ -25,7 +25,7 @@ namespace Cppelix {
         ~DependencyOfflineEvent() final = default;
 
         const std::shared_ptr<LifecycleManager> manager;
-        static constexpr uint64_t TYPE = 2;
+        static constexpr uint64_t TYPE = typeNameHash<DependencyOfflineEvent>();
     };
 
     struct DependencyRequestEvent : public Event {
@@ -36,7 +36,7 @@ namespace Cppelix {
         const std::shared_ptr<LifecycleManager> manager;
         const uint64_t requestedType;
         const Dependency dependency;
-        static constexpr uint64_t TYPE = 3;
+        static constexpr uint64_t TYPE = typeNameHash<DependencyRequestEvent>();
     };
 
     struct QuitEvent : public Event {
@@ -44,7 +44,7 @@ namespace Cppelix {
         ~QuitEvent() final = default;
 
         bool dependenciesStopped;
-        static constexpr uint64_t TYPE = 4;
+        static constexpr uint64_t TYPE = typeNameHash<QuitEvent>();
     };
 
     struct StopServiceEvent : public Event {
@@ -53,7 +53,7 @@ namespace Cppelix {
 
         uint64_t serviceId;
         bool dependenciesStopped;
-        static constexpr uint64_t TYPE = 5;
+        static constexpr uint64_t TYPE = typeNameHash<StopServiceEvent>();
     };
 
     struct StartServiceEvent : public Event {
@@ -61,6 +61,13 @@ namespace Cppelix {
         ~StartServiceEvent() final = default;
 
         uint64_t serviceId;
-        static constexpr uint64_t TYPE = 6;
+        static constexpr uint64_t TYPE = typeNameHash<StartServiceEvent>();
+    };
+
+    struct DoWorkEvent : public Event {
+        DoWorkEvent(uint64_t _id, uint64_t _originatingService) noexcept : Event(TYPE, _id, _originatingService) {}
+        ~DoWorkEvent() final = default;
+
+        static constexpr uint64_t TYPE = typeNameHash<DoWorkEvent>();
     };
 }

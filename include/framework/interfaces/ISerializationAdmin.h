@@ -19,8 +19,8 @@ namespace Cppelix {
     public:
         static constexpr InterfaceVersion version = InterfaceVersion{1, 0, 0};
 
-        virtual void addSerializer(const std::string_view type, ISerializer* serializer) = 0;
-        virtual void removeSerializer(const std::string_view type) = 0;
+        virtual void addSerializer(const uint64_t type, ISerializer* serializer) = 0;
+        virtual void removeSerializer(const uint64_t type) = 0;
 
         template <typename T>
         std::vector<uint8_t> serialize(const T &obj) {
@@ -40,7 +40,7 @@ namespace Cppelix {
     protected:
         virtual ~ISerializationAdmin() = default;
 
-        virtual std::vector<uint8_t> serialize(const std::string_view type, const void* obj) = 0;
-        virtual void* deserialize(const std::string_view type, std::vector<uint8_t> &&bytes) = 0;
+        virtual std::vector<uint8_t> serialize(const uint64_t type, const void* obj) = 0;
+        virtual void* deserialize(const uint64_t type, std::vector<uint8_t> &&bytes) = 0;
     };
 }

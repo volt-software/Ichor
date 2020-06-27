@@ -76,8 +76,10 @@ namespace Cppelix {
 
         template <typename EventT, typename... Args>
         requires Derived<EventT, Event>
-        void PushEvent(uint64_t originatingServiceId, Args&&... args){
-            _eventQueue.enqueue(std::make_unique<EventT, uint64_t, uint64_t, Args...>(_eventIdCounter.fetch_add(1, std::memory_order_acq_rel), std::forward<uint64_t>(originatingServiceId), std::forward<Args>(args)...));
+        uint64_t pushEvent(uint64_t originatingServiceId, Args&&... args){
+            uint64_t eventId = _eventIdCounter.fetch_add(1, std::memory_order_acq_rel);
+            _eventQueue.enqueue(std::make_unique<EventT, uint64_t, uint64_t, Args...>(std::forward<uint64_t>(eventId), std::forward<uint64_t>(originatingServiceId), std::forward<Args>(args)...));
+            return eventId;
         }
 
         template <class Impl, class Dependency>
@@ -91,7 +93,7 @@ namespace Cppelix {
 
         template <class Dependency>
         void trackOnlineDependencies(std::function<void(void*)> on, std::function<void(void*)> off) {
-            _dependencyTrackers.emplace_back(typeNameHash<Dependency>, std::move(on), std::move(off));
+            _dependencyTrackers.emplace_back(typeNameHash<Dependency>(), std::move(on), std::move(off));
         }
 
         template <typename EventT, typename Impl>
@@ -101,7 +103,7 @@ namespace Cppelix {
         }
 
         template <typename EventT, typename Impl>
-        requires Derived<EventT, Event> && Derived<Impl, Service>
+        requires Derived<EventT, Event> && ImplementsErrorHandler<Impl, EventT>
         void registerErrorCallback(uint64_t serviceId, Impl *impl) {
             _errorCallbacks.emplace(CallbackKey{serviceId, EventT::TYPE}, [impl](Event const * const evt){ impl->handleError(static_cast<EventT const * const>(evt)); });
         }

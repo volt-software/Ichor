@@ -29,3 +29,6 @@
 [submodule "external/wyhash"]
 	path = external/wyhash
 	url = https://github.com/wangyi-fudan/wyhash.git
+[submodule "external/etcd-cpp-apiv3"]
+	path = external/etcd-cpp-apiv3
+	url = https://github.com/nokia/etcd-cpp-apiv3.git

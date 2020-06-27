@@ -61,11 +61,8 @@ public:
         writer.String(msg->val.c_str(), msg->val.size());
 
         writer.EndObject();
-        std::string str = sb.GetString();
-        std::vector<uint8_t> ret;
-        ret.reserve(str.length());
-        std::move(str.begin(), str.end(), std::back_inserter(ret));
-        return ret;
+        auto *ret = sb.GetString();
+        return std::vector<uint8_t>(ret, ret + sb.GetSize());
     }
     void* deserialize(std::vector<uint8_t> &&stream) final {
         rapidjson::Document d;

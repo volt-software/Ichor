@@ -21,6 +21,7 @@ option(BUILD_EXAMPLES "Build examples" ON)
 option(BUILD_BENCHMARKS "Build benchmarks" ON)
 option(USE_SPDLOG "Use spdlog as framework logging implementation" OFF)
 option(USE_RAPIDJSON "Add RapidJSON as a possible serializer implementation" OFF)
+option(USE_PUBSUB "Add various dependencies to enable pubsub bundle to be built" OFF)
 option(USE_SANITIZERS "Enable sanitizers, catching potential errors but slowing down compilation and execution speed" ON)
 
 if(USE_SPDLOG)

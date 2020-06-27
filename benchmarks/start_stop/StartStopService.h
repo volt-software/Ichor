@@ -24,12 +24,12 @@ public:
             _manager->registerCompletionCallback<StopServiceEvent>(getServiceId(), this);
 
             _start = std::chrono::system_clock::now();
-            _manager->PushEvent<StopServiceEvent>(getServiceId(), _testServiceId);
+            _manager->pushEvent<StopServiceEvent>(getServiceId(), _testServiceId);
         } else if(startCount < 1'000'000) {
-            _manager->PushEvent<StopServiceEvent>(getServiceId(), _testServiceId);
+            _manager->pushEvent<StopServiceEvent>(getServiceId(), _testServiceId);
         } else {
             auto end = std::chrono::system_clock::now();
-            _manager->PushEvent<QuitEvent>(getServiceId());
+            _manager->pushEvent<QuitEvent>(getServiceId());
             LOG_INFO(_logger, "finished in {:n} µs", std::chrono::duration_cast<std::chrono::microseconds>(end-_start).count());
         }
         startCount++;
@@ -37,7 +37,7 @@ public:
     }
 
     bool stop() final {
-        _manager->PushEvent<StartServiceEvent>(getServiceId(), _testServiceId);
+        _manager->pushEvent<StartServiceEvent>(getServiceId(), _testServiceId);
         return true;
     }
 

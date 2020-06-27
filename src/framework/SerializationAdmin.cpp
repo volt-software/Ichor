@@ -7,7 +7,7 @@ Cppelix::SerializationAdmin::SerializationAdmin() {
 Cppelix::SerializationAdmin::~SerializationAdmin() {
 }
 
-std::vector<uint8_t> Cppelix::SerializationAdmin::serialize(const std::string_view type, const void* obj) {
+std::vector<uint8_t> Cppelix::SerializationAdmin::serialize(const uint64_t type, const void* obj) {
     auto serializer = _serializers.find(type);
     if(serializer == end(_serializers)) {
         throw std::runtime_error(fmt::format("Couldn't find serializer for type {}", type));
@@ -15,7 +15,7 @@ std::vector<uint8_t> Cppelix::SerializationAdmin::serialize(const std::string_vi
     return serializer->second->serialize(obj);
 }
 
-void* Cppelix::SerializationAdmin::deserialize(const std::string_view type, std::vector<uint8_t> &&bytes) {
+void* Cppelix::SerializationAdmin::deserialize(const uint64_t type, std::vector<uint8_t> &&bytes) {
     auto serializer = _serializers.find(type);
     if(serializer == end(_serializers)) {
         throw std::runtime_error(fmt::format("Couldn't find serializer for type {}", type));
@@ -23,7 +23,7 @@ void* Cppelix::SerializationAdmin::deserialize(const std::string_view type, std:
     return serializer->second->deserialize(std::move(bytes));
 }
 
-void Cppelix::SerializationAdmin::addSerializer(const std::string_view type, Cppelix::ISerializer* _serializer) {
+void Cppelix::SerializationAdmin::addSerializer(const uint64_t type, Cppelix::ISerializer* _serializer) {
     auto serializer = _serializers.find(type);
     if(serializer != end(_serializers)) {
         throw std::runtime_error(fmt::format("Couldn't find serializer for type {}", type));
@@ -32,7 +32,7 @@ void Cppelix::SerializationAdmin::addSerializer(const std::string_view type, Cpp
     LOG_INFO(_logger, "Inserted serializer for type {}", type);
 }
 
-void Cppelix::SerializationAdmin::removeSerializer(const std::string_view type) {
+void Cppelix::SerializationAdmin::removeSerializer(const uint64_t type) {
     auto serializer = _serializers.find(type);
     if(serializer != end(_serializers)) {
         throw std::runtime_error(fmt::format("Couldn't find serializer for type {}", type));

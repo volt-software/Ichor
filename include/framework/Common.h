@@ -78,6 +78,11 @@ namespace Cppelix {
         { impl.handleCompletion(evt) } -> std::same_as<void>;
     };
 
+    template <class ImplT, class EventT>
+    concept ImplementsErrorHandler = requires(ImplT impl, EventT const * const evt) {
+        { impl.handleError(evt) } -> std::same_as<void>;
+    };
+
 
     // TODO ServiceInterface on actual interface fails due to pure virtual functions or something
 //    template <class T>

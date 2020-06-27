@@ -39,7 +39,7 @@ void Cppelix::DependencyManager::start() {
         while (!quit.load(std::memory_order_acquire) && _eventQueue.try_dequeue(_consumerToken, evt)) {
             switch(evt->type) {
                 case DependencyOnlineEvent::TYPE: {
-                    SPDLOG_LOGGER_DEBUG(_logger, "DependencyOnlineEvent");
+                    SPDLOG_DEBUG("DependencyOnlineEvent");
                     auto depOnlineEvt = static_cast<DependencyOnlineEvent *>(evt.get());
                     for (auto &[key, possibleDependentLifecycleManager] : _services) {
                         possibleDependentLifecycleManager->dependencyOnline(depOnlineEvt->manager);
@@ -62,7 +62,7 @@ void Cppelix::DependencyManager::start() {
                 }
                     break;
                 case DependencyOfflineEvent::TYPE: {
-                    SPDLOG_LOGGER_DEBUG(_logger, "DependencyOfflineEvent");
+                    SPDLOG_DEBUG("DependencyOfflineEvent");
                     auto depOfflineEvt = static_cast<DependencyOfflineEvent *>(evt.get());
                     for (auto &[key, possibleDependentLifecycleManager] : _services) {
                         possibleDependentLifecycleManager->dependencyOffline(depOfflineEvt->manager);
@@ -92,7 +92,7 @@ void Cppelix::DependencyManager::start() {
                 }
                     break;
                 case QuitEvent::TYPE: {
-                    SPDLOG_LOGGER_DEBUG(_logger, "QuitEvent");
+                    SPDLOG_DEBUG("QuitEvent");
                     auto quitEvt = static_cast<QuitEvent *>(evt.get());
                     if(!quitEvt->dependenciesStopped) {
                         for(auto &[key, possibleManager] : _services) {
@@ -101,12 +101,24 @@ void Cppelix::DependencyManager::start() {
 
                         _eventQueue.enqueue(_producerToken, std::make_unique<QuitEvent>(_eventIdCounter.fetch_add(1, std::memory_order_acq_rel), quitEvt->originatingService, true));
                     } else {
-                        quit.store(true, std::memory_order_release);
+                        bool canFinallyQuit = true;
+                        for(auto &[key, manager] : _services) {
+                            if(manager->getServiceState() != ServiceState::INSTALLED) {
+                                canFinallyQuit = false;
+                                break;
+                            }
+                        }
+
+                        if(canFinallyQuit) {
+                            quit.store(true, std::memory_order_release);
+                        } else {
+                            _eventQueue.enqueue(_producerToken, std::make_unique<QuitEvent>(_eventIdCounter.fetch_add(1, std::memory_order_acq_rel), quitEvt->originatingService, true));
+                        }
                     }
                 }
                     break;
                 case StopServiceEvent::TYPE: {
-                    SPDLOG_LOGGER_DEBUG(_logger, "StopServiceEvent");
+                    SPDLOG_DEBUG("StopServiceEvent");
                     auto stopServiceEvt = static_cast<StopServiceEvent *>(evt.get());
 
                     auto toStopServiceIt = _services.find(stopServiceEvt->serviceId);
@@ -132,7 +144,7 @@ void Cppelix::DependencyManager::start() {
                 }
                     break;
                 case StartServiceEvent::TYPE: {
-                    SPDLOG_LOGGER_DEBUG(_logger, "StartServiceEvent");
+                    SPDLOG_DEBUG("StartServiceEvent");
                     auto startServiceEvt = static_cast<StartServiceEvent *>(evt.get());
 
                     auto toStartServiceIt = _services.find(startServiceEvt->serviceId);
@@ -156,6 +168,13 @@ void Cppelix::DependencyManager::start() {
                     } else {
                         handleEventCompletion(startServiceEvt);
                     }
+                }
+                    break;
+                case DoWorkEvent::TYPE: {
+                    SPDLOG_DEBUG("DoWorkEvent");
+                    auto doWorkEvt = static_cast<DoWorkEvent *>(evt.get());
+
+                    handleEventCompletion(doWorkEvt);
                 }
                     break;
             }

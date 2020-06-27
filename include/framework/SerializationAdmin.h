@@ -12,10 +12,10 @@ namespace Cppelix {
         SerializationAdmin();
         ~SerializationAdmin() final;
 
-        std::vector<uint8_t> serialize(const std::string_view type, const void* obj) final;
-        void* deserialize(const std::string_view type, std::vector<uint8_t> &&bytes) final;
-        void addSerializer(const std::string_view type, ISerializer* serializer) final;
-        void removeSerializer(const std::string_view type) final;
+        std::vector<uint8_t> serialize(const uint64_t type, const void* obj) final;
+        void* deserialize(const uint64_t type, std::vector<uint8_t> &&bytes) final;
+        void addSerializer(const uint64_t type, ISerializer* serializer) final;
+        void removeSerializer(const uint64_t type) final;
 
         void addDependencyInstance(IFrameworkLogger *logger);
         void removeDependencyInstance(IFrameworkLogger *logger);
@@ -23,7 +23,7 @@ namespace Cppelix {
         bool start() final;
         bool stop() final;
     private:
-        std::unordered_map<std::string_view, ISerializer*> _serializers{};
+        std::unordered_map<uint64_t, ISerializer*> _serializers{};
         IFrameworkLogger *_logger{nullptr};
         DependencyManager *_mng{nullptr};
     };

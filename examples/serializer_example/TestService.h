@@ -21,6 +21,8 @@ public:
     ~TestService() final = default;
     bool start() final {
         LOG_INFO(_logger, "TestService started with dependency");
+        _manager->registerCompletionCallback<DoWorkEvent>(getServiceId(), this);
+        _manager->pushEvent<DoWorkEvent>(getServiceId());
         return true;
     }
 
@@ -41,6 +43,14 @@ public:
     void addDependencyInstance(ISerializationAdmin *serializationAdmin) {
         _serializationAdmin = serializationAdmin;
         LOG_INFO(_logger, "Inserted serializationAdmin");
+    }
+
+    void removeDependencyInstance(ISerializationAdmin *serializationAdmin) {
+        _serializationAdmin = nullptr;
+        LOG_INFO(_logger, "Removed serializationAdmin");
+    }
+
+    void handleCompletion(DoWorkEvent const * const evt) {
         TestMsg msg{20, "five hundred"};
         auto res = _serializationAdmin->serialize<TestMsg>(msg);
         auto msg2 = _serializationAdmin->deserialize<TestMsg>(std::move(res));
@@ -49,12 +59,7 @@ public:
         } else {
             LOG_ERROR(_logger, "serde correct!");
         }
-        _manager->PushEvent<QuitEvent>(getServiceId());
-    }
-
-    void removeDependencyInstance(ISerializationAdmin *serializationAdmin) {
-        _serializationAdmin = nullptr;
-        LOG_INFO(_logger, "Removed serializationAdmin");
+        _manager->pushEvent<QuitEvent>(getServiceId());
     }
 
 private:
