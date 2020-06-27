@@ -36,7 +36,7 @@ void Cppelix::DependencyManager::start() {
 
     while(!quit.load(std::memory_order_acquire)) {
         std::unique_ptr<Event> evt{nullptr};
-        while (_eventQueue.try_dequeue(_consumerToken, evt)) {
+        while (!quit.load(std::memory_order_acquire) && _eventQueue.try_dequeue(_consumerToken, evt)) {
             switch(evt->type) {
                 case DependencyOnlineEvent::TYPE: {
                     SPDLOG_LOGGER_DEBUG(_logger, "DependencyOnlineEvent");

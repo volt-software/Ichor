@@ -88,8 +88,8 @@ namespace Cppelix {
     class LifecycleManager {
     public:
         CPPELIX_CONSTEXPR virtual ~LifecycleManager() = default;
-        CPPELIX_CONSTEXPR virtual void dependencyOnline(std::shared_ptr<LifecycleManager> dependentService) = 0;
-        CPPELIX_CONSTEXPR virtual void dependencyOffline(std::shared_ptr<LifecycleManager> dependentService) = 0;
+        CPPELIX_CONSTEXPR virtual void dependencyOnline(const std::shared_ptr<LifecycleManager> &dependentService) = 0;
+        CPPELIX_CONSTEXPR virtual void dependencyOffline(const std::shared_ptr<LifecycleManager> &dependentService) = 0;
         [[nodiscard]] CPPELIX_CONSTEXPR virtual bool start() = 0;
         [[nodiscard]] CPPELIX_CONSTEXPR virtual bool stop() = 0;
         [[nodiscard]] CPPELIX_CONSTEXPR virtual bool shouldStart() = 0;
@@ -135,7 +135,7 @@ namespace Cppelix {
             (_dependencies.template addDependency<TempDependencies>(required), ...);
         }
 
-        CPPELIX_CONSTEXPR void dependencyOnline(std::shared_ptr<LifecycleManager> dependentService) final {
+        CPPELIX_CONSTEXPR void dependencyOnline(const std::shared_ptr<LifecycleManager> &dependentService) final {
             auto dependency = dependentService->getSelfAsDependency();
             if(!_dependencies.contains(dependency) || _satisfiedDependencies.contains(dependency)) {
                 return;
@@ -152,7 +152,7 @@ namespace Cppelix {
         }
 
         template<class Interface0, class ...Interfaces>
-        CPPELIX_CONSTEXPR void injectSelfInto(uint64_t hashOfInterfaceToInject, std::shared_ptr<LifecycleManager> dependentService) {
+        CPPELIX_CONSTEXPR void injectSelfInto(uint64_t hashOfInterfaceToInject, const std::shared_ptr<LifecycleManager> &dependentService) {
             if (typeNameHash<Interface0>() == hashOfInterfaceToInject) {
                 _service.addDependencyInstance(static_cast<Interface0*>(dependentService->getServicePointer()));
             } else {
@@ -162,7 +162,7 @@ namespace Cppelix {
             }
         }
 
-        CPPELIX_CONSTEXPR void dependencyOffline(std::shared_ptr<LifecycleManager> dependentService) final {
+        CPPELIX_CONSTEXPR void dependencyOffline(const std::shared_ptr<LifecycleManager> &dependentService) final {
             auto dependency = dependentService->getSelfAsDependency();
             if(!_dependencies.contains(dependency) || !_satisfiedDependencies.contains(dependency)) {
                 return;
@@ -179,7 +179,7 @@ namespace Cppelix {
         }
 
         template<class Interface0, class ...Interfaces>
-        CPPELIX_CONSTEXPR void removeSelfInto(uint64_t hashOfInterfaceToInject, std::shared_ptr<LifecycleManager> dependentService) {
+        CPPELIX_CONSTEXPR void removeSelfInto(uint64_t hashOfInterfaceToInject, const std::shared_ptr<LifecycleManager> &dependentService) {
             if (typeNameHash<Interface0>() == hashOfInterfaceToInject) {
                 _service.removeDependencyInstance(static_cast<Interface0*>(dependentService->getServicePointer()));
             } else {
@@ -305,10 +305,10 @@ namespace Cppelix {
             return std::make_shared<ServiceLifecycleManager<Interface, ServiceType>>(logger, name, typeNameHash<Interface>(), std::move(properties));
         }
 
-        CPPELIX_CONSTEXPR void dependencyOnline(std::shared_ptr<LifecycleManager> dependentService) final {
+        CPPELIX_CONSTEXPR void dependencyOnline(const std::shared_ptr<LifecycleManager> &dependentService) final {
         }
 
-        CPPELIX_CONSTEXPR void dependencyOffline(std::shared_ptr<LifecycleManager> dependentService) final {
+        CPPELIX_CONSTEXPR void dependencyOffline(const std::shared_ptr<LifecycleManager> &dependentService) final {
         }
 
         [[nodiscard]]
