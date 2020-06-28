@@ -32,3 +32,6 @@
 [submodule "external/etcd-cpp-apiv3"]
 	path = external/etcd-cpp-apiv3
 	url = https://github.com/nokia/etcd-cpp-apiv3.git
+[submodule "external/simdjson"]
+	path = external/simdjson
+	url = https://github.com/simdjson/simdjson.git

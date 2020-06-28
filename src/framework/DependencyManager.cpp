@@ -1,6 +1,7 @@
 #define SPDLOG_ACTIVE_LEVEL SPDLOG_LEVEL_INFO
 
 #include "framework/DependencyManager.h"
+#include "framework/Callback.h"
 
 std::atomic<bool> quit{false};
 
@@ -13,26 +14,6 @@ void Cppelix::DependencyManager::start() {
     LOG_DEBUG(_logger, "starting dm");
 
     ::signal(SIGINT, on_sigint);
-
-    for(auto &[key, lifecycleManager] : _services) {
-        if(quit.load(std::memory_order_acquire)) {
-            break;
-        }
-
-        if(!lifecycleManager->shouldStart()) {
-            LOG_DEBUG(_logger, "lifecycleManager {} not ready to start yet", lifecycleManager->name());
-            continue;
-        }
-
-        LOG_DEBUG(_logger, "starting lifecycleManager {}", lifecycleManager->name());
-
-        if (!lifecycleManager->start()) {
-            LOG_TRACE(_logger, "Couldn't start ServiceManager {}", lifecycleManager->name());
-            continue;
-        }
-
-        _eventQueue.enqueue(_producerToken, std::make_unique<DependencyOnlineEvent>(_eventIdCounter.fetch_add(1, std::memory_order_acq_rel), 0, lifecycleManager));
-    }
 
     while(!quit.load(std::memory_order_acquire)) {
         std::unique_ptr<Event> evt{nullptr};
@@ -53,12 +34,6 @@ void Cppelix::DependencyManager::start() {
                             }
                         }
                     }
-
-                    for(DependencyTracker &tracker : _dependencyTrackers) {
-                        if(tracker.type == depOnlineEvt->manager->type()) {
-                            tracker.onlineFunc(depOnlineEvt->manager->getServicePointer());
-                        }
-                    }
                 }
                     break;
                 case DependencyOfflineEvent::TYPE: {
@@ -76,19 +51,32 @@ void Cppelix::DependencyManager::start() {
                             }
                         }
                     }
-
-                    for(DependencyTracker &tracker : _dependencyTrackers) {
-                        if(tracker.type == depOfflineEvt->manager->type()) {
-                            tracker.offlineFunc(depOfflineEvt->manager->getServicePointer());
-                        }
-                    }
                 }
                     break;
                 case DependencyRequestEvent::TYPE: {
                     auto depReqEvt = static_cast<DependencyRequestEvent *>(evt.get());
-//                            for (auto &possibleTrackingManager : _trackingServices) {
-//
-//                            }
+
+                    auto trackers = _dependencyRequestTrackers.find(depReqEvt->dependency.interfaceNameHash);
+                    if(trackers == end(_dependencyRequestTrackers)) {
+                        break;
+                    }
+
+                    for(DependencyTrackerInfo &info : trackers->second) {
+                        info.trackFunc(depReqEvt);
+                    }
+                }
+                    break;
+                case DependencyUndoRequestEvent::TYPE: {
+                    auto depUndoReqEvt = static_cast<DependencyUndoRequestEvent *>(evt.get());
+
+                    auto trackers = _dependencyUndoRequestTrackers.find(depUndoReqEvt->dependency.interfaceNameHash);
+                    if(trackers == end(_dependencyUndoRequestTrackers)) {
+                        break;
+                    }
+
+                    for(DependencyTrackerInfo &info : trackers->second) {
+                        info.trackFunc(depUndoReqEvt);
+                    }
                 }
                     break;
                 case QuitEvent::TYPE: {
@@ -112,7 +100,7 @@ void Cppelix::DependencyManager::start() {
                         if(canFinallyQuit) {
                             quit.store(true, std::memory_order_release);
                         } else {
-                            _eventQueue.enqueue(_producerToken, std::make_unique<QuitEvent>(_eventIdCounter.fetch_add(1, std::memory_order_acq_rel), quitEvt->originatingService, true));
+                            _eventQueue.enqueue(_producerToken, std::make_unique<QuitEvent>(_eventIdCounter.fetch_add(1, std::memory_order_acq_rel), quitEvt->originatingService, false));
                         }
                     }
                 }
@@ -140,6 +128,32 @@ void Cppelix::DependencyManager::start() {
                     } else {
                         _eventQueue.enqueue(_producerToken, std::make_unique<DependencyOfflineEvent>(_eventIdCounter.fetch_add(1, std::memory_order_acq_rel), 0, toStopService));
                         _eventQueue.enqueue(_producerToken, std::make_unique<StopServiceEvent>(_eventIdCounter.fetch_add(1, std::memory_order_acq_rel), stopServiceEvt->originatingService, stopServiceEvt->serviceId, true));
+                    }
+                }
+                    break;
+                case RemoveServiceEvent::TYPE: {
+                    SPDLOG_DEBUG("RemoveServiceEvent");
+                    auto removeServiceEvt = static_cast<RemoveServiceEvent *>(evt.get());
+
+                    auto toRemoveServiceIt = _services.find(removeServiceEvt->serviceId);
+
+                    if(toRemoveServiceIt == end(_services)) {
+                        LOG_ERROR(_logger, "Couldn't stop service {}, missing from known services", removeServiceEvt->serviceId);
+                        handleEventError(removeServiceEvt);
+                        break;
+                    }
+
+                    auto &toRemoveService = toRemoveServiceIt->second;
+                    if(removeServiceEvt->dependenciesStopped) {
+                        if(toRemoveService->getServiceState() == ServiceState::ACTIVE && !toRemoveService->stop()) {
+                            LOG_ERROR(_logger, "Couldn't stop service {}: {} but all dependencies stopped", removeServiceEvt->serviceId, toRemoveService->name());
+                            handleEventError(removeServiceEvt);
+                        } else {
+                            handleEventCompletion(removeServiceEvt);
+                        }
+                    } else {
+                        _eventQueue.enqueue(_producerToken, std::make_unique<DependencyOfflineEvent>(_eventIdCounter.fetch_add(1, std::memory_order_acq_rel), 0, toRemoveService));
+                        _eventQueue.enqueue(_producerToken, std::make_unique<StopServiceEvent>(_eventIdCounter.fetch_add(1, std::memory_order_acq_rel), removeServiceEvt->originatingService, removeServiceEvt->serviceId, true));
                     }
                 }
                     break;
@@ -172,9 +186,25 @@ void Cppelix::DependencyManager::start() {
                     break;
                 case DoWorkEvent::TYPE: {
                     SPDLOG_DEBUG("DoWorkEvent");
-                    auto doWorkEvt = static_cast<DoWorkEvent *>(evt.get());
+                    auto doWorkevt = static_cast<DoWorkEvent *>(evt.get());
 
-                    handleEventCompletion(doWorkEvt);
+                    handleEventCompletion(doWorkevt);
+                }
+                    break;
+                case RemoveCallbacksEvent::TYPE: {
+                    SPDLOG_DEBUG("RemoveCallbacksEvent");
+                    auto removeCallbacksEvt = static_cast<RemoveCallbacksEvent *>(evt.get());
+
+                    _completionCallbacks.erase(removeCallbacksEvt->key);
+                    _errorCallbacks.erase(removeCallbacksEvt->key);
+                }
+                    break;
+                case RemoveTrackerEvent::TYPE: {
+                    SPDLOG_DEBUG("RemoveCallbacksEvent");
+                    auto removeTrackerEvt = static_cast<RemoveTrackerEvent *>(evt.get());
+
+                    _dependencyRequestTrackers.erase(removeTrackerEvt->interfaceNameHash);
+                    _dependencyUndoRequestTrackers.erase(removeTrackerEvt->interfaceNameHash);
                 }
                     break;
             }
@@ -185,5 +215,17 @@ void Cppelix::DependencyManager::start() {
 
     for(auto &[key, manager] : _services) {
         manager->stop();
+    }
+}
+
+Cppelix::EventHandlerRegistration::~EventHandlerRegistration() {
+    if(_mgr != nullptr) {
+        _mgr->pushEvent<RemoveCallbacksEvent>(0, _key);
+    }
+}
+
+Cppelix::DependencyTrackerRegistration::~DependencyTrackerRegistration() {
+    if(_mgr != nullptr) {
+        _mgr->pushEvent<RemoveTrackerEvent>(0, _interfaceNameHash);
     }
 }

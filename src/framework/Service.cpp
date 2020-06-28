@@ -50,3 +50,7 @@ bool Cppelix::Service::internal_stop() {
 Cppelix::ServiceState Cppelix::Service::getState() const noexcept {
     return _serviceState;
 }
+
+void Cppelix::Service::setProperties(Cppelix::CppelixProperties&& properties) {
+    _properties = std::move(properties);
+}

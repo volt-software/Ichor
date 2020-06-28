@@ -13,7 +13,7 @@ namespace std {
     template <>
     struct hash<CallbackKey> {
         std::size_t operator()(const CallbackKey& k) const {
-            // TODO Terrible hashing method
+            // TODO Terrible hashing method?
 
             return std::hash<uint64_t>()(k.id) ^ std::hash<uint64_t>()(k.type);
         }

@@ -20,8 +20,8 @@ public:
     ~StartStopService() final = default;
     bool start() final {
         if(startCount == 0) {
-            _manager->registerCompletionCallback<StartServiceEvent>(getServiceId(), this);
-            _manager->registerCompletionCallback<StopServiceEvent>(getServiceId(), this);
+            _startServiceRegistration = _manager->registerEventCallbacks<StartServiceEvent>(getServiceId(), this);
+            _stopServiceRegistration = _manager->registerEventCallbacks<StopServiceEvent>(getServiceId(), this);
 
             _start = std::chrono::system_clock::now();
             _manager->pushEvent<StopServiceEvent>(getServiceId(), _testServiceId);
@@ -59,7 +59,13 @@ public:
     void handleCompletion(StartServiceEvent const * const evt) {
     }
 
+    void handleError(StartServiceEvent const * const evt) {
+    }
+
     void handleCompletion(StopServiceEvent const * const evt) {
+    }
+
+    void handleError(StopServiceEvent const * const evt) {
     }
 
 private:
@@ -67,4 +73,6 @@ private:
     uint64_t _testServiceId{0};
     std::chrono::system_clock::time_point _start{};
     static uint64_t startCount;
+    std::unique_ptr<EventHandlerRegistration> _startServiceRegistration;
+    std::unique_ptr<EventHandlerRegistration> _stopServiceRegistration;
 };

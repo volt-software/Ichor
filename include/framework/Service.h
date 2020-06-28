@@ -4,6 +4,7 @@
 #include <atomic>
 #include "sole.hpp"
 #include "Common.h"
+#include "Concepts.h"
 
 namespace Cppelix {
     class Framework;
@@ -44,10 +45,12 @@ namespace Cppelix {
         [[nodiscard]] virtual bool stop() = 0;
 
         DependencyManager *_manager;
+        CppelixProperties _properties;
     private:
         [[nodiscard]] bool internal_start();
         [[nodiscard]] bool internal_stop();
         [[nodiscard]] ServiceState getState() const noexcept;
+        void setProperties(CppelixProperties&& properties);
 
 
         uint64_t _serviceId;

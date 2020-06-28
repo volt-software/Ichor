@@ -8,7 +8,6 @@ int main() {
     std::locale::global(std::locale("en_US.UTF-8"));
 
     auto start = std::chrono::system_clock::now();
-    Framework fw{{}};
     DependencyManager dm{};
     auto logMgr = dm.createServiceManager<IFrameworkLogger, SpdlogFrameworkLogger>();
     auto serAdmin = dm.createDependencyServiceManager<ISerializationAdmin, SerializationAdmin>(RequiredList<IFrameworkLogger>, OptionalList<>);

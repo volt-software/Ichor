@@ -5,7 +5,6 @@
 int main() {
     std::locale::global(std::locale("en_US.UTF-8"));
 
-    Framework fw{{}};
     DependencyManager dm{};
     auto logMgr = dm.createServiceManager<IFrameworkLogger, SpdlogFrameworkLogger>();
     spdlog::set_level(spdlog::level::info);

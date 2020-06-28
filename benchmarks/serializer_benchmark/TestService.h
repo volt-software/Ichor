@@ -22,7 +22,7 @@ public:
     ~TestService() final = default;
     bool start() final {
         LOG_INFO(_logger, "TestService started with dependency");
-        _manager->registerCompletionCallback<DoWorkEvent>(getServiceId(), this);
+        _doWorkRegistration = _manager->registerEventCallbacks<DoWorkEvent>(getServiceId(), this);
         _manager->pushEvent<DoWorkEvent>(getServiceId());
         return true;
     }
@@ -66,7 +66,12 @@ public:
         _manager->pushEvent<QuitEvent>(getServiceId());
     }
 
+    void handleError(DoWorkEvent const * const evt) {
+        LOG_ERROR(_logger, "Error handling DoWorkEvent");
+    }
+
 private:
     IFrameworkLogger *_logger;
     ISerializationAdmin *_serializationAdmin;
+    std::unique_ptr<EventHandlerRegistration> _doWorkRegistration;
 };
