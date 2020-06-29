@@ -11,9 +11,6 @@
 #include <spdlog/spdlog.h>
 #include <concurrentqueue.h>
 #include <framework/interfaces/IFrameworkLogger.h>
-#include "FrameworkListener.h"
-#include "ServiceListener.h"
-#include "ServiceListener.h"
 #include "Service.h"
 #include "ServiceLifecycleManager.h"
 #include "Events.h"
@@ -22,14 +19,6 @@
 using namespace std::chrono_literals;
 
 namespace Cppelix {
-
-    struct DependencyTracker {
-        DependencyTracker(uint64_t _type, std::function<void(void*)> on, std::function<void(void*)> off) : type(_type), onlineFunc(std::move(on)), offlineFunc(std::move(off)) {}
-
-        uint64_t type;
-        std::function<void(void*)> onlineFunc;
-        std::function<void(void*)> offlineFunc;
-    };
 
     class DependencyManager;
 
@@ -93,8 +82,8 @@ namespace Cppelix {
                 }
             }
 
-            (_eventQueue.enqueue(_producerToken, std::make_unique<DependencyRequestEvent>(_eventIdCounter.fetch_add(1, std::memory_order_acq_rel), 0, cmpMgr, Dependency{typeNameHash<Optional>(), Optional::version, false}, properties)), ...);
-            (_eventQueue.enqueue(_producerToken, std::make_unique<DependencyRequestEvent>(_eventIdCounter.fetch_add(1, std::memory_order_acq_rel), 0, cmpMgr, Dependency{typeNameHash<Required>(), Required::version, true}, properties)), ...);
+            (_eventQueue.enqueue(_producerToken, std::make_unique<DependencyRequestEvent>(_eventIdCounter.fetch_add(1, std::memory_order_acq_rel), cmpMgr->serviceId(), cmpMgr, Dependency{typeNameHash<Optional>(), Optional::version, false}, properties)), ...);
+            (_eventQueue.enqueue(_producerToken, std::make_unique<DependencyRequestEvent>(_eventIdCounter.fetch_add(1, std::memory_order_acq_rel), cmpMgr->serviceId(), cmpMgr, Dependency{typeNameHash<Required>(), Required::version, true}, properties)), ...);
             _eventQueue.enqueue(_producerToken, std::make_unique<StartServiceEvent>(_eventIdCounter.fetch_add(1, std::memory_order_acq_rel), 0, cmpMgr->getService().getServiceId()));
 
             _services.emplace(cmpMgr->serviceId(), cmpMgr);
@@ -162,7 +151,7 @@ namespace Cppelix {
 
                 for (const auto &dependency : depInfo->_dependencies) {
                     if(dependency.interfaceNameHash == typeNameHash<Interface>()) {
-                        DependencyRequestEvent evt{0, 0, mgr, Dependency{dependency.interfaceNameHash, dependency.interfaceVersion, dependency.required}, mgr->getProperties()};
+                        DependencyRequestEvent evt{0, mgr->serviceId(), mgr, Dependency{dependency.interfaceNameHash, dependency.interfaceVersion, dependency.required}, mgr->getProperties()};
                         requestInfo.trackFunc(&evt);
                     }
                 }

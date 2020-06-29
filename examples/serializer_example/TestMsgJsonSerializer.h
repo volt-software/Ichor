@@ -2,9 +2,8 @@
 
 #include <spdlog/spdlog.h>
 #include <framework/DependencyManager.h>
-#include <framework/interfaces/IFrameworkLogger.h>
+#include <optional_bundles/logging_bundle/Logger.h>
 #include "../include/framework/Service.h"
-#include "../include/framework/Framework.h"
 #include "../include/framework/SerializationAdmin.h"
 #include "framework/ServiceLifecycleManager.h"
 #include "TestMsg.h"
@@ -27,12 +26,12 @@ public:
         return true;
     }
 
-    void addDependencyInstance(IFrameworkLogger *logger) {
+    void addDependencyInstance(ILogger *logger) {
         _logger = logger;
         LOG_INFO(_logger, "Inserted logger");
     }
 
-    void removeDependencyInstance(IFrameworkLogger *logger) {
+    void removeDependencyInstance(ILogger *logger) {
         _logger = nullptr;
     }
 
@@ -77,6 +76,6 @@ public:
     }
 
 private:
-    IFrameworkLogger *_logger;
+    ILogger *_logger;
     ISerializationAdmin *_serializationAdmin;
 };

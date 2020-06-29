@@ -28,9 +28,9 @@ namespace Cppelix {
     };
 
     template <>
-    class Property<int> : public IProperty {
+    class Property<long> : public IProperty {
     public:
-        Property(int _val) : val(_val) {}
+        Property(long _val) : val(_val) {}
         ~Property() final = default;
 
         [[nodiscard]] long getAsLong() final { return val; }
@@ -38,7 +38,7 @@ namespace Cppelix {
         [[nodiscard]] std::string getAsString() final { throw std::runtime_error(""); }
 
     private:
-        int val;
+        long val;
     };
 
     template <>

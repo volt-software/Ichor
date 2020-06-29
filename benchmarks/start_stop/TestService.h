@@ -1,9 +1,8 @@
 #pragma once
 
 #include <framework/DependencyManager.h>
-#include <framework/interfaces/IFrameworkLogger.h>
+#include <optional_bundles/logging_bundle/Logger.h>
 #include "framework/Service.h"
-#include "framework/Framework.h"
 #include "framework/ServiceLifecycleManager.h"
 
 using namespace Cppelix;
@@ -24,14 +23,14 @@ public:
         return true;
     }
 
-    void addDependencyInstance(IFrameworkLogger *logger) {
+    void addDependencyInstance(ILogger *logger) {
         _logger = logger;
     }
 
-    void removeDependencyInstance(IFrameworkLogger *logger) {
+    void removeDependencyInstance(ILogger *logger) {
         _logger = nullptr;
     }
 
 private:
-    IFrameworkLogger *_logger;
+    ILogger *_logger;
 };

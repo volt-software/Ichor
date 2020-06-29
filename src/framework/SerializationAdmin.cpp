@@ -51,11 +51,11 @@ bool Cppelix::SerializationAdmin::stop() {
     return true;
 }
 
-void Cppelix::SerializationAdmin::addDependencyInstance(IFrameworkLogger *logger) {
+void Cppelix::SerializationAdmin::addDependencyInstance(ILogger *logger) {
     _logger = logger;
     LOG_INFO(_logger, "Inserted logger");
 }
 
-void Cppelix::SerializationAdmin::removeDependencyInstance(IFrameworkLogger *logger) {
+void Cppelix::SerializationAdmin::removeDependencyInstance(ILogger *logger) {
     _logger = nullptr;
 }

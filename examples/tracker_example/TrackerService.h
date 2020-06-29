@@ -2,9 +2,8 @@
 
 #include <spdlog/spdlog.h>
 #include <framework/DependencyManager.h>
-#include <framework/interfaces/IFrameworkLogger.h>
+#include <optional_bundles/logging_bundle/Logger.h>
 #include "framework/Service.h"
-#include "framework/Framework.h"
 #include "framework/ServiceLifecycleManager.h"
 #include "RuntimeCreatedService.h"
 
@@ -29,12 +28,12 @@ public:
         return true;
     }
 
-    void addDependencyInstance(IFrameworkLogger *logger) {
+    void addDependencyInstance(ILogger *logger) {
         _logger = logger;
         LOG_INFO(_logger, "Inserted logger");
     }
 
-    void removeDependencyInstance(IFrameworkLogger *logger) {
+    void removeDependencyInstance(ILogger *logger) {
         _logger = nullptr;
     }
 
@@ -53,7 +52,7 @@ public:
         auto runtimeService = _scopedRuntimeServices.find(scope);
 
         if(runtimeService == end(_scopedRuntimeServices)) {
-            _scopedRuntimeServices.emplace(scope, _manager->createDependencyServiceManager<IRuntimeCreatedService, RuntimeCreatedService>(RequiredList<IFrameworkLogger>, OptionalList<>, CppelixProperties{{"scope", std::make_shared<Property<std::string>>(scope)}}));
+            _scopedRuntimeServices.emplace(scope, _manager->createDependencyServiceManager<IRuntimeCreatedService, RuntimeCreatedService>(RequiredList<ILogger>, OptionalList<>, CppelixProperties{{"scope", std::make_shared<Property<std::string>>(scope)}}));
         }
     }
 
@@ -73,7 +72,7 @@ public:
     }
 
 private:
-    IFrameworkLogger *_logger;
+    ILogger *_logger;
     std::unique_ptr<DependencyTrackerRegistration> _trackerRegistration;
     std::unordered_map<std::string, std::shared_ptr<LifecycleManager>> _scopedRuntimeServices;
 };
