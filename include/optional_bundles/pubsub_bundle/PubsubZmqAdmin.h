@@ -50,7 +50,7 @@ public:
         auto runtimeService = _scopedPublishers.find(key);
 
         if(runtimeService == end(_scopedPublishers)) {
-            _scopedPublishers.emplace(key, _manager->createDependencyServiceManager<IPubsubPublisherService, ZmqPubsubPublisherService>(RequiredList<ILogger>, OptionalList<>, CppelixProperties{{"scope", std::make_shared<Property<std::string>>(scope)}}));
+            _scopedPublishers.emplace(key, _manager->createDependencyServiceManager<IPubsubPublisherService, ZmqPubsubPublisherService>(RequiredList<ILogger>, OptionalList<>, CppelixProperties{makeProperty<std::string>("scope", scope)}));
         }
     }
 
@@ -90,7 +90,7 @@ public:
         auto runtimeService = _scopedSubscribers.find(key);
 
         if(runtimeService == end(_scopedSubscribers)) {
-            _scopedSubscribers.emplace(key, _manager->createDependencyServiceManager<IPubsubSubscriberService, ZmqPubsubPublisherService>(RequiredList<ILogger>, OptionalList<>, CppelixProperties{{"scope", std::make_shared<Property<std::string>>(scope)}}));
+            _scopedSubscribers.emplace(key, _manager->createDependencyServiceManager<IPubsubSubscriberService, ZmqPubsubPublisherService>(RequiredList<ILogger>, OptionalList<>, CppelixProperties{makeProperty<std::string>("scope", scope)}));
         }
     }
 

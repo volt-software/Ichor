@@ -7,6 +7,8 @@
 #include <chrono>
 #include <iostream>
 
+using namespace std::string_literals;
+
 int main() {
     std::locale::global(std::locale("en_US.UTF-8"));
 
@@ -14,8 +16,8 @@ int main() {
     DependencyManager dm{};
     auto logMgr = dm.createServiceManager<IFrameworkLogger, SpdlogFrameworkLogger>();
     auto logAdminMgr = dm.createDependencyServiceManager<ILoggerAdmin, LoggerAdmin<SpdlogLogger>>(RequiredList<IFrameworkLogger>, OptionalList<>);
-    auto testOneMgr = dm.createDependencyServiceManager<ITestService, TestService>(RequiredList<ILogger, IRuntimeCreatedService>, OptionalList<>, CppelixProperties{{"scope", std::make_shared<Property<std::string>>("one")}});
-    auto testTwoMgr = dm.createDependencyServiceManager<ITestService, TestService>(RequiredList<ILogger, IRuntimeCreatedService>, OptionalList<>, CppelixProperties{{"scope", std::make_shared<Property<std::string>>("two")}});
+    auto testOneMgr = dm.createDependencyServiceManager<ITestService, TestService>(RequiredList<ILogger, IRuntimeCreatedService>, OptionalList<>, CppelixProperties{{"scope", "one"s}});
+    auto testTwoMgr = dm.createDependencyServiceManager<ITestService, TestService>(RequiredList<ILogger, IRuntimeCreatedService>, OptionalList<>, CppelixProperties{{"scope", "two"s}});
     auto trackerMgr = dm.createDependencyServiceManager<ITrackerService, TrackerService>(RequiredList<ILogger>, OptionalList<>);
     dm.start();
     auto end = std::chrono::system_clock::now();

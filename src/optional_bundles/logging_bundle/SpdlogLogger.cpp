@@ -52,29 +52,34 @@ void Cppelix::SpdlogLogger::error(const char *filename_in, int line_in, const ch
 }
 
 bool Cppelix::SpdlogLogger::start() {
-    auto requestedLevel = _properties["LogLevel"]->getAsString();
-    if(requestedLevel == "trace") {
-        _logger->set_level(spdlog::level::trace);
-    } else if(requestedLevel == "debug") {
-        _logger->set_level(spdlog::level::debug);
-    } else if(requestedLevel == "info") {
-        _logger->set_level(spdlog::level::info);
-    } else if(requestedLevel == "warn") {
-        _logger->set_level(spdlog::level::warn);
-    } else if(requestedLevel == "error") {
-        _logger->set_level(spdlog::level::err);
+    auto requestedLevelIt = _properties.find("LogLevel");
+    if(requestedLevelIt != end(_properties)) {
+        auto requestedLevel = std::any_cast<std::string>(requestedLevelIt->second);
+        if (requestedLevel == "trace") {
+            _logger->set_level(spdlog::level::trace);
+        } else if (requestedLevel == "debug") {
+            _logger->set_level(spdlog::level::debug);
+        } else if (requestedLevel == "info") {
+            _logger->set_level(spdlog::level::info);
+        } else if (requestedLevel == "warn") {
+            _logger->set_level(spdlog::level::warn);
+        } else if (requestedLevel == "error") {
+            _logger->set_level(spdlog::level::err);
+        } else {
+            _logger->set_level(spdlog::level::info);
+        }
     } else {
         _logger->set_level(spdlog::level::info);
     }
 
-    auto nameHash = _properties["ServiceNameHash"]->getAsLong();
-    SPDLOG_TRACE("SpdlogLogger started for component {}", nameHash);
+    auto targetServiceId = std::any_cast<uint64_t>(_properties["TargetServiceId"]);
+    SPDLOG_TRACE("SpdlogLogger {} started for component {}", getServiceId(), targetServiceId);
     return true;
 }
 
 bool Cppelix::SpdlogLogger::stop() {
-    auto nameHash = _properties["ServiceNameHash"]->getAsLong();
-    SPDLOG_TRACE("SpdlogLogger stopped for component {}", nameHash);
+    auto targetServiceId = std::any_cast<uint64_t>(_properties["TargetServiceId"]);
+    SPDLOG_TRACE("SpdlogLogger {} stopped for component {}", getServiceId(), targetServiceId);
     return true;
 }
 

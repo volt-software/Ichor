@@ -15,6 +15,7 @@
 #include "ServiceLifecycleManager.h"
 #include "Events.h"
 #include "framework/Callback.h"
+#include "Filter.h"
 
 using namespace std::chrono_literals;
 
@@ -62,13 +63,13 @@ namespace Cppelix {
 
     class DependencyManager {
     public:
-        DependencyManager() : _services(), _dependencyRequestTrackers(), _dependencyUndoRequestTrackers(), _completionCallbacks{}, _errorCallbacks{}, _logger(nullptr), _eventQueue{}, _producerToken{_eventQueue}, _consumerToken{_eventQueue}, _eventIdCounter{0} {}
+        DependencyManager() : _services(), _dependencyRequestTrackers(), _dependencyUndoRequestTrackers(), _completionCallbacks{}, _errorCallbacks{}, _logger(nullptr), _eventQueue{}, _producerToken{_eventQueue}, _consumerToken{_eventQueue}, _eventIdCounter{0}, quit{false} {}
 
         template<class Interface, class Impl, typename... Required, typename... Optional>
         requires Derived<Impl, Service> && Derived<Impl, Interface>
         [[nodiscard]]
         auto createDependencyServiceManager(RequiredList_t<Required...>, OptionalList_t<Optional...>, CppelixProperties properties = CppelixProperties{}) {
-            auto cmpMgr = DependencyServiceLifecycleManager<Interface, Impl>::template create(_logger, "", properties, RequiredList<Required...>, OptionalList<Optional...>);
+            auto cmpMgr = DependencyServiceLifecycleManager<Interface, Impl>::template create(_logger, "", std::move(properties), RequiredList<Required...>, OptionalList<Optional...>);
 
             if(_logger != nullptr) {
                 LOG_DEBUG(_logger, "added ServiceManager<{}, {}>", typeName<Interface>(), typeName<Impl>());
@@ -78,12 +79,22 @@ namespace Cppelix {
 
             for(auto &[key, mgr] : _services) {
                 if(mgr->getServiceState() == ServiceState::ACTIVE) {
+                    auto filterProp = mgr->getProperties()->find("Filter");
+                    const Filter *filter = nullptr;
+                    if(filterProp != end(*mgr->getProperties())) {
+                        filter = std::any_cast<const Filter>(&filterProp->second);
+                    }
+
+                    if(filter != nullptr && !filter->compareTo(cmpMgr)) {
+                        continue;
+                    }
+
                     cmpMgr->dependencyOnline(mgr);
                 }
             }
 
-            (_eventQueue.enqueue(_producerToken, std::make_unique<DependencyRequestEvent>(_eventIdCounter.fetch_add(1, std::memory_order_acq_rel), cmpMgr->serviceId(), cmpMgr, Dependency{typeNameHash<Optional>(), Optional::version, false}, properties)), ...);
-            (_eventQueue.enqueue(_producerToken, std::make_unique<DependencyRequestEvent>(_eventIdCounter.fetch_add(1, std::memory_order_acq_rel), cmpMgr->serviceId(), cmpMgr, Dependency{typeNameHash<Required>(), Required::version, true}, properties)), ...);
+            (_eventQueue.enqueue(_producerToken, std::make_unique<DependencyRequestEvent>(_eventIdCounter.fetch_add(1, std::memory_order_acq_rel), cmpMgr->serviceId(), cmpMgr, Dependency{typeNameHash<Optional>(), Optional::version, false}, cmpMgr->getProperties())), ...);
+            (_eventQueue.enqueue(_producerToken, std::make_unique<DependencyRequestEvent>(_eventIdCounter.fetch_add(1, std::memory_order_acq_rel), cmpMgr->serviceId(), cmpMgr, Dependency{typeNameHash<Required>(), Required::version, true}, cmpMgr->getProperties())), ...);
             _eventQueue.enqueue(_producerToken, std::make_unique<StartServiceEvent>(_eventIdCounter.fetch_add(1, std::memory_order_acq_rel), 0, cmpMgr->getService().getServiceId()));
 
             _services.emplace(cmpMgr->serviceId(), cmpMgr);
@@ -115,6 +126,10 @@ namespace Cppelix {
         template <typename EventT, typename... Args>
         requires Derived<EventT, Event>
         uint64_t pushEvent(uint64_t originatingServiceId, Args&&... args){
+            if(quit.load(std::memory_order_acquire)) {
+                return 0;
+            }
+
             uint64_t eventId = _eventIdCounter.fetch_add(1, std::memory_order_acq_rel);
             _eventQueue.enqueue(std::make_unique<EventT, uint64_t, uint64_t, Args...>(std::forward<uint64_t>(eventId), std::forward<uint64_t>(originatingServiceId), std::forward<Args>(args)...));
             return eventId;
@@ -228,6 +243,7 @@ namespace Cppelix {
         moodycamel::ProducerToken _producerToken;
         moodycamel::ConsumerToken _consumerToken;
         std::atomic<uint64_t> _eventIdCounter;
+        std::atomic<bool> quit;
 
         friend class EventHandlerRegistration;
     };

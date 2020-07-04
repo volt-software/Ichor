@@ -1,6 +1,7 @@
 #pragma once
 
 #include "framework/ConstevalHash.h"
+#include <any>
 
 #if __cpp_lib_constexpr_string >= 201907L
 #if __cpp_lib_constexpr_vector >= 201907L
@@ -68,6 +69,5 @@ namespace Cppelix {
     template<typename... Type>
     inline constexpr RequiredList_t<Type...> RequiredList{};
 
-    // concepts
-
+    using CppelixProperties = std::unordered_map<std::string, std::any>;
 }

@@ -38,10 +38,13 @@ public:
     void handleDependencyRequest(ILogger*, DependencyRequestEvent const * const evt) {
         auto logger = _loggers.find(evt->originatingService);
 
-        auto requestedLevelIt = evt->properties.find("LogLevel");
-        auto requestedLevel = requestedLevelIt == end(evt->properties) ? "info" : requestedLevelIt->second->getAsString();
+        auto requestedLevelIt = evt->properties->find("LogLevel");
+        auto requestedLevel = requestedLevelIt != end(*evt->properties) ? std::any_cast<std::string>(requestedLevelIt) : "info";
         if(logger == end(_loggers)) {
-            _loggers.emplace(evt->originatingService, _manager->createServiceManager<ILogger, T>(CppelixProperties{{"ServiceNameHash", std::make_shared<Property<long>>(evt->originatingService)}, {"LogLevel", std::make_shared<Property<std::string>>(requestedLevel)}}));
+            LOG_INFO(_logger, "creating logger for svcid {}", evt->originatingService);
+            _loggers.emplace(evt->originatingService, _manager->createServiceManager<ILogger, T>(CppelixProperties{{"LogLevel", requestedLevel}, {"TargetServiceId", evt->originatingService}, {"Filter", Filter{ServiceIdFilterEntry{evt->originatingService}}}}));
+        } else {
+            LOG_INFO(_logger, "svcid {} already has logger", evt->originatingService);
         }
     }
 

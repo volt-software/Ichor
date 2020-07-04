@@ -30,15 +30,16 @@ public:
 
     void addDependencyInstance(ILogger *logger) {
         _logger = logger;
-        LOG_INFO(_logger, "Inserted logger");
+
+        LOG_INFO(_logger, "Inserted logger svcid {} for svcid {}", logger->getServiceId(), getServiceId());
     }
 
     void removeDependencyInstance(ILogger *logger) {
         _logger = nullptr;
     }
 
-    void addDependencyInstance(IRuntimeCreatedService *) {
-        LOG_INFO(_logger, "Inserted IRuntimeCreatedService");
+    void addDependencyInstance(IRuntimeCreatedService *svc) {
+        LOG_INFO(_logger, "Inserted IRuntimeCreatedService svcid {} for svcid {}", svc->getServiceId(), getServiceId());
     }
 
     void removeDependencyInstance(IRuntimeCreatedService *) {

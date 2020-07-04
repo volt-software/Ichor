@@ -8,8 +8,6 @@
 #include "Service.h"
 #include "interfaces/IFrameworkLogger.h"
 #include "Common.h"
-#include "Filter.h"
-#include "Property.h"
 #include "Events.h"
 #include "Dependency.h"
 
@@ -94,7 +92,7 @@ namespace Cppelix {
 
         // for some reason, returning a reference produces garbage??
         [[nodiscard]] CPPELIX_CONSTEXPR virtual DependencyInfo const * getDependencyInfo() const = 0;
-        [[nodiscard]] CPPELIX_CONSTEXPR virtual CppelixProperties getProperties() const = 0;
+        [[nodiscard]] CPPELIX_CONSTEXPR virtual CppelixProperties const * getProperties() const = 0;
         [[nodiscard]] CPPELIX_CONSTEXPR virtual void* getServicePointer() = 0;
 
         template <typename T>
@@ -113,7 +111,7 @@ namespace Cppelix {
 
         CPPELIX_CONSTEXPR ~DependencyServiceLifecycleManager() final {
             // _manager is always injected in DependencyManager::create...Manager functions.
-            (_service._manager->template pushEvent<DependencyUndoRequestEvent>(_service.getServiceId(), nullptr, Dependency{typeNameHash<Dependencies>(), Dependencies::version, false}, _service._properties), ...);
+            (_service._manager->template pushEvent<DependencyUndoRequestEvent>(_service.getServiceId(), nullptr, Dependency{typeNameHash<Dependencies>(), Dependencies::version, false}, getProperties()), ...);
         }
 
         template<typename... Required, typename... Optional>
@@ -267,8 +265,8 @@ namespace Cppelix {
             return &_dependencies;
         }
 
-        [[nodiscard]] CPPELIX_CONSTEXPR CppelixProperties getProperties() const final {
-            return _service._properties;
+        [[nodiscard]] CPPELIX_CONSTEXPR CppelixProperties const * getProperties() const final {
+            return &_service._properties;
         }
 
         [[nodiscard]] CPPELIX_CONSTEXPR void* getServicePointer() final {
@@ -377,8 +375,8 @@ namespace Cppelix {
             return nullptr;
         }
 
-        [[nodiscard]] CPPELIX_CONSTEXPR CppelixProperties getProperties() const final {
-            return _service._properties;
+        [[nodiscard]] CPPELIX_CONSTEXPR CppelixProperties const * getProperties() const final {
+            return &_service._properties;
         }
 
         [[nodiscard]] CPPELIX_CONSTEXPR void* getServicePointer() final {

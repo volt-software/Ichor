@@ -17,7 +17,7 @@ class RuntimeCreatedService : public IRuntimeCreatedService, public Service {
 public:
     ~RuntimeCreatedService() final = default;
     bool start() final {
-        auto scope = _properties["scope"]->getAsString();
+        auto scope = std::any_cast<std::string>(_properties["scope"]);
         LOG_INFO(_logger, "RuntimeCreatedService started with scope {}", scope);
         return true;
     }
@@ -29,7 +29,7 @@ public:
 
     void addDependencyInstance(ILogger *logger) {
         _logger = logger;
-        LOG_INFO(_logger, "Inserted logger");
+        LOG_INFO(_logger, "Inserted logger svcid {} for svcid {}", logger->getServiceId(), getServiceId());
     }
 
     void removeDependencyInstance(ILogger *logger) {

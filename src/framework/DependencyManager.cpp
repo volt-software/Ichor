@@ -3,10 +3,10 @@
 #include "framework/DependencyManager.h"
 #include "framework/Callback.h"
 
-std::atomic<bool> quit{false};
+std::atomic<bool> sigintQuit;
 
 void on_sigint([[maybe_unused]] int sig) {
-    quit.store(true, std::memory_order_release);
+    sigintQuit.store(true, std::memory_order_release);
 }
 
 void Cppelix::DependencyManager::start() {
@@ -17,12 +17,25 @@ void Cppelix::DependencyManager::start() {
 
     while(!quit.load(std::memory_order_acquire)) {
         std::unique_ptr<Event> evt{nullptr};
+        quit.store(sigintQuit.load(std::memory_order_acquire), std::memory_order_release);
         while (!quit.load(std::memory_order_acquire) && _eventQueue.try_dequeue(_consumerToken, evt)) {
+            quit.store(sigintQuit.load(std::memory_order_acquire), std::memory_order_release);
             switch(evt->type) {
                 case DependencyOnlineEvent::TYPE: {
                     SPDLOG_DEBUG("DependencyOnlineEvent");
                     auto depOnlineEvt = static_cast<DependencyOnlineEvent *>(evt.get());
+
+                    auto filterProp = depOnlineEvt->manager->getProperties()->find("Filter");
+                    const Filter *filter = nullptr;
+                    if(filterProp != end(*depOnlineEvt->manager->getProperties())) {
+                        filter = std::any_cast<const Filter>(&filterProp->second);
+                    }
+
                     for (auto &[key, possibleDependentLifecycleManager] : _services) {
+                        if(filter != nullptr && !filter->compareTo(possibleDependentLifecycleManager)) {
+                            continue;
+                        }
+
                         possibleDependentLifecycleManager->dependencyOnline(depOnlineEvt->manager);
 
                         if (possibleDependentLifecycleManager->shouldStart()) {
@@ -39,7 +52,18 @@ void Cppelix::DependencyManager::start() {
                 case DependencyOfflineEvent::TYPE: {
                     SPDLOG_DEBUG("DependencyOfflineEvent");
                     auto depOfflineEvt = static_cast<DependencyOfflineEvent *>(evt.get());
+
+                    auto filterProp = depOfflineEvt->manager->getProperties()->find("Filter");
+                    const Filter *filter = nullptr;
+                    if(filterProp != end(*depOfflineEvt->manager->getProperties())) {
+                        filter = std::any_cast<const Filter>(&filterProp->second);
+                    }
+
                     for (auto &[key, possibleDependentLifecycleManager] : _services) {
+                        if(filter != nullptr && !filter->compareTo(possibleDependentLifecycleManager)) {
+                            continue;
+                        }
+
                         possibleDependentLifecycleManager->dependencyOffline(depOfflineEvt->manager);
 
                         if (possibleDependentLifecycleManager->shouldStop()) {

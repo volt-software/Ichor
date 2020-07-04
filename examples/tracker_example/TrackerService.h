@@ -38,33 +38,33 @@ public:
     }
 
     void handleDependencyRequest(IRuntimeCreatedService*, DependencyRequestEvent const * const evt) {
-        auto scopeProp = evt->properties.find("scope");
+        auto scopeProp = evt->properties->find("scope");
 
-        if(scopeProp == end(evt->properties)) {
+        if(scopeProp == end(*evt->properties)) {
             LOG_ERROR(_logger, "scope missing");
             return;
         }
 
-        auto scope = scopeProp->second->getAsString();
+        auto scope = std::any_cast<std::string>(scopeProp->second);
 
         LOG_INFO(_logger, "Tracked IRuntimeCreatedService request for scope {}", scope);
 
         auto runtimeService = _scopedRuntimeServices.find(scope);
 
         if(runtimeService == end(_scopedRuntimeServices)) {
-            _scopedRuntimeServices.emplace(scope, _manager->createDependencyServiceManager<IRuntimeCreatedService, RuntimeCreatedService>(RequiredList<ILogger>, OptionalList<>, CppelixProperties{{"scope", std::make_shared<Property<std::string>>(scope)}}));
+            _scopedRuntimeServices.emplace(scope, _manager->createDependencyServiceManager<IRuntimeCreatedService, RuntimeCreatedService>(RequiredList<ILogger>, OptionalList<>, CppelixProperties{{"scope", scope}}));
         }
     }
 
     void handleDependencyUndoRequest(IRuntimeCreatedService*, DependencyUndoRequestEvent const * const evt) {
-        auto scopeProp = evt->properties.find("scope");
+        auto scopeProp = evt->properties->find("scope");
 
-        if(scopeProp == end(evt->properties)) {
+        if(scopeProp == end(*evt->properties)) {
             LOG_ERROR(_logger, "scope missing");
             return;
         }
 
-        auto scope = scopeProp->second->getAsString();
+        auto scope = std::any_cast<std::string>(scopeProp->second);
 
         LOG_INFO(_logger, "Tracked IRuntimeCreatedService undo request for scope {}", scope);
 

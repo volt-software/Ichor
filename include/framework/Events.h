@@ -1,7 +1,6 @@
 #pragma once
 
 #include "Dependency.h"
-#include "Property.h"
 #include "Callback.h"
 
 namespace Cppelix {
@@ -34,24 +33,24 @@ namespace Cppelix {
     };
 
     struct DependencyRequestEvent : public Event {
-        explicit DependencyRequestEvent(uint64_t _id, uint64_t _originatingService, std::shared_ptr<LifecycleManager> _manager, Dependency _dependency, CppelixProperties _properties) noexcept :
-                Event(TYPE, _id, _originatingService), manager(std::move(_manager)), dependency(std::move(_dependency)), properties{std::move(_properties)} {}
+        explicit DependencyRequestEvent(uint64_t _id, uint64_t _originatingService, std::shared_ptr<LifecycleManager> _manager, Dependency _dependency, CppelixProperties const * _properties) noexcept :
+                Event(TYPE, _id, _originatingService), manager(std::move(_manager)), dependency(std::move(_dependency)), properties{_properties} {}
         ~DependencyRequestEvent() final = default;
 
         const std::shared_ptr<LifecycleManager> manager;
         const Dependency dependency;
-        const CppelixProperties properties;
+        const CppelixProperties * properties;
         static constexpr uint64_t TYPE = typeNameHash<DependencyRequestEvent>();
     };
 
     struct DependencyUndoRequestEvent : public Event {
-        explicit DependencyUndoRequestEvent(uint64_t _id, uint64_t _originatingService, std::shared_ptr<LifecycleManager> _manager, Dependency _dependency, CppelixProperties _properties) noexcept :
-                Event(TYPE, _id, _originatingService), manager(std::move(_manager)), dependency(std::move(_dependency)), properties{std::move(_properties)} {}
+        explicit DependencyUndoRequestEvent(uint64_t _id, uint64_t _originatingService, std::shared_ptr<LifecycleManager> _manager, Dependency _dependency, CppelixProperties const * _properties) noexcept :
+                Event(TYPE, _id, _originatingService), manager(std::move(_manager)), dependency(std::move(_dependency)), properties{_properties} {}
         ~DependencyUndoRequestEvent() final = default;
 
         const std::shared_ptr<LifecycleManager> manager;
         const Dependency dependency;
-        const CppelixProperties properties;
+        const CppelixProperties * properties;
         static constexpr uint64_t TYPE = typeNameHash<DependencyUndoRequestEvent>();
     };
 
