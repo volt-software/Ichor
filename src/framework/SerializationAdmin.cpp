@@ -26,7 +26,7 @@ void* Cppelix::SerializationAdmin::deserialize(const uint64_t type, std::vector<
 void Cppelix::SerializationAdmin::addSerializer(const uint64_t type, Cppelix::ISerializer* _serializer) {
     auto serializer = _serializers.find(type);
     if(serializer != end(_serializers)) {
-        throw std::runtime_error(fmt::format("Couldn't find serializer for type {}", type));
+        throw std::runtime_error(fmt::format("Serializer for type {} already added", type));
     }
     _serializers.emplace(type, _serializer);
     LOG_INFO(_logger, "Inserted serializer for type {}", type);
@@ -34,7 +34,7 @@ void Cppelix::SerializationAdmin::addSerializer(const uint64_t type, Cppelix::IS
 
 void Cppelix::SerializationAdmin::removeSerializer(const uint64_t type) {
     auto serializer = _serializers.find(type);
-    if(serializer != end(_serializers)) {
+    if(serializer == end(_serializers)) {
         throw std::runtime_error(fmt::format("Couldn't find serializer for type {}", type));
     }
     _serializers.erase(type);

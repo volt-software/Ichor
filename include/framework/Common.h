@@ -69,5 +69,17 @@ namespace Cppelix {
     template<typename... Type>
     inline constexpr RequiredList_t<Type...> RequiredList{};
 
+#if __cpp_lib_generic_unordered_lookup >= 201811
+    struct string_hash {
+        using transparent_key_equal = std::equal_to<>;  // Pred to use
+        using hash_type = std::hash<std::string_view>;  // just a helper local type
+        size_t operator()(std::string_view txt) const   { return hash_type{}(txt); }
+        size_t operator()(const std::string& txt) const { return hash_type{}(txt); }
+        size_t operator()(const char* txt) const        { return hash_type{}(txt); }
+    };
+
+    using CppelixProperties = std::unordered_map<std::string, std::any, string_hash>;
+#else
     using CppelixProperties = std::unordered_map<std::string, std::any>;
+#endif
 }

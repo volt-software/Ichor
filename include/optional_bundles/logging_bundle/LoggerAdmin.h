@@ -26,12 +26,12 @@ public:
         return true;
     }
 
-    void addDependencyInstance(IFrameworkLogger *logger) {
+    void addDependencyInstance(IFrameworkLogger *logger) noexcept {
         _logger = logger;
         LOG_INFO(_logger, "Inserted logger");
     }
 
-    void removeDependencyInstance(IFrameworkLogger *logger) {
+    void removeDependencyInstance(IFrameworkLogger *logger) noexcept {
         _logger = nullptr;
     }
 

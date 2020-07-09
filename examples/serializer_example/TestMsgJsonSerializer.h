@@ -18,11 +18,13 @@ public:
     ~TestMsgJsonSerializer() final = default;
     bool start() final {
         LOG_INFO(_logger, "TestMsgSerializer started");
+        _serializationAdmin->addSerializer(typeNameHash<TestMsg>(), this);
         return true;
     }
 
     bool stop() final {
         LOG_INFO(_logger, "TestMsgSerializer stopped");
+        _serializationAdmin->removeSerializer(typeNameHash<TestMsg>());
         return true;
     }
 
@@ -38,7 +40,6 @@ public:
     void addDependencyInstance(ISerializationAdmin *serializationAdmin) {
         _serializationAdmin = serializationAdmin;
         LOG_INFO(_logger, "Inserted serializationAdmin");
-        _serializationAdmin->addSerializer(typeNameHash<TestMsg>(), this);
     }
 
     void removeDependencyInstance(ISerializationAdmin *serializationAdmin) {

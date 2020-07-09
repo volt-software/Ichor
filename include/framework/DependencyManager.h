@@ -23,7 +23,7 @@ namespace Cppelix {
 
     class DependencyManager;
 
-    class [[nodiscard]] EventHandlerRegistration {
+    class [[nodiscard]] EventHandlerRegistration final {
     public:
         EventHandlerRegistration(DependencyManager *mgr, CallbackKey key) noexcept : _mgr(mgr), _key(key) {}
         EventHandlerRegistration() noexcept = default;
@@ -38,7 +38,7 @@ namespace Cppelix {
         CallbackKey _key{0, 0};
     };
 
-    class [[nodiscard]] DependencyTrackerRegistration {
+    class [[nodiscard]] DependencyTrackerRegistration final {
     public:
         DependencyTrackerRegistration(DependencyManager *mgr, uint64_t interfaceNameHash) noexcept : _mgr(mgr), _interfaceNameHash(interfaceNameHash) {}
         DependencyTrackerRegistration() noexcept = default;
@@ -53,7 +53,7 @@ namespace Cppelix {
         uint64_t _interfaceNameHash{0};
     };
 
-    struct DependencyTrackerInfo {
+    struct DependencyTrackerInfo final {
         DependencyTrackerInfo() = default;
         DependencyTrackerInfo(uint64_t _trackingServiceId, std::function<void(Event const * const)> _trackFunc) noexcept : trackingServiceId(_trackingServiceId), trackFunc(std::move(_trackFunc)) {}
         ~DependencyTrackerInfo() = default;
@@ -61,7 +61,7 @@ namespace Cppelix {
         std::function<void(Event const * const)> trackFunc;
     };
 
-    class DependencyManager {
+    class DependencyManager final {
     public:
         DependencyManager() : _services(), _dependencyRequestTrackers(), _dependencyUndoRequestTrackers(), _completionCallbacks{}, _errorCallbacks{}, _logger(nullptr), _eventQueue{}, _producerToken{_eventQueue}, _consumerToken{_eventQueue}, _eventIdCounter{0}, quit{false} {}
 
@@ -135,6 +135,18 @@ namespace Cppelix {
             return eventId;
         }
 
+        template <typename EventT, typename... Args>
+        requires Derived<EventT, Event>
+        uint64_t pushEventThreadUnsafe(uint64_t originatingServiceId, Args&&... args){
+            if(quit.load(std::memory_order_acquire)) {
+                return 0;
+            }
+
+            uint64_t eventId = _eventIdCounter.fetch_add(1, std::memory_order_acq_rel);
+            _eventQueue.enqueue(_producerToken, std::make_unique<EventT, uint64_t, uint64_t, Args...>(std::forward<uint64_t>(eventId), std::forward<uint64_t>(originatingServiceId), std::forward<Args>(args)...));
+            return eventId;
+        }
+
         template <typename Interface, typename Impl>
         requires Derived<Impl, Service> && ImplementsTrackingHandlers<Impl, Interface>
         [[nodiscard]]
@@ -194,7 +206,7 @@ namespace Cppelix {
     private:
         template <typename EventT>
         requires Derived<EventT, Event>
-        void handleEventError(EventT *evt) {
+        void handleEventError(EventT *evt) const {
             if(evt->originatingService == 0) {
                 return;
             }
@@ -215,7 +227,7 @@ namespace Cppelix {
 
         template <typename EventT>
         requires Derived<EventT, Event>
-        void handleEventCompletion(EventT *evt) {
+        void handleEventCompletion(EventT *evt) const {
             if(evt->originatingService == 0) {
                 return;
             }

@@ -58,12 +58,12 @@ namespace Cppelix {
         }
 
         [[nodiscard]]
-        CPPELIX_CONSTEXPR size_t size() const noexcept {
+        CPPELIX_CONSTEXPR size_t size() const {
             return _dependencies.size();
         }
 
         [[nodiscard]]
-        CPPELIX_CONSTEXPR size_t amountRequired() const noexcept {
+        CPPELIX_CONSTEXPR size_t amountRequired() const {
             return std::count_if(_dependencies.cbegin(), _dependencies.cend(), [](const auto &dep){ return dep.required; });
         }
 
@@ -82,8 +82,8 @@ namespace Cppelix {
         CPPELIX_CONSTEXPR virtual void dependencyOffline(const std::shared_ptr<LifecycleManager> &dependentService) = 0;
         [[nodiscard]] CPPELIX_CONSTEXPR virtual bool start() = 0;
         [[nodiscard]] CPPELIX_CONSTEXPR virtual bool stop() = 0;
-        [[nodiscard]] CPPELIX_CONSTEXPR virtual bool shouldStart() = 0;
-        [[nodiscard]] CPPELIX_CONSTEXPR virtual bool shouldStop() = 0;
+        [[nodiscard]] CPPELIX_CONSTEXPR virtual bool shouldStart() const = 0;
+        [[nodiscard]] CPPELIX_CONSTEXPR virtual bool shouldStop() const = 0;
         [[nodiscard]] CPPELIX_CONSTEXPR virtual std::string_view name() const = 0;
         [[nodiscard]] CPPELIX_CONSTEXPR virtual uint64_t type() const = 0;
         [[nodiscard]] CPPELIX_CONSTEXPR virtual uint64_t serviceId() const = 0;
@@ -208,7 +208,7 @@ namespace Cppelix {
         }
 
         [[nodiscard]]
-        CPPELIX_CONSTEXPR bool shouldStart() final {
+        CPPELIX_CONSTEXPR bool shouldStart() const final {
             if(_service.getState() == ServiceState::ACTIVE) {
                 return false;
             }
@@ -223,7 +223,7 @@ namespace Cppelix {
         }
 
         [[nodiscard]]
-        CPPELIX_CONSTEXPR bool shouldStop() final {
+        CPPELIX_CONSTEXPR bool shouldStop() const final {
             if(_service.getState() != ServiceState::ACTIVE) {
                 return false;
             }
@@ -335,7 +335,7 @@ namespace Cppelix {
         }
 
         [[nodiscard]]
-        CPPELIX_CONSTEXPR bool shouldStart() final {
+        CPPELIX_CONSTEXPR bool shouldStart() const final {
             if(_service.getState() == ServiceState::ACTIVE) {
                 return false;
             }
@@ -343,7 +343,7 @@ namespace Cppelix {
             return true;
         }
 
-        [[nodiscard]] CPPELIX_CONSTEXPR bool shouldStop() final {
+        [[nodiscard]] CPPELIX_CONSTEXPR bool shouldStop() const final {
             return false;
         }
 

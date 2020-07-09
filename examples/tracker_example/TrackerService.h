@@ -25,6 +25,7 @@ public:
 
     bool stop() final {
         LOG_INFO(_logger, "TrackerService stopped");
+        _trackerRegistration.reset(nullptr);
         return true;
     }
 

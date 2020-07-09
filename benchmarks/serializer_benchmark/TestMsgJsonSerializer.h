@@ -23,11 +23,13 @@ public:
     ~TestMsgJsonSerializer() final = default;
     bool start() final {
         LOG_INFO(_logger, "TestMsgSerializer started");
+        _serializationAdmin->addSerializer(typeNameHash<TestMsg>(), this);
         return true;
     }
 
     bool stop() final {
         LOG_INFO(_logger, "TestMsgSerializer stopped");
+        _serializationAdmin->removeSerializer(typeNameHash<TestMsg>());
         return true;
     }
 
@@ -43,7 +45,6 @@ public:
     void addDependencyInstance(ISerializationAdmin *serializationAdmin) {
         _serializationAdmin = serializationAdmin;
         LOG_INFO(_logger, "Inserted serializationAdmin");
-        _serializationAdmin->addSerializer(typeNameHash<TestMsg>(), this);
     }
 
     void removeDependencyInstance(ISerializationAdmin *serializationAdmin) {
@@ -51,7 +52,7 @@ public:
         LOG_INFO(_logger, "Removed serializationAdmin");
     }
 
-    std::vector<uint8_t> serialize(const void* obj) final {
+    std::vector<uint8_t> serialize(const void* obj) {
         auto msg = static_cast<const TestMsg*>(obj);
         rapidjson::StringBuffer sb;
         rapidjson::Writer<rapidjson::StringBuffer> writer(sb);
@@ -69,7 +70,7 @@ public:
         return std::vector<uint8_t>(ret, ret + sb.GetSize());
     }
 
-    void* deserialize(std::vector<uint8_t> &&stream) final {
+    void* deserialize(std::vector<uint8_t> &&stream) {
 #ifdef USE_SIMDJSON
         auto d = parser.parse(stream.data(), stream.size());
 

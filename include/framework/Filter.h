@@ -5,7 +5,7 @@
 
 namespace Cppelix {
     template <typename T>
-    class PropertiesFilterEntry {
+    class PropertiesFilterEntry final {
     public:
         PropertiesFilterEntry(std::string _key, T _val) : key(std::move(_key)), val(std::move(_val)) {}
 
@@ -27,7 +27,7 @@ namespace Cppelix {
         const T val;
     };
 
-    class ServiceIdFilterEntry {
+    class ServiceIdFilterEntry final {
     public:
         ServiceIdFilterEntry(uint64_t _id) : id(_id) {}
 
@@ -46,7 +46,7 @@ namespace Cppelix {
 
     // workaround std::any not supporting polymorphism
     template <typename... T>
-    class TemplatedFilter : public ITemplatedFilter {
+    class TemplatedFilter final : public ITemplatedFilter {
     public:
         TemplatedFilter(T&&... _entries) : entries(std::forward<T>(_entries)...) {}
         ~TemplatedFilter() final = default;
@@ -67,7 +67,7 @@ namespace Cppelix {
         const std::tuple<T...> entries;
     };
 
-    class Filter {
+    class Filter final {
     public:
         template <typename... T>
         Filter(T&&... entries) : _templatedFilter(new TemplatedFilter<T...>(std::forward<T>(entries)...)) {}
