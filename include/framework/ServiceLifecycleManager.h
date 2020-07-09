@@ -72,18 +72,33 @@ namespace Cppelix {
             return _dependencies | std::ranges::views::filter([](auto &dep){ return dep.required; });
         }
 
+        [[nodiscard]]
+        CPPELIX_CONSTEXPR auto requiredDependenciesSatisfied(const DependencyInfo &satisfied) const {
+            for(auto &requiredDep : requiredDependencies()) {
+                if(!satisfied.contains(requiredDep)) {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
         CPPELIX_CONSTEXPR std::vector<Dependency> _dependencies;
     };
 
     class LifecycleManager {
     public:
         CPPELIX_CONSTEXPR virtual ~LifecycleManager() = default;
-        CPPELIX_CONSTEXPR virtual void dependencyOnline(const std::shared_ptr<LifecycleManager> &dependentService) = 0;
-        CPPELIX_CONSTEXPR virtual void dependencyOffline(const std::shared_ptr<LifecycleManager> &dependentService) = 0;
+        ///
+        /// \param dependentService
+        /// \return true if started, false if not
+        CPPELIX_CONSTEXPR virtual bool dependencyOnline(const std::shared_ptr<LifecycleManager> &dependentService) = 0;
+        ///
+        /// \param dependentService
+        /// \return true if stopped, false if not
+        CPPELIX_CONSTEXPR virtual bool dependencyOffline(const std::shared_ptr<LifecycleManager> &dependentService) = 0;
         [[nodiscard]] CPPELIX_CONSTEXPR virtual bool start() = 0;
         [[nodiscard]] CPPELIX_CONSTEXPR virtual bool stop() = 0;
-        [[nodiscard]] CPPELIX_CONSTEXPR virtual bool shouldStart() const = 0;
-        [[nodiscard]] CPPELIX_CONSTEXPR virtual bool shouldStop() const = 0;
         [[nodiscard]] CPPELIX_CONSTEXPR virtual std::string_view name() const = 0;
         [[nodiscard]] CPPELIX_CONSTEXPR virtual uint64_t type() const = 0;
         [[nodiscard]] CPPELIX_CONSTEXPR virtual uint64_t serviceId() const = 0;
@@ -133,20 +148,26 @@ namespace Cppelix {
             (_dependencies.template addDependency<TempDependencies>(required), ...);
         }
 
-        CPPELIX_CONSTEXPR void dependencyOnline(const std::shared_ptr<LifecycleManager> &dependentService) final {
+        CPPELIX_CONSTEXPR bool dependencyOnline(const std::shared_ptr<LifecycleManager> &dependentService) final {
             auto dependency = dependentService->getSelfAsDependency();
             if(!_dependencies.contains(dependency) || _satisfiedDependencies.contains(dependency)) {
-                return;
+                return false;
             }
 
             injectIntoSelf<Dependencies...>(dependency.interfaceNameHash, dependentService);
             _satisfiedDependencies.addDependency(std::move(dependency));
 
-            if(_dependencies.amountRequired() == _satisfiedDependencies.amountRequired()) {
+            bool canStart = _service.getState() != ServiceState::ACTIVE && _dependencies.requiredDependenciesSatisfied(_satisfiedDependencies);
+            if(canStart) {
                 if(!_service.internal_start()) {
                     LOG_ERROR(_logger, "Couldn't start service {}", _name);
+                } else {
+                    LOG_DEBUG(_logger, "Started {}", _name);
                 }
+                return true;
             }
+
+            return false;
         }
 
         template<class Interface0, class ...Interfaces>
@@ -161,20 +182,35 @@ namespace Cppelix {
             }
         }
 
-        CPPELIX_CONSTEXPR void dependencyOffline(const std::shared_ptr<LifecycleManager> &dependentService) final {
+        CPPELIX_CONSTEXPR bool dependencyOffline(const std::shared_ptr<LifecycleManager> &dependentService) final {
             auto dependency = dependentService->getSelfAsDependency();
             if(!_dependencies.contains(dependency) || !_satisfiedDependencies.contains(dependency)) {
-                return;
+                return false;
+            }
+
+            _satisfiedDependencies.removeDependency(dependency);
+
+
+
+            bool stopped = true;
+            if(_service.getState() != ServiceState::ACTIVE) {
+                stopped = false;
+            } else {
+                bool shouldStop = _service.getState() == ServiceState::ACTIVE && !_dependencies.requiredDependenciesSatisfied(_satisfiedDependencies);
+
+                if(shouldStop) {
+                    if (!_service.internal_stop()) {
+                        LOG_ERROR(_logger, "Couldn't stop service {}", _name);
+                        stopped = false;
+                    } else {
+                        LOG_DEBUG(_logger, "stopped {}", _name);
+                    }
+                }
             }
 
             removeSelfInto<Dependencies...>(dependency.interfaceNameHash, dependentService);
-            _satisfiedDependencies.removeDependency(dependency);
 
-            if(_dependencies.amountRequired() != _satisfiedDependencies.amountRequired()) {
-                if(!_service.internal_stop()) {
-                    LOG_ERROR(_logger, "Couldn't stop service {}", _name);
-                }
-            }
+            return stopped;
         }
 
         template<class Interface0, class ...Interfaces>
@@ -191,8 +227,14 @@ namespace Cppelix {
 
         [[nodiscard]]
         CPPELIX_CONSTEXPR bool start() final {
-            if(_dependencies.amountRequired() == _satisfiedDependencies.size() && _service.getState() == ServiceState::INSTALLED) {
-                return _service.internal_start();
+            bool canStart = _service.getState() != ServiceState::ACTIVE && _dependencies.requiredDependenciesSatisfied(_satisfiedDependencies);
+            if (canStart) {
+                if(_service.internal_start()) {
+                    LOG_DEBUG(_logger, "Started {}", _name);
+                    return true;
+                } else {
+                    LOG_DEBUG(_logger, "Couldn't start {}", _name);
+                }
             }
 
             return false;
@@ -201,40 +243,15 @@ namespace Cppelix {
         [[nodiscard]]
         CPPELIX_CONSTEXPR bool stop() final {
             if(_service.getState() == ServiceState::ACTIVE) {
-                return _service.internal_stop();
-            }
-
-            return true;
-        }
-
-        [[nodiscard]]
-        CPPELIX_CONSTEXPR bool shouldStart() const final {
-            if(_service.getState() == ServiceState::ACTIVE) {
-                return false;
-            }
-
-            for(const auto &dep : _dependencies.requiredDependencies()) {
-                if(!_satisfiedDependencies.contains(dep)) {
-                    return false;
-                }
-            }
-
-            return true;
-        }
-
-        [[nodiscard]]
-        CPPELIX_CONSTEXPR bool shouldStop() const final {
-            if(_service.getState() != ServiceState::ACTIVE) {
-                return false;
-            }
-
-            for(const auto &dep : _dependencies.requiredDependencies()) {
-                if(!_satisfiedDependencies.contains(dep)) {
+                if(_service.internal_stop()) {
+                    LOG_DEBUG(_logger, "Stopped {}", _name);
                     return true;
+                } else {
+                    LOG_DEBUG(_logger, "Couldn't stop {}", _name);
                 }
             }
 
-            return false;
+            return true;
         }
 
         [[nodiscard]] CPPELIX_CONSTEXPR std::string_view name() const final {
@@ -310,10 +327,12 @@ namespace Cppelix {
             return std::make_shared<ServiceLifecycleManager<Interface, ServiceType>>(logger, name, typeNameHash<Interface>(), std::move(properties));
         }
 
-        CPPELIX_CONSTEXPR void dependencyOnline(const std::shared_ptr<LifecycleManager> &dependentService) final {
+        CPPELIX_CONSTEXPR bool dependencyOnline(const std::shared_ptr<LifecycleManager> &dependentService) final {
+            return false;
         }
 
-        CPPELIX_CONSTEXPR void dependencyOffline(const std::shared_ptr<LifecycleManager> &dependentService) final {
+        CPPELIX_CONSTEXPR bool dependencyOffline(const std::shared_ptr<LifecycleManager> &dependentService) final {
+            return false;
         }
 
         [[nodiscard]]
@@ -331,19 +350,6 @@ namespace Cppelix {
                 return _service.internal_stop();
             }
 
-            return false;
-        }
-
-        [[nodiscard]]
-        CPPELIX_CONSTEXPR bool shouldStart() const final {
-            if(_service.getState() == ServiceState::ACTIVE) {
-                return false;
-            }
-
-            return true;
-        }
-
-        [[nodiscard]] CPPELIX_CONSTEXPR bool shouldStop() const final {
             return false;
         }
 

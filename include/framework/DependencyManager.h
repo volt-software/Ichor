@@ -184,7 +184,7 @@ namespace Cppelix {
                 }
             }
 
-            // I think there's a bug in GCC 10.1, where if I don't make this a unique_ptr, the EventHandlerRegistration destructor immediately gets called for some reason.
+            // I think there's a bug in GCC 10.1, where if I don't make this a unique_ptr, the DependencyTrackerRegistration destructor immediately gets called for some reason.
             // Even if the result is stored in a variable at the caller site.
             return std::make_unique<DependencyTrackerRegistration>(this, typeNameHash<Interface>());
         }

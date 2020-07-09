@@ -18,7 +18,7 @@ Cppelix::SpdlogFrameworkLogger::SpdlogFrameworkLogger() : IFrameworkLogger(), Se
     spdlog::set_default_logger(logger);
     spdlog::set_pattern("[%C-%m-%d %H:%M:%S.%e] [%s:%#] [%L] %v");
 
-    SPDLOG_TRACE("Starting SpdlogFrameworkLogger");
+    SPDLOG_TRACE("SpdlogFrameworkLogger constructor");
 }
 
 void Cppelix::SpdlogFrameworkLogger::trace(const char *filename_in, int line_in, const char *funcname_in,

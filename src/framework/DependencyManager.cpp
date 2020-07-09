@@ -36,15 +36,8 @@ void Cppelix::DependencyManager::start() {
                             continue;
                         }
 
-                        possibleDependentLifecycleManager->dependencyOnline(depOnlineEvt->manager);
-
-                        if (possibleDependentLifecycleManager->shouldStart()) {
-                            if (possibleDependentLifecycleManager->start()) {
-                                LOG_DEBUG(_logger, "Started {}", possibleDependentLifecycleManager->name());
-                                _eventQueue.enqueue(_producerToken, std::make_unique<DependencyOnlineEvent>(_eventIdCounter.fetch_add(1, std::memory_order_acq_rel), 0, possibleDependentLifecycleManager));
-                            } else {
-                                LOG_DEBUG(_logger, "Couldn't start {}", possibleDependentLifecycleManager->name());
-                            }
+                        if (possibleDependentLifecycleManager->dependencyOnline(depOnlineEvt->manager)) {
+                            _eventQueue.enqueue(_producerToken, std::make_unique<DependencyOnlineEvent>(_eventIdCounter.fetch_add(1, std::memory_order_acq_rel), 0, possibleDependentLifecycleManager));
                         }
                     }
                 }
@@ -64,15 +57,8 @@ void Cppelix::DependencyManager::start() {
                             continue;
                         }
 
-                        possibleDependentLifecycleManager->dependencyOffline(depOfflineEvt->manager);
-
-                        if (possibleDependentLifecycleManager->shouldStop()) {
-                            if (possibleDependentLifecycleManager->stop()) {
-                                LOG_DEBUG(_logger, "stopped {}", possibleDependentLifecycleManager->name());
-                                _eventQueue.enqueue(_producerToken, std::make_unique<DependencyOfflineEvent>(_eventIdCounter.fetch_add(1, std::memory_order_acq_rel), 0, possibleDependentLifecycleManager));
-                            } else {
-                                LOG_DEBUG(_logger, "Couldn't stop {}", possibleDependentLifecycleManager->name());
-                            }
+                        if (possibleDependentLifecycleManager->dependencyOffline(depOfflineEvt->manager)) {
+                            _eventQueue.enqueue(_producerToken, std::make_unique<DependencyOfflineEvent>(_eventIdCounter.fetch_add(1, std::memory_order_acq_rel), 0, possibleDependentLifecycleManager));
                         }
                     }
                 }
@@ -194,16 +180,11 @@ void Cppelix::DependencyManager::start() {
                     }
 
                     auto &toStartService = toStartServiceIt->second;
-                    if(toStartService->shouldStart()) {
-                        if(!toStartService->start()) {
-                            LOG_ERROR(_logger, "Couldn't start service {}: {}", startServiceEvt->serviceId, toStartService->name());
-                            handleEventError(startServiceEvt);
-                        } else {
-                            _eventQueue.enqueue(_producerToken, std::make_unique<DependencyOnlineEvent>(_eventIdCounter.fetch_add(1, std::memory_order_acq_rel), 0, toStartService));
-                            handleEventCompletion(startServiceEvt);
-                        }
-                        break;
+                    if(!toStartService->start()) {
+                        LOG_ERROR(_logger, "Couldn't start service {}: {}", startServiceEvt->serviceId, toStartService->name());
+                        handleEventError(startServiceEvt);
                     } else {
+                        _eventQueue.enqueue(_producerToken, std::make_unique<DependencyOnlineEvent>(_eventIdCounter.fetch_add(1, std::memory_order_acq_rel), 0, toStartService));
                         handleEventCompletion(startServiceEvt);
                     }
                 }

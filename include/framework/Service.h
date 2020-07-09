@@ -47,7 +47,11 @@ namespace Cppelix {
         DependencyManager *_manager;
         CppelixProperties _properties;
     private:
+        ///
+        /// \return true if started
         [[nodiscard]] bool internal_start();
+        ///
+        /// \return true if stopped or already stopped
         [[nodiscard]] bool internal_stop();
         [[nodiscard]] ServiceState getState() const noexcept;
         void setProperties(CppelixProperties&& properties);
