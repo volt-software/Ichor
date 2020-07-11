@@ -2,6 +2,7 @@
 
 #include "Dependency.h"
 #include "Callback.h"
+#include <memory>
 
 namespace Cppelix {
     class LifecycleManager;
@@ -95,12 +96,20 @@ namespace Cppelix {
         static constexpr uint64_t TYPE = typeNameHash<DoWorkEvent>();
     };
 
-    struct RemoveCallbacksEvent final : public Event {
-        RemoveCallbacksEvent(uint64_t _id, uint64_t _originatingService, CallbackKey _key) noexcept : Event(TYPE, _id, _originatingService), key(_key) {}
-        ~RemoveCallbacksEvent() final = default;
+    struct RemoveCompletionCallbacksEvent final : public Event {
+        RemoveCompletionCallbacksEvent(uint64_t _id, uint64_t _originatingService, CallbackKey _key) noexcept : Event(TYPE, _id, _originatingService), key(_key) {}
+        ~RemoveCompletionCallbacksEvent() final = default;
 
         const CallbackKey key;
-        static constexpr uint64_t TYPE = typeNameHash<RemoveCallbacksEvent>();
+        static constexpr uint64_t TYPE = typeNameHash<RemoveCompletionCallbacksEvent>();
+    };
+
+    struct RemoveEventHandlerEvent final : public Event {
+        RemoveEventHandlerEvent(uint64_t _id, uint64_t _originatingService, CallbackKey _key) noexcept : Event(TYPE, _id, _originatingService), key(_key) {}
+        ~RemoveEventHandlerEvent() final = default;
+
+        const CallbackKey key;
+        static constexpr uint64_t TYPE = typeNameHash<RemoveEventHandlerEvent>();
     };
 
     struct RemoveTrackerEvent final : public Event {

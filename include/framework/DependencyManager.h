@@ -23,6 +23,21 @@ namespace Cppelix {
 
     class DependencyManager;
 
+    class [[nodiscard]] EventCompletionHandlerRegistration final {
+    public:
+        EventCompletionHandlerRegistration(DependencyManager *mgr, CallbackKey key) noexcept : _mgr(mgr), _key(key) {}
+        EventCompletionHandlerRegistration() noexcept = default;
+        ~EventCompletionHandlerRegistration();
+
+        EventCompletionHandlerRegistration(const EventCompletionHandlerRegistration&) = delete;
+        EventCompletionHandlerRegistration(EventCompletionHandlerRegistration&&) noexcept = default;
+        EventCompletionHandlerRegistration& operator=(const EventCompletionHandlerRegistration&) = delete;
+        EventCompletionHandlerRegistration& operator=(EventCompletionHandlerRegistration&&) noexcept = default;
+    private:
+        DependencyManager *_mgr{nullptr};
+        CallbackKey _key{0, 0};
+    };
+
     class [[nodiscard]] EventHandlerRegistration final {
     public:
         EventHandlerRegistration(DependencyManager *mgr, CallbackKey key) noexcept : _mgr(mgr), _key(key) {}
@@ -190,15 +205,32 @@ namespace Cppelix {
         }
 
         template <typename EventT, typename Impl>
-        requires Derived<EventT, Event> && ImplementsEventHandlers<Impl, EventT>
+        requires Derived<EventT, Event> && ImplementsEventCompletionHandlers<Impl, EventT>
         [[nodiscard]]
-        std::unique_ptr<EventHandlerRegistration> registerEventCallbacks(uint64_t serviceId, Impl *impl) {
+        std::unique_ptr<EventCompletionHandlerRegistration> registerEventCompletionCallbacks(uint64_t serviceId, Impl *impl) {
             CallbackKey key{serviceId, EventT::TYPE};
             _completionCallbacks.emplace(key, [impl](Event const * const evt){ impl->handleCompletion(static_cast<EventT const * const>(evt)); });
             _errorCallbacks.emplace(key, [impl](Event const * const evt){ impl->handleError(static_cast<EventT const * const>(evt)); });
+            // I think there's a bug in GCC 10.1, where if I don't make this a unique_ptr, the EventCompletionHandlerRegistration destructor immediately gets called for some reason.
+            // Even if the result is stored in a variable at the caller site.
+            return std::make_unique<EventCompletionHandlerRegistration>(this, key);
+        }
+
+        template <typename EventT, typename Impl>
+        requires Derived<EventT, Event> && ImplementsEventHandlers<Impl, EventT>
+        [[nodiscard]]
+        std::unique_ptr<EventHandlerRegistration> registerEventHandler(uint64_t serviceId, Impl *impl) {
+            auto existingHandlers = _eventCallbacks.find(EventT::TYPE);
+            if(existingHandlers == end(_eventCallbacks)) {
+                _eventCallbacks.emplace(EventT::TYPE, std::vector<std::pair<uint64_t, std::function<bool(Event const * const)>>>{std::pair<uint64_t, std::function<bool(Event const * const)>>{serviceId,
+                        [impl](Event const * const evt){ return impl->handleEvent(static_cast<EventT const * const>(evt)); }}
+                });
+            } else {
+                existingHandlers->second.emplace_back(std::pair<uint64_t, std::function<bool(Event const * const)>>{serviceId, [impl](Event const * const evt){ return impl->handleEvent(static_cast<EventT const * const>(evt)); }});
+            }
             // I think there's a bug in GCC 10.1, where if I don't make this a unique_ptr, the EventHandlerRegistration destructor immediately gets called for some reason.
             // Even if the result is stored in a variable at the caller site.
-            return std::make_unique<EventHandlerRegistration>(this, key);
+            return std::make_unique<EventHandlerRegistration>(this, CallbackKey{serviceId, EventT::TYPE});
         }
 
         void start();
@@ -206,7 +238,7 @@ namespace Cppelix {
     private:
         template <typename EventT>
         requires Derived<EventT, Event>
-        void handleEventError(EventT *evt) const {
+        void handleEventError(EventT const * const evt) const {
             if(evt->originatingService == 0) {
                 return;
             }
@@ -224,10 +256,7 @@ namespace Cppelix {
             callback->second(evt);
         }
 
-
-        template <typename EventT>
-        requires Derived<EventT, Event>
-        void handleEventCompletion(EventT *evt) const {
+        void handleEventCompletion(Event const * const evt) const {
             if(evt->originatingService == 0) {
                 return;
             }
@@ -237,7 +266,7 @@ namespace Cppelix {
                 return;
             }
 
-            auto callback = _completionCallbacks.find(CallbackKey{evt->originatingService, EventT::TYPE});
+            auto callback = _completionCallbacks.find(CallbackKey{evt->originatingService, evt->type});
             if(callback == end(_completionCallbacks)) {
                 return;
             }
@@ -245,11 +274,30 @@ namespace Cppelix {
             callback->second(evt);
         }
 
+        void broadcastEvent(Event const * const evt) const {
+            auto registeredListeners = _eventCallbacks.find(evt->type);
+            if(registeredListeners == end(_eventCallbacks)) {
+                return;
+            }
+
+            for(auto &[serviceId, callback] : registeredListeners->second) {
+                auto service = _services.find(serviceId);
+                if(service == end(_services) || service->second->getServiceState() != ServiceState::ACTIVE) {
+                    continue;
+                }
+
+                if(callback(evt)) {
+                    break;
+                }
+            }
+        }
+
         std::unordered_map<uint64_t, std::shared_ptr<LifecycleManager>> _services;
         std::unordered_map<uint64_t, std::vector<DependencyTrackerInfo>> _dependencyRequestTrackers;
         std::unordered_map<uint64_t, std::vector<DependencyTrackerInfo>> _dependencyUndoRequestTrackers;
         std::unordered_map<CallbackKey, std::function<void(Event const * const)>> _completionCallbacks;
         std::unordered_map<CallbackKey, std::function<void(Event const * const)>> _errorCallbacks;
+        std::unordered_map<uint64_t, std::vector<std::pair<uint64_t, std::function<bool(Event const * const)>>>> _eventCallbacks;
         IFrameworkLogger *_logger;
         moodycamel::ConcurrentQueue<std::unique_ptr<Event>> _eventQueue;
         moodycamel::ProducerToken _producerToken;
@@ -257,6 +305,6 @@ namespace Cppelix {
         std::atomic<uint64_t> _eventIdCounter;
         std::atomic<bool> quit;
 
-        friend class EventHandlerRegistration;
+        friend class EventCompletionHandlerRegistration;
     };
 }

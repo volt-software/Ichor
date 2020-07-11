@@ -39,11 +39,11 @@ namespace Cppelix {
 
         template<class Interface>
         CPPELIX_CONSTEXPR void removeDependency() {
-            std::erase(std::remove_if(begin(_dependencies), end(_dependencies), [](const auto& dep) noexcept { return dep.interfaceNameHash == typeNameHash<Interface>() && dep.interfaceVersion == Interface::version(); }), end(_dependencies));
+            std::erase_if(_dependencies, [](const auto& dep) noexcept { return dep.interfaceNameHash == typeNameHash<Interface>() && dep.interfaceVersion == Interface::version(); });
         }
 
         CPPELIX_CONSTEXPR void removeDependency(const Dependency &dependency) {
-            _dependencies.erase(std::remove_if(begin(_dependencies), end(_dependencies), [&dependency](const auto& dep) noexcept { return dep.interfaceNameHash == dependency.interfaceNameHash && dep.interfaceVersion == dependency.interfaceVersion; }), end(_dependencies));
+            std::erase_if(_dependencies, [&dependency](const auto& dep) noexcept { return dep.interfaceNameHash == dependency.interfaceNameHash && dep.interfaceVersion == dependency.interfaceVersion; });
         }
 
         template<class Interface>

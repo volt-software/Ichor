@@ -191,25 +191,37 @@ void Cppelix::DependencyManager::start() {
                     break;
                 case DoWorkEvent::TYPE: {
                     SPDLOG_DEBUG("DoWorkEvent");
-                    auto doWorkevt = static_cast<DoWorkEvent *>(evt.get());
-
-                    handleEventCompletion(doWorkevt);
+                    handleEventCompletion(evt.get());
                 }
                     break;
-                case RemoveCallbacksEvent::TYPE: {
-                    SPDLOG_DEBUG("RemoveCallbacksEvent");
-                    auto removeCallbacksEvt = static_cast<RemoveCallbacksEvent *>(evt.get());
+                case RemoveCompletionCallbacksEvent::TYPE: {
+                    SPDLOG_DEBUG("RemoveCompletionCallbacksEvent");
+                    auto removeCallbacksEvt = static_cast<RemoveCompletionCallbacksEvent *>(evt.get());
 
                     _completionCallbacks.erase(removeCallbacksEvt->key);
                     _errorCallbacks.erase(removeCallbacksEvt->key);
                 }
                     break;
+                case RemoveEventHandlerEvent::TYPE: {
+                    SPDLOG_DEBUG("RemoveEventHandlerEvent");
+                    auto removeEventHandlerEvt = static_cast<RemoveEventHandlerEvent *>(evt.get());
+
+                    auto existingHandlers = _eventCallbacks.find(removeEventHandlerEvt->key.type);
+                    if(existingHandlers != end(_eventCallbacks)) {
+                        std::erase_if(existingHandlers->second, [removeEventHandlerEvt](const auto &pair) noexcept { return pair.first == removeEventHandlerEvt->key.id; });
+                    }
+                }
+                    break;
                 case RemoveTrackerEvent::TYPE: {
-                    SPDLOG_DEBUG("RemoveCallbacksEvent");
+                    SPDLOG_DEBUG("RemoveTrackerEvent");
                     auto removeTrackerEvt = static_cast<RemoveTrackerEvent *>(evt.get());
 
                     _dependencyRequestTrackers.erase(removeTrackerEvt->interfaceNameHash);
                     _dependencyUndoRequestTrackers.erase(removeTrackerEvt->interfaceNameHash);
+                }
+                    break;
+                default: {
+                    broadcastEvent(evt.get());
                 }
                     break;
             }
@@ -223,9 +235,15 @@ void Cppelix::DependencyManager::start() {
     }
 }
 
+Cppelix::EventCompletionHandlerRegistration::~EventCompletionHandlerRegistration() {
+    if(_mgr != nullptr) {
+        _mgr->pushEvent<RemoveCompletionCallbacksEvent>(0, _key);
+    }
+}
+
 Cppelix::EventHandlerRegistration::~EventHandlerRegistration() {
     if(_mgr != nullptr) {
-        _mgr->pushEvent<RemoveCallbacksEvent>(0, _key);
+        _mgr->pushEvent<RemoveEventHandlerEvent>(0, _key);
     }
 }
 
