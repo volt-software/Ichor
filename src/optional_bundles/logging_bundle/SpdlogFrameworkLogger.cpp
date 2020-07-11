@@ -23,35 +23,35 @@ Cppelix::SpdlogFrameworkLogger::SpdlogFrameworkLogger() : IFrameworkLogger(), Se
 
 void Cppelix::SpdlogFrameworkLogger::trace(const char *filename_in, int line_in, const char *funcname_in,
                                           std::string_view format_str, fmt::format_args args) {
-    if(spdlog::default_logger()->should_log(spdlog::level::trace)) {
+    if(_level <= LogLevel::TRACE) {
         spdlog::log(spdlog::source_loc{filename_in, line_in, funcname_in}, spdlog::level::trace, fmt::vformat(format_str, args));
     }
 }
 
 void Cppelix::SpdlogFrameworkLogger::debug(const char *filename_in, int line_in, const char *funcname_in,
                                           std::string_view format_str, fmt::format_args args) {
-    if(spdlog::default_logger()->should_log(spdlog::level::debug)) {
+    if(_level <= LogLevel::DEBUG) {
         spdlog::log(spdlog::source_loc{filename_in, line_in, funcname_in}, spdlog::level::debug, fmt::vformat(format_str, args));
     }
 }
 
 void Cppelix::SpdlogFrameworkLogger::info(const char *filename_in, int line_in, const char *funcname_in,
                                           std::string_view format_str, fmt::format_args args) {
-    if(spdlog::default_logger()->should_log(spdlog::level::info)) {
+    if(_level <= LogLevel::INFO) {
         spdlog::log(spdlog::source_loc{filename_in, line_in, funcname_in}, spdlog::level::info, fmt::vformat(format_str, args));
     }
 }
 
 void Cppelix::SpdlogFrameworkLogger::warn(const char *filename_in, int line_in, const char *funcname_in,
                                           std::string_view format_str, fmt::format_args args) {
-    if(spdlog::default_logger()->should_log(spdlog::level::warn)) {
+    if(_level <= LogLevel::WARN) {
         spdlog::log(spdlog::source_loc{filename_in, line_in, funcname_in}, spdlog::level::warn, fmt::vformat(format_str, args));
     }
 }
 
 void Cppelix::SpdlogFrameworkLogger::error(const char *filename_in, int line_in, const char *funcname_in,
                                           std::string_view format_str, fmt::format_args args) {
-    if(spdlog::default_logger()->should_log(spdlog::level::err)) {
+    if(_level <= LogLevel::ERROR) {
         spdlog::log(spdlog::source_loc{filename_in, line_in, funcname_in}, spdlog::level::err, fmt::vformat(format_str, args));
     }
 }
@@ -64,6 +64,14 @@ bool Cppelix::SpdlogFrameworkLogger::start() {
 bool Cppelix::SpdlogFrameworkLogger::stop() {
     SPDLOG_TRACE("SpdlogFrameworkLogger stopped");
     return true;
+}
+
+void Cppelix::SpdlogFrameworkLogger::setLogLevel(Cppelix::LogLevel level) {
+    _level = level;
+}
+
+Cppelix::LogLevel Cppelix::SpdlogFrameworkLogger::getLogLevel() const {
+    return _level;
 }
 
 

@@ -18,52 +18,60 @@ Cppelix::SpdlogLogger::SpdlogLogger() : ILogger(), Service() {
 
 void Cppelix::SpdlogLogger::trace(const char *filename_in, int line_in, const char *funcname_in,
                                            std::string_view format_str, fmt::format_args args) {
-    if(_logger->should_log(spdlog::level::trace)) {
-        _logger->log(spdlog::source_loc{filename_in, line_in, funcname_in}, spdlog::level::trace, fmt::vformat(format_str, args));
+    if(_level <= LogLevel::TRACE) {
+        spdlog::log(spdlog::source_loc{filename_in, line_in, funcname_in}, spdlog::level::trace, fmt::vformat(format_str, args));
     }
 }
 
 void Cppelix::SpdlogLogger::debug(const char *filename_in, int line_in, const char *funcname_in,
                                            std::string_view format_str, fmt::format_args args) {
-    if(_logger->should_log(spdlog::level::debug)) {
-        _logger->log(spdlog::source_loc{filename_in, line_in, funcname_in}, spdlog::level::debug, fmt::vformat(format_str, args));
+    if(_level <= LogLevel::DEBUG) {
+        spdlog::log(spdlog::source_loc{filename_in, line_in, funcname_in}, spdlog::level::debug, fmt::vformat(format_str, args));
     }
 }
 
 void Cppelix::SpdlogLogger::info(const char *filename_in, int line_in, const char *funcname_in,
                                           std::string_view format_str, fmt::format_args args) {
-    if(_logger->should_log(spdlog::level::info)) {
-        _logger->log(spdlog::source_loc{filename_in, line_in, funcname_in}, spdlog::level::info, fmt::vformat(format_str, args));
+    if(_level <= LogLevel::INFO) {
+        spdlog::log(spdlog::source_loc{filename_in, line_in, funcname_in}, spdlog::level::info, fmt::vformat(format_str, args));
     }
 }
 
 void Cppelix::SpdlogLogger::warn(const char *filename_in, int line_in, const char *funcname_in,
                                           std::string_view format_str, fmt::format_args args) {
-    if(_logger->should_log(spdlog::level::warn)) {
-        _logger->log(spdlog::source_loc{filename_in, line_in, funcname_in}, spdlog::level::warn, fmt::vformat(format_str, args));
+    if(_level <= LogLevel::WARN) {
+        spdlog::log(spdlog::source_loc{filename_in, line_in, funcname_in}, spdlog::level::warn, fmt::vformat(format_str, args));
     }
 }
 
 void Cppelix::SpdlogLogger::error(const char *filename_in, int line_in, const char *funcname_in,
                                            std::string_view format_str, fmt::format_args args) {
-    if(_logger->should_log(spdlog::level::err)) {
-        _logger->log(spdlog::source_loc{filename_in, line_in, funcname_in}, spdlog::level::err, fmt::vformat(format_str, args));
+    if(_level <= LogLevel::ERROR) {
+        spdlog::log(spdlog::source_loc{filename_in, line_in, funcname_in}, spdlog::level::err, fmt::vformat(format_str, args));
     }
+}
+
+void Cppelix::SpdlogLogger::setLogLevel(Cppelix::LogLevel level) {
+    _level = level;
+}
+
+Cppelix::LogLevel Cppelix::SpdlogLogger::getLogLevel() const {
+    return _level;
 }
 
 bool Cppelix::SpdlogLogger::start() {
     auto requestedLevelIt = _properties.find("LogLevel");
     if(requestedLevelIt != end(_properties)) {
-        auto requestedLevel = std::any_cast<std::string>(requestedLevelIt->second);
-        if (requestedLevel == "trace") {
+        auto requestedLevel = std::any_cast<LogLevel>(requestedLevelIt->second);
+        if (requestedLevel == LogLevel::TRACE) {
             _logger->set_level(spdlog::level::trace);
-        } else if (requestedLevel == "debug") {
+        } else if (requestedLevel == LogLevel::DEBUG) {
             _logger->set_level(spdlog::level::debug);
-        } else if (requestedLevel == "info") {
+        } else if (requestedLevel == LogLevel::INFO) {
             _logger->set_level(spdlog::level::info);
-        } else if (requestedLevel == "warn") {
+        } else if (requestedLevel == LogLevel::WARN) {
             _logger->set_level(spdlog::level::warn);
-        } else if (requestedLevel == "error") {
+        } else if (requestedLevel == LogLevel::ERROR) {
             _logger->set_level(spdlog::level::err);
         } else {
             _logger->set_level(spdlog::level::info);

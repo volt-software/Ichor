@@ -11,10 +11,10 @@ int main() {
 
     DependencyManager dm{};
     auto logMgr = dm.createServiceManager<IFrameworkLogger, SpdlogFrameworkLogger>();
-    spdlog::set_level(spdlog::level::info);
+    logMgr->setLogLevel(LogLevel::INFO);
     auto logAdminMgr = dm.createServiceManager<ILoggerAdmin, LoggerAdmin<SpdlogLogger>>();
-    auto testMgr = dm.createDependencyServiceManager<ITestService, TestService>(RequiredList<ILogger>, OptionalList<>);
-    auto startStopMgr = dm.createDependencyServiceManager<IStartStopService, StartStopService>(RequiredList<ILogger, ITestService>, OptionalList<>);
+    auto testMgr = dm.createServiceManager<ITestService, TestService>(RequiredList<ILogger>, OptionalList<>, CppelixProperties{{"LogLevel", LogLevel::INFO}});
+    auto startStopMgr = dm.createServiceManager<IStartStopService, StartStopService>(RequiredList<ILogger, ITestService>, OptionalList<>, CppelixProperties{{"LogLevel", LogLevel::INFO}});
     dm.start();
 
     return 0;

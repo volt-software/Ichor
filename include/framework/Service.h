@@ -65,8 +65,8 @@ namespace Cppelix {
         friend class Framework;
         friend class DependencyManager;
         template<class Interface, class ServiceType, typename... Dependencies>
-        requires Derived<ServiceType, Service>
-        friend class DependencyServiceLifecycleManager;
+        requires Derived<ServiceType, Service> && Derived<ServiceType, Interface>
+        friend class LifecycleManager;
         template<class Interface, class ServiceType>
         requires Derived<ServiceType, Service>
         friend class ServiceLifecycleManager;

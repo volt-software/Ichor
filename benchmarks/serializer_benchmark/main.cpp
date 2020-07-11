@@ -9,11 +9,11 @@ int main() {
 
     DependencyManager dm{};
     auto logMgr = dm.createServiceManager<IFrameworkLogger, SpdlogFrameworkLogger>();
-    spdlog::set_level(spdlog::level::info);
+    logMgr->setLogLevel(LogLevel::INFO);
     auto logAdminMgr = dm.createServiceManager<ILoggerAdmin, LoggerAdmin<SpdlogLogger>>();
-    auto serAdmin = dm.createDependencyServiceManager<ISerializationAdmin, SerializationAdmin>(RequiredList<ILogger>, OptionalList<>);
-    auto testMsgSerializer = dm.createDependencyServiceManager<ISerializer, TestMsgJsonSerializer>(RequiredList<ILogger, ISerializationAdmin>, OptionalList<>);
-    auto testMgr = dm.createDependencyServiceManager<ITestService, TestService>(RequiredList<ILogger, ISerializationAdmin>, OptionalList<>);
+    auto serAdmin = dm.createServiceManager<ISerializationAdmin, SerializationAdmin>(RequiredList<ILogger>, OptionalList<>);
+    auto testMsgSerializer = dm.createServiceManager<ISerializer, TestMsgJsonSerializer>(RequiredList<ILogger, ISerializationAdmin>, OptionalList<>);
+    auto testMgr = dm.createServiceManager<ITestService, TestService>(RequiredList<ILogger, ISerializationAdmin>, OptionalList<>);
     dm.start();
 
     return 0;

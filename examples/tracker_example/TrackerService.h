@@ -53,7 +53,7 @@ public:
         auto runtimeService = _scopedRuntimeServices.find(scope);
 
         if(runtimeService == end(_scopedRuntimeServices)) {
-            _scopedRuntimeServices.emplace(scope, _manager->createDependencyServiceManager<IRuntimeCreatedService, RuntimeCreatedService>(RequiredList<ILogger>, OptionalList<>, CppelixProperties{{"scope", scope}}));
+            _scopedRuntimeServices.emplace(scope, _manager->createServiceManager<IRuntimeCreatedService, RuntimeCreatedService>(RequiredList<ILogger>, OptionalList<>, CppelixProperties{{"scope", scope}}));
         }
     }
 
@@ -75,5 +75,5 @@ public:
 private:
     ILogger *_logger;
     std::unique_ptr<DependencyTrackerRegistration> _trackerRegistration;
-    std::unordered_map<std::string, std::shared_ptr<LifecycleManager>> _scopedRuntimeServices;
+    std::unordered_map<std::string, RuntimeCreatedService*> _scopedRuntimeServices;
 };

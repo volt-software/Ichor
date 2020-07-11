@@ -5,7 +5,7 @@
 #include <memory>
 
 namespace Cppelix {
-    class LifecycleManager;
+    class ILifecycleManager;
 
     struct Event {
         Event(uint64_t _type, uint64_t _id, uint64_t _originatingService) noexcept : type{_type}, id{_id}, originatingService{_originatingService} {}
@@ -16,40 +16,40 @@ namespace Cppelix {
     };
 
     struct DependencyOnlineEvent final : public Event {
-        explicit DependencyOnlineEvent(uint64_t _id, uint64_t _originatingService, const std::shared_ptr<LifecycleManager> _manager) noexcept :
+        explicit DependencyOnlineEvent(uint64_t _id, uint64_t _originatingService, const std::shared_ptr<ILifecycleManager> _manager) noexcept :
             Event(TYPE, _id, _originatingService), manager(std::move(_manager)) {}
         ~DependencyOnlineEvent() final = default;
 
-        const std::shared_ptr<LifecycleManager> manager;
+        const std::shared_ptr<ILifecycleManager> manager;
         static constexpr uint64_t TYPE = typeNameHash<DependencyOnlineEvent>();
     };
 
     struct DependencyOfflineEvent final : public Event {
-        explicit DependencyOfflineEvent(uint64_t _id, uint64_t _originatingService, const std::shared_ptr<LifecycleManager> _manager) noexcept :
+        explicit DependencyOfflineEvent(uint64_t _id, uint64_t _originatingService, const std::shared_ptr<ILifecycleManager> _manager) noexcept :
             Event(TYPE, _id, _originatingService), manager(std::move(_manager)) {}
         ~DependencyOfflineEvent() final = default;
 
-        const std::shared_ptr<LifecycleManager> manager;
+        const std::shared_ptr<ILifecycleManager> manager;
         static constexpr uint64_t TYPE = typeNameHash<DependencyOfflineEvent>();
     };
 
     struct DependencyRequestEvent final : public Event {
-        explicit DependencyRequestEvent(uint64_t _id, uint64_t _originatingService, std::shared_ptr<LifecycleManager> _manager, Dependency _dependency, CppelixProperties const * _properties) noexcept :
+        explicit DependencyRequestEvent(uint64_t _id, uint64_t _originatingService, std::shared_ptr<ILifecycleManager> _manager, Dependency _dependency, CppelixProperties const * _properties) noexcept :
                 Event(TYPE, _id, _originatingService), manager(std::move(_manager)), dependency(std::move(_dependency)), properties{_properties} {}
         ~DependencyRequestEvent() final = default;
 
-        const std::shared_ptr<LifecycleManager> manager;
+        const std::shared_ptr<ILifecycleManager> manager;
         const Dependency dependency;
         const CppelixProperties * properties;
         static constexpr uint64_t TYPE = typeNameHash<DependencyRequestEvent>();
     };
 
     struct DependencyUndoRequestEvent final : public Event {
-        explicit DependencyUndoRequestEvent(uint64_t _id, uint64_t _originatingService, std::shared_ptr<LifecycleManager> _manager, Dependency _dependency, CppelixProperties const * _properties) noexcept :
+        explicit DependencyUndoRequestEvent(uint64_t _id, uint64_t _originatingService, std::shared_ptr<ILifecycleManager> _manager, Dependency _dependency, CppelixProperties const * _properties) noexcept :
                 Event(TYPE, _id, _originatingService), manager(std::move(_manager)), dependency(std::move(_dependency)), properties{_properties} {}
         ~DependencyUndoRequestEvent() final = default;
 
-        const std::shared_ptr<LifecycleManager> manager;
+        const std::shared_ptr<ILifecycleManager> manager;
         const Dependency dependency;
         const CppelixProperties * properties;
         static constexpr uint64_t TYPE = typeNameHash<DependencyUndoRequestEvent>();

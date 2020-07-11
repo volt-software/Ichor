@@ -8,7 +8,7 @@ if(USE_RAPIDJSON)
     target_link_libraries(cppelix_serializer_benchmark cppelix)
 endif()
 
-file(GLOB_RECURSE PROJECT_EXAMPLE_SOURCES ${TOP_DIR}/benchmarks/start_stop/*.cpp)
+file(GLOB_RECURSE PROJECT_EXAMPLE_SOURCES ${TOP_DIR}/benchmarks/start_stop_benchmark/*.cpp)
 add_executable(cppelix_start_stop_benchmark ${PROJECT_EXAMPLE_SOURCES})
 if(USE_SPDLOG)
     target_sources(cppelix_start_stop_benchmark PRIVATE ${SPDLOG_SOURCES})

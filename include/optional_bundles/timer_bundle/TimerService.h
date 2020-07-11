@@ -12,8 +12,6 @@ namespace Cppelix {
     // Rather shoddy implementation, setting the interval does not reset the insertEventLoop function and the sleep_for is sketchy at best.
     class Timer : public ITimer, public Service {
     public:
-        static constexpr InterfaceVersion version = InterfaceVersion{1, 0, 0};
-
         Timer() : _id(_timerId.fetch_add(1, std::memory_order_acq_rel)), _intervalNanosec(0), _eventInsertionThread(nullptr), _quit(true) {
         }
 
@@ -30,14 +28,14 @@ namespace Cppelix {
             return true;
         }
 
-        void startTimer() {
+        void startTimer() final {
             bool expected = true;
             if(_quit.compare_exchange_strong(expected, false)) {
                 _eventInsertionThread = std::make_unique<std::thread>([this]() { this->insertEventLoop(); });
             }
         }
 
-        void stopTimer() {
+        void stopTimer() final {
             bool expected = false;
             if(_quit.compare_exchange_strong(expected, true)) {
                 _eventInsertionThread->join();
@@ -45,17 +43,16 @@ namespace Cppelix {
             }
         }
 
-        template <typename Dur>
-        void setInterval(Dur duration) {
-            _intervalNanosec = std::chrono::nanoseconds(duration).count();
-        }
-
         bool running() const {
             return !_quit;
         };
 
-        uint64_t timerId() const {
+        uint64_t timerId() const final {
             return _id;
+        }
+
+        void setInterval(uint64_t nanoseconds) final {
+            _intervalNanosec = nanoseconds;
         }
 
     private:

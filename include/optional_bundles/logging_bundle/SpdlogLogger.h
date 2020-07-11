@@ -22,8 +22,12 @@ namespace Cppelix {
         void warn(const char *filename_in, int line_in, const char *funcname_in, std::string_view format_str, fmt::format_args args) final;
         void error(const char *filename_in, int line_in, const char *funcname_in, std::string_view format_str, fmt::format_args args) final;
 
+        void setLogLevel(LogLevel level) final;
+        LogLevel getLogLevel() const final;
+
     private:
         std::shared_ptr<spdlog::logger> _logger;
+        LogLevel _level;
     };
 }
 

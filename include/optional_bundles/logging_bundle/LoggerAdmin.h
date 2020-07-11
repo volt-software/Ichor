@@ -39,7 +39,7 @@ public:
         auto logger = _loggers.find(evt->originatingService);
 
         auto requestedLevelIt = evt->properties->find("LogLevel");
-        auto requestedLevel = requestedLevelIt != end(*evt->properties) ? std::any_cast<std::string>(requestedLevelIt) : "info";
+        auto requestedLevel = requestedLevelIt != end(*evt->properties) ? std::any_cast<LogLevel>(requestedLevelIt->second) : LogLevel::INFO;
         if(logger == end(_loggers)) {
             LOG_INFO(_logger, "creating logger for svcid {}", evt->originatingService);
             _loggers.emplace(evt->originatingService, _manager->createServiceManager<ILogger, T>(CppelixProperties{{"LogLevel", requestedLevel}, {"TargetServiceId", evt->originatingService}, {"Filter", Filter{ServiceIdFilterEntry{evt->originatingService}}}}));
@@ -55,5 +55,5 @@ public:
 private:
     IFrameworkLogger *_logger;
     std::unique_ptr<DependencyTrackerRegistration> _loggerTrackerRegistration;
-    std::unordered_map<uint64_t, std::shared_ptr<LifecycleManager>> _loggers;
+    std::unordered_map<uint64_t, T*> _loggers;
 };
