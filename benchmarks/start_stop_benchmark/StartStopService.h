@@ -14,21 +14,21 @@ struct IStartStopService {
     static constexpr InterfaceVersion version = InterfaceVersion{1, 0, 0};
 };
 
-class StartStopService : public IStartStopService, public Service {
+class StartStopService final : public IStartStopService, public Service {
 public:
     ~StartStopService() final = default;
     bool start() final {
         if(startCount == 0) {
-            _startServiceRegistration = _manager->registerEventCompletionCallbacks<StartServiceEvent>(getServiceId(), this);
-            _stopServiceRegistration = _manager->registerEventCompletionCallbacks<StopServiceEvent>(getServiceId(), this);
+            _startServiceRegistration = getManager()->registerEventCompletionCallbacks<StartServiceEvent>(getServiceId(), this);
+            _stopServiceRegistration = getManager()->registerEventCompletionCallbacks<StopServiceEvent>(getServiceId(), this);
 
             _start = std::chrono::system_clock::now();
-            _manager->pushEventThreadUnsafe<StopServiceEvent>(getServiceId(), _testServiceId);
+            getManager()->pushEventThreadUnsafe<StopServiceEvent>(getServiceId(), _testServiceId);
         } else if(startCount < 1'000'000) {
-            _manager->pushEventThreadUnsafe<StopServiceEvent>(getServiceId(), _testServiceId);
+            getManager()->pushEventThreadUnsafe<StopServiceEvent>(getServiceId(), _testServiceId);
         } else {
             auto end = std::chrono::system_clock::now();
-            _manager->pushEventThreadUnsafe<QuitEvent>(getServiceId());
+            getManager()->pushEventThreadUnsafe<QuitEvent>(getServiceId());
             LOG_INFO(_logger, "finished in {:n} µs", std::chrono::duration_cast<std::chrono::microseconds>(end-_start).count());
         }
         startCount++;
@@ -36,7 +36,7 @@ public:
     }
 
     bool stop() final {
-        _manager->pushEventThreadUnsafe<StartServiceEvent>(getServiceId(), _testServiceId);
+        getManager()->pushEventThreadUnsafe<StartServiceEvent>(getServiceId(), _testServiceId);
         return true;
     }
 

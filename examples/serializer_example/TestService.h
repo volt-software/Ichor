@@ -15,13 +15,13 @@ struct ITestService : virtual public IService {
     static constexpr InterfaceVersion version = InterfaceVersion{1, 0, 0};
 };
 
-class TestService : public ITestService, public Service {
+class TestService final : public ITestService, public Service {
 public:
     ~TestService() final = default;
     bool start() final {
         LOG_INFO(_logger, "TestService started with dependency");
-        _doWorkRegistration = _manager->registerEventCompletionCallbacks<DoWorkEvent>(getServiceId(), this);
-        _manager->pushEvent<DoWorkEvent>(getServiceId());
+        _doWorkRegistration = getManager()->registerEventCompletionCallbacks<DoWorkEvent>(getServiceId(), this);
+        getManager()->pushEvent<DoWorkEvent>(getServiceId());
         return true;
     }
 
@@ -58,7 +58,7 @@ public:
         } else {
             LOG_ERROR(_logger, "serde correct!");
         }
-        _manager->pushEvent<QuitEvent>(getServiceId());
+        getManager()->pushEvent<QuitEvent>(getServiceId());
     }
 
     void handleError(DoWorkEvent const * const evt) {

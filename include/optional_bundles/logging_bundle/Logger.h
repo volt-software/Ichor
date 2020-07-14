@@ -15,11 +15,11 @@ namespace Cppelix {
         virtual void error(const char *filename_in, int line_in, const char *funcname_in, std::string_view format_str, fmt::format_args args) = 0;
 
         virtual void setLogLevel(LogLevel level) = 0;
-        virtual LogLevel getLogLevel() const = 0;
+        [[nodiscard]] virtual LogLevel getLogLevel() const = 0;
 
         static constexpr InterfaceVersion version = InterfaceVersion{1, 0, 0};
     protected:
-        virtual ~ILogger() = default;
+        ~ILogger() override = default;
     };
 
 #ifndef LOG_TRACE

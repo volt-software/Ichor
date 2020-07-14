@@ -24,7 +24,9 @@ namespace Cppelix {
     public:
         virtual ~IService() {}
 
-        virtual uint64_t getServiceId() const = 0;
+        [[nodiscard]] virtual uint64_t getServiceId() const = 0;
+
+        [[nodiscard]] virtual DependencyManager* getManager() = 0;
     };
 
     class Service : virtual public IService {
@@ -36,15 +38,18 @@ namespace Cppelix {
             _manager = mng;
         }
 
-        uint64_t getServiceId() const final {
+        [[nodiscard]] uint64_t getServiceId() const final {
             return _serviceId;
+        }
+
+        [[nodiscard]] DependencyManager* getManager() final {
+            return _manager;
         }
 
     protected:
         [[nodiscard]] virtual bool start() = 0;
         [[nodiscard]] virtual bool stop() = 0;
 
-        DependencyManager *_manager;
         CppelixProperties _properties;
     private:
         ///
@@ -61,6 +66,7 @@ namespace Cppelix {
         sole::uuid _serviceGid;
         ServiceState _serviceState;
         static std::atomic<uint64_t> _serviceIdCounter;
+        DependencyManager *_manager;
 
         friend class Framework;
         friend class DependencyManager;

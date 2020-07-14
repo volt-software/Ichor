@@ -10,7 +10,7 @@
 #include "Logger.h"
 
 namespace Cppelix {
-    class SpdlogLogger : public ILogger, public Service {
+    class SpdlogLogger final : public ILogger, public Service {
     public:
         SpdlogLogger();
         bool start() final;
@@ -23,7 +23,7 @@ namespace Cppelix {
         void error(const char *filename_in, int line_in, const char *funcname_in, std::string_view format_str, fmt::format_args args) final;
 
         void setLogLevel(LogLevel level) final;
-        LogLevel getLogLevel() const final;
+        [[nodiscard]] LogLevel getLogLevel() const final;
 
     private:
         std::shared_ptr<spdlog::logger> _logger;

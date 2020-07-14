@@ -5,7 +5,7 @@
 #include <spdlog/sinks/basic_file_sink.h>
 #include "optional_bundles/logging_bundle/SpdlogFrameworkLogger.h"
 
-Cppelix::SpdlogFrameworkLogger::SpdlogFrameworkLogger() : IFrameworkLogger(), Service() {
+Cppelix::SpdlogFrameworkLogger::SpdlogFrameworkLogger() : IFrameworkLogger(), Service(), _level(LogLevel::TRACE) {
     auto console_sink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
 
     auto time_since_epoch = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch());

@@ -21,8 +21,8 @@ public:
     ~TestService() final = default;
     bool start() final {
         LOG_INFO(_logger, "TestService started with dependency");
-        _doWorkRegistration = _manager->registerEventCompletionCallbacks<DoWorkEvent>(getServiceId(), this);
-        _manager->pushEvent<DoWorkEvent>(getServiceId());
+        _doWorkRegistration = getManager()->registerEventCompletionCallbacks<DoWorkEvent>(getServiceId(), this);
+        getManager()->pushEvent<DoWorkEvent>(getServiceId());
         return true;
     }
 
@@ -62,7 +62,7 @@ public:
         }
         auto end = std::chrono::system_clock::now();
         LOG_INFO(_logger, "finished in {:n} µs", std::chrono::duration_cast<std::chrono::microseconds>(end-start).count());
-        _manager->pushEvent<QuitEvent>(getServiceId());
+        getManager()->pushEvent<QuitEvent>(getServiceId());
     }
 
     void handleError(DoWorkEvent const * const evt) {

@@ -2,8 +2,10 @@
 
 #include "framework/DependencyManager.h"
 #include "framework/Callback.h"
+#include "framework/CommunicationChannel.h"
 
 std::atomic<bool> sigintQuit;
+std::atomic<uint64_t> Cppelix::DependencyManager::_managerIdCounter = 0;
 
 void on_sigint([[maybe_unused]] int sig) {
     sigintQuit.store(true, std::memory_order_release);
@@ -15,11 +17,11 @@ void Cppelix::DependencyManager::start() {
 
     ::signal(SIGINT, on_sigint);
 
-    while(!quit.load(std::memory_order_acquire)) {
+    while(!_quit.load(std::memory_order_acquire)) {
         EventStackUniquePtr evt{};
-        quit.store(sigintQuit.load(std::memory_order_acquire), std::memory_order_release);
-        while (!quit.load(std::memory_order_acquire) && _eventQueue.try_dequeue(_consumerToken, evt)) {
-            quit.store(sigintQuit.load(std::memory_order_acquire), std::memory_order_release);
+        _quit.store(sigintQuit.load(std::memory_order_acquire), std::memory_order_release);
+        while (!_quit.load(std::memory_order_acquire) && _eventQueue.try_dequeue(_consumerToken, evt)) {
+            _quit.store(sigintQuit.load(std::memory_order_acquire), std::memory_order_release);
             switch(evt.getType()) {
                 case DependencyOnlineEvent::TYPE: {
                     SPDLOG_DEBUG("DependencyOnlineEvent");
@@ -91,26 +93,26 @@ void Cppelix::DependencyManager::start() {
                     break;
                 case QuitEvent::TYPE: {
                     SPDLOG_DEBUG("QuitEvent");
-                    auto quitEvt = static_cast<QuitEvent *>(evt.get());
-                    if(!quitEvt->dependenciesStopped) {
+                    auto _quitEvt = static_cast<QuitEvent *>(evt.get());
+                    if(!_quitEvt->dependenciesStopped) {
                         for(auto &[key, possibleManager] : _services) {
-                            _eventQueue.enqueue(_producerToken, EventStackUniquePtr::create<StopServiceEvent>(_eventIdCounter.fetch_add(1, std::memory_order_acq_rel), quitEvt->originatingService, possibleManager->serviceId()));
+                            _eventQueue.enqueue(_producerToken, EventStackUniquePtr::create<StopServiceEvent>(_eventIdCounter.fetch_add(1, std::memory_order_acq_rel), _quitEvt->originatingService, possibleManager->serviceId()));
                         }
 
-                        _eventQueue.enqueue(_producerToken, EventStackUniquePtr::create<QuitEvent>(_eventIdCounter.fetch_add(1, std::memory_order_acq_rel), quitEvt->originatingService, true));
+                        _eventQueue.enqueue(_producerToken, EventStackUniquePtr::create<QuitEvent>(_eventIdCounter.fetch_add(1, std::memory_order_acq_rel), _quitEvt->originatingService, true));
                     } else {
-                        bool canFinallyQuit = true;
+                        bool canFinally_quit = true;
                         for(auto &[key, manager] : _services) {
                             if(manager->getServiceState() != ServiceState::INSTALLED) {
-                                canFinallyQuit = false;
+                                canFinally_quit = false;
                                 break;
                             }
                         }
 
-                        if(canFinallyQuit) {
-                            quit.store(true, std::memory_order_release);
+                        if(canFinally_quit) {
+                            _quit.store(true, std::memory_order_release);
                         } else {
-                            _eventQueue.enqueue(_producerToken, EventStackUniquePtr::create<QuitEvent>(_eventIdCounter.fetch_add(1, std::memory_order_acq_rel), quitEvt->originatingService, false));
+                            _eventQueue.enqueue(_producerToken, EventStackUniquePtr::create<QuitEvent>(_eventIdCounter.fetch_add(1, std::memory_order_acq_rel), _quitEvt->originatingService, false));
                         }
                     }
                 }
@@ -232,6 +234,10 @@ void Cppelix::DependencyManager::start() {
 
     for(auto &[key, manager] : _services) {
         manager->stop();
+    }
+
+    if(_communicationChannel != nullptr) {
+        _communicationChannel->removeManager(this);
     }
 }
 

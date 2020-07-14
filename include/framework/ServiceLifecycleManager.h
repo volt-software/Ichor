@@ -119,7 +119,7 @@ namespace Cppelix {
 
     template<class Interface, class ServiceType, typename... Dependencies>
     requires Derived<ServiceType, Service> && Derived<ServiceType, Interface>
-    class LifecycleManager : public ILifecycleManager {
+    class LifecycleManager final : public ILifecycleManager {
     public:
         explicit CPPELIX_CONSTEXPR LifecycleManager(IFrameworkLogger *logger, std::string_view name, uint64_t nameHash, CppelixProperties properties) : _name(name), _nameHash(nameHash), _dependencies(), _satisfiedDependencies(), _service(), _logger(logger) {
             _service.setProperties(std::move(properties));
@@ -302,14 +302,13 @@ namespace Cppelix {
 
     template<class Interface, class ServiceType>
     requires Derived<ServiceType, Service> && Derived<ServiceType, Interface>
-    class LifecycleManager<Interface, ServiceType> : public ILifecycleManager {
+    class LifecycleManager<Interface, ServiceType> final : public ILifecycleManager {
     public:
         explicit CPPELIX_CONSTEXPR LifecycleManager(IFrameworkLogger *logger, std::string_view name, uint64_t nameHash, CppelixProperties properties) : _name(name), _nameHash(nameHash), _service(), _logger(logger) {
             _service.setProperties(std::move(properties));
         }
 
-        CPPELIX_CONSTEXPR ~LifecycleManager() final {
-        }
+        CPPELIX_CONSTEXPR ~LifecycleManager() final = default;
 
         [[nodiscard]]
         static std::shared_ptr<LifecycleManager<Interface, ServiceType>> create(IFrameworkLogger *logger, std::string_view name, CppelixProperties properties) {

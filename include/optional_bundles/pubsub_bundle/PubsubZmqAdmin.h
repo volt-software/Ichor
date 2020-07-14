@@ -13,8 +13,8 @@ public:
 
     bool start() final {
         LOG_INFO(_logger, "PubsubAdminZmqService started");
-        _publisherTrackerRegistration = _manager->registerDependencyTracker<IPubsubPublisherService>(getServiceId(), this);
-        _subscriberTrackerRegistration = _manager->registerDependencyTracker<IPubsubSubscriberService>(getServiceId(), this);
+        _publisherTrackerRegistration = getManager()->registerDependencyTracker<IPubsubPublisherService>(getServiceId(), this);
+        _subscriberTrackerRegistration = getManager()->registerDependencyTracker<IPubsubSubscriberService>(getServiceId(), this);
         return true;
     }
 
@@ -50,7 +50,7 @@ public:
         auto runtimeService = _scopedPublishers.find(key);
 
         if(runtimeService == end(_scopedPublishers)) {
-            _scopedPublishers.emplace(key, _manager->createServiceManager<IPubsubPublisherService, ZmqPubsubPublisherService>(RequiredList<ILogger>, OptionalList<>, CppelixProperties{makeProperty<std::string>("scope", scope)}));
+            _scopedPublishers.emplace(key, getManager()->createServiceManager<IPubsubPublisherService, ZmqPubsubPublisherService>(RequiredList<ILogger>, OptionalList<>, CppelixProperties{makeProperty<std::string>("scope", scope)}));
         }
     }
 
@@ -90,7 +90,7 @@ public:
         auto runtimeService = _scopedSubscribers.find(key);
 
         if(runtimeService == end(_scopedSubscribers)) {
-            _scopedSubscribers.emplace(key, _manager->createServiceManager<IPubsubSubscriberService, ZmqPubsubPublisherService>(RequiredList<ILogger>, OptionalList<>, CppelixProperties{makeProperty<std::string>("scope", scope)}));
+            _scopedSubscribers.emplace(key, getManager()->createServiceManager<IPubsubSubscriberService, ZmqPubsubPublisherService>(RequiredList<ILogger>, OptionalList<>, CppelixProperties{makeProperty<std::string>("scope", scope)}));
         }
     }
 

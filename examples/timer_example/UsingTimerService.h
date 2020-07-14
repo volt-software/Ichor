@@ -14,14 +14,14 @@ struct IUsingTimerService : virtual public IService {
     static constexpr InterfaceVersion version = InterfaceVersion{1, 0, 0};
 };
 
-class UsingTimerService : public IUsingTimerService, public Service {
+class UsingTimerService final : public IUsingTimerService, public Service {
 public:
     ~UsingTimerService() final = default;
 
     bool start() final {
         LOG_INFO(_logger, "UsingTimerService started");
-        _timerEventRegistration = _manager->registerEventHandler<TimerEvent>(getServiceId(), this);
-        _timerManager = _manager->createServiceManager<ITimer, Timer>();
+        _timerEventRegistration = getManager()->registerEventHandler<TimerEvent>(getServiceId(), this);
+        _timerManager = getManager()->createServiceManager<ITimer, Timer>();
         _timerManager->setChronoInterval(std::chrono::milliseconds(500));
         _timerManager->startTimer();
         return true;
@@ -51,7 +51,7 @@ public:
         _timerTriggerCount++;
         LOG_INFO(_logger, "Timer triggered {} times", _timerTriggerCount);
         if(_timerTriggerCount == 5) {
-            _manager->pushEventThreadUnsafe<QuitEvent>(getServiceId());
+            getManager()->pushEventThreadUnsafe<QuitEvent>(getServiceId());
         }
 
         // we dealt with it, don't propagate to other handlers

@@ -14,12 +14,12 @@ struct ITrackerService : virtual public IService {
     static constexpr InterfaceVersion version = InterfaceVersion{1, 0, 0};
 };
 
-class TrackerService : public ITrackerService, public Service {
+class TrackerService final : public ITrackerService, public Service {
 public:
     ~TrackerService() final = default;
     bool start() final {
         LOG_INFO(_logger, "TrackerService started");
-        _trackerRegistration = _manager->registerDependencyTracker<IRuntimeCreatedService>(getServiceId(), this);
+        _trackerRegistration = getManager()->registerDependencyTracker<IRuntimeCreatedService>(getServiceId(), this);
         return true;
     }
 
@@ -53,7 +53,7 @@ public:
         auto runtimeService = _scopedRuntimeServices.find(scope);
 
         if(runtimeService == end(_scopedRuntimeServices)) {
-            _scopedRuntimeServices.emplace(scope, _manager->createServiceManager<IRuntimeCreatedService, RuntimeCreatedService>(RequiredList<ILogger>, OptionalList<>, CppelixProperties{{"scope", scope}}));
+            _scopedRuntimeServices.emplace(scope, getManager()->createServiceManager<IRuntimeCreatedService, RuntimeCreatedService>(RequiredList<ILogger>, OptionalList<>, CppelixProperties{{"scope", scope}}));
         }
     }
 

@@ -5,26 +5,27 @@
 #include <optional_bundles/logging_bundle/Logger.h>
 #include "framework/Service.h"
 #include "framework/ServiceLifecycleManager.h"
-#include "RuntimeCreatedService.h"
+#include "framework/CommunicationChannel.h"
+#include "CustomEvent.h"
 
 using namespace Cppelix;
 
 
-struct ITestService : virtual public IService {
+struct IOneService : virtual public IService {
     static constexpr InterfaceVersion version = InterfaceVersion{1, 0, 0};
 };
 
-class TestService final : public ITestService, public Service {
+class OneService final : public IOneService, public Service {
 public:
-    ~TestService() final = default;
+    ~OneService() final = default;
     bool start() final {
-        LOG_INFO(_logger, "TestService started with dependency");
-        getManager()->pushEvent<QuitEvent>(getServiceId(), this);
+        LOG_INFO(_logger, "OneService started with dependency");
+        getManager()->getCommunicationChannel()->broadcastEvent<CustomEvent>(getManager(), getServiceId());
         return true;
     }
 
     bool stop() final {
-        LOG_INFO(_logger, "TestService stopped with dependency");
+        LOG_INFO(_logger, "OneService stopped with dependency");
         return true;
     }
 
@@ -36,13 +37,6 @@ public:
 
     void removeDependencyInstance(ILogger *logger) {
         _logger = nullptr;
-    }
-
-    void addDependencyInstance(IRuntimeCreatedService *svc) {
-        LOG_INFO(_logger, "Inserted IRuntimeCreatedService svcid {} for svcid {}", svc->getServiceId(), getServiceId());
-    }
-
-    void removeDependencyInstance(IRuntimeCreatedService *) {
     }
 
 private:

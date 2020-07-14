@@ -22,6 +22,7 @@ using namespace std::chrono_literals;
 namespace Cppelix {
 
     class DependencyManager;
+    class CommunicationChannel;
 
     class [[nodiscard]] EventStackUniquePtr final {
     public:
@@ -42,7 +43,7 @@ namespace Cppelix {
             if(!_empty) {
                 reinterpret_cast<Event *>(_buffer.data())->~Event();
             }
-            _buffer = std::move(other._buffer);
+            _buffer = other._buffer;
             other._empty = true;
             _empty = false;
             _type = other._type;
@@ -54,7 +55,7 @@ namespace Cppelix {
             if(!_empty) {
                 reinterpret_cast<Event *>(_buffer.data())->~Event();
             }
-            _buffer = std::move(other._buffer);
+            _buffer = other._buffer;
             other._empty = true;
             _empty = false;
             _type = other._type;
@@ -69,7 +70,7 @@ namespace Cppelix {
 
         template <typename T>
         requires Derived<T, Event>
-        T* getT() noexcept {
+        [[nodiscard]] T* getT() noexcept {
             if(_empty) {
                 throw std::runtime_error("empty");
             }
@@ -77,11 +78,11 @@ namespace Cppelix {
             return reinterpret_cast<T*>(_buffer.data());
         }
 
-        Event* get() noexcept {
+        [[nodiscard]] Event* get() noexcept {
             return reinterpret_cast<Event*>(_buffer.data());
         }
 
-        uint64_t getType() const noexcept {
+        [[nodiscard]] uint64_t getType() const noexcept {
             return _type;
         }
     private:
@@ -146,7 +147,7 @@ namespace Cppelix {
 
     class DependencyManager final {
     public:
-        DependencyManager() : _services(), _dependencyRequestTrackers(), _dependencyUndoRequestTrackers(), _completionCallbacks{}, _errorCallbacks{}, _logger(nullptr), _eventQueue{}, _producerToken{_eventQueue}, _consumerToken{_eventQueue}, _eventIdCounter{0}, quit{false} {}
+        DependencyManager() : _services(), _dependencyRequestTrackers(), _dependencyUndoRequestTrackers(), _completionCallbacks{}, _errorCallbacks{}, _logger(nullptr), _eventQueue{}, _producerToken{_eventQueue}, _consumerToken{_eventQueue}, _eventIdCounter{0}, _quit{false}, _communicationChannel(nullptr), _id(_managerIdCounter++) {}
 
         template<class Interface, class Impl, typename... Required, typename... Optional>
         requires Derived<Impl, Service> && Derived<Impl, Interface>
@@ -211,7 +212,7 @@ namespace Cppelix {
         uint64_t pushEvent(uint64_t originatingServiceId, Args&&... args){
             static_assert(sizeof(EventT) < 128, "event type cannot be larger than 128 bytes");
 
-            if(quit.load(std::memory_order_acquire)) {
+            if(_quit.load(std::memory_order_acquire)) {
                 return 0;
             }
 
@@ -225,7 +226,7 @@ namespace Cppelix {
         uint64_t pushEventThreadUnsafe(uint64_t originatingServiceId, Args&&... args){
             static_assert(sizeof(EventT) < 128, "event type cannot be larger than 128 bytes");
 
-            if(quit.load(std::memory_order_acquire)) {
+            if(_quit.load(std::memory_order_acquire)) {
                 return 0;
             }
 
@@ -244,18 +245,6 @@ namespace Cppelix {
             DependencyTrackerInfo requestInfo{impl->getServiceId(), [impl](Event const * const evt){ impl->handleDependencyRequest(static_cast<Interface*>(nullptr), static_cast<DependencyRequestEvent const *>(evt)); }};
             DependencyTrackerInfo undoRequestInfo{impl->getServiceId(), [impl](Event const * const evt){ impl->handleDependencyUndoRequest(static_cast<Interface*>(nullptr), static_cast<DependencyUndoRequestEvent const *>(evt)); }};
 
-            if(requestTrackersForType == end(_dependencyRequestTrackers)) {
-                _dependencyRequestTrackers.emplace(typeNameHash<Interface>(), std::vector<DependencyTrackerInfo>{std::move(requestInfo)});
-            } else {
-                requestTrackersForType->second.emplace_back(std::move(requestInfo));
-            }
-
-            if(undoRequestTrackersForType == end(_dependencyUndoRequestTrackers)) {
-                _dependencyUndoRequestTrackers.emplace(typeNameHash<Interface>(), std::vector<DependencyTrackerInfo>{undoRequestInfo});
-            } else {
-                undoRequestTrackersForType->second.emplace_back(std::move(undoRequestInfo));
-            }
-
             for(auto &[key, mgr] : _services) {
                 auto const * depInfo = mgr->getDependencyInfo();
 
@@ -269,6 +258,18 @@ namespace Cppelix {
                         requestInfo.trackFunc(&evt);
                     }
                 }
+            }
+
+            if(requestTrackersForType == end(_dependencyRequestTrackers)) {
+                _dependencyRequestTrackers.emplace(typeNameHash<Interface>(), std::vector<DependencyTrackerInfo>{requestInfo});
+            } else {
+                requestTrackersForType->second.emplace_back(std::move(requestInfo));
+            }
+
+            if(undoRequestTrackersForType == end(_dependencyUndoRequestTrackers)) {
+                _dependencyUndoRequestTrackers.emplace(typeNameHash<Interface>(), std::vector<DependencyTrackerInfo>{undoRequestInfo});
+            } else {
+                undoRequestTrackersForType->second.emplace_back(std::move(undoRequestInfo));
             }
 
             // I think there's a bug in GCC 10.1, where if I don't make this a unique_ptr, the DependencyTrackerRegistration destructor immediately gets called for some reason.
@@ -303,6 +304,16 @@ namespace Cppelix {
             // I think there's a bug in GCC 10.1, where if I don't make this a unique_ptr, the EventHandlerRegistration destructor immediately gets called for some reason.
             // Even if the result is stored in a variable at the caller site.
             return std::make_unique<EventHandlerRegistration>(this, CallbackKey{serviceId, EventT::TYPE});
+        }
+
+        [[nodiscard]] uint64_t getId() const {
+            return _id;
+        }
+
+        ///
+        /// \return Potentially nullptr
+        [[nodiscard]] CommunicationChannel* getCommunicationChannel() {
+            return _communicationChannel;
         }
 
         void start();
@@ -364,6 +375,10 @@ namespace Cppelix {
             }
         }
 
+        void setCommunicationChannel(CommunicationChannel *channel) {
+            _communicationChannel = channel;
+        }
+
         std::unordered_map<uint64_t, std::shared_ptr<ILifecycleManager>> _services;
         std::unordered_map<uint64_t, std::vector<DependencyTrackerInfo>> _dependencyRequestTrackers;
         std::unordered_map<uint64_t, std::vector<DependencyTrackerInfo>> _dependencyUndoRequestTrackers;
@@ -375,8 +390,12 @@ namespace Cppelix {
         moodycamel::ProducerToken _producerToken;
         moodycamel::ConsumerToken _consumerToken;
         std::atomic<uint64_t> _eventIdCounter;
-        std::atomic<bool> quit;
+        std::atomic<bool> _quit;
+        CommunicationChannel *_communicationChannel;
+        uint64_t _id;
+        static std::atomic<uint64_t> _managerIdCounter;
 
         friend class EventCompletionHandlerRegistration;
+        friend class CommunicationChannel;
     };
 }
