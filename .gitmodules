@@ -35,3 +35,6 @@
 [submodule "external/simdjson"]
 	path = external/simdjson
 	url = https://github.com/simdjson/simdjson.git
+[submodule "external/celix"]
+	path = external/celix
+	url = https://github.com/apache/celix.git

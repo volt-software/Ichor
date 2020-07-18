@@ -27,6 +27,8 @@ namespace Cppelix {
         [[nodiscard]] virtual uint64_t getServiceId() const = 0;
 
         [[nodiscard]] virtual DependencyManager* getManager() = 0;
+
+        [[nodiscard]] virtual CppelixProperties* getProperties() = 0;
     };
 
     class Service : virtual public IService {
@@ -44,6 +46,10 @@ namespace Cppelix {
 
         [[nodiscard]] DependencyManager* getManager() final {
             return _manager;
+        }
+
+        [[nodiscard]] CppelixProperties* getProperties() final {
+            return &_properties;
         }
 
     protected:

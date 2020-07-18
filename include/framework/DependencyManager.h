@@ -70,7 +70,7 @@ namespace Cppelix {
 
         template <typename T>
         requires Derived<T, Event>
-        [[nodiscard]] T* getT() noexcept {
+        [[nodiscard]] T* getT() {
             if(_empty) {
                 throw std::runtime_error("empty");
             }
@@ -78,7 +78,11 @@ namespace Cppelix {
             return reinterpret_cast<T*>(_buffer.data());
         }
 
-        [[nodiscard]] Event* get() noexcept {
+        [[nodiscard]] Event* get() {
+            if(_empty) {
+                throw std::runtime_error("empty");
+            }
+
             return reinterpret_cast<Event*>(_buffer.data());
         }
 

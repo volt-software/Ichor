@@ -132,7 +132,8 @@ void Cppelix::DependencyManager::start() {
                     auto &toStopService = toStopServiceIt->second;
                     if(stopServiceEvt->dependenciesStopped) {
                         if(toStopService->getServiceState() == ServiceState::ACTIVE && !toStopService->stop()) {
-                            LOG_ERROR(_logger, "Couldn't stop service {}: {} but all dependencies stopped", stopServiceEvt->serviceId, toStopService->name());
+                            LOG_ERROR(_logger, "Couldn't stop service {}: {} but all dependencies stopped", stopServiceEvt->serviceId,
+                                      toStopService->implementationName());
                             handleEventError(stopServiceEvt);
                         } else {
                             handleEventCompletion(stopServiceEvt);
@@ -150,7 +151,7 @@ void Cppelix::DependencyManager::start() {
                     auto toRemoveServiceIt = _services.find(removeServiceEvt->serviceId);
 
                     if(toRemoveServiceIt == end(_services)) {
-                        LOG_ERROR(_logger, "Couldn't stop service {}, missing from known services", removeServiceEvt->serviceId);
+                        LOG_ERROR(_logger, "Couldn't remove service {}, missing from known services", removeServiceEvt->serviceId);
                         handleEventError(removeServiceEvt);
                         break;
                     }
@@ -158,14 +159,16 @@ void Cppelix::DependencyManager::start() {
                     auto &toRemoveService = toRemoveServiceIt->second;
                     if(removeServiceEvt->dependenciesStopped) {
                         if(toRemoveService->getServiceState() == ServiceState::ACTIVE && !toRemoveService->stop()) {
-                            LOG_ERROR(_logger, "Couldn't stop service {}: {} but all dependencies stopped", removeServiceEvt->serviceId, toRemoveService->name());
+                            LOG_ERROR(_logger, "Couldn't remove service {}: {} but all dependencies stopped", removeServiceEvt->serviceId,
+                                      toRemoveService->implementationName());
                             handleEventError(removeServiceEvt);
                         } else {
                             handleEventCompletion(removeServiceEvt);
+                            _services.erase(toRemoveServiceIt);
                         }
                     } else {
                         _eventQueue.enqueue(_producerToken, EventStackUniquePtr::create<DependencyOfflineEvent>(_eventIdCounter.fetch_add(1, std::memory_order_acq_rel), 0, toRemoveService));
-                        _eventQueue.enqueue(_producerToken, EventStackUniquePtr::create<StopServiceEvent>(_eventIdCounter.fetch_add(1, std::memory_order_acq_rel), removeServiceEvt->originatingService, removeServiceEvt->serviceId, true));
+                        _eventQueue.enqueue(_producerToken, EventStackUniquePtr::create<RemoveServiceEvent>(_eventIdCounter.fetch_add(1, std::memory_order_acq_rel), removeServiceEvt->originatingService, removeServiceEvt->serviceId, true));
                     }
                 }
                     break;
@@ -183,7 +186,7 @@ void Cppelix::DependencyManager::start() {
 
                     auto &toStartService = toStartServiceIt->second;
                     if(!toStartService->start()) {
-                        LOG_ERROR(_logger, "Couldn't start service {}: {}", startServiceEvt->serviceId, toStartService->name());
+                        LOG_ERROR(_logger, "Couldn't start service {}: {}", startServiceEvt->serviceId, toStartService->implementationName());
                         handleEventError(startServiceEvt);
                     } else {
                         _eventQueue.enqueue(_producerToken, EventStackUniquePtr::create<DependencyOnlineEvent>(_eventIdCounter.fetch_add(1, std::memory_order_acq_rel), 0, toStartService));

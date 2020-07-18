@@ -16,9 +16,9 @@ int main() {
     CommunicationChannel channel{};
 
     std::thread t1([&channel](){
-        std::this_thread::sleep_for(std::chrono::milliseconds(10));
         DependencyManager dm{};
         channel.addManager(&dm);
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
         auto logMgr = dm.createServiceManager<IFrameworkLogger, SpdlogFrameworkLogger>();
         auto logAdminMgr = dm.createServiceManager<ILoggerAdmin, LoggerAdmin<SpdlogLogger>>();
         auto oneService = dm.createServiceManager<IOneService, OneService>(RequiredList<ILogger>, OptionalList<>);
@@ -26,9 +26,9 @@ int main() {
     });
 
     std::thread t2([&channel](){
-        std::this_thread::sleep_for(std::chrono::milliseconds(10));
         DependencyManager dm{};
         channel.addManager(&dm);
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
         auto logMgr = dm.createServiceManager<IFrameworkLogger, SpdlogFrameworkLogger>();
         auto logAdminMgr = dm.createServiceManager<ILoggerAdmin, LoggerAdmin<SpdlogLogger>>();
         auto otherService = dm.createServiceManager<IOtherService, OtherService>(RequiredList<ILogger>, OptionalList<>);

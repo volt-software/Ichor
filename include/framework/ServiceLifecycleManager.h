@@ -99,7 +99,7 @@ namespace Cppelix {
         CPPELIX_CONSTEXPR virtual bool dependencyOffline(const std::shared_ptr<ILifecycleManager> &dependentService) = 0;
         [[nodiscard]] CPPELIX_CONSTEXPR virtual bool start() = 0;
         [[nodiscard]] CPPELIX_CONSTEXPR virtual bool stop() = 0;
-        [[nodiscard]] CPPELIX_CONSTEXPR virtual std::string_view name() const = 0;
+        [[nodiscard]] CPPELIX_CONSTEXPR virtual std::string_view implementationName() const = 0;
         [[nodiscard]] CPPELIX_CONSTEXPR virtual uint64_t type() const = 0;
         [[nodiscard]] CPPELIX_CONSTEXPR virtual uint64_t serviceId() const = 0;
         [[nodiscard]] CPPELIX_CONSTEXPR virtual ServiceState getServiceState() const = 0;
@@ -121,7 +121,7 @@ namespace Cppelix {
     requires Derived<ServiceType, Service> && Derived<ServiceType, Interface>
     class LifecycleManager final : public ILifecycleManager {
     public:
-        explicit CPPELIX_CONSTEXPR LifecycleManager(IFrameworkLogger *logger, std::string_view name, uint64_t nameHash, CppelixProperties properties) : _name(name), _nameHash(nameHash), _dependencies(), _satisfiedDependencies(), _service(), _logger(logger) {
+        explicit CPPELIX_CONSTEXPR LifecycleManager(IFrameworkLogger *logger, std::string_view name, uint64_t nameHash, CppelixProperties properties) : _implementationName(name), _nameHash(nameHash), _dependencies(), _satisfiedDependencies(), _service(), _logger(logger) {
             _service.setProperties(std::move(properties));
         }
 
@@ -161,9 +161,9 @@ namespace Cppelix {
             bool canStart = _service.getState() != ServiceState::ACTIVE && _dependencies.requiredDependenciesSatisfied(_satisfiedDependencies);
             if(canStart) {
                 if(!_service.internal_start()) {
-                    LOG_ERROR(_logger, "Couldn't start service {}", _name);
+                    LOG_ERROR(_logger, "Couldn't start service {}", _implementationName);
                 } else {
-                    LOG_DEBUG(_logger, "Started {}", _name);
+                    LOG_DEBUG(_logger, "Started {}", _implementationName);
                 }
                 return true;
             }
@@ -201,10 +201,10 @@ namespace Cppelix {
 
                 if(shouldStop) {
                     if (!_service.internal_stop()) {
-                        LOG_ERROR(_logger, "Couldn't stop service {}", _name);
+                        LOG_ERROR(_logger, "Couldn't stop service {}", _implementationName);
                         stopped = false;
                     } else {
-                        LOG_DEBUG(_logger, "stopped {}", _name);
+                        LOG_DEBUG(_logger, "stopped {}", _implementationName);
                     }
                 }
             }
@@ -231,10 +231,10 @@ namespace Cppelix {
             bool canStart = _service.getState() != ServiceState::ACTIVE && _dependencies.requiredDependenciesSatisfied(_satisfiedDependencies);
             if (canStart) {
                 if(_service.internal_start()) {
-                    LOG_DEBUG(_logger, "Started {}", _name);
+                    LOG_DEBUG(_logger, "Started {}", _implementationName);
                     return true;
                 } else {
-                    LOG_DEBUG(_logger, "Couldn't start {}", _name);
+                    LOG_DEBUG(_logger, "Couldn't start {}", _implementationName);
                 }
             }
 
@@ -245,18 +245,18 @@ namespace Cppelix {
         CPPELIX_CONSTEXPR bool stop() final {
             if(_service.getState() == ServiceState::ACTIVE) {
                 if(_service.internal_stop()) {
-                    LOG_DEBUG(_logger, "Stopped {}", _name);
+                    LOG_DEBUG(_logger, "Stopped {}", _implementationName);
                     return true;
                 } else {
-                    LOG_DEBUG(_logger, "Couldn't stop {}", _name);
+                    LOG_DEBUG(_logger, "Couldn't stop {}", _implementationName);
                 }
             }
 
             return true;
         }
 
-        [[nodiscard]] CPPELIX_CONSTEXPR std::string_view name() const final {
-            return _name;
+        [[nodiscard]] CPPELIX_CONSTEXPR std::string_view implementationName() const final {
+            return _implementationName;
         }
 
         [[nodiscard]] CPPELIX_CONSTEXPR uint64_t type() const final {
@@ -292,7 +292,7 @@ namespace Cppelix {
         }
 
     private:
-        const std::string_view _name;
+        const std::string_view _implementationName;
         const uint64_t _nameHash;
         DependencyInfo _dependencies;
         DependencyInfo _satisfiedDependencies;
@@ -304,7 +304,7 @@ namespace Cppelix {
     requires Derived<ServiceType, Service> && Derived<ServiceType, Interface>
     class LifecycleManager<Interface, ServiceType> final : public ILifecycleManager {
     public:
-        explicit CPPELIX_CONSTEXPR LifecycleManager(IFrameworkLogger *logger, std::string_view name, uint64_t nameHash, CppelixProperties properties) : _name(name), _nameHash(nameHash), _service(), _logger(logger) {
+        explicit CPPELIX_CONSTEXPR LifecycleManager(IFrameworkLogger *logger, std::string_view name, uint64_t nameHash, CppelixProperties properties) : _implementationName(name), _nameHash(nameHash), _service(), _logger(logger) {
             _service.setProperties(std::move(properties));
         }
 
@@ -333,10 +333,10 @@ namespace Cppelix {
             bool canStart = _service.getState() != ServiceState::ACTIVE;
             if (canStart) {
                 if(_service.internal_start()) {
-                    LOG_DEBUG(_logger, "Started {}", _name);
+                    LOG_DEBUG(_logger, "Started {}", _implementationName);
                     return true;
                 } else {
-                    LOG_DEBUG(_logger, "Couldn't start {}", _name);
+                    LOG_DEBUG(_logger, "Couldn't start {}", _implementationName);
                 }
             }
 
@@ -347,18 +347,18 @@ namespace Cppelix {
         CPPELIX_CONSTEXPR bool stop() final {
             if(_service.getState() == ServiceState::ACTIVE) {
                 if(_service.internal_stop()) {
-                    LOG_DEBUG(_logger, "Stopped {}", _name);
+                    LOG_DEBUG(_logger, "Stopped {}", _implementationName);
                     return true;
                 } else {
-                    LOG_DEBUG(_logger, "Couldn't stop {}", _name);
+                    LOG_DEBUG(_logger, "Couldn't stop {}", _implementationName);
                 }
             }
 
             return true;
         }
 
-        [[nodiscard]] CPPELIX_CONSTEXPR std::string_view name() const final {
-            return _name;
+        [[nodiscard]] CPPELIX_CONSTEXPR std::string_view implementationName() const final {
+            return _implementationName;
         }
 
         [[nodiscard]] CPPELIX_CONSTEXPR uint64_t type() const final {
@@ -394,7 +394,7 @@ namespace Cppelix {
         }
 
     private:
-        const std::string_view _name;
+        const std::string_view _implementationName;
         const uint64_t _nameHash;
         ServiceType _service;
         IFrameworkLogger *_logger;
