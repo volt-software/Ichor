@@ -213,7 +213,7 @@ void Cppelix::DependencyManager::start() {
 
                     auto existingHandlers = _eventCallbacks.find(removeEventHandlerEvt->key.type);
                     if(existingHandlers != end(_eventCallbacks)) {
-                        std::erase_if(existingHandlers->second, [removeEventHandlerEvt](const auto &pair) noexcept { return pair.first == removeEventHandlerEvt->key.id; });
+                        std::erase_if(existingHandlers->second, [removeEventHandlerEvt](const EventCallbackInfo &info) noexcept { return info.listeningServiceId == removeEventHandlerEvt->key.id; });
                     }
                 }
                     break;

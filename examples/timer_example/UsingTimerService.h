@@ -20,9 +20,9 @@ public:
 
     bool start() final {
         LOG_INFO(_logger, "UsingTimerService started");
-        _timerEventRegistration = getManager()->registerEventHandler<TimerEvent>(getServiceId(), this);
         _timerManager = getManager()->createServiceManager<ITimer, Timer>();
         _timerManager->setChronoInterval(std::chrono::milliseconds(500));
+        _timerEventRegistration = getManager()->registerEventHandler<TimerEvent>(getServiceId(), this, _timerManager->getServiceId());
         _timerManager->startTimer();
         return true;
     }
@@ -43,13 +43,13 @@ public:
     }
 
     bool handleEvent(TimerEvent const * const evt) {
-        if(evt->timerId != _timerManager->timerId()) {
-            // let another timer handler deal with it
-            return false;
+        if(evt->originatingService != _timerManager->getServiceId()) {
+            LOG_ERROR(_logger, "Received event for timer which we did not register for");
+            return false; // let someone else deal with it
         }
 
         _timerTriggerCount++;
-        LOG_INFO(_logger, "Timer triggered {} times", _timerTriggerCount);
+        LOG_INFO(_logger, "Timer {} triggered {} times", _timerManager->getServiceId(), _timerTriggerCount);
         if(_timerTriggerCount == 5) {
             getManager()->pushEventThreadUnsafe<QuitEvent>(getServiceId());
         }

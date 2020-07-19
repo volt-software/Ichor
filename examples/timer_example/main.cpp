@@ -15,6 +15,7 @@ int main() {
     auto logMgr = dm.createServiceManager<IFrameworkLogger, SpdlogFrameworkLogger>();
     auto logAdminMgr = dm.createServiceManager<ILoggerAdmin, LoggerAdmin<SpdlogLogger>>(RequiredList<IFrameworkLogger>, OptionalList<>);
     auto testOneMgr = dm.createServiceManager<IUsingTimerService, UsingTimerService>(RequiredList<ILogger>, OptionalList<>);
+    auto testTwoMgr = dm.createServiceManager<IUsingTimerService, UsingTimerService>(RequiredList<ILogger>, OptionalList<>);
     dm.start();
     auto end = std::chrono::system_clock::now();
     std::cout << fmt::format("Program ran for {:n} µs\n", std::chrono::duration_cast<std::chrono::microseconds>(end-start).count());

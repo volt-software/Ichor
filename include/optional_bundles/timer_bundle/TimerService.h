@@ -12,7 +12,7 @@ namespace Cppelix {
     // Rather shoddy implementation, setting the interval does not reset the insertEventLoop function and the sleep_for is sketchy at best.
     class Timer final : public ITimer, public Service {
     public:
-        Timer() : _id(_timerId.fetch_add(1, std::memory_order_acq_rel)), _intervalNanosec(0), _eventInsertionThread(nullptr), _quit(true) {
+        Timer() : _intervalNanosec(0), _eventInsertionThread(nullptr), _quit(true) {
         }
 
         ~Timer() final {
@@ -47,10 +47,6 @@ namespace Cppelix {
             return !_quit;
         };
 
-        uint64_t timerId() const final {
-            return _id;
-        }
-
         void setInterval(uint64_t nanoseconds) final {
             _intervalNanosec = nanoseconds;
         }
@@ -64,16 +60,14 @@ namespace Cppelix {
                     std::this_thread::sleep_for(std::chrono::nanoseconds(_intervalNanosec.load(std::memory_order_acquire)/10));
                     now = std::chrono::system_clock::now();
                 }
-                getManager()->pushEvent<TimerEvent>(getServiceId(), _id);
+                getManager()->pushEvent<TimerEvent>(getServiceId());
 
                 next += std::chrono::nanoseconds(_intervalNanosec.load(std::memory_order_acquire));
             }
         }
 
-        uint64_t _id;
         std::atomic<uint64_t> _intervalNanosec;
         std::unique_ptr<std::thread> _eventInsertionThread;
         std::atomic<bool> _quit;
-        static std::atomic<uint64_t> _timerId;
     };
 }

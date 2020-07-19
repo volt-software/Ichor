@@ -126,6 +126,13 @@ namespace Cppelix {
         CallbackKey _key{0, 0};
     };
 
+    class [[nodiscard]] EventCallbackInfo final {
+    public:
+        uint64_t listeningServiceId;
+        std::optional<uint64_t> filterServiceId;
+        std::function<bool(Event const * const)> callback;
+    };
+
     class [[nodiscard]] DependencyTrackerRegistration final {
     public:
         DependencyTrackerRegistration(DependencyManager *mgr, uint64_t interfaceNameHash) noexcept : _mgr(mgr), _interfaceNameHash(interfaceNameHash) {}
@@ -142,7 +149,6 @@ namespace Cppelix {
     };
 
     struct DependencyTrackerInfo final {
-        DependencyTrackerInfo() = default;
         DependencyTrackerInfo(uint64_t _trackingServiceId, std::function<void(Event const * const)> _trackFunc) noexcept : trackingServiceId(_trackingServiceId), trackFunc(std::move(_trackFunc)) {}
         ~DependencyTrackerInfo() = default;
         uint64_t trackingServiceId;
@@ -157,6 +163,10 @@ namespace Cppelix {
         requires Derived<Impl, Service> && Derived<Impl, Interface>
         [[nodiscard]]
         auto createServiceManager(RequiredList_t<Required...>, OptionalList_t<Optional...>, CppelixProperties properties = CppelixProperties{}) {
+            if constexpr(sizeof...(Required) == 0 && sizeof...(Optional) == 0) {
+                return createServiceManager<Interface, Impl>(std::move(properties));
+            }
+
             auto cmpMgr = LifecycleManager<Interface, Impl, Required..., Optional...>::template create(_logger, "", std::move(properties), RequiredList<Required...>, OptionalList<Optional...>);
 
             if(_logger != nullptr) {
@@ -211,6 +221,12 @@ namespace Cppelix {
             return &cmpMgr->getService();
         }
 
+        /// Push event into event loop
+        /// \tparam EventT Type of event to push, has to derive from Event
+        /// \tparam Args auto-deducible arguments for EventT constructor
+        /// \param originatingServiceId service that is pushing the event
+        /// \param args arguments for EventT constructor
+        /// \return event id (can be used in completion/error handlers)
         template <typename EventT, typename... Args>
         requires Derived<EventT, Event>
         uint64_t pushEvent(uint64_t originatingServiceId, Args&&... args){
@@ -225,6 +241,13 @@ namespace Cppelix {
             return eventId;
         }
 
+        /// Push event into event loop, requires caller to be on the same thread as dependency manager handler.
+        /// Otherwise, no guarantees for soundness can be made.
+        /// \tparam EventT Type of event to push, has to derive from Event
+        /// \tparam Args auto-deducible arguments for EventT constructor
+        /// \param originatingServiceId service that is pushing the event
+        /// \param args arguments for EventT constructor
+        /// \return event id (can be used in completion/error handlers)
         template <typename EventT, typename... Args>
         requires Derived<EventT, Event>
         uint64_t pushEventThreadUnsafe(uint64_t originatingServiceId, Args&&... args){
@@ -242,6 +265,12 @@ namespace Cppelix {
         template <typename Interface, typename Impl>
         requires Derived<Impl, Service> && ImplementsTrackingHandlers<Impl, Interface>
         [[nodiscard]]
+        /// Register handlers for when dependencies get requested/unrequested
+        /// \tparam Interface type of interface where dependency is requested for (has to derive from Event)
+        /// \tparam Impl type of class registering handler (auto-deducible)
+        /// \param serviceId id of service registering handler
+        /// \param impl class that is registering handler
+        /// \return RAII handler, removes registration upon destruction
         std::unique_ptr<DependencyTrackerRegistration> registerDependencyTracker(uint64_t serviceId, Impl *impl) {
             auto requestTrackersForType = _dependencyRequestTrackers.find(typeNameHash<Interface>());
             auto undoRequestTrackersForType = _dependencyUndoRequestTrackers.find(typeNameHash<Interface>());
@@ -284,6 +313,12 @@ namespace Cppelix {
         template <typename EventT, typename Impl>
         requires Derived<EventT, Event> && ImplementsEventCompletionHandlers<Impl, EventT>
         [[nodiscard]]
+        /// Register event error/completion handlers
+        /// \tparam EventT type of event (has to derive from Event)
+        /// \tparam Impl type of class registering handler (auto-deducible)
+        /// \param serviceId id of service registering handler
+        /// \param impl class that is registering handler
+        /// \return RAII handler, removes registration upon destruction
         std::unique_ptr<EventCompletionHandlerRegistration> registerEventCompletionCallbacks(uint64_t serviceId, Impl *impl) {
             CallbackKey key{serviceId, EventT::TYPE};
             _completionCallbacks.emplace(key, [impl](Event const * const evt){ impl->handleCompletion(static_cast<EventT const * const>(evt)); });
@@ -296,14 +331,21 @@ namespace Cppelix {
         template <typename EventT, typename Impl>
         requires Derived<EventT, Event> && ImplementsEventHandlers<Impl, EventT>
         [[nodiscard]]
-        std::unique_ptr<EventHandlerRegistration> registerEventHandler(uint64_t serviceId, Impl *impl) {
+        /// Register an event handler
+        /// \tparam EventT type of event (has to derive from Event)
+        /// \tparam Impl type of class registering handler (auto-deducible)
+        /// \param serviceId id of service registering handler
+        /// \param impl class that is registering handler
+        /// \param targetServiceId optional service id to filter registering for, if empty, receive all events of type EventT
+        /// \return RAII handler, removes registration upon destruction
+        std::unique_ptr<EventHandlerRegistration> registerEventHandler(uint64_t serviceId, Impl *impl, std::optional<uint64_t> targetServiceId = {}) {
             auto existingHandlers = _eventCallbacks.find(EventT::TYPE);
             if(existingHandlers == end(_eventCallbacks)) {
-                _eventCallbacks.emplace(EventT::TYPE, std::vector<std::pair<uint64_t, std::function<bool(Event const * const)>>>{std::pair<uint64_t, std::function<bool(Event const * const)>>{serviceId,
+                _eventCallbacks.emplace(EventT::TYPE, std::vector<EventCallbackInfo>{EventCallbackInfo{serviceId, targetServiceId,
                         [impl](Event const * const evt){ return impl->handleEvent(static_cast<EventT const * const>(evt)); }}
                 });
             } else {
-                existingHandlers->second.emplace_back(std::pair<uint64_t, std::function<bool(Event const * const)>>{serviceId, [impl](Event const * const evt){ return impl->handleEvent(static_cast<EventT const * const>(evt)); }});
+                existingHandlers->second.emplace_back(EventCallbackInfo{serviceId, targetServiceId, [impl](Event const * const evt){ return impl->handleEvent(static_cast<EventT const * const>(evt)); }});
             }
             // I think there's a bug in GCC 10.1, where if I don't make this a unique_ptr, the EventHandlerRegistration destructor immediately gets called for some reason.
             // Even if the result is stored in a variable at the caller site.
@@ -367,13 +409,17 @@ namespace Cppelix {
                 return;
             }
 
-            for(auto &[serviceId, callback] : registeredListeners->second) {
-                auto service = _services.find(serviceId);
+            for(auto &callbackInfo : registeredListeners->second) {
+                auto service = _services.find(callbackInfo.listeningServiceId);
                 if(service == end(_services) || service->second->getServiceState() != ServiceState::ACTIVE) {
                     continue;
                 }
 
-                if(callback(evt)) {
+                if(callbackInfo.filterServiceId.has_value() && *callbackInfo.filterServiceId != evt->originatingService) {
+                    continue;
+                }
+
+                if(callbackInfo.callback(evt)) {
                     break;
                 }
             }
@@ -383,12 +429,12 @@ namespace Cppelix {
             _communicationChannel = channel;
         }
 
-        std::unordered_map<uint64_t, std::shared_ptr<ILifecycleManager>> _services;
-        std::unordered_map<uint64_t, std::vector<DependencyTrackerInfo>> _dependencyRequestTrackers;
-        std::unordered_map<uint64_t, std::vector<DependencyTrackerInfo>> _dependencyUndoRequestTrackers;
-        std::unordered_map<CallbackKey, std::function<void(Event const * const)>> _completionCallbacks;
-        std::unordered_map<CallbackKey, std::function<void(Event const * const)>> _errorCallbacks;
-        std::unordered_map<uint64_t, std::vector<std::pair<uint64_t, std::function<bool(Event const * const)>>>> _eventCallbacks;
+        std::unordered_map<uint64_t, std::shared_ptr<ILifecycleManager>> _services; // key = service id
+        std::unordered_map<uint64_t, std::vector<DependencyTrackerInfo>> _dependencyRequestTrackers; // key = interface name hash
+        std::unordered_map<uint64_t, std::vector<DependencyTrackerInfo>> _dependencyUndoRequestTrackers; // key = interface name hash
+        std::unordered_map<CallbackKey, std::function<void(Event const * const)>> _completionCallbacks; // key = listening service id + event type
+        std::unordered_map<CallbackKey, std::function<void(Event const * const)>> _errorCallbacks; // key = listening service id + event type
+        std::unordered_map<uint64_t, std::vector<EventCallbackInfo>> _eventCallbacks; // key = service id
         IFrameworkLogger *_logger;
         moodycamel::ConcurrentQueue<EventStackUniquePtr> _eventQueue;
         moodycamel::ProducerToken _producerToken;
