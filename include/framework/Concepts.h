@@ -22,7 +22,7 @@ namespace Cppelix {
 
     template <class ImplT, class EventT>
     concept ImplementsEventHandlers = requires(ImplT impl, EventT const * const evt) {
-        { impl.handleEvent(evt) } -> std::same_as<bool>;
+        { impl.handleEvent(evt) } -> std::same_as<cppcoro::generator<EventCallbackReturn>>;
     };
 
     template <class ImplT, class Interface>

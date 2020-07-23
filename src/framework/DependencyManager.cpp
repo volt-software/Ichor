@@ -45,7 +45,7 @@ void Cppelix::DependencyManager::start() {
                         }
 
                         if (possibleDependentLifecycleManager->dependencyOnline(depOnlineEvt->manager)) {
-                            _eventQueue.enqueue(_producerToken, EventStackUniquePtr::create<DependencyOnlineEvent>(_eventIdCounter.fetch_add(1, std::memory_order_acq_rel), 0, possibleDependentLifecycleManager));
+                            pushEventThreadUnsafe<DependencyOnlineEvent>(0, possibleDependentLifecycleManager);
                         }
                     }
                 }
@@ -66,7 +66,7 @@ void Cppelix::DependencyManager::start() {
                         }
 
                         if (possibleDependentLifecycleManager->dependencyOffline(depOfflineEvt->manager)) {
-                            _eventQueue.enqueue(_producerToken, EventStackUniquePtr::create<DependencyOfflineEvent>(_eventIdCounter.fetch_add(1, std::memory_order_acq_rel), 0, possibleDependentLifecycleManager));
+                            pushEventThreadUnsafe<DependencyOfflineEvent>(0, possibleDependentLifecycleManager);
                         }
                     }
                 }
@@ -102,10 +102,10 @@ void Cppelix::DependencyManager::start() {
                     auto _quitEvt = static_cast<QuitEvent *>(evt.get());
                     if(!_quitEvt->dependenciesStopped) {
                         for(auto &[key, possibleManager] : _services) {
-                            _eventQueue.enqueue(_producerToken, EventStackUniquePtr::create<StopServiceEvent>(_eventIdCounter.fetch_add(1, std::memory_order_acq_rel), _quitEvt->originatingService, possibleManager->serviceId()));
+                            pushEventThreadUnsafe<StopServiceEvent>(_quitEvt->originatingService, possibleManager->serviceId());
                         }
 
-                        _eventQueue.enqueue(_producerToken, EventStackUniquePtr::create<QuitEvent>(_eventIdCounter.fetch_add(1, std::memory_order_acq_rel), _quitEvt->originatingService, true));
+                        pushEventThreadUnsafe<QuitEvent>(_quitEvt->originatingService, true);
                     } else {
                         bool canFinally_quit = true;
                         for(auto &[key, manager] : _services) {
@@ -118,7 +118,7 @@ void Cppelix::DependencyManager::start() {
                         if(canFinally_quit) {
                             _quit.store(true, std::memory_order_release);
                         } else {
-                            _eventQueue.enqueue(_producerToken, EventStackUniquePtr::create<QuitEvent>(_eventIdCounter.fetch_add(1, std::memory_order_acq_rel), _quitEvt->originatingService, false));
+                            pushEventThreadUnsafe<QuitEvent>(_quitEvt->originatingService, false);
                         }
                     }
                 }
@@ -145,8 +145,8 @@ void Cppelix::DependencyManager::start() {
                             handleEventCompletion(stopServiceEvt);
                         }
                     } else {
-                        _eventQueue.enqueue(_producerToken, EventStackUniquePtr::create<DependencyOfflineEvent>(_eventIdCounter.fetch_add(1, std::memory_order_acq_rel), 0, toStopService));
-                        _eventQueue.enqueue(_producerToken, EventStackUniquePtr::create<StopServiceEvent>(_eventIdCounter.fetch_add(1, std::memory_order_acq_rel), stopServiceEvt->originatingService, stopServiceEvt->serviceId, true));
+                        pushEventThreadUnsafe<DependencyOfflineEvent>(0, toStopService);
+                        pushEventThreadUnsafe<StopServiceEvent>(stopServiceEvt->originatingService, stopServiceEvt->serviceId, true);
                     }
                 }
                     break;
@@ -173,8 +173,8 @@ void Cppelix::DependencyManager::start() {
                             _services.erase(toRemoveServiceIt);
                         }
                     } else {
-                        _eventQueue.enqueue(_producerToken, EventStackUniquePtr::create<DependencyOfflineEvent>(_eventIdCounter.fetch_add(1, std::memory_order_acq_rel), 0, toRemoveService));
-                        _eventQueue.enqueue(_producerToken, EventStackUniquePtr::create<RemoveServiceEvent>(_eventIdCounter.fetch_add(1, std::memory_order_acq_rel), removeServiceEvt->originatingService, removeServiceEvt->serviceId, true));
+                        pushEventThreadUnsafe<DependencyOfflineEvent>(0, toRemoveService);
+                        pushEventThreadUnsafe<RemoveServiceEvent>(removeServiceEvt->originatingService, removeServiceEvt->serviceId, true);
                     }
                 }
                     break;
@@ -195,7 +195,7 @@ void Cppelix::DependencyManager::start() {
                         LOG_ERROR(_logger, "Couldn't start service {}: {}", startServiceEvt->serviceId, toStartService->implementationName());
                         handleEventError(startServiceEvt);
                     } else {
-                        _eventQueue.enqueue(_producerToken, EventStackUniquePtr::create<DependencyOnlineEvent>(_eventIdCounter.fetch_add(1, std::memory_order_acq_rel), 0, toStartService));
+                        pushEventThreadUnsafe<DependencyOnlineEvent>(0, toStartService);
                         handleEventCompletion(startServiceEvt);
                     }
                 }
@@ -231,7 +231,19 @@ void Cppelix::DependencyManager::start() {
                     _dependencyUndoRequestTrackers.erase(removeTrackerEvt->interfaceNameHash);
                 }
                     break;
+                case ContinuableEvent::TYPE: {
+                    SPDLOG_DEBUG("ContinuableEvent");
+                    auto continuableEvt = static_cast<ContinuableEvent *>(evt.get());
+
+                    auto it = continuableEvt->generator.begin();
+
+                    if(it->continuable) {
+                        pushEventThreadUnsafe<ContinuableEvent>(continuableEvt->originatingService, std::move(continuableEvt->generator));
+                    }
+                }
+                    break;
                 default: {
+                    SPDLOG_DEBUG("broadcastEvent");
                     broadcastEvent(evt.get());
                 }
                     break;
@@ -248,6 +260,57 @@ void Cppelix::DependencyManager::start() {
     if(_communicationChannel != nullptr) {
         _communicationChannel->removeManager(this);
     }
+}
+
+void Cppelix::DependencyManager::handleEventCompletion(const Cppelix::Event *const evt) const  {
+    if(evt->originatingService == 0) {
+        return;
+    }
+
+    auto service = _services.find(evt->originatingService);
+    if(service == end(_services) || service->second->getServiceState() != ServiceState::ACTIVE) {
+        return;
+    }
+
+    auto callback = _completionCallbacks.find(CallbackKey{evt->originatingService, evt->type});
+    if(callback == end(_completionCallbacks)) {
+        return;
+    }
+
+    callback->second(evt);
+}
+
+void Cppelix::DependencyManager::broadcastEvent(const Cppelix::Event *const evt) {
+    auto registeredListeners = _eventCallbacks.find(evt->type);
+    if(registeredListeners == end(_eventCallbacks)) {
+        return;
+    }
+
+    for(auto &callbackInfo : registeredListeners->second) {
+        auto service = _services.find(callbackInfo.listeningServiceId);
+        if(service == end(_services) || service->second->getServiceState() != ServiceState::ACTIVE) {
+            continue;
+        }
+
+        if(callbackInfo.filterServiceId.has_value() && *callbackInfo.filterServiceId != evt->originatingService) {
+            continue;
+        }
+
+        auto ret = callbackInfo.callback(evt);
+
+        auto [continuable, allowOtherHandlers] = *ret.begin();
+        if(continuable) {
+            pushEventThreadUnsafe<ContinuableEvent>(evt->originatingService, std::move(ret));
+        }
+
+        if(!allowOtherHandlers) {
+            break;
+        }
+    }
+}
+
+void Cppelix::DependencyManager::setCommunicationChannel(Cppelix::CommunicationChannel *channel) {
+    _communicationChannel = channel;
 }
 
 Cppelix::EventCompletionHandlerRegistration::~EventCompletionHandlerRegistration() {

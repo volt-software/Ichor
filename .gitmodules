@@ -35,3 +35,7 @@
 [submodule "external/simdjson"]
 	path = external/simdjson
 	url = https://github.com/simdjson/simdjson.git
+[submodule "external/cppcoro"]
+	path = external/cppcoro
+	url = https://github.com/dutow/cppcoro.git
+	branch = gcc_support

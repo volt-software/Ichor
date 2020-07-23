@@ -7,6 +7,10 @@
 #include <framework/Service.h>
 #include "Logger.h"
 
+namespace spdlog {
+    class logger;
+}
+
 namespace Cppelix {
     class SpdlogLogger final : public ILogger, public Service {
     public:

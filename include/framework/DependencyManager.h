@@ -8,6 +8,7 @@
 #include <chrono>
 #include <atomic>
 #include <csignal>
+#include <cppcoro/generator.hpp>
 #include <concurrentqueue.h>
 #include <framework/interfaces/IFrameworkLogger.h>
 #include "Service.h"
@@ -125,12 +126,7 @@ namespace Cppelix {
         CallbackKey _key{0, 0};
     };
 
-    class [[nodiscard]] EventCallbackInfo final {
-    public:
-        uint64_t listeningServiceId;
-        std::optional<uint64_t> filterServiceId;
-        std::function<bool(Event const * const)> callback;
-    };
+
 
     class [[nodiscard]] DependencyTrackerRegistration final {
     public:
@@ -190,9 +186,9 @@ namespace Cppelix {
                 }
             }
 
-            (_eventQueue.enqueue(_producerToken, EventStackUniquePtr::create<DependencyRequestEvent>(_eventIdCounter.fetch_add(1, std::memory_order_acq_rel), cmpMgr->serviceId(), cmpMgr, Dependency{typeNameHash<Optional>(), Optional::version, false}, cmpMgr->getProperties())), ...);
-            (_eventQueue.enqueue(_producerToken, EventStackUniquePtr::create<DependencyRequestEvent>(_eventIdCounter.fetch_add(1, std::memory_order_acq_rel), cmpMgr->serviceId(), cmpMgr, Dependency{typeNameHash<Required>(), Required::version, true}, cmpMgr->getProperties())), ...);
-            _eventQueue.enqueue(_producerToken, EventStackUniquePtr::create<StartServiceEvent>(_eventIdCounter.fetch_add(1, std::memory_order_acq_rel), 0, cmpMgr->serviceId()));
+            (pushEventThreadUnsafe<DependencyRequestEvent>(cmpMgr->serviceId(), cmpMgr, Dependency{typeNameHash<Optional>(), Optional::version, false}, cmpMgr->getProperties()), ...);
+            (pushEventThreadUnsafe<DependencyRequestEvent>(cmpMgr->serviceId(), cmpMgr, Dependency{typeNameHash<Required>(), Required::version, true}, cmpMgr->getProperties()), ...);
+            pushEventThreadUnsafe<StartServiceEvent>(0, cmpMgr->serviceId());
 
             _services.emplace(cmpMgr->serviceId(), cmpMgr);
             return &cmpMgr->getService();
@@ -214,7 +210,7 @@ namespace Cppelix {
 
             cmpMgr->getService().injectDependencyManager(this);
 
-            _eventQueue.enqueue(_producerToken, EventStackUniquePtr::create<StartServiceEvent>(_eventIdCounter.fetch_add(1, std::memory_order_acq_rel), 0, cmpMgr->getService().getServiceId()));
+            pushEventThreadUnsafe<StartServiceEvent>(0, cmpMgr->serviceId());
 
             _services.emplace(cmpMgr->serviceId(), cmpMgr);
             return &cmpMgr->getService();
@@ -384,49 +380,11 @@ namespace Cppelix {
             callback->second(evt);
         }
 
-        void handleEventCompletion(Event const * const evt) const {
-            if(evt->originatingService == 0) {
-                return;
-            }
+        void handleEventCompletion(Event const * const evt) const;
 
-            auto service = _services.find(evt->originatingService);
-            if(service == end(_services) || service->second->getServiceState() != ServiceState::ACTIVE) {
-                return;
-            }
+        void broadcastEvent(Event const * const evt);
 
-            auto callback = _completionCallbacks.find(CallbackKey{evt->originatingService, evt->type});
-            if(callback == end(_completionCallbacks)) {
-                return;
-            }
-
-            callback->second(evt);
-        }
-
-        void broadcastEvent(Event const * const evt) const {
-            auto registeredListeners = _eventCallbacks.find(evt->type);
-            if(registeredListeners == end(_eventCallbacks)) {
-                return;
-            }
-
-            for(auto &callbackInfo : registeredListeners->second) {
-                auto service = _services.find(callbackInfo.listeningServiceId);
-                if(service == end(_services) || service->second->getServiceState() != ServiceState::ACTIVE) {
-                    continue;
-                }
-
-                if(callbackInfo.filterServiceId.has_value() && *callbackInfo.filterServiceId != evt->originatingService) {
-                    continue;
-                }
-
-                if(callbackInfo.callback(evt)) {
-                    break;
-                }
-            }
-        }
-
-        void setCommunicationChannel(CommunicationChannel *channel) {
-            _communicationChannel = channel;
-        }
+        void setCommunicationChannel(CommunicationChannel *channel);
 
         std::unordered_map<uint64_t, std::shared_ptr<ILifecycleManager>> _services; // key = service id
         std::unordered_map<uint64_t, std::vector<DependencyTrackerInfo>> _dependencyRequestTrackers; // key = interface name hash
