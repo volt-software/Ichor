@@ -24,7 +24,7 @@ Celix was started in 2010, when the newer standards of C++ weren't released yet.
 * Implement business logic in the least amount of code possible 
 * Hopefully this culminates and less error-prone code and better time to market
 
-# Why C++20? It's not even released?
+# Why C++20? It's not even fully implemented?
 
 To consider putting in the effort to port a 100,000+ loc library, it has to be worth the effort. To figure out if it is, this port aims to use the most advanced C++ available at the time of writing, showcasing the benefit in the long-term. 
 
@@ -40,12 +40,12 @@ With this rewrite comes an opportunity to remove some features that are not used
 * Dynamic loading of bundles
 * Descriptor based serialization
 * C support
-    * No effort will be made to provided a C compatible layer either
+    * No effort will be made to provided a C compatible layer
+    * But, a [celix shim library](https://github.com/volt-software/cppelix-celix-shim) is in the works
 * ...
 
 # Todo
 
-* Multithreaded channel for communicating between event loops
 * Support parsing filter (LDAP) strings to type-safe filter currently used
 * etcd support (copy celix library or use COTS for etcd v3?)
 * Pubsub compatibility with celix

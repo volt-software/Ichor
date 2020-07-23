@@ -1,4 +1,3 @@
-#include <spdlog/spdlog.h>
 #include "framework/Service.h"
 
 std::atomic<uint64_t> Cppelix::Service::_serviceIdCounter = 1;

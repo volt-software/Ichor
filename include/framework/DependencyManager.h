@@ -8,7 +8,6 @@
 #include <chrono>
 #include <atomic>
 #include <csignal>
-#include <spdlog/spdlog.h>
 #include <concurrentqueue.h>
 #include <framework/interfaces/IFrameworkLogger.h>
 #include "Service.h"

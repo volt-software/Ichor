@@ -1,16 +1,14 @@
 #pragma once
 
-#ifdef USE_SPDLOG
-
 #include <memory>
 #include <framework/interfaces/IFrameworkLogger.h>
 #include <framework/Service.h>
 #include "Logger.h"
 
 namespace Cppelix {
-    class SpdlogLogger final : public ILogger, public Service {
+    class CoutLogger final : public ILogger, public Service {
     public:
-        SpdlogLogger();
+        CoutLogger();
         bool start() final;
         bool stop() final;
 
@@ -24,9 +22,6 @@ namespace Cppelix {
         [[nodiscard]] LogLevel getLogLevel() const final;
 
     private:
-        std::shared_ptr<spdlog::logger> _logger;
         LogLevel _level;
     };
 }
-
-#endif

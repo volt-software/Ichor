@@ -4,6 +4,12 @@
 #include "framework/Callback.h"
 #include "framework/CommunicationChannel.h"
 
+#if !__has_include(<spdlog/spdlog.h>)
+#define SPDLOG_DEBUG(x)
+#else
+#include <spdlog/spdlog.h>
+#endif
+
 std::atomic<bool> sigintQuit;
 std::atomic<uint64_t> Cppelix::DependencyManager::_managerIdCounter = 0;
 
