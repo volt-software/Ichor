@@ -1,6 +1,5 @@
 #pragma once
 
-#include <coroutine>
 #include <framework/DependencyManager.h>
 #include <optional_bundles/logging_bundle/Logger.h>
 #include <optional_bundles/timer_bundle/TimerService.h>

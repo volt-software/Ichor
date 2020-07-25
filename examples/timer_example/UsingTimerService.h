@@ -1,6 +1,5 @@
 #pragma once
 
-#include <coroutine>
 #include <framework/DependencyManager.h>
 #include <optional_bundles/logging_bundle/Logger.h>
 #include <optional_bundles/timer_bundle/TimerService.h>
@@ -43,7 +42,6 @@ public:
     }
 
     Generator<bool> handleEvent(TimerEvent const * const evt) {
-        //_timerManager->setChronoInterval(std::chrono::milliseconds(50000));
         _timerTriggerCount++;
         LOG_INFO(_logger, "Timer {} triggered {} times", _timerManager->getServiceId(), _timerTriggerCount);
         if(_timerTriggerCount == 5) {
@@ -51,7 +49,7 @@ public:
         }
 
         // we handled it, false means no other handlers are allowed to handle this event.
-        co_return true;
+        co_return false;
     }
 
 private:
