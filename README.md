@@ -74,6 +74,10 @@ Setup: AMD 3900X, 3600MHz@CL17 RAM, ubuntu 20.04
 * Serialization: Rapidjson: 1,000,000 messages serialized & deserialized in ~350 ms
 * Serialization: Rapidjson & simdjson: 1,000,000 messages serialized & deserialized in ~280 ms
 
+# Support
+
+Feel free to make issues/pull requests and I'm sometimes online on Discord, though there's no 24/7 support: https://discord.gg/r9BtesB
+
 # License
 
 Cppelix is licensed under the MIT license.
