@@ -3,7 +3,7 @@
 #include "Dependency.h"
 #include "Callback.h"
 #include <memory>
-#include <EventCallback.h>
+#include <framework/EventCallback.h>
 
 namespace Cppelix {
     class ILifecycleManager;
@@ -122,10 +122,10 @@ namespace Cppelix {
     };
 
     struct ContinuableEvent final : public Event {
-        ContinuableEvent(uint64_t _id, uint64_t _originatingService, cppcoro::generator<EventCallbackReturn> _generator) noexcept : Event(TYPE, _id, _originatingService), generator(std::move(_generator)) {}
+        ContinuableEvent(uint64_t _id, uint64_t _originatingService, Generator<bool> _generator) noexcept : Event(TYPE, _id, _originatingService), generator(std::move(_generator)) {}
         ~ContinuableEvent() final = default;
 
-        cppcoro::generator<EventCallbackReturn> generator;
+        Generator<bool> generator;
         static constexpr uint64_t TYPE = typeNameHash<ContinuableEvent>();
     };
 }

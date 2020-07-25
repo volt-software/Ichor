@@ -237,7 +237,7 @@ void Cppelix::DependencyManager::start() {
 
                     auto it = continuableEvt->generator.begin();
 
-                    if(it->continuable) {
+                    if(it != continuableEvt->generator.end()) {
                         pushEventInternal<ContinuableEvent>(continuableEvt->originatingService, std::move(continuableEvt->generator));
                     }
                 }
@@ -297,9 +297,10 @@ void Cppelix::DependencyManager::broadcastEvent(const Cppelix::Event *const evt)
         }
 
         auto ret = callbackInfo.callback(evt);
+        auto it = ret.begin();
 
-        auto [continuable, allowOtherHandlers] = *ret.begin();
-        if(continuable) {
+        auto allowOtherHandlers = *it;
+        if(it != ret.end()) {
             pushEventInternal<ContinuableEvent>(evt->originatingService, std::move(ret));
         }
 

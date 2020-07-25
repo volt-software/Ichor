@@ -42,12 +42,7 @@ public:
         _logger = nullptr;
     }
 
-    cppcoro::generator<EventCallbackReturn> handleEvent(TimerEvent const * const evt) {
-        if(evt->originatingService != _timerManager->getServiceId()) {
-            LOG_ERROR(_logger, "Received event for timer which we did not register for");
-            co_yield EventCallbackReturn{false, true}; // let someone else deal with it
-        }
-
+    Generator<bool> handleEvent(TimerEvent const * const evt) {
         LOG_INFO(_logger, "Timer {} starting 'long' task", getServiceId());
 
         _timerTriggerCount++;
@@ -56,7 +51,7 @@ public:
             std::this_thread::sleep_for(std::chrono::milliseconds(40));
             LOG_INFO(_logger, "Timer {} completed 'long' task {} times", getServiceId(), i);
             // schedule us again later in the event loop for the next iteration, don't let other handlers handle this event.
-            co_yield EventCallbackReturn{true, false};
+            co_yield false;
         }
 
         if(_timerTriggerCount == 2) {
@@ -64,8 +59,7 @@ public:
         }
 
         LOG_INFO(_logger, "Timer {} completed 'long' task", getServiceId());
-        // we dealt with it, don't propagate to other handlers
-        co_yield EventCallbackReturn{false, false};
+        co_return false;
     }
 
 private:

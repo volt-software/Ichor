@@ -42,20 +42,16 @@ public:
         _logger = nullptr;
     }
 
-    cppcoro::generator<EventCallbackReturn> handleEvent(TimerEvent const * const evt) {
-        if(evt->originatingService != _timerManager->getServiceId()) {
-            LOG_ERROR(_logger, "Received event for timer which we did not register for");
-            co_yield EventCallbackReturn{false, false}; // let someone else deal with it
-        }
-
+    Generator<bool> handleEvent(TimerEvent const * const evt) {
+        //_timerManager->setChronoInterval(std::chrono::milliseconds(50000));
         _timerTriggerCount++;
         LOG_INFO(_logger, "Timer {} triggered {} times", _timerManager->getServiceId(), _timerTriggerCount);
         if(_timerTriggerCount == 5) {
             getManager()->pushEventThreadUnsafe<QuitEvent>(getServiceId());
         }
 
-        // we dealt with it, don't propagate to other handlers
-        co_yield EventCallbackReturn{false, false};
+        // we handled it, false means no other handlers are allowed to handle this event.
+        co_return true;
     }
 
 private:

@@ -36,12 +36,12 @@ public:
         _logger = nullptr;
     }
 
-    cppcoro::generator<EventCallbackReturn> handleEvent(CustomEvent const * const evt) {
+    Generator<bool> handleEvent(CustomEvent const * const evt) {
         getManager()->pushEvent<QuitEvent>(getServiceId(), this);
         getManager()->getCommunicationChannel()->broadcastEvent<QuitEvent>(getManager(), getServiceId());
 
         // we dealt with it, don't let other services handle this event
-        co_yield EventCallbackReturn{false, false};
+        co_return false;
     }
 
 private:
