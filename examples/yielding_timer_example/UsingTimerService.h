@@ -54,7 +54,7 @@ public:
         }
 
         if(_timerTriggerCount == 2) {
-            getManager()->pushEventThreadUnsafe<QuitEvent>(getServiceId());
+            getManager()->pushEventThreadUnsafe<QuitEvent>(getServiceId(), INTERNAL_EVENT_PRIORITY+1);
         }
 
         LOG_INFO(_logger, "Timer {} completed 'long' task", getServiceId());

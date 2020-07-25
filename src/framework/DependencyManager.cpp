@@ -24,14 +24,16 @@ void Cppelix::DependencyManager::start() {
     ::signal(SIGINT, on_sigint);
 
     while(!_quit.load(std::memory_order_acquire)) {
-        EventStackUniquePtr evt{};
         _quit.store(sigintQuit.load(std::memory_order_acquire), std::memory_order_release);
-        while (!_quit.load(std::memory_order_acquire) && _eventQueue.try_dequeue(_consumerToken, evt)) {
+        std::unique_lock lck(_eventQueueMutex);
+        while (!_quit.load(std::memory_order_acquire) && !_eventQueue.empty()) {
+            auto evtNode = _eventQueue.extract(_eventQueue.begin());
+            lck.unlock();
             _quit.store(sigintQuit.load(std::memory_order_acquire), std::memory_order_release);
-            switch(evt.getType()) {
+            switch(evtNode.mapped().getType()) {
                 case DependencyOnlineEvent::TYPE: {
                     SPDLOG_DEBUG("DependencyOnlineEvent");
-                    auto depOnlineEvt = static_cast<DependencyOnlineEvent *>(evt.get());
+                    auto depOnlineEvt = static_cast<DependencyOnlineEvent *>(evtNode.mapped().get());
 
                     auto filterProp = depOnlineEvt->manager->getProperties()->find("Filter");
                     const Filter *filter = nullptr;
@@ -45,14 +47,14 @@ void Cppelix::DependencyManager::start() {
                         }
 
                         if (possibleDependentLifecycleManager->dependencyOnline(depOnlineEvt->manager)) {
-                            pushEventInternal<DependencyOnlineEvent>(0, possibleDependentLifecycleManager);
+                            pushEventInternal<DependencyOnlineEvent>(0, INTERNAL_EVENT_PRIORITY, possibleDependentLifecycleManager);
                         }
                     }
                 }
                     break;
                 case DependencyOfflineEvent::TYPE: {
                     SPDLOG_DEBUG("DependencyOfflineEvent");
-                    auto depOfflineEvt = static_cast<DependencyOfflineEvent *>(evt.get());
+                    auto depOfflineEvt = static_cast<DependencyOfflineEvent *>(evtNode.mapped().get());
 
                     auto filterProp = depOfflineEvt->manager->getProperties()->find("Filter");
                     const Filter *filter = nullptr;
@@ -66,13 +68,13 @@ void Cppelix::DependencyManager::start() {
                         }
 
                         if (possibleDependentLifecycleManager->dependencyOffline(depOfflineEvt->manager)) {
-                            pushEventInternal<DependencyOfflineEvent>(0, possibleDependentLifecycleManager);
+                            pushEventInternal<DependencyOfflineEvent>(0, INTERNAL_EVENT_PRIORITY, possibleDependentLifecycleManager);
                         }
                     }
                 }
                     break;
                 case DependencyRequestEvent::TYPE: {
-                    auto depReqEvt = static_cast<DependencyRequestEvent *>(evt.get());
+                    auto depReqEvt = static_cast<DependencyRequestEvent *>(evtNode.mapped().get());
 
                     auto trackers = _dependencyRequestTrackers.find(depReqEvt->dependency.interfaceNameHash);
                     if(trackers == end(_dependencyRequestTrackers)) {
@@ -85,7 +87,7 @@ void Cppelix::DependencyManager::start() {
                 }
                     break;
                 case DependencyUndoRequestEvent::TYPE: {
-                    auto depUndoReqEvt = static_cast<DependencyUndoRequestEvent *>(evt.get());
+                    auto depUndoReqEvt = static_cast<DependencyUndoRequestEvent *>(evtNode.mapped().get());
 
                     auto trackers = _dependencyUndoRequestTrackers.find(depUndoReqEvt->dependency.interfaceNameHash);
                     if(trackers == end(_dependencyUndoRequestTrackers)) {
@@ -99,13 +101,13 @@ void Cppelix::DependencyManager::start() {
                     break;
                 case QuitEvent::TYPE: {
                     SPDLOG_DEBUG("QuitEvent");
-                    auto _quitEvt = static_cast<QuitEvent *>(evt.get());
+                    auto _quitEvt = static_cast<QuitEvent *>(evtNode.mapped().get());
                     if(!_quitEvt->dependenciesStopped) {
                         for(auto &[key, possibleManager] : _services) {
-                            pushEventInternal<StopServiceEvent>(_quitEvt->originatingService, possibleManager->serviceId());
+                            pushEventInternal<StopServiceEvent>(_quitEvt->originatingService, INTERNAL_EVENT_PRIORITY, possibleManager->serviceId());
                         }
 
-                        pushEventInternal<QuitEvent>(_quitEvt->originatingService, true);
+                        pushEventInternal<QuitEvent>(_quitEvt->originatingService, INTERNAL_EVENT_PRIORITY+1, true);
                     } else {
                         bool canFinally_quit = true;
                         for(auto &[key, manager] : _services) {
@@ -118,14 +120,14 @@ void Cppelix::DependencyManager::start() {
                         if(canFinally_quit) {
                             _quit.store(true, std::memory_order_release);
                         } else {
-                            pushEventInternal<QuitEvent>(_quitEvt->originatingService, false);
+                            pushEventInternal<QuitEvent>(_quitEvt->originatingService, INTERNAL_EVENT_PRIORITY+1, false);
                         }
                     }
                 }
                     break;
                 case StopServiceEvent::TYPE: {
                     SPDLOG_DEBUG("StopServiceEvent");
-                    auto stopServiceEvt = static_cast<StopServiceEvent *>(evt.get());
+                    auto stopServiceEvt = static_cast<StopServiceEvent *>(evtNode.mapped().get());
 
                     auto toStopServiceIt = _services.find(stopServiceEvt->serviceId);
 
@@ -145,14 +147,14 @@ void Cppelix::DependencyManager::start() {
                             handleEventCompletion(stopServiceEvt);
                         }
                     } else {
-                        pushEventInternal<DependencyOfflineEvent>(0, toStopService);
-                        pushEventInternal<StopServiceEvent>(stopServiceEvt->originatingService, stopServiceEvt->serviceId, true);
+                        pushEventInternal<DependencyOfflineEvent>(0, INTERNAL_EVENT_PRIORITY, toStopService);
+                        pushEventInternal<StopServiceEvent>(stopServiceEvt->originatingService, INTERNAL_EVENT_PRIORITY, stopServiceEvt->serviceId, true);
                     }
                 }
                     break;
                 case RemoveServiceEvent::TYPE: {
                     SPDLOG_DEBUG("RemoveServiceEvent");
-                    auto removeServiceEvt = static_cast<RemoveServiceEvent *>(evt.get());
+                    auto removeServiceEvt = static_cast<RemoveServiceEvent *>(evtNode.mapped().get());
 
                     auto toRemoveServiceIt = _services.find(removeServiceEvt->serviceId);
 
@@ -173,14 +175,14 @@ void Cppelix::DependencyManager::start() {
                             _services.erase(toRemoveServiceIt);
                         }
                     } else {
-                        pushEventInternal<DependencyOfflineEvent>(0, toRemoveService);
-                        pushEventInternal<RemoveServiceEvent>(removeServiceEvt->originatingService, removeServiceEvt->serviceId, true);
+                        pushEventInternal<DependencyOfflineEvent>(0, INTERNAL_EVENT_PRIORITY, toRemoveService);
+                        pushEventInternal<RemoveServiceEvent>(removeServiceEvt->originatingService, INTERNAL_EVENT_PRIORITY, removeServiceEvt->serviceId, true);
                     }
                 }
                     break;
                 case StartServiceEvent::TYPE: {
                     SPDLOG_DEBUG("StartServiceEvent");
-                    auto startServiceEvt = static_cast<StartServiceEvent *>(evt.get());
+                    auto startServiceEvt = static_cast<StartServiceEvent *>(evtNode.mapped().get());
 
                     auto toStartServiceIt = _services.find(startServiceEvt->serviceId);
 
@@ -195,19 +197,19 @@ void Cppelix::DependencyManager::start() {
                         LOG_ERROR(_logger, "Couldn't start service {}: {}", startServiceEvt->serviceId, toStartService->implementationName());
                         handleEventError(startServiceEvt);
                     } else {
-                        pushEventInternal<DependencyOnlineEvent>(0, toStartService);
+                        pushEventInternal<DependencyOnlineEvent>(0, INTERNAL_EVENT_PRIORITY, toStartService);
                         handleEventCompletion(startServiceEvt);
                     }
                 }
                     break;
                 case DoWorkEvent::TYPE: {
                     SPDLOG_DEBUG("DoWorkEvent");
-                    handleEventCompletion(evt.get());
+                    handleEventCompletion(evtNode.mapped().get());
                 }
                     break;
                 case RemoveCompletionCallbacksEvent::TYPE: {
                     SPDLOG_DEBUG("RemoveCompletionCallbacksEvent");
-                    auto removeCallbacksEvt = static_cast<RemoveCompletionCallbacksEvent *>(evt.get());
+                    auto removeCallbacksEvt = static_cast<RemoveCompletionCallbacksEvent *>(evtNode.mapped().get());
 
                     _completionCallbacks.erase(removeCallbacksEvt->key);
                     _errorCallbacks.erase(removeCallbacksEvt->key);
@@ -215,7 +217,7 @@ void Cppelix::DependencyManager::start() {
                     break;
                 case RemoveEventHandlerEvent::TYPE: {
                     SPDLOG_DEBUG("RemoveEventHandlerEvent");
-                    auto removeEventHandlerEvt = static_cast<RemoveEventHandlerEvent *>(evt.get());
+                    auto removeEventHandlerEvt = static_cast<RemoveEventHandlerEvent *>(evtNode.mapped().get());
 
                     auto existingHandlers = _eventCallbacks.find(removeEventHandlerEvt->key.type);
                     if(existingHandlers != end(_eventCallbacks)) {
@@ -225,7 +227,7 @@ void Cppelix::DependencyManager::start() {
                     break;
                 case RemoveTrackerEvent::TYPE: {
                     SPDLOG_DEBUG("RemoveTrackerEvent");
-                    auto removeTrackerEvt = static_cast<RemoveTrackerEvent *>(evt.get());
+                    auto removeTrackerEvt = static_cast<RemoveTrackerEvent *>(evtNode.mapped().get());
 
                     _dependencyRequestTrackers.erase(removeTrackerEvt->interfaceNameHash);
                     _dependencyUndoRequestTrackers.erase(removeTrackerEvt->interfaceNameHash);
@@ -233,23 +235,28 @@ void Cppelix::DependencyManager::start() {
                     break;
                 case ContinuableEvent::TYPE: {
                     SPDLOG_DEBUG("ContinuableEvent");
-                    auto continuableEvt = static_cast<ContinuableEvent *>(evt.get());
+                    auto continuableEvt = static_cast<ContinuableEvent *>(evtNode.mapped().get());
 
                     auto it = continuableEvt->generator.begin();
 
                     if(it != continuableEvt->generator.end()) {
-                        pushEventInternal<ContinuableEvent>(continuableEvt->originatingService, std::move(continuableEvt->generator));
+                        pushEventInternal<ContinuableEvent>(continuableEvt->originatingService, continuableEvt->priority, std::move(continuableEvt->generator));
                     }
                 }
                     break;
                 default: {
                     SPDLOG_DEBUG("broadcastEvent");
-                    broadcastEvent(evt.get());
+                    broadcastEvent(evtNode.mapped().get());
                 }
                     break;
             }
+
+            lck.lock();
         }
 
+        lck.unlock();
+
+        // todo condition variable
         std::this_thread::sleep_for(1ms);
     }
 
@@ -301,7 +308,7 @@ void Cppelix::DependencyManager::broadcastEvent(const Cppelix::Event *const evt)
 
         auto allowOtherHandlers = *it;
         if(it != ret.end()) {
-            pushEventInternal<ContinuableEvent>(evt->originatingService, std::move(ret));
+            pushEventInternal<ContinuableEvent>(evt->originatingService, evt->priority, std::move(ret));
         }
 
         if(!allowOtherHandlers) {
@@ -316,18 +323,18 @@ void Cppelix::DependencyManager::setCommunicationChannel(Cppelix::CommunicationC
 
 Cppelix::EventCompletionHandlerRegistration::~EventCompletionHandlerRegistration() {
     if(_mgr != nullptr) {
-        _mgr->pushEvent<RemoveCompletionCallbacksEvent>(0, _key);
+        _mgr->pushEvent<RemoveCompletionCallbacksEvent>(0, INTERNAL_EVENT_PRIORITY, _key);
     }
 }
 
 Cppelix::EventHandlerRegistration::~EventHandlerRegistration() {
     if(_mgr != nullptr) {
-        _mgr->pushEvent<RemoveEventHandlerEvent>(0, _key);
+        _mgr->pushEvent<RemoveEventHandlerEvent>(0, INTERNAL_EVENT_PRIORITY, _key);
     }
 }
 
 Cppelix::DependencyTrackerRegistration::~DependencyTrackerRegistration() {
     if(_mgr != nullptr) {
-        _mgr->pushEvent<RemoveTrackerEvent>(0, _interfaceNameHash);
+        _mgr->pushEvent<RemoveTrackerEvent>(0, INTERNAL_EVENT_PRIORITY, _interfaceNameHash);
     }
 }

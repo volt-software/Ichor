@@ -127,7 +127,7 @@ namespace Cppelix {
 
         CPPELIX_CONSTEXPR ~LifecycleManager() final {
             // _manager is always injected in DependencyManager::create...Manager functions.
-            (_service._manager->template pushEvent<DependencyUndoRequestEvent>(_service.getServiceId(), nullptr, Dependency{typeNameHash<Dependencies>(), Dependencies::version, false}, getProperties()), ...);
+            (_service._manager->template pushEvent<DependencyUndoRequestEvent>(_service.getServiceId(), INTERNAL_EVENT_PRIORITY, nullptr, Dependency{typeNameHash<Dependencies>(), Dependencies::version, false}, getProperties()), ...);
         }
 
         template<typename... Required, typename... Optional>

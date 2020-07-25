@@ -2,6 +2,7 @@
 
 #include <vector>
 #include <unordered_map>
+#include <map>
 #include <memory>
 #include <cassert>
 #include <thread>
@@ -152,7 +153,7 @@ namespace Cppelix {
 
     class DependencyManager final {
     public:
-        DependencyManager() : _services(), _dependencyRequestTrackers(), _dependencyUndoRequestTrackers(), _completionCallbacks{}, _errorCallbacks{}, _logger(nullptr), _eventQueue{}, _producerToken{_eventQueue}, _consumerToken{_eventQueue}, _eventIdCounter{0}, _quit{false}, _communicationChannel(nullptr), _id(_managerIdCounter++) {}
+        DependencyManager() : _services(), _dependencyRequestTrackers(), _dependencyUndoRequestTrackers(), _completionCallbacks{}, _errorCallbacks{}, _logger(nullptr), _eventQueue{}, _eventQueueMutex{}, _eventIdCounter{0}, _quit{false}, _communicationChannel(nullptr), _id(_managerIdCounter++) {}
 
         template<class Interface, class Impl, typename... Required, typename... Optional>
         requires Derived<Impl, Service> && Derived<Impl, Interface>
@@ -186,9 +187,9 @@ namespace Cppelix {
                 }
             }
 
-            (pushEventInternal<DependencyRequestEvent>(cmpMgr->serviceId(), cmpMgr, Dependency{typeNameHash<Optional>(), Optional::version, false}, cmpMgr->getProperties()), ...);
-            (pushEventInternal<DependencyRequestEvent>(cmpMgr->serviceId(), cmpMgr, Dependency{typeNameHash<Required>(), Required::version, true}, cmpMgr->getProperties()), ...);
-            pushEventInternal<StartServiceEvent>(0, cmpMgr->serviceId());
+            (pushEventInternal<DependencyRequestEvent>(cmpMgr->serviceId(), INTERNAL_EVENT_PRIORITY, cmpMgr, Dependency{typeNameHash<Optional>(), Optional::version, false}, cmpMgr->getProperties()), ...);
+            (pushEventInternal<DependencyRequestEvent>(cmpMgr->serviceId(), INTERNAL_EVENT_PRIORITY, cmpMgr, Dependency{typeNameHash<Required>(), Required::version, true}, cmpMgr->getProperties()), ...);
+            pushEventInternal<StartServiceEvent>(0, INTERNAL_EVENT_PRIORITY, cmpMgr->serviceId());
 
             _services.emplace(cmpMgr->serviceId(), cmpMgr);
             return &cmpMgr->getService();
@@ -210,7 +211,7 @@ namespace Cppelix {
 
             cmpMgr->getService().injectDependencyManager(this);
 
-            pushEventInternal<StartServiceEvent>(0, cmpMgr->serviceId());
+            pushEventInternal<StartServiceEvent>(0, INTERNAL_EVENT_PRIORITY, cmpMgr->serviceId());
 
             _services.emplace(cmpMgr->serviceId(), cmpMgr);
             return &cmpMgr->getService();
@@ -224,7 +225,7 @@ namespace Cppelix {
         /// \return event id (can be used in completion/error handlers)
         template <typename EventT, typename... Args>
         requires Derived<EventT, Event>
-        uint64_t pushEvent(uint64_t originatingServiceId, Args&&... args){
+        uint64_t pushEvent(uint64_t originatingServiceId, uint64_t priority, Args&&... args){
             static_assert(sizeof(EventT) < 128, "event type cannot be larger than 128 bytes");
 
             if(_quit.load(std::memory_order_acquire)) {
@@ -232,7 +233,9 @@ namespace Cppelix {
             }
 
             uint64_t eventId = _eventIdCounter.fetch_add(1, std::memory_order_acq_rel);
-            _eventQueue.enqueue(EventStackUniquePtr::create<EventT>(std::forward<uint64_t>(eventId), std::forward<uint64_t>(originatingServiceId), std::forward<Args>(args)...));
+            _eventQueueMutex.lock();
+            _eventQueue.emplace(priority, EventStackUniquePtr::create<EventT>(std::forward<uint64_t>(eventId), std::forward<uint64_t>(originatingServiceId), std::forward<uint64_t>(priority), std::forward<Args>(args)...));
+            _eventQueueMutex.unlock();
             return eventId;
         }
 
@@ -245,7 +248,7 @@ namespace Cppelix {
         /// \return event id (can be used in completion/error handlers)
         template <typename EventT, typename... Args>
         requires Derived<EventT, Event>
-        uint64_t pushEventThreadUnsafe(uint64_t originatingServiceId, Args&&... args){
+        uint64_t pushEventThreadUnsafe(uint64_t originatingServiceId, uint64_t priority, Args&&... args){
             static_assert(sizeof(EventT) < 128, "event type cannot be larger than 128 bytes");
 
             if(_quit.load(std::memory_order_acquire)) {
@@ -253,7 +256,9 @@ namespace Cppelix {
             }
 
             uint64_t eventId = _eventIdCounter.fetch_add(1, std::memory_order_acq_rel);
-            _eventQueue.enqueue(_producerToken, EventStackUniquePtr::create<EventT>(std::forward<uint64_t>(eventId), std::forward<uint64_t>(originatingServiceId), std::forward<Args>(args)...));
+            _eventQueueMutex.lock();
+            _eventQueue.emplace(priority, EventStackUniquePtr::create<EventT>(std::forward<uint64_t>(eventId), std::forward<uint64_t>(originatingServiceId), std::forward<uint64_t>(priority), std::forward<Args>(args)...));
+            _eventQueueMutex.unlock();
             return eventId;
         }
 
@@ -282,7 +287,7 @@ namespace Cppelix {
 
                 for (const auto &dependency : depInfo->_dependencies) {
                     if(dependency.interfaceNameHash == typeNameHash<Interface>()) {
-                        DependencyRequestEvent evt{0, mgr->serviceId(), mgr, Dependency{dependency.interfaceNameHash, dependency.interfaceVersion, dependency.required}, mgr->getProperties()};
+                        DependencyRequestEvent evt{0, mgr->serviceId(), INTERNAL_EVENT_PRIORITY, mgr, Dependency{dependency.interfaceNameHash, dependency.interfaceVersion, dependency.required}, mgr->getProperties()};
                         requestInfo.trackFunc(&evt);
                     }
                 }
@@ -388,11 +393,13 @@ namespace Cppelix {
 
         template <typename EventT, typename... Args>
         requires Derived<EventT, Event>
-        uint64_t pushEventInternal(uint64_t originatingServiceId, Args&&... args){
+        uint64_t pushEventInternal(uint64_t originatingServiceId, uint64_t priority, Args&&... args){
             static_assert(sizeof(EventT) < 128, "event type cannot be larger than 128 bytes");
 
             uint64_t eventId = _eventIdCounter.fetch_add(1, std::memory_order_acq_rel);
-            _eventQueue.enqueue(_producerToken, EventStackUniquePtr::create<EventT>(std::forward<uint64_t>(eventId), std::forward<uint64_t>(originatingServiceId), std::forward<Args>(args)...));
+            _eventQueueMutex.lock();
+            _eventQueue.emplace(priority, EventStackUniquePtr::create<EventT>(std::forward<uint64_t>(eventId), std::forward<uint64_t>(originatingServiceId), std::forward<uint64_t>(priority), std::forward<Args>(args)...));
+            _eventQueueMutex.unlock();
             return eventId;
         }
 
@@ -403,9 +410,8 @@ namespace Cppelix {
         std::unordered_map<CallbackKey, std::function<void(Event const * const)>> _errorCallbacks; // key = listening service id + event type
         std::unordered_map<uint64_t, std::vector<EventCallbackInfo>> _eventCallbacks; // key = service id
         IFrameworkLogger *_logger;
-        moodycamel::ConcurrentQueue<EventStackUniquePtr> _eventQueue;
-        moodycamel::ProducerToken _producerToken;
-        moodycamel::ConsumerToken _consumerToken;
+        std::multimap<uint64_t, EventStackUniquePtr> _eventQueue;
+        std::mutex _eventQueueMutex;
         std::atomic<uint64_t> _eventIdCounter;
         std::atomic<bool> _quit;
         CommunicationChannel *_communicationChannel;
