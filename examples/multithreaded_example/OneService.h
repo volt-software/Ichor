@@ -19,7 +19,7 @@ public:
     ~OneService() final = default;
     bool start() final {
         LOG_INFO(_logger, "OneService started with dependency");
-        getManager()->getCommunicationChannel()->broadcastEvent<CustomEvent>(getManager(), getServiceId(), INTERNAL_EVENT_PRIORITY+1);
+        getManager()->getCommunicationChannel()->broadcastEvent<CustomEvent>(getManager(), getServiceId());
         return true;
     }
 

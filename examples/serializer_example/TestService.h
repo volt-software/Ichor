@@ -21,7 +21,7 @@ public:
     bool start() final {
         LOG_INFO(_logger, "TestService started with dependency");
         _doWorkRegistration = getManager()->registerEventCompletionCallbacks<DoWorkEvent>(getServiceId(), this);
-        getManager()->pushEvent<DoWorkEvent>(getServiceId(), INTERNAL_EVENT_PRIORITY+1);
+        getManager()->pushEvent<DoWorkEvent>(getServiceId());
         return true;
     }
 
@@ -58,7 +58,7 @@ public:
         } else {
             LOG_ERROR(_logger, "serde correct!");
         }
-        getManager()->pushEvent<QuitEvent>(getServiceId(), INTERNAL_EVENT_PRIORITY+1);
+        getManager()->pushEvent<QuitEvent>(getServiceId());
     }
 
     void handleError(DoWorkEvent const * const evt) {

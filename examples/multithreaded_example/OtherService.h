@@ -37,7 +37,7 @@ public:
     }
 
     Generator<bool> handleEvent(CustomEvent const * const evt) {
-        getManager()->pushEvent<QuitEvent>(getServiceId(), INTERNAL_EVENT_PRIORITY+1, this);
+        getManager()->pushEvent<QuitEvent>(getServiceId(), this);
         getManager()->getCommunicationChannel()->broadcastEvent<QuitEvent>(getManager(), getServiceId(), INTERNAL_EVENT_PRIORITY+1);
 
         // we dealt with it, don't let other services handle this event
