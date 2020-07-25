@@ -9,6 +9,7 @@
 #include <chrono>
 #include <atomic>
 #include <csignal>
+#include <condition_variable>
 #include <cppcoro/generator.hpp>
 #include <concurrentqueue.h>
 #include <framework/interfaces/IFrameworkLogger.h>
@@ -217,7 +218,7 @@ namespace Cppelix {
             return &cmpMgr->getService();
         }
 
-        /// Push event into event loop
+        /// Push event into event loop with specified priority
         /// \tparam EventT Type of event to push, has to derive from Event
         /// \tparam Args auto-deducible arguments for EventT constructor
         /// \param originatingServiceId service that is pushing the event
@@ -225,7 +226,7 @@ namespace Cppelix {
         /// \return event id (can be used in completion/error handlers)
         template <typename EventT, typename... Args>
         requires Derived<EventT, Event>
-        uint64_t pushEvent(uint64_t originatingServiceId, uint64_t priority, Args&&... args){
+        uint64_t pushPrioritisedEvent(uint64_t originatingServiceId, uint64_t priority, Args&&... args){
             static_assert(sizeof(EventT) < 128, "event type cannot be larger than 128 bytes");
 
             if(_quit.load(std::memory_order_acquire)) {
@@ -236,11 +237,11 @@ namespace Cppelix {
             _eventQueueMutex.lock();
             _eventQueue.emplace(priority, EventStackUniquePtr::create<EventT>(std::forward<uint64_t>(eventId), std::forward<uint64_t>(originatingServiceId), std::forward<uint64_t>(priority), std::forward<Args>(args)...));
             _eventQueueMutex.unlock();
+            _wakeUp.notify_all();
             return eventId;
         }
 
-        /// Push event into event loop, requires caller to be on the same thread as dependency manager handler.
-        /// Otherwise, no guarantees for soundness can be made.
+        /// Push event into event loop with the default priority
         /// \tparam EventT Type of event to push, has to derive from Event
         /// \tparam Args auto-deducible arguments for EventT constructor
         /// \param originatingServiceId service that is pushing the event
@@ -248,7 +249,7 @@ namespace Cppelix {
         /// \return event id (can be used in completion/error handlers)
         template <typename EventT, typename... Args>
         requires Derived<EventT, Event>
-        uint64_t pushEventThreadUnsafe(uint64_t originatingServiceId, uint64_t priority, Args&&... args){
+        uint64_t pushEvent(uint64_t originatingServiceId, Args&&... args){
             static_assert(sizeof(EventT) < 128, "event type cannot be larger than 128 bytes");
 
             if(_quit.load(std::memory_order_acquire)) {
@@ -257,8 +258,9 @@ namespace Cppelix {
 
             uint64_t eventId = _eventIdCounter.fetch_add(1, std::memory_order_acq_rel);
             _eventQueueMutex.lock();
-            _eventQueue.emplace(priority, EventStackUniquePtr::create<EventT>(std::forward<uint64_t>(eventId), std::forward<uint64_t>(originatingServiceId), std::forward<uint64_t>(priority), std::forward<Args>(args)...));
+            _eventQueue.emplace(INTERNAL_EVENT_PRIORITY, EventStackUniquePtr::create<EventT>(std::forward<uint64_t>(eventId), std::forward<uint64_t>(originatingServiceId), INTERNAL_EVENT_PRIORITY, std::forward<Args>(args)...));
             _eventQueueMutex.unlock();
+            _wakeUp.notify_all();
             return eventId;
         }
 
@@ -400,6 +402,7 @@ namespace Cppelix {
             _eventQueueMutex.lock();
             _eventQueue.emplace(priority, EventStackUniquePtr::create<EventT>(std::forward<uint64_t>(eventId), std::forward<uint64_t>(originatingServiceId), std::forward<uint64_t>(priority), std::forward<Args>(args)...));
             _eventQueueMutex.unlock();
+            _wakeUp.notify_all();
             return eventId;
         }
 
@@ -412,6 +415,7 @@ namespace Cppelix {
         IFrameworkLogger *_logger;
         std::multimap<uint64_t, EventStackUniquePtr> _eventQueue;
         std::mutex _eventQueueMutex;
+        std::condition_variable _wakeUp;
         std::atomic<uint64_t> _eventIdCounter;
         std::atomic<bool> _quit;
         CommunicationChannel *_communicationChannel;

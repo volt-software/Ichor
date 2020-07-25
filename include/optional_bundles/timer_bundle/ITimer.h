@@ -17,6 +17,8 @@ namespace Cppelix {
         virtual void stopTimer() = 0;
         [[nodiscard]] virtual bool running() const = 0;
         virtual void setInterval(uint64_t nanoseconds) = 0;
+        virtual void setPriority(uint64_t priority) = 0;
+        virtual uint64_t getPriority() const = 0;
 
         template <typename Dur>
         void setChronoInterval(Dur duration) {

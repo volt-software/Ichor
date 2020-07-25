@@ -45,7 +45,7 @@ public:
         _timerTriggerCount++;
         LOG_INFO(_logger, "Timer {} triggered {} times", _timerManager->getServiceId(), _timerTriggerCount);
         if(_timerTriggerCount == 5) {
-            getManager()->pushEventThreadUnsafe<QuitEvent>(getServiceId(), INTERNAL_EVENT_PRIORITY+1);
+            getManager()->pushEvent<QuitEvent>(getServiceId(), INTERNAL_EVENT_PRIORITY+1);
         }
 
         // we handled it, false means no other handlers are allowed to handle this event.

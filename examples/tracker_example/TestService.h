@@ -18,7 +18,7 @@ public:
     ~TestService() final = default;
     bool start() final {
         LOG_INFO(_logger, "TestService started with dependency");
-        getManager()->pushEvent<QuitEvent>(getServiceId(), INTERNAL_EVENT_PRIORITY+1, this);
+        getManager()->pushEvent<QuitEvent>(getServiceId(), this);
         return true;
     }
 

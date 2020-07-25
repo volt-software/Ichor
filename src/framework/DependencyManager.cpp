@@ -240,7 +240,7 @@ void Cppelix::DependencyManager::start() {
                     auto it = continuableEvt->generator.begin();
 
                     if(it != continuableEvt->generator.end()) {
-                        pushEventInternal<ContinuableEvent>(continuableEvt->originatingService, continuableEvt->priority, std::move(continuableEvt->generator));
+                        pushEventInternal<ContinuableEvent>(continuableEvt->originatingService, evtNode.key(), std::move(continuableEvt->generator));
                     }
                 }
                     break;
@@ -254,10 +254,9 @@ void Cppelix::DependencyManager::start() {
             lck.lock();
         }
 
-        lck.unlock();
+        _wakeUp.wait_for(lck, std::chrono::milliseconds(1), [this]{return !_eventQueue.empty(); });
 
-        // todo condition variable
-        std::this_thread::sleep_for(1ms);
+        lck.unlock();
     }
 
     for(auto &[key, manager] : _services) {
@@ -323,18 +322,18 @@ void Cppelix::DependencyManager::setCommunicationChannel(Cppelix::CommunicationC
 
 Cppelix::EventCompletionHandlerRegistration::~EventCompletionHandlerRegistration() {
     if(_mgr != nullptr) {
-        _mgr->pushEvent<RemoveCompletionCallbacksEvent>(0, INTERNAL_EVENT_PRIORITY, _key);
+        _mgr->pushEvent<RemoveCompletionCallbacksEvent>(0, _key);
     }
 }
 
 Cppelix::EventHandlerRegistration::~EventHandlerRegistration() {
     if(_mgr != nullptr) {
-        _mgr->pushEvent<RemoveEventHandlerEvent>(0, INTERNAL_EVENT_PRIORITY, _key);
+        _mgr->pushEvent<RemoveEventHandlerEvent>(0, _key);
     }
 }
 
 Cppelix::DependencyTrackerRegistration::~DependencyTrackerRegistration() {
     if(_mgr != nullptr) {
-        _mgr->pushEvent<RemoveTrackerEvent>(0, INTERNAL_EVENT_PRIORITY, _interfaceNameHash);
+        _mgr->pushEvent<RemoveTrackerEvent>(0, _interfaceNameHash);
     }
 }
