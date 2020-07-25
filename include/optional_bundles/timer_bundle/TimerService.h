@@ -60,7 +60,7 @@ namespace Cppelix {
                     std::this_thread::sleep_for(std::chrono::nanoseconds(_intervalNanosec.load(std::memory_order_acquire)/10));
                     now = std::chrono::system_clock::now();
                 }
-                getManager()->pushEvent<TimerEvent>(getServiceId());
+                getManager()->pushEvent<TimerEvent>(getServiceId(), INTERNAL_EVENT_PRIORITY+1);
 
                 next += std::chrono::nanoseconds(_intervalNanosec.load(std::memory_order_acquire));
             }

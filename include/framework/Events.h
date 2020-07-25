@@ -8,17 +8,20 @@
 namespace Cppelix {
     class ILifecycleManager;
 
+    constexpr uint64_t INTERNAL_EVENT_PRIORITY = 1000;
+
     struct Event {
-        Event(uint64_t _type, uint64_t _id, uint64_t _originatingService) noexcept : type{_type}, id{_id}, originatingService{_originatingService} {}
+        Event(uint64_t _type, uint64_t _id, uint64_t _originatingService, uint64_t _priority) noexcept : type{_type}, id{_id}, originatingService{_originatingService}, priority{_priority} {}
         virtual ~Event() = default;
         const uint64_t type;
         const uint64_t id;
         const uint64_t originatingService;
+        const uint64_t priority;
     };
 
     struct DependencyOnlineEvent final : public Event {
-        explicit DependencyOnlineEvent(uint64_t _id, uint64_t _originatingService, const std::shared_ptr<ILifecycleManager> _manager) noexcept :
-            Event(TYPE, _id, _originatingService), manager(std::move(_manager)) {}
+        explicit DependencyOnlineEvent(uint64_t _id, uint64_t _originatingService, uint64_t _priority, const std::shared_ptr<ILifecycleManager> _manager) noexcept :
+            Event(TYPE, _id, _originatingService, _priority), manager(std::move(_manager)) {}
         ~DependencyOnlineEvent() final = default;
 
         const std::shared_ptr<ILifecycleManager> manager;
@@ -26,8 +29,8 @@ namespace Cppelix {
     };
 
     struct DependencyOfflineEvent final : public Event {
-        explicit DependencyOfflineEvent(uint64_t _id, uint64_t _originatingService, const std::shared_ptr<ILifecycleManager> _manager) noexcept :
-            Event(TYPE, _id, _originatingService), manager(std::move(_manager)) {}
+        explicit DependencyOfflineEvent(uint64_t _id, uint64_t _originatingService, uint64_t _priority, const std::shared_ptr<ILifecycleManager> _manager) noexcept :
+            Event(TYPE, _id, _originatingService, _priority), manager(std::move(_manager)) {}
         ~DependencyOfflineEvent() final = default;
 
         const std::shared_ptr<ILifecycleManager> manager;
@@ -35,8 +38,8 @@ namespace Cppelix {
     };
 
     struct DependencyRequestEvent final : public Event {
-        explicit DependencyRequestEvent(uint64_t _id, uint64_t _originatingService, std::shared_ptr<ILifecycleManager> _manager, Dependency _dependency, CppelixProperties const * _properties) noexcept :
-                Event(TYPE, _id, _originatingService), manager(std::move(_manager)), dependency(std::move(_dependency)), properties{_properties} {}
+        explicit DependencyRequestEvent(uint64_t _id, uint64_t _originatingService, uint64_t _priority, std::shared_ptr<ILifecycleManager> _manager, Dependency _dependency, CppelixProperties const * _properties) noexcept :
+                Event(TYPE, _id, _originatingService, _priority), manager(std::move(_manager)), dependency(std::move(_dependency)), properties{_properties} {}
         ~DependencyRequestEvent() final = default;
 
         const std::shared_ptr<ILifecycleManager> manager;
@@ -46,8 +49,8 @@ namespace Cppelix {
     };
 
     struct DependencyUndoRequestEvent final : public Event {
-        explicit DependencyUndoRequestEvent(uint64_t _id, uint64_t _originatingService, std::shared_ptr<ILifecycleManager> _manager, Dependency _dependency, CppelixProperties const * _properties) noexcept :
-                Event(TYPE, _id, _originatingService), manager(std::move(_manager)), dependency(std::move(_dependency)), properties{_properties} {}
+        explicit DependencyUndoRequestEvent(uint64_t _id, uint64_t _originatingService, uint64_t _priority, std::shared_ptr<ILifecycleManager> _manager, Dependency _dependency, CppelixProperties const * _properties) noexcept :
+                Event(TYPE, _id, _originatingService, _priority), manager(std::move(_manager)), dependency(std::move(_dependency)), properties{_properties} {}
         ~DependencyUndoRequestEvent() final = default;
 
         const std::shared_ptr<ILifecycleManager> manager;
@@ -57,7 +60,7 @@ namespace Cppelix {
     };
 
     struct QuitEvent final : public Event {
-        QuitEvent(uint64_t _id, uint64_t _originatingService, bool _dependenciesStopped = false) noexcept : Event(TYPE, _id, _originatingService), dependenciesStopped(_dependenciesStopped) {}
+        QuitEvent(uint64_t _id, uint64_t _originatingService, uint64_t _priority, bool _dependenciesStopped = false) noexcept : Event(TYPE, _id, _originatingService, _priority), dependenciesStopped(_dependenciesStopped) {}
         ~QuitEvent() final = default;
 
         const bool dependenciesStopped;
@@ -65,7 +68,7 @@ namespace Cppelix {
     };
 
     struct StopServiceEvent final : public Event {
-        StopServiceEvent(uint64_t _id, uint64_t _originatingService, uint64_t _serviceId, bool _dependenciesStopped = false) noexcept : Event(TYPE, _id, _originatingService), serviceId(_serviceId), dependenciesStopped(_dependenciesStopped) {}
+        StopServiceEvent(uint64_t _id, uint64_t _originatingService, uint64_t _priority, uint64_t _serviceId, bool _dependenciesStopped = false) noexcept : Event(TYPE, _id, _originatingService, _priority), serviceId(_serviceId), dependenciesStopped(_dependenciesStopped) {}
         ~StopServiceEvent() final = default;
 
         const uint64_t serviceId;
@@ -74,7 +77,7 @@ namespace Cppelix {
     };
 
     struct StartServiceEvent final : public Event {
-        StartServiceEvent(uint64_t _id, uint64_t _originatingService, uint64_t _serviceId) noexcept : Event(TYPE, _id, _originatingService), serviceId(_serviceId) {}
+        StartServiceEvent(uint64_t _id, uint64_t _originatingService, uint64_t _priority, uint64_t _serviceId) noexcept : Event(TYPE, _id, _originatingService, _priority), serviceId(_serviceId) {}
         ~StartServiceEvent() final = default;
 
         const uint64_t serviceId;
@@ -82,7 +85,7 @@ namespace Cppelix {
     };
 
     struct RemoveServiceEvent final : public Event {
-        RemoveServiceEvent(uint64_t _id, uint64_t _originatingService, uint64_t _serviceId, bool _dependenciesStopped = false) noexcept : Event(TYPE, _id, _originatingService), serviceId(_serviceId), dependenciesStopped(_dependenciesStopped) {}
+        RemoveServiceEvent(uint64_t _id, uint64_t _originatingService, uint64_t _priority, uint64_t _serviceId, bool _dependenciesStopped = false) noexcept : Event(TYPE, _id, _originatingService, _priority), serviceId(_serviceId), dependenciesStopped(_dependenciesStopped) {}
         ~RemoveServiceEvent() final = default;
 
         const uint64_t serviceId;
@@ -91,14 +94,14 @@ namespace Cppelix {
     };
 
     struct DoWorkEvent final : public Event {
-        DoWorkEvent(uint64_t _id, uint64_t _originatingService) noexcept : Event(TYPE, _id, _originatingService) {}
+        DoWorkEvent(uint64_t _id, uint64_t _originatingService, uint64_t _priority) noexcept : Event(TYPE, _id, _originatingService, _priority) {}
         ~DoWorkEvent() final = default;
 
         static constexpr uint64_t TYPE = typeNameHash<DoWorkEvent>();
     };
 
     struct RemoveCompletionCallbacksEvent final : public Event {
-        RemoveCompletionCallbacksEvent(uint64_t _id, uint64_t _originatingService, CallbackKey _key) noexcept : Event(TYPE, _id, _originatingService), key(_key) {}
+        RemoveCompletionCallbacksEvent(uint64_t _id, uint64_t _originatingService, uint64_t _priority, CallbackKey _key) noexcept : Event(TYPE, _id, _originatingService, _priority), key(_key) {}
         ~RemoveCompletionCallbacksEvent() final = default;
 
         const CallbackKey key;
@@ -106,7 +109,7 @@ namespace Cppelix {
     };
 
     struct RemoveEventHandlerEvent final : public Event {
-        RemoveEventHandlerEvent(uint64_t _id, uint64_t _originatingService, CallbackKey _key) noexcept : Event(TYPE, _id, _originatingService), key(_key) {}
+        RemoveEventHandlerEvent(uint64_t _id, uint64_t _originatingService, uint64_t _priority, CallbackKey _key) noexcept : Event(TYPE, _id, _originatingService, _priority), key(_key) {}
         ~RemoveEventHandlerEvent() final = default;
 
         const CallbackKey key;
@@ -114,7 +117,7 @@ namespace Cppelix {
     };
 
     struct RemoveTrackerEvent final : public Event {
-        RemoveTrackerEvent(uint64_t _id, uint64_t _originatingService, uint64_t _interfaceNameHash) noexcept : Event(TYPE, _id, _originatingService), interfaceNameHash(_interfaceNameHash) {}
+        RemoveTrackerEvent(uint64_t _id, uint64_t _originatingService, uint64_t _priority, uint64_t _interfaceNameHash) noexcept : Event(TYPE, _id, _originatingService, _priority), interfaceNameHash(_interfaceNameHash) {}
         ~RemoveTrackerEvent() final = default;
 
         const uint64_t interfaceNameHash;
@@ -122,7 +125,7 @@ namespace Cppelix {
     };
 
     struct ContinuableEvent final : public Event {
-        ContinuableEvent(uint64_t _id, uint64_t _originatingService, Generator<bool> _generator) noexcept : Event(TYPE, _id, _originatingService), generator(std::move(_generator)) {}
+        ContinuableEvent(uint64_t _id, uint64_t _originatingService, uint64_t _priority, Generator<bool> _generator) noexcept : Event(TYPE, _id, _originatingService, _priority), generator(std::move(_generator)) {}
         ~ContinuableEvent() final = default;
 
         Generator<bool> generator;

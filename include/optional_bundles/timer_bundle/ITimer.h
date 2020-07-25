@@ -4,7 +4,7 @@
 
 namespace Cppelix {
     struct TimerEvent final : public Event {
-        TimerEvent(uint64_t _id, uint64_t _originatingService) noexcept : Event(TYPE, _id, _originatingService) {}
+        TimerEvent(uint64_t _id, uint64_t _originatingService, uint64_t _priority) noexcept : Event(TYPE, _id, _originatingService, _priority) {}
         ~TimerEvent() final = default;
 
         static constexpr uint64_t TYPE = typeNameHash<TimerEvent>();
