@@ -186,9 +186,9 @@ namespace Cppelix {
                 }
             }
 
-            (pushEventThreadUnsafe<DependencyRequestEvent>(cmpMgr->serviceId(), cmpMgr, Dependency{typeNameHash<Optional>(), Optional::version, false}, cmpMgr->getProperties()), ...);
-            (pushEventThreadUnsafe<DependencyRequestEvent>(cmpMgr->serviceId(), cmpMgr, Dependency{typeNameHash<Required>(), Required::version, true}, cmpMgr->getProperties()), ...);
-            pushEventThreadUnsafe<StartServiceEvent>(0, cmpMgr->serviceId());
+            (pushEventInternal<DependencyRequestEvent>(cmpMgr->serviceId(), cmpMgr, Dependency{typeNameHash<Optional>(), Optional::version, false}, cmpMgr->getProperties()), ...);
+            (pushEventInternal<DependencyRequestEvent>(cmpMgr->serviceId(), cmpMgr, Dependency{typeNameHash<Required>(), Required::version, true}, cmpMgr->getProperties()), ...);
+            pushEventInternal<StartServiceEvent>(0, cmpMgr->serviceId());
 
             _services.emplace(cmpMgr->serviceId(), cmpMgr);
             return &cmpMgr->getService();
@@ -210,7 +210,7 @@ namespace Cppelix {
 
             cmpMgr->getService().injectDependencyManager(this);
 
-            pushEventThreadUnsafe<StartServiceEvent>(0, cmpMgr->serviceId());
+            pushEventInternal<StartServiceEvent>(0, cmpMgr->serviceId());
 
             _services.emplace(cmpMgr->serviceId(), cmpMgr);
             return &cmpMgr->getService();
@@ -385,6 +385,16 @@ namespace Cppelix {
         void broadcastEvent(Event const * const evt);
 
         void setCommunicationChannel(CommunicationChannel *channel);
+
+        template <typename EventT, typename... Args>
+        requires Derived<EventT, Event>
+        uint64_t pushEventInternal(uint64_t originatingServiceId, Args&&... args){
+            static_assert(sizeof(EventT) < 128, "event type cannot be larger than 128 bytes");
+
+            uint64_t eventId = _eventIdCounter.fetch_add(1, std::memory_order_acq_rel);
+            _eventQueue.enqueue(_producerToken, EventStackUniquePtr::create<EventT>(std::forward<uint64_t>(eventId), std::forward<uint64_t>(originatingServiceId), std::forward<Args>(args)...));
+            return eventId;
+        }
 
         std::unordered_map<uint64_t, std::shared_ptr<ILifecycleManager>> _services; // key = service id
         std::unordered_map<uint64_t, std::vector<DependencyTrackerInfo>> _dependencyRequestTrackers; // key = interface name hash

@@ -45,7 +45,7 @@ void Cppelix::DependencyManager::start() {
                         }
 
                         if (possibleDependentLifecycleManager->dependencyOnline(depOnlineEvt->manager)) {
-                            pushEventThreadUnsafe<DependencyOnlineEvent>(0, possibleDependentLifecycleManager);
+                            pushEventInternal<DependencyOnlineEvent>(0, possibleDependentLifecycleManager);
                         }
                     }
                 }
@@ -66,7 +66,7 @@ void Cppelix::DependencyManager::start() {
                         }
 
                         if (possibleDependentLifecycleManager->dependencyOffline(depOfflineEvt->manager)) {
-                            pushEventThreadUnsafe<DependencyOfflineEvent>(0, possibleDependentLifecycleManager);
+                            pushEventInternal<DependencyOfflineEvent>(0, possibleDependentLifecycleManager);
                         }
                     }
                 }
@@ -102,10 +102,10 @@ void Cppelix::DependencyManager::start() {
                     auto _quitEvt = static_cast<QuitEvent *>(evt.get());
                     if(!_quitEvt->dependenciesStopped) {
                         for(auto &[key, possibleManager] : _services) {
-                            pushEventThreadUnsafe<StopServiceEvent>(_quitEvt->originatingService, possibleManager->serviceId());
+                            pushEventInternal<StopServiceEvent>(_quitEvt->originatingService, possibleManager->serviceId());
                         }
 
-                        pushEventThreadUnsafe<QuitEvent>(_quitEvt->originatingService, true);
+                        pushEventInternal<QuitEvent>(_quitEvt->originatingService, true);
                     } else {
                         bool canFinally_quit = true;
                         for(auto &[key, manager] : _services) {
@@ -118,7 +118,7 @@ void Cppelix::DependencyManager::start() {
                         if(canFinally_quit) {
                             _quit.store(true, std::memory_order_release);
                         } else {
-                            pushEventThreadUnsafe<QuitEvent>(_quitEvt->originatingService, false);
+                            pushEventInternal<QuitEvent>(_quitEvt->originatingService, false);
                         }
                     }
                 }
@@ -145,8 +145,8 @@ void Cppelix::DependencyManager::start() {
                             handleEventCompletion(stopServiceEvt);
                         }
                     } else {
-                        pushEventThreadUnsafe<DependencyOfflineEvent>(0, toStopService);
-                        pushEventThreadUnsafe<StopServiceEvent>(stopServiceEvt->originatingService, stopServiceEvt->serviceId, true);
+                        pushEventInternal<DependencyOfflineEvent>(0, toStopService);
+                        pushEventInternal<StopServiceEvent>(stopServiceEvt->originatingService, stopServiceEvt->serviceId, true);
                     }
                 }
                     break;
@@ -173,8 +173,8 @@ void Cppelix::DependencyManager::start() {
                             _services.erase(toRemoveServiceIt);
                         }
                     } else {
-                        pushEventThreadUnsafe<DependencyOfflineEvent>(0, toRemoveService);
-                        pushEventThreadUnsafe<RemoveServiceEvent>(removeServiceEvt->originatingService, removeServiceEvt->serviceId, true);
+                        pushEventInternal<DependencyOfflineEvent>(0, toRemoveService);
+                        pushEventInternal<RemoveServiceEvent>(removeServiceEvt->originatingService, removeServiceEvt->serviceId, true);
                     }
                 }
                     break;
@@ -195,7 +195,7 @@ void Cppelix::DependencyManager::start() {
                         LOG_ERROR(_logger, "Couldn't start service {}: {}", startServiceEvt->serviceId, toStartService->implementationName());
                         handleEventError(startServiceEvt);
                     } else {
-                        pushEventThreadUnsafe<DependencyOnlineEvent>(0, toStartService);
+                        pushEventInternal<DependencyOnlineEvent>(0, toStartService);
                         handleEventCompletion(startServiceEvt);
                     }
                 }
@@ -238,7 +238,7 @@ void Cppelix::DependencyManager::start() {
                     auto it = continuableEvt->generator.begin();
 
                     if(it->continuable) {
-                        pushEventThreadUnsafe<ContinuableEvent>(continuableEvt->originatingService, std::move(continuableEvt->generator));
+                        pushEventInternal<ContinuableEvent>(continuableEvt->originatingService, std::move(continuableEvt->generator));
                     }
                 }
                     break;
@@ -300,7 +300,7 @@ void Cppelix::DependencyManager::broadcastEvent(const Cppelix::Event *const evt)
 
         auto [continuable, allowOtherHandlers] = *ret.begin();
         if(continuable) {
-            pushEventThreadUnsafe<ContinuableEvent>(evt->originatingService, std::move(ret));
+            pushEventInternal<ContinuableEvent>(evt->originatingService, std::move(ret));
         }
 
         if(!allowOtherHandlers) {
