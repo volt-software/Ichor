@@ -138,6 +138,7 @@ include_directories("${EXTERNAL_DIR}/libuv/include")
 include_directories("${EXTERNAL_DIR}/libuv/src")
 include_directories("${EXTERNAL_DIR}/concurrentqueue")
 include_directories("${EXTERNAL_DIR}/cppcoro/include")
+include_directories("${EXTERNAL_DIR}/fmt/include")
 include_directories("${TOP_DIR}/include")
 
 if(USE_SPDLOG)
