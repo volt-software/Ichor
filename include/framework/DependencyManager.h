@@ -14,7 +14,7 @@
 #include <concurrentqueue.h>
 #include <framework/interfaces/IFrameworkLogger.h>
 #include "Service.h"
-#include "ServiceLifecycleManager.h"
+#include "LifecycleManager.h"
 #include "Events.h"
 #include "framework/Callback.h"
 #include "Filter.h"
@@ -157,8 +157,7 @@ namespace Cppelix {
         DependencyManager() : _services(), _dependencyRequestTrackers(), _dependencyUndoRequestTrackers(), _completionCallbacks{}, _errorCallbacks{}, _logger(nullptr), _eventQueue{}, _eventQueueMutex{}, _eventIdCounter{0}, _quit{false}, _communicationChannel(nullptr), _id(_managerIdCounter++) {}
 
         template<class Interface, class Impl, typename... Required, typename... Optional>
-        requires Derived<Impl, Service> && Derived<Impl, Interface>
-        [[nodiscard]]
+        requires Derived<Impl, Service> && Derived<Impl, Interface> && std::has_virtual_destructor_v<Interface>
         auto createServiceManager(RequiredList_t<Required...>, OptionalList_t<Optional...>, CppelixProperties properties = CppelixProperties{}) {
             if constexpr(sizeof...(Required) == 0 && sizeof...(Optional) == 0) {
                 return createServiceManager<Interface, Impl>(std::move(properties));
@@ -197,8 +196,7 @@ namespace Cppelix {
         }
 
         template<class Interface, class Impl>
-        requires Derived<Impl, Service> && Derived<Impl, Interface>
-        [[nodiscard]]
+        requires Derived<Impl, Service> && Derived<Impl, Interface> && std::has_virtual_destructor_v<Interface>
         auto createServiceManager(CppelixProperties properties = {}) {
             auto cmpMgr = LifecycleManager<Interface, Impl>::create(_logger, "", std::move(properties));
 

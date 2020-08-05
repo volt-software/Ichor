@@ -1,11 +1,5 @@
 #include <framework/SerializationAdmin.h>
 
-Cppelix::SerializationAdmin::SerializationAdmin() {
-}
-
-Cppelix::SerializationAdmin::~SerializationAdmin() {
-}
-
 std::vector<uint8_t> Cppelix::SerializationAdmin::serialize(const uint64_t type, const void* obj) {
     auto serializer = _serializers.find(type);
     if(serializer == end(_serializers)) {

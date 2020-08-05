@@ -10,6 +10,11 @@ add_executable(cppelix_tracker_example ${PROJECT_TRACKER_EXAMPLE_SOURCES})
 target_link_libraries(cppelix_tracker_example ${CMAKE_THREAD_LIBS_INIT})
 target_link_libraries(cppelix_tracker_example cppelix)
 
+file(GLOB_RECURSE PROJECT_TCP_EXAMPLE_SOURCES ${TOP_DIR}/examples/tcp_example/*.cpp)
+add_executable(cppelix_tcp_example ${PROJECT_TCP_EXAMPLE_SOURCES})
+target_link_libraries(cppelix_tcp_example ${CMAKE_THREAD_LIBS_INIT})
+target_link_libraries(cppelix_tcp_example cppelix)
+
 file(GLOB_RECURSE PROJECT_TIMER_EXAMPLE_SOURCES ${TOP_DIR}/examples/timer_example/*.cpp)
 add_executable(cppelix_timer_example ${PROJECT_TIMER_EXAMPLE_SOURCES})
 target_link_libraries(cppelix_timer_example ${CMAKE_THREAD_LIBS_INIT})

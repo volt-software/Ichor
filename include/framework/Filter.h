@@ -9,7 +9,7 @@ namespace Cppelix {
     public:
         PropertiesFilterEntry(std::string _key, T _val) : key(std::move(_key)), val(std::move(_val)) {}
 
-        bool matches(const std::shared_ptr<ILifecycleManager> &manager) const {
+        [[nodiscard]] bool matches(const std::shared_ptr<ILifecycleManager> &manager) const {
             auto propVal = manager->getProperties()->find(key);
 
             if(propVal == end(*manager->getProperties())) {
@@ -31,7 +31,7 @@ namespace Cppelix {
     public:
         ServiceIdFilterEntry(uint64_t _id) : id(_id) {}
 
-        bool matches(const std::shared_ptr<ILifecycleManager> &manager) const {
+        [[nodiscard]] bool matches(const std::shared_ptr<ILifecycleManager> &manager) const {
             return manager->serviceId() == id;
         }
 
@@ -41,7 +41,7 @@ namespace Cppelix {
     class ITemplatedFilter {
     public:
         virtual ~ITemplatedFilter() = default;
-        virtual bool compareTo(const std::shared_ptr<ILifecycleManager> &manager) const = 0;
+        [[nodiscard]] virtual bool compareTo(const std::shared_ptr<ILifecycleManager> &manager) const = 0;
     };
 
     // workaround std::any not supporting polymorphism
@@ -56,7 +56,7 @@ namespace Cppelix {
         TemplatedFilter& operator=(const TemplatedFilter&) = default;
         TemplatedFilter& operator=(TemplatedFilter&&) noexcept = default;
 
-        bool compareTo(const std::shared_ptr<ILifecycleManager> &manager) const final {
+        [[nodiscard]] bool compareTo(const std::shared_ptr<ILifecycleManager> &manager) const final {
             bool matches = true;
             std::apply([&manager, &matches](auto ...x){
                 ((matches = matches && x.matches(manager)), ...);
@@ -77,7 +77,7 @@ namespace Cppelix {
         Filter& operator=(const Filter&) = default;
         Filter& operator=(Filter&&) noexcept = default;
 
-        bool compareTo(const std::shared_ptr<ILifecycleManager> &manager) const {
+        [[nodiscard]] bool compareTo(const std::shared_ptr<ILifecycleManager> &manager) const {
             return _templatedFilter->compareTo(manager);
         }
 

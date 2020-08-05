@@ -7,7 +7,6 @@
 #include "Concepts.h"
 
 namespace Cppelix {
-    class Framework;
     class DependencyManager;
 
     enum class ServiceState {
@@ -22,7 +21,7 @@ namespace Cppelix {
 
     class IService {
     public:
-        virtual ~IService() {}
+        virtual ~IService() = default;
 
         [[nodiscard]] virtual uint64_t getServiceId() const = 0;
 
@@ -74,7 +73,6 @@ namespace Cppelix {
         static std::atomic<uint64_t> _serviceIdCounter;
         DependencyManager *_manager;
 
-        friend class Framework;
         friend class DependencyManager;
         template<class Interface, class ServiceType, typename... Dependencies>
         requires Derived<ServiceType, Service> && Derived<ServiceType, Interface>

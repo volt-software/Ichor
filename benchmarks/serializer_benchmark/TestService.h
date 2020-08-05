@@ -5,7 +5,7 @@
 #include <optional_bundles/logging_bundle/Logger.h>
 #include "framework/Service.h"
 #include "framework/SerializationAdmin.h"
-#include "framework/ServiceLifecycleManager.h"
+#include "framework/LifecycleManager.h"
 #include "TestMsg.h"
 
 using namespace Cppelix;

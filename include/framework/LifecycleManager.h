@@ -162,9 +162,10 @@ namespace Cppelix {
             if(canStart) {
                 if(!_service.internal_start()) {
                     LOG_ERROR(_logger, "Couldn't start service {}", _implementationName);
-                } else {
-                    LOG_DEBUG(_logger, "Started {}", _implementationName);
+                    return false;
                 }
+
+                LOG_DEBUG(_logger, "Started {}", _implementationName);
                 return true;
             }
 

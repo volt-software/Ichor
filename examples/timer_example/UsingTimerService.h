@@ -4,7 +4,7 @@
 #include <optional_bundles/logging_bundle/Logger.h>
 #include <optional_bundles/timer_bundle/TimerService.h>
 #include "framework/Service.h"
-#include "framework/ServiceLifecycleManager.h"
+#include "framework/LifecycleManager.h"
 
 using namespace Cppelix;
 

@@ -4,7 +4,7 @@
 #include <optional_bundles/logging_bundle/Logger.h>
 #include "../include/framework/Service.h"
 #include "../include/framework/SerializationAdmin.h"
-#include "framework/ServiceLifecycleManager.h"
+#include "framework/LifecycleManager.h"
 #include "TestMsg.h"
 #include <iostream>
 
@@ -51,7 +51,7 @@ public:
         LOG_INFO(_logger, "Removed serializationAdmin");
     }
 
-    std::vector<uint8_t> serialize(const void* obj) {
+    std::vector<uint8_t> serialize(const void* obj) final {
         auto msg = static_cast<const TestMsg*>(obj);
         rapidjson::StringBuffer sb;
         rapidjson::Writer<rapidjson::StringBuffer> writer(sb);
@@ -66,14 +66,15 @@ public:
 
         writer.EndObject();
         auto *ret = sb.GetString();
-        return std::vector<uint8_t>(ret, ret + sb.GetSize());
+        return std::vector<uint8_t>(ret, ret + sb.GetSize() + 1);
     }
 
-    void* deserialize(std::vector<uint8_t> &&stream) {
+    void* deserialize(std::vector<uint8_t> &&stream) final {
 #ifdef USE_SIMDJSON
+        LOG_ERROR(_logger, "json: {}", stream.data());
         auto d = parser.parse(stream.data(), stream.size());
 
-        return new TestMsg(d["id"], std::string{d["val"].get_string().value()});
+        return new TestMsg{(uint64_t)d["id"], std::string{d["val"].get_string().value()}};
 #else
         rapidjson::Document d;
         d.ParseInsitu(reinterpret_cast<char *>(stream.data()));

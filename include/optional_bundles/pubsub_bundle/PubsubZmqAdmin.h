@@ -4,7 +4,7 @@
 #include <framework/DependencyManager.h>
 #include <optional_bundles/logging_bundle/Logger.h>
 #include "framework/Service.h"
-#include "framework/ServiceLifecycleManager.h"
+#include "framework/LifecycleManager.h"
 #include "PubsubZmqAdmin.h"
 
 class PubsubAdminZmqService : public IPubsubAdminService, public Service {

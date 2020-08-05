@@ -3,7 +3,7 @@
 #include <framework/DependencyManager.h>
 #include <optional_bundles/logging_bundle/Logger.h>
 #include "framework/Service.h"
-#include "framework/ServiceLifecycleManager.h"
+#include "framework/LifecycleManager.h"
 #include "RuntimeCreatedService.h"
 
 using namespace Cppelix;
@@ -38,7 +38,9 @@ public:
     }
 
     void addDependencyInstance(IRuntimeCreatedService *svc) {
-        LOG_INFO(_logger, "Inserted IRuntimeCreatedService svcid {} for svcid {}", svc->getServiceId(), getServiceId());
+        auto ownScopeProp = getProperties()->find("scope");
+        auto svcScopeProp = svc->getProperties()->find("scope");
+        LOG_INFO(_logger, "Inserted IRuntimeCreatedService svcid {} with scope {} for svcid {} with scope {}", svc->getServiceId(), std::any_cast<std::string>(svcScopeProp->second), getServiceId(), std::any_cast<std::string>(ownScopeProp->second));
     }
 
     void removeDependencyInstance(IRuntimeCreatedService *) {
