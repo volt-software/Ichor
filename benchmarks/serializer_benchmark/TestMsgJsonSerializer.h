@@ -71,8 +71,7 @@ public:
 
     void* deserialize(std::vector<uint8_t> &&stream) final {
 #ifdef USE_SIMDJSON
-        LOG_ERROR(_logger, "json: {}", stream.data());
-        auto d = parser.parse(stream.data(), stream.size());
+        auto d = parser.parse(stream.data(), stream.size() - 1);
 
         return new TestMsg{(uint64_t)d["id"], std::string{d["val"].get_string().value()}};
 #else

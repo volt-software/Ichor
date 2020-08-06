@@ -9,7 +9,7 @@
 using namespace Cppelix;
 
 
-struct IStartStopService {
+struct IStartStopService : public virtual IService {
     static constexpr InterfaceVersion version = InterfaceVersion{1, 0, 0};
 };
 
