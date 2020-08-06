@@ -24,6 +24,7 @@ namespace Cppelix {
 
     private:
         int _socket;
+        int _attempts;
         std::atomic<uint64_t> _priority;
         std::atomic<bool> _quit;
         std::thread _listenThread;

@@ -6,7 +6,7 @@
 #include <netinet/tcp.h>
 #include <unistd.h>
 
-Cppelix::TcpConnectionService::TcpConnectionService() : _socket(-1), _priority(INTERNAL_EVENT_PRIORITY),  _quit(), _listenThread() {
+Cppelix::TcpConnectionService::TcpConnectionService() : _socket(-1), _attempts(), _priority(INTERNAL_EVENT_PRIORITY),  _quit(), _listenThread() {
 
 }
 
@@ -49,8 +49,11 @@ bool Cppelix::TcpConnectionService::start() {
         if(connect(_socket, (struct sockaddr *)&address, sizeof(address)) < 0)
         {
             LOG_ERROR(_logger, "connect error {}", errno);
+            if(_attempts < 5) {
+                _attempts++;
+                getManager()->pushEvent<StartServiceEvent>(getServiceId(), getServiceId());
+            }
             return false;
-            //throw std::runtime_error(fmt::format("connect error {}", errno));
         }
 
         auto ip = ::inet_ntoa(address.sin_addr);

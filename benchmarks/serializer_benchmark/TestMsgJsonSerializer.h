@@ -71,7 +71,7 @@ public:
 
     void* deserialize(std::vector<uint8_t> &&stream) final {
 #ifdef USE_SIMDJSON
-        auto d = parser.parse(stream.data(), stream.size() - 1);
+        auto d = parser.parse(stream.data(), stream.size() - 1); // simdjson 0.4.7 doesn't like null-terminated input.
 
         return new TestMsg{(uint64_t)d["id"], std::string{d["val"].get_string().value()}};
 #else
