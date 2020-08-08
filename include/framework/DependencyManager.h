@@ -11,7 +11,6 @@
 #include <csignal>
 #include <condition_variable>
 #include <cppcoro/generator.hpp>
-#include <concurrentqueue.h>
 #include <framework/interfaces/IFrameworkLogger.h>
 #include "Service.h"
 #include "LifecycleManager.h"

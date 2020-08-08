@@ -10,7 +10,7 @@ namespace Cppelix {
         static constexpr InterfaceVersion version = InterfaceVersion{1, 0, 0};
 
         TcpConnectionService();
-        ~TcpConnectionService() override = default;
+        ~TcpConnectionService() final = default;
 
         bool start() final;
         bool stop() final;

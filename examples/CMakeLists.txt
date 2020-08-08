@@ -29,3 +29,10 @@ file(GLOB_RECURSE PROJECT_MULTITHREADED_EXAMPLE_SOURCES ${TOP_DIR}/examples/mult
 add_executable(cppelix_multithreaded_example ${PROJECT_MULTITHREADED_EXAMPLE_SOURCES})
 target_link_libraries(cppelix_multithreaded_example ${CMAKE_THREAD_LIBS_INIT})
 target_link_libraries(cppelix_multithreaded_example cppelix)
+
+if(USE_ETCD)
+    file(GLOB_RECURSE PROJECT_ETCD_EXAMPLE_SOURCES ${TOP_DIR}/examples/etcd_example/*.cpp)
+    add_executable(cppelix_etcd_example ${PROJECT_ETCD_EXAMPLE_SOURCES})
+    target_link_libraries(cppelix_etcd_example ${CMAKE_THREAD_LIBS_INIT})
+    target_link_libraries(cppelix_etcd_example cppelix)
+endif()

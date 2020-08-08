@@ -4,7 +4,7 @@
 #include <framework/DependencyManager.h>
 #include <optional_bundles/logging_bundle/Logger.h>
 #include "../include/framework/Service.h"
-#include "../include/framework/SerializationAdmin.h"
+#include "optional_bundles/serialization_bundle/SerializationAdmin.h"
 #include "framework/LifecycleManager.h"
 #include "TestMsg.h"
 
@@ -13,7 +13,7 @@
 
 using namespace Cppelix;
 
-class TestMsgJsonSerializer : public ISerializer, public Service {
+class TestMsgJsonSerializer final : public ISerializer, public Service {
 public:
     ~TestMsgJsonSerializer() final = default;
     bool start() final {
@@ -30,7 +30,7 @@ public:
 
     void addDependencyInstance(ILogger *logger) {
         _logger = logger;
-        LOG_INFO(_logger, "Inserted logger");
+        LOG_TRACE(_logger, "Inserted logger");
     }
 
     void removeDependencyInstance(ILogger *logger) {

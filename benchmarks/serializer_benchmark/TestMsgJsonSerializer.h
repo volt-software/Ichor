@@ -3,7 +3,7 @@
 #include <framework/DependencyManager.h>
 #include <optional_bundles/logging_bundle/Logger.h>
 #include "../include/framework/Service.h"
-#include "../include/framework/SerializationAdmin.h"
+#include "optional_bundles/serialization_bundle/SerializationAdmin.h"
 #include "framework/LifecycleManager.h"
 #include "TestMsg.h"
 #include <iostream>
@@ -11,13 +11,9 @@
 #include <rapidjson/document.h>
 #include <rapidjson/writer.h>
 
-#ifdef USE_SIMDJSON
-#include "simdjson.h"
-#endif
-
 using namespace Cppelix;
 
-class TestMsgJsonSerializer : public ISerializer, public Service {
+class TestMsgJsonSerializer final : public ISerializer, public Service {
 public:
     ~TestMsgJsonSerializer() final = default;
     bool start() final {
@@ -34,7 +30,7 @@ public:
 
     void addDependencyInstance(ILogger *logger) {
         _logger = logger;
-        LOG_INFO(_logger, "Inserted logger");
+        LOG_TRACE(_logger, "Inserted logger");
     }
 
     void removeDependencyInstance(ILogger *logger) {
@@ -70,11 +66,6 @@ public:
     }
 
     void* deserialize(std::vector<uint8_t> &&stream) final {
-#ifdef USE_SIMDJSON
-        auto d = parser.parse(stream.data(), stream.size() - 1); // simdjson 0.4.7 doesn't like null-terminated input.
-
-        return new TestMsg{(uint64_t)d["id"], std::string{d["val"].get_string().value()}};
-#else
         rapidjson::Document d;
         d.ParseInsitu(reinterpret_cast<char *>(stream.data()));
 
@@ -84,13 +75,9 @@ public:
         }
 
         return new TestMsg(d["id"].GetUint64(), d["val"].GetString());
-#endif
     }
 
 private:
     ILogger *_logger;
     ISerializationAdmin *_serializationAdmin;
-#ifdef USE_SIMDJSON
-    simdjson::dom::parser parser;
-#endif
 };

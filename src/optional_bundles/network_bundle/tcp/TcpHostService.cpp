@@ -105,7 +105,7 @@ bool Cppelix::TcpHostService::stop() {
 
 void Cppelix::TcpHostService::addDependencyInstance(ILogger *logger) {
     _logger = logger;
-    LOG_INFO(_logger, "Inserted logger");
+    LOG_TRACE(_logger, "Inserted logger");
 }
 
 void Cppelix::TcpHostService::removeDependencyInstance(ILogger *logger) {

@@ -29,9 +29,12 @@ bool Cppelix::TcpConnectionService::start() {
             throw std::runtime_error("Missing port");
         }
 
-        _socket = socket(AF_INET, SOCK_STREAM, 0);
+        // The start function possibly gets called multiple times due to trying to recover from not being able to connect
         if(_socket == -1) {
-            throw std::runtime_error("Couldn't create socket");
+            _socket = socket(AF_INET, SOCK_STREAM, 0);
+            if (_socket == -1) {
+                throw std::runtime_error("Couldn't create socket");
+            }
         }
 
         int setting = 1;
@@ -96,7 +99,7 @@ bool Cppelix::TcpConnectionService::stop() {
 
 void Cppelix::TcpConnectionService::addDependencyInstance(ILogger *logger) {
     _logger = logger;
-    LOG_INFO(_logger, "Inserted logger");
+    LOG_TRACE(_logger, "Inserted logger");
 }
 
 void Cppelix::TcpConnectionService::removeDependencyInstance(ILogger *logger) {

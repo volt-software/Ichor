@@ -28,7 +28,7 @@ public:
         } else {
             auto end = std::chrono::system_clock::now();
             getManager()->pushEvent<QuitEvent>(getServiceId());
-            LOG_INFO(_logger, "finished in {:n} µs", std::chrono::duration_cast<std::chrono::microseconds>(end-_start).count());
+            LOG_INFO(_logger, "finished in {:L} µs", std::chrono::duration_cast<std::chrono::microseconds>(end-_start).count());
         }
         startCount++;
         return true;

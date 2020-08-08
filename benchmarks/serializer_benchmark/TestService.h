@@ -4,7 +4,7 @@
 #include <framework/DependencyManager.h>
 #include <optional_bundles/logging_bundle/Logger.h>
 #include "framework/Service.h"
-#include "framework/SerializationAdmin.h"
+#include "optional_bundles/serialization_bundle/SerializationAdmin.h"
 #include "framework/LifecycleManager.h"
 #include "TestMsg.h"
 
@@ -15,7 +15,7 @@ struct ITestService : virtual public IService {
     static constexpr InterfaceVersion version = InterfaceVersion{1, 0, 0};
 };
 
-class TestService : public ITestService, public Service {
+class TestService final : public ITestService, public Service {
 public:
     ~TestService() final = default;
     bool start() final {
@@ -32,7 +32,7 @@ public:
 
     void addDependencyInstance(ILogger *logger) {
         _logger = logger;
-        LOG_INFO(_logger, "Inserted logger");
+        LOG_TRACE(_logger, "Inserted logger");
     }
 
     void removeDependencyInstance(ILogger *logger) {
@@ -60,7 +60,7 @@ public:
             }
         }
         auto end = std::chrono::system_clock::now();
-        LOG_INFO(_logger, "finished in {:n} µs", std::chrono::duration_cast<std::chrono::microseconds>(end-start).count());
+        LOG_INFO(_logger, "finished in {:L} µs", std::chrono::duration_cast<std::chrono::microseconds>(end-start).count());
         getManager()->pushEvent<QuitEvent>(getServiceId());
     }
 

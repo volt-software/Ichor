@@ -28,7 +28,7 @@ public:
 
     void addDependencyInstance(IFrameworkLogger *logger) noexcept {
         _logger = logger;
-        LOG_INFO(_logger, "Inserted logger");
+        LOG_TRACE(_logger, "Inserted logger");
     }
 
     void removeDependencyInstance(IFrameworkLogger *logger) noexcept {

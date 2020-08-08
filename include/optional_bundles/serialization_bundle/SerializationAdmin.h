@@ -2,7 +2,7 @@
 
 #include <unordered_map>
 #include <framework/Service.h>
-#include <framework/interfaces/ISerializationAdmin.h>
+#include <optional_bundles/serialization_bundle/ISerializationAdmin.h>
 #include <optional_bundles/logging_bundle/Logger.h>
 
 namespace Cppelix {

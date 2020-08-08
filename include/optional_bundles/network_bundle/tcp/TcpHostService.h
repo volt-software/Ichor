@@ -11,7 +11,7 @@ namespace Cppelix {
         static constexpr InterfaceVersion version = InterfaceVersion{1, 0, 0};
 
         TcpHostService();
-        ~TcpHostService() override = default;
+        ~TcpHostService() final = default;
 
         bool start() final;
         bool stop() final;

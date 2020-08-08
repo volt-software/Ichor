@@ -8,7 +8,7 @@
 #include <optional_bundles/network_bundle/IHostService.h>
 #include "framework/Service.h"
 #include "framework/LifecycleManager.h"
-#include "framework/SerializationAdmin.h"
+#include "optional_bundles/serialization_bundle/SerializationAdmin.h"
 #include "TestMsg.h"
 
 using namespace Cppelix;
