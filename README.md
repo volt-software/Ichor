@@ -55,7 +55,7 @@ With this rewrite comes an opportunity to remove some features that are not used
 # Todo
 
 * Support parsing filter (LDAP) strings to type-safe filter currently used
-* etcd support (copy celix library or use COTS for etcd v3?)
+* expand etcd support, currently only simply put/get supported
 * Pubsub compatibility with celix
     * ZMQ
     * TCP
