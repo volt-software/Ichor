@@ -12,14 +12,12 @@ public:
     ~PubsubAdminZmqService() final = default;
 
     bool start() final {
-        LOG_INFO(_logger, "PubsubAdminZmqService started");
         _publisherTrackerRegistration = getManager()->registerDependencyTracker<IPubsubPublisherService>(getServiceId(), this);
         _subscriberTrackerRegistration = getManager()->registerDependencyTracker<IPubsubSubscriberService>(getServiceId(), this);
         return true;
     }
 
     bool stop() final {
-        LOG_INFO(_logger, "PubsubAdminZmqService stopped");
         return true;
     }
 

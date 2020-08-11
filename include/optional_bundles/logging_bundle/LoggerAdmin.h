@@ -16,13 +16,11 @@ public:
     ~LoggerAdmin() final = default;
 
     bool start() final {
-        LOG_INFO(_logger, "LoggerAdmin started");
         _loggerTrackerRegistration = getManager()->template registerDependencyTracker<ILogger>(getServiceId(), this);
         return true;
     }
 
     bool stop() final {
-        LOG_INFO(_logger, "LoggerAdmin stopped");
         return true;
     }
 

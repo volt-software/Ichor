@@ -25,25 +25,23 @@ int main() {
     auto start = std::chrono::system_clock::now();
 
     CommunicationChannel channel{};
+    DependencyManager dmOne{};
+    DependencyManager dmTwo{};
+    channel.addManager(&dmOne);
+    channel.addManager(&dmTwo);
 
-    std::thread t1([&channel](){
-        DependencyManager dm{};
-        channel.addManager(&dm);
-        std::this_thread::sleep_for(std::chrono::milliseconds(1));
-        auto logMgr = dm.createServiceManager<IFrameworkLogger, FRAMEWORK_LOGGER_TYPE>();
-        auto logAdminMgr = dm.createServiceManager<ILoggerAdmin, LoggerAdmin<LOGGER_TYPE>>();
-        auto oneService = dm.createServiceManager<IOneService, OneService>(RequiredList<ILogger>, OptionalList<>);
-        dm.start();
+    std::thread t1([&dmOne] {
+        dmOne.createServiceManager<IFrameworkLogger, FRAMEWORK_LOGGER_TYPE>();
+        dmOne.createServiceManager<ILoggerAdmin, LoggerAdmin<LOGGER_TYPE>>();
+        dmOne.createServiceManager<IOneService, OneService>(RequiredList<ILogger>, OptionalList<>);
+        dmOne.start();
     });
 
-    std::thread t2([&channel](){
-        DependencyManager dm{};
-        channel.addManager(&dm);
-        std::this_thread::sleep_for(std::chrono::milliseconds(1));
-        auto logMgr = dm.createServiceManager<IFrameworkLogger, FRAMEWORK_LOGGER_TYPE>();
-        auto logAdminMgr = dm.createServiceManager<ILoggerAdmin, LoggerAdmin<LOGGER_TYPE>>();
-        auto otherService = dm.createServiceManager<IOtherService, OtherService>(RequiredList<ILogger>, OptionalList<>);
-        dm.start();
+    std::thread t2([&dmTwo] {
+        dmTwo.createServiceManager<IFrameworkLogger, FRAMEWORK_LOGGER_TYPE>();
+        dmTwo.createServiceManager<ILoggerAdmin, LoggerAdmin<LOGGER_TYPE>>();
+        dmTwo.createServiceManager<IOtherService, OtherService>(RequiredList<ILogger>, OptionalList<>);
+        dmTwo.start();
     });
 
     t1.join();
