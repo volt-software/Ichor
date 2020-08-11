@@ -70,7 +70,10 @@ find_package (Threads)
 
 file(GLOB_RECURSE FMT_SOURCES ${EXTERNAL_DIR}/fmt/src/*.cc)
 file(GLOB_RECURSE CPPELIX_FRAMEWORK_SOURCES ${TOP_DIR}/src/framework/*.cpp)
-file(GLOB_RECURSE CPPELIX_OPTIONAL_BUNDLES_SOURCES ${TOP_DIR}/src/optional_bundles/*.cpp ${TOP_DIR}/src/optional_bundles/*.cc)
+file(GLOB_RECURSE CPPELIX_OPTIONAL_ETCD_SOURCES ${TOP_DIR}/src/optional_bundles/etcd_bundle/*.cpp ${TOP_DIR}/src/optional_bundles/etcd_bundle/*.cc)
+file(GLOB_RECURSE CPPELIX_LOGGING_SOURCES ${TOP_DIR}/src/optional_bundles/logging_bundle/*.cpp)
+file(GLOB_RECURSE CPPELIX_NETWORK_SOURCES ${TOP_DIR}/src/optional_bundles/network_bundle/*.cpp)
+file(GLOB_RECURSE CPPELIX_SERIALIZATION_SOURCES ${TOP_DIR}/src/optional_bundles/serialization_bundle/*.cpp)
 
 set(uv_sources
         ${EXTERNAL_DIR}/libuv/src/fs-poll.c
@@ -114,12 +117,13 @@ if(USE_SPDLOG)
     file(GLOB SPDLOG_SOURCES ${EXTERNAL_DIR}/spdlog/src/*.cpp)
 endif()
 
-add_library(cppelix ${uv_sources} ${FMT_SOURCES} ${CPPELIX_FRAMEWORK_SOURCES} ${CPPELIX_OPTIONAL_BUNDLES_SOURCES})
+add_library(cppelix ${uv_sources} ${FMT_SOURCES} ${CPPELIX_FRAMEWORK_SOURCES} ${CPPELIX_LOGGING_SOURCES} ${CPPELIX_NETWORK_SOURCES} ${CPPELIX_SERIALIZATION_SOURCES})
 if(USE_SPDLOG)
     target_sources(cppelix PRIVATE ${SPDLOG_SOURCES})
 endif()
 if(USE_ETCD)
     target_link_libraries(cppelix ${ETCD_TARGET})
+    target_sources(cppelix PRIVATE ${CPPELIX_OPTIONAL_ETCD_SOURCES})
 endif()
 target_link_libraries(cppelix ${CMAKE_THREAD_LIBS_INIT})
 target_link_libraries(cppelix -ldl -lrt)
