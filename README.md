@@ -78,7 +78,7 @@ With this rewrite comes an opportunity to remove some features that are not used
 These benchmarks are mainly used to identify bottlenecks, not to showcase the performance of the framework. Comparisons between Cppelix, Celix and Felix will be made at a later date.
 
 Setup: AMD 3900X, 3600MHz@CL17 RAM, ubuntu 20.04
-* Start/stop best case scenario: 1,000,000 start/stops with dependency in ~670ms
+* Start/stop best case scenario: 1,000,000 start/stops with dependency in ~720ms
 * Serialization: Rapidjson: 1,000,000 messages serialized & deserialized in ~350 ms
 
 # Support

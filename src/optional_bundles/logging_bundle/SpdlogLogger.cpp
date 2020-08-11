@@ -12,7 +12,12 @@ Cppelix::SpdlogLogger::SpdlogLogger() : ILogger(), Service(), _level(LogLevel::T
     auto file_sink = make_shared<spdlog::sinks::basic_file_sink_mt>(fmt::format("logs/log-{}.txt", time_since_epoch.count()), true);
 
     _logger = make_shared<spdlog::logger>("multi_sink", spdlog::sinks_init_list{console_sink, file_sink});
+
+#ifndef REMOVE_SOURCE_NAMES_FROM_LOGGING
     _logger->set_pattern("[%C-%m-%d %H:%M:%S.%e] [%s:%#] [%L] %v");
+#else
+    _logger->set_pattern("[%C-%m-%d %H:%M:%S.%e] [%L] %v");
+#endif
     _logger->set_level(spdlog::level::trace);
 
     SPDLOG_TRACE("Constructor SpdlogLogger");

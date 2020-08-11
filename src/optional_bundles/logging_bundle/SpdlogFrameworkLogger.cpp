@@ -17,7 +17,11 @@ Cppelix::SpdlogFrameworkLogger::SpdlogFrameworkLogger() : IFrameworkLogger(), Se
     spdlog::flush_on(spdlog::level::err);
 
     spdlog::set_default_logger(logger);
+#ifndef REMOVE_SOURCE_NAMES_FROM_LOGGING
     spdlog::set_pattern("[%C-%m-%d %H:%M:%S.%e] [%s:%#] [%L] %v");
+#else
+    spdlog::set_pattern("[%C-%m-%d %H:%M:%S.%e] [%L] %v");
+#endif
 
     SPDLOG_TRACE("SpdlogFrameworkLogger constructor");
 }
