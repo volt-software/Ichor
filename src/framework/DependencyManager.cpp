@@ -263,6 +263,8 @@ void Cppelix::DependencyManager::start() {
         manager->stop();
     }
 
+    _services.clear();
+
     if(_communicationChannel != nullptr) {
         _communicationChannel->removeManager(this);
     }
@@ -305,7 +307,7 @@ void Cppelix::DependencyManager::broadcastEvent(const Cppelix::Event *const evt)
         auto ret = callbackInfo.callback(evt);
         auto it = ret.begin();
 
-        auto allowOtherHandlers = *it;
+        bool allowOtherHandlers = *it;
         if(it != ret.end()) {
             pushEventInternal<ContinuableEvent>(evt->originatingService, evt->priority, std::move(ret));
         }

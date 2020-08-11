@@ -2,6 +2,7 @@
 
 #include "DependencyManager.h"
 #include <mutex>
+#include <iostream>
 
 namespace Cppelix {
     class CommunicationChannel {
@@ -27,7 +28,13 @@ namespace Cppelix {
                     continue;
                 }
 
+#if 0
+                std::cout << "Inserting event " << typeName<EventT>() << " from manager " << originatingManager->getId() << " into manager " << manager.second->getId() << std::endl;
+#endif
                 manager.second->pushEvent<EventT>(std::forward<Args>(args)...);
+#if 0
+                std::cout << "Inserted event " << typeName<EventT>() << " from manager " << originatingManager->getId() << " into manager " << manager.second->getId() << std::endl;
+#endif
             }
         }
 

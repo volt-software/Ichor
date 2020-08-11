@@ -5,8 +5,23 @@
 
 namespace Cppelix {
 
+    template <class T, class U, class... Remainder>
+    struct DerivedTrait : std::integral_constant<bool, DerivedTrait<T, Remainder...>::value && std::is_base_of_v<U, T>> {};
+
+    template <class T, class U>
+    struct DerivedTrait<T, U> : std::integral_constant<bool, std::is_base_of_v<U, T>> {};
+
+    template <class T, class U, class... Remainder>
+    struct ListContainsInterface : std::integral_constant<bool, ListContainsInterface<T, Remainder...>::value || std::is_base_of_v<U, T>> {};
+
+    template <class T, class U>
+    struct ListContainsInterface<T, U> : std::integral_constant<bool, std::is_base_of_v<U, T>> {};
+
     template <class T, class U>
     concept Derived = std::is_base_of<U, T>::value;
+
+    template <class T, class... U>
+    concept AllDerived = DerivedTrait<T, U...>::value;
 
     template <class ImplT, class Interface>
     concept ImplementsDependencyInjection = requires(ImplT impl, Interface *svc) {

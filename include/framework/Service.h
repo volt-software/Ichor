@@ -74,10 +74,10 @@ namespace Cppelix {
         DependencyManager *_manager;
 
         friend class DependencyManager;
-        template<class Interface, class ServiceType, typename... Dependencies>
-        requires Derived<ServiceType, Service> && Derived<ServiceType, Interface>
+        template<class ServiceType, typename... Dependencies>
+        requires Derived<ServiceType, Service>
         friend class LifecycleManager;
-        template<class Interface, class ServiceType>
+        template<class ServiceType>
         requires Derived<ServiceType, Service>
         friend class ServiceLifecycleManager;
     };

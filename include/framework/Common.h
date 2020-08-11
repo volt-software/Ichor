@@ -66,10 +66,16 @@ namespace Cppelix {
     struct RequiredList_t: typeList<Type...>{};
 
     template<typename... Type>
+    struct InterfacesList_t: typeList<Type...>{};
+
+    template<typename... Type>
     inline constexpr OptionalList_t<Type...> OptionalList{};
 
     template<typename... Type>
     inline constexpr RequiredList_t<Type...> RequiredList{};
+
+    template<typename... Type>
+    inline constexpr InterfacesList_t<Type...> InterfacesList{};
 
 #if __cpp_lib_generic_unordered_lookup >= 201811
     struct string_hash {
