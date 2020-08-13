@@ -5,6 +5,13 @@ if(USE_RAPIDJSON)
     target_link_libraries(cppelix_serializer_benchmark cppelix)
 endif()
 
+if(USE_ETCD)
+    file(GLOB_RECURSE PROJECT_EXAMPLE_SOURCES ${TOP_DIR}/benchmarks/etcd_benchmark/*.cpp)
+    add_executable(cppelix_etcd_benchmark ${PROJECT_EXAMPLE_SOURCES})
+    target_link_libraries(cppelix_etcd_benchmark ${CMAKE_THREAD_LIBS_INIT})
+    target_link_libraries(cppelix_etcd_benchmark cppelix)
+endif()
+
 file(GLOB_RECURSE PROJECT_EXAMPLE_SOURCES ${TOP_DIR}/benchmarks/start_stop_benchmark/*.cpp)
 add_executable(cppelix_start_stop_benchmark ${PROJECT_EXAMPLE_SOURCES})
 target_link_libraries(cppelix_start_stop_benchmark ${CMAKE_THREAD_LIBS_INIT})
