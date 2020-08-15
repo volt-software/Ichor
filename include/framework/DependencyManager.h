@@ -126,6 +126,21 @@ namespace Cppelix {
         CallbackKey _key{0, 0};
     };
 
+    class [[nodiscard]] EventInterceptorRegistration final {
+    public:
+        EventInterceptorRegistration(DependencyManager *mgr, CallbackKey key) noexcept : _mgr(mgr), _key(key) {}
+        EventInterceptorRegistration() noexcept = default;
+        ~EventInterceptorRegistration();
+
+        EventInterceptorRegistration(const EventInterceptorRegistration&) = delete;
+        EventInterceptorRegistration(EventInterceptorRegistration&&) noexcept = default;
+        EventInterceptorRegistration& operator=(const EventInterceptorRegistration&) = delete;
+        EventInterceptorRegistration& operator=(EventInterceptorRegistration&&) noexcept = default;
+    private:
+        DependencyManager *_mgr{nullptr};
+        CallbackKey _key{0, 0};
+    };
+
 
 
     class [[nodiscard]] DependencyTrackerRegistration final {
@@ -156,7 +171,7 @@ namespace Cppelix {
 
         template<Derived<Service> Impl, Derived<IService>... Interfaces, Derived<IService>... Required, Derived<IService>... Optional>
         requires AllDerived<Impl, Interfaces...>
-        auto createServiceManager(InterfacesList_t<Interfaces...>, RequiredList_t<Required...>, OptionalList_t<Optional...>, CppelixProperties properties = CppelixProperties{}) {
+        auto createServiceManager(InterfacesList_t<Interfaces...>, RequiredList_t<Required...>, OptionalList_t<Optional...> = OptionalList_t<>{}, CppelixProperties properties = CppelixProperties{}) {
             if constexpr(sizeof...(Required) == 0 && sizeof...(Optional) == 0) {
                 return createServiceManager<Impl>(std::move(properties));
             }
@@ -197,7 +212,7 @@ namespace Cppelix {
 
         template<Derived<IService> Interface, Derived<Service> Impl, Derived<IService>... Required, Derived<IService>... Optional>
         requires Derived<Impl, Interface>
-        auto createServiceManager(RequiredList_t<Required...>, OptionalList_t<Optional...>, CppelixProperties properties = CppelixProperties{}) {
+        auto createServiceManager(RequiredList_t<Required...>, OptionalList_t<Optional...> = OptionalList_t<>{}, CppelixProperties properties = CppelixProperties{}) {
             if constexpr(sizeof...(Required) == 0 && sizeof...(Optional) == 0) {
                 return createServiceManager<Impl>(std::move(properties));
             }
@@ -406,7 +421,7 @@ namespace Cppelix {
             auto existingHandlers = _eventCallbacks.find(EventT::TYPE);
             if(existingHandlers == end(_eventCallbacks)) {
                 _eventCallbacks.emplace(EventT::TYPE, std::vector<EventCallbackInfo>{EventCallbackInfo{serviceId, targetServiceId,
-                        [impl](Event const * const evt){ return impl->handleEvent(static_cast<EventT const * const>(evt)); }}
+                                                                                                       [impl](Event const * const evt){ return impl->handleEvent(static_cast<EventT const * const>(evt)); }}
                 });
             } else {
                 existingHandlers->second.emplace_back(EventCallbackInfo{serviceId, targetServiceId, [impl](Event const * const evt){ return impl->handleEvent(static_cast<EventT const * const>(evt)); }});
@@ -416,6 +431,38 @@ namespace Cppelix {
             return std::make_unique<EventHandlerRegistration>(this, CallbackKey{serviceId, EventT::TYPE});
         }
 
+        template <typename EventT, typename Impl>
+        requires Derived<EventT, Event> && ImplementsEventInterceptors<Impl, EventT>
+        [[nodiscard]]
+        /// Register an event interceptor. If EventT equals Event, intercept all events. Otherwise only intercept given event.
+        /// \tparam EventT type of event (has to derive from Event)
+        /// \tparam Impl type of class registering handler (auto-deducible)
+        /// \param serviceId id of service registering handler
+        /// \param impl class that is registering handler
+        /// \return RAII handler, removes registration upon destruction
+        std::unique_ptr<EventInterceptorRegistration> registerEventInterceptor(uint64_t serviceId, Impl *impl) {
+            uint64_t targetEventId = 0;
+            if constexpr (!std::is_same_v<EventT, Event>) {
+                targetEventId = EventT::TYPE;
+            }
+            auto existingHandlers = _eventInterceptors.find(targetEventId);
+            if(existingHandlers == end(_eventInterceptors)) {
+                _eventInterceptors.emplace(targetEventId, std::vector<EventInterceptInfo>{EventInterceptInfo{serviceId, targetEventId,
+                                                                                                            [impl](Event const * const evt){ return impl->preInterceptEvent(static_cast<EventT const * const>(evt)); },
+                                                                                                            [impl](Event const * const evt, bool processed){ return impl->postInterceptEvent(static_cast<EventT const * const>(evt), processed); }}
+                });
+            } else {
+                existingHandlers->second.emplace_back(EventInterceptInfo{serviceId, targetEventId,
+                                                                         [impl](Event const * const evt){ return impl->preInterceptEvent(static_cast<EventT const * const>(evt)); },
+                                                                         [impl](Event const * const evt, bool processed){ return impl->postInterceptEvent(static_cast<EventT const * const>(evt), processed); }});
+            }
+            // I think there's a bug in GCC 10.1, where if I don't make this a unique_ptr, the EventHandlerRegistration destructor immediately gets called for some reason.
+            // Even if the result is stored in a variable at the caller site.
+            return std::make_unique<EventInterceptorRegistration>(this, CallbackKey{serviceId, targetEventId});
+        }
+
+        /// Get manager id
+        /// \return id
         [[nodiscard]] uint64_t getId() const {
             return _id;
         }
@@ -425,6 +472,8 @@ namespace Cppelix {
         [[nodiscard]] CommunicationChannel* getCommunicationChannel() {
             return _communicationChannel;
         }
+
+        [[nodiscard]] std::optional<std::string_view> getImplementationNameFor(uint64_t serviceId);
 
         void start();
 
@@ -493,7 +542,8 @@ namespace Cppelix {
         std::unordered_map<uint64_t, std::vector<DependencyTrackerInfo>> _dependencyUndoRequestTrackers; // key = interface name hash
         std::unordered_map<CallbackKey, std::function<void(Event const * const)>> _completionCallbacks; // key = listening service id + event type
         std::unordered_map<CallbackKey, std::function<void(Event const * const)>> _errorCallbacks; // key = listening service id + event type
-        std::unordered_map<uint64_t, std::vector<EventCallbackInfo>> _eventCallbacks; // key = service id
+        std::unordered_map<uint64_t, std::vector<EventCallbackInfo>> _eventCallbacks; // key = event id
+        std::unordered_map<uint64_t, std::vector<EventInterceptInfo>> _eventInterceptors; // key = event id
         IFrameworkLogger *_logger;
         std::shared_ptr<ILifecycleManager> _preventEarlyDestructionOfFrameworkLogger;
         std::multimap<uint64_t, EventStackUniquePtr> _eventQueue;

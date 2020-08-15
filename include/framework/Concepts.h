@@ -40,6 +40,12 @@ namespace Cppelix {
         { impl.handleEvent(evt) } -> std::same_as<Generator<bool>>;
     };
 
+    template <class ImplT, class EventT>
+    concept ImplementsEventInterceptors = requires(ImplT impl, EventT const * const evt, bool processed) {
+        { impl.preInterceptEvent(evt) } -> std::same_as<bool>;
+        { impl.postInterceptEvent(evt, processed) } -> std::same_as<bool>;
+    };
+
     template <class ImplT, class Interface>
     concept ImplementsTrackingHandlers = requires(ImplT impl, Interface *svc, DependencyRequestEvent const * const reqEvt, DependencyUndoRequestEvent const * const reqUndoEvt) {
         { impl.handleDependencyRequest(svc, reqEvt) } -> std::same_as<void>;

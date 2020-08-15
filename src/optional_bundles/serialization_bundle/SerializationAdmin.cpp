@@ -1,4 +1,5 @@
 #include <optional_bundles/serialization_bundle/SerializationAdmin.h>
+#include <framework/DependencyManager.h>
 
 std::vector<uint8_t> Cppelix::SerializationAdmin::serialize(const uint64_t type, const void* obj) {
     auto serializer = _serializers.find(type);

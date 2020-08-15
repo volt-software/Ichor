@@ -74,7 +74,7 @@ public:
         getManager()->pushEvent<QuitEvent>(getServiceId());
 
         // we handled it, false means no other handlers are allowed to handle this event.
-        co_return false;
+        co_return (bool)PreventOthersHandling;
     }
 
 private:

@@ -77,6 +77,7 @@ file(GLOB_RECURSE CPPELIX_FRAMEWORK_SOURCES ${TOP_DIR}/src/framework/*.cpp)
 file(GLOB_RECURSE CPPELIX_OPTIONAL_ETCD_SOURCES ${TOP_DIR}/src/optional_bundles/etcd_bundle/*.cpp ${TOP_DIR}/src/optional_bundles/etcd_bundle/*.cc)
 file(GLOB_RECURSE CPPELIX_LOGGING_SOURCES ${TOP_DIR}/src/optional_bundles/logging_bundle/*.cpp)
 file(GLOB_RECURSE CPPELIX_NETWORK_SOURCES ${TOP_DIR}/src/optional_bundles/network_bundle/*.cpp)
+file(GLOB_RECURSE CPPELIX_METRICS_SOURCES ${TOP_DIR}/src/optional_bundles/metrics_bundle/*.cpp)
 file(GLOB_RECURSE CPPELIX_SERIALIZATION_SOURCES ${TOP_DIR}/src/optional_bundles/serialization_bundle/*.cpp)
 
 set(uv_sources
@@ -121,7 +122,7 @@ if(USE_SPDLOG)
     file(GLOB SPDLOG_SOURCES ${EXTERNAL_DIR}/spdlog/src/*.cpp)
 endif()
 
-add_library(cppelix ${uv_sources} ${FMT_SOURCES} ${CPPELIX_FRAMEWORK_SOURCES} ${CPPELIX_LOGGING_SOURCES} ${CPPELIX_NETWORK_SOURCES} ${CPPELIX_SERIALIZATION_SOURCES})
+add_library(cppelix ${uv_sources} ${FMT_SOURCES} ${CPPELIX_FRAMEWORK_SOURCES} ${CPPELIX_LOGGING_SOURCES} ${CPPELIX_NETWORK_SOURCES} ${CPPELIX_METRICS_SOURCES} ${CPPELIX_SERIALIZATION_SOURCES})
 if(USE_SPDLOG)
     target_sources(cppelix PRIVATE ${SPDLOG_SOURCES})
 endif()

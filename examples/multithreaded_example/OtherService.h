@@ -42,7 +42,7 @@ public:
         getManager()->getCommunicationChannel()->broadcastEvent<QuitEvent>(getManager(), getServiceId(), INTERNAL_EVENT_PRIORITY+1);
 
         // we dealt with it, don't let other services handle this event
-        co_return false;
+        co_return (bool)PreventOthersHandling;
     }
 
 private:

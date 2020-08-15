@@ -12,7 +12,8 @@ using namespace Cppelix;
 
 class ScopeFilterEntry final {
 public:
-    ScopeFilterEntry(std::string _scope) : scope(std::move(_scope)) {}
+    explicit ScopeFilterEntry(std::string _scope) : scope(std::move(_scope)) {}
+    explicit ScopeFilterEntry(const char *_scope) : scope(_scope) {}
 
     [[nodiscard]] bool matches(const std::shared_ptr<ILifecycleManager> &manager) const {
         auto scopeProp = manager->getProperties()->find("scope");
@@ -38,7 +39,7 @@ public:
 
     bool stop() final {
         LOG_INFO(_logger, "TrackerService stopped");
-        _trackerRegistration.reset(nullptr);
+        _trackerRegistration = nullptr;
         return true;
     }
 

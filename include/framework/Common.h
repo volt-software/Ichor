@@ -90,4 +90,7 @@ namespace Cppelix {
 #else
     using CppelixProperties = std::unordered_map<std::string, std::any>;
 #endif
+
+    inline constexpr bool PreventOthersHandling = false;
+    inline constexpr bool AllowOthersHandling = false;
 }

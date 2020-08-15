@@ -23,17 +23,17 @@ namespace Cppelix {
         requires Derived<EventT, Event>
         void broadcastEvent(DependencyManager *originatingManager, Args&&... args) {
             std::unique_lock l(_mutex);
-            for(auto manager : _managers) {
-                if(manager.second->getId() == originatingManager->getId()) {
+            for(auto &[key, manager] : _managers) {
+                if(manager->getId() == originatingManager->getId()) {
                     continue;
                 }
 
 #if 0
-                std::cout << "Inserting event " << typeName<EventT>() << " from manager " << originatingManager->getId() << " into manager " << manager.second->getId() << std::endl;
+                std::cout << "Inserting event " << typeName<EventT>() << " from manager " << originatingManager->getId() << " into manager " << manager->getId() << std::endl;
 #endif
-                manager.second->pushEvent<EventT>(std::forward<Args>(args)...);
+                manager->template pushEvent<EventT>(std::forward<Args>(args)...);
 #if 0
-                std::cout << "Inserted event " << typeName<EventT>() << " from manager " << originatingManager->getId() << " into manager " << manager.second->getId() << std::endl;
+                std::cout << "Inserted event " << typeName<EventT>() << " from manager " << originatingManager->getId() << " into manager " << manager->getId() << std::endl;
 #endif
             }
         }

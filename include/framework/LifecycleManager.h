@@ -34,7 +34,7 @@ namespace Cppelix {
         }
 
         CPPELIX_CONSTEXPR void addDependency(Dependency dependency) {
-            _dependencies.emplace_back(std::move(dependency));
+            _dependencies.emplace_back(dependency);
         }
 
         template<class Interface>

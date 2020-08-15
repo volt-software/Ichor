@@ -53,7 +53,7 @@ namespace Cppelix {
             }
         }
 
-        Generator<bool> handlEvent(UnrecoverableErrorEvent *evt) {
+        Generator<bool> handleEvent(UnrecoverableErrorEvent const * const evt) {
             for(auto &[key, service] : _connections) {
                 if(service->getServiceId() != evt->originatingService) {
                     continue;
@@ -65,7 +65,8 @@ namespace Cppelix {
                 if(port != end(*service->getProperties())) {
                     full_address += ":" + std::to_string(std::any_cast<uint16_t>(port->second));
                 }
-                LOG_ERROR(_logger, "Couldn't start connection of type {} on address {} for service of type {} with id {} because \"{}\"", getManager()->getImplementationNameFor(evt->originatingService), full_address, getManager()->getImplementationNameFor(service->getServiceId()), service->getServiceId(), evt->error);
+                std::string_view implNameRequestor = getManager()->getImplementationNameFor(evt->originatingService).value();
+                LOG_ERROR(_logger, "Couldn't start connection of type {} on address {} for service of type {} with id {} because \"{}\"", typeNameHash<NetworkType>(), full_address, implNameRequestor, service->getServiceId(), evt->error);
 
                 break;
             }
