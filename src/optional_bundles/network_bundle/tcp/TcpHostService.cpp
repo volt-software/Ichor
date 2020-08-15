@@ -19,7 +19,8 @@ bool Cppelix::TcpHostService::start() {
 
     _socket = ::socket(AF_INET, SOCK_STREAM, 0);
     if(_socket == -1) {
-        throw std::runtime_error("Couldn't create socket");
+        getManager()->pushEvent<UnrecoverableErrorEvent>(getServiceId(), 0, "Couldn't create socket: errno = " + std::to_string(errno));
+        return false;
     }
 
     int setting = 1;
@@ -34,11 +35,13 @@ bool Cppelix::TcpHostService::start() {
     if(addressProp != end(*getProperties())) {
         auto hostname = std::any_cast<std::string>(addressProp->second);
         if(::inet_aton(hostname.c_str(), &address.sin_addr) != 0) {
+            getManager()->pushEvent<RecoverableErrorEvent>(getServiceId(), 1, "inet_aton: errno = " + std::to_string(errno));
             auto hp = ::gethostbyname(hostname.c_str());
             if (hp == nullptr) {
                 _socket = -1;
                 close(_socket);
-                throw std::runtime_error("Couldn't inet_aton");
+                getManager()->pushEvent<UnrecoverableErrorEvent>(getServiceId(), 2, "gethostbyname: errno = " + std::to_string(errno));
+                return false;
             }
 
             address.sin_addr = *(struct in_addr *) hp->h_addr;
@@ -53,13 +56,15 @@ bool Cppelix::TcpHostService::start() {
     if(_bindFd == -1) {
         _socket = -1;
         close(_socket);
-        throw std::runtime_error("Couldn't bind socket");
+        getManager()->pushEvent<UnrecoverableErrorEvent>(getServiceId(), 3, "Couldn't bind socket: errno = " + std::to_string(errno));
+        return false;
     }
 
     if(::listen(_socket, 10) != 0) {
         _socket = -1;
         close(_socket);
-        throw std::runtime_error("Couldn't listen on socket");
+        getManager()->pushEvent<UnrecoverableErrorEvent>(getServiceId(), 4, "Couldn't listen on socket: errno = " + std::to_string(errno));
+        return false;
     }
 
     _listenThread = std::thread([this]{
@@ -72,8 +77,10 @@ bool Cppelix::TcpHostService::start() {
             if (newConnection == -1) {
                 LOG_ERROR(_logger, "New connection but accept() returned {} errno {}", newConnection, errno);
                 if(errno == EINVAL) {
+                    getManager()->pushEvent<UnrecoverableErrorEvent>(getServiceId(), 4, "Accept() generated error. errno = " + std::to_string(errno));
                     break;
                 }
+                getManager()->pushEvent<RecoverableErrorEvent>(getServiceId(), 4, "Accept() generated error. errno = " + std::to_string(errno));
                 continue;
             }
 

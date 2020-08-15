@@ -22,18 +22,21 @@ bool Cppelix::TcpConnectionService::start() {
         LOG_TRACE(_logger, "Starting TCP connection for existing socket");
     } else {
         if(!getProperties()->contains("Address")) {
-            throw std::runtime_error("Missing address");
+            getManager()->pushEvent<UnrecoverableErrorEvent>(getServiceId(), 0, "Missing \"Address\" in properties");
+            return false;
         }
 
         if(!getProperties()->contains("Port")) {
-            throw std::runtime_error("Missing port");
+            getManager()->pushEvent<UnrecoverableErrorEvent>(getServiceId(), 1, "Missing \"Port\" in properties");
+            return false;
         }
 
         // The start function possibly gets called multiple times due to trying to recover from not being able to connect
         if(_socket == -1) {
             _socket = socket(AF_INET, SOCK_STREAM, 0);
             if (_socket == -1) {
-                throw std::runtime_error("Couldn't create socket");
+                getManager()->pushEvent<UnrecoverableErrorEvent>(getServiceId(), 2, "Couldn't create socket: errno = " + std::to_string(errno));
+                return false;
             }
         }
 
@@ -44,9 +47,11 @@ bool Cppelix::TcpConnectionService::start() {
         address.sin_family = AF_INET;
         address.sin_port = htons(std::any_cast<uint16_t>((*getProperties())["Port"]));
 
-        if(inet_pton(AF_INET, std::any_cast<std::string>((*getProperties())["Address"]).c_str(), &address.sin_addr) <= 0)
+        int ret = inet_pton(AF_INET, std::any_cast<std::string>((*getProperties())["Address"]).c_str(), &address.sin_addr);
+        if(ret == 0)
         {
-            throw std::runtime_error("inet_pton error");
+            getManager()->pushEvent<UnrecoverableErrorEvent>(getServiceId(), 3, "inet_pton invalid address for given address family (has to be ipv4-valid address)");
+            return false;
         }
 
         if(connect(_socket, (struct sockaddr *)&address, sizeof(address)) < 0)
@@ -74,6 +79,7 @@ bool Cppelix::TcpConnectionService::start() {
 
             if(ret < 0) {
                 LOG_ERROR(_logger, "Error receiving from socket: {}", errno);
+                getManager()->pushEvent<RecoverableErrorEvent>(getServiceId(), 4, "Error receiving from socket. errno = " + std::to_string(errno));
                 continue;
             }
 

@@ -16,12 +16,14 @@ namespace Cppelix {
 
         bool start() final {
             _trackerRegistration = getManager()->template registerDependencyTracker<IConnectionService>(getServiceId(), this);
+            _unrecoverableErrorRegistration = getManager()->template registerEventHandler<UnrecoverableErrorEvent>(getServiceId(), this);
 
             return false;
         }
 
         bool stop() final {
-            _trackerRegistration.reset(nullptr);
+            _trackerRegistration = nullptr;
+            _unrecoverableErrorRegistration = nullptr;
             return false;
         }
 
@@ -51,9 +53,31 @@ namespace Cppelix {
             }
         }
 
+        Generator<bool> handlEvent(UnrecoverableErrorEvent *evt) {
+            for(auto &[key, service] : _connections) {
+                if(service->getServiceId() != evt->originatingService) {
+                    continue;
+                }
+
+                auto address = service->getProperties()->find("Address");
+                auto port = service->getProperties()->find("Port");
+                auto full_address = std::any_cast<std::string>(address->second);
+                if(port != end(*service->getProperties())) {
+                    full_address += ":" + std::to_string(std::any_cast<uint16_t>(port->second));
+                }
+                LOG_ERROR(_logger, "Couldn't start connection of type {} on address {} for service of type {} with id {} because \"{}\"", getManager()->getImplementationNameFor(evt->originatingService), full_address, getManager()->getImplementationNameFor(service->getServiceId()), service->getServiceId(), evt->error);
+
+                break;
+            }
+
+            // maybe others want to log this as well
+            co_return (bool)AllowOthersHandling;
+        }
+
     private:
         ILogger *_logger{nullptr};
         std::unordered_map<uint64_t, IConnectionService*> _connections{};
         std::unique_ptr<DependencyTrackerRegistration> _trackerRegistration{nullptr};
+        std::unique_ptr<EventHandlerRegistration> _unrecoverableErrorRegistration{nullptr};
     };
 }

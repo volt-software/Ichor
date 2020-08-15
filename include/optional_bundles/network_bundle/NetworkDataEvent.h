@@ -5,10 +5,11 @@
 namespace Cppelix {
     struct NetworkDataEvent final : public Event {
         explicit NetworkDataEvent(uint64_t _id, uint64_t _originatingService, uint64_t _priority, std::vector<uint8_t>&& data) noexcept :
-                Event(TYPE, _id, _originatingService, _priority), _data(std::forward<std::vector<uint8_t>>(data)), _movedFrom(false) {}
+                Event(TYPE, NAME, _id, _originatingService, _priority), _data(std::forward<std::vector<uint8_t>>(data)), _movedFrom(false) {}
         ~NetworkDataEvent() final = default;
 
         static constexpr uint64_t TYPE = typeNameHash<NetworkDataEvent>();
+        static constexpr std::string_view NAME= typeName<NetworkDataEvent>();
 
         std::vector<uint8_t>& getData() const {
             if(_movedFrom) {
