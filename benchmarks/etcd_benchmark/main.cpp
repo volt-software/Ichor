@@ -1,6 +1,7 @@
 #include "UsingEtcdService.h"
 #include <optional_bundles/logging_bundle/LoggerAdmin.h>
 #include <optional_bundles/etcd_bundle/EtcdService.h>
+#include <framework/CommunicationChannel.h>
 #ifdef USE_SPDLOG
 #include <optional_bundles/logging_bundle/SpdlogFrameworkLogger.h>
 #include <optional_bundles/logging_bundle/SpdlogLogger.h>
@@ -20,13 +21,37 @@ int main() {
     using namespace std::string_literals;
     std::locale::global(std::locale("en_US.UTF-8"));
 
-    DependencyManager dm{};
-    auto logMgr = dm.createServiceManager<IFrameworkLogger, FRAMEWORK_LOGGER_TYPE>();
-    logMgr->setLogLevel(LogLevel::INFO);
-    dm.createServiceManager<ILoggerAdmin, LoggerAdmin<LOGGER_TYPE>>();
-    dm.createServiceManager<IEtcdService, EtcdService>(RequiredList<ILogger>, OptionalList<>, CppelixProperties{{"EtcdAddress", "localhost:2379"s}});
-    dm.createServiceManager<IUsingEtcdService, UsingEtcdService>(RequiredList<ILogger, IEtcdService>, OptionalList<>);
-    dm.start();
+    auto start = std::chrono::system_clock::now();
+
+    CommunicationChannel channel{};
+    DependencyManager dmOne{};
+    DependencyManager dmTwo{};
+    channel.addManager(&dmOne);
+    channel.addManager(&dmTwo);
+
+    std::thread t1([&dmOne] {
+        auto logMgr = dmOne.createServiceManager<IFrameworkLogger, FRAMEWORK_LOGGER_TYPE>();
+        logMgr->setLogLevel(LogLevel::INFO);
+        dmOne.createServiceManager<ILoggerAdmin, LoggerAdmin<LOGGER_TYPE>>();
+        dmOne.createServiceManager<IEtcdService, EtcdService>(RequiredList<ILogger>, OptionalList<>, CppelixProperties{{"EtcdAddress", "localhost:2379"s}});
+        dmOne.createServiceManager<IUsingEtcdService, UsingEtcdService>(RequiredList<ILogger, IEtcdService>, OptionalList<>);
+        dmOne.start();
+    });
+
+    std::thread t2([&dmTwo] {
+        auto logMgr = dmTwo.createServiceManager<IFrameworkLogger, FRAMEWORK_LOGGER_TYPE>();
+        logMgr->setLogLevel(LogLevel::INFO);
+        dmTwo.createServiceManager<ILoggerAdmin, LoggerAdmin<LOGGER_TYPE>>();
+        dmTwo.createServiceManager<IEtcdService, EtcdService>(RequiredList<ILogger>, OptionalList<>, CppelixProperties{{"EtcdAddress", "localhost:2379"s}});
+        dmTwo.createServiceManager<IUsingEtcdService, UsingEtcdService>(RequiredList<ILogger, IEtcdService>, OptionalList<>);
+        dmTwo.start();
+    });
+
+    t1.join();
+    t2.join();
+
+    auto end = std::chrono::system_clock::now();
+    std::cout << fmt::format("Program ran for {:L} µs\n", std::chrono::duration_cast<std::chrono::microseconds>(end-start).count());
 
     return 0;
 }

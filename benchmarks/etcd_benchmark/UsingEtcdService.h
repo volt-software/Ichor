@@ -21,7 +21,7 @@ public:
         LOG_INFO(_logger, "UsingEtcdService started");
         auto start = std::chrono::system_clock::now();
         for(uint64_t i = 0; i < 100'000; i++) {
-            if(!_etcd->put("test", "2") || !_etcd->get("test")) {
+            if(!_etcd->put("test" + std::to_string(i), "2") || !_etcd->get("test" + std::to_string(i))) {
                 throw std::runtime_error("Couldn't put or get");
             }
 

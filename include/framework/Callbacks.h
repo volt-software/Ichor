@@ -5,7 +5,7 @@
 #include "Generator.h"
 
 namespace Cppelix {
-    class Event;
+    struct Event;
 
     class [[nodiscard]] EventCallbackInfo final {
     public:
