@@ -6,7 +6,6 @@
 #include "optional_bundles/serialization_bundle/SerializationAdmin.h"
 #include "framework/LifecycleManager.h"
 #include "TestMsg.h"
-#include <iostream>
 
 #include <rapidjson/document.h>
 #include <rapidjson/writer.h>

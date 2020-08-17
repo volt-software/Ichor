@@ -185,6 +185,7 @@ namespace Cppelix {
             logAddService<Impl, Interfaces...>();
 
             cmpMgr->getService().injectDependencyManager(this);
+            bool started = false;
 
             for(auto &[key, mgr] : _services) {
                 if(mgr->getServiceState() == ServiceState::ACTIVE) {
@@ -198,13 +199,19 @@ namespace Cppelix {
                         continue;
                     }
 
-                    cmpMgr->dependencyOnline(mgr);
+                    started = cmpMgr->dependencyOnline(mgr);
+                    if(started) {
+                        pushEventInternal<DependencyOnlineEvent>(0, INTERNAL_EVENT_PRIORITY, cmpMgr);
+                        break;
+                    }
                 }
             }
 
             (pushEventInternal<DependencyRequestEvent>(cmpMgr->serviceId(), INTERNAL_EVENT_PRIORITY, cmpMgr, Dependency{typeNameHash<Optional>(), Optional::version, false}, cmpMgr->getProperties()), ...);
             (pushEventInternal<DependencyRequestEvent>(cmpMgr->serviceId(), INTERNAL_EVENT_PRIORITY, cmpMgr, Dependency{typeNameHash<Required>(), Required::version, true}, cmpMgr->getProperties()), ...);
-            pushEventInternal<StartServiceEvent>(0, INTERNAL_EVENT_PRIORITY, cmpMgr->serviceId());
+            if(!started) {
+                pushEventInternal<StartServiceEvent>(0, INTERNAL_EVENT_PRIORITY, cmpMgr->serviceId());
+            }
 
             _services.emplace(cmpMgr->serviceId(), cmpMgr);
             return &cmpMgr->getService();
@@ -214,7 +221,7 @@ namespace Cppelix {
         requires Derived<Impl, Interface>
         auto createServiceManager(RequiredList_t<Required...>, OptionalList_t<Optional...> = OptionalList_t<>{}, CppelixProperties properties = CppelixProperties{}) {
             if constexpr(sizeof...(Required) == 0 && sizeof...(Optional) == 0) {
-                return createServiceManager<Impl>(std::move(properties));
+                return createServiceManager<Interface, Impl>(std::move(properties));
             }
 
             if constexpr (ListContainsInterface<IFrameworkLogger, Interface>::value) {
@@ -226,6 +233,7 @@ namespace Cppelix {
             logAddService<Impl, Interface>();
 
             cmpMgr->getService().injectDependencyManager(this);
+            bool started = false;
 
             for(auto &[key, mgr] : _services) {
                 if(mgr->getServiceState() == ServiceState::ACTIVE) {
@@ -239,13 +247,19 @@ namespace Cppelix {
                         continue;
                     }
 
-                    cmpMgr->dependencyOnline(mgr);
+                    started = cmpMgr->dependencyOnline(mgr);
+                    if(started) {
+                        pushEventInternal<DependencyOnlineEvent>(0, INTERNAL_EVENT_PRIORITY, cmpMgr);
+                        break;
+                    }
                 }
             }
 
             (pushEventInternal<DependencyRequestEvent>(cmpMgr->serviceId(), INTERNAL_EVENT_PRIORITY, cmpMgr, Dependency{typeNameHash<Optional>(), Optional::version, false}, cmpMgr->getProperties()), ...);
             (pushEventInternal<DependencyRequestEvent>(cmpMgr->serviceId(), INTERNAL_EVENT_PRIORITY, cmpMgr, Dependency{typeNameHash<Required>(), Required::version, true}, cmpMgr->getProperties()), ...);
-            pushEventInternal<StartServiceEvent>(0, INTERNAL_EVENT_PRIORITY, cmpMgr->serviceId());
+            if(!started) {
+                pushEventInternal<StartServiceEvent>(0, INTERNAL_EVENT_PRIORITY, cmpMgr->serviceId());
+            }
 
             _services.emplace(cmpMgr->serviceId(), cmpMgr);
             return &cmpMgr->getService();
@@ -254,7 +268,7 @@ namespace Cppelix {
         template<Derived<Service> Impl, Derived<IService>... Interfaces>
         requires AllDerived<Impl, Interfaces...>
         auto createServiceManager(InterfacesList_t<Interfaces...>, CppelixProperties properties = {}) {
-            auto cmpMgr = LifecycleManager<Impl>::create(_logger, "", InterfacesList<Interfaces...>, std::move(properties));
+            auto cmpMgr = LifecycleManager<Impl>::template create(_logger, "", std::move(properties), InterfacesList<Interfaces...>);
 
             if constexpr (ListContainsInterface<IFrameworkLogger, Interfaces...>::value) {
                 _logger = &cmpMgr->getService();
@@ -274,7 +288,7 @@ namespace Cppelix {
         template<Derived<IService> Interface, Derived<Service> Impl>
         requires Derived<Impl, Interface>
         auto createServiceManager(CppelixProperties properties = {}) {
-            auto cmpMgr = LifecycleManager<Impl>::create(_logger, "", InterfacesList<Interface>, std::move(properties));
+            auto cmpMgr = LifecycleManager<Impl>::template create(_logger, "", std::move(properties), InterfacesList<Interface>);
 
             if constexpr (ListContainsInterface<IFrameworkLogger, Interface>::value) {
                 _logger = &cmpMgr->getService();

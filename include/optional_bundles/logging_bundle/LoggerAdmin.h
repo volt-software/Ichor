@@ -10,7 +10,7 @@ namespace Cppelix {
         static constexpr InterfaceVersion version = InterfaceVersion{1, 0, 0};
     };
 
-    template<typename T>
+    template<typename LogT, typename... DependencyTs>
     class LoggerAdmin final : public ILoggerAdmin, public Service {
     public:
         ~LoggerAdmin() final = default;
@@ -39,13 +39,22 @@ namespace Cppelix {
             auto requestedLevelIt = evt->properties->find("LogLevel");
             auto requestedLevel = requestedLevelIt != end(*evt->properties) ? std::any_cast<LogLevel>(requestedLevelIt->second) : LogLevel::INFO;
             if (logger == end(_loggers)) {
-                LOG_INFO(_logger, "creating logger for svcid {}", evt->originatingService);
-                _loggers.emplace(evt->originatingService, getManager()->template createServiceManager<ILogger, T>(
-                        CppelixProperties{{"LogLevel",        requestedLevel},
-                                          {"TargetServiceId", evt->originatingService},
-                                          {"Filter",          Filter{ServiceIdFilterEntry{evt->originatingService}}}}));
+                LOG_TRACE(_logger, "creating logger for svcid {}", evt->originatingService);
+                if constexpr(sizeof...(DependencyTs) > 0) {
+                    _loggers.emplace(evt->originatingService, getManager()->template createServiceManager<ILogger, LogT>(
+                            RequiredList<DependencyTs...>,
+                            OptionalList<>,
+                            CppelixProperties{{"LogLevel",        requestedLevel},
+                                              {"TargetServiceId", evt->originatingService},
+                                              {"Filter",          Filter{ServiceIdFilterEntry{evt->originatingService}}}}));
+                } else {
+                    _loggers.emplace(evt->originatingService, getManager()->template createServiceManager<ILogger, LogT>(
+                            CppelixProperties{{"LogLevel",        requestedLevel},
+                                              {"TargetServiceId", evt->originatingService},
+                                              {"Filter",          Filter{ServiceIdFilterEntry{evt->originatingService}}}}));
+                }
             } else {
-                LOG_INFO(_logger, "svcid {} already has logger", evt->originatingService);
+                LOG_TRACE(_logger, "svcid {} already has logger", evt->originatingService);
             }
         }
 
@@ -56,6 +65,6 @@ namespace Cppelix {
     private:
         IFrameworkLogger *_logger{nullptr};
         std::unique_ptr<DependencyTrackerRegistration> _loggerTrackerRegistration;
-        std::unordered_map<uint64_t, T *> _loggers;
+        std::unordered_map<uint64_t, LogT*> _loggers;
     };
 }

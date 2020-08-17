@@ -63,6 +63,11 @@ namespace Cppelix {
         }
 
         [[nodiscard]]
+        CPPELIX_CONSTEXPR bool empty() const {
+            return _dependencies.empty();
+        }
+
+        [[nodiscard]]
         CPPELIX_CONSTEXPR size_t amountRequired() const {
             return std::count_if(_dependencies.cbegin(), _dependencies.cend(), [](const auto &dep){ return dep.required; });
         }
@@ -154,6 +159,10 @@ namespace Cppelix {
         }
 
         CPPELIX_CONSTEXPR bool dependencyOnline(const std::shared_ptr<ILifecycleManager> &dependentService) final {
+            if(_service.getState() == ServiceState::ACTIVE) {
+                return false;
+            }
+
             const auto &dependencies = dependentService->getSelfAsDependency();
             for(const auto &dependency : dependencies) {
                 if (!_dependencies.contains(dependency) || _satisfiedDependencies.contains(dependency)) {
@@ -163,7 +172,7 @@ namespace Cppelix {
                 injectIntoSelf<Dependencies...>(dependency.interfaceNameHash, dependentService);
                 _satisfiedDependencies.addDependency(dependency);
 
-                bool canStart = _service.getState() != ServiceState::ACTIVE && _dependencies.requiredDependenciesSatisfied(_satisfiedDependencies);
+                bool canStart = _dependencies.requiredDependenciesSatisfied(_satisfiedDependencies);
                 if (canStart) {
                     if (!_service.internal_start()) {
                         LOG_ERROR(_logger, "Couldn't start service {}", _implementationName);
@@ -191,6 +200,10 @@ namespace Cppelix {
         }
 
         CPPELIX_CONSTEXPR bool dependencyOffline(const std::shared_ptr<ILifecycleManager> &dependentService) final {
+            if(_satisfiedDependencies.empty()) {
+                return false;
+            }
+
             const auto &dependencies = dependentService->getSelfAsDependency();
             bool stopped = false;
 
@@ -317,7 +330,7 @@ namespace Cppelix {
 
         template<Derived<IService>... Interfaces>
         [[nodiscard]]
-        static std::shared_ptr<LifecycleManager<ServiceType>> create(IFrameworkLogger *logger, std::string_view name, InterfacesList_t<Interfaces...>, CppelixProperties properties) {
+        static std::shared_ptr<LifecycleManager<ServiceType>> create(IFrameworkLogger *logger, std::string_view name, CppelixProperties properties, InterfacesList_t<Interfaces...>) {
             if (name.empty()) {
                 name = typeName<ServiceType>();
             }

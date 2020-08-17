@@ -6,12 +6,14 @@
 
 #define FRAMEWORK_LOGGER_TYPE SpdlogFrameworkLogger
 #define LOGGER_TYPE SpdlogLogger
+#define LOGGER_SHARED_TYPE ,ISpdlogSharedService
 #else
 #include <optional_bundles/logging_bundle/CoutFrameworkLogger.h>
 #include <optional_bundles/logging_bundle/CoutLogger.h>
 
 #define FRAMEWORK_LOGGER_TYPE CoutFrameworkLogger
 #define LOGGER_TYPE CoutLogger
+#define LOGGER_SHARED_TYPE
 #endif
 #include <chrono>
 #include <iostream>
@@ -23,10 +25,13 @@ int main() {
 
     auto start = std::chrono::system_clock::now();
     DependencyManager dm{};
-    auto logMgr = dm.createServiceManager<IFrameworkLogger, FRAMEWORK_LOGGER_TYPE>();
-    auto logAdminMgr = dm.createServiceManager<ILoggerAdmin, LoggerAdmin<LOGGER_TYPE>>(RequiredList<IFrameworkLogger>, OptionalList<>);
-    auto testOneMgr = dm.createServiceManager<IUsingTimerService, UsingTimerService>(RequiredList<ILogger>, OptionalList<>);
-    auto testTwoMgr = dm.createServiceManager<IUsingTimerService, UsingTimerService>(RequiredList<ILogger>, OptionalList<>);
+    dm.createServiceManager<IFrameworkLogger, FRAMEWORK_LOGGER_TYPE>();
+#ifdef USE_SPDLOG
+    dm.createServiceManager<ISpdlogSharedService, SpdlogSharedService>();
+#endif
+    dm.createServiceManager<ILoggerAdmin, LoggerAdmin<LOGGER_TYPE LOGGER_SHARED_TYPE>>(RequiredList<IFrameworkLogger>);
+    dm.createServiceManager<IUsingTimerService, UsingTimerService>(RequiredList<ILogger>, OptionalList<>);
+    dm.createServiceManager<IUsingTimerService, UsingTimerService>(RequiredList<ILogger>, OptionalList<>);
     dm.start();
     auto end = std::chrono::system_clock::now();
     std::cout << fmt::format("Program ran for {:L} µs\n", std::chrono::duration_cast<std::chrono::microseconds>(end-start).count());

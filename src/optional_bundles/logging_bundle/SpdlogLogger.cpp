@@ -5,24 +5,6 @@
 #include <spdlog/sinks/basic_file_sink.h>
 #include "optional_bundles/logging_bundle/SpdlogLogger.h"
 
-Cppelix::SpdlogLogger::SpdlogLogger() : ILogger(), Service(), _level(LogLevel::TRACE) {
-    auto console_sink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
-
-    auto time_since_epoch = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch());
-    auto file_sink = make_shared<spdlog::sinks::basic_file_sink_mt>(fmt::format("logs/log-{}.txt", time_since_epoch.count()), true);
-
-    _logger = make_shared<spdlog::logger>("multi_sink", spdlog::sinks_init_list{console_sink, file_sink});
-
-#ifndef REMOVE_SOURCE_NAMES_FROM_LOGGING
-    _logger->set_pattern("[%C-%m-%d %H:%M:%S.%e] [%s:%#] [%L] %v");
-#else
-    _logger->set_pattern("[%C-%m-%d %H:%M:%S.%e] [%L] %v");
-#endif
-    _logger->set_level(spdlog::level::trace);
-
-    SPDLOG_TRACE("Constructor SpdlogLogger");
-}
-
 void Cppelix::SpdlogLogger::trace(const char *filename_in, int line_in, const char *funcname_in,
                                            std::string_view format_str, fmt::format_args args) {
     if(_level <= LogLevel::TRACE) {
@@ -67,6 +49,25 @@ Cppelix::LogLevel Cppelix::SpdlogLogger::getLogLevel() const {
 }
 
 bool Cppelix::SpdlogLogger::start() {
+    if(_sharedService != nullptr) {
+        auto& sinks = _sharedService->getSinks();
+        _logger = make_shared<spdlog::logger>("multi_sink", sinks.begin(), sinks.end());
+    } else {
+        auto console_sink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
+
+        auto time_since_epoch = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch());
+        auto file_sink = make_shared<spdlog::sinks::basic_file_sink_mt>(fmt::format("logs/log-{}.txt", time_since_epoch.count()), true);
+        _logger = make_shared<spdlog::logger>("multi_sink", spdlog::sinks_init_list{console_sink, file_sink});
+    }
+
+#ifndef REMOVE_SOURCE_NAMES_FROM_LOGGING
+    _logger->set_pattern("[%C-%m-%d %H:%M:%S.%e] [%s:%#] [%L] %v");
+#else
+    _logger->set_pattern("[%C-%m-%d %H:%M:%S.%e] [%L] %v");
+#endif
+    _logger->set_level(spdlog::level::trace);
+
+
     auto requestedLevelIt = _properties.find("LogLevel");
     if(requestedLevelIt != end(_properties)) {
         auto requestedLevel = std::any_cast<LogLevel>(requestedLevelIt->second);
@@ -88,14 +89,22 @@ bool Cppelix::SpdlogLogger::start() {
     }
 
     auto targetServiceId = std::any_cast<uint64_t>(_properties["TargetServiceId"]);
-    SPDLOG_TRACE("SpdlogLogger {} started for component {}", getServiceId(), targetServiceId);
+    _logger->trace("SpdlogLogger {} started for component {}", getServiceId(), targetServiceId);
     return true;
 }
 
 bool Cppelix::SpdlogLogger::stop() {
     auto targetServiceId = std::any_cast<uint64_t>(_properties["TargetServiceId"]);
-    SPDLOG_TRACE("SpdlogLogger {} stopped for component {}", getServiceId(), targetServiceId);
+    _logger->trace("SpdlogLogger {} stopped for component {}", getServiceId(), targetServiceId);
     return true;
+}
+
+void Cppelix::SpdlogLogger::addDependencyInstance(Cppelix::ISpdlogSharedService *shared) noexcept {
+    _sharedService = shared;
+}
+
+void Cppelix::SpdlogLogger::removeDependencyInstance(Cppelix::ISpdlogSharedService *shared) noexcept {
+    _sharedService = nullptr;
 }
 
 

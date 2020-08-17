@@ -16,3 +16,8 @@ file(GLOB_RECURSE PROJECT_EXAMPLE_SOURCES ${TOP_DIR}/benchmarks/start_stop_bench
 add_executable(cppelix_start_stop_benchmark ${PROJECT_EXAMPLE_SOURCES})
 target_link_libraries(cppelix_start_stop_benchmark ${CMAKE_THREAD_LIBS_INIT})
 target_link_libraries(cppelix_start_stop_benchmark cppelix)
+
+file(GLOB_RECURSE PROJECT_EXAMPLE_SOURCES ${TOP_DIR}/benchmarks/start_benchmark/*.cpp)
+add_executable(cppelix_start_benchmark ${PROJECT_EXAMPLE_SOURCES})
+target_link_libraries(cppelix_start_benchmark ${CMAKE_THREAD_LIBS_INIT})
+target_link_libraries(cppelix_start_benchmark cppelix)

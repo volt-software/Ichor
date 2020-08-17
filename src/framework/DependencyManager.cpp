@@ -216,8 +216,10 @@ void Cppelix::DependencyManager::start() {
                         }
 
                         auto &toStartService = toStartServiceIt->second;
-                        if (!toStartService->start()) {
-                            LOG_ERROR(_logger, "Couldn't start service {}: {}", startServiceEvt->serviceId, toStartService->implementationName());
+                        if(toStartService->getServiceState() == ServiceState::ACTIVE) {
+                            handleEventCompletion(startServiceEvt);
+                        } else if (!toStartService->start()) {
+                            LOG_TRACE(_logger, "Couldn't start service {}: {}", startServiceEvt->serviceId, toStartService->implementationName());
                             handleEventError(startServiceEvt);
                         } else {
                             pushEventInternal<DependencyOnlineEvent>(0, INTERNAL_EVENT_PRIORITY, toStartService);
