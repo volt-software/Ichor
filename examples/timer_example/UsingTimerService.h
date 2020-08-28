@@ -4,7 +4,7 @@
 #include <optional_bundles/logging_bundle/Logger.h>
 #include <optional_bundles/timer_bundle/TimerService.h>
 #include "framework/Service.h"
-#include "framework/ServiceLifecycleManager.h"
+#include "framework/LifecycleManager.h"
 
 using namespace Cppelix;
 
@@ -49,7 +49,7 @@ public:
         }
 
         // we handled it, false means no other handlers are allowed to handle this event.
-        co_return false;
+        co_return (bool)PreventOthersHandling;
     }
 
 private:

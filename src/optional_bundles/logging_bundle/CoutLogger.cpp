@@ -2,7 +2,6 @@
 #include <iostream>
 
 Cppelix::CoutLogger::CoutLogger() : ILogger(), Service(), _level(LogLevel::TRACE) {
-    std::cout << "CoutLogger constructor\n";
 }
 
 void Cppelix::CoutLogger::trace(const char *filename_in, int line_in, const char *funcname_in,
@@ -41,12 +40,10 @@ void Cppelix::CoutLogger::error(const char *filename_in, int line_in, const char
 }
 
 bool Cppelix::CoutLogger::start() {
-    std::cout << "CoutLogger started\n";
     return true;
 }
 
 bool Cppelix::CoutLogger::stop() {
-    std::cout << "CoutLogger stopped\n";
     return true;
 }
 

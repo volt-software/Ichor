@@ -4,12 +4,12 @@
 #include <framework/DependencyManager.h>
 #include <optional_bundles/logging_bundle/Logger.h>
 #include "framework/Service.h"
-#include "framework/ServiceLifecycleManager.h"
+#include "framework/LifecycleManager.h"
 
 using namespace Cppelix;
 
 
-struct IStartStopService {
+struct IStartStopService : public virtual IService {
     static constexpr InterfaceVersion version = InterfaceVersion{1, 0, 0};
 };
 
@@ -28,7 +28,7 @@ public:
         } else {
             auto end = std::chrono::system_clock::now();
             getManager()->pushEvent<QuitEvent>(getServiceId());
-            LOG_INFO(_logger, "finished in {:n} µs", std::chrono::duration_cast<std::chrono::microseconds>(end-_start).count());
+            LOG_INFO(_logger, "finished in {:L} µs", std::chrono::duration_cast<std::chrono::microseconds>(end-_start).count());
         }
         startCount++;
         return true;

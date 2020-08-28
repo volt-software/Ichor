@@ -5,8 +5,23 @@
 
 namespace Cppelix {
 
+    template <class T, class U, class... Remainder>
+    struct DerivedTrait : std::integral_constant<bool, DerivedTrait<T, Remainder...>::value && std::is_base_of_v<U, T>> {};
+
+    template <class T, class U>
+    struct DerivedTrait<T, U> : std::integral_constant<bool, std::is_base_of_v<U, T>> {};
+
+    template <class T, class U, class... Remainder>
+    struct ListContainsInterface : std::integral_constant<bool, ListContainsInterface<T, Remainder...>::value || std::is_base_of_v<U, T>> {};
+
+    template <class T, class U>
+    struct ListContainsInterface<T, U> : std::integral_constant<bool, std::is_base_of_v<U, T>> {};
+
     template <class T, class U>
     concept Derived = std::is_base_of<U, T>::value;
+
+    template <class T, class... U>
+    concept AllDerived = DerivedTrait<T, U...>::value;
 
     template <class ImplT, class Interface>
     concept ImplementsDependencyInjection = requires(ImplT impl, Interface *svc) {
@@ -23,6 +38,12 @@ namespace Cppelix {
     template <class ImplT, class EventT>
     concept ImplementsEventHandlers = requires(ImplT impl, EventT const * const evt) {
         { impl.handleEvent(evt) } -> std::same_as<Generator<bool>>;
+    };
+
+    template <class ImplT, class EventT>
+    concept ImplementsEventInterceptors = requires(ImplT impl, EventT const * const evt, bool processed) {
+        { impl.preInterceptEvent(evt) } -> std::same_as<bool>;
+        { impl.postInterceptEvent(evt, processed) } -> std::same_as<bool>;
     };
 
     template <class ImplT, class Interface>

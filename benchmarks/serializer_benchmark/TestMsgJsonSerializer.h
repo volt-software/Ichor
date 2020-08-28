@@ -3,38 +3,31 @@
 #include <framework/DependencyManager.h>
 #include <optional_bundles/logging_bundle/Logger.h>
 #include "../include/framework/Service.h"
-#include "../include/framework/SerializationAdmin.h"
-#include "framework/ServiceLifecycleManager.h"
+#include "optional_bundles/serialization_bundle/SerializationAdmin.h"
+#include "framework/LifecycleManager.h"
 #include "TestMsg.h"
-#include <iostream>
 
 #include <rapidjson/document.h>
 #include <rapidjson/writer.h>
 
-#ifdef USE_SIMDJSON
-#include "simdjson.h"
-#endif
-
 using namespace Cppelix;
 
-class TestMsgJsonSerializer : public ISerializer, public Service {
+class TestMsgJsonSerializer final : public ISerializer, public Service {
 public:
     ~TestMsgJsonSerializer() final = default;
     bool start() final {
-        LOG_INFO(_logger, "TestMsgSerializer started");
         _serializationAdmin->addSerializer(typeNameHash<TestMsg>(), this);
         return true;
     }
 
     bool stop() final {
-        LOG_INFO(_logger, "TestMsgSerializer stopped");
         _serializationAdmin->removeSerializer(typeNameHash<TestMsg>());
         return true;
     }
 
     void addDependencyInstance(ILogger *logger) {
         _logger = logger;
-        LOG_INFO(_logger, "Inserted logger");
+        LOG_TRACE(_logger, "Inserted logger");
     }
 
     void removeDependencyInstance(ILogger *logger) {
@@ -51,7 +44,7 @@ public:
         LOG_INFO(_logger, "Removed serializationAdmin");
     }
 
-    std::vector<uint8_t> serialize(const void* obj) {
+    std::vector<uint8_t> serialize(const void* obj) final {
         auto msg = static_cast<const TestMsg*>(obj);
         rapidjson::StringBuffer sb;
         rapidjson::Writer<rapidjson::StringBuffer> writer(sb);
@@ -66,15 +59,10 @@ public:
 
         writer.EndObject();
         auto *ret = sb.GetString();
-        return std::vector<uint8_t>(ret, ret + sb.GetSize());
+        return std::vector<uint8_t>(ret, ret + sb.GetSize() + 1);
     }
 
-    void* deserialize(std::vector<uint8_t> &&stream) {
-#ifdef USE_SIMDJSON
-        auto d = parser.parse(stream.data(), stream.size());
-
-        return new TestMsg(d["id"], std::string{d["val"].get_string().value()});
-#else
+    void* deserialize(std::vector<uint8_t> &&stream) final {
         rapidjson::Document d;
         d.ParseInsitu(reinterpret_cast<char *>(stream.data()));
 
@@ -84,13 +72,9 @@ public:
         }
 
         return new TestMsg(d["id"].GetUint64(), d["val"].GetString());
-#endif
     }
 
 private:
     ILogger *_logger;
     ISerializationAdmin *_serializationAdmin;
-#ifdef USE_SIMDJSON
-    simdjson::dom::parser parser;
-#endif
 };

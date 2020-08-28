@@ -3,7 +3,7 @@
 #include <framework/DependencyManager.h>
 #include <optional_bundles/logging_bundle/Logger.h>
 #include "framework/Service.h"
-#include "framework/ServiceLifecycleManager.h"
+#include "framework/LifecycleManager.h"
 #include "framework/CommunicationChannel.h"
 #include "CustomEvent.h"
 
@@ -19,6 +19,8 @@ public:
     ~OneService() final = default;
     bool start() final {
         LOG_INFO(_logger, "OneService started with dependency");
+        // this component sometimes starts up before the other thread has started the OtherService
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
         getManager()->getCommunicationChannel()->broadcastEvent<CustomEvent>(getManager(), getServiceId());
         return true;
     }

@@ -7,12 +7,14 @@
 
 #define FRAMEWORK_LOGGER_TYPE SpdlogFrameworkLogger
 #define LOGGER_TYPE SpdlogLogger
+#define LOGGER_SHARED_TYPE ,ISpdlogSharedService
 #else
 #include <optional_bundles/logging_bundle/CoutFrameworkLogger.h>
 #include <optional_bundles/logging_bundle/CoutLogger.h>
 
 #define FRAMEWORK_LOGGER_TYPE CoutFrameworkLogger
 #define LOGGER_TYPE CoutLogger
+#define LOGGER_SHARED_TYPE
 #endif
 #include <framework/CommunicationChannel.h>
 #include <chrono>
@@ -25,32 +27,36 @@ int main() {
     auto start = std::chrono::system_clock::now();
 
     CommunicationChannel channel{};
+    DependencyManager dmOne{};
+    DependencyManager dmTwo{};
+    channel.addManager(&dmOne);
+    channel.addManager(&dmTwo);
 
-    std::thread t1([&channel](){
-        DependencyManager dm{};
-        channel.addManager(&dm);
-        std::this_thread::sleep_for(std::chrono::milliseconds(1));
-        auto logMgr = dm.createServiceManager<IFrameworkLogger, FRAMEWORK_LOGGER_TYPE>();
-        auto logAdminMgr = dm.createServiceManager<ILoggerAdmin, LoggerAdmin<LOGGER_TYPE>>();
-        auto oneService = dm.createServiceManager<IOneService, OneService>(RequiredList<ILogger>, OptionalList<>);
-        dm.start();
+    std::thread t1([&dmOne] {
+        dmOne.createServiceManager<IFrameworkLogger, FRAMEWORK_LOGGER_TYPE>();
+#ifdef USE_SPDLOG
+        dmOne.createServiceManager<ISpdlogSharedService, SpdlogSharedService>();
+#endif
+        dmOne.createServiceManager<ILoggerAdmin, LoggerAdmin<LOGGER_TYPE LOGGER_SHARED_TYPE>>(RequiredList<IFrameworkLogger>);
+        dmOne.createServiceManager<IOneService, OneService>(RequiredList<ILogger>, OptionalList<>);
+        dmOne.start();
     });
 
-    std::thread t2([&channel](){
-        DependencyManager dm{};
-        channel.addManager(&dm);
-        std::this_thread::sleep_for(std::chrono::milliseconds(1));
-        auto logMgr = dm.createServiceManager<IFrameworkLogger, FRAMEWORK_LOGGER_TYPE>();
-        auto logAdminMgr = dm.createServiceManager<ILoggerAdmin, LoggerAdmin<LOGGER_TYPE>>();
-        auto otherService = dm.createServiceManager<IOtherService, OtherService>(RequiredList<ILogger>, OptionalList<>);
-        dm.start();
+    std::thread t2([&dmTwo] {
+        dmTwo.createServiceManager<IFrameworkLogger, FRAMEWORK_LOGGER_TYPE>();
+#ifdef USE_SPDLOG
+        dmTwo.createServiceManager<ISpdlogSharedService, SpdlogSharedService>();
+#endif
+        dmTwo.createServiceManager<ILoggerAdmin, LoggerAdmin<LOGGER_TYPE LOGGER_SHARED_TYPE>>(RequiredList<IFrameworkLogger>);
+        dmTwo.createServiceManager<IOtherService, OtherService>(RequiredList<ILogger>, OptionalList<>);
+        dmTwo.start();
     });
 
     t1.join();
     t2.join();
 
     auto end = std::chrono::system_clock::now();
-    std::cout << fmt::format("Program ran for {:n} µs\n", std::chrono::duration_cast<std::chrono::microseconds>(end-start).count());
+    std::cout << fmt::format("Program ran for {:L} µs\n", std::chrono::duration_cast<std::chrono::microseconds>(end-start).count());
 
     return 0;
 }

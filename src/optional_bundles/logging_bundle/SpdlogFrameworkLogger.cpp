@@ -9,14 +9,19 @@ Cppelix::SpdlogFrameworkLogger::SpdlogFrameworkLogger() : IFrameworkLogger(), Se
     auto console_sink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
 
     auto time_since_epoch = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch());
-    auto file_sink = make_shared<spdlog::sinks::basic_file_sink_mt>(fmt::format("logs/log-{}.txt", time_since_epoch.count()), true);
+    auto file_sink = make_shared<spdlog::sinks::basic_file_sink_mt>(fmt::format("logs/framework-log-{}.txt", time_since_epoch.count()), true);
 
     auto logger = make_shared<spdlog::logger>("multi_sink", spdlog::sinks_init_list{console_sink, file_sink});
 
     logger->set_level(spdlog::level::trace);
+    spdlog::flush_on(spdlog::level::err);
 
     spdlog::set_default_logger(logger);
+#ifndef REMOVE_SOURCE_NAMES_FROM_LOGGING
     spdlog::set_pattern("[%C-%m-%d %H:%M:%S.%e] [%s:%#] [%L] %v");
+#else
+    spdlog::set_pattern("[%C-%m-%d %H:%M:%S.%e] [%L] %v");
+#endif
 
     SPDLOG_TRACE("SpdlogFrameworkLogger constructor");
 }

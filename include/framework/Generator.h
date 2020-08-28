@@ -13,7 +13,7 @@ namespace Cppelix{
         public:
 
             using value_type = std::remove_reference_t<T>;
-            using reference_type = std::conditional_t<std::is_reference_v<T>, T, T &>;
+            using reference_type = std::conditional_t<std::is_reference_v<T>, const T, const T &>;
             using pointer_type = value_type *;
 
             GeneratorPromise() = default;
@@ -28,12 +28,12 @@ namespace Cppelix{
                     typename U = T,
                     std::enable_if_t<!std::is_rvalue_reference<U>::value, int> = 0>
             cppcoro::suspend_always yield_value(std::remove_reference_t<T> &value) noexcept {
-                m_value = std::addressof(value);
+                ::new (static_cast<void*>(std::addressof(m_value))) T(std::forward<T>(value));
                 return {};
             }
 
             cppcoro::suspend_always yield_value(std::remove_reference_t<T> &&value) noexcept {
-                m_value = std::addressof(value);
+                ::new (static_cast<void*>(std::addressof(m_value))) T(std::forward<T>(value));
                 return {};
             }
 
@@ -44,22 +44,20 @@ namespace Cppelix{
             void return_void() {
             }
 
-            template<
-                    typename U = T,
-                    std::enable_if_t<!std::is_rvalue_reference<U>::value, int> = 0>
-            cppcoro::suspend_never return_value(std::remove_reference_t<T> &value) noexcept {
-                m_value = std::addressof(value);
+            cppcoro::suspend_never return_value(std::remove_reference_t<T> &value) noexcept
+            {
+                ::new (static_cast<void*>(std::addressof(m_value))) T(std::forward<T>(value));
                 return {};
             }
 
-            cppcoro::suspend_never return_value(std::remove_reference_t<T> &&value)
+            cppcoro::suspend_never return_value(std::remove_reference_t<T> &&value) noexcept(std::is_nothrow_constructible_v<T, T&&>)
             {
-                m_value = std::addressof(value);
+                ::new (static_cast<void*>(std::addressof(m_value))) T(std::forward<T>(value));
                 return {};
             }
 
             reference_type value() const noexcept {
-                return static_cast<reference_type>(*m_value);
+                return m_value;
             }
 
             // Don't allow any use of 'co_await' inside the generator coroutine.
@@ -74,7 +72,7 @@ namespace Cppelix{
 
         private:
 
-            pointer_type m_value;
+            T m_value;
             std::exception_ptr m_exception;
 
         };

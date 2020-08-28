@@ -4,7 +4,7 @@
 #include <framework/DependencyManager.h>
 #include <optional_bundles/logging_bundle/Logger.h>
 #include "framework/Service.h"
-#include "framework/ServiceLifecycleManager.h"
+#include "framework/LifecycleManager.h"
 #include "PubsubZmqAdmin.h"
 
 class PubsubAdminZmqService : public IPubsubAdminService, public Service {
@@ -12,20 +12,18 @@ public:
     ~PubsubAdminZmqService() final = default;
 
     bool start() final {
-        LOG_INFO(_logger, "PubsubAdminZmqService started");
         _publisherTrackerRegistration = getManager()->registerDependencyTracker<IPubsubPublisherService>(getServiceId(), this);
         _subscriberTrackerRegistration = getManager()->registerDependencyTracker<IPubsubSubscriberService>(getServiceId(), this);
         return true;
     }
 
     bool stop() final {
-        LOG_INFO(_logger, "PubsubAdminZmqService stopped");
         return true;
     }
 
     void addDependencyInstance(ILogger *logger) {
         _logger = logger;
-        LOG_INFO(_logger, "Inserted logger");
+        LOG_TRACE(_logger, "Inserted logger");
     }
 
     void removeDependencyInstance(ILogger *logger) {

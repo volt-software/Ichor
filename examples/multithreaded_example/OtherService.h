@@ -3,7 +3,7 @@
 #include <framework/DependencyManager.h>
 #include <optional_bundles/logging_bundle/Logger.h>
 #include "framework/Service.h"
-#include "framework/ServiceLifecycleManager.h"
+#include "framework/LifecycleManager.h"
 #include "CustomEvent.h"
 
 using namespace Cppelix;
@@ -37,11 +37,12 @@ public:
     }
 
     Generator<bool> handleEvent(CustomEvent const * const evt) {
-        getManager()->pushEvent<QuitEvent>(getServiceId(), this);
+        LOG_INFO(_logger, "Handling custom event");
+        getManager()->pushEvent<QuitEvent>(getServiceId());
         getManager()->getCommunicationChannel()->broadcastEvent<QuitEvent>(getManager(), getServiceId(), INTERNAL_EVENT_PRIORITY+1);
 
         // we dealt with it, don't let other services handle this event
-        co_return false;
+        co_return (bool)PreventOthersHandling;
     }
 
 private:

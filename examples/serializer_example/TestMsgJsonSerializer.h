@@ -1,11 +1,10 @@
 #pragma once
 
-#include <spdlog/spdlog.h>
 #include <framework/DependencyManager.h>
 #include <optional_bundles/logging_bundle/Logger.h>
 #include "../include/framework/Service.h"
-#include "../include/framework/SerializationAdmin.h"
-#include "framework/ServiceLifecycleManager.h"
+#include "optional_bundles/serialization_bundle/SerializationAdmin.h"
+#include "framework/LifecycleManager.h"
 #include "TestMsg.h"
 
 #include <rapidjson/document.h>
@@ -30,7 +29,7 @@ public:
 
     void addDependencyInstance(ILogger *logger) {
         _logger = logger;
-        LOG_INFO(_logger, "Inserted logger");
+        LOG_TRACE(_logger, "Inserted logger");
     }
 
     void removeDependencyInstance(ILogger *logger) {
@@ -62,7 +61,7 @@ public:
 
         writer.EndObject();
         auto *ret = sb.GetString();
-        return std::vector<uint8_t>(ret, ret + sb.GetSize());
+        return std::vector<uint8_t>(ret, ret + sb.GetSize() + 1);
     }
     void* deserialize(std::vector<uint8_t> &&stream) final {
         rapidjson::Document d;

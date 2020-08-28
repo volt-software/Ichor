@@ -32,6 +32,14 @@ To consider putting in the effort to port a 100,000+ loc library, it has to be w
 
 There are not enough Rust users in industry to warrant such a transition. Feel free to create your own implementation of the OSGI standard in Rust though, shoot me a message if you need any help understanding the standard.
 
+# Install
+
+Ubuntu:
+
+```
+sudo apt install build-essential autoconf libtool pkg-config libgrpc++-dev libprotobuf-dev
+```
+
 # Unsupported features in Cppelix
 
 With this rewrite comes an opportunity to remove some features that are not used often in Celix:
@@ -47,7 +55,7 @@ With this rewrite comes an opportunity to remove some features that are not used
 # Todo
 
 * Support parsing filter (LDAP) strings to type-safe filter currently used
-* etcd support (copy celix library or use COTS for etcd v3?)
+* expand etcd support, currently only simply put/get supported
 * Pubsub compatibility with celix
     * ZMQ
     * TCP
@@ -70,9 +78,8 @@ With this rewrite comes an opportunity to remove some features that are not used
 These benchmarks are mainly used to identify bottlenecks, not to showcase the performance of the framework. Comparisons between Cppelix, Celix and Felix will be made at a later date.
 
 Setup: AMD 3900X, 3600MHz@CL17 RAM, ubuntu 20.04
-* Start/stop best case scenario: 1,000,000 start/stops with dependency in ~670ms
+* Start/stop best case scenario: 1,000,000 start/stops with dependency in ~800ms
 * Serialization: Rapidjson: 1,000,000 messages serialized & deserialized in ~350 ms
-* Serialization: Rapidjson & simdjson: 1,000,000 messages serialized & deserialized in ~280 ms
 
 # Support
 

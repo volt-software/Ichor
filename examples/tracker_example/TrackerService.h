@@ -2,12 +2,27 @@
 
 #include <framework/DependencyManager.h>
 #include <optional_bundles/logging_bundle/Logger.h>
+
+#include <utility>
 #include "framework/Service.h"
-#include "framework/ServiceLifecycleManager.h"
+#include "framework/LifecycleManager.h"
 #include "RuntimeCreatedService.h"
 
 using namespace Cppelix;
 
+class ScopeFilterEntry final {
+public:
+    explicit ScopeFilterEntry(std::string _scope) : scope(std::move(_scope)) {}
+    explicit ScopeFilterEntry(const char *_scope) : scope(_scope) {}
+
+    [[nodiscard]] bool matches(const std::shared_ptr<ILifecycleManager> &manager) const {
+        auto scopeProp = manager->getProperties()->find("scope");
+
+        return scopeProp != end(*manager->getProperties()) && std::any_cast<std::string>(scopeProp->second) == scope;
+    }
+
+    const std::string scope;
+};
 
 struct ITrackerService : virtual public IService {
     static constexpr InterfaceVersion version = InterfaceVersion{1, 0, 0};
@@ -24,13 +39,13 @@ public:
 
     bool stop() final {
         LOG_INFO(_logger, "TrackerService stopped");
-        _trackerRegistration.reset(nullptr);
+        _trackerRegistration = nullptr;
         return true;
     }
 
     void addDependencyInstance(ILogger *logger) {
         _logger = logger;
-        LOG_INFO(_logger, "Inserted logger");
+        LOG_TRACE(_logger, "Inserted logger");
     }
 
     void removeDependencyInstance(ILogger *logger) {
@@ -52,7 +67,10 @@ public:
         auto runtimeService = _scopedRuntimeServices.find(scope);
 
         if(runtimeService == end(_scopedRuntimeServices)) {
-            _scopedRuntimeServices.emplace(scope, getManager()->createServiceManager<IRuntimeCreatedService, RuntimeCreatedService>(RequiredList<ILogger>, OptionalList<>, CppelixProperties{{"scope", scope}}));
+            auto newProps = *evt->properties;
+            newProps.emplace("Filter", Filter{ScopeFilterEntry{scope}});
+
+            _scopedRuntimeServices.emplace(scope, getManager()->createServiceManager<IRuntimeCreatedService, RuntimeCreatedService>(RequiredList<ILogger>, OptionalList<>, newProps));
         }
     }
 
@@ -68,7 +86,11 @@ public:
 
         LOG_INFO(_logger, "Tracked IRuntimeCreatedService undo request for scope {}", scope);
 
-        _scopedRuntimeServices.erase(scope);
+        auto service = _scopedRuntimeServices.find(scope);
+        if(service != end(_scopedRuntimeServices)) {
+            getManager()->pushEvent<RemoveServiceEvent>(evt->originatingService, service->second->getServiceId());
+            _scopedRuntimeServices.erase(scope);
+        }
     }
 
 private:

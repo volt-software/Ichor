@@ -5,17 +5,17 @@
 
 namespace Cppelix {
 
-    class ISerializer {
+    class ISerializer : public virtual IService {
     public:
         static constexpr InterfaceVersion version = InterfaceVersion{1, 0, 0};
 
-        virtual ~ISerializer() = default;
+        ~ISerializer() override = default;
 
         virtual std::vector<uint8_t> serialize(const void* obj) = 0;
         virtual void* deserialize(std::vector<uint8_t> &&stream) = 0;
     };
 
-    class ISerializationAdmin {
+    class ISerializationAdmin : public virtual IService {
     public:
         static constexpr InterfaceVersion version = InterfaceVersion{1, 0, 0};
 
@@ -38,7 +38,7 @@ namespace Cppelix {
         }
 
     protected:
-        virtual ~ISerializationAdmin() = default;
+        ~ISerializationAdmin() override = default;
 
         virtual std::vector<uint8_t> serialize(const uint64_t type, const void* obj) = 0;
         virtual void* deserialize(const uint64_t type, std::vector<uint8_t> &&bytes) = 0;

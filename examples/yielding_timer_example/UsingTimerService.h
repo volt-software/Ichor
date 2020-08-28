@@ -4,7 +4,7 @@
 #include <optional_bundles/logging_bundle/Logger.h>
 #include <optional_bundles/timer_bundle/TimerService.h>
 #include "framework/Service.h"
-#include "framework/ServiceLifecycleManager.h"
+#include "framework/LifecycleManager.h"
 
 using namespace Cppelix;
 
@@ -50,7 +50,7 @@ public:
             std::this_thread::sleep_for(std::chrono::milliseconds(40));
             LOG_INFO(_logger, "Timer {} completed 'long' task {} times", getServiceId(), i);
             // schedule us again later in the event loop for the next iteration, don't let other handlers handle this event.
-            co_yield false;
+            co_yield (bool)PreventOthersHandling;
         }
 
         if(_timerTriggerCount == 2) {
@@ -58,7 +58,7 @@ public:
         }
 
         LOG_INFO(_logger, "Timer {} completed 'long' task", getServiceId());
-        co_return false;
+        co_return (bool)PreventOthersHandling;
     }
 
 private:

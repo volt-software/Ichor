@@ -10,11 +10,9 @@
 #include <atomic>
 #include <csignal>
 #include <condition_variable>
-#include <cppcoro/generator.hpp>
-#include <concurrentqueue.h>
 #include <framework/interfaces/IFrameworkLogger.h>
 #include "Service.h"
-#include "ServiceLifecycleManager.h"
+#include "LifecycleManager.h"
 #include "Events.h"
 #include "framework/Callback.h"
 #include "Filter.h"
@@ -128,6 +126,21 @@ namespace Cppelix {
         CallbackKey _key{0, 0};
     };
 
+    class [[nodiscard]] EventInterceptorRegistration final {
+    public:
+        EventInterceptorRegistration(DependencyManager *mgr, CallbackKey key) noexcept : _mgr(mgr), _key(key) {}
+        EventInterceptorRegistration() noexcept = default;
+        ~EventInterceptorRegistration();
+
+        EventInterceptorRegistration(const EventInterceptorRegistration&) = delete;
+        EventInterceptorRegistration(EventInterceptorRegistration&&) noexcept = default;
+        EventInterceptorRegistration& operator=(const EventInterceptorRegistration&) = delete;
+        EventInterceptorRegistration& operator=(EventInterceptorRegistration&&) noexcept = default;
+    private:
+        DependencyManager *_mgr{nullptr};
+        CallbackKey _key{0, 0};
+    };
+
 
 
     class [[nodiscard]] DependencyTrackerRegistration final {
@@ -154,23 +167,25 @@ namespace Cppelix {
 
     class DependencyManager final {
     public:
-        DependencyManager() : _services(), _dependencyRequestTrackers(), _dependencyUndoRequestTrackers(), _completionCallbacks{}, _errorCallbacks{}, _logger(nullptr), _eventQueue{}, _eventQueueMutex{}, _eventIdCounter{0}, _quit{false}, _communicationChannel(nullptr), _id(_managerIdCounter++) {}
+        DependencyManager() : _services(), _dependencyRequestTrackers(), _dependencyUndoRequestTrackers(), _completionCallbacks{}, _errorCallbacks{}, _logger(nullptr), _eventQueue{}, _eventQueueMutex{}, _wakeUp{}, _eventIdCounter{0}, _quit{false}, _communicationChannel(nullptr), _id(_managerIdCounter++) {}
 
-        template<class Interface, class Impl, typename... Required, typename... Optional>
-        requires Derived<Impl, Service> && Derived<Impl, Interface>
-        [[nodiscard]]
-        auto createServiceManager(RequiredList_t<Required...>, OptionalList_t<Optional...>, CppelixProperties properties = CppelixProperties{}) {
+        template<Derived<Service> Impl, Derived<IService>... Interfaces, Derived<IService>... Required, Derived<IService>... Optional>
+        requires AllDerived<Impl, Interfaces...>
+        auto createServiceManager(InterfacesList_t<Interfaces...>, RequiredList_t<Required...>, OptionalList_t<Optional...> = OptionalList_t<>{}, CppelixProperties properties = CppelixProperties{}) {
             if constexpr(sizeof...(Required) == 0 && sizeof...(Optional) == 0) {
-                return createServiceManager<Interface, Impl>(std::move(properties));
+                return createServiceManager<Impl>(std::move(properties));
             }
 
-            auto cmpMgr = LifecycleManager<Interface, Impl, Required..., Optional...>::template create(_logger, "", std::move(properties), RequiredList<Required...>, OptionalList<Optional...>);
-
-            if(_logger != nullptr) {
-                LOG_DEBUG(_logger, "added ServiceManager<{}, {}>", typeName<Interface>(), typeName<Impl>());
+            if constexpr (ListContainsInterface<IFrameworkLogger, Interfaces...>::value) {
+                throw std::runtime_error("IFrameworkLogger cannot have any dependencies");
             }
+
+            auto cmpMgr = LifecycleManager<Impl, Required..., Optional...>::template create(_logger, "", std::move(properties), InterfacesList<Interfaces...>, RequiredList<Required...>, OptionalList<Optional...>);
+
+            logAddService<Impl, Interfaces...>();
 
             cmpMgr->getService().injectDependencyManager(this);
+            bool started = false;
 
             for(auto &[key, mgr] : _services) {
                 if(mgr->getServiceState() == ServiceState::ACTIVE) {
@@ -184,31 +199,103 @@ namespace Cppelix {
                         continue;
                     }
 
-                    cmpMgr->dependencyOnline(mgr);
+                    started = cmpMgr->dependencyOnline(mgr);
+                    if(started) {
+                        pushEventInternal<DependencyOnlineEvent>(0, INTERNAL_EVENT_PRIORITY, cmpMgr);
+                        break;
+                    }
                 }
             }
 
             (pushEventInternal<DependencyRequestEvent>(cmpMgr->serviceId(), INTERNAL_EVENT_PRIORITY, cmpMgr, Dependency{typeNameHash<Optional>(), Optional::version, false}, cmpMgr->getProperties()), ...);
             (pushEventInternal<DependencyRequestEvent>(cmpMgr->serviceId(), INTERNAL_EVENT_PRIORITY, cmpMgr, Dependency{typeNameHash<Required>(), Required::version, true}, cmpMgr->getProperties()), ...);
+            if(!started) {
+                pushEventInternal<StartServiceEvent>(0, INTERNAL_EVENT_PRIORITY, cmpMgr->serviceId());
+            }
+
+            _services.emplace(cmpMgr->serviceId(), cmpMgr);
+            return &cmpMgr->getService();
+        }
+
+        template<Derived<IService> Interface, Derived<Service> Impl, Derived<IService>... Required, Derived<IService>... Optional>
+        requires Derived<Impl, Interface>
+        auto createServiceManager(RequiredList_t<Required...>, OptionalList_t<Optional...> = OptionalList_t<>{}, CppelixProperties properties = CppelixProperties{}) {
+            if constexpr(sizeof...(Required) == 0 && sizeof...(Optional) == 0) {
+                return createServiceManager<Interface, Impl>(std::move(properties));
+            }
+
+            if constexpr (ListContainsInterface<IFrameworkLogger, Interface>::value) {
+                throw std::runtime_error("IFrameworkLogger cannot have any dependencies");
+            }
+
+            auto cmpMgr = LifecycleManager<Impl, Required..., Optional...>::template create(_logger, "", std::move(properties), InterfacesList<Interface>, RequiredList<Required...>, OptionalList<Optional...>);
+
+            logAddService<Impl, Interface>();
+
+            cmpMgr->getService().injectDependencyManager(this);
+            bool started = false;
+
+            for(auto &[key, mgr] : _services) {
+                if(mgr->getServiceState() == ServiceState::ACTIVE) {
+                    auto filterProp = mgr->getProperties()->find("Filter");
+                    const Filter *filter = nullptr;
+                    if(filterProp != end(*mgr->getProperties())) {
+                        filter = std::any_cast<const Filter>(&filterProp->second);
+                    }
+
+                    if(filter != nullptr && !filter->compareTo(cmpMgr)) {
+                        continue;
+                    }
+
+                    started = cmpMgr->dependencyOnline(mgr);
+                    if(started) {
+                        pushEventInternal<DependencyOnlineEvent>(0, INTERNAL_EVENT_PRIORITY, cmpMgr);
+                        break;
+                    }
+                }
+            }
+
+            (pushEventInternal<DependencyRequestEvent>(cmpMgr->serviceId(), INTERNAL_EVENT_PRIORITY, cmpMgr, Dependency{typeNameHash<Optional>(), Optional::version, false}, cmpMgr->getProperties()), ...);
+            (pushEventInternal<DependencyRequestEvent>(cmpMgr->serviceId(), INTERNAL_EVENT_PRIORITY, cmpMgr, Dependency{typeNameHash<Required>(), Required::version, true}, cmpMgr->getProperties()), ...);
+            if(!started) {
+                pushEventInternal<StartServiceEvent>(0, INTERNAL_EVENT_PRIORITY, cmpMgr->serviceId());
+            }
+
+            _services.emplace(cmpMgr->serviceId(), cmpMgr);
+            return &cmpMgr->getService();
+        }
+
+        template<Derived<Service> Impl, Derived<IService>... Interfaces>
+        requires AllDerived<Impl, Interfaces...>
+        auto createServiceManager(InterfacesList_t<Interfaces...>, CppelixProperties properties = {}) {
+            auto cmpMgr = LifecycleManager<Impl>::template create(_logger, "", std::move(properties), InterfacesList<Interfaces...>);
+
+            if constexpr (ListContainsInterface<IFrameworkLogger, Interfaces...>::value) {
+                _logger = &cmpMgr->getService();
+                _preventEarlyDestructionOfFrameworkLogger = cmpMgr;
+            }
+
+            logAddService<Impl, Interfaces...>();
+
+            cmpMgr->getService().injectDependencyManager(this);
+
             pushEventInternal<StartServiceEvent>(0, INTERNAL_EVENT_PRIORITY, cmpMgr->serviceId());
 
             _services.emplace(cmpMgr->serviceId(), cmpMgr);
             return &cmpMgr->getService();
         }
 
-        template<class Interface, class Impl>
-        requires Derived<Impl, Service> && Derived<Impl, Interface>
-        [[nodiscard]]
+        template<Derived<IService> Interface, Derived<Service> Impl>
+        requires Derived<Impl, Interface>
         auto createServiceManager(CppelixProperties properties = {}) {
-            auto cmpMgr = LifecycleManager<Interface, Impl>::create(_logger, "", std::move(properties));
+            auto cmpMgr = LifecycleManager<Impl>::template create(_logger, "", std::move(properties), InterfacesList<Interface>);
 
-            if constexpr (std::is_same<Interface, IFrameworkLogger>::value) {
+            if constexpr (ListContainsInterface<IFrameworkLogger, Interface>::value) {
                 _logger = &cmpMgr->getService();
+                _preventEarlyDestructionOfFrameworkLogger = cmpMgr;
             }
 
-            if(_logger != nullptr) {
-                LOG_DEBUG(_logger, "added ServiceManager<{}, {}>", typeName<Interface>(), typeName<Impl>());
-            }
+            logAddService<Impl, Interface>();
 
             cmpMgr->getService().injectDependencyManager(this);
 
@@ -230,6 +317,7 @@ namespace Cppelix {
             static_assert(sizeof(EventT) < 128, "event type cannot be larger than 128 bytes");
 
             if(_quit.load(std::memory_order_acquire)) {
+                LOG_TRACE(_logger, "inserting event of type {} into manager {}, but have to quit", typeName<EventT>(), getId());
                 return 0;
             }
 
@@ -238,6 +326,7 @@ namespace Cppelix {
             _eventQueue.emplace(priority, EventStackUniquePtr::create<EventT>(std::forward<uint64_t>(eventId), std::forward<uint64_t>(originatingServiceId), std::forward<uint64_t>(priority), std::forward<Args>(args)...));
             _eventQueueMutex.unlock();
             _wakeUp.notify_all();
+            LOG_TRACE(_logger, "inserted event of type {} into manager {}", typeName<EventT>(), getId());
             return eventId;
         }
 
@@ -253,6 +342,7 @@ namespace Cppelix {
             static_assert(sizeof(EventT) < 128, "event type cannot be larger than 128 bytes");
 
             if(_quit.load(std::memory_order_acquire)) {
+                LOG_TRACE(_logger, "inserting event of type {} into manager {}, but have to quit", typeName<EventT>(), getId());
                 return 0;
             }
 
@@ -261,6 +351,7 @@ namespace Cppelix {
             _eventQueue.emplace(INTERNAL_EVENT_PRIORITY, EventStackUniquePtr::create<EventT>(std::forward<uint64_t>(eventId), std::forward<uint64_t>(originatingServiceId), INTERNAL_EVENT_PRIORITY, std::forward<Args>(args)...));
             _eventQueueMutex.unlock();
             _wakeUp.notify_all();
+            LOG_TRACE(_logger, "inserted event of type {} into manager {}", typeName<EventT>(), getId());
             return eventId;
         }
 
@@ -344,7 +435,7 @@ namespace Cppelix {
             auto existingHandlers = _eventCallbacks.find(EventT::TYPE);
             if(existingHandlers == end(_eventCallbacks)) {
                 _eventCallbacks.emplace(EventT::TYPE, std::vector<EventCallbackInfo>{EventCallbackInfo{serviceId, targetServiceId,
-                        [impl](Event const * const evt){ return impl->handleEvent(static_cast<EventT const * const>(evt)); }}
+                                                                                                       [impl](Event const * const evt){ return impl->handleEvent(static_cast<EventT const * const>(evt)); }}
                 });
             } else {
                 existingHandlers->second.emplace_back(EventCallbackInfo{serviceId, targetServiceId, [impl](Event const * const evt){ return impl->handleEvent(static_cast<EventT const * const>(evt)); }});
@@ -354,6 +445,38 @@ namespace Cppelix {
             return std::make_unique<EventHandlerRegistration>(this, CallbackKey{serviceId, EventT::TYPE});
         }
 
+        template <typename EventT, typename Impl>
+        requires Derived<EventT, Event> && ImplementsEventInterceptors<Impl, EventT>
+        [[nodiscard]]
+        /// Register an event interceptor. If EventT equals Event, intercept all events. Otherwise only intercept given event.
+        /// \tparam EventT type of event (has to derive from Event)
+        /// \tparam Impl type of class registering handler (auto-deducible)
+        /// \param serviceId id of service registering handler
+        /// \param impl class that is registering handler
+        /// \return RAII handler, removes registration upon destruction
+        std::unique_ptr<EventInterceptorRegistration> registerEventInterceptor(uint64_t serviceId, Impl *impl) {
+            uint64_t targetEventId = 0;
+            if constexpr (!std::is_same_v<EventT, Event>) {
+                targetEventId = EventT::TYPE;
+            }
+            auto existingHandlers = _eventInterceptors.find(targetEventId);
+            if(existingHandlers == end(_eventInterceptors)) {
+                _eventInterceptors.emplace(targetEventId, std::vector<EventInterceptInfo>{EventInterceptInfo{serviceId, targetEventId,
+                                                                                                            [impl](Event const * const evt){ return impl->preInterceptEvent(static_cast<EventT const * const>(evt)); },
+                                                                                                            [impl](Event const * const evt, bool processed){ return impl->postInterceptEvent(static_cast<EventT const * const>(evt), processed); }}
+                });
+            } else {
+                existingHandlers->second.emplace_back(EventInterceptInfo{serviceId, targetEventId,
+                                                                         [impl](Event const * const evt){ return impl->preInterceptEvent(static_cast<EventT const * const>(evt)); },
+                                                                         [impl](Event const * const evt, bool processed){ return impl->postInterceptEvent(static_cast<EventT const * const>(evt), processed); }});
+            }
+            // I think there's a bug in GCC 10.1, where if I don't make this a unique_ptr, the EventHandlerRegistration destructor immediately gets called for some reason.
+            // Even if the result is stored in a variable at the caller site.
+            return std::make_unique<EventInterceptorRegistration>(this, CallbackKey{serviceId, targetEventId});
+        }
+
+        /// Get manager id
+        /// \return id
         [[nodiscard]] uint64_t getId() const {
             return _id;
         }
@@ -363,6 +486,8 @@ namespace Cppelix {
         [[nodiscard]] CommunicationChannel* getCommunicationChannel() {
             return _communicationChannel;
         }
+
+        [[nodiscard]] std::optional<std::string_view> getImplementationNameFor(uint64_t serviceId);
 
         void start();
 
@@ -385,6 +510,26 @@ namespace Cppelix {
             }
 
             callback->second(evt);
+        }
+
+        template <typename Impl, typename Interface1, typename Interface2, typename... Interfaces>
+        void logAddService() {
+            if(_logger != nullptr && _logger->getLogLevel() <= LogLevel::DEBUG) {
+                fmt::memory_buffer out;
+                fmt::format_to(out, "added ServiceManager<");
+                fmt::format_to(out, "{}, ", typeName<Interface1>());
+                fmt::format_to(out, "{}, ", typeName<Interface2>());
+                (fmt::format_to(out, "{}, ", typeName<Interfaces>()), ...);
+                fmt::format_to(out, "{}>", typeName<Impl>());
+                LOG_DEBUG(_logger, "{}", out.data());
+            }
+        }
+
+        template <typename Impl, typename Interface>
+        void logAddService() {
+            if(_logger != nullptr && _logger->getLogLevel() <= LogLevel::DEBUG) {
+                LOG_DEBUG(_logger, "added ServiceManager<{}, {}>", typeName<Interface>(), typeName<Impl>());
+            }
         }
 
         void handleEventCompletion(Event const * const evt) const;
@@ -411,8 +556,10 @@ namespace Cppelix {
         std::unordered_map<uint64_t, std::vector<DependencyTrackerInfo>> _dependencyUndoRequestTrackers; // key = interface name hash
         std::unordered_map<CallbackKey, std::function<void(Event const * const)>> _completionCallbacks; // key = listening service id + event type
         std::unordered_map<CallbackKey, std::function<void(Event const * const)>> _errorCallbacks; // key = listening service id + event type
-        std::unordered_map<uint64_t, std::vector<EventCallbackInfo>> _eventCallbacks; // key = service id
+        std::unordered_map<uint64_t, std::vector<EventCallbackInfo>> _eventCallbacks; // key = event id
+        std::unordered_map<uint64_t, std::vector<EventInterceptInfo>> _eventInterceptors; // key = event id
         IFrameworkLogger *_logger;
+        std::shared_ptr<ILifecycleManager> _preventEarlyDestructionOfFrameworkLogger;
         std::multimap<uint64_t, EventStackUniquePtr> _eventQueue;
         std::mutex _eventQueueMutex;
         std::condition_variable _wakeUp;

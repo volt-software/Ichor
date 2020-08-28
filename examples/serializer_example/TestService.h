@@ -1,11 +1,10 @@
 #pragma once
 
-#include <spdlog/spdlog.h>
 #include <framework/DependencyManager.h>
 #include <optional_bundles/logging_bundle/Logger.h>
 #include "framework/Service.h"
-#include "framework/SerializationAdmin.h"
-#include "framework/ServiceLifecycleManager.h"
+#include "optional_bundles/serialization_bundle/SerializationAdmin.h"
+#include "framework/LifecycleManager.h"
 #include "TestMsg.h"
 
 using namespace Cppelix;
@@ -32,7 +31,7 @@ public:
 
     void addDependencyInstance(ILogger *logger) {
         _logger = logger;
-        LOG_INFO(_logger, "Inserted logger");
+        LOG_TRACE(_logger, "Inserted logger");
     }
 
     void removeDependencyInstance(ILogger *logger) {
