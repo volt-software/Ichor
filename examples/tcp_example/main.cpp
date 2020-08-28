@@ -9,14 +9,12 @@
 
 #define FRAMEWORK_LOGGER_TYPE SpdlogFrameworkLogger
 #define LOGGER_TYPE SpdlogLogger
-#define LOGGER_SHARED_TYPE ,ISpdlogSharedService
 #else
 #include <optional_bundles/logging_bundle/CoutFrameworkLogger.h>
 #include <optional_bundles/logging_bundle/CoutLogger.h>
 
 #define FRAMEWORK_LOGGER_TYPE CoutFrameworkLogger
 #define LOGGER_TYPE CoutLogger
-#define LOGGER_SHARED_TYPE
 #endif
 #include <chrono>
 #include <iostream>
@@ -28,16 +26,16 @@ int main() {
 
     auto start = std::chrono::system_clock::now();
     DependencyManager dm{};
-    dm.createServiceManager<IFrameworkLogger, FRAMEWORK_LOGGER_TYPE>();
+    dm.createServiceManager<FRAMEWORK_LOGGER_TYPE, IFrameworkLogger>();
 #ifdef USE_SPDLOG
-    dm.createServiceManager<ISpdlogSharedService, SpdlogSharedService>();
+    dm.createServiceManager<SpdlogSharedService, ISpdlogSharedService>();
 #endif
-    dm.createServiceManager<ILoggerAdmin, LoggerAdmin<LOGGER_TYPE LOGGER_SHARED_TYPE>>(RequiredList<IFrameworkLogger>);
-    dm.createServiceManager<ISerializationAdmin, SerializationAdmin>(RequiredList<ILogger>, OptionalList<>);
-    dm.createServiceManager<ISerializer, TestMsgJsonSerializer>(RequiredList<ILogger, ISerializationAdmin>, OptionalList<>);
-    dm.createServiceManager<IHostService, TcpHostService>(RequiredList<ILogger>, OptionalList<>, CppelixProperties{{"Address", "127.0.0.1"s}, {"Port", (uint16_t)8001}});
-    dm.createServiceManager<IClientAdmin, ClientAdmin<TcpConnectionService>>();
-    dm.createServiceManager<IUsingTcpService, UsingTcpService>(RequiredList<ILogger, ISerializationAdmin, IConnectionService>, OptionalList<>, CppelixProperties{{"Address", "127.0.0.1"s}, {"Port", (uint16_t)8001}});
+    dm.createServiceManager<LoggerAdmin<LOGGER_TYPE>, ILoggerAdmin>();
+    dm.createServiceManager<SerializationAdmin, ISerializationAdmin>();
+    dm.createServiceManager<TestMsgJsonSerializer, ISerializer>();
+    dm.createServiceManager<TcpHostService, IHostService>(CppelixProperties{{"Address", "127.0.0.1"s}, {"Port", (uint16_t)8001}});
+    dm.createServiceManager<ClientAdmin<TcpConnectionService>, IClientAdmin>();
+    dm.createServiceManager<UsingTcpService, IUsingTcpService>(CppelixProperties{{"Address", "127.0.0.1"s}, {"Port", (uint16_t)8001}});
     dm.start();
     auto end = std::chrono::system_clock::now();
     std::cout << fmt::format("Program ran for {:L} µs\n", std::chrono::duration_cast<std::chrono::microseconds>(end-start).count());

@@ -20,6 +20,11 @@ struct IUsingTcpService : virtual public IService {
 
 class UsingTcpService final : public IUsingTcpService, public Service {
 public:
+    UsingTcpService(DependencyRegister &reg, CppelixProperties props) : Service(std::move(props)) {
+        reg.registerDependency<ILogger>(this, true);
+        reg.registerDependency<ISerializationAdmin>(this, true);
+        reg.registerDependency<IConnectionService>(this, true);
+    }
     ~UsingTcpService() final = default;
 
     bool start() final {
@@ -73,7 +78,6 @@ public:
         LOG_INFO(_logger, "Received TestMsg id {} val {}", msg->id, msg->val);
         getManager()->pushEvent<QuitEvent>(getServiceId());
 
-        // we handled it, false means no other handlers are allowed to handle this event.
         co_return (bool)PreventOthersHandling;
     }
 

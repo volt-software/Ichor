@@ -1,5 +1,9 @@
 #include <optional_bundles/metrics_bundle/EventStatisticsService.h>
 
+Cppelix::EventStatisticsService::EventStatisticsService(Cppelix::DependencyRegister &reg, Cppelix::CppelixProperties props) : Service(std::move(props)) {
+    reg.registerDependency<ILogger>(this, true);
+}
+
 bool Cppelix::EventStatisticsService::start() {
     if(getProperties()->contains("ShowStatisticsOnStop")) {
         _showStatisticsOnStop = std::any_cast<bool>(getProperties()->operator[]("ShowStatisticsOnStop"));
@@ -11,7 +15,7 @@ bool Cppelix::EventStatisticsService::start() {
         _averagingIntervalMs = 5000;
     }
 
-    auto _timerManager = getManager()->createServiceManager<ITimer, Timer>();
+    auto _timerManager = getManager()->createServiceManager<Timer, ITimer>();
     _timerManager->setChronoInterval(std::chrono::milliseconds(_averagingIntervalMs));
     _timerEventRegistration = getManager()->registerEventHandler<TimerEvent>(getServiceId(), this, _timerManager->getServiceId());
     _timerManager->startTimer();

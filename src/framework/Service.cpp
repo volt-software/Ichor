@@ -6,6 +6,10 @@ Cppelix::Service::Service() noexcept : IService(), _serviceId(_serviceIdCounter.
 
 }
 
+Cppelix::Service::Service(Cppelix::CppelixProperties props) noexcept : IService(), _properties(std::move(props)), _serviceId(_serviceIdCounter.fetch_add(1, std::memory_order_acq_rel)), _serviceGid(sole::uuid4()), _serviceState(ServiceState::INSTALLED) {
+
+}
+
 Cppelix::Service::~Service() {
     _serviceId = 0;
     _serviceGid.ab = 0;

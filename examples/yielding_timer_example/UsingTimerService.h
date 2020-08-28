@@ -15,11 +15,14 @@ struct IUsingTimerService : virtual public IService {
 
 class UsingTimerService final : public IUsingTimerService, public Service {
 public:
+    UsingTimerService(DependencyRegister &reg, CppelixProperties props) : Service(std::move(props)) {
+        reg.registerDependency<ILogger>(this, true);
+    }
     ~UsingTimerService() final = default;
 
     bool start() final {
         LOG_INFO(_logger, "UsingTimerService started");
-        _timerManager = getManager()->createServiceManager<ITimer, Timer>();
+        _timerManager = getManager()->createServiceManager<Timer, ITimer>();
         _timerManager->setChronoInterval(std::chrono::milliseconds(500));
         _timerEventRegistration = getManager()->registerEventHandler<TimerEvent>(getServiceId(), this, _timerManager->getServiceId());
         _timerManager->startTimer();

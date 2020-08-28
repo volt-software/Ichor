@@ -7,14 +7,12 @@
 
 #define FRAMEWORK_LOGGER_TYPE SpdlogFrameworkLogger
 #define LOGGER_TYPE SpdlogLogger
-#define LOGGER_SHARED_TYPE ,ISpdlogSharedService
 #else
 #include <optional_bundles/logging_bundle/CoutFrameworkLogger.h>
 #include <optional_bundles/logging_bundle/CoutLogger.h>
 
 #define FRAMEWORK_LOGGER_TYPE CoutFrameworkLogger
 #define LOGGER_TYPE CoutLogger
-#define LOGGER_SHARED_TYPE
 #endif
 #include <framework/CommunicationChannel.h>
 #include <chrono>
@@ -33,22 +31,22 @@ int main() {
     channel.addManager(&dmTwo);
 
     std::thread t1([&dmOne] {
-        dmOne.createServiceManager<IFrameworkLogger, FRAMEWORK_LOGGER_TYPE>();
+        dmOne.createServiceManager<FRAMEWORK_LOGGER_TYPE, IFrameworkLogger>();
 #ifdef USE_SPDLOG
-        dmOne.createServiceManager<ISpdlogSharedService, SpdlogSharedService>();
+        dmOne.createServiceManager<SpdlogSharedService, ISpdlogSharedService>();
 #endif
-        dmOne.createServiceManager<ILoggerAdmin, LoggerAdmin<LOGGER_TYPE LOGGER_SHARED_TYPE>>(RequiredList<IFrameworkLogger>);
-        dmOne.createServiceManager<IOneService, OneService>(RequiredList<ILogger>, OptionalList<>);
+        dmOne.createServiceManager<LoggerAdmin<LOGGER_TYPE>, ILoggerAdmin>();
+        dmOne.createServiceManager<OneService, IOneService>();
         dmOne.start();
     });
 
     std::thread t2([&dmTwo] {
-        dmTwo.createServiceManager<IFrameworkLogger, FRAMEWORK_LOGGER_TYPE>();
+        dmTwo.createServiceManager<FRAMEWORK_LOGGER_TYPE, IFrameworkLogger>();
 #ifdef USE_SPDLOG
-        dmTwo.createServiceManager<ISpdlogSharedService, SpdlogSharedService>();
+        dmTwo.createServiceManager<SpdlogSharedService, ISpdlogSharedService>();
 #endif
-        dmTwo.createServiceManager<ILoggerAdmin, LoggerAdmin<LOGGER_TYPE LOGGER_SHARED_TYPE>>(RequiredList<IFrameworkLogger>);
-        dmTwo.createServiceManager<IOtherService, OtherService>(RequiredList<ILogger>, OptionalList<>);
+        dmTwo.createServiceManager<LoggerAdmin<LOGGER_TYPE>, ILoggerAdmin>();
+        dmTwo.createServiceManager<OtherService, IOtherService>();
         dmTwo.start();
     });
 

@@ -40,7 +40,7 @@ namespace Cppelix {
             newProps.emplace("Filter", Filter{ServiceIdFilterEntry{evt->originatingService}});
 
             if(!_connections.contains(evt->originatingService)) {
-                _connections.emplace(evt->originatingService, getManager()->template createServiceManager<IConnectionService, NetworkType>(RequiredList<ILogger>, OptionalList<>, newProps));
+                _connections.emplace(evt->originatingService, getManager()->template createServiceManager<NetworkType, IConnectionService>(newProps));
             }
         }
 

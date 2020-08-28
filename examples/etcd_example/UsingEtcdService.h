@@ -15,6 +15,10 @@ struct IUsingEtcdService : virtual public IService {
 
 class UsingEtcdService final : public IUsingEtcdService, public Service {
 public:
+    UsingEtcdService(DependencyRegister &reg, CppelixProperties props) : Service(std::move(props)) {
+        reg.registerDependency<ILogger>(this, true);
+        reg.registerDependency<IEtcdService>(this, true);
+    }
     ~UsingEtcdService() final = default;
 
     bool start() final {

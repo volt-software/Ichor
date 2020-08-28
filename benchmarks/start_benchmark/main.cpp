@@ -7,14 +7,12 @@
 
 #define FRAMEWORK_LOGGER_TYPE SpdlogFrameworkLogger
 #define LOGGER_TYPE SpdlogLogger
-#define LOGGER_SHARED_TYPE ,ISpdlogSharedService
 #else
 #include <optional_bundles/logging_bundle/CoutFrameworkLogger.h>
 #include <optional_bundles/logging_bundle/CoutLogger.h>
 
 #define FRAMEWORK_LOGGER_TYPE CoutFrameworkLogger
 #define LOGGER_TYPE CoutLogger
-#define LOGGER_SHARED_TYPE
 #endif
 #include <iostream>
 
@@ -23,17 +21,17 @@ int main() {
 
     auto start = std::chrono::system_clock::now();
     DependencyManager dm{};
-    auto logMgr = dm.createServiceManager<IFrameworkLogger, FRAMEWORK_LOGGER_TYPE>();
+    auto logMgr = dm.createServiceManager<FRAMEWORK_LOGGER_TYPE, IFrameworkLogger>();
     logMgr->setLogLevel(LogLevel::INFO);
 
 
 #ifdef USE_SPDLOG
-    dm.createServiceManager<ISpdlogSharedService, SpdlogSharedService>();
+    dm.createServiceManager<SpdlogSharedService, ISpdlogSharedService>();
 #endif
 
-    dm.createServiceManager<ILoggerAdmin, LoggerAdmin<LOGGER_TYPE LOGGER_SHARED_TYPE>>(RequiredList<IFrameworkLogger>);
+    dm.createServiceManager<LoggerAdmin<LOGGER_TYPE>, ILoggerAdmin>();
     for(uint64_t i = 0; i < 10'000; i++) {
-        dm.createServiceManager<ITestService, TestService>(RequiredList<ILogger>, OptionalList<>, CppelixProperties{{"Iteration", i}, {"LogLevel", LogLevel::WARN}});
+        dm.createServiceManager<TestService, ITestService>(CppelixProperties{{"Iteration", i}, {"LogLevel", LogLevel::WARN}});
     }
     dm.start();
     auto end = std::chrono::system_clock::now();

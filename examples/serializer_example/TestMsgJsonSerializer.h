@@ -12,9 +12,14 @@
 
 using namespace Cppelix;
 
-class TestMsgJsonSerializer : public ISerializer, public Service {
+class TestMsgJsonSerializer final : public ISerializer, public Service {
 public:
+    TestMsgJsonSerializer(DependencyRegister &reg, CppelixProperties props) : Service(std::move(props)) {
+        reg.registerDependency<ILogger>(this, true);
+        reg.registerDependency<ISerializationAdmin>(this, true);
+    }
     ~TestMsgJsonSerializer() final = default;
+
     bool start() final {
         LOG_INFO(_logger, "TestMsgSerializer started");
         _serializationAdmin->addSerializer(typeNameHash<TestMsg>(), this);

@@ -32,6 +32,7 @@ namespace Cppelix {
         requires Derived<T, Event>
         static EventStackUniquePtr create(Args&&... args) {
             static_assert(sizeof(T) < 128, "size not big enough to hold T");
+            static_assert(T::TYPE != 0, "type of T cannot be 0");
             EventStackUniquePtr ptr;
             new (ptr._buffer.data()) T(std::forward<Args>(args)...);
             ptr._type = T::TYPE;
@@ -169,140 +170,69 @@ namespace Cppelix {
     public:
         DependencyManager() : _services(), _dependencyRequestTrackers(), _dependencyUndoRequestTrackers(), _completionCallbacks{}, _errorCallbacks{}, _logger(nullptr), _eventQueue{}, _eventQueueMutex{}, _wakeUp{}, _eventIdCounter{0}, _quit{false}, _communicationChannel(nullptr), _id(_managerIdCounter++) {}
 
-        template<Derived<Service> Impl, Derived<IService>... Interfaces, Derived<IService>... Required, Derived<IService>... Optional>
-        requires AllDerived<Impl, Interfaces...>
-        auto createServiceManager(InterfacesList_t<Interfaces...>, RequiredList_t<Required...>, OptionalList_t<Optional...> = OptionalList_t<>{}, CppelixProperties properties = CppelixProperties{}) {
-            if constexpr(sizeof...(Required) == 0 && sizeof...(Optional) == 0) {
-                return createServiceManager<Impl>(std::move(properties));
-            }
-
-            if constexpr (ListContainsInterface<IFrameworkLogger, Interfaces...>::value) {
-                throw std::runtime_error("IFrameworkLogger cannot have any dependencies");
-            }
-
-            auto cmpMgr = LifecycleManager<Impl, Required..., Optional...>::template create(_logger, "", std::move(properties), InterfacesList<Interfaces...>, RequiredList<Required...>, OptionalList<Optional...>);
-
-            logAddService<Impl, Interfaces...>();
-
-            cmpMgr->getService().injectDependencyManager(this);
-            bool started = false;
-
-            for(auto &[key, mgr] : _services) {
-                if(mgr->getServiceState() == ServiceState::ACTIVE) {
-                    auto filterProp = mgr->getProperties()->find("Filter");
-                    const Filter *filter = nullptr;
-                    if(filterProp != end(*mgr->getProperties())) {
-                        filter = std::any_cast<const Filter>(&filterProp->second);
-                    }
-
-                    if(filter != nullptr && !filter->compareTo(cmpMgr)) {
-                        continue;
-                    }
-
-                    started = cmpMgr->dependencyOnline(mgr);
-                    if(started) {
-                        pushEventInternal<DependencyOnlineEvent>(0, INTERNAL_EVENT_PRIORITY, cmpMgr);
-                        break;
-                    }
-                }
-            }
-
-            (pushEventInternal<DependencyRequestEvent>(cmpMgr->serviceId(), INTERNAL_EVENT_PRIORITY, cmpMgr, Dependency{typeNameHash<Optional>(), Optional::version, false}, cmpMgr->getProperties()), ...);
-            (pushEventInternal<DependencyRequestEvent>(cmpMgr->serviceId(), INTERNAL_EVENT_PRIORITY, cmpMgr, Dependency{typeNameHash<Required>(), Required::version, true}, cmpMgr->getProperties()), ...);
-            if(!started) {
-                pushEventInternal<StartServiceEvent>(0, INTERNAL_EVENT_PRIORITY, cmpMgr->serviceId());
-            }
-
-            _services.emplace(cmpMgr->serviceId(), cmpMgr);
-            return &cmpMgr->getService();
-        }
-
-        template<Derived<IService> Interface, Derived<Service> Impl, Derived<IService>... Required, Derived<IService>... Optional>
-        requires Derived<Impl, Interface>
-        auto createServiceManager(RequiredList_t<Required...>, OptionalList_t<Optional...> = OptionalList_t<>{}, CppelixProperties properties = CppelixProperties{}) {
-            if constexpr(sizeof...(Required) == 0 && sizeof...(Optional) == 0) {
-                return createServiceManager<Interface, Impl>(std::move(properties));
-            }
-
-            if constexpr (ListContainsInterface<IFrameworkLogger, Interface>::value) {
-                throw std::runtime_error("IFrameworkLogger cannot have any dependencies");
-            }
-
-            auto cmpMgr = LifecycleManager<Impl, Required..., Optional...>::template create(_logger, "", std::move(properties), InterfacesList<Interface>, RequiredList<Required...>, OptionalList<Optional...>);
-
-            logAddService<Impl, Interface>();
-
-            cmpMgr->getService().injectDependencyManager(this);
-            bool started = false;
-
-            for(auto &[key, mgr] : _services) {
-                if(mgr->getServiceState() == ServiceState::ACTIVE) {
-                    auto filterProp = mgr->getProperties()->find("Filter");
-                    const Filter *filter = nullptr;
-                    if(filterProp != end(*mgr->getProperties())) {
-                        filter = std::any_cast<const Filter>(&filterProp->second);
-                    }
-
-                    if(filter != nullptr && !filter->compareTo(cmpMgr)) {
-                        continue;
-                    }
-
-                    started = cmpMgr->dependencyOnline(mgr);
-                    if(started) {
-                        pushEventInternal<DependencyOnlineEvent>(0, INTERNAL_EVENT_PRIORITY, cmpMgr);
-                        break;
-                    }
-                }
-            }
-
-            (pushEventInternal<DependencyRequestEvent>(cmpMgr->serviceId(), INTERNAL_EVENT_PRIORITY, cmpMgr, Dependency{typeNameHash<Optional>(), Optional::version, false}, cmpMgr->getProperties()), ...);
-            (pushEventInternal<DependencyRequestEvent>(cmpMgr->serviceId(), INTERNAL_EVENT_PRIORITY, cmpMgr, Dependency{typeNameHash<Required>(), Required::version, true}, cmpMgr->getProperties()), ...);
-            if(!started) {
-                pushEventInternal<StartServiceEvent>(0, INTERNAL_EVENT_PRIORITY, cmpMgr->serviceId());
-            }
-
-            _services.emplace(cmpMgr->serviceId(), cmpMgr);
-            return &cmpMgr->getService();
-        }
-
         template<Derived<Service> Impl, Derived<IService>... Interfaces>
-        requires AllDerived<Impl, Interfaces...>
-        auto createServiceManager(InterfacesList_t<Interfaces...>, CppelixProperties properties = {}) {
-            auto cmpMgr = LifecycleManager<Impl>::template create(_logger, "", std::move(properties), InterfacesList<Interfaces...>);
+        requires ImplementsAll<Impl, Interfaces...>
+        auto createServiceManager(CppelixProperties properties = CppelixProperties{}) {
+            if constexpr(RequestsDependencies<Impl>) {
+                auto cmpMgr = DependencyLifecycleManager<Impl>::template create(_logger, "", std::move(properties), InterfacesList<Interfaces...>);
 
-            if constexpr (ListContainsInterface<IFrameworkLogger, Interfaces...>::value) {
-                _logger = &cmpMgr->getService();
-                _preventEarlyDestructionOfFrameworkLogger = cmpMgr;
+                if constexpr (ListContainsInterface<IFrameworkLogger, Interfaces...>::value) {
+                    throw std::runtime_error("IFrameworkLogger cannot have any dependencies");
+                }
+
+                logAddService<Impl, Interfaces...>();
+
+                cmpMgr->getService().injectDependencyManager(this);
+                bool started = false;
+
+                for (auto &[key, mgr] : _services) {
+                    if (mgr->getServiceState() == ServiceState::ACTIVE) {
+                        auto filterProp = mgr->getProperties()->find("Filter");
+                        const Filter *filter = nullptr;
+                        if (filterProp != end(*mgr->getProperties())) {
+                            filter = std::any_cast<const Filter>(&filterProp->second);
+                        }
+
+                        if (filter != nullptr && !filter->compareTo(cmpMgr)) {
+                            continue;
+                        }
+
+                        started = cmpMgr->dependencyOnline(mgr);
+                        if (started) {
+                            pushEventInternal<DependencyOnlineEvent>(0, INTERNAL_EVENT_PRIORITY, cmpMgr);
+                            break;
+                        }
+                    }
+                }
+
+                for (const auto &dep : cmpMgr->getDependencyInfo()->_dependencies) {
+                    pushEventInternal<DependencyRequestEvent>(cmpMgr->serviceId(), INTERNAL_EVENT_PRIORITY, cmpMgr,
+                                                              Dependency{dep.interfaceNameHash, dep.interfaceVersion, dep.required}, cmpMgr->getProperties());
+                }
+
+                if(!started) {
+                    pushEventInternal<StartServiceEvent>(0, INTERNAL_EVENT_PRIORITY, cmpMgr->serviceId());
+                }
+
+                _services.emplace(cmpMgr->serviceId(), cmpMgr);
+                return &cmpMgr->getService();
+            } else {
+                auto cmpMgr = LifecycleManager<Impl>::template create(_logger, "", std::move(properties), InterfacesList<Interfaces...>);
+
+                if constexpr (ListContainsInterface<IFrameworkLogger, Interfaces...>::value) {
+                    _logger = &cmpMgr->getService();
+                    _preventEarlyDestructionOfFrameworkLogger = cmpMgr;
+                }
+
+                cmpMgr->getService().injectDependencyManager(this);
+
+                logAddService<Impl, Interfaces...>();
+
+                pushEventInternal<StartServiceEvent>(0, INTERNAL_EVENT_PRIORITY, cmpMgr->serviceId());
+
+                _services.emplace(cmpMgr->serviceId(), cmpMgr);
+                return &cmpMgr->getService();
             }
-
-            logAddService<Impl, Interfaces...>();
-
-            cmpMgr->getService().injectDependencyManager(this);
-
-            pushEventInternal<StartServiceEvent>(0, INTERNAL_EVENT_PRIORITY, cmpMgr->serviceId());
-
-            _services.emplace(cmpMgr->serviceId(), cmpMgr);
-            return &cmpMgr->getService();
-        }
-
-        template<Derived<IService> Interface, Derived<Service> Impl>
-        requires Derived<Impl, Interface>
-        auto createServiceManager(CppelixProperties properties = {}) {
-            auto cmpMgr = LifecycleManager<Impl>::template create(_logger, "", std::move(properties), InterfacesList<Interface>);
-
-            if constexpr (ListContainsInterface<IFrameworkLogger, Interface>::value) {
-                _logger = &cmpMgr->getService();
-                _preventEarlyDestructionOfFrameworkLogger = cmpMgr;
-            }
-
-            logAddService<Impl, Interface>();
-
-            cmpMgr->getService().injectDependencyManager(this);
-
-            pushEventInternal<StartServiceEvent>(0, INTERNAL_EVENT_PRIORITY, cmpMgr->serviceId());
-
-            _services.emplace(cmpMgr->serviceId(), cmpMgr);
-            return &cmpMgr->getService();
         }
 
         /// Push event into event loop with specified priority

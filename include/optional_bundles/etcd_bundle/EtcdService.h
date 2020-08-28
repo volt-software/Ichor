@@ -10,7 +10,7 @@ namespace Cppelix {
     public:
         static constexpr InterfaceVersion version = InterfaceVersion{1, 0, 0};
 
-        EtcdService() = default;
+        EtcdService(DependencyRegister &reg, CppelixProperties props);
         ~EtcdService() final = default;
 
         bool start() final;

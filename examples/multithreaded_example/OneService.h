@@ -16,6 +16,9 @@ struct IOneService : virtual public IService {
 
 class OneService final : public IOneService, public Service {
 public:
+    OneService(DependencyRegister &reg, CppelixProperties props) : Service(std::move(props)) {
+        reg.registerDependency<ILogger>(this, true);
+    }
     ~OneService() final = default;
     bool start() final {
         LOG_INFO(_logger, "OneService started with dependency");

@@ -1,6 +1,10 @@
 #include <optional_bundles/serialization_bundle/SerializationAdmin.h>
 #include <framework/DependencyManager.h>
 
+Cppelix::SerializationAdmin::SerializationAdmin(DependencyRegister &reg, CppelixProperties props) : Service(std::move(props)) {
+    reg.registerDependency<ILogger>(this, true);
+}
+
 std::vector<uint8_t> Cppelix::SerializationAdmin::serialize(const uint64_t type, const void* obj) {
     auto serializer = _serializers.find(type);
     if(serializer == end(_serializers)) {

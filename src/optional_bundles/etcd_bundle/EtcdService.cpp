@@ -5,6 +5,11 @@
 #include <optional_bundles/etcd_bundle/auth.pb.h>
 #include <grpc++/grpc++.h>
 
+
+Cppelix::EtcdService::EtcdService(Cppelix::DependencyRegister &reg, Cppelix::CppelixProperties props) : Service(std::move(props)) {
+    reg.registerDependency<ILogger>(this, true);
+}
+
 bool Cppelix::EtcdService::start() {
     auto addressProp = getProperties()->find("EtcdAddress");
     if(addressProp == end(*getProperties())) {

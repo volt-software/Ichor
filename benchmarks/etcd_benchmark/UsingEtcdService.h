@@ -15,12 +15,16 @@ struct IUsingEtcdService : virtual public IService {
 
 class UsingEtcdService final : public IUsingEtcdService, public Service {
 public:
+    UsingEtcdService(DependencyRegister &reg, CppelixProperties props) : Service(std::move(props)) {
+        reg.registerDependency<ILogger>(this, true);
+        reg.registerDependency<IEtcdService>(this, true);
+    }
     ~UsingEtcdService() final = default;
 
     bool start() final {
         LOG_INFO(_logger, "UsingEtcdService started");
         auto start = std::chrono::system_clock::now();
-        for(uint64_t i = 0; i < 100'000; i++) {
+        for(uint64_t i = 0; i < 10'000; i++) {
             if(!_etcd->put("test" + std::to_string(i), "2") || !_etcd->get("test" + std::to_string(i))) {
                 throw std::runtime_error("Couldn't put or get");
             }

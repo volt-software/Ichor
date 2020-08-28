@@ -9,7 +9,7 @@ namespace Cppelix {
 
     class SerializationAdmin final : public ISerializationAdmin, public Service {
     public:
-        SerializationAdmin() = default;
+        SerializationAdmin(DependencyRegister &reg, CppelixProperties props);
         ~SerializationAdmin() final = default;
 
         std::vector<uint8_t> serialize(const uint64_t type, const void* obj) final;

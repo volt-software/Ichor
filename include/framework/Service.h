@@ -33,6 +33,7 @@ namespace Cppelix {
     class Service : virtual public IService {
     public:
         Service() noexcept;
+        Service(CppelixProperties props) noexcept;
         ~Service() override;
 
         void injectDependencyManager(DependencyManager *mng) {
@@ -71,14 +72,17 @@ namespace Cppelix {
         sole::uuid _serviceGid;
         ServiceState _serviceState;
         static std::atomic<uint64_t> _serviceIdCounter;
-        DependencyManager *_manager;
+        DependencyManager *_manager{nullptr};
 
         friend class DependencyManager;
-        template<class ServiceType, typename... Dependencies>
+        template<class ServiceType>
         requires Derived<ServiceType, Service>
         friend class LifecycleManager;
         template<class ServiceType>
         requires Derived<ServiceType, Service>
-        friend class ServiceLifecycleManager;
+        friend class DependencyLifecycleManager;
+        template<class ServiceType>
+        requires Derived<ServiceType, Service>
+        friend class LifecycleManager;
     };
 }

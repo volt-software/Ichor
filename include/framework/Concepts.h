@@ -5,6 +5,8 @@
 
 namespace Cppelix {
 
+    class DependencyRegister;
+
     template <class T, class U, class... Remainder>
     struct DerivedTrait : std::integral_constant<bool, DerivedTrait<T, Remainder...>::value && std::is_base_of_v<U, T>> {};
 
@@ -21,7 +23,12 @@ namespace Cppelix {
     concept Derived = std::is_base_of<U, T>::value;
 
     template <class T, class... U>
-    concept AllDerived = DerivedTrait<T, U...>::value;
+    concept ImplementsAll = DerivedTrait<T, U...>::value;
+
+    template <class ImplT>
+    concept RequestsDependencies = requires(ImplT impl, DependencyRegister &deps, CppelixProperties properties) {
+        { ImplT(deps, properties) };
+    };
 
     template <class ImplT, class Interface>
     concept ImplementsDependencyInjection = requires(ImplT impl, Interface *svc) {

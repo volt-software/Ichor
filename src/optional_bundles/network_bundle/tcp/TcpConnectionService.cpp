@@ -6,8 +6,8 @@
 #include <netinet/tcp.h>
 #include <unistd.h>
 
-Cppelix::TcpConnectionService::TcpConnectionService() : _socket(-1), _attempts(), _priority(INTERNAL_EVENT_PRIORITY),  _quit(), _listenThread() {
-
+Cppelix::TcpConnectionService::TcpConnectionService(DependencyRegister &reg, CppelixProperties props) : Service(std::move(props)), _socket(-1), _attempts(), _priority(INTERNAL_EVENT_PRIORITY),  _quit(), _listenThread() {
+    reg.registerDependency<ILogger>(this, true);
 }
 
 bool Cppelix::TcpConnectionService::start() {
