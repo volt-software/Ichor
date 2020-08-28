@@ -14,6 +14,9 @@ struct ITestService : virtual public IService {
 
 class TestService final : public ITestService, public Service {
 public:
+    TestService(DependencyRegister &reg, CppelixProperties props) : Service(std::move(props)) {
+        reg.registerDependency<ILogger>(this, true);
+    }
     ~TestService() final = default;
     bool start() final {
         if(std::any_cast<uint64_t>(getProperties()->operator[]("Iteration")) == 9'999) {

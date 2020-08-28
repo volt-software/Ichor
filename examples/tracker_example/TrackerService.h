@@ -30,6 +30,9 @@ struct ITrackerService : virtual public IService {
 
 class TrackerService final : public ITrackerService, public Service {
 public:
+    TrackerService(DependencyRegister &reg, CppelixProperties props) : Service(std::move(props)) {
+        reg.registerDependency<ILogger>(this, true);
+    }
     ~TrackerService() final = default;
     bool start() final {
         LOG_INFO(_logger, "TrackerService started");
@@ -70,7 +73,7 @@ public:
             auto newProps = *evt->properties;
             newProps.emplace("Filter", Filter{ScopeFilterEntry{scope}});
 
-            _scopedRuntimeServices.emplace(scope, getManager()->createServiceManager<IRuntimeCreatedService, RuntimeCreatedService>(RequiredList<ILogger>, OptionalList<>, newProps));
+            _scopedRuntimeServices.emplace(scope, getManager()->createServiceManager<RuntimeCreatedService, IRuntimeCreatedService>(newProps));
         }
     }
 

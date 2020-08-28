@@ -9,7 +9,7 @@ namespace Cppelix {
     public:
         static constexpr InterfaceVersion version = InterfaceVersion{1, 0, 0};
 
-        TcpConnectionService();
+        TcpConnectionService(DependencyRegister &reg, CppelixProperties props);
         ~TcpConnectionService() final = default;
 
         bool start() final;

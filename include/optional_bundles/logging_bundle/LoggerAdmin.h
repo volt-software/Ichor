@@ -10,9 +10,12 @@ namespace Cppelix {
         static constexpr InterfaceVersion version = InterfaceVersion{1, 0, 0};
     };
 
-    template<typename LogT, typename... DependencyTs>
+    template<typename LogT>
     class LoggerAdmin final : public ILoggerAdmin, public Service {
     public:
+        LoggerAdmin(DependencyRegister &reg, CppelixProperties props) : Service(std::move(props)) {
+            reg.registerDependency<IFrameworkLogger>(this, true);
+        }
         ~LoggerAdmin() final = default;
 
         bool start() final {
@@ -40,19 +43,10 @@ namespace Cppelix {
             auto requestedLevel = requestedLevelIt != end(*evt->properties) ? std::any_cast<LogLevel>(requestedLevelIt->second) : LogLevel::INFO;
             if (logger == end(_loggers)) {
                 LOG_TRACE(_logger, "creating logger for svcid {}", evt->originatingService);
-                if constexpr(sizeof...(DependencyTs) > 0) {
-                    _loggers.emplace(evt->originatingService, getManager()->template createServiceManager<ILogger, LogT>(
-                            RequiredList<DependencyTs...>,
-                            OptionalList<>,
+                    _loggers.emplace(evt->originatingService, getManager()->template createServiceManager<LogT, ILogger>(
                             CppelixProperties{{"LogLevel",        requestedLevel},
                                               {"TargetServiceId", evt->originatingService},
                                               {"Filter",          Filter{ServiceIdFilterEntry{evt->originatingService}}}}));
-                } else {
-                    _loggers.emplace(evt->originatingService, getManager()->template createServiceManager<ILogger, LogT>(
-                            CppelixProperties{{"LogLevel",        requestedLevel},
-                                              {"TargetServiceId", evt->originatingService},
-                                              {"Filter",          Filter{ServiceIdFilterEntry{evt->originatingService}}}}));
-                }
             } else {
                 LOG_TRACE(_logger, "svcid {} already has logger", evt->originatingService);
             }

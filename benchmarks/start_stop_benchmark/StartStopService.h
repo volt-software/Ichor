@@ -15,6 +15,10 @@ struct IStartStopService : public virtual IService {
 
 class StartStopService final : public IStartStopService, public Service {
 public:
+    StartStopService(DependencyRegister &reg, CppelixProperties props) : Service(std::move(props)) {
+        reg.registerDependency<ILogger>(this, true);
+        reg.registerDependency<ITestService>(this, true);
+    }
     ~StartStopService() final = default;
     bool start() final {
         if(startCount == 0) {

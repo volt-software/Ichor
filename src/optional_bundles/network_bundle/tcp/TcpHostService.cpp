@@ -8,8 +8,8 @@
 #include <unistd.h>
 #include <netdb.h>
 
-Cppelix::TcpHostService::TcpHostService() : _socket(-1), _bindFd(), _priority(INTERNAL_EVENT_PRIORITY), _quit(), _listenThread() {
-
+Cppelix::TcpHostService::TcpHostService(DependencyRegister &reg, CppelixProperties props) : Service(std::move(props)), _socket(-1), _bindFd(), _priority(INTERNAL_EVENT_PRIORITY), _quit(), _listenThread() {
+    reg.registerDependency<ILogger>(this, true);
 }
 
 bool Cppelix::TcpHostService::start() {
@@ -87,8 +87,7 @@ bool Cppelix::TcpHostService::start() {
             auto ip = ::inet_ntoa(client_addr.sin_addr);
             LOG_TRACE(_logger, "new connection from {}:{}", ip, ::ntohs(client_addr.sin_port));
 
-            auto connection = getManager()->template createServiceManager<IConnectionService, TcpConnectionService>(RequiredList<ILogger>, OptionalList<>,
-                    CppelixProperties{{"Priority", _priority.load(std::memory_order_acquire)}, {"Socket", newConnection}});
+            auto connection = getManager()->template createServiceManager<TcpConnectionService, IConnectionService>(CppelixProperties{{"Priority", _priority.load(std::memory_order_acquire)}, {"Socket", newConnection}});
 
             _connections.emplace_back(connection);
         }

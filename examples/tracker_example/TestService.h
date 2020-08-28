@@ -15,6 +15,10 @@ struct ITestService : virtual public IService {
 
 class TestService final : public ITestService, public Service {
 public:
+    TestService(DependencyRegister &reg, CppelixProperties props) : Service(std::move(props)) {
+        reg.registerDependency<ILogger>(this, true);
+        reg.registerDependency<IRuntimeCreatedService>(this, true);
+    }
     ~TestService() final = default;
     bool start() final {
         LOG_INFO(_logger, "TestService started with dependency");

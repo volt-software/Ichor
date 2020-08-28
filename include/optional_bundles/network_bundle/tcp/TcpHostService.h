@@ -10,7 +10,7 @@ namespace Cppelix {
     public:
         static constexpr InterfaceVersion version = InterfaceVersion{1, 0, 0};
 
-        TcpHostService();
+        TcpHostService(DependencyRegister &reg, CppelixProperties props);
         ~TcpHostService() final = default;
 
         bool start() final;

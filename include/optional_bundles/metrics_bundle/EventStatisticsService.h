@@ -38,7 +38,7 @@ namespace Cppelix {
 
     class EventStatisticsService final : public IEventStatisticsService, public Service {
     public:
-        EventStatisticsService() = default;
+        EventStatisticsService(DependencyRegister &reg, CppelixProperties props);
         ~EventStatisticsService() final = default;
 
         void addDependencyInstance(ILogger *logger);

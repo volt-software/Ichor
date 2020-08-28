@@ -19,7 +19,7 @@ namespace Cppelix {
         TRACKING_OPTIONAL
     };
 
-    struct DependencyInfo {
+    struct DependencyInfo final {
 
         CPPELIX_CONSTEXPR DependencyInfo() = default;
         CPPELIX_CONSTEXPR ~DependencyInfo() = default;
@@ -91,6 +91,23 @@ namespace Cppelix {
         CPPELIX_CONSTEXPR std::vector<Dependency> _dependencies;
     };
 
+    class DependencyRegister final {
+    public:
+        template<Derived<IService> Interface, Derived<Service> Impl>
+        void registerDependency(Impl *svc, bool required) {
+            if(_registrations.contains(typeNameHash<Interface>())) {
+                throw std::runtime_error("Already registered interface");
+            }
+
+            _registrations.emplace(typeNameHash<Interface>(), std::make_tuple(
+                    Dependency{typeNameHash<Interface>(), Interface::version, required},
+                    [svc](void* dep){ svc->addDependencyInstance(static_cast<Interface*>(dep)); },
+                    [svc](void* dep){ svc->removeDependencyInstance(static_cast<Interface*>(dep)); }));
+        }
+
+        std::unordered_map<uint64_t, std::tuple<Dependency, std::function<void(IService*)>, std::function<void(IService*)>>> _registrations;
+    };
+
     class ILifecycleManager {
     public:
         CPPELIX_CONSTEXPR virtual ~ILifecycleManager() = default;
@@ -108,37 +125,35 @@ namespace Cppelix {
         [[nodiscard]] CPPELIX_CONSTEXPR virtual uint64_t type() const = 0;
         [[nodiscard]] CPPELIX_CONSTEXPR virtual uint64_t serviceId() const = 0;
         [[nodiscard]] CPPELIX_CONSTEXPR virtual ServiceState getServiceState() const = 0;
-        [[nodiscard]] CPPELIX_CONSTEXPR virtual const std::vector<Dependency>& getSelfAsDependency() const = 0;
+        [[nodiscard]] CPPELIX_CONSTEXPR virtual const std::vector<Dependency>& getInterfaces() const = 0;
 
         // for some reason, returning a reference produces garbage??
         [[nodiscard]] CPPELIX_CONSTEXPR virtual DependencyInfo const * getDependencyInfo() const = 0;
         [[nodiscard]] CPPELIX_CONSTEXPR virtual CppelixProperties const * getProperties() const = 0;
-        [[nodiscard]] CPPELIX_CONSTEXPR virtual void* getInterfacePointer() = 0;
-
-        template <typename T>
-        requires Derived<T, IService> && std::is_abstract_v<T>
-        [[nodiscard]] CPPELIX_CONSTEXPR T* getInterface() {
-            return static_cast<T*>(getInterfacePointer());
-        }
+        [[nodiscard]] CPPELIX_CONSTEXPR virtual IService* getServiceAsInterfacePointer() = 0;
     };
 
-    template<class ServiceType, typename... Dependencies>
+    template<class ServiceType>
     requires Derived<ServiceType, Service>
-    class LifecycleManager final : public ILifecycleManager {
+    class DependencyLifecycleManager final : public ILifecycleManager {
     public:
-        explicit CPPELIX_CONSTEXPR LifecycleManager(IFrameworkLogger *logger, std::string_view name, std::vector<Dependency> interfaces, CppelixProperties properties) : _implementationName(name), _interfaces(std::move(interfaces)), _dependencies(), _satisfiedDependencies(), _service(), _logger(logger) {
-            _service.setProperties(std::move(properties));
+        explicit CPPELIX_CONSTEXPR DependencyLifecycleManager(IFrameworkLogger *logger, std::string_view name, std::vector<Dependency> interfaces, CppelixProperties properties) : _implementationName(name), _interfaces(std::move(interfaces)), _registry(), _dependencies(), _satisfiedDependencies(), _service(_registry, std::move(properties)), _logger(logger) {
+            for(const auto &reg : _registry._registrations) {
+                _dependencies.addDependency(std::get<0>(reg.second));
+            }
         }
 
-        CPPELIX_CONSTEXPR ~LifecycleManager() final {
+        CPPELIX_CONSTEXPR ~DependencyLifecycleManager() final {
             LOG_TRACE(_logger, "destroying {}, id {}", typeName<ServiceType>(), _service.getServiceId());
-            // _manager is always injected in DependencyManager::create...Manager functions.
-            (_service._manager->template pushEvent<DependencyUndoRequestEvent>(_service.getServiceId(), nullptr, Dependency{typeNameHash<Dependencies>(), Dependencies::version, false}, getProperties()), ...);
+            for(const auto &dep : _dependencies._dependencies) {
+                // _manager is always injected in DependencyManager::create...Manager functions.
+                _service._manager->template pushEvent<DependencyUndoRequestEvent>(_service.getServiceId(), nullptr, Dependency{dep.interfaceNameHash, dep.interfaceVersion, dep.required}, getProperties());
+            }
         }
 
-        template<Derived<IService>... Interfaces, Derived<IService>... Required, Derived<IService>... Optional>
+        template<Derived<IService>... Interfaces>
         [[nodiscard]]
-        static std::shared_ptr<LifecycleManager<ServiceType, Required..., Optional...>> create(IFrameworkLogger *logger, std::string_view name, CppelixProperties properties, InterfacesList_t<Interfaces...>, RequiredList_t<Required...>, OptionalList_t<Optional...>) {
+        static std::shared_ptr<DependencyLifecycleManager<ServiceType>> create(IFrameworkLogger *logger, std::string_view name, CppelixProperties properties, InterfacesList_t<Interfaces...>) {
             if (name.empty()) {
                 name = typeName<ServiceType>();
             }
@@ -146,16 +161,8 @@ namespace Cppelix {
             std::vector<Dependency> interfaces;
             interfaces.reserve(sizeof...(Interfaces));
             (interfaces.emplace_back(typeNameHash<Interfaces>(), Interfaces::version, false),...);
-            auto mgr = std::make_shared<LifecycleManager<ServiceType, Required..., Optional...>>(logger, name, std::move(interfaces), std::move(properties));
-            mgr->template setupDependencies<Optional...>(false);
-            mgr->template setupDependencies<Required...>(true);
+            auto mgr = std::make_shared<DependencyLifecycleManager<ServiceType>>(logger, name, std::move(interfaces), std::move(properties));
             return mgr;
-        }
-
-        // stupid bug where it complains about accessing private variables.
-        template <typename... TempDependencies>
-        CPPELIX_CONSTEXPR void setupDependencies([[maybe_unused]] bool required) {
-            (_dependencies.template addDependency<TempDependencies>(required), ...);
         }
 
         CPPELIX_CONSTEXPR bool dependencyOnline(const std::shared_ptr<ILifecycleManager> &dependentService) final {
@@ -163,14 +170,14 @@ namespace Cppelix {
                 return false;
             }
 
-            const auto &dependencies = dependentService->getSelfAsDependency();
-            for(const auto &dependency : dependencies) {
-                if (!_dependencies.contains(dependency) || _satisfiedDependencies.contains(dependency)) {
+            const auto &interfaces = dependentService->getInterfaces();
+            for(const auto &interface : interfaces) {
+                if (!_dependencies.contains(interface) || _satisfiedDependencies.contains(interface)) {
                     continue;
                 }
 
-                injectIntoSelf<Dependencies...>(dependency.interfaceNameHash, dependentService);
-                _satisfiedDependencies.addDependency(dependency);
+                injectIntoSelf(interface.interfaceNameHash, dependentService);
+                _satisfiedDependencies.addDependency(interface);
 
                 bool canStart = _dependencies.requiredDependenciesSatisfied(_satisfiedDependencies);
                 if (canStart) {
@@ -187,15 +194,11 @@ namespace Cppelix {
             return false;
         }
 
-        template<class Interface0, class ...Interfaces>
-        requires ImplementsDependencyInjection<ServiceType, Interface0>
         CPPELIX_CONSTEXPR void injectIntoSelf(uint64_t hashOfInterfaceToInject, const std::shared_ptr<ILifecycleManager> &dependentService) {
-            if (typeNameHash<Interface0>() == hashOfInterfaceToInject) {
-                _service.addDependencyInstance(static_cast<Interface0*>(dependentService->getInterfacePointer()));
-            } else {
-                if constexpr (sizeof...(Interfaces) > 0) {
-                    injectIntoSelf<Interfaces...>(hashOfInterfaceToInject, dependentService);
-                }
+            auto dep = _registry._registrations.find(hashOfInterfaceToInject);
+
+            if(dep != end(_registry._registrations)) {
+                std::get<1>(dep->second)(dependentService->getServiceAsInterfacePointer());
             }
         }
 
@@ -204,7 +207,7 @@ namespace Cppelix {
                 return false;
             }
 
-            const auto &dependencies = dependentService->getSelfAsDependency();
+            const auto &dependencies = dependentService->getInterfaces();
             bool stopped = false;
 
             for(const auto &dependency : dependencies) {
@@ -226,21 +229,17 @@ namespace Cppelix {
                     }
                 }
 
-                removeSelfInto<Dependencies...>(dependency.interfaceNameHash, dependentService);
+                removeSelfInto(dependency.interfaceNameHash, dependentService);
             }
 
             return stopped;
         }
 
-        template<class Interface0, class ...Interfaces>
-        requires ImplementsDependencyInjection<ServiceType, Interface0>
         CPPELIX_CONSTEXPR void removeSelfInto(uint64_t hashOfInterfaceToInject, const std::shared_ptr<ILifecycleManager> &dependentService) {
-            if (typeNameHash<Interface0>() == hashOfInterfaceToInject) {
-                _service.removeDependencyInstance(static_cast<Interface0*>(dependentService->getInterfacePointer()));
-            } else {
-                if constexpr (sizeof...(Interfaces) > 0) {
-                    removeSelfInto<Interfaces...>(hashOfInterfaceToInject, dependentService);
-                }
+            auto dep = _registry._registrations.find(hashOfInterfaceToInject);
+
+            if(dep != end(_registry._registrations)) {
+                std::get<2>(dep->second)(dependentService->getServiceAsInterfacePointer());
             }
         }
 
@@ -293,7 +292,7 @@ namespace Cppelix {
             return _service.getState();
         }
 
-        [[nodiscard]] CPPELIX_CONSTEXPR const std::vector<Dependency>& getSelfAsDependency() const final {
+        [[nodiscard]] CPPELIX_CONSTEXPR const std::vector<Dependency>& getInterfaces() const final {
             return _interfaces;
         }
 
@@ -305,13 +304,14 @@ namespace Cppelix {
             return &_service._properties;
         }
 
-        [[nodiscard]] CPPELIX_CONSTEXPR void* getInterfacePointer() final {
+        [[nodiscard]] CPPELIX_CONSTEXPR IService* getServiceAsInterfacePointer() final {
             return &_service;
         }
 
     private:
         const std::string_view _implementationName;
         std::vector<Dependency> _interfaces;
+        DependencyRegister _registry;
         DependencyInfo _dependencies;
         DependencyInfo _satisfiedDependencies;
         ServiceType _service;
@@ -320,7 +320,7 @@ namespace Cppelix {
 
     template<class ServiceType>
     requires Derived<ServiceType, Service>
-    class LifecycleManager<ServiceType> final : public ILifecycleManager {
+    class LifecycleManager final : public ILifecycleManager {
     public:
         explicit CPPELIX_CONSTEXPR LifecycleManager(IFrameworkLogger *logger, std::string_view name, std::vector<Dependency> interfaces, CppelixProperties properties) : _implementationName(name), _interfaces(std::move(interfaces)), _service(), _logger(logger) {
             _service.setProperties(std::move(properties));
@@ -399,7 +399,7 @@ namespace Cppelix {
             return _service.getState();
         }
 
-        [[nodiscard]] CPPELIX_CONSTEXPR const std::vector<Dependency>& getSelfAsDependency() const final {
+        [[nodiscard]] CPPELIX_CONSTEXPR const std::vector<Dependency>& getInterfaces() const final {
             return _interfaces;
         }
 
@@ -411,7 +411,7 @@ namespace Cppelix {
             return &_service._properties;
         }
 
-        [[nodiscard]] CPPELIX_CONSTEXPR void* getInterfacePointer() final {
+        [[nodiscard]] CPPELIX_CONSTEXPR IService* getServiceAsInterfacePointer() final {
             return &_service;
         }
 

@@ -15,6 +15,8 @@ namespace spdlog {
 namespace Cppelix {
     class SpdlogLogger final : public ILogger, public Service {
     public:
+        SpdlogLogger(DependencyRegister &reg, CppelixProperties props);
+
         bool start() final;
         bool stop() final;
 

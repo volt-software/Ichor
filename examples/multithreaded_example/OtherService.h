@@ -14,6 +14,9 @@ struct IOtherService : virtual public IService {
 
 class OtherService final : public IOtherService, public Service {
 public:
+    OtherService(DependencyRegister &reg, CppelixProperties props) : Service(std::move(props)) {
+        reg.registerDependency<ILogger>(this, true);
+    }
     ~OtherService() final = default;
     bool start() final {
         LOG_INFO(_logger, "OtherService started with dependency");
