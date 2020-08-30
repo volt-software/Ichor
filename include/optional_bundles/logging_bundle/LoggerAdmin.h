@@ -39,8 +39,11 @@ namespace Cppelix {
         void handleDependencyRequest(ILogger *, DependencyRequestEvent const *const evt) {
             auto logger = _loggers.find(evt->originatingService);
 
-            auto requestedLevelIt = evt->properties->find("LogLevel");
-            auto requestedLevel = requestedLevelIt != end(*evt->properties) ? std::any_cast<LogLevel>(requestedLevelIt->second) : LogLevel::INFO;
+            auto requestedLevel = LogLevel::INFO;
+            if(evt->properties.has_value()) {
+                auto requestedLevelIt = evt->properties.value()->find("LogLevel");
+                requestedLevel = requestedLevelIt != end(*evt->properties.value()) ? std::any_cast<LogLevel>(requestedLevelIt->second) : LogLevel::INFO;
+            }
             if (logger == end(_loggers)) {
                 LOG_TRACE(_logger, "creating logger for svcid {}", evt->originatingService);
                     _loggers.emplace(evt->originatingService, getManager()->template createServiceManager<LogT, ILogger>(

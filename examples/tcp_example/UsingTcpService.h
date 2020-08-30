@@ -23,7 +23,7 @@ public:
     UsingTcpService(DependencyRegister &reg, CppelixProperties props) : Service(std::move(props)) {
         reg.registerDependency<ILogger>(this, true);
         reg.registerDependency<ISerializationAdmin>(this, true);
-        reg.registerDependency<IConnectionService>(this, true);
+        reg.registerDependency<IConnectionService>(this, true, *getProperties());
     }
     ~UsingTcpService() final = default;
 

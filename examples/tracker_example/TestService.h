@@ -17,7 +17,7 @@ class TestService final : public ITestService, public Service {
 public:
     TestService(DependencyRegister &reg, CppelixProperties props) : Service(std::move(props)) {
         reg.registerDependency<ILogger>(this, true);
-        reg.registerDependency<IRuntimeCreatedService>(this, true);
+        reg.registerDependency<IRuntimeCreatedService>(this, true, *getProperties());
     }
     ~TestService() final = default;
     bool start() final {

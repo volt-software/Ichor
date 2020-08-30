@@ -79,7 +79,7 @@ These benchmarks are mainly used to identify bottlenecks, not to showcase the pe
 
 Setup: AMD 3900X, 3600MHz@CL17 RAM, ubuntu 20.04
 * Start best case scenario: 10,000 starts with dependency in ~690ms
-* Start/stop best case scenario: 1,000,000 start/stops with dependency in ~800ms
+* Start/stop best case scenario: 1,000,000 start/stops with dependency in ~840ms
 * Serialization: Rapidjson: 1,000,000 messages serialized & deserialized in ~350 ms
 
 # Support

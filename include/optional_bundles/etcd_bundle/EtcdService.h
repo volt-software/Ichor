@@ -8,8 +8,6 @@
 namespace Cppelix {
     class EtcdService final : public IEtcdService, public Service {
     public:
-        static constexpr InterfaceVersion version = InterfaceVersion{1, 0, 0};
-
         EtcdService(DependencyRegister &reg, CppelixProperties props);
         ~EtcdService() final = default;
 
