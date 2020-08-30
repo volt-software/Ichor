@@ -31,7 +31,7 @@ namespace Cppelix {
         template <typename T, typename... Args>
         requires Derived<T, Event>
         static EventStackUniquePtr create(Args&&... args) {
-            static_assert(sizeof(T) < 128, "size not big enough to hold T");
+            static_assert(sizeof(T) <= 128, "size not big enough to hold T");
             static_assert(T::TYPE != 0, "type of T cannot be 0");
             EventStackUniquePtr ptr;
             new (ptr._buffer.data()) T(std::forward<Args>(args)...);
@@ -205,9 +205,9 @@ namespace Cppelix {
                     }
                 }
 
-                for (const auto &dep : cmpMgr->getDependencyInfo()->_dependencies) {
-                    pushEventInternal<DependencyRequestEvent>(cmpMgr->serviceId(), INTERNAL_EVENT_PRIORITY, cmpMgr,
-                                                              Dependency{dep.interfaceNameHash, dep.interfaceVersion, dep.required}, cmpMgr->getProperties());
+                for (const auto &[key, registration] : cmpMgr->getDependencyRegistry()->_registrations) {
+                    const auto &props = std::get<std::optional<CppelixProperties>>(registration);
+                    pushEventInternal<DependencyRequestEvent>(cmpMgr->serviceId(), INTERNAL_EVENT_PRIORITY, cmpMgr, std::get<Dependency>(registration), props.has_value() ? &props.value() : std::optional<CppelixProperties const *>{});
                 }
 
                 if(!started) {
@@ -244,7 +244,7 @@ namespace Cppelix {
         template <typename EventT, typename... Args>
         requires Derived<EventT, Event>
         uint64_t pushPrioritisedEvent(uint64_t originatingServiceId, uint64_t priority, Args&&... args){
-            static_assert(sizeof(EventT) < 128, "event type cannot be larger than 128 bytes");
+            static_assert(sizeof(EventT) <= 128, "event type cannot be larger than 128 bytes");
 
             if(_quit.load(std::memory_order_acquire)) {
                 LOG_TRACE(_logger, "inserting event of type {} into manager {}, but have to quit", typeName<EventT>(), getId());
@@ -269,7 +269,7 @@ namespace Cppelix {
         template <typename EventT, typename... Args>
         requires Derived<EventT, Event>
         uint64_t pushEvent(uint64_t originatingServiceId, Args&&... args){
-            static_assert(sizeof(EventT) < 128, "event type cannot be larger than 128 bytes");
+            static_assert(sizeof(EventT) <= 128, "event type cannot be larger than 128 bytes");
 
             if(_quit.load(std::memory_order_acquire)) {
                 LOG_TRACE(_logger, "inserting event of type {} into manager {}, but have to quit", typeName<EventT>(), getId());
@@ -302,15 +302,16 @@ namespace Cppelix {
             DependencyTrackerInfo undoRequestInfo{impl->getServiceId(), [impl](Event const * const evt){ impl->handleDependencyUndoRequest(static_cast<Interface*>(nullptr), static_cast<DependencyUndoRequestEvent const *>(evt)); }};
 
             for(auto &[key, mgr] : _services) {
-                auto const * depInfo = mgr->getDependencyInfo();
+                auto const * depRegistry = mgr->getDependencyRegistry();
 
-                if(depInfo == nullptr) {
+                if(depRegistry == nullptr) {
                     continue;
                 }
 
-                for (const auto &dependency : depInfo->_dependencies) {
-                    if(dependency.interfaceNameHash == typeNameHash<Interface>()) {
-                        DependencyRequestEvent evt{0, mgr->serviceId(), INTERNAL_EVENT_PRIORITY, mgr, Dependency{dependency.interfaceNameHash, dependency.interfaceVersion, dependency.required}, mgr->getProperties()};
+                for (const auto &[regKey, registration] : depRegistry->_registrations) {
+                    if(regKey == InterfaceKey{typeNameHash<Interface>(), Interface::version}) {
+                        const auto &props = std::get<std::optional<CppelixProperties>>(registration);
+                        DependencyRequestEvent evt{0, mgr->serviceId(), INTERNAL_EVENT_PRIORITY, mgr, std::get<Dependency>(registration), props.has_value() ? &props.value() : std::optional<CppelixProperties const *>{}};
                         requestInfo.trackFunc(&evt);
                     }
                 }
@@ -471,7 +472,7 @@ namespace Cppelix {
         template <typename EventT, typename... Args>
         requires Derived<EventT, Event>
         uint64_t pushEventInternal(uint64_t originatingServiceId, uint64_t priority, Args&&... args){
-            static_assert(sizeof(EventT) < 128, "event type cannot be larger than 128 bytes");
+            static_assert(sizeof(EventT) <= 128, "event type cannot be larger than 128 bytes");
 
             uint64_t eventId = _eventIdCounter.fetch_add(1, std::memory_order_acq_rel);
             _eventQueueMutex.lock();

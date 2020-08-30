@@ -41,13 +41,13 @@ namespace Cppelix {
     };
 
     struct DependencyRequestEvent final : public Event {
-        explicit DependencyRequestEvent(uint64_t _id, uint64_t _originatingService, uint64_t _priority, std::shared_ptr<ILifecycleManager> _manager, Dependency _dependency, CppelixProperties const * _properties) noexcept :
+        explicit DependencyRequestEvent(uint64_t _id, uint64_t _originatingService, uint64_t _priority, std::shared_ptr<ILifecycleManager> _manager, Dependency _dependency, std::optional<CppelixProperties const *> _properties) noexcept :
                 Event(TYPE, NAME, _id, _originatingService, _priority), manager(std::move(_manager)), dependency(std::move(_dependency)), properties{_properties} {}
         ~DependencyRequestEvent() final = default;
 
         const std::shared_ptr<ILifecycleManager> manager;
         const Dependency dependency;
-        const CppelixProperties * properties;
+        const std::optional<CppelixProperties const *> properties;
         static constexpr uint64_t TYPE = typeNameHash<DependencyRequestEvent>();
         static constexpr std::string_view NAME= typeName<DependencyRequestEvent>();
     };

@@ -56,9 +56,14 @@ public:
     }
 
     void handleDependencyRequest(IRuntimeCreatedService*, DependencyRequestEvent const * const evt) {
-        auto scopeProp = evt->properties->find("scope");
+        if(!evt->properties.has_value()) {
+            LOG_ERROR(_logger, "missing properties");
+            return;
+        }
 
-        if(scopeProp == end(*evt->properties)) {
+        auto scopeProp = evt->properties.value()->find("scope");
+
+        if(scopeProp == end(*evt->properties.value())) {
             LOG_ERROR(_logger, "scope missing");
             return;
         }
@@ -70,7 +75,7 @@ public:
         auto runtimeService = _scopedRuntimeServices.find(scope);
 
         if(runtimeService == end(_scopedRuntimeServices)) {
-            auto newProps = *evt->properties;
+            auto newProps = *evt->properties.value();
             newProps.emplace("Filter", Filter{ScopeFilterEntry{scope}});
 
             _scopedRuntimeServices.emplace(scope, getManager()->createServiceManager<RuntimeCreatedService, IRuntimeCreatedService>(newProps));

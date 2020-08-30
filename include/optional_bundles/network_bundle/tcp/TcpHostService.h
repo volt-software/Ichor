@@ -8,8 +8,6 @@
 namespace Cppelix {
     class TcpHostService final : public IHostService, public Service {
     public:
-        static constexpr InterfaceVersion version = InterfaceVersion{1, 0, 0};
-
         TcpHostService(DependencyRegister &reg, CppelixProperties props);
         ~TcpHostService() final = default;
 

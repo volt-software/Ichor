@@ -9,8 +9,6 @@ namespace Cppelix {
     template <typename NetworkType>
     class ClientAdmin final : public IClientAdmin, public Service {
     public:
-        static constexpr InterfaceVersion version = InterfaceVersion{1, 0, 0};
-
         ClientAdmin() = default;
         ~ClientAdmin() override = default;
 
@@ -28,15 +26,19 @@ namespace Cppelix {
         }
 
         void handleDependencyRequest(IConnectionService*, DependencyRequestEvent const * const evt) {
-            if(!evt->properties->contains("Address")) {
+            if(!evt->properties.has_value()) {
+                throw std::runtime_error("Missing properties");
+            }
+
+            if(!evt->properties.value()->contains("Address")) {
                 throw std::runtime_error("Missing address");
             }
 
-            if(!evt->properties->contains("Port")) {
+            if(!evt->properties.value()->contains("Port")) {
                 throw std::runtime_error("Missing port");
             }
 
-            auto newProps = *evt->properties;
+            auto newProps = *evt->properties.value();
             newProps.emplace("Filter", Filter{ServiceIdFilterEntry{evt->originatingService}});
 
             if(!_connections.contains(evt->originatingService)) {
