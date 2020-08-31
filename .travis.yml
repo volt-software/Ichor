@@ -15,9 +15,9 @@ addons:
 
 env:
   matrix:
-  - MATRIX_EVAL="CC=gcc-10 && CXX=g++-10 && SONARCLOUD=0 && EXTRA_OPTS=OFF"
-  - MATRIX_EVAL="CC=gcc-10 && CXX=g++-10 && SONARCLOUD=0 && EXTRA_OPTS=ON"
-  #- MATRIX_EVAL="CC=gcc-10 && CXX=g++-10 && SONARCLOUD=1 && EXTRA_OPTS=ON" #sonarcloud does not support C++20 atm
+  - MATRIX_EVAL="CC=gcc-10 && CXX=g++-10 && SONARCLOUD=0 && EXTRA_OPTS=0"
+  - MATRIX_EVAL="CC=gcc-10 && CXX=g++-10 && SONARCLOUD=0 && EXTRA_OPTS=1"
+  #- MATRIX_EVAL="CC=gcc-10 && CXX=g++-10 && SONARCLOUD=1 && EXTRA_OPTS=1" #sonarcloud does not support C++20 atm
 
 before_install:
 - eval "${MATRIX_EVAL}"
@@ -29,6 +29,7 @@ cache:
 script:
 - mkdir -p build
 - cd build
-- cmake -DCMAKE_BUILD_TYPE=Debug -DUSE_SPDLOG=${EXTRA_OPTS} -DUSE_LIBUV=${EXTRA_OPTS} -DUSE_RAPIDJSON=${EXTRA_OPTS} ..
+- if [ "EXTRA_OPTS" = "0" ]; then cmake -DCMAKE_BUILD_TYPE=Debug ..; fi
+- if [ "EXTRA_OPTS" = "1" ]; then cmake -DCMAKE_BUILD_TYPE=Debug -DUSE_SPDLOG=ON -DUSE_LIBUV=ON -DUSE_RAPIDJSON=ON ..; fi
 - if [ "$SONARCLOUD" = "0" ]; then make -j2; fi
 - if [ "$SONARCLOUD" = "1" ]; then cd .. && build-wrapper-linux-x86-64 --out-dir bw-output cmake --build build/ && sonar-scanner -Dsonar.cfamily.build-wrapper-output=bw-output -Dsonar.cfamily.threads=2; fi
