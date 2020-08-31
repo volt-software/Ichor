@@ -29,7 +29,7 @@ cache:
 script:
 - mkdir -p build
 - cd build
-- if [ "EXTRA_OPTS" = "0" ]; then cmake -DCMAKE_BUILD_TYPE=Debug ..; fi
-- if [ "EXTRA_OPTS" = "1" ]; then cmake -DCMAKE_BUILD_TYPE=Debug -DUSE_SPDLOG=ON -DUSE_LIBUV=ON -DUSE_RAPIDJSON=ON ..; fi
+- if [ "$EXTRA_OPTS" = "0" ]; then cmake -DCMAKE_BUILD_TYPE=Debug ..; fi
+- if [ "$EXTRA_OPTS" = "1" ]; then cmake -DCMAKE_BUILD_TYPE=Debug -DUSE_SPDLOG=ON -DUSE_LIBUV=ON -DUSE_RAPIDJSON=ON ..; fi
 - if [ "$SONARCLOUD" = "0" ]; then make -j2; fi
 - if [ "$SONARCLOUD" = "1" ]; then cd .. && build-wrapper-linux-x86-64 --out-dir bw-output cmake --build build/ && sonar-scanner -Dsonar.cfamily.build-wrapper-output=bw-output -Dsonar.cfamily.threads=2; fi
