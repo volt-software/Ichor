@@ -9,6 +9,8 @@ addons:
       - sourceline: "ppa:ubuntu-toolchain-r/test"
     packages:
       - g++-10
+env:
+  - MATRIX_EVAL="CC=gcc-10 && CXX=g++-10"
 script:
   - mkdir -p build
   - cd build
