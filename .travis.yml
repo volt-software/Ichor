@@ -11,6 +11,8 @@ addons:
       - g++-10
 env:
   - MATRIX_EVAL="CC=gcc-10 && CXX=g++-10"
+before_install:
+  - eval "${MATRIX_EVAL}"
 script:
   - mkdir -p build
   - cd build

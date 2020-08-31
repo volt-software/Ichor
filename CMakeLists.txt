@@ -23,6 +23,7 @@ option(USE_SPDLOG "Use spdlog as framework logging implementation" OFF)
 option(USE_RAPIDJSON "Add RapidJSON as a possible serializer implementation" OFF)
 option(USE_PUBSUB "Add various dependencies to enable pubsub bundle to be built" OFF)
 option(USE_ETCD "Add various dependencies to enable pubsub bundle to be built" OFF)
+option(USE_LIBUV "Add libuv as a possible network IO implementation" OFF)
 option(USE_SANITIZERS "Enable sanitizers, catching potential errors but slowing down compilation and execution speed" ON)
 option(REMOVE_SOURCE_NAMES "Remove compiling source file names and line numbers when logging." OFF)
 
@@ -80,7 +81,7 @@ file(GLOB_RECURSE CPPELIX_NETWORK_SOURCES ${TOP_DIR}/src/optional_bundles/networ
 file(GLOB_RECURSE CPPELIX_METRICS_SOURCES ${TOP_DIR}/src/optional_bundles/metrics_bundle/*.cpp)
 file(GLOB_RECURSE CPPELIX_SERIALIZATION_SOURCES ${TOP_DIR}/src/optional_bundles/serialization_bundle/*.cpp)
 
-set(uv_sources
+set(UV_SOURCE
         ${EXTERNAL_DIR}/libuv/src/fs-poll.c
         ${EXTERNAL_DIR}/libuv/src/idna.c
         ${EXTERNAL_DIR}/libuv/src/inet.c
@@ -116,13 +117,10 @@ set(uv_sources
         ${EXTERNAL_DIR}/libuv/src/unix/random-getrandom.c
         ${EXTERNAL_DIR}/libuv/src/unix/random-sysctl-linux.c)
 
-set(uv_defines -D _GNU_SOURCE -D _POSIX_C_SOURCE=200112)
+set(UV_DEFINES -D _GNU_SOURCE -D _POSIX_C_SOURCE=200112)
+file(GLOB SPDLOG_SOURCES ${EXTERNAL_DIR}/spdlog/src/*.cpp)
 
-if(USE_SPDLOG)
-    file(GLOB SPDLOG_SOURCES ${EXTERNAL_DIR}/spdlog/src/*.cpp)
-endif()
-
-add_library(cppelix ${uv_sources} ${FMT_SOURCES} ${CPPELIX_FRAMEWORK_SOURCES} ${CPPELIX_LOGGING_SOURCES} ${CPPELIX_NETWORK_SOURCES} ${CPPELIX_METRICS_SOURCES} ${CPPELIX_SERIALIZATION_SOURCES})
+add_library(cppelix ${FMT_SOURCES} ${CPPELIX_FRAMEWORK_SOURCES} ${CPPELIX_LOGGING_SOURCES} ${CPPELIX_NETWORK_SOURCES} ${CPPELIX_METRICS_SOURCES} ${CPPELIX_SERIALIZATION_SOURCES})
 if(USE_SPDLOG)
     target_sources(cppelix PRIVATE ${SPDLOG_SOURCES})
 endif()
@@ -130,9 +128,12 @@ if(USE_ETCD)
     target_link_libraries(cppelix ${ETCD_TARGET})
     target_sources(cppelix PRIVATE ${CPPELIX_OPTIONAL_ETCD_SOURCES})
 endif()
+if(USE_LIBUV)
+    target_sources(cppelix PRIVATE ${UV_SOURCE})
+    target_compile_definitions(cppelix PRIVATE ${UV_DEFINES})
+endif()
 target_link_libraries(cppelix ${CMAKE_THREAD_LIBS_INIT})
 target_link_libraries(cppelix -ldl -lrt)
-target_compile_definitions(cppelix PRIVATE ${uv_defines})
 target_compile_options(cppelix PRIVATE -fPIC)
 
 # no tests yet
@@ -147,7 +148,6 @@ target_compile_options(cppelix PRIVATE -fPIC)
 include_directories("${EXTERNAL_DIR}/Catch2/single_include")
 include_directories("${EXTERNAL_DIR}/wyhash")
 include_directories("${EXTERNAL_DIR}/libuv/include")
-include_directories("${EXTERNAL_DIR}/libuv/src")
 include_directories("${EXTERNAL_DIR}/cppcoro/include")
 include_directories("${EXTERNAL_DIR}/fmt/include")
 include_directories("${TOP_DIR}/include")
@@ -162,6 +162,10 @@ endif()
 
 if(USE_ETCD)
     include_directories("${TOP_DIR}/include/optional_bundles/etcd_bundle")
+endif()
+
+if(USE_LIBUV)
+    include_directories("${EXTERNAL_DIR}/libuv/src")
 endif()
 
 if(BUILD_EXAMPLES)
