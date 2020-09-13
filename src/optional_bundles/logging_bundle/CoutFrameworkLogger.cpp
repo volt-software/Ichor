@@ -1,4 +1,4 @@
-#include "optional_bundles/logging_bundle/CoutFrameworkLogger.h"
+#include <cppelix/optional_bundles/logging_bundle/CoutFrameworkLogger.h>
 #include <iostream>
 
 Cppelix::CoutFrameworkLogger::CoutFrameworkLogger() : IFrameworkLogger(), Service(), _level(LogLevel::TRACE) {

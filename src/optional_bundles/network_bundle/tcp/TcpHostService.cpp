@@ -1,7 +1,7 @@
-#include <framework/DependencyManager.h>
-#include <optional_bundles/network_bundle/IConnectionService.h>
-#include <optional_bundles/network_bundle/tcp/TcpHostService.h>
-#include <optional_bundles/network_bundle/tcp/TcpConnectionService.h>
+#include <cppelix/DependencyManager.h>
+#include <cppelix/optional_bundles/network_bundle/IConnectionService.h>
+#include <cppelix/optional_bundles/network_bundle/tcp/TcpHostService.h>
+#include <cppelix/optional_bundles/network_bundle/tcp/TcpConnectionService.h>
 #include <arpa/inet.h>
 #include <sys/socket.h>
 #include <netinet/tcp.h>

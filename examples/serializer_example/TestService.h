@@ -1,10 +1,10 @@
 #pragma once
 
-#include <framework/DependencyManager.h>
-#include <optional_bundles/logging_bundle/Logger.h>
-#include "framework/Service.h"
-#include "optional_bundles/serialization_bundle/SerializationAdmin.h"
-#include "framework/LifecycleManager.h"
+#include <cppelix/DependencyManager.h>
+#include <cppelix/optional_bundles/logging_bundle/Logger.h>
+#include <cppelix/Service.h>
+#include <cppelix/optional_bundles/serialization_bundle/SerializationAdmin.h>
+#include <cppelix/LifecycleManager.h>
 #include "TestMsg.h"
 
 using namespace Cppelix;

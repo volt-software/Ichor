@@ -1,6 +1,6 @@
 #ifdef USE_SPDLOG
 
-#include <optional_bundles/logging_bundle/SpdlogSharedService.h>
+#include <cppelix/optional_bundles/logging_bundle/SpdlogSharedService.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/sinks/basic_file_sink.h>
 

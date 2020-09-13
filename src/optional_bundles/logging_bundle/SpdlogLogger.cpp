@@ -3,8 +3,8 @@
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/sinks/basic_file_sink.h>
-#include "optional_bundles/logging_bundle/SpdlogLogger.h"
-#include <framework/DependencyManager.h>
+#include <cppelix/optional_bundles/logging_bundle/SpdlogLogger.h>
+#include <cppelix/DependencyManager.h>
 
 Cppelix::SpdlogLogger::SpdlogLogger(Cppelix::DependencyRegister &reg, Cppelix::CppelixProperties props) : Service(std::move(props)) {
     reg.registerDependency<ISpdlogSharedService>(this, true);

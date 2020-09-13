@@ -1,4 +1,4 @@
-#include "optional_bundles/logging_bundle/CoutLogger.h"
+#include <cppelix/optional_bundles/logging_bundle/CoutLogger.h>
 #include <iostream>
 
 Cppelix::CoutLogger::CoutLogger() : ILogger(), Service(), _level(LogLevel::TRACE) {

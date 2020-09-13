@@ -1,8 +1,8 @@
-#include <framework/DependencyManager.h>
-#include <optional_bundles/etcd_bundle/EtcdService.h>
-#include <optional_bundles/etcd_bundle/rpc.pb.h>
-#include <optional_bundles/etcd_bundle/kv.pb.h>
-#include <optional_bundles/etcd_bundle/auth.pb.h>
+#include <cppelix/DependencyManager.h>
+#include <cppelix/optional_bundles/etcd_bundle/EtcdService.h>
+#include <cppelix/optional_bundles/etcd_bundle/rpc.pb.h>
+#include <cppelix/optional_bundles/etcd_bundle/kv.pb.h>
+#include <cppelix/optional_bundles/etcd_bundle/auth.pb.h>
 #include <grpc++/grpc++.h>
 
 

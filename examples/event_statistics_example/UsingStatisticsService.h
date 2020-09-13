@@ -1,10 +1,10 @@
 #pragma once
 
-#include <framework/DependencyManager.h>
-#include <optional_bundles/logging_bundle/Logger.h>
-#include <optional_bundles/timer_bundle/TimerService.h>
-#include "framework/Service.h"
-#include "framework/LifecycleManager.h"
+#include <cppelix/DependencyManager.h>
+#include <cppelix/optional_bundles/logging_bundle/Logger.h>
+#include <cppelix/optional_bundles/timer_bundle/TimerService.h>
+#include <cppelix/Service.h>
+#include <cppelix/LifecycleManager.h>
 
 using namespace Cppelix;
 

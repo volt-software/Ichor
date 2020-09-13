@@ -3,7 +3,7 @@
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/sinks/basic_file_sink.h>
-#include "optional_bundles/logging_bundle/SpdlogFrameworkLogger.h"
+#include <cppelix/optional_bundles/logging_bundle/SpdlogFrameworkLogger.h>
 
 Cppelix::SpdlogFrameworkLogger::SpdlogFrameworkLogger() : IFrameworkLogger(), Service(), _level(LogLevel::TRACE) {
     auto console_sink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();

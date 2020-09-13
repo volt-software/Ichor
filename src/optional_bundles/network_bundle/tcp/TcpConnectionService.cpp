@@ -1,6 +1,6 @@
-#include <framework/DependencyManager.h>
-#include <optional_bundles/network_bundle/tcp/TcpConnectionService.h>
-#include <optional_bundles/network_bundle/NetworkDataEvent.h>
+#include <cppelix/DependencyManager.h>
+#include <cppelix/optional_bundles/network_bundle/tcp/TcpConnectionService.h>
+#include <cppelix/optional_bundles/network_bundle/NetworkDataEvent.h>
 #include <arpa/inet.h>
 #include <sys/socket.h>
 #include <netinet/tcp.h>

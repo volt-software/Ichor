@@ -1,17 +1,17 @@
 #include "UsingTcpService.h"
 #include "TestMsgJsonSerializer.h"
-#include <optional_bundles/logging_bundle/LoggerAdmin.h>
-#include <optional_bundles/network_bundle/tcp/TcpHostService.h>
-#include <optional_bundles/network_bundle/ClientAdmin.h>
+#include <cppelix/optional_bundles/logging_bundle/LoggerAdmin.h>
+#include <cppelix/optional_bundles/network_bundle/tcp/TcpHostService.h>
+#include <cppelix/optional_bundles/network_bundle/ClientAdmin.h>
 #ifdef USE_SPDLOG
-#include <optional_bundles/logging_bundle/SpdlogFrameworkLogger.h>
-#include <optional_bundles/logging_bundle/SpdlogLogger.h>
+#include <cppelix/optional_bundles/logging_bundle/SpdlogFrameworkLogger.h>
+#include <cppelix/optional_bundles/logging_bundle/SpdlogLogger.h>
 
 #define FRAMEWORK_LOGGER_TYPE SpdlogFrameworkLogger
 #define LOGGER_TYPE SpdlogLogger
 #else
-#include <optional_bundles/logging_bundle/CoutFrameworkLogger.h>
-#include <optional_bundles/logging_bundle/CoutLogger.h>
+#include <cppelix/optional_bundles/logging_bundle/CoutFrameworkLogger.h>
+#include <cppelix/optional_bundles/logging_bundle/CoutLogger.h>
 
 #define FRAMEWORK_LOGGER_TYPE CoutFrameworkLogger
 #define LOGGER_TYPE CoutLogger

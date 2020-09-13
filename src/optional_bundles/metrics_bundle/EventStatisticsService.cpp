@@ -1,4 +1,4 @@
-#include <optional_bundles/metrics_bundle/EventStatisticsService.h>
+#include <cppelix/optional_bundles/metrics_bundle/EventStatisticsService.h>
 
 Cppelix::EventStatisticsService::EventStatisticsService(Cppelix::DependencyRegister &reg, Cppelix::CppelixProperties props) : Service(std::move(props)) {
     reg.registerDependency<ILogger>(this, true);

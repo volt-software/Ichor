@@ -17,6 +17,8 @@ set(EXTERNAL_DIR ${CMAKE_SOURCE_DIR}/external/)
 set(EXECUTABLE_OUTPUT_PATH ${CMAKE_BINARY_DIR})
 set(LIBRARY_OUTPUT_PATH ${CMAKE_BINARY_DIR})
 
+include(ExternalProject)
+
 option(BUILD_EXAMPLES "Build examples" ON)
 option(BUILD_BENCHMARKS "Build benchmarks" ON)
 option(USE_SPDLOG "Use spdlog as framework logging implementation" OFF)
@@ -51,6 +53,9 @@ if(USE_ETCD)
 
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DUSE_ETCD ")
 endif()
+if(USE_LIBUV)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DUSE_LIBUV ")
+endif()
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DCATCH_CONFIG_FAST_COMPILE ")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Wshadow -Wnon-virtual-dtor -Wno-unused-variable -Wno-long-long -Wno-unused-parameter -Wduplicated-cond -Wduplicated-branches -Wlogical-op -Wnull-dereference -pedantic -Wformat -Wformat-security ")
@@ -71,67 +76,47 @@ set(CMAKE_CXX_FLAGS_RELEASE "-O3 -g3 -ggdb -DNDEBUG")
 set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-g3 -ggdb -Og")
 set(CMAKE_CXX_FLAGS_MINSIZEREL "-Os -DNDEBUG")
 
+set(EXTERNAL_C_FLAGS "-fstack-protector-strong -fstack-clash-protection -fcf-protection -fPIE")
+if(USE_SANITIZERS)
+    set(EXTERNAL_C_FLAGS "${EXTERNAL_C_FLAGS} -fsanitize=address,undefined ")
+endif()
+
 find_package (Threads)
 
 file(GLOB_RECURSE FMT_SOURCES ${EXTERNAL_DIR}/fmt/src/*.cc)
-file(GLOB_RECURSE CPPELIX_FRAMEWORK_SOURCES ${TOP_DIR}/src/framework/*.cpp)
+file(GLOB_RECURSE CPPELIX_FRAMEWORK_SOURCES ${TOP_DIR}/src/cppelix/*.cpp)
 file(GLOB_RECURSE CPPELIX_OPTIONAL_ETCD_SOURCES ${TOP_DIR}/src/optional_bundles/etcd_bundle/*.cpp ${TOP_DIR}/src/optional_bundles/etcd_bundle/*.cc)
 file(GLOB_RECURSE CPPELIX_LOGGING_SOURCES ${TOP_DIR}/src/optional_bundles/logging_bundle/*.cpp)
 file(GLOB_RECURSE CPPELIX_NETWORK_SOURCES ${TOP_DIR}/src/optional_bundles/network_bundle/*.cpp)
 file(GLOB_RECURSE CPPELIX_METRICS_SOURCES ${TOP_DIR}/src/optional_bundles/metrics_bundle/*.cpp)
 file(GLOB_RECURSE CPPELIX_SERIALIZATION_SOURCES ${TOP_DIR}/src/optional_bundles/serialization_bundle/*.cpp)
 
-set(UV_SOURCE
-        ${EXTERNAL_DIR}/libuv/src/fs-poll.c
-        ${EXTERNAL_DIR}/libuv/src/idna.c
-        ${EXTERNAL_DIR}/libuv/src/inet.c
-        ${EXTERNAL_DIR}/libuv/src/random.c
-        ${EXTERNAL_DIR}/libuv/src/strscpy.c
-        ${EXTERNAL_DIR}/libuv/src/threadpool.c
-        ${EXTERNAL_DIR}/libuv/src/timer.c
-        ${EXTERNAL_DIR}/libuv/src/uv-common.c
-        ${EXTERNAL_DIR}/libuv/src/uv-data-getter-setters.c
-        ${EXTERNAL_DIR}/libuv/src/version.c
-        ${EXTERNAL_DIR}/libuv/src/unix/async.c
-        ${EXTERNAL_DIR}/libuv/src/unix/core.c
-        ${EXTERNAL_DIR}/libuv/src/unix/dl.c
-        ${EXTERNAL_DIR}/libuv/src/unix/fs.c
-        ${EXTERNAL_DIR}/libuv/src/unix/getaddrinfo.c
-        ${EXTERNAL_DIR}/libuv/src/unix/getnameinfo.c
-        ${EXTERNAL_DIR}/libuv/src/unix/loop-watcher.c
-        ${EXTERNAL_DIR}/libuv/src/unix/loop.c
-        ${EXTERNAL_DIR}/libuv/src/unix/pipe.c
-        ${EXTERNAL_DIR}/libuv/src/unix/poll.c
-        ${EXTERNAL_DIR}/libuv/src/unix/process.c
-        ${EXTERNAL_DIR}/libuv/src/unix/random-devurandom.c
-        ${EXTERNAL_DIR}/libuv/src/unix/signal.c
-        ${EXTERNAL_DIR}/libuv/src/unix/stream.c
-        ${EXTERNAL_DIR}/libuv/src/unix/tcp.c
-        ${EXTERNAL_DIR}/libuv/src/unix/thread.c
-        ${EXTERNAL_DIR}/libuv/src/unix/tty.c
-        ${EXTERNAL_DIR}/libuv/src/unix/udp.c
-        ${EXTERNAL_DIR}/libuv/src/unix/linux-core.c
-        ${EXTERNAL_DIR}/libuv/src/unix/linux-inotify.c
-        ${EXTERNAL_DIR}/libuv/src/unix/linux-syscalls.c
-        ${EXTERNAL_DIR}/libuv/src/unix/procfs-exepath.c
-        ${EXTERNAL_DIR}/libuv/src/unix/random-getrandom.c
-        ${EXTERNAL_DIR}/libuv/src/unix/random-sysctl-linux.c)
-
-set(UV_DEFINES -D _GNU_SOURCE -D _POSIX_C_SOURCE=200112)
 file(GLOB SPDLOG_SOURCES ${EXTERNAL_DIR}/spdlog/src/*.cpp)
 
 add_library(cppelix ${FMT_SOURCES} ${CPPELIX_FRAMEWORK_SOURCES} ${CPPELIX_LOGGING_SOURCES} ${CPPELIX_NETWORK_SOURCES} ${CPPELIX_METRICS_SOURCES} ${CPPELIX_SERIALIZATION_SOURCES})
+
 if(USE_SPDLOG)
     target_sources(cppelix PRIVATE ${SPDLOG_SOURCES})
 endif()
+
 if(USE_ETCD)
     target_link_libraries(cppelix ${ETCD_TARGET})
     target_sources(cppelix PRIVATE ${CPPELIX_OPTIONAL_ETCD_SOURCES})
 endif()
+
 if(USE_LIBUV)
-    target_sources(cppelix PRIVATE ${UV_SOURCE})
-    target_compile_definitions(cppelix PRIVATE ${UV_DEFINES})
+    set(LIBUV_CMAKE_ARGS -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE} -DCMAKE_INSTALL_PREFIX=${EXTERNAL_DIR}/libuv/build -DCMAKE_C_FLAGS=${EXTERNAL_C_FLAGS} -DBUILD_TESTING=OFF -DLIBUV_BUILD_BENCH=OFF -DLIBUV_BUILD_TESTS=OFF)
+
+    ExternalProject_Add(LIBUV_EXTERNAL
+            SOURCE_DIR "${EXTERNAL_DIR}/libuv"
+            BINARY_DIR "${EXTERNAL_DIR}/libuv/build"
+            CMAKE_ARGS "${LIBUV_CMAKE_ARGS}"
+            INSTALL_COMMAND cmake -E echo "Skipping install step.")
+
+    add_dependencies(cppelix LIBUV_EXTERNAL)
+    target_link_libraries(cppelix ${EXTERNAL_DIR}/libuv/build/libuv.so)
 endif()
+
 target_link_libraries(cppelix ${CMAKE_THREAD_LIBS_INIT})
 target_link_libraries(cppelix -ldl -lrt)
 target_compile_options(cppelix PRIVATE -fPIC)
@@ -161,7 +146,8 @@ if(USE_RAPIDJSON)
 endif()
 
 if(USE_ETCD)
-    include_directories("${TOP_DIR}/include/optional_bundles/etcd_bundle")
+    #necessary to get generator protobuf/grpc code to compile
+    include_directories("${TOP_DIR}/include/cppelix/optional_bundles/etcd_bundle")
 endif()
 
 if(USE_LIBUV)

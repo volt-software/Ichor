@@ -1,5 +1,5 @@
-#include <optional_bundles/serialization_bundle/SerializationAdmin.h>
-#include <framework/DependencyManager.h>
+#include <cppelix/optional_bundles/serialization_bundle/SerializationAdmin.h>
+#include <cppelix/DependencyManager.h>
 
 Cppelix::SerializationAdmin::SerializationAdmin(DependencyRegister &reg, CppelixProperties props) : Service(std::move(props)) {
     reg.registerDependency<ILogger>(this, true);
