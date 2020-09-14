@@ -5,7 +5,7 @@
 [submodule "external/Catch2"]
 	path = external/Catch2
 	url = https://github.com/catchorg/Catch2.git
-	branch = v.2.11.1
+	branch = v.2.13.1
 [submodule "external/fmt"]
 	path = external/fmt
 	url = https://github.com/fmtlib/fmt.git
@@ -28,3 +28,7 @@
 	path = external/cppcoro
 	url = https://github.com/dutow/cppcoro.git
 	branch = gcc_support
+[submodule "external/liburing"]
+	path = external/liburing
+	url = https://github.com/axboe/liburing.git
+	tag = liburing-0.7

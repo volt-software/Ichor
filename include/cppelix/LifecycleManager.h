@@ -58,6 +58,21 @@ namespace Cppelix {
         }
 
         [[nodiscard]]
+        CPPELIX_CONSTEXPR auto find(const Dependency &dependency) const {
+            return std::find_if(cbegin(_dependencies), cend(_dependencies), [&dependency](const auto& dep) noexcept { return dep.interfaceNameHash == dependency.interfaceNameHash && dep.interfaceVersion == dependency.interfaceVersion; });
+        }
+
+        [[nodiscard]]
+        CPPELIX_CONSTEXPR auto end() {
+            return std::end(_dependencies);
+        }
+
+        [[nodiscard]]
+        CPPELIX_CONSTEXPR auto end() const {
+            return std::cend(_dependencies);
+        }
+
+        [[nodiscard]]
         CPPELIX_CONSTEXPR size_t size() const {
             return _dependencies.size();
         }
@@ -169,28 +184,27 @@ namespace Cppelix {
         }
 
         CPPELIX_CONSTEXPR bool dependencyOnline(const std::shared_ptr<ILifecycleManager> &dependentService) final {
-            if(_service.getState() == ServiceState::ACTIVE) {
-                return false;
-            }
-
             const auto &interfaces = dependentService->getInterfaces();
             for(const auto &interface : interfaces) {
-                if (!_dependencies.contains(interface) || _satisfiedDependencies.contains(interface)) {
+                auto dep = _dependencies.find(interface);
+                if (dep == _dependencies.end() || _satisfiedDependencies.contains(interface)) {
                     continue;
                 }
 
                 injectIntoSelf(InterfaceKey{interface.interfaceNameHash, interface.interfaceVersion}, dependentService);
-                _satisfiedDependencies.addDependency(interface);
+                if(dep->required) {
+                    _satisfiedDependencies.addDependency(interface);
 
-                bool canStart = _dependencies.requiredDependenciesSatisfied(_satisfiedDependencies);
-                if (canStart) {
-                    if (!_service.internal_start()) {
-                        LOG_ERROR(_logger, "Couldn't start service {}", _implementationName);
-                        return false;
+                    bool canStart = _dependencies.requiredDependenciesSatisfied(_satisfiedDependencies);
+                    if (canStart) {
+                        if (!_service.internal_start()) {
+                            LOG_ERROR(_logger, "Couldn't start service {}", _implementationName);
+                            return false;
+                        }
+
+                        LOG_DEBUG(_logger, "Started {}", _implementationName);
+                        return true;
                     }
-
-                    LOG_DEBUG(_logger, "Started {}", _implementationName);
-                    return true;
                 }
             }
 
@@ -206,33 +220,32 @@ namespace Cppelix {
         }
 
         CPPELIX_CONSTEXPR bool dependencyOffline(const std::shared_ptr<ILifecycleManager> &dependentService) final {
-            if(_satisfiedDependencies.empty()) {
-                return false;
-            }
-
-            const auto &dependencies = dependentService->getInterfaces();
+            const auto &interfaces = dependentService->getInterfaces();
             bool stopped = false;
 
-            for(const auto &dependency : dependencies) {
-                if (!_dependencies.contains(dependency) || !_satisfiedDependencies.contains(dependency)) {
+            for(const auto &interface : interfaces) {
+                auto dep = _dependencies.find(interface);
+                if (dep == _dependencies.end() || (dep->required && !_satisfiedDependencies.contains(interface))) {
                     continue;
                 }
 
-                _satisfiedDependencies.removeDependency(dependency);
-                if (_service.getState() == ServiceState::ACTIVE) {
-                    bool shouldStop = !_dependencies.requiredDependenciesSatisfied(_satisfiedDependencies);
+                if (dep->required) {
+                    _satisfiedDependencies.removeDependency(interface);
+                    if (_service.getState() == ServiceState::ACTIVE) {
+                        bool shouldStop = !_dependencies.requiredDependenciesSatisfied(_satisfiedDependencies);
 
-                    if (shouldStop) {
-                        if (!_service.internal_stop()) {
-                            LOG_ERROR(_logger, "Couldn't stop service {}", _implementationName);
-                        } else {
-                            LOG_DEBUG(_logger, "stopped {}", _implementationName);
-                            stopped = true;
+                        if (shouldStop) {
+                            if (!_service.internal_stop()) {
+                                LOG_ERROR(_logger, "Couldn't stop service {}", _implementationName);
+                            } else {
+                                LOG_DEBUG(_logger, "stopped {}", _implementationName);
+                                stopped = true;
+                            }
                         }
                     }
                 }
 
-                removeSelfInto(InterfaceKey{dependency.interfaceNameHash, dependency.interfaceVersion}, dependentService);
+                removeSelfInto(InterfaceKey{interface.interfaceNameHash, interface.interfaceVersion}, dependentService);
             }
 
             return stopped;

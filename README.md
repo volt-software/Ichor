@@ -37,7 +37,17 @@ There are not enough Rust users in industry to warrant such a transition. Feel f
 Ubuntu:
 
 ```
-sudo apt install build-essential autoconf libtool pkg-config libgrpc++-dev libprotobuf-dev
+sudo apt install build-essential autoconf libtool pkg-config
+```
+
+If using etcd:
+```
+sudo apt install  libgrpc++-dev libprotobuf-dev
+```
+
+If using the Boost.BEAST (recommended boost 1.70 or newer):
+```
+sudo apt install libboost1.71-all-dev libssl-dev
 ```
 
 # Unsupported features in Cppelix
@@ -78,8 +88,8 @@ With this rewrite comes an opportunity to remove some features that are not used
 These benchmarks are mainly used to identify bottlenecks, not to showcase the performance of the framework. Comparisons between Cppelix, Celix and Felix will be made at a later date.
 
 Setup: AMD 3900X, 3600MHz@CL17 RAM, ubuntu 20.04
-* Start best case scenario: 10,000 starts with dependency in ~690ms
-* Start/stop best case scenario: 1,000,000 start/stops with dependency in ~840ms
+* Start best case scenario: 10,000 starts with dependency in ~1,000 ms
+* Start/stop best case scenario: 1,000,000 start/stops with dependency in ~840 ms
 * Serialization: Rapidjson: 1,000,000 messages serialized & deserialized in ~350 ms
 
 # Support

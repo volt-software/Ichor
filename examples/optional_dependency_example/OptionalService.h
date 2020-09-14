@@ -8,25 +8,24 @@
 using namespace Cppelix;
 
 
-struct IRuntimeCreatedService : virtual public IService {
+struct IOptionalService : virtual public IService {
     static constexpr InterfaceVersion version = InterfaceVersion{1, 0, 0};
 };
 
-class RuntimeCreatedService final : public IRuntimeCreatedService, public Service {
+class OptionalService final : public IOptionalService, public Service {
 public:
-    RuntimeCreatedService(DependencyRegister &reg, CppelixProperties props) : Service(std::move(props)) {
+    OptionalService(DependencyRegister &reg, CppelixProperties props) : Service(std::move(props)) {
         reg.registerDependency<ILogger>(this, true);
     }
 
-    ~RuntimeCreatedService() final = default;
+    ~OptionalService() final = default;
     bool start() final {
-        auto scope = std::any_cast<std::string>(_properties["scope"]);
-        LOG_INFO(_logger, "RuntimeCreatedService started with scope {}", scope);
+        LOG_INFO(_logger, "OptionalService {} started", getServiceId());
         return true;
     }
 
     bool stop() final {
-        LOG_INFO(_logger, "RuntimeCreatedService stopped");
+        LOG_INFO(_logger, "OptionalService {} stopped", getServiceId());
         return true;
     }
 
