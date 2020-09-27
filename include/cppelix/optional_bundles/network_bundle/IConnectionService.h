@@ -11,7 +11,7 @@ namespace Cppelix {
 
         virtual void send(std::vector<uint8_t>&& msg) = 0;
 
-        virtual void set_priority(uint64_t priority) = 0;
-        virtual uint64_t get_priority() = 0;
+        virtual void setPriority(uint64_t priority) = 0;
+        virtual uint64_t getPriority() = 0;
     };
 }

@@ -26,6 +26,7 @@ option(USE_RAPIDJSON "Add RapidJSON as a possible serializer implementation" OFF
 option(USE_PUBSUB "Add various dependencies to enable pubsub bundle to be built" OFF)
 option(USE_ETCD "Add various dependencies to enable pubsub bundle to be built" OFF)
 option(USE_LIBUV "Add libuv as a possible network IO implementation" OFF)
+option(USE_BOOST_BEAST "Add boost asio and boost BEAST as dependencies" OFF)
 option(USE_SANITIZERS "Enable sanitizers, catching potential errors but slowing down compilation and execution speed" ON)
 option(REMOVE_SOURCE_NAMES "Remove compiling source file names and line numbers when logging." OFF)
 
@@ -53,17 +54,26 @@ if(USE_ETCD)
 
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DUSE_ETCD ")
 endif()
+
 if(USE_LIBUV)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DUSE_LIBUV ")
+endif()
+
+if(USE_BOOST_BEAST)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DUSE_BOOST_BEAST ")
 endif()
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DCATCH_CONFIG_FAST_COMPILE ")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Wshadow -Wnon-virtual-dtor -Wno-unused-variable -Wno-long-long -Wno-unused-parameter -Wduplicated-cond -Wduplicated-branches -Wlogical-op -Wnull-dereference -pedantic -Wformat -Wformat-security ")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fconcepts -pthread ")
 if(USE_SANITIZERS)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address,undefined ")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address,undefined -no-pie -fno-omit-frame-pointer")
+    set(CMAKE_EXE_LINKER_FLAGS "-no-pie")
+else()
+    # see https://github.com/google/sanitizers/issues/856
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIE")
 endif()
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fstack-protector-strong -fstack-clash-protection -fcf-protection -fPIE")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fstack-protector-strong -fstack-clash-protection -fcf-protection")
 
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fcoroutines")
@@ -76,9 +86,12 @@ set(CMAKE_CXX_FLAGS_RELEASE "-O3 -g3 -ggdb -DNDEBUG")
 set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-g3 -ggdb -Og")
 set(CMAKE_CXX_FLAGS_MINSIZEREL "-Os -DNDEBUG")
 
-set(EXTERNAL_C_FLAGS "-fstack-protector-strong -fstack-clash-protection -fcf-protection -fPIE")
+set(EXTERNAL_C_FLAGS "-fstack-protector-strong -fstack-clash-protection -fcf-protection")
 if(USE_SANITIZERS)
-    set(EXTERNAL_C_FLAGS "${EXTERNAL_C_FLAGS} -fsanitize=address,undefined ")
+    set(EXTERNAL_C_FLAGS "${EXTERNAL_C_FLAGS} -fsanitize=address,undefined -no-pie -fno-omit-frame-pointer")
+    set(EXTERNAL_LINKER_FLAGS "-no-pie")
+else()
+    set(EXTERNAL_C_FLAGS "${EXTERNAL_C_FLAGS} -fPIE ")
 endif()
 
 find_package (Threads)
@@ -105,7 +118,7 @@ if(USE_ETCD)
 endif()
 
 if(USE_LIBUV)
-    set(LIBUV_CMAKE_ARGS -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE} -DCMAKE_INSTALL_PREFIX=${EXTERNAL_DIR}/libuv/build -DCMAKE_C_FLAGS=${EXTERNAL_C_FLAGS} -DBUILD_TESTING=OFF -DLIBUV_BUILD_BENCH=OFF -DLIBUV_BUILD_TESTS=OFF)
+    set(LIBUV_CMAKE_ARGS -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE} -DCMAKE_INSTALL_PREFIX=${EXTERNAL_DIR}/libuv/build -DCMAKE_C_FLAGS=${EXTERNAL_C_FLAGS} -DCMAKE_EXE_LINKER_FLAGS=${EXTERNAL_LINKER_FLAGS} -DBUILD_TESTING=OFF -DLIBUV_BUILD_BENCH=OFF -DLIBUV_BUILD_TESTS=OFF)
 
     ExternalProject_Add(LIBUV_EXTERNAL
             SOURCE_DIR "${EXTERNAL_DIR}/libuv"
@@ -117,9 +130,15 @@ if(USE_LIBUV)
     target_link_libraries(cppelix ${EXTERNAL_DIR}/libuv/build/libuv.so)
 endif()
 
+if(USE_BOOST_BEAST)
+#TODO figure out how to make asio/beast compile as libraries, rather than header only. This would hopefully save some compilation time.
+#    target_link_libraries(cppelix asio beast)
+    target_link_libraries(cppelix boost_coroutine)
+endif()
+
 target_link_libraries(cppelix ${CMAKE_THREAD_LIBS_INIT})
 target_link_libraries(cppelix -ldl -lrt)
-target_compile_options(cppelix PRIVATE -fPIC)
+#target_compile_options(cppelix PRIVATE -fPIC)
 
 # no tests yet
 #file(GLOB_RECURSE PROJECT_TEST_SOURCES ${TOP_DIR}/test/*.cpp)

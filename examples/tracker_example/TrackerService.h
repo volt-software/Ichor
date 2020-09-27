@@ -18,7 +18,7 @@ public:
     [[nodiscard]] bool matches(const std::shared_ptr<ILifecycleManager> &manager) const {
         auto scopeProp = manager->getProperties()->find("scope");
 
-        return scopeProp != end(*manager->getProperties()) && std::any_cast<std::string>(scopeProp->second) == scope;
+        return scopeProp != end(*manager->getProperties()) && std::any_cast<std::string&>(scopeProp->second) == scope;
     }
 
     const std::string scope;
@@ -68,7 +68,7 @@ public:
             return;
         }
 
-        auto scope = std::any_cast<std::string>(scopeProp->second);
+        auto scope = std::any_cast<std::string&>(scopeProp->second);
 
         LOG_INFO(_logger, "Tracked IRuntimeCreatedService request for scope {}", scope);
 
@@ -90,7 +90,7 @@ public:
             return;
         }
 
-        auto scope = std::any_cast<std::string>(scopeProp->second);
+        auto scope = std::any_cast<std::string&>(scopeProp->second);
 
         LOG_INFO(_logger, "Tracked IRuntimeCreatedService undo request for scope {}", scope);
 

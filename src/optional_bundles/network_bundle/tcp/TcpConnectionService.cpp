@@ -47,7 +47,7 @@ bool Cppelix::TcpConnectionService::start() {
         address.sin_family = AF_INET;
         address.sin_port = htons(std::any_cast<uint16_t>((*getProperties())["Port"]));
 
-        int ret = inet_pton(AF_INET, std::any_cast<std::string>((*getProperties())["Address"]).c_str(), &address.sin_addr);
+        int ret = inet_pton(AF_INET, std::any_cast<std::string&>((*getProperties())["Address"]).c_str(), &address.sin_addr);
         if(ret == 0)
         {
             getManager()->pushEvent<UnrecoverableErrorEvent>(getServiceId(), 3, "inet_pton invalid address for given address family (has to be ipv4-valid address)");
@@ -125,10 +125,10 @@ void Cppelix::TcpConnectionService::send(std::vector<uint8_t> &&msg) {
     }
 }
 
-void Cppelix::TcpConnectionService::set_priority(uint64_t priority) {
+void Cppelix::TcpConnectionService::setPriority(uint64_t priority) {
     _priority.store(priority, std::memory_order_release);
 }
 
-uint64_t Cppelix::TcpConnectionService::get_priority() {
+uint64_t Cppelix::TcpConnectionService::getPriority() {
     return _priority.load(std::memory_order_acquire);
 }

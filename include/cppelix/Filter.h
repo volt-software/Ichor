@@ -20,7 +20,7 @@ namespace Cppelix {
                 return false;
             }
 
-            return std::any_cast<T>(propVal->second) == val;
+            return std::any_cast<T&>(propVal->second) == val;
         }
 
         const std::string key;

@@ -20,7 +20,7 @@ public:
 
     ~RuntimeCreatedService() final = default;
     bool start() final {
-        auto scope = std::any_cast<std::string>(_properties["scope"]);
+        auto scope = std::any_cast<std::string&>(_properties["scope"]);
         LOG_INFO(_logger, "RuntimeCreatedService started with scope {}", scope);
         return true;
     }

@@ -17,8 +17,8 @@ namespace Cppelix {
         void removeDependencyInstance(ILogger *logger);
 
         void send(std::vector<uint8_t>&& msg) final;
-        void set_priority(uint64_t priority) final;
-        uint64_t get_priority() final;
+        void setPriority(uint64_t priority) final;
+        uint64_t getPriority() final;
 
     private:
         int _socket;

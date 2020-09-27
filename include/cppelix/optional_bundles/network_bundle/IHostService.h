@@ -9,7 +9,7 @@ namespace Cppelix {
 
         ~IHostService() override = default;
 
-        virtual void set_priority(uint64_t priority) = 0;
-        virtual uint64_t get_priority() = 0;
+        virtual void setPriority(uint64_t priority) = 0;
+        virtual uint64_t getPriority() = 0;
     };
 }

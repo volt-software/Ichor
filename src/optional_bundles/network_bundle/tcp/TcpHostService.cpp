@@ -118,10 +118,10 @@ void Cppelix::TcpHostService::removeDependencyInstance(ILogger *logger) {
     _logger = nullptr;
 }
 
-void Cppelix::TcpHostService::set_priority(uint64_t priority) {
+void Cppelix::TcpHostService::setPriority(uint64_t priority) {
     _priority.store(priority, std::memory_order_release);
 }
 
-uint64_t Cppelix::TcpHostService::get_priority() {
+uint64_t Cppelix::TcpHostService::getPriority() {
     return _priority.load(std::memory_order_acquire);
 }
