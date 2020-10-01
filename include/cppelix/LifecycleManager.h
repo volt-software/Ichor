@@ -267,7 +267,7 @@ namespace Cppelix {
                     LOG_DEBUG(_logger, "Started {}", _implementationName);
                     return true;
                 } else {
-                    LOG_DEBUG(_logger, "Couldn't start {}", _implementationName);
+//                    LOG_DEBUG(_logger, "Couldn't start {}", _implementationName);
                 }
             }
 

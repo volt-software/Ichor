@@ -3,8 +3,10 @@
 #ifdef USE_BOOST_BEAST
 
 #include <cppelix/optional_bundles/network_bundle/IConnectionService.h>
+#include <cppelix/optional_bundles/network_bundle/IHostService.h>
 #include <cppelix/optional_bundles/logging_bundle/Logger.h>
 #include <thread>
+#include <queue>
 #include <boost/beast.hpp>
 #include <boost/asio/spawn.hpp>
 
@@ -26,22 +28,37 @@ namespace Cppelix {
         void addDependencyInstance(ILogger *logger);
         void removeDependencyInstance(ILogger *logger);
 
-        void send(std::vector<uint8_t>&& msg) final;
+        void addDependencyInstance(IHostService *);
+        void removeDependencyInstance(IHostService *);
+
+        /**
+         * Asynchronous send, if send queue is full, doesn't send this message and returns false
+         * @param msg message to send
+         * @return true if added to buffer, false if full
+         */
+        bool send(std::vector<uint8_t>&& msg) final;
         void setPriority(uint64_t priority) final;
         uint64_t getPriority() final;
 
     private:
         void fail(beast::error_code, char const* what);
-        void connect(net::yield_context yield);
+        void sendStrand(net::yield_context yield);
+        void accept(net::yield_context yield); // for when a new connection from WsHost is established
+        void connect(net::yield_context yield); // for when connecting as a client
         void read(net::yield_context &yield);
+        void cancelSendTimer();
 
         std::unique_ptr<net::io_context> _wsContext{};
         std::unique_ptr<websocket::stream<beast::tcp_stream>> _ws{};
+        std::unique_ptr<net::steady_timer> _sendTimer; // used as condition variable
+        std::queue<std::vector<uint8_t>> _msgQueue{};
         int _attempts{};
         std::atomic<uint64_t> _priority{};
         std::atomic<bool> _connected{};
         std::atomic<bool> _connecting{};
         std::atomic<bool> _quit{};
+        std::atomic<bool> _sendStrandDone{};
+        std::mutex _queueMutex{};
         std::thread _connectThread{};
         ILogger *_logger{nullptr};
     };

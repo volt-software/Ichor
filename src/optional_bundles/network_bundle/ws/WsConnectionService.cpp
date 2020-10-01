@@ -5,6 +5,7 @@
 #include <cppelix/optional_bundles/network_bundle/ws/WsEvents.h>
 #include <cppelix/optional_bundles/network_bundle/ws/WsCopyIsMoveWorkaround.h>
 #include <cppelix/optional_bundles/network_bundle/NetworkDataEvent.h>
+#include <cppelix/optional_bundles/network_bundle/IHostService.h>
 
 template<class NextLayer>
 void setup_stream(std::unique_ptr<websocket::stream<NextLayer>>& ws)
@@ -23,84 +24,55 @@ void setup_stream(std::unique_ptr<websocket::stream<NextLayer>>& ws)
 
 Cppelix::WsConnectionService::WsConnectionService(DependencyRegister &reg, CppelixProperties props) : Service(std::move(props)) {
     reg.registerDependency<ILogger>(this, true);
+    if(props.contains("WsHostServiceId")) {
+        reg.registerDependency<IHostService>(this, true, CppelixProperties{{"Filter", Filter{ServiceIdFilterEntry{std::any_cast<uint64_t>(props["WsHostServiceId"])}}}});
+    }
 }
 
 bool Cppelix::WsConnectionService::start() {
-    if(_quit) {
+    if(_quit.load(std::memory_order_acquire)) {
         return false;
     }
 
     if(!_connecting && !_connected) {
+        _connecting = true;
+
         if (getProperties()->contains("Priority")) {
             _priority = std::any_cast<uint64_t>(getProperties()->operator[]("Priority"));
         }
 
         if (getProperties()->contains("Socket")) {
+            _sendTimer = std::make_unique<net::steady_timer>(std::any_cast<net::executor>(getProperties()->operator[]("Executor")));
             net::spawn(std::any_cast<net::executor>(getProperties()->operator[]("Executor")), [this](net::yield_context yield) {
-                beast::error_code ec;
+                accept(std::move(yield));
+            });
 
-                {
-                    auto socket = std::any_cast<CopyIsMoveWorkaround<tcp::socket>>(getProperties()->operator[]("Socket"));
-                    _ws = std::make_unique<websocket::stream<beast::tcp_stream>>(std::move(socket._obj));
-                }
-
-                setup_stream(_ws);
-
-                // Set suggested timeout settings for the websocket
-                _ws->set_option(websocket::stream_base::timeout::suggested(beast::role_type::server));
-
-                // Set a decorator to change the Server of the handshake
-                _ws->set_option(websocket::stream_base::decorator(
-                        [](websocket::response_type &res) {
-                            res.set(http::field::server, std::string(
-                                    BOOST_BEAST_VERSION_STRING) + "-Fiber");
-                        }));
-
-                // Make the connection on the IP address we get from a lookup
-                // If it fails (due to connecting earlier than the host is available), wait 250 ms and make another attempt
-                // After 5 attempts, fail.
-                while(_attempts < 5) {
-                    // initiate websocket handshake
-                    _ws->async_accept(yield[ec]);
-                    if(ec) {
-                        _attempts++;
-                        net::steady_timer t{std::any_cast<net::executor>(getProperties()->operator[]("Executor"))};
-                        t.expires_after(std::chrono::milliseconds(250));
-                        t.async_wait(yield);
-                    } else {
-                        break;
-                    }
-                }
-
-                if (ec) {
-                    return fail(ec, "accept");
-                }
-                _connected = true;
-                _connecting = false;
-
-                read(yield);
+            net::spawn(std::any_cast<net::executor>(getProperties()->operator[]("Executor")), [this](net::yield_context yield) {
+                sendStrand(std::move(yield));
             });
         } else {
             _wsContext = std::make_unique<net::io_context>(1);
+            _sendTimer = std::make_unique<net::steady_timer>(*_wsContext);
 
             net::spawn(*_wsContext, [this](net::yield_context yield) {
                 connect(std::move(yield));
             });
 
+            net::spawn(*_wsContext, [this](net::yield_context yield) {
+                sendStrand(std::move(yield));
+            });
+
             _connectThread = std::thread([this] {
                 _wsContext->run();
             });
-        }
 
-        _connecting = true;
+#ifdef __linux__
+            pthread_setname_np(_connectThread.native_handle(), fmt::format("WsConn #{}", getServiceId()).c_str());
+#endif
+        }
     }
 
-    if(!_connected && _attempts < 5) {
-//        std::this_thread::sleep_for(std::chrono::milliseconds(250));
-        // cannot use priority here, would possibly block the loop
-        getManager()->pushEvent<StartServiceEvent>(getServiceId(), getServiceId());
-        return false;
-    } else if (!_connected && _attempts >= 5) {
+    if(!_connected) {
         return false;
     }
 
@@ -109,18 +81,30 @@ bool Cppelix::WsConnectionService::start() {
 
 bool Cppelix::WsConnectionService::stop() {
     bool expected = false;
+    bool stopWsContext = false;
     if(_quit.compare_exchange_strong(expected, true)) {
-        if (_wsContext) {
-            _wsContext->stop();
-        } else {
-            _ws->close(websocket::close_code::normal);
+        try {
+            _ws->next_layer().close();
+            cancelSendTimer();
+        } catch (...) {
+            // ignore
         }
+        stopWsContext = true;
     }
 
     if(_connectThread.joinable()) {
         _connectThread.join();
     }
 
+    while(!_sendStrandDone) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(5));
+    }
+
+    if (stopWsContext && _wsContext) {
+        _wsContext->stop();
+    }
+
+    _sendTimer = nullptr;
     _ws = nullptr;
     _wsContext = nullptr;
 
@@ -136,27 +120,27 @@ void Cppelix::WsConnectionService::removeDependencyInstance(ILogger *logger) {
     _logger = nullptr;
 }
 
-void Cppelix::WsConnectionService::send(std::vector<uint8_t> &&msg) {
-    _ws->write(net::buffer(msg.data(), msg.size()));
-//    if(getProperties()->contains("Socket")) {
-//        net::spawn(std::any_cast<net::executor>(getProperties()->operator[]("Executor")), [this, msg = std::forward<std::vector<uint8_t>>(msg)](net::yield_context yield){
-//            beast::error_code ec;
-//
-//            _ws->async_write(net::buffer(msg.data(), msg.size()), yield[ec]);
-//            if(ec) {
-//                return fail(ec, "write");
-//            }
-//        });
-//    } else {
-//        net::spawn(*_wsContext, [this, msg = std::forward<std::vector<uint8_t>>(msg)](net::yield_context yield){
-//            beast::error_code ec;
-//
-//            _ws->async_write(net::buffer(msg.data(), msg.size()), yield[ec]);
-//            if(ec) {
-//                return fail(ec, "write");
-//            }
-//        });
-//    }
+void Cppelix::WsConnectionService::addDependencyInstance(IHostService *) {
+
+}
+
+void Cppelix::WsConnectionService::removeDependencyInstance(IHostService *) {
+
+}
+
+bool Cppelix::WsConnectionService::send(std::vector<uint8_t> &&msg) {
+    if(_quit.load(std::memory_order_acquire)) {
+        return false;
+    }
+
+    {
+        std::scoped_lock l(_queueMutex);
+        _msgQueue.push(std::forward<decltype(msg)>(msg));
+    }
+
+    cancelSendTimer();
+
+    return true;
 }
 
 void Cppelix::WsConnectionService::setPriority(uint64_t priority) {
@@ -169,6 +153,89 @@ uint64_t Cppelix::WsConnectionService::getPriority() {
 
 void Cppelix::WsConnectionService::fail(beast::error_code ec, const char *what) {
     LOG_ERROR(_logger, "Boost.BEAST fail: {}, {}", what, ec.message());
+    getManager()->pushEvent<StopServiceEvent>(getServiceId(), getServiceId());
+}
+
+void Cppelix::WsConnectionService::sendStrand(net::yield_context yield) {
+    while(!_quit.load(std::memory_order_acquire)) {
+        beast::error_code ec;
+
+        {
+            std::unique_lock l(_queueMutex);
+            if (!_msgQueue.empty()) {
+                auto msg = _msgQueue.front();
+                l.unlock();
+                _ws->async_write(net::buffer(msg.data(), msg.size()), yield[ec]);
+
+                while(!_quit.load(std::memory_order_acquire) && ec && ec != websocket::error::closed) {
+                    _sendTimer->expires_after(std::chrono::milliseconds (5));
+                    _sendTimer->async_wait(yield[ec]);
+                    _ws->async_write(net::buffer(msg.data(), msg.size()), yield[ec]);
+                }
+
+                if(ec == websocket::error::closed) {
+                    break;
+                }
+
+                l.lock();
+                _msgQueue.pop();
+            }
+        }
+
+        if(!_quit.load(std::memory_order_acquire)) {
+            _sendTimer->expires_after(std::chrono::milliseconds(500));
+            _sendTimer->async_wait(yield[ec]);
+        }
+    }
+
+    _sendStrandDone = true;
+}
+
+void Cppelix::WsConnectionService::accept(net::yield_context yield) {
+    beast::error_code ec;
+
+    {
+        auto socket = std::any_cast<CopyIsMoveWorkaround<tcp::socket>>(getProperties()->operator[]("Socket"));
+        _ws = std::make_unique<websocket::stream<beast::tcp_stream>>(socket.moveObject());
+    }
+
+    setup_stream(_ws);
+
+    // Set suggested timeout settings for the websocket
+    _ws->set_option(websocket::stream_base::timeout::suggested(beast::role_type::server));
+
+    // Set a decorator to change the Server of the handshake
+    _ws->set_option(websocket::stream_base::decorator(
+            [](websocket::response_type &res) {
+                res.set(http::field::server, std::string(
+                        BOOST_BEAST_VERSION_STRING) + "-Fiber");
+            }));
+
+    // Make the connection on the IP address we get from a lookup
+    // If it fails (due to connecting earlier than the host is available), wait 250 ms and make another attempt
+    // After 5 attempts, fail.
+    while(!_quit && _attempts < 5) {
+        // initiate websocket handshake
+        _ws->async_accept(yield[ec]);
+        if(ec) {
+            _attempts++;
+            net::steady_timer t{std::any_cast<net::executor>(getProperties()->operator[]("Executor"))};
+            t.expires_after(std::chrono::milliseconds(250));
+            t.async_wait(yield);
+        } else {
+            break;
+        }
+    }
+
+    if (ec) {
+        return fail(ec, "accept");
+    }
+    _connected = true;
+    _connecting = false;
+
+    getManager()->pushEvent<StartServiceEvent>(getServiceId(), getServiceId());
+
+    read(yield);
 }
 
 void Cppelix::WsConnectionService::connect(net::yield_context yield) {
@@ -187,12 +254,12 @@ void Cppelix::WsConnectionService::connect(net::yield_context yield) {
     }
 
     // Set a timeout on the operation
-    beast::get_lowest_layer(*_ws).expires_after(std::chrono::seconds(30));
+    beast::get_lowest_layer(*_ws).expires_after(std::chrono::seconds(10));
 
     // Make the connection on the IP address we get from a lookup
     // If it fails (due to connecting earlier than the host is available), wait 250 ms and make another attempt
     // After 5 attempts, fail.
-    while(_attempts < 5) {
+    while(!_quit && _attempts < 5) {
         beast::get_lowest_layer(*_ws).async_connect(results, yield[ec]);
         if(ec) {
             _attempts++;
@@ -211,6 +278,8 @@ void Cppelix::WsConnectionService::connect(net::yield_context yield) {
 
     _connected = true;
     _connecting = false;
+
+    getManager()->pushEvent<StartServiceEvent>(getServiceId(), getServiceId());
 
     // Turn off the timeout on the tcp_stream, because
     // the websocket stream has its own timeout system.
@@ -237,14 +306,6 @@ void Cppelix::WsConnectionService::connect(net::yield_context yield) {
     }
 
     read(yield);
-
-    // Close the WebSocket connection
-    _ws->async_close(websocket::close_code::normal, yield[ec]);
-    if(ec) {
-        return fail(ec, "close");
-    }
-
-    // If we get here then the connection is closed gracefully
 }
 
 void Cppelix::WsConnectionService::read(net::yield_context &yield) {
@@ -266,6 +327,16 @@ void Cppelix::WsConnectionService::read(net::yield_context &yield) {
             auto data = buffer.data();
             getManager()->pushPrioritisedEvent<NetworkDataEvent>(getServiceId(), _priority.load(std::memory_order_acquire),  std::vector<uint8_t>{static_cast<char*>(data.data()), static_cast<char*>(data.data()) + data.size()});
         }
+    }
+}
+
+void Cppelix::WsConnectionService::cancelSendTimer() {
+    if(_wsContext) {
+        _wsContext->post([this](){ _sendTimer->cancel(); });
+    } else {
+        net::spawn(std::any_cast<net::executor>(getProperties()->operator[]("Executor")), [this](net::yield_context yield) {
+            _sendTimer->cancel();
+        });
     }
 }
 

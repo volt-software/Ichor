@@ -38,6 +38,7 @@ namespace Cppelix {
         void listen(tcp::endpoint endpoint, net::yield_context yield);
 
         std::unique_ptr<net::io_context> _wsContext{};
+        std::unique_ptr<tcp::acceptor> _wsAcceptor{};
         std::atomic<uint64_t> _priority{INTERNAL_EVENT_PRIORITY};
         std::atomic<bool> _quit{};
         std::thread _listenThread{};

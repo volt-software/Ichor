@@ -16,9 +16,9 @@ public:
     explicit ScopeFilterEntry(const char *_scope) : scope(_scope) {}
 
     [[nodiscard]] bool matches(const std::shared_ptr<ILifecycleManager> &manager) const {
-        auto scopeProp = manager->getProperties()->find("scope");
+        const auto scopeProp = manager->getProperties()->find("scope");
 
-        return scopeProp != end(*manager->getProperties()) && std::any_cast<std::string&>(scopeProp->second) == scope;
+        return scopeProp != end(*manager->getProperties()) && std::any_cast<const std::string&>(scopeProp->second) == scope;
     }
 
     const std::string scope;
@@ -68,7 +68,7 @@ public:
             return;
         }
 
-        auto scope = std::any_cast<std::string&>(scopeProp->second);
+        auto scope = std::any_cast<const std::string&>(scopeProp->second);
 
         LOG_INFO(_logger, "Tracked IRuntimeCreatedService request for scope {}", scope);
 
@@ -90,7 +90,7 @@ public:
             return;
         }
 
-        auto scope = std::any_cast<std::string&>(scopeProp->second);
+        auto scope = std::any_cast<const std::string&>(scopeProp->second);
 
         LOG_INFO(_logger, "Tracked IRuntimeCreatedService undo request for scope {}", scope);
 
@@ -102,7 +102,7 @@ public:
     }
 
 private:
-    ILogger *_logger;
-    std::unique_ptr<DependencyTrackerRegistration> _trackerRegistration;
-    std::unordered_map<std::string, RuntimeCreatedService*> _scopedRuntimeServices;
+    ILogger *_logger{nullptr};
+    std::unique_ptr<DependencyTrackerRegistration> _trackerRegistration{};
+    std::unordered_map<std::string, RuntimeCreatedService*> _scopedRuntimeServices{};
 };

@@ -23,6 +23,10 @@ void Cppelix::DependencyManager::start() {
 
     ::signal(SIGINT, on_sigint);
 
+#ifdef __linux__
+    pthread_setname_np(pthread_self(), fmt::format("DepMan #{}", _id).c_str());
+#endif
+
     while(!_quit.load(std::memory_order_acquire)) {
         _quit.store(sigintQuit.load(std::memory_order_acquire), std::memory_order_release);
         std::unique_lock lck(_eventQueueMutex);
@@ -37,7 +41,7 @@ void Cppelix::DependencyManager::start() {
 
             if(interceptorsForAllEvents != end(_eventInterceptors)) {
                 for(const EventInterceptInfo &info : interceptorsForAllEvents->second) {
-                    if(info.preIntercept(evtNode.mapped().get())) {
+                    if(!info.preIntercept(evtNode.mapped().get())) {
                         allowProcessing = false;
                     }
                 }
@@ -45,7 +49,7 @@ void Cppelix::DependencyManager::start() {
 
             if(interceptorsForEvent != end(_eventInterceptors)) {
                 for(const EventInterceptInfo &info : interceptorsForEvent->second) {
-                    if(info.preIntercept(evtNode.mapped().get())) {
+                    if(!info.preIntercept(evtNode.mapped().get())) {
                         allowProcessing = false;
                     }
                 }
@@ -219,7 +223,7 @@ void Cppelix::DependencyManager::start() {
                         if(toStartService->getServiceState() == ServiceState::ACTIVE) {
                             handleEventCompletion(startServiceEvt);
                         } else if (!toStartService->start()) {
-                            LOG_TRACE(_logger, "Couldn't start service {}: {}", startServiceEvt->serviceId, toStartService->implementationName());
+//                            LOG_TRACE(_logger, "Couldn't start service {}: {}", startServiceEvt->serviceId, toStartService->implementationName());
                             handleEventError(startServiceEvt);
                         } else {
                             pushEventInternal<DependencyOnlineEvent>(0, INTERNAL_EVENT_PRIORITY, toStartService);

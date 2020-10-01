@@ -51,6 +51,10 @@ bool Cppelix::WsHostService::start() {
         _wsContext->run();
     });
 
+#ifdef __linux__
+    pthread_setname_np(_listenThread.native_handle(), fmt::format("WsHost #{}", getServiceId()).c_str());
+#endif
+
     return true;
 }
 
@@ -61,8 +65,11 @@ bool Cppelix::WsHostService::stop() {
         conn->stop();
     }
 
-    _wsContext->stop();
+    _wsAcceptor->close();
+
     _listenThread.join();
+
+    _wsContext->stop();
     _wsContext = nullptr;
 
     return true;
@@ -79,6 +86,7 @@ void Cppelix::WsHostService::removeDependencyInstance(ILogger *logger) {
 
 Cppelix::Generator<bool> Cppelix::WsHostService::handleEvent(Cppelix::NewWsConnectionEvent const * const evt) {
     auto connection = getManager()->createServiceManager<WsConnectionService, IConnectionService>(CppelixProperties{
+        {"WsHostServiceId", getServiceId()},
         {"Socket", evt->_socket},
         {"Executor", evt->_executor}
     });
@@ -104,23 +112,23 @@ void Cppelix::WsHostService::listen(tcp::endpoint endpoint, net::yield_context y
 {
     beast::error_code ec;
 
-    tcp::acceptor acceptor(*_wsContext);
-    acceptor.open(endpoint.protocol(), ec);
+    _wsAcceptor = std::make_unique<tcp::acceptor>(*_wsContext);
+    _wsAcceptor->open(endpoint.protocol(), ec);
     if(ec) {
         return fail(ec, "open");
     }
 
-    acceptor.set_option(net::socket_base::reuse_address(true), ec);
+    _wsAcceptor->set_option(net::socket_base::reuse_address(true), ec);
     if(ec) {
         return fail(ec, "set_option");
     }
 
-    acceptor.bind(endpoint, ec);
+    _wsAcceptor->bind(endpoint, ec);
     if(ec) {
         return fail(ec, "bind");
     }
 
-    acceptor.listen(net::socket_base::max_listen_connections, ec);
+    _wsAcceptor->listen(net::socket_base::max_listen_connections, ec);
     if(ec) {
         return fail(ec, "listen");
     }
@@ -130,14 +138,14 @@ void Cppelix::WsHostService::listen(tcp::endpoint endpoint, net::yield_context y
         auto socket = tcp::socket(*_wsContext);
 
         // tcp accept new connections
-        acceptor.async_accept(socket, yield[ec]);
+        _wsAcceptor->async_accept(socket, yield[ec]);
         if(ec)
         {
             fail(ec, "accept");
             continue;
         }
 
-        getManager()->pushPrioritisedEvent<NewWsConnectionEvent>(getServiceId(), _priority.load(std::memory_order_acquire), CopyIsMoveWorkaround(std::move(socket)), acceptor.get_executor());
+        getManager()->pushPrioritisedEvent<NewWsConnectionEvent>(getServiceId(), _priority.load(std::memory_order_acquire), CopyIsMoveWorkaround(std::move(socket)), _wsAcceptor->get_executor());
     }
 }
 

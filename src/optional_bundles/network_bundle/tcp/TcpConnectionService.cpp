@@ -112,7 +112,7 @@ void Cppelix::TcpConnectionService::removeDependencyInstance(ILogger *logger) {
     _logger = nullptr;
 }
 
-void Cppelix::TcpConnectionService::send(std::vector<uint8_t> &&msg) {
+bool Cppelix::TcpConnectionService::send(std::vector<uint8_t> &&msg) {
     size_t sent_bytes = 0;
     while(sent_bytes < msg.size()) {
         auto ret = ::send(_socket, msg.data() + sent_bytes, msg.size() - sent_bytes, 0);
@@ -123,6 +123,8 @@ void Cppelix::TcpConnectionService::send(std::vector<uint8_t> &&msg) {
 
         sent_bytes += ret;
     }
+
+    return true;
 }
 
 void Cppelix::TcpConnectionService::setPriority(uint64_t priority) {
