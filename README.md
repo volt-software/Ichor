@@ -1,48 +1,99 @@
 # What is this?
 
-Cppelix is a rewrite of [Celix](https://github.com/apache/celix) in C++20, which itself is a port of [Felix](https://github.com/apache/felix).
+Ichor, [Greek Mythos for ethereal fluid that is the blood of the gods/immortals](https://en.wikipedia.org/wiki/Ichor), is a C++ software suite to both quickly develop and easily refactor large back-end systems. 
 
-### OSGI?
+Ichor informally stands for "Intuitive Compile-time Hoisted Object Resources".
 
-[OSGI](https://www.osgi.org/) is a modular approach aiming to make refactoring of code easier.
-The framework [boasts](https://www.osgi.org/developer/benefits-of-using-osgi/) more benefits, but the Cppelix author's personal opinion is that the switch to interface-oriented programming mainly provides a way to reduce the size of refactors, such as using a different pubsub provider not requiring all the business logic classes to change at all.
+Although initially started as a rewrite of OSGI-based framework Celix and to a lesser extent CppMicroservices, Ichor has carved out its own path, as god-fluids are wont to do. 
 
-# Why a rewrite?
+### Quickstart
 
-Celix was started in 2010, when the newer standards of C++ weren't released yet. Over the years usage has increased and so have feature requests. A sizeable amount of usage in recent years has been in these newer C++ standards, but with Celix being in C this tends to pollute the code of users.
+The minimal example requires a main function, which initiates at least one event loop, a framework logger and one service. This is an example on how to quit the program on ctrl+c:
 
-### Current desired advantages over Celix (regardless of using C++ wrapper or C core)
+```c++
+#include <ichor/DependencyManager.h>
+#include <ichor/Service.h>
+#include <ichor/LifecycleManager.h>
+#include <ichor/optional_bundles/logging_bundle/CoutFrameworkLogger.h>
+#include <ichor/optional_bundles/timer_bundle/TimerService.h>
 
-* Less magic configuration
-    * code as configuration, as much as possible bundled in one place
-* More type-safety than a C++ wrapper around Celix can offer
-* Less multi-threading to prevent data races and similar issues
-    * Use of an event loop
-    * Where multi-threading is desired, provide easy to use abstractions to prevent issues
-* Performance-oriented design in all-parts of the framework / making it easy to get high performance and low latency
-* Fully utilise OOP, RAII and C++20 Concepts to steer users to using the framework correctly
-* Implement business logic in the least amount of code possible 
-* Hopefully this culminates and less error-prone code and better time to market
+using namespace Ichor;
 
-# Why C++20? It's not even fully implemented?
+std::atomic<bool> quit{};
 
-To consider putting in the effort to port a 100,000+ loc library, it has to be worth the effort. To figure out if it is, this port aims to use the most advanced C++ available at the time of writing, showcasing the benefit in the long-term. 
+void siginthandler(int param)
+{
+    quit = true;
+}
 
-# Why not Rust?
+struct ISigIntService : virtual public IService {
+    static constexpr InterfaceVersion version = InterfaceVersion{1, 0, 0};
+};
+class SigIntService final : public ISigIntService, public Service {
+public:
+    bool start() final {
+        // Setup a timer that fires every 10 milliseconds and tell that dependency manager that we're interested in the events that the timer fires.
+        auto timer = getManager()->createServiceManager<Timer, ITimer>();
+        timer->setChronoInterval(std::chrono::milliseconds(10));
+        // Registering an event handler requires 2 pieces of information: the service id and a pointer to a service instantiation.
+        // The third piece of information is an extra filter, as we're only interested in events of this specific timer.
+        _timerEventRegistration = getManager()->registerEventHandler<TimerEvent>(getServiceId(), this, timer->getServiceId());
+        timer->startTimer();
 
-There are not enough Rust users in industry to warrant such a transition. Feel free to create your own implementation of the OSGI standard in Rust though, shoot me a message if you need any help understanding the standard.
+        // Register sigint handler
+        signal(SIGINT, siginthandler);
+        return true;
+    }
 
-# Install
+    bool stop() final {
+        _timerEventRegistration = nullptr;
+        return true;
+    }
 
-Ubuntu:
+    Generator<bool> handleEvent(TimerEvent const * const evt) {
+        // If sigint has been fired, send a quit to the event loop.
+        // This can't be done from within the handler itself, as the mutex surrounding pushEvent might already be locked, resulting in a deadlock!
+        if(quit) {
+            getManager()->pushEvent<QuitEvent>(getServiceId());
+        }
+        co_return (bool)PreventOthersHandling;
+    }
+
+    std::unique_ptr<EventHandlerRegistration> _timerEventRegistration{nullptr};
+}
+
+
+int main() {
+    std::locale::global(std::locale("en_US.UTF-8")); // some framework logging requires a proper locale
+
+    DependencyManager dm{};
+    // Register a framework logger and our sig int service.
+    dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>();
+    dm.createServiceManager<SigIntService, ISigIntService>();
+    // Start manager, consumes current thread.
+    dm.start();
+
+    return 0;
+}
+```
+
+More examples can be found in the examples directory.
+
+### Dependencies
+
+#### Ubuntu 20.04:
 
 ```
-sudo apt install build-essential autoconf libtool pkg-config
+sudo add-apt-repository ppa:ubuntu-toolchain-r/ppa
+sudo apt update
+sudo apt install g++-10 build-essential cmake
 ```
+
+Some features are behind feature flags and have their own dependencies.
 
 If using etcd:
 ```
-sudo apt install  libgrpc++-dev libprotobuf-dev
+sudo apt install libgrpc++-dev libprotobuf-dev
 ```
 
 If using the Boost.BEAST (recommended boost 1.70 or newer):
@@ -50,42 +101,64 @@ If using the Boost.BEAST (recommended boost 1.70 or newer):
 sudo apt install libboost1.71-all-dev libssl-dev
 ```
 
-# Unsupported features in Cppelix
+#### Windows
 
-With this rewrite comes an opportunity to remove some features that are not used often in Celix:
+Untested, latest MSVC should probably work.
 
-* Zip or Jar-based bundles/containers
-* Dynamic loading of bundles
-* Descriptor based serialization
-* C support
-    * No effort will be made to provided a C compatible layer
-    * But, a [celix shim library](https://github.com/volt-software/cppelix-celix-shim) is in the works
-* ...
+#### Mac
 
-# Todo
+Untested, unknown if compiler supports enough C++20.
 
-* Support parsing filter (LDAP) strings to type-safe filter currently used
+### Documentation
+
+Documentation is rather...lacking at the moment. Contributions are very welcome!
+
+### Current design focuses
+
+* Less magic configuration
+    * code as configuration, as much as possible bundled in one place
+* As much type-safety as possible, prefer compile errors over run-time errors.
+* Less multi-threading to prevent data races and similar issues
+    * Use of an event loop
+    * Where multi-threading is desired, provide easy to use abstractions to prevent issues
+* Performance-oriented design in all-parts of the framework / making it easy to get high performance and low latency
+* Fully utilise OOP, RAII and C++20 Concepts to steer users to using the framework correctly
+* Implement business logic in the least amount of code possible 
+* Hopefully this culminates and less error-prone code and better time to market 
+
+### Supported features
+
+The framework provides several core features and optional services behind cmake feature flags:
+* Coroutine-based event loop
+* Event-based message passing
+* Dependency Management
+* Service lifecycle management (sort of like OSGi-lite services)
+* User-space priority-based real-time capable scheduling
+* data race free communication between event loops
+
+Optional services:
+* Websocket service through Boost.BEAST
+* Spdlog logging service
+* TCP communication service
+* RapidJson serialization services
+* Timer service
+* Partial etcd service
+
+# Roadmap
+
+* Http server/client
+* CMake stuff to include ichor library from external project
 * expand etcd support, currently only simply put/get supported
-* Pubsub compatibility with celix
-    * ZMQ
-    * TCP
-    * TCP iovec/zerocopy
-    * websocket
-    * UDP?
-* Pubsub new interfaces
-    * Kafka? Pulsar? Something COTS based.
-* RSA compatibility with celix
-* ShellCommand
+* Pubsub interfaces
+    * Kafka? Pulsar? Ecal?
+* Shell Commands
+* Tracing interface
+    * Opentracing? Jaeger?
+* Docker integration/compilation
 * ...
 
-# Requirements to build Cppelix
-
-* Gcc 10 or newer
-* Clang 10 or newer
-* Cmake 3.12 or newer
-
-# Preleminary benchmark results
-These benchmarks are mainly used to identify bottlenecks, not to showcase the performance of the framework. Comparisons between Cppelix, Celix and Felix will be made at a later date.
+# Preliminary benchmark results
+These benchmarks are mainly used to identify bottlenecks, not to showcase the performance of the framework. Proper throughput and latency benchmarks are TBD.
 
 Setup: AMD 3900X, 3600MHz@CL17 RAM, ubuntu 20.04
 * Start best case scenario: 10,000 starts with dependency in ~1,000 ms
@@ -98,4 +171,4 @@ Feel free to make issues/pull requests and I'm sometimes online on Discord, thou
 
 # License
 
-Cppelix is licensed under the MIT license.
+Ichor is licensed under the MIT license.

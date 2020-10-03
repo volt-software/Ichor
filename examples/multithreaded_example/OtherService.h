@@ -1,12 +1,12 @@
 #pragma once
 
-#include <cppelix/DependencyManager.h>
-#include <cppelix/optional_bundles/logging_bundle/Logger.h>
-#include <cppelix/Service.h>
-#include <cppelix/LifecycleManager.h>
+#include <ichor/DependencyManager.h>
+#include <ichor/optional_bundles/logging_bundle/Logger.h>
+#include <ichor/Service.h>
+#include <ichor/LifecycleManager.h>
 #include "CustomEvent.h"
 
-using namespace Cppelix;
+using namespace Ichor;
 
 struct IOtherService : virtual public IService {
     static constexpr InterfaceVersion version = InterfaceVersion{1, 0, 0};
@@ -14,7 +14,7 @@ struct IOtherService : virtual public IService {
 
 class OtherService final : public IOtherService, public Service {
 public:
-    OtherService(DependencyRegister &reg, CppelixProperties props) : Service(std::move(props)) {
+    OtherService(DependencyRegister &reg, IchorProperties props) : Service(std::move(props)) {
         reg.registerDependency<ILogger>(this, true);
     }
     ~OtherService() final = default;

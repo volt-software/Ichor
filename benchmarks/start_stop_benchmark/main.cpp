@@ -1,15 +1,15 @@
 #include "TestService.h"
 #include "StartStopService.h"
-#include <cppelix/optional_bundles/logging_bundle/LoggerAdmin.h>
+#include <ichor/optional_bundles/logging_bundle/LoggerAdmin.h>
 #ifdef USE_SPDLOG
-#include <cppelix/optional_bundles/logging_bundle/SpdlogFrameworkLogger.h>
-#include <cppelix/optional_bundles/logging_bundle/SpdlogLogger.h>
+#include <ichor/optional_bundles/logging_bundle/SpdlogFrameworkLogger.h>
+#include <ichor/optional_bundles/logging_bundle/SpdlogLogger.h>
 
 #define FRAMEWORK_LOGGER_TYPE SpdlogFrameworkLogger
 #define LOGGER_TYPE SpdlogLogger
 #else
-#include <cppelix/optional_bundles/logging_bundle/CoutFrameworkLogger.h>
-#include <cppelix/optional_bundles/logging_bundle/CoutLogger.h>
+#include <ichor/optional_bundles/logging_bundle/CoutFrameworkLogger.h>
+#include <ichor/optional_bundles/logging_bundle/CoutLogger.h>
 
 #define FRAMEWORK_LOGGER_TYPE CoutFrameworkLogger
 #define LOGGER_TYPE CoutLogger
@@ -27,8 +27,8 @@ int main() {
     dm.createServiceManager<SpdlogSharedService, ISpdlogSharedService>();
 #endif
     dm.createServiceManager<LoggerAdmin<LOGGER_TYPE>, ILoggerAdmin>();
-    dm.createServiceManager<TestService, ITestService>(CppelixProperties{{"LogLevel", LogLevel::INFO}});
-    dm.createServiceManager<StartStopService, IStartStopService>(CppelixProperties{{"LogLevel", LogLevel::INFO}});
+    dm.createServiceManager<TestService, ITestService>(IchorProperties{{"LogLevel", LogLevel::INFO}});
+    dm.createServiceManager<StartStopService, IStartStopService>(IchorProperties{{"LogLevel", LogLevel::INFO}});
     dm.start();
 
     return 0;

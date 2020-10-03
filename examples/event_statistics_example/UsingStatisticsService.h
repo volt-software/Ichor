@@ -1,12 +1,12 @@
 #pragma once
 
-#include <cppelix/DependencyManager.h>
-#include <cppelix/optional_bundles/logging_bundle/Logger.h>
-#include <cppelix/optional_bundles/timer_bundle/TimerService.h>
-#include <cppelix/Service.h>
-#include <cppelix/LifecycleManager.h>
+#include <ichor/DependencyManager.h>
+#include <ichor/optional_bundles/logging_bundle/Logger.h>
+#include <ichor/optional_bundles/timer_bundle/TimerService.h>
+#include <ichor/Service.h>
+#include <ichor/LifecycleManager.h>
 
-using namespace Cppelix;
+using namespace Ichor;
 
 
 struct IUsingStatisticsService : virtual public IService {
@@ -15,7 +15,7 @@ struct IUsingStatisticsService : virtual public IService {
 
 class UsingStatisticsService final : public IUsingStatisticsService, public Service {
 public:
-    UsingStatisticsService(DependencyRegister &reg, CppelixProperties props) : Service(std::move(props)) {
+    UsingStatisticsService(DependencyRegister &reg, IchorProperties props) : Service(std::move(props)) {
         reg.registerDependency<ILogger>(this, true);
     }
     ~UsingStatisticsService() final = default;

@@ -3,57 +3,57 @@
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/sinks/basic_file_sink.h>
-#include <cppelix/optional_bundles/logging_bundle/SpdlogLogger.h>
-#include <cppelix/DependencyManager.h>
+#include <ichor/optional_bundles/logging_bundle/SpdlogLogger.h>
+#include <ichor/DependencyManager.h>
 
-Cppelix::SpdlogLogger::SpdlogLogger(Cppelix::DependencyRegister &reg, Cppelix::CppelixProperties props) : Service(std::move(props)) {
+Ichor::SpdlogLogger::SpdlogLogger(Ichor::DependencyRegister &reg, Ichor::IchorProperties props) : Service(std::move(props)) {
     reg.registerDependency<ISpdlogSharedService>(this, true);
 }
 
-void Cppelix::SpdlogLogger::trace(const char *filename_in, int line_in, const char *funcname_in,
+void Ichor::SpdlogLogger::trace(const char *filename_in, int line_in, const char *funcname_in,
                                            std::string_view format_str, fmt::format_args args) {
     if(_level <= LogLevel::TRACE) {
         spdlog::log(spdlog::source_loc{filename_in, line_in, funcname_in}, spdlog::level::trace, fmt::vformat(format_str, args));
     }
 }
 
-void Cppelix::SpdlogLogger::debug(const char *filename_in, int line_in, const char *funcname_in,
+void Ichor::SpdlogLogger::debug(const char *filename_in, int line_in, const char *funcname_in,
                                            std::string_view format_str, fmt::format_args args) {
     if(_level <= LogLevel::DEBUG) {
         spdlog::log(spdlog::source_loc{filename_in, line_in, funcname_in}, spdlog::level::debug, fmt::vformat(format_str, args));
     }
 }
 
-void Cppelix::SpdlogLogger::info(const char *filename_in, int line_in, const char *funcname_in,
+void Ichor::SpdlogLogger::info(const char *filename_in, int line_in, const char *funcname_in,
                                           std::string_view format_str, fmt::format_args args) {
     if(_level <= LogLevel::INFO) {
         spdlog::log(spdlog::source_loc{filename_in, line_in, funcname_in}, spdlog::level::info, fmt::vformat(format_str, args));
     }
 }
 
-void Cppelix::SpdlogLogger::warn(const char *filename_in, int line_in, const char *funcname_in,
+void Ichor::SpdlogLogger::warn(const char *filename_in, int line_in, const char *funcname_in,
                                           std::string_view format_str, fmt::format_args args) {
     if(_level <= LogLevel::WARN) {
         spdlog::log(spdlog::source_loc{filename_in, line_in, funcname_in}, spdlog::level::warn, fmt::vformat(format_str, args));
     }
 }
 
-void Cppelix::SpdlogLogger::error(const char *filename_in, int line_in, const char *funcname_in,
+void Ichor::SpdlogLogger::error(const char *filename_in, int line_in, const char *funcname_in,
                                            std::string_view format_str, fmt::format_args args) {
     if(_level <= LogLevel::ERROR) {
         spdlog::log(spdlog::source_loc{filename_in, line_in, funcname_in}, spdlog::level::err, fmt::vformat(format_str, args));
     }
 }
 
-void Cppelix::SpdlogLogger::setLogLevel(Cppelix::LogLevel level) {
+void Ichor::SpdlogLogger::setLogLevel(Ichor::LogLevel level) {
     _level = level;
 }
 
-Cppelix::LogLevel Cppelix::SpdlogLogger::getLogLevel() const {
+Ichor::LogLevel Ichor::SpdlogLogger::getLogLevel() const {
     return _level;
 }
 
-bool Cppelix::SpdlogLogger::start() {
+bool Ichor::SpdlogLogger::start() {
     if(_sharedService != nullptr) {
         auto& sinks = _sharedService->getSinks();
         _logger = make_shared<spdlog::logger>("multi_sink", sinks.begin(), sinks.end());
@@ -98,17 +98,17 @@ bool Cppelix::SpdlogLogger::start() {
     return true;
 }
 
-bool Cppelix::SpdlogLogger::stop() {
+bool Ichor::SpdlogLogger::stop() {
     auto targetServiceId = std::any_cast<uint64_t>(_properties["TargetServiceId"]);
     _logger->trace("SpdlogLogger {} stopped for component {}", getServiceId(), targetServiceId);
     return true;
 }
 
-void Cppelix::SpdlogLogger::addDependencyInstance(Cppelix::ISpdlogSharedService *shared) noexcept {
+void Ichor::SpdlogLogger::addDependencyInstance(Ichor::ISpdlogSharedService *shared) noexcept {
     _sharedService = shared;
 }
 
-void Cppelix::SpdlogLogger::removeDependencyInstance(Cppelix::ISpdlogSharedService *shared) noexcept {
+void Ichor::SpdlogLogger::removeDependencyInstance(Ichor::ISpdlogSharedService *shared) noexcept {
     _sharedService = nullptr;
 }
 

@@ -1,16 +1,16 @@
-#include <cppelix/DependencyManager.h>
-#include <cppelix/optional_bundles/etcd_bundle/EtcdService.h>
-#include <cppelix/optional_bundles/etcd_bundle/rpc.pb.h>
-#include <cppelix/optional_bundles/etcd_bundle/kv.pb.h>
-#include <cppelix/optional_bundles/etcd_bundle/auth.pb.h>
+#include <ichor/DependencyManager.h>
+#include <ichor/optional_bundles/etcd_bundle/EtcdService.h>
+#include <ichor/optional_bundles/etcd_bundle/rpc.pb.h>
+#include <ichor/optional_bundles/etcd_bundle/kv.pb.h>
+#include <ichor/optional_bundles/etcd_bundle/auth.pb.h>
 #include <grpc++/grpc++.h>
 
 
-Cppelix::EtcdService::EtcdService(Cppelix::DependencyRegister &reg, Cppelix::CppelixProperties props) : Service(std::move(props)) {
+Ichor::EtcdService::EtcdService(Ichor::DependencyRegister &reg, Ichor::IchorProperties props) : Service(std::move(props)) {
     reg.registerDependency<ILogger>(this, true);
 }
 
-bool Cppelix::EtcdService::start() {
+bool Ichor::EtcdService::start() {
     auto addressProp = getProperties()->find("EtcdAddress");
     if(addressProp == end(*getProperties())) {
         throw std::runtime_error("Missing EtcdAddress");
@@ -21,22 +21,22 @@ bool Cppelix::EtcdService::start() {
     return true;
 }
 
-bool Cppelix::EtcdService::stop() {
+bool Ichor::EtcdService::stop() {
     _stub = nullptr;
     _channel = nullptr;
     return true;
 }
 
-void Cppelix::EtcdService::addDependencyInstance(Cppelix::ILogger *logger) {
+void Ichor::EtcdService::addDependencyInstance(Ichor::ILogger *logger) {
     _logger = logger;
     LOG_TRACE(_logger, "Inserted logger");
 }
 
-void Cppelix::EtcdService::removeDependencyInstance(Cppelix::ILogger *logger) {
+void Ichor::EtcdService::removeDependencyInstance(Ichor::ILogger *logger) {
     _logger = nullptr;
 }
 
-bool Cppelix::EtcdService::put(std::string&& key, std::string&& value) {
+bool Ichor::EtcdService::put(std::string&& key, std::string&& value) {
     grpc::ClientContext context{};
     etcdserverpb::PutRequest req{};
     req.set_key(std::move(key));
@@ -45,7 +45,7 @@ bool Cppelix::EtcdService::put(std::string&& key, std::string&& value) {
     return _stub->Put(&context, req, &resp).ok();
 }
 
-std::optional<std::string> Cppelix::EtcdService::get(std::string &&key) {
+std::optional<std::string> Ichor::EtcdService::get(std::string &&key) {
     grpc::ClientContext context{};
     etcdserverpb::RangeRequest req{};
     etcdserverpb::RangeResponse resp{};

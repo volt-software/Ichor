@@ -1,16 +1,16 @@
 #include "TestService.h"
 #include "OptionalService.h"
 #include "OptionalService.h"
-#include <cppelix/optional_bundles/logging_bundle/LoggerAdmin.h>
+#include <ichor/optional_bundles/logging_bundle/LoggerAdmin.h>
 #ifdef USE_SPDLOG
-#include <cppelix/optional_bundles/logging_bundle/SpdlogFrameworkLogger.h>
-#include <cppelix/optional_bundles/logging_bundle/SpdlogLogger.h>
+#include <ichor/optional_bundles/logging_bundle/SpdlogFrameworkLogger.h>
+#include <ichor/optional_bundles/logging_bundle/SpdlogLogger.h>
 
 #define FRAMEWORK_LOGGER_TYPE SpdlogFrameworkLogger
 #define LOGGER_TYPE SpdlogLogger
 #else
-#include <cppelix/optional_bundles/logging_bundle/CoutFrameworkLogger.h>
-#include <cppelix/optional_bundles/logging_bundle/CoutLogger.h>
+#include <ichor/optional_bundles/logging_bundle/CoutFrameworkLogger.h>
+#include <ichor/optional_bundles/logging_bundle/CoutLogger.h>
 
 #define FRAMEWORK_LOGGER_TYPE CoutFrameworkLogger
 #define LOGGER_TYPE CoutLogger

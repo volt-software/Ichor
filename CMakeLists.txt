@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.12)
-project(cppelix)
+project(ichor)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE CXX STANDARD REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
@@ -97,24 +97,24 @@ endif()
 find_package (Threads)
 
 file(GLOB_RECURSE FMT_SOURCES ${EXTERNAL_DIR}/fmt/src/*.cc)
-file(GLOB_RECURSE CPPELIX_FRAMEWORK_SOURCES ${TOP_DIR}/src/cppelix/*.cpp)
-file(GLOB_RECURSE CPPELIX_OPTIONAL_ETCD_SOURCES ${TOP_DIR}/src/optional_bundles/etcd_bundle/*.cpp ${TOP_DIR}/src/optional_bundles/etcd_bundle/*.cc)
-file(GLOB_RECURSE CPPELIX_LOGGING_SOURCES ${TOP_DIR}/src/optional_bundles/logging_bundle/*.cpp)
-file(GLOB_RECURSE CPPELIX_NETWORK_SOURCES ${TOP_DIR}/src/optional_bundles/network_bundle/*.cpp)
-file(GLOB_RECURSE CPPELIX_METRICS_SOURCES ${TOP_DIR}/src/optional_bundles/metrics_bundle/*.cpp)
-file(GLOB_RECURSE CPPELIX_SERIALIZATION_SOURCES ${TOP_DIR}/src/optional_bundles/serialization_bundle/*.cpp)
+file(GLOB_RECURSE ICHOR_FRAMEWORK_SOURCES ${TOP_DIR}/src/ichor/*.cpp)
+file(GLOB_RECURSE ICHOR_OPTIONAL_ETCD_SOURCES ${TOP_DIR}/src/optional_bundles/etcd_bundle/*.cpp ${TOP_DIR}/src/optional_bundles/etcd_bundle/*.cc)
+file(GLOB_RECURSE ICHOR_LOGGING_SOURCES ${TOP_DIR}/src/optional_bundles/logging_bundle/*.cpp)
+file(GLOB_RECURSE ICHOR_NETWORK_SOURCES ${TOP_DIR}/src/optional_bundles/network_bundle/*.cpp)
+file(GLOB_RECURSE ICHOR_METRICS_SOURCES ${TOP_DIR}/src/optional_bundles/metrics_bundle/*.cpp)
+file(GLOB_RECURSE ICHOR_SERIALIZATION_SOURCES ${TOP_DIR}/src/optional_bundles/serialization_bundle/*.cpp)
 
 file(GLOB SPDLOG_SOURCES ${EXTERNAL_DIR}/spdlog/src/*.cpp)
 
-add_library(cppelix ${FMT_SOURCES} ${CPPELIX_FRAMEWORK_SOURCES} ${CPPELIX_LOGGING_SOURCES} ${CPPELIX_NETWORK_SOURCES} ${CPPELIX_METRICS_SOURCES} ${CPPELIX_SERIALIZATION_SOURCES})
+add_library(ichor ${FMT_SOURCES} ${ICHOR_FRAMEWORK_SOURCES} ${ICHOR_LOGGING_SOURCES} ${ICHOR_NETWORK_SOURCES} ${ICHOR_METRICS_SOURCES} ${ICHOR_SERIALIZATION_SOURCES})
 
 if(USE_SPDLOG)
-    target_sources(cppelix PRIVATE ${SPDLOG_SOURCES})
+    target_sources(ichor PRIVATE ${SPDLOG_SOURCES})
 endif()
 
 if(USE_ETCD)
-    target_link_libraries(cppelix ${ETCD_TARGET})
-    target_sources(cppelix PRIVATE ${CPPELIX_OPTIONAL_ETCD_SOURCES})
+    target_link_libraries(ichor ${ETCD_TARGET})
+    target_sources(ichor PRIVATE ${ICHOR_OPTIONAL_ETCD_SOURCES})
 endif()
 
 if(USE_LIBUV)
@@ -126,28 +126,28 @@ if(USE_LIBUV)
             CMAKE_ARGS "${LIBUV_CMAKE_ARGS}"
             INSTALL_COMMAND cmake -E echo "Skipping install step.")
 
-    add_dependencies(cppelix LIBUV_EXTERNAL)
-    target_link_libraries(cppelix ${EXTERNAL_DIR}/libuv/build/libuv.so)
+    add_dependencies(ichor LIBUV_EXTERNAL)
+    target_link_libraries(ichor ${EXTERNAL_DIR}/libuv/build/libuv.so)
 endif()
 
 if(USE_BOOST_BEAST)
 #TODO figure out how to make asio/beast compile as libraries, rather than header only. This would hopefully save some compilation time.
-#    target_link_libraries(cppelix asio beast)
-    target_link_libraries(cppelix boost_coroutine)
+#    target_link_libraries(ichor asio beast)
+    target_link_libraries(ichor boost_coroutine)
 endif()
 
-target_link_libraries(cppelix ${CMAKE_THREAD_LIBS_INIT})
-target_link_libraries(cppelix -ldl -lrt)
-#target_compile_options(cppelix PRIVATE -fPIC)
+target_link_libraries(ichor ${CMAKE_THREAD_LIBS_INIT})
+target_link_libraries(ichor -ldl -lrt)
+#target_compile_options(ichor PRIVATE -fPIC)
 
 # no tests yet
 #file(GLOB_RECURSE PROJECT_TEST_SOURCES ${TOP_DIR}/test/*.cpp)
-#add_executable(cppelix_test ${PROJECT_TEST_SOURCES})
+#add_executable(ichor_test ${PROJECT_TEST_SOURCES})
 #if(USE_SPDLOG)
-#    target_sources(cppelix_test PRIVATE ${SPDLOG_SOURCES})
+#    target_sources(ichor_test PRIVATE ${SPDLOG_SOURCES})
 #endif()
-#add_test(NAME MyTest COMMAND cppelix_test)
-#target_link_libraries(cppelix_test ${CMAKE_THREAD_LIBS_INIT})
+#add_test(NAME MyTest COMMAND ichor_test)
+#target_link_libraries(ichor_test ${CMAKE_THREAD_LIBS_INIT})
 
 include_directories("${EXTERNAL_DIR}/Catch2/single_include")
 include_directories("${EXTERNAL_DIR}/wyhash")
@@ -166,7 +166,7 @@ endif()
 
 if(USE_ETCD)
     #necessary to get generator protobuf/grpc code to compile
-    include_directories("${TOP_DIR}/include/cppelix/optional_bundles/etcd_bundle")
+    include_directories("${TOP_DIR}/include/ichor/optional_bundles/etcd_bundle")
 endif()
 
 if(USE_LIBUV)

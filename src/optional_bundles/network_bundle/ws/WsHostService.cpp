@@ -1,11 +1,11 @@
 #ifdef USE_BOOST_BEAST
 
-#include <cppelix/DependencyManager.h>
-#include <cppelix/optional_bundles/network_bundle/IConnectionService.h>
-#include <cppelix/optional_bundles/network_bundle/ws/WsHostService.h>
-#include <cppelix/optional_bundles/network_bundle/ws/WsConnectionService.h>
-#include <cppelix/optional_bundles/network_bundle/ws/WsEvents.h>
-#include <cppelix/optional_bundles/network_bundle/NetworkDataEvent.h>
+#include <ichor/DependencyManager.h>
+#include <ichor/optional_bundles/network_bundle/IConnectionService.h>
+#include <ichor/optional_bundles/network_bundle/ws/WsHostService.h>
+#include <ichor/optional_bundles/network_bundle/ws/WsConnectionService.h>
+#include <ichor/optional_bundles/network_bundle/ws/WsEvents.h>
+#include <ichor/optional_bundles/network_bundle/NetworkDataEvent.h>
 
 template<class NextLayer>
 void setup_stream(websocket::stream<NextLayer>& ws)
@@ -23,11 +23,11 @@ void setup_stream(websocket::stream<NextLayer>& ws)
 }
 
 
-Cppelix::WsHostService::WsHostService(DependencyRegister &reg, CppelixProperties props) : Service(std::move(props)) {
+Ichor::WsHostService::WsHostService(DependencyRegister &reg, IchorProperties props) : Service(std::move(props)) {
     reg.registerDependency<ILogger>(this, true);
 }
 
-bool Cppelix::WsHostService::start() {
+bool Ichor::WsHostService::start() {
     if(getProperties()->contains("Priority")) {
         _priority = std::any_cast<uint64_t>(getProperties()->operator[]("Priority"));
     }
@@ -58,7 +58,7 @@ bool Cppelix::WsHostService::start() {
     return true;
 }
 
-bool Cppelix::WsHostService::stop() {
+bool Ichor::WsHostService::stop() {
     _quit = true;
 
     for(auto conn : _connections) {
@@ -75,17 +75,17 @@ bool Cppelix::WsHostService::stop() {
     return true;
 }
 
-void Cppelix::WsHostService::addDependencyInstance(ILogger *logger) {
+void Ichor::WsHostService::addDependencyInstance(ILogger *logger) {
     _logger = logger;
     LOG_TRACE(_logger, "Inserted logger");
 }
 
-void Cppelix::WsHostService::removeDependencyInstance(ILogger *logger) {
+void Ichor::WsHostService::removeDependencyInstance(ILogger *logger) {
     _logger = nullptr;
 }
 
-Cppelix::Generator<bool> Cppelix::WsHostService::handleEvent(Cppelix::NewWsConnectionEvent const * const evt) {
-    auto connection = getManager()->createServiceManager<WsConnectionService, IConnectionService>(CppelixProperties{
+Ichor::Generator<bool> Ichor::WsHostService::handleEvent(Ichor::NewWsConnectionEvent const * const evt) {
+    auto connection = getManager()->createServiceManager<WsConnectionService, IConnectionService>(IchorProperties{
         {"WsHostServiceId", getServiceId()},
         {"Socket", evt->_socket},
         {"Executor", evt->_executor}
@@ -95,20 +95,20 @@ Cppelix::Generator<bool> Cppelix::WsHostService::handleEvent(Cppelix::NewWsConne
     co_return (bool)PreventOthersHandling;
 }
 
-void Cppelix::WsHostService::setPriority(uint64_t priority) {
+void Ichor::WsHostService::setPriority(uint64_t priority) {
     _priority.store(priority, std::memory_order_release);
 }
 
-uint64_t Cppelix::WsHostService::getPriority() {
+uint64_t Ichor::WsHostService::getPriority() {
     return _priority.load(std::memory_order_acquire);
 }
 
-void Cppelix::WsHostService::fail(beast::error_code ec, const char *what) {
+void Ichor::WsHostService::fail(beast::error_code ec, const char *what) {
     LOG_ERROR(_logger, "Boost.BEAST fail: {}, {}", what, ec.message());
     getManager()->pushPrioritisedEvent<StopServiceEvent>(getServiceId(), _priority, getServiceId());
 }
 
-void Cppelix::WsHostService::listen(tcp::endpoint endpoint, net::yield_context yield)
+void Ichor::WsHostService::listen(tcp::endpoint endpoint, net::yield_context yield)
 {
     beast::error_code ec;
 

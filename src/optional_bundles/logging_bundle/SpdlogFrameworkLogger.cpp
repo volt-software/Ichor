@@ -3,9 +3,9 @@
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/sinks/basic_file_sink.h>
-#include <cppelix/optional_bundles/logging_bundle/SpdlogFrameworkLogger.h>
+#include <ichor/optional_bundles/logging_bundle/SpdlogFrameworkLogger.h>
 
-Cppelix::SpdlogFrameworkLogger::SpdlogFrameworkLogger() : IFrameworkLogger(), Service(), _level(LogLevel::TRACE) {
+Ichor::SpdlogFrameworkLogger::SpdlogFrameworkLogger() : IFrameworkLogger(), Service(), _level(LogLevel::TRACE) {
     auto console_sink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
 
     auto time_since_epoch = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch());
@@ -26,56 +26,56 @@ Cppelix::SpdlogFrameworkLogger::SpdlogFrameworkLogger() : IFrameworkLogger(), Se
     SPDLOG_TRACE("SpdlogFrameworkLogger constructor");
 }
 
-void Cppelix::SpdlogFrameworkLogger::trace(const char *filename_in, int line_in, const char *funcname_in,
+void Ichor::SpdlogFrameworkLogger::trace(const char *filename_in, int line_in, const char *funcname_in,
                                           std::string_view format_str, fmt::format_args args) {
     if(_level <= LogLevel::TRACE) {
         spdlog::log(spdlog::source_loc{filename_in, line_in, funcname_in}, spdlog::level::trace, fmt::vformat(format_str, args));
     }
 }
 
-void Cppelix::SpdlogFrameworkLogger::debug(const char *filename_in, int line_in, const char *funcname_in,
+void Ichor::SpdlogFrameworkLogger::debug(const char *filename_in, int line_in, const char *funcname_in,
                                           std::string_view format_str, fmt::format_args args) {
     if(_level <= LogLevel::DEBUG) {
         spdlog::log(spdlog::source_loc{filename_in, line_in, funcname_in}, spdlog::level::debug, fmt::vformat(format_str, args));
     }
 }
 
-void Cppelix::SpdlogFrameworkLogger::info(const char *filename_in, int line_in, const char *funcname_in,
+void Ichor::SpdlogFrameworkLogger::info(const char *filename_in, int line_in, const char *funcname_in,
                                           std::string_view format_str, fmt::format_args args) {
     if(_level <= LogLevel::INFO) {
         spdlog::log(spdlog::source_loc{filename_in, line_in, funcname_in}, spdlog::level::info, fmt::vformat(format_str, args));
     }
 }
 
-void Cppelix::SpdlogFrameworkLogger::warn(const char *filename_in, int line_in, const char *funcname_in,
+void Ichor::SpdlogFrameworkLogger::warn(const char *filename_in, int line_in, const char *funcname_in,
                                           std::string_view format_str, fmt::format_args args) {
     if(_level <= LogLevel::WARN) {
         spdlog::log(spdlog::source_loc{filename_in, line_in, funcname_in}, spdlog::level::warn, fmt::vformat(format_str, args));
     }
 }
 
-void Cppelix::SpdlogFrameworkLogger::error(const char *filename_in, int line_in, const char *funcname_in,
+void Ichor::SpdlogFrameworkLogger::error(const char *filename_in, int line_in, const char *funcname_in,
                                           std::string_view format_str, fmt::format_args args) {
     if(_level <= LogLevel::ERROR) {
         spdlog::log(spdlog::source_loc{filename_in, line_in, funcname_in}, spdlog::level::err, fmt::vformat(format_str, args));
     }
 }
 
-bool Cppelix::SpdlogFrameworkLogger::start() {
+bool Ichor::SpdlogFrameworkLogger::start() {
     SPDLOG_TRACE("SpdlogFrameworkLogger started");
     return true;
 }
 
-bool Cppelix::SpdlogFrameworkLogger::stop() {
+bool Ichor::SpdlogFrameworkLogger::stop() {
     SPDLOG_TRACE("SpdlogFrameworkLogger stopped");
     return true;
 }
 
-void Cppelix::SpdlogFrameworkLogger::setLogLevel(Cppelix::LogLevel level) {
+void Ichor::SpdlogFrameworkLogger::setLogLevel(Ichor::LogLevel level) {
     _level = level;
 }
 
-Cppelix::LogLevel Cppelix::SpdlogFrameworkLogger::getLogLevel() const {
+Ichor::LogLevel Ichor::SpdlogFrameworkLogger::getLogLevel() const {
     return _level;
 }
 

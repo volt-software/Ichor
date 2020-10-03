@@ -1,17 +1,17 @@
 #pragma once
 
-#include <cppelix/DependencyManager.h>
-#include <cppelix/optional_bundles/logging_bundle/Logger.h>
-#include <cppelix/optional_bundles/timer_bundle/TimerService.h>
-#include <cppelix/optional_bundles/network_bundle/NetworkDataEvent.h>
-#include <cppelix/optional_bundles/network_bundle/IConnectionService.h>
-#include <cppelix/optional_bundles/network_bundle/IHostService.h>
-#include <cppelix/Service.h>
-#include <cppelix/LifecycleManager.h>
-#include <cppelix/optional_bundles/serialization_bundle/SerializationAdmin.h>
+#include <ichor/DependencyManager.h>
+#include <ichor/optional_bundles/logging_bundle/Logger.h>
+#include <ichor/optional_bundles/timer_bundle/TimerService.h>
+#include <ichor/optional_bundles/network_bundle/NetworkDataEvent.h>
+#include <ichor/optional_bundles/network_bundle/IConnectionService.h>
+#include <ichor/optional_bundles/network_bundle/IHostService.h>
+#include <ichor/Service.h>
+#include <ichor/LifecycleManager.h>
+#include <ichor/optional_bundles/serialization_bundle/SerializationAdmin.h>
 #include "TestMsg.h"
 
-using namespace Cppelix;
+using namespace Ichor;
 
 
 struct IUsingTcpService : virtual public IService {
@@ -20,7 +20,7 @@ struct IUsingTcpService : virtual public IService {
 
 class UsingTcpService final : public IUsingTcpService, public Service {
 public:
-    UsingTcpService(DependencyRegister &reg, CppelixProperties props) : Service(std::move(props)) {
+    UsingTcpService(DependencyRegister &reg, IchorProperties props) : Service(std::move(props)) {
         reg.registerDependency<ILogger>(this, true);
         reg.registerDependency<ISerializationAdmin>(this, true);
         reg.registerDependency<IConnectionService>(this, true, *getProperties());

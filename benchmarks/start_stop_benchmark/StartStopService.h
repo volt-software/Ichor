@@ -1,12 +1,12 @@
 #pragma once
 
 #include <chrono>
-#include <cppelix/DependencyManager.h>
-#include <cppelix/optional_bundles/logging_bundle/Logger.h>
-#include <cppelix/Service.h>
-#include <cppelix/LifecycleManager.h>
+#include <ichor/DependencyManager.h>
+#include <ichor/optional_bundles/logging_bundle/Logger.h>
+#include <ichor/Service.h>
+#include <ichor/LifecycleManager.h>
 
-using namespace Cppelix;
+using namespace Ichor;
 
 
 struct IStartStopService : public virtual IService {
@@ -15,7 +15,7 @@ struct IStartStopService : public virtual IService {
 
 class StartStopService final : public IStartStopService, public Service {
 public:
-    StartStopService(DependencyRegister &reg, CppelixProperties props) : Service(std::move(props)) {
+    StartStopService(DependencyRegister &reg, IchorProperties props) : Service(std::move(props)) {
         reg.registerDependency<ILogger>(this, true);
         reg.registerDependency<ITestService>(this, true);
     }

@@ -1,14 +1,14 @@
 #pragma once
 
-#include <cppelix/DependencyManager.h>
-#include <cppelix/optional_bundles/logging_bundle/Logger.h>
+#include <ichor/DependencyManager.h>
+#include <ichor/optional_bundles/logging_bundle/Logger.h>
 
 #include <utility>
-#include <cppelix/Service.h>
-#include <cppelix/LifecycleManager.h>
+#include <ichor/Service.h>
+#include <ichor/LifecycleManager.h>
 #include "RuntimeCreatedService.h"
 
-using namespace Cppelix;
+using namespace Ichor;
 
 class ScopeFilterEntry final {
 public:
@@ -30,7 +30,7 @@ struct ITrackerService : virtual public IService {
 
 class TrackerService final : public ITrackerService, public Service {
 public:
-    TrackerService(DependencyRegister &reg, CppelixProperties props) : Service(std::move(props)) {
+    TrackerService(DependencyRegister &reg, IchorProperties props) : Service(std::move(props)) {
         reg.registerDependency<ILogger>(this, true);
     }
     ~TrackerService() final = default;

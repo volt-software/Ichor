@@ -1,59 +1,59 @@
-#include <cppelix/optional_bundles/logging_bundle/CoutFrameworkLogger.h>
+#include <ichor/optional_bundles/logging_bundle/CoutFrameworkLogger.h>
 #include <iostream>
 
-Cppelix::CoutFrameworkLogger::CoutFrameworkLogger() : IFrameworkLogger(), Service(), _level(LogLevel::TRACE) {
+Ichor::CoutFrameworkLogger::CoutFrameworkLogger() : IFrameworkLogger(), Service(), _level(LogLevel::TRACE) {
     std::cout << "CoutFrameworkLogger constructor\n";
 }
 
-void Cppelix::CoutFrameworkLogger::trace(const char *filename_in, int line_in, const char *funcname_in,
+void Ichor::CoutFrameworkLogger::trace(const char *filename_in, int line_in, const char *funcname_in,
                                            std::string_view format_str, fmt::format_args args) {
     if(_level <= LogLevel::TRACE) {
         std::cout << fmt::vformat(format_str, args) << "\n";
     }
 }
 
-void Cppelix::CoutFrameworkLogger::debug(const char *filename_in, int line_in, const char *funcname_in,
+void Ichor::CoutFrameworkLogger::debug(const char *filename_in, int line_in, const char *funcname_in,
                                            std::string_view format_str, fmt::format_args args) {
     if(_level <= LogLevel::DEBUG) {
         std::cout << fmt::vformat(format_str, args) << "\n";
     }
 }
 
-void Cppelix::CoutFrameworkLogger::info(const char *filename_in, int line_in, const char *funcname_in,
+void Ichor::CoutFrameworkLogger::info(const char *filename_in, int line_in, const char *funcname_in,
                                           std::string_view format_str, fmt::format_args args) {
     if(_level <= LogLevel::INFO) {
         std::cout << fmt::vformat(format_str, args) << "\n";
     }
 }
 
-void Cppelix::CoutFrameworkLogger::warn(const char *filename_in, int line_in, const char *funcname_in,
+void Ichor::CoutFrameworkLogger::warn(const char *filename_in, int line_in, const char *funcname_in,
                                           std::string_view format_str, fmt::format_args args) {
     if(_level <= LogLevel::WARN) {
         std::cout << fmt::vformat(format_str, args) << "\n";
     }
 }
 
-void Cppelix::CoutFrameworkLogger::error(const char *filename_in, int line_in, const char *funcname_in,
+void Ichor::CoutFrameworkLogger::error(const char *filename_in, int line_in, const char *funcname_in,
                                            std::string_view format_str, fmt::format_args args) {
     if(_level <= LogLevel::ERROR) {
         std::cout << fmt::vformat(format_str, args) << "\n";
     }
 }
 
-bool Cppelix::CoutFrameworkLogger::start() {
+bool Ichor::CoutFrameworkLogger::start() {
     std::cout << "CoutFrameworkLogger started\n";
     return true;
 }
 
-bool Cppelix::CoutFrameworkLogger::stop() {
+bool Ichor::CoutFrameworkLogger::stop() {
     std::cout << "CoutFrameworkLogger stopped\n";
     return true;
 }
 
-void Cppelix::CoutFrameworkLogger::setLogLevel(Cppelix::LogLevel level) {
+void Ichor::CoutFrameworkLogger::setLogLevel(Ichor::LogLevel level) {
     _level = level;
 }
 
-Cppelix::LogLevel Cppelix::CoutFrameworkLogger::getLogLevel() const {
+Ichor::LogLevel Ichor::CoutFrameworkLogger::getLogLevel() const {
     return _level;
 }

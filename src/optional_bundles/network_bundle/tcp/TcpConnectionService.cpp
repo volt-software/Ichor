@@ -1,16 +1,16 @@
-#include <cppelix/DependencyManager.h>
-#include <cppelix/optional_bundles/network_bundle/tcp/TcpConnectionService.h>
-#include <cppelix/optional_bundles/network_bundle/NetworkDataEvent.h>
+#include <ichor/DependencyManager.h>
+#include <ichor/optional_bundles/network_bundle/tcp/TcpConnectionService.h>
+#include <ichor/optional_bundles/network_bundle/NetworkDataEvent.h>
 #include <arpa/inet.h>
 #include <sys/socket.h>
 #include <netinet/tcp.h>
 #include <unistd.h>
 
-Cppelix::TcpConnectionService::TcpConnectionService(DependencyRegister &reg, CppelixProperties props) : Service(std::move(props)), _socket(-1), _attempts(), _priority(INTERNAL_EVENT_PRIORITY),  _quit(), _listenThread() {
+Ichor::TcpConnectionService::TcpConnectionService(DependencyRegister &reg, IchorProperties props) : Service(std::move(props)), _socket(-1), _attempts(), _priority(INTERNAL_EVENT_PRIORITY),  _quit(), _listenThread() {
     reg.registerDependency<ILogger>(this, true);
 }
 
-bool Cppelix::TcpConnectionService::start() {
+bool Ichor::TcpConnectionService::start() {
     if(getProperties()->contains("Priority")) {
         _priority = std::any_cast<uint64_t>(getProperties()->operator[]("Priority"));
     }
@@ -90,7 +90,7 @@ bool Cppelix::TcpConnectionService::start() {
     return true;
 }
 
-bool Cppelix::TcpConnectionService::stop() {
+bool Ichor::TcpConnectionService::stop() {
     _quit = true;
 
     if(_socket >= 0) {
@@ -103,16 +103,16 @@ bool Cppelix::TcpConnectionService::stop() {
     return true;
 }
 
-void Cppelix::TcpConnectionService::addDependencyInstance(ILogger *logger) {
+void Ichor::TcpConnectionService::addDependencyInstance(ILogger *logger) {
     _logger = logger;
     LOG_TRACE(_logger, "Inserted logger");
 }
 
-void Cppelix::TcpConnectionService::removeDependencyInstance(ILogger *logger) {
+void Ichor::TcpConnectionService::removeDependencyInstance(ILogger *logger) {
     _logger = nullptr;
 }
 
-bool Cppelix::TcpConnectionService::send(std::vector<uint8_t> &&msg) {
+bool Ichor::TcpConnectionService::send(std::vector<uint8_t> &&msg) {
     size_t sent_bytes = 0;
     while(sent_bytes < msg.size()) {
         auto ret = ::send(_socket, msg.data() + sent_bytes, msg.size() - sent_bytes, 0);
@@ -127,10 +127,10 @@ bool Cppelix::TcpConnectionService::send(std::vector<uint8_t> &&msg) {
     return true;
 }
 
-void Cppelix::TcpConnectionService::setPriority(uint64_t priority) {
+void Ichor::TcpConnectionService::setPriority(uint64_t priority) {
     _priority.store(priority, std::memory_order_release);
 }
 
-uint64_t Cppelix::TcpConnectionService::getPriority() {
+uint64_t Ichor::TcpConnectionService::getPriority() {
     return _priority.load(std::memory_order_acquire);
 }

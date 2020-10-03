@@ -1,15 +1,15 @@
-#include <cppelix/optional_bundles/logging_bundle/LoggerAdmin.h>
-#include <cppelix/optional_bundles/metrics_bundle/EventStatisticsService.h>
+#include <ichor/optional_bundles/logging_bundle/LoggerAdmin.h>
+#include <ichor/optional_bundles/metrics_bundle/EventStatisticsService.h>
 #include "UsingStatisticsService.h"
 #ifdef USE_SPDLOG
-#include <cppelix/optional_bundles/logging_bundle/SpdlogFrameworkLogger.h>
-#include <cppelix/optional_bundles/logging_bundle/SpdlogLogger.h>
+#include <ichor/optional_bundles/logging_bundle/SpdlogFrameworkLogger.h>
+#include <ichor/optional_bundles/logging_bundle/SpdlogLogger.h>
 
 #define FRAMEWORK_LOGGER_TYPE SpdlogFrameworkLogger
 #define LOGGER_TYPE SpdlogLogger
 #else
-#include <cppelix/optional_bundles/logging_bundle/CoutFrameworkLogger.h>
-#include <cppelix/optional_bundles/logging_bundle/CoutLogger.h>
+#include <ichor/optional_bundles/logging_bundle/CoutFrameworkLogger.h>
+#include <ichor/optional_bundles/logging_bundle/CoutLogger.h>
 
 #define FRAMEWORK_LOGGER_TYPE CoutFrameworkLogger
 #define LOGGER_TYPE CoutLogger
@@ -17,7 +17,7 @@
 #include <chrono>
 #include <iostream>
 
-using namespace Cppelix;
+using namespace Ichor;
 using namespace std::string_literals;
 
 int main() {
@@ -30,7 +30,7 @@ int main() {
     dm.createServiceManager<SpdlogSharedService, ISpdlogSharedService>();
 #endif
     dm.createServiceManager<LoggerAdmin<LOGGER_TYPE>, ILoggerAdmin>();
-    dm.createServiceManager<EventStatisticsService, IEventStatisticsService>(CppelixProperties{{"ShowStatisticsOnStop", true}});
+    dm.createServiceManager<EventStatisticsService, IEventStatisticsService>(IchorProperties{{"ShowStatisticsOnStop", true}});
     dm.createServiceManager<UsingStatisticsService, IUsingStatisticsService>();
     dm.start();
     auto end = std::chrono::system_clock::now();

@@ -1,20 +1,20 @@
 #pragma once
 
-#include <cppelix/DependencyManager.h>
-#include <cppelix/optional_bundles/logging_bundle/Logger.h>
-#include <cppelix/Service.h>
-#include <cppelix/optional_bundles/serialization_bundle/SerializationAdmin.h>
-#include <cppelix/LifecycleManager.h>
+#include <ichor/DependencyManager.h>
+#include <ichor/optional_bundles/logging_bundle/Logger.h>
+#include <ichor/Service.h>
+#include <ichor/optional_bundles/serialization_bundle/SerializationAdmin.h>
+#include <ichor/LifecycleManager.h>
 #include "TestMsg.h"
 
 #include <rapidjson/document.h>
 #include <rapidjson/writer.h>
 
-using namespace Cppelix;
+using namespace Ichor;
 
 class TestMsgJsonSerializer final : public ISerializer, public Service {
 public:
-    TestMsgJsonSerializer(DependencyRegister &reg, CppelixProperties props) : Service(std::move(props)) {
+    TestMsgJsonSerializer(DependencyRegister &reg, IchorProperties props) : Service(std::move(props)) {
         reg.registerDependency<ILogger>(this, true);
         reg.registerDependency<ISerializationAdmin>(this, true);
     }

@@ -1,10 +1,10 @@
-#include <cppelix/optional_bundles/metrics_bundle/EventStatisticsService.h>
+#include <ichor/optional_bundles/metrics_bundle/EventStatisticsService.h>
 
-Cppelix::EventStatisticsService::EventStatisticsService(Cppelix::DependencyRegister &reg, Cppelix::CppelixProperties props) : Service(std::move(props)) {
+Ichor::EventStatisticsService::EventStatisticsService(Ichor::DependencyRegister &reg, Ichor::IchorProperties props) : Service(std::move(props)) {
     reg.registerDependency<ILogger>(this, true);
 }
 
-bool Cppelix::EventStatisticsService::start() {
+bool Ichor::EventStatisticsService::start() {
     if(getProperties()->contains("ShowStatisticsOnStop")) {
         _showStatisticsOnStop = std::any_cast<bool>(getProperties()->operator[]("ShowStatisticsOnStop"));
     }
@@ -25,7 +25,7 @@ bool Cppelix::EventStatisticsService::start() {
     return true;
 }
 
-bool Cppelix::EventStatisticsService::stop() {
+bool Ichor::EventStatisticsService::stop() {
     _timerEventRegistration = nullptr;
 
     if(_showStatisticsOnStop) {
@@ -46,20 +46,20 @@ bool Cppelix::EventStatisticsService::stop() {
     return true;
 }
 
-void Cppelix::EventStatisticsService::addDependencyInstance(Cppelix::ILogger *logger) {
+void Ichor::EventStatisticsService::addDependencyInstance(Ichor::ILogger *logger) {
     _logger = logger;
 }
 
-void Cppelix::EventStatisticsService::removeDependencyInstance(Cppelix::ILogger *logger) {
+void Ichor::EventStatisticsService::removeDependencyInstance(Ichor::ILogger *logger) {
     _logger = nullptr;
 }
 
-bool Cppelix::EventStatisticsService::preInterceptEvent(const Cppelix::Event *const evt) {
+bool Ichor::EventStatisticsService::preInterceptEvent(const Ichor::Event *const evt) {
     _startProcessingTimestamp = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
     return (bool)AllowOthersHandling;
 }
 
-bool Cppelix::EventStatisticsService::postInterceptEvent(const Cppelix::Event *const evt, bool processed) {
+bool Ichor::EventStatisticsService::postInterceptEvent(const Ichor::Event *const evt, bool processed) {
     if(!processed) {
         return (bool)AllowOthersHandling;
     }
@@ -77,7 +77,7 @@ bool Cppelix::EventStatisticsService::postInterceptEvent(const Cppelix::Event *c
     return (bool)AllowOthersHandling;
 }
 
-Cppelix::Generator<bool> Cppelix::EventStatisticsService::handleEvent(const Cppelix::TimerEvent *const evt) {
+Ichor::Generator<bool> Ichor::EventStatisticsService::handleEvent(const Ichor::TimerEvent *const evt) {
     uint64_t now = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
     for(auto &[key, statistics] : _recentEventStatistics) {
         auto avgStatistics = _averagedStatistics.find(key);
@@ -102,15 +102,15 @@ Cppelix::Generator<bool> Cppelix::EventStatisticsService::handleEvent(const Cppe
             avgStatistics->second.emplace_back(now, min, max, avg, statistics.size());
         }
 
-        co_yield (bool)Cppelix::PreventOthersHandling;
+        co_yield (bool)Ichor::PreventOthersHandling;
     }
-    co_return (bool)Cppelix::PreventOthersHandling;
+    co_return (bool)Ichor::PreventOthersHandling;
 }
 
-const std::unordered_map<std::string_view, std::vector<Cppelix::StatisticEntry>> &Cppelix::EventStatisticsService::getRecentStatistics() {
+const std::unordered_map<std::string_view, std::vector<Ichor::StatisticEntry>> &Ichor::EventStatisticsService::getRecentStatistics() {
     return _recentEventStatistics;
 }
 
-const std::unordered_map<std::string_view, std::vector<Cppelix::AveragedStatisticEntry>> &Cppelix::EventStatisticsService::getAverageStatistics() {
+const std::unordered_map<std::string_view, std::vector<Ichor::AveragedStatisticEntry>> &Ichor::EventStatisticsService::getAverageStatistics() {
     return _averagedStatistics;
 }

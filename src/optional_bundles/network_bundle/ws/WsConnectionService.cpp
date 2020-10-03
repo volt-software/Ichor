@@ -1,11 +1,11 @@
 #ifdef USE_BOOST_BEAST
 
-#include <cppelix/DependencyManager.h>
-#include <cppelix/optional_bundles/network_bundle/ws/WsConnectionService.h>
-#include <cppelix/optional_bundles/network_bundle/ws/WsEvents.h>
-#include <cppelix/optional_bundles/network_bundle/ws/WsCopyIsMoveWorkaround.h>
-#include <cppelix/optional_bundles/network_bundle/NetworkDataEvent.h>
-#include <cppelix/optional_bundles/network_bundle/IHostService.h>
+#include <ichor/DependencyManager.h>
+#include <ichor/optional_bundles/network_bundle/ws/WsConnectionService.h>
+#include <ichor/optional_bundles/network_bundle/ws/WsEvents.h>
+#include <ichor/optional_bundles/network_bundle/ws/WsCopyIsMoveWorkaround.h>
+#include <ichor/optional_bundles/network_bundle/NetworkDataEvent.h>
+#include <ichor/optional_bundles/network_bundle/IHostService.h>
 
 template<class NextLayer>
 void setup_stream(std::unique_ptr<websocket::stream<NextLayer>>& ws)
@@ -22,14 +22,14 @@ void setup_stream(std::unique_ptr<websocket::stream<NextLayer>>& ws)
     ws->auto_fragment(false);
 }
 
-Cppelix::WsConnectionService::WsConnectionService(DependencyRegister &reg, CppelixProperties props) : Service(std::move(props)) {
+Ichor::WsConnectionService::WsConnectionService(DependencyRegister &reg, IchorProperties props) : Service(std::move(props)) {
     reg.registerDependency<ILogger>(this, true);
     if(props.contains("WsHostServiceId")) {
-        reg.registerDependency<IHostService>(this, true, CppelixProperties{{"Filter", Filter{ServiceIdFilterEntry{std::any_cast<uint64_t>(props["WsHostServiceId"])}}}});
+        reg.registerDependency<IHostService>(this, true, IchorProperties{{"Filter", Filter{ServiceIdFilterEntry{std::any_cast<uint64_t>(props["WsHostServiceId"])}}}});
     }
 }
 
-bool Cppelix::WsConnectionService::start() {
+bool Ichor::WsConnectionService::start() {
     if(_quit.load(std::memory_order_acquire)) {
         return false;
     }
@@ -79,7 +79,7 @@ bool Cppelix::WsConnectionService::start() {
     return true;
 }
 
-bool Cppelix::WsConnectionService::stop() {
+bool Ichor::WsConnectionService::stop() {
     bool expected = false;
     bool stopWsContext = false;
     if(_quit.compare_exchange_strong(expected, true)) {
@@ -111,24 +111,24 @@ bool Cppelix::WsConnectionService::stop() {
     return true;
 }
 
-void Cppelix::WsConnectionService::addDependencyInstance(ILogger *logger) {
+void Ichor::WsConnectionService::addDependencyInstance(ILogger *logger) {
     _logger = logger;
     LOG_TRACE(_logger, "Inserted logger");
 }
 
-void Cppelix::WsConnectionService::removeDependencyInstance(ILogger *logger) {
+void Ichor::WsConnectionService::removeDependencyInstance(ILogger *logger) {
     _logger = nullptr;
 }
 
-void Cppelix::WsConnectionService::addDependencyInstance(IHostService *) {
+void Ichor::WsConnectionService::addDependencyInstance(IHostService *) {
 
 }
 
-void Cppelix::WsConnectionService::removeDependencyInstance(IHostService *) {
+void Ichor::WsConnectionService::removeDependencyInstance(IHostService *) {
 
 }
 
-bool Cppelix::WsConnectionService::send(std::vector<uint8_t> &&msg) {
+bool Ichor::WsConnectionService::send(std::vector<uint8_t> &&msg) {
     if(_quit.load(std::memory_order_acquire)) {
         return false;
     }
@@ -143,20 +143,20 @@ bool Cppelix::WsConnectionService::send(std::vector<uint8_t> &&msg) {
     return true;
 }
 
-void Cppelix::WsConnectionService::setPriority(uint64_t priority) {
+void Ichor::WsConnectionService::setPriority(uint64_t priority) {
     _priority.store(priority, std::memory_order_release);
 }
 
-uint64_t Cppelix::WsConnectionService::getPriority() {
+uint64_t Ichor::WsConnectionService::getPriority() {
     return _priority.load(std::memory_order_acquire);
 }
 
-void Cppelix::WsConnectionService::fail(beast::error_code ec, const char *what) {
+void Ichor::WsConnectionService::fail(beast::error_code ec, const char *what) {
     LOG_ERROR(_logger, "Boost.BEAST fail: {}, {}", what, ec.message());
     getManager()->pushEvent<StopServiceEvent>(getServiceId(), getServiceId());
 }
 
-void Cppelix::WsConnectionService::sendStrand(net::yield_context yield) {
+void Ichor::WsConnectionService::sendStrand(net::yield_context yield) {
     while(!_quit.load(std::memory_order_acquire)) {
         beast::error_code ec;
 
@@ -191,7 +191,7 @@ void Cppelix::WsConnectionService::sendStrand(net::yield_context yield) {
     _sendStrandDone = true;
 }
 
-void Cppelix::WsConnectionService::accept(net::yield_context yield) {
+void Ichor::WsConnectionService::accept(net::yield_context yield) {
     beast::error_code ec;
 
     {
@@ -238,7 +238,7 @@ void Cppelix::WsConnectionService::accept(net::yield_context yield) {
     read(yield);
 }
 
-void Cppelix::WsConnectionService::connect(net::yield_context yield) {
+void Ichor::WsConnectionService::connect(net::yield_context yield) {
     beast::error_code ec;
     auto const address = std::any_cast<std::string&>(getProperties()->operator[]("Address"));
     auto const port = std::any_cast<uint16_t>(getProperties()->operator[]("Port"));
@@ -308,7 +308,7 @@ void Cppelix::WsConnectionService::connect(net::yield_context yield) {
     read(yield);
 }
 
-void Cppelix::WsConnectionService::read(net::yield_context &yield) {
+void Ichor::WsConnectionService::read(net::yield_context &yield) {
     beast::error_code ec;
 
     while(!_quit.load(std::memory_order_acquire))
@@ -330,7 +330,7 @@ void Cppelix::WsConnectionService::read(net::yield_context &yield) {
     }
 }
 
-void Cppelix::WsConnectionService::cancelSendTimer() {
+void Ichor::WsConnectionService::cancelSendTimer() {
     if(_wsContext) {
         _wsContext->post([this](){ _sendTimer->cancel(); });
     } else {

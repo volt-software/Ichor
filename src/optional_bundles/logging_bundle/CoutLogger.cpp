@@ -1,56 +1,56 @@
-#include <cppelix/optional_bundles/logging_bundle/CoutLogger.h>
+#include <ichor/optional_bundles/logging_bundle/CoutLogger.h>
 #include <iostream>
 
-Cppelix::CoutLogger::CoutLogger() : ILogger(), Service(), _level(LogLevel::TRACE) {
+Ichor::CoutLogger::CoutLogger() : ILogger(), Service(), _level(LogLevel::TRACE) {
 }
 
-void Cppelix::CoutLogger::trace(const char *filename_in, int line_in, const char *funcname_in,
+void Ichor::CoutLogger::trace(const char *filename_in, int line_in, const char *funcname_in,
                                          std::string_view format_str, fmt::format_args args) {
     if(_level <= LogLevel::TRACE) {
         std::cout << fmt::vformat(format_str, args) << "\n";
     }
 }
 
-void Cppelix::CoutLogger::debug(const char *filename_in, int line_in, const char *funcname_in,
+void Ichor::CoutLogger::debug(const char *filename_in, int line_in, const char *funcname_in,
                                          std::string_view format_str, fmt::format_args args) {
     if(_level <= LogLevel::DEBUG) {
         std::cout << fmt::vformat(format_str, args) << "\n";
     }
 }
 
-void Cppelix::CoutLogger::info(const char *filename_in, int line_in, const char *funcname_in,
+void Ichor::CoutLogger::info(const char *filename_in, int line_in, const char *funcname_in,
                                         std::string_view format_str, fmt::format_args args) {
     if(_level <= LogLevel::INFO) {
         std::cout << fmt::vformat(format_str, args) << "\n";
     }
 }
 
-void Cppelix::CoutLogger::warn(const char *filename_in, int line_in, const char *funcname_in,
+void Ichor::CoutLogger::warn(const char *filename_in, int line_in, const char *funcname_in,
                                         std::string_view format_str, fmt::format_args args) {
     if(_level <= LogLevel::WARN) {
         std::cout << fmt::vformat(format_str, args) << "\n";
     }
 }
 
-void Cppelix::CoutLogger::error(const char *filename_in, int line_in, const char *funcname_in,
+void Ichor::CoutLogger::error(const char *filename_in, int line_in, const char *funcname_in,
                                          std::string_view format_str, fmt::format_args args) {
     if(_level <= LogLevel::ERROR) {
         std::cout << fmt::vformat(format_str, args) << "\n";
     }
 }
 
-bool Cppelix::CoutLogger::start() {
+bool Ichor::CoutLogger::start() {
     return true;
 }
 
-bool Cppelix::CoutLogger::stop() {
+bool Ichor::CoutLogger::stop() {
     return true;
 }
 
-void Cppelix::CoutLogger::setLogLevel(Cppelix::LogLevel level) {
+void Ichor::CoutLogger::setLogLevel(Ichor::LogLevel level) {
     _level = level;
 }
 
-Cppelix::LogLevel Cppelix::CoutLogger::getLogLevel() const {
+Ichor::LogLevel Ichor::CoutLogger::getLogLevel() const {
     return _level;
 }

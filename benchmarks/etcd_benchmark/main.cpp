@@ -1,16 +1,16 @@
 #include "UsingEtcdService.h"
-#include <cppelix/optional_bundles/logging_bundle/LoggerAdmin.h>
-#include <cppelix/optional_bundles/etcd_bundle/EtcdService.h>
-#include <cppelix/CommunicationChannel.h>
+#include <ichor/optional_bundles/logging_bundle/LoggerAdmin.h>
+#include <ichor/optional_bundles/etcd_bundle/EtcdService.h>
+#include <ichor/CommunicationChannel.h>
 #ifdef USE_SPDLOG
-#include <cppelix/optional_bundles/logging_bundle/SpdlogFrameworkLogger.h>
-#include <cppelix/optional_bundles/logging_bundle/SpdlogLogger.h>
+#include <ichor/optional_bundles/logging_bundle/SpdlogFrameworkLogger.h>
+#include <ichor/optional_bundles/logging_bundle/SpdlogLogger.h>
 
 #define FRAMEWORK_LOGGER_TYPE SpdlogFrameworkLogger
 #define LOGGER_TYPE SpdlogLogger
 #else
-#include <cppelix/optional_bundles/logging_bundle/CoutFrameworkLogger.h>
-#include <cppelix/optional_bundles/logging_bundle/CoutLogger.h>
+#include <ichor/optional_bundles/logging_bundle/CoutFrameworkLogger.h>
+#include <ichor/optional_bundles/logging_bundle/CoutLogger.h>
 
 #define FRAMEWORK_LOGGER_TYPE CoutFrameworkLogger
 #define LOGGER_TYPE CoutLogger
@@ -36,7 +36,7 @@ int main() {
         dmOne.createServiceManager<SpdlogSharedService, ISpdlogSharedService>();
 #endif
         dmOne.createServiceManager<LoggerAdmin<LOGGER_TYPE>, ILoggerAdmin>();
-        dmOne.createServiceManager<EtcdService, IEtcdService>(CppelixProperties{{"EtcdAddress", "localhost:2379"s}});
+        dmOne.createServiceManager<EtcdService, IEtcdService>(IchorProperties{{"EtcdAddress", "localhost:2379"s}});
         dmOne.createServiceManager<UsingEtcdService, IUsingEtcdService>();
         dmOne.start();
     });
@@ -48,7 +48,7 @@ int main() {
         dmTwo.createServiceManager<SpdlogSharedService, ISpdlogSharedService>();
 #endif
         dmTwo.createServiceManager<LoggerAdmin<LOGGER_TYPE>, ILoggerAdmin>();
-        dmTwo.createServiceManager<EtcdService, IEtcdService>(CppelixProperties{{"EtcdAddress", "localhost:2379"s}});
+        dmTwo.createServiceManager<EtcdService, IEtcdService>(IchorProperties{{"EtcdAddress", "localhost:2379"s}});
         dmTwo.createServiceManager<UsingEtcdService, IUsingEtcdService>();
         dmTwo.start();
     });
