@@ -38,5 +38,5 @@ public:
     }
 
 private:
-    ILogger *_logger;
+    ILogger *_logger{nullptr};
 };

@@ -134,6 +134,8 @@ if(USE_BOOST_BEAST)
 #TODO figure out how to make asio/beast compile as libraries, rather than header only. This would hopefully save some compilation time.
 #    target_link_libraries(ichor asio beast)
     target_link_libraries(ichor boost_coroutine)
+    #BOOST_BEAST_USE_STD_STRING_VIEW
+    target_compile_definitions(ichor PUBLIC "BOOST_BEAST_USE_STD_STRING_VIEW")
 endif()
 
 target_link_libraries(ichor ${CMAKE_THREAD_LIBS_INIT})
