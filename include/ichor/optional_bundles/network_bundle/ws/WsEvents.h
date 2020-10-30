@@ -17,7 +17,7 @@ namespace Ichor {
         ~NewWsConnectionEvent() final = default;
 
         static constexpr uint64_t TYPE = typeNameHash<NewWsConnectionEvent>();
-        static constexpr std::string_view NAME= typeName<NewWsConnectionEvent>();
+        static constexpr std::string_view NAME = typeName<NewWsConnectionEvent>();
 
         mutable CopyIsMoveWorkaround<tcp::socket> _socket;
         net::executor _executor;

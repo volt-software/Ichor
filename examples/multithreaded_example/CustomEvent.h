@@ -9,6 +9,6 @@ namespace Ichor {
         ~CustomEvent() final = default;
 
         static constexpr uint64_t TYPE = typeNameHash<CustomEvent>();
-        static constexpr std::string_view NAME= typeName<CustomEvent>();
+        static constexpr std::string_view NAME = typeName<CustomEvent>();
     };
 }

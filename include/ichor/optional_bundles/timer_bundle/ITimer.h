@@ -8,7 +8,7 @@ namespace Ichor {
         ~TimerEvent() final = default;
 
         static constexpr uint64_t TYPE = typeNameHash<TimerEvent>();
-        static constexpr std::string_view NAME= typeName<TimerEvent>();
+        static constexpr std::string_view NAME = typeName<TimerEvent>();
     };
 
     struct ITimer : virtual public IService {

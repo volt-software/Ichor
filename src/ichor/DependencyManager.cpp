@@ -36,6 +36,7 @@ void Ichor::DependencyManager::start() {
             _quit.store(sigintQuit.load(std::memory_order_acquire), std::memory_order_release);
 
             bool allowProcessing = true;
+            uint32_t handlerAmount = 1; // for the non-default case below, the DepMan handles the event
             auto interceptorsForAllEvents = _eventInterceptors.find(0);
             auto interceptorsForEvent = _eventInterceptors.find(evtNode.mapped().getType());
 
@@ -291,7 +292,7 @@ void Ichor::DependencyManager::start() {
                         break;
                     default: {
                         SPDLOG_DEBUG("broadcastEvent");
-                        broadcastEvent(evtNode.mapped().get());
+                        handlerAmount = broadcastEvent(evtNode.mapped().get());
                     }
                         break;
                 }
@@ -299,13 +300,13 @@ void Ichor::DependencyManager::start() {
 
             if(interceptorsForAllEvents != end(_eventInterceptors)) {
                 for(const EventInterceptInfo &info : interceptorsForAllEvents->second) {
-                    info.postIntercept(evtNode.mapped().get(), allowProcessing);
+                    info.postIntercept(evtNode.mapped().get(), allowProcessing && handlerAmount > 0);
                 }
             }
 
             if(interceptorsForEvent != end(_eventInterceptors)) {
                 for(const EventInterceptInfo &info : interceptorsForEvent->second) {
-                    info.postIntercept(evtNode.mapped().get(), allowProcessing);
+                    info.postIntercept(evtNode.mapped().get(), allowProcessing && handlerAmount > 0);
                 }
             }
 
@@ -346,10 +347,10 @@ void Ichor::DependencyManager::handleEventCompletion(const Ichor::Event *const e
     callback->second(evt);
 }
 
-void Ichor::DependencyManager::broadcastEvent(const Ichor::Event *const evt) {
+uint32_t Ichor::DependencyManager::broadcastEvent(const Ichor::Event *const evt) {
     auto registeredListeners = _eventCallbacks.find(evt->type);
     if(registeredListeners == end(_eventCallbacks)) {
-        return;
+        return 0;
     }
 
     for(auto &callbackInfo : registeredListeners->second) {
@@ -374,6 +375,8 @@ void Ichor::DependencyManager::broadcastEvent(const Ichor::Event *const evt) {
             break;
         }
     }
+
+    return registeredListeners->second.size();
 }
 
 std::optional<std::string_view> Ichor::DependencyManager::getImplementationNameFor(uint64_t serviceId) {

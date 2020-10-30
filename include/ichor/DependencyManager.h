@@ -447,9 +447,7 @@ namespace Ichor {
         void logAddService() {
             if(_logger != nullptr && _logger->getLogLevel() <= LogLevel::DEBUG) {
                 fmt::memory_buffer out;
-                fmt::format_to(out, "added ServiceManager<");
-                fmt::format_to(out, "{}, ", typeName<Interface1>());
-                fmt::format_to(out, "{}, ", typeName<Interface2>());
+                fmt::format_to(out, "added ServiceManager<{}, {}, ", typeName<Interface1>(), typeName<Interface2>());
                 (fmt::format_to(out, "{}, ", typeName<Interfaces>()), ...);
                 fmt::format_to(out, "{}>", typeName<Impl>());
                 LOG_DEBUG(_logger, "{}", out.data());
@@ -465,7 +463,7 @@ namespace Ichor {
 
         void handleEventCompletion(Event const * const evt) const;
 
-        void broadcastEvent(Event const * const evt);
+        [[nodiscard]] uint32_t broadcastEvent(Event const * const evt);
 
         void setCommunicationChannel(CommunicationChannel *channel);
 

@@ -1,19 +1,20 @@
 #pragma once
 
 #include <ichor/optional_bundles/network_bundle/IClientAdmin.h>
+#include <ichor/optional_bundles/network_bundle/IConnectionService.h>
 #include <ichor/optional_bundles/logging_bundle/Logger.h>
 #include <thread>
 #include <ichor/DependencyManager.h>
 
 namespace Ichor {
-    template <typename NetworkType>
+    template <typename NetworkType, typename NetworkInterfaceType = IConnectionService>
     class ClientAdmin final : public IClientAdmin, public Service {
     public:
         ClientAdmin() = default;
         ~ClientAdmin() override = default;
 
         bool start() final {
-            _trackerRegistration = getManager()->template registerDependencyTracker<IConnectionService>(getServiceId(), this);
+            _trackerRegistration = getManager()->template registerDependencyTracker<NetworkInterfaceType>(getServiceId(), this);
             _unrecoverableErrorRegistration = getManager()->template registerEventHandler<UnrecoverableErrorEvent>(getServiceId(), this);
 
             return false;
@@ -25,7 +26,7 @@ namespace Ichor {
             return false;
         }
 
-        void handleDependencyRequest(IConnectionService*, DependencyRequestEvent const * const evt) {
+        void handleDependencyRequest(NetworkInterfaceType*, DependencyRequestEvent const * const evt) {
             if(!evt->properties.has_value()) {
                 throw std::runtime_error("Missing properties");
             }
@@ -42,11 +43,11 @@ namespace Ichor {
             newProps.emplace("Filter", Filter{ServiceIdFilterEntry{evt->originatingService}});
 
             if(!_connections.contains(evt->originatingService)) {
-                _connections.emplace(evt->originatingService, getManager()->template createServiceManager<NetworkType, IConnectionService>(newProps));
+                _connections.emplace(evt->originatingService, getManager()->template createServiceManager<NetworkType, NetworkInterfaceType>(newProps));
             }
         }
 
-        void handleDependencyUndoRequest(IConnectionService*, DependencyUndoRequestEvent const * const evt) {
+        void handleDependencyUndoRequest(NetworkInterfaceType*, DependencyUndoRequestEvent const * const evt) {
             auto connection = _connections.find(evt->originatingService);
 
             if(connection != end(_connections)) {
@@ -79,7 +80,7 @@ namespace Ichor {
 
     private:
         ILogger *_logger{nullptr};
-        std::unordered_map<uint64_t, IConnectionService*> _connections{};
+        std::unordered_map<uint64_t, NetworkInterfaceType*> _connections{};
         std::unique_ptr<DependencyTrackerRegistration> _trackerRegistration{nullptr};
         std::unique_ptr<EventHandlerRegistration> _unrecoverableErrorRegistration{nullptr};
     };

@@ -21,8 +21,7 @@ using namespace Ichor;
 
 std::atomic<bool> quit{};
 
-void siginthandler(int param)
-{
+void siginthandler(int param) {
     quit = true;
 }
 

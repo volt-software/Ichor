@@ -9,7 +9,7 @@ namespace Ichor {
         ~NetworkDataEvent() final = default;
 
         static constexpr uint64_t TYPE = typeNameHash<NetworkDataEvent>();
-        static constexpr std::string_view NAME= typeName<NetworkDataEvent>();
+        static constexpr std::string_view NAME = typeName<NetworkDataEvent>();
 
         std::vector<uint8_t>& getData() const {
             if(_movedFrom) {

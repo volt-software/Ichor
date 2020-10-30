@@ -27,7 +27,7 @@ namespace Ichor {
 
         const std::shared_ptr<ILifecycleManager> manager;
         static constexpr uint64_t TYPE = typeNameHash<DependencyOnlineEvent>();
-        static constexpr std::string_view NAME= typeName<DependencyOnlineEvent>();
+        static constexpr std::string_view NAME = typeName<DependencyOnlineEvent>();
     };
 
     struct DependencyOfflineEvent final : public Event {
@@ -37,7 +37,7 @@ namespace Ichor {
 
         const std::shared_ptr<ILifecycleManager> manager;
         static constexpr uint64_t TYPE = typeNameHash<DependencyOfflineEvent>();
-        static constexpr std::string_view NAME= typeName<DependencyOfflineEvent>();
+        static constexpr std::string_view NAME = typeName<DependencyOfflineEvent>();
     };
 
     struct DependencyRequestEvent final : public Event {
@@ -49,7 +49,7 @@ namespace Ichor {
         const Dependency dependency;
         const std::optional<IchorProperties const *> properties;
         static constexpr uint64_t TYPE = typeNameHash<DependencyRequestEvent>();
-        static constexpr std::string_view NAME= typeName<DependencyRequestEvent>();
+        static constexpr std::string_view NAME = typeName<DependencyRequestEvent>();
     };
 
     struct DependencyUndoRequestEvent final : public Event {
@@ -61,7 +61,7 @@ namespace Ichor {
         const Dependency dependency;
         const IchorProperties * properties;
         static constexpr uint64_t TYPE = typeNameHash<DependencyUndoRequestEvent>();
-        static constexpr std::string_view NAME= typeName<DependencyUndoRequestEvent>();
+        static constexpr std::string_view NAME = typeName<DependencyUndoRequestEvent>();
     };
 
     struct QuitEvent final : public Event {
@@ -70,7 +70,7 @@ namespace Ichor {
 
         const bool dependenciesStopped;
         static constexpr uint64_t TYPE = typeNameHash<QuitEvent>();
-        static constexpr std::string_view NAME= typeName<QuitEvent>();
+        static constexpr std::string_view NAME = typeName<QuitEvent>();
     };
 
     struct StopServiceEvent final : public Event {
@@ -80,7 +80,7 @@ namespace Ichor {
         const uint64_t serviceId;
         const bool dependenciesStopped;
         static constexpr uint64_t TYPE = typeNameHash<StopServiceEvent>();
-        static constexpr std::string_view NAME= typeName<StopServiceEvent>();
+        static constexpr std::string_view NAME = typeName<StopServiceEvent>();
     };
 
     struct StartServiceEvent final : public Event {
@@ -89,7 +89,7 @@ namespace Ichor {
 
         const uint64_t serviceId;
         static constexpr uint64_t TYPE = typeNameHash<StartServiceEvent>();
-        static constexpr std::string_view NAME= typeName<StartServiceEvent>();
+        static constexpr std::string_view NAME = typeName<StartServiceEvent>();
     };
 
     struct RemoveServiceEvent final : public Event {
@@ -99,7 +99,7 @@ namespace Ichor {
         const uint64_t serviceId;
         const bool dependenciesStopped;
         static constexpr uint64_t TYPE = typeNameHash<RemoveServiceEvent>();
-        static constexpr std::string_view NAME= typeName<RemoveServiceEvent>();
+        static constexpr std::string_view NAME = typeName<RemoveServiceEvent>();
     };
 
     struct DoWorkEvent final : public Event {
@@ -107,7 +107,7 @@ namespace Ichor {
         ~DoWorkEvent() final = default;
 
         static constexpr uint64_t TYPE = typeNameHash<DoWorkEvent>();
-        static constexpr std::string_view NAME= typeName<DoWorkEvent>();
+        static constexpr std::string_view NAME = typeName<DoWorkEvent>();
     };
 
     struct RemoveCompletionCallbacksEvent final : public Event {
@@ -116,7 +116,7 @@ namespace Ichor {
 
         const CallbackKey key;
         static constexpr uint64_t TYPE = typeNameHash<RemoveCompletionCallbacksEvent>();
-        static constexpr std::string_view NAME= typeName<RemoveCompletionCallbacksEvent>();
+        static constexpr std::string_view NAME = typeName<RemoveCompletionCallbacksEvent>();
     };
 
     struct RemoveEventHandlerEvent final : public Event {
@@ -125,7 +125,7 @@ namespace Ichor {
 
         const CallbackKey key;
         static constexpr uint64_t TYPE = typeNameHash<RemoveEventHandlerEvent>();
-        static constexpr std::string_view NAME= typeName<RemoveEventHandlerEvent>();
+        static constexpr std::string_view NAME = typeName<RemoveEventHandlerEvent>();
     };
 
     struct RemoveEventInterceptorEvent final : public Event {
@@ -134,7 +134,7 @@ namespace Ichor {
 
         const CallbackKey key;
         static constexpr uint64_t TYPE = typeNameHash<RemoveEventInterceptorEvent>();
-        static constexpr std::string_view NAME= typeName<RemoveEventInterceptorEvent>();
+        static constexpr std::string_view NAME = typeName<RemoveEventInterceptorEvent>();
     };
 
     struct RemoveTrackerEvent final : public Event {
@@ -143,7 +143,7 @@ namespace Ichor {
 
         const uint64_t interfaceNameHash;
         static constexpr uint64_t TYPE = typeNameHash<RemoveTrackerEvent>();
-        static constexpr std::string_view NAME= typeName<RemoveTrackerEvent>();
+        static constexpr std::string_view NAME = typeName<RemoveTrackerEvent>();
     };
 
     struct ContinuableEvent final : public Event {
@@ -152,7 +152,7 @@ namespace Ichor {
 
         Generator<bool> generator;
         static constexpr uint64_t TYPE = typeNameHash<ContinuableEvent>();
-        static constexpr std::string_view NAME= typeName<ContinuableEvent>();
+        static constexpr std::string_view NAME = typeName<ContinuableEvent>();
     };
 
     struct UnrecoverableErrorEvent final : public Event {
@@ -162,7 +162,7 @@ namespace Ichor {
         uint64_t errorType;
         std::string error;
         static constexpr uint64_t TYPE = typeNameHash<UnrecoverableErrorEvent>();
-        static constexpr std::string_view NAME= typeName<UnrecoverableErrorEvent>();
+        static constexpr std::string_view NAME = typeName<UnrecoverableErrorEvent>();
     };
 
     struct RecoverableErrorEvent final : public Event {
@@ -172,6 +172,6 @@ namespace Ichor {
         uint64_t errorType;
         std::string error;
         static constexpr uint64_t TYPE = typeNameHash<RecoverableErrorEvent>();
-        static constexpr std::string_view NAME= typeName<RecoverableErrorEvent>();
+        static constexpr std::string_view NAME = typeName<RecoverableErrorEvent>();
     };
 }
