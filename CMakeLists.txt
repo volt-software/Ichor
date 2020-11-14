@@ -27,7 +27,7 @@ option(USE_PUBSUB "Add various dependencies to enable pubsub bundle to be built"
 option(USE_ETCD "Add various dependencies to enable pubsub bundle to be built" OFF)
 option(USE_BOOST_BEAST "Add boost asio and boost BEAST as dependencies" OFF)
 option(USE_SANITIZERS "Enable sanitizers, catching potential errors but slowing down compilation and execution speed" ON)
-option(USE_UGLY_HACK_EXCEPTION_CATCHING "Enable an ugly hack on gcc to enable debugging the point where exceptions are thrown. Useful for debugging boost asio/beast backtraces." ON)
+option(USE_UGLY_HACK_EXCEPTION_CATCHING "Enable an ugly hack on gcc to enable debugging the point where exceptions are thrown. Useful for debugging boost asio/beast backtraces." OFF)
 option(REMOVE_SOURCE_NAMES "Remove compiling source file names and line numbers when logging." OFF)
 
 if(USE_SPDLOG)
