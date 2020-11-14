@@ -1,5 +1,5 @@
 #include "UsingTcpService.h"
-#include "TestMsgJsonSerializer.h"
+#include "../common/TestMsgJsonSerializer.h"
 #include <ichor/optional_bundles/logging_bundle/LoggerAdmin.h>
 #include <ichor/optional_bundles/network_bundle/tcp/TcpHostService.h>
 #include <ichor/optional_bundles/network_bundle/ClientAdmin.h>

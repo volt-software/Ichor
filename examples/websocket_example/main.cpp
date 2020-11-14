@@ -1,5 +1,5 @@
 #include "UsingWsService.h"
-#include "TestMsgJsonSerializer.h"
+#include "../common/TestMsgJsonSerializer.h"
 #include <ichor/DependencyManager.h>
 #include <ichor/optional_bundles/logging_bundle/LoggerAdmin.h>
 #include <ichor/optional_bundles/network_bundle/ws/WsHostService.h>

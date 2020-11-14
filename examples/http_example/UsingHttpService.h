@@ -9,7 +9,7 @@
 #include <ichor/Service.h>
 #include <ichor/LifecycleManager.h>
 #include <ichor/optional_bundles/serialization_bundle/ISerializationAdmin.h>
-#include "TestMsg.h"
+#include "../common/TestMsg.h"
 
 using namespace Ichor;
 
