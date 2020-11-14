@@ -4,7 +4,7 @@
 #include <ichor/DependencyManager.h>
 #include <ichor/optional_bundles/logging_bundle/Logger.h>
 #include <ichor/Service.h>
-#include <ichor/optional_bundles/serialization_bundle/SerializationAdmin.h>
+#include <ichor/optional_bundles/serialization_bundle/ISerializationAdmin.h>
 #include <ichor/LifecycleManager.h>
 #include "TestMsg.h"
 

@@ -19,9 +19,6 @@ namespace Ichor {
     public:
         static constexpr InterfaceVersion version = InterfaceVersion{1, 0, 0};
 
-        virtual void addSerializer(const uint64_t type, ISerializer* serializer) = 0;
-        virtual void removeSerializer(const uint64_t type) = 0;
-
         template <typename T>
         std::vector<uint8_t> serialize(const T &obj) {
             return serialize(typeNameHash<T>(), static_cast<const void*>(&obj));

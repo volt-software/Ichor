@@ -1,6 +1,7 @@
 #include "TestService.h"
 #include "TestMsgJsonSerializer.h"
 #include <ichor/optional_bundles/logging_bundle/LoggerAdmin.h>
+#include <ichor/optional_bundles/serialization_bundle/SerializationAdmin.h>
 #ifdef USE_SPDLOG
 #include <ichor/optional_bundles/logging_bundle/SpdlogFrameworkLogger.h>
 #include <ichor/optional_bundles/logging_bundle/SpdlogLogger.h>

@@ -5,6 +5,7 @@
 #include <ichor/optional_bundles/network_bundle/http/HttpHostService.h>
 #include <ichor/optional_bundles/network_bundle/http/HttpConnectionService.h>
 #include <ichor/optional_bundles/network_bundle/ClientAdmin.h>
+#include <ichor/optional_bundles/serialization_bundle/SerializationAdmin.h>
 #ifdef USE_SPDLOG
 #include <ichor/optional_bundles/logging_bundle/SpdlogFrameworkLogger.h>
 #include <ichor/optional_bundles/logging_bundle/SpdlogLogger.h>

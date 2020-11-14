@@ -3,6 +3,7 @@
 
 Ichor::SerializationAdmin::SerializationAdmin(DependencyRegister &reg, IchorProperties props) : Service(std::move(props)) {
     reg.registerDependency<ILogger>(this, true);
+    reg.registerDependency<ISerializer>(this, false);
 }
 
 std::vector<uint8_t> Ichor::SerializationAdmin::serialize(const uint64_t type, const void* obj) {
@@ -19,24 +20,6 @@ void* Ichor::SerializationAdmin::deserialize(const uint64_t type, std::vector<ui
         throw std::runtime_error(fmt::format("Couldn't find serializer for type {}", type));
     }
     return serializer->second->deserialize(std::move(bytes));
-}
-
-void Ichor::SerializationAdmin::addSerializer(const uint64_t type, Ichor::ISerializer* _serializer) {
-    auto serializer = _serializers.find(type);
-    if(serializer != end(_serializers)) {
-        throw std::runtime_error(fmt::format("Serializer for type {} already added", type));
-    }
-    _serializers.emplace(type, _serializer);
-    LOG_TRACE(_logger, "Inserted serializer for type {}", type);
-}
-
-void Ichor::SerializationAdmin::removeSerializer(const uint64_t type) {
-    auto serializer = _serializers.find(type);
-    if(serializer == end(_serializers)) {
-        throw std::runtime_error(fmt::format("Couldn't find serializer for type {}", type));
-    }
-    _serializers.erase(type);
-    LOG_TRACE(_logger, "Removed serializer for type {}", type);
 }
 
 bool Ichor::SerializationAdmin::start() {
@@ -56,4 +39,39 @@ void Ichor::SerializationAdmin::addDependencyInstance(ILogger *logger) {
 
 void Ichor::SerializationAdmin::removeDependencyInstance(ILogger *logger) {
     _logger = nullptr;
+}
+
+void Ichor::SerializationAdmin::addDependencyInstance(ISerializer *serializer) {
+    if(!serializer->getProperties()->contains("type")) {
+        LOG_TRACE(_logger, "No type property for serializer {}", serializer->getServiceId());
+        return;
+    }
+
+    auto type = std::any_cast<uint64_t>(serializer->getProperties()->operator[]("type"));
+
+    auto existingSerializer = _serializers.find(type);
+    if(existingSerializer != end(_serializers)) {
+        LOG_TRACE(_logger, "Serializer for type {} already added", type);
+        return;
+    }
+
+    _serializers.emplace(type, serializer);
+    LOG_TRACE(_logger, "Inserted serializer for type {}", type);
+}
+
+void Ichor::SerializationAdmin::removeDependencyInstance(ISerializer *serializer) {
+    if(!serializer->getProperties()->contains("type")) {
+        LOG_TRACE(_logger, "No type property for serializer {}", serializer->getServiceId());
+    }
+
+    auto type = std::any_cast<uint64_t>(serializer->getProperties()->operator[]("type"));
+
+    auto existingSerializer = _serializers.find(type);
+    if(existingSerializer == end(_serializers)) {
+        LOG_TRACE(_logger, "Couldn't find serializer for type {} to remove", type);
+        return;
+    }
+
+    _serializers.erase(type);
+    LOG_TRACE(_logger, "Removed serializer for type {}", type);
 }

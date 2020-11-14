@@ -3,6 +3,7 @@
 #include <ichor/optional_bundles/logging_bundle/LoggerAdmin.h>
 #include <ichor/optional_bundles/network_bundle/tcp/TcpHostService.h>
 #include <ichor/optional_bundles/network_bundle/ClientAdmin.h>
+#include <ichor/optional_bundles/serialization_bundle/SerializationAdmin.h>
 #ifdef USE_SPDLOG
 #include <ichor/optional_bundles/logging_bundle/SpdlogFrameworkLogger.h>
 #include <ichor/optional_bundles/logging_bundle/SpdlogLogger.h>

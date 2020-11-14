@@ -14,15 +14,16 @@ namespace Ichor {
 
         std::vector<uint8_t> serialize(const uint64_t type, const void* obj) final;
         void* deserialize(const uint64_t type, std::vector<uint8_t> &&bytes) final;
-        void addSerializer(const uint64_t type, ISerializer* serializer) final;
-        void removeSerializer(const uint64_t type) final;
 
         void addDependencyInstance(ILogger *logger);
         void removeDependencyInstance(ILogger *logger);
+        void addDependencyInstance(ISerializer *serializer);
+        void removeDependencyInstance(ISerializer *serializer);
 
         bool start() final;
         bool stop() final;
     private:
+
         std::unordered_map<uint64_t, ISerializer*> _serializers{};
         ILogger *_logger{nullptr};
     };

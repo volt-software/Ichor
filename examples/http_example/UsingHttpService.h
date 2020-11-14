@@ -8,7 +8,7 @@
 #include <ichor/optional_bundles/network_bundle/http/IHttpService.h>
 #include <ichor/Service.h>
 #include <ichor/LifecycleManager.h>
-#include <ichor/optional_bundles/serialization_bundle/SerializationAdmin.h>
+#include <ichor/optional_bundles/serialization_bundle/ISerializationAdmin.h>
 #include "TestMsg.h"
 
 using namespace Ichor;

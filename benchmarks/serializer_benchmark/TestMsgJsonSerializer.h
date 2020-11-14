@@ -3,7 +3,7 @@
 #include <ichor/DependencyManager.h>
 #include <ichor/optional_bundles/logging_bundle/Logger.h>
 #include <ichor/Service.h>
-#include <ichor/optional_bundles/serialization_bundle/SerializationAdmin.h>
+#include <ichor/optional_bundles/serialization_bundle/ISerializationAdmin.h>
 #include <ichor/LifecycleManager.h>
 #include "TestMsg.h"
 
@@ -16,16 +16,14 @@ class TestMsgJsonSerializer final : public ISerializer, public Service {
 public:
     TestMsgJsonSerializer(DependencyRegister &reg, IchorProperties props) : Service(std::move(props)) {
         reg.registerDependency<ILogger>(this, true);
-        reg.registerDependency<ISerializationAdmin>(this, true);
+        _properties.insert({"type", typeNameHash<TestMsg>()});
     }
     ~TestMsgJsonSerializer() final = default;
     bool start() final {
-        _serializationAdmin->addSerializer(typeNameHash<TestMsg>(), this);
         return true;
     }
 
     bool stop() final {
-        _serializationAdmin->removeSerializer(typeNameHash<TestMsg>());
         return true;
     }
 
@@ -36,16 +34,6 @@ public:
 
     void removeDependencyInstance(ILogger *logger) {
         _logger = nullptr;
-    }
-
-    void addDependencyInstance(ISerializationAdmin *serializationAdmin) {
-        _serializationAdmin = serializationAdmin;
-        LOG_INFO(_logger, "Inserted serializationAdmin");
-    }
-
-    void removeDependencyInstance(ISerializationAdmin *serializationAdmin) {
-        _serializationAdmin = nullptr;
-        LOG_INFO(_logger, "Removed serializationAdmin");
     }
 
     std::vector<uint8_t> serialize(const void* obj) final {
@@ -75,10 +63,9 @@ public:
             return nullptr;
         }
 
-        return new TestMsg(d["id"].GetUint64(), d["val"].GetString());
+        return new TestMsg{d["id"].GetUint64(), d["val"].GetString()};
     }
 
 private:
-    ILogger *_logger;
-    ISerializationAdmin *_serializationAdmin;
+    ILogger *_logger{nullptr};
 };
