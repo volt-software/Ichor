@@ -6,7 +6,7 @@
 #include <ichor/Service.h>
 #include <ichor/optional_bundles/serialization_bundle/ISerializationAdmin.h>
 #include <ichor/LifecycleManager.h>
-#include "TestMsg.h"
+#include "../../examples/common/TestMsg.h"
 
 using namespace Ichor;
 

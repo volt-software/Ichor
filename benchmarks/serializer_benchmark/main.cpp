@@ -1,5 +1,5 @@
 #include "TestService.h"
-#include "TestMsgJsonSerializer.h"
+#include "../../examples/common/TestMsgJsonSerializer.h"
 #include <ichor/optional_bundles/logging_bundle/LoggerAdmin.h>
 #include <ichor/optional_bundles/serialization_bundle/SerializationAdmin.h>
 #ifdef USE_SPDLOG
