@@ -17,9 +17,6 @@
 [submodule "external/rapidjson"]
 	path = external/rapidjson
 	url = https://github.com/Tencent/rapidjson.git
-[submodule "external/libuv"]
-	path = external/libuv
-	url = https://github.com/libuv/libuv.git
 [submodule "external/wyhash"]
 	path = external/wyhash
 	url = https://github.com/wangyi-fudan/wyhash.git

@@ -25,7 +25,6 @@ option(USE_SPDLOG "Use spdlog as framework logging implementation" OFF)
 option(USE_RAPIDJSON "Add RapidJSON as a possible serializer implementation" OFF)
 option(USE_PUBSUB "Add various dependencies to enable pubsub bundle to be built" OFF)
 option(USE_ETCD "Add various dependencies to enable pubsub bundle to be built" OFF)
-option(USE_LIBUV "Add libuv as a possible network IO implementation" OFF)
 option(USE_BOOST_BEAST "Add boost asio and boost BEAST as dependencies" OFF)
 option(USE_SANITIZERS "Enable sanitizers, catching potential errors but slowing down compilation and execution speed" ON)
 option(REMOVE_SOURCE_NAMES "Remove compiling source file names and line numbers when logging." OFF)
@@ -53,10 +52,6 @@ if(USE_ETCD)
     endif()
 
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DUSE_ETCD ")
-endif()
-
-if(USE_LIBUV)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DUSE_LIBUV ")
 endif()
 
 if(USE_BOOST_BEAST)
@@ -117,19 +112,6 @@ if(USE_ETCD)
     target_sources(ichor PRIVATE ${ICHOR_OPTIONAL_ETCD_SOURCES})
 endif()
 
-if(USE_LIBUV)
-    set(LIBUV_CMAKE_ARGS -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE} -DCMAKE_INSTALL_PREFIX=${EXTERNAL_DIR}/libuv/build -DCMAKE_C_FLAGS=${EXTERNAL_C_FLAGS} -DCMAKE_EXE_LINKER_FLAGS=${EXTERNAL_LINKER_FLAGS} -DBUILD_TESTING=OFF -DLIBUV_BUILD_BENCH=OFF -DLIBUV_BUILD_TESTS=OFF)
-
-    ExternalProject_Add(LIBUV_EXTERNAL
-            SOURCE_DIR "${EXTERNAL_DIR}/libuv"
-            BINARY_DIR "${EXTERNAL_DIR}/libuv/build"
-            CMAKE_ARGS "${LIBUV_CMAKE_ARGS}"
-            INSTALL_COMMAND cmake -E echo "Skipping install step.")
-
-    add_dependencies(ichor LIBUV_EXTERNAL)
-    target_link_libraries(ichor ${EXTERNAL_DIR}/libuv/build/libuv.so)
-endif()
-
 if(USE_BOOST_BEAST)
 #TODO figure out how to make asio/beast compile as libraries, rather than header only. This would hopefully save some compilation time.
 #    target_link_libraries(ichor asio beast)
@@ -153,7 +135,6 @@ target_link_libraries(ichor -ldl -lrt)
 
 include_directories("${EXTERNAL_DIR}/Catch2/single_include")
 include_directories("${EXTERNAL_DIR}/wyhash")
-include_directories("${EXTERNAL_DIR}/libuv/include")
 include_directories("${EXTERNAL_DIR}/cppcoro/include")
 include_directories("${EXTERNAL_DIR}/fmt/include")
 include_directories("${TOP_DIR}/include")
@@ -169,10 +150,6 @@ endif()
 if(USE_ETCD)
     #necessary to get generator protobuf/grpc code to compile
     include_directories("${TOP_DIR}/include/ichor/optional_bundles/etcd_bundle")
-endif()
-
-if(USE_LIBUV)
-    include_directories("${EXTERNAL_DIR}/libuv/src")
 endif()
 
 if(BUILD_EXAMPLES)
