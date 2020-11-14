@@ -93,7 +93,7 @@ uint64_t Ichor::HttpConnectionService::sendAsync(Ichor::HttpMethod method, std::
             beast::error_code ec;
             http::request<http::vector_body<uint8_t>> req{static_cast<http::verb>(method), route, 11, std::move(msg)};
 
-            for(const auto &header : headers) {
+            for(auto const &header : headers) {
                 req.set(header.name, header.value);
             }
             req.set(http::field::host, std::any_cast<std::string &>(getProperties()->operator[]("Address")));

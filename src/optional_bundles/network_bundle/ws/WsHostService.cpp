@@ -40,15 +40,31 @@ bool Ichor::WsHostService::start() {
     _eventRegistration = getManager()->registerEventHandler<NewWsConnectionEvent>(getServiceId(), this, getServiceId());
 
     _wsContext = std::make_unique<net::io_context>(1);
-    auto address = net::ip::make_address(std::any_cast<std::string&>(getProperties()->operator[]("Address")));
+    auto const& address = net::ip::make_address(std::any_cast<std::string&>(getProperties()->operator[]("Address")));
     auto port = std::any_cast<uint16_t>(getProperties()->operator[]("Port"));
 
     net::spawn(*_wsContext, [this, address = std::move(address), port](net::yield_context yield){
-        listen(tcp::endpoint{address, port}, std::move(yield));
+        try {
+            listen(tcp::endpoint{address, port}, std::move(yield));
+        } catch (std::runtime_error &e) {
+            LOG_ERROR(_logger, "caught std runtime_error {}", e.what());
+            getManager()->pushEvent<StopServiceEvent>(getServiceId(), getServiceId());
+        } catch (...) {
+            LOG_ERROR(_logger, "caught unknown error");
+            getManager()->pushEvent<StopServiceEvent>(getServiceId(), getServiceId());
+        }
     });
 
     _listenThread = std::thread([this]{
-        _wsContext->run();
+        try {
+            _wsContext->run();
+        } catch (std::runtime_error &e) {
+            LOG_ERROR(_logger, "caught std runtime_error {}", e.what());
+            getManager()->pushEvent<StopServiceEvent>(getServiceId(), getServiceId());
+        } catch (...) {
+            LOG_ERROR(_logger, "caught unknown error");
+            getManager()->pushEvent<StopServiceEvent>(getServiceId(), getServiceId());
+        }
     });
 
 #ifdef __linux__
@@ -59,15 +75,22 @@ bool Ichor::WsHostService::start() {
 }
 
 bool Ichor::WsHostService::stop() {
+    LOG_TRACE(_logger, "trying to stop WsHostService {}", getServiceId());
     _quit = true;
 
     for(auto conn : _connections) {
         conn->stop();
     }
+    LOG_TRACE(_logger, "connections closed WsHostService {}", getServiceId());
 
     _wsAcceptor->close();
 
+
+    LOG_TRACE(_logger, "joining WsHostService {}", getServiceId());
+
     _listenThread.join();
+
+    LOG_TRACE(_logger, "wsContext->stop() WsHostService {}", getServiceId());
 
     _wsContext->stop();
     _wsContext = nullptr;

@@ -39,27 +39,27 @@ namespace Ichor {
 
         template<class Interface>
         ICHOR_CONSTEXPR void removeDependency() {
-            std::erase_if(_dependencies, [](const auto& dep) noexcept { return dep.interfaceNameHash == typeNameHash<Interface>() && dep.interfaceVersion == Interface::version(); });
+            std::erase_if(_dependencies, [](auto const& dep) noexcept { return dep.interfaceNameHash == typeNameHash<Interface>() && dep.interfaceVersion == Interface::version(); });
         }
 
         ICHOR_CONSTEXPR void removeDependency(const Dependency &dependency) {
-            std::erase_if(_dependencies, [&dependency](const auto& dep) noexcept { return dep.interfaceNameHash == dependency.interfaceNameHash && dep.interfaceVersion == dependency.interfaceVersion; });
+            std::erase_if(_dependencies, [&dependency](auto const& dep) noexcept { return dep.interfaceNameHash == dependency.interfaceNameHash && dep.interfaceVersion == dependency.interfaceVersion; });
         }
 
         template<class Interface>
         [[nodiscard]]
         ICHOR_CONSTEXPR bool contains() const {
-            return cend(_dependencies) != std::find_if(cbegin(_dependencies), cend(_dependencies), [](const auto& dep) noexcept { return dep.interfaceNameHash == typeNameHash<Interface>() && dep.interfaceVersion == Interface::version(); });
+            return cend(_dependencies) != std::find_if(cbegin(_dependencies), cend(_dependencies), [](auto const& dep) noexcept { return dep.interfaceNameHash == typeNameHash<Interface>() && dep.interfaceVersion == Interface::version(); });
         }
 
         [[nodiscard]]
         ICHOR_CONSTEXPR bool contains(const Dependency &dependency) const {
-            return cend(_dependencies) != std::find_if(cbegin(_dependencies), cend(_dependencies), [&dependency](const auto& dep) noexcept { return dep.interfaceNameHash == dependency.interfaceNameHash && dep.interfaceVersion == dependency.interfaceVersion; });
+            return cend(_dependencies) != std::find_if(cbegin(_dependencies), cend(_dependencies), [&dependency](auto const& dep) noexcept { return dep.interfaceNameHash == dependency.interfaceNameHash && dep.interfaceVersion == dependency.interfaceVersion; });
         }
 
         [[nodiscard]]
         ICHOR_CONSTEXPR auto find(const Dependency &dependency) const {
-            return std::find_if(cbegin(_dependencies), cend(_dependencies), [&dependency](const auto& dep) noexcept { return dep.interfaceNameHash == dependency.interfaceNameHash && dep.interfaceVersion == dependency.interfaceVersion; });
+            return std::find_if(cbegin(_dependencies), cend(_dependencies), [&dependency](auto const& dep) noexcept { return dep.interfaceNameHash == dependency.interfaceNameHash && dep.interfaceVersion == dependency.interfaceVersion; });
         }
 
         [[nodiscard]]
@@ -84,7 +84,7 @@ namespace Ichor {
 
         [[nodiscard]]
         ICHOR_CONSTEXPR size_t amountRequired() const {
-            return std::count_if(_dependencies.cbegin(), _dependencies.cend(), [](const auto &dep){ return dep.required; });
+            return std::count_if(_dependencies.cbegin(), _dependencies.cend(), [](auto const &dep){ return dep.required; });
         }
 
         [[nodiscard]]
@@ -156,14 +156,14 @@ namespace Ichor {
     class DependencyLifecycleManager final : public ILifecycleManager {
     public:
         explicit ICHOR_CONSTEXPR DependencyLifecycleManager(IFrameworkLogger *logger, std::string_view name, std::vector<Dependency> interfaces, IchorProperties properties) : _implementationName(name), _interfaces(std::move(interfaces)), _registry(), _dependencies(), _satisfiedDependencies(), _service(_registry, std::move(properties)), _logger(logger) {
-            for(const auto &reg : _registry._registrations) {
+            for(auto const &reg : _registry._registrations) {
                 _dependencies.addDependency(std::get<0>(reg.second));
             }
         }
 
         ICHOR_CONSTEXPR ~DependencyLifecycleManager() final {
             LOG_TRACE(_logger, "destroying {}, id {}", typeName<ServiceType>(), _service.getServiceId());
-            for(const auto &dep : _dependencies._dependencies) {
+            for(auto const &dep : _dependencies._dependencies) {
                 // _manager is always injected in DependencyManager::create...Manager functions.
                 _service._manager->template pushEvent<DependencyUndoRequestEvent>(_service.getServiceId(), nullptr, Dependency{dep.interfaceNameHash, dep.interfaceVersion, dep.required}, getProperties());
             }
@@ -184,8 +184,8 @@ namespace Ichor {
         }
 
         ICHOR_CONSTEXPR bool dependencyOnline(const std::shared_ptr<ILifecycleManager> &dependentService) final {
-            const auto &interfaces = dependentService->getInterfaces();
-            for(const auto &interface : interfaces) {
+            auto const &interfaces = dependentService->getInterfaces();
+            for(auto const &interface : interfaces) {
                 auto dep = _dependencies.find(interface);
                 if (dep == _dependencies.end() || _satisfiedDependencies.contains(interface)) {
                     continue;
@@ -220,10 +220,10 @@ namespace Ichor {
         }
 
         ICHOR_CONSTEXPR bool dependencyOffline(const std::shared_ptr<ILifecycleManager> &dependentService) final {
-            const auto &interfaces = dependentService->getInterfaces();
+            auto const &interfaces = dependentService->getInterfaces();
             bool stopped = false;
 
-            for(const auto &interface : interfaces) {
+            for(auto const &interface : interfaces) {
                 auto dep = _dependencies.find(interface);
                 if (dep == _dependencies.end() || (dep->required && !_satisfiedDependencies.contains(interface))) {
                     continue;

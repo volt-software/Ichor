@@ -64,7 +64,7 @@ namespace Ichor {
 
                 auto address = service->getProperties()->find("Address");
                 auto port = service->getProperties()->find("Port");
-                auto full_address = std::any_cast<std::string&>(address->second);
+                auto full_address = std::any_cast<std::string>(address->second);
                 if(port != end(*service->getProperties())) {
                     full_address += ":" + std::to_string(std::any_cast<uint16_t>(port->second));
                 }

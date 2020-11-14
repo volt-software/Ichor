@@ -24,6 +24,15 @@
 using namespace std::string_literals;
 using namespace Ichor;
 
+#include <iostream>
+#include <dlfcn.h>
+#include <execinfo.h>
+#include <typeinfo>
+#include <string>
+#include <memory>
+#include <cxxabi.h>
+#include <cstdlib>
+
 int main() {
     std::locale::global(std::locale("en_US.UTF-8"));
 

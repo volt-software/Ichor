@@ -416,3 +416,14 @@ Ichor::DependencyTrackerRegistration::~DependencyTrackerRegistration() {
         _mgr->pushEvent<RemoveTrackerEvent>(0, _interfaceNameHash);
     }
 }
+
+
+// ugly hack to catch the place where an exception is thrown
+// boost asio/beast are absolutely terrible when it comes to debugging these things
+// only works on gcc, probably. See https://stackoverflow.com/a/11674810/1460998
+#if USE_UGLY_HACK_EXCEPTION_CATCHING
+extern "C" void __cxa_throw(void *ex, void *info, void (*dest)(void *)) {
+    static void (*const rethrow)(void*,void*,void(*)(void*)) __attribute__ ((noreturn)) = (void (*)(void*,void*,void(*)(void*)))dlsym(RTLD_NEXT, "__cxa_throw");
+    rethrow(ex,info,dest);
+}
+#endif

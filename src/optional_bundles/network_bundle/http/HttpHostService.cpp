@@ -185,7 +185,7 @@ void Ichor::HttpHostService::read(tcp::socket socket, net::yield_context yield) 
 #endif
             if(handler != std::end(routes->second)) {
                 std::vector<HttpHeader> headers;
-                for(const auto &field : req) {
+                for(auto const &field : req) {
                     headers.reserve(10);
                     headers.emplace_back(field.name_string(), field.value());
                 }
@@ -194,7 +194,7 @@ void Ichor::HttpHostService::read(tcp::socket socket, net::yield_context yield) 
                 http::response<http::vector_body<uint8_t>> res{static_cast<http::status>(httpRes.status), req.version()};
                 res.set(http::field::server, BOOST_BEAST_VERSION_STRING);
                 res.set(http::field::content_type, "text/html");
-                for(const auto& header : httpRes.headers) {
+                for(auto const& header : httpRes.headers) {
                     res.set(header.value, header.name);
                 }
                 res.keep_alive(req.keep_alive());

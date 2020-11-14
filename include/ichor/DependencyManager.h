@@ -205,8 +205,8 @@ namespace Ichor {
                     }
                 }
 
-                for (const auto &[key, registration] : cmpMgr->getDependencyRegistry()->_registrations) {
-                    const auto &props = std::get<std::optional<IchorProperties>>(registration);
+                for (auto const &[key, registration] : cmpMgr->getDependencyRegistry()->_registrations) {
+                    auto const &props = std::get<std::optional<IchorProperties>>(registration);
                     pushEventInternal<DependencyRequestEvent>(cmpMgr->serviceId(), INTERNAL_EVENT_PRIORITY, cmpMgr, std::get<Dependency>(registration), props.has_value() ? &props.value() : std::optional<IchorProperties const *>{});
                 }
 
@@ -308,9 +308,9 @@ namespace Ichor {
                     continue;
                 }
 
-                for (const auto &[regKey, registration] : depRegistry->_registrations) {
+                for (auto const &[regKey, registration] : depRegistry->_registrations) {
                     if(regKey == InterfaceKey{typeNameHash<Interface>(), Interface::version}) {
-                        const auto &props = std::get<std::optional<IchorProperties>>(registration);
+                        auto const &props = std::get<std::optional<IchorProperties>>(registration);
                         DependencyRequestEvent evt{0, mgr->serviceId(), INTERNAL_EVENT_PRIORITY, mgr, std::get<Dependency>(registration), props.has_value() ? &props.value() : std::optional<IchorProperties const *>{}};
                         requestInfo.trackFunc(&evt);
                     }

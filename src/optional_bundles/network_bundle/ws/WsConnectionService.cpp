@@ -80,10 +80,12 @@ bool Ichor::WsConnectionService::start() {
 }
 
 bool Ichor::WsConnectionService::stop() {
+    LOG_TRACE(_logger, "trying to stop WsConnectionService {}", getServiceId());
     bool expected = false;
     bool stopWsContext = false;
     if(_quit.compare_exchange_strong(expected, true)) {
         try {
+            LOG_TRACE(_logger, "ws next layer close WsConnectionService {}", getServiceId());
             _ws->next_layer().close();
             cancelSendTimer();
         } catch (...) {
@@ -183,7 +185,7 @@ void Ichor::WsConnectionService::sendStrand(net::yield_context yield) {
         }
 
         if(!_quit.load(std::memory_order_acquire)) {
-            _sendTimer->expires_after(std::chrono::milliseconds(500));
+            _sendTimer->expires_after(std::chrono::milliseconds(50));
             _sendTimer->async_wait(yield[ec]);
         }
     }
@@ -194,8 +196,8 @@ void Ichor::WsConnectionService::sendStrand(net::yield_context yield) {
 void Ichor::WsConnectionService::accept(net::yield_context yield) {
     beast::error_code ec;
 
-    {
-        auto socket = std::any_cast<CopyIsMoveWorkaround<tcp::socket>>(getProperties()->operator[]("Socket"));
+    if(!_ws) {
+        auto &socket = std::any_cast<CopyIsMoveWorkaround<tcp::socket>&>(getProperties()->operator[]("Socket"));
         _ws = std::make_unique<websocket::stream<beast::tcp_stream>>(socket.moveObject());
     }
 
@@ -240,7 +242,7 @@ void Ichor::WsConnectionService::accept(net::yield_context yield) {
 
 void Ichor::WsConnectionService::connect(net::yield_context yield) {
     beast::error_code ec;
-    auto const address = std::any_cast<std::string&>(getProperties()->operator[]("Address"));
+    auto const& address = std::any_cast<std::string&>(getProperties()->operator[]("Address"));
     auto const port = std::any_cast<uint16_t>(getProperties()->operator[]("Port"));
 
     // These objects perform our I/O
@@ -332,8 +334,12 @@ void Ichor::WsConnectionService::read(net::yield_context &yield) {
 
 void Ichor::WsConnectionService::cancelSendTimer() {
     if(_wsContext) {
-        _wsContext->post([this](){ _sendTimer->cancel(); });
+        LOG_TRACE(_logger, "cancelSendTimer wsContext->post() WsConnectionService {}", getServiceId());
+        _wsContext->post([this](){
+            _sendTimer->cancel();
+        });
     } else {
+        LOG_TRACE(_logger, "cancelSendTimer net::spawn WsConnectionService {}", getServiceId());
         net::spawn(std::any_cast<net::executor>(getProperties()->operator[]("Executor")), [this](net::yield_context yield) {
             _sendTimer->cancel();
         });
