@@ -422,6 +422,14 @@ Ichor::DependencyTrackerRegistration::~DependencyTrackerRegistration() {
 // boost asio/beast are absolutely terrible when it comes to debugging these things
 // only works on gcc, probably. See https://stackoverflow.com/a/11674810/1460998
 #if USE_UGLY_HACK_EXCEPTION_CATCHING
+#include <dlfcn.h>
+#include <execinfo.h>
+#include <typeinfo>
+#include <string>
+#include <memory>
+#include <cxxabi.h>
+#include <cstdlib>
+
 extern "C" void __cxa_throw(void *ex, void *info, void (*dest)(void *)) {
     static void (*const rethrow)(void*,void*,void(*)(void*)) __attribute__ ((noreturn)) = (void (*)(void*,void*,void(*)(void*)))dlsym(RTLD_NEXT, "__cxa_throw");
     rethrow(ex,info,dest);
