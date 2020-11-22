@@ -31,7 +31,7 @@ int main() {
 
     dm.createServiceManager<LoggerAdmin<LOGGER_TYPE>, ILoggerAdmin>();
     for(uint64_t i = 0; i < 10'000; i++) {
-        dm.createServiceManager<TestService, ITestService>(IchorProperties{{"Iteration", i}, {"LogLevel", LogLevel::WARN}});
+        dm.createServiceManager<TestService>(IchorProperties{{"Iteration", i}, {"LogLevel", LogLevel::WARN}});
     }
     dm.start();
     auto end = std::chrono::system_clock::now();

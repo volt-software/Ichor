@@ -31,7 +31,7 @@ int main() {
 #endif
     dm.createServiceManager<LoggerAdmin<LOGGER_TYPE>, ILoggerAdmin>();
     dm.createServiceManager<EventStatisticsService, IEventStatisticsService>(IchorProperties{{"ShowStatisticsOnStop", true}});
-    dm.createServiceManager<UsingStatisticsService, IUsingStatisticsService>();
+    dm.createServiceManager<UsingStatisticsService>();
     dm.start();
     auto end = std::chrono::system_clock::now();
     std::cout << fmt::format("Program ran for {:L} µs\n", std::chrono::duration_cast<std::chrono::microseconds>(end-start).count());

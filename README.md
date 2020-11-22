@@ -25,10 +25,7 @@ void siginthandler(int param) {
     quit = true;
 }
 
-struct ISigIntService : virtual public IService {
-    static constexpr InterfaceVersion version = InterfaceVersion{1, 0, 0};
-};
-class SigIntService final : public ISigIntService, public Service {
+class SigIntService final : public Service {
 public:
     bool start() final {
         // Setup a timer that fires every 10 milliseconds and tell that dependency manager that we're interested in the events that the timer fires.
@@ -63,12 +60,12 @@ public:
 
 
 int main() {
-    std::locale::global(std::locale("en_US.UTF-8")); // some framework logging requires a proper locale
+    std::locale::global(std::locale("en_US.UTF-8")); // some loggers require having a locale
 
     DependencyManager dm{};
     // Register a framework logger and our sig int service.
     dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>();
-    dm.createServiceManager<SigIntService, ISigIntService>();
+    dm.createServiceManager<SigIntService>();
     // Start manager, consumes current thread.
     dm.start();
 
@@ -160,9 +157,9 @@ Optional services:
 These benchmarks are mainly used to identify bottlenecks, not to showcase the performance of the framework. Proper throughput and latency benchmarks are TBD.
 
 Setup: AMD 3900X, 3600MHz@CL17 RAM, ubuntu 20.04
-* Start best case scenario: 10,000 starts with dependency in ~1,000 ms
+* Start best case scenario: 10,000 starts with dependency in ~730 ms
 * Start/stop best case scenario: 1,000,000 start/stops with dependency in ~840 ms
-* Serialization: Rapidjson: 1,000,000 messages serialized & deserialized in ~350 ms
+* Serialization: Rapidjson: 1,000,000 messages serialized & deserialized in ~390 ms
 
 # Support
 

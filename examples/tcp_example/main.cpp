@@ -36,7 +36,7 @@ int main() {
     dm.createServiceManager<TestMsgJsonSerializer, ISerializer>();
     dm.createServiceManager<TcpHostService, IHostService>(IchorProperties{{"Address", "127.0.0.1"s}, {"Port", (uint16_t)8001}});
     dm.createServiceManager<ClientAdmin<TcpConnectionService>, IClientAdmin>();
-    dm.createServiceManager<UsingTcpService, IUsingTcpService>(IchorProperties{{"Address", "127.0.0.1"s}, {"Port", (uint16_t)8001}});
+    dm.createServiceManager<UsingTcpService>(IchorProperties{{"Address", "127.0.0.1"s}, {"Port", (uint16_t)8001}});
     dm.start();
     auto end = std::chrono::system_clock::now();
     std::cout << fmt::format("Program ran for {:L} µs\n", std::chrono::duration_cast<std::chrono::microseconds>(end-start).count());

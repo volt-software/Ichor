@@ -8,12 +8,7 @@
 
 using namespace Ichor;
 
-
-struct IUsingTimerService : virtual public IService {
-    static constexpr InterfaceVersion version = InterfaceVersion{1, 0, 0};
-};
-
-class UsingTimerService final : public IUsingTimerService, public Service {
+class UsingTimerService final : public Service {
 public:
     UsingTimerService(DependencyRegister &reg, IchorProperties props) : Service(std::move(props)) {
         reg.registerDependency<ILogger>(this, true);

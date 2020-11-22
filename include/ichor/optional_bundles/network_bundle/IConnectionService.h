@@ -5,8 +5,6 @@
 namespace Ichor {
     class IConnectionService : public virtual IService {
     public:
-        static constexpr InterfaceVersion version = InterfaceVersion{1, 0, 0};
-
         ~IConnectionService() override = default;
 
         /**

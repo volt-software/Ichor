@@ -8,8 +8,6 @@ namespace Ichor {
 
     class IHttpService : public virtual IService {
     public:
-        static constexpr InterfaceVersion version = InterfaceVersion{1, 0, 0};
-
         ~IHttpService() override = default;
 
         virtual std::unique_ptr<HttpRouteRegistration> addRoute(HttpMethod method, std::string route, std::function<HttpResponse(HttpRequest&)> handler) = 0;

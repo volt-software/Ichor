@@ -9,7 +9,6 @@ using namespace Ichor;
 
 
 struct IOptionalService : virtual public IService {
-    static constexpr InterfaceVersion version = InterfaceVersion{1, 0, 0};
 };
 
 class OptionalService final : public IOptionalService, public Service {

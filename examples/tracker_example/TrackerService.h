@@ -24,11 +24,7 @@ public:
     const std::string scope;
 };
 
-struct ITrackerService : virtual public IService {
-    static constexpr InterfaceVersion version = InterfaceVersion{1, 0, 0};
-};
-
-class TrackerService final : public ITrackerService, public Service {
+class TrackerService final : public Service {
 public:
     TrackerService(DependencyRegister &reg, IchorProperties props) : Service(std::move(props)) {
         reg.registerDependency<ILogger>(this, true);

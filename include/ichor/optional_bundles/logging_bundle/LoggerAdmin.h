@@ -7,7 +7,6 @@
 
 namespace Ichor {
     struct ILoggerAdmin : virtual public IService {
-        static constexpr InterfaceVersion version = InterfaceVersion{1, 0, 0};
     };
 
     template<typename LogT>

@@ -16,8 +16,6 @@ namespace Ichor {
 
         virtual void setLogLevel(LogLevel level) = 0;
         [[nodiscard]] virtual LogLevel getLogLevel() const = 0;
-
-        static constexpr InterfaceVersion version = InterfaceVersion{1, 0, 0};
     protected:
         ~IFrameworkLogger() override = default;
     };

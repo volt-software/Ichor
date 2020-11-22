@@ -7,8 +7,6 @@ namespace Ichor {
 
     class IDependencyRequestTracker {
     public:
-        static constexpr InterfaceVersion version = InterfaceVersion{1, 0, 0};
-
         virtual ~IDependencyRequestTracker() = default;
 
         virtual void handleDependencyRequest(void * ) = 0;

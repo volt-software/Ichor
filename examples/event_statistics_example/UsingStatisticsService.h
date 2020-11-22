@@ -8,12 +8,7 @@
 
 using namespace Ichor;
 
-
-struct IUsingStatisticsService : virtual public IService {
-    static constexpr InterfaceVersion version = InterfaceVersion{1, 0, 0};
-};
-
-class UsingStatisticsService final : public IUsingStatisticsService, public Service {
+class UsingStatisticsService final : public Service {
 public:
     UsingStatisticsService(DependencyRegister &reg, IchorProperties props) : Service(std::move(props)) {
         reg.registerDependency<ILogger>(this, true);
@@ -22,15 +17,21 @@ public:
 
     bool start() final {
         LOG_INFO(_logger, "UsingStatisticsService started");
-        auto _timerManager = getManager()->createServiceManager<Timer, ITimer>();
-        _timerManager->setChronoInterval(std::chrono::seconds (15));
-        _timerEventRegistration = getManager()->registerEventHandler<TimerEvent>(getServiceId(), this, _timerManager->getServiceId());
-        _timerManager->startTimer();
+        auto _quitTimerManager = getManager()->createServiceManager<Timer, ITimer>();
+        auto _bogusTimerManager = getManager()->createServiceManager<Timer, ITimer>();
+        _quitTimerManager->setChronoInterval(std::chrono::seconds (15));
+        _bogusTimerManager->setChronoInterval(std::chrono::milliseconds (15));
+        _quitTimerId = _quitTimerManager->getServiceId();
+        _quitTimerEventRegistration = getManager()->registerEventHandler<TimerEvent>(getServiceId(), this, _quitTimerManager->getServiceId());
+        _bogusTimerEventRegistration = getManager()->registerEventHandler<TimerEvent>(getServiceId(), this, _bogusTimerManager->getServiceId());
+        _quitTimerManager->startTimer();
+        _bogusTimerManager->startTimer();
         return true;
     }
 
     bool stop() final {
-        _timerEventRegistration = nullptr;
+        _quitTimerEventRegistration = nullptr;
+        _bogusTimerEventRegistration = nullptr;
         LOG_INFO(_logger, "UsingStatisticsService stopped");
         return true;
     }
@@ -44,12 +45,22 @@ public:
     }
 
     Generator<bool> handleEvent(TimerEvent const * const evt) {
-        getManager()->pushEvent<QuitEvent>(getServiceId(), INTERNAL_EVENT_PRIORITY+1);
+        if(evt->originatingService == _quitTimerId) {
+            getManager()->pushEvent<QuitEvent>(getServiceId(), INTERNAL_EVENT_PRIORITY + 1);
+        } else {
+            std::this_thread::sleep_for(std::chrono::milliseconds(_dist(_mt)));
+        }
 
         co_return (bool)PreventOthersHandling;
     }
 
 private:
     ILogger *_logger{nullptr};
-    std::unique_ptr<EventHandlerRegistration> _timerEventRegistration{nullptr};
+    std::unique_ptr<EventHandlerRegistration> _quitTimerEventRegistration{nullptr};
+    std::unique_ptr<EventHandlerRegistration> _bogusTimerEventRegistration{nullptr};
+    uint64_t _quitTimerId{0};
+
+    std::random_device _rd{};
+    std::mt19937 _mt{_rd()};
+    std::uniform_int_distribution<> _dist{1, 10};
 };

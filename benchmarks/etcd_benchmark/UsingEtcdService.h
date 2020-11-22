@@ -8,12 +8,7 @@
 
 using namespace Ichor;
 
-
-struct IUsingEtcdService : virtual public IService {
-    static constexpr InterfaceVersion version = InterfaceVersion{1, 0, 0};
-};
-
-class UsingEtcdService final : public IUsingEtcdService, public Service {
+class UsingEtcdService final : public Service {
 public:
     UsingEtcdService(DependencyRegister &reg, IchorProperties props) : Service(std::move(props)) {
         reg.registerDependency<ILogger>(this, true);

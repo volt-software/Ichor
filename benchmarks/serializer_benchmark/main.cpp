@@ -28,7 +28,7 @@ int main() {
     dm.createServiceManager<LoggerAdmin<LOGGER_TYPE>, ILoggerAdmin>();
     dm.createServiceManager<SerializationAdmin, ISerializationAdmin>();
     dm.createServiceManager<TestMsgJsonSerializer, ISerializer>();
-    dm.createServiceManager<TestService, ITestService>();
+    dm.createServiceManager<TestService>();
     dm.start();
 
     return 0;

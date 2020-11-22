@@ -13,12 +13,7 @@
 
 using namespace Ichor;
 
-
-struct IUsingWsService : virtual public IService {
-    static constexpr InterfaceVersion version = InterfaceVersion{1, 0, 0};
-};
-
-class UsingWsService final : public IUsingWsService, public Service {
+class UsingWsService final : public Service {
 public:
     UsingWsService(DependencyRegister &reg, IchorProperties props) : Service(std::move(props)) {
         reg.registerDependency<ILogger>(this, true);

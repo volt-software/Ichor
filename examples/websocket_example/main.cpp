@@ -39,7 +39,7 @@ int main() {
     dm.createServiceManager<TestMsgJsonSerializer, ISerializer>();
     dm.createServiceManager<WsHostService, IHostService>(IchorProperties{{"Address", "127.0.0.1"s}, {"Port", (uint16_t)8001}});
     dm.createServiceManager<ClientAdmin<WsConnectionService>, IClientAdmin>();
-    dm.createServiceManager<UsingWsService, IUsingWsService>(IchorProperties{{"Address", "127.0.0.1"s}, {"Port", (uint16_t)8001}});
+    dm.createServiceManager<UsingWsService>(IchorProperties{{"Address", "127.0.0.1"s}, {"Port", (uint16_t)8001}});
     dm.start();
     auto end = std::chrono::system_clock::now();
     std::cout << fmt::format("Program ran for {:L} µs\n", std::chrono::duration_cast<std::chrono::microseconds>(end-start).count());

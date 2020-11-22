@@ -47,19 +47,6 @@ namespace Ichor {
         return consteval_wyhash(&name[0], name.size(), 0);
     }
 
-    struct InterfaceVersion {
-        constexpr InterfaceVersion(uint64_t _major, uint64_t _minor, uint64_t _patch) noexcept : major(_major), minor(_minor), patch(_patch) {}
-        constexpr InterfaceVersion(const InterfaceVersion &other) noexcept = default;
-        constexpr InterfaceVersion(InterfaceVersion &&other) noexcept = default;
-        constexpr InterfaceVersion& operator=(const InterfaceVersion &other) noexcept = default;
-        constexpr InterfaceVersion& operator=(InterfaceVersion &&other) noexcept = default;
-        constexpr std::strong_ordering operator<=>(const InterfaceVersion&) const noexcept = default;
-
-        uint64_t major;
-        uint64_t minor;
-        uint64_t patch;
-    };
-
     template<typename...>
     struct typeList {};
 

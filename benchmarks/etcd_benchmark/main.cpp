@@ -37,7 +37,7 @@ int main() {
 #endif
         dmOne.createServiceManager<LoggerAdmin<LOGGER_TYPE>, ILoggerAdmin>();
         dmOne.createServiceManager<EtcdService, IEtcdService>(IchorProperties{{"EtcdAddress", "localhost:2379"s}});
-        dmOne.createServiceManager<UsingEtcdService, IUsingEtcdService>();
+        dmOne.createServiceManager<UsingEtcdService>();
         dmOne.start();
     });
 
@@ -49,7 +49,7 @@ int main() {
 #endif
         dmTwo.createServiceManager<LoggerAdmin<LOGGER_TYPE>, ILoggerAdmin>();
         dmTwo.createServiceManager<EtcdService, IEtcdService>(IchorProperties{{"EtcdAddress", "localhost:2379"s}});
-        dmTwo.createServiceManager<UsingEtcdService, IUsingEtcdService>();
+        dmTwo.createServiceManager<UsingEtcdService>();
         dmTwo.start();
     });
 

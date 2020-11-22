@@ -13,12 +13,7 @@
 
 using namespace Ichor;
 
-
-struct IUsingTcpService : virtual public IService {
-    static constexpr InterfaceVersion version = InterfaceVersion{1, 0, 0};
-};
-
-class UsingTcpService final : public IUsingTcpService, public Service {
+class UsingTcpService final : public Service {
 public:
     UsingTcpService(DependencyRegister &reg, IchorProperties props) : Service(std::move(props)) {
         reg.registerDependency<ILogger>(this, true);

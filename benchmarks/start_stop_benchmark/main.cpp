@@ -28,7 +28,7 @@ int main() {
 #endif
     dm.createServiceManager<LoggerAdmin<LOGGER_TYPE>, ILoggerAdmin>();
     dm.createServiceManager<TestService, ITestService>(IchorProperties{{"LogLevel", LogLevel::INFO}});
-    dm.createServiceManager<StartStopService, IStartStopService>(IchorProperties{{"LogLevel", LogLevel::INFO}});
+    dm.createServiceManager<StartStopService>(IchorProperties{{"LogLevel", LogLevel::INFO}});
     dm.start();
 
     return 0;

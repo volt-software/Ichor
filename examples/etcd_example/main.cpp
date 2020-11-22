@@ -30,7 +30,7 @@ int main() {
 #endif
     dm.createServiceManager<LoggerAdmin<LOGGER_TYPE>, ILoggerAdmin>();
     dm.createServiceManager<EtcdService, IEtcdService>(IchorProperties{{"EtcdAddress", "localhost:2379"s}});
-    dm.createServiceManager<UsingEtcdService, IUsingEtcdService>();
+    dm.createServiceManager<UsingEtcdService>();
     dm.start();
     auto end = std::chrono::system_clock::now();
     std::cout << fmt::format("Program ran for {:L} µs\n", std::chrono::duration_cast<std::chrono::microseconds>(end-start).count());

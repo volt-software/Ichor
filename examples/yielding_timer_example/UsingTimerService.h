@@ -10,7 +10,6 @@ using namespace Ichor;
 
 
 struct IUsingTimerService : virtual public IService {
-    static constexpr InterfaceVersion version = InterfaceVersion{1, 0, 0};
 };
 
 class UsingTimerService final : public IUsingTimerService, public Service {

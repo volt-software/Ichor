@@ -7,8 +7,6 @@ namespace Ichor {
 
     class ISerializer : public virtual IService {
     public:
-        static constexpr InterfaceVersion version = InterfaceVersion{1, 0, 0};
-
         ~ISerializer() override = default;
 
         virtual std::vector<uint8_t> serialize(const void* obj) = 0;
@@ -17,8 +15,6 @@ namespace Ichor {
 
     class ISerializationAdmin : public virtual IService {
     public:
-        static constexpr InterfaceVersion version = InterfaceVersion{1, 0, 0};
-
         template <typename T>
         std::vector<uint8_t> serialize(const T &obj) {
             return serialize(typeNameHash<T>(), static_cast<const void*>(&obj));

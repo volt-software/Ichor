@@ -23,7 +23,7 @@ namespace Ichor {
     concept Derived = std::is_base_of<U, T>::value;
 
     template <class T, class... U>
-    concept ImplementsAll = DerivedTrait<T, U...>::value;
+    concept ImplementsAll = sizeof...(U) == 0 || DerivedTrait<T, U...>::value;
 
     template <class ImplT>
     concept RequestsDependencies = requires(ImplT impl, DependencyRegister &deps, IchorProperties properties) {
@@ -58,11 +58,4 @@ namespace Ichor {
         { impl.handleDependencyRequest(svc, reqEvt) } -> std::same_as<void>;
         { impl.handleDependencyUndoRequest(svc, reqUndoEvt) } -> std::same_as<void>;
     };
-
-
-    // TODO ServiceInterface on actual interface fails due to pure virtual functions or something
-//    template <class T>
-//    concept ServiceInterface = requires(T bundleInterface) {
-//        { bundleInterface.version() } -> std::same_as<InterfaceVersion>;
-//    };
 }

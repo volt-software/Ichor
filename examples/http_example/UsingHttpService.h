@@ -13,12 +13,7 @@
 
 using namespace Ichor;
 
-
-struct IUsingHttpService : virtual public IService {
-    static constexpr InterfaceVersion version = InterfaceVersion{1, 0, 0};
-};
-
-class UsingHttpService final : public IUsingHttpService, public Service {
+class UsingHttpService final : public Service {
 public:
     UsingHttpService(DependencyRegister &reg, IchorProperties props) : Service(std::move(props)) {
         reg.registerDependency<ILogger>(this, true);

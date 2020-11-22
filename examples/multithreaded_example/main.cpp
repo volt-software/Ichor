@@ -36,7 +36,7 @@ int main() {
         dmOne.createServiceManager<SpdlogSharedService, ISpdlogSharedService>();
 #endif
         dmOne.createServiceManager<LoggerAdmin<LOGGER_TYPE>, ILoggerAdmin>();
-        dmOne.createServiceManager<OneService, IOneService>();
+        dmOne.createServiceManager<OneService>();
         dmOne.start();
     });
 
@@ -46,7 +46,7 @@ int main() {
         dmTwo.createServiceManager<SpdlogSharedService, ISpdlogSharedService>();
 #endif
         dmTwo.createServiceManager<LoggerAdmin<LOGGER_TYPE>, ILoggerAdmin>();
-        dmTwo.createServiceManager<OtherService, IOtherService>();
+        dmTwo.createServiceManager<OtherService>();
         dmTwo.start();
     });
 

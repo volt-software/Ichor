@@ -28,8 +28,6 @@ namespace Ichor {
 
     class IEventStatisticsService : public virtual IService {
     public:
-        static constexpr InterfaceVersion version = InterfaceVersion{1, 0, 0};
-
         ~IEventStatisticsService() override = default;
 
         virtual const std::unordered_map<std::string_view, std::vector<StatisticEntry>>& getRecentStatistics() = 0;

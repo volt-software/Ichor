@@ -8,12 +8,7 @@
 
 using namespace Ichor;
 
-
-struct IStartStopService : public virtual IService {
-    static constexpr InterfaceVersion version = InterfaceVersion{1, 0, 0};
-};
-
-class StartStopService final : public IStartStopService, public Service {
+class StartStopService final : public Service {
 public:
     StartStopService(DependencyRegister &reg, IchorProperties props) : Service(std::move(props)) {
         reg.registerDependency<ILogger>(this, true);

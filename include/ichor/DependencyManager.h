@@ -176,8 +176,10 @@ namespace Ichor {
             if constexpr(RequestsDependencies<Impl>) {
                 auto cmpMgr = DependencyLifecycleManager<Impl>::template create(_logger, "", std::move(properties), InterfacesList<Interfaces...>);
 
-                if constexpr (ListContainsInterface<IFrameworkLogger, Interfaces...>::value) {
-                    throw std::runtime_error("IFrameworkLogger cannot have any dependencies");
+                if constexpr (sizeof...(Interfaces) > 0) {
+                    if constexpr(ListContainsInterface<IFrameworkLogger, Interfaces...>::value) {
+                        throw std::runtime_error("IFrameworkLogger cannot have any dependencies");
+                    }
                 }
 
                 logAddService<Impl, Interfaces...>();
@@ -219,9 +221,11 @@ namespace Ichor {
             } else {
                 auto cmpMgr = LifecycleManager<Impl>::template create(_logger, "", std::move(properties), InterfacesList<Interfaces...>);
 
-                if constexpr (ListContainsInterface<IFrameworkLogger, Interfaces...>::value) {
-                    _logger = &cmpMgr->getService();
-                    _preventEarlyDestructionOfFrameworkLogger = cmpMgr;
+                if constexpr (sizeof...(Interfaces) > 0) {
+                    if constexpr (ListContainsInterface<IFrameworkLogger, Interfaces...>::value) {
+                        _logger = &cmpMgr->getService();
+                        _preventEarlyDestructionOfFrameworkLogger = cmpMgr;
+                    }
                 }
 
                 cmpMgr->getService().injectDependencyManager(this);
@@ -290,7 +294,7 @@ namespace Ichor {
         [[nodiscard]]
         /// Register handlers for when dependencies get requested/unrequested
         /// \tparam Interface type of interface where dependency is requested for (has to derive from Event)
-        /// \tparam Impl type of class registering handler (auto-deducible)
+        /// \tparam Impl type of class registering handler (auto-deducib)
         /// \param serviceId id of service registering handler
         /// \param impl class that is registering handler
         /// \return RAII handler, removes registration upon destruction
@@ -308,8 +312,8 @@ namespace Ichor {
                     continue;
                 }
 
-                for (auto const &[regKey, registration] : depRegistry->_registrations) {
-                    if(regKey == InterfaceKey{typeNameHash<Interface>(), Interface::version}) {
+                for (auto const &[interfaceHash, registration] : depRegistry->_registrations) {
+                    if(interfaceHash == typeNameHash<Interface>()) {
                         auto const &props = std::get<std::optional<IchorProperties>>(registration);
                         DependencyRequestEvent evt{0, mgr->serviceId(), INTERNAL_EVENT_PRIORITY, mgr, std::get<Dependency>(registration), props.has_value() ? &props.value() : std::optional<IchorProperties const *>{}};
                         requestInfo.trackFunc(&evt);
@@ -458,6 +462,13 @@ namespace Ichor {
         void logAddService() {
             if(_logger != nullptr && _logger->getLogLevel() <= LogLevel::DEBUG) {
                 LOG_DEBUG(_logger, "added ServiceManager<{}, {}>", typeName<Interface>(), typeName<Impl>());
+            }
+        }
+
+        template <typename Impl>
+        void logAddService() {
+            if(_logger != nullptr && _logger->getLogLevel() <= LogLevel::DEBUG) {
+                LOG_DEBUG(_logger, "added ServiceManager<{}>", typeName<Impl>());
             }
         }
 

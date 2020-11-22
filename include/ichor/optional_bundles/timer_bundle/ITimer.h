@@ -12,8 +12,6 @@ namespace Ichor {
     };
 
     struct ITimer : virtual public IService {
-        static constexpr InterfaceVersion version = InterfaceVersion{1, 0, 0};
-
         virtual void startTimer() = 0;
         virtual void stopTimer() = 0;
         [[nodiscard]] virtual bool running() const = 0;

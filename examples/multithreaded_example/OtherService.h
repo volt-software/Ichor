@@ -8,11 +8,7 @@
 
 using namespace Ichor;
 
-struct IOtherService : virtual public IService {
-    static constexpr InterfaceVersion version = InterfaceVersion{1, 0, 0};
-};
-
-class OtherService final : public IOtherService, public Service {
+class OtherService final : public Service {
 public:
     OtherService(DependencyRegister &reg, IchorProperties props) : Service(std::move(props)) {
         reg.registerDependency<ILogger>(this, true);
