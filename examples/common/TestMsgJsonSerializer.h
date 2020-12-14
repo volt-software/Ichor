@@ -14,29 +14,17 @@ using namespace Ichor;
 
 class TestMsgJsonSerializer final : public ISerializer, public Service {
 public:
-    TestMsgJsonSerializer(DependencyRegister &reg, IchorProperties props) : Service(std::move(props)) {
-        reg.registerDependency<ILogger>(this, true);
+    TestMsgJsonSerializer(IchorProperties props) : Service(std::move(props)) {
         _properties.insert({"type", typeNameHash<TestMsg>()});
     }
     ~TestMsgJsonSerializer() final = default;
 
     bool start() final {
-        LOG_INFO(_logger, "TestMsgSerializer started");
         return true;
     }
 
     bool stop() final {
-        LOG_INFO(_logger, "TestMsgSerializer stopped");
         return true;
-    }
-
-    void addDependencyInstance(ILogger *logger) {
-        _logger = logger;
-        LOG_TRACE(_logger, "Inserted logger");
-    }
-
-    void removeDependencyInstance(ILogger *logger) {
-        _logger = nullptr;
     }
 
     std::vector<uint8_t> serialize(const void* obj) final {
@@ -61,13 +49,9 @@ public:
         d.ParseInsitu(reinterpret_cast<char*>(stream.data()));
 
         if(d.HasParseError() || !d.HasMember("id") || !d.HasMember("val")) {
-            LOG_ERROR(_logger, "stream not valid json");
             return nullptr;
         }
 
         return new TestMsg{d["id"].GetUint64(), d["val"].GetString()};
     }
-
-private:
-    ILogger *_logger{nullptr};
 };

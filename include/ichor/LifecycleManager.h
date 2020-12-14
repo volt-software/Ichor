@@ -334,6 +334,11 @@ namespace Ichor {
     requires Derived<ServiceType, Service>
     class LifecycleManager final : public ILifecycleManager {
     public:
+        template <typename U = ServiceType> requires RequestsProperties<U>
+        explicit ICHOR_CONSTEXPR LifecycleManager(IFrameworkLogger *logger, std::string_view name, std::vector<Dependency> interfaces, IchorProperties properties) : _implementationName(name), _interfaces(std::move(interfaces)), _service(std::move(properties)), _logger(logger) {
+        }
+
+        template <typename U = ServiceType> requires (!RequestsProperties<U>)
         explicit ICHOR_CONSTEXPR LifecycleManager(IFrameworkLogger *logger, std::string_view name, std::vector<Dependency> interfaces, IchorProperties properties) : _implementationName(name), _interfaces(std::move(interfaces)), _service(), _logger(logger) {
             _service.setProperties(std::move(properties));
         }

@@ -30,6 +30,11 @@ namespace Ichor {
         { ImplT(deps, properties) };
     };
 
+    template <class ImplT>
+    concept RequestsProperties = requires(ImplT impl, IchorProperties properties) {
+        { ImplT(properties) };
+    };
+
     template <class ImplT, class Interface>
     concept ImplementsDependencyInjection = requires(ImplT impl, Interface *svc) {
         { impl.addDependencyInstance(svc) } -> std::same_as<void>;
