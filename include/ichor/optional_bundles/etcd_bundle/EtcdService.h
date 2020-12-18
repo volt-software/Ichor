@@ -8,7 +8,7 @@
 namespace Ichor {
     class EtcdService final : public IEtcdService, public Service {
     public:
-        EtcdService(DependencyRegister &reg, IchorProperties props);
+        EtcdService(DependencyRegister &reg, IchorProperties props, DependencyManager *mng);
         ~EtcdService() final = default;
 
         bool start() final;

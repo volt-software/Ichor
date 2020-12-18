@@ -15,7 +15,7 @@ using namespace Ichor;
 
 class UsingHttpService final : public Service {
 public:
-    UsingHttpService(DependencyRegister &reg, IchorProperties props) : Service(std::move(props)) {
+    UsingHttpService(DependencyRegister &reg, IchorProperties props, DependencyManager *mng) : Service(std::move(props), mng) {
         reg.registerDependency<ILogger>(this, true);
         reg.registerDependency<ISerializationAdmin>(this, true);
         reg.registerDependency<IHttpConnectionService>(this, true, *getProperties());

@@ -9,12 +9,13 @@ using namespace Ichor;
 
 class TestService final : public Service {
 public:
-    TestService(DependencyRegister &reg, IchorProperties props) : Service(std::move(props)) {
+    TestService(DependencyRegister &reg, IchorProperties props, DependencyManager *mng) : Service(std::move(props), mng) {
         reg.registerDependency<ILogger>(this, true);
     }
     ~TestService() final = default;
     bool start() final {
-        if(std::any_cast<uint64_t>(getProperties()->operator[]("Iteration")) == 9'999) {
+        auto iteration = std::any_cast<uint64_t>(getProperties()->operator[]("Iteration"));
+        if(iteration == 9'999) {
             getManager()->pushEvent<QuitEvent>(getServiceId());
         }
         return true;

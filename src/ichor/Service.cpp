@@ -6,7 +6,7 @@ Ichor::Service::Service() noexcept : IService(), _serviceId(_serviceIdCounter.fe
 
 }
 
-Ichor::Service::Service(Ichor::IchorProperties props) noexcept : IService(), _properties(std::move(props)), _serviceId(_serviceIdCounter.fetch_add(1, std::memory_order_acq_rel)), _serviceGid(sole::uuid4()), _serviceState(ServiceState::INSTALLED) {
+Ichor::Service::Service(Ichor::IchorProperties props, DependencyManager *mng) noexcept : IService(), _properties(std::move(props)), _serviceId(_serviceIdCounter.fetch_add(1, std::memory_order_acq_rel)), _serviceGid(sole::uuid4()), _serviceState(ServiceState::INSTALLED), _manager(mng) {
 
 }
 

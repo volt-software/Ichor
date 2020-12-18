@@ -6,7 +6,7 @@
 #include <ichor/optional_bundles/logging_bundle/SpdlogLogger.h>
 #include <ichor/DependencyManager.h>
 
-Ichor::SpdlogLogger::SpdlogLogger(Ichor::DependencyRegister &reg, Ichor::IchorProperties props) : Service(std::move(props)) {
+Ichor::SpdlogLogger::SpdlogLogger(DependencyRegister &reg, IchorProperties props, DependencyManager *mng) : Service(std::move(props), mng) {
     reg.registerDependency<ISpdlogSharedService>(this, true);
 }
 
@@ -45,7 +45,7 @@ void Ichor::SpdlogLogger::error(const char *filename_in, int line_in, const char
     }
 }
 
-void Ichor::SpdlogLogger::setLogLevel(Ichor::LogLevel level) {
+void Ichor::SpdlogLogger::setLogLevel(LogLevel level) {
     _level = level;
 }
 
@@ -54,16 +54,8 @@ Ichor::LogLevel Ichor::SpdlogLogger::getLogLevel() const {
 }
 
 bool Ichor::SpdlogLogger::start() {
-    if(_sharedService != nullptr) {
-        auto& sinks = _sharedService->getSinks();
-        _logger = make_shared<spdlog::logger>("multi_sink", sinks.begin(), sinks.end());
-    } else {
-        auto console_sink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
-
-        auto time_since_epoch = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch());
-        auto file_sink = make_shared<spdlog::sinks::basic_file_sink_mt>(fmt::format("logs/log-{}.txt", time_since_epoch.count()), true);
-        _logger = make_shared<spdlog::logger>("multi_sink", spdlog::sinks_init_list{console_sink, file_sink});
-    }
+    auto const &sinks = _sharedService->getSinks();
+    _logger = std::allocate_shared<spdlog::logger, std::pmr::polymorphic_allocator<>>(getManager()->getMemoryResource(), "multi_sink", sinks.begin(), sinks.end());
 
 #ifndef REMOVE_SOURCE_NAMES_FROM_LOGGING
     _logger->set_pattern("[%C-%m-%d %H:%M:%S.%e] [%s:%#] [%L] %v");
@@ -104,11 +96,11 @@ bool Ichor::SpdlogLogger::stop() {
     return true;
 }
 
-void Ichor::SpdlogLogger::addDependencyInstance(Ichor::ISpdlogSharedService *shared) noexcept {
+void Ichor::SpdlogLogger::addDependencyInstance(ISpdlogSharedService *shared) noexcept {
     _sharedService = shared;
 }
 
-void Ichor::SpdlogLogger::removeDependencyInstance(Ichor::ISpdlogSharedService *shared) noexcept {
+void Ichor::SpdlogLogger::removeDependencyInstance(ISpdlogSharedService *) noexcept {
     _sharedService = nullptr;
 }
 

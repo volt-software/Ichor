@@ -33,7 +33,7 @@ namespace Ichor {
     class Service : virtual public IService {
     public:
         Service() noexcept;
-        Service(IchorProperties props) noexcept;
+        Service(IchorProperties props, DependencyManager *mng = nullptr) noexcept;
         ~Service() override;
 
         void injectDependencyManager(DependencyManager *mng) {

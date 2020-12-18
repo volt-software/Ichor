@@ -15,7 +15,7 @@ using namespace Ichor;
 
 class UsingTcpService final : public Service {
 public:
-    UsingTcpService(DependencyRegister &reg, IchorProperties props) : Service(std::move(props)) {
+    UsingTcpService(DependencyRegister &reg, IchorProperties props, DependencyManager *mng) : Service(std::move(props), mng) {
         reg.registerDependency<ILogger>(this, true);
         reg.registerDependency<ISerializationAdmin>(this, true);
         reg.registerDependency<IConnectionService>(this, true, *getProperties());

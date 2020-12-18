@@ -12,7 +12,7 @@ using namespace Ichor;
 
 class TestService final : public Service {
 public:
-    TestService(DependencyRegister &reg, IchorProperties props) : Service(std::move(props)) {
+    TestService(DependencyRegister &reg, IchorProperties props, DependencyManager *mng) : Service(std::move(props), mng) {
         reg.registerDependency<ILogger>(this, true);
         reg.registerDependency<ISerializationAdmin>(this, true);
     }

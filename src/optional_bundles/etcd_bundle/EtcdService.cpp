@@ -6,7 +6,7 @@
 #include <grpc++/grpc++.h>
 
 
-Ichor::EtcdService::EtcdService(Ichor::DependencyRegister &reg, Ichor::IchorProperties props) : Service(std::move(props)) {
+Ichor::EtcdService::EtcdService(DependencyRegister &reg, IchorProperties props, DependencyManager *mng) : Service(std::move(props), mng) {
     reg.registerDependency<ILogger>(this, true);
 }
 
@@ -27,12 +27,12 @@ bool Ichor::EtcdService::stop() {
     return true;
 }
 
-void Ichor::EtcdService::addDependencyInstance(Ichor::ILogger *logger) {
+void Ichor::EtcdService::addDependencyInstance(ILogger *logger) {
     _logger = logger;
     LOG_TRACE(_logger, "Inserted logger");
 }
 
-void Ichor::EtcdService::removeDependencyInstance(Ichor::ILogger *logger) {
+void Ichor::EtcdService::removeDependencyInstance(ILogger *logger) {
     _logger = nullptr;
 }
 

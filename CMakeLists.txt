@@ -27,6 +27,7 @@ option(USE_PUBSUB "Add various dependencies to enable pubsub bundle to be built"
 option(USE_ETCD "Add various dependencies to enable pubsub bundle to be built" OFF)
 option(USE_BOOST_BEAST "Add boost asio and boost BEAST as dependencies" OFF)
 option(USE_SANITIZERS "Enable sanitizers, catching potential errors but slowing down compilation and execution speed" ON)
+option(USE_THREAD_SANITIZER "Enable thread sanitizer, catching potential threading errors but slowing down compilation and execution speed. Cannot be combined with USE_SANITIZERS" OFF)
 option(USE_UGLY_HACK_EXCEPTION_CATCHING "Enable an ugly hack on gcc to enable debugging the point where exceptions are thrown. Useful for debugging boost asio/beast backtraces." OFF)
 option(REMOVE_SOURCE_NAMES "Remove compiling source file names and line numbers when logging." OFF)
 
@@ -65,10 +66,18 @@ endif()
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DCATCH_CONFIG_FAST_COMPILE ")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Wshadow -Wnon-virtual-dtor -Wno-unused-variable -Wno-long-long -Wno-unused-parameter -Wduplicated-cond -Wduplicated-branches -Wlogical-op -Wnull-dereference -pedantic -Wformat -Wformat-security ")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fconcepts -pthread ")
+
 if(USE_SANITIZERS)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address,undefined -no-pie -fno-omit-frame-pointer")
     set(CMAKE_EXE_LINKER_FLAGS "-no-pie")
-else()
+endif()
+
+if(USE_THREAD_SANITIZER)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=thread -no-pie -fno-omit-frame-pointer")
+    set(CMAKE_EXE_LINKER_FLAGS "-no-pie")
+endif()
+
+if(NOT DEFINED USE_SANITIZERS AND NOT DEFINED USE_THREAD_SANITIZER)
     # see https://github.com/google/sanitizers/issues/856
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIE")
 endif()
@@ -141,6 +150,8 @@ include_directories("${EXTERNAL_DIR}/Catch2/single_include")
 include_directories("${EXTERNAL_DIR}/wyhash")
 include_directories("${EXTERNAL_DIR}/cppcoro/include")
 include_directories("${EXTERNAL_DIR}/fmt/include")
+include_directories("${EXTERNAL_DIR}/robin-map/include")
+include_directories("${EXTERNAL_DIR}/parallel-hashmap")
 include_directories("${TOP_DIR}/include")
 
 if(USE_SPDLOG)

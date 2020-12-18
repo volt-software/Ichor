@@ -4,24 +4,31 @@
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/sinks/basic_file_sink.h>
 #include <ichor/optional_bundles/logging_bundle/SpdlogFrameworkLogger.h>
+#include <ichor/DependencyManager.h>
 
-Ichor::SpdlogFrameworkLogger::SpdlogFrameworkLogger() : IFrameworkLogger(), Service(), _level(LogLevel::TRACE) {
-    auto console_sink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
+std::atomic<bool> Ichor::SpdlogFrameworkLogger::_logger_set;
 
-    auto time_since_epoch = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch());
-    auto file_sink = make_shared<spdlog::sinks::basic_file_sink_mt>(fmt::format("logs/framework-log-{}.txt", time_since_epoch.count()), true);
+Ichor::SpdlogFrameworkLogger::SpdlogFrameworkLogger(IchorProperties props, DependencyManager *mng) : IFrameworkLogger(), Service(std::move(props), mng), _level(LogLevel::TRACE) {
+    bool already_set = _logger_set.exchange(true);
+    if(!already_set) {
+        auto console_sink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
 
-    auto logger = make_shared<spdlog::logger>("multi_sink", spdlog::sinks_init_list{console_sink, file_sink});
+        auto time_since_epoch = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch());
+        auto file_sink = make_shared<spdlog::sinks::basic_file_sink_mt>(
+                fmt::format("logs/framework-log-{}.txt", time_since_epoch.count()), true);
 
-    logger->set_level(spdlog::level::trace);
-    spdlog::flush_on(spdlog::level::err);
+        auto logger = make_shared<spdlog::logger>("multi_sink", spdlog::sinks_init_list{console_sink, file_sink});
 
-    spdlog::set_default_logger(logger);
+        logger->set_level(spdlog::level::trace);
+        spdlog::flush_on(spdlog::level::err);
+
+        spdlog::set_default_logger(logger);
 #ifndef REMOVE_SOURCE_NAMES_FROM_LOGGING
-    spdlog::set_pattern("[%C-%m-%d %H:%M:%S.%e] [%s:%#] [%L] %v");
+        spdlog::set_pattern("[%C-%m-%d %H:%M:%S.%e] [%s:%#] [%L] %v");
 #else
-    spdlog::set_pattern("[%C-%m-%d %H:%M:%S.%e] [%L] %v");
+        spdlog::set_pattern("[%C-%m-%d %H:%M:%S.%e] [%L] %v");
 #endif
+    }
 
     SPDLOG_TRACE("SpdlogFrameworkLogger constructor");
 }

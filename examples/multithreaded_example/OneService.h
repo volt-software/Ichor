@@ -11,7 +11,7 @@ using namespace Ichor;
 
 class OneService final : public Service {
 public:
-    OneService(DependencyRegister &reg, IchorProperties props) : Service(std::move(props)) {
+    OneService(DependencyRegister &reg, IchorProperties props, DependencyManager *mng) : Service(std::move(props), mng) {
         reg.registerDependency<ILogger>(this, true);
     }
     ~OneService() final = default;

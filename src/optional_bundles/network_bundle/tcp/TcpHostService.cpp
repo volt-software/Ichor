@@ -8,7 +8,7 @@
 #include <unistd.h>
 #include <netdb.h>
 
-Ichor::TcpHostService::TcpHostService(DependencyRegister &reg, IchorProperties props) : Service(std::move(props)), _socket(-1), _bindFd(), _priority(INTERNAL_EVENT_PRIORITY), _quit(), _listenThread() {
+Ichor::TcpHostService::TcpHostService(DependencyRegister &reg, IchorProperties props, DependencyManager *mng) : Service(std::move(props), mng), _socket(-1), _bindFd(), _priority(INTERNAL_EVENT_PRIORITY), _quit(), _listenThread() {
     reg.registerDependency<ILogger>(this, true);
 }
 

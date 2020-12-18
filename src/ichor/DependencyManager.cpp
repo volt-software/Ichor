@@ -23,6 +23,8 @@ void Ichor::DependencyManager::start() {
 
     ::signal(SIGINT, on_sigint);
 
+    LOG_TRACE(_logger, "depman {} has {} events", _id, _eventQueue.size());
+
 #ifdef __linux__
     pthread_setname_np(pthread_self(), fmt::format("DepMan #{}", _id).c_str());
 #endif
@@ -68,13 +70,19 @@ void Ichor::DependencyManager::start() {
                             filter = std::any_cast<const Filter>(&filterProp->second);
                         }
 
-                        for (auto &[key, possibleDependentLifecycleManager] : _services) {
+                        std::vector<std::shared_ptr<ILifecycleManager>> interestedManagers{};
+                        interestedManagers.reserve(_services.size());
+                        for (auto const &[key, possibleDependentLifecycleManager] : _services) {
                             if (filter != nullptr && !filter->compareTo(possibleDependentLifecycleManager)) {
                                 continue;
                             }
 
-                            if (possibleDependentLifecycleManager->dependencyOnline(depOnlineEvt->manager)) {
-                                pushEventInternal<DependencyOnlineEvent>(0, INTERNAL_EVENT_PRIORITY, possibleDependentLifecycleManager);
+                            interestedManagers.emplace_back(possibleDependentLifecycleManager);
+                        }
+
+                        for(auto const &interestedManager : interestedManagers) {
+                            if (interestedManager->dependencyOnline(depOnlineEvt->manager)) {
+                                pushEventInternal<DependencyOnlineEvent>(0, INTERNAL_EVENT_PRIORITY, interestedManager);
                             }
                         }
                     }
@@ -89,13 +97,19 @@ void Ichor::DependencyManager::start() {
                             filter = std::any_cast<const Filter>(&filterProp->second);
                         }
 
-                        for (auto &[key, possibleDependentLifecycleManager] : _services) {
+                        std::vector<std::shared_ptr<ILifecycleManager>> interestedManagers{};
+                        interestedManagers.reserve(_services.size());
+                        for (auto const &[key, possibleDependentLifecycleManager] : _services) {
                             if (filter != nullptr && !filter->compareTo(possibleDependentLifecycleManager)) {
                                 continue;
                             }
 
-                            if (possibleDependentLifecycleManager->dependencyOffline(depOfflineEvt->manager)) {
-                                pushEventInternal<DependencyOfflineEvent>(0, INTERNAL_EVENT_PRIORITY, possibleDependentLifecycleManager);
+                            interestedManagers.emplace_back(possibleDependentLifecycleManager);
+                        }
+
+                        for(auto const &interestedManager : interestedManagers) {
+                            if (interestedManager->dependencyOffline(depOfflineEvt->manager)) {
+                                pushEventInternal<DependencyOfflineEvent>(0, INTERNAL_EVENT_PRIORITY, interestedManager);
                             }
                         }
                     }
@@ -108,7 +122,7 @@ void Ichor::DependencyManager::start() {
                             break;
                         }
 
-                        for (DependencyTrackerInfo &info : trackers->second) {
+                        for (DependencyTrackerInfo const &info : trackers->second) {
                             info.trackFunc(depReqEvt);
                         }
                     }
@@ -121,7 +135,7 @@ void Ichor::DependencyManager::start() {
                             break;
                         }
 
-                        for (DependencyTrackerInfo &info : trackers->second) {
+                        for (DependencyTrackerInfo const &info : trackers->second) {
                             info.trackFunc(depUndoReqEvt);
                         }
                     }
@@ -130,14 +144,14 @@ void Ichor::DependencyManager::start() {
                         SPDLOG_DEBUG("QuitEvent");
                         auto _quitEvt = static_cast<QuitEvent *>(evtNode.mapped().get());
                         if (!_quitEvt->dependenciesStopped) {
-                            for (auto &[key, possibleManager] : _services) {
+                            for (auto const &[key, possibleManager] : _services) {
                                 pushEventInternal<StopServiceEvent>(_quitEvt->originatingService, INTERNAL_EVENT_PRIORITY, possibleManager->serviceId());
                             }
 
                             pushEventInternal<QuitEvent>(_quitEvt->originatingService, INTERNAL_EVENT_PRIORITY + 1, true);
                         } else {
                             bool canFinally_quit = true;
-                            for (auto &[key, manager] : _services) {
+                            for (auto const &[key, manager] : _services) {
                                 if (manager->getServiceState() != ServiceState::INSTALLED) {
                                     canFinally_quit = false;
                                     break;
@@ -313,7 +327,7 @@ void Ichor::DependencyManager::start() {
             lck.lock();
         }
 
-        _wakeUp.wait_for(lck, std::chrono::milliseconds(1), [this]{return !_eventQueue.empty(); });
+        _wakeUp.wait_for(lck, std::chrono::milliseconds(1), [this]{ return !_eventQueue.empty(); });
 
         lck.unlock();
     }

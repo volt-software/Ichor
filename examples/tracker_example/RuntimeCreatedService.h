@@ -13,7 +13,7 @@ struct IRuntimeCreatedService : virtual public IService {
 
 class RuntimeCreatedService final : public IRuntimeCreatedService, public Service {
 public:
-    RuntimeCreatedService(DependencyRegister &reg, IchorProperties props) : Service(std::move(props)) {
+    RuntimeCreatedService(DependencyRegister &reg, IchorProperties props, DependencyManager *mng) : Service(std::move(props), mng) {
         reg.registerDependency<ILogger>(this, true);
     }
 

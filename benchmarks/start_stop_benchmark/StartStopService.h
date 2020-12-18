@@ -10,7 +10,7 @@ using namespace Ichor;
 
 class StartStopService final : public Service {
 public:
-    StartStopService(DependencyRegister &reg, IchorProperties props) : Service(std::move(props)) {
+    StartStopService(DependencyRegister &reg, IchorProperties props, DependencyManager *mng) : Service(std::move(props), mng) {
         reg.registerDependency<ILogger>(this, true);
         reg.registerDependency<ITestService>(this, true);
     }
@@ -69,7 +69,7 @@ private:
     ILogger *_logger{nullptr};
     uint64_t _testServiceId{0};
     std::chrono::system_clock::time_point _start{};
-    static uint64_t startCount;
+    uint64_t startCount{0};
     std::unique_ptr<EventCompletionHandlerRegistration> _startServiceRegistration;
     std::unique_ptr<EventCompletionHandlerRegistration> _stopServiceRegistration;
 };

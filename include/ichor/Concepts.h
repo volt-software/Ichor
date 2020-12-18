@@ -6,6 +6,7 @@
 namespace Ichor {
 
     class DependencyRegister;
+    class DependencyManager;
 
     template <class T, class U, class... Remainder>
     struct DerivedTrait : std::integral_constant<bool, DerivedTrait<T, Remainder...>::value && std::is_base_of_v<U, T>> {};
@@ -26,13 +27,13 @@ namespace Ichor {
     concept ImplementsAll = sizeof...(U) == 0 || DerivedTrait<T, U...>::value;
 
     template <class ImplT>
-    concept RequestsDependencies = requires(ImplT impl, DependencyRegister &deps, IchorProperties properties) {
-        { ImplT(deps, properties) };
+    concept RequestsDependencies = requires(ImplT impl, DependencyRegister &deps, IchorProperties properties, DependencyManager *mng) {
+        { ImplT(deps, properties, mng) };
     };
 
     template <class ImplT>
-    concept RequestsProperties = requires(ImplT impl, IchorProperties properties) {
-        { ImplT(properties) };
+    concept RequestsProperties = requires(ImplT impl, IchorProperties properties, DependencyManager *mng) {
+        { ImplT(properties, mng) };
     };
 
     template <class ImplT, class Interface>

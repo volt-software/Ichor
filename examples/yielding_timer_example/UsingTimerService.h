@@ -14,7 +14,7 @@ struct IUsingTimerService : virtual public IService {
 
 class UsingTimerService final : public IUsingTimerService, public Service {
 public:
-    UsingTimerService(DependencyRegister &reg, IchorProperties props) : Service(std::move(props)) {
+    UsingTimerService(DependencyRegister &reg, IchorProperties props, DependencyManager *mng) : Service(std::move(props), mng) {
         reg.registerDependency<ILogger>(this, true);
     }
     ~UsingTimerService() final = default;

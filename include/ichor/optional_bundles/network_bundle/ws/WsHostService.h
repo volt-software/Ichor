@@ -19,7 +19,7 @@ using tcp = boost::asio::ip::tcp;       // from <boost/asio/ip/tcp.hpp>
 namespace Ichor {
     class WsHostService final : public IHostService, public Service {
     public:
-        WsHostService(DependencyRegister &reg, IchorProperties props);
+        WsHostService(DependencyRegister &reg, IchorProperties props, DependencyManager *mng);
         ~WsHostService() final = default;
 
         bool start() final;

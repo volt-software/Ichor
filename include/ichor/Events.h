@@ -21,7 +21,7 @@ namespace Ichor {
     };
 
     struct DependencyOnlineEvent final : public Event {
-        explicit DependencyOnlineEvent(uint64_t _id, uint64_t _originatingService, uint64_t _priority, const std::shared_ptr<ILifecycleManager> _manager) noexcept :
+        explicit DependencyOnlineEvent(uint64_t _id, uint64_t _originatingService, uint64_t _priority, std::shared_ptr<ILifecycleManager> _manager) noexcept :
             Event(TYPE, NAME, _id, _originatingService, _priority), manager(std::move(_manager)) {}
         ~DependencyOnlineEvent() final = default;
 
@@ -31,7 +31,7 @@ namespace Ichor {
     };
 
     struct DependencyOfflineEvent final : public Event {
-        explicit DependencyOfflineEvent(uint64_t _id, uint64_t _originatingService, uint64_t _priority, const std::shared_ptr<ILifecycleManager> _manager) noexcept :
+        explicit DependencyOfflineEvent(uint64_t _id, uint64_t _originatingService, uint64_t _priority, std::shared_ptr<ILifecycleManager> _manager) noexcept :
             Event(TYPE, NAME, _id, _originatingService, _priority), manager(std::move(_manager)) {}
         ~DependencyOfflineEvent() final = default;
 
@@ -42,7 +42,7 @@ namespace Ichor {
 
     struct DependencyRequestEvent final : public Event {
         explicit DependencyRequestEvent(uint64_t _id, uint64_t _originatingService, uint64_t _priority, std::shared_ptr<ILifecycleManager> _manager, Dependency _dependency, std::optional<IchorProperties const *> _properties) noexcept :
-                Event(TYPE, NAME, _id, _originatingService, _priority), manager(std::move(_manager)), dependency(std::move(_dependency)), properties{_properties} {}
+                Event(TYPE, NAME, _id, _originatingService, _priority), manager(std::move(_manager)), dependency(_dependency), properties{_properties} {}
         ~DependencyRequestEvent() final = default;
 
         const std::shared_ptr<ILifecycleManager> manager;
@@ -54,7 +54,7 @@ namespace Ichor {
 
     struct DependencyUndoRequestEvent final : public Event {
         explicit DependencyUndoRequestEvent(uint64_t _id, uint64_t _originatingService, uint64_t _priority, std::shared_ptr<ILifecycleManager> _manager, Dependency _dependency, IchorProperties const * _properties) noexcept :
-                Event(TYPE, NAME, _id, _originatingService, _priority), manager(std::move(_manager)), dependency(std::move(_dependency)), properties{_properties} {}
+                Event(TYPE, NAME, _id, _originatingService, _priority), manager(std::move(_manager)), dependency(_dependency), properties{_properties} {}
         ~DependencyUndoRequestEvent() final = default;
 
         const std::shared_ptr<ILifecycleManager> manager;

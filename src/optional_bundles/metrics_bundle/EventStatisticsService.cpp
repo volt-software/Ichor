@@ -1,6 +1,6 @@
 #include <ichor/optional_bundles/metrics_bundle/EventStatisticsService.h>
 
-Ichor::EventStatisticsService::EventStatisticsService(Ichor::DependencyRegister &reg, Ichor::IchorProperties props) : Service(std::move(props)) {
+Ichor::EventStatisticsService::EventStatisticsService(DependencyRegister &reg, IchorProperties props, DependencyManager *mng) : Service(std::move(props), mng) {
     reg.registerDependency<ILogger>(this, true);
 }
 
@@ -46,20 +46,20 @@ bool Ichor::EventStatisticsService::stop() {
     return true;
 }
 
-void Ichor::EventStatisticsService::addDependencyInstance(Ichor::ILogger *logger) {
+void Ichor::EventStatisticsService::addDependencyInstance(ILogger *logger) {
     _logger = logger;
 }
 
-void Ichor::EventStatisticsService::removeDependencyInstance(Ichor::ILogger *logger) {
+void Ichor::EventStatisticsService::removeDependencyInstance(ILogger *logger) {
     _logger = nullptr;
 }
 
-bool Ichor::EventStatisticsService::preInterceptEvent(const Ichor::Event *const evt) {
+bool Ichor::EventStatisticsService::preInterceptEvent(const Event *const evt) {
     _startProcessingTimestamp = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
     return (bool)AllowOthersHandling;
 }
 
-bool Ichor::EventStatisticsService::postInterceptEvent(const Ichor::Event *const evt, bool processed) {
+bool Ichor::EventStatisticsService::postInterceptEvent(const Event *const evt, bool processed) {
     if(!processed) {
         return (bool)AllowOthersHandling;
     }
@@ -77,7 +77,7 @@ bool Ichor::EventStatisticsService::postInterceptEvent(const Ichor::Event *const
     return (bool)AllowOthersHandling;
 }
 
-Ichor::Generator<bool> Ichor::EventStatisticsService::handleEvent(const Ichor::TimerEvent *const evt) {
+Ichor::Generator<bool> Ichor::EventStatisticsService::handleEvent(const TimerEvent *const evt) {
     uint64_t now = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
     for(auto &[key, statistics] : _recentEventStatistics) {
         auto avgStatistics = _averagedStatistics.find(key);

@@ -15,7 +15,7 @@ namespace spdlog {
 namespace Ichor {
     class SpdlogLogger final : public ILogger, public Service {
     public:
-        SpdlogLogger(DependencyRegister &reg, IchorProperties props);
+        SpdlogLogger(DependencyRegister &reg, IchorProperties props, DependencyManager *mng);
 
         bool start() final;
         bool stop() final;

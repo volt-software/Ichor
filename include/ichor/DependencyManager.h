@@ -10,6 +10,7 @@
 #include <atomic>
 #include <csignal>
 #include <condition_variable>
+#include <memory_resource>
 #include <ichor/interfaces/IFrameworkLogger.h>
 #include <ichor/Service.h>
 #include <ichor/LifecycleManager.h>
@@ -168,13 +169,11 @@ namespace Ichor {
 
     class DependencyManager final {
     public:
-        DependencyManager() : _services(), _dependencyRequestTrackers(), _dependencyUndoRequestTrackers(), _completionCallbacks{}, _errorCallbacks{}, _logger(nullptr), _eventQueue{}, _eventQueueMutex{}, _wakeUp{}, _eventIdCounter{0}, _quit{false}, _communicationChannel(nullptr), _id(_managerIdCounter++) {}
-
         template<Derived<Service> Impl, Derived<IService>... Interfaces>
         requires ImplementsAll<Impl, Interfaces...>
         auto createServiceManager(IchorProperties properties = IchorProperties{}) {
             if constexpr(RequestsDependencies<Impl>) {
-                auto cmpMgr = DependencyLifecycleManager<Impl>::template create(_logger, "", std::move(properties), InterfacesList<Interfaces...>);
+                auto cmpMgr = DependencyLifecycleManager<Impl>::template create(_logger, "", std::move(properties), this, &_memResource, InterfacesList<Interfaces...>);
 
                 if constexpr (sizeof...(Interfaces) > 0) {
                     if constexpr(ListContainsInterface<IFrameworkLogger, Interfaces...>::value) {
@@ -201,7 +200,7 @@ namespace Ichor {
 
                         started = cmpMgr->dependencyOnline(mgr);
                         if (started) {
-                            pushEventInternal<DependencyOnlineEvent>(0, INTERNAL_EVENT_PRIORITY, cmpMgr);
+                            pushEventInternal<DependencyOnlineEvent>(cmpMgr->serviceId(), INTERNAL_EVENT_PRIORITY, cmpMgr);
                             break;
                         }
                     }
@@ -213,13 +212,14 @@ namespace Ichor {
                 }
 
                 if(!started) {
-                    pushEventInternal<StartServiceEvent>(0, INTERNAL_EVENT_PRIORITY, cmpMgr->serviceId());
+                    pushEventInternal<StartServiceEvent>(cmpMgr->serviceId(), INTERNAL_EVENT_PRIORITY, cmpMgr->serviceId());
                 }
 
                 _services.emplace(cmpMgr->serviceId(), cmpMgr);
+
                 return &cmpMgr->getService();
             } else {
-                auto cmpMgr = LifecycleManager<Impl>::template create(_logger, "", std::move(properties), InterfacesList<Interfaces...>);
+                auto cmpMgr = LifecycleManager<Impl>::template create(_logger, "", std::move(properties), this, &_memResource, InterfacesList<Interfaces...>);
 
                 if constexpr (sizeof...(Interfaces) > 0) {
                     if constexpr (ListContainsInterface<IFrameworkLogger, Interfaces...>::value) {
@@ -232,9 +232,10 @@ namespace Ichor {
 
                 logAddService<Impl, Interfaces...>();
 
-                pushEventInternal<StartServiceEvent>(0, INTERNAL_EVENT_PRIORITY, cmpMgr->serviceId());
+                pushEventInternal<StartServiceEvent>(cmpMgr->serviceId(), INTERNAL_EVENT_PRIORITY, cmpMgr->serviceId());
 
                 _services.emplace(cmpMgr->serviceId(), cmpMgr);
+
                 return &cmpMgr->getService();
             }
         }
@@ -305,8 +306,10 @@ namespace Ichor {
             DependencyTrackerInfo requestInfo{impl->getServiceId(), [impl](Event const * const evt){ impl->handleDependencyRequest(static_cast<Interface*>(nullptr), static_cast<DependencyRequestEvent const *>(evt)); }};
             DependencyTrackerInfo undoRequestInfo{impl->getServiceId(), [impl](Event const * const evt){ impl->handleDependencyUndoRequest(static_cast<Interface*>(nullptr), static_cast<DependencyUndoRequestEvent const *>(evt)); }};
 
-            for(auto &[key, mgr] : _services) {
+            std::vector<DependencyRequestEvent> requests;
+            for(auto const &[key, mgr] : _services) {
                 auto const * depRegistry = mgr->getDependencyRegistry();
+//                LOG_ERROR(_logger, "register svcId {} dm {}", mgr->serviceId(), _id);
 
                 if(depRegistry == nullptr) {
                     continue;
@@ -316,19 +319,23 @@ namespace Ichor {
                     if(interfaceHash == typeNameHash<Interface>()) {
                         auto const &props = std::get<std::optional<IchorProperties>>(registration);
                         DependencyRequestEvent evt{0, mgr->serviceId(), INTERNAL_EVENT_PRIORITY, mgr, std::get<Dependency>(registration), props.has_value() ? &props.value() : std::optional<IchorProperties const *>{}};
-                        requestInfo.trackFunc(&evt);
+                        requests.emplace_back(0, mgr->serviceId(), INTERNAL_EVENT_PRIORITY, mgr, std::get<Dependency>(registration), props.has_value() ? &props.value() : std::optional<IchorProperties const *>{});
                     }
                 }
             }
 
+            for(const auto& request : requests) {
+                requestInfo.trackFunc(&request);
+            }
+
             if(requestTrackersForType == end(_dependencyRequestTrackers)) {
-                _dependencyRequestTrackers.emplace(typeNameHash<Interface>(), std::vector<DependencyTrackerInfo>{requestInfo});
+                _dependencyRequestTrackers.emplace(typeNameHash<Interface>(), std::pmr::vector<DependencyTrackerInfo>{{requestInfo}, &_memResource});
             } else {
                 requestTrackersForType->second.emplace_back(std::move(requestInfo));
             }
 
             if(undoRequestTrackersForType == end(_dependencyUndoRequestTrackers)) {
-                _dependencyUndoRequestTrackers.emplace(typeNameHash<Interface>(), std::vector<DependencyTrackerInfo>{undoRequestInfo});
+                _dependencyUndoRequestTrackers.emplace(typeNameHash<Interface>(), std::pmr::vector<DependencyTrackerInfo>{{undoRequestInfo}, &_memResource});
             } else {
                 undoRequestTrackersForType->second.emplace_back(std::move(undoRequestInfo));
             }
@@ -369,8 +376,8 @@ namespace Ichor {
         std::unique_ptr<EventHandlerRegistration> registerEventHandler(uint64_t serviceId, Impl *impl, std::optional<uint64_t> targetServiceId = {}) {
             auto existingHandlers = _eventCallbacks.find(EventT::TYPE);
             if(existingHandlers == end(_eventCallbacks)) {
-                _eventCallbacks.emplace(EventT::TYPE, std::vector<EventCallbackInfo>{EventCallbackInfo{serviceId, targetServiceId,
-                                                                                                       [impl](Event const * const evt){ return impl->handleEvent(static_cast<EventT const * const>(evt)); }}
+                _eventCallbacks.emplace(EventT::TYPE, std::pmr::vector<EventCallbackInfo>{{EventCallbackInfo{serviceId, targetServiceId,
+                                                                                                       [impl](Event const * const evt){ return impl->handleEvent(static_cast<EventT const * const>(evt)); }}}, &_memResource
                 });
             } else {
                 existingHandlers->second.emplace_back(EventCallbackInfo{serviceId, targetServiceId, [impl](Event const * const evt){ return impl->handleEvent(static_cast<EventT const * const>(evt)); }});
@@ -396,9 +403,9 @@ namespace Ichor {
             }
             auto existingHandlers = _eventInterceptors.find(targetEventId);
             if(existingHandlers == end(_eventInterceptors)) {
-                _eventInterceptors.emplace(targetEventId, std::vector<EventInterceptInfo>{EventInterceptInfo{serviceId, targetEventId,
+                _eventInterceptors.emplace(targetEventId, std::pmr::vector<EventInterceptInfo>{{EventInterceptInfo{serviceId, targetEventId,
                                                                                                             [impl](Event const * const evt){ return impl->preInterceptEvent(static_cast<EventT const * const>(evt)); },
-                                                                                                            [impl](Event const * const evt, bool processed){ return impl->postInterceptEvent(static_cast<EventT const * const>(evt), processed); }}
+                                                                                                            [impl](Event const * const evt, bool processed){ return impl->postInterceptEvent(static_cast<EventT const * const>(evt), processed); }}}, &_memResource
                 });
             } else {
                 existingHandlers->second.emplace_back(EventInterceptInfo{serviceId, targetEventId,
@@ -414,6 +421,10 @@ namespace Ichor {
         /// \return id
         [[nodiscard]] uint64_t getId() const {
             return _id;
+        }
+
+        [[nodiscard]] std::pmr::memory_resource* getMemoryResource() {
+            return &_memResource;
         }
 
         ///
@@ -491,22 +502,23 @@ namespace Ichor {
             return eventId;
         }
 
-        std::unordered_map<uint64_t, std::shared_ptr<ILifecycleManager>> _services; // key = service id
-        std::unordered_map<uint64_t, std::vector<DependencyTrackerInfo>> _dependencyRequestTrackers; // key = interface name hash
-        std::unordered_map<uint64_t, std::vector<DependencyTrackerInfo>> _dependencyUndoRequestTrackers; // key = interface name hash
-        std::unordered_map<CallbackKey, std::function<void(Event const * const)>> _completionCallbacks; // key = listening service id + event type
-        std::unordered_map<CallbackKey, std::function<void(Event const * const)>> _errorCallbacks; // key = listening service id + event type
-        std::unordered_map<uint64_t, std::vector<EventCallbackInfo>> _eventCallbacks; // key = event id
-        std::unordered_map<uint64_t, std::vector<EventInterceptInfo>> _eventInterceptors; // key = event id
-        IFrameworkLogger *_logger;
-        std::shared_ptr<ILifecycleManager> _preventEarlyDestructionOfFrameworkLogger;
-        std::multimap<uint64_t, EventStackUniquePtr> _eventQueue;
-        std::mutex _eventQueueMutex;
-        std::condition_variable _wakeUp;
-        std::atomic<uint64_t> _eventIdCounter;
-        std::atomic<bool> _quit;
-        CommunicationChannel *_communicationChannel;
-        uint64_t _id;
+        std::pmr::unsynchronized_pool_resource _memResource{};
+        std::pmr::unordered_map<uint64_t, std::shared_ptr<ILifecycleManager>> _services{&_memResource}; // key = service id
+        std::pmr::unordered_map<uint64_t, std::pmr::vector<DependencyTrackerInfo>> _dependencyRequestTrackers{&_memResource}; // key = interface name hash
+        std::pmr::unordered_map<uint64_t, std::pmr::vector<DependencyTrackerInfo>> _dependencyUndoRequestTrackers{&_memResource}; // key = interface name hash
+        std::pmr::unordered_map<CallbackKey, std::function<void(Event const * const)>> _completionCallbacks{&_memResource}; // key = listening service id + event type
+        std::pmr::unordered_map<CallbackKey, std::function<void(Event const * const)>> _errorCallbacks{&_memResource}; // key = listening service id + event type
+        std::pmr::unordered_map<uint64_t, std::pmr::vector<EventCallbackInfo>> _eventCallbacks{&_memResource}; // key = event id
+        std::pmr::unordered_map<uint64_t, std::pmr::vector<EventInterceptInfo>> _eventInterceptors{&_memResource}; // key = event id
+        IFrameworkLogger *_logger{nullptr};
+        std::shared_ptr<ILifecycleManager> _preventEarlyDestructionOfFrameworkLogger{nullptr};
+        std::pmr::multimap<uint64_t, EventStackUniquePtr> _eventQueue{&_memResource};
+        std::mutex _eventQueueMutex{};
+        std::condition_variable _wakeUp{};
+        std::atomic<uint64_t> _eventIdCounter{0};
+        std::atomic<bool> _quit{false};
+        CommunicationChannel *_communicationChannel{nullptr};
+        uint64_t _id{_managerIdCounter++};
         static std::atomic<uint64_t> _managerIdCounter;
 
         friend class EventCompletionHandlerRegistration;

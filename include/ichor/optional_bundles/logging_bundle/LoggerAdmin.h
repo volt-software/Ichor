@@ -12,7 +12,7 @@ namespace Ichor {
     template<typename LogT>
     class LoggerAdmin final : public ILoggerAdmin, public Service {
     public:
-        LoggerAdmin(DependencyRegister &reg, IchorProperties props) : Service(std::move(props)) {
+        LoggerAdmin(DependencyRegister &reg, IchorProperties props, DependencyManager *mng) : Service(std::move(props), mng) {
             reg.registerDependency<IFrameworkLogger>(this, true);
         }
         ~LoggerAdmin() final = default;
@@ -38,13 +38,15 @@ namespace Ichor {
         void handleDependencyRequest(ILogger *, DependencyRequestEvent const *const evt) {
             auto logger = _loggers.find(evt->originatingService);
 
+//            LOG_ERROR(_logger, "dep req {} dm {}", evt->manager->serviceId(), getManager()->getId());
+
             auto requestedLevel = LogLevel::INFO;
             if(evt->properties.has_value()) {
                 auto requestedLevelIt = evt->properties.value()->find("LogLevel");
                 requestedLevel = requestedLevelIt != end(*evt->properties.value()) ? std::any_cast<LogLevel>(requestedLevelIt->second) : LogLevel::INFO;
             }
             if (logger == end(_loggers)) {
-                LOG_TRACE(_logger, "creating logger for svcid {}", evt->originatingService);
+//                LOG_ERROR(_logger, "creating logger for svcid {}", evt->originatingService);
                     _loggers.emplace(evt->originatingService, getManager()->template createServiceManager<LogT, ILogger>(
                             IchorProperties{{"LogLevel",        requestedLevel},
                                               {"TargetServiceId", evt->originatingService},

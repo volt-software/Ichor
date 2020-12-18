@@ -21,3 +21,8 @@ file(GLOB_RECURSE PROJECT_EXAMPLE_SOURCES ${TOP_DIR}/benchmarks/start_benchmark/
 add_executable(ichor_start_benchmark ${PROJECT_EXAMPLE_SOURCES})
 target_link_libraries(ichor_start_benchmark ${CMAKE_THREAD_LIBS_INIT})
 target_link_libraries(ichor_start_benchmark ichor)
+
+file(GLOB_RECURSE PROJECT_EXAMPLE_SOURCES ${TOP_DIR}/benchmarks/event_benchmark/*.cpp)
+add_executable(ichor_event_benchmark ${PROJECT_EXAMPLE_SOURCES})
+target_link_libraries(ichor_event_benchmark ${CMAKE_THREAD_LIBS_INIT})
+target_link_libraries(ichor_event_benchmark ichor)

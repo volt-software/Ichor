@@ -4,7 +4,7 @@
 #include <ichor/optional_bundles/network_bundle/http/HttpHostService.h>
 
 
-Ichor::HttpHostService::HttpHostService(DependencyRegister &reg, IchorProperties props) : Service(std::move(props)) {
+Ichor::HttpHostService::HttpHostService(DependencyRegister &reg, IchorProperties props, DependencyManager *mng) : Service(std::move(props), mng) {
     reg.registerDependency<ILogger>(this, true);
 }
 

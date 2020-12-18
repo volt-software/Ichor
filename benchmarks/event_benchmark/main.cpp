@@ -14,8 +14,8 @@
 #define FRAMEWORK_LOGGER_TYPE CoutFrameworkLogger
 #define LOGGER_TYPE CoutLogger
 #endif
-#include <ichor/optional_bundles/metrics_bundle/MemoryUsageFunctions.h>
 #include <iostream>
+#include <thread>
 
 int main() {
     std::locale::global(std::locale("en_US.UTF-8"));
@@ -26,19 +26,15 @@ int main() {
         auto logMgr = dm.createServiceManager<FRAMEWORK_LOGGER_TYPE, IFrameworkLogger>();
         logMgr->setLogLevel(LogLevel::INFO);
 
-
 #ifdef USE_SPDLOG
         dm.createServiceManager<SpdlogSharedService, ISpdlogSharedService>();
 #endif
 
         dm.createServiceManager<LoggerAdmin<LOGGER_TYPE>, ILoggerAdmin>();
-        for (uint64_t i = 0; i < 10'000; i++) {
-            dm.createServiceManager<TestService>(IchorProperties{{"Iteration", i},
-                                                                 {"LogLevel",  LogLevel::WARN}});
-        }
+        dm.createServiceManager<TestService>(IchorProperties{{"LogLevel", LogLevel::WARN}});
         dm.start();
         auto end = std::chrono::system_clock::now();
-        std::cout << fmt::format("Single Threaded Program ran for {:L} µs with {:L} peak memory usage\n", std::chrono::duration_cast<std::chrono::microseconds>(end - start).count(), getPeakRSS());
+        std::cout << fmt::format("Single Threaded program ran for {:L} µs\n", std::chrono::duration_cast<std::chrono::microseconds>(end - start).count());
     }
 
     auto start = std::chrono::system_clock::now();
@@ -54,10 +50,7 @@ int main() {
 #endif
 
             managers[i].createServiceManager<LoggerAdmin<LOGGER_TYPE>, ILoggerAdmin>();
-            for (uint64_t j = 0; j < 10'000; j++) {
-                managers[i].createServiceManager<TestService>(IchorProperties{{"Iteration", j},
-                                                                     {"LogLevel",  LogLevel::WARN}});
-            }
+            managers[i].createServiceManager<TestService>(IchorProperties{{"LogLevel", LogLevel::WARN}});
             managers[i].start();
         });
     }
@@ -65,7 +58,7 @@ int main() {
         threads[i].join();
     }
     auto end = std::chrono::system_clock::now();
-    std::cout << fmt::format("Multi Threaded program ran for {:L} µs with {:L} peak memory usage\n", std::chrono::duration_cast<std::chrono::microseconds>(end - start).count(), getPeakRSS());
+    std::cout << fmt::format("Multi Threaded program ran for {:L} µs\n", std::chrono::duration_cast<std::chrono::microseconds>(end - start).count());
 
     return 0;
 }

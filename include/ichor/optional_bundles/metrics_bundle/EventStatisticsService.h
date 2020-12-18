@@ -36,7 +36,7 @@ namespace Ichor {
 
     class EventStatisticsService final : public IEventStatisticsService, public Service {
     public:
-        EventStatisticsService(DependencyRegister &reg, IchorProperties props);
+        EventStatisticsService(DependencyRegister &reg, IchorProperties props, DependencyManager *mng);
         ~EventStatisticsService() final = default;
 
         void addDependencyInstance(ILogger *logger);
