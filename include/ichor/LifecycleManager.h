@@ -130,17 +130,17 @@ namespace Ichor {
         ICHOR_CONSTEXPR virtual bool dependencyOffline(const std::shared_ptr<ILifecycleManager> &dependentService) = 0;
         [[nodiscard]] ICHOR_CONSTEXPR virtual bool start() = 0;
         [[nodiscard]] ICHOR_CONSTEXPR virtual bool stop() = 0;
-        [[nodiscard]] ICHOR_CONSTEXPR virtual std::string_view implementationName() const = 0;
-        [[nodiscard]] ICHOR_CONSTEXPR virtual uint64_t type() const = 0;
-        [[nodiscard]] ICHOR_CONSTEXPR virtual uint64_t serviceId() const = 0;
-        [[nodiscard]] ICHOR_CONSTEXPR virtual ServiceState getServiceState() const = 0;
-        [[nodiscard]] ICHOR_CONSTEXPR virtual const std::vector<Dependency>& getInterfaces() const = 0;
+        [[nodiscard]] ICHOR_CONSTEXPR virtual std::string_view implementationName() const noexcept = 0;
+        [[nodiscard]] ICHOR_CONSTEXPR virtual uint64_t type() const noexcept = 0;
+        [[nodiscard]] ICHOR_CONSTEXPR virtual uint64_t serviceId() const noexcept = 0;
+        [[nodiscard]] ICHOR_CONSTEXPR virtual ServiceState getServiceState() const noexcept = 0;
+        [[nodiscard]] ICHOR_CONSTEXPR virtual const std::vector<Dependency>& getInterfaces() const noexcept = 0;
 
         // for some reason, returning a reference produces garbage??
-        [[nodiscard]] ICHOR_CONSTEXPR virtual DependencyInfo const * getDependencyInfo() const = 0;
-        [[nodiscard]] ICHOR_CONSTEXPR virtual IchorProperties const * getProperties() const = 0;
-        [[nodiscard]] ICHOR_CONSTEXPR virtual IService* getServiceAsInterfacePointer() = 0;
-        [[nodiscard]] ICHOR_CONSTEXPR virtual DependencyRegister const * getDependencyRegistry() const = 0;
+        [[nodiscard]] ICHOR_CONSTEXPR virtual DependencyInfo const * getDependencyInfo() const noexcept = 0;
+        [[nodiscard]] ICHOR_CONSTEXPR virtual IchorProperties const * getProperties() const noexcept = 0;
+        [[nodiscard]] ICHOR_CONSTEXPR virtual IService* getServiceAsInterfacePointer() noexcept = 0;
+        [[nodiscard]] ICHOR_CONSTEXPR virtual DependencyRegister const * getDependencyRegistry() const noexcept = 0;
     };
 
     template<class ServiceType>
@@ -280,43 +280,43 @@ namespace Ichor {
             return true;
         }
 
-        [[nodiscard]] ICHOR_CONSTEXPR std::string_view implementationName() const final {
+        [[nodiscard]] ICHOR_CONSTEXPR std::string_view implementationName() const noexcept final {
             return _implementationName;
         }
 
-        [[nodiscard]] ICHOR_CONSTEXPR uint64_t type() const final {
+        [[nodiscard]] ICHOR_CONSTEXPR uint64_t type() const noexcept final {
             return typeNameHash<ServiceType>();
         }
 
-        [[nodiscard]] ICHOR_CONSTEXPR uint64_t serviceId() const final {
+        [[nodiscard]] ICHOR_CONSTEXPR uint64_t serviceId() const noexcept final {
             return _service.getServiceId();
         }
 
-        [[nodiscard]] ICHOR_CONSTEXPR ServiceType& getService() {
+        [[nodiscard]] ICHOR_CONSTEXPR ServiceType& getService() noexcept {
             return _service;
         }
 
-        [[nodiscard]] ICHOR_CONSTEXPR ServiceState getServiceState() const final {
+        [[nodiscard]] ICHOR_CONSTEXPR ServiceState getServiceState() const noexcept final {
             return _service.getState();
         }
 
-        [[nodiscard]] ICHOR_CONSTEXPR const std::vector<Dependency>& getInterfaces() const final {
+        [[nodiscard]] ICHOR_CONSTEXPR const std::vector<Dependency>& getInterfaces() const noexcept final {
             return _interfaces;
         }
 
-        [[nodiscard]] ICHOR_CONSTEXPR DependencyInfo const * getDependencyInfo() const final {
+        [[nodiscard]] ICHOR_CONSTEXPR DependencyInfo const * getDependencyInfo() const noexcept final {
             return &_dependencies;
         }
 
-        [[nodiscard]] ICHOR_CONSTEXPR IchorProperties const * getProperties() const final {
+        [[nodiscard]] ICHOR_CONSTEXPR IchorProperties const * getProperties() const noexcept final {
             return &_service._properties;
         }
 
-        [[nodiscard]] ICHOR_CONSTEXPR IService* getServiceAsInterfacePointer() final {
+        [[nodiscard]] ICHOR_CONSTEXPR IService* getServiceAsInterfacePointer() noexcept final {
             return &_service;
         }
 
-        [[nodiscard]] ICHOR_CONSTEXPR DependencyRegister const * getDependencyRegistry() const final {
+        [[nodiscard]] ICHOR_CONSTEXPR DependencyRegister const * getDependencyRegistry() const noexcept final {
             return &_registry;
         }
 
@@ -396,43 +396,43 @@ namespace Ichor {
             return true;
         }
 
-        [[nodiscard]] ICHOR_CONSTEXPR std::string_view implementationName() const final {
+        [[nodiscard]] ICHOR_CONSTEXPR std::string_view implementationName() const noexcept final {
             return _implementationName;
         }
 
-        [[nodiscard]] ICHOR_CONSTEXPR uint64_t type() const final {
+        [[nodiscard]] ICHOR_CONSTEXPR uint64_t type() const noexcept final {
             return typeNameHash<ServiceType>();
         }
 
-        [[nodiscard]] ICHOR_CONSTEXPR uint64_t serviceId() const final {
+        [[nodiscard]] ICHOR_CONSTEXPR uint64_t serviceId() const noexcept final {
             return _service.getServiceId();
         }
 
-        [[nodiscard]] ICHOR_CONSTEXPR ServiceType& getService() {
+        [[nodiscard]] ICHOR_CONSTEXPR ServiceType& getService() noexcept {
             return _service;
         }
 
-        [[nodiscard]] ICHOR_CONSTEXPR ServiceState getServiceState() const final {
+        [[nodiscard]] ICHOR_CONSTEXPR ServiceState getServiceState() const noexcept final {
             return _service.getState();
         }
 
-        [[nodiscard]] ICHOR_CONSTEXPR const std::vector<Dependency>& getInterfaces() const final {
+        [[nodiscard]] ICHOR_CONSTEXPR const std::vector<Dependency>& getInterfaces() const noexcept final {
             return _interfaces;
         }
 
-        [[nodiscard]] ICHOR_CONSTEXPR DependencyInfo const * getDependencyInfo() const final {
+        [[nodiscard]] ICHOR_CONSTEXPR DependencyInfo const * getDependencyInfo() const noexcept final {
             return nullptr;
         }
 
-        [[nodiscard]] ICHOR_CONSTEXPR IchorProperties const * getProperties() const final {
+        [[nodiscard]] ICHOR_CONSTEXPR IchorProperties const * getProperties() const noexcept final {
             return &_service._properties;
         }
 
-        [[nodiscard]] ICHOR_CONSTEXPR IService* getServiceAsInterfacePointer() final {
+        [[nodiscard]] ICHOR_CONSTEXPR IService* getServiceAsInterfacePointer() noexcept final {
             return &_service;
         }
 
-        [[nodiscard]] ICHOR_CONSTEXPR DependencyRegister const * getDependencyRegistry() const final {
+        [[nodiscard]] ICHOR_CONSTEXPR DependencyRegister const * getDependencyRegistry() const noexcept final {
             return nullptr;
         }
 

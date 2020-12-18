@@ -419,21 +419,21 @@ namespace Ichor {
 
         /// Get manager id
         /// \return id
-        [[nodiscard]] uint64_t getId() const {
+        [[nodiscard]] uint64_t getId() const noexcept {
             return _id;
         }
 
-        [[nodiscard]] std::pmr::memory_resource* getMemoryResource() {
+        [[nodiscard]] std::pmr::memory_resource* getMemoryResource() noexcept {
             return &_memResource;
         }
 
         ///
         /// \return Potentially nullptr
-        [[nodiscard]] CommunicationChannel* getCommunicationChannel() {
+        [[nodiscard]] CommunicationChannel* getCommunicationChannel() const noexcept {
             return _communicationChannel;
         }
 
-        [[nodiscard]] std::optional<std::string_view> getImplementationNameFor(uint64_t serviceId);
+        [[nodiscard]] std::optional<std::string_view> getImplementationNameFor(uint64_t serviceId) const noexcept;
 
         void start();
 
@@ -491,7 +491,7 @@ namespace Ichor {
 
         template <typename EventT, typename... Args>
         requires Derived<EventT, Event>
-        uint64_t pushEventInternal(uint64_t originatingServiceId, uint64_t priority, Args&&... args){
+        uint64_t pushEventInternal(uint64_t originatingServiceId, uint64_t priority, Args&&... args) {
             static_assert(sizeof(EventT) <= 128, "event type cannot be larger than 128 bytes");
 
             uint64_t eventId = _eventIdCounter.fetch_add(1, std::memory_order_acq_rel);

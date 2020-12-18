@@ -70,7 +70,7 @@ void Ichor::DependencyManager::start() {
                             filter = std::any_cast<const Filter>(&filterProp->second);
                         }
 
-                        std::vector<std::shared_ptr<ILifecycleManager>> interestedManagers{};
+                        std::vector<std::reference_wrapper<const std::shared_ptr<ILifecycleManager>>> interestedManagers{};
                         interestedManagers.reserve(_services.size());
                         for (auto const &[key, possibleDependentLifecycleManager] : _services) {
                             if (filter != nullptr && !filter->compareTo(possibleDependentLifecycleManager)) {
@@ -81,8 +81,8 @@ void Ichor::DependencyManager::start() {
                         }
 
                         for(auto const &interestedManager : interestedManagers) {
-                            if (interestedManager->dependencyOnline(depOnlineEvt->manager)) {
-                                pushEventInternal<DependencyOnlineEvent>(0, INTERNAL_EVENT_PRIORITY, interestedManager);
+                            if (interestedManager.get()->dependencyOnline(depOnlineEvt->manager)) {
+                                pushEventInternal<DependencyOnlineEvent>(0, INTERNAL_EVENT_PRIORITY, interestedManager.get());
                             }
                         }
                     }
@@ -97,7 +97,7 @@ void Ichor::DependencyManager::start() {
                             filter = std::any_cast<const Filter>(&filterProp->second);
                         }
 
-                        std::vector<std::shared_ptr<ILifecycleManager>> interestedManagers{};
+                        std::vector<std::reference_wrapper<const std::shared_ptr<ILifecycleManager>>> interestedManagers{};
                         interestedManagers.reserve(_services.size());
                         for (auto const &[key, possibleDependentLifecycleManager] : _services) {
                             if (filter != nullptr && !filter->compareTo(possibleDependentLifecycleManager)) {
@@ -108,8 +108,8 @@ void Ichor::DependencyManager::start() {
                         }
 
                         for(auto const &interestedManager : interestedManagers) {
-                            if (interestedManager->dependencyOffline(depOfflineEvt->manager)) {
-                                pushEventInternal<DependencyOfflineEvent>(0, INTERNAL_EVENT_PRIORITY, interestedManager);
+                            if (interestedManager.get()->dependencyOffline(depOfflineEvt->manager)) {
+                                pushEventInternal<DependencyOfflineEvent>(0, INTERNAL_EVENT_PRIORITY, interestedManager.get());
                             }
                         }
                     }
@@ -393,7 +393,7 @@ uint32_t Ichor::DependencyManager::broadcastEvent(const Ichor::Event *const evt)
     return registeredListeners->second.size();
 }
 
-std::optional<std::string_view> Ichor::DependencyManager::getImplementationNameFor(uint64_t serviceId) {
+std::optional<std::string_view> Ichor::DependencyManager::getImplementationNameFor(uint64_t serviceId) const noexcept {
     auto service = _services.find(serviceId);
 
     if(service == end(_services)) {

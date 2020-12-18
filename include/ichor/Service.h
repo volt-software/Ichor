@@ -36,19 +36,19 @@ namespace Ichor {
         Service(IchorProperties props, DependencyManager *mng = nullptr) noexcept;
         ~Service() override;
 
-        void injectDependencyManager(DependencyManager *mng) {
+        void injectDependencyManager(DependencyManager *mng) noexcept {
             _manager = mng;
         }
 
-        [[nodiscard]] uint64_t getServiceId() const final {
+        [[nodiscard]] uint64_t getServiceId() const noexcept final {
             return _serviceId;
         }
 
-        [[nodiscard]] DependencyManager* getManager() final {
+        [[nodiscard]] DependencyManager* getManager() noexcept final {
             return _manager;
         }
 
-        [[nodiscard]] IchorProperties* getProperties() final {
+        [[nodiscard]] IchorProperties* getProperties() noexcept final {
             return &_properties;
         }
 
@@ -65,7 +65,7 @@ namespace Ichor {
         /// \return true if stopped or already stopped
         [[nodiscard]] bool internal_stop();
         [[nodiscard]] ServiceState getState() const noexcept;
-        void setProperties(IchorProperties&& properties);
+        void setProperties(IchorProperties&& properties) noexcept(std::is_nothrow_move_assignable_v<IchorProperties>);
 
 
         uint64_t _serviceId;

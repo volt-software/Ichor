@@ -54,6 +54,6 @@ Ichor::ServiceState Ichor::Service::getState() const noexcept {
     return _serviceState;
 }
 
-void Ichor::Service::setProperties(Ichor::IchorProperties&& properties) {
+void Ichor::Service::setProperties(Ichor::IchorProperties&& properties) noexcept(std::is_nothrow_move_assignable_v<IchorProperties>) {
     _properties = std::move(properties);
 }

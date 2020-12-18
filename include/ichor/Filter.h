@@ -29,9 +29,9 @@ namespace Ichor {
 
     class ServiceIdFilterEntry final {
     public:
-        ServiceIdFilterEntry(uint64_t _id) : id(_id) {}
+        explicit ServiceIdFilterEntry(uint64_t _id) : id(_id) {}
 
-        [[nodiscard]] bool matches(const std::shared_ptr<ILifecycleManager> &manager) const {
+        [[nodiscard]] bool matches(const std::shared_ptr<ILifecycleManager> &manager) const noexcept {
             return manager->serviceId() == id;
         }
 

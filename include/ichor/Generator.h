@@ -37,11 +37,11 @@ namespace Ichor{
                 return {};
             }
 
-            void unhandled_exception() {
+            void unhandled_exception() noexcept {
                 m_exception = std::current_exception();
             }
 
-            void return_void() {
+            void return_void() noexcept {
             }
 
             cppcoro::suspend_never return_value(std::remove_reference_t<T> &value) noexcept
