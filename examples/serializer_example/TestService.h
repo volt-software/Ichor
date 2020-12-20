@@ -19,7 +19,7 @@ public:
 
     bool start() final {
         LOG_INFO(_logger, "TestService started with dependency");
-        _doWorkRegistration = getManager()->registerEventCompletionCallbacks<DoWorkEvent>(getServiceId(), this);
+        _doWorkRegistration = getManager()->registerEventCompletionCallbacks<DoWorkEvent>(this);
         getManager()->pushEvent<DoWorkEvent>(getServiceId());
         return true;
     }

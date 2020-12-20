@@ -16,7 +16,7 @@ public:
     ~OtherService() final = default;
     bool start() final {
         LOG_INFO(_logger, "OtherService started with dependency");
-        _customEventHandler = getManager()->registerEventHandler<CustomEvent>(getServiceId(), this);
+        _customEventHandler = getManager()->registerEventHandler<CustomEvent>(this);
         return true;
     }
 

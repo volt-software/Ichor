@@ -24,7 +24,7 @@ public:
 
     bool start() final {
         LOG_INFO(_logger, "UsingTcpService started");
-        _timerEventRegistration = getManager()->registerEventHandler<NetworkDataEvent>(getServiceId(), this);
+        _timerEventRegistration = getManager()->registerEventHandler<NetworkDataEvent>(this);
         _connectionService->send(_serializationAdmin->serialize(TestMsg{11, "hello"}));
         return true;
     }

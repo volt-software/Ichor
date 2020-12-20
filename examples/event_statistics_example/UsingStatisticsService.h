@@ -22,8 +22,8 @@ public:
         _quitTimerManager->setChronoInterval(std::chrono::seconds (15));
         _bogusTimerManager->setChronoInterval(std::chrono::milliseconds (15));
         _quitTimerId = _quitTimerManager->getServiceId();
-        _quitTimerEventRegistration = getManager()->registerEventHandler<TimerEvent>(getServiceId(), this, _quitTimerManager->getServiceId());
-        _bogusTimerEventRegistration = getManager()->registerEventHandler<TimerEvent>(getServiceId(), this, _bogusTimerManager->getServiceId());
+        _quitTimerEventRegistration = getManager()->registerEventHandler<TimerEvent>(this, _quitTimerManager->getServiceId());
+        _bogusTimerEventRegistration = getManager()->registerEventHandler<TimerEvent>(this, _bogusTimerManager->getServiceId());
         _quitTimerManager->startTimer();
         _bogusTimerManager->startTimer();
         return true;

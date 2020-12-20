@@ -33,7 +33,7 @@ public:
         timer->setChronoInterval(std::chrono::milliseconds(10));
         // Registering an event handler requires 2 pieces of information: the service id and a pointer to a service instantiation.
         // The third piece of information is an extra filter, as we're only interested in events of this specific timer.
-        _timerEventRegistration = getManager()->registerEventHandler<TimerEvent>(getServiceId(), this, timer->getServiceId());
+        _timerEventRegistration = getManager()->registerEventHandler<TimerEvent>(this, timer->getServiceId());
         timer->startTimer();
 
         // Register sigint handler

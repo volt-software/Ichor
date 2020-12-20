@@ -18,7 +18,7 @@ namespace Ichor {
         ~LoggerAdmin() final = default;
 
         bool start() final {
-            _loggerTrackerRegistration = getManager()->template registerDependencyTracker<ILogger>(getServiceId(), this);
+            _loggerTrackerRegistration = getManager()->template registerDependencyTracker<ILogger>(this);
             return true;
         }
 

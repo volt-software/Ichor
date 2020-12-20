@@ -14,8 +14,8 @@ namespace Ichor {
         ~ClientAdmin() override = default;
 
         bool start() final {
-            _trackerRegistration = getManager()->template registerDependencyTracker<NetworkInterfaceType>(getServiceId(), this);
-            _unrecoverableErrorRegistration = getManager()->template registerEventHandler<UnrecoverableErrorEvent>(getServiceId(), this);
+            _trackerRegistration = getManager()->template registerDependencyTracker<NetworkInterfaceType>(this);
+            _unrecoverableErrorRegistration = getManager()->template registerEventHandler<UnrecoverableErrorEvent>(this);
 
             return false;
         }

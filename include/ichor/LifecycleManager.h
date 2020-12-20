@@ -133,6 +133,7 @@ namespace Ichor {
         [[nodiscard]] ICHOR_CONSTEXPR virtual std::string_view implementationName() const noexcept = 0;
         [[nodiscard]] ICHOR_CONSTEXPR virtual uint64_t type() const noexcept = 0;
         [[nodiscard]] ICHOR_CONSTEXPR virtual uint64_t serviceId() const noexcept = 0;
+        [[nodiscard]] ICHOR_CONSTEXPR virtual uint64_t getPriority() const noexcept = 0;
         [[nodiscard]] ICHOR_CONSTEXPR virtual ServiceState getServiceState() const noexcept = 0;
         [[nodiscard]] ICHOR_CONSTEXPR virtual const std::vector<Dependency>& getInterfaces() const noexcept = 0;
 
@@ -157,7 +158,7 @@ namespace Ichor {
             LOG_TRACE(_logger, "destroying {}, id {}", typeName<ServiceType>(), _service.getServiceId());
             for(auto const &dep : _dependencies._dependencies) {
                 // _manager is always injected in DependencyManager::create...Manager functions.
-                _service._manager->template pushEvent<DependencyUndoRequestEvent>(_service.getServiceId(), nullptr, Dependency{dep.interfaceNameHash, dep.required}, getProperties());
+                _service._manager->template pushPrioritisedEvent<DependencyUndoRequestEvent>(_service.getServiceId(), getPriority(), nullptr, Dependency{dep.interfaceNameHash, dep.required}, getProperties());
             }
         }
 
@@ -292,6 +293,10 @@ namespace Ichor {
             return _service.getServiceId();
         }
 
+        [[nodiscard]] ICHOR_CONSTEXPR uint64_t getPriority() const noexcept final {
+            return _service.getServicePriority();
+        }
+
         [[nodiscard]] ICHOR_CONSTEXPR ServiceType& getService() noexcept {
             return _service;
         }
@@ -410,6 +415,10 @@ namespace Ichor {
 
         [[nodiscard]] ICHOR_CONSTEXPR ServiceType& getService() noexcept {
             return _service;
+        }
+
+        [[nodiscard]] ICHOR_CONSTEXPR uint64_t getPriority() const noexcept final {
+            return _service.getServicePriority();
         }
 
         [[nodiscard]] ICHOR_CONSTEXPR ServiceState getServiceState() const noexcept final {

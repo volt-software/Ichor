@@ -12,8 +12,8 @@ public:
     ~PubsubAdminZmqService() final = default;
 
     bool start() final {
-        _publisherTrackerRegistration = getManager()->registerDependencyTracker<IPubsubPublisherService>(getServiceId(), this);
-        _subscriberTrackerRegistration = getManager()->registerDependencyTracker<IPubsubSubscriberService>(getServiceId(), this);
+        _publisherTrackerRegistration = getManager()->registerDependencyTracker<IPubsubPublisherService>(this);
+        _subscriberTrackerRegistration = getManager()->registerDependencyTracker<IPubsubSubscriberService>(this);
         return true;
     }
 

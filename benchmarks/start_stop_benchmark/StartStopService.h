@@ -17,8 +17,8 @@ public:
     ~StartStopService() final = default;
     bool start() final {
         if(startCount == 0) {
-            _startServiceRegistration = getManager()->registerEventCompletionCallbacks<StartServiceEvent>(getServiceId(), this);
-            _stopServiceRegistration = getManager()->registerEventCompletionCallbacks<StopServiceEvent>(getServiceId(), this);
+            _startServiceRegistration = getManager()->registerEventCompletionCallbacks<StartServiceEvent>(this);
+            _stopServiceRegistration = getManager()->registerEventCompletionCallbacks<StopServiceEvent>(this);
 
             _start = std::chrono::system_clock::now();
             getManager()->pushEvent<StopServiceEvent>(getServiceId(), _testServiceId);
@@ -27,7 +27,7 @@ public:
         } else {
             auto end = std::chrono::system_clock::now();
             getManager()->pushEvent<QuitEvent>(getServiceId());
-            LOG_INFO(_logger, "finished in {:L} µs", std::chrono::duration_cast<std::chrono::microseconds>(end-_start).count());
+            LOG_INFO(_logger, "dm {} finished in {:L} µs", getManager()->getId(), std::chrono::duration_cast<std::chrono::microseconds>(end-_start).count());
         }
         startCount++;
         return true;

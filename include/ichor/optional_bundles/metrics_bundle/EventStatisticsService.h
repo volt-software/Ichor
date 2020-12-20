@@ -4,26 +4,27 @@
 #include <ichor/Service.h>
 #include <ichor/optional_bundles/logging_bundle/Logger.h>
 #include <ichor/optional_bundles/timer_bundle/TimerService.h>
+#include <chrono>
 
 namespace Ichor {
 
     struct StatisticEntry {
         StatisticEntry() = default;
-        StatisticEntry(uint64_t _timestamp, uint64_t _processingTimeRequired) : timestamp(_timestamp), processingTimeRequired(_processingTimeRequired) {}
-        uint64_t timestamp;
-        uint64_t processingTimeRequired;
+        StatisticEntry(int64_t _timestamp, int64_t _processingTimeRequired) : timestamp(_timestamp), processingTimeRequired(_processingTimeRequired) {}
+        int64_t timestamp{};
+        int64_t processingTimeRequired{};
     };
 
     struct AveragedStatisticEntry {
         AveragedStatisticEntry() = default;
-        AveragedStatisticEntry(uint64_t _timestamp, uint64_t _minProcessingTimeRequired, uint64_t _maxProcessingTimeRequired, uint64_t _avgProcessingTimeRequired, uint64_t _occurances) :
+        AveragedStatisticEntry(int64_t _timestamp, int64_t _minProcessingTimeRequired, int64_t _maxProcessingTimeRequired, int64_t _avgProcessingTimeRequired, uint64_t _occurances) :
             timestamp(_timestamp), minProcessingTimeRequired(_minProcessingTimeRequired), maxProcessingTimeRequired(_maxProcessingTimeRequired), avgProcessingTimeRequired(_avgProcessingTimeRequired),
             occurances(_occurances) {}
-        uint64_t timestamp;
-        uint64_t minProcessingTimeRequired;
-        uint64_t maxProcessingTimeRequired;
-        uint64_t avgProcessingTimeRequired;
-        uint64_t occurances;
+        int64_t timestamp{};
+        int64_t minProcessingTimeRequired{};
+        int64_t maxProcessingTimeRequired{};
+        int64_t avgProcessingTimeRequired{};
+        uint64_t occurances{};
     };
 
     class IEventStatisticsService : public virtual IService {
@@ -36,11 +37,7 @@ namespace Ichor {
 
     class EventStatisticsService final : public IEventStatisticsService, public Service {
     public:
-        EventStatisticsService(DependencyRegister &reg, IchorProperties props, DependencyManager *mng);
         ~EventStatisticsService() final = default;
-
-        void addDependencyInstance(ILogger *logger);
-        void removeDependencyInstance(ILogger *logger);
 
         bool preInterceptEvent(Event const * const evt);
         bool postInterceptEvent(Event const * const evt, bool processed);
@@ -55,11 +52,10 @@ namespace Ichor {
     private:
         std::unordered_map<std::string_view, std::vector<StatisticEntry>> _recentEventStatistics{};
         std::unordered_map<std::string_view, std::vector<AveragedStatisticEntry>> _averagedStatistics{};
-        uint64_t _startProcessingTimestamp{};
+        std::chrono::time_point<std::chrono::steady_clock> _startProcessingTimestamp{};
         bool _showStatisticsOnStop{false};
         uint64_t _averagingIntervalMs{5000};
         std::unique_ptr<EventHandlerRegistration> _timerEventRegistration{nullptr};
         std::unique_ptr<EventInterceptorRegistration> _interceptorRegistration{nullptr};
-        ILogger *_logger{nullptr};
     };
 }

@@ -32,7 +32,7 @@ public:
     ~TrackerService() final = default;
     bool start() final {
         LOG_INFO(_logger, "TrackerService started");
-        _trackerRegistration = getManager()->registerDependencyTracker<IRuntimeCreatedService>(getServiceId(), this);
+        _trackerRegistration = getManager()->registerDependencyTracker<IRuntimeCreatedService>(this);
         return true;
     }
 

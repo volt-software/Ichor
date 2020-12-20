@@ -25,7 +25,7 @@ public:
 
     bool start() final {
         LOG_INFO(_logger, "UsingHttpService started");
-        _timerEventRegistration = getManager()->registerEventHandler<HttpResponseEvent>(getServiceId(), this);
+        _timerEventRegistration = getManager()->registerEventHandler<HttpResponseEvent>(this);
         _connectionService->sendAsync(HttpMethod::post, "/test", {}, _serializationAdmin->serialize(TestMsg{11, "hello"}));
         return true;
     }

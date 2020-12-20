@@ -37,7 +37,7 @@ bool Ichor::WsHostService::start() {
         return false;
     }
 
-    _eventRegistration = getManager()->registerEventHandler<NewWsConnectionEvent>(getServiceId(), this, getServiceId());
+    _eventRegistration = getManager()->registerEventHandler<NewWsConnectionEvent>(this, getServiceId());
 
     _wsContext = std::make_unique<net::io_context>(1);
     auto const& address = net::ip::make_address(std::any_cast<std::string&>(getProperties()->operator[]("Address")));

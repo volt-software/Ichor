@@ -23,25 +23,27 @@ namespace Ichor {
     public:
         virtual ~IService() = default;
 
-        [[nodiscard]] virtual uint64_t getServiceId() const = 0;
+        [[nodiscard]] virtual uint64_t getServiceId() const noexcept = 0;
 
-        [[nodiscard]] virtual DependencyManager* getManager() = 0;
+        [[nodiscard]] virtual uint64_t getServicePriority() const noexcept = 0;
 
-        [[nodiscard]] virtual IchorProperties* getProperties() = 0;
+        [[nodiscard]] virtual DependencyManager* getManager() noexcept = 0;
+
+        [[nodiscard]] virtual IchorProperties* getProperties() noexcept = 0;
     };
 
     class Service : virtual public IService {
     public:
         Service() noexcept;
         Service(IchorProperties props, DependencyManager *mng = nullptr) noexcept;
-        ~Service() override;
-
-        void injectDependencyManager(DependencyManager *mng) noexcept {
-            _manager = mng;
-        }
+        ~Service() noexcept override;
 
         [[nodiscard]] uint64_t getServiceId() const noexcept final {
             return _serviceId;
+        }
+
+        [[nodiscard]] uint64_t getServicePriority() const noexcept final {
+            return _servicePriority;
         }
 
         [[nodiscard]] DependencyManager* getManager() noexcept final {
@@ -67,8 +69,17 @@ namespace Ichor {
         [[nodiscard]] ServiceState getState() const noexcept;
         void setProperties(IchorProperties&& properties) noexcept(std::is_nothrow_move_assignable_v<IchorProperties>);
 
+        void injectDependencyManager(DependencyManager *mng) noexcept {
+            _manager = mng;
+        }
+
+        void injectPriority(uint64_t priority) noexcept {
+            _servicePriority = priority;
+        }
+
 
         uint64_t _serviceId;
+        uint64_t _servicePriority;
         sole::uuid _serviceGid;
         ServiceState _serviceState;
         static std::atomic<uint64_t> _serviceIdCounter;

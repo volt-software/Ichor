@@ -15,6 +15,7 @@
 #define LOGGER_TYPE CoutLogger
 #endif
 #include <ichor/optional_bundles/metrics_bundle/MemoryUsageFunctions.h>
+#include <ichor/optional_bundles/metrics_bundle/EventStatisticsService.h>
 #include <iostream>
 
 int main() {
@@ -23,7 +24,7 @@ int main() {
     {
         auto start = std::chrono::system_clock::now();
         DependencyManager dm{};
-        auto logMgr = dm.createServiceManager<FRAMEWORK_LOGGER_TYPE, IFrameworkLogger>();
+        auto logMgr = dm.createServiceManager<FRAMEWORK_LOGGER_TYPE, IFrameworkLogger>({}, 10);
         logMgr->setLogLevel(LogLevel::INFO);
 #ifdef USE_SPDLOG
         dm.createServiceManager<SpdlogSharedService, ISpdlogSharedService>();
@@ -31,6 +32,7 @@ int main() {
         dm.createServiceManager<LoggerAdmin<LOGGER_TYPE>, ILoggerAdmin>();
         dm.createServiceManager<TestService, ITestService>(IchorProperties{{"LogLevel", LogLevel::INFO}});
         dm.createServiceManager<StartStopService>(IchorProperties{{"LogLevel", LogLevel::INFO}});
+        dm.createServiceManager<EventStatisticsService, IEventStatisticsService>(IchorProperties{{"ShowStatisticsOnStop", true}, {"AveragingIntervalMs", 10ul}}, 9);
         dm.start();
         auto end = std::chrono::system_clock::now();
         std::cout << fmt::format("Single Threaded Program ran for {:L} µs with {:L} peak memory usage\n", std::chrono::duration_cast<std::chrono::microseconds>(end - start).count(), getPeakRSS());
@@ -41,7 +43,7 @@ int main() {
     std::array<DependencyManager, 8> managers{};
     for(uint_fast32_t i = 0; i < 8; i++) {
         threads[i] = std::thread([&managers, i] {
-            auto logMgr = managers[i].createServiceManager<FRAMEWORK_LOGGER_TYPE, IFrameworkLogger>();
+            auto logMgr = managers[i].createServiceManager<FRAMEWORK_LOGGER_TYPE, IFrameworkLogger>({}, 10);
             logMgr->setLogLevel(LogLevel::INFO);
 
 #ifdef USE_SPDLOG
@@ -51,6 +53,7 @@ int main() {
             managers[i].createServiceManager<LoggerAdmin<LOGGER_TYPE>, ILoggerAdmin>();
             managers[i].createServiceManager<TestService, ITestService>(IchorProperties{{"LogLevel",  LogLevel::INFO}});
             managers[i].createServiceManager<StartStopService>(IchorProperties{{"LogLevel", LogLevel::INFO}});
+            managers[i].createServiceManager<EventStatisticsService, IEventStatisticsService>(IchorProperties{{"ShowStatisticsOnStop", true}, {"AveragingIntervalMs", 10ul}}, 9);
             managers[i].start();
         });
     }

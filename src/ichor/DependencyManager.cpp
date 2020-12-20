@@ -37,6 +37,8 @@ void Ichor::DependencyManager::start() {
             lck.unlock();
             _quit.store(sigintQuit.load(std::memory_order_acquire), std::memory_order_release);
 
+//            LOG_ERROR(_logger, "evt id {} type {} has {}-{} prio", evtNode.mapped().get()->id, evtNode.mapped().get()->name, evtNode.key(), evtNode.mapped().get()->priority);
+
             bool allowProcessing = true;
             uint32_t handlerAmount = 1; // for the non-default case below, the DepMan handles the event
             auto interceptorsForAllEvents = _eventInterceptors.find(0);
@@ -48,6 +50,8 @@ void Ichor::DependencyManager::start() {
                         allowProcessing = false;
                     }
                 }
+            } else {
+                LOG_ERROR(_logger, "missed intercepting evt id {} type {} has {}-{} prio", evtNode.mapped().get()->id, evtNode.mapped().get()->name, evtNode.key(), evtNode.mapped().get()->priority);
             }
 
             if(interceptorsForEvent != end(_eventInterceptors)) {
@@ -82,7 +86,7 @@ void Ichor::DependencyManager::start() {
 
                         for(auto const &interestedManager : interestedManagers) {
                             if (interestedManager.get()->dependencyOnline(depOnlineEvt->manager)) {
-                                pushEventInternal<DependencyOnlineEvent>(0, INTERNAL_EVENT_PRIORITY, interestedManager.get());
+                                pushEventInternal<DependencyOnlineEvent>(0, interestedManager.get()->getPriority(), interestedManager.get());
                             }
                         }
                     }
@@ -109,7 +113,7 @@ void Ichor::DependencyManager::start() {
 
                         for(auto const &interestedManager : interestedManagers) {
                             if (interestedManager.get()->dependencyOffline(depOfflineEvt->manager)) {
-                                pushEventInternal<DependencyOfflineEvent>(0, INTERNAL_EVENT_PRIORITY, interestedManager.get());
+                                pushEventInternal<DependencyOfflineEvent>(0, interestedManager.get()->getPriority(), interestedManager.get());
                             }
                         }
                     }
@@ -145,7 +149,7 @@ void Ichor::DependencyManager::start() {
                         auto _quitEvt = static_cast<QuitEvent *>(evtNode.mapped().get());
                         if (!_quitEvt->dependenciesStopped) {
                             for (auto const &[key, possibleManager] : _services) {
-                                pushEventInternal<StopServiceEvent>(_quitEvt->originatingService, INTERNAL_EVENT_PRIORITY, possibleManager->serviceId());
+                                pushEventInternal<StopServiceEvent>(_quitEvt->originatingService, possibleManager->getPriority(), possibleManager->serviceId());
                             }
 
                             pushEventInternal<QuitEvent>(_quitEvt->originatingService, INTERNAL_EVENT_PRIORITY + 1, true);
@@ -188,8 +192,8 @@ void Ichor::DependencyManager::start() {
                                 handleEventCompletion(stopServiceEvt);
                             }
                         } else {
-                            pushEventInternal<DependencyOfflineEvent>(0, INTERNAL_EVENT_PRIORITY, toStopService);
-                            pushEventInternal<StopServiceEvent>(stopServiceEvt->originatingService, INTERNAL_EVENT_PRIORITY, stopServiceEvt->serviceId, true);
+                            pushEventInternal<DependencyOfflineEvent>(0, stopServiceEvt->priority, toStopService);
+                            pushEventInternal<StopServiceEvent>(stopServiceEvt->originatingService, stopServiceEvt->priority, stopServiceEvt->serviceId, true);
                         }
                     }
                         break;
@@ -216,8 +220,8 @@ void Ichor::DependencyManager::start() {
                                 _services.erase(toRemoveServiceIt);
                             }
                         } else {
-                            pushEventInternal<DependencyOfflineEvent>(0, INTERNAL_EVENT_PRIORITY, toRemoveService);
-                            pushEventInternal<RemoveServiceEvent>(removeServiceEvt->originatingService, INTERNAL_EVENT_PRIORITY, removeServiceEvt->serviceId,
+                            pushEventInternal<DependencyOfflineEvent>(0, removeServiceEvt->priority, toRemoveService);
+                            pushEventInternal<RemoveServiceEvent>(removeServiceEvt->originatingService, removeServiceEvt->priority, removeServiceEvt->serviceId,
                                                                   true);
                         }
                     }
@@ -241,7 +245,7 @@ void Ichor::DependencyManager::start() {
 //                            LOG_TRACE(_logger, "Couldn't start service {}: {}", startServiceEvt->serviceId, toStartService->implementationName());
                             handleEventError(startServiceEvt);
                         } else {
-                            pushEventInternal<DependencyOnlineEvent>(0, INTERNAL_EVENT_PRIORITY, toStartService);
+                            pushEventInternal<DependencyOnlineEvent>(0, startServiceEvt->priority, toStartService);
                             handleEventCompletion(startServiceEvt);
                         }
                     }
@@ -409,25 +413,25 @@ void Ichor::DependencyManager::setCommunicationChannel(Ichor::CommunicationChann
 
 Ichor::EventCompletionHandlerRegistration::~EventCompletionHandlerRegistration() {
     if(_mgr != nullptr) {
-        _mgr->pushEvent<RemoveCompletionCallbacksEvent>(0, _key);
+        _mgr->pushPrioritisedEvent<RemoveCompletionCallbacksEvent>(0, _priority, _key);
     }
 }
 
 Ichor::EventHandlerRegistration::~EventHandlerRegistration() {
     if(_mgr != nullptr) {
-        _mgr->pushEvent<RemoveEventHandlerEvent>(0, _key);
+        _mgr->pushPrioritisedEvent<RemoveEventHandlerEvent>(0, _priority, _key);
     }
 }
 
 Ichor::EventInterceptorRegistration::~EventInterceptorRegistration() {
     if(_mgr != nullptr) {
-        _mgr->pushEvent<RemoveEventInterceptorEvent>(0, _key);
+        _mgr->pushPrioritisedEvent<RemoveEventInterceptorEvent>(0, _priority, _key);
     }
 }
 
 Ichor::DependencyTrackerRegistration::~DependencyTrackerRegistration() {
     if(_mgr != nullptr) {
-        _mgr->pushEvent<RemoveTrackerEvent>(0, _interfaceNameHash);
+        _mgr->pushPrioritisedEvent<RemoveTrackerEvent>(0, _priority, _interfaceNameHash);
     }
 }
 

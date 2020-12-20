@@ -1,9 +1,5 @@
 #include <ichor/optional_bundles/metrics_bundle/EventStatisticsService.h>
 
-Ichor::EventStatisticsService::EventStatisticsService(DependencyRegister &reg, IchorProperties props, DependencyManager *mng) : Service(std::move(props), mng) {
-    reg.registerDependency<ILogger>(this, true);
-}
-
 bool Ichor::EventStatisticsService::start() {
     if(getProperties()->contains("ShowStatisticsOnStop")) {
         _showStatisticsOnStop = std::any_cast<bool>(getProperties()->operator[]("ShowStatisticsOnStop"));
@@ -17,10 +13,9 @@ bool Ichor::EventStatisticsService::start() {
 
     auto _timerManager = getManager()->createServiceManager<Timer, ITimer>();
     _timerManager->setChronoInterval(std::chrono::milliseconds(_averagingIntervalMs));
-    _timerEventRegistration = getManager()->registerEventHandler<TimerEvent>(getServiceId(), this, _timerManager->getServiceId());
+    _timerEventRegistration = getManager()->registerEventHandler<TimerEvent>(this, _timerManager->getServiceId());
+    _interceptorRegistration = getManager()->registerEventInterceptor<Event>(this);
     _timerManager->startTimer();
-
-    _interceptorRegistration = getManager()->registerEventInterceptor<Event>(getServiceId(), this);
 
     return true;
 }
@@ -29,6 +24,13 @@ bool Ichor::EventStatisticsService::stop() {
     _timerEventRegistration = nullptr;
 
     if(_showStatisticsOnStop) {
+        // handle last bit of stored statistics by emulating a handleEvent call
+        auto gen = handleEvent(nullptr);
+        auto it = gen.begin();
+        while(it != gen.end()) {
+            it = gen.begin();
+        }
+
         for(auto &[key, statistics] : _averagedStatistics) {
             if(statistics.empty()) {
                 continue;
@@ -36,26 +38,18 @@ bool Ichor::EventStatisticsService::stop() {
 
             auto min = std::min_element(begin(statistics), end(statistics), [](const AveragedStatisticEntry &a, const AveragedStatisticEntry &b){return a.minProcessingTimeRequired < b.minProcessingTimeRequired; })->minProcessingTimeRequired;
             auto max = std::max_element(begin(statistics), end(statistics), [](const AveragedStatisticEntry &a, const AveragedStatisticEntry &b){return a.maxProcessingTimeRequired < b.maxProcessingTimeRequired; })->maxProcessingTimeRequired;
-            auto avg = std::accumulate(begin(statistics), end(statistics), 0UL, [](uint64_t i, const AveragedStatisticEntry &entry){ return i + entry.avgProcessingTimeRequired; }) / statistics.size();
-            auto occ = std::accumulate(begin(statistics), end(statistics), 0UL, [](uint64_t i, const AveragedStatisticEntry &entry){ return i + entry.occurances; });
+            auto avg = std::accumulate(begin(statistics), end(statistics), 0L, [](int64_t i, const AveragedStatisticEntry &entry){ return i + entry.avgProcessingTimeRequired; }) / statistics.size();
+            auto occ = std::accumulate(begin(statistics), end(statistics), 0L, [](int64_t i, const AveragedStatisticEntry &entry){ return i + entry.occurances; });
 
-            LOG_INFO(_logger, "Event type {} occurred {} times, min/max/avg processing: {}/{}/{} µs", key, occ, min, max, avg);
+            LOG_ERROR(getManager()->getLogger(), "Dm {:L} Event type {} occurred {:L} times, min/max/avg processing: {:L}/{:L}/{:L} ns", getManager()->getId(), key, occ, min, max, avg);
         }
     }
 
     return true;
 }
 
-void Ichor::EventStatisticsService::addDependencyInstance(ILogger *logger) {
-    _logger = logger;
-}
-
-void Ichor::EventStatisticsService::removeDependencyInstance(ILogger *logger) {
-    _logger = nullptr;
-}
-
 bool Ichor::EventStatisticsService::preInterceptEvent(const Event *const evt) {
-    _startProcessingTimestamp = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+    _startProcessingTimestamp = std::chrono::steady_clock::now();
     return (bool)AllowOthersHandling;
 }
 
@@ -64,37 +58,39 @@ bool Ichor::EventStatisticsService::postInterceptEvent(const Event *const evt, b
         return (bool)AllowOthersHandling;
     }
 
-    uint64_t now = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+    auto now = std::chrono::steady_clock::now();
     auto processingTime = now - _startProcessingTimestamp;
     auto statistics = _recentEventStatistics.find(evt->name);
 
     if(statistics == end(_recentEventStatistics)) {
-        _recentEventStatistics.emplace(evt->name, std::vector<StatisticEntry>{StatisticEntry{now, processingTime}});
+        _recentEventStatistics.emplace(evt->name, std::vector<StatisticEntry>{StatisticEntry{
+            std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count(),
+            std::chrono::duration_cast<std::chrono::nanoseconds>(processingTime).count()}});
     } else {
-        statistics->second.emplace_back(now, processingTime);
+        statistics->second.emplace_back(
+                std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count(),
+                std::chrono::duration_cast<std::chrono::nanoseconds>(processingTime).count());
     }
 
     return (bool)AllowOthersHandling;
 }
 
-Ichor::Generator<bool> Ichor::EventStatisticsService::handleEvent(const TimerEvent *const evt) {
-    uint64_t now = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-    for(auto &[key, statistics] : _recentEventStatistics) {
+Ichor::Generator<bool> Ichor::EventStatisticsService::handleEvent([[maybe_unused]] const TimerEvent *const evt) {
+    int64_t now = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+    decltype(_recentEventStatistics) newVec;
+    newVec.swap(_recentEventStatistics);
+    _recentEventStatistics.clear();
+
+    for(auto &[key, statistics] : newVec) {
         auto avgStatistics = _averagedStatistics.find(key);
 
         if(statistics.empty()) {
-            if(avgStatistics == end(_averagedStatistics)) {
-                _averagedStatistics.emplace(key, std::vector<AveragedStatisticEntry>{AveragedStatisticEntry{now, 0, 0, 0, 0}});
-            } else {
-                avgStatistics->second.emplace_back(now, 0, 0, 0, 0);
-            }
-            _averagedStatistics.emplace(key, std::vector<AveragedStatisticEntry>{AveragedStatisticEntry{now, 0, 0, 0, 0}});
             continue;
         }
 
         auto min = std::min_element(begin(statistics), end(statistics), [](const StatisticEntry &a, const StatisticEntry &b){return a.processingTimeRequired < b.processingTimeRequired; })->processingTimeRequired;
         auto max = std::max_element(begin(statistics), end(statistics), [](const StatisticEntry &a, const StatisticEntry &b){return a.processingTimeRequired < b.processingTimeRequired; })->processingTimeRequired;
-        auto avg = std::accumulate(begin(statistics), end(statistics), 0UL, [](uint64_t i, const StatisticEntry &entry){ return i + entry.processingTimeRequired; }) / statistics.size();
+        auto avg = std::accumulate(begin(statistics), end(statistics), 0L, [](int64_t i, const StatisticEntry &entry){ return i + entry.processingTimeRequired; }) / static_cast<int64_t>(statistics.size());
 
         if(avgStatistics == end(_averagedStatistics)) {
             _averagedStatistics.emplace(key, std::vector<AveragedStatisticEntry>{AveragedStatisticEntry{now, min, max, avg, statistics.size()}});
