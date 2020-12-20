@@ -50,8 +50,6 @@ void Ichor::DependencyManager::start() {
                         allowProcessing = false;
                     }
                 }
-            } else {
-                LOG_ERROR(_logger, "missed intercepting evt id {} type {} has {}-{} prio", evtNode.mapped().get()->id, evtNode.mapped().get()->name, evtNode.key(), evtNode.mapped().get()->priority);
             }
 
             if(interceptorsForEvent != end(_eventInterceptors)) {

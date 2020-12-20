@@ -14,8 +14,8 @@
 #define FRAMEWORK_LOGGER_TYPE CoutFrameworkLogger
 #define LOGGER_TYPE CoutLogger
 #endif
+#include <ichor/optional_bundles/metrics_bundle/MemoryUsageFunctions.h>
 #include <iostream>
-#include <thread>
 
 int main() {
     std::locale::global(std::locale("en_US.UTF-8"));
@@ -34,7 +34,7 @@ int main() {
         dm.createServiceManager<TestService>(IchorProperties{{"LogLevel", LogLevel::WARN}});
         dm.start();
         auto end = std::chrono::system_clock::now();
-        std::cout << fmt::format("Single Threaded program ran for {:L} µs\n", std::chrono::duration_cast<std::chrono::microseconds>(end - start).count());
+        std::cout << fmt::format("Single Threaded Program ran for {:L} µs with {:L} peak memory usage\n", std::chrono::duration_cast<std::chrono::microseconds>(end - start).count(), getPeakRSS());
     }
 
     auto start = std::chrono::system_clock::now();
@@ -58,7 +58,7 @@ int main() {
         threads[i].join();
     }
     auto end = std::chrono::system_clock::now();
-    std::cout << fmt::format("Multi Threaded program ran for {:L} µs\n", std::chrono::duration_cast<std::chrono::microseconds>(end - start).count());
+    std::cout << fmt::format("Multi Threaded program ran for {:L} µs with {:L} peak memory usage\n", std::chrono::duration_cast<std::chrono::microseconds>(end - start).count(), getPeakRSS());
 
     return 0;
 }

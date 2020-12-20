@@ -32,7 +32,6 @@ int main() {
         dm.createServiceManager<LoggerAdmin<LOGGER_TYPE>, ILoggerAdmin>();
         dm.createServiceManager<TestService, ITestService>(IchorProperties{{"LogLevel", LogLevel::INFO}});
         dm.createServiceManager<StartStopService>(IchorProperties{{"LogLevel", LogLevel::INFO}});
-        dm.createServiceManager<EventStatisticsService, IEventStatisticsService>(IchorProperties{{"ShowStatisticsOnStop", true}, {"AveragingIntervalMs", 10ul}}, 9);
         dm.start();
         auto end = std::chrono::system_clock::now();
         std::cout << fmt::format("Single Threaded Program ran for {:L} µs with {:L} peak memory usage\n", std::chrono::duration_cast<std::chrono::microseconds>(end - start).count(), getPeakRSS());
@@ -53,7 +52,6 @@ int main() {
             managers[i].createServiceManager<LoggerAdmin<LOGGER_TYPE>, ILoggerAdmin>();
             managers[i].createServiceManager<TestService, ITestService>(IchorProperties{{"LogLevel",  LogLevel::INFO}});
             managers[i].createServiceManager<StartStopService>(IchorProperties{{"LogLevel", LogLevel::INFO}});
-            managers[i].createServiceManager<EventStatisticsService, IEventStatisticsService>(IchorProperties{{"ShowStatisticsOnStop", true}, {"AveragingIntervalMs", 10ul}}, 9);
             managers[i].start();
         });
     }

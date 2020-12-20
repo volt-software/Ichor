@@ -157,9 +157,22 @@ Optional services:
 These benchmarks are mainly used to identify bottlenecks, not to showcase the performance of the framework. Proper throughput and latency benchmarks are TBD.
 
 Setup: AMD 3900X, 3600MHz@CL17 RAM, ubuntu 20.04
-* Start best case scenario: 10,000 starts with dependency in ~730 ms
-* Start/stop best case scenario: 1,000,000 start/stops with dependency in ~840 ms
-* Serialization: Rapidjson: 1,000,000 messages serialized & deserialized in ~350 ms
+* 1 thread inserting ~5 million events and then processing them in ~1,220 ms and ~965 MB memory usage
+* 8 threads inserting ~5 million events and then processing them in ~2,020 ms and ~7,691 MB memory usage
+* 1 thread creating 10,000 services with dependencies in ~6,262 ms and ~40 MB memory usage
+* 8 threads creating 10,000 services with dependencies in ~25,187 ms and ~308 MB memory usage
+* 1 thread starting/stopping 1 service 10,000 times in ~958 ms and ~4 MB memory usage
+* 8 threads starting/stopping 1 service 10,000 times in ~1,829 ms and ~5 MB memory usage
+* 1 thread serializing & deserializing 1,000,000 JSON messages in ~410 ms and ~4 MB memory usage
+* 8 threads serializing & deserializing 1,000,000 JSON messages in ~495 ms and ~5 MB memory usage
+
+These benchmarks currently lead to the characteristics:
+* creating services with dependencies overhead is likely O(N²).
+* Starting services, stopping services overhead is likely O(N)
+* event handling overhead is amortized O(1)
+* Creating more threads is not 100% linearizable in all cases (pure event creation/handling seems to be, otherwise not really)
+
+Help with improving memory usage and the O(N²) behaviour would be appreciated.
 
 # Support
 
