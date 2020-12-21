@@ -31,8 +31,8 @@ namespace Ichor {
     public:
         ~IEventStatisticsService() override = default;
 
-        virtual const std::unordered_map<std::string_view, std::vector<StatisticEntry>>& getRecentStatistics() = 0;
-        virtual const std::unordered_map<std::string_view, std::vector<AveragedStatisticEntry>>& getAverageStatistics() = 0;
+        [[nodiscard]] virtual const std::unordered_map<uint64_t, std::vector<StatisticEntry>>& getRecentStatistics() const noexcept = 0;
+        [[nodiscard]] virtual const std::unordered_map<uint64_t, std::vector<AveragedStatisticEntry>>& getAverageStatistics() const noexcept = 0;
     };
 
     class EventStatisticsService final : public IEventStatisticsService, public Service {
@@ -47,11 +47,12 @@ namespace Ichor {
         bool start() final;
         bool stop() final;
 
-        const std::unordered_map<std::string_view, std::vector<StatisticEntry>>& getRecentStatistics() override;
-        const std::unordered_map<std::string_view, std::vector<AveragedStatisticEntry>>& getAverageStatistics() override;
+        const std::unordered_map<uint64_t, std::vector<StatisticEntry>>& getRecentStatistics() const noexcept final;
+        const std::unordered_map<uint64_t, std::vector<AveragedStatisticEntry>>& getAverageStatistics() const noexcept final;
     private:
-        std::unordered_map<std::string_view, std::vector<StatisticEntry>> _recentEventStatistics{};
-        std::unordered_map<std::string_view, std::vector<AveragedStatisticEntry>> _averagedStatistics{};
+        std::unordered_map<uint64_t, std::vector<StatisticEntry>> _recentEventStatistics;
+        std::unordered_map<uint64_t, std::vector<AveragedStatisticEntry>> _averagedStatistics;
+        std::unordered_map<uint64_t, std::string_view> _eventTypeToNameMapper;
         std::chrono::time_point<std::chrono::steady_clock> _startProcessingTimestamp{};
         bool _showStatisticsOnStop{false};
         uint64_t _averagingIntervalMs{5000};

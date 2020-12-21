@@ -8,7 +8,7 @@ bool Ichor::EventStatisticsService::start() {
     if(getProperties()->contains("AveragingIntervalMs")) {
         _averagingIntervalMs = std::any_cast<uint64_t>(getProperties()->operator[]("AveragingIntervalMs"));
     } else {
-        _averagingIntervalMs = 5000;
+        _averagingIntervalMs = 500;
     }
 
     auto _timerManager = getManager()->createServiceManager<Timer, ITimer>();
@@ -41,7 +41,7 @@ bool Ichor::EventStatisticsService::stop() {
             auto avg = std::accumulate(begin(statistics), end(statistics), 0L, [](int64_t i, const AveragedStatisticEntry &entry){ return i + entry.avgProcessingTimeRequired; }) / statistics.size();
             auto occ = std::accumulate(begin(statistics), end(statistics), 0L, [](int64_t i, const AveragedStatisticEntry &entry){ return i + entry.occurances; });
 
-            LOG_ERROR(getManager()->getLogger(), "Dm {:L} Event type {} occurred {:L} times, min/max/avg processing: {:L}/{:L}/{:L} ns", getManager()->getId(), key, occ, min, max, avg);
+            LOG_ERROR(getManager()->getLogger(), "Dm {:L} Event type {} occurred {:L} times, min/max/avg processing: {:L}/{:L}/{:L} ns", getManager()->getId(), _eventTypeToNameMapper[key], occ, min, max, avg);
         }
     }
 
@@ -50,6 +50,11 @@ bool Ichor::EventStatisticsService::stop() {
 
 bool Ichor::EventStatisticsService::preInterceptEvent(const Event *const evt) {
     _startProcessingTimestamp = std::chrono::steady_clock::now();
+
+    if(!_eventTypeToNameMapper.contains(evt->type)) {
+        _eventTypeToNameMapper.emplace(evt->type, evt->name);
+    }
+
     return (bool)AllowOthersHandling;
 }
 
@@ -60,15 +65,15 @@ bool Ichor::EventStatisticsService::postInterceptEvent(const Event *const evt, b
 
     auto now = std::chrono::steady_clock::now();
     auto processingTime = now - _startProcessingTimestamp;
-    auto statistics = _recentEventStatistics.find(evt->name);
+    auto statistics = _recentEventStatistics.find(evt->type);
 
     if(statistics == end(_recentEventStatistics)) {
-        _recentEventStatistics.emplace(evt->name, std::vector<StatisticEntry>{StatisticEntry{
-            std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count(),
-            std::chrono::duration_cast<std::chrono::nanoseconds>(processingTime).count()}});
+        _recentEventStatistics.emplace(evt->type, std::vector<StatisticEntry>{{StatisticEntry{
+            std::chrono::duration_cast<std::chrono::nanoseconds>(now.time_since_epoch()).count(),
+            std::chrono::duration_cast<std::chrono::nanoseconds>(processingTime).count()}}});
     } else {
         statistics->second.emplace_back(
-                std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count(),
+                std::chrono::duration_cast<std::chrono::nanoseconds>(now.time_since_epoch()).count(),
                 std::chrono::duration_cast<std::chrono::nanoseconds>(processingTime).count());
     }
 
@@ -77,7 +82,7 @@ bool Ichor::EventStatisticsService::postInterceptEvent(const Event *const evt, b
 
 Ichor::Generator<bool> Ichor::EventStatisticsService::handleEvent([[maybe_unused]] const TimerEvent *const evt) {
     int64_t now = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-    decltype(_recentEventStatistics) newVec;
+    decltype(_recentEventStatistics) newVec{};
     newVec.swap(_recentEventStatistics);
     _recentEventStatistics.clear();
 
@@ -93,7 +98,7 @@ Ichor::Generator<bool> Ichor::EventStatisticsService::handleEvent([[maybe_unused
         auto avg = std::accumulate(begin(statistics), end(statistics), 0L, [](int64_t i, const StatisticEntry &entry){ return i + entry.processingTimeRequired; }) / static_cast<int64_t>(statistics.size());
 
         if(avgStatistics == end(_averagedStatistics)) {
-            _averagedStatistics.emplace(key, std::vector<AveragedStatisticEntry>{AveragedStatisticEntry{now, min, max, avg, statistics.size()}});
+            _averagedStatistics.emplace(key, std::vector<AveragedStatisticEntry>{{AveragedStatisticEntry{now, min, max, avg, statistics.size()}}});
         } else {
             avgStatistics->second.emplace_back(now, min, max, avg, statistics.size());
         }
@@ -103,10 +108,10 @@ Ichor::Generator<bool> Ichor::EventStatisticsService::handleEvent([[maybe_unused
     co_return (bool)Ichor::PreventOthersHandling;
 }
 
-const std::unordered_map<std::string_view, std::vector<Ichor::StatisticEntry>> &Ichor::EventStatisticsService::getRecentStatistics() {
+const std::unordered_map<uint64_t, std::vector<Ichor::StatisticEntry>> &Ichor::EventStatisticsService::getRecentStatistics() const noexcept {
     return _recentEventStatistics;
 }
 
-const std::unordered_map<std::string_view, std::vector<Ichor::AveragedStatisticEntry>> &Ichor::EventStatisticsService::getAverageStatistics() {
+const std::unordered_map<uint64_t, std::vector<Ichor::AveragedStatisticEntry>> &Ichor::EventStatisticsService::getAverageStatistics() const noexcept {
     return _averagedStatistics;
 }
