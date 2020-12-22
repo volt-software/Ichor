@@ -6,6 +6,15 @@
 #include <thread>
 
 namespace Ichor {
+    struct NewSocketEvent final : public Ichor::Event {
+        NewSocketEvent(uint64_t _id, uint64_t _originatingService, uint64_t _priority, int _socket) noexcept : Event(TYPE, NAME, _id, _originatingService, _priority), socket(_socket) {}
+        ~NewSocketEvent() final = default;
+
+        int socket;
+        static constexpr uint64_t TYPE = Ichor::typeNameHash<NewSocketEvent>();
+        static constexpr std::string_view NAME = Ichor::typeName<NewSocketEvent>();
+    };
+
     class TcpHostService final : public IHostService, public Service {
     public:
         TcpHostService(DependencyRegister &reg, IchorProperties props, DependencyManager *mng);
@@ -20,6 +29,8 @@ namespace Ichor {
         void setPriority(uint64_t priority) final;
         uint64_t getPriority() final;
 
+        Generator<bool> handleEvent(NewSocketEvent const * const evt);
+
     private:
         int _socket;
         int _bindFd;
@@ -28,5 +39,6 @@ namespace Ichor {
         std::thread _listenThread;
         ILogger *_logger{nullptr};
         std::vector<TcpConnectionService*> _connections;
+        std::unique_ptr<EventHandlerRegistration> _newSocketEventHandlerRegistration;
     };
 }

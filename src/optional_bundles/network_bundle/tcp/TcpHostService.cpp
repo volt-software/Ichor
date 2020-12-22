@@ -17,6 +17,8 @@ bool Ichor::TcpHostService::start() {
         _priority = std::any_cast<uint64_t>(getProperties()->operator[]("Priority"));
     }
 
+    _newSocketEventHandlerRegistration = getManager()->registerEventHandler<NewSocketEvent>(this);
+
     _socket = ::socket(AF_INET, SOCK_STREAM, 0);
     if(_socket == -1) {
         getManager()->pushEvent<UnrecoverableErrorEvent>(getServiceId(), 0, "Couldn't create socket: errno = " + std::to_string(errno));
@@ -87,9 +89,7 @@ bool Ichor::TcpHostService::start() {
             auto ip = ::inet_ntoa(client_addr.sin_addr);
             LOG_TRACE(_logger, "new connection from {}:{}", ip, ::ntohs(client_addr.sin_port));
 
-            auto connection = getManager()->template createServiceManager<TcpConnectionService, IConnectionService>(IchorProperties{{"Priority", _priority.load(std::memory_order_acquire)}, {"Socket", newConnection}});
-
-            _connections.emplace_back(connection);
+            getManager()->pushPrioritisedEvent<NewSocketEvent>(getServiceId(), _priority.load(std::memory_order_acquire), newConnection);
         }
     });
 
@@ -124,4 +124,10 @@ void Ichor::TcpHostService::setPriority(uint64_t priority) {
 
 uint64_t Ichor::TcpHostService::getPriority() {
     return _priority.load(std::memory_order_acquire);
+}
+
+Ichor::Generator<bool> Ichor::TcpHostService::handleEvent(NewSocketEvent const * const evt) {
+    _connections.emplace_back(getManager()->template createServiceManager<TcpConnectionService, IConnectionService>(IchorProperties{{"Priority", _priority.load(std::memory_order_acquire)}, {"Socket", evt->socket}}));
+
+    co_return (bool)AllowOthersHandling;
 }
