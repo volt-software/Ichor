@@ -28,6 +28,7 @@ namespace Ichor {
         bool stop() final;
     private:
         LogLevel _level;
+        static std::atomic<bool> _setting_logger;
         static std::atomic<bool> _logger_set;
     };
 }

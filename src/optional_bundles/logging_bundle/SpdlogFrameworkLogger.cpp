@@ -6,10 +6,11 @@
 #include <ichor/optional_bundles/logging_bundle/SpdlogFrameworkLogger.h>
 #include <ichor/DependencyManager.h>
 
-std::atomic<bool> Ichor::SpdlogFrameworkLogger::_logger_set;
+std::atomic<bool> Ichor::SpdlogFrameworkLogger::_setting_logger{false};
+std::atomic<bool> Ichor::SpdlogFrameworkLogger::_logger_set{false};
 
 Ichor::SpdlogFrameworkLogger::SpdlogFrameworkLogger(IchorProperties props, DependencyManager *mng) : IFrameworkLogger(), Service(std::move(props), mng), _level(LogLevel::TRACE) {
-    bool already_set = _logger_set.exchange(true);
+    bool already_set = _setting_logger.exchange(true);
     if(!already_set) {
         auto console_sink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
 
@@ -28,6 +29,11 @@ Ichor::SpdlogFrameworkLogger::SpdlogFrameworkLogger(IchorProperties props, Depen
 #else
         spdlog::set_pattern("[%C-%m-%d %H:%M:%S.%e] [%L] %v");
 #endif
+        _logger_set.store(true, std::memory_order_release);
+    }
+
+    while(!_logger_set.load(std::memory_order_acquire)) {
+        // spinlock
     }
 
     SPDLOG_TRACE("SpdlogFrameworkLogger constructor");

@@ -22,7 +22,7 @@ namespace Ichor {
         template <typename EventT, typename... Args>
         requires Derived<EventT, Event>
         void broadcastEvent(DependencyManager *originatingManager, Args&&... args) {
-            std::unique_lock l(_mutex);
+            std::shared_lock l(_mutex);
             for(auto &[key, manager] : _managers) {
                 if(manager->getId() == originatingManager->getId()) {
                     continue;
@@ -41,7 +41,7 @@ namespace Ichor {
         template <typename EventT, typename... Args>
         requires Derived<EventT, Event>
         void sendEventTo(uint64_t id, Args&&... args) {
-            std::unique_lock l(_mutex);
+            std::shared_lock l(_mutex);
             auto manager = _managers.find(id);
 
             if(manager == end(_managers)) {
@@ -52,6 +52,6 @@ namespace Ichor {
         }
     private:
         std::unordered_map<uint64_t, DependencyManager*> _managers{};
-        std::mutex _mutex{};
+        std::shared_mutex _mutex{};
     };
 }
