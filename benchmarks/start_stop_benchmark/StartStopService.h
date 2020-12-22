@@ -20,12 +20,12 @@ public:
             _startServiceRegistration = getManager()->registerEventCompletionCallbacks<StartServiceEvent>(this);
             _stopServiceRegistration = getManager()->registerEventCompletionCallbacks<StopServiceEvent>(this);
 
-            _start = std::chrono::system_clock::now();
+            _start = std::chrono::steady_clock::now();
             getManager()->pushEvent<StopServiceEvent>(getServiceId(), _testServiceId);
         } else if(startCount < 1'000'000) {
             getManager()->pushEvent<StopServiceEvent>(getServiceId(), _testServiceId);
         } else {
-            auto end = std::chrono::system_clock::now();
+            auto end = std::chrono::steady_clock::now();
             getManager()->pushEvent<QuitEvent>(getServiceId());
             LOG_INFO(_logger, "dm {} finished in {:L} µs", getManager()->getId(), std::chrono::duration_cast<std::chrono::microseconds>(end-_start).count());
         }
@@ -68,7 +68,7 @@ public:
 private:
     ILogger *_logger{nullptr};
     uint64_t _testServiceId{0};
-    std::chrono::system_clock::time_point _start{};
+    std::chrono::steady_clock::time_point _start{};
     uint64_t startCount{0};
     std::unique_ptr<EventCompletionHandlerRegistration> _startServiceRegistration;
     std::unique_ptr<EventCompletionHandlerRegistration> _stopServiceRegistration;

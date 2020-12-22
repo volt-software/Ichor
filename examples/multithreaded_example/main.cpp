@@ -22,7 +22,7 @@
 int main() {
     std::locale::global(std::locale("en_US.UTF-8"));
 
-    auto start = std::chrono::system_clock::now();
+    auto start = std::chrono::steady_clock::now();
 
     CommunicationChannel channel{};
     DependencyManager dmOne{};
@@ -31,7 +31,7 @@ int main() {
     channel.addManager(&dmTwo);
 
     std::thread t1([&dmOne] {
-        dmOne.createServiceManager<FRAMEWORK_LOGGER_TYPE, IFrameworkLogger>();
+        dmOne.createServiceManager<FRAMEWORK_LOGGER_TYPE, IFrameworkLogger>({}, 10);
 #ifdef USE_SPDLOG
         dmOne.createServiceManager<SpdlogSharedService, ISpdlogSharedService>();
 #endif
@@ -41,7 +41,7 @@ int main() {
     });
 
     std::thread t2([&dmTwo] {
-        dmTwo.createServiceManager<FRAMEWORK_LOGGER_TYPE, IFrameworkLogger>();
+        dmTwo.createServiceManager<FRAMEWORK_LOGGER_TYPE, IFrameworkLogger>({}, 10);
 #ifdef USE_SPDLOG
         dmTwo.createServiceManager<SpdlogSharedService, ISpdlogSharedService>();
 #endif
@@ -53,7 +53,7 @@ int main() {
     t1.join();
     t2.join();
 
-    auto end = std::chrono::system_clock::now();
+    auto end = std::chrono::steady_clock::now();
     std::cout << fmt::format("Program ran for {:L} µs\n", std::chrono::duration_cast<std::chrono::microseconds>(end-start).count());
 
     return 0;

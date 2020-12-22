@@ -50,7 +50,7 @@ public:
 
     void handleCompletion(DoWorkEvent const * const evt) {
         TestMsg msg{20, "five hundred"};
-        auto start = std::chrono::system_clock::now();
+        auto start = std::chrono::steady_clock::now();
         for(uint64_t i = 0; i < 1'000'000; i++) {
             auto res = _serializationAdmin->serialize<TestMsg>(msg);
             auto msg2 = _serializationAdmin->deserialize<TestMsg>(std::move(res));
@@ -58,7 +58,7 @@ public:
                 LOG_ERROR(_logger, "serde incorrect!");
             }
         }
-        auto end = std::chrono::system_clock::now();
+        auto end = std::chrono::steady_clock::now();
         LOG_INFO(_logger, "finished in {:L} µs", std::chrono::duration_cast<std::chrono::microseconds>(end-start).count());
         getManager()->pushEvent<QuitEvent>(getServiceId());
     }

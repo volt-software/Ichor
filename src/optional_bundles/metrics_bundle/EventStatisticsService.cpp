@@ -81,7 +81,7 @@ bool Ichor::EventStatisticsService::postInterceptEvent(const Event *const evt, b
 }
 
 Ichor::Generator<bool> Ichor::EventStatisticsService::handleEvent([[maybe_unused]] const TimerEvent *const evt) {
-    int64_t now = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+    int64_t now = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
     decltype(_recentEventStatistics) newVec{};
     newVec.swap(_recentEventStatistics);
     _recentEventStatistics.clear();

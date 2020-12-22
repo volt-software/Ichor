@@ -21,9 +21,9 @@ using namespace std::string_literals;
 int main() {
     std::locale::global(std::locale("en_US.UTF-8"));
 
-    auto start = std::chrono::system_clock::now();
+    auto start = std::chrono::steady_clock::now();
     DependencyManager dm{};
-    auto logMgr = dm.createServiceManager<FRAMEWORK_LOGGER_TYPE, IFrameworkLogger>();
+    auto logMgr = dm.createServiceManager<FRAMEWORK_LOGGER_TYPE, IFrameworkLogger>({}, 10);
 #ifdef USE_SPDLOG
     dm.createServiceManager<SpdlogSharedService, ISpdlogSharedService>();
 #endif
@@ -31,7 +31,7 @@ int main() {
     dm.createServiceManager<UsingTimerService>();
     dm.createServiceManager<UsingTimerService>();
     dm.start();
-    auto end = std::chrono::system_clock::now();
+    auto end = std::chrono::steady_clock::now();
     std::cout << fmt::format("Program ran for {:L} µs\n", std::chrono::duration_cast<std::chrono::microseconds>(end-start).count());
 
     return 0;

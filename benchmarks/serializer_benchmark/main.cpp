@@ -22,9 +22,9 @@ int main() {
     std::locale::global(std::locale("en_US.UTF-8"));
 
     {
-        auto start = std::chrono::system_clock::now();
+        auto start = std::chrono::steady_clock::now();
         DependencyManager dm{};
-        auto logMgr = dm.createServiceManager<FRAMEWORK_LOGGER_TYPE, IFrameworkLogger>();
+        auto logMgr = dm.createServiceManager<FRAMEWORK_LOGGER_TYPE, IFrameworkLogger>({}, 10);
         logMgr->setLogLevel(LogLevel::INFO);
 
 #ifdef USE_SPDLOG
@@ -36,16 +36,16 @@ int main() {
         dm.createServiceManager<TestMsgJsonSerializer, ISerializer>();
         dm.createServiceManager<TestService>();
         dm.start();
-        auto end = std::chrono::system_clock::now();
+        auto end = std::chrono::steady_clock::now();
         std::cout << fmt::format("Single Threaded Program ran for {:L} µs with {:L} peak memory usage\n", std::chrono::duration_cast<std::chrono::microseconds>(end - start).count(), getPeakRSS());
     }
 
-    auto start = std::chrono::system_clock::now();
+    auto start = std::chrono::steady_clock::now();
     std::array<std::thread, 8> threads{};
     std::array<DependencyManager, 8> managers{};
     for(uint_fast32_t i = 0; i < 8; i++) {
         threads[i] = std::thread([&managers, i] {
-            auto logMgr = managers[i].createServiceManager<FRAMEWORK_LOGGER_TYPE, IFrameworkLogger>();
+            auto logMgr = managers[i].createServiceManager<FRAMEWORK_LOGGER_TYPE, IFrameworkLogger>({}, 10);
             logMgr->setLogLevel(LogLevel::INFO);
 
 #ifdef USE_SPDLOG
@@ -62,7 +62,7 @@ int main() {
     for(uint_fast32_t i = 0; i < 8; i++) {
         threads[i].join();
     }
-    auto end = std::chrono::system_clock::now();
+    auto end = std::chrono::steady_clock::now();
     std::cout << fmt::format("Multi Threaded program ran for {:L} µs with {:L} peak memory usage\n", std::chrono::duration_cast<std::chrono::microseconds>(end - start).count(), getPeakRSS());
 
     return 0;

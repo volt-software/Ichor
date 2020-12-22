@@ -18,7 +18,7 @@ public:
 
     bool start() final {
         LOG_INFO(_logger, "UsingEtcdService started");
-        auto start = std::chrono::system_clock::now();
+        auto start = std::chrono::steady_clock::now();
         for(uint64_t i = 0; i < 10'000; i++) {
             if(!_etcd->put("test" + std::to_string(i), "2") || !_etcd->get("test" + std::to_string(i))) {
                 throw std::runtime_error("Couldn't put or get");
@@ -28,7 +28,7 @@ public:
                 LOG_INFO(_logger, "iteration {}", i);
             }
         }
-        auto end = std::chrono::system_clock::now();
+        auto end = std::chrono::steady_clock::now();
         LOG_INFO(_logger, "finished in {:L} µs", std::chrono::duration_cast<std::chrono::microseconds>(end-start).count());
         getManager()->pushEvent<QuitEvent>(getServiceId(), INTERNAL_EVENT_PRIORITY+1);
         return true;

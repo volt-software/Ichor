@@ -23,11 +23,11 @@ public:
     }
     ~TestService() final = default;
     bool start() final {
-        auto start = std::chrono::system_clock::now();
+        auto start = std::chrono::steady_clock::now();
         for(uint32_t i = 0; i < 5'000'000; i++) {
             getManager()->pushEvent<UselessEvent>(getServiceId());
         }
-        auto end = std::chrono::system_clock::now();
+        auto end = std::chrono::steady_clock::now();
         getManager()->pushEvent<QuitEvent>(getServiceId());
         LOG_WARN(_logger, "Inserted events in {:L} µs", std::chrono::duration_cast<std::chrono::microseconds>(end-start).count());
         return true;
