@@ -1,10 +1,16 @@
 # What is this?
 
-Ichor, [Greek Mythos for ethereal fluid that is the blood of the gods/immortals](https://en.wikipedia.org/wiki/Ichor), is a C++ software suite to both quickly develop and easily refactor large back-end systems. 
+Ichor, [Greek Mythos for ethereal fluid that is the blood of the gods/immortals](https://en.wikipedia.org/wiki/Ichor), is a C++ framework/middleware for thread confinement and dependency management. 
 
 Ichor informally stands for "Intuitive Compile-time Hoisted Object Resources".
 
 Although initially started as a rewrite of OSGI-based framework Celix and to a lesser extent CppMicroservices, Ichor has carved out its own path, as god-fluids are wont to do. 
+
+## Thread confinement?
+
+Multithreading is hard. There exist plenty of methods trying to make it easier, ranging from the [actor framework](https://github.com/actor-framework/actor-framework), [static analysis a la rust](https://doc.rust-lang.org/book/ch16-00-concurrency.html), [software transaction memory](https://en.wikipedia.org/wiki/Software_transactional_memory) and traditional manual lock-wrangling.
+
+Thread confinement is one such approach. Instead of having to protect resources, Ichor attempts to make it well-defined on which thread an instance of a C++ class runs. Thereby removing the need to think about atomics/mutexes, unless the implementation uses threads not managed by Ichor. 
 
 ### Quickstart
 
@@ -114,7 +120,7 @@ Documentation is rather...lacking at the moment. Contributions are very welcome!
 * Less magic configuration
     * code as configuration, as much as possible bundled in one place
 * As much type-safety as possible, prefer compile errors over run-time errors.
-* Less multi-threading to prevent data races and similar issues
+* Well-defined and managed multi-threading to prevent data races and similar issues
     * Use of an event loop
     * Where multi-threading is desired, provide easy to use abstractions to prevent issues
 * Performance-oriented design in all-parts of the framework / making it easy to get high performance and low latency
