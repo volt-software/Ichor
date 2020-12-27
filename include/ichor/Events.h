@@ -21,31 +21,28 @@ namespace Ichor {
     };
 
     struct DependencyOnlineEvent final : public Event {
-        explicit DependencyOnlineEvent(uint64_t _id, uint64_t _originatingService, uint64_t _priority, std::shared_ptr<ILifecycleManager> _manager) noexcept :
-            Event(TYPE, NAME, _id, _originatingService, _priority), manager(std::move(_manager)) {}
+        explicit DependencyOnlineEvent(uint64_t _id, uint64_t _originatingService, uint64_t _priority) noexcept :
+            Event(TYPE, NAME, _id, _originatingService, _priority) {}
         ~DependencyOnlineEvent() final = default;
 
-        const std::shared_ptr<ILifecycleManager> manager;
         static constexpr uint64_t TYPE = typeNameHash<DependencyOnlineEvent>();
         static constexpr std::string_view NAME = typeName<DependencyOnlineEvent>();
     };
 
     struct DependencyOfflineEvent final : public Event {
-        explicit DependencyOfflineEvent(uint64_t _id, uint64_t _originatingService, uint64_t _priority, std::shared_ptr<ILifecycleManager> _manager) noexcept :
-            Event(TYPE, NAME, _id, _originatingService, _priority), manager(std::move(_manager)) {}
+        explicit DependencyOfflineEvent(uint64_t _id, uint64_t _originatingService, uint64_t _priority) noexcept :
+            Event(TYPE, NAME, _id, _originatingService, _priority) {}
         ~DependencyOfflineEvent() final = default;
 
-        const std::shared_ptr<ILifecycleManager> manager;
         static constexpr uint64_t TYPE = typeNameHash<DependencyOfflineEvent>();
         static constexpr std::string_view NAME = typeName<DependencyOfflineEvent>();
     };
 
     struct DependencyRequestEvent final : public Event {
-        explicit DependencyRequestEvent(uint64_t _id, uint64_t _originatingService, uint64_t _priority, std::shared_ptr<ILifecycleManager> _manager, Dependency _dependency, std::optional<IchorProperties const *> _properties) noexcept :
-                Event(TYPE, NAME, _id, _originatingService, _priority), manager(std::move(_manager)), dependency(_dependency), properties{_properties} {}
+        explicit DependencyRequestEvent(uint64_t _id, uint64_t _originatingService, uint64_t _priority, Dependency _dependency, std::optional<IchorProperties const *> _properties) noexcept :
+                Event(TYPE, NAME, _id, _originatingService, _priority), dependency(_dependency), properties{_properties} {}
         ~DependencyRequestEvent() final = default;
 
-        const std::shared_ptr<ILifecycleManager> manager;
         const Dependency dependency;
         const std::optional<IchorProperties const *> properties;
         static constexpr uint64_t TYPE = typeNameHash<DependencyRequestEvent>();
@@ -53,11 +50,10 @@ namespace Ichor {
     };
 
     struct DependencyUndoRequestEvent final : public Event {
-        explicit DependencyUndoRequestEvent(uint64_t _id, uint64_t _originatingService, uint64_t _priority, std::shared_ptr<ILifecycleManager> _manager, Dependency _dependency, IchorProperties const * _properties) noexcept :
-                Event(TYPE, NAME, _id, _originatingService, _priority), manager(std::move(_manager)), dependency(_dependency), properties{_properties} {}
+        explicit DependencyUndoRequestEvent(uint64_t _id, uint64_t _originatingService, uint64_t _priority, Dependency _dependency, IchorProperties const * _properties) noexcept :
+                Event(TYPE, NAME, _id, _originatingService, _priority), dependency(_dependency), properties{_properties} {}
         ~DependencyUndoRequestEvent() final = default;
 
-        const std::shared_ptr<ILifecycleManager> manager;
         const Dependency dependency;
         const IchorProperties * properties;
         static constexpr uint64_t TYPE = typeNameHash<DependencyUndoRequestEvent>();

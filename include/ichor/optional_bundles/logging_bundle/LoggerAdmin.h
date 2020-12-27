@@ -38,7 +38,7 @@ namespace Ichor {
         void handleDependencyRequest(ILogger *, DependencyRequestEvent const *const evt) {
             auto logger = _loggers.find(evt->originatingService);
 
-//            LOG_ERROR(_logger, "dep req {} dm {}", evt->manager->serviceId(), getManager()->getId());
+//            LOG_ERROR(_logger, "dep req {} dm {}", evt->originatingService, getManager()->getId());
 
             auto requestedLevel = LogLevel::INFO;
             if(evt->properties.has_value()) {

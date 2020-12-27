@@ -36,7 +36,7 @@ bool Ichor::Service::internal_start() {
 
 bool Ichor::Service::internal_stop() {
     if(_serviceState != ServiceState::ACTIVE) {
-        return true;
+        return false;
     }
 
     _serviceState = ServiceState::STOPPING;

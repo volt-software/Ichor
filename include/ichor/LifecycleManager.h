@@ -122,12 +122,12 @@ namespace Ichor {
         ICHOR_CONSTEXPR virtual ~ILifecycleManager() = default;
         ///
         /// \param dependentService
-        /// \return true if started, false if not
-        ICHOR_CONSTEXPR virtual bool dependencyOnline(const std::shared_ptr<ILifecycleManager> &dependentService) = 0;
+        /// \return true if dependency is registered in service, false if not
+        ICHOR_CONSTEXPR virtual bool dependencyOnline(ILifecycleManager*dependentService) = 0;
         ///
         /// \param dependentService
-        /// \return true if stopped, false if not
-        ICHOR_CONSTEXPR virtual bool dependencyOffline(const std::shared_ptr<ILifecycleManager> &dependentService) = 0;
+        /// \return true if dependency is registered in service, false if not
+        ICHOR_CONSTEXPR virtual bool dependencyOffline(ILifecycleManager*dependentService) = 0;
         [[nodiscard]] ICHOR_CONSTEXPR virtual bool start() = 0;
         [[nodiscard]] ICHOR_CONSTEXPR virtual bool stop() = 0;
         [[nodiscard]] ICHOR_CONSTEXPR virtual std::string_view implementationName() const noexcept = 0;
@@ -158,7 +158,7 @@ namespace Ichor {
             LOG_TRACE(_logger, "destroying {}, id {}", typeName<ServiceType>(), _service.getServiceId());
             for(auto const &dep : _dependencies._dependencies) {
                 // _manager is always injected in DependencyManager::create...Manager functions.
-                _service._manager->template pushPrioritisedEvent<DependencyUndoRequestEvent>(_service.getServiceId(), getPriority(), nullptr, Dependency{dep.interfaceNameHash, dep.required}, getProperties());
+                _service._manager->template pushPrioritisedEvent<DependencyUndoRequestEvent>(_service.getServiceId(), getPriority(), Dependency{dep.interfaceNameHash, dep.required}, getProperties());
             }
         }
 
@@ -176,7 +176,8 @@ namespace Ichor {
             return mgr;
         }
 
-        ICHOR_CONSTEXPR bool dependencyOnline(const std::shared_ptr<ILifecycleManager> &dependentService) final {
+        ICHOR_CONSTEXPR bool dependencyOnline(ILifecycleManager*dependentService) final {
+            bool interested = false;
             auto const &interfaces = dependentService->getInterfaces();
             for(auto const &interface : interfaces) {
                 auto dep = _dependencies.find(interface);
@@ -184,27 +185,17 @@ namespace Ichor {
                     continue;
                 }
 
+                interested = true;
                 injectIntoSelf(interface.interfaceNameHash, dependentService);
                 if(dep->required) {
                     _satisfiedDependencies.addDependency(interface);
-
-                    bool canStart = _dependencies.requiredDependenciesSatisfied(_satisfiedDependencies);
-                    if (canStart) {
-                        if (!_service.internal_start()) {
-                            LOG_ERROR(_logger, "Couldn't start service {}", _implementationName);
-                            return false;
-                        }
-
-                        LOG_DEBUG(_logger, "Started {}", _implementationName);
-                        return true;
-                    }
                 }
             }
 
-            return false;
+            return interested;
         }
 
-        ICHOR_CONSTEXPR void injectIntoSelf(uint64_t keyOfInterfaceToInject, const std::shared_ptr<ILifecycleManager> &dependentService) {
+        ICHOR_CONSTEXPR void injectIntoSelf(uint64_t keyOfInterfaceToInject, ILifecycleManager*dependentService) {
             auto dep = _registry._registrations.find(keyOfInterfaceToInject);
 
             if(dep != end(_registry._registrations)) {
@@ -212,9 +203,9 @@ namespace Ichor {
             }
         }
 
-        ICHOR_CONSTEXPR bool dependencyOffline(const std::shared_ptr<ILifecycleManager> &dependentService) final {
+        ICHOR_CONSTEXPR bool dependencyOffline(ILifecycleManager*dependentService) final {
             auto const &interfaces = dependentService->getInterfaces();
-            bool stopped = false;
+            bool interested = false;
 
             for(auto const &interface : interfaces) {
                 auto dep = _dependencies.find(interface);
@@ -222,29 +213,18 @@ namespace Ichor {
                     continue;
                 }
 
+                interested = true;
                 if (dep->required) {
                     _satisfiedDependencies.removeDependency(interface);
-                    if (_service.getState() == ServiceState::ACTIVE) {
-                        bool shouldStop = !_dependencies.requiredDependenciesSatisfied(_satisfiedDependencies);
-
-                        if (shouldStop) {
-                            if (!_service.internal_stop()) {
-                                LOG_ERROR(_logger, "Couldn't stop service {}", _implementationName);
-                            } else {
-                                LOG_DEBUG(_logger, "stopped {}", _implementationName);
-                                stopped = true;
-                            }
-                        }
-                    }
                 }
 
                 removeSelfInto(interface.interfaceNameHash, dependentService);
             }
 
-            return stopped;
+            return interested;
         }
 
-        ICHOR_CONSTEXPR void removeSelfInto(uint64_t keyOfInterfaceToInject, const std::shared_ptr<ILifecycleManager> &dependentService) {
+        ICHOR_CONSTEXPR void removeSelfInto(uint64_t keyOfInterfaceToInject, ILifecycleManager*dependentService) {
             auto dep = _registry._registrations.find(keyOfInterfaceToInject);
 
             if(dep != end(_registry._registrations)) {
@@ -269,16 +249,14 @@ namespace Ichor {
 
         [[nodiscard]]
         ICHOR_CONSTEXPR bool stop() final {
-            if(_service.getState() == ServiceState::ACTIVE) {
-                if(_service.internal_stop()) {
-                    LOG_DEBUG(_logger, "Stopped {}", _implementationName);
-                    return true;
-                } else {
-                    LOG_DEBUG(_logger, "Couldn't stop {}", _implementationName);
-                }
+            if(_service.internal_stop()) {
+                LOG_DEBUG(_logger, "Stopped {}", _implementationName);
+                return true;
             }
 
-            return true;
+            LOG_DEBUG(_logger, "Couldn't stop {}", _implementationName);
+
+            return false;
         }
 
         [[nodiscard]] ICHOR_CONSTEXPR std::string_view implementationName() const noexcept final {
@@ -364,41 +342,36 @@ namespace Ichor {
             return mgr;
         }
 
-        ICHOR_CONSTEXPR bool dependencyOnline(const std::shared_ptr<ILifecycleManager> &dependentService) final {
+        ICHOR_CONSTEXPR bool dependencyOnline(ILifecycleManager*dependentService) final {
             return false;
         }
 
-        ICHOR_CONSTEXPR bool dependencyOffline(const std::shared_ptr<ILifecycleManager> &dependentService) final {
+        ICHOR_CONSTEXPR bool dependencyOffline(ILifecycleManager*dependentService) final {
             return false;
         }
 
         [[nodiscard]]
         ICHOR_CONSTEXPR bool start() final {
-            bool canStart = _service.getState() != ServiceState::ACTIVE;
-            if (canStart) {
-                if(_service.internal_start()) {
-                    LOG_DEBUG(_logger, "Started {}", _implementationName);
-                    return true;
-                } else {
-                    LOG_DEBUG(_logger, "Couldn't start {}", _implementationName);
-                }
+            if(_service.internal_start()) {
+                LOG_DEBUG(_logger, "Started {}", _implementationName);
+                return true;
             }
+
+            LOG_DEBUG(_logger, "Couldn't start {}", _implementationName);
 
             return false;
         }
 
         [[nodiscard]]
         ICHOR_CONSTEXPR bool stop() final {
-            if(_service.getState() == ServiceState::ACTIVE) {
-                if(_service.internal_stop()) {
-                    LOG_DEBUG(_logger, "Stopped {}", _implementationName);
-                    return true;
-                } else {
-                    LOG_DEBUG(_logger, "Couldn't stop {}", _implementationName);
-                }
+            if(_service.internal_stop()) {
+                LOG_DEBUG(_logger, "Stopped {}", _implementationName);
+                return true;
             }
 
-            return true;
+            LOG_DEBUG(_logger, "Couldn't stop {}", _implementationName);
+
+            return false;
         }
 
         [[nodiscard]] ICHOR_CONSTEXPR std::string_view implementationName() const noexcept final {

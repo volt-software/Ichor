@@ -210,7 +210,6 @@ namespace Ichor {
                 logAddService<Impl, Interfaces...>();
 
                 cmpMgr->getService().injectDependencyManager(this);
-                bool started = false;
 
                 for (auto &[key, mgr] : _services) {
                     if (mgr->getServiceState() == ServiceState::ACTIVE) {
@@ -224,20 +223,21 @@ namespace Ichor {
                             continue;
                         }
 
-                        started = cmpMgr->dependencyOnline(mgr);
-                        if (started) {
-                            pushEventInternal<DependencyOnlineEvent>(cmpMgr->serviceId(), priority, cmpMgr);
-                        }
+                        cmpMgr->dependencyOnline(mgr.get());
                     }
                 }
 
+                bool started = cmpMgr->start();
+
                 for (auto const &[key, registration] : cmpMgr->getDependencyRegistry()->_registrations) {
                     auto const &props = std::get<std::optional<IchorProperties>>(registration);
-                    pushEventInternal<DependencyRequestEvent>(cmpMgr->serviceId(), priority, cmpMgr, std::get<Dependency>(registration), props.has_value() ? &props.value() : std::optional<IchorProperties const *>{});
+                    pushEventInternal<DependencyRequestEvent>(cmpMgr->serviceId(), priority, std::get<Dependency>(registration), props.has_value() ? &props.value() : std::optional<IchorProperties const *>{});
                 }
 
                 if(!started) {
                     pushEventInternal<StartServiceEvent>(cmpMgr->serviceId(), priority, cmpMgr->serviceId());
+                } else {
+                    pushEventInternal<DependencyOnlineEvent>(cmpMgr->serviceId(), priority);
                 }
 
                 cmpMgr->getService().injectPriority(priority);
@@ -260,7 +260,11 @@ namespace Ichor {
 
                 logAddService<Impl, Interfaces...>();
 
-                pushEventInternal<StartServiceEvent>(cmpMgr->serviceId(), priority, cmpMgr->serviceId());
+                if(!cmpMgr->start()) {
+                    pushEventInternal<StartServiceEvent>(cmpMgr->serviceId(), priority, cmpMgr->serviceId());
+                } else {
+                    pushEventInternal<DependencyOnlineEvent>(cmpMgr->serviceId(), priority);
+                }
 
                 _services.emplace(cmpMgr->serviceId(), cmpMgr);
 
@@ -338,7 +342,7 @@ namespace Ichor {
 
             std::vector<DependencyRequestEvent> requests;
             for(auto const &[key, mgr] : _services) {
-                auto const * depRegistry = mgr->getDependencyRegistry();
+                auto const *depRegistry = mgr->getDependencyRegistry();
 //                LOG_ERROR(_logger, "register svcId {} dm {}", mgr->serviceId(), _id);
 
                 if(depRegistry == nullptr) {
@@ -348,8 +352,7 @@ namespace Ichor {
                 for (auto const &[interfaceHash, registration] : depRegistry->_registrations) {
                     if(interfaceHash == typeNameHash<Interface>()) {
                         auto const &props = std::get<std::optional<IchorProperties>>(registration);
-                        DependencyRequestEvent evt{0, mgr->serviceId(), INTERNAL_EVENT_PRIORITY, mgr, std::get<Dependency>(registration), props.has_value() ? &props.value() : std::optional<IchorProperties const *>{}};
-                        requests.emplace_back(0, mgr->serviceId(), INTERNAL_EVENT_PRIORITY, mgr, std::get<Dependency>(registration), props.has_value() ? &props.value() : std::optional<IchorProperties const *>{});
+                        requests.emplace_back(0, mgr->serviceId(), INTERNAL_EVENT_PRIORITY, std::get<Dependency>(registration), props.has_value() ? &props.value() : std::optional<IchorProperties const *>{});
                     }
                 }
             }
