@@ -56,7 +56,7 @@ bool Ichor::HttpHostService::stop() {
 
 void Ichor::HttpHostService::addDependencyInstance(ILogger *logger) {
     _logger = logger;
-    LOG_TRACE(_logger, "Inserted logger");
+    ICHOR_LOG_TRACE(_logger, "Inserted logger");
 }
 
 void Ichor::HttpHostService::removeDependencyInstance(ILogger *logger) {
@@ -72,7 +72,7 @@ uint64_t Ichor::HttpHostService::getPriority() {
 }
 
 void Ichor::HttpHostService::fail(beast::error_code ec, const char *what) {
-    LOG_ERROR(_logger, "Boost.BEAST fail: {}, {}", what, ec.message());
+    ICHOR_LOG_ERROR(_logger, "Boost.BEAST fail: {}, {}", what, ec.message());
     getManager()->pushPrioritisedEvent<StopServiceEvent>(getServiceId(), _priority, getServiceId());
 }
 
@@ -117,7 +117,7 @@ void Ichor::HttpHostService::listen(tcp::endpoint endpoint, net::yield_context y
             read(std::forward<decltype(socket)>(socket), _yield);
         });
     }
-    LOG_WARN(_logger, "finished listen()");
+    ICHOR_LOG_WARN(_logger, "finished listen()");
 }
 
 std::unique_ptr<Ichor::HttpRouteRegistration> Ichor::HttpHostService::addRoute(HttpMethod method, std::string route, std::function<HttpResponse(HttpRequest&)> handler) {
@@ -172,7 +172,7 @@ void Ichor::HttpHostService::read(tcp::socket socket, net::yield_context yield) 
             return fail(ec, "HttpHostService::read read");
         }
 
-        LOG_TRACE(_logger, "New request for {} {}", req.method(), req.target());
+        ICHOR_LOG_TRACE(_logger, "New request for {} {}", req.method(), req.target());
 
         auto routes = _handlers.find(static_cast<HttpMethod>(req.method()));
 
@@ -198,7 +198,7 @@ void Ichor::HttpHostService::read(tcp::socket socket, net::yield_context yield) 
                     res.set(header.value, header.name);
                 }
                 res.keep_alive(req.keep_alive());
-//                LOG_WARN(_logger, "sending http response {} - {}", httpRes.status, httpRes.body.data());
+//                ICHOR_LOG_WARN(_logger, "sending http response {} - {}", httpRes.status, httpRes.body.data());
 
                 res.body() = std::move(httpRes.body);
                 res.prepare_payload();
@@ -233,7 +233,7 @@ void Ichor::HttpHostService::read(tcp::socket socket, net::yield_context yield) 
     _httpStream->socket().shutdown(tcp::socket::shutdown_send, ec);
 
     // At this point the connection is closed gracefully
-    LOG_WARN(_logger, "finished read()");
+    ICHOR_LOG_WARN(_logger, "finished read()");
 }
 
 #endif

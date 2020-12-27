@@ -15,20 +15,20 @@ public:
     }
     ~OtherService() final = default;
     bool start() final {
-        LOG_INFO(_logger, "OtherService started with dependency");
+        ICHOR_LOG_INFO(_logger, "OtherService started with dependency");
         _customEventHandler = getManager()->registerEventHandler<CustomEvent>(this);
         return true;
     }
 
     bool stop() final {
-        LOG_INFO(_logger, "OtherService stopped with dependency");
+        ICHOR_LOG_INFO(_logger, "OtherService stopped with dependency");
         return true;
     }
 
     void addDependencyInstance(ILogger *logger) {
         _logger = logger;
 
-        LOG_INFO(_logger, "Inserted logger svcid {} for svcid {}", logger->getServiceId(), getServiceId());
+        ICHOR_LOG_INFO(_logger, "Inserted logger svcid {} for svcid {}", logger->getServiceId(), getServiceId());
     }
 
     void removeDependencyInstance(ILogger *logger) {
@@ -36,7 +36,7 @@ public:
     }
 
     Generator<bool> handleEvent(CustomEvent const * const evt) {
-        LOG_INFO(_logger, "Handling custom event");
+        ICHOR_LOG_INFO(_logger, "Handling custom event");
         getManager()->pushEvent<QuitEvent>(getServiceId());
         getManager()->getCommunicationChannel()->broadcastEvent<QuitEvent>(getManager(), getServiceId(), INTERNAL_EVENT_PRIORITY+1);
 

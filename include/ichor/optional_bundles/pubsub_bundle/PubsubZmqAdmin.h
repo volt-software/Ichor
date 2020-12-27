@@ -23,7 +23,7 @@ public:
 
     void addDependencyInstance(ILogger *logger) {
         _logger = logger;
-        LOG_TRACE(_logger, "Inserted logger");
+        ICHOR_LOG_TRACE(_logger, "Inserted logger");
     }
 
     void removeDependencyInstance(ILogger *logger) {
@@ -35,7 +35,7 @@ public:
         auto topicProp = evt->properties.find("topic");
 
         if(scopeProp == end(evt->properties) || topicProp == end(evt->properties)) {
-            LOG_ERROR(_logger, "scope or topic missing");
+            ICHOR_LOG_ERROR(_logger, "scope or topic missing");
             return;
         }
 
@@ -43,7 +43,7 @@ public:
         auto topic = topicProp->second->getAsString();
         auto key = scope + ":" + topic;
 
-        LOG_INFO(_logger, "Tracked IRuntimeCreatedService request for scope {} topic {}", scope, topic);
+        ICHOR_LOG_INFO(_logger, "Tracked IRuntimeCreatedService request for scope {} topic {}", scope, topic);
 
         auto runtimeService = _scopedPublishers.find(key);
 
@@ -57,7 +57,7 @@ public:
         auto topicProp = evt->properties.find("topic");
 
         if(scopeProp == end(evt->properties) || topicProp == end(evt->properties)) {
-            LOG_ERROR(_logger, "scope or topic missing");
+            ICHOR_LOG_ERROR(_logger, "scope or topic missing");
             return;
         }
 
@@ -65,7 +65,7 @@ public:
         auto topic = topicProp->second->getAsString();
         auto key = scope + ":" + topic;
 
-        LOG_INFO(_logger, "Tracked IRuntimeCreatedService undo request for scope {} topic {}", scope, topic);
+        ICHOR_LOG_INFO(_logger, "Tracked IRuntimeCreatedService undo request for scope {} topic {}", scope, topic);
 
         _scopedPublishers.erase(key);
     }
@@ -75,7 +75,7 @@ public:
         auto topicProp = evt->properties.find("topic");
 
         if(scopeProp == end(evt->properties) || topicProp == end(evt->properties)) {
-            LOG_ERROR(_logger, "scope or topic missing");
+            ICHOR_LOG_ERROR(_logger, "scope or topic missing");
             return;
         }
 
@@ -83,7 +83,7 @@ public:
         auto topic = topicProp->second->getAsString();
         auto key = scope + ":" + topic;
 
-        LOG_INFO(_logger, "Tracked IRuntimeCreatedService request for scope {} topic {}", scope, topic);
+        ICHOR_LOG_INFO(_logger, "Tracked IRuntimeCreatedService request for scope {} topic {}", scope, topic);
 
         auto runtimeService = _scopedSubscribers.find(key);
 
@@ -97,7 +97,7 @@ public:
         auto topicProp = evt->properties.find("topic");
 
         if(scopeProp == end(evt->properties) || topicProp == end(evt->properties)) {
-            LOG_ERROR(_logger, "scope or topic missing");
+            ICHOR_LOG_ERROR(_logger, "scope or topic missing");
             return;
         }
 
@@ -105,7 +105,7 @@ public:
         auto topic = topicProp->second->getAsString();
         auto key = scope + ":" + topic;
 
-        LOG_INFO(_logger, "Tracked IRuntimeCreatedService undo request for scope {} topic {}", scope, topic);
+        ICHOR_LOG_INFO(_logger, "Tracked IRuntimeCreatedService undo request for scope {} topic {}", scope, topic);
 
         _scopedSubscribers.erase(key);
     }

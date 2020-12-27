@@ -29,7 +29,7 @@ bool Ichor::EtcdService::stop() {
 
 void Ichor::EtcdService::addDependencyInstance(ILogger *logger) {
     _logger = logger;
-    LOG_TRACE(_logger, "Inserted logger");
+    ICHOR_LOG_TRACE(_logger, "Inserted logger");
 }
 
 void Ichor::EtcdService::removeDependencyInstance(ILogger *logger) {

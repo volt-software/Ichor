@@ -155,7 +155,7 @@ namespace Ichor {
         }
 
         ICHOR_CONSTEXPR ~DependencyLifecycleManager() final {
-            LOG_TRACE(_logger, "destroying {}, id {}", typeName<ServiceType>(), _service.getServiceId());
+            ICHOR_LOG_TRACE(_logger, "destroying {}, id {}", typeName<ServiceType>(), _service.getServiceId());
             for(auto const &dep : _dependencies._dependencies) {
                 // _manager is always injected in DependencyManager::create...Manager functions.
                 _service._manager->template pushPrioritisedEvent<DependencyUndoRequestEvent>(_service.getServiceId(), getPriority(), Dependency{dep.interfaceNameHash, dep.required}, getProperties());
@@ -237,10 +237,10 @@ namespace Ichor {
             bool canStart = _service.getState() != ServiceState::ACTIVE && _dependencies.requiredDependenciesSatisfied(_satisfiedDependencies);
             if (canStart) {
                 if(_service.internal_start()) {
-                    LOG_DEBUG(_logger, "Started {}", _implementationName);
+                    ICHOR_LOG_DEBUG(_logger, "Started {}", _implementationName);
                     return true;
                 } else {
-//                    LOG_DEBUG(_logger, "Couldn't start {}", _implementationName);
+//                    ICHOR_LOG_DEBUG(_logger, "Couldn't start {}", _implementationName);
                 }
             }
 
@@ -250,11 +250,11 @@ namespace Ichor {
         [[nodiscard]]
         ICHOR_CONSTEXPR bool stop() final {
             if(_service.internal_stop()) {
-                LOG_DEBUG(_logger, "Stopped {}", _implementationName);
+                ICHOR_LOG_DEBUG(_logger, "Stopped {}", _implementationName);
                 return true;
             }
 
-            LOG_DEBUG(_logger, "Couldn't stop {}", _implementationName);
+            ICHOR_LOG_DEBUG(_logger, "Couldn't stop {}", _implementationName);
 
             return false;
         }
@@ -353,11 +353,11 @@ namespace Ichor {
         [[nodiscard]]
         ICHOR_CONSTEXPR bool start() final {
             if(_service.internal_start()) {
-                LOG_DEBUG(_logger, "Started {}", _implementationName);
+                ICHOR_LOG_DEBUG(_logger, "Started {}", _implementationName);
                 return true;
             }
 
-            LOG_DEBUG(_logger, "Couldn't start {}", _implementationName);
+            ICHOR_LOG_DEBUG(_logger, "Couldn't start {}", _implementationName);
 
             return false;
         }
@@ -365,11 +365,11 @@ namespace Ichor {
         [[nodiscard]]
         ICHOR_CONSTEXPR bool stop() final {
             if(_service.internal_stop()) {
-                LOG_DEBUG(_logger, "Stopped {}", _implementationName);
+                ICHOR_LOG_DEBUG(_logger, "Stopped {}", _implementationName);
                 return true;
             }
 
-            LOG_DEBUG(_logger, "Couldn't stop {}", _implementationName);
+            ICHOR_LOG_DEBUG(_logger, "Couldn't stop {}", _implementationName);
 
             return false;
         }

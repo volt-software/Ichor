@@ -47,10 +47,10 @@ bool Ichor::WsHostService::start() {
         try {
             listen(tcp::endpoint{address, port}, std::move(yield));
         } catch (std::runtime_error &e) {
-            LOG_ERROR(_logger, "caught std runtime_error {}", e.what());
+            ICHOR_LOG_ERROR(_logger, "caught std runtime_error {}", e.what());
             getManager()->pushEvent<StopServiceEvent>(getServiceId(), getServiceId());
         } catch (...) {
-            LOG_ERROR(_logger, "caught unknown error");
+            ICHOR_LOG_ERROR(_logger, "caught unknown error");
             getManager()->pushEvent<StopServiceEvent>(getServiceId(), getServiceId());
         }
     });
@@ -59,10 +59,10 @@ bool Ichor::WsHostService::start() {
         try {
             _wsContext->run();
         } catch (std::runtime_error &e) {
-            LOG_ERROR(_logger, "caught std runtime_error {}", e.what());
+            ICHOR_LOG_ERROR(_logger, "caught std runtime_error {}", e.what());
             getManager()->pushEvent<StopServiceEvent>(getServiceId(), getServiceId());
         } catch (...) {
-            LOG_ERROR(_logger, "caught unknown error");
+            ICHOR_LOG_ERROR(_logger, "caught unknown error");
             getManager()->pushEvent<StopServiceEvent>(getServiceId(), getServiceId());
         }
     });
@@ -75,22 +75,22 @@ bool Ichor::WsHostService::start() {
 }
 
 bool Ichor::WsHostService::stop() {
-    LOG_TRACE(_logger, "trying to stop WsHostService {}", getServiceId());
+    ICHOR_LOG_TRACE(_logger, "trying to stop WsHostService {}", getServiceId());
     _quit = true;
 
     for(auto conn : _connections) {
         conn->stop();
     }
-    LOG_TRACE(_logger, "connections closed WsHostService {}", getServiceId());
+    ICHOR_LOG_TRACE(_logger, "connections closed WsHostService {}", getServiceId());
 
     _wsAcceptor->close();
 
 
-    LOG_TRACE(_logger, "joining WsHostService {}", getServiceId());
+    ICHOR_LOG_TRACE(_logger, "joining WsHostService {}", getServiceId());
 
     _listenThread.join();
 
-    LOG_TRACE(_logger, "wsContext->stop() WsHostService {}", getServiceId());
+    ICHOR_LOG_TRACE(_logger, "wsContext->stop() WsHostService {}", getServiceId());
 
     _wsContext->stop();
     _wsContext = nullptr;
@@ -100,7 +100,7 @@ bool Ichor::WsHostService::stop() {
 
 void Ichor::WsHostService::addDependencyInstance(ILogger *logger) {
     _logger = logger;
-    LOG_TRACE(_logger, "Inserted logger");
+    ICHOR_LOG_TRACE(_logger, "Inserted logger");
 }
 
 void Ichor::WsHostService::removeDependencyInstance(ILogger *logger) {
@@ -127,7 +127,7 @@ uint64_t Ichor::WsHostService::getPriority() {
 }
 
 void Ichor::WsHostService::fail(beast::error_code ec, const char *what) {
-    LOG_ERROR(_logger, "Boost.BEAST fail: {}, {}", what, ec.message());
+    ICHOR_LOG_ERROR(_logger, "Boost.BEAST fail: {}, {}", what, ec.message());
     getManager()->pushPrioritisedEvent<StopServiceEvent>(getServiceId(), _priority, getServiceId());
 }
 

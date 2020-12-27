@@ -16,7 +16,7 @@ public:
     }
     ~TestService() final = default;
     bool start() final {
-        LOG_INFO(_logger, "TestService started with dependency");
+        ICHOR_LOG_INFO(_logger, "TestService started with dependency");
         _started = true;
         if(_injectionCount == 2) {
             getManager()->pushEvent<QuitEvent>(getServiceId());
@@ -25,14 +25,14 @@ public:
     }
 
     bool stop() final {
-        LOG_INFO(_logger, "TestService stopped with dependency");
+        ICHOR_LOG_INFO(_logger, "TestService stopped with dependency");
         return true;
     }
 
     void addDependencyInstance(ILogger *logger) {
         _logger = logger;
 
-        LOG_INFO(_logger, "Inserted logger svcid {} for svcid {}", logger->getServiceId(), getServiceId());
+        ICHOR_LOG_INFO(_logger, "Inserted logger svcid {} for svcid {}", logger->getServiceId(), getServiceId());
     }
 
     void removeDependencyInstance(ILogger *logger) {
@@ -40,7 +40,7 @@ public:
     }
 
     void addDependencyInstance(IOptionalService *svc) {
-        LOG_INFO(_logger, "Inserted IOptionalService svcid {}", svc->getServiceId());
+        ICHOR_LOG_INFO(_logger, "Inserted IOptionalService svcid {}", svc->getServiceId());
 
         _injectionCount++;
         if(_started && _injectionCount == 2) {

@@ -69,7 +69,7 @@ namespace Ichor {
                     full_address += ":" + std::to_string(std::any_cast<uint16_t>(port->second));
                 }
                 std::string_view implNameRequestor = getManager()->getImplementationNameFor(evt->originatingService).value();
-                LOG_ERROR(_logger, "Couldn't start connection of type {} on address {} for service of type {} with id {} because \"{}\"", typeNameHash<NetworkType>(), full_address, implNameRequestor, service->getServiceId(), evt->error);
+                ICHOR_LOG_ERROR(_logger, "Couldn't start connection of type {} on address {} for service of type {} with id {} because \"{}\"", typeNameHash<NetworkType>(), full_address, implNameRequestor, service->getServiceId(), evt->error);
 
                 break;
             }

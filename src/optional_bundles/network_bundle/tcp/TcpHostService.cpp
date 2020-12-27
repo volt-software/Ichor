@@ -77,7 +77,7 @@ bool Ichor::TcpHostService::start() {
             int newConnection = ::accept(_socket, (sockaddr *) &client_addr, &client_addr_size);
 
             if (newConnection == -1) {
-                LOG_ERROR(_logger, "New connection but accept() returned {} errno {}", newConnection, errno);
+                ICHOR_LOG_ERROR(_logger, "New connection but accept() returned {} errno {}", newConnection, errno);
                 if(errno == EINVAL) {
                     getManager()->pushEvent<UnrecoverableErrorEvent>(getServiceId(), 4, "Accept() generated error. errno = " + std::to_string(errno));
                     break;
@@ -87,7 +87,7 @@ bool Ichor::TcpHostService::start() {
             }
 
             auto ip = ::inet_ntoa(client_addr.sin_addr);
-            LOG_TRACE(_logger, "new connection from {}:{}", ip, ::ntohs(client_addr.sin_port));
+            ICHOR_LOG_TRACE(_logger, "new connection from {}:{}", ip, ::ntohs(client_addr.sin_port));
 
             getManager()->pushPrioritisedEvent<NewSocketEvent>(getServiceId(), _priority.load(std::memory_order_acquire), newConnection);
         }
@@ -111,7 +111,7 @@ bool Ichor::TcpHostService::stop() {
 
 void Ichor::TcpHostService::addDependencyInstance(ILogger *logger) {
     _logger = logger;
-    LOG_TRACE(_logger, "Inserted logger");
+    ICHOR_LOG_TRACE(_logger, "Inserted logger");
 }
 
 void Ichor::TcpHostService::removeDependencyInstance(ILogger *logger) {

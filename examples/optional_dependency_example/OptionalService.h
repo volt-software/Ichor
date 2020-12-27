@@ -19,18 +19,18 @@ public:
 
     ~OptionalService() final = default;
     bool start() final {
-        LOG_INFO(_logger, "OptionalService {} started", getServiceId());
+        ICHOR_LOG_INFO(_logger, "OptionalService {} started", getServiceId());
         return true;
     }
 
     bool stop() final {
-        LOG_INFO(_logger, "OptionalService {} stopped", getServiceId());
+        ICHOR_LOG_INFO(_logger, "OptionalService {} stopped", getServiceId());
         return true;
     }
 
     void addDependencyInstance(ILogger *logger) {
         _logger = logger;
-        LOG_INFO(_logger, "Inserted logger svcid {} for svcid {}", logger->getServiceId(), getServiceId());
+        ICHOR_LOG_INFO(_logger, "Inserted logger svcid {} for svcid {}", logger->getServiceId(), getServiceId());
     }
 
     void removeDependencyInstance(ILogger *logger) {

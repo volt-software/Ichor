@@ -17,7 +17,7 @@ public:
     ~UsingEtcdService() final = default;
 
     bool start() final {
-        LOG_INFO(_logger, "UsingEtcdService started");
+        ICHOR_LOG_INFO(_logger, "UsingEtcdService started");
         auto start = std::chrono::steady_clock::now();
         for(uint64_t i = 0; i < 10'000; i++) {
             if(!_etcd->put("test" + std::to_string(i), "2") || !_etcd->get("test" + std::to_string(i))) {
@@ -25,17 +25,17 @@ public:
             }
 
             if(i % 1'000 == 0) {
-                LOG_INFO(_logger, "iteration {}", i);
+                ICHOR_LOG_INFO(_logger, "iteration {}", i);
             }
         }
         auto end = std::chrono::steady_clock::now();
-        LOG_INFO(_logger, "finished in {:L} µs", std::chrono::duration_cast<std::chrono::microseconds>(end-start).count());
+        ICHOR_LOG_INFO(_logger, "finished in {:L} µs", std::chrono::duration_cast<std::chrono::microseconds>(end-start).count());
         getManager()->pushEvent<QuitEvent>(getServiceId(), INTERNAL_EVENT_PRIORITY+1);
         return true;
     }
 
     bool stop() final {
-        LOG_INFO(_logger, "UsingEtcdService stopped");
+        ICHOR_LOG_INFO(_logger, "UsingEtcdService stopped");
         return true;
     }
 

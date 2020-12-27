@@ -17,17 +17,17 @@ public:
     ~UsingEtcdService() final = default;
 
     bool start() final {
-        LOG_INFO(_logger, "UsingEtcdService started");
+        ICHOR_LOG_INFO(_logger, "UsingEtcdService started");
         if(_etcd->put("test", "2")) {
-            LOG_TRACE(_logger, "Succesfully put key/value into etcd");
+            ICHOR_LOG_TRACE(_logger, "Succesfully put key/value into etcd");
             auto storedVal = _etcd->get("test");
             if(storedVal == "2") {
-                LOG_TRACE(_logger, "Succesfully retrieved key/value into etcd");
+                ICHOR_LOG_TRACE(_logger, "Succesfully retrieved key/value into etcd");
             } else {
-                LOG_ERROR(_logger, "Error retrieving key/value into etcd");
+                ICHOR_LOG_ERROR(_logger, "Error retrieving key/value into etcd");
             }
         } else {
-            LOG_ERROR(_logger, "Error putting key/value into etcd");
+            ICHOR_LOG_ERROR(_logger, "Error putting key/value into etcd");
         }
 
         getManager()->pushEvent<QuitEvent>(getServiceId(), INTERNAL_EVENT_PRIORITY+1);
@@ -35,7 +35,7 @@ public:
     }
 
     bool stop() final {
-        LOG_INFO(_logger, "UsingEtcdService stopped");
+        ICHOR_LOG_INFO(_logger, "UsingEtcdService stopped");
         return true;
     }
 

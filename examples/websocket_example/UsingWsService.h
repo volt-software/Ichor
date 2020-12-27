@@ -23,7 +23,7 @@ public:
     ~UsingWsService() final = default;
 
     bool start() final {
-        LOG_INFO(_logger, "UsingWsService started");
+        ICHOR_LOG_INFO(_logger, "UsingWsService started");
         _timerEventRegistration = getManager()->registerEventHandler<NetworkDataEvent>(this);
         _connectionService->send(_serializationAdmin->serialize(TestMsg{11, "hello"}));
         return true;
@@ -31,7 +31,7 @@ public:
 
     bool stop() final {
         _timerEventRegistration = nullptr;
-        LOG_INFO(_logger, "UsingWsService stopped");
+        ICHOR_LOG_INFO(_logger, "UsingWsService stopped");
         return true;
     }
 
@@ -45,17 +45,17 @@ public:
 
     void addDependencyInstance(ISerializationAdmin *serializationAdmin) {
         _serializationAdmin = serializationAdmin;
-        LOG_INFO(_logger, "Inserted serializationAdmin");
+        ICHOR_LOG_INFO(_logger, "Inserted serializationAdmin");
     }
 
     void removeDependencyInstance(ISerializationAdmin *serializationAdmin) {
         _serializationAdmin = nullptr;
-        LOG_INFO(_logger, "Removed serializationAdmin");
+        ICHOR_LOG_INFO(_logger, "Removed serializationAdmin");
     }
 
     void addDependencyInstance(IConnectionService *connectionService) {
         _connectionService = connectionService;
-        LOG_INFO(_logger, "Inserted connectionService");
+        ICHOR_LOG_INFO(_logger, "Inserted connectionService");
     }
 
     void addDependencyInstance(IHostService *) {
@@ -65,12 +65,12 @@ public:
     }
 
     void removeDependencyInstance(IConnectionService *connectionService) {
-        LOG_INFO(_logger, "Removed connectionService");
+        ICHOR_LOG_INFO(_logger, "Removed connectionService");
     }
 
     Generator<bool> handleEvent(NetworkDataEvent const * const evt) {
         auto msg = _serializationAdmin->deserialize<TestMsg>(evt->getData());
-        LOG_INFO(_logger, "Received TestMsg id {} val {}", msg->id, msg->val);
+        ICHOR_LOG_INFO(_logger, "Received TestMsg id {} val {}", msg->id, msg->val);
         getManager()->pushEvent<QuitEvent>(getServiceId());
 
         co_return (bool)PreventOthersHandling;

@@ -284,7 +284,7 @@ namespace Ichor {
             static_assert(sizeof(EventT) <= 128, "event type cannot be larger than 128 bytes");
 
             if(_quit.load(std::memory_order_acquire)) {
-                LOG_TRACE(_logger, "inserting event of type {} into manager {}, but have to quit", typeName<EventT>(), getId());
+                ICHOR_LOG_TRACE(_logger, "inserting event of type {} into manager {}, but have to quit", typeName<EventT>(), getId());
                 return 0;
             }
 
@@ -294,7 +294,7 @@ namespace Ichor {
             TSAN_ANNOTATE_HAPPENS_BEFORE((void*)&(*it));
             _eventQueueMutex.unlock();
             _wakeUp.notify_all();
-            LOG_TRACE(_logger, "inserted event of type {} into manager {}", typeName<EventT>(), getId());
+            ICHOR_LOG_TRACE(_logger, "inserted event of type {} into manager {}", typeName<EventT>(), getId());
             return eventId;
         }
 
@@ -310,7 +310,7 @@ namespace Ichor {
             static_assert(sizeof(EventT) <= 128, "event type cannot be larger than 128 bytes");
 
             if(_quit.load(std::memory_order_acquire)) {
-                LOG_TRACE(_logger, "inserting event of type {} into manager {}, but have to quit", typeName<EventT>(), getId());
+                ICHOR_LOG_TRACE(_logger, "inserting event of type {} into manager {}, but have to quit", typeName<EventT>(), getId());
                 return 0;
             }
 
@@ -320,7 +320,7 @@ namespace Ichor {
             TSAN_ANNOTATE_HAPPENS_BEFORE((void*)&(*it));
             _eventQueueMutex.unlock();
             _wakeUp.notify_all();
-            LOG_TRACE(_logger, "inserted event of type {} into manager {}", typeName<EventT>(), getId());
+            ICHOR_LOG_TRACE(_logger, "inserted event of type {} into manager {}", typeName<EventT>(), getId());
             return eventId;
         }
 
@@ -343,7 +343,7 @@ namespace Ichor {
             std::vector<DependencyRequestEvent> requests;
             for(auto const &[key, mgr] : _services) {
                 auto const *depRegistry = mgr->getDependencyRegistry();
-//                LOG_ERROR(_logger, "register svcId {} dm {}", mgr->serviceId(), _id);
+//                ICHOR_LOG_ERROR(_logger, "register svcId {} dm {}", mgr->serviceId(), _id);
 
                 if(depRegistry == nullptr) {
                     continue;
@@ -504,21 +504,21 @@ namespace Ichor {
                 fmt::format_to(out, "added ServiceManager<{}, {}, ", typeName<Interface1>(), typeName<Interface2>());
                 (fmt::format_to(out, "{}, ", typeName<Interfaces>()), ...);
                 fmt::format_to(out, "{}>", typeName<Impl>());
-                LOG_DEBUG(_logger, "{}", out.data());
+                ICHOR_LOG_DEBUG(_logger, "{}", out.data());
             }
         }
 
         template <typename Impl, typename Interface>
         void logAddService() {
             if(_logger != nullptr && _logger->getLogLevel() <= LogLevel::DEBUG) {
-                LOG_DEBUG(_logger, "added ServiceManager<{}, {}>", typeName<Interface>(), typeName<Impl>());
+                ICHOR_LOG_DEBUG(_logger, "added ServiceManager<{}, {}>", typeName<Interface>(), typeName<Impl>());
             }
         }
 
         template <typename Impl>
         void logAddService() {
             if(_logger != nullptr && _logger->getLogLevel() <= LogLevel::DEBUG) {
-                LOG_DEBUG(_logger, "added ServiceManager<{}>", typeName<Impl>());
+                ICHOR_LOG_DEBUG(_logger, "added ServiceManager<{}>", typeName<Impl>());
             }
         }
 

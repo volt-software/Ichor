@@ -18,20 +18,20 @@ public:
     ~TestService() final = default;
 
     bool start() final {
-        LOG_INFO(_logger, "TestService started with dependency");
+        ICHOR_LOG_INFO(_logger, "TestService started with dependency");
         _doWorkRegistration = getManager()->registerEventCompletionCallbacks<DoWorkEvent>(this);
         getManager()->pushEvent<DoWorkEvent>(getServiceId());
         return true;
     }
 
     bool stop() final {
-        LOG_INFO(_logger, "TestService stopped with dependency");
+        ICHOR_LOG_INFO(_logger, "TestService stopped with dependency");
         return true;
     }
 
     void addDependencyInstance(ILogger *logger) {
         _logger = logger;
-        LOG_TRACE(_logger, "Inserted logger");
+        ICHOR_LOG_TRACE(_logger, "Inserted logger");
     }
 
     void removeDependencyInstance(ILogger *logger) {
@@ -40,12 +40,12 @@ public:
 
     void addDependencyInstance(ISerializationAdmin *serializationAdmin) {
         _serializationAdmin = serializationAdmin;
-        LOG_INFO(_logger, "Inserted serializationAdmin");
+        ICHOR_LOG_INFO(_logger, "Inserted serializationAdmin");
     }
 
     void removeDependencyInstance(ISerializationAdmin *serializationAdmin) {
         _serializationAdmin = nullptr;
-        LOG_INFO(_logger, "Removed serializationAdmin");
+        ICHOR_LOG_INFO(_logger, "Removed serializationAdmin");
     }
 
     void handleCompletion(DoWorkEvent const * const evt) {
@@ -53,15 +53,15 @@ public:
         auto res = _serializationAdmin->serialize<TestMsg>(msg);
         auto msg2 = _serializationAdmin->deserialize<TestMsg>(std::move(res));
         if(msg2->id != msg.id || msg2->val != msg.val) {
-            LOG_ERROR(_logger, "serde incorrect!");
+            ICHOR_LOG_ERROR(_logger, "serde incorrect!");
         } else {
-            LOG_ERROR(_logger, "serde correct!");
+            ICHOR_LOG_ERROR(_logger, "serde correct!");
         }
         getManager()->pushEvent<QuitEvent>(getServiceId());
     }
 
     void handleError(DoWorkEvent const * const evt) {
-        LOG_ERROR(_logger, "Error handling DoWorkEvent");
+        ICHOR_LOG_ERROR(_logger, "Error handling DoWorkEvent");
     }
 
 private:

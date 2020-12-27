@@ -29,7 +29,7 @@ public:
         }
         auto end = std::chrono::steady_clock::now();
         getManager()->pushEvent<QuitEvent>(getServiceId());
-        LOG_WARN(_logger, "Inserted events in {:L} µs", std::chrono::duration_cast<std::chrono::microseconds>(end-start).count());
+        ICHOR_LOG_WARN(_logger, "Inserted events in {:L} µs", std::chrono::duration_cast<std::chrono::microseconds>(end-start).count());
         return true;
     }
 

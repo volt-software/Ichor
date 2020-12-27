@@ -10,7 +10,7 @@ Ichor::HttpConnectionService::HttpConnectionService(DependencyRegister &reg, Ich
 
 bool Ichor::HttpConnectionService::start() {
     if(!_quit && !_connecting && !_connected) {
-        LOG_WARN(_logger, "starting svc {}", getServiceId());
+        ICHOR_LOG_WARN(_logger, "starting svc {}", getServiceId());
         if (getProperties()->contains("Priority")) {
             _priority = std::any_cast<uint64_t>(getProperties()->operator[]("Priority"));
         }
@@ -66,7 +66,7 @@ bool Ichor::HttpConnectionService::stop() {
 
 void Ichor::HttpConnectionService::addDependencyInstance(ILogger *logger) {
     _logger = logger;
-    LOG_TRACE(_logger, "Inserted logger");
+    ICHOR_LOG_TRACE(_logger, "Inserted logger");
 }
 
 void Ichor::HttpConnectionService::removeDependencyInstance(ILogger *logger) {
@@ -116,7 +116,7 @@ uint64_t Ichor::HttpConnectionService::sendAsync(Ichor::HttpMethod method, std::
                 return fail(ec, "HttpConnectionService::sendAsync read");
             }
 
-//            LOG_WARN(_logger, "received HTTP response {}", res.body().data());
+//            ICHOR_LOG_WARN(_logger, "received HTTP response {}", res.body().data());
 
             std::vector<HttpHeader> resHeaders;
             resHeaders.reserve(10);
@@ -147,7 +147,7 @@ bool Ichor::HttpConnectionService::close() {
 }
 
 void Ichor::HttpConnectionService::fail(beast::error_code ec, const char *what) {
-    LOG_ERROR(_logger, "Boost.BEAST fail: {}, {}", what, ec.message());
+    ICHOR_LOG_ERROR(_logger, "Boost.BEAST fail: {}, {}", what, ec.message());
     getManager()->pushPrioritisedEvent<StopServiceEvent>(getServiceId(), _priority, getServiceId());
 }
 
@@ -167,9 +167,9 @@ void Ichor::HttpConnectionService::connect(tcp::endpoint endpoint, net::yield_co
 
     // Make the connection on the IP address we get from a lookup
     while(!_quit && _attempts < 5) {
-//        LOG_WARN(_logger, "async_connect {}", _attempts);
+//        ICHOR_LOG_WARN(_logger, "async_connect {}", _attempts);
         _httpStream->async_connect(results, yield[ec]);
-//        LOG_WARN(_logger, "async_connect after {}", _attempts);
+//        ICHOR_LOG_WARN(_logger, "async_connect after {}", _attempts);
         if (ec) {
             _attempts++;
             net::steady_timer t{*_httpContext};

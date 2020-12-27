@@ -16,7 +16,7 @@ public:
     ~UsingStatisticsService() final = default;
 
     bool start() final {
-        LOG_INFO(_logger, "UsingStatisticsService started");
+        ICHOR_LOG_INFO(_logger, "UsingStatisticsService started");
         auto _quitTimerManager = getManager()->createServiceManager<Timer, ITimer>();
         auto _bogusTimerManager = getManager()->createServiceManager<Timer, ITimer>();
         _quitTimerManager->setChronoInterval(std::chrono::seconds (15));
@@ -32,7 +32,7 @@ public:
     bool stop() final {
         _quitTimerEventRegistration = nullptr;
         _bogusTimerEventRegistration = nullptr;
-        LOG_INFO(_logger, "UsingStatisticsService stopped");
+        ICHOR_LOG_INFO(_logger, "UsingStatisticsService stopped");
         return true;
     }
 

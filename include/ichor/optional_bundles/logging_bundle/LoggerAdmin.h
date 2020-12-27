@@ -28,7 +28,7 @@ namespace Ichor {
 
         void addDependencyInstance(IFrameworkLogger *logger) noexcept {
             _logger = logger;
-            LOG_TRACE(_logger, "Inserted logger");
+            ICHOR_LOG_TRACE(_logger, "Inserted logger");
         }
 
         void removeDependencyInstance(IFrameworkLogger *logger) noexcept {
@@ -38,7 +38,7 @@ namespace Ichor {
         void handleDependencyRequest(ILogger *, DependencyRequestEvent const *const evt) {
             auto logger = _loggers.find(evt->originatingService);
 
-//            LOG_ERROR(_logger, "dep req {} dm {}", evt->originatingService, getManager()->getId());
+//            ICHOR_LOG_ERROR(_logger, "dep req {} dm {}", evt->originatingService, getManager()->getId());
 
             auto requestedLevel = LogLevel::INFO;
             if(evt->properties.has_value()) {
@@ -46,13 +46,13 @@ namespace Ichor {
                 requestedLevel = requestedLevelIt != end(*evt->properties.value()) ? std::any_cast<LogLevel>(requestedLevelIt->second) : LogLevel::INFO;
             }
             if (logger == end(_loggers)) {
-//                LOG_ERROR(_logger, "creating logger for svcid {}", evt->originatingService);
+//                ICHOR_LOG_ERROR(_logger, "creating logger for svcid {}", evt->originatingService);
                     _loggers.emplace(evt->originatingService, getManager()->template createServiceManager<LogT, ILogger>(
                             IchorProperties{{"LogLevel",        requestedLevel},
                                               {"TargetServiceId", evt->originatingService},
                                               {"Filter",          Filter{ServiceIdFilterEntry{evt->originatingService}}}}));
             } else {
-                LOG_TRACE(_logger, "svcid {} already has logger", evt->originatingService);
+                ICHOR_LOG_TRACE(_logger, "svcid {} already has logger", evt->originatingService);
             }
         }
 

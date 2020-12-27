@@ -41,7 +41,7 @@ bool Ichor::EventStatisticsService::stop() {
             auto avg = std::accumulate(begin(statistics), end(statistics), 0L, [](int64_t i, const AveragedStatisticEntry &entry){ return i + entry.avgProcessingTimeRequired; }) / statistics.size();
             auto occ = std::accumulate(begin(statistics), end(statistics), 0L, [](int64_t i, const AveragedStatisticEntry &entry){ return i + entry.occurances; });
 
-            LOG_ERROR(getManager()->getLogger(), "Dm {:L} Event type {} occurred {:L} times, min/max/avg processing: {:L}/{:L}/{:L} ns", getManager()->getId(), _eventTypeToNameMapper[key], occ, min, max, avg);
+            ICHOR_LOG_ERROR(getManager()->getLogger(), "Dm {:L} Event type {} occurred {:L} times, min/max/avg processing: {:L}/{:L}/{:L} ns", getManager()->getId(), _eventTypeToNameMapper[key], occ, min, max, avg);
         }
     }
 

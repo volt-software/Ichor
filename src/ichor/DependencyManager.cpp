@@ -19,11 +19,11 @@ void on_sigint([[maybe_unused]] int sig) {
 
 void Ichor::DependencyManager::start() {
     assert(_logger != nullptr);
-    LOG_DEBUG(_logger, "starting dm");
+    ICHOR_LOG_DEBUG(_logger, "starting dm");
 
     ::signal(SIGINT, on_sigint);
 
-    LOG_TRACE(_logger, "depman {} has {} events", _id, _eventQueue.size());
+    ICHOR_LOG_TRACE(_logger, "depman {} has {} events", _id, _eventQueue.size());
 
 #ifdef __linux__
     pthread_setname_np(pthread_self(), fmt::format("DepMan #{}", _id).c_str());
@@ -38,7 +38,7 @@ void Ichor::DependencyManager::start() {
             lck.unlock();
             _quit.store(sigintQuit.load(std::memory_order_acquire), std::memory_order_release);
 
-//            LOG_ERROR(_logger, "evt id {} type {} has {}-{} prio", evtNode.mapped().get()->id, evtNode.mapped().get()->name, evtNode.key(), evtNode.mapped().get()->priority);
+//            ICHOR_LOG_ERROR(_logger, "evt id {} type {} has {}-{} prio", evtNode.mapped().get()->id, evtNode.mapped().get()->name, evtNode.key(), evtNode.mapped().get()->priority);
 
             bool allowProcessing = true;
             uint32_t handlerAmount = 1; // for the non-default case below, the DepMan handles the event
@@ -194,7 +194,7 @@ void Ichor::DependencyManager::start() {
                         auto toStopServiceIt = _services.find(stopServiceEvt->serviceId);
 
                         if (toStopServiceIt == end(_services)) {
-                            LOG_ERROR(_logger, "Couldn't stop service {}, missing from known services", stopServiceEvt->serviceId);
+                            ICHOR_LOG_ERROR(_logger, "Couldn't stop service {}, missing from known services", stopServiceEvt->serviceId);
                             handleEventError(stopServiceEvt);
                             break;
                         }
@@ -202,7 +202,7 @@ void Ichor::DependencyManager::start() {
                         auto &toStopService = toStopServiceIt->second;
                         if (stopServiceEvt->dependenciesStopped) {
                             if (toStopService->getServiceState() == ServiceState::ACTIVE && !toStopService->stop()) {
-                                LOG_ERROR(_logger, "Couldn't stop service {}: {} but all dependencies stopped", stopServiceEvt->serviceId,
+                                ICHOR_LOG_ERROR(_logger, "Couldn't stop service {}: {} but all dependencies stopped", stopServiceEvt->serviceId,
                                           toStopService->implementationName());
                                 handleEventError(stopServiceEvt);
                             } else {
@@ -221,7 +221,7 @@ void Ichor::DependencyManager::start() {
                         auto toRemoveServiceIt = _services.find(removeServiceEvt->serviceId);
 
                         if (toRemoveServiceIt == end(_services)) {
-                            LOG_ERROR(_logger, "Couldn't remove service {}, missing from known services", removeServiceEvt->serviceId);
+                            ICHOR_LOG_ERROR(_logger, "Couldn't remove service {}, missing from known services", removeServiceEvt->serviceId);
                             handleEventError(removeServiceEvt);
                             break;
                         }
@@ -229,7 +229,7 @@ void Ichor::DependencyManager::start() {
                         auto &toRemoveService = toRemoveServiceIt->second;
                         if (removeServiceEvt->dependenciesStopped) {
                             if (toRemoveService->getServiceState() == ServiceState::ACTIVE && !toRemoveService->stop()) {
-                                LOG_ERROR(_logger, "Couldn't remove service {}: {} but all dependencies stopped", removeServiceEvt->serviceId,
+                                ICHOR_LOG_ERROR(_logger, "Couldn't remove service {}: {} but all dependencies stopped", removeServiceEvt->serviceId,
                                           toRemoveService->implementationName());
                                 handleEventError(removeServiceEvt);
                             } else {
@@ -250,7 +250,7 @@ void Ichor::DependencyManager::start() {
                         auto toStartServiceIt = _services.find(startServiceEvt->serviceId);
 
                         if (toStartServiceIt == end(_services)) {
-                            LOG_ERROR(_logger, "Couldn't start service {}, missing from known services", startServiceEvt->serviceId);
+                            ICHOR_LOG_ERROR(_logger, "Couldn't start service {}, missing from known services", startServiceEvt->serviceId);
                             handleEventError(startServiceEvt);
                             break;
                         }
@@ -259,7 +259,7 @@ void Ichor::DependencyManager::start() {
                         if(toStartService->getServiceState() == ServiceState::ACTIVE) {
                             handleEventCompletion(startServiceEvt);
                         } else if (!toStartService->start()) {
-//                            LOG_TRACE(_logger, "Couldn't start service {}: {}", startServiceEvt->serviceId, toStartService->implementationName());
+//                            ICHOR_LOG_TRACE(_logger, "Couldn't start service {}: {}", startServiceEvt->serviceId, toStartService->implementationName());
                             handleEventError(startServiceEvt);
                         } else {
                             pushEventInternal<DependencyOnlineEvent>(toStartService->serviceId(), startServiceEvt->priority);

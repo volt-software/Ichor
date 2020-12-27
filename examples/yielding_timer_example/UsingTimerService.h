@@ -20,7 +20,7 @@ public:
     ~UsingTimerService() final = default;
 
     bool start() final {
-        LOG_INFO(_logger, "UsingTimerService started");
+        ICHOR_LOG_INFO(_logger, "UsingTimerService started");
         _timerManager = getManager()->createServiceManager<Timer, ITimer>();
         _timerManager->setChronoInterval(std::chrono::milliseconds(500));
         _timerEventRegistration = getManager()->registerEventHandler<TimerEvent>(this, _timerManager->getServiceId());
@@ -31,7 +31,7 @@ public:
     bool stop() final {
         _timerEventRegistration = nullptr;
         _timerManager = nullptr;
-        LOG_INFO(_logger, "UsingTimerService stopped");
+        ICHOR_LOG_INFO(_logger, "UsingTimerService stopped");
         return true;
     }
 
@@ -44,13 +44,13 @@ public:
     }
 
     Generator<bool> handleEvent(TimerEvent const * const evt) {
-        LOG_INFO(_logger, "Timer {} starting 'long' task", getServiceId());
+        ICHOR_LOG_INFO(_logger, "Timer {} starting 'long' task", getServiceId());
 
         _timerTriggerCount++;
         for(uint32_t i = 0; i < 5; i++) {
             //simulate long task
             std::this_thread::sleep_for(std::chrono::milliseconds(40));
-            LOG_INFO(_logger, "Timer {} completed 'long' task {} times", getServiceId(), i);
+            ICHOR_LOG_INFO(_logger, "Timer {} completed 'long' task {} times", getServiceId(), i);
             // schedule us again later in the event loop for the next iteration, don't let other handlers handle this event.
             co_yield (bool)PreventOthersHandling;
         }
@@ -59,7 +59,7 @@ public:
             getManager()->pushEvent<QuitEvent>(getServiceId(), INTERNAL_EVENT_PRIORITY+1);
         }
 
-        LOG_INFO(_logger, "Timer {} completed 'long' task", getServiceId());
+        ICHOR_LOG_INFO(_logger, "Timer {} completed 'long' task", getServiceId());
         co_return (bool)PreventOthersHandling;
     }
 

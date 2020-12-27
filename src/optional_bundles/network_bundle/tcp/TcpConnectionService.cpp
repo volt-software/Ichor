@@ -19,7 +19,7 @@ bool Ichor::TcpConnectionService::start() {
     if(getProperties()->contains("Socket")) {
         _socket = std::any_cast<int>(getProperties()->operator[]("Socket"));
 
-        LOG_TRACE(_logger, "Starting TCP connection for existing socket");
+        ICHOR_LOG_TRACE(_logger, "Starting TCP connection for existing socket");
     } else {
         if(!getProperties()->contains("Address")) {
             getManager()->pushEvent<UnrecoverableErrorEvent>(getServiceId(), 0, "Missing \"Address\" in properties");
@@ -56,7 +56,7 @@ bool Ichor::TcpConnectionService::start() {
 
         if(connect(_socket, (struct sockaddr *)&address, sizeof(address)) < 0)
         {
-            LOG_ERROR(_logger, "connect error {}", errno);
+            ICHOR_LOG_ERROR(_logger, "connect error {}", errno);
             if(_attempts < 5) {
                 _attempts++;
                 getManager()->pushEvent<StartServiceEvent>(getServiceId(), getServiceId());
@@ -65,7 +65,7 @@ bool Ichor::TcpConnectionService::start() {
         }
 
         auto ip = ::inet_ntoa(address.sin_addr);
-        LOG_TRACE(_logger, "Starting TCP connection for {}:{}", ip, ::ntohs(address.sin_port));
+        ICHOR_LOG_TRACE(_logger, "Starting TCP connection for {}:{}", ip, ::ntohs(address.sin_port));
     }
 
     _listenThread = std::thread([this] {
@@ -78,7 +78,7 @@ bool Ichor::TcpConnectionService::start() {
             }
 
             if(ret < 0) {
-                LOG_ERROR(_logger, "Error receiving from socket: {}", errno);
+                ICHOR_LOG_ERROR(_logger, "Error receiving from socket: {}", errno);
                 getManager()->pushEvent<RecoverableErrorEvent>(getServiceId(), 4, "Error receiving from socket. errno = " + std::to_string(errno));
                 continue;
             }
@@ -105,7 +105,7 @@ bool Ichor::TcpConnectionService::stop() {
 
 void Ichor::TcpConnectionService::addDependencyInstance(ILogger *logger) {
     _logger = logger;
-    LOG_TRACE(_logger, "Inserted logger");
+    ICHOR_LOG_TRACE(_logger, "Inserted logger");
 }
 
 void Ichor::TcpConnectionService::removeDependencyInstance(ILogger *logger) {

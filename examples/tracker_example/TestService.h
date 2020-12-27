@@ -16,20 +16,20 @@ public:
     }
     ~TestService() final = default;
     bool start() final {
-        LOG_INFO(_logger, "TestService started with dependency");
+        ICHOR_LOG_INFO(_logger, "TestService started with dependency");
         getManager()->pushEvent<QuitEvent>(getServiceId());
         return true;
     }
 
     bool stop() final {
-        LOG_INFO(_logger, "TestService stopped with dependency");
+        ICHOR_LOG_INFO(_logger, "TestService stopped with dependency");
         return true;
     }
 
     void addDependencyInstance(ILogger *logger) {
         _logger = logger;
 
-        LOG_INFO(_logger, "Inserted logger svcid {} for svcid {}", logger->getServiceId(), getServiceId());
+        ICHOR_LOG_INFO(_logger, "Inserted logger svcid {} for svcid {}", logger->getServiceId(), getServiceId());
     }
 
     void removeDependencyInstance(ILogger *logger) {
@@ -39,7 +39,7 @@ public:
     void addDependencyInstance(IRuntimeCreatedService *svc) {
         auto ownScopeProp = getProperties()->find("scope");
         auto svcScopeProp = svc->getProperties()->find("scope");
-        LOG_INFO(_logger, "Inserted IRuntimeCreatedService svcid {} with scope {} for svcid {} with scope {}", svc->getServiceId(), std::any_cast<std::string&>(svcScopeProp->second), getServiceId(), std::any_cast<std::string>(ownScopeProp->second));
+        ICHOR_LOG_INFO(_logger, "Inserted IRuntimeCreatedService svcid {} with scope {} for svcid {} with scope {}", svc->getServiceId(), std::any_cast<std::string&>(svcScopeProp->second), getServiceId(), std::any_cast<std::string>(ownScopeProp->second));
     }
 
     void removeDependencyInstance(IRuntimeCreatedService *) {

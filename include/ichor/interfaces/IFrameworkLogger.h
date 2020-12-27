@@ -21,16 +21,16 @@ namespace Ichor {
     };
 
 #ifndef REMOVE_SOURCE_NAMES_FROM_LOGGING
-#define LOG_TRACE(logger, str, ...) if(logger != nullptr) logger->trace(__FILE__, __LINE__, static_cast<const char *>(__FUNCTION__), str, fmt::make_format_args(__VA_ARGS__))
-#define LOG_DEBUG(logger, str, ...) if(logger != nullptr) logger->debug(__FILE__, __LINE__, static_cast<const char *>(__FUNCTION__), str, fmt::make_format_args(__VA_ARGS__))
-#define LOG_INFO(logger, str, ...) if(logger != nullptr) logger->info(__FILE__, __LINE__, static_cast<const char *>(__FUNCTION__), str, fmt::make_format_args(__VA_ARGS__))
-#define LOG_WARN(logger, str, ...) if(logger != nullptr) logger->warn(__FILE__, __LINE__, static_cast<const char *>(__FUNCTION__), str, fmt::make_format_args(__VA_ARGS__))
-#define LOG_ERROR(logger, str, ...) if(logger != nullptr) logger->error(__FILE__, __LINE__, static_cast<const char *>(__FUNCTION__), str, fmt::make_format_args(__VA_ARGS__))
+#define ICHOR_LOG_TRACE(logger, str, ...) if(logger != nullptr) logger->trace(__FILE__, __LINE__, static_cast<const char *>(__FUNCTION__), str, fmt::make_format_args(__VA_ARGS__))
+#define ICHOR_LOG_DEBUG(logger, str, ...) if(logger != nullptr) logger->debug(__FILE__, __LINE__, static_cast<const char *>(__FUNCTION__), str, fmt::make_format_args(__VA_ARGS__))
+#define ICHOR_LOG_INFO(logger, str, ...) if(logger != nullptr) logger->info(__FILE__, __LINE__, static_cast<const char *>(__FUNCTION__), str, fmt::make_format_args(__VA_ARGS__))
+#define ICHOR_LOG_WARN(logger, str, ...) if(logger != nullptr) logger->warn(__FILE__, __LINE__, static_cast<const char *>(__FUNCTION__), str, fmt::make_format_args(__VA_ARGS__))
+#define ICHOR_LOG_ERROR(logger, str, ...) if(logger != nullptr) logger->error(__FILE__, __LINE__, static_cast<const char *>(__FUNCTION__), str, fmt::make_format_args(__VA_ARGS__))
 #else
-#define LOG_TRACE(logger, str, ...) if(logger != nullptr) logger->trace(nullptr, 0, nullptr, str, fmt::make_format_args(__VA_ARGS__))
-#define LOG_DEBUG(logger, str, ...) if(logger != nullptr) logger->debug(nullptr, 0, nullptr, str, fmt::make_format_args(__VA_ARGS__))
-#define LOG_INFO(logger, str, ...) if(logger != nullptr) logger->info(nullptr, 0, nullptr, str, fmt::make_format_args(__VA_ARGS__))
-#define LOG_WARN(logger, str, ...) if(logger != nullptr) logger->warn(nullptr, 0, nullptr, str, fmt::make_format_args(__VA_ARGS__))
-#define LOG_ERROR(logger, str, ...) if(logger != nullptr) logger->error(nullptr, 0, nullptr, str, fmt::make_format_args(__VA_ARGS__))
+#define ICHOR_LOG_TRACE(logger, str, ...) if(logger != nullptr) logger->trace(nullptr, 0, nullptr, str, fmt::make_format_args(__VA_ARGS__))
+#define ICHOR_LOG_DEBUG(logger, str, ...) if(logger != nullptr) logger->debug(nullptr, 0, nullptr, str, fmt::make_format_args(__VA_ARGS__))
+#define ICHOR_LOG_INFO(logger, str, ...) if(logger != nullptr) logger->info(nullptr, 0, nullptr, str, fmt::make_format_args(__VA_ARGS__))
+#define ICHOR_LOG_WARN(logger, str, ...) if(logger != nullptr) logger->warn(nullptr, 0, nullptr, str, fmt::make_format_args(__VA_ARGS__))
+#define ICHOR_LOG_ERROR(logger, str, ...) if(logger != nullptr) logger->error(nullptr, 0, nullptr, str, fmt::make_format_args(__VA_ARGS__))
 #endif
 }

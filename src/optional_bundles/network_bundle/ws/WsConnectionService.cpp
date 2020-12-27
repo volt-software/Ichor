@@ -80,12 +80,12 @@ bool Ichor::WsConnectionService::start() {
 }
 
 bool Ichor::WsConnectionService::stop() {
-    LOG_TRACE(_logger, "trying to stop WsConnectionService {}", getServiceId());
+    ICHOR_LOG_TRACE(_logger, "trying to stop WsConnectionService {}", getServiceId());
     bool expected = false;
     bool stopWsContext = false;
     if(_quit.compare_exchange_strong(expected, true)) {
         try {
-            LOG_TRACE(_logger, "ws next layer close WsConnectionService {}", getServiceId());
+            ICHOR_LOG_TRACE(_logger, "ws next layer close WsConnectionService {}", getServiceId());
             _ws->next_layer().close();
             cancelSendTimer();
         } catch (...) {
@@ -115,7 +115,7 @@ bool Ichor::WsConnectionService::stop() {
 
 void Ichor::WsConnectionService::addDependencyInstance(ILogger *logger) {
     _logger = logger;
-    LOG_TRACE(_logger, "Inserted logger");
+    ICHOR_LOG_TRACE(_logger, "Inserted logger");
 }
 
 void Ichor::WsConnectionService::removeDependencyInstance(ILogger *logger) {
@@ -154,7 +154,7 @@ uint64_t Ichor::WsConnectionService::getPriority() {
 }
 
 void Ichor::WsConnectionService::fail(beast::error_code ec, const char *what) {
-    LOG_ERROR(_logger, "Boost.BEAST fail: {}, {}", what, ec.message());
+    ICHOR_LOG_ERROR(_logger, "Boost.BEAST fail: {}, {}", what, ec.message());
     getManager()->pushEvent<StopServiceEvent>(getServiceId(), getServiceId());
 }
 
@@ -334,12 +334,12 @@ void Ichor::WsConnectionService::read(net::yield_context &yield) {
 
 void Ichor::WsConnectionService::cancelSendTimer() {
     if(_wsContext) {
-        LOG_TRACE(_logger, "cancelSendTimer wsContext->post() WsConnectionService {}", getServiceId());
+        ICHOR_LOG_TRACE(_logger, "cancelSendTimer wsContext->post() WsConnectionService {}", getServiceId());
         _wsContext->post([this](){
             _sendTimer->cancel();
         });
     } else {
-        LOG_TRACE(_logger, "cancelSendTimer net::spawn WsConnectionService {}", getServiceId());
+        ICHOR_LOG_TRACE(_logger, "cancelSendTimer net::spawn WsConnectionService {}", getServiceId());
         net::spawn(std::any_cast<net::executor>(getProperties()->operator[]("Executor")), [this](net::yield_context yield) {
             _sendTimer->cancel();
         });

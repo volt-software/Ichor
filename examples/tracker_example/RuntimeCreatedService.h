@@ -20,18 +20,18 @@ public:
     ~RuntimeCreatedService() final = default;
     bool start() final {
         auto const& scope = std::any_cast<std::string&>(_properties["scope"]);
-        LOG_INFO(_logger, "RuntimeCreatedService started with scope {}", scope);
+        ICHOR_LOG_INFO(_logger, "RuntimeCreatedService started with scope {}", scope);
         return true;
     }
 
     bool stop() final {
-        LOG_INFO(_logger, "RuntimeCreatedService stopped");
+        ICHOR_LOG_INFO(_logger, "RuntimeCreatedService stopped");
         return true;
     }
 
     void addDependencyInstance(ILogger *logger) {
         _logger = logger;
-        LOG_INFO(_logger, "Inserted logger svcid {} for svcid {}", logger->getServiceId(), getServiceId());
+        ICHOR_LOG_INFO(_logger, "Inserted logger svcid {} for svcid {}", logger->getServiceId(), getServiceId());
     }
 
     void removeDependencyInstance(ILogger *logger) {

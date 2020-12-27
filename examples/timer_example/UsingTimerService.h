@@ -16,7 +16,7 @@ public:
     ~UsingTimerService() final = default;
 
     bool start() final {
-        LOG_INFO(_logger, "UsingTimerService started");
+        ICHOR_LOG_INFO(_logger, "UsingTimerService started");
         _timerManager = getManager()->createServiceManager<Timer, ITimer>();
         _timerManager->setChronoInterval(std::chrono::milliseconds(500));
         _timerEventRegistration = getManager()->registerEventHandler<TimerEvent>(this, _timerManager->getServiceId());
@@ -27,7 +27,7 @@ public:
     bool stop() final {
         _timerEventRegistration = nullptr;
         _timerManager = nullptr;
-        LOG_INFO(_logger, "UsingTimerService stopped");
+        ICHOR_LOG_INFO(_logger, "UsingTimerService stopped");
         return true;
     }
 
@@ -41,7 +41,7 @@ public:
 
     Generator<bool> handleEvent(TimerEvent const * const evt) {
         _timerTriggerCount++;
-        LOG_INFO(_logger, "Timer {} triggered {} times", _timerManager->getServiceId(), _timerTriggerCount);
+        ICHOR_LOG_INFO(_logger, "Timer {} triggered {} times", _timerManager->getServiceId(), _timerTriggerCount);
         if(_timerTriggerCount == 5) {
             getManager()->pushEvent<QuitEvent>(getServiceId());
         }

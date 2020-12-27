@@ -27,7 +27,7 @@ public:
         } else {
             auto end = std::chrono::steady_clock::now();
             getManager()->pushEvent<QuitEvent>(getServiceId());
-            LOG_INFO(_logger, "dm {} finished in {:L} µs", getManager()->getId(), std::chrono::duration_cast<std::chrono::microseconds>(end-_start).count());
+            ICHOR_LOG_INFO(_logger, "dm {} finished in {:L} µs", getManager()->getId(), std::chrono::duration_cast<std::chrono::microseconds>(end-_start).count());
         }
         startCount++;
         return true;

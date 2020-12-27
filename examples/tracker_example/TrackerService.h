@@ -31,20 +31,20 @@ public:
     }
     ~TrackerService() final = default;
     bool start() final {
-        LOG_INFO(_logger, "TrackerService started");
+        ICHOR_LOG_INFO(_logger, "TrackerService started");
         _trackerRegistration = getManager()->registerDependencyTracker<IRuntimeCreatedService>(this);
         return true;
     }
 
     bool stop() final {
-        LOG_INFO(_logger, "TrackerService stopped");
+        ICHOR_LOG_INFO(_logger, "TrackerService stopped");
         _trackerRegistration = nullptr;
         return true;
     }
 
     void addDependencyInstance(ILogger *logger) {
         _logger = logger;
-        LOG_TRACE(_logger, "Inserted logger");
+        ICHOR_LOG_TRACE(_logger, "Inserted logger");
     }
 
     void removeDependencyInstance(ILogger *logger) {
@@ -53,20 +53,20 @@ public:
 
     void handleDependencyRequest(IRuntimeCreatedService*, DependencyRequestEvent const * const evt) {
         if(!evt->properties.has_value()) {
-            LOG_ERROR(_logger, "missing properties");
+            ICHOR_LOG_ERROR(_logger, "missing properties");
             return;
         }
 
         auto scopeProp = evt->properties.value()->find("scope");
 
         if(scopeProp == end(*evt->properties.value())) {
-            LOG_ERROR(_logger, "scope missing");
+            ICHOR_LOG_ERROR(_logger, "scope missing");
             return;
         }
 
         auto const& scope = std::any_cast<const std::string&>(scopeProp->second);
 
-        LOG_INFO(_logger, "Tracked IRuntimeCreatedService request for scope {}", scope);
+        ICHOR_LOG_INFO(_logger, "Tracked IRuntimeCreatedService request for scope {}", scope);
 
         auto runtimeService = _scopedRuntimeServices.find(scope);
 
@@ -82,13 +82,13 @@ public:
         auto scopeProp = evt->properties->find("scope");
 
         if(scopeProp == end(*evt->properties)) {
-            LOG_ERROR(_logger, "scope missing");
+            ICHOR_LOG_ERROR(_logger, "scope missing");
             return;
         }
 
         auto const& scope = std::any_cast<const std::string&>(scopeProp->second);
 
-        LOG_INFO(_logger, "Tracked IRuntimeCreatedService undo request for scope {}", scope);
+        ICHOR_LOG_INFO(_logger, "Tracked IRuntimeCreatedService undo request for scope {}", scope);
 
         auto service = _scopedRuntimeServices.find(scope);
         if(service != end(_scopedRuntimeServices)) {

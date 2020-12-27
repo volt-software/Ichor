@@ -23,18 +23,18 @@ void* Ichor::SerializationAdmin::deserialize(const uint64_t type, std::vector<ui
 }
 
 bool Ichor::SerializationAdmin::start() {
-    LOG_TRACE(_logger, "Start");
+    ICHOR_LOG_TRACE(_logger, "Start");
     return true;
 }
 
 bool Ichor::SerializationAdmin::stop() {
-    LOG_TRACE(_logger, "Stop");
+    ICHOR_LOG_TRACE(_logger, "Stop");
     return true;
 }
 
 void Ichor::SerializationAdmin::addDependencyInstance(ILogger *logger) {
     _logger = logger;
-    LOG_TRACE(_logger, "Inserted logger");
+    ICHOR_LOG_TRACE(_logger, "Inserted logger");
 }
 
 void Ichor::SerializationAdmin::removeDependencyInstance(ILogger *logger) {
@@ -43,7 +43,7 @@ void Ichor::SerializationAdmin::removeDependencyInstance(ILogger *logger) {
 
 void Ichor::SerializationAdmin::addDependencyInstance(ISerializer *serializer) {
     if(!serializer->getProperties()->contains("type")) {
-        LOG_TRACE(_logger, "No type property for serializer {}", serializer->getServiceId());
+        ICHOR_LOG_TRACE(_logger, "No type property for serializer {}", serializer->getServiceId());
         return;
     }
 
@@ -51,27 +51,27 @@ void Ichor::SerializationAdmin::addDependencyInstance(ISerializer *serializer) {
 
     auto existingSerializer = _serializers.find(type);
     if(existingSerializer != end(_serializers)) {
-        LOG_TRACE(_logger, "Serializer for type {} already added", type);
+        ICHOR_LOG_TRACE(_logger, "Serializer for type {} already added", type);
         return;
     }
 
     _serializers.emplace(type, serializer);
-    LOG_TRACE(_logger, "Inserted serializer for type {}", type);
+    ICHOR_LOG_TRACE(_logger, "Inserted serializer for type {}", type);
 }
 
 void Ichor::SerializationAdmin::removeDependencyInstance(ISerializer *serializer) {
     if(!serializer->getProperties()->contains("type")) {
-        LOG_TRACE(_logger, "No type property for serializer {}", serializer->getServiceId());
+        ICHOR_LOG_TRACE(_logger, "No type property for serializer {}", serializer->getServiceId());
     }
 
     auto type = std::any_cast<uint64_t>(serializer->getProperties()->operator[]("type"));
 
     auto existingSerializer = _serializers.find(type);
     if(existingSerializer == end(_serializers)) {
-        LOG_TRACE(_logger, "Couldn't find serializer for type {} to remove", type);
+        ICHOR_LOG_TRACE(_logger, "Couldn't find serializer for type {} to remove", type);
         return;
     }
 
     _serializers.erase(type);
-    LOG_TRACE(_logger, "Removed serializer for type {}", type);
+    ICHOR_LOG_TRACE(_logger, "Removed serializer for type {}", type);
 }
