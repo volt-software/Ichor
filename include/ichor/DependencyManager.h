@@ -19,6 +19,7 @@
 #include <ichor/Filter.h>
 
 // prevent false positives by TSAN
+// See "ThreadSanitizer – data race detection in practice" by Serebryany et al. for more info: https://static.googleusercontent.com/media/research.google.com/en//pubs/archive/35604.pdf
 #if defined(__SANITIZE_THREAD__)
 #define TSAN_ENABLED
 #elif defined(__has_feature)
