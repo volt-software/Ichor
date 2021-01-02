@@ -13,7 +13,7 @@
 
 using namespace Ichor;
 
-class UsingHttpService final : public Service {
+class UsingHttpService final : public Service<UsingHttpService> {
 public:
     UsingHttpService(DependencyRegister &reg, IchorProperties props, DependencyManager *mng) : Service(std::move(props), mng) {
         reg.registerDependency<ILogger>(this, true);

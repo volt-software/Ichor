@@ -6,7 +6,7 @@
 #include <ichor/optional_bundles/logging_bundle/Logger.h>
 
 namespace Ichor {
-    class CoutLogger final : public ILogger, public Service {
+    class CoutLogger final : public ILogger, public Service<CoutLogger> {
     public:
         CoutLogger();
         bool start() final;

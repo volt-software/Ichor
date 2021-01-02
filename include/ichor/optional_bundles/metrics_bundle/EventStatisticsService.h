@@ -35,7 +35,7 @@ namespace Ichor {
         [[nodiscard]] virtual const std::unordered_map<uint64_t, std::vector<AveragedStatisticEntry>>& getAverageStatistics() const noexcept = 0;
     };
 
-    class EventStatisticsService final : public IEventStatisticsService, public Service {
+    class EventStatisticsService final : public IEventStatisticsService, public Service<EventStatisticsService> {
     public:
         ~EventStatisticsService() final = default;
 

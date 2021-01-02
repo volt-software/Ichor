@@ -12,7 +12,7 @@ using namespace Ichor;
 struct IUsingTimerService : virtual public IService {
 };
 
-class UsingTimerService final : public IUsingTimerService, public Service {
+class UsingTimerService final : public IUsingTimerService, public Service<UsingTimerService> {
 public:
     UsingTimerService(DependencyRegister &reg, IchorProperties props, DependencyManager *mng) : Service(std::move(props), mng) {
         reg.registerDependency<ILogger>(this, true);

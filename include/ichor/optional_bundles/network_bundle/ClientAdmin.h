@@ -8,14 +8,14 @@
 
 namespace Ichor {
     template <typename NetworkType, typename NetworkInterfaceType = IConnectionService>
-    class ClientAdmin final : public IClientAdmin, public Service {
+    class ClientAdmin final : public IClientAdmin, public Service<ClientAdmin<NetworkType, NetworkInterfaceType>> {
     public:
-        ClientAdmin(IchorProperties properties, DependencyManager *mng) : Service(std::move(properties), mng), _connections{mng->getMemoryResource()} {  }
+        ClientAdmin(IchorProperties properties, DependencyManager *mng) : Service<ClientAdmin<NetworkType, NetworkInterfaceType>>(std::move(properties), mng), _connections{mng->getMemoryResource()} {  }
         ~ClientAdmin() override = default;
 
         bool start() final {
-            _trackerRegistration = getManager()->template registerDependencyTracker<NetworkInterfaceType>(this);
-            _unrecoverableErrorRegistration = getManager()->template registerEventHandler<UnrecoverableErrorEvent>(this);
+            _trackerRegistration = Service<ClientAdmin<NetworkType, NetworkInterfaceType>>::getManager()->template registerDependencyTracker<NetworkInterfaceType>(this);
+            _unrecoverableErrorRegistration = Service<ClientAdmin<NetworkType, NetworkInterfaceType>>::getManager()->template registerEventHandler<UnrecoverableErrorEvent>(this);
 
             return false;
         }
@@ -43,7 +43,7 @@ namespace Ichor {
             newProps.emplace("Filter", Filter{ServiceIdFilterEntry{evt->originatingService}});
 
             if(!_connections.contains(evt->originatingService)) {
-                _connections.emplace(evt->originatingService, getManager()->template createServiceManager<NetworkType, NetworkInterfaceType>(newProps));
+                _connections.emplace(evt->originatingService, Service<ClientAdmin<NetworkType, NetworkInterfaceType>>::getManager()->template createServiceManager<NetworkType, NetworkInterfaceType>(std::move(newProps)));
             }
         }
 
@@ -51,7 +51,7 @@ namespace Ichor {
             auto connection = _connections.find(evt->originatingService);
 
             if(connection != end(_connections)) {
-                getManager()->template pushEvent<RemoveServiceEvent>(evt->originatingService, connection->second->getServiceId());
+                Service<ClientAdmin<NetworkType, NetworkInterfaceType>>::getManager()->template pushEvent<RemoveServiceEvent>(evt->originatingService, connection->second->getServiceId());
                 _connections.erase(connection);
             }
         }
@@ -68,7 +68,7 @@ namespace Ichor {
                 if(port != end(*service->getProperties())) {
                     full_address += ":" + std::to_string(std::any_cast<uint16_t>(port->second));
                 }
-                std::string_view implNameRequestor = getManager()->getImplementationNameFor(evt->originatingService).value();
+                std::string_view implNameRequestor = Service<ClientAdmin<NetworkType, NetworkInterfaceType>>::getManager()->getImplementationNameFor(evt->originatingService).value();
                 ICHOR_LOG_ERROR(_logger, "Couldn't start connection of type {} on address {} for service of type {} with id {} because \"{}\"", typeNameHash<NetworkType>(), full_address, implNameRequestor, service->getServiceId(), evt->error);
 
                 break;

@@ -13,7 +13,7 @@
 
 using namespace Ichor;
 
-class UsingWsService final : public Service {
+class UsingWsService final : public Service<UsingWsService> {
 public:
     UsingWsService(DependencyRegister &reg, IchorProperties props, DependencyManager *mng) : Service(std::move(props), mng) {
         reg.registerDependency<ILogger>(this, true);

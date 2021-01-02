@@ -23,6 +23,9 @@ namespace Ichor {
     template <class T, class U>
     concept Derived = std::is_base_of<U, T>::value;
 
+    template <class T, template <class> class U>
+    concept DerivedTemplated = std::is_base_of<U<T>, T>::value;
+
     template <class T, class... U>
     concept ImplementsAll = sizeof...(U) == 0 || DerivedTrait<T, U...>::value;
 

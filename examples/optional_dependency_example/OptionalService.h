@@ -11,7 +11,7 @@ using namespace Ichor;
 struct IOptionalService : virtual public IService {
 };
 
-class OptionalService final : public IOptionalService, public Service {
+class OptionalService final : public IOptionalService, public Service<OptionalService> {
 public:
     OptionalService(DependencyRegister &reg, IchorProperties props, DependencyManager *mng) : Service(std::move(props), mng) {
         reg.registerDependency<ILogger>(this, true);

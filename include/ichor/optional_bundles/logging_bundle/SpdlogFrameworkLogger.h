@@ -10,7 +10,7 @@
 
 namespace Ichor {
 
-    class SpdlogFrameworkLogger final : public IFrameworkLogger, public Service {
+    class SpdlogFrameworkLogger final : public IFrameworkLogger, public Service<SpdlogFrameworkLogger> {
     public:
         SpdlogFrameworkLogger(IchorProperties props, DependencyManager *mng);
         ~SpdlogFrameworkLogger() final = default;

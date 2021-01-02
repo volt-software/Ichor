@@ -11,7 +11,7 @@ using namespace Ichor;
 struct IRuntimeCreatedService : virtual public IService {
 };
 
-class RuntimeCreatedService final : public IRuntimeCreatedService, public Service {
+class RuntimeCreatedService final : public IRuntimeCreatedService, public Service<RuntimeCreatedService> {
 public:
     RuntimeCreatedService(DependencyRegister &reg, IchorProperties props, DependencyManager *mng) : Service(std::move(props), mng) {
         reg.registerDependency<ILogger>(this, true);

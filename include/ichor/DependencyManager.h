@@ -186,29 +186,26 @@ namespace Ichor {
     };
 
     struct DependencyTrackerInfo final {
-        DependencyTrackerInfo(uint64_t _trackingServiceId, std::function<void(Event const * const)> _trackFunc) noexcept : trackingServiceId(_trackingServiceId), trackFunc(std::move(_trackFunc)) {}
+        explicit DependencyTrackerInfo(std::function<void(Event const * const)> _trackFunc) noexcept : trackFunc(std::move(_trackFunc)) {}
         ~DependencyTrackerInfo() = default;
-        uint64_t trackingServiceId;
         std::function<void(Event const * const)> trackFunc;
     };
 
     class DependencyManager final {
     public:
-        template<Derived<Service> Impl, Derived<IService>... Interfaces>
+        template<DerivedTemplated<Service> Impl, Derived<IService>... Interfaces>
         requires ImplementsAll<Impl, Interfaces...>
-        auto createServiceManager(IchorProperties properties = IchorProperties{}, uint64_t priority = INTERNAL_EVENT_PRIORITY) {
+        auto createServiceManager(IchorProperties&& properties = IchorProperties{}, uint64_t priority = INTERNAL_EVENT_PRIORITY) {
             if constexpr(RequestsDependencies<Impl>) {
-                auto cmpMgr = DependencyLifecycleManager<Impl>::template create(_logger, "", std::move(properties), this, &_memResource, InterfacesList<Interfaces...>);
+                static_assert(!std::is_default_constructible_v<Impl>, "Cannot have a dependencies constructor and a default constructor simultaneously.");
+                static_assert(!RequestsProperties<Impl>, "Cannot have a dependencies constructor and a properties constructor simultaneously.");
+                auto cmpMgr = DependencyLifecycleManager<Impl>::template create(_logger, "", std::forward<IchorProperties>(properties), this, &_memResource, InterfacesList<Interfaces...>);
 
                 if constexpr (sizeof...(Interfaces) > 0) {
-                    if constexpr(ListContainsInterface<IFrameworkLogger, Interfaces...>::value) {
-                        throw std::runtime_error("IFrameworkLogger cannot have any dependencies");
-                    }
+                    static_assert(!ListContainsInterface<IFrameworkLogger, Interfaces...>::value, "IFrameworkLogger cannot have any dependencies");
                 }
 
                 logAddService<Impl, Interfaces...>();
-
-                cmpMgr->getService().injectDependencyManager(this);
 
                 for (auto &[key, mgr] : _services) {
                     if (mgr->getServiceState() == ServiceState::ACTIVE) {
@@ -245,7 +242,8 @@ namespace Ichor {
 
                 return &cmpMgr->getService();
             } else {
-                auto cmpMgr = LifecycleManager<Impl>::template create(_logger, "", std::move(properties), this, &_memResource, InterfacesList<Interfaces...>);
+                static_assert(!(std::is_default_constructible_v<Impl> && RequestsProperties<Impl>), "Cannot have a properties constructor and a default constructor simultaneously.");
+                auto cmpMgr = LifecycleManager<Impl>::template create(_logger, "", std::forward<IchorProperties>(properties), this, &_memResource, InterfacesList<Interfaces...>);
 
                 if constexpr (sizeof...(Interfaces) > 0) {
                     if constexpr (ListContainsInterface<IFrameworkLogger, Interfaces...>::value) {
@@ -324,7 +322,7 @@ namespace Ichor {
         }
 
         template <typename Interface, typename Impl>
-        requires Derived<Impl, Service> && ImplementsTrackingHandlers<Impl, Interface>
+        requires DerivedTemplated<Impl, Service> && ImplementsTrackingHandlers<Impl, Interface>
         [[nodiscard]]
         /// Register handlers for when dependencies get requested/unrequested
         /// \tparam Interface type of interface where dependency is requested for (has to derive from Event)
@@ -336,8 +334,8 @@ namespace Ichor {
             auto requestTrackersForType = _dependencyRequestTrackers.find(typeNameHash<Interface>());
             auto undoRequestTrackersForType = _dependencyUndoRequestTrackers.find(typeNameHash<Interface>());
 
-            DependencyTrackerInfo requestInfo{impl->getServiceId(), [impl](Event const * const evt){ impl->handleDependencyRequest(static_cast<Interface*>(nullptr), static_cast<DependencyRequestEvent const *>(evt)); }};
-            DependencyTrackerInfo undoRequestInfo{impl->getServiceId(), [impl](Event const * const evt){ impl->handleDependencyUndoRequest(static_cast<Interface*>(nullptr), static_cast<DependencyUndoRequestEvent const *>(evt)); }};
+            DependencyTrackerInfo requestInfo{[impl](Event const * const evt){ impl->handleDependencyRequest(static_cast<Interface*>(nullptr), static_cast<DependencyRequestEvent const *>(evt)); }};
+            DependencyTrackerInfo undoRequestInfo{[impl](Event const * const evt){ impl->handleDependencyUndoRequest(static_cast<Interface*>(nullptr), static_cast<DependencyUndoRequestEvent const *>(evt)); }};
 
             std::vector<DependencyRequestEvent> requests;
             for(auto const &[key, mgr] : _services) {

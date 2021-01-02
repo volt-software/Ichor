@@ -7,7 +7,7 @@
 #include <ichor/LifecycleManager.h>
 #include <ichor/optional_bundles/pubsub_bundle/PubsubZmqAdmin.h>
 
-class PubsubAdminZmqService : public IPubsubAdminService, public Service {
+class PubsubAdminZmqService final : public IPubsubAdminService, public Service<PubsubAdminZmqService {
 public:
     ~PubsubAdminZmqService() final = default;
 

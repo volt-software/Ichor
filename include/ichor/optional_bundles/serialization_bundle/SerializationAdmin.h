@@ -7,7 +7,7 @@
 
 namespace Ichor {
 
-    class SerializationAdmin final : public ISerializationAdmin, public Service {
+    class SerializationAdmin final : public ISerializationAdmin, public Service<SerializationAdmin> {
     public:
         SerializationAdmin(DependencyRegister &reg, IchorProperties props, DependencyManager *mng);
         ~SerializationAdmin() final = default;

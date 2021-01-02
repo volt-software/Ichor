@@ -11,7 +11,7 @@ using namespace Ichor;
 struct ITestService : virtual public IService {
 };
 
-class TestService final : public ITestService, public Service {
+class TestService final : public ITestService, public Service<TestService> {
 public:
     TestService(DependencyRegister &reg, IchorProperties props, DependencyManager *mng) : Service(std::move(props), mng) {
         reg.registerDependency<ILogger>(this, true);

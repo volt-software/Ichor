@@ -14,7 +14,7 @@ namespace net = boost::asio;            // from <boost/asio.hpp>
 using tcp = boost::asio::ip::tcp;       // from <boost/asio/ip/tcp.hpp>
 
 namespace Ichor {
-    class HttpConnectionService final : public IHttpConnectionService, public Service {
+    class HttpConnectionService final : public IHttpConnectionService, public Service<HttpConnectionService> {
     public:
         HttpConnectionService(DependencyRegister &reg, IchorProperties props, DependencyManager *mng);
         ~HttpConnectionService() final = default;

@@ -13,7 +13,7 @@
 
 using namespace Ichor;
 
-class UsingTcpService final : public Service {
+class UsingTcpService final : public Service<UsingTcpService> {
 public:
     UsingTcpService(DependencyRegister &reg, IchorProperties props, DependencyManager *mng) : Service(std::move(props), mng) {
         reg.registerDependency<ILogger>(this, true);

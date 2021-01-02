@@ -8,7 +8,7 @@
 
 using namespace Ichor;
 
-class UsingEtcdService final : public Service {
+class UsingEtcdService final : public Service<UsingEtcdService> {
 public:
     UsingEtcdService(DependencyRegister &reg, IchorProperties props, DependencyManager *mng) : Service(std::move(props), mng) {
         reg.registerDependency<ILogger>(this, true);

@@ -10,7 +10,7 @@
 namespace Ichor {
 
     // Rather shoddy implementation, setting the interval does not reset the insertEventLoop function and the sleep_for is sketchy at best.
-    class Timer final : public ITimer, public Service {
+    class Timer final : public ITimer, public Service<Timer> {
     public:
         Timer() noexcept : _intervalNanosec(0), _eventInsertionThread(nullptr), _quit(true), _priority(INTERNAL_EVENT_PRIORITY) {
         }

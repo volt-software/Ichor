@@ -8,7 +8,7 @@
 
 namespace Ichor {
 
-    class CoutFrameworkLogger final : public IFrameworkLogger, public Service {
+    class CoutFrameworkLogger final : public IFrameworkLogger, public Service<CoutFrameworkLogger> {
     public:
         CoutFrameworkLogger();
         ~CoutFrameworkLogger() final = default;

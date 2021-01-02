@@ -101,7 +101,7 @@ namespace Ichor {
 
     class DependencyRegister final {
     public:
-        template<Derived<IService> Interface, Derived<Service> Impl>
+        template<Derived<IService> Interface, DerivedTemplated<Service> Impl>
         void registerDependency(Impl *svc, bool required, std::optional<IchorProperties> props = {}) {
             if(_registrations.contains(typeNameHash<Interface>())) {
                 throw std::runtime_error("Already registered interface");
@@ -145,7 +145,7 @@ namespace Ichor {
     };
 
     template<class ServiceType>
-    requires Derived<ServiceType, Service>
+    requires DerivedTemplated<ServiceType, Service>
     class DependencyLifecycleManager final : public ILifecycleManager {
     public:
         explicit ICHOR_CONSTEXPR DependencyLifecycleManager(IFrameworkLogger *logger, std::string_view name, std::vector<Dependency> interfaces, IchorProperties properties, DependencyManager *mng) : _implementationName(name), _interfaces(std::move(interfaces)), _registry(), _dependencies(), _satisfiedDependencies(), _service(_registry, std::move(properties), mng), _logger(logger) {
@@ -172,8 +172,7 @@ namespace Ichor {
             std::vector<Dependency> interfaces;
             interfaces.reserve(sizeof...(Interfaces));
             (interfaces.emplace_back(typeNameHash<Interfaces>(), false),...);
-            auto mgr = std::allocate_shared<DependencyLifecycleManager<ServiceType>, std::pmr::polymorphic_allocator<>>(memResource, logger, name, std::move(interfaces), std::move(properties), mng);
-            return mgr;
+            return std::allocate_shared<DependencyLifecycleManager<ServiceType>, std::pmr::polymorphic_allocator<>>(memResource, logger, name, std::move(interfaces), std::move(properties), mng);
         }
 
         ICHOR_CONSTEXPR bool dependencyOnline(ILifecycleManager* dependentService) final {
@@ -314,7 +313,7 @@ namespace Ichor {
     };
 
     template<class ServiceType>
-    requires Derived<ServiceType, Service>
+    requires DerivedTemplated<ServiceType, Service>
     class LifecycleManager final : public ILifecycleManager {
     public:
         template <typename U = ServiceType> requires RequestsProperties<U>
@@ -338,8 +337,7 @@ namespace Ichor {
             std::vector<Dependency> interfaces;
             interfaces.reserve(sizeof...(Interfaces));
             (interfaces.emplace_back(typeNameHash<Interfaces>(), false),...);
-            auto mgr = std::allocate_shared<LifecycleManager<ServiceType>, std::pmr::polymorphic_allocator<>>(memResource, logger, name, std::move(interfaces), std::move(properties), mng);
-            return mgr;
+            return std::allocate_shared<LifecycleManager<ServiceType>, std::pmr::polymorphic_allocator<>>(memResource, logger, name, std::move(interfaces), std::move(properties), mng);
         }
 
         ICHOR_CONSTEXPR bool dependencyOnline(ILifecycleManager* dependentService) final {

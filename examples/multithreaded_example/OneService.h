@@ -9,7 +9,7 @@
 
 using namespace Ichor;
 
-class OneService final : public Service {
+class OneService final : public Service<OneService> {
 public:
     OneService(DependencyRegister &reg, IchorProperties props, DependencyManager *mng) : Service(std::move(props), mng) {
         reg.registerDependency<ILogger>(this, true);

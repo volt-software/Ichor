@@ -17,7 +17,7 @@ namespace Ichor {
         ~ISpdlogSharedService() override = default;
     };
 
-    class SpdlogSharedService final : public ISpdlogSharedService, public Service {
+    class SpdlogSharedService final : public ISpdlogSharedService, public Service<SpdlogSharedService> {
     public:
         bool start() final;
         bool stop() final;

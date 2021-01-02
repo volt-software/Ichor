@@ -24,7 +24,7 @@ public:
     const std::string scope;
 };
 
-class TrackerService final : public Service {
+class TrackerService final : public Service<TrackerService> {
 public:
     TrackerService(DependencyRegister &reg, IchorProperties props, DependencyManager *mng) : Service(std::move(props), mng) {
         reg.registerDependency<ILogger>(this, true);
@@ -74,7 +74,7 @@ public:
             auto newProps = *evt->properties.value();
             newProps.emplace("Filter", Filter{ScopeFilterEntry{scope}});
 
-            _scopedRuntimeServices.emplace(scope, getManager()->createServiceManager<RuntimeCreatedService, IRuntimeCreatedService>(newProps));
+            _scopedRuntimeServices.emplace(scope, getManager()->createServiceManager<RuntimeCreatedService, IRuntimeCreatedService>(std::move(newProps)));
         }
     }
 

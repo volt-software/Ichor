@@ -6,7 +6,7 @@
 #include <thread>
 
 namespace Ichor {
-    class EtcdService final : public IEtcdService, public Service {
+    class EtcdService final : public IEtcdService, public Service<EtcdService> {
     public:
         EtcdService(DependencyRegister &reg, IchorProperties props, DependencyManager *mng);
         ~EtcdService() final = default;

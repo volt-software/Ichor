@@ -8,7 +8,7 @@
 
 using namespace Ichor;
 
-class OtherService final : public Service {
+class OtherService final : public Service<OtherService> {
 public:
     OtherService(DependencyRegister &reg, IchorProperties props, DependencyManager *mng) : Service(std::move(props), mng) {
         reg.registerDependency<ILogger>(this, true);
