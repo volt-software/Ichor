@@ -10,7 +10,6 @@
 #include <atomic>
 #include <csignal>
 #include <condition_variable>
-#include <memory_resource>
 #include <ichor/interfaces/IFrameworkLogger.h>
 #include <ichor/Service.h>
 #include <ichor/LifecycleManager.h>

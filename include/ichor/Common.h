@@ -4,6 +4,7 @@
 #include <any>
 #include <string_view>
 #include <unordered_map>
+#include <memory_resource>
 
 #if __cpp_lib_constexpr_string >= 201907L
 #if __cpp_lib_constexpr_vector >= 201907L

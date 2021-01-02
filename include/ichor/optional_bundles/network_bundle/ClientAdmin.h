@@ -10,7 +10,7 @@ namespace Ichor {
     template <typename NetworkType, typename NetworkInterfaceType = IConnectionService>
     class ClientAdmin final : public IClientAdmin, public Service {
     public:
-        ClientAdmin() = default;
+        ClientAdmin(IchorProperties properties, DependencyManager *mng) : Service(std::move(properties), mng), _connections{mng->getMemoryResource()} {  }
         ~ClientAdmin() override = default;
 
         bool start() final {
@@ -80,7 +80,7 @@ namespace Ichor {
 
     private:
         ILogger *_logger{nullptr};
-        std::unordered_map<uint64_t, NetworkInterfaceType*> _connections{};
+        std::pmr::unordered_map<uint64_t, NetworkInterfaceType*> _connections;
         std::unique_ptr<DependencyTrackerRegistration> _trackerRegistration{nullptr};
         std::unique_ptr<EventHandlerRegistration> _unrecoverableErrorRegistration{nullptr};
     };

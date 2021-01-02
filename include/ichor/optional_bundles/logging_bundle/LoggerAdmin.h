@@ -12,7 +12,7 @@ namespace Ichor {
     template<typename LogT>
     class LoggerAdmin final : public ILoggerAdmin, public Service {
     public:
-        LoggerAdmin(DependencyRegister &reg, IchorProperties props, DependencyManager *mng) : Service(std::move(props), mng) {
+        LoggerAdmin(DependencyRegister &reg, IchorProperties props, DependencyManager *mng) : Service(std::move(props), mng), _loggers(mng->getMemoryResource()) {
             reg.registerDependency<IFrameworkLogger>(this, true);
         }
         ~LoggerAdmin() final = default;
@@ -62,7 +62,7 @@ namespace Ichor {
 
     private:
         IFrameworkLogger *_logger{nullptr};
-        std::unique_ptr<DependencyTrackerRegistration> _loggerTrackerRegistration;
-        std::unordered_map<uint64_t, LogT*> _loggers;
+        std::unique_ptr<DependencyTrackerRegistration> _loggerTrackerRegistration{};
+        std::pmr::unordered_map<uint64_t, LogT*> _loggers;
     };
 }

@@ -123,11 +123,11 @@ namespace Ichor {
         ///
         /// \param dependentService
         /// \return true if dependency is registered in service, false if not
-        ICHOR_CONSTEXPR virtual bool dependencyOnline(ILifecycleManager*dependentService) = 0;
+        ICHOR_CONSTEXPR virtual bool dependencyOnline(ILifecycleManager* dependentService) = 0;
         ///
         /// \param dependentService
         /// \return true if dependency is registered in service, false if not
-        ICHOR_CONSTEXPR virtual bool dependencyOffline(ILifecycleManager*dependentService) = 0;
+        ICHOR_CONSTEXPR virtual bool dependencyOffline(ILifecycleManager* dependentService) = 0;
         [[nodiscard]] ICHOR_CONSTEXPR virtual bool start() = 0;
         [[nodiscard]] ICHOR_CONSTEXPR virtual bool stop() = 0;
         [[nodiscard]] ICHOR_CONSTEXPR virtual std::string_view implementationName() const noexcept = 0;
@@ -176,7 +176,7 @@ namespace Ichor {
             return mgr;
         }
 
-        ICHOR_CONSTEXPR bool dependencyOnline(ILifecycleManager*dependentService) final {
+        ICHOR_CONSTEXPR bool dependencyOnline(ILifecycleManager* dependentService) final {
             bool interested = false;
             auto const &interfaces = dependentService->getInterfaces();
             for(auto const &interface : interfaces) {
@@ -195,7 +195,7 @@ namespace Ichor {
             return interested;
         }
 
-        ICHOR_CONSTEXPR void injectIntoSelf(uint64_t keyOfInterfaceToInject, ILifecycleManager*dependentService) {
+        ICHOR_CONSTEXPR void injectIntoSelf(uint64_t keyOfInterfaceToInject, ILifecycleManager* dependentService) {
             auto dep = _registry._registrations.find(keyOfInterfaceToInject);
 
             if(dep != end(_registry._registrations)) {
@@ -203,7 +203,7 @@ namespace Ichor {
             }
         }
 
-        ICHOR_CONSTEXPR bool dependencyOffline(ILifecycleManager*dependentService) final {
+        ICHOR_CONSTEXPR bool dependencyOffline(ILifecycleManager* dependentService) final {
             auto const &interfaces = dependentService->getInterfaces();
             bool interested = false;
 
@@ -224,7 +224,7 @@ namespace Ichor {
             return interested;
         }
 
-        ICHOR_CONSTEXPR void removeSelfInto(uint64_t keyOfInterfaceToInject, ILifecycleManager*dependentService) {
+        ICHOR_CONSTEXPR void removeSelfInto(uint64_t keyOfInterfaceToInject, ILifecycleManager* dependentService) {
             auto dep = _registry._registrations.find(keyOfInterfaceToInject);
 
             if(dep != end(_registry._registrations)) {
@@ -342,11 +342,11 @@ namespace Ichor {
             return mgr;
         }
 
-        ICHOR_CONSTEXPR bool dependencyOnline(ILifecycleManager*dependentService) final {
+        ICHOR_CONSTEXPR bool dependencyOnline(ILifecycleManager* dependentService) final {
             return false;
         }
 
-        ICHOR_CONSTEXPR bool dependencyOffline(ILifecycleManager*dependentService) final {
+        ICHOR_CONSTEXPR bool dependencyOffline(ILifecycleManager* dependentService) final {
             return false;
         }
 

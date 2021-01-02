@@ -24,7 +24,7 @@ namespace Ichor {
         bool stop() final;
     private:
 
-        std::unordered_map<uint64_t, ISerializer*> _serializers{};
+        std::pmr::unordered_map<uint64_t, ISerializer*> _serializers;
         ILogger *_logger{nullptr};
     };
 }
