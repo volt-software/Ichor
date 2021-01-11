@@ -540,6 +540,7 @@ namespace Ichor {
         }
 
         std::pmr::unsynchronized_pool_resource _memResource{};
+        std::pmr::unsynchronized_pool_resource _eventMemResource{}; // cannot be shared with _memResource, as that would introduce threading issues
         std::pmr::unordered_map<uint64_t, std::shared_ptr<ILifecycleManager>> _services{&_memResource}; // key = service id
         std::pmr::unordered_map<uint64_t, std::pmr::vector<DependencyTrackerInfo>> _dependencyRequestTrackers{&_memResource}; // key = interface name hash
         std::pmr::unordered_map<uint64_t, std::pmr::vector<DependencyTrackerInfo>> _dependencyUndoRequestTrackers{&_memResource}; // key = interface name hash
@@ -549,7 +550,7 @@ namespace Ichor {
         std::pmr::unordered_map<uint64_t, std::pmr::vector<EventInterceptInfo>> _eventInterceptors{&_memResource}; // key = event id
         IFrameworkLogger *_logger{nullptr};
         std::shared_ptr<ILifecycleManager> _preventEarlyDestructionOfFrameworkLogger{nullptr};
-        std::pmr::multimap<uint64_t, EventStackUniquePtr> _eventQueue{&_memResource};
+        std::pmr::multimap<uint64_t, EventStackUniquePtr> _eventQueue{&_eventMemResource};
         std::mutex _eventQueueMutex{};
         std::condition_variable _wakeUp{};
         std::atomic<uint64_t> _eventIdCounter{0};
