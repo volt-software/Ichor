@@ -58,7 +58,7 @@ namespace Ichor {
         std::atomic<bool> _connecting{};
         std::atomic<bool> _quit{};
         std::atomic<bool> _sendStrandDone{};
-        std::mutex _queueMutex{};
+        RealtimeMutex _queueMutex{};
         std::thread _connectThread{};
         ILogger *_logger{nullptr};
     };

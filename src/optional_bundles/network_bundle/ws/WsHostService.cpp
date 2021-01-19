@@ -158,7 +158,7 @@ void Ichor::WsHostService::listen(tcp::endpoint endpoint, net::yield_context yie
 
     while(!_quit.load(std::memory_order_acquire))
     {
-        auto socket = tcp::socket(*_wsContext);
+        tcp::socket socket(*_wsContext);
 
         // tcp accept new connections
         _wsAcceptor->async_accept(socket, yield[ec]);
