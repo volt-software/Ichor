@@ -16,6 +16,7 @@
 #include <ichor/Events.h>
 #include <ichor/Callback.h>
 #include <ichor/Filter.h>
+#include <ichor/RealtimeMutex.h>
 
 // prevent false positives by TSAN
 // See "ThreadSanitizer – data race detection in practice" by Serebryany et al. for more info: https://static.googleusercontent.com/media/research.google.com/en//pubs/archive/35604.pdf
@@ -551,8 +552,8 @@ namespace Ichor {
         IFrameworkLogger *_logger{nullptr};
         std::shared_ptr<ILifecycleManager> _preventEarlyDestructionOfFrameworkLogger{nullptr};
         std::pmr::multimap<uint64_t, EventStackUniquePtr> _eventQueue{&_eventMemResource};
-        std::mutex _eventQueueMutex{};
-        std::condition_variable _wakeUp{};
+        RealtimeMutex _eventQueueMutex{};
+        std::condition_variable_any _wakeUp{};
         std::atomic<uint64_t> _eventIdCounter{0};
         std::atomic<bool> _quit{false};
         CommunicationChannel *_communicationChannel{nullptr};
