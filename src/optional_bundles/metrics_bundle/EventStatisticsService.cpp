@@ -2,11 +2,11 @@
 
 bool Ichor::EventStatisticsService::start() {
     if(getProperties()->contains("ShowStatisticsOnStop")) {
-        _showStatisticsOnStop = std::any_cast<bool>(getProperties()->operator[]("ShowStatisticsOnStop"));
+        _showStatisticsOnStop = Ichor::any_cast<bool>(getProperties()->operator[]("ShowStatisticsOnStop"));
     }
 
     if(getProperties()->contains("AveragingIntervalMs")) {
-        _averagingIntervalMs = std::any_cast<uint64_t>(getProperties()->operator[]("AveragingIntervalMs"));
+        _averagingIntervalMs = Ichor::any_cast<uint64_t>(getProperties()->operator[]("AveragingIntervalMs"));
     } else {
         _averagingIntervalMs = 500;
     }
@@ -21,7 +21,8 @@ bool Ichor::EventStatisticsService::start() {
 }
 
 bool Ichor::EventStatisticsService::stop() {
-    _timerEventRegistration = nullptr;
+    _timerEventRegistration.reset();
+    _interceptorRegistration.reset();
 
     if(_showStatisticsOnStop) {
         // handle last bit of stored statistics by emulating a handleEvent call

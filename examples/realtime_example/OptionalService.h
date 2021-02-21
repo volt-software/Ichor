@@ -8,24 +8,23 @@
 using namespace Ichor;
 
 
-struct IRuntimeCreatedService : virtual public IService {
+struct IOptionalService : virtual public IService {
 };
 
-class RuntimeCreatedService final : public IRuntimeCreatedService, public Service<RuntimeCreatedService> {
+class OptionalService final : public IOptionalService, public Service<OptionalService> {
 public:
-    RuntimeCreatedService(DependencyRegister &reg, IchorProperties props, DependencyManager *mng) : Service(std::move(props), mng) {
+    OptionalService(DependencyRegister &reg, IchorProperties props, DependencyManager *mng) : Service(std::move(props), mng) {
         reg.registerDependency<ILogger>(this, true);
     }
 
-    ~RuntimeCreatedService() final = default;
+    ~OptionalService() final = default;
     bool start() final {
-        auto const& scope = Ichor::any_cast<std::string&>(_properties["scope"]);
-        ICHOR_LOG_INFO(_logger, "RuntimeCreatedService started with scope {}", scope);
+        ICHOR_LOG_INFO(_logger, "OptionalService {} started", getServiceId());
         return true;
     }
 
     bool stop() final {
-        ICHOR_LOG_INFO(_logger, "RuntimeCreatedService stopped");
+        ICHOR_LOG_INFO(_logger, "OptionalService {} stopped", getServiceId());
         return true;
     }
 

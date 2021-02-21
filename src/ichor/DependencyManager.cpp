@@ -1,8 +1,8 @@
 #define SPDLOG_ACTIVE_LEVEL SPDLOG_LEVEL_INFO
 
 #include <ichor/DependencyManager.h>
-#include <ichor/Callback.h>
 #include <ichor/CommunicationChannel.h>
+#include <ichor/stl/Any.h>
 
 #if !__has_include(<spdlog/spdlog.h>)
 #define SPDLOG_DEBUG(x)
@@ -17,6 +17,8 @@ void on_sigint([[maybe_unused]] int sig) {
     sigintQuit.store(true, std::memory_order_release);
 }
 
+
+
 void Ichor::DependencyManager::start() {
     assert(_logger != nullptr);
     ICHOR_LOG_DEBUG(_logger, "starting dm");
@@ -24,6 +26,8 @@ void Ichor::DependencyManager::start() {
     ::signal(SIGINT, on_sigint);
 
     ICHOR_LOG_TRACE(_logger, "depman {} has {} events", _id, _eventQueue.size());
+
+    _started = true;
 
 #ifdef __linux__
     pthread_setname_np(pthread_self(), fmt::format("DepMan #{}", _id).c_str());
@@ -77,10 +81,10 @@ void Ichor::DependencyManager::start() {
                         auto filterProp = manager->getProperties()->find("Filter");
                         const Filter *filter = nullptr;
                         if (filterProp != end(*manager->getProperties())) {
-                            filter = std::any_cast<const Filter>(&filterProp->second);
+                            filter = Ichor::any_cast<Filter * const>(&filterProp->second);
                         }
 
-                        std::vector<ILifecycleManager*> interestedManagers{};
+                        std::pmr::vector<ILifecycleManager*> interestedManagers{_memResource};
                         interestedManagers.reserve(_services.size());
                         for (auto const &[key, possibleDependentLifecycleManager] : _services) {
                             if (filter != nullptr && !filter->compareTo(possibleDependentLifecycleManager)) {
@@ -113,10 +117,10 @@ void Ichor::DependencyManager::start() {
                         auto filterProp = manager->getProperties()->find("Filter");
                         const Filter *filter = nullptr;
                         if (filterProp != end(*manager->getProperties())) {
-                            filter = std::any_cast<const Filter>(&filterProp->second);
+                            filter = Ichor::any_cast<Filter * const>(&filterProp->second);
                         }
 
-                        std::vector<ILifecycleManager*> interestedManagers{};
+                        std::pmr::vector<ILifecycleManager*> interestedManagers{_memResource};
                         interestedManagers.reserve(_services.size());
                         for (auto const &[key, possibleDependentLifecycleManager] : _services) {
                             if (filter != nullptr && !filter->compareTo(possibleDependentLifecycleManager)) {
@@ -362,6 +366,8 @@ void Ichor::DependencyManager::start() {
     if(_communicationChannel != nullptr) {
         _communicationChannel->removeManager(this);
     }
+
+    _started = false;
 }
 
 void Ichor::DependencyManager::handleEventCompletion(const Ichor::Event *const evt) const  {

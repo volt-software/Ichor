@@ -1,7 +1,7 @@
 #include <ichor/optional_bundles/serialization_bundle/SerializationAdmin.h>
 #include <ichor/DependencyManager.h>
 
-Ichor::SerializationAdmin::SerializationAdmin(DependencyRegister &reg, IchorProperties props, DependencyManager *mng) : Service(std::move(props), mng), _serializers(mng->getMemoryResource()) {
+Ichor::SerializationAdmin::SerializationAdmin(DependencyRegister &reg, IchorProperties props, DependencyManager *mng) : Service(std::move(props), mng), _serializers(getMemoryResource()) {
     reg.registerDependency<ILogger>(this, true);
     reg.registerDependency<ISerializer>(this, false);
 }
@@ -47,7 +47,7 @@ void Ichor::SerializationAdmin::addDependencyInstance(ISerializer *serializer) {
         return;
     }
 
-    auto type = std::any_cast<uint64_t>(serializer->getProperties()->operator[]("type"));
+    auto type = Ichor::any_cast<uint64_t>(serializer->getProperties()->operator[]("type"));
 
     auto existingSerializer = _serializers.find(type);
     if(existingSerializer != end(_serializers)) {
@@ -64,7 +64,7 @@ void Ichor::SerializationAdmin::removeDependencyInstance(ISerializer *serializer
         ICHOR_LOG_TRACE(_logger, "No type property for serializer {}", serializer->getServiceId());
     }
 
-    auto type = std::any_cast<uint64_t>(serializer->getProperties()->operator[]("type"));
+    auto type = Ichor::any_cast<uint64_t>(serializer->getProperties()->operator[]("type"));
 
     auto existingSerializer = _serializers.find(type);
     if(existingSerializer == end(_serializers)) {

@@ -23,9 +23,13 @@ int main() {
 
     auto start = std::chrono::steady_clock::now();
 
+    std::pmr::unsynchronized_pool_resource resourceOne{};
+    std::pmr::unsynchronized_pool_resource resourceTwo{};
+    std::pmr::unsynchronized_pool_resource resourceThree{};
+    std::pmr::unsynchronized_pool_resource resourceFour{};
     CommunicationChannel channel{};
-    DependencyManager dmOne{};
-    DependencyManager dmTwo{};
+    DependencyManager dmOne{&resourceOne, &resourceTwo};
+    DependencyManager dmTwo{&resourceThree, &resourceFour};
     channel.addManager(&dmOne);
     channel.addManager(&dmTwo);
 
@@ -57,7 +61,7 @@ int main() {
     t2.join();
 
     auto end = std::chrono::steady_clock::now();
-    std::cout << fmt::format("Program ran for {:L} µs\n", std::chrono::duration_cast<std::chrono::microseconds>(end-start).count());
+    fmt::print("Program ran for {:L} µs\n", std::chrono::duration_cast<std::chrono::microseconds>(end-start).count());
 
     return 0;
 }

@@ -23,7 +23,9 @@ int main() {
 
     {
         auto start = std::chrono::steady_clock::now();
-        DependencyManager dm{};
+        std::pmr::unsynchronized_pool_resource resourceOne{};
+        std::pmr::unsynchronized_pool_resource resourceTwo{};
+        DependencyManager dm{&resourceOne, &resourceTwo};
         auto logMgr = dm.createServiceManager<FRAMEWORK_LOGGER_TYPE, IFrameworkLogger>({}, 10);
         logMgr->setLogLevel(LogLevel::INFO);
 
@@ -40,30 +42,36 @@ int main() {
         std::cout << fmt::format("Single Threaded Program ran for {:L} µs with {:L} peak memory usage\n", std::chrono::duration_cast<std::chrono::microseconds>(end - start).count(), getPeakRSS());
     }
 
-    auto start = std::chrono::steady_clock::now();
-    std::array<std::thread, 8> threads{};
-    std::array<DependencyManager, 8> managers{};
-    for(uint_fast32_t i = 0; i < 8; i++) {
-        threads[i] = std::thread([&managers, i] {
-            auto logMgr = managers[i].createServiceManager<FRAMEWORK_LOGGER_TYPE, IFrameworkLogger>({}, 10);
-            logMgr->setLogLevel(LogLevel::INFO);
+    std::array<std::pmr::unsynchronized_pool_resource, 16> memoryAllocators{};
+    {
+        auto start = std::chrono::steady_clock::now();
+        std::array<std::thread, 8> threads{};
+        std::vector<DependencyManager> managers{};
+        managers.reserve(8);
+        for (uint_fast32_t i = 0, j = 0; i < 8; i++, j += 2) {
+            managers.emplace_back(&memoryAllocators[j], &memoryAllocators[j + 1]);
+            threads[i] = std::thread([&managers, i] {
+                auto logMgr = managers[i].createServiceManager<FRAMEWORK_LOGGER_TYPE, IFrameworkLogger>({}, 10);
+                logMgr->setLogLevel(LogLevel::INFO);
 
 #ifdef USE_SPDLOG
-            managers[i].createServiceManager<SpdlogSharedService, ISpdlogSharedService>();
+                managers[i].createServiceManager<SpdlogSharedService, ISpdlogSharedService>();
 #endif
 
-            managers[i].createServiceManager<LoggerAdmin<LOGGER_TYPE>, ILoggerAdmin>();
-            managers[i].createServiceManager<SerializationAdmin, ISerializationAdmin>();
-            managers[i].createServiceManager<TestMsgJsonSerializer, ISerializer>();
-            managers[i].createServiceManager<TestService>();
-            managers[i].start();
-        });
+                managers[i].createServiceManager<LoggerAdmin<LOGGER_TYPE>, ILoggerAdmin>();
+                managers[i].createServiceManager<SerializationAdmin, ISerializationAdmin>();
+                managers[i].createServiceManager<TestMsgJsonSerializer, ISerializer>();
+                managers[i].createServiceManager<TestService>();
+                managers[i].start();
+            });
+        }
+        for (uint_fast32_t i = 0; i < 8; i++) {
+            threads[i].join();
+        }
+        auto end = std::chrono::steady_clock::now();
+        std::cout << fmt::format("Multi Threaded program ran for {:L} µs with {:L} peak memory usage\n",
+                                 std::chrono::duration_cast<std::chrono::microseconds>(end - start).count(), getPeakRSS());
     }
-    for(uint_fast32_t i = 0; i < 8; i++) {
-        threads[i].join();
-    }
-    auto end = std::chrono::steady_clock::now();
-    std::cout << fmt::format("Multi Threaded program ran for {:L} µs with {:L} peak memory usage\n", std::chrono::duration_cast<std::chrono::microseconds>(end - start).count(), getPeakRSS());
 
     return 0;
 }

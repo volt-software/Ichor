@@ -39,6 +39,6 @@ namespace Ichor {
         std::thread _listenThread;
         ILogger *_logger{nullptr};
         std::vector<TcpConnectionService*> _connections;
-        std::unique_ptr<EventHandlerRegistration> _newSocketEventHandlerRegistration;
+        std::unique_ptr<EventHandlerRegistration, Deleter> _newSocketEventHandlerRegistration{nullptr};
     };
 }

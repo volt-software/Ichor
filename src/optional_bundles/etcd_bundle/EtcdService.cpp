@@ -16,7 +16,7 @@ bool Ichor::EtcdService::start() {
         throw std::runtime_error("Missing EtcdAddress");
     }
 
-    _channel = grpc::CreateChannel(std::any_cast<std::string>(addressProp->second), grpc::InsecureChannelCredentials());
+    _channel = grpc::CreateChannel(Ichor::any_cast<std::string>(addressProp->second), grpc::InsecureChannelCredentials());
     _stub = etcdserverpb::KV::NewStub(_channel);
     return true;
 }

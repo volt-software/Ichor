@@ -25,7 +25,7 @@ public:
     }
 
     bool stop() final {
-        _timerEventRegistration = nullptr;
+        _timerEventRegistration.reset();
         _timerManager = nullptr;
         ICHOR_LOG_INFO(_logger, "UsingTimerService stopped");
         return true;
@@ -51,7 +51,7 @@ public:
 
 private:
     ILogger *_logger{nullptr};
-    std::unique_ptr<EventHandlerRegistration> _timerEventRegistration{nullptr};
+    std::unique_ptr<EventHandlerRegistration, Deleter> _timerEventRegistration{nullptr};
     uint64_t _timerTriggerCount{0};
     Timer* _timerManager{nullptr};
 };

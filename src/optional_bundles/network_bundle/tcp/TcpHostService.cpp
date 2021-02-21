@@ -14,7 +14,7 @@ Ichor::TcpHostService::TcpHostService(DependencyRegister &reg, IchorProperties p
 
 bool Ichor::TcpHostService::start() {
     if(getProperties()->contains("Priority")) {
-        _priority = std::any_cast<uint64_t>(getProperties()->operator[]("Priority"));
+        _priority = Ichor::any_cast<uint64_t>(getProperties()->operator[]("Priority"));
     }
 
     _newSocketEventHandlerRegistration = getManager()->registerEventHandler<NewSocketEvent>(this);
@@ -35,7 +35,7 @@ bool Ichor::TcpHostService::start() {
     auto addressProp = getProperties()->find("Address");
 
     if(addressProp != end(*getProperties())) {
-        auto hostname = std::any_cast<std::string>(addressProp->second);
+        auto hostname = Ichor::any_cast<std::string>(addressProp->second);
         if(::inet_aton(hostname.c_str(), &address.sin_addr) != 0) {
             getManager()->pushEvent<RecoverableErrorEvent>(getServiceId(), 1, "inet_aton: errno = " + std::to_string(errno));
             auto hp = ::gethostbyname(hostname.c_str());
@@ -51,7 +51,7 @@ bool Ichor::TcpHostService::start() {
     } else {
         address.sin_addr.s_addr = INADDR_ANY;
     }
-    address.sin_port = ::htons(std::any_cast<uint16_t>((*getProperties())["Port"]));
+    address.sin_port = ::htons(Ichor::any_cast<uint16_t>((*getProperties())["Port"]));
 
     _bindFd = ::bind(_socket, (sockaddr *)&address, sizeof(address));
 
@@ -105,6 +105,7 @@ bool Ichor::TcpHostService::stop() {
     }
 
     _listenThread.join();
+    _newSocketEventHandlerRegistration.reset();
 
     return true;
 }
@@ -127,7 +128,10 @@ uint64_t Ichor::TcpHostService::getPriority() {
 }
 
 Ichor::Generator<bool> Ichor::TcpHostService::handleEvent(NewSocketEvent const * const evt) {
-    _connections.emplace_back(getManager()->template createServiceManager<TcpConnectionService, IConnectionService>(IchorProperties{{"Priority", _priority.load(std::memory_order_acquire)}, {"Socket", evt->socket}}));
+    IchorProperties props{};
+    props.emplace("Priority", Ichor::make_any<bool>(getMemoryResource(), _priority.load(std::memory_order_acquire)));
+    props.emplace("Socket", Ichor::make_any<int>(getMemoryResource(), evt->socket));
+    _connections.emplace_back(getManager()->template createServiceManager<TcpConnectionService, IConnectionService>(std::move(props)));
 
     co_return (bool)AllowOthersHandling;
 }

@@ -12,7 +12,7 @@ bool Ichor::HttpConnectionService::start() {
     if(!_quit && !_connecting && !_connected) {
         ICHOR_LOG_WARN(_logger, "starting svc {}", getServiceId());
         if (getProperties()->contains("Priority")) {
-            _priority = std::any_cast<uint64_t>(getProperties()->operator[]("Priority"));
+            _priority = Ichor::any_cast<uint64_t>(getProperties()->operator[]("Priority"));
         }
 
         if (!getProperties()->contains("Port") || !getProperties()->contains("Address")) {
@@ -22,8 +22,8 @@ bool Ichor::HttpConnectionService::start() {
         }
 
         _httpContext = std::make_unique<net::io_context>(1);
-        auto address = net::ip::make_address(std::any_cast<std::string &>(getProperties()->operator[]("Address")));
-        auto port = std::any_cast<uint16_t>(getProperties()->operator[]("Port"));
+        auto address = net::ip::make_address(Ichor::any_cast<std::string &>(getProperties()->operator[]("Address")));
+        auto port = Ichor::any_cast<uint16_t>(getProperties()->operator[]("Port"));
 
         _connecting = true;
         net::spawn(*_httpContext, [this, address = std::move(address), port](net::yield_context yield) {
@@ -96,7 +96,7 @@ uint64_t Ichor::HttpConnectionService::sendAsync(Ichor::HttpMethod method, std::
             for(auto const &header : headers) {
                 req.set(header.name, header.value);
             }
-            req.set(http::field::host, std::any_cast<std::string &>(getProperties()->operator[]("Address")));
+            req.set(http::field::host, Ichor::any_cast<std::string &>(getProperties()->operator[]("Address")));
             req.prepare_payload();
 
             http::write(*_httpStream, req, ec);

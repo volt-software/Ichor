@@ -10,7 +10,7 @@ namespace Ichor {
     template <typename NetworkType, typename NetworkInterfaceType = IConnectionService>
     class ClientAdmin final : public IClientAdmin, public Service<ClientAdmin<NetworkType, NetworkInterfaceType>> {
     public:
-        ClientAdmin(IchorProperties properties, DependencyManager *mng) : Service<ClientAdmin<NetworkType, NetworkInterfaceType>>(std::move(properties), mng), _connections{mng->getMemoryResource()} {  }
+        ClientAdmin(IchorProperties properties, DependencyManager *mng) : Service<ClientAdmin<NetworkType, NetworkInterfaceType>>(std::move(properties), mng), _connections{getMemoryResource()} {  }
         ~ClientAdmin() override = default;
 
         bool start() final {
@@ -39,10 +39,10 @@ namespace Ichor {
                 throw std::runtime_error("Missing port");
             }
 
-            auto newProps = *evt->properties.value();
-            newProps.emplace("Filter", Filter{ServiceIdFilterEntry{evt->originatingService}});
-
             if(!_connections.contains(evt->originatingService)) {
+                auto newProps = *evt->properties.value();
+                newProps.emplace("Filter", Ichor::make_any<Filter>(getMemoryResource(), Filter{getMemoryResource(), ServiceIdFilterEntry{evt->originatingService}}));
+
                 _connections.emplace(evt->originatingService, Service<ClientAdmin<NetworkType, NetworkInterfaceType>>::getManager()->template createServiceManager<NetworkType, NetworkInterfaceType>(std::move(newProps)));
             }
         }
@@ -64,9 +64,9 @@ namespace Ichor {
 
                 auto address = service->getProperties()->find("Address");
                 auto port = service->getProperties()->find("Port");
-                auto full_address = std::any_cast<std::string>(address->second);
+                auto full_address = Ichor::any_cast<std::string>(address->second);
                 if(port != end(*service->getProperties())) {
-                    full_address += ":" + std::to_string(std::any_cast<uint16_t>(port->second));
+                    full_address += ":" + std::to_string(Ichor::any_cast<uint16_t>(port->second));
                 }
                 std::string_view implNameRequestor = Service<ClientAdmin<NetworkType, NetworkInterfaceType>>::getManager()->getImplementationNameFor(evt->originatingService).value();
                 ICHOR_LOG_ERROR(_logger, "Couldn't start connection of type {} on address {} for service of type {} with id {} because \"{}\"", typeNameHash<NetworkType>(), full_address, implNameRequestor, service->getServiceId(), evt->error);
@@ -81,7 +81,7 @@ namespace Ichor {
     private:
         ILogger *_logger{nullptr};
         std::pmr::unordered_map<uint64_t, NetworkInterfaceType*> _connections;
-        std::unique_ptr<DependencyTrackerRegistration> _trackerRegistration{nullptr};
-        std::unique_ptr<EventHandlerRegistration> _unrecoverableErrorRegistration{nullptr};
+        std::unique_ptr<DependencyTrackerRegistration, Deleter> _trackerRegistration{nullptr};
+        std::unique_ptr<EventHandlerRegistration, Deleter> _unrecoverableErrorRegistration{nullptr};
     };
 }

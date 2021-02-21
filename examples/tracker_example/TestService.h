@@ -39,7 +39,7 @@ public:
     void addDependencyInstance(IRuntimeCreatedService *svc) {
         auto ownScopeProp = getProperties()->find("scope");
         auto svcScopeProp = svc->getProperties()->find("scope");
-        ICHOR_LOG_INFO(_logger, "Inserted IRuntimeCreatedService svcid {} with scope {} for svcid {} with scope {}", svc->getServiceId(), std::any_cast<std::string&>(svcScopeProp->second), getServiceId(), std::any_cast<std::string>(ownScopeProp->second));
+        ICHOR_LOG_INFO(_logger, "Inserted IRuntimeCreatedService svcid {} with scope {} for svcid {} with scope {}", svc->getServiceId(), Ichor::any_cast<std::string&>(svcScopeProp->second), getServiceId(), Ichor::any_cast<std::string>(ownScopeProp->second));
     }
 
     void removeDependencyInstance(IRuntimeCreatedService *) {

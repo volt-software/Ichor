@@ -14,9 +14,10 @@
 #include <ichor/Service.h>
 #include <ichor/LifecycleManager.h>
 #include <ichor/Events.h>
-#include <ichor/Callback.h>
+#include <ichor/Callbacks.h>
 #include <ichor/Filter.h>
-#include <ichor/RealtimeMutex.h>
+#include <ichor/stl/RealtimeMutex.h>
+#include <ichor/stl/ConditionVariable.h>
 
 // prevent false positives by TSAN
 // See "ThreadSanitizer – data race detection in practice" by Serebryany et al. for more info: https://static.googleusercontent.com/media/research.google.com/en//pubs/archive/35604.pdf
@@ -187,20 +188,36 @@ namespace Ichor {
     };
 
     struct DependencyTrackerInfo final {
-        explicit DependencyTrackerInfo(std::function<void(Event const * const)> _trackFunc) noexcept : trackFunc(std::move(_trackFunc)) {}
-        ~DependencyTrackerInfo() = default;
-        std::function<void(Event const * const)> trackFunc;
+        explicit DependencyTrackerInfo(Ichor::function<void(Event const * const)> _trackFunc) noexcept : trackFunc(std::move(_trackFunc)) {}
+        Ichor::function<void(Event const * const)> trackFunc;
     };
 
     class DependencyManager final {
     public:
+        DependencyManager() : _memResource(std::pmr::get_default_resource()), _eventMemResource(std::pmr::get_default_resource()) {
+
+        }
+
+        DependencyManager(std::pmr::memory_resource *mainMemoryResource, std::pmr::memory_resource *eventMemoryResource) : _memResource(mainMemoryResource), _eventMemResource(eventMemoryResource) {
+
+        }
+
+        // DANGEROUS COPY, EFFECTIVELY MAKES A NEW MANAGER AND STARTS OVER!!
+        [[deprecated]]
+        DependencyManager(const DependencyManager& other) : _memResource(other._memResource), _eventMemResource(other._eventMemResource) {
+            if(other._started) {
+                std::terminate();
+            }
+        };
+        DependencyManager(DependencyManager&&) = delete;
+
         template<DerivedTemplated<Service> Impl, Derived<IService>... Interfaces>
         requires ImplementsAll<Impl, Interfaces...>
         auto createServiceManager(IchorProperties&& properties = IchorProperties{}, uint64_t priority = INTERNAL_EVENT_PRIORITY) {
             if constexpr(RequestsDependencies<Impl>) {
                 static_assert(!std::is_default_constructible_v<Impl>, "Cannot have a dependencies constructor and a default constructor simultaneously.");
                 static_assert(!RequestsProperties<Impl>, "Cannot have a dependencies constructor and a properties constructor simultaneously.");
-                auto cmpMgr = DependencyLifecycleManager<Impl>::template create(_logger, "", std::forward<IchorProperties>(properties), this, &_memResource, InterfacesList<Interfaces...>);
+                auto cmpMgr = DependencyLifecycleManager<Impl>::template create(_logger, "", std::forward<IchorProperties>(properties), this, _memResource, InterfacesList<Interfaces...>);
 
                 if constexpr (sizeof...(Interfaces) > 0) {
                     static_assert(!ListContainsInterface<IFrameworkLogger, Interfaces...>::value, "IFrameworkLogger cannot have any dependencies");
@@ -213,7 +230,7 @@ namespace Ichor {
                         auto filterProp = mgr->getProperties()->find("Filter");
                         const Filter *filter = nullptr;
                         if (filterProp != end(*mgr->getProperties())) {
-                            filter = std::any_cast<const Filter>(&filterProp->second);
+                            filter = Ichor::any_cast<Filter * const>(&filterProp->second);
                         }
 
                         if (filter != nullptr && !filter->compareTo(cmpMgr)) {
@@ -244,7 +261,7 @@ namespace Ichor {
                 return &cmpMgr->getService();
             } else {
                 static_assert(!(std::is_default_constructible_v<Impl> && RequestsProperties<Impl>), "Cannot have a properties constructor and a default constructor simultaneously.");
-                auto cmpMgr = LifecycleManager<Impl>::template create(_logger, "", std::forward<IchorProperties>(properties), this, &_memResource, InterfacesList<Interfaces...>);
+                auto cmpMgr = LifecycleManager<Impl>::template create(_logger, "", std::forward<IchorProperties>(properties), this, _memResource, InterfacesList<Interfaces...>);
 
                 if constexpr (sizeof...(Interfaces) > 0) {
                     if constexpr (ListContainsInterface<IFrameworkLogger, Interfaces...>::value) {
@@ -331,14 +348,14 @@ namespace Ichor {
         /// \param serviceId id of service registering handler
         /// \param impl class that is registering handler
         /// \return RAII handler, removes registration upon destruction
-        std::unique_ptr<DependencyTrackerRegistration> registerDependencyTracker(Impl *impl) {
+        std::unique_ptr<DependencyTrackerRegistration, Deleter> registerDependencyTracker(Impl *impl) {
             auto requestTrackersForType = _dependencyRequestTrackers.find(typeNameHash<Interface>());
             auto undoRequestTrackersForType = _dependencyUndoRequestTrackers.find(typeNameHash<Interface>());
 
-            DependencyTrackerInfo requestInfo{[impl](Event const * const evt){ impl->handleDependencyRequest(static_cast<Interface*>(nullptr), static_cast<DependencyRequestEvent const *>(evt)); }};
-            DependencyTrackerInfo undoRequestInfo{[impl](Event const * const evt){ impl->handleDependencyUndoRequest(static_cast<Interface*>(nullptr), static_cast<DependencyUndoRequestEvent const *>(evt)); }};
+            DependencyTrackerInfo requestInfo{Ichor::function<void(Event const * const)>{[impl](Event const * const evt){ impl->handleDependencyRequest(static_cast<Interface*>(nullptr), static_cast<DependencyRequestEvent const *>(evt)); }, _memResource}};
+            DependencyTrackerInfo undoRequestInfo{Ichor::function<void(Event const * const)>{[impl](Event const * const evt){ impl->handleDependencyUndoRequest(static_cast<Interface*>(nullptr), static_cast<DependencyUndoRequestEvent const *>(evt)); }, _memResource}};
 
-            std::vector<DependencyRequestEvent> requests;
+            std::pmr::vector<DependencyRequestEvent> requests{getMemoryResource()};
             for(auto const &[key, mgr] : _services) {
                 auto const *depRegistry = mgr->getDependencyRegistry();
 //                ICHOR_LOG_ERROR(_logger, "register svcId {} dm {}", mgr->serviceId(), _id);
@@ -360,20 +377,22 @@ namespace Ichor {
             }
 
             if(requestTrackersForType == end(_dependencyRequestTrackers)) {
-                _dependencyRequestTrackers.emplace(typeNameHash<Interface>(), std::pmr::vector<DependencyTrackerInfo>{{requestInfo}, &_memResource});
+                std::pmr::vector<DependencyTrackerInfo> v{_memResource};
+                v.emplace_back(std::move(requestInfo));
+                _dependencyRequestTrackers.emplace(typeNameHash<Interface>(), std::move(v));
             } else {
                 requestTrackersForType->second.emplace_back(std::move(requestInfo));
             }
 
             if(undoRequestTrackersForType == end(_dependencyUndoRequestTrackers)) {
-                _dependencyUndoRequestTrackers.emplace(typeNameHash<Interface>(), std::pmr::vector<DependencyTrackerInfo>{{undoRequestInfo}, &_memResource});
+                std::pmr::vector<DependencyTrackerInfo> v{_memResource};
+                v.emplace_back(std::move(undoRequestInfo));
+                _dependencyUndoRequestTrackers.emplace(typeNameHash<Interface>(), std::move(v));
             } else {
                 undoRequestTrackersForType->second.emplace_back(std::move(undoRequestInfo));
             }
 
-            // I think there's a bug in GCC 10.1, where if I don't make this a unique_ptr, the DependencyTrackerRegistration destructor immediately gets called for some reason.
-            // Even if the result is stored in a variable at the caller site.
-            return std::make_unique<DependencyTrackerRegistration>(this, typeNameHash<Interface>(), impl->getServicePriority());
+            return std::unique_ptr<DependencyTrackerRegistration, Deleter>(new (_memResource->allocate(sizeof(DependencyTrackerRegistration))) DependencyTrackerRegistration(this, typeNameHash<Interface>(), impl->getServicePriority()), Deleter{_memResource, sizeof(DependencyTrackerRegistration)});
         }
 
         template <typename EventT, typename Impl>
@@ -385,13 +404,11 @@ namespace Ichor {
         /// \param serviceId id of service registering handler
         /// \param impl class that is registering handler
         /// \return RAII handler, removes registration upon destruction
-        std::unique_ptr<EventCompletionHandlerRegistration> registerEventCompletionCallbacks(Impl *impl) {
+        std::unique_ptr<EventCompletionHandlerRegistration, Deleter> registerEventCompletionCallbacks(Impl *impl) {
             CallbackKey key{impl->getServiceId(), EventT::TYPE};
-            _completionCallbacks.emplace(key, [impl](Event const * const evt){ impl->handleCompletion(static_cast<EventT const * const>(evt)); });
-            _errorCallbacks.emplace(key, [impl](Event const * const evt){ impl->handleError(static_cast<EventT const * const>(evt)); });
-            // I think there's a bug in GCC 10.1, where if I don't make this a unique_ptr, the EventCompletionHandlerRegistration destructor immediately gets called for some reason.
-            // Even if the result is stored in a variable at the caller site.
-            return std::make_unique<EventCompletionHandlerRegistration>(this, key, impl->getServicePriority());
+            _completionCallbacks.emplace(key, Ichor::function<void(Event const * const)>{[impl](Event const * const evt){ impl->handleCompletion(static_cast<EventT const * const>(evt)); }, _memResource});
+            _errorCallbacks.emplace(key, Ichor::function<void(Event const * const)>{[impl](Event const * const evt){ impl->handleError(static_cast<EventT const * const>(evt)); }, _memResource});
+            return std::unique_ptr<EventCompletionHandlerRegistration, Deleter>(new (_memResource->allocate(sizeof(EventCompletionHandlerRegistration))) EventCompletionHandlerRegistration(this, key, impl->getServicePriority()), Deleter{_memResource, sizeof(EventCompletionHandlerRegistration)});
         }
 
         template <typename EventT, typename Impl>
@@ -404,18 +421,25 @@ namespace Ichor {
         /// \param impl class that is registering handler
         /// \param targetServiceId optional service id to filter registering for, if empty, receive all events of type EventT
         /// \return RAII handler, removes registration upon destruction
-        std::unique_ptr<EventHandlerRegistration> registerEventHandler(Impl *impl, std::optional<uint64_t> targetServiceId = {}) {
+        std::unique_ptr<EventHandlerRegistration, Deleter> registerEventHandler(Impl *impl, std::optional<uint64_t> targetServiceId = {}) {
             auto existingHandlers = _eventCallbacks.find(EventT::TYPE);
             if(existingHandlers == end(_eventCallbacks)) {
-                _eventCallbacks.emplace(EventT::TYPE, std::pmr::vector<EventCallbackInfo>{{EventCallbackInfo{impl->getServiceId(), targetServiceId,
-                                                                                                       [impl](Event const * const evt){ return impl->handleEvent(static_cast<EventT const * const>(evt)); }}}, &_memResource
+                std::pmr::vector<EventCallbackInfo> v{ _memResource };
+                v.template emplace_back(EventCallbackInfo{
+                        impl->getServiceId(),
+                        targetServiceId,
+                        Ichor::function<Generator<bool>(Event const * const)>{
+                                [impl](Event const * const evt) {
+                                    return impl->handleEvent(static_cast<EventT const * const>(evt));
+                                },
+                                _memResource
+                        }
                 });
+                _eventCallbacks.emplace(EventT::TYPE, std::move(v));
             } else {
-                existingHandlers->second.emplace_back(EventCallbackInfo{impl->getServiceId(), targetServiceId, [impl](Event const * const evt){ return impl->handleEvent(static_cast<EventT const * const>(evt)); }});
+                existingHandlers->second.emplace_back(impl->getServiceId(), targetServiceId, Ichor::function<Generator<bool>(Event const * const)>{[impl](Event const * const evt){ return impl->handleEvent(static_cast<EventT const * const>(evt)); }, _memResource});
             }
-            // I think there's a bug in GCC 10.1, where if I don't make this a unique_ptr, the EventHandlerRegistration destructor immediately gets called for some reason.
-            // Even if the result is stored in a variable at the caller site.
-            return std::make_unique<EventHandlerRegistration>(this, CallbackKey{impl->getServiceId(), EventT::TYPE}, impl->getServicePriority());
+            return std::unique_ptr<EventHandlerRegistration, Deleter>(new (_memResource->allocate(sizeof(EventHandlerRegistration))) EventHandlerRegistration(this, CallbackKey{impl->getServiceId(), EventT::TYPE}, impl->getServicePriority()), Deleter{_memResource, sizeof(EventHandlerRegistration)});
         }
 
         template <typename EventT, typename Impl>
@@ -427,25 +451,26 @@ namespace Ichor {
         /// \param serviceId id of service registering handler
         /// \param impl class that is registering handler
         /// \return RAII handler, removes registration upon destruction
-        std::unique_ptr<EventInterceptorRegistration> registerEventInterceptor(Impl *impl) {
+        std::unique_ptr<EventInterceptorRegistration, Deleter> registerEventInterceptor(Impl *impl) {
             uint64_t targetEventId = 0;
             if constexpr (!std::is_same_v<EventT, Event>) {
                 targetEventId = EventT::TYPE;
             }
             auto existingHandlers = _eventInterceptors.find(targetEventId);
             if(existingHandlers == end(_eventInterceptors)) {
-                _eventInterceptors.emplace(targetEventId, std::pmr::vector<EventInterceptInfo>{{EventInterceptInfo{impl->getServiceId(), targetEventId,
-                                                                                                            [impl](Event const * const evt){ return impl->preInterceptEvent(static_cast<EventT const * const>(evt)); },
-                                                                                                            [impl](Event const * const evt, bool processed){ return impl->postInterceptEvent(static_cast<EventT const * const>(evt), processed); }}}, &_memResource
-                });
+                std::pmr::vector<EventInterceptInfo> v{_memResource};
+                v.template emplace_back(EventInterceptInfo{impl->getServiceId(), targetEventId,
+                                   Ichor::function<bool(Event const * const)>{[impl](Event const * const evt){ return impl->preInterceptEvent(static_cast<EventT const * const>(evt)); }, _memResource},
+                                   Ichor::function<bool(Event const * const, bool)>{[impl](Event const * const evt, bool processed){ return impl->postInterceptEvent(static_cast<EventT const * const>(evt), processed); }, _memResource}});
+                _eventInterceptors.emplace(targetEventId, std::move(v));
             } else {
-                existingHandlers->second.emplace_back(EventInterceptInfo{impl->getServiceId(), targetEventId,
-                                                                         [impl](Event const * const evt){ return impl->preInterceptEvent(static_cast<EventT const * const>(evt)); },
-                                                                         [impl](Event const * const evt, bool processed){ return impl->postInterceptEvent(static_cast<EventT const * const>(evt), processed); }});
+                existingHandlers->second.template emplace_back(impl->getServiceId(), targetEventId,
+                                                      Ichor::function<bool(Event const * const)>{[impl](Event const * const evt){ return impl->preInterceptEvent(static_cast<EventT const * const>(evt)); }, _memResource},
+                                                      Ichor::function<bool(Event const * const, bool)>{[impl](Event const * const evt, bool processed){ return impl->postInterceptEvent(static_cast<EventT const * const>(evt), processed); }, _memResource});
             }
             // I think there's a bug in GCC 10.1, where if I don't make this a unique_ptr, the EventHandlerRegistration destructor immediately gets called for some reason.
             // Even if the result is stored in a variable at the caller site.
-            return std::make_unique<EventInterceptorRegistration>(this, CallbackKey{impl->getServiceId(), targetEventId}, impl->getServicePriority());
+            return std::unique_ptr<EventInterceptorRegistration, Deleter>(new (_memResource->allocate(sizeof(EventInterceptorRegistration))) EventInterceptorRegistration(this, CallbackKey{impl->getServiceId(), targetEventId}, impl->getServicePriority()), Deleter{_memResource, sizeof(EventInterceptorRegistration)});
         }
 
         /// Get manager id
@@ -455,7 +480,7 @@ namespace Ichor {
         }
 
         [[nodiscard]] std::pmr::memory_resource* getMemoryResource() noexcept {
-            return &_memResource;
+            return _memResource;
         }
 
         ///
@@ -540,22 +565,23 @@ namespace Ichor {
             return eventId;
         }
 
-        std::pmr::unsynchronized_pool_resource _memResource{};
-        std::pmr::unsynchronized_pool_resource _eventMemResource{}; // cannot be shared with _memResource, as that would introduce threading issues
-        std::pmr::unordered_map<uint64_t, std::shared_ptr<ILifecycleManager>> _services{&_memResource}; // key = service id
-        std::pmr::unordered_map<uint64_t, std::pmr::vector<DependencyTrackerInfo>> _dependencyRequestTrackers{&_memResource}; // key = interface name hash
-        std::pmr::unordered_map<uint64_t, std::pmr::vector<DependencyTrackerInfo>> _dependencyUndoRequestTrackers{&_memResource}; // key = interface name hash
-        std::pmr::unordered_map<CallbackKey, std::function<void(Event const * const)>> _completionCallbacks{&_memResource}; // key = listening service id + event type
-        std::pmr::unordered_map<CallbackKey, std::function<void(Event const * const)>> _errorCallbacks{&_memResource}; // key = listening service id + event type
-        std::pmr::unordered_map<uint64_t, std::pmr::vector<EventCallbackInfo>> _eventCallbacks{&_memResource}; // key = event id
-        std::pmr::unordered_map<uint64_t, std::pmr::vector<EventInterceptInfo>> _eventInterceptors{&_memResource}; // key = event id
+        std::pmr::memory_resource *_memResource;
+        std::pmr::memory_resource *_eventMemResource; // cannot be shared with _memResource, as that would introduce threading issues
+        std::pmr::unordered_map<uint64_t, std::shared_ptr<ILifecycleManager>> _services{_memResource}; // key = service id
+        std::pmr::unordered_map<uint64_t, std::pmr::vector<DependencyTrackerInfo>> _dependencyRequestTrackers{_memResource}; // key = interface name hash
+        std::pmr::unordered_map<uint64_t, std::pmr::vector<DependencyTrackerInfo>> _dependencyUndoRequestTrackers{_memResource}; // key = interface name hash
+        std::pmr::unordered_map<CallbackKey, Ichor::function<void(Event const * const)>> _completionCallbacks{_memResource}; // key = listening service id + event type
+        std::pmr::unordered_map<CallbackKey, Ichor::function<void(Event const * const)>> _errorCallbacks{_memResource}; // key = listening service id + event type
+        std::pmr::unordered_map<uint64_t, std::pmr::vector<EventCallbackInfo>> _eventCallbacks{_memResource}; // key = event id
+        std::pmr::unordered_map<uint64_t, std::pmr::vector<EventInterceptInfo>> _eventInterceptors{_memResource}; // key = event id
         IFrameworkLogger *_logger{nullptr};
         std::shared_ptr<ILifecycleManager> _preventEarlyDestructionOfFrameworkLogger{nullptr};
-        std::pmr::multimap<uint64_t, EventStackUniquePtr> _eventQueue{&_eventMemResource};
+        std::pmr::multimap<uint64_t, EventStackUniquePtr> _eventQueue{_eventMemResource};
         RealtimeMutex _eventQueueMutex{};
-        std::condition_variable_any _wakeUp{};
+        ConditionVariable _wakeUp{_eventQueueMutex};
         std::atomic<uint64_t> _eventIdCounter{0};
         std::atomic<bool> _quit{false};
+        std::atomic<bool> _started{false};
         CommunicationChannel *_communicationChannel{nullptr};
         uint64_t _id{_managerIdCounter++};
         static std::atomic<uint64_t> _managerIdCounter;

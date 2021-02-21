@@ -10,7 +10,7 @@ Ichor::HttpHostService::HttpHostService(DependencyRegister &reg, IchorProperties
 
 bool Ichor::HttpHostService::start() {
     if(getProperties()->contains("Priority")) {
-        _priority = std::any_cast<uint64_t>(getProperties()->operator[]("Priority"));
+        _priority = Ichor::any_cast<uint64_t>(getProperties()->operator[]("Priority"));
     }
 
     if(!getProperties()->contains("Port") || !getProperties()->contains("Address")) {
@@ -19,8 +19,8 @@ bool Ichor::HttpHostService::start() {
     }
 
     _httpContext = std::make_unique<net::io_context>(1);
-    auto address = net::ip::make_address(std::any_cast<std::string&>(getProperties()->operator[]("Address")));
-    auto port = std::any_cast<uint16_t>(getProperties()->operator[]("Port"));
+    auto address = net::ip::make_address(Ichor::any_cast<std::string&>(getProperties()->operator[]("Address")));
+    auto port = Ichor::any_cast<uint16_t>(getProperties()->operator[]("Port"));
 
     net::spawn(*_httpContext, [this, address = std::move(address), port](net::yield_context yield){
         listen(tcp::endpoint{address, port}, std::move(yield));

@@ -18,7 +18,7 @@ public:
     [[nodiscard]] bool matches(const std::shared_ptr<ILifecycleManager> &manager) const {
         auto const scopeProp = manager->getProperties()->find("scope");
 
-        return scopeProp != end(*manager->getProperties()) && std::any_cast<const std::string&>(scopeProp->second) == scope;
+        return scopeProp != end(*manager->getProperties()) && Ichor::any_cast<const std::string&>(scopeProp->second) == scope;
     }
 
     const std::string scope;
@@ -64,7 +64,7 @@ public:
             return;
         }
 
-        auto const& scope = std::any_cast<const std::string&>(scopeProp->second);
+        auto const& scope = Ichor::any_cast<const std::string&>(scopeProp->second);
 
         ICHOR_LOG_INFO(_logger, "Tracked IRuntimeCreatedService request for scope {}", scope);
 
@@ -72,7 +72,7 @@ public:
 
         if(runtimeService == end(_scopedRuntimeServices)) {
             auto newProps = *evt->properties.value();
-            newProps.emplace("Filter", Filter{ScopeFilterEntry{scope}});
+            newProps.emplace("Filter", Ichor::make_any<Filter>(getMemoryResource(), Filter{getMemoryResource(), ScopeFilterEntry{scope}}));
 
             _scopedRuntimeServices.emplace(scope, getManager()->createServiceManager<RuntimeCreatedService, IRuntimeCreatedService>(std::move(newProps)));
         }
@@ -86,7 +86,7 @@ public:
             return;
         }
 
-        auto const& scope = std::any_cast<const std::string&>(scopeProp->second);
+        auto const& scope = Ichor::any_cast<const std::string&>(scopeProp->second);
 
         ICHOR_LOG_INFO(_logger, "Tracked IRuntimeCreatedService undo request for scope {}", scope);
 
@@ -99,6 +99,6 @@ public:
 
 private:
     ILogger *_logger{nullptr};
-    std::unique_ptr<DependencyTrackerRegistration> _trackerRegistration{};
+    std::unique_ptr<DependencyTrackerRegistration, Deleter> _trackerRegistration{nullptr};
     std::unordered_map<std::string, RuntimeCreatedService*> _scopedRuntimeServices{};
 };

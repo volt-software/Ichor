@@ -111,3 +111,32 @@ static consteval uint64_t consteval_wyhash(const T *key, uint64_t len, uint64_t 
     }
     return consteval_wymum(seed ^ see1, len ^ _wyp4);
 }
+
+namespace Ichor {
+    template<typename INTERFACE_TYPENAME>
+    [[nodiscard]] consteval auto typeName() {
+        constexpr std::string_view result = __PRETTY_FUNCTION__;
+        constexpr std::string_view templateStr = "INTERFACE_TYPENAME = ";
+
+        constexpr size_t bpos = result.find(templateStr) + templateStr.size(); //find begin pos after INTERFACE_TYPENAME = entry
+        if constexpr (result.find_first_not_of("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_:") == std::string_view::npos) {
+            constexpr size_t len = result.length() - bpos;
+
+            static_assert(!result.substr(bpos, len).empty(), "Cannot infer type name in function call");
+
+            return result.substr(bpos, len);
+        } else {
+            constexpr size_t len = result.substr(bpos).find_first_not_of("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_:");
+
+            static_assert(!result.substr(bpos, len).empty(), "Cannot infer type name in function call");
+
+            return result.substr(bpos, len);
+        }
+    }
+
+    template<typename INTERFACE_TYPENAME>
+    [[nodiscard]] consteval auto typeNameHash() {
+        std::string_view name = typeName<INTERFACE_TYPENAME>();
+        return consteval_wyhash(&name[0], name.size(), 0);
+    }
+}

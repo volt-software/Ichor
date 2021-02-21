@@ -27,6 +27,8 @@ public:
         } else {
             auto end = std::chrono::steady_clock::now();
             getManager()->pushEvent<QuitEvent>(getServiceId());
+            _startServiceRegistration.reset();
+            _stopServiceRegistration.reset();
             ICHOR_LOG_INFO(_logger, "dm {} finished in {:L} µs", getManager()->getId(), std::chrono::duration_cast<std::chrono::microseconds>(end-_start).count());
         }
         startCount++;
@@ -70,6 +72,6 @@ private:
     uint64_t _testServiceId{0};
     std::chrono::steady_clock::time_point _start{};
     uint64_t startCount{0};
-    std::unique_ptr<EventCompletionHandlerRegistration> _startServiceRegistration;
-    std::unique_ptr<EventCompletionHandlerRegistration> _stopServiceRegistration;
+    std::unique_ptr<EventCompletionHandlerRegistration, Deleter> _startServiceRegistration{nullptr};
+    std::unique_ptr<EventCompletionHandlerRegistration, Deleter> _stopServiceRegistration{nullptr};
 };

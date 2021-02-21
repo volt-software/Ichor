@@ -67,7 +67,7 @@ bool Ichor::SpdlogLogger::start() {
 
     auto requestedLevelIt = _properties.find("LogLevel");
     if(requestedLevelIt != end(_properties)) {
-        auto requestedLevel = std::any_cast<LogLevel>(requestedLevelIt->second);
+        auto requestedLevel = Ichor::any_cast<LogLevel>(requestedLevelIt->second);
         if (requestedLevel == LogLevel::TRACE) {
             _logger->set_level(spdlog::level::trace);
         } else if (requestedLevel == LogLevel::DEBUG) {
@@ -85,13 +85,13 @@ bool Ichor::SpdlogLogger::start() {
         _logger->set_level(spdlog::level::info);
     }
 
-    auto targetServiceId = std::any_cast<uint64_t>(_properties["TargetServiceId"]);
+    auto targetServiceId = Ichor::any_cast<uint64_t>(_properties["TargetServiceId"]);
     _logger->trace("SpdlogLogger {} started for component {}", getServiceId(), targetServiceId);
     return true;
 }
 
 bool Ichor::SpdlogLogger::stop() {
-    auto targetServiceId = std::any_cast<uint64_t>(_properties["TargetServiceId"]);
+    auto targetServiceId = Ichor::any_cast<uint64_t>(_properties["TargetServiceId"]);
     _logger->trace("SpdlogLogger {} stopped for component {}", getServiceId(), targetServiceId);
     return true;
 }

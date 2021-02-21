@@ -30,6 +30,8 @@ namespace Ichor {
         [[nodiscard]] virtual DependencyManager* getManager() noexcept = 0;
 
         [[nodiscard]] virtual IchorProperties* getProperties() noexcept = 0;
+
+        [[nodiscard]] std::pmr::memory_resource* getMemoryResource() noexcept;
     };
 
 
@@ -39,7 +41,7 @@ namespace Ichor {
     class Service : virtual public IService {
     public:
         template <typename U = T> requires (!RequestsProperties<U> && !RequestsDependencies<U>)
-        Service() noexcept : IService(), _serviceId(_serviceIdCounter.fetch_add(1, std::memory_order_acq_rel)), _servicePriority(1000), _serviceGid(sole::uuid4()), _serviceState(ServiceState::INSTALLED) {
+        Service() noexcept : IService(), _properties(), _serviceId(_serviceIdCounter.fetch_add(1, std::memory_order_acq_rel)), _servicePriority(1000), _serviceGid(sole::uuid4()), _serviceState(ServiceState::INSTALLED) {
 
         }
 

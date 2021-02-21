@@ -22,6 +22,7 @@ public:
 
     bool stop() final {
         ICHOR_LOG_INFO(_logger, "OtherService stopped with dependency");
+        _customEventHandler.reset();
         return true;
     }
 
@@ -46,5 +47,5 @@ public:
 
 private:
     ILogger *_logger;
-    std::unique_ptr<EventHandlerRegistration> _customEventHandler;
+    std::unique_ptr<EventHandlerRegistration, Deleter> _customEventHandler{nullptr};
 };

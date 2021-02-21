@@ -37,12 +37,12 @@ int main() {
     dm.createServiceManager<LoggerAdmin<LOGGER_TYPE>, ILoggerAdmin>();
     dm.createServiceManager<SerializationAdmin, ISerializationAdmin>();
     dm.createServiceManager<TestMsgJsonSerializer, ISerializer>();
-    dm.createServiceManager<HttpHostService, IHttpService>(IchorProperties{{"Address", "127.0.0.1"s}, {"Port", (uint16_t)8001}});
+    dm.createServiceManager<HttpHostService, IHttpService>(IchorProperties{{"Address", Ichor::make_any<std::string, std::string>("127.0.0.1"s)}, {"Port", Ichor::make_any<uint16_t>(8001)}});
     dm.createServiceManager<ClientAdmin<HttpConnectionService, IHttpConnectionService>, IClientAdmin>();
     dm.createServiceManager<UsingHttpService>(IchorProperties{{"Address", "127.0.0.1"s}, {"Port", (uint16_t)8001}});
     dm.start();
     auto end = std::chrono::steady_clock::now();
-    std::cout << fmt::format("Program ran for {:L} µs\n", std::chrono::duration_cast<std::chrono::microseconds>(end-start).count());
+    fmt::print("Program ran for {:L} µs\n", std::chrono::duration_cast<std::chrono::microseconds>(end-start).count());
 
     return 0;
 }

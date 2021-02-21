@@ -80,5 +80,5 @@ private:
     ILogger *_logger{nullptr};
     ISerializationAdmin *_serializationAdmin{nullptr};
     IConnectionService *_connectionService{nullptr};
-    std::unique_ptr<EventHandlerRegistration> _timerEventRegistration{nullptr};
+    std::unique_ptr<EventHandlerRegistration, Deleter> _timerEventRegistration{nullptr};
 };

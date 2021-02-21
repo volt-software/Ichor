@@ -42,7 +42,7 @@ int main() {
     dm.createServiceManager<UsingWsService>(IchorProperties{{"Address", "127.0.0.1"s}, {"Port", (uint16_t)8001}});
     dm.start();
     auto end = std::chrono::steady_clock::now();
-    std::cout << fmt::format("Program ran for {:L} µs\n", std::chrono::duration_cast<std::chrono::microseconds>(end-start).count());
+    fmt::print("Program ran for {:L} µs\n", std::chrono::duration_cast<std::chrono::microseconds>(end-start).count());
 
     return 0;
 }

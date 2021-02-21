@@ -5,7 +5,7 @@
 
 namespace Ichor {
 
-    class DependencyRegister;
+    struct DependencyRegister;
     class DependencyManager;
 
     template <class T, class U, class... Remainder>

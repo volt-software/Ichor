@@ -12,7 +12,11 @@ Multithreading is hard. There exist plenty of methods trying to make it easier, 
 
 Thread confinement is one such approach. Instead of having to protect resources, Ichor attempts to make it well-defined on which thread an instance of a C++ class runs. Thereby removing the need to think about atomics/mutexes, unless the implementation uses threads not managed by Ichor. 
 
-### Quickstart
+## Dependency Management?
+
+Ichor could have stopped at something similar to libuv: create a 
+
+## Quickstart
 
 The minimal example requires a main function, which initiates at least one event loop, a framework logger and one service. This is an example on how to quit the program on ctrl+c:
 
@@ -81,9 +85,10 @@ int main() {
 
 More examples can be found in the examples directory.
 
-### Dependencies
 
-#### Ubuntu 20.04:
+## Dependencies
+
+### Ubuntu 20.04:
 
 ```
 sudo add-apt-repository ppa:ubuntu-toolchain-r/ppa
@@ -111,7 +116,7 @@ Untested, latest MSVC should probably work.
 
 Untested, unknown if compiler supports enough C++20.
 
-### Documentation
+## Documentation
 
 Documentation is rather...lacking at the moment. Contributions are very welcome!
 

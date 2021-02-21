@@ -26,6 +26,7 @@ public:
 
     bool stop() final {
         ICHOR_LOG_INFO(_logger, "TestService stopped with dependency");
+        _doWorkRegistration.reset();
         return true;
     }
 
@@ -67,5 +68,5 @@ public:
 private:
     ILogger *_logger;
     ISerializationAdmin *_serializationAdmin;
-    std::unique_ptr<EventCompletionHandlerRegistration> _doWorkRegistration;
+    std::unique_ptr<EventCompletionHandlerRegistration, Deleter> _doWorkRegistration{nullptr};
 };

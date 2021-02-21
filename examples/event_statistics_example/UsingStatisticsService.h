@@ -30,8 +30,8 @@ public:
     }
 
     bool stop() final {
-        _quitTimerEventRegistration = nullptr;
-        _bogusTimerEventRegistration = nullptr;
+        _quitTimerEventRegistration.reset();
+        _bogusTimerEventRegistration.reset();
         ICHOR_LOG_INFO(_logger, "UsingStatisticsService stopped");
         return true;
     }
@@ -56,8 +56,8 @@ public:
 
 private:
     ILogger *_logger{nullptr};
-    std::unique_ptr<EventHandlerRegistration> _quitTimerEventRegistration{nullptr};
-    std::unique_ptr<EventHandlerRegistration> _bogusTimerEventRegistration{nullptr};
+    std::unique_ptr<EventHandlerRegistration, Deleter> _quitTimerEventRegistration{nullptr};
+    std::unique_ptr<EventHandlerRegistration, Deleter> _bogusTimerEventRegistration{nullptr};
     uint64_t _quitTimerId{0};
 
     std::random_device _rd{};

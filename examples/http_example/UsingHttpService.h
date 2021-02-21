@@ -92,6 +92,6 @@ private:
     ILogger *_logger{nullptr};
     ISerializationAdmin *_serializationAdmin{nullptr};
     IHttpConnectionService *_connectionService{nullptr};
-    std::unique_ptr<EventHandlerRegistration> _timerEventRegistration{nullptr};
-    std::unique_ptr<HttpRouteRegistration> _routeRegistration{nullptr};
+    std::unique_ptr<EventHandlerRegistration, Deleter> _timerEventRegistration{nullptr};
+    std::unique_ptr<HttpRouteRegistration, Deleter> _routeRegistration{nullptr};
 };

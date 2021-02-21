@@ -6,6 +6,7 @@
 #include <pthread.h>
 #endif
 
+// Differs from std::mutex by setting some extra properties when creating the mutex
 namespace Ichor {
     class RealtimeMutex final {
     public:

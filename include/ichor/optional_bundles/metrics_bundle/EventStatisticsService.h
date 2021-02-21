@@ -56,7 +56,7 @@ namespace Ichor {
         std::chrono::time_point<std::chrono::steady_clock> _startProcessingTimestamp{};
         bool _showStatisticsOnStop{false};
         uint64_t _averagingIntervalMs{5000};
-        std::unique_ptr<EventHandlerRegistration> _timerEventRegistration{nullptr};
-        std::unique_ptr<EventInterceptorRegistration> _interceptorRegistration{nullptr};
+        std::unique_ptr<EventHandlerRegistration, Deleter> _timerEventRegistration{nullptr};
+        std::unique_ptr<EventInterceptorRegistration, Deleter> _interceptorRegistration{nullptr};
     };
 }

@@ -29,7 +29,7 @@ Ichor::WsHostService::WsHostService(DependencyRegister &reg, IchorProperties pro
 
 bool Ichor::WsHostService::start() {
     if(getProperties()->contains("Priority")) {
-        _priority = std::any_cast<uint64_t>(getProperties()->operator[]("Priority"));
+        _priority = Ichor::any_cast<uint64_t>(getProperties()->operator[]("Priority"));
     }
 
     if(!getProperties()->contains("Port") || !getProperties()->contains("Address")) {
@@ -40,8 +40,8 @@ bool Ichor::WsHostService::start() {
     _eventRegistration = getManager()->registerEventHandler<NewWsConnectionEvent>(this, getServiceId());
 
     _wsContext = std::make_unique<net::io_context>(1);
-    auto const& address = net::ip::make_address(std::any_cast<std::string&>(getProperties()->operator[]("Address")));
-    auto port = std::any_cast<uint16_t>(getProperties()->operator[]("Port"));
+    auto const& address = net::ip::make_address(Ichor::any_cast<std::string&>(getProperties()->operator[]("Address")));
+    auto port = Ichor::any_cast<uint16_t>(getProperties()->operator[]("Port"));
 
     net::spawn(*_wsContext, [this, address = std::move(address), port](net::yield_context yield){
         try {

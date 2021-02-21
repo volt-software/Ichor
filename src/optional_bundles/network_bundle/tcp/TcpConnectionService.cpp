@@ -12,12 +12,12 @@ Ichor::TcpConnectionService::TcpConnectionService(DependencyRegister &reg, Ichor
 
 bool Ichor::TcpConnectionService::start() {
     if(getProperties()->contains("Priority")) {
-        _priority = std::any_cast<uint64_t>(getProperties()->operator[]("Priority"));
+        _priority = Ichor::any_cast<uint64_t>(getProperties()->operator[]("Priority"));
     }
 
 
     if(getProperties()->contains("Socket")) {
-        _socket = std::any_cast<int>(getProperties()->operator[]("Socket"));
+        _socket = Ichor::any_cast<int>(getProperties()->operator[]("Socket"));
 
         ICHOR_LOG_TRACE(_logger, "Starting TCP connection for existing socket");
     } else {
@@ -45,9 +45,9 @@ bool Ichor::TcpConnectionService::start() {
 
         sockaddr_in address{};
         address.sin_family = AF_INET;
-        address.sin_port = htons(std::any_cast<uint16_t>((*getProperties())["Port"]));
+        address.sin_port = htons(Ichor::any_cast<uint16_t>((*getProperties())["Port"]));
 
-        int ret = inet_pton(AF_INET, std::any_cast<std::string&>((*getProperties())["Address"]).c_str(), &address.sin_addr);
+        int ret = inet_pton(AF_INET, Ichor::any_cast<std::string&>((*getProperties())["Address"]).c_str(), &address.sin_addr);
         if(ret == 0)
         {
             getManager()->pushEvent<UnrecoverableErrorEvent>(getServiceId(), 3, "inet_pton invalid address for given address family (has to be ipv4-valid address)");

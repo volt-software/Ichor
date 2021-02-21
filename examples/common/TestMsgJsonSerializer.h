@@ -15,7 +15,7 @@ using namespace Ichor;
 class TestMsgJsonSerializer final : public ISerializer, public Service<TestMsgJsonSerializer> {
 public:
     TestMsgJsonSerializer(IchorProperties props, DependencyManager *mng) : Service(std::move(props), mng) {
-        _properties.insert({"type", typeNameHash<TestMsg>()});
+        _properties.insert({"type", Ichor::make_any<uint64_t>(getMemoryResource(), typeNameHash<TestMsg>())});
     }
     ~TestMsgJsonSerializer() final = default;
 

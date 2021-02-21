@@ -33,7 +33,7 @@ int main() {
     dm.createServiceManager<UsingEtcdService>();
     dm.start();
     auto end = std::chrono::steady_clock::now();
-    std::cout << fmt::format("Program ran for {:L} µs\n", std::chrono::duration_cast<std::chrono::microseconds>(end-start).count());
+    fmt::print("Program ran for {:L} µs\n", std::chrono::duration_cast<std::chrono::microseconds>(end-start).count());
 
     return 0;
 }

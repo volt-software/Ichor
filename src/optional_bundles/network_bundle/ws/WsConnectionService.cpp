@@ -25,7 +25,7 @@ void setup_stream(std::unique_ptr<websocket::stream<NextLayer>>& ws)
 Ichor::WsConnectionService::WsConnectionService(DependencyRegister &reg, IchorProperties props, DependencyManager *mng) : Service(std::move(props), mng) {
     reg.registerDependency<ILogger>(this, true);
     if(props.contains("WsHostServiceId")) {
-        reg.registerDependency<IHostService>(this, true, IchorProperties{{"Filter", Filter{ServiceIdFilterEntry{std::any_cast<uint64_t>(props["WsHostServiceId"])}}}});
+        reg.registerDependency<IHostService>(this, true, IchorProperties{{"Filter", Filter{ServiceIdFilterEntry{Ichor::any_cast<uint64_t>(props["WsHostServiceId"])}}}});
     }
 }
 
@@ -38,16 +38,16 @@ bool Ichor::WsConnectionService::start() {
         _connecting = true;
 
         if (getProperties()->contains("Priority")) {
-            _priority = std::any_cast<uint64_t>(getProperties()->operator[]("Priority"));
+            _priority = Ichor::any_cast<uint64_t>(getProperties()->operator[]("Priority"));
         }
 
         if (getProperties()->contains("Socket")) {
-            _sendTimer = std::make_unique<net::steady_timer>(std::any_cast<net::executor>(getProperties()->operator[]("Executor")));
-            net::spawn(std::any_cast<net::executor>(getProperties()->operator[]("Executor")), [this](net::yield_context yield) {
+            _sendTimer = std::make_unique<net::steady_timer>(Ichor::any_cast<net::executor>(getProperties()->operator[]("Executor")));
+            net::spawn(Ichor::any_cast<net::executor>(getProperties()->operator[]("Executor")), [this](net::yield_context yield) {
                 accept(std::move(yield));
             });
 
-            net::spawn(std::any_cast<net::executor>(getProperties()->operator[]("Executor")), [this](net::yield_context yield) {
+            net::spawn(Ichor::any_cast<net::executor>(getProperties()->operator[]("Executor")), [this](net::yield_context yield) {
                 sendStrand(std::move(yield));
             });
         } else {
@@ -197,7 +197,7 @@ void Ichor::WsConnectionService::accept(net::yield_context yield) {
     beast::error_code ec;
 
     if(!_ws) {
-        auto &socket = std::any_cast<CopyIsMoveWorkaround<tcp::socket>&>(getProperties()->operator[]("Socket"));
+        auto &socket = Ichor::any_cast<CopyIsMoveWorkaround<tcp::socket>&>(getProperties()->operator[]("Socket"));
         _ws = std::make_unique<websocket::stream<beast::tcp_stream>>(socket.moveObject());
     }
 
@@ -221,7 +221,7 @@ void Ichor::WsConnectionService::accept(net::yield_context yield) {
         _ws->async_accept(yield[ec]);
         if(ec) {
             _attempts++;
-            net::steady_timer t{std::any_cast<net::executor>(getProperties()->operator[]("Executor"))};
+            net::steady_timer t{Ichor::any_cast<net::executor>(getProperties()->operator[]("Executor"))};
             t.expires_after(std::chrono::milliseconds(250));
             t.async_wait(yield);
         } else {
@@ -242,8 +242,8 @@ void Ichor::WsConnectionService::accept(net::yield_context yield) {
 
 void Ichor::WsConnectionService::connect(net::yield_context yield) {
     beast::error_code ec;
-    auto const& address = std::any_cast<std::string&>(getProperties()->operator[]("Address"));
-    auto const port = std::any_cast<uint16_t>(getProperties()->operator[]("Port"));
+    auto const& address = Ichor::any_cast<std::string&>(getProperties()->operator[]("Address"));
+    auto const port = Ichor::any_cast<uint16_t>(getProperties()->operator[]("Port"));
 
     // These objects perform our I/O
     tcp::resolver resolver(*_wsContext);
@@ -340,7 +340,7 @@ void Ichor::WsConnectionService::cancelSendTimer() {
         });
     } else {
         ICHOR_LOG_TRACE(_logger, "cancelSendTimer net::spawn WsConnectionService {}", getServiceId());
-        net::spawn(std::any_cast<net::executor>(getProperties()->operator[]("Executor")), [this](net::yield_context yield) {
+        net::spawn(Ichor::any_cast<net::executor>(getProperties()->operator[]("Executor")), [this](net::yield_context yield) {
             _sendTimer->cancel();
         });
     }

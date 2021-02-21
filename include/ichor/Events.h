@@ -1,8 +1,7 @@
 #pragma once
 
-#include <ichor/Dependency.h>
-#include <ichor/Callback.h>
 #include <memory>
+#include <ichor/Dependency.h>
 #include <ichor/Callbacks.h>
 
 namespace Ichor {

@@ -1,10 +1,10 @@
 #pragma once
 
 #include <ichor/ConstevalHash.h>
-#include <any>
+#include <ichor/stl/Any.h>
+#include <ichor/stl/PolymorphicAllocator.h>
 #include <string_view>
 #include <unordered_map>
-#include <memory_resource>
 
 #if __cpp_lib_constexpr_string >= 201907L
 #if __cpp_lib_constexpr_vector >= 201907L
@@ -21,33 +21,6 @@
 #undef minor
 
 namespace Ichor {
-    template<typename INTERFACE_TYPENAME>
-    [[nodiscard]] consteval auto typeName() {
-        constexpr std::string_view result = __PRETTY_FUNCTION__;
-        constexpr std::string_view templateStr = "INTERFACE_TYPENAME = ";
-
-        constexpr size_t bpos = result.find(templateStr) + templateStr.size(); //find begin pos after INTERFACE_TYPENAME = entry
-        if constexpr (result.find_first_not_of("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_:") == std::string_view::npos) {
-            constexpr size_t len = result.length() - bpos;
-
-            static_assert(!result.substr(bpos, len).empty(), "Cannot infer type name in function call");
-
-            return result.substr(bpos, len);
-        } else {
-            constexpr size_t len = result.substr(bpos).find_first_not_of("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_:");
-
-            static_assert(!result.substr(bpos, len).empty(), "Cannot infer type name in function call");
-
-            return result.substr(bpos, len);
-        }
-    }
-
-    template<typename INTERFACE_TYPENAME>
-    [[nodiscard]] consteval auto typeNameHash() {
-        std::string_view name = typeName<INTERFACE_TYPENAME>();
-        return consteval_wyhash(&name[0], name.size(), 0);
-    }
-
     template<typename...>
     struct typeList {};
 
@@ -78,9 +51,10 @@ namespace Ichor {
         size_t operator()(const char* txt) const        { return hash_type{}(txt); }
     };
 
-    using IchorProperties = std::unordered_map<std::string, std::any, string_hash>;
+    using IchorProperties = std::pmr::unordered_map<std::pmr::string, Ichor::any, string_hash>;
 #else
-    using IchorProperties = std::unordered_map<std::string, std::any>;
+//    using IchorProperties = std::pmr::unordered_map<std::pmr::string, Ichor::any>;
+    using IchorProperties = std::unordered_map<std::pmr::string, Ichor::any, std::hash<std::pmr::string>, std::equal_to<>, Ichor::PolymorphicAllocator<std::pair<const std::pmr::string, Ichor::any>>>;
 #endif
 
     inline constexpr bool PreventOthersHandling = false;
