@@ -25,7 +25,7 @@ namespace Ichor {
         void addDependencyInstance(ILogger *logger);
         void removeDependencyInstance(ILogger *logger);
 
-        std::unique_ptr<HttpRouteRegistration> addRoute(HttpMethod method, std::string route, std::function<HttpResponse(HttpRequest&)> handler) final;
+        std::unique_ptr<HttpRouteRegistration, Deleter> addRoute(HttpMethod method, std::string route, std::function<HttpResponse(HttpRequest&)> handler) final;
         void removeRoute(HttpMethod method, std::string_view route) final;
 
         void setPriority(uint64_t priority) final;

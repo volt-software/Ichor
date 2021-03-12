@@ -120,7 +120,7 @@ void Ichor::HttpHostService::listen(tcp::endpoint endpoint, net::yield_context y
     ICHOR_LOG_WARN(_logger, "finished listen()");
 }
 
-std::unique_ptr<Ichor::HttpRouteRegistration> Ichor::HttpHostService::addRoute(HttpMethod method, std::string route, std::function<HttpResponse(HttpRequest&)> handler) {
+std::unique_ptr<Ichor::HttpRouteRegistration, Ichor::Deleter> Ichor::HttpHostService::addRoute(HttpMethod method, std::string route, std::function<HttpResponse(HttpRequest&)> handler) {
     auto &routes = _handlers[method];
 
     auto existingHandler = routes.find(route);
@@ -132,7 +132,7 @@ std::unique_ptr<Ichor::HttpRouteRegistration> Ichor::HttpHostService::addRoute(H
     auto insertedIt = routes.emplace(route, handler);
 
     // convoluted way to pass a string_view that doesn't go out of scope after this function
-    return std::make_unique<HttpRouteRegistration>(method, insertedIt.first->first, this);
+    return std::unique_ptr<Ichor::HttpRouteRegistration, Ichor::Deleter>(new (getMemoryResource()->allocate(sizeof(HttpRouteRegistration))) HttpRouteRegistration(method, insertedIt.first->first, this), Deleter{getMemoryResource(), sizeof(HttpRouteRegistration)});
 }
 
 void Ichor::HttpHostService::removeRoute(HttpMethod method, std::string_view route) {

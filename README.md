@@ -6,84 +6,21 @@ Ichor informally stands for "Intuitive Compile-time Hoisted Object Resources".
 
 Although initially started as a rewrite of OSGI-based framework Celix and to a lesser extent CppMicroservices, Ichor has carved out its own path, as god-fluids are wont to do. 
 
-## Thread confinement?
+Ichor's greater aim is to bring C++20 to the embedded realm. This means that classic requirements such as the possibility to have 0 dynamic memory allocations, control over scheduling and deterministic execution times are a focus, whilst still allowing much of standard modern C++ development. 
+
+Moreover, the concept of [Fearless Concurrency](https://doc.rust-lang.org/book/ch16-00-concurrency.html) from Rust is attempted to be applied in Ichor through thread confinement.   
+
+### Thread confinement? Fearless Concurrency?
 
 Multithreading is hard. There exist plenty of methods trying to make it easier, ranging from the [actor framework](https://github.com/actor-framework/actor-framework), [static analysis a la rust](https://doc.rust-lang.org/book/ch16-00-concurrency.html), [software transaction memory](https://en.wikipedia.org/wiki/Software_transactional_memory) and traditional manual lock-wrangling.
 
-Thread confinement is one such approach. Instead of having to protect resources, Ichor attempts to make it well-defined on which thread an instance of a C++ class runs. Thereby removing the need to think about atomics/mutexes, unless the implementation uses threads not managed by Ichor. 
-
-## Dependency Management?
-
-Ichor could have stopped at something similar to libuv: create a 
+Thread confinement is one such approach. Instead of having to protect resources, Ichor attempts to make it well-defined on which thread an instance of a C++ class runs and only allows modification to the memory from that thread. Thereby removing the need to think about atomics/mutexes, unless you use threads not managed by Ichor.
 
 ## Quickstart
 
-The minimal example requires a main function, which initiates at least one event loop, a framework logger and one service. This is an example on how to quit the program on ctrl+c:
+The [minimal example](examples/minimal_example/main.cpp) requires a main function, which initiates at least one event loop, a framework logger and one service and quitting the program gracefully using ctrl+c.
 
-```c++
-#include <ichor/DependencyManager.h>
-#include <ichor/Service.h>
-#include <ichor/LifecycleManager.h>
-#include <ichor/optional_bundles/logging_bundle/CoutFrameworkLogger.h>
-#include <ichor/optional_bundles/timer_bundle/TimerService.h>
-
-using namespace Ichor;
-
-std::atomic<bool> quit{};
-
-void siginthandler(int param) {
-    quit = true;
-}
-
-class SigIntService final : public Service {
-public:
-    bool start() final {
-        // Setup a timer that fires every 10 milliseconds and tell that dependency manager that we're interested in the events that the timer fires.
-        auto timer = getManager()->createServiceManager<Timer, ITimer>();
-        timer->setChronoInterval(std::chrono::milliseconds(10));
-        // Registering an event handler requires 2 pieces of information: the service id and a pointer to a service instantiation.
-        // The third piece of information is an extra filter, as we're only interested in events of this specific timer.
-        _timerEventRegistration = getManager()->registerEventHandler<TimerEvent>(this, timer->getServiceId());
-        timer->startTimer();
-
-        // Register sigint handler
-        signal(SIGINT, siginthandler);
-        return true;
-    }
-
-    bool stop() final {
-        _timerEventRegistration = nullptr;
-        return true;
-    }
-
-    Generator<bool> handleEvent(TimerEvent const * const evt) {
-        // If sigint has been fired, send a quit to the event loop.
-        // This can't be done from within the handler itself, as the mutex surrounding pushEvent might already be locked, resulting in a deadlock!
-        if(quit) {
-            getManager()->pushEvent<QuitEvent>(getServiceId());
-        }
-        co_return (bool)PreventOthersHandling;
-    }
-
-    std::unique_ptr<EventHandlerRegistration> _timerEventRegistration{nullptr};
-}
-
-
-int main() {
-    std::locale::global(std::locale("en_US.UTF-8")); // some loggers require having a locale
-
-    DependencyManager dm{};
-    // Register a framework logger and our sig int service.
-    dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>();
-    dm.createServiceManager<SigIntService>();
-    // Start manager, consumes current thread.
-    dm.start();
-
-    return 0;
-}
-```
-
-More examples can be found in the examples directory.
+More examples can be found in the [examples directory](examples).
 
 
 ## Dependencies
@@ -187,7 +124,37 @@ Help with improving memory usage and the O(N²) behaviour would be appreciated.
 
 # Support
 
-Feel free to make issues/pull requests and I'm sometimes online on Discord, though there's no 24/7 support: https://discord.gg/r9BtesB
+Feel free to make issues/pull requests and I'm sometimes online on Discord: https://discord.gg/r9BtesB
+
+Business inquiries can be sent to michael@volt-softare.nl
+
+# FAQ
+
+### I want to have a non-voluntary pre-emption scheduler
+
+Currently Ichor uses a mutex when inserting/extracting events from its queue. Because non-voluntary user-space scheduling requires lock-free data-structures, this is not possible yet.
+
+### Is it possible to have a completely stack-based allocation while using C++?
+
+Yes, see the [realtime example](examples/realtime_example). This example terminates the program whenever there is a dynamic memory allocation, aside from some allowed exceptions like the std::locale allocation.
+
+### I'd like to use clang
+
+To my knowledge, clang doesn't have certain C++20 features used in Ichor yet. As soon as clang implements those, I'll work on adding support.
+
+### Windows? OS X?
+
+I don't have a machine with windows/OS X to program for (and also know if there is much demand for it), so I haven't started on it.
+
+What is necessary to implement before using Ichor on these platforms:
+* Ichor [STL](include/ichor/stl) functionality, namely the RealtimeMutex and ConditionVariable.
+* Compiler support for C++20 may not be adequate yet.
+
+### Why re-implement parts of the STL?
+
+To add support for memory allocators and achieve 0 dynamic memory allocation support. Particularly std::any.
+
+But also because the real-time extensions to mutexes (PTHREAD_MUTEX_ADAPTIVE_NP/PTHREAD_PRIO_INHERIT) is either not a standard extension or not exposed by std::mutex.
 
 # License
 

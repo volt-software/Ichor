@@ -44,7 +44,7 @@ namespace Ichor {
         std::thread _listenThread{};
         ILogger *_logger{nullptr};
         std::vector<WsConnectionService*> _connections{};
-        std::unique_ptr<EventHandlerRegistration> _eventRegistration{};
+        std::unique_ptr<EventHandlerRegistration, Deleter> _eventRegistration{};
     };
 }
 

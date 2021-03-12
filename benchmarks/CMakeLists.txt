@@ -10,6 +10,7 @@ if(USE_ETCD)
     add_executable(ichor_etcd_benchmark ${PROJECT_EXAMPLE_SOURCES})
     target_link_libraries(ichor_etcd_benchmark ${CMAKE_THREAD_LIBS_INIT})
     target_link_libraries(ichor_etcd_benchmark ichor)
+    target_link_libraries(ichor_etcd_benchmark ${ETCD_TARGET})
 endif()
 
 file(GLOB_RECURSE PROJECT_EXAMPLE_SOURCES ${TOP_DIR}/benchmarks/start_stop_benchmark/*.cpp)

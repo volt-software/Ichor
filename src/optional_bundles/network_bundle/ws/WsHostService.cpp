@@ -108,11 +108,11 @@ void Ichor::WsHostService::removeDependencyInstance(ILogger *logger) {
 }
 
 Ichor::Generator<bool> Ichor::WsHostService::handleEvent(Ichor::NewWsConnectionEvent const * const evt) {
-    auto connection = getManager()->createServiceManager<WsConnectionService, IConnectionService>(IchorProperties{
-        {"WsHostServiceId", getServiceId()},
-        {"Socket", evt->_socket},
-        {"Executor", evt->_executor}
-    });
+    auto connection = getManager()->createServiceManager<WsConnectionService, IConnectionService>(Ichor::make_properties(getMemoryResource(),
+        IchorProperty{"WsHostServiceId", Ichor::make_any<uint64_t>(getMemoryResource(), getServiceId())},
+        IchorProperty{"Socket", Ichor::make_any<decltype(evt->_socket)>(getMemoryResource(), std::move(evt->_socket))},
+        IchorProperty{"Executor", Ichor::make_any<decltype(evt->_executor)>(getMemoryResource(), evt->_executor)}
+        ));
     _connections.push_back(connection);
 
     co_return (bool)PreventOthersHandling;

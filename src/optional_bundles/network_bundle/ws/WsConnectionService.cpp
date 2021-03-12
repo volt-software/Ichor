@@ -25,7 +25,9 @@ void setup_stream(std::unique_ptr<websocket::stream<NextLayer>>& ws)
 Ichor::WsConnectionService::WsConnectionService(DependencyRegister &reg, IchorProperties props, DependencyManager *mng) : Service(std::move(props), mng) {
     reg.registerDependency<ILogger>(this, true);
     if(props.contains("WsHostServiceId")) {
-        reg.registerDependency<IHostService>(this, true, IchorProperties{{"Filter", Filter{ServiceIdFilterEntry{Ichor::any_cast<uint64_t>(props["WsHostServiceId"])}}}});
+        reg.registerDependency<IHostService>(this, true,
+                                             Ichor::make_properties(getMemoryResource(),
+                                             IchorProperty{"Filter", Ichor::make_any<Filter>(getMemoryResource(), getMemoryResource(), ServiceIdFilterEntry{Ichor::any_cast<uint64_t>(props["WsHostServiceId"])})}));
     }
 }
 

@@ -211,9 +211,16 @@ namespace Ichor {
         };
         DependencyManager(DependencyManager&&) = delete;
 
+
         template<DerivedTemplated<Service> Impl, Derived<IService>... Interfaces>
         requires ImplementsAll<Impl, Interfaces...>
-        auto createServiceManager(IchorProperties&& properties = IchorProperties{}, uint64_t priority = INTERNAL_EVENT_PRIORITY) {
+        auto createServiceManager() {
+            return createServiceManager<Impl, Interfaces...>(IchorProperties{_memResource});
+        }
+
+        template<DerivedTemplated<Service> Impl, Derived<IService>... Interfaces>
+        requires ImplementsAll<Impl, Interfaces...>
+        auto createServiceManager(IchorProperties&& properties, uint64_t priority = INTERNAL_EVENT_PRIORITY) {
             if constexpr(RequestsDependencies<Impl>) {
                 static_assert(!std::is_default_constructible_v<Impl>, "Cannot have a dependencies constructor and a default constructor simultaneously.");
                 static_assert(!RequestsProperties<Impl>, "Cannot have a dependencies constructor and a properties constructor simultaneously.");

@@ -184,4 +184,11 @@ namespace Ichor {
         a.template emplace<T, Args...>(rsrc, std::forward<Args>(args)...);
         return a;
     }
+
+    template <typename T, typename... Args>
+    any make_any(Args&&... args) {
+        any a;
+        a.template emplace<T, Args...>(std::pmr::get_default_resource(), std::forward<Args>(args)...);
+        return a;
+    }
 }

@@ -52,7 +52,7 @@ private:
         auto unaligned_location = reinterpret_cast<std::size_t>(buffer.data()) + total_used + sizeof(block);
         auto location = round_up(unaligned_location, alignment);
 
-#ifndef NDEBUG
+#ifndef NDEBUG //warning: fmt::print calls printf(), which allocates (at least on my machine)
         if(location - unaligned_location > bytes_necessary - bytes) {
             fmt::print("Alignment error, check implementation\n");
             std::terminate();
@@ -60,14 +60,14 @@ private:
 #endif
 
         if(last_used_block->next == nullptr) {
-#ifndef NDEBUG
+#ifndef NDEBUG //warning: fmt::print calls printf(), which allocates (at least on my machine)
             fmt::print("id {:L} allocated {:L} bytes for {:L} bytes requested with alignment {:L} at location {:L} and returning {:L}\n", id, bytes_necessary,
                        bytes, alignment, unaligned_location, location);
 #endif
             last_used_block->size = bytes_necessary;
             last_used_block->next = reinterpret_cast<block*>(buffer.data() + total_used + bytes_necessary);
         }
-#ifndef NDEBUG
+#ifndef NDEBUG //warning: fmt::print calls printf(), which allocates (at least on my machine)
         else {
             fmt::print(
                     "id {:L} allocated {:L} bytes for {:L} bytes requested with alignment {:L} at location {:L} and returning {:L} by re-using block of size {}\n",
@@ -86,7 +86,7 @@ private:
             if(last_used_block->next != nullptr && reinterpret_cast<std::size_t>(last_used_block->next) > reinterpret_cast<std::size_t>(p) || last_used_block->next == nullptr) {
                 last_used_block->used = false;
 
-#ifndef NDEBUG
+#ifndef NDEBUG //warning: fmt::print calls printf(), which allocates (at least on my machine)
                 fmt::print("id {:L} deallocated {:L} bytes at location {:L}\n", id, bytes, reinterpret_cast<std::size_t>(last_used_block->next));
 #endif
 

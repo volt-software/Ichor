@@ -56,7 +56,18 @@ namespace Ichor {
 //    using IchorProperties = std::pmr::unordered_map<std::pmr::string, Ichor::any>;
     using IchorProperties = std::unordered_map<std::pmr::string, Ichor::any, std::hash<std::pmr::string>, std::equal_to<>, Ichor::PolymorphicAllocator<std::pair<const std::pmr::string, Ichor::any>>>;
 #endif
+    using IchorProperty = std::pair<std::pmr::string, Ichor::any>;
 
     inline constexpr bool PreventOthersHandling = false;
     inline constexpr bool AllowOthersHandling = true;
+
+    template <class T>
+    concept Pair = std::is_same_v<T, IchorProperty>;
+
+    template <Pair... Pairs>
+    IchorProperties make_properties(std::pmr::memory_resource *rsrc, Pairs&&... pairs) {
+        IchorProperties props{rsrc};
+        (props.emplace(std::move(pairs.first), std::move(pairs.second)), ...);
+        return props;
+    }
 }

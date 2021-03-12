@@ -2,12 +2,12 @@
 #include "OptionalService.h"
 #include <ichor/optional_bundles/logging_bundle/LoggerAdmin.h>
 #include "MemoryResources.h"
-#ifdef USE_SPDLOG
-#include <ichor/optional_bundles/logging_bundle/SpdlogFrameworkLogger.h>
-#include <ichor/optional_bundles/logging_bundle/SpdlogLogger.h>
+#if defined(NDEBUG)
+#include <ichor/optional_bundles/logging_bundle/NullFrameworkLogger.h>
+#include <ichor/optional_bundles/logging_bundle/NullLogger.h>
 
-#define FRAMEWORK_LOGGER_TYPE SpdlogFrameworkLogger
-#define LOGGER_TYPE SpdlogLogger
+#define FRAMEWORK_LOGGER_TYPE NullFrameworkLogger
+#define LOGGER_TYPE NullLogger
 #else
 #include <ichor/optional_bundles/logging_bundle/CoutFrameworkLogger.h>
 #include <ichor/optional_bundles/logging_bundle/CoutLogger.h>
@@ -35,16 +35,15 @@ int main() {
 
     DependencyManager dm{&resourceOne, &resourceTwo};
     dm.createServiceManager<FRAMEWORK_LOGGER_TYPE, IFrameworkLogger>({}, 10);
-#ifdef USE_SPDLOG
-    dm.createServiceManager<SpdlogSharedService, ISpdlogSharedService>();
-#endif
     dm.createServiceManager<LoggerAdmin<LOGGER_TYPE>, ILoggerAdmin>();
     dm.createServiceManager<OptionalService, IOptionalService>();
     dm.createServiceManager<OptionalService, IOptionalService>();
     dm.createServiceManager<TestService>();
     dm.start();
     auto end = std::chrono::steady_clock::now();
+#ifndef NDEBUG
     fmt::print("Program ran for {:L} µs\n", std::chrono::duration_cast<std::chrono::microseconds>(end-start).count());
+#endif
 
     return 0;
 }

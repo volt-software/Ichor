@@ -29,7 +29,7 @@ int main() {
     dm.createServiceManager<SpdlogSharedService, ISpdlogSharedService>();
 #endif
     dm.createServiceManager<LoggerAdmin<LOGGER_TYPE>, ILoggerAdmin>();
-    dm.createServiceManager<EtcdService, IEtcdService>(IchorProperties{{"EtcdAddress", "localhost:2379"s}});
+    dm.createServiceManager<EtcdService, IEtcdService>(IchorProperties{{"EtcdAddress", Ichor::make_any<std::string>("localhost:2379")}});
     dm.createServiceManager<UsingEtcdService>();
     dm.start();
     auto end = std::chrono::steady_clock::now();

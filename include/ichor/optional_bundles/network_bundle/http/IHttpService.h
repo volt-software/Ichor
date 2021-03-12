@@ -10,7 +10,7 @@ namespace Ichor {
     public:
         ~IHttpService() override = default;
 
-        virtual std::unique_ptr<HttpRouteRegistration> addRoute(HttpMethod method, std::string route, std::function<HttpResponse(HttpRequest&)> handler) = 0;
+        virtual std::unique_ptr<HttpRouteRegistration, Deleter> addRoute(HttpMethod method, std::string route, std::function<HttpResponse(HttpRequest&)> handler) = 0;
         virtual void removeRoute(HttpMethod method, std::string_view route) = 0;
         virtual void setPriority(uint64_t priority) = 0;
         virtual uint64_t getPriority() = 0;

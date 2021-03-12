@@ -33,26 +33,26 @@ int main() {
     channel.addManager(&dmOne);
     channel.addManager(&dmTwo);
 
-    std::thread t1([&dmOne] {
+    std::thread t1([&dmOne, &resourceOne] {
         auto logMgr = dmOne.createServiceManager<FRAMEWORK_LOGGER_TYPE, IFrameworkLogger>({}, 10);
         logMgr->setLogLevel(LogLevel::INFO);
 #ifdef USE_SPDLOG
         dmOne.createServiceManager<SpdlogSharedService, ISpdlogSharedService>();
 #endif
         dmOne.createServiceManager<LoggerAdmin<LOGGER_TYPE>, ILoggerAdmin>();
-        dmOne.createServiceManager<EtcdService, IEtcdService>(IchorProperties{{"EtcdAddress", "localhost:2379"s}});
+        dmOne.createServiceManager<EtcdService, IEtcdService>(IchorProperties{{"EtcdAddress", Ichor::make_any<std::string, std::string>(&resourceOne, "localhost:2379")}});
         dmOne.createServiceManager<UsingEtcdService>();
         dmOne.start();
     });
 
-    std::thread t2([&dmTwo] {
+    std::thread t2([&dmTwo, &resourceThree] {
         auto logMgr = dmTwo.createServiceManager<FRAMEWORK_LOGGER_TYPE, IFrameworkLogger>({}, 10);
         logMgr->setLogLevel(LogLevel::INFO);
 #ifdef USE_SPDLOG
         dmTwo.createServiceManager<SpdlogSharedService, ISpdlogSharedService>();
 #endif
         dmTwo.createServiceManager<LoggerAdmin<LOGGER_TYPE>, ILoggerAdmin>();
-        dmTwo.createServiceManager<EtcdService, IEtcdService>(IchorProperties{{"EtcdAddress", "localhost:2379"s}});
+        dmTwo.createServiceManager<EtcdService, IEtcdService>(IchorProperties{{"EtcdAddress", Ichor::make_any<std::string, std::string>(&resourceThree, "localhost:2379")}});
         dmTwo.createServiceManager<UsingEtcdService>();
         dmTwo.start();
     });

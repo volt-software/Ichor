@@ -123,15 +123,14 @@ if(USE_SPDLOG)
 endif()
 
 if(USE_ETCD)
-    target_link_libraries(ichor ${ETCD_TARGET})
     target_sources(ichor PRIVATE ${ICHOR_OPTIONAL_ETCD_SOURCES})
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DGOOGLE_PROTOBUF_NO_RTTI")
 endif()
 
 if(USE_BOOST_BEAST)
 #TODO figure out how to make asio/beast compile as libraries, rather than header only. This would hopefully save some compilation time.
 #    target_link_libraries(ichor asio beast)
     target_link_libraries(ichor boost_coroutine)
-    #BOOST_BEAST_USE_STD_STRING_VIEW
     target_compile_definitions(ichor PUBLIC "BOOST_BEAST_USE_STD_STRING_VIEW")
 endif()
 

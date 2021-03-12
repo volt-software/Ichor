@@ -6,24 +6,24 @@
 // Maybe doesn't work in some situations where std::function would, missing tests
 namespace Ichor {
 
-    struct Deleter {
+    struct Deleter final {
         Deleter(std::pmr::memory_resource *rsrc, std::size_t size) noexcept : _rsrc(rsrc), _size(size) {}
         Deleter() noexcept = default;
 
-        Deleter(const Deleter&) = default;
+        Deleter(const Deleter&) noexcept = default;
         Deleter(Deleter&&) noexcept = default;
 
-        Deleter& operator=(const Deleter&) = default;
+        Deleter& operator=(const Deleter&) noexcept = default;
         Deleter& operator=(Deleter&&) noexcept = default;
 
-        ~Deleter() {
+        ~Deleter() noexcept {
             if(_rsrc == nullptr) {
                 std::terminate();
             }
         }
 
         //Called by unique_ptr or shared_ptr to destroy/free the Resource
-        void operator()(void *c) {
+        void operator()(void *c) const noexcept {
             if(c != nullptr) {
                 _rsrc->deallocate(c, _size);
             }

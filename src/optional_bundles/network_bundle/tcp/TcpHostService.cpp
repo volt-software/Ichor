@@ -129,7 +129,7 @@ uint64_t Ichor::TcpHostService::getPriority() {
 
 Ichor::Generator<bool> Ichor::TcpHostService::handleEvent(NewSocketEvent const * const evt) {
     IchorProperties props{};
-    props.emplace("Priority", Ichor::make_any<bool>(getMemoryResource(), _priority.load(std::memory_order_acquire)));
+    props.emplace("Priority", Ichor::make_any<uint64_t>(getMemoryResource(), _priority.load(std::memory_order_acquire)));
     props.emplace("Socket", Ichor::make_any<int>(getMemoryResource(), evt->socket));
     _connections.emplace_back(getManager()->template createServiceManager<TcpConnectionService, IConnectionService>(std::move(props)));
 
