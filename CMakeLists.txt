@@ -21,6 +21,7 @@ include(ExternalProject)
 
 option(BUILD_EXAMPLES "Build examples" ON)
 option(BUILD_BENCHMARKS "Build benchmarks" ON)
+option(BUILD_TESTS "Build tests" ON)
 option(USE_SPDLOG "Use spdlog as framework logging implementation" OFF)
 option(USE_RAPIDJSON "Add RapidJSON as a possible serializer implementation" OFF)
 option(USE_PUBSUB "Add various dependencies to enable pubsub bundle to be built" OFF)
@@ -136,16 +137,6 @@ endif()
 
 target_link_libraries(ichor ${CMAKE_THREAD_LIBS_INIT})
 target_link_libraries(ichor -ldl -lrt)
-#target_compile_options(ichor PRIVATE -fPIC)
-
-# no tests yet
-#file(GLOB_RECURSE PROJECT_TEST_SOURCES ${TOP_DIR}/test/*.cpp)
-#add_executable(ichor_test ${PROJECT_TEST_SOURCES})
-#if(USE_SPDLOG)
-#    target_sources(ichor_test PRIVATE ${SPDLOG_SOURCES})
-#endif()
-#add_test(NAME MyTest COMMAND ichor_test)
-#target_link_libraries(ichor_test ${CMAKE_THREAD_LIBS_INIT})
 
 include_directories("${EXTERNAL_DIR}/Catch2/single_include")
 include_directories("${EXTERNAL_DIR}/wyhash")
@@ -174,3 +165,16 @@ endif()
 if(BUILD_BENCHMARKS)
     add_subdirectory(benchmarks)
 endif()
+if(BUILD_TESTS)
+    add_subdirectory(test)
+endif()
+
+
+# no tests yet
+#file(GLOB_RECURSE PROJECT_TEST_SOURCES ${TOP_DIR}/test/*.cpp)
+#add_executable(ichor_test ${PROJECT_TEST_SOURCES})
+#if(USE_SPDLOG)
+#    target_sources(ichor_test PRIVATE ${SPDLOG_SOURCES})
+#endif()
+#add_test(NAME MyTest COMMAND ichor_test)
+#target_link_libraries(ichor_test ${CMAKE_THREAD_LIBS_INIT})

@@ -502,6 +502,10 @@ namespace Ichor {
             return _logger;
         }
 
+        [[nodiscard]] bool isRunning() const noexcept {
+            return _started;
+        };
+
         [[nodiscard]] std::optional<std::string_view> getImplementationNameFor(uint64_t serviceId) const noexcept;
 
         void start();

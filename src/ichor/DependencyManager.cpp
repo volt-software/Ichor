@@ -20,7 +20,14 @@ void on_sigint([[maybe_unused]] int sig) {
 
 
 void Ichor::DependencyManager::start() {
-    assert(_logger != nullptr);
+    if(_logger == nullptr) {
+        throw std::runtime_error("Trying to start without a framework logger");
+    }
+
+    if(_services.size() < 2) {
+        throw std::runtime_error("Trying to start without any registered services");
+    }
+
     ICHOR_LOG_DEBUG(_logger, "starting dm");
 
     ::signal(SIGINT, on_sigint);
