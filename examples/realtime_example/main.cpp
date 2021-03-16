@@ -45,8 +45,8 @@ void* run_example(void*) {
     std::pmr::set_default_resource(&terminatingResource);
 
     {
-        buffer_resource<1024 * 256> resourceOne{};
-        buffer_resource<1024 * 256> resourceTwo{};
+        buffer_resource<1024 * 16> resourceOne{};
+        buffer_resource<1024 * 16> resourceTwo{};
 
         DependencyManager dm{&resourceOne, &resourceTwo};
         dm.createServiceManager<FRAMEWORK_LOGGER_TYPE, IFrameworkLogger>({}, 10);
