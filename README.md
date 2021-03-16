@@ -20,6 +20,8 @@ Thread confinement is one such approach. Instead of having to protect resources,
 
 The [minimal example](examples/minimal_example/main.cpp) requires a main function, which initiates at least one event loop, a framework logger and one service and quitting the program gracefully using ctrl+c.
 
+The [realtime example](examples/realtime_example/main.cpp) shows a trivial program running with realtime priorities and shows some usage of Ichor priorities.
+
 More examples can be found in the [examples directory](examples).
 
 
