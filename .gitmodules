@@ -25,3 +25,6 @@
 	path = external/liburing
 	url = https://github.com/axboe/liburing.git
 	tag = liburing-0.7
+[submodule "external/utest.h"]
+	path = external/utest.h
+	url = https://github.com/sheredom/utest.h.git
