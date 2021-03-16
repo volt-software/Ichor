@@ -126,7 +126,7 @@ Help with improving memory usage and the O(N²) behaviour would be appreciated.
 
 Feel free to make issues/pull requests and I'm sometimes online on Discord: https://discord.gg/r9BtesB
 
-Business inquiries can be sent to michael@volt-softare.nl
+Business inquiries can be sent to michael AT volt-software.nl
 
 # FAQ
 
