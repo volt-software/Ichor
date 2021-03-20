@@ -93,6 +93,7 @@ Optional services:
 
 # Roadmap
 
+* EDF scheduling / WCET measurements
 * CMake stuff to include ichor library from external project
 * expand etcd support, currently only simply put/get supported
 * Pubsub interfaces

@@ -2,6 +2,7 @@
 #include "OptionalService.h"
 #include <ichor/optional_bundles/logging_bundle/LoggerAdmin.h>
 #include "MemoryResources.h"
+#include "GlobalRealtimeSettings.h"
 #if defined(NDEBUG)
 #include <ichor/optional_bundles/logging_bundle/NullFrameworkLogger.h>
 #include <ichor/optional_bundles/logging_bundle/NullLogger.h>
@@ -16,13 +17,8 @@
 #define LOGGER_TYPE CoutLogger
 #endif
 #include <chrono>
-#include <iostream>
+#include <stdexcept>
 
-#if defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)
-    //TODO
-#else
-#include <sched.h>
-#endif
 
 using namespace std::string_literals;
 
@@ -66,11 +62,13 @@ void* run_example(void*) {
 
 int main() {
     std::locale::global(std::locale("en_US.UTF-8"));
+    GlobalRealtimeSettings settings{};
 
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)
     //TODO realtime settings
     run_example();
 #else
+    // create a thread with realtime priority to run the program on
     pthread_t thread{};
     sched_param param{};
     pthread_attr_t attr{};
@@ -89,8 +87,6 @@ int main() {
         pthread_join(thread, nullptr);
     }
 #endif
-
-
 
     return 0;
 }

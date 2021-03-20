@@ -30,6 +30,8 @@ void* malloc(size_t size) {
         for (size_t i = 0; i < size2; i++) {
             // the first 2 dozen memory allocations or so are used for __static_initialization_and_destruction_0 and std::locale
             if (strstr(funcNames[i], "locale") != nullptr || //exception for locale
+                strstr(funcNames[i], "__cxa_allocate_exception") != nullptr || //exception for std::terminate
+                strstr(funcNames[i], "runtime_error") != nullptr || //exception for std::terminate
 #ifndef NDEBUG
                 strstr(funcNames[i], "_IO_file_doallocate") != nullptr || //exception for printf() related functionality
 #endif
