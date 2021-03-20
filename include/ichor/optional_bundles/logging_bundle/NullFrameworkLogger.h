@@ -21,8 +21,5 @@ namespace Ichor {
 
         void setLogLevel(LogLevel level) final {}
         [[nodiscard]] LogLevel getLogLevel() const final { return LogLevel::ERROR; }
-
-        bool start() final { return true; }
-        bool stop() final { return true; }
     };
 }

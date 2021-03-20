@@ -79,8 +79,13 @@ namespace Ichor {
         }
 
     protected:
-        [[nodiscard]] virtual bool start() = 0;
-        [[nodiscard]] virtual bool stop() = 0;
+        [[nodiscard]] virtual bool start() {
+            return true;
+        }
+
+        [[nodiscard]] virtual bool stop() {
+            return true;
+        }
 
         IchorProperties _properties;
     private:

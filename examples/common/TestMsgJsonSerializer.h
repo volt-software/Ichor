@@ -19,14 +19,6 @@ public:
     }
     ~TestMsgJsonSerializer() final = default;
 
-    bool start() final {
-        return true;
-    }
-
-    bool stop() final {
-        return true;
-    }
-
     std::vector<uint8_t> serialize(const void* obj) final {
         auto msg = static_cast<const TestMsg*>(obj);
         rapidjson::StringBuffer sb;

@@ -15,10 +15,6 @@ struct QuitOnStartWithDependenciesService final : public Service<QuitOnStartWith
         return true;
     }
 
-    bool stop() final {
-        return true;
-    }
-
     void addDependencyInstance(UselessService *) {
     }
 

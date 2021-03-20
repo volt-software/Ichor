@@ -50,14 +50,6 @@ void Ichor::CoutLogger::error(const char *filename_in, int line_in, const char *
     }
 }
 
-bool Ichor::CoutLogger::start() {
-    return true;
-}
-
-bool Ichor::CoutLogger::stop() {
-    return true;
-}
-
 void Ichor::CoutLogger::setLogLevel(Ichor::LogLevel level) {
     _level = level;
 }

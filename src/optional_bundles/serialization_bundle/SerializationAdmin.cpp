@@ -22,16 +22,6 @@ void* Ichor::SerializationAdmin::deserialize(const uint64_t type, std::vector<ui
     return serializer->second->deserialize(std::move(bytes));
 }
 
-bool Ichor::SerializationAdmin::start() {
-    ICHOR_LOG_TRACE(_logger, "Start");
-    return true;
-}
-
-bool Ichor::SerializationAdmin::stop() {
-    ICHOR_LOG_TRACE(_logger, "Stop");
-    return true;
-}
-
 void Ichor::SerializationAdmin::addDependencyInstance(ILogger *logger) {
     _logger = logger;
     ICHOR_LOG_TRACE(_logger, "Inserted logger");

@@ -19,9 +19,6 @@ namespace Ichor {
         void removeDependencyInstance(ILogger *logger);
         void addDependencyInstance(ISerializer *serializer);
         void removeDependencyInstance(ISerializer *serializer);
-
-        bool start() final;
-        bool stop() final;
     private:
 
         std::pmr::unordered_map<uint64_t, ISerializer*> _serializers;
