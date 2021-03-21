@@ -3,7 +3,6 @@
 #include <cstdint>
 #include <ichor/Generator.h>
 #include <ichor/stl/Function.h>
-#include <variant>
 
 namespace Ichor {
     struct Event;

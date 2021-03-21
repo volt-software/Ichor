@@ -119,22 +119,16 @@ Setup: AMD 3900X, 3600MHz@CL17 RAM, ubuntu 20.04
 
 Realtime example on a vanilla linux:
 ```
-duration of run 5,174 is 50,774 µs which exceeded maximum of 2,000 µs
-duration of run 8,584 is 49,804 µs which exceeded maximum of 2,000 µs
-duration of run 11,278 is 50,833 µs which exceeded maximum of 2,000 µs
-duration of run 13,977 is 49,847 µs which exceeded maximum of 2,000 µs
-duration of run 16,675 is 50,893 µs which exceeded maximum of 2,000 µs
-duration of run 19,340 is 49,830 µs which exceeded maximum of 2,000 µs
-duration min/max/avg: 274/50,893/335 µs
-```
-
-Realtime example on an RT_PREEMPT linux, [tuned](https://rigtorp.se/low-latency-guide/):
-```
-root@xanthos:/home/oipo-unencrypted/Programming/cppelix/bin# ./ichor_realtime_example 
-duration of run 6,013 is 49,191 µs which exceeded maximum of 2,000 µs
-duration of run 11,215 is 50,187 µs which exceeded maximum of 2,000 µs
-duration of run 16,420 is 50,187 µs which exceeded maximum of 2,000 µs
-duration min/max/avg: 177/50,187/188 µs
+root# echo 950000 > /proc/sys/kernel/sched_rt_runtime_us
+root# ./ichor_realtime_example 
+duration of run 7,156 is 49,222 µs which exceeded maximum of 2,000 µs
+duration of run 12,280 is 50,220 µs which exceeded maximum of 2,000 µs
+duration of run 17,421 is 50,223 µs which exceeded maximum of 2,000 µs
+duration min/max/avg: 182/50,223/192 µs
+root# 
+root# echo 999900 > /proc/sys/kernel/sched_rt_runtime_us
+root# ./ichor_realtime_example 
+duration min/max/avg: 181/370/184 µs
 ```
 
 These benchmarks currently lead to the characteristics:
@@ -142,6 +136,7 @@ These benchmarks currently lead to the characteristics:
 * Starting services, stopping services overhead is likely O(N)
 * event handling overhead is amortized O(1)
 * Creating more threads is not 100% linearizable in all cases (pure event creation/handling seems to be, otherwise not really)
+* Latency spikes while scheduling in user-space is in the order of 100's of microseconds (except if the queue goes empty and is forced to sleep)
 
 Help with improving memory usage and the O(N²) behaviour would be appreciated.
 

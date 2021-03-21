@@ -361,7 +361,9 @@ void Ichor::DependencyManager::start() {
             lck.lock();
         }
 
-        _wakeUp.wait_for(lck, std::chrono::milliseconds(1), [this]{ return !_eventQueue.empty(); });
+        if(!_quit.load(std::memory_order_acquire)) {
+            _wakeUp.wait_for(lck, std::chrono::milliseconds(1), [this] { return !_eventQueue.empty(); });
+        }
 
         lck.unlock();
     }
