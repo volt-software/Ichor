@@ -195,11 +195,9 @@ namespace Ichor {
     class DependencyManager final {
     public:
         DependencyManager() : _memResource(std::pmr::get_default_resource()), _eventMemResource(std::pmr::get_default_resource()) {
-
         }
 
         DependencyManager(std::pmr::memory_resource *mainMemoryResource, std::pmr::memory_resource *eventMemoryResource) : _memResource(mainMemoryResource), _eventMemResource(eventMemoryResource) {
-
         }
 
         // DANGEROUS COPY, EFFECTIVELY MAKES A NEW MANAGER AND STARTS OVER!!
@@ -436,15 +434,16 @@ namespace Ichor {
                         impl->getServiceId(),
                         targetServiceId,
                         Ichor::function<Generator<bool>(Event const * const)>{
-                                [impl](Event const * const evt) {
-                                    return impl->handleEvent(static_cast<EventT const * const>(evt));
+                                [impl](Event const *const evt) {
+                                    return impl->handleEvent(static_cast<EventT const *const>(evt));
                                 },
                                 _memResource
                         }
                 });
                 _eventCallbacks.emplace(EventT::TYPE, std::move(v));
             } else {
-                existingHandlers->second.emplace_back(impl->getServiceId(), targetServiceId, Ichor::function<Generator<bool>(Event const * const)>{[impl](Event const * const evt){ return impl->handleEvent(static_cast<EventT const * const>(evt)); }, _memResource});
+                existingHandlers->second.emplace_back(impl->getServiceId(), targetServiceId, Ichor::function<Generator<bool>(Event const *const)>{
+                        [impl](Event const *const evt) { return impl->handleEvent(static_cast<EventT const *const>(evt)); }, _memResource});
             }
             return std::unique_ptr<EventHandlerRegistration, Deleter>(new (_memResource->allocate(sizeof(EventHandlerRegistration))) EventHandlerRegistration(this, CallbackKey{impl->getServiceId(), EventT::TYPE}, impl->getServicePriority()), Deleter{_memResource, sizeof(EventHandlerRegistration)});
         }

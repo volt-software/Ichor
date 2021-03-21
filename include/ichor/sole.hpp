@@ -633,15 +633,16 @@ namespace sole {
     // UUID implementations
 
     inline uuid uuid4() {
-        static std::mutex m;
-        static std::random_device rd;
-        static std::uniform_int_distribution<uint64_t> dist(0, std::numeric_limits<uint64_t>::max());
+//        static std::mutex m;
+        static thread_local std::random_device rd;
+        static thread_local std::mt19937 rng(rd());
+        static thread_local std::uniform_int_distribution<uint64_t> dist(0, std::numeric_limits<uint64_t>::max());
 
-        std::scoped_lock sl(m);
+//        std::scoped_lock sl(m);
         uuid my;
 
-        my.ab = dist(rd);
-        my.cd = dist(rd);
+        my.ab = dist(rng);
+        my.cd = dist(rng);
 
         my.ab = (my.ab & 0xFFFFFFFFFFFF0FFFULL) | 0x0000000000004000ULL;
         my.cd = (my.cd & 0x3FFFFFFFFFFFFFFFULL) | 0x8000000000000000ULL;

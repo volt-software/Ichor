@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cppcoro/generator.hpp>
+#include <ichor/GetThreadLocalMemoryResource.h>
 
 namespace Ichor{
 
@@ -18,7 +19,10 @@ namespace Ichor{
 
             GeneratorPromise() = default;
 
-            Generator<T> get_return_object() noexcept;
+            Generator<T> get_return_object() noexcept {
+                using coroutine_handle = cppcoro::coroutine_handle<GeneratorPromise<T>>;
+                return Generator<T>{coroutine_handle::from_promise(*this)};
+            }
 
             constexpr cppcoro::suspend_always initial_suspend() const { return {}; }
 
@@ -28,12 +32,12 @@ namespace Ichor{
                     typename U = T,
                     std::enable_if_t<!std::is_rvalue_reference<U>::value, int> = 0>
             cppcoro::suspend_always yield_value(std::remove_reference_t<T> &value) noexcept {
-                ::new (static_cast<void*>(std::addressof(m_value))) T(std::forward<T>(value));
+                ::new(static_cast<void *>(std::addressof(m_value))) T(std::forward<T>(value));
                 return {};
             }
 
             cppcoro::suspend_always yield_value(std::remove_reference_t<T> &&value) noexcept {
-                ::new (static_cast<void*>(std::addressof(m_value))) T(std::forward<T>(value));
+                ::new(static_cast<void *>(std::addressof(m_value))) T(std::forward<T>(value));
                 return {};
             }
 
@@ -44,15 +48,13 @@ namespace Ichor{
             void return_void() noexcept {
             }
 
-            cppcoro::suspend_never return_value(std::remove_reference_t<T> &value) noexcept
-            {
-                ::new (static_cast<void*>(std::addressof(m_value))) T(std::forward<T>(value));
+            cppcoro::suspend_never return_value(std::remove_reference_t<T> &value) noexcept {
+                ::new(static_cast<void *>(std::addressof(m_value))) T(std::forward<T>(value));
                 return {};
             }
 
-            cppcoro::suspend_never return_value(std::remove_reference_t<T> &&value) noexcept(std::is_nothrow_constructible_v<T, T&&>)
-            {
-                ::new (static_cast<void*>(std::addressof(m_value))) T(std::forward<T>(value));
+            cppcoro::suspend_never return_value(std::remove_reference_t<T> &&value) noexcept(std::is_nothrow_constructible_v<T, T &&>) {
+                ::new(static_cast<void *>(std::addressof(m_value))) T(std::forward<T>(value));
                 return {};
             }
 
@@ -70,6 +72,17 @@ namespace Ichor{
                 }
             }
 
+            void *operator new(std::size_t sz) {
+                auto* rsrc = getThreadLocalMemoryResource();
+                auto* ptr = rsrc->allocate(sz);
+                return ptr;
+            }
+
+            void operator delete(void *ptr, std::size_t sz) noexcept {
+                auto rsrc = getThreadLocalMemoryResource();
+                rsrc->deallocate(ptr, sz);
+            }
+
         private:
 
             T m_value;
@@ -77,11 +90,11 @@ namespace Ichor{
 
         };
 
-        struct GeneratorSentinel {};
+        struct GeneratorSentinel {
+        };
 
         template<typename T>
-        class GeneratorIterator
-        {
+        class GeneratorIterator {
             using coroutine_handle = cppcoro::coroutine_handle<GeneratorPromise<T>>;
 
         public:
@@ -95,38 +108,30 @@ namespace Ichor{
 
             // Iterator needs to be default-constructible to satisfy the Range concept.
             GeneratorIterator() noexcept
-                    : m_coroutine(nullptr)
-            {}
+                    : m_coroutine(nullptr) {}
 
             explicit GeneratorIterator(coroutine_handle coroutine) noexcept
-                    : m_coroutine(coroutine)
-            {}
+                    : m_coroutine(coroutine) {}
 
-            friend bool operator==(const GeneratorIterator& it, GeneratorSentinel) noexcept
-            {
+            friend bool operator==(const GeneratorIterator &it, GeneratorSentinel) noexcept {
                 return !it.m_coroutine || it.m_coroutine.done();
             }
 
-            friend bool operator!=(const GeneratorIterator& it, GeneratorSentinel s) noexcept
-            {
+            friend bool operator!=(const GeneratorIterator &it, GeneratorSentinel s) noexcept {
                 return !(it == s);
             }
 
-            friend bool operator==(GeneratorSentinel s, const GeneratorIterator& it) noexcept
-            {
+            friend bool operator==(GeneratorSentinel s, const GeneratorIterator &it) noexcept {
                 return (it == s);
             }
 
-            friend bool operator!=(GeneratorSentinel s, const GeneratorIterator& it) noexcept
-            {
+            friend bool operator!=(GeneratorSentinel s, const GeneratorIterator &it) noexcept {
                 return it != s;
             }
 
-            GeneratorIterator& operator++()
-            {
+            GeneratorIterator &operator++() {
                 m_coroutine.resume();
-                if (m_coroutine.done())
-                {
+                if (m_coroutine.done()) {
                     m_coroutine.promise().rethrow_if_exception();
                 }
 
@@ -134,18 +139,15 @@ namespace Ichor{
             }
 
             // Need to provide post-increment operator to implement the 'Range' concept.
-            void operator++(int)
-            {
-                (void)operator++();
+            void operator++(int) {
+                (void) operator++();
             }
 
-            reference operator*() const noexcept
-            {
+            reference operator*() const noexcept {
                 return m_coroutine.promise().value();
             }
 
-            pointer operator->() const noexcept
-            {
+            pointer operator->() const noexcept {
                 return std::addressof(operator*());
             }
 
@@ -224,14 +226,4 @@ namespace Ichor{
         cppcoro::coroutine_handle<promise_type> m_coroutine;
 
     };
-
-    namespace Detail
-    {
-        template<typename T>
-        Generator<T> GeneratorPromise<T>::get_return_object() noexcept
-        {
-            using coroutine_handle = cppcoro::coroutine_handle<GeneratorPromise<T>>;
-            return Generator<T>{ coroutine_handle::from_promise(*this) };
-        }
-    }
 }

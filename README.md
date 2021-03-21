@@ -108,14 +108,34 @@ Optional services:
 These benchmarks are mainly used to identify bottlenecks, not to showcase the performance of the framework. Proper throughput and latency benchmarks are TBD.
 
 Setup: AMD 3900X, 3600MHz@CL17 RAM, ubuntu 20.04
-* 1 thread inserting ~5 million events and then processing them in ~1,220 ms and ~965 MB memory usage
-* 8 threads inserting ~5 million events and then processing them in ~2,020 ms and ~7,691 MB memory usage
-* 1 thread creating 10,000 services with dependencies in ~6,262 ms and ~40 MB memory usage
-* 8 threads creating 10,000 services with dependencies in ~25,187 ms and ~308 MB memory usage
-* 1 thread starting/stopping 1 service 10,000 times in ~958 ms and ~4 MB memory usage
-* 8 threads starting/stopping 1 service 10,000 times in ~1,829 ms and ~5 MB memory usage
-* 1 thread serializing & deserializing 1,000,000 JSON messages in ~410 ms and ~4 MB memory usage
-* 8 threads serializing & deserializing 1,000,000 JSON messages in ~495 ms and ~5 MB memory usage
+* 1 thread inserting ~5 million events and then processing them in ~945 ms and ~965 MB memory usage
+* 8 threads inserting ~5 million events and then processing them in ~1,424 ms and ~7,691 MB memory usage
+* 1 thread creating 10,000 services with dependencies in ~4,900 ms and ~40 MB memory usage
+* 8 threads creating 10,000 services with dependencies in ~16,230 ms and ~308 MB memory usage
+* 1 thread starting/stopping 1 service 10,000 times in ~1,126 ms and ~4 MB memory usage
+* 8 threads starting/stopping 1 service 10,000 times in ~1,895 ms and ~5 MB memory usage
+* 1 thread serializing & deserializing 1,000,000 JSON messages in ~343 ms and ~4 MB memory usage
+* 8 threads serializing & deserializing 1,000,000 JSON messages in ~375 ms and ~5 MB memory usage
+
+Realtime example on a vanilla linux:
+```
+duration of run 5,174 is 50,774 µs which exceeded maximum of 2,000 µs
+duration of run 8,584 is 49,804 µs which exceeded maximum of 2,000 µs
+duration of run 11,278 is 50,833 µs which exceeded maximum of 2,000 µs
+duration of run 13,977 is 49,847 µs which exceeded maximum of 2,000 µs
+duration of run 16,675 is 50,893 µs which exceeded maximum of 2,000 µs
+duration of run 19,340 is 49,830 µs which exceeded maximum of 2,000 µs
+duration min/max/avg: 274/50,893/335 µs
+```
+
+Realtime example on an RT_PREEMPT linux, [tuned](https://rigtorp.se/low-latency-guide/):
+```
+root@xanthos:/home/oipo-unencrypted/Programming/cppelix/bin# ./ichor_realtime_example 
+duration of run 6,013 is 49,191 µs which exceeded maximum of 2,000 µs
+duration of run 11,215 is 50,187 µs which exceeded maximum of 2,000 µs
+duration of run 16,420 is 50,187 µs which exceeded maximum of 2,000 µs
+duration min/max/avg: 177/50,187/188 µs
+```
 
 These benchmarks currently lead to the characteristics:
 * creating services with dependencies overhead is likely O(N²).

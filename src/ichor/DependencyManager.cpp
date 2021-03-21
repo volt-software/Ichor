@@ -3,6 +3,7 @@
 #include <ichor/DependencyManager.h>
 #include <ichor/CommunicationChannel.h>
 #include <ichor/stl/Any.h>
+#include <ichor/GetThreadLocalMemoryResource.h>
 
 #if !__has_include(<spdlog/spdlog.h>)
 #define SPDLOG_DEBUG(x)
@@ -20,6 +21,8 @@ void on_sigint([[maybe_unused]] int sig) {
 
 
 void Ichor::DependencyManager::start() {
+    setThreadLocalMemoryResource(_memResource);
+
     if(_logger == nullptr) {
         throw std::runtime_error("Trying to start without a framework logger");
     }
@@ -325,17 +328,16 @@ void Ichor::DependencyManager::start() {
                         _dependencyUndoRequestTrackers.erase(removeTrackerEvt->interfaceNameHash);
                     }
                         break;
-                    case ContinuableEvent::TYPE: {
+                    case ContinuableEvent<Generator<bool>>::TYPE: {
                         SPDLOG_DEBUG("ContinuableEvent");
-                        auto continuableEvt = static_cast<ContinuableEvent *>(evtNode.mapped().get());
+                        auto continuableEvt = static_cast<ContinuableEvent<Generator<bool>> *>(evtNode.mapped().get());
 
                         auto it = continuableEvt->generator.begin();
 
                         if (it != continuableEvt->generator.end()) {
-                            pushEventInternal<ContinuableEvent>(continuableEvt->originatingService, evtNode.key(), std::move(continuableEvt->generator));
+                            pushEventInternal<ContinuableEvent<Generator<bool>>>(continuableEvt->originatingService, evtNode.key(), std::move(continuableEvt->generator));
                         }
                     }
-                        break;
                     default: {
                         SPDLOG_DEBUG("broadcastEvent");
                         handlerAmount = broadcastEvent(evtNode.mapped().get());
@@ -411,12 +413,13 @@ uint32_t Ichor::DependencyManager::broadcastEvent(const Ichor::Event *const evt)
             continue;
         }
 
+        bool allowOtherHandlers;
         auto ret = callbackInfo.callback(evt);
         auto it = ret.begin();
 
-        bool allowOtherHandlers = *it;
+        allowOtherHandlers = *it;
         if(it != ret.end()) {
-            pushEventInternal<ContinuableEvent>(evt->originatingService, evt->priority, std::move(ret));
+            pushEventInternal<ContinuableEvent<Generator<bool>>>(evt->originatingService, evt->priority, std::move(ret));
         }
 
         if(!allowOtherHandlers) {

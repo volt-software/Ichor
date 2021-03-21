@@ -56,6 +56,11 @@ namespace Ichor {
         { impl.handleEvent(evt) } -> std::same_as<Generator<bool>>;
     };
 
+//    template <class ImplT, class EventT>
+//    concept ImplementsAllocatorEventHandlers = requires(ImplT impl, std::allocator_arg_t arg, Ichor::PolymorphicAllocator<bool> alloc, EventT const * const evt) {
+//        { impl.handleEvent(arg, alloc, evt) } -> std::same_as<AllocatorGenerator<Ichor::PolymorphicAllocator<bool>, bool>>;
+//    };
+
     template <class ImplT, class EventT>
     concept ImplementsEventInterceptors = requires(ImplT impl, EventT const * const evt, bool processed, uint32_t handlerAmount) {
         { impl.preInterceptEvent(evt) } -> std::same_as<bool>;

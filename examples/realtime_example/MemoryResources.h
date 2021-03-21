@@ -40,12 +40,15 @@ private:
 
         auto *last_used_block = top_block;
         std::size_t total_used = 0;
-        while(last_used_block->used || (last_used_block->next != nullptr && last_used_block->size <= bytes_necessary)) {
+        while(last_used_block->used || (last_used_block->next != nullptr && last_used_block->size < bytes_necessary)) {
             total_used += last_used_block->size;
             last_used_block = last_used_block->next;
         }
 
         if(total_used + bytes_necessary > SIZE) {
+#ifndef NDEBUG //warning: fmt::print calls printf(), which allocates (at least on my machine)
+            fmt::print("Ran out of space on allocator {:L}\n", id);
+#endif
             std::terminate();
         }
 
@@ -61,8 +64,8 @@ private:
 
         if(last_used_block->next == nullptr) {
 #ifndef NDEBUG //warning: fmt::print calls printf(), which allocates (at least on my machine)
-            fmt::print("id {:L} allocated {:L} bytes for {:L} bytes requested with alignment {:L} at location {:L} and returning {:L}\n", id, bytes_necessary,
-                       bytes, alignment, unaligned_location, location);
+            fmt::print("id {:L} allocated {:L} bytes for {:L} bytes requested with alignment {:L} at location {:L} and returning {:L} and block {:L}\n", id, bytes_necessary,
+                       bytes, alignment, unaligned_location, location, reinterpret_cast<std::size_t>(last_used_block));
 #endif
             last_used_block->size = bytes_necessary;
             last_used_block->next = reinterpret_cast<block*>(buffer.data() + total_used + bytes_necessary);
@@ -82,12 +85,13 @@ private:
 
     void do_deallocate(void *p, size_t bytes, size_t alignment) final {
         auto *last_used_block = top_block;
+
         while(last_used_block != nullptr) {
-            if(last_used_block->next != nullptr && reinterpret_cast<std::size_t>(last_used_block->next) > reinterpret_cast<std::size_t>(p) || last_used_block->next == nullptr) {
+            if(reinterpret_cast<std::size_t>(last_used_block) == reinterpret_cast<std::size_t>(p) - sizeof(block)) {
                 last_used_block->used = false;
 
 #ifndef NDEBUG //warning: fmt::print calls printf(), which allocates (at least on my machine)
-                fmt::print("id {:L} deallocated {:L} bytes at location {:L}\n", id, bytes, reinterpret_cast<std::size_t>(last_used_block->next));
+                fmt::print("id {:L} deallocated {:L} bytes at location {:L} and block {:L}\n", id, bytes, reinterpret_cast<std::size_t>(p), reinterpret_cast<std::size_t>(last_used_block));
 #endif
 
                 break;

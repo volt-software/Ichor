@@ -30,7 +30,7 @@ void* run_example(void*) {
 #else
     cpu_set_t lock_to_core_set;
     CPU_ZERO(&lock_to_core_set);
-    CPU_SET(0, &lock_to_core_set);
+    CPU_SET(1, &lock_to_core_set);
     sched_setaffinity(0, sizeof(cpu_set_t), &lock_to_core_set);
 #endif
 
@@ -41,8 +41,8 @@ void* run_example(void*) {
     std::pmr::set_default_resource(&terminatingResource);
 
     {
-        buffer_resource<1024 * 16> resourceOne{};
-        buffer_resource<1024 * 16> resourceTwo{};
+        buffer_resource<1024 * 512> resourceOne{};
+        buffer_resource<1024 * 32> resourceTwo{};
 
         DependencyManager dm{&resourceOne, &resourceTwo};
         dm.createServiceManager<FRAMEWORK_LOGGER_TYPE, IFrameworkLogger>({}, 10);

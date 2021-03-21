@@ -32,9 +32,7 @@ void* malloc(size_t size) {
             if (strstr(funcNames[i], "locale") != nullptr || //exception for locale
                 strstr(funcNames[i], "__cxa_allocate_exception") != nullptr || //exception for std::terminate
                 strstr(funcNames[i], "runtime_error") != nullptr || //exception for std::terminate
-#ifndef NDEBUG
                 strstr(funcNames[i], "_IO_file_doallocate") != nullptr || //exception for printf() related functionality
-#endif
                 strstr(funcNames[i], "ld-linux-x86-64") != nullptr) { //exception for initialization at beginning of program
                 shouldTerminate = false;
                 break;

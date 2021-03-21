@@ -6,6 +6,7 @@
 
 namespace Ichor {
     class ILifecycleManager;
+    class DependencyManager;
 
     constexpr uint64_t INTERNAL_EVENT_PRIORITY = 1000;
 
@@ -141,13 +142,14 @@ namespace Ichor {
         static constexpr std::string_view NAME = typeName<RemoveTrackerEvent>();
     };
 
+    template <typename GeneratorT>
     struct ContinuableEvent final : public Event {
-        ContinuableEvent(uint64_t _id, uint64_t _originatingService, uint64_t _priority, Generator<bool> _generator) noexcept : Event(TYPE, NAME, _id, _originatingService, _priority), generator(std::move(_generator)) {}
+        ContinuableEvent(uint64_t _id, uint64_t _originatingService, uint64_t _priority, GeneratorT _generator) noexcept : Event(TYPE, NAME, _id, _originatingService, _priority), generator(std::move(_generator)) {}
         ~ContinuableEvent() final = default;
 
-        Generator<bool> generator;
-        static constexpr uint64_t TYPE = typeNameHash<ContinuableEvent>();
-        static constexpr std::string_view NAME = typeName<ContinuableEvent>();
+        GeneratorT generator;
+        static constexpr uint64_t TYPE = typeNameHash<ContinuableEvent<GeneratorT>>();
+        static constexpr std::string_view NAME = typeName<ContinuableEvent<GeneratorT>>();
     };
 
     struct UnrecoverableErrorEvent final : public Event {
@@ -168,5 +170,14 @@ namespace Ichor {
         std::string error;
         static constexpr uint64_t TYPE = typeNameHash<RecoverableErrorEvent>();
         static constexpr std::string_view NAME = typeName<RecoverableErrorEvent>();
+    };
+
+    struct RunFunctionEvent final : public Event {
+        RunFunctionEvent(uint64_t _id, uint64_t _originatingService, uint64_t _priority, std::function<void(DependencyManager*)> _fun) noexcept : Event(TYPE, NAME, _id, _originatingService, _priority), fun(std::move(_fun)) {}
+        ~RunFunctionEvent() final = default;
+
+        std::function<void(DependencyManager*)> fun;
+        static constexpr uint64_t TYPE = typeNameHash<RunFunctionEvent>();
+        static constexpr std::string_view NAME = typeName<RunFunctionEvent>();
     };
 }

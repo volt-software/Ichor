@@ -1,6 +1,6 @@
 #include <exception>
 #include "GlobalRealtimeSettings.h"
-
+#include <fmt/core.h>
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)
 //TODO
 #else
@@ -44,7 +44,7 @@ GlobalRealtimeSettings::GlobalRealtimeSettings() {
             std::terminate();
         }
 
-        auto size = read(smt_file, &control_read, 4);
+        auto size = read(smt_file, control_read.data(), 4);
         if(size == -1) {
             std::terminate();
         }
@@ -53,7 +53,7 @@ GlobalRealtimeSettings::GlobalRealtimeSettings() {
             std::terminate();
         }
 
-        if(strcmp(control_read.data(), "off") == 0) {
+        if(strncmp(control_read.data(), "off", 3) == 0) {
             reenable_smt = false;
             close(smt_file);
         } else {

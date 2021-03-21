@@ -1,0 +1,8 @@
+2017-06-28:
+- Rename benchmark to gsm_enc.
+- Add prefix 'gsm_enc_'.
+- Introduce gsm_enc_init and gsm_enc_return functions.
+- Rewrite negative shifts to avoid undefined behavior.
+- Fix comparisons between signed and unsigned types.
+- Remove unused variables and parameters.
+- Fix memory corruption in gsm_enc_Short_term_analysis_filtering.
