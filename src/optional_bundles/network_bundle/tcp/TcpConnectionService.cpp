@@ -95,10 +95,11 @@ bool Ichor::TcpConnectionService::stop() {
 
     if(_socket >= 0) {
         ::shutdown(_socket, SHUT_RDWR);
+        _listenThread.join();
         ::close(_socket);
+    } else {
+        _listenThread.join();
     }
-
-    _listenThread.join();
 
     return true;
 }
