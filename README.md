@@ -1,6 +1,6 @@
 # What is this?
 
-Ichor, [Greek Mythos for ethereal fluid that is the blood of the gods/immortals](https://en.wikipedia.org/wiki/Ichor), is a C++ framework/middleware for thread confinement and dependency management. 
+Ichor, [Greek Mythos for ethereal fluid that is the blood of the gods/immortals](https://en.wikipedia.org/wiki/Ichor), is a C++ framework/middleware for thread confinement and dependency injection. 
 
 Ichor informally stands for "Intuitive Compile-time Hoisted Object Resources".
 
@@ -24,6 +24,13 @@ The [realtime example](examples/realtime_example/main.cpp) shows a trivial progr
 
 More examples can be found in the [examples directory](examples).
 
+## Supported OSes
+* Linux
+
+## Currently Unsupported
+* Windows, untested, not sure if compiles but should be relatively easy to get up and running
+* Baremetal, might change if someone puts in the effort to modify Ichor to work with freestanding implementations of C++20
+* Future plans for any RTOS that supports C++20 such as VxWorks Wind River
 
 ## Dependencies
 
@@ -51,10 +58,6 @@ sudo apt install libboost1.71-all-dev libssl-dev
 
 Untested, latest MSVC should probably work.
 
-#### Mac
-
-Untested, unknown if compiler supports enough C++20.
-
 ## Documentation
 
 Documentation is rather...lacking at the moment. Contributions are very welcome!
@@ -77,7 +80,7 @@ Documentation is rather...lacking at the moment. Contributions are very welcome!
 The framework provides several core features and optional services behind cmake feature flags:
 * Coroutine-based event loop
 * Event-based message passing
-* Dependency Management
+* Dependency Injection
 * Service lifecycle management (sort of like OSGi-lite services)
 * User-space priority-based real-time capable scheduling
 * data race free communication between event loops
@@ -119,16 +122,23 @@ Setup: AMD 3900X, 3600MHz@CL17 RAM, ubuntu 20.04
 
 Realtime example on a vanilla linux:
 ```
-root# echo 950000 > /proc/sys/kernel/sched_rt_runtime_us
+root# echo 950000 > /proc/sys/kernel/sched_rt_runtime_us #force kernel to fail our deadlines
 root# ./ichor_realtime_example 
-duration of run 7,156 is 49,222 µs which exceeded maximum of 2,000 µs
-duration of run 12,280 is 50,220 µs which exceeded maximum of 2,000 µs
-duration of run 17,421 is 50,223 µs which exceeded maximum of 2,000 µs
-duration min/max/avg: 182/50,223/192 µs
-root# 
-root# echo 999900 > /proc/sys/kernel/sched_rt_runtime_us
+duration of run 4,076 is 51,298 µs which exceeded maximum of 2,000 µs
+duration of run 6,750 is 50,296 µs which exceeded maximum of 2,000 µs
+duration of run 9,396 is 50,293 µs which exceeded maximum of 2,000 µs
+duration of run 12,055 is 50,296 µs which exceeded maximum of 2,000 µs
+duration of run 14,719 is 50,295 µs which exceeded maximum of 2,000 µs
+duration of run 17,374 is 50,297 µs which exceeded maximum of 2,000 µs
+duration min/max/avg: 349/51,298/371 µs
+root#
+root# echo 999999 > /proc/sys/kernel/sched_rt_runtime_us
 root# ./ichor_realtime_example 
-duration min/max/avg: 181/370/184 µs
+duration min/max/avg: 179/838/204 µs
+root#
+root# echo -1 > /proc/sys/kernel/sched_rt_runtime_us
+root# ./ichor_realtime_example 
+duration min/max/avg: 274/368/276 µs
 ```
 
 These benchmarks currently lead to the characteristics:
@@ -136,7 +146,7 @@ These benchmarks currently lead to the characteristics:
 * Starting services, stopping services overhead is likely O(N)
 * event handling overhead is amortized O(1)
 * Creating more threads is not 100% linearizable in all cases (pure event creation/handling seems to be, otherwise not really)
-* Latency spikes while scheduling in user-space is in the order of 100's of microseconds (except if the queue goes empty and is forced to sleep)
+* Latency spikes while scheduling in user-space is in the order of 100's of microseconds, lower if a proper [realtime tuning guide](https://rigtorp.se/low-latency-guide/) is used (except if the queue goes empty and is forced to sleep)
 
 Help with improving memory usage and the O(N²) behaviour would be appreciated.
 
@@ -160,7 +170,7 @@ Yes, see the [realtime example](examples/realtime_example). This example termina
 
 To my knowledge, clang doesn't have certain C++20 features used in Ichor yet. As soon as clang implements those, I'll work on adding support.
 
-### Windows? OS X?
+### Windows? OS X? VxWorks Wind River? Baremetal?
 
 I don't have a machine with windows/OS X to program for (and also know if there is much demand for it), so I haven't started on it.
 
@@ -168,11 +178,13 @@ What is necessary to implement before using Ichor on these platforms:
 * Ichor [STL](include/ichor/stl) functionality, namely the RealtimeMutex and ConditionVariable.
 * Compiler support for C++20 may not be adequate yet.
 
+The same goes for Wind River. Freestanding implementations might be necessary for Baremetal support, but that would stray rather far from my expertise.
+
 ### Why re-implement parts of the STL?
 
-To add support for memory allocators and achieve 0 dynamic memory allocation support. Particularly std::any.
+To add support for memory allocators and achieve 0 dynamic memory allocation support. Particularly std::any and the (read/write) mutexes.
 
-But also because the real-time extensions to mutexes (PTHREAD_MUTEX_ADAPTIVE_NP/PTHREAD_PRIO_INHERIT) is either not a standard extension or not exposed by std::mutex.
+But also because the real-time extensions to mutexes (PTHREAD_MUTEX_ADAPTIVE_NP/PTHREAD_PRIO_INHERIT/PTHREAD_RWLOCK_PREFER_WRITER_NONRECURSIVE_NP) is either not a standard extension or not exposed by the standard library equivalents.
 
 # License
 

@@ -2,31 +2,33 @@
 
 #include <iostream>
 #include <ichor/stl/RealtimeMutex.h>
+#include <ichor/stl/ConditionVariable.h>
 
-// Differs from std::condition_variable by working on steady clock only, using a reference instead of allocating memory and uses RealtimeMutex rather than needing std::condition_variable_any
+// Differs from std::condition_variable_any by working on steady clock only, using a reference instead of allocating memory and uses RealtimeMutex/RealtimeReadWriteMutex
 namespace Ichor {
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)
-    using ConditionVariable = std::condition_variable_any;
+    template <typename MutexT>
+    using ConditionVariableAny = std::condition_variable_any;
 #else
-    enum class cv_status { no_timeout, timeout };
-    
-    struct ConditionVariable final {
-        explicit ConditionVariable(RealtimeMutex &m) noexcept : _m(m) {
+
+    template <typename MutexT>
+    struct ConditionVariableAny final {
+        explicit ConditionVariableAny(MutexT &m) noexcept : _m(m) {
             pthread_cond_init(&_cond, nullptr);
         }
 
-        ~ConditionVariable() noexcept {
+        ~ConditionVariableAny() noexcept {
             pthread_cond_destroy(&_cond);
         }
 
         void notify_all() noexcept
         {
-            std::lock_guard<RealtimeMutex> lock(_m);
+            std::lock_guard<MutexT> lock(_m);
             pthread_cond_broadcast(&_cond);
         }
 
-        template<typename DurT>
-        cv_status _wait_until_impl(std::unique_lock<RealtimeMutex>& lock, const std::chrono::time_point<std::chrono::steady_clock, DurT>& atime)
+        template<typename LockT, typename DurT>
+        cv_status _wait_until_impl(LockT& lock, const std::chrono::time_point<std::chrono::steady_clock, DurT>& atime)
         {
             auto _s = std::chrono::time_point_cast<std::chrono::seconds>(atime);
             auto _ns = std::chrono::duration_cast<std::chrono::nanoseconds>(atime - _s);
@@ -36,14 +38,18 @@ namespace Ichor {
                 static_cast<long>(_ns.count())
             };
 
-            pthread_cond_clockwait(&_cond, lock.mutex()->native_handle(), CLOCK_MONOTONIC, &_ts);
+            _cvMutex.lock();
+            lock.unlock();
+            pthread_cond_clockwait(&_cond, _cvMutex.native_handle(), CLOCK_MONOTONIC, &_ts);
+            _cvMutex.unlock();
+            lock.lock();
 
             return (std::chrono::steady_clock::now() < atime
                     ? cv_status::no_timeout : cv_status::timeout);
         }
 
-        template<typename DurationT>
-        cv_status wait_until(std::unique_lock<RealtimeMutex>& lock, const std::chrono::time_point<std::chrono::steady_clock, DurationT>& atime)
+        template<typename LockT, typename DurationT>
+        cv_status wait_until(LockT& lock, const std::chrono::time_point<std::chrono::steady_clock, DurationT>& atime)
         {
             static_assert(std::chrono::is_clock_v<std::chrono::steady_clock>);
             const typename std::chrono::steady_clock::time_point _c_entry = std::chrono::steady_clock::now();
@@ -74,7 +80,8 @@ namespace Ichor {
         }
 
     private:
-        RealtimeMutex &_m;
+        MutexT &_m;
+        RealtimeMutex _cvMutex{};
         pthread_cond_t _cond{};
     };
 #endif

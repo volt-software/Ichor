@@ -45,7 +45,7 @@ void Ichor::DependencyManager::start() {
 
     while(!_quit.load(std::memory_order_acquire)) {
         _quit.store(sigintQuit.load(std::memory_order_acquire), std::memory_order_release);
-        std::unique_lock lck(_eventQueueMutex);
+        std::shared_lock lck(_eventQueueMutex);
         while (!_quit.load(std::memory_order_acquire) && !_eventQueue.empty()) {
             TSAN_ANNOTATE_HAPPENS_AFTER((void*)&(*_eventQueue.begin()));
             auto evtNode = _eventQueue.extract(_eventQueue.begin());

@@ -62,6 +62,19 @@ void* run_example(void*) {
 
 int main() {
     std::locale::global(std::locale("en_US.UTF-8"));
+
+#if defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)
+    //TODO check for elevated permissions
+#else
+
+    uid_t uid = getuid();
+    uid_t euid = geteuid();
+
+    if (uid !=0 || uid!=euid) {
+        throw std::runtime_error("No permissions to set realtime scheduling. Consider running under sudo/root.");
+    }
+#endif
+
     GlobalRealtimeSettings settings{};
 
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)
@@ -80,7 +93,7 @@ int main() {
     auto ret = pthread_create (&thread, &attr, run_example, nullptr);
 
     if(ret == EPERM) {
-        throw std::runtime_error("No permissions to set realtime scheduling. Consider running under sudo.");
+        throw std::runtime_error("No permissions to set realtime scheduling. Consider running under sudo/root.");
     }
 
     if(ret == 0) {

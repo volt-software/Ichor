@@ -52,6 +52,6 @@ namespace Ichor {
         }
     private:
         std::unordered_map<uint64_t, DependencyManager*> _managers{};
-        std::shared_mutex _mutex{};
+        RealtimeReadWriteMutex _mutex{};
     };
 }

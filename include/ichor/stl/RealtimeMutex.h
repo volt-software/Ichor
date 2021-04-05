@@ -11,7 +11,7 @@ namespace Ichor {
     class RealtimeMutex final {
     public:
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)
-        typedef native_handle_type CRITICAL_SECTION;
+        typedef CRITICAL_SECTION native_handle_type;
 #else
         typedef pthread_mutex_t native_handle_type;
 #endif
