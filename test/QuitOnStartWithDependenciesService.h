@@ -1,6 +1,5 @@
 #pragma once
 
-#include <ichor/Service.h>
 #include "UselessService.h"
 
 using namespace Ichor;

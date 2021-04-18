@@ -15,7 +15,6 @@
 #define LOGGER_TYPE CoutLogger
 #endif
 #include <ichor/optional_bundles/metrics_bundle/MemoryUsageFunctions.h>
-#include <ichor/optional_bundles/metrics_bundle/EventStatisticsService.h>
 #include <iostream>
 
 int main() {

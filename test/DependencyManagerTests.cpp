@@ -1,63 +1,66 @@
-#include "utest.h"
+#include <catch2/catch_test_macros.hpp>
 #include <ichor/DependencyManager.h>
 #include <ichor/optional_bundles/logging_bundle/NullFrameworkLogger.h>
 #include "UselessService.h"
 
-UTEST(DependencyManager, ExceptionOnStart_WhenNoRegistrations) {
-    std::atomic<bool> stopped = false;
-    std::atomic<bool> thrown_exception = false;
-    std::thread t([&]() {
-        try {
-            Ichor::DependencyManager dm{};
-            dm.start();
-        } catch (...) {
-            thrown_exception = true;
-        }
-        stopped = true;
-    });
+TEST_CASE("DependencyManager") {
 
-    t.join();
+    SECTION("ExceptionOnStart_WhenNoRegistrations") {
+        std::atomic<bool> stopped = false;
+        std::atomic<bool> thrown_exception = false;
+        std::thread t([&]() {
+            try {
+                Ichor::DependencyManager dm{};
+                dm.start();
+            } catch (...) {
+                thrown_exception = true;
+            }
+            stopped = true;
+        });
 
-    ASSERT_TRUE(stopped);
-    ASSERT_TRUE(thrown_exception);
-}
+        t.join();
 
-UTEST(DependencyManager, ExceptionOnStart_WhenNoFrameworkLogger) {
-    std::atomic<bool> stopped = false;
-    std::atomic<bool> thrown_exception = false;
-    std::thread t([&]() {
-        try {
-            Ichor::DependencyManager dm{};
+        REQUIRE(stopped);
+        REQUIRE(thrown_exception);
+    }
+
+    SECTION("DependencyManager", "ExceptionOnStart_WhenNoFrameworkLogger") {
+        std::atomic<bool> stopped = false;
+        std::atomic<bool> thrown_exception = false;
+        std::thread t([&]() {
+            try {
+                Ichor::DependencyManager dm{};
+                dm.createServiceManager<UselessService>();
+                dm.start();
+            } catch (...) {
+                thrown_exception = true;
+            }
+            stopped = true;
+        });
+
+        t.join();
+
+        REQUIRE(stopped);
+        REQUIRE(thrown_exception);
+    }
+
+    SECTION("DependencyManager", "QuitOnQuitEvent") {
+        Ichor::DependencyManager dm{};
+
+        std::thread t([&]() {
+            dm.createServiceManager<NullFrameworkLogger, IFrameworkLogger>();
             dm.createServiceManager<UselessService>();
             dm.start();
-        } catch (...) {
-            thrown_exception = true;
-        }
-        stopped = true;
-    });
+        });
 
-    t.join();
+        dm.waitForEmptyQueue();
 
-    ASSERT_TRUE(stopped);
-    ASSERT_TRUE(thrown_exception);
-}
+        REQUIRE(dm.isRunning());
 
-UTEST(DependencyManager, QuitOnQuitEvent) {
-    Ichor::DependencyManager dm{};
+        dm.pushEvent<QuitEvent>(0);
 
-    std::thread t([&]() {
-        dm.createServiceManager<NullFrameworkLogger, IFrameworkLogger>();
-        dm.createServiceManager<UselessService>();
-        dm.start();
-    });
+        t.join();
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(25));
-
-    ASSERT_TRUE(dm.isRunning());
-
-    dm.pushEvent<QuitEvent>(0);
-
-    t.join();
-
-    ASSERT_FALSE(dm.isRunning());
+        REQUIRE_FALSE(dm.isRunning());
+    }
 }

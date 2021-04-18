@@ -338,6 +338,13 @@ void Ichor::DependencyManager::start() {
                             pushEventInternal<ContinuableEvent<Generator<bool>>>(continuableEvt->originatingService, evtNode.key(), std::move(continuableEvt->generator));
                         }
                     }
+                        break;
+                    case RunFunctionEvent::TYPE: {
+                        SPDLOG_DEBUG("RunFunctionEvent");
+                        auto runFunctionEvt = static_cast<RunFunctionEvent *>(evtNode.mapped().get());
+                        runFunctionEvt->fun(this);
+                    }
+                        break;
                     default: {
                         SPDLOG_DEBUG("broadcastEvent");
                         handlerAmount = broadcastEvent(evtNode.mapped().get());
@@ -360,6 +367,8 @@ void Ichor::DependencyManager::start() {
 
             lck.lock();
         }
+
+        _emptyQueue = true;
 
         if(!_quit.load(std::memory_order_acquire)) {
             _wakeUp.wait_for(lck, std::chrono::milliseconds(1), [this] { return !_eventQueue.empty(); });

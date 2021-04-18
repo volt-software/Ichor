@@ -3,123 +3,16 @@
 #include <string_view>
 #include <memory>
 #include <atomic>
-#include <unordered_set>
 #include <ranges>
 #include <ichor/Service.h>
 #include <ichor/interfaces/IFrameworkLogger.h>
 #include <ichor/Common.h>
 #include <ichor/Events.h>
 #include <ichor/Dependency.h>
+#include <ichor/DependencyInfo.h>
+#include <ichor/DependencyRegister.h>
 
 namespace Ichor {
-    struct DependencyInfo final {
-
-        ICHOR_CONSTEXPR explicit DependencyInfo(std::pmr::memory_resource *memResource) : _dependencies(memResource) {
-        }
-
-        ICHOR_CONSTEXPR ~DependencyInfo() = default;
-        ICHOR_CONSTEXPR DependencyInfo(const DependencyInfo&) = delete;
-        ICHOR_CONSTEXPR DependencyInfo(DependencyInfo&&) noexcept = default;
-        ICHOR_CONSTEXPR DependencyInfo& operator=(const DependencyInfo&) = delete;
-        ICHOR_CONSTEXPR DependencyInfo& operator=(DependencyInfo&&) noexcept = default;
-
-        template<class Interface>
-        ICHOR_CONSTEXPR void addDependency(bool required = true) {
-            _dependencies.emplace_back(typeNameHash<Interface>(), required);
-        }
-
-        ICHOR_CONSTEXPR void addDependency(Dependency dependency) {
-            _dependencies.emplace_back(dependency);
-        }
-
-        template<class Interface>
-        ICHOR_CONSTEXPR void removeDependency() {
-            std::erase_if(_dependencies, [](auto const& dep) noexcept { return dep.interfaceNameHash == typeNameHash<Interface>(); });
-        }
-
-        ICHOR_CONSTEXPR void removeDependency(const Dependency &dependency) {
-            std::erase_if(_dependencies, [&dependency](auto const& dep) noexcept { return dep.interfaceNameHash == dependency.interfaceNameHash; });
-        }
-
-        template<class Interface>
-        [[nodiscard]]
-        ICHOR_CONSTEXPR bool contains() const {
-            return cend(_dependencies) != std::find_if(cbegin(_dependencies), cend(_dependencies), [](auto const& dep) noexcept { return dep.interfaceNameHash == typeNameHash<Interface>(); });
-        }
-
-        [[nodiscard]]
-        ICHOR_CONSTEXPR bool contains(const Dependency &dependency) const {
-            return cend(_dependencies) != std::find_if(cbegin(_dependencies), cend(_dependencies), [&dependency](auto const& dep) noexcept { return dep.interfaceNameHash == dependency.interfaceNameHash; });
-        }
-
-        [[nodiscard]]
-        ICHOR_CONSTEXPR auto find(const Dependency &dependency) const {
-            return std::find_if(cbegin(_dependencies), cend(_dependencies), [&dependency](auto const& dep) noexcept { return dep.interfaceNameHash == dependency.interfaceNameHash; });
-        }
-
-        [[nodiscard]]
-        ICHOR_CONSTEXPR auto end() {
-            return std::end(_dependencies);
-        }
-
-        [[nodiscard]]
-        ICHOR_CONSTEXPR auto end() const {
-            return std::cend(_dependencies);
-        }
-
-        [[nodiscard]]
-        ICHOR_CONSTEXPR size_t size() const {
-            return _dependencies.size();
-        }
-
-        [[nodiscard]]
-        ICHOR_CONSTEXPR bool empty() const {
-            return _dependencies.empty();
-        }
-
-        [[nodiscard]]
-        ICHOR_CONSTEXPR size_t amountRequired() const {
-            return std::count_if(_dependencies.cbegin(), _dependencies.cend(), [](auto const &dep){ return dep.required; });
-        }
-
-        [[nodiscard]]
-        ICHOR_CONSTEXPR auto requiredDependencies() const {
-            return _dependencies | std::ranges::views::filter([](auto &dep){ return dep.required; });
-        }
-
-        [[nodiscard]]
-        ICHOR_CONSTEXPR auto requiredDependenciesSatisfied(const DependencyInfo &satisfied) const {
-            for(auto &requiredDep : requiredDependencies()) {
-                if(!satisfied.contains(requiredDep)) {
-                    return false;
-                }
-            }
-
-            return true;
-        }
-
-        ICHOR_CONSTEXPR std::pmr::vector<Dependency> _dependencies;
-    };
-
-    struct DependencyRegister final {
-        explicit DependencyRegister(DependencyManager *mng) noexcept;
-
-        template<Derived<IService> Interface, DerivedTemplated<Service> Impl>
-        void registerDependency(Impl *svc, bool required, std::optional<IchorProperties> props = {}) {
-            if(_registrations.contains(typeNameHash<Interface>())) {
-                throw std::runtime_error("Already registered interface");
-            }
-
-            _registrations.emplace(typeNameHash<Interface>(), std::make_tuple(
-                    Dependency{typeNameHash<Interface>(), required},
-                    Ichor::function<void(IService*)>{[svc](void* dep){ svc->addDependencyInstance(static_cast<Interface*>(dep)); }, svc->getMemoryResource()},
-                    Ichor::function<void(IService*)>{[svc](void* dep){ svc->removeDependencyInstance(static_cast<Interface*>(dep)); }, svc->getMemoryResource()},
-                    std::move(props)));
-        }
-
-        std::pmr::unordered_map<uint64_t, std::tuple<Dependency, Ichor::function<void(IService*)>, Ichor::function<void(IService*)>, std::optional<IchorProperties>>> _registrations;
-    };
-
     class ILifecycleManager {
     public:
         ICHOR_CONSTEXPR virtual ~ILifecycleManager() = default;
@@ -151,7 +44,7 @@ namespace Ichor {
     requires DerivedTemplated<ServiceType, Service>
     class DependencyLifecycleManager final : public ILifecycleManager {
     public:
-        explicit ICHOR_CONSTEXPR DependencyLifecycleManager(IFrameworkLogger *logger, std::string_view name, std::pmr::vector<Dependency> interfaces, IchorProperties&& properties, DependencyManager *mng, std::pmr::memory_resource *memResource) : _implementationName(name), _interfaces(std::move(interfaces)), _registry(mng), _dependencies(memResource), _satisfiedDependencies(memResource), _service(_registry, std::forward<IchorProperties>(properties), mng), _logger(logger) {
+        explicit ICHOR_CONSTEXPR DependencyLifecycleManager(IFrameworkLogger *logger, std::string_view name, std::pmr::vector<Dependency> interfaces, IchorProperties&& properties, DependencyManager *mng, std::pmr::memory_resource *memResource) : _implementationName(name), _interfaces(std::move(interfaces)), _registry(mng), _dependencies(memResource), _satisfiedDependencies(memResource), _injectedDependencies(memResource), _service(_registry, std::forward<IchorProperties>(properties), mng), _logger(logger) {
             for(auto const &reg : _registry._registrations) {
                 _dependencies.addDependency(std::get<0>(reg.second));
             }
@@ -181,9 +74,14 @@ namespace Ichor {
         ICHOR_CONSTEXPR bool dependencyOnline(ILifecycleManager* dependentService) final {
             bool interested = false;
             auto const &interfaces = dependentService->getInterfaces();
+
+            if(std::find(_injectedDependencies.begin(), _injectedDependencies.end(), dependentService->serviceId()) != _injectedDependencies.end()) {
+                return interested;
+            }
+
             for(auto const &interface : interfaces) {
                 auto dep = _dependencies.find(interface);
-                if (dep == _dependencies.end() || _satisfiedDependencies.contains(interface)) {
+                if (dep == _dependencies.end() || (dep->required && _satisfiedDependencies.contains(interface))) {
                     continue;
                 }
 
@@ -192,6 +90,10 @@ namespace Ichor {
                 if(dep->required) {
                     _satisfiedDependencies.addDependency(interface);
                 }
+            }
+
+            if(interested) {
+                _injectedDependencies.push_back(dependentService->serviceId());
             }
 
             return interested;
@@ -209,19 +111,25 @@ namespace Ichor {
             auto const &interfaces = dependentService->getInterfaces();
             bool interested = false;
 
+            if(std::find(_injectedDependencies.begin(), _injectedDependencies.end(), dependentService->serviceId()) == _injectedDependencies.end()) {
+                return interested;
+            }
+
             for(auto const &interface : interfaces) {
                 auto dep = _dependencies.find(interface);
                 if (dep == _dependencies.end() || (dep->required && !_satisfiedDependencies.contains(interface))) {
                     continue;
                 }
 
-                interested = true;
                 if (dep->required) {
                     _satisfiedDependencies.removeDependency(interface);
+                    interested = true;
                 }
 
                 removeSelfInto(interface.interfaceNameHash, dependentService);
             }
+
+            std::erase(_injectedDependencies, dependentService->serviceId());
 
             return interested;
         }
@@ -311,6 +219,7 @@ namespace Ichor {
         DependencyRegister _registry;
         DependencyInfo _dependencies;
         DependencyInfo _satisfiedDependencies;
+        std::pmr::vector<uint64_t> _injectedDependencies;
         ServiceType _service;
         IFrameworkLogger *_logger;
     };

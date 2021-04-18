@@ -16,10 +16,12 @@
 #include <ichor/Events.h>
 #include <ichor/Callbacks.h>
 #include <ichor/Filter.h>
+#include <ichor/DependencyRegistrations.h>
 #include <ichor/stl/RealtimeMutex.h>
 #include <ichor/stl/RealtimeReadWriteMutex.h>
 #include <ichor/stl/ConditionVariable.h>
 #include <ichor/stl/ConditionVariableAny.h>
+#include <ichor/stl/EventStackUniquePtr.h>
 
 // prevent false positives by TSAN
 // See "ThreadSanitizer – data race detection in practice" by Serebryany et al. for more info: https://static.googleusercontent.com/media/research.google.com/en//pubs/archive/35604.pdf
@@ -46,148 +48,7 @@ extern "C" void AnnotateHappensAfter(const char* f, int l, void* addr);
 using namespace std::chrono_literals;
 
 namespace Ichor {
-
-    class DependencyManager;
     class CommunicationChannel;
-
-    class [[nodiscard]] EventStackUniquePtr final {
-    public:
-        EventStackUniquePtr() = default;
-
-        template <typename T, typename... Args>
-        requires Derived<T, Event>
-        static EventStackUniquePtr create(Args&&... args) {
-            static_assert(sizeof(T) <= 128, "size not big enough to hold T");
-            static_assert(T::TYPE != 0, "type of T cannot be 0");
-            EventStackUniquePtr ptr;
-            new (ptr._buffer.data()) T(std::forward<Args>(args)...);
-            ptr._type = T::TYPE;
-            return ptr;
-        }
-
-        EventStackUniquePtr(const EventStackUniquePtr&) = delete;
-        EventStackUniquePtr(EventStackUniquePtr&& other) noexcept {
-            if(!_empty) {
-                reinterpret_cast<Event *>(_buffer.data())->~Event();
-            }
-            _buffer = other._buffer;
-            other._empty = true;
-            _empty = false;
-            _type = other._type;
-        }
-
-
-        EventStackUniquePtr& operator=(const EventStackUniquePtr&) = delete;
-        EventStackUniquePtr& operator=(EventStackUniquePtr &&other) noexcept {
-            if(!_empty) {
-                reinterpret_cast<Event *>(_buffer.data())->~Event();
-            }
-            _buffer = other._buffer;
-            other._empty = true;
-            _empty = false;
-            _type = other._type;
-            return *this;
-        }
-
-        ~EventStackUniquePtr() {
-            if(!_empty) {
-                reinterpret_cast<Event *>(_buffer.data())->~Event();
-            }
-        }
-
-        template <typename T>
-        requires Derived<T, Event>
-        [[nodiscard]] T* getT() {
-            if(_empty) {
-                throw std::runtime_error("empty");
-            }
-
-            return reinterpret_cast<T*>(_buffer.data());
-        }
-
-        [[nodiscard]] Event* get() {
-            if(_empty) {
-                throw std::runtime_error("empty");
-            }
-
-            return reinterpret_cast<Event*>(_buffer.data());
-        }
-
-        [[nodiscard]] uint64_t getType() const noexcept {
-            return _type;
-        }
-    private:
-
-        std::array<uint8_t, 128> _buffer;
-        uint64_t _type{0};
-        bool _empty{true};
-    };
-
-    class [[nodiscard]] EventCompletionHandlerRegistration final {
-    public:
-        EventCompletionHandlerRegistration(DependencyManager *mgr, CallbackKey key, uint64_t priority) noexcept : _mgr(mgr), _key(key), _priority(priority) {}
-        EventCompletionHandlerRegistration() noexcept = default;
-        ~EventCompletionHandlerRegistration();
-
-        EventCompletionHandlerRegistration(const EventCompletionHandlerRegistration&) = delete;
-        EventCompletionHandlerRegistration(EventCompletionHandlerRegistration&&) noexcept = default;
-        EventCompletionHandlerRegistration& operator=(const EventCompletionHandlerRegistration&) = delete;
-        EventCompletionHandlerRegistration& operator=(EventCompletionHandlerRegistration&&) noexcept = default;
-    private:
-        DependencyManager *_mgr{nullptr};
-        CallbackKey _key{0, 0};
-        uint64_t _priority{0};
-    };
-
-    class [[nodiscard]] EventHandlerRegistration final {
-    public:
-        EventHandlerRegistration(DependencyManager *mgr, CallbackKey key, uint64_t priority) noexcept : _mgr(mgr), _key(key), _priority(priority) {}
-        EventHandlerRegistration() noexcept = default;
-        ~EventHandlerRegistration();
-
-        EventHandlerRegistration(const EventHandlerRegistration&) = delete;
-        EventHandlerRegistration(EventHandlerRegistration&&) noexcept = default;
-        EventHandlerRegistration& operator=(const EventHandlerRegistration&) = delete;
-        EventHandlerRegistration& operator=(EventHandlerRegistration&&) noexcept = default;
-    private:
-        DependencyManager *_mgr{nullptr};
-        CallbackKey _key{0, 0};
-        uint64_t _priority{0};
-    };
-
-    class [[nodiscard]] EventInterceptorRegistration final {
-    public:
-        EventInterceptorRegistration(DependencyManager *mgr, CallbackKey key, uint64_t priority) noexcept : _mgr(mgr), _key(key), _priority(priority) {}
-        EventInterceptorRegistration() noexcept = default;
-        ~EventInterceptorRegistration();
-
-        EventInterceptorRegistration(const EventInterceptorRegistration&) = delete;
-        EventInterceptorRegistration(EventInterceptorRegistration&&) noexcept = default;
-        EventInterceptorRegistration& operator=(const EventInterceptorRegistration&) = delete;
-        EventInterceptorRegistration& operator=(EventInterceptorRegistration&&) noexcept = default;
-    private:
-        DependencyManager *_mgr{nullptr};
-        CallbackKey _key{0, 0};
-        uint64_t _priority{0};
-    };
-
-
-
-    class [[nodiscard]] DependencyTrackerRegistration final {
-    public:
-        DependencyTrackerRegistration(DependencyManager *mgr, uint64_t interfaceNameHash, uint64_t priority) noexcept : _mgr(mgr), _interfaceNameHash(interfaceNameHash), _priority(priority) {}
-        DependencyTrackerRegistration() noexcept = default;
-        ~DependencyTrackerRegistration();
-
-        DependencyTrackerRegistration(const DependencyTrackerRegistration&) = delete;
-        DependencyTrackerRegistration(DependencyTrackerRegistration&&) noexcept = default;
-        DependencyTrackerRegistration& operator=(const DependencyTrackerRegistration&) = delete;
-        DependencyTrackerRegistration& operator=(DependencyTrackerRegistration&&) noexcept = default;
-    private:
-        DependencyManager *_mgr{nullptr};
-        uint64_t _interfaceNameHash{0};
-        uint64_t _priority{0};
-    };
 
     struct DependencyTrackerInfo final {
         explicit DependencyTrackerInfo(Ichor::function<void(Event const * const)> _trackFunc) noexcept : trackFunc(std::move(_trackFunc)) {}
@@ -203,12 +64,15 @@ namespace Ichor {
         }
 
         // DANGEROUS COPY, EFFECTIVELY MAKES A NEW MANAGER AND STARTS OVER!!
-        [[deprecated]]
+        // Only implemented so that the manager can be easily used in STL containers before anything is using it.
+        [[deprecated("DANGEROUS COPY, EFFECTIVELY MAKES A NEW MANAGER AND STARTS OVER!! The moved-from manager cannot be registered with a CommunicationChannel, or UB occurs.")]]
         DependencyManager(const DependencyManager& other) : _memResource(other._memResource), _eventMemResource(other._eventMemResource) {
             if(other._started) {
                 std::terminate();
             }
         };
+
+        // An implementation would be very thread un-safe. Moving the event queue would require no modification by any thread.
         DependencyManager(DependencyManager&&) = delete;
 
 
@@ -312,6 +176,7 @@ namespace Ichor {
 
             uint64_t eventId = _eventIdCounter.fetch_add(1, std::memory_order_acq_rel);
             _eventQueueMutex.lock();
+            _emptyQueue = false;
             [[maybe_unused]] auto it = _eventQueue.emplace(priority, EventStackUniquePtr::create<EventT>(std::forward<uint64_t>(eventId), std::forward<uint64_t>(originatingServiceId), std::forward<uint64_t>(priority), std::forward<Args>(args)...));
             TSAN_ANNOTATE_HAPPENS_BEFORE((void*)&(*it));
             _eventQueueMutex.unlock();
@@ -338,6 +203,7 @@ namespace Ichor {
 
             uint64_t eventId = _eventIdCounter.fetch_add(1, std::memory_order_acq_rel);
             _eventQueueMutex.lock();
+            _emptyQueue = false;
             [[maybe_unused]] auto it = _eventQueue.emplace(INTERNAL_EVENT_PRIORITY, EventStackUniquePtr::create<EventT>(std::forward<uint64_t>(eventId), std::forward<uint64_t>(originatingServiceId), INTERNAL_EVENT_PRIORITY, std::forward<Args>(args)...));
             TSAN_ANNOTATE_HAPPENS_BEFORE((void*)&(*it));
             _eventQueueMutex.unlock();
@@ -507,6 +373,31 @@ namespace Ichor {
             return _started;
         };
 
+        template <typename Interface>
+        [[nodiscard]] std::pmr::vector<Interface*> getStartedServices() noexcept {
+            std::pmr::vector<Interface*> ret{_memResource};
+            ret.reserve(_services.size());
+            for(auto &[key, svc] : _services) {
+                if(svc->getServiceState() != ServiceState::ACTIVE) {
+                    continue;
+                }
+
+                for(auto &iface : svc->getInterfaces()) {
+                    if(iface.interfaceNameHash == typeNameHash<Interface>()) {
+                        ret.push_back(static_cast<Interface*>((void*)svc->getServiceAsInterfacePointer()));
+                    }
+                }
+            }
+
+            return ret;
+        }
+
+        // This waits on all events done processing, rather than the event queue being empty.
+        void waitForEmptyQueue() {
+            std::shared_lock lck(_eventQueueMutex);
+            _wakeUp.wait_for(lck, std::chrono::milliseconds(1), [this] { return _emptyQueue || _quit.load(std::memory_order_acquire); });
+        }
+
         [[nodiscard]] std::optional<std::string_view> getImplementationNameFor(uint64_t serviceId) const noexcept;
 
         void start();
@@ -570,6 +461,7 @@ namespace Ichor {
 
             uint64_t eventId = _eventIdCounter.fetch_add(1, std::memory_order_acq_rel);
             _eventQueueMutex.lock();
+            _emptyQueue = false;
             [[maybe_unused]] auto it = _eventQueue.emplace(priority, EventStackUniquePtr::create<EventT>(std::forward<uint64_t>(eventId), std::forward<uint64_t>(originatingServiceId), std::forward<uint64_t>(priority), std::forward<Args>(args)...));
             TSAN_ANNOTATE_HAPPENS_BEFORE((void*)&(*it));
             _eventQueueMutex.unlock();
@@ -594,6 +486,7 @@ namespace Ichor {
         std::atomic<uint64_t> _eventIdCounter{0};
         std::atomic<bool> _quit{false};
         std::atomic<bool> _started{false};
+        bool _emptyQueue{false}; // only true when all events are done processing, as opposed to having an empty _eventQueue. The latter can be empty before processing due to the usage of extract()
         CommunicationChannel *_communicationChannel{nullptr};
         uint64_t _id{_managerIdCounter++};
         static std::atomic<uint64_t> _managerIdCounter;

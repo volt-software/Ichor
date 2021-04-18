@@ -5,7 +5,7 @@
 [submodule "external/Catch2"]
 	path = external/Catch2
 	url = https://github.com/catchorg/Catch2.git
-	branch = v.2.13.1
+	branch = devel
 [submodule "external/fmt"]
 	path = external/fmt
 	url = https://github.com/fmtlib/fmt.git
@@ -25,6 +25,3 @@
 	path = external/liburing
 	url = https://github.com/axboe/liburing.git
 	tag = liburing-0.7
-[submodule "external/utest.h"]
-	path = external/utest.h
-	url = https://github.com/sheredom/utest.h.git

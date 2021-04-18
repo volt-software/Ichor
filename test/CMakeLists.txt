@@ -1,10 +1,6 @@
-include_directories("${EXTERNAL_DIR}/utest.h")
-
 file(GLOB_RECURSE PROJECT_TEST_SOURCES ${TOP_DIR}/test/*.cpp)
 add_executable(ichor_test ${PROJECT_TEST_SOURCES})
-if(USE_SPDLOG)
-    target_sources(ichor_test PRIVATE ${SPDLOG_SOURCES})
-endif()
 add_test(NAME MyTest COMMAND ichor_test)
 target_link_libraries(ichor_test ${CMAKE_THREAD_LIBS_INIT})
 target_link_libraries(ichor_test ichor)
+target_link_libraries(ichor_test Catch2::Catch2WithMain)
