@@ -4,6 +4,7 @@
 #include "UselessService.h"
 #include "QuitOnStartWithDependenciesService.h"
 #include "DependencyService.h"
+#include "MixingInterfacesService.h"
 
 TEST_CASE("DependencyServices") {
 
@@ -90,5 +91,23 @@ TEST_CASE("DependencyServices") {
         t.join();
 
         REQUIRE_FALSE(dm.isRunning());
+    }
+
+    SECTION("Mixing services should not cause UB") {
+        Ichor::DependencyManager dm{};
+
+        std::thread t([&]() {
+            dm.createServiceManager<NullFrameworkLogger, IFrameworkLogger>();
+            dm.createServiceManager<MixServiceOne, IMixOne, IMixTwo>();
+            dm.createServiceManager<MixServiceTwo, IMixOne, IMixTwo>();
+            dm.createServiceManager<MixServiceThree, IMixOne, IMixTwo>();
+            dm.createServiceManager<MixServiceFour, IMixOne, IMixTwo>();
+            dm.createServiceManager<MixServiceFive, IMixOne, IMixTwo>();
+            dm.createServiceManager<MixServiceSix, IMixOne, IMixTwo>();
+            dm.createServiceManager<CheckMixService>();
+            dm.start();
+        });
+
+        t.join();
     }
 }
