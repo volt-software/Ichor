@@ -27,7 +27,7 @@ namespace Ichor {
         uint64_t occurances{};
     };
 
-    class IEventStatisticsService : public virtual IService {
+    class IEventStatisticsService : virtual public IService {
     public:
         ~IEventStatisticsService() override = default;
 

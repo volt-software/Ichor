@@ -3,7 +3,7 @@
 #include <ichor/Service.h>
 
 namespace Ichor {
-    class IHostService : public virtual IService {
+    class IHostService : virtual public IService {
     public:
         ~IHostService() override = default;
 

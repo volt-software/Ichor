@@ -6,7 +6,7 @@
 namespace Ichor {
     class HttpRouteRegistration;
 
-    class IHttpService : public virtual IService {
+    class IHttpService : virtual public IService {
     public:
         ~IHttpService() override = default;
 

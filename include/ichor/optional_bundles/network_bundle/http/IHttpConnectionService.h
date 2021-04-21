@@ -16,7 +16,7 @@ namespace Ichor {
         HttpResponse response;
     };
 
-    class IHttpConnectionService : public virtual IService {
+    class IHttpConnectionService : virtual public IService {
     public:
         ~IHttpConnectionService() override = default;
 

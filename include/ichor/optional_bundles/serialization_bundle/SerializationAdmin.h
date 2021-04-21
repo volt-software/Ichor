@@ -12,8 +12,8 @@ namespace Ichor {
         SerializationAdmin(DependencyRegister &reg, IchorProperties props, DependencyManager *mng);
         ~SerializationAdmin() final = default;
 
-        std::vector<uint8_t> serialize(const uint64_t type, const void* obj) final;
-        void* deserialize(const uint64_t type, std::vector<uint8_t> &&bytes) final;
+        std::vector<uint8_t> serialize(uint64_t type, const void* obj) final;
+        void* deserialize(uint64_t type, std::vector<uint8_t> &&bytes) final;
 
         void addDependencyInstance(ILogger *logger);
         void removeDependencyInstance(ILogger *logger);

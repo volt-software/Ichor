@@ -24,9 +24,9 @@ namespace Ichor{
                 return Generator<T>{coroutine_handle::from_promise(*this)};
             }
 
-            constexpr cppcoro::suspend_always initial_suspend() const { return {}; }
+            constexpr cppcoro::suspend_always initial_suspend() const noexcept { return {}; }
 
-            constexpr cppcoro::suspend_always final_suspend() const { return {}; }
+            constexpr cppcoro::suspend_always final_suspend() const noexcept { return {}; }
 
             template<
                     typename U = T,
@@ -45,8 +45,8 @@ namespace Ichor{
                 m_exception = std::current_exception();
             }
 
-            void return_void() noexcept {
-            }
+//            void return_void() noexcept {
+//            }
 
             cppcoro::suspend_never return_value(std::remove_reference_t<T> &value) noexcept {
                 ::new(static_cast<void *>(std::addressof(m_value))) T(std::forward<T>(value));

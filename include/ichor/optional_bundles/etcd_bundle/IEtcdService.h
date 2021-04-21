@@ -3,7 +3,7 @@
 #include <ichor/Service.h>
 
 namespace Ichor {
-    class IEtcdService : public virtual IService {
+    class IEtcdService : virtual public IService {
     public:
         ~IEtcdService() override = default;
 

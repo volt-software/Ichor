@@ -1,6 +1,7 @@
 #pragma once
 
 #include <ichor/Dependency.h>
+#include <ichor/Service.h>
 
 namespace Ichor {
     struct DependencyRegister final {
@@ -14,8 +15,8 @@ namespace Ichor {
 
             _registrations.emplace(typeNameHash<Interface>(), std::make_tuple(
                     Dependency{typeNameHash<Interface>(), required},
-                    Ichor::function<void(IService*)>{[svc](void* dep){ svc->addDependencyInstance(static_cast<Interface*>(dep)); }, svc->getMemoryResource()},
-                    Ichor::function<void(IService*)>{[svc](void* dep){ svc->removeDependencyInstance(static_cast<Interface*>(dep)); }, svc->getMemoryResource()},
+                    Ichor::function<void(IService*)>{[svc](IService* dep){ svc->addDependencyInstance(reinterpret_cast<Interface*>(dep)); }, svc->getMemoryResource()},
+                    Ichor::function<void(IService*)>{[svc](IService* dep){ svc->removeDependencyInstance(reinterpret_cast<Interface*>(dep)); }, svc->getMemoryResource()},
                     std::move(props)));
         }
 

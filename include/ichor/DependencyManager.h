@@ -384,7 +384,8 @@ namespace Ichor {
 
                 for(auto &iface : svc->getInterfaces()) {
                     if(iface.interfaceNameHash == typeNameHash<Interface>()) {
-                        ret.push_back(static_cast<Interface*>((void*)svc->getServiceAsInterfacePointer()));
+                        ret.push_back(reinterpret_cast<Interface*>(svc->getServiceAsInterfacePointer()));
+                        break;
                     }
                 }
             }

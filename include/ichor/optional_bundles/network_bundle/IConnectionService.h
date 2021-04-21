@@ -3,7 +3,7 @@
 #include <ichor/Service.h>
 
 namespace Ichor {
-    class IConnectionService : public virtual IService {
+    class IConnectionService : virtual public IService {
     public:
         ~IConnectionService() override = default;
 
