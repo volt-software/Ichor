@@ -47,7 +47,7 @@ private:
 
         if(total_used + bytes_necessary > SIZE) {
 #ifndef NDEBUG //warning: fmt::print calls printf(), which allocates (at least on my machine)
-            fmt::print("Ran out of space on allocator {:L}\n", id);
+            fmt::print("Ran out of space on allocator {:L} while trying to allocate {:L} bytes with {:L} used of {:L} max\n", id, bytes_necessary, total_used, SIZE);
 #endif
             std::terminate();
         }
@@ -85,9 +85,12 @@ private:
 
     void do_deallocate(void *p, size_t bytes, size_t alignment) final {
         auto *last_used_block = top_block;
+#ifndef NDEBUG //warning: fmt::print calls printf(), which allocates (at least on my machine)
+        fmt::print("id {:L} reqeust deallocation of ptr {} of {:L} bytes\n", id, fmt::ptr(p), bytes);
+#endif
 
         while(last_used_block != nullptr) {
-            if(reinterpret_cast<std::size_t>(last_used_block) == reinterpret_cast<std::size_t>(p) - sizeof(block)) {
+            if(reinterpret_cast<std::size_t>(last_used_block) < reinterpret_cast<std::size_t>(p) && (last_used_block->next == nullptr || reinterpret_cast<std::size_t>(last_used_block->next) > reinterpret_cast<std::size_t>(p))) {
                 last_used_block->used = false;
 
 #ifndef NDEBUG //warning: fmt::print calls printf(), which allocates (at least on my machine)
