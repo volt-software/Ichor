@@ -76,13 +76,13 @@ namespace Ichor {
         DependencyManager(DependencyManager&&) = delete;
 
 
-        template<DerivedTemplated<Service> Impl, Derived<IService>... Interfaces>
+        template<DerivedTemplated<Service> Impl, typename... Interfaces>
         requires ImplementsAll<Impl, Interfaces...>
         auto createServiceManager() {
             return createServiceManager<Impl, Interfaces...>(IchorProperties{_memResource});
         }
 
-        template<DerivedTemplated<Service> Impl, Derived<IService>... Interfaces>
+        template<DerivedTemplated<Service> Impl, typename... Interfaces>
         requires ImplementsAll<Impl, Interfaces...>
         auto createServiceManager(IchorProperties&& properties, uint64_t priority = INTERNAL_EVENT_PRIORITY) {
             if constexpr(RequestsDependencies<Impl>) {
@@ -132,7 +132,7 @@ namespace Ichor {
                 return &cmpMgr->getService();
             } else {
                 static_assert(!(std::is_default_constructible_v<Impl> && RequestsProperties<Impl>), "Cannot have a properties constructor and a default constructor simultaneously.");
-                auto cmpMgr = LifecycleManager<Impl>::template create(_logger, "", std::forward<IchorProperties>(properties), this, _memResource, InterfacesList<Interfaces...>);
+                auto cmpMgr = LifecycleManager<Impl, Interfaces...>::template create(_logger, "", std::forward<IchorProperties>(properties), this, _memResource, InterfacesList<Interfaces...>);
 
                 if constexpr (sizeof...(Interfaces) > 0) {
                     if constexpr (ListContainsInterface<IFrameworkLogger, Interfaces...>::value) {
@@ -381,13 +381,8 @@ namespace Ichor {
                 if(svc->getServiceState() != ServiceState::ACTIVE) {
                     continue;
                 }
-
-                for(auto &iface : svc->getInterfaces()) {
-                    if(iface.interfaceNameHash == typeNameHash<Interface>()) {
-                        ret.push_back(reinterpret_cast<Interface*>(svc->getServiceAsInterfacePointer()));
-                        break;
-                    }
-                }
+                Ichor::function<void(void*, IService*)> f{[&ret](void *svc2, IService *isvc){ ret.push_back(reinterpret_cast<Interface*>(svc2)); }, _memResource};
+                svc->insertSelfInto(typeNameHash<Interface>(), f);
             }
 
             return ret;

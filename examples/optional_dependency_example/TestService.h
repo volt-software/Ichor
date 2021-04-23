@@ -29,18 +29,18 @@ public:
         return true;
     }
 
-    void addDependencyInstance(ILogger *logger) {
+    void addDependencyInstance(ILogger *logger, IService *isvc) {
         _logger = logger;
 
-        ICHOR_LOG_INFO(_logger, "Inserted logger svcid {} for svcid {}", logger->getServiceId(), getServiceId());
+        ICHOR_LOG_INFO(_logger, "Inserted logger svcid {} for svcid {}", isvc->getServiceId(), getServiceId());
     }
 
-    void removeDependencyInstance(ILogger *logger) {
+    void removeDependencyInstance(ILogger *logger, IService *) {
         _logger = nullptr;
     }
 
-    void addDependencyInstance(IOptionalService *svc) {
-        ICHOR_LOG_INFO(_logger, "Inserted IOptionalService svcid {}", svc->getServiceId());
+    void addDependencyInstance(IOptionalService *svc, IService *isvc) {
+        ICHOR_LOG_INFO(_logger, "Inserted IOptionalService svcid {}", isvc->getServiceId());
 
         _injectionCount++;
         if(_started && _injectionCount == 2) {
@@ -48,7 +48,7 @@ public:
         }
     }
 
-    void removeDependencyInstance(IOptionalService *) {
+    void removeDependencyInstance(IOptionalService *, IService *) {
     }
 
 private:

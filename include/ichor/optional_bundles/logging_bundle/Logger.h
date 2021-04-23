@@ -6,7 +6,7 @@
 #include <ichor/interfaces/LogLevel.h>
 
 namespace Ichor {
-    class ILogger : virtual public IService {
+    class ILogger {
     public:
         virtual void trace(const char *filename_in, int line_in, const char *funcname_in, std::string_view format_str, fmt::format_args args) = 0;
         virtual void debug(const char *filename_in, int line_in, const char *funcname_in, std::string_view format_str, fmt::format_args args) = 0;
@@ -18,7 +18,7 @@ namespace Ichor {
         [[nodiscard]] virtual LogLevel getLogLevel() const = 0;
 
     protected:
-        ~ILogger() override = default;
+        virtual ~ILogger() = default;
     };
 
 #ifndef ICHOR_LOG_TRACE

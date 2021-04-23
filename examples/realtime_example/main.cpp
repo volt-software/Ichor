@@ -41,7 +41,7 @@ void* run_example(void*) {
     std::pmr::set_default_resource(&terminatingResource);
 
     {
-        buffer_resource<1024 * 512> resourceOne{};
+        buffer_resource<1024 * 192> resourceOne{}; // need about 160 kb for the 20'000 iteration array in TestService
         buffer_resource<1024 * 32> resourceTwo{};
 
         DependencyManager dm{&resourceOne, &resourceTwo};

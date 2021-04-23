@@ -64,12 +64,12 @@ bool Ichor::HttpConnectionService::stop() {
     return true;
 }
 
-void Ichor::HttpConnectionService::addDependencyInstance(ILogger *logger) {
+void Ichor::HttpConnectionService::addDependencyInstance(ILogger *logger, IService *) {
     _logger = logger;
     ICHOR_LOG_TRACE(_logger, "Inserted logger");
 }
 
-void Ichor::HttpConnectionService::removeDependencyInstance(ILogger *logger) {
+void Ichor::HttpConnectionService::removeDependencyInstance(ILogger *logger, IService *) {
     _logger = nullptr;
 }
 

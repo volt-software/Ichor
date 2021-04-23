@@ -11,7 +11,7 @@ namespace Ichor {
         static constexpr std::string_view NAME = typeName<TimerEvent>();
     };
 
-    struct ITimer : virtual public IService {
+    struct ITimer {
         virtual void startTimer() = 0;
         virtual void stopTimer() = 0;
         [[nodiscard]] virtual bool running() const noexcept = 0;
@@ -23,5 +23,8 @@ namespace Ichor {
         void setChronoInterval(Dur duration) noexcept {
             setInterval(std::chrono::nanoseconds(duration).count());
         }
+
+    protected:
+        virtual ~ITimer() = default;
     };
 }

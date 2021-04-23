@@ -7,6 +7,7 @@ namespace Ichor {
 
     struct DependencyRegister;
     class DependencyManager;
+    class IService;
 
     template <class T, class U, class... Remainder>
     struct DerivedTrait : std::integral_constant<bool, DerivedTrait<T, Remainder...>::value && std::is_base_of_v<U, T>> {};
@@ -40,9 +41,9 @@ namespace Ichor {
     };
 
     template <class ImplT, class Interface>
-    concept ImplementsDependencyInjection = requires(ImplT impl, Interface *svc) {
-        { impl.addDependencyInstance(svc) } -> std::same_as<void>;
-        { impl.removeDependencyInstance(svc) } -> std::same_as<void>;
+    concept ImplementsDependencyInjection = requires(ImplT impl, Interface *svc, IService *isvc) {
+        { impl.addDependencyInstance(svc, isvc) } -> std::same_as<void>;
+        { impl.removeDependencyInstance(svc, isvc) } -> std::same_as<void>;
     };
 
     template <class ImplT, class EventT>

@@ -2,12 +2,12 @@
 
 #include <ichor/Service.h>
 namespace Ichor {
-    struct IPubsubAdminService : virtual public IService {
+    struct IPubsubAdminService {
     };
 
-    struct IPubsubPublisherService : virtual public IService {
+    struct IPubsubPublisherService {
     };
 
-    struct IPubsubSubscriberService : virtual public IService {
+    struct IPubsubSubscriberService {
     };
 }

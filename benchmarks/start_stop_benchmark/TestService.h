@@ -8,7 +8,7 @@
 using namespace Ichor;
 
 
-struct ITestService : virtual public IService {
+struct ITestService {
 };
 
 class TestService final : public ITestService, public Service<TestService> {
@@ -25,11 +25,11 @@ public:
         return true;
     }
 
-    void addDependencyInstance(ILogger *logger) {
+    void addDependencyInstance(ILogger *logger, IService *) {
         _logger = logger;
     }
 
-    void removeDependencyInstance(ILogger *logger) {
+    void removeDependencyInstance(ILogger *logger, IService *) {
         _logger = nullptr;
     }
 

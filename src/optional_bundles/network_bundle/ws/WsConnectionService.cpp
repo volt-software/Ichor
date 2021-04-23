@@ -115,20 +115,20 @@ bool Ichor::WsConnectionService::stop() {
     return true;
 }
 
-void Ichor::WsConnectionService::addDependencyInstance(ILogger *logger) {
+void Ichor::WsConnectionService::addDependencyInstance(ILogger *logger, IService *) {
     _logger = logger;
     ICHOR_LOG_TRACE(_logger, "Inserted logger");
 }
 
-void Ichor::WsConnectionService::removeDependencyInstance(ILogger *logger) {
+void Ichor::WsConnectionService::removeDependencyInstance(ILogger *logger, IService *) {
     _logger = nullptr;
 }
 
-void Ichor::WsConnectionService::addDependencyInstance(IHostService *) {
+void Ichor::WsConnectionService::addDependencyInstance(IHostService *, IService *) {
 
 }
 
-void Ichor::WsConnectionService::removeDependencyInstance(IHostService *) {
+void Ichor::WsConnectionService::removeDependencyInstance(IHostService *, IService *) {
 
 }
 

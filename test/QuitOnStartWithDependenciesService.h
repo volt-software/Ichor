@@ -14,9 +14,9 @@ struct QuitOnStartWithDependenciesService final : public Service<QuitOnStartWith
         return true;
     }
 
-    void addDependencyInstance(UselessService *) {
+    void addDependencyInstance(UselessService *, IService *) {
     }
 
-    void removeDependencyInstance(UselessService *) {
+    void removeDependencyInstance(UselessService *, IService *) {
     }
 };

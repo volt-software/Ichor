@@ -25,8 +25,8 @@ namespace Ichor {
         bool start() final;
         bool stop() final;
 
-        void addDependencyInstance(ILogger *logger);
-        void removeDependencyInstance(ILogger *logger);
+        void addDependencyInstance(ILogger *logger, IService *isvc);
+        void removeDependencyInstance(ILogger *logger, IService *isvc);
 
         Generator<bool> handleEvent(NewWsConnectionEvent const * const evt);
 

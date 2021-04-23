@@ -7,7 +7,7 @@ namespace Ichor {
     struct DependencyRegister final {
         explicit DependencyRegister(DependencyManager *mng) noexcept;
 
-        template<Derived<IService> Interface, DerivedTemplated<Service> Impl>
+        template<typename Interface, DerivedTemplated<Service> Impl>
         void registerDependency(Impl *svc, bool required, std::optional<IchorProperties> props = {}) {
             if(_registrations.contains(typeNameHash<Interface>())) {
                 throw std::runtime_error("Already registered interface");
@@ -15,11 +15,11 @@ namespace Ichor {
 
             _registrations.emplace(typeNameHash<Interface>(), std::make_tuple(
                     Dependency{typeNameHash<Interface>(), required},
-                    Ichor::function<void(IService*)>{[svc](IService* dep){ svc->addDependencyInstance(reinterpret_cast<Interface*>(dep)); }, svc->getMemoryResource()},
-                    Ichor::function<void(IService*)>{[svc](IService* dep){ svc->removeDependencyInstance(reinterpret_cast<Interface*>(dep)); }, svc->getMemoryResource()},
+                    Ichor::function<void(void*, IService*)>{[svc](void* dep, IService* isvc){ svc->addDependencyInstance(reinterpret_cast<Interface*>(dep), isvc); }, svc->getMemoryResource()},
+                    Ichor::function<void(void*, IService*)>{[svc](void* dep, IService* isvc){ svc->removeDependencyInstance(reinterpret_cast<Interface*>(dep), isvc); }, svc->getMemoryResource()},
                     std::move(props)));
         }
 
-        std::pmr::unordered_map<uint64_t, std::tuple<Dependency, Ichor::function<void(IService*)>, Ichor::function<void(IService*)>, std::optional<IchorProperties>>> _registrations;
+        std::pmr::unordered_map<uint64_t, std::tuple<Dependency, Ichor::function<void(void*, IService*)>, Ichor::function<void(void*, IService*)>, std::optional<IchorProperties>>> _registrations;
     };
 }

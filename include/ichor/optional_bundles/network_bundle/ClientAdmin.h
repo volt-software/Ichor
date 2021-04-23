@@ -10,7 +10,7 @@ namespace Ichor {
     template <typename NetworkType, typename NetworkInterfaceType = IConnectionService>
     class ClientAdmin final : public IClientAdmin, public Service<ClientAdmin<NetworkType, NetworkInterfaceType>> {
     public:
-        ClientAdmin(IchorProperties properties, DependencyManager *mng) : Service<ClientAdmin<NetworkType, NetworkInterfaceType>>(std::move(properties), mng), _connections{getMemoryResource()} {  }
+        ClientAdmin(IchorProperties properties, DependencyManager *mng) : Service<ClientAdmin<NetworkType, NetworkInterfaceType>>(std::move(properties), mng), _connections{this->getMemoryResource()} {  }
         ~ClientAdmin() override = default;
 
         bool start() final {
@@ -41,7 +41,7 @@ namespace Ichor {
 
             if(!_connections.contains(evt->originatingService)) {
                 auto newProps = *evt->properties.value();
-                newProps.emplace("Filter", Ichor::make_any<Filter>(getMemoryResource(), Filter{getMemoryResource(), ServiceIdFilterEntry{evt->originatingService}}));
+                newProps.emplace("Filter", Ichor::make_any<Filter>(this->getMemoryResource(), Filter{this->getMemoryResource(), ServiceIdFilterEntry{evt->originatingService}}));
 
                 _connections.emplace(evt->originatingService, Service<ClientAdmin<NetworkType, NetworkInterfaceType>>::getManager()->template createServiceManager<NetworkType, NetworkInterfaceType>(std::move(newProps)));
             }
@@ -80,7 +80,7 @@ namespace Ichor {
 
     private:
         ILogger *_logger{nullptr};
-        std::pmr::unordered_map<uint64_t, NetworkInterfaceType*> _connections;
+        std::pmr::unordered_map<uint64_t, IService*> _connections;
         std::unique_ptr<DependencyTrackerRegistration, Deleter> _trackerRegistration{nullptr};
         std::unique_ptr<EventHandlerRegistration, Deleter> _unrecoverableErrorRegistration{nullptr};
     };

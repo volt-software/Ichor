@@ -13,8 +13,8 @@ namespace Ichor {
         bool start() final;
         bool stop() final;
 
-        void addDependencyInstance(ILogger *logger);
-        void removeDependencyInstance(ILogger *logger);
+        void addDependencyInstance(ILogger *logger, IService *isvc);
+        void removeDependencyInstance(ILogger *logger, IService *isvc);
 
         bool send(std::vector<uint8_t>&& msg) final;
         void setPriority(uint64_t priority) final;

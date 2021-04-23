@@ -40,19 +40,19 @@ public:
         return true;
     }
 
-    void addDependencyInstance(ILogger *logger) {
+    void addDependencyInstance(ILogger *logger, IService *) {
         _logger = logger;
     }
 
-    void removeDependencyInstance(ILogger *logger) {
+    void removeDependencyInstance(ILogger *logger, IService *) {
         _logger = nullptr;
     }
 
-    void addDependencyInstance(ITestService *bnd) {
-        _testServiceId = bnd->getServiceId();
+    void addDependencyInstance(ITestService *, IService *isvc) {
+        _testServiceId = isvc->getServiceId();
     }
 
-    void removeDependencyInstance(ITestService *bnd) {
+    void removeDependencyInstance(ITestService *, IService *) {
     }
 
     void handleCompletion(StartServiceEvent const * const evt) {

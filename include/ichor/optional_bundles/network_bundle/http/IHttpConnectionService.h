@@ -16,9 +16,8 @@ namespace Ichor {
         HttpResponse response;
     };
 
-    class IHttpConnectionService : virtual public IService {
+    class IHttpConnectionService {
     public:
-        ~IHttpConnectionService() override = default;
 
         /**
          * Send message asynchronously to the connected http server. An HttpResponseEvent is queued when the request finishes.
@@ -41,5 +40,8 @@ namespace Ichor {
          */
         virtual void setPriority(uint64_t priority) = 0;
         virtual uint64_t getPriority() = 0;
+
+    protected:
+        virtual ~IHttpConnectionService() = default;
     };
 }

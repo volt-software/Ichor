@@ -14,8 +14,8 @@ namespace Ichor {
         bool start() final;
         bool stop() final;
 
-        void addDependencyInstance(ILogger *logger);
-        void removeDependencyInstance(ILogger *logger);
+        void addDependencyInstance(ILogger *logger, IService *isvc);
+        void removeDependencyInstance(ILogger *logger, IService *isvc);
 
         bool put(std::string&& key, std::string&& value) final;
         std::optional<std::string> get(std::string&& key) final;

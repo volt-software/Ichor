@@ -1,14 +1,15 @@
 #pragma once
 
+#include <variant>
 #include <ichor/Service.h>
 #include "DependencyService.h"
 
 using namespace Ichor;
 
-struct IMixOne : virtual public IService {
+struct IMixOne {
     virtual uint32_t one() = 0;
 };
-struct IMixTwo : virtual public IService {
+struct IMixTwo {
     virtual uint32_t two() = 0;
 };
 struct MixServiceOne final : public IMixOne, public IMixTwo, public Service<MixServiceOne> {
@@ -36,44 +37,19 @@ struct MixServiceSix final : public IMixOne, public Service<MixServiceSix>, publ
     uint32_t two() final { return 12; }
 };
 
+struct Handle {
+    IService *isvc{};
+    std::variant<IMixOne*, IMixTwo*> iface{};
+};
+
 struct CheckMixService final : public ICountService, public Service<CheckMixService> {
     CheckMixService(DependencyRegister &reg, IchorProperties props, DependencyManager *mng) : Service<CheckMixService>(std::move(props), mng) {
         reg.registerDependency<IMixOne>(this, false);
         reg.registerDependency<IMixTwo>(this, false);
     }
 
-    void check(IMixOne *one, IMixTwo *two) {
-        REQUIRE(one->getServiceId() == two->getServiceId());
-        REQUIRE(one->getServicePriority() == two->getServicePriority());
+    static void check(IMixOne *one, IMixTwo *two) {
         REQUIRE(one->one() != two->two());
-    }
-
-    void add(IService *svc) {
-        svcCount++;
-
-        auto existing = _services.find(svc->getServiceId());
-
-        if(existing != end(_services)) {
-            REQUIRE(existing->second->getServiceId() == svc->getServiceId());
-            REQUIRE(existing->second->getServicePriority() == svc->getServicePriority());
-            REQUIRE(existing->second == svc);
-
-            IMixOne *newone = reinterpret_cast<IMixOne*>(svc);
-            IMixTwo *newtwo = reinterpret_cast<IMixTwo*>(svc);
-            IMixOne *existingone = reinterpret_cast<IMixOne*>(svc);
-            IMixTwo *existingtwo = reinterpret_cast<IMixTwo*>(svc);
-
-            check(newone, newtwo);
-            check(existingone, existingtwo);
-            check(newone, existingtwo);
-            check(existingone, newtwo);
-        } else {
-            _services.emplace(svc->getServiceId(), svc);
-        }
-
-        if(svcCount == 12) {
-            getManager()->pushEvent<QuitEvent>(0);
-        }
     }
 
     void remove(IService *svc) {
@@ -82,20 +58,56 @@ struct CheckMixService final : public ICountService, public Service<CheckMixServ
         _services.erase(svc->getServiceId());
     }
 
-    void addDependencyInstance(IMixOne *svc) {
-        add(svc);
+    void addDependencyInstance(IMixOne *svc, IService *isvc) {
+        svcCount++;
+
+        auto existing = _services.find(isvc->getServiceId());
+
+        if(existing != end(_services)) {
+            REQUIRE(existing->second.isvc->getServiceId() == isvc->getServiceId());
+            REQUIRE(existing->second.isvc->getServicePriority() == isvc->getServicePriority());
+            REQUIRE(existing->second.isvc == isvc);
+
+            auto *existingMixTwo = std::get<IMixTwo*>(existing->second.iface);
+
+            check(svc, existingMixTwo);
+        } else {
+            _services.emplace(isvc->getServiceId(), Handle{isvc, svc});
+        }
+
+        if(svcCount == 12) {
+            getManager()->pushEvent<QuitEvent>(0);
+        }
     }
 
-    void removeDependencyInstance(IMixOne *svc) {
-        remove(svc);
+    void removeDependencyInstance(IMixOne *, IService *isvc) {
+        remove(isvc);
     }
 
-    void addDependencyInstance(IMixTwo *svc) {
-        add(svc);
+    void addDependencyInstance(IMixTwo *svc, IService *isvc) {
+        svcCount++;
+
+        auto existing = _services.find(isvc->getServiceId());
+
+        if(existing != end(_services)) {
+            REQUIRE(existing->second.isvc->getServiceId() == isvc->getServiceId());
+            REQUIRE(existing->second.isvc->getServicePriority() == isvc->getServicePriority());
+            REQUIRE(existing->second.isvc == isvc);
+
+            auto *existingMixOne = std::get<IMixOne*>(existing->second.iface);
+
+            check(existingMixOne, svc);
+        } else {
+            _services.emplace(isvc->getServiceId(), Handle{isvc, svc});
+        }
+
+        if(svcCount == 12) {
+            getManager()->pushEvent<QuitEvent>(0);
+        }
     }
 
-    void removeDependencyInstance(IMixTwo *svc) {
-        remove(svc);
+    void removeDependencyInstance(IMixTwo *, IService *isvc) {
+        remove(isvc);
     }
 
     [[nodiscard]] uint64_t getSvcCount() const noexcept final {
@@ -103,5 +115,5 @@ struct CheckMixService final : public ICountService, public Service<CheckMixServ
     }
 
     uint64_t svcCount{};
-    std::unordered_map<uint64_t, IService*> _services;
+    std::unordered_map<uint64_t, Handle> _services;
 };

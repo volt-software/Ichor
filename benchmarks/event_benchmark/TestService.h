@@ -37,11 +37,11 @@ public:
         return true;
     }
 
-    void addDependencyInstance(ILogger *logger) {
+    void addDependencyInstance(ILogger *logger, IService *) {
         _logger = logger;
     }
 
-    void removeDependencyInstance(ILogger *logger) {
+    void removeDependencyInstance(ILogger *logger, IService *) {
         _logger = nullptr;
     }
 

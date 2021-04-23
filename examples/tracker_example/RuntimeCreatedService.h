@@ -8,7 +8,7 @@
 using namespace Ichor;
 
 
-struct IRuntimeCreatedService : virtual public IService {
+struct IRuntimeCreatedService {
 };
 
 class RuntimeCreatedService final : public IRuntimeCreatedService, public Service<RuntimeCreatedService> {
@@ -29,12 +29,12 @@ public:
         return true;
     }
 
-    void addDependencyInstance(ILogger *logger) {
+    void addDependencyInstance(ILogger *logger, IService *isvc) {
         _logger = logger;
-        ICHOR_LOG_INFO(_logger, "Inserted logger svcid {} for svcid {}", logger->getServiceId(), getServiceId());
+        ICHOR_LOG_INFO(_logger, "Inserted logger svcid {} for svcid {}", isvc->getServiceId(), getServiceId());
     }
 
-    void removeDependencyInstance(ILogger *logger) {
+    void removeDependencyInstance(ILogger *logger, IService *) {
         _logger = nullptr;
     }
 

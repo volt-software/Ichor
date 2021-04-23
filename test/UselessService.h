@@ -4,7 +4,7 @@
 
 using namespace Ichor;
 
-struct IUselessService : virtual public IService {
+struct IUselessService {
 };
 struct UselessService final : public IUselessService, public Service<UselessService> {
 };

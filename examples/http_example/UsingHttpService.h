@@ -37,30 +37,30 @@ public:
         return true;
     }
 
-    void addDependencyInstance(ILogger *logger) {
+    void addDependencyInstance(ILogger *logger, IService *) {
         _logger = logger;
     }
 
-    void removeDependencyInstance(ILogger *logger) {
+    void removeDependencyInstance(ILogger *logger, IService *) {
         _logger = nullptr;
     }
 
-    void addDependencyInstance(ISerializationAdmin *serializationAdmin) {
+    void addDependencyInstance(ISerializationAdmin *serializationAdmin, IService *) {
         _serializationAdmin = serializationAdmin;
         ICHOR_LOG_INFO(_logger, "Inserted serializationAdmin");
     }
 
-    void removeDependencyInstance(ISerializationAdmin *serializationAdmin) {
+    void removeDependencyInstance(ISerializationAdmin *serializationAdmin, IService *) {
         _serializationAdmin = nullptr;
         ICHOR_LOG_INFO(_logger, "Removed serializationAdmin");
     }
 
-    void addDependencyInstance(IHttpConnectionService *connectionService) {
+    void addDependencyInstance(IHttpConnectionService *connectionService, IService *) {
         _connectionService = connectionService;
         ICHOR_LOG_INFO(_logger, "Inserted IHttpConnectionService");
     }
 
-    void addDependencyInstance(IHttpService *svc) {
+    void addDependencyInstance(IHttpService *svc, IService *) {
         _routeRegistration = svc->addRoute(HttpMethod::post, "/test", [this](HttpRequest &req) -> HttpResponse{
             auto msg = _serializationAdmin->deserialize<TestMsg>(std::move(req.body));
             ICHOR_LOG_WARN(_logger, "received request on route {} {} with testmsg {} - {}", req.method, req.route, msg->id, msg->val);
@@ -68,11 +68,11 @@ public:
         });
     }
 
-    void removeDependencyInstance(IHttpService *) {
+    void removeDependencyInstance(IHttpService *, IService *) {
         _routeRegistration = nullptr;
     }
 
-    void removeDependencyInstance(IHttpConnectionService *connectionService) {
+    void removeDependencyInstance(IHttpConnectionService *connectionService, IService *) {
         ICHOR_LOG_INFO(_logger, "Removed IHttpConnectionService");
     }
 

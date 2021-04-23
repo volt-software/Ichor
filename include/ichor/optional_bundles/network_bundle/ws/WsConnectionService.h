@@ -25,11 +25,11 @@ namespace Ichor {
         bool start() final;
         bool stop() final;
 
-        void addDependencyInstance(ILogger *logger);
-        void removeDependencyInstance(ILogger *logger);
+        void addDependencyInstance(ILogger *logger, IService *isvc);
+        void removeDependencyInstance(ILogger *logger, IService *isvc);
 
-        void addDependencyInstance(IHostService *);
-        void removeDependencyInstance(IHostService *);
+        void addDependencyInstance(IHostService *, IService *isvc);
+        void removeDependencyInstance(IHostService *, IService *isvc);
 
         /**
          * Asynchronous send, if send queue is full, doesn't send this message and returns false

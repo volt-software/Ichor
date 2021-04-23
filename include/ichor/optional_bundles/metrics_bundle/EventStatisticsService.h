@@ -27,12 +27,13 @@ namespace Ichor {
         uint64_t occurances{};
     };
 
-    class IEventStatisticsService : virtual public IService {
+    class IEventStatisticsService {
     public:
-        ~IEventStatisticsService() override = default;
-
         [[nodiscard]] virtual const std::unordered_map<uint64_t, std::vector<StatisticEntry>>& getRecentStatistics() const noexcept = 0;
         [[nodiscard]] virtual const std::unordered_map<uint64_t, std::vector<AveragedStatisticEntry>>& getAverageStatistics() const noexcept = 0;
+
+    protected:
+        virtual ~IEventStatisticsService() = default;
     };
 
     class EventStatisticsService final : public IEventStatisticsService, public Service<EventStatisticsService> {

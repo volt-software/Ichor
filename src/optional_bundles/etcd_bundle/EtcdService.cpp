@@ -27,12 +27,12 @@ bool Ichor::EtcdService::stop() {
     return true;
 }
 
-void Ichor::EtcdService::addDependencyInstance(ILogger *logger) {
+void Ichor::EtcdService::addDependencyInstance(ILogger *logger, IService *) {
     _logger = logger;
     ICHOR_LOG_TRACE(_logger, "Inserted logger");
 }
 
-void Ichor::EtcdService::removeDependencyInstance(ILogger *logger) {
+void Ichor::EtcdService::removeDependencyInstance(ILogger *logger, IService *) {
     _logger = nullptr;
 }
 

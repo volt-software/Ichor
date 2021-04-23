@@ -3,8 +3,8 @@
 #include <ichor/Service.h>
 
 namespace Ichor {
-    class IClientAdmin : virtual public IService {
-    public:
-        ~IClientAdmin() override = default;
+    class IClientAdmin {
+    protected:
+        virtual ~IClientAdmin() = default;
     };
 }

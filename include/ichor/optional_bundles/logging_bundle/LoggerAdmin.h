@@ -6,13 +6,13 @@
 #include <ichor/optional_bundles/logging_bundle/Logger.h>
 
 namespace Ichor {
-    struct ILoggerAdmin : virtual public IService {
+    struct ILoggerAdmin {
     };
 
     template<typename LogT>
     class LoggerAdmin final : public ILoggerAdmin, public Service<LoggerAdmin<LogT>> {
     public:
-        LoggerAdmin(DependencyRegister &reg, IchorProperties props, DependencyManager *mng) : Service<LoggerAdmin<LogT>>(std::move(props), mng), _loggers(getMemoryResource()) {
+        LoggerAdmin(DependencyRegister &reg, IchorProperties props, DependencyManager *mng) : Service<LoggerAdmin<LogT>>(std::move(props), mng), _loggers(this->getMemoryResource()) {
             reg.registerDependency<IFrameworkLogger>(this, true);
         }
         ~LoggerAdmin() final = default;
@@ -27,12 +27,12 @@ namespace Ichor {
             return true;
         }
 
-        void addDependencyInstance(IFrameworkLogger *logger) noexcept {
+        void addDependencyInstance(IFrameworkLogger *logger, IService *isvc) noexcept {
             _logger = logger;
             ICHOR_LOG_TRACE(_logger, "Inserted logger");
         }
 
-        void removeDependencyInstance(IFrameworkLogger *logger) noexcept {
+        void removeDependencyInstance(IFrameworkLogger *logger, IService *isvc) noexcept {
             _logger = nullptr;
         }
 
@@ -48,11 +48,11 @@ namespace Ichor {
             }
             if (logger == end(_loggers)) {
 //                ICHOR_LOG_ERROR(_logger, "creating logger for svcid {}", evt->originatingService);
-                    IchorProperties props{getMemoryResource()};
+                    IchorProperties props{this->getMemoryResource()};
                     props.reserve(3);
-                    props.template emplace("LogLevel",        Ichor::make_any<LogLevel>(getMemoryResource(), requestedLevel));
-                    props.template emplace("TargetServiceId", Ichor::make_any<uint64_t>(getMemoryResource(), evt->originatingService));
-                    props.template emplace("Filter",          Ichor::make_any<Filter>(getMemoryResource(), Filter{getMemoryResource(), ServiceIdFilterEntry{evt->originatingService}}));
+                    props.template emplace("LogLevel",        Ichor::make_any<LogLevel>(this->getMemoryResource(), requestedLevel));
+                    props.template emplace("TargetServiceId", Ichor::make_any<uint64_t>(this->getMemoryResource(), evt->originatingService));
+                    props.template emplace("Filter",          Ichor::make_any<Filter>(this->getMemoryResource(), Filter{this->getMemoryResource(), ServiceIdFilterEntry{evt->originatingService}}));
                     _loggers.emplace(evt->originatingService, Service<LoggerAdmin<LogT>>::getManager()->template createServiceManager<LogT, ILogger>(std::move(props)));
             } else {
                 ICHOR_LOG_TRACE(_logger, "svcid {} already has logger", evt->originatingService);

@@ -79,7 +79,7 @@ namespace Ichor{
             }
 
             void operator delete(void *ptr, std::size_t sz) noexcept {
-                auto rsrc = getThreadLocalMemoryResource();
+                auto* rsrc = getThreadLocalMemoryResource();
                 rsrc->deallocate(ptr, sz);
             }
 

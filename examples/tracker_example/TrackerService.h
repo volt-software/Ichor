@@ -42,12 +42,12 @@ public:
         return true;
     }
 
-    void addDependencyInstance(ILogger *logger) {
+    void addDependencyInstance(ILogger *logger, IService *) {
         _logger = logger;
         ICHOR_LOG_TRACE(_logger, "Inserted logger");
     }
 
-    void removeDependencyInstance(ILogger *logger) {
+    void removeDependencyInstance(ILogger *logger, IService *) {
         _logger = nullptr;
     }
 
@@ -72,7 +72,7 @@ public:
 
         if(runtimeService == end(_scopedRuntimeServices)) {
             auto newProps = *evt->properties.value();
-            newProps.emplace("Filter", Ichor::make_any<Filter>(getMemoryResource(), Filter{getMemoryResource(), ScopeFilterEntry{scope}}));
+            newProps.emplace("Filter", Ichor::make_any<Filter>(getMemoryResource(), Filter{Service::getMemoryResource(), ScopeFilterEntry{scope}}));
 
             _scopedRuntimeServices.emplace(scope, getManager()->createServiceManager<RuntimeCreatedService, IRuntimeCreatedService>(std::move(newProps)));
         }

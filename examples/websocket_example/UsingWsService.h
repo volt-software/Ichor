@@ -35,37 +35,37 @@ public:
         return true;
     }
 
-    void addDependencyInstance(ILogger *logger) {
+    void addDependencyInstance(ILogger *logger, IService *) {
         _logger = logger;
     }
 
-    void removeDependencyInstance(ILogger *logger) {
+    void removeDependencyInstance(ILogger *logger, IService *) {
         _logger = nullptr;
     }
 
-    void addDependencyInstance(ISerializationAdmin *serializationAdmin) {
+    void addDependencyInstance(ISerializationAdmin *serializationAdmin, IService *) {
         _serializationAdmin = serializationAdmin;
         ICHOR_LOG_INFO(_logger, "Inserted serializationAdmin");
     }
 
-    void removeDependencyInstance(ISerializationAdmin *serializationAdmin) {
+    void removeDependencyInstance(ISerializationAdmin *serializationAdmin, IService *) {
         _serializationAdmin = nullptr;
         ICHOR_LOG_INFO(_logger, "Removed serializationAdmin");
     }
 
-    void addDependencyInstance(IConnectionService *connectionService) {
+    void addDependencyInstance(IConnectionService *connectionService, IService *) {
         _connectionService = connectionService;
         ICHOR_LOG_INFO(_logger, "Inserted connectionService");
     }
 
-    void addDependencyInstance(IHostService *) {
-    }
-
-    void removeDependencyInstance(IHostService *) {
-    }
-
-    void removeDependencyInstance(IConnectionService *connectionService) {
+    void removeDependencyInstance(IConnectionService *connectionService, IService *) {
         ICHOR_LOG_INFO(_logger, "Removed connectionService");
+    }
+
+    void addDependencyInstance(IHostService *, IService *) {
+    }
+
+    void removeDependencyInstance(IHostService *, IService *) {
     }
 
     Generator<bool> handleEvent(NetworkDataEvent const * const evt) {

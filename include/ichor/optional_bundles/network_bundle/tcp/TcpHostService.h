@@ -23,8 +23,8 @@ namespace Ichor {
         bool start() final;
         bool stop() final;
 
-        void addDependencyInstance(ILogger *logger);
-        void removeDependencyInstance(ILogger *logger);
+        void addDependencyInstance(ILogger *logger, IService *isvc);
+        void removeDependencyInstance(ILogger *logger, IService *isvc);
 
         void setPriority(uint64_t priority) final;
         uint64_t getPriority() final;

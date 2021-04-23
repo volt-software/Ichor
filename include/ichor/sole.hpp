@@ -51,7 +51,6 @@
 #include <sys/types.h> // for uint32_t; should be stdint.h instead; however, GCC 5 on OSX fails when compiling it (See issue #11)
 #include <functional>
 #include <string>
-#include <mutex>
 
 // public API
 
@@ -633,12 +632,10 @@ namespace sole {
     // UUID implementations
 
     inline uuid uuid4() {
-//        static std::mutex m;
         static thread_local std::random_device rd;
         static thread_local std::mt19937 rng(rd());
         static thread_local std::uniform_int_distribution<uint64_t> dist(0, std::numeric_limits<uint64_t>::max());
 
-//        std::scoped_lock sl(m);
         uuid my;
 
         my.ab = dist(rng);

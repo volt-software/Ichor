@@ -96,11 +96,11 @@ bool Ichor::SpdlogLogger::stop() {
     return true;
 }
 
-void Ichor::SpdlogLogger::addDependencyInstance(ISpdlogSharedService *shared) noexcept {
+void Ichor::SpdlogLogger::addDependencyInstance(ISpdlogSharedService *shared, IService *) noexcept {
     _sharedService = shared;
 }
 
-void Ichor::SpdlogLogger::removeDependencyInstance(ISpdlogSharedService *) noexcept {
+void Ichor::SpdlogLogger::removeDependencyInstance(ISpdlogSharedService *, IService *) noexcept {
     _sharedService = nullptr;
 }
 

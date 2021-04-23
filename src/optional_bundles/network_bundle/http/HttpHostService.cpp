@@ -54,12 +54,12 @@ bool Ichor::HttpHostService::stop() {
     return true;
 }
 
-void Ichor::HttpHostService::addDependencyInstance(ILogger *logger) {
+void Ichor::HttpHostService::addDependencyInstance(ILogger *logger, IService *) {
     _logger = logger;
     ICHOR_LOG_TRACE(_logger, "Inserted logger");
 }
 
-void Ichor::HttpHostService::removeDependencyInstance(ILogger *logger) {
+void Ichor::HttpHostService::removeDependencyInstance(ILogger *logger, IService *) {
     _logger = nullptr;
 }
 
@@ -132,7 +132,7 @@ std::unique_ptr<Ichor::HttpRouteRegistration, Ichor::Deleter> Ichor::HttpHostSer
     auto insertedIt = routes.emplace(route, handler);
 
     // convoluted way to pass a string_view that doesn't go out of scope after this function
-    return std::unique_ptr<Ichor::HttpRouteRegistration, Ichor::Deleter>(new (getMemoryResource()->allocate(sizeof(HttpRouteRegistration))) HttpRouteRegistration(method, insertedIt.first->first, this), Deleter{getMemoryResource(), sizeof(HttpRouteRegistration)});
+    return std::unique_ptr<Ichor::HttpRouteRegistration, Ichor::Deleter>(new (getMemoryResource()->allocate(sizeof(HttpRouteRegistration))) HttpRouteRegistration(method, insertedIt.first->first, this), Deleter{Service::getMemoryResource(), sizeof(HttpRouteRegistration)});
 }
 
 void Ichor::HttpHostService::removeRoute(HttpMethod method, std::string_view route) {

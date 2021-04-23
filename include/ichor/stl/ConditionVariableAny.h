@@ -1,6 +1,5 @@
 #pragma once
 
-#include <iostream>
 #include <ichor/stl/RealtimeMutex.h>
 #include <ichor/stl/ConditionVariable.h>
 

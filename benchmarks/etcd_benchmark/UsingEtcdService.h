@@ -39,19 +39,19 @@ public:
         return true;
     }
 
-    void addDependencyInstance(ILogger *logger) {
+    void addDependencyInstance(ILogger *logger, IService *) {
         _logger = logger;
     }
 
-    void removeDependencyInstance(ILogger *logger) {
+    void removeDependencyInstance(ILogger *logger, IService *) {
         _logger = nullptr;
     }
 
-    void addDependencyInstance(IEtcdService *etcd) {
+    void addDependencyInstance(IEtcdService *etcd, IService *) {
         _etcd = etcd;
     }
 
-    void removeDependencyInstance(IEtcdService *etcd) {
+    void removeDependencyInstance(IEtcdService *etcd, IService *) {
         _etcd = nullptr;
     }
 

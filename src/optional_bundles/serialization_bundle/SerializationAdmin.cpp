@@ -22,22 +22,22 @@ void* Ichor::SerializationAdmin::deserialize(const uint64_t type, std::vector<ui
     return serializer->second->deserialize(std::move(bytes));
 }
 
-void Ichor::SerializationAdmin::addDependencyInstance(ILogger *logger) {
+void Ichor::SerializationAdmin::addDependencyInstance(ILogger *logger, IService *) {
     _logger = logger;
     ICHOR_LOG_TRACE(_logger, "Inserted logger");
 }
 
-void Ichor::SerializationAdmin::removeDependencyInstance(ILogger *logger) {
+void Ichor::SerializationAdmin::removeDependencyInstance(ILogger *logger, IService *) {
     _logger = nullptr;
 }
 
-void Ichor::SerializationAdmin::addDependencyInstance(ISerializer *serializer) {
-    if(!serializer->getProperties()->contains("type")) {
-        ICHOR_LOG_TRACE(_logger, "No type property for serializer {}", serializer->getServiceId());
+void Ichor::SerializationAdmin::addDependencyInstance(ISerializer *serializer, IService *isvc) {
+    if(!isvc->getProperties()->contains("type")) {
+        ICHOR_LOG_TRACE(_logger, "No type property for serializer {}", isvc->getServiceId());
         return;
     }
 
-    auto type = Ichor::any_cast<uint64_t>(serializer->getProperties()->operator[]("type"));
+    auto type = Ichor::any_cast<uint64_t>(isvc->getProperties()->operator[]("type"));
 
     auto existingSerializer = _serializers.find(type);
     if(existingSerializer != end(_serializers)) {
@@ -49,12 +49,12 @@ void Ichor::SerializationAdmin::addDependencyInstance(ISerializer *serializer) {
     ICHOR_LOG_TRACE(_logger, "Inserted serializer for type {}", type);
 }
 
-void Ichor::SerializationAdmin::removeDependencyInstance(ISerializer *serializer) {
-    if(!serializer->getProperties()->contains("type")) {
-        ICHOR_LOG_TRACE(_logger, "No type property for serializer {}", serializer->getServiceId());
+void Ichor::SerializationAdmin::removeDependencyInstance(ISerializer *serializer, IService *isvc) {
+    if(!isvc->getProperties()->contains("type")) {
+        ICHOR_LOG_TRACE(_logger, "No type property for serializer {}", isvc->getServiceId());
     }
 
-    auto type = Ichor::any_cast<uint64_t>(serializer->getProperties()->operator[]("type"));
+    auto type = Ichor::any_cast<uint64_t>(isvc->getProperties()->operator[]("type"));
 
     auto existingSerializer = _serializers.find(type);
     if(existingSerializer == end(_serializers)) {

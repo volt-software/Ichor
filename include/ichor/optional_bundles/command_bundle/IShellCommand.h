@@ -5,7 +5,7 @@
 #include <ichor/Service.h>
 
 namespace Ichor {
-    class IShellCommand : virtual public IService {
+    class IShellCommand {
     protected:
         virtual ~IShellCommand() = default;
     };

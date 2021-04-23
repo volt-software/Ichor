@@ -9,7 +9,7 @@
 std::atomic<bool> Ichor::SpdlogFrameworkLogger::_setting_logger{false};
 std::atomic<bool> Ichor::SpdlogFrameworkLogger::_logger_set{false};
 
-Ichor::SpdlogFrameworkLogger::SpdlogFrameworkLogger(IchorProperties props, DependencyManager *mng) : IFrameworkLogger(), Service(std::move(props), mng), _level(LogLevel::TRACE) {
+Ichor::SpdlogFrameworkLogger::SpdlogFrameworkLogger(IchorProperties props, DependencyManager *mng) : Service(std::move(props), mng), _level(LogLevel::TRACE) {
     bool already_set = _setting_logger.exchange(true);
     if(!already_set) {
         auto console_sink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();

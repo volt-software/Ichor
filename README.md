@@ -113,8 +113,8 @@ These benchmarks are mainly used to identify bottlenecks, not to showcase the pe
 Setup: AMD 3900X, 3600MHz@CL17 RAM, ubuntu 20.04
 * 1 thread inserting ~5 million events and then processing them in ~945 ms and ~965 MB memory usage
 * 8 threads inserting ~5 million events and then processing them in ~1,424 ms and ~7,691 MB memory usage
-* 1 thread creating 10,000 services with dependencies in ~4,900 ms and ~40 MB memory usage
-* 8 threads creating 10,000 services with dependencies in ~16,230 ms and ~308 MB memory usage
+* 1 thread creating 10,000 services with dependencies in ~6,000 ms and ~40 MB memory usage
+* 8 threads creating 10,000 services with dependencies in ~18,500 ms and ~314 MB memory usage
 * 1 thread starting/stopping 1 service 10,000 times in ~1,126 ms and ~4 MB memory usage
 * 8 threads starting/stopping 1 service 10,000 times in ~1,895 ms and ~5 MB memory usage
 * 1 thread serializing & deserializing 1,000,000 JSON messages in ~343 ms and ~4 MB memory usage

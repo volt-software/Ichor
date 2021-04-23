@@ -38,9 +38,10 @@ namespace Ichor {
         [[nodiscard]] ICHOR_CONSTEXPR virtual IchorProperties const * getProperties() const noexcept = 0;
         [[nodiscard]] ICHOR_CONSTEXPR virtual IService* getServiceAsInterfacePointer() noexcept = 0;
         [[nodiscard]] ICHOR_CONSTEXPR virtual DependencyRegister const * getDependencyRegistry() const noexcept = 0;
+        virtual void insertSelfInto(uint64_t keyOfInterfaceToInject, Ichor::function<void(void*, IService*)>&) noexcept = 0;
     };
 
-    template<class ServiceType>
+    template<class ServiceType, typename... IFaces>
     requires DerivedTemplated<ServiceType, Service>
     class DependencyLifecycleManager final : public ILifecycleManager {
     public:
@@ -58,9 +59,9 @@ namespace Ichor {
             }
         }
 
-        template<Derived<IService>... Interfaces>
+        template<typename... Interfaces>
         [[nodiscard]]
-        static std::shared_ptr<DependencyLifecycleManager<ServiceType>> create(IFrameworkLogger *logger, std::string_view name, IchorProperties&& properties, DependencyManager *mng, std::pmr::memory_resource *memResource, InterfacesList_t<Interfaces...>) {
+        static std::shared_ptr<DependencyLifecycleManager<ServiceType, Interfaces...>> create(IFrameworkLogger *logger, std::string_view name, IchorProperties&& properties, DependencyManager *mng, std::pmr::memory_resource *memResource, InterfacesList_t<Interfaces...>) {
             if (name.empty()) {
                 name = typeName<ServiceType>();
             }
@@ -68,7 +69,7 @@ namespace Ichor {
             std::pmr::vector<Dependency> interfaces{memResource};
             interfaces.reserve(sizeof...(Interfaces));
             (interfaces.emplace_back(typeNameHash<Interfaces>(), false),...);
-            return std::allocate_shared<DependencyLifecycleManager<ServiceType>, std::pmr::polymorphic_allocator<>>(memResource, logger, name, std::move(interfaces), std::forward<IchorProperties>(properties), mng, memResource);
+            return std::allocate_shared<DependencyLifecycleManager<ServiceType, Interfaces...>, std::pmr::polymorphic_allocator<>>(memResource, logger, name, std::move(interfaces), std::forward<IchorProperties>(properties), mng, memResource);
         }
 
         ICHOR_CONSTEXPR bool dependencyOnline(ILifecycleManager* dependentService) final {
@@ -86,7 +87,7 @@ namespace Ichor {
                 }
 
                 interested = true;
-                injectIntoSelf(interface.interfaceNameHash, dependentService);
+                injectIntoSelfDoubleDispatch(interface.interfaceNameHash, dependentService);
                 if(dep->required) {
                     _satisfiedDependencies.addDependency(interface);
                 }
@@ -99,11 +100,28 @@ namespace Ichor {
             return interested;
         }
 
-        ICHOR_CONSTEXPR void injectIntoSelf(uint64_t keyOfInterfaceToInject, ILifecycleManager* dependentService) {
+        ICHOR_CONSTEXPR void injectIntoSelfDoubleDispatch(uint64_t keyOfInterfaceToInject, ILifecycleManager* dependentService) {
             auto dep = _registry._registrations.find(keyOfInterfaceToInject);
 
             if(dep != end(_registry._registrations)) {
-                std::get<1>(dep->second)(dependentService->getServiceAsInterfacePointer());
+                dependentService->insertSelfInto(keyOfInterfaceToInject, std::get<1>(dep->second));
+            }
+        }
+
+        void insertSelfInto(uint64_t keyOfInterfaceToInject, Ichor::function<void(void*, IService*)> &fn) noexcept final {
+            if constexpr (sizeof...(IFaces) > 0) {
+                insertSelfInto2<sizeof...(IFaces), IFaces...>(keyOfInterfaceToInject, fn);
+            }
+        }
+
+        template <int i, typename Iface1, typename... otherIfaces>
+        void insertSelfInto2(uint64_t keyOfInterfaceToInject, Ichor::function<void(void*, IService*)> &fn) noexcept {
+            if(typeNameHash<Iface1>() == keyOfInterfaceToInject) {
+                fn(static_cast<Iface1*>(&_service), static_cast<IService*>(&_service));
+            } else {
+                if constexpr(i > 1) {
+                    insertSelfInto2<sizeof...(otherIfaces), otherIfaces...>(keyOfInterfaceToInject, fn);
+                }
             }
         }
 
@@ -126,7 +144,7 @@ namespace Ichor {
                     interested = true;
                 }
 
-                removeSelfInto(interface.interfaceNameHash, dependentService);
+                removeSelfIntoDoubleDispatch(interface.interfaceNameHash, dependentService);
             }
 
             std::erase(_injectedDependencies, dependentService->serviceId());
@@ -134,11 +152,11 @@ namespace Ichor {
             return interested;
         }
 
-        ICHOR_CONSTEXPR void removeSelfInto(uint64_t keyOfInterfaceToInject, ILifecycleManager* dependentService) {
+        ICHOR_CONSTEXPR void removeSelfIntoDoubleDispatch(uint64_t keyOfInterfaceToInject, ILifecycleManager* dependentService) {
             auto dep = _registry._registrations.find(keyOfInterfaceToInject);
 
             if(dep != end(_registry._registrations)) {
-                std::get<2>(dep->second)(dependentService->getServiceAsInterfacePointer());
+                dependentService->insertSelfInto(keyOfInterfaceToInject, std::get<2>(dep->second));
             }
         }
 
@@ -150,7 +168,7 @@ namespace Ichor {
                     ICHOR_LOG_DEBUG(_logger, "Started {}", _implementationName);
                     return true;
                 } else {
-//                    ICHOR_LOG_DEBUG(_logger, "Couldn't start {}", _implementationName);
+                    ICHOR_LOG_DEBUG(_logger, "Couldn't start {}", _implementationName);
                 }
             }
 
@@ -224,7 +242,7 @@ namespace Ichor {
         IFrameworkLogger *_logger;
     };
 
-    template<class ServiceType>
+    template<class ServiceType, typename... IFaces>
     requires DerivedTemplated<ServiceType, Service>
     class LifecycleManager final : public ILifecycleManager {
     public:
@@ -239,9 +257,9 @@ namespace Ichor {
 
         ICHOR_CONSTEXPR ~LifecycleManager() final = default;
 
-        template<Derived<IService>... Interfaces>
+        template<typename... Interfaces>
         [[nodiscard]]
-        static std::shared_ptr<LifecycleManager<ServiceType>> create(IFrameworkLogger *logger, std::string_view name, IchorProperties&& properties, DependencyManager *mng, std::pmr::memory_resource *memResource, InterfacesList_t<Interfaces...>) {
+        static std::shared_ptr<LifecycleManager<ServiceType, Interfaces...>> create(IFrameworkLogger *logger, std::string_view name, IchorProperties&& properties, DependencyManager *mng, std::pmr::memory_resource *memResource, InterfacesList_t<Interfaces...>) {
             if (name.empty()) {
                 name = typeName<ServiceType>();
             }
@@ -249,7 +267,7 @@ namespace Ichor {
             std::pmr::vector<Dependency> interfaces{memResource};
             interfaces.reserve(sizeof...(Interfaces));
             (interfaces.emplace_back(typeNameHash<Interfaces>(), false),...);
-            return std::allocate_shared<LifecycleManager<ServiceType>, std::pmr::polymorphic_allocator<>>(memResource, logger, name, std::move(interfaces), std::forward<IchorProperties>(properties), mng);
+            return std::allocate_shared<LifecycleManager<ServiceType, Interfaces...>, std::pmr::polymorphic_allocator<>>(memResource, logger, name, std::move(interfaces), std::forward<IchorProperties>(properties), mng);
         }
 
         ICHOR_CONSTEXPR bool dependencyOnline(ILifecycleManager* dependentService) final {
@@ -326,6 +344,23 @@ namespace Ichor {
 
         [[nodiscard]] ICHOR_CONSTEXPR DependencyRegister const * getDependencyRegistry() const noexcept final {
             return nullptr;
+        }
+
+        void insertSelfInto(uint64_t keyOfInterfaceToInject, Ichor::function<void(void*, IService*)> &fn) noexcept final {
+            if constexpr (sizeof...(IFaces) > 0) {
+                insertSelfInto2<sizeof...(IFaces), IFaces...>(keyOfInterfaceToInject, fn);
+            }
+        }
+
+        template <int i, typename Iface1, typename... otherIfaces>
+        void insertSelfInto2(uint64_t keyOfInterfaceToInject, Ichor::function<void(void*, IService*)> &fn) noexcept {
+            if(typeNameHash<Iface1>() == keyOfInterfaceToInject) {
+                fn(static_cast<Iface1*>(&_service), static_cast<IService*>(&_service));
+            } else {
+                if constexpr(i > 1) {
+                    insertSelfInto2<sizeof...(otherIfaces), otherIfaces...>(keyOfInterfaceToInject, fn);
+                }
+            }
         }
 
     private:

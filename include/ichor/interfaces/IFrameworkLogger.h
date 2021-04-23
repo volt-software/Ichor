@@ -6,7 +6,7 @@
 #include <ichor/interfaces/LogLevel.h>
 
 namespace Ichor {
-    class IFrameworkLogger : virtual public IService {
+    class IFrameworkLogger {
     public:
         virtual void trace(const char *filename_in, int line_in, const char *funcname_in, std::string_view format_str, fmt::format_args args) = 0;
         virtual void debug(const char *filename_in, int line_in, const char *funcname_in, std::string_view format_str, fmt::format_args args) = 0;
@@ -17,7 +17,7 @@ namespace Ichor {
         virtual void setLogLevel(LogLevel level) = 0;
         [[nodiscard]] virtual LogLevel getLogLevel() const = 0;
     protected:
-        ~IFrameworkLogger() override = default;
+        virtual ~IFrameworkLogger() = default;
     };
 
 #ifndef REMOVE_SOURCE_NAMES_FROM_LOGGING

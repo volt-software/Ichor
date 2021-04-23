@@ -110,12 +110,12 @@ bool Ichor::TcpHostService::stop() {
     return true;
 }
 
-void Ichor::TcpHostService::addDependencyInstance(ILogger *logger) {
+void Ichor::TcpHostService::addDependencyInstance(ILogger *logger, IService *) {
     _logger = logger;
     ICHOR_LOG_TRACE(_logger, "Inserted logger");
 }
 
-void Ichor::TcpHostService::removeDependencyInstance(ILogger *logger) {
+void Ichor::TcpHostService::removeDependencyInstance(ILogger *logger, IService *) {
     _logger = nullptr;
 }
 

@@ -1,8 +1,10 @@
 #pragma once
 
 #include <ichor/DependencyManager.h>
-#include <mutex>
+
+#ifdef DEBUG_CHANNEL
 #include <iostream>
+#endif
 
 namespace Ichor {
     class CommunicationChannel {
@@ -28,11 +30,11 @@ namespace Ichor {
                     continue;
                 }
 
-#if 0
+#ifdef DEBUG_CHANNEL
                 std::cout << "Inserting event " << typeName<EventT>() << " from manager " << originatingManager->getId() << " into manager " << manager->getId() << std::endl;
 #endif
                 manager->template pushEvent<EventT>(std::forward<Args>(args)...);
-#if 0
+#ifdef DEBUG_CHANNEL
                 std::cout << "Inserted event " << typeName<EventT>() << " from manager " << originatingManager->getId() << " into manager " << manager->getId() << std::endl;
 #endif
             }

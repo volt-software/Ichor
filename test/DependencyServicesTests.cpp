@@ -54,7 +54,7 @@ TEST_CASE("DependencyServices") {
         uint64_t secondUselessServiceId{};
 
         std::thread t([&]() {
-            dm.createServiceManager<NullFrameworkLogger, IFrameworkLogger>();
+            dm.createServiceManager<NullFrameworkLogger, IFrameworkLogger>({}, 10);
             dm.createServiceManager<UselessService, IUselessService>();
             auto secondSvc = dm.createServiceManager<UselessService, IUselessService>();
             secondUselessServiceId = secondSvc->getServiceId();
@@ -104,7 +104,7 @@ TEST_CASE("DependencyServices") {
             dm.createServiceManager<MixServiceFour, IMixOne, IMixTwo>();
             dm.createServiceManager<MixServiceFive, IMixOne, IMixTwo>();
             dm.createServiceManager<MixServiceSix, IMixOne, IMixTwo>();
-            dm.createServiceManager<CheckMixService>();
+            dm.createServiceManager<CheckMixService, ICountService>();
             dm.start();
         });
 

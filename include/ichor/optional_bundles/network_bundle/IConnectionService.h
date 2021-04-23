@@ -3,10 +3,8 @@
 #include <ichor/Service.h>
 
 namespace Ichor {
-    class IConnectionService : virtual public IService {
+    class IConnectionService {
     public:
-        ~IConnectionService() override = default;
-
         /**
          * Send function. Implementation defined synchronous/asynchronous behaviour.
          * @param msg message to send
@@ -20,5 +18,8 @@ namespace Ichor {
          */
         virtual void setPriority(uint64_t priority) = 0;
         virtual uint64_t getPriority() = 0;
+
+    protected:
+        virtual ~IConnectionService() = default;
     };
 }

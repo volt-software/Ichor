@@ -30,21 +30,21 @@ public:
         return true;
     }
 
-    void addDependencyInstance(ILogger *logger) {
+    void addDependencyInstance(ILogger *logger, IService *) {
         _logger = logger;
         ICHOR_LOG_TRACE(_logger, "Inserted logger");
     }
 
-    void removeDependencyInstance(ILogger *logger) {
+    void removeDependencyInstance(ILogger *logger, IService *) {
         _logger = nullptr;
     }
 
-    void addDependencyInstance(ISerializationAdmin *serializationAdmin) {
+    void addDependencyInstance(ISerializationAdmin *serializationAdmin, IService *) {
         _serializationAdmin = serializationAdmin;
         ICHOR_LOG_INFO(_logger, "Inserted serializationAdmin");
     }
 
-    void removeDependencyInstance(ISerializationAdmin *serializationAdmin) {
+    void removeDependencyInstance(ISerializationAdmin *serializationAdmin, IService *) {
         _serializationAdmin = nullptr;
         ICHOR_LOG_INFO(_logger, "Removed serializationAdmin");
     }

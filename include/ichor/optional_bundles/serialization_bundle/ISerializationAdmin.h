@@ -5,16 +5,16 @@
 
 namespace Ichor {
 
-    class ISerializer : virtual public IService {
+    class ISerializer {
     public:
         virtual std::vector<uint8_t> serialize(const void* obj) = 0;
         virtual void* deserialize(std::vector<uint8_t> &&stream) = 0;
 
     protected:
-        ~ISerializer() override = default;
+        virtual ~ISerializer() = default;
     };
 
-    class ISerializationAdmin : virtual public IService {
+    class ISerializationAdmin {
     public:
         template <typename T>
         std::vector<uint8_t> serialize(const T &obj) {
@@ -32,7 +32,7 @@ namespace Ichor {
         }
 
     protected:
-        ~ISerializationAdmin() override = default;
+        virtual ~ISerializationAdmin() = default;
 
         virtual std::vector<uint8_t> serialize(uint64_t type, const void* obj) = 0;
         virtual void* deserialize(uint64_t type, std::vector<uint8_t> &&bytes) = 0;

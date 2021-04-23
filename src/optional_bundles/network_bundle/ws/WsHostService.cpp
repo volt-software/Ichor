@@ -98,12 +98,12 @@ bool Ichor::WsHostService::stop() {
     return true;
 }
 
-void Ichor::WsHostService::addDependencyInstance(ILogger *logger) {
+void Ichor::WsHostService::addDependencyInstance(ILogger *logger, IService *) {
     _logger = logger;
     ICHOR_LOG_TRACE(_logger, "Inserted logger");
 }
 
-void Ichor::WsHostService::removeDependencyInstance(ILogger *logger) {
+void Ichor::WsHostService::removeDependencyInstance(ILogger *logger, IService *) {
     _logger = nullptr;
 }
 

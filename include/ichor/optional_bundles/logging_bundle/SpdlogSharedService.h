@@ -10,11 +10,11 @@ namespace spdlog::sinks {
 }
 
 namespace Ichor {
-    class ISpdlogSharedService : virtual public IService {
+    class ISpdlogSharedService {
     public:
         virtual std::vector<std::shared_ptr<spdlog::sinks::sink>> const& getSinks() noexcept = 0;
     protected:
-        ~ISpdlogSharedService() override = default;
+        virtual ~ISpdlogSharedService() = default;
     };
 
     class SpdlogSharedService final : public ISpdlogSharedService, public Service<SpdlogSharedService> {

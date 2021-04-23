@@ -38,7 +38,7 @@ namespace Ichor {
     extern std::atomic<uint64_t> _serviceIdCounter;
 
     template <typename T>
-    class Service : virtual public IService {
+    class Service : public IService {
     public:
         template <typename U = T> requires (!RequestsProperties<U> && !RequestsDependencies<U>)
         Service() noexcept : IService(), _properties(), _serviceId(_serviceIdCounter.fetch_add(1, std::memory_order_acq_rel)), _servicePriority(1000), _serviceGid(sole::uuid4()), _serviceState(ServiceState::INSTALLED) {
@@ -148,14 +148,11 @@ namespace Ichor {
         DependencyManager *_manager{nullptr};
 
         friend class DependencyManager;
-        template<class ServiceType>
+        template<class ServiceType, typename... IFaces>
         requires DerivedTemplated<ServiceType, Service>
         friend class LifecycleManager;
-        template<class ServiceType>
+        template<class ServiceType, typename... IFaces>
         requires DerivedTemplated<ServiceType, Service>
         friend class DependencyLifecycleManager;
-        template<class ServiceType>
-        requires DerivedTemplated<ServiceType, Service>
-        friend class LifecycleManager;
     };
 }
