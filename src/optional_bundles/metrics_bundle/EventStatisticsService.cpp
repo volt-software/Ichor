@@ -59,9 +59,9 @@ bool Ichor::EventStatisticsService::preInterceptEvent(const Event *const evt) {
     return (bool)AllowOthersHandling;
 }
 
-bool Ichor::EventStatisticsService::postInterceptEvent(const Event *const evt, bool processed) {
+void Ichor::EventStatisticsService::postInterceptEvent(const Event *const evt, bool processed) {
     if(!processed) {
-        return (bool)AllowOthersHandling;
+        return;
     }
 
     auto now = std::chrono::steady_clock::now();
@@ -77,8 +77,6 @@ bool Ichor::EventStatisticsService::postInterceptEvent(const Event *const evt, b
                 std::chrono::duration_cast<std::chrono::nanoseconds>(now.time_since_epoch()).count(),
                 std::chrono::duration_cast<std::chrono::nanoseconds>(processingTime).count());
     }
-
-    return (bool)AllowOthersHandling;
 }
 
 Ichor::Generator<bool> Ichor::EventStatisticsService::handleEvent([[maybe_unused]] const TimerEvent *const evt) {

@@ -41,7 +41,7 @@ namespace Ichor {
         ~EventStatisticsService() final = default;
 
         bool preInterceptEvent(Event const * const evt);
-        bool postInterceptEvent(Event const * const evt, bool processed);
+        void postInterceptEvent(Event const * const evt, bool processed);
 
         Generator<bool> handleEvent(TimerEvent const * const evt);
 

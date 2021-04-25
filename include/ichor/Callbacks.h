@@ -19,7 +19,7 @@ namespace Ichor {
         uint64_t listeningServiceId;
         std::optional<uint64_t> filterEventId;
         Ichor::function<bool(Event const * const)> preIntercept;
-        Ichor::function<bool(Event const * const, bool)> postIntercept;
+        Ichor::function<void(Event const * const, bool)> postIntercept;
     };
 
     struct CallbackKey {

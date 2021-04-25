@@ -67,7 +67,7 @@ namespace Ichor {
     template <class ImplT, class EventT>
     concept ImplementsEventInterceptors = requires(ImplT impl, EventT const * const evt, bool processed, uint32_t handlerAmount) {
         { impl.preInterceptEvent(evt) } -> std::same_as<bool>;
-        { impl.postInterceptEvent(evt, processed) } -> std::same_as<bool>;
+        { impl.postInterceptEvent(evt, processed) } -> std::same_as<void>;
     };
 
     template <class ImplT, class Interface>

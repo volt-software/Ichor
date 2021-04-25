@@ -335,12 +335,12 @@ namespace Ichor {
                 std::pmr::vector<EventInterceptInfo> v{_memResource};
                 v.template emplace_back(EventInterceptInfo{impl->getServiceId(), targetEventId,
                                    Ichor::function<bool(Event const * const)>{[impl](Event const * const evt){ return impl->preInterceptEvent(static_cast<EventT const * const>(evt)); }, _memResource},
-                                   Ichor::function<bool(Event const * const, bool)>{[impl](Event const * const evt, bool processed){ return impl->postInterceptEvent(static_cast<EventT const * const>(evt), processed); }, _memResource}});
+                                   Ichor::function<void(Event const * const, bool)>{[impl](Event const * const evt, bool processed){ impl->postInterceptEvent(static_cast<EventT const * const>(evt), processed); }, _memResource}});
                 _eventInterceptors.emplace(targetEventId, std::move(v));
             } else {
                 existingHandlers->second.template emplace_back(impl->getServiceId(), targetEventId,
                                                       Ichor::function<bool(Event const * const)>{[impl](Event const * const evt){ return impl->preInterceptEvent(static_cast<EventT const * const>(evt)); }, _memResource},
-                                                      Ichor::function<bool(Event const * const, bool)>{[impl](Event const * const evt, bool processed){ return impl->postInterceptEvent(static_cast<EventT const * const>(evt), processed); }, _memResource});
+                                                      Ichor::function<void(Event const * const, bool)>{[impl](Event const * const evt, bool processed){ impl->postInterceptEvent(static_cast<EventT const * const>(evt), processed); }, _memResource});
             }
             // I think there's a bug in GCC 10.1, where if I don't make this a unique_ptr, the EventHandlerRegistration destructor immediately gets called for some reason.
             // Even if the result is stored in a variable at the caller site.
