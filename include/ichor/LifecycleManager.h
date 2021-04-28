@@ -35,7 +35,7 @@ namespace Ichor {
 
         // for some reason, returning a reference produces garbage??
         [[nodiscard]] ICHOR_CONSTEXPR virtual DependencyInfo const * getDependencyInfo() const noexcept = 0;
-        [[nodiscard]] ICHOR_CONSTEXPR virtual IchorProperties const * getProperties() const noexcept = 0;
+        [[nodiscard]] ICHOR_CONSTEXPR virtual Properties const * getProperties() const noexcept = 0;
         [[nodiscard]] ICHOR_CONSTEXPR virtual IService* getServiceAsInterfacePointer() noexcept = 0;
         [[nodiscard]] ICHOR_CONSTEXPR virtual DependencyRegister const * getDependencyRegistry() const noexcept = 0;
         virtual void insertSelfInto(uint64_t keyOfInterfaceToInject, Ichor::function<void(void*, IService*)>&) noexcept = 0;
@@ -45,7 +45,7 @@ namespace Ichor {
     requires DerivedTemplated<ServiceType, Service>
     class DependencyLifecycleManager final : public ILifecycleManager {
     public:
-        explicit ICHOR_CONSTEXPR DependencyLifecycleManager(IFrameworkLogger *logger, std::string_view name, std::pmr::vector<Dependency> interfaces, IchorProperties&& properties, DependencyManager *mng, std::pmr::memory_resource *memResource) : _implementationName(name), _interfaces(std::move(interfaces)), _registry(mng), _dependencies(memResource), _satisfiedDependencies(memResource), _injectedDependencies(memResource), _service(_registry, std::forward<IchorProperties>(properties), mng), _logger(logger) {
+        explicit ICHOR_CONSTEXPR DependencyLifecycleManager(IFrameworkLogger *logger, std::string_view name, std::pmr::vector<Dependency> interfaces, Properties&& properties, DependencyManager *mng, std::pmr::memory_resource *memResource) : _implementationName(name), _interfaces(std::move(interfaces)), _registry(mng), _dependencies(memResource), _satisfiedDependencies(memResource), _injectedDependencies(memResource), _service(_registry, std::forward<Properties>(properties), mng), _logger(logger) {
             for(auto const &reg : _registry._registrations) {
                 _dependencies.addDependency(std::get<0>(reg.second));
             }
@@ -61,7 +61,7 @@ namespace Ichor {
 
         template<typename... Interfaces>
         [[nodiscard]]
-        static std::shared_ptr<DependencyLifecycleManager<ServiceType, Interfaces...>> create(IFrameworkLogger *logger, std::string_view name, IchorProperties&& properties, DependencyManager *mng, std::pmr::memory_resource *memResource, InterfacesList_t<Interfaces...>) {
+        static std::shared_ptr<DependencyLifecycleManager<ServiceType, Interfaces...>> create(IFrameworkLogger *logger, std::string_view name, Properties&& properties, DependencyManager *mng, std::pmr::memory_resource *memResource, InterfacesList_t<Interfaces...>) {
             if (name.empty()) {
                 name = typeName<ServiceType>();
             }
@@ -69,7 +69,7 @@ namespace Ichor {
             std::pmr::vector<Dependency> interfaces{memResource};
             interfaces.reserve(sizeof...(Interfaces));
             (interfaces.emplace_back(typeNameHash<Interfaces>(), false),...);
-            return std::allocate_shared<DependencyLifecycleManager<ServiceType, Interfaces...>, std::pmr::polymorphic_allocator<>>(memResource, logger, name, std::move(interfaces), std::forward<IchorProperties>(properties), mng, memResource);
+            return std::allocate_shared<DependencyLifecycleManager<ServiceType, Interfaces...>, std::pmr::polymorphic_allocator<>>(memResource, logger, name, std::move(interfaces), std::forward<Properties>(properties), mng, memResource);
         }
 
         ICHOR_CONSTEXPR bool dependencyOnline(ILifecycleManager* dependentService) final {
@@ -219,7 +219,7 @@ namespace Ichor {
             return &_dependencies;
         }
 
-        [[nodiscard]] ICHOR_CONSTEXPR IchorProperties const * getProperties() const noexcept final {
+        [[nodiscard]] ICHOR_CONSTEXPR Properties const * getProperties() const noexcept final {
             return &_service._properties;
         }
 
@@ -247,19 +247,19 @@ namespace Ichor {
     class LifecycleManager final : public ILifecycleManager {
     public:
         template <typename U = ServiceType> requires RequestsProperties<U>
-        explicit ICHOR_CONSTEXPR LifecycleManager(IFrameworkLogger *logger, std::string_view name, std::pmr::vector<Dependency> interfaces, IchorProperties&& properties, DependencyManager *mng) : _implementationName(name), _interfaces(std::move(interfaces)), _service(std::forward<IchorProperties>(properties), mng), _logger(logger) {
+        explicit ICHOR_CONSTEXPR LifecycleManager(IFrameworkLogger *logger, std::string_view name, std::pmr::vector<Dependency> interfaces, Properties&& properties, DependencyManager *mng) : _implementationName(name), _interfaces(std::move(interfaces)), _service(std::forward<Properties>(properties), mng), _logger(logger) {
         }
 
         template <typename U = ServiceType> requires (!RequestsProperties<U>)
-        explicit ICHOR_CONSTEXPR LifecycleManager(IFrameworkLogger *logger, std::string_view name, std::pmr::vector<Dependency> interfaces, IchorProperties&& properties, DependencyManager *mng) : _implementationName(name), _interfaces(std::move(interfaces)), _service(), _logger(logger) {
-            _service.setProperties(std::forward<IchorProperties>(properties));
+        explicit ICHOR_CONSTEXPR LifecycleManager(IFrameworkLogger *logger, std::string_view name, std::pmr::vector<Dependency> interfaces, Properties&& properties, DependencyManager *mng) : _implementationName(name), _interfaces(std::move(interfaces)), _service(), _logger(logger) {
+            _service.setProperties(std::forward<Properties>(properties));
         }
 
         ICHOR_CONSTEXPR ~LifecycleManager() final = default;
 
         template<typename... Interfaces>
         [[nodiscard]]
-        static std::shared_ptr<LifecycleManager<ServiceType, Interfaces...>> create(IFrameworkLogger *logger, std::string_view name, IchorProperties&& properties, DependencyManager *mng, std::pmr::memory_resource *memResource, InterfacesList_t<Interfaces...>) {
+        static std::shared_ptr<LifecycleManager<ServiceType, Interfaces...>> create(IFrameworkLogger *logger, std::string_view name, Properties&& properties, DependencyManager *mng, std::pmr::memory_resource *memResource, InterfacesList_t<Interfaces...>) {
             if (name.empty()) {
                 name = typeName<ServiceType>();
             }
@@ -267,7 +267,7 @@ namespace Ichor {
             std::pmr::vector<Dependency> interfaces{memResource};
             interfaces.reserve(sizeof...(Interfaces));
             (interfaces.emplace_back(typeNameHash<Interfaces>(), false),...);
-            return std::allocate_shared<LifecycleManager<ServiceType, Interfaces...>, std::pmr::polymorphic_allocator<>>(memResource, logger, name, std::move(interfaces), std::forward<IchorProperties>(properties), mng);
+            return std::allocate_shared<LifecycleManager<ServiceType, Interfaces...>, std::pmr::polymorphic_allocator<>>(memResource, logger, name, std::move(interfaces), std::forward<Properties>(properties), mng);
         }
 
         ICHOR_CONSTEXPR bool dependencyOnline(ILifecycleManager* dependentService) final {
@@ -334,7 +334,7 @@ namespace Ichor {
             return nullptr;
         }
 
-        [[nodiscard]] ICHOR_CONSTEXPR IchorProperties const * getProperties() const noexcept final {
+        [[nodiscard]] ICHOR_CONSTEXPR Properties const * getProperties() const noexcept final {
             return &_service._properties;
         }
 

@@ -10,7 +10,7 @@ namespace Ichor {
     template <typename NetworkType, typename NetworkInterfaceType = IConnectionService>
     class ClientAdmin final : public IClientAdmin, public Service<ClientAdmin<NetworkType, NetworkInterfaceType>> {
     public:
-        ClientAdmin(IchorProperties properties, DependencyManager *mng) : Service<ClientAdmin<NetworkType, NetworkInterfaceType>>(std::move(properties), mng), _connections{this->getMemoryResource()} {  }
+        ClientAdmin(Properties properties, DependencyManager *mng) : Service<ClientAdmin<NetworkType, NetworkInterfaceType>>(std::move(properties), mng), _connections{this->getMemoryResource()} {  }
         ~ClientAdmin() override = default;
 
         bool start() final {

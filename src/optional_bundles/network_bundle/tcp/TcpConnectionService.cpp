@@ -6,7 +6,7 @@
 #include <netinet/tcp.h>
 #include <unistd.h>
 
-Ichor::TcpConnectionService::TcpConnectionService(DependencyRegister &reg, IchorProperties props, DependencyManager *mng) : Service(std::move(props), mng), _socket(-1), _attempts(), _priority(INTERNAL_EVENT_PRIORITY),  _quit(), _listenThread() {
+Ichor::TcpConnectionService::TcpConnectionService(DependencyRegister &reg, Properties props, DependencyManager *mng) : Service(std::move(props), mng), _socket(-1), _attempts(), _priority(INTERNAL_EVENT_PRIORITY),  _quit(), _listenThread() {
     reg.registerDependency<ILogger>(this, true);
 }
 

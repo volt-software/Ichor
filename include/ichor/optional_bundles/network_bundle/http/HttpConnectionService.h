@@ -16,7 +16,7 @@ using tcp = boost::asio::ip::tcp;       // from <boost/asio/ip/tcp.hpp>
 namespace Ichor {
     class HttpConnectionService final : public IHttpConnectionService, public Service<HttpConnectionService> {
     public:
-        HttpConnectionService(DependencyRegister &reg, IchorProperties props, DependencyManager *mng);
+        HttpConnectionService(DependencyRegister &reg, Properties props, DependencyManager *mng);
         ~HttpConnectionService() final = default;
 
         bool start() final;

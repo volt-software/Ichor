@@ -7,7 +7,7 @@
 namespace Ichor {
     class TcpConnectionService final : public IConnectionService, public Service<TcpConnectionService> {
     public:
-        TcpConnectionService(DependencyRegister &reg, IchorProperties props, DependencyManager *mng);
+        TcpConnectionService(DependencyRegister &reg, Properties props, DependencyManager *mng);
         ~TcpConnectionService() final = default;
 
         bool start() final;

@@ -39,23 +39,23 @@ namespace Ichor {
     };
 
     struct DependencyRequestEvent final : public Event {
-        explicit DependencyRequestEvent(uint64_t _id, uint64_t _originatingService, uint64_t _priority, Dependency _dependency, std::optional<IchorProperties const *> _properties) noexcept :
+        explicit DependencyRequestEvent(uint64_t _id, uint64_t _originatingService, uint64_t _priority, Dependency _dependency, std::optional<Properties const *> _properties) noexcept :
                 Event(TYPE, NAME, _id, _originatingService, _priority), dependency(_dependency), properties{_properties} {}
         ~DependencyRequestEvent() final = default;
 
         const Dependency dependency;
-        const std::optional<IchorProperties const *> properties;
+        const std::optional<Properties const *> properties;
         static constexpr uint64_t TYPE = typeNameHash<DependencyRequestEvent>();
         static constexpr std::string_view NAME = typeName<DependencyRequestEvent>();
     };
 
     struct DependencyUndoRequestEvent final : public Event {
-        explicit DependencyUndoRequestEvent(uint64_t _id, uint64_t _originatingService, uint64_t _priority, Dependency _dependency, IchorProperties const * _properties) noexcept :
+        explicit DependencyUndoRequestEvent(uint64_t _id, uint64_t _originatingService, uint64_t _priority, Dependency _dependency, Properties const * _properties) noexcept :
                 Event(TYPE, NAME, _id, _originatingService, _priority), dependency(_dependency), properties{_properties} {}
         ~DependencyUndoRequestEvent() final = default;
 
         const Dependency dependency;
-        const IchorProperties * properties;
+        const Properties * properties;
         static constexpr uint64_t TYPE = typeNameHash<DependencyUndoRequestEvent>();
         static constexpr std::string_view NAME = typeName<DependencyUndoRequestEvent>();
     };

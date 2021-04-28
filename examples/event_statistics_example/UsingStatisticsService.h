@@ -10,7 +10,7 @@ using namespace Ichor;
 
 class UsingStatisticsService final : public Service<UsingStatisticsService> {
 public:
-    UsingStatisticsService(DependencyRegister &reg, IchorProperties props, DependencyManager *mng) : Service(std::move(props), mng) {
+    UsingStatisticsService(DependencyRegister &reg, Properties props, DependencyManager *mng) : Service(std::move(props), mng) {
         reg.registerDependency<ILogger>(this, true);
     }
     ~UsingStatisticsService() final = default;

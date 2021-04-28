@@ -4,7 +4,7 @@
 #include <ichor/optional_bundles/network_bundle/http/HttpConnectionService.h>
 
 
-Ichor::HttpConnectionService::HttpConnectionService(DependencyRegister &reg, IchorProperties props, DependencyManager *mng) : Service(std::move(props), mng) {
+Ichor::HttpConnectionService::HttpConnectionService(DependencyRegister &reg, Properties props, DependencyManager *mng) : Service(std::move(props), mng) {
     reg.registerDependency<ILogger>(this, true);
 }
 

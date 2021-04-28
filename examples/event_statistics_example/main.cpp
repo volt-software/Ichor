@@ -30,7 +30,7 @@ int main() {
     dm.createServiceManager<SpdlogSharedService, ISpdlogSharedService>();
 #endif
     dm.createServiceManager<LoggerAdmin<LOGGER_TYPE>, ILoggerAdmin>();
-    dm.createServiceManager<EventStatisticsService, IEventStatisticsService>(IchorProperties{{"ShowStatisticsOnStop", make_any<bool>(dm.getMemoryResource(), true)}});
+    dm.createServiceManager<EventStatisticsService, IEventStatisticsService>(Properties{{"ShowStatisticsOnStop", make_any<bool>(dm.getMemoryResource(), true)}});
     dm.createServiceManager<UsingStatisticsService>();
     dm.start();
     auto end = std::chrono::steady_clock::now();

@@ -1,7 +1,7 @@
 #include <ichor/optional_bundles/serialization_bundle/SerializationAdmin.h>
 #include <ichor/DependencyManager.h>
 
-Ichor::SerializationAdmin::SerializationAdmin(DependencyRegister &reg, IchorProperties props, DependencyManager *mng) : Service(std::move(props), mng), _serializers(getMemoryResource()) {
+Ichor::SerializationAdmin::SerializationAdmin(DependencyRegister &reg, Properties props, DependencyManager *mng) : Service(std::move(props), mng), _serializers(getMemoryResource()) {
     reg.registerDependency<ILogger>(this, true);
     reg.registerDependency<ISerializer>(this, false);
 }

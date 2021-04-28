@@ -48,7 +48,7 @@ public:
         auto runtimeService = _scopedPublishers.find(key);
 
         if(runtimeService == end(_scopedPublishers)) {
-            _scopedPublishers.emplace(key, getManager()->createServiceManager<IPubsubPublisherService, ZmqPubsubPublisherService>(RequiredList<ILogger>, OptionalList<>, IchorProperties{makeProperty<std::string>("scope", scope)}));
+            _scopedPublishers.emplace(key, getManager()->createServiceManager<IPubsubPublisherService, ZmqPubsubPublisherService>(RequiredList<ILogger>, OptionalList<>, Properties{makeProperty<std::string>("scope", scope)}));
         }
     }
 
@@ -88,7 +88,7 @@ public:
         auto runtimeService = _scopedSubscribers.find(key);
 
         if(runtimeService == end(_scopedSubscribers)) {
-            _scopedSubscribers.emplace(key, getManager()->createServiceManager<IPubsubSubscriberService, ZmqPubsubPublisherService>(RequiredList<ILogger>, OptionalList<>, IchorProperties{makeProperty<std::string>("scope", scope)}));
+            _scopedSubscribers.emplace(key, getManager()->createServiceManager<IPubsubSubscriberService, ZmqPubsubPublisherService>(RequiredList<ILogger>, OptionalList<>, Properties{makeProperty<std::string>("scope", scope)}));
         }
     }
 

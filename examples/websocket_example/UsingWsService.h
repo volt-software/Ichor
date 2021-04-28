@@ -15,7 +15,7 @@ using namespace Ichor;
 
 class UsingWsService final : public Service<UsingWsService> {
 public:
-    UsingWsService(DependencyRegister &reg, IchorProperties props, DependencyManager *mng) : Service(std::move(props), mng) {
+    UsingWsService(DependencyRegister &reg, Properties props, DependencyManager *mng) : Service(std::move(props), mng) {
         reg.registerDependency<ILogger>(this, true);
         reg.registerDependency<ISerializationAdmin>(this, true);
         reg.registerDependency<IConnectionService>(this, true, *getProperties());

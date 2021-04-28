@@ -19,7 +19,7 @@ using tcp = boost::asio::ip::tcp;       // from <boost/asio/ip/tcp.hpp>
 namespace Ichor {
     class WsConnectionService final : public IConnectionService, public Service<WsConnectionService> {
     public:
-        WsConnectionService(DependencyRegister &reg, IchorProperties props, DependencyManager *mng);
+        WsConnectionService(DependencyRegister &reg, Properties props, DependencyManager *mng);
         ~WsConnectionService() final = default;
 
         bool start() final;

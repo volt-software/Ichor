@@ -10,7 +10,7 @@ struct ICountService {
 
 template<bool required>
 struct DependencyService final : public ICountService, public Service<DependencyService<required>> {
-    DependencyService(DependencyRegister &reg, IchorProperties props, DependencyManager *mng) : Service<DependencyService<required>>(std::move(props), mng) {
+    DependencyService(DependencyRegister &reg, Properties props, DependencyManager *mng) : Service<DependencyService<required>>(std::move(props), mng) {
         reg.registerDependency<IUselessService>(this, required);
     }
     ~DependencyService() final = default;

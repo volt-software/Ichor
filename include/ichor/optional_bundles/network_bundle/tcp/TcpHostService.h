@@ -17,7 +17,7 @@ namespace Ichor {
 
     class TcpHostService final : public IHostService, public Service<TcpHostService> {
     public:
-        TcpHostService(DependencyRegister &reg, IchorProperties props, DependencyManager *mng);
+        TcpHostService(DependencyRegister &reg, Properties props, DependencyManager *mng);
         ~TcpHostService() final = default;
 
         bool start() final;

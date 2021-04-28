@@ -43,7 +43,7 @@ struct Handle {
 };
 
 struct CheckMixService final : public ICountService, public Service<CheckMixService> {
-    CheckMixService(DependencyRegister &reg, IchorProperties props, DependencyManager *mng) : Service<CheckMixService>(std::move(props), mng) {
+    CheckMixService(DependencyRegister &reg, Properties props, DependencyManager *mng) : Service<CheckMixService>(std::move(props), mng) {
         reg.registerDependency<IMixOne>(this, false);
         reg.registerDependency<IMixTwo>(this, false);
     }

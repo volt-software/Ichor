@@ -8,7 +8,7 @@ namespace Ichor {
         explicit DependencyRegister(DependencyManager *mng) noexcept;
 
         template<typename Interface, DerivedTemplated<Service> Impl>
-        void registerDependency(Impl *svc, bool required, std::optional<IchorProperties> props = {}) {
+        void registerDependency(Impl *svc, bool required, std::optional<Properties> props = {}) {
             if(_registrations.contains(typeNameHash<Interface>())) {
                 throw std::runtime_error("Already registered interface");
             }
@@ -20,6 +20,6 @@ namespace Ichor {
                     std::move(props)));
         }
 
-        std::pmr::unordered_map<uint64_t, std::tuple<Dependency, Ichor::function<void(void*, IService*)>, Ichor::function<void(void*, IService*)>, std::optional<IchorProperties>>> _registrations;
+        std::pmr::unordered_map<uint64_t, std::tuple<Dependency, Ichor::function<void(void*, IService*)>, Ichor::function<void(void*, IService*)>, std::optional<Properties>>> _registrations;
     };
 }

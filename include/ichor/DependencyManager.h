@@ -79,16 +79,16 @@ namespace Ichor {
         template<DerivedTemplated<Service> Impl, typename... Interfaces>
         requires ImplementsAll<Impl, Interfaces...>
         auto createServiceManager() {
-            return createServiceManager<Impl, Interfaces...>(IchorProperties{_memResource});
+            return createServiceManager<Impl, Interfaces...>(Properties{_memResource});
         }
 
         template<DerivedTemplated<Service> Impl, typename... Interfaces>
         requires ImplementsAll<Impl, Interfaces...>
-        auto createServiceManager(IchorProperties&& properties, uint64_t priority = INTERNAL_EVENT_PRIORITY) {
+        auto createServiceManager(Properties&& properties, uint64_t priority = INTERNAL_EVENT_PRIORITY) {
             if constexpr(RequestsDependencies<Impl>) {
                 static_assert(!std::is_default_constructible_v<Impl>, "Cannot have a dependencies constructor and a default constructor simultaneously.");
                 static_assert(!RequestsProperties<Impl>, "Cannot have a dependencies constructor and a properties constructor simultaneously.");
-                auto cmpMgr = DependencyLifecycleManager<Impl>::template create(_logger, "", std::forward<IchorProperties>(properties), this, _memResource, InterfacesList<Interfaces...>);
+                auto cmpMgr = DependencyLifecycleManager<Impl>::template create(_logger, "", std::forward<Properties>(properties), this, _memResource, InterfacesList<Interfaces...>);
 
                 if constexpr (sizeof...(Interfaces) > 0) {
                     static_assert(!ListContainsInterface<IFrameworkLogger, Interfaces...>::value, "IFrameworkLogger cannot have any dependencies");
@@ -115,8 +115,8 @@ namespace Ichor {
                 bool started = cmpMgr->start();
 
                 for (auto const &[key, registration] : cmpMgr->getDependencyRegistry()->_registrations) {
-                    auto const &props = std::get<std::optional<IchorProperties>>(registration);
-                    pushEventInternal<DependencyRequestEvent>(cmpMgr->serviceId(), priority, std::get<Dependency>(registration), props.has_value() ? &props.value() : std::optional<IchorProperties const *>{});
+                    auto const &props = std::get<std::optional<Properties>>(registration);
+                    pushEventInternal<DependencyRequestEvent>(cmpMgr->serviceId(), priority, std::get<Dependency>(registration), props.has_value() ? &props.value() : std::optional<Properties const *>{});
                 }
 
                 if(!started) {
@@ -132,7 +132,7 @@ namespace Ichor {
                 return &cmpMgr->getService();
             } else {
                 static_assert(!(std::is_default_constructible_v<Impl> && RequestsProperties<Impl>), "Cannot have a properties constructor and a default constructor simultaneously.");
-                auto cmpMgr = LifecycleManager<Impl, Interfaces...>::template create(_logger, "", std::forward<IchorProperties>(properties), this, _memResource, InterfacesList<Interfaces...>);
+                auto cmpMgr = LifecycleManager<Impl, Interfaces...>::template create(_logger, "", std::forward<Properties>(properties), this, _memResource, InterfacesList<Interfaces...>);
 
                 if constexpr (sizeof...(Interfaces) > 0) {
                     if constexpr (ListContainsInterface<IFrameworkLogger, Interfaces...>::value) {
@@ -239,8 +239,8 @@ namespace Ichor {
 
                 for (auto const &[interfaceHash, registration] : depRegistry->_registrations) {
                     if(interfaceHash == typeNameHash<Interface>()) {
-                        auto const &props = std::get<std::optional<IchorProperties>>(registration);
-                        requests.emplace_back(0, mgr->serviceId(), INTERNAL_EVENT_PRIORITY, std::get<Dependency>(registration), props.has_value() ? &props.value() : std::optional<IchorProperties const *>{});
+                        auto const &props = std::get<std::optional<Properties>>(registration);
+                        requests.emplace_back(0, mgr->serviceId(), INTERNAL_EVENT_PRIORITY, std::get<Dependency>(registration), props.has_value() ? &props.value() : std::optional<Properties const *>{});
                     }
                 }
             }

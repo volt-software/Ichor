@@ -35,7 +35,7 @@ int main() {
 
         dm.createServiceManager<LoggerAdmin<LOGGER_TYPE>, ILoggerAdmin>();
         for (uint64_t i = 0; i < 10'000; i++) {
-            dm.createServiceManager<TestService>(IchorProperties{{"Iteration", Ichor::make_any<uint64_t>(dm.getMemoryResource(), i)},
+            dm.createServiceManager<TestService>(Properties{{"Iteration", Ichor::make_any<uint64_t>(dm.getMemoryResource(), i)},
                                                                  {"LogLevel",  Ichor::make_any<LogLevel>(dm.getMemoryResource(), LogLevel::WARN)}});
         }
         dm.start();
@@ -61,7 +61,7 @@ int main() {
 
                 managers[i].createServiceManager<LoggerAdmin<LOGGER_TYPE>, ILoggerAdmin>();
                 for (uint64_t z = 0; z < 10'000; z++) {
-                    managers[i].createServiceManager<TestService>(IchorProperties{{"Iteration", Ichor::make_any<uint64_t>(managers[i].getMemoryResource(), z)}, {"LogLevel", Ichor::make_any<LogLevel>(managers[i].getMemoryResource(), LogLevel::WARN)}});
+                    managers[i].createServiceManager<TestService>(Properties{{"Iteration", Ichor::make_any<uint64_t>(managers[i].getMemoryResource(), z)}, {"LogLevel", Ichor::make_any<LogLevel>(managers[i].getMemoryResource(), LogLevel::WARN)}});
                 }
                 managers[i].start();
             });

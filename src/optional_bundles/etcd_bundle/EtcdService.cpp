@@ -6,7 +6,7 @@
 #include <grpc++/grpc++.h>
 
 
-Ichor::EtcdService::EtcdService(DependencyRegister &reg, IchorProperties props, DependencyManager *mng) : Service(std::move(props), mng) {
+Ichor::EtcdService::EtcdService(DependencyRegister &reg, Properties props, DependencyManager *mng) : Service(std::move(props), mng) {
     reg.registerDependency<ILogger>(this, true);
 }
 

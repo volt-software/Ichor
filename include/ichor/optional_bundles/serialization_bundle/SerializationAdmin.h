@@ -9,7 +9,7 @@ namespace Ichor {
 
     class SerializationAdmin final : public ISerializationAdmin, public Service<SerializationAdmin> {
     public:
-        SerializationAdmin(DependencyRegister &reg, IchorProperties props, DependencyManager *mng);
+        SerializationAdmin(DependencyRegister &reg, Properties props, DependencyManager *mng);
         ~SerializationAdmin() final = default;
 
         std::vector<uint8_t> serialize(uint64_t type, const void* obj) final;

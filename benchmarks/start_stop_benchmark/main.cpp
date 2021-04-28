@@ -31,8 +31,8 @@ int main() {
         dm.createServiceManager<SpdlogSharedService, ISpdlogSharedService>();
 #endif
         dm.createServiceManager<LoggerAdmin<LOGGER_TYPE>, ILoggerAdmin>();
-        dm.createServiceManager<TestService, ITestService>(IchorProperties{{"LogLevel", Ichor::make_any<LogLevel>(dm.getMemoryResource(), LogLevel::INFO)}});
-        dm.createServiceManager<StartStopService>(IchorProperties{{"LogLevel", Ichor::make_any<LogLevel>(dm.getMemoryResource(), LogLevel::INFO)}});
+        dm.createServiceManager<TestService, ITestService>(Properties{{"LogLevel", Ichor::make_any<LogLevel>(dm.getMemoryResource(), LogLevel::INFO)}});
+        dm.createServiceManager<StartStopService>(Properties{{"LogLevel", Ichor::make_any<LogLevel>(dm.getMemoryResource(), LogLevel::INFO)}});
         dm.start();
         auto end = std::chrono::steady_clock::now();
         std::cout << fmt::format("Single Threaded Program ran for {:L} µs with {:L} peak memory usage\n", std::chrono::duration_cast<std::chrono::microseconds>(end - start).count(), getPeakRSS());
@@ -55,8 +55,8 @@ int main() {
 #endif
 
                 managers[i].createServiceManager<LoggerAdmin<LOGGER_TYPE>, ILoggerAdmin>();
-                managers[i].createServiceManager<TestService, ITestService>(IchorProperties{{"LogLevel", Ichor::make_any<LogLevel>(managers[i].getMemoryResource(), LogLevel::INFO)}});
-                managers[i].createServiceManager<StartStopService>(IchorProperties{{"LogLevel", Ichor::make_any<LogLevel>(managers[i].getMemoryResource(), LogLevel::INFO)}});
+                managers[i].createServiceManager<TestService, ITestService>(Properties{{"LogLevel", Ichor::make_any<LogLevel>(managers[i].getMemoryResource(), LogLevel::INFO)}});
+                managers[i].createServiceManager<StartStopService>(Properties{{"LogLevel", Ichor::make_any<LogLevel>(managers[i].getMemoryResource(), LogLevel::INFO)}});
                 managers[i].start();
             });
         }

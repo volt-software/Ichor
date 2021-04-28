@@ -12,7 +12,7 @@ namespace Ichor {
     template<typename LogT>
     class LoggerAdmin final : public ILoggerAdmin, public Service<LoggerAdmin<LogT>> {
     public:
-        LoggerAdmin(DependencyRegister &reg, IchorProperties props, DependencyManager *mng) : Service<LoggerAdmin<LogT>>(std::move(props), mng), _loggers(this->getMemoryResource()) {
+        LoggerAdmin(DependencyRegister &reg, Properties props, DependencyManager *mng) : Service<LoggerAdmin<LogT>>(std::move(props), mng), _loggers(this->getMemoryResource()) {
             reg.registerDependency<IFrameworkLogger>(this, true);
         }
         ~LoggerAdmin() final = default;
@@ -48,7 +48,7 @@ namespace Ichor {
             }
             if (logger == end(_loggers)) {
 //                ICHOR_LOG_ERROR(_logger, "creating logger for svcid {}", evt->originatingService);
-                    IchorProperties props{this->getMemoryResource()};
+                    Properties props{this->getMemoryResource()};
                     props.reserve(3);
                     props.template emplace("LogLevel",        Ichor::make_any<LogLevel>(this->getMemoryResource(), requestedLevel));
                     props.template emplace("TargetServiceId", Ichor::make_any<uint64_t>(this->getMemoryResource(), evt->originatingService));

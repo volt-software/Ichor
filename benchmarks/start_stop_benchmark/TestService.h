@@ -13,7 +13,7 @@ struct ITestService {
 
 class TestService final : public ITestService, public Service<TestService> {
 public:
-    TestService(DependencyRegister &reg, IchorProperties props, DependencyManager *mng) : Service(std::move(props), mng) {
+    TestService(DependencyRegister &reg, Properties props, DependencyManager *mng) : Service(std::move(props), mng) {
         reg.registerDependency<ILogger>(this, true);
     }
     ~TestService() final = default;

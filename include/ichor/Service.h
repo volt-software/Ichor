@@ -29,7 +29,7 @@ namespace Ichor {
 
         [[nodiscard]] virtual DependencyManager* getManager() noexcept = 0;
 
-        [[nodiscard]] virtual IchorProperties* getProperties() noexcept = 0;
+        [[nodiscard]] virtual Properties* getProperties() noexcept = 0;
 
         [[nodiscard]] std::pmr::memory_resource* getMemoryResource() noexcept;
     };
@@ -46,7 +46,7 @@ namespace Ichor {
         }
 
         template <typename U = T> requires (RequestsProperties<U> || RequestsDependencies<U>)
-        Service(IchorProperties&& props, DependencyManager *mng) noexcept: IService(), _properties(std::forward<IchorProperties>(props)), _serviceId(_serviceIdCounter.fetch_add(1, std::memory_order_acq_rel)), _servicePriority(1000), _serviceGid(sole::uuid4()), _serviceState(ServiceState::INSTALLED), _manager(mng) {
+        Service(Properties&& props, DependencyManager *mng) noexcept: IService(), _properties(std::forward<Properties>(props)), _serviceId(_serviceIdCounter.fetch_add(1, std::memory_order_acq_rel)), _servicePriority(1000), _serviceGid(sole::uuid4()), _serviceState(ServiceState::INSTALLED), _manager(mng) {
 
         }
 
@@ -74,7 +74,7 @@ namespace Ichor {
             return _manager;
         }
 
-        [[nodiscard]] IchorProperties* getProperties() noexcept final {
+        [[nodiscard]] Properties* getProperties() noexcept final {
             return &_properties;
         }
 
@@ -87,7 +87,7 @@ namespace Ichor {
             return true;
         }
 
-        IchorProperties _properties;
+        Properties _properties;
     private:
         ///
         /// \return true if started
@@ -128,8 +128,8 @@ namespace Ichor {
             return _serviceState;
         }
 
-        void setProperties(IchorProperties&& properties) noexcept(std::is_nothrow_move_assignable_v<IchorProperties>) {
-            _properties = std::forward<IchorProperties>(properties);
+        void setProperties(Properties&& properties) noexcept(std::is_nothrow_move_assignable_v<Properties>) {
+            _properties = std::forward<Properties>(properties);
         }
 
         void injectDependencyManager(DependencyManager *mng) noexcept {

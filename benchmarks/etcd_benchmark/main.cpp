@@ -40,7 +40,7 @@ int main() {
         dmOne.createServiceManager<SpdlogSharedService, ISpdlogSharedService>();
 #endif
         dmOne.createServiceManager<LoggerAdmin<LOGGER_TYPE>, ILoggerAdmin>();
-        dmOne.createServiceManager<EtcdService, IEtcdService>(IchorProperties{{"EtcdAddress", Ichor::make_any<std::string, std::string>(&resourceOne, "localhost:2379")}});
+        dmOne.createServiceManager<EtcdService, IEtcdService>(Properties{{"EtcdAddress", Ichor::make_any<std::string, std::string>(&resourceOne, "localhost:2379")}});
         dmOne.createServiceManager<UsingEtcdService>();
         dmOne.start();
     });
@@ -52,7 +52,7 @@ int main() {
         dmTwo.createServiceManager<SpdlogSharedService, ISpdlogSharedService>();
 #endif
         dmTwo.createServiceManager<LoggerAdmin<LOGGER_TYPE>, ILoggerAdmin>();
-        dmTwo.createServiceManager<EtcdService, IEtcdService>(IchorProperties{{"EtcdAddress", Ichor::make_any<std::string, std::string>(&resourceThree, "localhost:2379")}});
+        dmTwo.createServiceManager<EtcdService, IEtcdService>(Properties{{"EtcdAddress", Ichor::make_any<std::string, std::string>(&resourceThree, "localhost:2379")}});
         dmTwo.createServiceManager<UsingEtcdService>();
         dmTwo.start();
     });

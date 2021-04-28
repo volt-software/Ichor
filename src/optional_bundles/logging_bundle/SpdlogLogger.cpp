@@ -6,7 +6,7 @@
 #include <ichor/optional_bundles/logging_bundle/SpdlogLogger.h>
 #include <ichor/DependencyManager.h>
 
-Ichor::SpdlogLogger::SpdlogLogger(DependencyRegister &reg, IchorProperties props, DependencyManager *mng) : Service(std::move(props), mng) {
+Ichor::SpdlogLogger::SpdlogLogger(DependencyRegister &reg, Properties props, DependencyManager *mng) : Service(std::move(props), mng) {
     reg.registerDependency<ISpdlogSharedService>(this, true);
 }
 

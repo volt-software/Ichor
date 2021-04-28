@@ -23,7 +23,7 @@ void setup_stream(websocket::stream<NextLayer>& ws)
 }
 
 
-Ichor::WsHostService::WsHostService(DependencyRegister &reg, IchorProperties props, DependencyManager *mng) : Service(std::move(props), mng) {
+Ichor::WsHostService::WsHostService(DependencyRegister &reg, Properties props, DependencyManager *mng) : Service(std::move(props), mng) {
     reg.registerDependency<ILogger>(this, true);
 }
 

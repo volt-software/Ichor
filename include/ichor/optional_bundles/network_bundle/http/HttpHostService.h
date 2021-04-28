@@ -16,7 +16,7 @@ using tcp = boost::asio::ip::tcp;       // from <boost/asio/ip/tcp.hpp>
 namespace Ichor {
     class HttpHostService final : public IHttpService, public Service<HttpHostService> {
     public:
-        HttpHostService(DependencyRegister &reg, IchorProperties props, DependencyManager *mng);
+        HttpHostService(DependencyRegister &reg, Properties props, DependencyManager *mng);
         ~HttpHostService() final = default;
 
         bool start() final;

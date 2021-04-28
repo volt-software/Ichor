@@ -22,7 +22,7 @@ void setup_stream(std::unique_ptr<websocket::stream<NextLayer>>& ws)
     ws->auto_fragment(false);
 }
 
-Ichor::WsConnectionService::WsConnectionService(DependencyRegister &reg, IchorProperties props, DependencyManager *mng) : Service(std::move(props), mng) {
+Ichor::WsConnectionService::WsConnectionService(DependencyRegister &reg, Properties props, DependencyManager *mng) : Service(std::move(props), mng) {
     reg.registerDependency<ILogger>(this, true);
     if(props.contains("WsHostServiceId")) {
         reg.registerDependency<IHostService>(this, true,

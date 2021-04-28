@@ -31,12 +31,12 @@ namespace Ichor {
     concept ImplementsAll = sizeof...(U) == 0 || DerivedTrait<T, U...>::value;
 
     template <class ImplT>
-    concept RequestsDependencies = requires(ImplT impl, DependencyRegister &deps, IchorProperties properties, DependencyManager *mng) {
+    concept RequestsDependencies = requires(ImplT impl, DependencyRegister &deps, Properties properties, DependencyManager *mng) {
         { ImplT(deps, properties, mng) };
     };
 
     template <class ImplT>
-    concept RequestsProperties = requires(ImplT impl, IchorProperties properties, DependencyManager *mng) {
+    concept RequestsProperties = requires(ImplT impl, Properties properties, DependencyManager *mng) {
         { ImplT(properties, mng) };
     };
 

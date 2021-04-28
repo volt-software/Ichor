@@ -26,7 +26,7 @@ public:
 
 class TrackerService final : public Service<TrackerService> {
 public:
-    TrackerService(DependencyRegister &reg, IchorProperties props, DependencyManager *mng) : Service(std::move(props), mng) {
+    TrackerService(DependencyRegister &reg, Properties props, DependencyManager *mng) : Service(std::move(props), mng) {
         reg.registerDependency<ILogger>(this, true);
     }
     ~TrackerService() final = default;

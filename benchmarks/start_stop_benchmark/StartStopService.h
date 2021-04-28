@@ -10,7 +10,7 @@ using namespace Ichor;
 
 class StartStopService final : public Service<StartStopService> {
 public:
-    StartStopService(DependencyRegister &reg, IchorProperties props, DependencyManager *mng) : Service(std::move(props), mng) {
+    StartStopService(DependencyRegister &reg, Properties props, DependencyManager *mng) : Service(std::move(props), mng) {
         reg.registerDependency<ILogger>(this, true);
         reg.registerDependency<ITestService>(this, true);
     }
