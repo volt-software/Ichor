@@ -2,7 +2,79 @@
 
 ## Compiling Ichor
 
-### Options
+Compiling is done through the help of CMake. Ichor requires at least gcc 10.2 and has also been tested with gcc 10.3. Clang does not yet implement the required C++20 bits and I do not have access to a windows machine currently.
+
+### Dependencies
+
+### Ubuntu 20.04:
+
+```
+sudo add-apt-repository ppa:ubuntu-toolchain-r/ppa
+sudo apt update
+sudo apt install g++-10 build-essential cmake
+```
+
+#### Optional Features
+Some features are behind feature flags and have their own dependencies.
+
+If using etcd:
+```
+sudo apt install libgrpc++-dev libprotobuf-dev
+```
+
+If using the Boost.BEAST (recommended boost 1.70 or newer):
+```
+sudo apt install libboost1.71-all-dev libssl-dev
+```
+
+### CMake Options
+
+#### BUILD_EXAMPLES
+
+Builds the examples in the [examples directory](../examples). Takes some time to compile.
+
+#### BUILD_BENCHMARKS
+
+Builds the benchmarks in the [benchmarks directory](../benchmarks).
+
+#### BUILD_TESTS
+
+Builds the tests in the [test directory](../test).
+
+#### USE_SPDLOG (optional dependency)
+
+Enables the use of the [spdlog submodule](../external/spdlog). If examples or benchmarks are enabled, these then use the spdlog variants of loggers instead of cout.
+
+#### USE_RAPIDJSON (optional dependency)
+
+Enables the use of the [rapidjson submodule](../external/spdlog). Used for the serializer examples and benchmarks.
+
+#### USE_PUBSUB
+
+Not implemented currently.
+
+#### USE_ETCD (optional dependency)
+
+Enables the use of the [rapidjson submodule](../external/spdlog). Used for the etcd examples and benchmarks.
+
+#### USE_BOOST_BEAST
+
+Requires Boost.BEAST to be installed as a system dependency (version >= 1.70). Used for websocket and http server/client implementations.
+
+#### USE_SANITIZERS
+
+Compiles everything (including the optionally enabled submodules) with the AddressSanitizer and UndefinedBehaviourSanitizer. Recommended when debugging. Cannot be combined with the ThreadSanitizer
+
+#### USE_THREAD_SANITIZER
+
+Compiles everything (including the optionally enabled submodules) with the ThreadSanitizer. Recommended when debugging. Cannot be combined with the AddressSanitizer.
+
+#### USE_UGLY_HACK_EXCEPTION_CATCHING
+
+Debugging Boost.asio and Boost.BEAST is difficult, this hack enables catching exceptions directly at the source, rather than at the last point of being rethrown. Requires gcc.
+#### REMOVE_SOURCE_NAMES
+
+Ichor's logging macros by default adds the current filename and line number to each log statement. This option disables that.
 
 ## Your first Ichor program
 
