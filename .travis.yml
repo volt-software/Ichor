@@ -8,6 +8,10 @@ addons:
     - sourceline: ppa:ubuntu-toolchain-r/test
     packages:
     - g++-10
+    - libboost1.71-all-dev
+    - libssl-dev
+    - libgrpc++-dev
+    - libprotobuf-dev
   sonarcloud:
     organization: "volt-software"
     token:
@@ -30,6 +34,6 @@ script:
 - mkdir -p build
 - cd build
 - if [ "$EXTRA_OPTS" = "0" ]; then cmake -DCMAKE_BUILD_TYPE=Debug ..; fi
-- if [ "$EXTRA_OPTS" = "1" ]; then cmake -DCMAKE_BUILD_TYPE=Debug -DUSE_SPDLOG=ON -DUSE_LIBUV=ON -DUSE_RAPIDJSON=ON ..; fi
-- if [ "$SONARCLOUD" = "0" ]; then make -j2; fi
+- if [ "$EXTRA_OPTS" = "1" ]; then cmake -DCMAKE_BUILD_TYPE=Debug -DUSE_SPDLOG=ON -DUSE_RAPIDJSON=ON -DUSE_ETCD=ON -DUSE_BOOST_BEAST=ON ..; fi
+- if [ "$SONARCLOUD" = "0" ]; then make -j2 && ../bin/ichor_test; fi
 - if [ "$SONARCLOUD" = "1" ]; then cd .. && build-wrapper-linux-x86-64 --out-dir bw-output cmake --build build/ && sonar-scanner -Dsonar.cfamily.build-wrapper-output=bw-output -Dsonar.cfamily.threads=2; fi
