@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.com/volt-software/Ichor.svg?branch=master)](https://travis-ci.com/volt-software/Ichor)
+
 # What is this?
 
 Ichor, [Greek Mythos for ethereal fluid that is the blood of the gods/immortals](https://en.wikipedia.org/wiki/Ichor), is a C++ framework/middleware for thread confinement and dependency injection. 
