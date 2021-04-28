@@ -15,6 +15,7 @@ Moreover, the concept of [Fearless Concurrency](https://doc.rust-lang.org/book/c
 Multithreading is hard. There exist plenty of methods trying to make it easier, ranging from the [actor framework](https://github.com/actor-framework/actor-framework), [static analysis a la rust](https://doc.rust-lang.org/book/ch16-00-concurrency.html), [software transaction memory](https://en.wikipedia.org/wiki/Software_transactional_memory) and traditional manual lock-wrangling.
 
 Thread confinement is one such approach. Instead of having to protect resources, Ichor attempts to make it well-defined on which thread an instance of a C++ class runs and only allows modification to the memory from that thread. Thereby removing the need to think about atomics/mutexes, unless you use threads not managed by Ichor.
+In which case, you're on your own.
 
 ## Quickstart
 
@@ -30,7 +31,7 @@ More examples can be found in the [examples directory](examples).
 ## Currently Unsupported
 * Windows, untested, not sure if compiles but should be relatively easy to get up and running
 * Baremetal, might change if someone puts in the effort to modify Ichor to work with freestanding implementations of C++20
-* Future plans for any RTOS that supports C++20 such as VxWorks Wind River
+* Far out future plans for any RTOS that supports C++20 such as VxWorks Wind River
 
 ## Dependencies
 
@@ -42,6 +43,7 @@ sudo apt update
 sudo apt install g++-10 build-essential cmake
 ```
 
+#### Optional Features
 Some features are behind feature flags and have their own dependencies.
 
 If using etcd:
@@ -60,7 +62,7 @@ Untested, latest MSVC should probably work.
 
 ## Documentation
 
-Documentation is rather...lacking at the moment. Contributions are very welcome!
+Documentation can be found in the [docs directory](docs).
 
 ### Current design focuses
 
@@ -71,6 +73,7 @@ Documentation is rather...lacking at the moment. Contributions are very welcome!
     * Use of an event loop
     * Where multi-threading is desired, provide easy to use abstractions to prevent issues
 * Performance-oriented design in all-parts of the framework / making it easy to get high performance and low latency
+* Usage of memory allocators, enabling 0 heap allocation C++ usage.
 * Fully utilise OOP, RAII and C++20 Concepts to steer users to using the framework correctly
 * Implement business logic in the least amount of code possible 
 * Hopefully this culminates and less error-prone code and better time to market 
@@ -81,13 +84,14 @@ The framework provides several core features and optional services behind cmake 
 * Coroutine-based event loop
 * Event-based message passing
 * Dependency Injection
+* Memory allocators for 0 heap allocations
 * Service lifecycle management (sort of like OSGi-lite services)
-* User-space priority-based real-time capable scheduling
 * data race free communication between event loops
 * Http server/client
 
 Optional services:
 * Websocket service through Boost.BEAST
+* HTTP client and server services through Boost.BEAST
 * Spdlog logging service
 * TCP communication service
 * RapidJson serialization services
