@@ -12,6 +12,7 @@ std::atomic<bool> Ichor::SpdlogFrameworkLogger::_logger_set{false};
 Ichor::SpdlogFrameworkLogger::SpdlogFrameworkLogger(Properties props, DependencyManager *mng) : Service(std::move(props), mng), _level(LogLevel::TRACE) {
     bool already_set = _setting_logger.exchange(true);
     if(!already_set) {
+        // Do not use getMemoryResource() here! The memory_resource might get destructed while another dependency manager is still using this!
         auto console_sink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
 
         auto time_since_epoch = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch());

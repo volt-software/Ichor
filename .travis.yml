@@ -33,7 +33,7 @@ cache:
 script:
 - mkdir -p build
 - cd build
-- if [ "$EXTRA_OPTS" = "0" ]; then cmake -DCMAKE_BUILD_TYPE=Debug -DBUILD_BENCHMARKS=OFF -DBUILD_EXAMPLES=OFF ..; fi
-- if [ "$EXTRA_OPTS" = "1" ]; then cmake -DCMAKE_BUILD_TYPE=Debug -DUSE_SPDLOG=ON -DUSE_RAPIDJSON=ON -DUSE_ETCD=ON -DUSE_BOOST_BEAST=ON ..; fi
+- if [ "$EXTRA_OPTS" = "0" ]; then cmake -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTING=OFF -DBUILD_BENCHMARKS=OFF -DBUILD_EXAMPLES=OFF ..; fi # BUILD_TESTING is Catch2, BUILD_TESTS is Ichor
+- if [ "$EXTRA_OPTS" = "1" ]; then cmake -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTING=OFF -DUSE_SANITIZERS=OFF -DUSE_SPDLOG=ON -DUSE_RAPIDJSON=ON -DUSE_ETCD=ON -DUSE_BOOST_BEAST=ON ..; fi # this is mainly a compile test, ichor_test gets run with sanitizers if EXTRA_OPTS==0
 - if [ "$SONARCLOUD" = "0" ]; then make -j2 && ../bin/ichor_test; fi
 - if [ "$SONARCLOUD" = "1" ]; then cd .. && build-wrapper-linux-x86-64 --out-dir bw-output cmake --build build/ && sonar-scanner -Dsonar.cfamily.build-wrapper-output=bw-output -Dsonar.cfamily.threads=2; fi
