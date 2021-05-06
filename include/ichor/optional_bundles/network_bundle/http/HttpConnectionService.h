@@ -25,7 +25,7 @@ namespace Ichor {
         void addDependencyInstance(ILogger *logger, IService *);
         void removeDependencyInstance(ILogger *logger, IService *);
 
-        uint64_t sendAsync(HttpMethod method, std::string_view route, std::vector<HttpHeader> &&headers, std::vector<uint8_t>&& msg) final;
+        uint64_t sendAsync(HttpMethod method, std::string_view route, std::vector<HttpHeader> &&headers, std::pmr::vector<uint8_t>&& msg) final;
 
         bool close() final;
 

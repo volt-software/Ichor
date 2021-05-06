@@ -57,7 +57,7 @@ void Ichor::DependencyManager::start() {
             bool allowProcessing = true;
             uint32_t handlerAmount = 1; // for the non-default case below, the DepMan handles the event
             auto interceptorsForAllEvents = _eventInterceptors.find(0);
-            auto interceptorsForEvent = _eventInterceptors.find(evtNode.mapped().getType());
+            auto interceptorsForEvent = _eventInterceptors.find(evtNode.mapped()->type);
 
             if(interceptorsForAllEvents != end(_eventInterceptors)) {
                 for(const EventInterceptInfo &info : interceptorsForAllEvents->second) {
@@ -76,7 +76,7 @@ void Ichor::DependencyManager::start() {
             }
 
             if(allowProcessing) {
-                switch (evtNode.mapped().getType()) {
+                switch (evtNode.mapped()->type) {
                     case DependencyOnlineEvent::TYPE: {
                         SPDLOG_DEBUG("DependencyOnlineEvent");
                         auto depOnlineEvt = static_cast<DependencyOnlineEvent *>(evtNode.mapped().get());

@@ -83,7 +83,7 @@ bool Ichor::TcpConnectionService::start() {
                 continue;
             }
 
-            getManager()->pushPrioritisedEvent<NetworkDataEvent>(getServiceId(), _priority.load(std::memory_order_acquire), std::vector<uint8_t>{buf.data(), buf.data() + ret});
+            getManager()->pushPrioritisedEvent<NetworkDataEvent>(getServiceId(), _priority.load(std::memory_order_acquire), std::pmr::vector<uint8_t>{buf.data(), buf.data() + ret, getMemoryResource()});
         }
     });
 
@@ -113,7 +113,7 @@ void Ichor::TcpConnectionService::removeDependencyInstance(ILogger *logger, ISer
     _logger = nullptr;
 }
 
-bool Ichor::TcpConnectionService::send(std::vector<uint8_t> &&msg) {
+bool Ichor::TcpConnectionService::send(std::pmr::vector<uint8_t> &&msg) {
     size_t sent_bytes = 0;
     while(sent_bytes < msg.size()) {
         auto ret = ::send(_socket, msg.data() + sent_bytes, msg.size() - sent_bytes, 0);

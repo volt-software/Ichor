@@ -132,7 +132,7 @@ void Ichor::WsConnectionService::removeDependencyInstance(IHostService *, IServi
 
 }
 
-bool Ichor::WsConnectionService::send(std::vector<uint8_t> &&msg) {
+bool Ichor::WsConnectionService::send(std::pmr::vector<uint8_t> &&msg) {
     if(_quit.load(std::memory_order_acquire)) {
         return false;
     }
@@ -329,7 +329,7 @@ void Ichor::WsConnectionService::read(net::yield_context &yield) {
 
         if(_ws->got_text()) {
             auto data = buffer.data();
-            getManager()->pushPrioritisedEvent<NetworkDataEvent>(getServiceId(), _priority.load(std::memory_order_acquire),  std::vector<uint8_t>{static_cast<char*>(data.data()), static_cast<char*>(data.data()) + data.size()});
+            getManager()->pushPrioritisedEvent<NetworkDataEvent>(getServiceId(), _priority.load(std::memory_order_acquire),  std::pmr::vector<uint8_t>{static_cast<char*>(data.data()), static_cast<char*>(data.data()) + data.size(), getMemoryResource()});
         }
     }
 }

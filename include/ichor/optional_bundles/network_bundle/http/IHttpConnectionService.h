@@ -26,7 +26,7 @@ namespace Ichor {
          * @param msg Usually json, ignored for GET requests
          * @return id of the request, will be available in the HttpResponseEvent
          */
-        virtual uint64_t sendAsync(HttpMethod method, std::string_view route, std::vector<HttpHeader> &&headers, std::vector<uint8_t>&& msg) = 0;
+        virtual uint64_t sendAsync(HttpMethod method, std::string_view route, std::vector<HttpHeader> &&headers, std::pmr::vector<uint8_t>&& msg) = 0;
 
         /**
          * Close the connection

@@ -21,7 +21,6 @@
 #include <ichor/stl/RealtimeReadWriteMutex.h>
 #include <ichor/stl/ConditionVariable.h>
 #include <ichor/stl/ConditionVariableAny.h>
-#include <ichor/stl/EventStackUniquePtr.h>
 
 // prevent false positives by TSAN
 // See "ThreadSanitizer – data race detection in practice" by Serebryany et al. for more info: https://static.googleusercontent.com/media/research.google.com/en//pubs/archive/35604.pdf
@@ -167,8 +166,6 @@ namespace Ichor {
         template <typename EventT, typename... Args>
         requires Derived<EventT, Event>
         uint64_t pushPrioritisedEvent(uint64_t originatingServiceId, uint64_t priority, Args&&... args){
-            static_assert(sizeof(EventT) <= 128, "event type cannot be larger than 128 bytes");
-
             if(_quit.load(std::memory_order_acquire)) {
                 ICHOR_LOG_TRACE(_logger, "inserting event of type {} into manager {}, but have to quit", typeName<EventT>(), getId());
                 return 0;
@@ -177,7 +174,7 @@ namespace Ichor {
             uint64_t eventId = _eventIdCounter.fetch_add(1, std::memory_order_acq_rel);
             _eventQueueMutex.lock();
             _emptyQueue = false;
-            [[maybe_unused]] auto it = _eventQueue.emplace(priority, EventStackUniquePtr::create<EventT>(std::forward<uint64_t>(eventId), std::forward<uint64_t>(originatingServiceId), std::forward<uint64_t>(priority), std::forward<Args>(args)...));
+            [[maybe_unused]] auto it = _eventQueue.emplace(priority, std::unique_ptr<Event, Deleter>(new (_memResource->allocate(sizeof(EventT))) EventT(std::forward<uint64_t>(eventId), std::forward<uint64_t>(originatingServiceId), std::forward<uint64_t>(priority), std::forward<Args>(args)...), Deleter{_memResource, sizeof(EventT)}));
             TSAN_ANNOTATE_HAPPENS_BEFORE((void*)&(*it));
             _eventQueueMutex.unlock();
             _wakeUp.notify_all();
@@ -194,8 +191,6 @@ namespace Ichor {
         template <typename EventT, typename... Args>
         requires Derived<EventT, Event>
         uint64_t pushEvent(uint64_t originatingServiceId, Args&&... args){
-            static_assert(sizeof(EventT) <= 128, "event type cannot be larger than 128 bytes");
-
             if(_quit.load(std::memory_order_acquire)) {
                 ICHOR_LOG_TRACE(_logger, "inserting event of type {} into manager {}, but have to quit", typeName<EventT>(), getId());
                 return 0;
@@ -204,7 +199,7 @@ namespace Ichor {
             uint64_t eventId = _eventIdCounter.fetch_add(1, std::memory_order_acq_rel);
             _eventQueueMutex.lock();
             _emptyQueue = false;
-            [[maybe_unused]] auto it = _eventQueue.emplace(INTERNAL_EVENT_PRIORITY, EventStackUniquePtr::create<EventT>(std::forward<uint64_t>(eventId), std::forward<uint64_t>(originatingServiceId), INTERNAL_EVENT_PRIORITY, std::forward<Args>(args)...));
+            [[maybe_unused]] auto it = _eventQueue.emplace(INTERNAL_EVENT_PRIORITY, std::unique_ptr<Event, Deleter>(new (_memResource->allocate(sizeof(EventT))) EventT(std::forward<uint64_t>(eventId), std::forward<uint64_t>(originatingServiceId), INTERNAL_EVENT_PRIORITY, std::forward<Args>(args)...), Deleter{_memResource, sizeof(EventT)}));
             TSAN_ANNOTATE_HAPPENS_BEFORE((void*)&(*it));
             _eventQueueMutex.unlock();
             _wakeUp.notify_all();
@@ -453,12 +448,10 @@ namespace Ichor {
         template <typename EventT, typename... Args>
         requires Derived<EventT, Event>
         uint64_t pushEventInternal(uint64_t originatingServiceId, uint64_t priority, Args&&... args) {
-            static_assert(sizeof(EventT) <= 128, "event type cannot be larger than 128 bytes");
-
             uint64_t eventId = _eventIdCounter.fetch_add(1, std::memory_order_acq_rel);
             _eventQueueMutex.lock();
             _emptyQueue = false;
-            [[maybe_unused]] auto it = _eventQueue.emplace(priority, EventStackUniquePtr::create<EventT>(std::forward<uint64_t>(eventId), std::forward<uint64_t>(originatingServiceId), std::forward<uint64_t>(priority), std::forward<Args>(args)...));
+            [[maybe_unused]] auto it = _eventQueue.emplace(priority, std::unique_ptr<Event, Deleter>(new (_memResource->allocate(sizeof(EventT))) EventT(std::forward<uint64_t>(eventId), std::forward<uint64_t>(originatingServiceId), std::forward<uint64_t>(priority), std::forward<Args>(args)...), Deleter{_memResource, sizeof(EventT)}));
             TSAN_ANNOTATE_HAPPENS_BEFORE((void*)&(*it));
             _eventQueueMutex.unlock();
             _wakeUp.notify_all();
@@ -476,7 +469,7 @@ namespace Ichor {
         std::pmr::unordered_map<uint64_t, std::pmr::vector<EventInterceptInfo>> _eventInterceptors{_memResource}; // key = event id
         IFrameworkLogger *_logger{nullptr};
         std::shared_ptr<ILifecycleManager> _preventEarlyDestructionOfFrameworkLogger{nullptr};
-        std::pmr::multimap<uint64_t, EventStackUniquePtr> _eventQueue{_eventMemResource};
+        std::pmr::multimap<uint64_t, std::unique_ptr<Event, Deleter>> _eventQueue{_eventMemResource};
         RealtimeReadWriteMutex _eventQueueMutex{};
         ConditionVariableAny<RealtimeReadWriteMutex> _wakeUp{_eventQueueMutex};
         std::atomic<uint64_t> _eventIdCounter{0};

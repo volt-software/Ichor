@@ -163,7 +163,7 @@ void Ichor::HttpHostService::read(tcp::socket socket, net::yield_context yield) 
         _httpStream->expires_after(std::chrono::seconds(30));
 
         // Read a request
-        http::request<http::vector_body<uint8_t>> req;
+        http::request<http::vector_body<uint8_t, std::pmr::polymorphic_allocator<uint8_t>>> req;
         http::async_read(*_httpStream, buffer, req, yield[ec]);
         if(ec == http::error::end_of_stream || ec == net::error::operation_aborted) {
             break;
@@ -184,14 +184,14 @@ void Ichor::HttpHostService::read(tcp::socket socket, net::yield_context yield) 
             auto handler = routes->second.find(std::string{req.target()});
 #endif
             if(handler != std::end(routes->second)) {
-                std::vector<HttpHeader> headers;
+                std::pmr::vector<HttpHeader> headers{getMemoryResource()};
                 for(auto const &field : req) {
                     headers.reserve(10);
                     headers.emplace_back(field.name_string(), field.value());
                 }
                 HttpRequest httpReq{std::move(req.body()), static_cast<HttpMethod>(req.method()), req.target(), std::move(headers)};
                 auto httpRes = handler->second(httpReq);
-                http::response<http::vector_body<uint8_t>> res{static_cast<http::status>(httpRes.status), req.version()};
+                http::response<http::vector_body<uint8_t, std::pmr::polymorphic_allocator<uint8_t>>> res{static_cast<http::status>(httpRes.status), req.version()};
                 res.set(http::field::server, BOOST_BEAST_VERSION_STRING);
                 res.set(http::field::content_type, "text/html");
                 for(auto const& header : httpRes.headers) {

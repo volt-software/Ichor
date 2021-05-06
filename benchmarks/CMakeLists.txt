@@ -1,4 +1,4 @@
-if(USE_RAPIDJSON)
+if(NOT SERIALIZATION_FRAMEWORK STREQUAL "OFF")
     file(GLOB_RECURSE PROJECT_EXAMPLE_SOURCES ${TOP_DIR}/benchmarks/serializer_benchmark/*.cpp)
     add_executable(ichor_serializer_benchmark ${PROJECT_EXAMPLE_SOURCES})
     target_link_libraries(ichor_serializer_benchmark ${CMAKE_THREAD_LIBS_INIT})

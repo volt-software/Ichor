@@ -36,7 +36,7 @@ namespace Ichor {
          * @param msg message to send
          * @return true if added to buffer, false if full
          */
-        bool send(std::vector<uint8_t>&& msg) final;
+        bool send(std::pmr::vector<uint8_t>&& msg) final;
         void setPriority(uint64_t priority) final;
         uint64_t getPriority() final;
 
@@ -51,7 +51,7 @@ namespace Ichor {
         std::unique_ptr<net::io_context> _wsContext{};
         std::unique_ptr<websocket::stream<beast::tcp_stream>> _ws{};
         std::unique_ptr<net::steady_timer> _sendTimer; // used as condition variable
-        std::queue<std::vector<uint8_t>> _msgQueue{};
+        std::queue<std::pmr::vector<uint8_t>> _msgQueue{};
         int _attempts{};
         std::atomic<uint64_t> _priority{};
         std::atomic<bool> _connected{};

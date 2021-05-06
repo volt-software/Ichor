@@ -81,7 +81,7 @@ uint64_t Ichor::HttpConnectionService::getPriority() {
     return _priority.load(std::memory_order_acquire);
 }
 
-uint64_t Ichor::HttpConnectionService::sendAsync(Ichor::HttpMethod method, std::string_view route, std::vector<HttpHeader> &&headers, std::vector<uint8_t> &&msg) {
+uint64_t Ichor::HttpConnectionService::sendAsync(Ichor::HttpMethod method, std::string_view route, std::vector<HttpHeader> &&headers, std::pmr::vector<uint8_t> &&msg) {
 
     if(method == HttpMethod::get && !msg.empty()) {
         throw std::runtime_error("GET requests cannot have a body.");
@@ -91,7 +91,7 @@ uint64_t Ichor::HttpConnectionService::sendAsync(Ichor::HttpMethod method, std::
     if(!_quit) {
         net::spawn(*_httpContext, [this, msgId, method, route, headers = std::forward<decltype(headers)>(headers), msg = std::forward<decltype(msg)>(msg)](net::yield_context yield) mutable {
             beast::error_code ec;
-            http::request<http::vector_body<uint8_t>> req{static_cast<http::verb>(method), route, 11, std::move(msg)};
+            http::request<http::vector_body<uint8_t, std::pmr::polymorphic_allocator<uint8_t>>> req{static_cast<http::verb>(method), route, 11, std::move(msg)};
 
             for(auto const &header : headers) {
                 req.set(header.name, header.value);
@@ -108,7 +108,7 @@ uint64_t Ichor::HttpConnectionService::sendAsync(Ichor::HttpMethod method, std::
             beast::flat_buffer b;
 
             // Declare a container to hold the response
-            http::response<http::vector_body<uint8_t>> res;
+            http::response<http::vector_body<uint8_t, std::pmr::polymorphic_allocator<uint8_t>>> res;
 
             // Receive the HTTP response
             http::read(*_httpStream, b, res, ec);
@@ -118,7 +118,7 @@ uint64_t Ichor::HttpConnectionService::sendAsync(Ichor::HttpMethod method, std::
 
 //            ICHOR_LOG_WARN(_logger, "received HTTP response {}", res.body().data());
 
-            std::vector<HttpHeader> resHeaders;
+            std::pmr::vector<HttpHeader> resHeaders;
             resHeaders.reserve(10);
             for(auto const &header : res) {
                 resHeaders.emplace_back(std::string{header.name_string()}, std::string{header.value()});

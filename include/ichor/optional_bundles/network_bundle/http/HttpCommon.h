@@ -189,15 +189,15 @@ namespace Ichor {
     };
 
     struct HttpRequest {
-        std::vector<uint8_t> body;
+        std::pmr::vector<uint8_t> body;
         HttpMethod method;
         std::string_view route;
-        std::vector<HttpHeader> headers;
+        std::pmr::vector<HttpHeader> headers;
     };
 
     struct HttpResponse {
         HttpStatus status;
-        std::vector<uint8_t> body;
-        std::vector<HttpHeader> headers;
+        std::pmr::vector<uint8_t> body;
+        std::pmr::vector<HttpHeader> headers;
     };
 }

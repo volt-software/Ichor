@@ -16,7 +16,7 @@ Moreover, the concept of [Fearless Concurrency](https://doc.rust-lang.org/book/c
 
 Multithreading is hard. There exist plenty of methods trying to make it easier, ranging from the [actor framework](https://github.com/actor-framework/actor-framework), [static analysis a la rust](https://doc.rust-lang.org/book/ch16-00-concurrency.html), [software transaction memory](https://en.wikipedia.org/wiki/Software_transactional_memory) and traditional manual lock-wrangling.
 
-Thread confinement is one such approach. Instead of having to protect resources, Ichor attempts to make it well-defined on which thread an instance of a C++ class runs and only allows modification to the memory from that thread. Thereby removing the need to think about atomics/mutexes, unless you use threads not managed by Ichor.
+Thread confinement is one such approach. Instead of having to protect resources, Ichor attempts to make it well-defined on which thread an instance of a C++ class runs and pushes you to only access and modify memory from that thread. Thereby removing the need to think about atomics/mutexes, unless you use threads not managed by, or otherwise trying to circumvent, Ichor.
 In which case, you're on your own.
 
 ## Quickstart
@@ -117,14 +117,14 @@ Optional services:
 These benchmarks are mainly used to identify bottlenecks, not to showcase the performance of the framework. Proper throughput and latency benchmarks are TBD.
 
 Setup: AMD 3900X, 3600MHz@CL17 RAM, ubuntu 20.04
-* 1 thread inserting ~5 million events and then processing them in ~945 ms and ~965 MB memory usage
-* 8 threads inserting ~5 million events and then processing them in ~1,424 ms and ~7,691 MB memory usage
-* 1 thread creating 10,000 services with dependencies in ~6,000 ms and ~40 MB memory usage
-* 8 threads creating 10,000 services with dependencies in ~18,500 ms and ~314 MB memory usage
-* 1 thread starting/stopping 1 service 10,000 times in ~1,126 ms and ~4 MB memory usage
-* 8 threads starting/stopping 1 service 10,000 times in ~1,895 ms and ~5 MB memory usage
-* 1 thread serializing & deserializing 1,000,000 JSON messages in ~343 ms and ~4 MB memory usage
-* 8 threads serializing & deserializing 1,000,000 JSON messages in ~375 ms and ~5 MB memory usage
+* 1 thread inserting ~5 million events and then processing them in ~1,353 ms and ~647 MB memory usage
+* 8 threads inserting ~5 million events and then processing them in ~1,938 ms and ~5,137 MB memory usage
+* 1 thread creating 10,000 services with dependencies in ~3,8000 ms and ~33 MB memory usage
+* 8 threads creating 10,000 services with dependencies in ~12,200 ms and ~237 MB memory usage
+* 1 thread starting/stopping 1 service 10,000 times in ~1,193 ms and ~4 MB memory usage
+* 8 threads starting/stopping 1 service 10,000 times in ~2,480 ms and ~5 MB memory usage
+* 1 thread serializing & deserializing 1,000,000 JSON messages in ~380 ms and ~4 MB memory usage
+* 8 threads serializing & deserializing 1,000,000 JSON messages in ~400 ms and ~5 MB memory usage
 
 Realtime example on a vanilla linux:
 ```
