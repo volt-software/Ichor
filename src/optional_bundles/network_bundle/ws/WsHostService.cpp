@@ -39,8 +39,8 @@ bool Ichor::WsHostService::start() {
 
     _eventRegistration = getManager()->registerEventHandler<NewWsConnectionEvent>(this, getServiceId());
 
-    _wsContext = std::make_unique<net::io_context>(1);
-    auto const& address = net::ip::make_address(Ichor::any_cast<std::string&>(getProperties()->operator[]("Address")));
+    _wsContext = std::make_unique<net::io_context>(BOOST_ASIO_CONCURRENCY_HINT_UNSAFE);
+    auto address = net::ip::make_address(Ichor::any_cast<std::string&>(getProperties()->operator[]("Address")));
     auto port = Ichor::any_cast<uint16_t>(getProperties()->operator[]("Port"));
 
     net::spawn(*_wsContext, [this, address = std::move(address), port](net::yield_context yield){
@@ -55,21 +55,17 @@ bool Ichor::WsHostService::start() {
         }
     });
 
-    _listenThread = std::thread([this]{
-        try {
-            _wsContext->run();
-        } catch (std::runtime_error &e) {
-            ICHOR_LOG_ERROR(_logger, "caught std runtime_error {}", e.what());
-            getManager()->pushEvent<StopServiceEvent>(getServiceId(), getServiceId());
-        } catch (...) {
-            ICHOR_LOG_ERROR(_logger, "caught unknown error");
-            getManager()->pushEvent<StopServiceEvent>(getServiceId(), getServiceId());
-        }
-    });
+    auto s = _wsContext->poll();
+    ICHOR_LOG_INFO(_logger, "s: {}", s);
 
-#ifdef __linux__
-    pthread_setname_np(_listenThread.native_handle(), fmt::format("WsHost #{}", getServiceId()).c_str());
-#endif
+    _timerManager = getManager()->createServiceManager<Timer, ITimer>();
+    _timerManager->setChronoInterval(std::chrono::milliseconds(20));
+    _timerManager->setCallback([this](TimerEvent const * const evt) -> Generator<bool> {
+        auto s = _wsContext->poll();
+        ICHOR_LOG_INFO(_logger, "s: {}", s);
+        co_return (bool)PreventOthersHandling;
+    });
+    _timerManager->startTimer();
 
     return true;
 }
@@ -88,7 +84,7 @@ bool Ichor::WsHostService::stop() {
 
     ICHOR_LOG_TRACE(_logger, "joining WsHostService {}", getServiceId());
 
-    _listenThread.join();
+    _timerManager = nullptr;
 
     ICHOR_LOG_TRACE(_logger, "wsContext->stop() WsHostService {}", getServiceId());
 
@@ -119,11 +115,11 @@ Ichor::Generator<bool> Ichor::WsHostService::handleEvent(Ichor::NewWsConnectionE
 }
 
 void Ichor::WsHostService::setPriority(uint64_t priority) {
-    _priority.store(priority, std::memory_order_release);
+    _priority = priority;
 }
 
 uint64_t Ichor::WsHostService::getPriority() {
-    return _priority.load(std::memory_order_acquire);
+    return _priority;
 }
 
 void Ichor::WsHostService::fail(beast::error_code ec, const char *what) {
@@ -156,7 +152,7 @@ void Ichor::WsHostService::listen(tcp::endpoint endpoint, net::yield_context yie
         return fail(ec, "listen");
     }
 
-    while(!_quit.load(std::memory_order_acquire))
+    while(!_quit)
     {
         tcp::socket socket(*_wsContext);
 
@@ -168,7 +164,7 @@ void Ichor::WsHostService::listen(tcp::endpoint endpoint, net::yield_context yie
             continue;
         }
 
-        getManager()->pushPrioritisedEvent<NewWsConnectionEvent>(getServiceId(), _priority.load(std::memory_order_acquire), CopyIsMoveWorkaround(std::move(socket)), _wsAcceptor->get_executor());
+        getManager()->pushPrioritisedEvent<NewWsConnectionEvent>(getServiceId(), _priority, CopyIsMoveWorkaround(std::move(socket)), _wsAcceptor->get_executor());
     }
 }
 

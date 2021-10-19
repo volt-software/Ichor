@@ -2,7 +2,7 @@
 
 #include <ichor/optional_bundles/network_bundle/IConnectionService.h>
 #include <ichor/optional_bundles/logging_bundle/Logger.h>
-#include <thread>
+#include <ichor/optional_bundles/timer_bundle/TimerService.h>
 
 namespace Ichor {
     class TcpConnectionService final : public IConnectionService, public Service<TcpConnectionService> {
@@ -23,9 +23,9 @@ namespace Ichor {
     private:
         int _socket;
         int _attempts;
-        std::atomic<uint64_t> _priority;
-        std::atomic<bool> _quit;
-        std::thread _listenThread;
+        uint64_t _priority;
+        bool _quit;
         ILogger *_logger{nullptr};
+        Timer* _timerManager{nullptr};
     };
 }

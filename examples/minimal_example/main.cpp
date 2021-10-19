@@ -18,9 +18,15 @@ public:
         // Setup a timer that fires every 10 milliseconds and tell that dependency manager that we're interested in the events that the timer fires.
         auto timer = getManager()->createServiceManager<Timer, ITimer>();
         timer->setChronoInterval(std::chrono::milliseconds(10));
-        // Registering an event handler requires 2 pieces of information: the service id and a pointer to a service instantiation.
-        // The third piece of information is an extra filter, as we're only interested in events of this specific timer.
-        _timerEventRegistration = getManager()->registerEventHandler<TimerEvent>(this, timer->getServiceId());
+
+        timer->setCallback([this](TimerEvent const * const evt) -> Generator<bool> {
+            // If sigint has been fired, send a quit to the event loop.
+            // This can't be done from within the handler itself, as the mutex surrounding pushEvent might already be locked, resulting in a deadlock!
+            if(quit) {
+                getManager()->pushEvent<QuitEvent>(getServiceId());
+            }
+            co_return (bool)PreventOthersHandling;
+        });
         timer->startTimer();
 
         // Register sigint handler
@@ -29,20 +35,8 @@ public:
     }
 
     bool stop() final {
-        _timerEventRegistration = nullptr;
         return true;
     }
-
-    Generator<bool> handleEvent(TimerEvent const * const evt) {
-        // If sigint has been fired, send a quit to the event loop.
-        // This can't be done from within the handler itself, as the mutex surrounding pushEvent might already be locked, resulting in a deadlock!
-        if(quit) {
-            getManager()->pushEvent<QuitEvent>(getServiceId());
-        }
-        co_return (bool)PreventOthersHandling;
-    }
-
-    std::unique_ptr<EventHandlerRegistration, Deleter> _timerEventRegistration{nullptr};
 };
 
 int main() {

@@ -5,7 +5,7 @@
 #include <ichor/optional_bundles/network_bundle/IConnectionService.h>
 #include <ichor/optional_bundles/network_bundle/IHostService.h>
 #include <ichor/optional_bundles/logging_bundle/Logger.h>
-#include <thread>
+#include <ichor/optional_bundles/timer_bundle/TimerService.h>
 #include <queue>
 #include <boost/beast.hpp>
 #include <boost/asio/spawn.hpp>
@@ -53,14 +53,12 @@ namespace Ichor {
         std::unique_ptr<net::steady_timer> _sendTimer; // used as condition variable
         std::queue<std::pmr::vector<uint8_t>> _msgQueue{};
         int _attempts{};
-        std::atomic<uint64_t> _priority{};
-        std::atomic<bool> _connected{};
-        std::atomic<bool> _connecting{};
-        std::atomic<bool> _quit{};
-        std::atomic<bool> _sendStrandDone{};
-        RealtimeMutex _queueMutex{};
-        std::thread _connectThread{};
+        uint64_t _priority{};
+        bool _connected{};
+        bool _connecting{};
+        bool _quit{};
         ILogger *_logger{nullptr};
+        Timer* _timerManager{nullptr};
     };
 }
 

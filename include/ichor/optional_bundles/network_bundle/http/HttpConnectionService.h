@@ -4,7 +4,7 @@
 
 #include <ichor/optional_bundles/network_bundle/http/IHttpConnectionService.h>
 #include <ichor/optional_bundles/logging_bundle/Logger.h>
-#include <thread>
+#include <ichor/optional_bundles/timer_bundle/TimerService.h>
 #include <boost/beast.hpp>
 #include <boost/asio/spawn.hpp>
 
@@ -39,13 +39,13 @@ namespace Ichor {
         std::unique_ptr<net::io_context> _httpContext{};
         std::unique_ptr<beast::tcp_stream> _httpStream{};
         std::atomic<uint64_t> _priority{INTERNAL_EVENT_PRIORITY};
-        std::atomic<bool> _quit{};
-        std::atomic<bool> _connecting{};
-        std::atomic<bool> _connected{};
-        int _attempts;
-        std::atomic<uint64_t> _msgId{};
-        std::thread _listenThread{};
+        bool _quit{};
+        bool _connecting{};
+        bool _connected{};
+        int _attempts{};
+        uint64_t _msgId{};
         ILogger *_logger{nullptr};
+        Timer* _timerManager{nullptr};
     };
 }
 

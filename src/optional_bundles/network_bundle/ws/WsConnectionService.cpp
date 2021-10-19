@@ -32,7 +32,7 @@ Ichor::WsConnectionService::WsConnectionService(DependencyRegister &reg, Propert
 }
 
 bool Ichor::WsConnectionService::start() {
-    if(_quit.load(std::memory_order_acquire)) {
+    if(_quit) {
         return false;
     }
 
@@ -53,7 +53,7 @@ bool Ichor::WsConnectionService::start() {
                 sendStrand(std::move(yield));
             });
         } else {
-            _wsContext = std::make_unique<net::io_context>(1);
+            _wsContext = std::make_unique<net::io_context>( BOOST_ASIO_CONCURRENCY_HINT_UNSAFE );
             _sendTimer = std::make_unique<net::steady_timer>(*_wsContext);
 
             net::spawn(*_wsContext, [this](net::yield_context yield) {
@@ -64,13 +64,17 @@ bool Ichor::WsConnectionService::start() {
                 sendStrand(std::move(yield));
             });
 
-            _connectThread = std::thread([this] {
-                _wsContext->run();
-            });
+            auto s = _wsContext->poll();
+            ICHOR_LOG_INFO(_logger, "s: {}", s);
 
-#ifdef __linux__
-            pthread_setname_np(_connectThread.native_handle(), fmt::format("WsConn #{}", getServiceId()).c_str());
-#endif
+            _timerManager = getManager()->createServiceManager<Timer, ITimer>();
+            _timerManager->setChronoInterval(std::chrono::milliseconds(20));
+            _timerManager->setCallback([this](TimerEvent const * const evt) -> Generator<bool> {
+                auto s = _wsContext->poll();
+                ICHOR_LOG_INFO(_logger, "s: {}", s);
+                co_return (bool)PreventOthersHandling;
+            });
+            _timerManager->startTimer();
         }
     }
 
@@ -83,9 +87,8 @@ bool Ichor::WsConnectionService::start() {
 
 bool Ichor::WsConnectionService::stop() {
     ICHOR_LOG_TRACE(_logger, "trying to stop WsConnectionService {}", getServiceId());
-    bool expected = false;
     bool stopWsContext = false;
-    if(_quit.compare_exchange_strong(expected, true)) {
+    if(_quit) {
         try {
             ICHOR_LOG_TRACE(_logger, "ws next layer close WsConnectionService {}", getServiceId());
             _ws->next_layer().close();
@@ -96,13 +99,7 @@ bool Ichor::WsConnectionService::stop() {
         stopWsContext = true;
     }
 
-    if(_connectThread.joinable()) {
-        _connectThread.join();
-    }
-
-    while(!_sendStrandDone) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(5));
-    }
+    _timerManager = nullptr;
 
     if (stopWsContext && _wsContext) {
         _wsContext->stop();
@@ -133,14 +130,11 @@ void Ichor::WsConnectionService::removeDependencyInstance(IHostService *, IServi
 }
 
 bool Ichor::WsConnectionService::send(std::pmr::vector<uint8_t> &&msg) {
-    if(_quit.load(std::memory_order_acquire)) {
+    if(_quit) {
         return false;
     }
 
-    {
-        std::scoped_lock l(_queueMutex);
-        _msgQueue.push(std::forward<decltype(msg)>(msg));
-    }
+    _msgQueue.push(std::forward<decltype(msg)>(msg));
 
     cancelSendTimer();
 
@@ -148,11 +142,11 @@ bool Ichor::WsConnectionService::send(std::pmr::vector<uint8_t> &&msg) {
 }
 
 void Ichor::WsConnectionService::setPriority(uint64_t priority) {
-    _priority.store(priority, std::memory_order_release);
+    _priority = priority;
 }
 
 uint64_t Ichor::WsConnectionService::getPriority() {
-    return _priority.load(std::memory_order_acquire);
+    return _priority;
 }
 
 void Ichor::WsConnectionService::fail(beast::error_code ec, const char *what) {
@@ -161,38 +155,32 @@ void Ichor::WsConnectionService::fail(beast::error_code ec, const char *what) {
 }
 
 void Ichor::WsConnectionService::sendStrand(net::yield_context yield) {
-    while(!_quit.load(std::memory_order_acquire)) {
+    while(!_quit) {
         beast::error_code ec;
 
-        {
-            std::unique_lock l(_queueMutex);
-            if (!_msgQueue.empty()) {
-                auto msg = _msgQueue.front();
-                l.unlock();
+        if (!_msgQueue.empty()) {
+            auto &msg = _msgQueue.front();
+            _ws->async_write(net::buffer(msg.data(), msg.size()), yield[ec]);
+
+            while(!_quit && ec && ec != websocket::error::closed) {
+                // this timeout should be significantly lower than the _timerManager timeout
+                _sendTimer->expires_after(std::chrono::milliseconds (1));
+                _sendTimer->async_wait(yield[ec]);
                 _ws->async_write(net::buffer(msg.data(), msg.size()), yield[ec]);
-
-                while(!_quit.load(std::memory_order_acquire) && ec && ec != websocket::error::closed) {
-                    _sendTimer->expires_after(std::chrono::milliseconds (5));
-                    _sendTimer->async_wait(yield[ec]);
-                    _ws->async_write(net::buffer(msg.data(), msg.size()), yield[ec]);
-                }
-
-                if(ec == websocket::error::closed) {
-                    break;
-                }
-
-                l.lock();
-                _msgQueue.pop();
             }
+
+            if(ec == websocket::error::closed) {
+                break;
+            }
+
+            _msgQueue.pop();
         }
 
-        if(!_quit.load(std::memory_order_acquire)) {
-            _sendTimer->expires_after(std::chrono::milliseconds(50));
+        if(!_quit) {
+            _sendTimer->expires_after(std::chrono::milliseconds(1));
             _sendTimer->async_wait(yield[ec]);
         }
     }
-
-    _sendStrandDone = true;
 }
 
 void Ichor::WsConnectionService::accept(net::yield_context yield) {
@@ -252,7 +240,7 @@ void Ichor::WsConnectionService::connect(net::yield_context yield) {
     _ws = std::make_unique<websocket::stream<beast::tcp_stream>>(*_wsContext);
 
     // Look up the domain name
-    auto const results = resolver.async_resolve(address, std::to_string(port), yield[ec]);
+    auto const results = resolver.resolve(address, std::to_string(port), ec);
     if(ec) {
         return fail(ec, "resolve");
     }
@@ -315,7 +303,7 @@ void Ichor::WsConnectionService::connect(net::yield_context yield) {
 void Ichor::WsConnectionService::read(net::yield_context &yield) {
     beast::error_code ec;
 
-    while(!_quit.load(std::memory_order_acquire))
+    while(!_quit)
     {
         beast::flat_buffer buffer;
 
@@ -329,7 +317,7 @@ void Ichor::WsConnectionService::read(net::yield_context &yield) {
 
         if(_ws->got_text()) {
             auto data = buffer.data();
-            getManager()->pushPrioritisedEvent<NetworkDataEvent>(getServiceId(), _priority.load(std::memory_order_acquire),  std::pmr::vector<uint8_t>{static_cast<char*>(data.data()), static_cast<char*>(data.data()) + data.size(), getMemoryResource()});
+            getManager()->pushPrioritisedEvent<NetworkDataEvent>(getServiceId(), _priority,  std::pmr::vector<uint8_t>{static_cast<char*>(data.data()), static_cast<char*>(data.data()) + data.size(), getMemoryResource()});
         }
     }
 }

@@ -19,13 +19,14 @@ public:
         ICHOR_LOG_INFO(_logger, "UsingTimerService started");
         _timerManager = getManager()->createServiceManager<Timer, ITimer>();
         _timerManager->setChronoInterval(std::chrono::milliseconds(500));
-        _timerEventRegistration = getManager()->registerEventHandler<TimerEvent>(this, _timerManager->getServiceId());
+        _timerManager->setCallback([this](TimerEvent const * const evt) {
+            return handleEvent(evt);
+        });
         _timerManager->startTimer();
         return true;
     }
 
     bool stop() final {
-        _timerEventRegistration.reset();
         _timerManager = nullptr;
         ICHOR_LOG_INFO(_logger, "UsingTimerService stopped");
         return true;
@@ -51,7 +52,6 @@ public:
 
 private:
     ILogger *_logger{nullptr};
-    std::unique_ptr<EventHandlerRegistration, Deleter> _timerEventRegistration{nullptr};
     uint64_t _timerTriggerCount{0};
     Timer* _timerManager{nullptr};
 };

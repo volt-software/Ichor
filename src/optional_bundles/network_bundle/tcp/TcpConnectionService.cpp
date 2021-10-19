@@ -5,8 +5,9 @@
 #include <sys/socket.h>
 #include <netinet/tcp.h>
 #include <unistd.h>
+#include <fcntl.h>
 
-Ichor::TcpConnectionService::TcpConnectionService(DependencyRegister &reg, Properties props, DependencyManager *mng) : Service(std::move(props), mng), _socket(-1), _attempts(), _priority(INTERNAL_EVENT_PRIORITY),  _quit(), _listenThread() {
+Ichor::TcpConnectionService::TcpConnectionService(DependencyRegister &reg, Properties props, DependencyManager *mng) : Service(std::move(props), mng), _socket(-1), _attempts(), _priority(INTERNAL_EVENT_PRIORITY),  _quit() {
     reg.registerDependency<ILogger>(this, true);
 }
 
@@ -42,6 +43,8 @@ bool Ichor::TcpConnectionService::start() {
 
         int setting = 1;
         ::setsockopt(_socket, IPPROTO_TCP, TCP_NODELAY, &setting, sizeof(setting));
+        auto flags = ::fcntl(_socket, F_GETFL, 0);
+        ::fcntl(_socket, F_SETFL, flags | O_NONBLOCK);
 
         sockaddr_in address{};
         address.sin_family = AF_INET;
@@ -68,37 +71,37 @@ bool Ichor::TcpConnectionService::start() {
         ICHOR_LOG_TRACE(_logger, "Starting TCP connection for {}:{}", ip, ::ntohs(address.sin_port));
     }
 
-    _listenThread = std::thread([this] {
-        while(!_quit.load(std::memory_order_acquire)) {
-            std::array<char, 1024> buf;
-            auto ret = recv(_socket, buf.data(), buf.size(), 0);
+    _timerManager = getManager()->createServiceManager<Timer, ITimer>();
+    _timerManager->setChronoInterval(std::chrono::milliseconds(20));
+    _timerManager->setCallback([this](TimerEvent const * const evt) -> Generator<bool> {
+        std::array<char, 1024> buf;
+        auto ret = recv(_socket, buf.data(), buf.size(), 0);
 
-            if (ret == 0) {
-                break;
-            }
-
-            if(ret < 0) {
-                ICHOR_LOG_ERROR(_logger, "Error receiving from socket: {}", errno);
-                getManager()->pushEvent<RecoverableErrorEvent>(getServiceId(), 4, "Error receiving from socket. errno = " + std::to_string(errno));
-                continue;
-            }
-
-            getManager()->pushPrioritisedEvent<NetworkDataEvent>(getServiceId(), _priority.load(std::memory_order_acquire), std::pmr::vector<uint8_t>{buf.data(), buf.data() + ret, getMemoryResource()});
+        if (ret == 0) {
+            co_return (bool)PreventOthersHandling;
         }
+
+        if(ret < 0) {
+            ICHOR_LOG_ERROR(_logger, "Error receiving from socket: {}", errno);
+            getManager()->pushEvent<RecoverableErrorEvent>(getServiceId(), 4, "Error receiving from socket. errno = " + std::to_string(errno));
+            co_return (bool)PreventOthersHandling;
+        }
+
+        getManager()->pushPrioritisedEvent<NetworkDataEvent>(getServiceId(), _priority, std::pmr::vector<uint8_t>{buf.data(), buf.data() + ret, getMemoryResource()});
+        co_return (bool)PreventOthersHandling;
     });
+    _timerManager->startTimer();
 
     return true;
 }
 
 bool Ichor::TcpConnectionService::stop() {
     _quit = true;
+    _timerManager = nullptr;
 
     if(_socket >= 0) {
         ::shutdown(_socket, SHUT_RDWR);
-        _listenThread.join();
         ::close(_socket);
-    } else {
-        _listenThread.join();
     }
 
     return true;
@@ -129,9 +132,9 @@ bool Ichor::TcpConnectionService::send(std::pmr::vector<uint8_t> &&msg) {
 }
 
 void Ichor::TcpConnectionService::setPriority(uint64_t priority) {
-    _priority.store(priority, std::memory_order_release);
+    _priority = priority;
 }
 
 uint64_t Ichor::TcpConnectionService::getPriority() {
-    return _priority.load(std::memory_order_acquire);
+    return _priority;
 }

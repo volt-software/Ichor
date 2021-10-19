@@ -18,7 +18,7 @@ bool Ichor::HttpHostService::start() {
         return false;
     }
 
-    _httpContext = std::make_unique<net::io_context>(1);
+    _httpContext = std::make_unique<net::io_context>(BOOST_ASIO_CONCURRENCY_HINT_UNSAFE);
     auto address = net::ip::make_address(Ichor::any_cast<std::string&>(getProperties()->operator[]("Address")));
     auto port = Ichor::any_cast<uint16_t>(getProperties()->operator[]("Port"));
 
@@ -26,13 +26,17 @@ bool Ichor::HttpHostService::start() {
         listen(tcp::endpoint{address, port}, std::move(yield));
     });
 
-    _listenThread = std::thread([this]{
-        _httpContext->run();
-    });
+    auto s = _httpContext->poll();
+    ICHOR_LOG_INFO(_logger, "s: {}", s);
 
-#ifdef __linux__
-    pthread_setname_np(_listenThread.native_handle(), fmt::format("HtHost #{}", getServiceId()).c_str());
-#endif
+    _timerManager = getManager()->createServiceManager<Timer, ITimer>();
+    _timerManager->setChronoInterval(std::chrono::milliseconds(20));
+    _timerManager->setCallback([this](TimerEvent const * const evt) -> Generator<bool> {
+        auto s = _httpContext->poll();
+        ICHOR_LOG_INFO(_logger, "s: {}", s);
+        co_return (bool)PreventOthersHandling;
+    });
+    _timerManager->startTimer();
 
     return true;
 }
@@ -40,10 +44,10 @@ bool Ichor::HttpHostService::start() {
 bool Ichor::HttpHostService::stop() {
     _quit = true;
 
+    _timerManager = nullptr;
+
     _httpAcceptor->close();
     _httpStream->cancel();
-
-    _listenThread.join();
 
     _httpContext->stop();
 
@@ -64,11 +68,11 @@ void Ichor::HttpHostService::removeDependencyInstance(ILogger *logger, IService 
 }
 
 void Ichor::HttpHostService::setPriority(uint64_t priority) {
-    _priority.store(priority, std::memory_order_release);
+    _priority = priority;
 }
 
 uint64_t Ichor::HttpHostService::getPriority() {
-    return _priority.load(std::memory_order_acquire);
+    return _priority;
 }
 
 void Ichor::HttpHostService::fail(beast::error_code ec, const char *what) {
@@ -101,7 +105,7 @@ void Ichor::HttpHostService::listen(tcp::endpoint endpoint, net::yield_context y
         return fail(ec, "HttpHostService::listen listen");
     }
 
-    while(!_quit.load(std::memory_order_acquire))
+    while(!_quit)
     {
         auto socket = tcp::socket(*_httpContext);
 
@@ -114,7 +118,7 @@ void Ichor::HttpHostService::listen(tcp::endpoint endpoint, net::yield_context y
         }
 
         net::spawn(*_httpContext, [this, socket = std::move((socket))](net::yield_context _yield) mutable {
-            read(std::forward<decltype(socket)>(socket), _yield);
+            read(std::forward<decltype(socket)>(socket), std::move(_yield));
         });
     }
     ICHOR_LOG_WARN(_logger, "finished listen()");
@@ -132,7 +136,7 @@ std::unique_ptr<Ichor::HttpRouteRegistration, Ichor::Deleter> Ichor::HttpHostSer
     auto insertedIt = routes.emplace(route, handler);
 
     // convoluted way to pass a string_view that doesn't go out of scope after this function
-    return std::unique_ptr<Ichor::HttpRouteRegistration, Ichor::Deleter>(new (getMemoryResource()->allocate(sizeof(HttpRouteRegistration))) HttpRouteRegistration(method, insertedIt.first->first, this), Deleter{Service::getMemoryResource(), sizeof(HttpRouteRegistration)});
+    return {new (getMemoryResource()->allocate(sizeof(HttpRouteRegistration))) HttpRouteRegistration(method, insertedIt.first->first, this), Deleter{Service::getMemoryResource(), sizeof(HttpRouteRegistration)}};
 }
 
 void Ichor::HttpHostService::removeRoute(HttpMethod method, std::string_view route) {
@@ -157,7 +161,7 @@ void Ichor::HttpHostService::read(tcp::socket socket, net::yield_context yield) 
     // This buffer is required to persist across reads
     beast::flat_buffer buffer;
 
-    while(!_quit.load(std::memory_order_acquire))
+    while(!_quit)
     {
         // Set the timeout.
         _httpStream->expires_after(std::chrono::seconds(30));
@@ -198,7 +202,7 @@ void Ichor::HttpHostService::read(tcp::socket socket, net::yield_context yield) 
                     res.set(header.value, header.name);
                 }
                 res.keep_alive(req.keep_alive());
-//                ICHOR_LOG_WARN(_logger, "sending http response {} - {}", httpRes.status, httpRes.body.data());
+                ICHOR_LOG_WARN(_logger, "sending http response {} - {}", httpRes.status, httpRes.body.data());
 
                 res.body() = std::move(httpRes.body);
                 res.prepare_payload();

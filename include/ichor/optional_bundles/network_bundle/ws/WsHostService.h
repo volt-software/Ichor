@@ -6,7 +6,7 @@
 #include <ichor/optional_bundles/logging_bundle/Logger.h>
 #include <ichor/optional_bundles/network_bundle/ws/WsConnectionService.h>
 #include <ichor/optional_bundles/network_bundle/ws/WsEvents.h>
-#include <thread>
+#include <ichor/optional_bundles/timer_bundle/TimerService.h>
 #include <boost/beast.hpp>
 #include <boost/asio/spawn.hpp>
 
@@ -39,10 +39,10 @@ namespace Ichor {
 
         std::unique_ptr<net::io_context> _wsContext{};
         std::unique_ptr<tcp::acceptor> _wsAcceptor{};
-        std::atomic<uint64_t> _priority{INTERNAL_EVENT_PRIORITY};
-        std::atomic<bool> _quit{};
-        std::thread _listenThread{};
+        uint64_t _priority{INTERNAL_EVENT_PRIORITY};
+        bool _quit{};
         ILogger *_logger{nullptr};
+        Timer* _timerManager{nullptr};
         std::vector<WsConnectionService*> _connections{};
         std::unique_ptr<EventHandlerRegistration, Deleter> _eventRegistration{};
     };

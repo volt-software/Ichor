@@ -455,6 +455,7 @@ namespace Ichor {
             TSAN_ANNOTATE_HAPPENS_BEFORE((void*)&(*it));
             _eventQueueMutex.unlock();
             _wakeUp.notify_all();
+            ICHOR_LOG_TRACE(_logger, "inserted event of type {} into manager {}", typeName<EventT>(), getId());
             return eventId;
         }
 

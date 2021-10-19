@@ -11,17 +11,20 @@ bool Ichor::EventStatisticsService::start() {
         _averagingIntervalMs = 500;
     }
 
-    auto _timerManager = getManager()->createServiceManager<Timer, ITimer>();
-    _timerManager->setChronoInterval(std::chrono::milliseconds(_averagingIntervalMs));
-    _timerEventRegistration = getManager()->registerEventHandler<TimerEvent>(this, _timerManager->getServiceId());
+    auto timerManager = getManager()->createServiceManager<Timer, ITimer>();
+    timerManager->setChronoInterval(std::chrono::milliseconds(_averagingIntervalMs));
+
+    timerManager->setCallback([this](TimerEvent const * const evt) -> Generator<bool> {
+        return handleEvent(evt);
+    });
+
     _interceptorRegistration = getManager()->registerEventInterceptor<Event>(this);
-    _timerManager->startTimer();
+    timerManager->startTimer();
 
     return true;
 }
 
 bool Ichor::EventStatisticsService::stop() {
-    _timerEventRegistration.reset();
     _interceptorRegistration.reset();
 
     if(_showStatisticsOnStop) {

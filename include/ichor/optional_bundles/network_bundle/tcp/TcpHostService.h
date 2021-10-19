@@ -3,7 +3,7 @@
 #include <ichor/optional_bundles/network_bundle/IHostService.h>
 #include <ichor/optional_bundles/logging_bundle/Logger.h>
 #include <ichor/optional_bundles/network_bundle/tcp/TcpConnectionService.h>
-#include <thread>
+#include <ichor/optional_bundles/timer_bundle/TimerService.h>
 
 namespace Ichor {
     struct NewSocketEvent final : public Ichor::Event {
@@ -34,10 +34,10 @@ namespace Ichor {
     private:
         int _socket;
         int _bindFd;
-        std::atomic<uint64_t> _priority;
-        std::atomic<bool> _quit;
-        std::thread _listenThread;
+        uint64_t _priority;
+        bool _quit;
         ILogger *_logger{nullptr};
+        Timer* _timerManager{nullptr};
         std::vector<TcpConnectionService*> _connections;
         std::unique_ptr<EventHandlerRegistration, Deleter> _newSocketEventHandlerRegistration{nullptr};
     };
