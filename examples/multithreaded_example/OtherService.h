@@ -47,5 +47,5 @@ public:
 
 private:
     ILogger *_logger;
-    std::unique_ptr<EventHandlerRegistration, Deleter> _customEventHandler{nullptr};
+    Ichor::unique_ptr<EventHandlerRegistration> _customEventHandler{nullptr};
 };

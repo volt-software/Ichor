@@ -17,7 +17,7 @@ namespace Ichor {
         virtual void setLogLevel(LogLevel level) = 0;
         [[nodiscard]] virtual LogLevel getLogLevel() const = 0;
     protected:
-        virtual ~IFrameworkLogger() = default;
+        ~IFrameworkLogger() = default;
     };
 
 #ifndef REMOVE_SOURCE_NAMES_FROM_LOGGING

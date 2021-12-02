@@ -10,7 +10,7 @@ namespace Ichor {
          * @param msg message to send
          * @return true if succesfully (going to) send message, false otherwise
          */
-        virtual bool send(std::pmr::vector<uint8_t>&& msg) = 0;
+        virtual bool send(std::vector<uint8_t, Ichor::PolymorphicAllocator<uint8_t>>&& msg) = 0;
 
         /**
          * Sets priority with which to push incoming network events.
@@ -20,6 +20,6 @@ namespace Ichor {
         virtual uint64_t getPriority() = 0;
 
     protected:
-        virtual ~IConnectionService() = default;
+        ~IConnectionService() = default;
     };
 }

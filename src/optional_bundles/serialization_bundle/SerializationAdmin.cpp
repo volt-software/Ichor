@@ -6,7 +6,7 @@ Ichor::SerializationAdmin::SerializationAdmin(DependencyRegister &reg, Propertie
     reg.registerDependency<ISerializer>(this, false);
 }
 
-std::pmr::vector<uint8_t> Ichor::SerializationAdmin::serialize(const uint64_t type, const void* obj) {
+std::vector<uint8_t, Ichor::PolymorphicAllocator<uint8_t>> Ichor::SerializationAdmin::serialize(const uint64_t type, const void* obj) {
     auto serializer = _serializers.find(type);
     if(serializer == end(_serializers)) {
         throw std::runtime_error(fmt::format("Couldn't find serializer for type {}", type));
@@ -14,7 +14,7 @@ std::pmr::vector<uint8_t> Ichor::SerializationAdmin::serialize(const uint64_t ty
     return serializer->second->serialize(obj);
 }
 
-std::tuple<void*, std::pmr::memory_resource*> Ichor::SerializationAdmin::deserialize(const uint64_t type, std::pmr::vector<uint8_t> &&bytes) {
+std::tuple<void*, std::pmr::memory_resource*> Ichor::SerializationAdmin::deserialize(const uint64_t type, std::vector<uint8_t, Ichor::PolymorphicAllocator<uint8_t>> &&bytes) {
     auto serializer = _serializers.find(type);
     if(serializer == end(_serializers)) {
         throw std::runtime_error(fmt::format("Couldn't find serializer for type {}", type));

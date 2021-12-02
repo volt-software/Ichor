@@ -6,15 +6,17 @@
 using namespace Ichor;
 
 struct IInterceptorService {
-    virtual ~IInterceptorService() = default;
-
     virtual std::unordered_map<uint64_t, uint64_t>& getPreinterceptedCounters() = 0;
     virtual std::unordered_map<uint64_t, uint64_t>& getPostinterceptedCounters() = 0;
     virtual std::unordered_map<uint64_t, uint64_t>& getUnprocessedInterceptedCounters() = 0;
+
+protected:
+    ~IInterceptorService() = default;
 };
 
 template <Derived<Event> InterceptorT, bool allowProcessing = true>
 struct InterceptorService final : public IInterceptorService, public Service<InterceptorService<InterceptorT, allowProcessing>> {
+    InterceptorService() = default;
 
     bool start() final {
         _interceptor = this->getManager()->template registerEventInterceptor<InterceptorT>(this);
@@ -72,7 +74,7 @@ struct InterceptorService final : public IInterceptorService, public Service<Int
         return unprocessedInterceptedCounters;
     }
 
-    std::unique_ptr<EventInterceptorRegistration, Deleter> _interceptor{};
+    Ichor::unique_ptr<EventInterceptorRegistration> _interceptor{};
     std::unordered_map<uint64_t, uint64_t> preinterceptedCounters;
     std::unordered_map<uint64_t, uint64_t> postinterceptedCounters;
     std::unordered_map<uint64_t, uint64_t> unprocessedInterceptedCounters;

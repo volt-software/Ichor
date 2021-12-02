@@ -9,6 +9,6 @@ namespace Ichor {
         virtual uint64_t getPriority() = 0;
 
     protected:
-        virtual ~IHostService() = default;
+        ~IHostService() = default;
     };
 }

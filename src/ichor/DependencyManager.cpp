@@ -60,7 +60,7 @@ void Ichor::DependencyManager::start() {
             auto interceptorsForEvent = _eventInterceptors.find(evtNode.mapped()->type);
 
             if(interceptorsForAllEvents != end(_eventInterceptors)) {
-                for(const EventInterceptInfo &info : interceptorsForAllEvents->second) {
+                for(EventInterceptInfo &info : interceptorsForAllEvents->second) {
                     if(!info.preIntercept(evtNode.mapped().get())) {
                         allowProcessing = false;
                     }
@@ -68,7 +68,7 @@ void Ichor::DependencyManager::start() {
             }
 
             if(interceptorsForEvent != end(_eventInterceptors)) {
-                for(const EventInterceptInfo &info : interceptorsForEvent->second) {
+                for(EventInterceptInfo &info : interceptorsForEvent->second) {
                     if(!info.preIntercept(evtNode.mapped().get())) {
                         allowProcessing = false;
                     }
@@ -157,7 +157,7 @@ void Ichor::DependencyManager::start() {
                             break;
                         }
 
-                        for (DependencyTrackerInfo const &info : trackers->second) {
+                        for (DependencyTrackerInfo &info : trackers->second) {
                             info.trackFunc(depReqEvt);
                         }
                     }
@@ -170,7 +170,7 @@ void Ichor::DependencyManager::start() {
                             break;
                         }
 
-                        for (DependencyTrackerInfo const &info : trackers->second) {
+                        for (DependencyTrackerInfo &info : trackers->second) {
                             info.trackFunc(depUndoReqEvt);
                         }
                     }
@@ -354,13 +354,13 @@ void Ichor::DependencyManager::start() {
             }
 
             if(interceptorsForAllEvents != end(_eventInterceptors)) {
-                for(const EventInterceptInfo &info : interceptorsForAllEvents->second) {
+                for(EventInterceptInfo &info : interceptorsForAllEvents->second) {
                     info.postIntercept(evtNode.mapped().get(), allowProcessing && handlerAmount > 0);
                 }
             }
 
             if(interceptorsForEvent != end(_eventInterceptors)) {
-                for(const EventInterceptInfo &info : interceptorsForEvent->second) {
+                for(EventInterceptInfo &info : interceptorsForEvent->second) {
                     info.postIntercept(evtNode.mapped().get(), allowProcessing && handlerAmount > 0);
                 }
             }
@@ -382,6 +382,7 @@ void Ichor::DependencyManager::start() {
     }
 
     _services.clear();
+    _eventQueue.clear();
 
     if(_communicationChannel != nullptr) {
         _communicationChannel->removeManager(this);
@@ -390,7 +391,7 @@ void Ichor::DependencyManager::start() {
     _started = false;
 }
 
-void Ichor::DependencyManager::handleEventCompletion(const Ichor::Event *const evt) const  {
+void Ichor::DependencyManager::handleEventCompletion(const Ichor::Event *const evt) {
     if(evt->originatingService == 0) {
         return;
     }

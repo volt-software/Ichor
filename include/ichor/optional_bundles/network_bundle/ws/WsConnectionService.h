@@ -16,6 +16,8 @@ namespace websocket = beast::websocket; // from <boost/beast/websocket.hpp>
 namespace net = boost::asio;            // from <boost/asio.hpp>
 using tcp = boost::asio::ip::tcp;       // from <boost/asio/ip/tcp.hpp>
 
+#include <iostream>
+
 namespace Ichor {
     class WsConnectionService final : public IConnectionService, public Service<WsConnectionService> {
     public:
@@ -36,7 +38,7 @@ namespace Ichor {
          * @param msg message to send
          * @return true if added to buffer, false if full
          */
-        bool send(std::pmr::vector<uint8_t>&& msg) final;
+        bool send(std::vector<uint8_t, Ichor::PolymorphicAllocator<uint8_t>>&& msg) final;
         void setPriority(uint64_t priority) final;
         uint64_t getPriority() final;
 
@@ -48,10 +50,10 @@ namespace Ichor {
         void read(net::yield_context &yield);
         void cancelSendTimer();
 
-        std::unique_ptr<net::io_context> _wsContext{};
-        std::unique_ptr<websocket::stream<beast::tcp_stream>> _ws{};
-        std::unique_ptr<net::steady_timer> _sendTimer; // used as condition variable
-        std::queue<std::pmr::vector<uint8_t>> _msgQueue{};
+        Ichor::unique_ptr<net::io_context> _wsContext{};
+        Ichor::unique_ptr<websocket::stream<beast::tcp_stream>> _ws{};
+        Ichor::unique_ptr<net::steady_timer> _sendTimer; // used as condition variable
+        std::queue<std::vector<uint8_t, Ichor::PolymorphicAllocator<uint8_t>>> _msgQueue{};
         int _attempts{};
         uint64_t _priority{};
         bool _connected{};

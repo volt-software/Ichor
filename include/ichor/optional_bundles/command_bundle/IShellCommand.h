@@ -7,6 +7,6 @@
 namespace Ichor {
     class IShellCommand {
     protected:
-        virtual ~IShellCommand() = default;
+        ~IShellCommand() = default;
     };
 }

@@ -106,7 +106,9 @@ Just starting a manager without any custom services is not very interesting. So 
 
 struct IMyService {}; // the interface
 
-struct MyService final : public IMyService, public Ichor::Service<MyService> {}; // a minimal implementation
+struct MyService final : public IMyService, public Ichor::Service<MyService> {
+    MyService() = default;
+}; // a minimal implementation
 ```
 
 ```c++
@@ -139,7 +141,7 @@ Now that we have a basic service registered and instantiated, let's add a servic
 struct IMyDependencyService {};
 
 struct MyDependencyService final : public IMyDependencyService, public Ichor::Service<MyDependencyService> {
-    MyDependencyService(Ichor::DependencyRegister &reg, Ichor::Properties props, Ichor::DependencyManager *mng) : Ichor::Service(std::move(props), mng) {
+    MyDependencyService(Ichor::DependencyRegister &reg, Ichor::Properties props, Ichor::DependencyManager *mng) : Ichor::Service<MyDependencyService>(std::move(props), mng) {
         reg.registerDependency<IMyService>(this, true);
     }
     ~MyDependencyService() final = default;
@@ -190,7 +192,9 @@ Before we get to the point where we are able to start and stop the program, let'
 struct IMyTimerService {};
 
 struct MyTimerService final : public IMyTimerService, public Ichor::Service<MyTimerService> {
-    bool start() {
+    MyTimerService() = default;
+
+    bool start() final {
         auto timer = getManager()->createServiceManager<Ichor::Timer, Ichor::ITimer>();
         timer->setChronoInterval(std::chrono::seconds(1));
         _timerEventRegistration = getManager()->registerEventHandler<Ichor::TimerEvent>(this, timer->getServiceId());
@@ -198,7 +202,7 @@ struct MyTimerService final : public IMyTimerService, public Ichor::Service<MyTi
         return true;
     }
     
-    bool stop() {
+    bool stop() final {
         _timerEventRegistration.reset();
         return true;
     }
@@ -207,7 +211,7 @@ struct MyTimerService final : public IMyTimerService, public Ichor::Service<MyTi
         co_return (bool)PreventOthersHandling;        
     }
 
-    std::unique_ptr<Ichor::EventHandlerRegistration, Ichor::Deleter> _timerEventRegistration{nullptr};
+    Ichor::unique_ptr<Ichor::EventHandlerRegistration> _timerEventRegistration{nullptr};
 };
 ```
 
@@ -255,7 +259,9 @@ The only thing left to do is tell Ichor to stop. This can easily be done by push
 struct IMyTimerService {};
 
 struct MyTimerService final : public IMyTimerService, public Ichor::Service<MyTimerService> {
-    bool start() {
+    MyTimerService() = default;
+
+    bool start() final {
         auto timer = getManager()->createServiceManager<Ichor::Timer, Ichor::ITimer>();
         timer->setChronoInterval(std::chrono::seconds(1));
         _timerEventRegistration = getManager()->registerEventHandler<Ichor::TimerEvent>(this, timer->getServiceId());
@@ -263,7 +269,7 @@ struct MyTimerService final : public IMyTimerService, public Ichor::Service<MyTi
         return true;
     }
     
-    bool stop() {
+    bool stop() final {
         _timerEventRegistration.reset();
         return true;
     }
@@ -273,7 +279,7 @@ struct MyTimerService final : public IMyTimerService, public Ichor::Service<MyTi
         co_return (bool)PreventOthersHandling;
     }
     
-    std::unique_ptr<Ichor::EventHandlerRegistration, Ichor::Deleter> _timerEventRegistration{nullptr};
+    Ichor::unique_ptr<Ichor::EventHandlerRegistration> _timerEventRegistration{nullptr};
 };
 ```
 
@@ -291,7 +297,9 @@ Registering a service is best done with an interface, as this allows other servi
 // ServiceWithoutInterface.h
 #include <ichor/Service.h>
 
-struct ServiceWithoutInterface final : public Ichor::Service<ServiceWithoutInterface> {};
+struct ServiceWithoutInterface final : public Ichor::Service<ServiceWithoutInterface> {
+    ServiceWithoutInterface() = default;
+};
 ```
 
 ### Interceptors
@@ -302,6 +310,7 @@ It is possible to intercept all events before they're handled by registered serv
 // MyInterceptorService.h
 #include <ichor/DependencyManager.h>
 #include <ichor/Events.h>
+#include <ichor/optional_bundles/timer_bundle/TimerService.h>
 
 struct MyInterceptorService final : public Ichor::Service<MyInterceptorService> {
     bool start() final {
@@ -322,7 +331,7 @@ struct MyInterceptorService final : public Ichor::Service<MyInterceptorService> 
         // Can use this to track how long the processing took
     }
 
-    std::unique_ptr<Ichor::EventInterceptorRegistration, Ichor::Deleter> _interceptor{};
+    Ichor::unique_ptr<Ichor::EventInterceptorRegistration> _interceptor{};
 };
 ```
 
@@ -370,13 +379,14 @@ Using the memory allocator from your own Services is relatively easy:
 #include <ichor/Events.h>
 
 struct MyMemoryStructure {
+    MyMemoryStructure(int id_) : id(id_) {}
     uint64_t id;
     // etc
 };
 
 struct MyMemoryAllocatorService final : public Ichor::Service<MyMemoryAllocatorService> {
     bool start() final {
-        _myDataStructure = std::unique_ptr<MyMemoryStructure, Ichor::Deleter>(new (getMemoryResource()->allocate(sizeof(MyMemoryStructure))) MyMemoryStructure(1), Ichor::Deleter{getMemoryResource(), sizeof(MyMemoryStructure)});
+        _myDataStructure = Ichor::make_unique<MyMemoryStructure>(getMemoryResource(), 1);
         return true;
     }
     
@@ -385,7 +395,7 @@ struct MyMemoryAllocatorService final : public Ichor::Service<MyMemoryAllocatorS
         return true;
     }
 
-    std::unique_ptr<MyMemoryStructure, Ichor::Deleter> _myDataStructure{};
+    Ichor::unique_ptr<MyMemoryStructure> _myDataStructure{};
 };
 ```
 
@@ -415,13 +425,13 @@ int main() {
         dmOne.createServiceManager<Ichor::CoutFrameworkLogger, Ichor::IFrameworkLogger>();
         // your services here
         dmOne.start();
-    };
+    });
 
     std::thread t2([&dmTwo] {
         dmTwo.createServiceManager<Ichor::CoutFrameworkLogger, Ichor::IFrameworkLogger>();
         // your services here
         dmTwo.start();
-    };
+    });
     
     t1.join();
     t2.join();
@@ -436,11 +446,6 @@ This then allows services to send events to other manager:
 // MyCommunicatingService.h
 #include <ichor/DependencyManager.h>
 #include <ichor/Events.h>
-
-struct MyMemoryStructure {
-    uint64_t id;
-    // etc
-};
 
 struct MyCommunicatingService final : public Ichor::Service<MyCommunicatingService> {
     bool start() final {

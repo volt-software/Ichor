@@ -76,6 +76,10 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-rtti ")
 if(USE_SANITIZERS)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address,undefined -no-pie -fno-omit-frame-pointer")
     set(CMAKE_EXE_LINKER_FLAGS "-no-pie")
+
+    if(USE_BOOST_BEAST)
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DBOOST_USE_ASAN -DBOOST_USE_UCONTEXT")
+    endif()
 endif()
 
 if(USE_THREAD_SANITIZER)
@@ -147,6 +151,7 @@ include_directories("${EXTERNAL_DIR}/cppcoro/include")
 include_directories("${EXTERNAL_DIR}/fmt/include")
 include_directories("${EXTERNAL_DIR}/robin-map/include")
 include_directories("${EXTERNAL_DIR}/parallel-hashmap")
+include_directories("${EXTERNAL_DIR}/function2/include")
 include_directories("${TOP_DIR}/include")
 
 if(USE_SPDLOG)

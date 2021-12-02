@@ -33,11 +33,12 @@ namespace Ichor {
         [[nodiscard]] virtual const std::unordered_map<uint64_t, std::vector<AveragedStatisticEntry>>& getAverageStatistics() const noexcept = 0;
 
     protected:
-        virtual ~IEventStatisticsService() = default;
+        ~IEventStatisticsService() = default;
     };
 
     class EventStatisticsService final : public IEventStatisticsService, public Service<EventStatisticsService> {
     public:
+        EventStatisticsService() = default;
         ~EventStatisticsService() final = default;
 
         bool preInterceptEvent(Event const * const evt);
@@ -57,6 +58,6 @@ namespace Ichor {
         std::chrono::time_point<std::chrono::steady_clock> _startProcessingTimestamp{};
         bool _showStatisticsOnStop{false};
         uint64_t _averagingIntervalMs{5000};
-        std::unique_ptr<EventInterceptorRegistration, Deleter> _interceptorRegistration{nullptr};
+        Ichor::unique_ptr<EventInterceptorRegistration> _interceptorRegistration{nullptr};
     };
 }

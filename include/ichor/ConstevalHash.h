@@ -119,19 +119,7 @@ namespace Ichor {
         constexpr std::string_view templateStr = "INTERFACE_TYPENAME = ";
 
         constexpr size_t bpos = result.find(templateStr) + templateStr.size(); //find begin pos after INTERFACE_TYPENAME = entry
-        if constexpr (result.find_first_not_of("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_:<>") == std::string_view::npos) {
-            constexpr size_t len = result.length() - bpos;
-
-            static_assert(!result.substr(bpos, len).empty(), "Cannot infer type name in function call");
-
-            return result.substr(bpos, len);
-        } else {
-            constexpr size_t len = result.substr(bpos).find_first_not_of("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_:<>");
-
-            static_assert(!result.substr(bpos, len).empty(), "Cannot infer type name in function call");
-
-            return result.substr(bpos, len);
-        }
+        return result.substr(bpos, result.size() - bpos - 1);
     }
 
     template<typename INTERFACE_TYPENAME>

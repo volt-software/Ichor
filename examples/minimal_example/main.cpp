@@ -14,6 +14,8 @@ void siginthandler(int param) {
 
 class SigIntService final : public Service<SigIntService> {
 public:
+    SigIntService() = default;
+
     bool start() final {
         // Setup a timer that fires every 10 milliseconds and tell that dependency manager that we're interested in the events that the timer fires.
         auto timer = getManager()->createServiceManager<Timer, ITimer>();

@@ -48,7 +48,7 @@ public:
     }
     ~TestMsgJsonSerializer() final = default;
 
-    std::pmr::vector<uint8_t> serialize(const void* obj) final {
+    std::vector<uint8_t, Ichor::PolymorphicAllocator<uint8_t>> serialize(const void* obj) final {
         auto msg = static_cast<const TestMsg*>(obj);
 
 #ifdef USE_RAPIDJSON
@@ -65,7 +65,7 @@ public:
 
         writer.EndObject();
         auto *ret = sb.GetString();
-        return std::pmr::vector<uint8_t>(ret, ret + sb.GetSize() + 1, getMemoryResource());
+        return std::vector<uint8_t, Ichor::PolymorphicAllocator<uint8_t>>(ret, ret + sb.GetSize() + 1, getMemoryResource());
 #elif USE_BOOST_JSON
         boost::json::value jv(getMemoryResource());
         boost::json::serializer sr;
@@ -77,10 +77,10 @@ public:
         sv = sr.read(buf);
 
         if(sr.done()) {
-            return std::pmr::vector<uint8_t>(sv.data(), sv.data() + sv.size(), getMemoryResource());
+            return std::vector<uint8_t, Ichor::PolymorphicAllocator<uint8_t>>(sv.data(), sv.data() + sv.size(), getMemoryResource());
         }
 
-        std::pmr::vector<uint8_t> ret{getMemoryResource()};
+        std::vector<uint8_t, Ichor::PolymorphicAllocator<uint8_t>> ret{getMemoryResource()};
         std::size_t len = sv.size();
         ret.reserve(len*2);
         ret.resize(ret.capacity());
@@ -92,14 +92,14 @@ public:
             if(sr.done()) {
                 break;
             }
-            ret.resize(ret.capacity() + 1);
+            ret.resize(ret.capacity()*1.5);
         }
         ret.resize(len);
 
         return ret;
 #endif
     }
-    void* deserialize(std::pmr::vector<uint8_t> &&stream) final {
+    void* deserialize(std::vector<uint8_t, Ichor::PolymorphicAllocator<uint8_t>> &&stream) final {
 #ifdef USE_RAPIDJSON
         rapidjson::Document d;
         d.ParseInsitu(reinterpret_cast<char*>(stream.data()));

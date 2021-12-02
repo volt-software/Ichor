@@ -42,20 +42,16 @@ namespace Ichor {
     template<typename... Type>
     inline constexpr InterfacesList_t<Type...> InterfacesList{};
 
-#if __cpp_lib_generic_unordered_lookup >= 201811
     struct string_hash {
-        using transparent_key_equal = std::equal_to<>;  // Pred to use
+        using is_transparent = void;  // Pred to use
+        using key_equal = std::equal_to<>;  // Pred to use
         using hash_type = std::hash<std::string_view>;  // just a helper local type
         size_t operator()(std::string_view txt) const   { return hash_type{}(txt); }
         size_t operator()(const std::string& txt) const { return hash_type{}(txt); }
         size_t operator()(const char* txt) const        { return hash_type{}(txt); }
     };
 
-    using Properties = std::pmr::unordered_map<std::pmr::string, Ichor::any, string_hash>;
-#else
-//    using Properties = std::pmr::unordered_map<std::pmr::string, Ichor::any>;
-    using Properties = std::unordered_map<std::pmr::string, Ichor::any, std::hash<std::pmr::string>, std::equal_to<>, Ichor::PolymorphicAllocator<std::pair<const std::pmr::string, Ichor::any>>>;
-#endif
+    using Properties = std::unordered_map<std::pmr::string, Ichor::any, string_hash, std::equal_to<>, Ichor::PolymorphicAllocator<std::pair<const std::pmr::string, Ichor::any>>>;
     using IchorProperty = std::pair<std::pmr::string, Ichor::any>;
 
     inline constexpr bool PreventOthersHandling = false;

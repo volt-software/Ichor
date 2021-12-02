@@ -71,5 +71,5 @@ public:
 private:
     ILogger *_logger{};
     ISerializationAdmin *_serializationAdmin{};
-    std::unique_ptr<EventCompletionHandlerRegistration, Deleter> _doWorkRegistration{nullptr};
+    Ichor::unique_ptr<EventCompletionHandlerRegistration> _doWorkRegistration{nullptr};
 };

@@ -39,7 +39,7 @@ bool Ichor::WsHostService::start() {
 
     _eventRegistration = getManager()->registerEventHandler<NewWsConnectionEvent>(this, getServiceId());
 
-    _wsContext = std::make_unique<net::io_context>(BOOST_ASIO_CONCURRENCY_HINT_UNSAFE);
+    _wsContext = Ichor::make_unique<net::io_context>(getMemoryResource(), BOOST_ASIO_CONCURRENCY_HINT_UNSAFE);
     auto address = net::ip::make_address(Ichor::any_cast<std::string&>(getProperties()->operator[]("Address")));
     auto port = Ichor::any_cast<uint16_t>(getProperties()->operator[]("Port"));
 
@@ -55,14 +55,12 @@ bool Ichor::WsHostService::start() {
         }
     });
 
-    auto s = _wsContext->poll();
-    ICHOR_LOG_INFO(_logger, "s: {}", s);
+    _wsContext->poll();
 
     _timerManager = getManager()->createServiceManager<Timer, ITimer>();
     _timerManager->setChronoInterval(std::chrono::milliseconds(20));
     _timerManager->setCallback([this](TimerEvent const * const evt) -> Generator<bool> {
-        auto s = _wsContext->poll();
-        ICHOR_LOG_INFO(_logger, "s: {}", s);
+        _wsContext->poll();
         co_return (bool)PreventOthersHandling;
     });
     _timerManager->startTimer();
@@ -131,7 +129,7 @@ void Ichor::WsHostService::listen(tcp::endpoint endpoint, net::yield_context yie
 {
     beast::error_code ec;
 
-    _wsAcceptor = std::make_unique<tcp::acceptor>(*_wsContext);
+    _wsAcceptor = Ichor::make_unique<tcp::acceptor>(getMemoryResource(), *_wsContext);
     _wsAcceptor->open(endpoint.protocol(), ec);
     if(ec) {
         return fail(ec, "open");

@@ -13,26 +13,32 @@ struct IMixTwo {
     virtual uint32_t two() = 0;
 };
 struct MixServiceOne final : public IMixOne, public IMixTwo, public Service<MixServiceOne> {
+    MixServiceOne() = default;
     uint32_t one() final { return 1; }
     uint32_t two() final { return 2; }
 };
 struct MixServiceTwo final : public IMixTwo, public IMixOne, public Service<MixServiceTwo> {
+    MixServiceTwo() = default;
     uint32_t one() final { return 3; }
     uint32_t two() final { return 4; }
 };
 struct MixServiceThree final : public IMixTwo, public Service<MixServiceThree>, public IMixOne {
+    MixServiceThree() = default;
     uint32_t one() final { return 5; }
     uint32_t two() final { return 6; }
 };
 struct MixServiceFour final : public Service<MixServiceFour>, public IMixTwo, public IMixOne {
+    MixServiceFour() = default;
     uint32_t one() final { return 7; }
     uint32_t two() final { return 8; }
 };
 struct MixServiceFive final : public Service<MixServiceFive>, public IMixOne, public IMixTwo {
+    MixServiceFive() = default;
     uint32_t one() final { return 9; }
     uint32_t two() final { return 10; }
 };
 struct MixServiceSix final : public IMixOne, public Service<MixServiceSix>, public IMixTwo {
+    MixServiceSix() = default;
     uint32_t one() final { return 11; }
     uint32_t two() final { return 12; }
 };

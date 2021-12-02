@@ -23,6 +23,6 @@ namespace Ichor {
     private:
         ILogger *_logger{nullptr};
         std::shared_ptr<grpc::Channel> _channel{nullptr};
-        std::unique_ptr<etcdserverpb::KV::Stub> _stub;
+        std::unique_ptr<etcdserverpb::KV::Stub> _stub; // cannot use ichor unique_ptr with generated code :(
     };
 }

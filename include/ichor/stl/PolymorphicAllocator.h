@@ -99,7 +99,7 @@ namespace Ichor {
         }
 
         PolymorphicAllocator select_on_container_copy_construction() const noexcept {
-            return PolymorphicAllocator();
+            return PolymorphicAllocator(_resource);
         }
 
         [[nodiscard]]

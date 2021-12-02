@@ -6,13 +6,15 @@
 using namespace Ichor;
 
 struct IEventHandlerService {
-    virtual ~IEventHandlerService() = default;
-
     virtual std::unordered_map<uint64_t, uint64_t>& getHandledEvents() = 0;
+
+protected:
+    ~IEventHandlerService() = default;
 };
 
 template <Derived<Event> EventT>
 struct EventHandlerService final : public IEventHandlerService, public Service<EventHandlerService<EventT>> {
+    EventHandlerService() = default;
 
     bool start() final {
         _handler = this->getManager()->template registerEventHandler<EventT>(this);
@@ -42,6 +44,6 @@ struct EventHandlerService final : public IEventHandlerService, public Service<E
         return handledEvents;
     }
 
-    std::unique_ptr<EventHandlerRegistration, Deleter> _handler{};
+    Ichor::unique_ptr<EventHandlerRegistration> _handler{};
     std::unordered_map<uint64_t, uint64_t> handledEvents;
 };

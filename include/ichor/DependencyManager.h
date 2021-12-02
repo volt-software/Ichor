@@ -174,7 +174,7 @@ namespace Ichor {
             uint64_t eventId = _eventIdCounter.fetch_add(1, std::memory_order_acq_rel);
             _eventQueueMutex.lock();
             _emptyQueue = false;
-            [[maybe_unused]] auto it = _eventQueue.emplace(priority, std::unique_ptr<Event, Deleter>(new (_memResource->allocate(sizeof(EventT))) EventT(std::forward<uint64_t>(eventId), std::forward<uint64_t>(originatingServiceId), std::forward<uint64_t>(priority), std::forward<Args>(args)...), Deleter{_memResource, sizeof(EventT)}));
+            [[maybe_unused]] auto it = _eventQueue.emplace(priority, Ichor::unique_ptr<Event>{new (_memResource->allocate(sizeof(EventT))) EventT(std::forward<uint64_t>(eventId), std::forward<uint64_t>(originatingServiceId), std::forward<uint64_t>(priority), std::forward<Args>(args)...), Deleter{InternalDeleter<EventT>{_memResource}}});
             TSAN_ANNOTATE_HAPPENS_BEFORE((void*)&(*it));
             _eventQueueMutex.unlock();
             _wakeUp.notify_all();
@@ -199,7 +199,7 @@ namespace Ichor {
             uint64_t eventId = _eventIdCounter.fetch_add(1, std::memory_order_acq_rel);
             _eventQueueMutex.lock();
             _emptyQueue = false;
-            [[maybe_unused]] auto it = _eventQueue.emplace(INTERNAL_EVENT_PRIORITY, std::unique_ptr<Event, Deleter>(new (_memResource->allocate(sizeof(EventT))) EventT(std::forward<uint64_t>(eventId), std::forward<uint64_t>(originatingServiceId), INTERNAL_EVENT_PRIORITY, std::forward<Args>(args)...), Deleter{_memResource, sizeof(EventT)}));
+            [[maybe_unused]] auto it = _eventQueue.emplace(INTERNAL_EVENT_PRIORITY, Ichor::unique_ptr<Event>{new (_memResource->allocate(sizeof(EventT))) EventT(std::forward<uint64_t>(eventId), std::forward<uint64_t>(originatingServiceId), INTERNAL_EVENT_PRIORITY, std::forward<Args>(args)...), Deleter{InternalDeleter<EventT>{_memResource}}});
             TSAN_ANNOTATE_HAPPENS_BEFORE((void*)&(*it));
             _eventQueueMutex.unlock();
             _wakeUp.notify_all();
@@ -216,7 +216,7 @@ namespace Ichor {
         /// \param serviceId id of service registering handler
         /// \param impl class that is registering handler
         /// \return RAII handler, removes registration upon destruction
-        std::unique_ptr<DependencyTrackerRegistration, Deleter> registerDependencyTracker(Impl *impl) {
+        Ichor::unique_ptr<DependencyTrackerRegistration> registerDependencyTracker(Impl *impl) {
             auto requestTrackersForType = _dependencyRequestTrackers.find(typeNameHash<Interface>());
             auto undoRequestTrackersForType = _dependencyUndoRequestTrackers.find(typeNameHash<Interface>());
 
@@ -260,7 +260,7 @@ namespace Ichor {
                 undoRequestTrackersForType->second.emplace_back(std::move(undoRequestInfo));
             }
 
-            return std::unique_ptr<DependencyTrackerRegistration, Deleter>(new (_memResource->allocate(sizeof(DependencyTrackerRegistration))) DependencyTrackerRegistration(this, typeNameHash<Interface>(), impl->getServicePriority()), Deleter{_memResource, sizeof(DependencyTrackerRegistration)});
+            return Ichor::make_unique<DependencyTrackerRegistration>(_memResource, this, typeNameHash<Interface>(), impl->getServicePriority());
         }
 
         template <typename EventT, typename Impl>
@@ -272,11 +272,11 @@ namespace Ichor {
         /// \param serviceId id of service registering handler
         /// \param impl class that is registering handler
         /// \return RAII handler, removes registration upon destruction
-        std::unique_ptr<EventCompletionHandlerRegistration, Deleter> registerEventCompletionCallbacks(Impl *impl) {
+        Ichor::unique_ptr<EventCompletionHandlerRegistration> registerEventCompletionCallbacks(Impl *impl) {
             CallbackKey key{impl->getServiceId(), EventT::TYPE};
             _completionCallbacks.emplace(key, Ichor::function<void(Event const * const)>{[impl](Event const * const evt){ impl->handleCompletion(static_cast<EventT const * const>(evt)); }, _memResource});
             _errorCallbacks.emplace(key, Ichor::function<void(Event const * const)>{[impl](Event const * const evt){ impl->handleError(static_cast<EventT const * const>(evt)); }, _memResource});
-            return std::unique_ptr<EventCompletionHandlerRegistration, Deleter>(new (_memResource->allocate(sizeof(EventCompletionHandlerRegistration))) EventCompletionHandlerRegistration(this, key, impl->getServicePriority()), Deleter{_memResource, sizeof(EventCompletionHandlerRegistration)});
+            return Ichor::make_unique<EventCompletionHandlerRegistration>(_memResource, this, key, impl->getServicePriority());
         }
 
         template <typename EventT, typename Impl>
@@ -289,7 +289,7 @@ namespace Ichor {
         /// \param impl class that is registering handler
         /// \param targetServiceId optional service id to filter registering for, if empty, receive all events of type EventT
         /// \return RAII handler, removes registration upon destruction
-        std::unique_ptr<EventHandlerRegistration, Deleter> registerEventHandler(Impl *impl, std::optional<uint64_t> targetServiceId = {}) {
+        Ichor::unique_ptr<EventHandlerRegistration> registerEventHandler(Impl *impl, std::optional<uint64_t> targetServiceId = {}) {
             auto existingHandlers = _eventCallbacks.find(EventT::TYPE);
             if(existingHandlers == end(_eventCallbacks)) {
                 std::pmr::vector<EventCallbackInfo> v{ _memResource };
@@ -308,7 +308,7 @@ namespace Ichor {
                 existingHandlers->second.emplace_back(impl->getServiceId(), targetServiceId, Ichor::function<Generator<bool>(Event const *const)>{
                         [impl](Event const *const evt) { return impl->handleEvent(static_cast<EventT const *const>(evt)); }, _memResource});
             }
-            return std::unique_ptr<EventHandlerRegistration, Deleter>(new (_memResource->allocate(sizeof(EventHandlerRegistration))) EventHandlerRegistration(this, CallbackKey{impl->getServiceId(), EventT::TYPE}, impl->getServicePriority()), Deleter{_memResource, sizeof(EventHandlerRegistration)});
+            return Ichor::make_unique<EventHandlerRegistration>(_memResource, this, CallbackKey{impl->getServiceId(), EventT::TYPE}, impl->getServicePriority());
         }
 
         template <typename EventT, typename Impl>
@@ -320,7 +320,7 @@ namespace Ichor {
         /// \param serviceId id of service registering handler
         /// \param impl class that is registering handler
         /// \return RAII handler, removes registration upon destruction
-        std::unique_ptr<EventInterceptorRegistration, Deleter> registerEventInterceptor(Impl *impl) {
+        Ichor::unique_ptr<EventInterceptorRegistration> registerEventInterceptor(Impl *impl) {
             uint64_t targetEventId = 0;
             if constexpr (!std::is_same_v<EventT, Event>) {
                 targetEventId = EventT::TYPE;
@@ -339,7 +339,7 @@ namespace Ichor {
             }
             // I think there's a bug in GCC 10.1, where if I don't make this a unique_ptr, the EventHandlerRegistration destructor immediately gets called for some reason.
             // Even if the result is stored in a variable at the caller site.
-            return std::unique_ptr<EventInterceptorRegistration, Deleter>(new (_memResource->allocate(sizeof(EventInterceptorRegistration))) EventInterceptorRegistration(this, CallbackKey{impl->getServiceId(), targetEventId}, impl->getServicePriority()), Deleter{_memResource, sizeof(EventInterceptorRegistration)});
+            return Ichor::make_unique<EventInterceptorRegistration>(_memResource, this, CallbackKey{impl->getServiceId(), targetEventId}, impl->getServicePriority());
         }
 
         /// Get manager id
@@ -439,7 +439,7 @@ namespace Ichor {
             }
         }
 
-        void handleEventCompletion(Event const * const evt) const;
+        void handleEventCompletion(Event const * const evt);
 
         [[nodiscard]] uint32_t broadcastEvent(Event const * const evt);
 
@@ -451,7 +451,7 @@ namespace Ichor {
             uint64_t eventId = _eventIdCounter.fetch_add(1, std::memory_order_acq_rel);
             _eventQueueMutex.lock();
             _emptyQueue = false;
-            [[maybe_unused]] auto it = _eventQueue.emplace(priority, std::unique_ptr<Event, Deleter>(new (_memResource->allocate(sizeof(EventT))) EventT(std::forward<uint64_t>(eventId), std::forward<uint64_t>(originatingServiceId), std::forward<uint64_t>(priority), std::forward<Args>(args)...), Deleter{_memResource, sizeof(EventT)}));
+            [[maybe_unused]] auto it = _eventQueue.emplace(priority, Ichor::unique_ptr<Event>{new (_memResource->allocate(sizeof(EventT))) EventT(std::forward<uint64_t>(eventId), std::forward<uint64_t>(originatingServiceId), std::forward<uint64_t>(priority), std::forward<Args>(args)...), Deleter{InternalDeleter<EventT>{_memResource}}});
             TSAN_ANNOTATE_HAPPENS_BEFORE((void*)&(*it));
             _eventQueueMutex.unlock();
             _wakeUp.notify_all();
@@ -470,7 +470,7 @@ namespace Ichor {
         std::pmr::unordered_map<uint64_t, std::pmr::vector<EventInterceptInfo>> _eventInterceptors{_memResource}; // key = event id
         IFrameworkLogger *_logger{nullptr};
         std::shared_ptr<ILifecycleManager> _preventEarlyDestructionOfFrameworkLogger{nullptr};
-        std::pmr::multimap<uint64_t, std::unique_ptr<Event, Deleter>> _eventQueue{_eventMemResource};
+        std::multimap<uint64_t, Ichor::unique_ptr<Event>, std::less<>, Ichor::PolymorphicAllocator<std::pair<const uint64_t, Ichor::unique_ptr<Event>>>> _eventQueue{_eventMemResource};
         RealtimeReadWriteMutex _eventQueueMutex{};
         ConditionVariableAny<RealtimeReadWriteMutex> _wakeUp{_eventQueueMutex};
         std::atomic<uint64_t> _eventIdCounter{0};

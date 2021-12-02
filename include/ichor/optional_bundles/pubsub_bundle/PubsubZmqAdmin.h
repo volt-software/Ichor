@@ -112,8 +112,8 @@ public:
 
 private:
     ILogger *_logger;
-    std::unique_ptr<DependencyTrackerRegistration> _publisherTrackerRegistration;
-    std::unique_ptr<DependencyTrackerRegistration> _subscriberTrackerRegistration;
+    Ichor::unique_ptr<DependencyTrackerRegistration> _publisherTrackerRegistration;
+    Ichor::unique_ptr<DependencyTrackerRegistration> _subscriberTrackerRegistration;
     std::unordered_map<std::string, std::shared_ptr<LifecycleManager>> _scopedPublishers;
     std::unordered_map<std::string, std::shared_ptr<LifecycleManager>> _scopedSubscribers;
 };

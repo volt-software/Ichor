@@ -81,7 +81,7 @@ namespace Ichor {
     private:
         ILogger *_logger{nullptr};
         std::pmr::unordered_map<uint64_t, IService*> _connections;
-        std::unique_ptr<DependencyTrackerRegistration, Deleter> _trackerRegistration{nullptr};
-        std::unique_ptr<EventHandlerRegistration, Deleter> _unrecoverableErrorRegistration{nullptr};
+        Ichor::unique_ptr<DependencyTrackerRegistration> _trackerRegistration{nullptr};
+        Ichor::unique_ptr<EventHandlerRegistration> _unrecoverableErrorRegistration{nullptr};
     };
 }

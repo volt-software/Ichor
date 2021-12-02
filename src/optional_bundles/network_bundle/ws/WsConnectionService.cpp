@@ -8,7 +8,7 @@
 #include <ichor/optional_bundles/network_bundle/IHostService.h>
 
 template<class NextLayer>
-void setup_stream(std::unique_ptr<websocket::stream<NextLayer>>& ws)
+void setup_stream(Ichor::unique_ptr<websocket::stream<NextLayer>>& ws)
 {
     // These values are tuned for Autobahn|Testsuite, and
     // should also be generally helpful for increased performance.
@@ -44,7 +44,7 @@ bool Ichor::WsConnectionService::start() {
         }
 
         if (getProperties()->contains("Socket")) {
-            _sendTimer = std::make_unique<net::steady_timer>(Ichor::any_cast<net::executor>(getProperties()->operator[]("Executor")));
+            _sendTimer = Ichor::make_unique<net::steady_timer>(getMemoryResource(), Ichor::any_cast<net::executor>(getProperties()->operator[]("Executor")));
             net::spawn(Ichor::any_cast<net::executor>(getProperties()->operator[]("Executor")), [this](net::yield_context yield) {
                 accept(std::move(yield));
             });
@@ -53,8 +53,8 @@ bool Ichor::WsConnectionService::start() {
                 sendStrand(std::move(yield));
             });
         } else {
-            _wsContext = std::make_unique<net::io_context>( BOOST_ASIO_CONCURRENCY_HINT_UNSAFE );
-            _sendTimer = std::make_unique<net::steady_timer>(*_wsContext);
+            _wsContext = Ichor::make_unique<net::io_context>(getMemoryResource(), BOOST_ASIO_CONCURRENCY_HINT_UNSAFE);
+            _sendTimer = Ichor::make_unique<net::steady_timer>(getMemoryResource(), *_wsContext);
 
             net::spawn(*_wsContext, [this](net::yield_context yield) {
                 connect(std::move(yield));
@@ -64,14 +64,12 @@ bool Ichor::WsConnectionService::start() {
                 sendStrand(std::move(yield));
             });
 
-            auto s = _wsContext->poll();
-            ICHOR_LOG_INFO(_logger, "s: {}", s);
+            _wsContext->poll();
 
             _timerManager = getManager()->createServiceManager<Timer, ITimer>();
             _timerManager->setChronoInterval(std::chrono::milliseconds(20));
             _timerManager->setCallback([this](TimerEvent const * const evt) -> Generator<bool> {
-                auto s = _wsContext->poll();
-                ICHOR_LOG_INFO(_logger, "s: {}", s);
+                _wsContext->poll();
                 co_return (bool)PreventOthersHandling;
             });
             _timerManager->startTimer();
@@ -129,7 +127,7 @@ void Ichor::WsConnectionService::removeDependencyInstance(IHostService *, IServi
 
 }
 
-bool Ichor::WsConnectionService::send(std::pmr::vector<uint8_t> &&msg) {
+bool Ichor::WsConnectionService::send(std::vector<uint8_t, Ichor::PolymorphicAllocator<uint8_t>> &&msg) {
     if(_quit) {
         return false;
     }
@@ -188,7 +186,7 @@ void Ichor::WsConnectionService::accept(net::yield_context yield) {
 
     if(!_ws) {
         auto &socket = Ichor::any_cast<CopyIsMoveWorkaround<tcp::socket>&>(getProperties()->operator[]("Socket"));
-        _ws = std::make_unique<websocket::stream<beast::tcp_stream>>(socket.moveObject());
+        _ws = Ichor::make_unique<websocket::stream<beast::tcp_stream>>(getMemoryResource(), socket.moveObject());
     }
 
     setup_stream(_ws);
@@ -237,7 +235,7 @@ void Ichor::WsConnectionService::connect(net::yield_context yield) {
 
     // These objects perform our I/O
     tcp::resolver resolver(*_wsContext);
-    _ws = std::make_unique<websocket::stream<beast::tcp_stream>>(*_wsContext);
+    _ws = Ichor::make_unique<websocket::stream<beast::tcp_stream>>(getMemoryResource(), *_wsContext);
 
     // Look up the domain name
     auto const results = resolver.resolve(address, std::to_string(port), ec);
@@ -317,7 +315,7 @@ void Ichor::WsConnectionService::read(net::yield_context &yield) {
 
         if(_ws->got_text()) {
             auto data = buffer.data();
-            getManager()->pushPrioritisedEvent<NetworkDataEvent>(getServiceId(), _priority,  std::pmr::vector<uint8_t>{static_cast<char*>(data.data()), static_cast<char*>(data.data()) + data.size(), getMemoryResource()});
+            getManager()->pushPrioritisedEvent<NetworkDataEvent>(getServiceId(), _priority,  std::vector<uint8_t, Ichor::PolymorphicAllocator<uint8_t>>{static_cast<char*>(data.data()), static_cast<char*>(data.data()) + data.size(), getMemoryResource()});
         }
     }
 }

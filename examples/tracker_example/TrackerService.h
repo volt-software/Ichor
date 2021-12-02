@@ -72,7 +72,7 @@ public:
 
         if(runtimeService == end(_scopedRuntimeServices)) {
             auto newProps = *evt->properties.value();
-            newProps.emplace("Filter", Ichor::make_any<Filter>(getMemoryResource(), Filter{Service::getMemoryResource(), ScopeFilterEntry{scope}}));
+            newProps.emplace("Filter", Ichor::make_any<Filter>(getMemoryResource(), Filter{getMemoryResource(), ScopeFilterEntry{scope}}));
 
             _scopedRuntimeServices.emplace(scope, getManager()->createServiceManager<RuntimeCreatedService, IRuntimeCreatedService>(std::move(newProps)));
         }
@@ -99,6 +99,6 @@ public:
 
 private:
     ILogger *_logger{nullptr};
-    std::unique_ptr<DependencyTrackerRegistration, Deleter> _trackerRegistration{nullptr};
+    Ichor::unique_ptr<DependencyTrackerRegistration> _trackerRegistration{nullptr};
     std::unordered_map<std::string, RuntimeCreatedService*> _scopedRuntimeServices{};
 };

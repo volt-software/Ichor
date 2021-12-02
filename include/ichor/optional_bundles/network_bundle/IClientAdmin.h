@@ -5,6 +5,6 @@
 namespace Ichor {
     class IClientAdmin {
     protected:
-        virtual ~IClientAdmin() = default;
+        ~IClientAdmin() = default;
     };
 }

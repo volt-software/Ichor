@@ -37,14 +37,14 @@ namespace Ichor {
         void fail(beast::error_code, char const* what);
         void listen(tcp::endpoint endpoint, net::yield_context yield);
 
-        std::unique_ptr<net::io_context> _wsContext{};
-        std::unique_ptr<tcp::acceptor> _wsAcceptor{};
+        Ichor::unique_ptr<net::io_context> _wsContext{};
+        Ichor::unique_ptr<tcp::acceptor> _wsAcceptor{};
         uint64_t _priority{INTERNAL_EVENT_PRIORITY};
         bool _quit{};
         ILogger *_logger{nullptr};
         Timer* _timerManager{nullptr};
         std::vector<WsConnectionService*> _connections{};
-        std::unique_ptr<EventHandlerRegistration, Deleter> _eventRegistration{};
+        Ichor::unique_ptr<EventHandlerRegistration> _eventRegistration{};
     };
 }
 

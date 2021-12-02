@@ -14,11 +14,13 @@ namespace Ichor {
     public:
         virtual std::pmr::vector<std::shared_ptr<spdlog::sinks::sink>> const& getSinks() noexcept = 0;
     protected:
-        virtual ~ISpdlogSharedService() = default;
+        ~ISpdlogSharedService() = default;
     };
 
     class SpdlogSharedService final : public ISpdlogSharedService, public Service<SpdlogSharedService> {
     public:
+        SpdlogSharedService() = default;
+        ~SpdlogSharedService() final = default;
         bool start() final;
         bool stop() final;
 

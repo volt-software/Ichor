@@ -42,7 +42,7 @@ More examples can be found in the [examples directory](examples).
 ```
 sudo add-apt-repository ppa:ubuntu-toolchain-r/ppa
 sudo apt update
-sudo apt install g++-10 build-essential cmake
+sudo apt install g++-11 build-essential cmake
 ```
 
 #### Optional Features

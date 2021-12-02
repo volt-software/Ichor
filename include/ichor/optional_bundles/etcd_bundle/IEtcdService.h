@@ -9,6 +9,6 @@ namespace Ichor {
         virtual std::optional<std::string> get(std::string&& key) = 0;
 
     protected:
-        virtual ~IEtcdService() = default;
+        ~IEtcdService() = default;
     };
 }

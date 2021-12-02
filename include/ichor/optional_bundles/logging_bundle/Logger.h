@@ -18,7 +18,7 @@ namespace Ichor {
         [[nodiscard]] virtual LogLevel getLogLevel() const = 0;
 
     protected:
-        virtual ~ILogger() = default;
+        ~ILogger() = default;
     };
 
 #ifndef ICHOR_LOG_TRACE

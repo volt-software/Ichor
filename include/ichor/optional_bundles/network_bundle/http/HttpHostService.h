@@ -25,7 +25,7 @@ namespace Ichor {
         void addDependencyInstance(ILogger *logger, IService *isvc);
         void removeDependencyInstance(ILogger *logger, IService *isvc);
 
-        std::unique_ptr<HttpRouteRegistration, Deleter> addRoute(HttpMethod method, std::string route, std::function<HttpResponse(HttpRequest&)> handler) final;
+        Ichor::unique_ptr<HttpRouteRegistration> addRoute(HttpMethod method, std::string_view route, std::function<HttpResponse(HttpRequest&)> handler) final;
         void removeRoute(HttpMethod method, std::string_view route) final;
 
         void setPriority(uint64_t priority) final;
@@ -36,19 +36,15 @@ namespace Ichor {
         void listen(tcp::endpoint endpoint, net::yield_context yield);
         void read(tcp::socket socket, net::yield_context yield);
 
-        std::unique_ptr<net::io_context> _httpContext{};
-        std::unique_ptr<tcp::acceptor> _httpAcceptor{};
-        std::unique_ptr<beast::tcp_stream> _httpStream{};
+        Ichor::unique_ptr<net::io_context> _httpContext{};
+        Ichor::unique_ptr<tcp::acceptor> _httpAcceptor{};
+        Ichor::unique_ptr<beast::tcp_stream> _httpStream{};
         uint64_t _priority{INTERNAL_EVENT_PRIORITY};
         bool _quit{};
         ILogger *_logger{nullptr};
         Timer* _timerManager{nullptr};
-#if __cpp_lib_generic_unordered_lookup >= 201811
-        std::unordered_map<HttpMethod, std::unordered_map<std::string, std::function<HttpResponse(HttpRequest&)>, string_hash>, string_hash> _handlers{};
-#else
-        std::unordered_map<HttpMethod, std::unordered_map<std::string, std::function<HttpResponse(HttpRequest&)>>> _handlers{};
-#endif
-//        std::unique_ptr<EventHandlerRegistration> _eventRegistration{};
+        std::unordered_map<HttpMethod, std::unordered_map<std::string, std::function<HttpResponse(HttpRequest&)>, string_hash, std::equal_to<>>> _handlers{};
+//        Ichor::unique_ptr<EventHandlerRegistration> _eventRegistration{};
     };
 }
 

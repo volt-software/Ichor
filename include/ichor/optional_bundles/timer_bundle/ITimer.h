@@ -25,6 +25,6 @@ namespace Ichor {
         }
 
     protected:
-        virtual ~ITimer() = default;
+        ~ITimer() = default;
     };
 }

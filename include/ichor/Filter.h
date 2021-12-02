@@ -70,7 +70,7 @@ namespace Ichor {
     class Filter final {
     public:
         template <typename... T>
-        Filter(std::pmr::memory_resource *rsrc, T&&... entries) : _templatedFilter(new (rsrc->allocate(sizeof(TemplatedFilter<T...>))) TemplatedFilter<T...>(std::forward<T>(entries)...), Deleter{rsrc, sizeof(TemplatedFilter<T...>)}, std::pmr::polymorphic_allocator<TemplatedFilter<T...>>(rsrc)) {}
+        Filter(std::pmr::memory_resource *rsrc, T&&... entries) : _templatedFilter(new (rsrc->allocate(sizeof(TemplatedFilter<T...>))) TemplatedFilter<T...>(std::forward<T>(entries)...), Deleter{InternalDeleter<TemplatedFilter<T...>>{rsrc}}, std::pmr::polymorphic_allocator<TemplatedFilter<T...>>(rsrc)) {}
 
         Filter(const Filter&) = default;
         Filter(Filter&&) noexcept = default;

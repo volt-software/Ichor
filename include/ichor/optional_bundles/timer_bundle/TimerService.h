@@ -36,7 +36,7 @@ namespace Ichor {
 
             bool expected = true;
             if(_quit.compare_exchange_strong(expected, false, std::memory_order_acq_rel)) {
-                _eventInsertionThread = std::make_unique<std::thread>([this]() { this->insertEventLoop(); });
+                _eventInsertionThread = Ichor::make_unique<std::thread>(getMemoryResource(), [this]() { this->insertEventLoop(); });
 #ifdef __linux__
                 pthread_setname_np(_eventInsertionThread->native_handle(), fmt::format("Tmr #{}", getServiceId()).c_str());
 #endif
@@ -92,8 +92,8 @@ namespace Ichor {
         }
 
         std::atomic<uint64_t> _intervalNanosec{};
-        std::unique_ptr<std::thread> _eventInsertionThread{};
-        std::unique_ptr<EventHandlerRegistration, Deleter> _timerEventRegistration{nullptr};
+        Ichor::unique_ptr<std::thread> _eventInsertionThread{};
+        Ichor::unique_ptr<EventHandlerRegistration> _timerEventRegistration{nullptr};
         std::function<Generator<bool>(TimerEvent const * const)> _fn{};
         std::atomic<bool> _quit{true};
         std::atomic<uint64_t> _priority{INTERNAL_EVENT_PRIORITY};
