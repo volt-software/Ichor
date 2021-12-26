@@ -20,7 +20,7 @@ namespace Ichor {
     public:
 
         /**
-         * Send message asynchronously to the connected http server. An HttpResponseEvent is queued when the request finishes.
+         * Send message asynchronously to the connected http server. An HttpResponseEvent is queued when the request finishes. In case of failure, pushes a FailedSendMessageEvent
          * @param method method type (GET, POST, etc)
          * @param route The route, or path, of this request. Has to be pointing to valid memory until an HttpResponseEvent is received.
          * @param msg Usually json, ignored for GET requests

@@ -17,19 +17,18 @@ namespace Ichor {
         }
         ~LoggerAdmin() final = default;
 
-        bool start() final {
+        StartBehaviour start() final {
             _loggerTrackerRegistration = Service<LoggerAdmin<LogT>>::getManager()->template registerDependencyTracker<ILogger>(this);
-            return true;
+            return StartBehaviour::SUCCEEDED;
         }
 
-        bool stop() final {
+        StartBehaviour stop() final {
             _loggerTrackerRegistration.reset();
-            return true;
+            return StartBehaviour::SUCCEEDED;
         }
 
         void addDependencyInstance(IFrameworkLogger *logger, IService *isvc) noexcept {
             _logger = logger;
-            ICHOR_LOG_TRACE(_logger, "Inserted logger");
         }
 
         void removeDependencyInstance(IFrameworkLogger *logger, IService *isvc) noexcept {

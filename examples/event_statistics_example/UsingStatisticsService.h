@@ -15,7 +15,7 @@ public:
     }
     ~UsingStatisticsService() final = default;
 
-    bool start() final {
+    StartBehaviour start() final {
         ICHOR_LOG_INFO(_logger, "UsingStatisticsService started");
         auto quitTimerManager = getManager()->createServiceManager<Timer, ITimer>();
         auto bogusTimerManager = getManager()->createServiceManager<Timer, ITimer>();
@@ -34,12 +34,12 @@ public:
 
         quitTimerManager->startTimer();
         bogusTimerManager->startTimer();
-        return true;
+        return StartBehaviour::SUCCEEDED;
     }
 
-    bool stop() final {
+    StartBehaviour stop() final {
         ICHOR_LOG_INFO(_logger, "UsingStatisticsService stopped");
-        return true;
+        return StartBehaviour::SUCCEEDED;
     }
 
     void addDependencyInstance(ILogger *logger, IService *) {

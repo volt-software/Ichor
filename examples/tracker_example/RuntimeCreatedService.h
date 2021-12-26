@@ -18,15 +18,15 @@ public:
     }
 
     ~RuntimeCreatedService() final = default;
-    bool start() final {
+    StartBehaviour start() final {
         auto const& scope = Ichor::any_cast<std::string&>(_properties["scope"]);
         ICHOR_LOG_INFO(_logger, "RuntimeCreatedService started with scope {}", scope);
-        return true;
+        return StartBehaviour::SUCCEEDED;
     }
 
-    bool stop() final {
+    StartBehaviour stop() final {
         ICHOR_LOG_INFO(_logger, "RuntimeCreatedService stopped");
-        return true;
+        return StartBehaviour::SUCCEEDED;
     }
 
     void addDependencyInstance(ILogger *logger, IService *isvc) {

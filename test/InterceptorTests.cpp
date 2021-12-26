@@ -4,10 +4,19 @@
 #include "InterceptorService.h"
 #include "EventHandlerService.h"
 #include "TestEvents.h"
+#include "spdlog/sinks/stdout_color_sinks.h"
 
 using namespace Ichor;
 
 TEST_CASE("Interceptor Tests") {
+
+#if __has_include(<spdlog/spdlog.h>)
+    //default logger is disabled in cmake
+    if(spdlog::default_logger_raw() == nullptr) {
+        auto new_logger = spdlog::stdout_color_st("new_default_logger");
+        spdlog::set_default_logger(new_logger);
+    }
+#endif
 
     SECTION("Intercept TestEvent unprocessed") {
         Ichor::DependencyManager dm{};

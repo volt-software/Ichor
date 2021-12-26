@@ -4,6 +4,7 @@
 #include <ichor/optional_bundles/logging_bundle/LoggerAdmin.h>
 #include <ichor/optional_bundles/network_bundle/http/HttpHostService.h>
 #include <ichor/optional_bundles/network_bundle/http/HttpConnectionService.h>
+#include <ichor/optional_bundles/network_bundle/http/HttpContextService.h>
 #include <ichor/optional_bundles/network_bundle/ClientAdmin.h>
 #include <ichor/optional_bundles/serialization_bundle/SerializationAdmin.h>
 #ifdef USE_SPDLOG
@@ -37,6 +38,7 @@ int main() {
     dm.createServiceManager<LoggerAdmin<LOGGER_TYPE>, ILoggerAdmin>();
     dm.createServiceManager<SerializationAdmin, ISerializationAdmin>();
     dm.createServiceManager<TestMsgJsonSerializer, ISerializer>();
+    dm.createServiceManager<HttpContextService, IHttpContextService>();
     dm.createServiceManager<HttpHostService, IHttpService>(Properties{{"Address", Ichor::make_any<std::string>("127.0.0.1")}, {"Port", Ichor::make_any<uint16_t>(8001)}});
     dm.createServiceManager<ClientAdmin<HttpConnectionService, IHttpConnectionService>, IClientAdmin>();
     dm.createServiceManager<UsingHttpService>(Properties{{"Address", Ichor::make_any<std::string>("127.0.0.1")}, {"Port", Ichor::make_any<uint16_t>(8001)}});

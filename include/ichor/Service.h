@@ -19,6 +19,12 @@ namespace Ichor {
         UNKNOWN
     };
 
+    enum class StartBehaviour {
+        FAILED_DO_NOT_RETRY,
+        FAILED_AND_RETRY,
+        SUCCEEDED
+    };
+
     class IService {
     public:
         virtual ~IService() = default;
@@ -79,49 +85,49 @@ namespace Ichor {
         }
 
     protected:
-        [[nodiscard]] virtual bool start() {
-            return true;
+        [[nodiscard]] virtual StartBehaviour start() {
+            return StartBehaviour::SUCCEEDED;
         }
 
-        [[nodiscard]] virtual bool stop() {
-            return true;
+        [[nodiscard]] virtual StartBehaviour stop() {
+            return StartBehaviour::SUCCEEDED;
         }
 
         Properties _properties;
     private:
         ///
         /// \return true if started
-        [[nodiscard]] bool internal_start() {
-            if(_serviceState != ServiceState::INSTALLED) {
-                return false;
+        [[nodiscard]] StartBehaviour internal_start() {
+            if(_serviceState != ServiceState::INSTALLED && _serviceState != ServiceState::STARTING) {
+                return StartBehaviour::FAILED_DO_NOT_RETRY;
             }
 
+            INTERNAL_DEBUG("service {} state {} -> {}", getServiceId(), getState(), ServiceState::STARTING);
             _serviceState = ServiceState::STARTING;
-            if(start()) {
+            auto ret = start();
+            if(ret == StartBehaviour::SUCCEEDED) {
+                INTERNAL_DEBUG("service {} state {} -> {}", getServiceId(), getState(), ServiceState::ACTIVE);
                 _serviceState = ServiceState::ACTIVE;
-                return true;
-            } else {
-                _serviceState = ServiceState::INSTALLED;
             }
 
-            return false;
+            return ret;
         }
         ///
         /// \return true if stopped or already stopped
-        [[nodiscard]] bool internal_stop() {
-            if(_serviceState != ServiceState::ACTIVE) {
-                return false;
+        [[nodiscard]] StartBehaviour internal_stop() {
+            if(_serviceState != ServiceState::ACTIVE && _serviceState != ServiceState::STOPPING) {
+                return StartBehaviour::FAILED_DO_NOT_RETRY;
             }
 
+            INTERNAL_DEBUG("service {} state {} -> {}", getServiceId(), getState(), ServiceState::STOPPING);
             _serviceState = ServiceState::STOPPING;
-            if(stop()) {
+            auto ret = stop();
+            if(ret == StartBehaviour::SUCCEEDED) {
+                INTERNAL_DEBUG("service {} state {} -> {}", getServiceId(), getState(), ServiceState::INSTALLED);
                 _serviceState = ServiceState::INSTALLED;
-                return true;
-            } else {
-                _serviceState = ServiceState::UNKNOWN;
             }
 
-            return false;
+            return ret;
         }
 
         [[nodiscard]] ServiceState getState() const noexcept {

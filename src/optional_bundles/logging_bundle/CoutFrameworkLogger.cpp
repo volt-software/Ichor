@@ -51,14 +51,14 @@ void Ichor::CoutFrameworkLogger::error(const char *filename_in, int line_in, con
     }
 }
 
-bool Ichor::CoutFrameworkLogger::start() {
+Ichor::StartBehaviour Ichor::CoutFrameworkLogger::start() {
     std::cout << "CoutFrameworkLogger started\n";
-    return true;
+    return Ichor::StartBehaviour::SUCCEEDED;
 }
 
-bool Ichor::CoutFrameworkLogger::stop() {
+Ichor::StartBehaviour Ichor::CoutFrameworkLogger::stop() {
     std::cout << "CoutFrameworkLogger stopped\n";
-    return true;
+    return Ichor::StartBehaviour::SUCCEEDED;
 }
 
 void Ichor::CoutFrameworkLogger::setLogLevel(Ichor::LogLevel level) {

@@ -6,85 +6,81 @@
 
 Ichor::HttpHostService::HttpHostService(DependencyRegister &reg, Properties props, DependencyManager *mng) : Service(std::move(props), mng) {
     reg.registerDependency<ILogger>(this, true);
+    reg.registerDependency<IHttpContextService>(this, true);
 }
 
-bool Ichor::HttpHostService::start() {
+Ichor::StartBehaviour Ichor::HttpHostService::start() {
     if(getProperties()->contains("Priority")) {
         _priority = Ichor::any_cast<uint64_t>(getProperties()->operator[]("Priority"));
     }
 
     if(!getProperties()->contains("Port") || !getProperties()->contains("Address")) {
         getManager()->pushPrioritisedEvent<UnrecoverableErrorEvent>(getServiceId(), _priority, 0, "Missing port or address when starting HttpHostService");
-        return false;
+        return Ichor::StartBehaviour::FAILED_DO_NOT_RETRY;
     }
 
-    _httpContext = Ichor::make_unique<net::io_context>(getMemoryResource(), BOOST_ASIO_CONCURRENCY_HINT_UNSAFE);
+    if(getProperties()->contains("NoDelay")) {
+        _tcpNoDelay = Ichor::any_cast<bool>(getProperties()->operator[]("NoDelay"));
+    }
+
     auto address = net::ip::make_address(Ichor::any_cast<std::string&>(getProperties()->operator[]("Address")));
     auto port = Ichor::any_cast<uint16_t>(getProperties()->operator[]("Port"));
 
-    net::spawn(*_httpContext, [this, address = std::move(address), port](net::yield_context yield){
+    net::spawn(*_httpContextService->getContext(), [this, address = std::move(address), port](net::yield_context yield){
         listen(tcp::endpoint{address, port}, std::move(yield));
     });
 
-    _httpContext->poll();
-
-    _timerManager = getManager()->createServiceManager<Timer, ITimer>();
-    _timerManager->setChronoInterval(std::chrono::milliseconds(20));
-    _timerManager->setCallback([this](TimerEvent const * const evt) -> Generator<bool> {
-        _httpContext->poll();
-        co_return (bool)PreventOthersHandling;
-    });
-    _timerManager->startTimer();
-
-    return true;
+    return Ichor::StartBehaviour::SUCCEEDED;
 }
 
-bool Ichor::HttpHostService::stop() {
+Ichor::StartBehaviour Ichor::HttpHostService::stop() {
     _quit = true;
-
-    _timerManager = nullptr;
 
     _httpAcceptor->close();
     _httpStream->cancel();
 
-    while(_httpContext->poll() > 0);
-
-    _httpContext->stop();
-
     _httpAcceptor = nullptr;
     _httpStream = nullptr;
-    _httpContext = nullptr;
 
-    return true;
+    return Ichor::StartBehaviour::SUCCEEDED;
 }
 
 void Ichor::HttpHostService::addDependencyInstance(ILogger *logger, IService *) {
     _logger = logger;
-    ICHOR_LOG_TRACE(_logger, "Inserted logger");
 }
 
 void Ichor::HttpHostService::removeDependencyInstance(ILogger *logger, IService *) {
     _logger = nullptr;
 }
 
+void Ichor::HttpHostService::addDependencyInstance(IHttpContextService *httpContextService, IService *) {
+    _httpContextService = httpContextService;
+    ICHOR_LOG_TRACE(_logger, "Inserted httpContextService");
+}
+
+void Ichor::HttpHostService::removeDependencyInstance(IHttpContextService *httpContextService, IService *) {
+    _httpContextService = nullptr;
+    _quit = true;
+}
+
 void Ichor::HttpHostService::setPriority(uint64_t priority) {
-    _priority = priority;
+    _priority.store(priority, std::memory_order_release);
 }
 
 uint64_t Ichor::HttpHostService::getPriority() {
-    return _priority;
+    return _priority.load(std::memory_order_acquire);
 }
 
 void Ichor::HttpHostService::fail(beast::error_code ec, const char *what) {
     ICHOR_LOG_ERROR(_logger, "Boost.BEAST fail: {}, {}", what, ec.message());
-    getManager()->pushPrioritisedEvent<StopServiceEvent>(getServiceId(), _priority, getServiceId());
+    getManager()->pushPrioritisedEvent<StopServiceEvent>(getServiceId(), _priority.load(std::memory_order_acquire), getServiceId());
 }
 
 void Ichor::HttpHostService::listen(tcp::endpoint endpoint, net::yield_context yield)
 {
     beast::error_code ec;
 
-    _httpAcceptor = Ichor::make_unique<tcp::acceptor>(getMemoryResource(), *_httpContext);
+    _httpAcceptor = Ichor::make_unique<tcp::acceptor>(getMemoryResource(), *_httpContextService->getContext());
     _httpAcceptor->open(endpoint.protocol(), ec);
     if(ec) {
         return fail(ec, "HttpHostService::listen open");
@@ -105,9 +101,9 @@ void Ichor::HttpHostService::listen(tcp::endpoint endpoint, net::yield_context y
         return fail(ec, "HttpHostService::listen listen");
     }
 
-    while(!_quit)
+    while(!_quit && !_httpContextService->fibersShouldStop())
     {
-        auto socket = tcp::socket(*_httpContext);
+        auto socket = tcp::socket(*_httpContextService->getContext());
 
         // tcp accept new connections
         _httpAcceptor->async_accept(socket, yield[ec]);
@@ -117,7 +113,9 @@ void Ichor::HttpHostService::listen(tcp::endpoint endpoint, net::yield_context y
             continue;
         }
 
-        net::spawn(*_httpContext, [this, socket = std::move(socket)](net::yield_context _yield) mutable {
+        socket.set_option(tcp::no_delay(_tcpNoDelay));
+
+        net::spawn(*_httpContextService->getContext(), [this, socket = std::move(socket)](net::yield_context _yield) mutable {
             read(std::forward<decltype(socket)>(socket), std::move(_yield));
         });
     }
@@ -159,9 +157,9 @@ void Ichor::HttpHostService::read(tcp::socket socket, net::yield_context yield) 
     _httpStream = Ichor::make_unique<beast::tcp_stream>(getMemoryResource(), std::move(socket));
 
     // This buffer is required to persist across reads
-    beast::flat_buffer buffer;
+    beast::basic_flat_buffer buffer{Ichor::PolymorphicAllocator<uint8_t>{getMemoryResource()}};
 
-    while(!_quit)
+    while(!_quit && !_httpContextService->fibersShouldStop())
     {
         // Set the timeout.
         _httpStream->expires_after(std::chrono::seconds(30));

@@ -6,11 +6,11 @@ namespace Ichor {
     class IConnectionService {
     public:
         /**
-         * Send function. Implementation defined synchronous/asynchronous behaviour.
+         * Send function. In case of failure, pushes a FailedSendMessageEvent
          * @param msg message to send
-         * @return true if succesfully (going to) send message, false otherwise
+         * @return id of message
          */
-        virtual bool send(std::vector<uint8_t, Ichor::PolymorphicAllocator<uint8_t>>&& msg) = 0;
+        virtual uint64_t sendAsync(std::vector<uint8_t, Ichor::PolymorphicAllocator<uint8_t>>&& msg) = 0;
 
         /**
          * Sets priority with which to push incoming network events.

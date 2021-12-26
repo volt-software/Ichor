@@ -5,7 +5,7 @@
 #include <ichor/optional_bundles/network_bundle/ws/WsHostService.h>
 #include <ichor/optional_bundles/network_bundle/ws/WsConnectionService.h>
 #include <ichor/optional_bundles/network_bundle/ws/WsEvents.h>
-#include <ichor/optional_bundles/network_bundle/NetworkDataEvent.h>
+#include <ichor/optional_bundles/network_bundle/NetworkEvents.h>
 
 template<class NextLayer>
 void setup_stream(websocket::stream<NextLayer>& ws)
@@ -25,25 +25,25 @@ void setup_stream(websocket::stream<NextLayer>& ws)
 
 Ichor::WsHostService::WsHostService(DependencyRegister &reg, Properties props, DependencyManager *mng) : Service(std::move(props), mng) {
     reg.registerDependency<ILogger>(this, true);
+    reg.registerDependency<IHttpContextService>(this, true);
 }
 
-bool Ichor::WsHostService::start() {
+Ichor::StartBehaviour Ichor::WsHostService::start() {
     if(getProperties()->contains("Priority")) {
         _priority = Ichor::any_cast<uint64_t>(getProperties()->operator[]("Priority"));
     }
 
     if(!getProperties()->contains("Port") || !getProperties()->contains("Address")) {
         getManager()->pushPrioritisedEvent<UnrecoverableErrorEvent>(getServiceId(), _priority, 0, "Missing port or address when starting WsHostService");
-        return false;
+        return Ichor::StartBehaviour::FAILED_DO_NOT_RETRY;
     }
 
     _eventRegistration = getManager()->registerEventHandler<NewWsConnectionEvent>(this, getServiceId());
 
-    _wsContext = Ichor::make_unique<net::io_context>(getMemoryResource(), BOOST_ASIO_CONCURRENCY_HINT_UNSAFE);
     auto address = net::ip::make_address(Ichor::any_cast<std::string&>(getProperties()->operator[]("Address")));
     auto port = Ichor::any_cast<uint16_t>(getProperties()->operator[]("Port"));
 
-    net::spawn(*_wsContext, [this, address = std::move(address), port](net::yield_context yield){
+    net::spawn(*_httpContextService->getContext(), [this, address = std::move(address), port](net::yield_context yield){
         try {
             listen(tcp::endpoint{address, port}, std::move(yield));
         } catch (std::runtime_error &e) {
@@ -55,57 +55,49 @@ bool Ichor::WsHostService::start() {
         }
     });
 
-    _wsContext->poll();
-
-    _timerManager = getManager()->createServiceManager<Timer, ITimer>();
-    _timerManager->setChronoInterval(std::chrono::milliseconds(20));
-    _timerManager->setCallback([this](TimerEvent const * const evt) -> Generator<bool> {
-        _wsContext->poll();
-        co_return (bool)PreventOthersHandling;
-    });
-    _timerManager->startTimer();
-
-    return true;
+    return Ichor::StartBehaviour::SUCCEEDED;
 }
 
-bool Ichor::WsHostService::stop() {
-    ICHOR_LOG_TRACE(_logger, "trying to stop WsHostService {}", getServiceId());
+Ichor::StartBehaviour Ichor::WsHostService::stop() {
+    INTERNAL_DEBUG("trying to stop WsHostService {}", getServiceId());
+//    ICHOR_LOG_TRACE(_logger, "trying to stop WsHostService {}", getServiceId());
     _quit = true;
 
+    bool canStop = true;
     for(auto conn : _connections) {
-        conn->stop();
+        canStop &= conn->stop() == StartBehaviour::SUCCEEDED;
     }
-    ICHOR_LOG_TRACE(_logger, "connections closed WsHostService {}", getServiceId());
 
-    _wsAcceptor->close();
+    if(canStop) {
+        INTERNAL_DEBUG("all connections closed WsHostService {}", getServiceId());
+//        ICHOR_LOG_TRACE(_logger, "all connections closed WsHostService {}", getServiceId());
+        _wsAcceptor->close();
+    }
 
-
-    ICHOR_LOG_TRACE(_logger, "joining WsHostService {}", getServiceId());
-
-    _timerManager = nullptr;
-
-    ICHOR_LOG_TRACE(_logger, "wsContext->stop() WsHostService {}", getServiceId());
-
-    _wsContext->stop();
-    _wsContext = nullptr;
-
-    return true;
+    return canStop ? Ichor::StartBehaviour::SUCCEEDED : Ichor::StartBehaviour::FAILED_AND_RETRY;
 }
 
 void Ichor::WsHostService::addDependencyInstance(ILogger *logger, IService *) {
     _logger = logger;
-    ICHOR_LOG_TRACE(_logger, "Inserted logger");
 }
 
 void Ichor::WsHostService::removeDependencyInstance(ILogger *logger, IService *) {
     _logger = nullptr;
 }
 
+void Ichor::WsHostService::addDependencyInstance(IHttpContextService *httpContextService, IService *) {
+    _httpContextService = httpContextService;
+}
+
+void Ichor::WsHostService::removeDependencyInstance(IHttpContextService *logger, IService *) {
+    _httpContextService = nullptr;
+    _quit = true;
+}
+
 Ichor::Generator<bool> Ichor::WsHostService::handleEvent(Ichor::NewWsConnectionEvent const * const evt) {
     auto connection = getManager()->createServiceManager<WsConnectionService, IConnectionService>(Ichor::make_properties(getMemoryResource(),
         IchorProperty{"WsHostServiceId", Ichor::make_any<uint64_t>(getMemoryResource(), getServiceId())},
-        IchorProperty{"Socket", Ichor::make_any<decltype(evt->_socket)>(getMemoryResource(), std::move(evt->_socket))},
-        IchorProperty{"Executor", Ichor::make_any<decltype(evt->_executor)>(getMemoryResource(), evt->_executor)}
+        IchorProperty{"Socket", Ichor::make_any<decltype(evt->_socket)>(getMemoryResource(), std::move(evt->_socket))}
         ));
     _connections.push_back(connection);
 
@@ -129,7 +121,7 @@ void Ichor::WsHostService::listen(tcp::endpoint endpoint, net::yield_context yie
 {
     beast::error_code ec;
 
-    _wsAcceptor = Ichor::make_unique<tcp::acceptor>(getMemoryResource(), *_wsContext);
+    _wsAcceptor = Ichor::make_unique<tcp::acceptor>(getMemoryResource(), *_httpContextService->getContext());
     _wsAcceptor->open(endpoint.protocol(), ec);
     if(ec) {
         return fail(ec, "open");
@@ -150,9 +142,9 @@ void Ichor::WsHostService::listen(tcp::endpoint endpoint, net::yield_context yie
         return fail(ec, "listen");
     }
 
-    while(!_quit)
+    while(!_quit && !_httpContextService->fibersShouldStop())
     {
-        tcp::socket socket(*_wsContext);
+        tcp::socket socket(*_httpContextService->getContext());
 
         // tcp accept new connections
         _wsAcceptor->async_accept(socket, yield[ec]);
@@ -162,7 +154,7 @@ void Ichor::WsHostService::listen(tcp::endpoint endpoint, net::yield_context yie
             continue;
         }
 
-        getManager()->pushPrioritisedEvent<NewWsConnectionEvent>(getServiceId(), _priority, CopyIsMoveWorkaround(std::move(socket)), _wsAcceptor->get_executor());
+        getManager()->pushPrioritisedEvent<NewWsConnectionEvent>(getServiceId(), _priority, CopyIsMoveWorkaround(std::move(socket)));
     }
 }
 

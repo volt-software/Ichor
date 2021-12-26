@@ -22,7 +22,7 @@ public:
         reg.registerDependency<ILogger>(this, true);
     }
     ~TestService() final = default;
-    bool start() final {
+    StartBehaviour start() final {
         auto start = std::chrono::steady_clock::now();
         for(uint32_t i = 0; i < 5'000'000; i++) {
             getManager()->pushEvent<UselessEvent>(getServiceId());
@@ -30,11 +30,11 @@ public:
         auto end = std::chrono::steady_clock::now();
         getManager()->pushEvent<QuitEvent>(getServiceId());
         ICHOR_LOG_WARN(_logger, "Inserted events in {:L} µs", std::chrono::duration_cast<std::chrono::microseconds>(end-start).count());
-        return true;
+        return Ichor::StartBehaviour::SUCCEEDED;
     }
 
-    bool stop() final {
-        return true;
+    StartBehaviour stop() final {
+        return Ichor::StartBehaviour::SUCCEEDED;
     }
 
     void addDependencyInstance(ILogger *logger, IService *) {

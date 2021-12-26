@@ -11,19 +11,18 @@ class PubsubAdminZmqService final : public IPubsubAdminService, public Service<P
 public:
     ~PubsubAdminZmqService() final = default;
 
-    bool start() final {
+    StartBehaviour start() final {
         _publisherTrackerRegistration = getManager()->registerDependencyTracker<IPubsubPublisherService>(this);
         _subscriberTrackerRegistration = getManager()->registerDependencyTracker<IPubsubSubscriberService>(this);
         return true;
     }
 
-    bool stop() final {
+    StartBehaviour stop() final {
         return true;
     }
 
     void addDependencyInstance(ILogger *logger) {
         _logger = logger;
-        ICHOR_LOG_TRACE(_logger, "Inserted logger");
     }
 
     void removeDependencyInstance(ILogger *logger) {

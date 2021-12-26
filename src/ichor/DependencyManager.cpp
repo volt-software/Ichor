@@ -1,15 +1,7 @@
-#define SPDLOG_ACTIVE_LEVEL SPDLOG_LEVEL_INFO
-
 #include <ichor/DependencyManager.h>
 #include <ichor/CommunicationChannel.h>
 #include <ichor/stl/Any.h>
 #include <ichor/GetThreadLocalMemoryResource.h>
-
-#if !__has_include(<spdlog/spdlog.h>)
-#define SPDLOG_DEBUG(x)
-#else
-#include <spdlog/spdlog.h>
-#endif
 
 std::atomic<bool> sigintQuit;
 std::atomic<uint64_t> Ichor::DependencyManager::_managerIdCounter = 0;
@@ -31,7 +23,7 @@ void Ichor::DependencyManager::start() {
         throw std::runtime_error("Trying to start without any registered services");
     }
 
-    ICHOR_LOG_DEBUG(_logger, "starting dm");
+    ICHOR_LOG_DEBUG(_logger, "starting dm {}", _id);
 
     ::signal(SIGINT, on_sigint);
 
@@ -78,7 +70,7 @@ void Ichor::DependencyManager::start() {
             if(allowProcessing) {
                 switch (evtNode.mapped()->type) {
                     case DependencyOnlineEvent::TYPE: {
-                        SPDLOG_DEBUG("DependencyOnlineEvent");
+                        INTERNAL_DEBUG("DependencyOnlineEvent");
                         auto depOnlineEvt = static_cast<DependencyOnlineEvent *>(evtNode.mapped().get());
                         auto managerIt = _services.find(depOnlineEvt->originatingService);
 
@@ -107,14 +99,17 @@ void Ichor::DependencyManager::start() {
                         }
 
                         for(auto const &interestedManager : interestedManagers) {
-                            if (interestedManager->start()) {
+                            auto started = interestedManager->start();
+                            if (started == StartBehaviour::SUCCEEDED) {
                                 pushEventInternal<DependencyOnlineEvent>(interestedManager->serviceId(), interestedManager->getPriority());
+                            } else if(started == StartBehaviour::FAILED_AND_RETRY) {
+                                pushEventInternal<StartServiceEvent>(depOnlineEvt->originatingService, depOnlineEvt->priority, interestedManager->serviceId());
                             }
                         }
                     }
                         break;
                     case DependencyOfflineEvent::TYPE: {
-                        SPDLOG_DEBUG("DependencyOfflineEvent");
+                        INTERNAL_DEBUG("DependencyOfflineEvent");
                         auto depOfflineEvt = static_cast<DependencyOfflineEvent *>(evtNode.mapped().get());
                         auto managerIt = _services.find(depOfflineEvt->originatingService);
 
@@ -143,8 +138,11 @@ void Ichor::DependencyManager::start() {
                         }
 
                         for(auto const &interestedManager : interestedManagers) {
-                            if (interestedManager->stop()) {
+                            auto stopped = interestedManager->stop();
+                            if (stopped == StartBehaviour::SUCCEEDED) {
                                 pushEventInternal<DependencyOfflineEvent>(interestedManager->serviceId(), interestedManager->getPriority());
+                            } else if(stopped == StartBehaviour::FAILED_AND_RETRY) {
+                                pushEventInternal<StopServiceEvent>(depOfflineEvt->originatingService, depOfflineEvt->priority, interestedManager->serviceId(), false);
                             }
                         }
                     }
@@ -176,11 +174,14 @@ void Ichor::DependencyManager::start() {
                     }
                         break;
                     case QuitEvent::TYPE: {
-                        SPDLOG_DEBUG("QuitEvent");
+                        INTERNAL_DEBUG("QuitEvent");
                         auto _quitEvt = static_cast<QuitEvent *>(evtNode.mapped().get());
                         if (!_quitEvt->dependenciesStopped) {
                             for (auto const &[key, possibleManager] : _services) {
-                                pushEventInternal<StopServiceEvent>(_quitEvt->originatingService, possibleManager->getPriority(), possibleManager->serviceId());
+                                if (possibleManager->getServiceState() != ServiceState::INSTALLED) {
+                                    pushEventInternal<StopServiceEvent>(_quitEvt->originatingService, possibleManager->getPriority(),
+                                                                        possibleManager->serviceId());
+                                }
                             }
 
                             pushEventInternal<QuitEvent>(_quitEvt->originatingService, INTERNAL_EVENT_PRIORITY + 1, true);
@@ -189,7 +190,7 @@ void Ichor::DependencyManager::start() {
                             for (auto const &[key, manager] : _services) {
                                 if (manager->getServiceState() != ServiceState::INSTALLED) {
                                     canFinally_quit = false;
-                                    break;
+                                    INTERNAL_DEBUG("couldn't quit: service {}-{} is in state {}", manager->serviceId(), manager->implementationName(), manager->getServiceState());
                                 }
                             }
 
@@ -202,7 +203,7 @@ void Ichor::DependencyManager::start() {
                     }
                         break;
                     case StopServiceEvent::TYPE: {
-                        SPDLOG_DEBUG("StopServiceEvent");
+                        INTERNAL_DEBUG("StopServiceEvent");
                         auto stopServiceEvt = static_cast<StopServiceEvent *>(evtNode.mapped().get());
 
                         auto toStopServiceIt = _services.find(stopServiceEvt->serviceId);
@@ -215,10 +216,14 @@ void Ichor::DependencyManager::start() {
 
                         auto &toStopService = toStopServiceIt->second;
                         if (stopServiceEvt->dependenciesStopped) {
-                            if (toStopService->getServiceState() == ServiceState::ACTIVE && !toStopService->stop()) {
+                            auto ret = toStopService->stop();
+                            if (toStopService->getServiceState() != ServiceState::INSTALLED && ret != StartBehaviour::SUCCEEDED) {
                                 ICHOR_LOG_ERROR(_logger, "Couldn't stop service {}: {} but all dependencies stopped", stopServiceEvt->serviceId,
                                           toStopService->implementationName());
                                 handleEventError(stopServiceEvt);
+                                if(ret == StartBehaviour::FAILED_AND_RETRY) {
+                                    pushEventInternal<StopServiceEvent>(stopServiceEvt->originatingService, stopServiceEvt->priority, stopServiceEvt->serviceId, true);
+                                }
                             } else {
                                 handleEventCompletion(stopServiceEvt);
                             }
@@ -229,7 +234,7 @@ void Ichor::DependencyManager::start() {
                     }
                         break;
                     case RemoveServiceEvent::TYPE: {
-                        SPDLOG_DEBUG("RemoveServiceEvent");
+                        INTERNAL_DEBUG("RemoveServiceEvent");
                         auto removeServiceEvt = static_cast<RemoveServiceEvent *>(evtNode.mapped().get());
 
                         auto toRemoveServiceIt = _services.find(removeServiceEvt->serviceId);
@@ -242,10 +247,15 @@ void Ichor::DependencyManager::start() {
 
                         auto &toRemoveService = toRemoveServiceIt->second;
                         if (removeServiceEvt->dependenciesStopped) {
-                            if (toRemoveService->getServiceState() == ServiceState::ACTIVE && !toRemoveService->stop()) {
+                            auto ret = toRemoveService->stop();
+                            if (toRemoveService->getServiceState() == ServiceState::ACTIVE && ret != StartBehaviour::SUCCEEDED) {
                                 ICHOR_LOG_ERROR(_logger, "Couldn't remove service {}: {} but all dependencies stopped", removeServiceEvt->serviceId,
                                           toRemoveService->implementationName());
                                 handleEventError(removeServiceEvt);
+                                if(ret == StartBehaviour::FAILED_AND_RETRY) {
+                                    pushEventInternal<RemoveServiceEvent>(removeServiceEvt->originatingService, removeServiceEvt->priority, removeServiceEvt->serviceId,
+                                                                          true);
+                                }
                             } else {
                                 handleEventCompletion(removeServiceEvt);
                                 _services.erase(toRemoveServiceIt);
@@ -258,7 +268,7 @@ void Ichor::DependencyManager::start() {
                     }
                         break;
                     case StartServiceEvent::TYPE: {
-                        SPDLOG_DEBUG("StartServiceEvent");
+                        INTERNAL_DEBUG("StartServiceEvent");
                         auto startServiceEvt = static_cast<StartServiceEvent *>(evtNode.mapped().get());
 
                         auto toStartServiceIt = _services.find(startServiceEvt->serviceId);
@@ -270,24 +280,31 @@ void Ichor::DependencyManager::start() {
                         }
 
                         auto &toStartService = toStartServiceIt->second;
-                        if(toStartService->getServiceState() == ServiceState::ACTIVE) {
+                        if (toStartService->getServiceState() == ServiceState::ACTIVE) {
                             handleEventCompletion(startServiceEvt);
-                        } else if (!toStartService->start()) {
-//                            ICHOR_LOG_TRACE(_logger, "Couldn't start service {}: {}", startServiceEvt->serviceId, toStartService->implementationName());
-                            handleEventError(startServiceEvt);
                         } else {
-                            pushEventInternal<DependencyOnlineEvent>(toStartService->serviceId(), startServiceEvt->priority);
-                            handleEventCompletion(startServiceEvt);
+                            auto ret = toStartService->start();
+                            if (ret == StartBehaviour::SUCCEEDED) {
+                                pushEventInternal<DependencyOnlineEvent>(toStartService->serviceId(), startServiceEvt->priority);
+                                handleEventCompletion(startServiceEvt);
+                                INTERNAL_DEBUG("Couldn't start service {}: {}", startServiceEvt->serviceId, toStartService->implementationName());
+                                handleEventError(startServiceEvt);
+                            } else {
+                                handleEventError(startServiceEvt);
+                                if(ret == StartBehaviour::FAILED_AND_RETRY) {
+                                    pushEventInternal<StartServiceEvent>(startServiceEvt->originatingService, startServiceEvt->priority, startServiceEvt->serviceId);
+                                }
+                            }
                         }
                     }
                         break;
                     case DoWorkEvent::TYPE: {
-                        SPDLOG_DEBUG("DoWorkEvent");
+                        INTERNAL_DEBUG("DoWorkEvent");
                         handleEventCompletion(evtNode.mapped().get());
                     }
                         break;
                     case RemoveCompletionCallbacksEvent::TYPE: {
-                        SPDLOG_DEBUG("RemoveCompletionCallbacksEvent");
+                        INTERNAL_DEBUG("RemoveCompletionCallbacksEvent");
                         auto removeCallbacksEvt = static_cast<RemoveCompletionCallbacksEvent *>(evtNode.mapped().get());
 
                         _completionCallbacks.erase(removeCallbacksEvt->key);
@@ -295,7 +312,7 @@ void Ichor::DependencyManager::start() {
                     }
                         break;
                     case RemoveEventHandlerEvent::TYPE: {
-                        SPDLOG_DEBUG("RemoveEventHandlerEvent");
+                        INTERNAL_DEBUG("RemoveEventHandlerEvent");
                         auto removeEventHandlerEvt = static_cast<RemoveEventHandlerEvent *>(evtNode.mapped().get());
 
                         // key.id = service id, key.type == event id
@@ -308,7 +325,7 @@ void Ichor::DependencyManager::start() {
                     }
                         break;
                     case RemoveEventInterceptorEvent::TYPE: {
-                        SPDLOG_DEBUG("RemoveEventInterceptorEvent");
+                        INTERNAL_DEBUG("RemoveEventInterceptorEvent");
                         auto removeEventHandlerEvt = static_cast<RemoveEventInterceptorEvent *>(evtNode.mapped().get());
 
                         // key.id = service id, key.type == event id
@@ -321,7 +338,7 @@ void Ichor::DependencyManager::start() {
                     }
                         break;
                     case RemoveTrackerEvent::TYPE: {
-                        SPDLOG_DEBUG("RemoveTrackerEvent");
+                        INTERNAL_DEBUG("RemoveTrackerEvent");
                         auto removeTrackerEvt = static_cast<RemoveTrackerEvent *>(evtNode.mapped().get());
 
                         _dependencyRequestTrackers.erase(removeTrackerEvt->interfaceNameHash);
@@ -329,7 +346,7 @@ void Ichor::DependencyManager::start() {
                     }
                         break;
                     case ContinuableEvent<Generator<bool>>::TYPE: {
-                        SPDLOG_DEBUG("ContinuableEvent");
+                        INTERNAL_DEBUG("ContinuableEvent");
                         auto continuableEvt = static_cast<ContinuableEvent<Generator<bool>> *>(evtNode.mapped().get());
 
                         auto it = continuableEvt->generator.begin();
@@ -340,13 +357,13 @@ void Ichor::DependencyManager::start() {
                     }
                         break;
                     case RunFunctionEvent::TYPE: {
-                        SPDLOG_DEBUG("RunFunctionEvent");
+                        INTERNAL_DEBUG("RunFunctionEvent");
                         auto runFunctionEvt = static_cast<RunFunctionEvent *>(evtNode.mapped().get());
                         runFunctionEvt->fun(this);
                     }
                         break;
                     default: {
-                        SPDLOG_DEBUG("broadcastEvent");
+                        INTERNAL_DEBUG("broadcastEvent");
                         handlerAmount = broadcastEvent(evtNode.mapped().get());
                     }
                         break;

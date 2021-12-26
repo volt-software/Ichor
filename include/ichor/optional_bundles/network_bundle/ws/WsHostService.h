@@ -6,7 +6,7 @@
 #include <ichor/optional_bundles/logging_bundle/Logger.h>
 #include <ichor/optional_bundles/network_bundle/ws/WsConnectionService.h>
 #include <ichor/optional_bundles/network_bundle/ws/WsEvents.h>
-#include <ichor/optional_bundles/timer_bundle/TimerService.h>
+#include <ichor/optional_bundles/network_bundle/http/HttpContextService.h>
 #include <boost/beast.hpp>
 #include <boost/asio/spawn.hpp>
 
@@ -22,11 +22,13 @@ namespace Ichor {
         WsHostService(DependencyRegister &reg, Properties props, DependencyManager *mng);
         ~WsHostService() final = default;
 
-        bool start() final;
-        bool stop() final;
+        StartBehaviour start() final;
+        StartBehaviour stop() final;
 
         void addDependencyInstance(ILogger *logger, IService *isvc);
         void removeDependencyInstance(ILogger *logger, IService *isvc);
+        void addDependencyInstance(IHttpContextService *logger, IService *);
+        void removeDependencyInstance(IHttpContextService *logger, IService *);
 
         Generator<bool> handleEvent(NewWsConnectionEvent const * const evt);
 
@@ -37,12 +39,11 @@ namespace Ichor {
         void fail(beast::error_code, char const* what);
         void listen(tcp::endpoint endpoint, net::yield_context yield);
 
-        Ichor::unique_ptr<net::io_context> _wsContext{};
         Ichor::unique_ptr<tcp::acceptor> _wsAcceptor{};
         uint64_t _priority{INTERNAL_EVENT_PRIORITY};
         bool _quit{};
         ILogger *_logger{nullptr};
-        Timer* _timerManager{nullptr};
+        IHttpContextService *_httpContextService{nullptr};
         std::vector<WsConnectionService*> _connections{};
         Ichor::unique_ptr<EventHandlerRegistration> _eventRegistration{};
     };

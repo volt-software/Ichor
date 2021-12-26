@@ -91,7 +91,9 @@ if(NOT DEFINED USE_SANITIZERS AND NOT DEFINED USE_THREAD_SANITIZER)
     # see https://github.com/google/sanitizers/issues/856
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIE")
 endif()
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fstack-protector-strong -fstack-clash-protection -fcf-protection")
+if(CMAKE_BUILD_TYPE STREQUAL "Release" OR CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fstack-protector-strong -fstack-clash-protection -fcf-protection")
+endif()
 
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fcoroutines")
@@ -99,19 +101,12 @@ elseif(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fcoroutines-ts")
 endif()
 
-# gcc uses gwarf-4 by default, which messes up using the coz profiler
-set(CMAKE_CXX_FLAGS_DEBUG "-g3 -ggdb -gdwarf-3")
+# gcc uses gdwarf-4 by default, which messes up using the coz profiler
+#-gdwarf-3
+set(CMAKE_CXX_FLAGS_DEBUG "-g3 -ggdb")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG")
-set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-g3 -ggdb -gdwarf-3 -Og")
+set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-g3 -ggdb -Og")
 set(CMAKE_CXX_FLAGS_MINSIZEREL "-Os -DNDEBUG")
-
-set(EXTERNAL_C_FLAGS "-fstack-protector-strong -fstack-clash-protection -fcf-protection")
-if(USE_SANITIZERS)
-    set(EXTERNAL_C_FLAGS "${EXTERNAL_C_FLAGS} -fsanitize=address,undefined -no-pie -fno-omit-frame-pointer")
-    set(EXTERNAL_LINKER_FLAGS "-no-pie")
-else()
-    set(EXTERNAL_C_FLAGS "${EXTERNAL_C_FLAGS} -fPIE ")
-endif()
 
 find_package (Threads)
 

@@ -75,14 +75,14 @@ void Ichor::SpdlogFrameworkLogger::error(const char *filename_in, int line_in, c
     }
 }
 
-bool Ichor::SpdlogFrameworkLogger::start() {
+Ichor::StartBehaviour Ichor::SpdlogFrameworkLogger::start() {
     SPDLOG_TRACE("SpdlogFrameworkLogger started");
-    return true;
+    return Ichor::StartBehaviour::SUCCEEDED;
 }
 
-bool Ichor::SpdlogFrameworkLogger::stop() {
+Ichor::StartBehaviour Ichor::SpdlogFrameworkLogger::stop() {
     SPDLOG_TRACE("SpdlogFrameworkLogger stopped");
-    return true;
+    return Ichor::StartBehaviour::SUCCEEDED;
 }
 
 void Ichor::SpdlogFrameworkLogger::setLogLevel(Ichor::LogLevel level) {

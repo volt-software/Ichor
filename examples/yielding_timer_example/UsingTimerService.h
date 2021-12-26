@@ -19,7 +19,7 @@ public:
     }
     ~UsingTimerService() final = default;
 
-    bool start() final {
+    StartBehaviour start() final {
         ICHOR_LOG_INFO(_logger, "UsingTimerService started");
         _timerManager = getManager()->createServiceManager<Timer, ITimer>();
         _timerManager->setChronoInterval(std::chrono::milliseconds(500));
@@ -27,13 +27,13 @@ public:
             return handleEvent(evt);
         });
         _timerManager->startTimer();
-        return true;
+        return StartBehaviour::SUCCEEDED;
     }
 
-    bool stop() final {
+    StartBehaviour stop() final {
         _timerManager = nullptr;
         ICHOR_LOG_INFO(_logger, "UsingTimerService stopped");
-        return true;
+        return StartBehaviour::SUCCEEDED;
     }
 
     void addDependencyInstance(ILogger *logger, IService *) {

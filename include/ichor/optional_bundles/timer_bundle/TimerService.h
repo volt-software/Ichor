@@ -18,15 +18,15 @@ namespace Ichor {
             stopTimer();
         }
 
-        bool start() final {
+        StartBehaviour start() final {
             _timerEventRegistration = getManager()->registerEventHandler<TimerEvent>(this, getServiceId());
-            return true;
+            return Ichor::StartBehaviour::SUCCEEDED;
         }
 
-        bool stop() final {
+        StartBehaviour stop() final {
             _timerEventRegistration.reset();
             stopTimer();
-            return true;
+            return Ichor::StartBehaviour::SUCCEEDED;
         }
 
         void startTimer() final {

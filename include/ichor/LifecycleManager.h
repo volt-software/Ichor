@@ -24,8 +24,8 @@ namespace Ichor {
         /// \param dependentService
         /// \return true if dependency is registered in service, false if not
         ICHOR_CONSTEXPR virtual bool dependencyOffline(ILifecycleManager* dependentService) = 0;
-        [[nodiscard]] ICHOR_CONSTEXPR virtual bool start() = 0;
-        [[nodiscard]] ICHOR_CONSTEXPR virtual bool stop() = 0;
+        [[nodiscard]] ICHOR_CONSTEXPR virtual StartBehaviour start() = 0;
+        [[nodiscard]] ICHOR_CONSTEXPR virtual StartBehaviour stop() = 0;
         [[nodiscard]] ICHOR_CONSTEXPR virtual std::string_view implementationName() const noexcept = 0;
         [[nodiscard]] ICHOR_CONSTEXPR virtual uint64_t type() const noexcept = 0;
         [[nodiscard]] ICHOR_CONSTEXPR virtual uint64_t serviceId() const noexcept = 0;
@@ -161,30 +161,32 @@ namespace Ichor {
         }
 
         [[nodiscard]]
-        ICHOR_CONSTEXPR bool start() final {
+        ICHOR_CONSTEXPR StartBehaviour start() final {
             bool canStart = _service.getState() != ServiceState::ACTIVE && _dependencies.requiredDependenciesSatisfied(_satisfiedDependencies);
+            StartBehaviour ret = StartBehaviour::FAILED_DO_NOT_RETRY;
             if (canStart) {
-                if(_service.internal_start()) {
+                ret = _service.internal_start();
+                if(ret == StartBehaviour::SUCCEEDED) {
                     ICHOR_LOG_DEBUG(_logger, "Started {}", _implementationName);
-                    return true;
                 } else {
-                    ICHOR_LOG_DEBUG(_logger, "Couldn't start {}", _implementationName);
+                    ICHOR_LOG_DEBUG(_logger, "Couldn't start {} {}", serviceId(), _implementationName);
                 }
             }
 
-            return false;
+            return ret;
         }
 
         [[nodiscard]]
-        ICHOR_CONSTEXPR bool stop() final {
-            if(_service.internal_stop()) {
+        ICHOR_CONSTEXPR StartBehaviour stop() final {
+            auto ret = _service.internal_stop();
+
+            if(ret == StartBehaviour::SUCCEEDED) {
                 ICHOR_LOG_DEBUG(_logger, "Stopped {}", _implementationName);
-                return true;
+            } else {
+                ICHOR_LOG_DEBUG(_logger, "Couldn't stop {} {}", serviceId(), _implementationName);
             }
 
-            ICHOR_LOG_DEBUG(_logger, "Couldn't stop {}", _implementationName);
-
-            return false;
+            return ret;
         }
 
         [[nodiscard]] ICHOR_CONSTEXPR std::string_view implementationName() const noexcept final {
@@ -279,27 +281,29 @@ namespace Ichor {
         }
 
         [[nodiscard]]
-        ICHOR_CONSTEXPR bool start() final {
-            if(_service.internal_start()) {
+        ICHOR_CONSTEXPR StartBehaviour start() final {
+            auto ret = _service.internal_start();
+
+            if(ret == StartBehaviour::SUCCEEDED) {
                 ICHOR_LOG_DEBUG(_logger, "Started {}", _implementationName);
-                return true;
+            } else {
+                ICHOR_LOG_DEBUG(_logger, "Couldn't start {} {}", serviceId(), _implementationName);
             }
 
-            ICHOR_LOG_DEBUG(_logger, "Couldn't start {}", _implementationName);
-
-            return false;
+            return ret;
         }
 
         [[nodiscard]]
-        ICHOR_CONSTEXPR bool stop() final {
-            if(_service.internal_stop()) {
+        ICHOR_CONSTEXPR StartBehaviour stop() final {
+            auto ret = _service.internal_stop();
+
+            if(ret == StartBehaviour::SUCCEEDED) {
                 ICHOR_LOG_DEBUG(_logger, "Stopped {}", _implementationName);
-                return true;
+            } else {
+                ICHOR_LOG_DEBUG(_logger, "Couldn't stop {} {}", serviceId(), _implementationName);
             }
 
-            ICHOR_LOG_DEBUG(_logger, "Couldn't stop {}", _implementationName);
-
-            return false;
+            return ret;
         }
 
         [[nodiscard]] ICHOR_CONSTEXPR std::string_view implementationName() const noexcept final {

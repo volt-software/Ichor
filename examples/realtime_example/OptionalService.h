@@ -18,14 +18,14 @@ public:
     }
 
     ~OptionalService() final = default;
-    bool start() final {
+    StartBehaviour start() final {
         ICHOR_LOG_INFO(_logger, "OptionalService {} started", getServiceId());
-        return true;
+        return StartBehaviour::SUCCEEDED;
     }
 
-    bool stop() final {
+    StartBehaviour stop() final {
         ICHOR_LOG_INFO(_logger, "OptionalService {} stopped", getServiceId());
-        return true;
+        return StartBehaviour::SUCCEEDED;
     }
 
     void addDependencyInstance(ILogger *logger, IService *isvc) {

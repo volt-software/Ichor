@@ -1,6 +1,6 @@
 #include <ichor/optional_bundles/metrics_bundle/EventStatisticsService.h>
 
-bool Ichor::EventStatisticsService::start() {
+Ichor::StartBehaviour Ichor::EventStatisticsService::start() {
     if(getProperties()->contains("ShowStatisticsOnStop")) {
         _showStatisticsOnStop = Ichor::any_cast<bool>(getProperties()->operator[]("ShowStatisticsOnStop"));
     }
@@ -21,10 +21,10 @@ bool Ichor::EventStatisticsService::start() {
     _interceptorRegistration = getManager()->registerEventInterceptor<Event>(this);
     timerManager->startTimer();
 
-    return true;
+    return Ichor::StartBehaviour::SUCCEEDED;
 }
 
-bool Ichor::EventStatisticsService::stop() {
+Ichor::StartBehaviour Ichor::EventStatisticsService::stop() {
     _interceptorRegistration.reset();
 
     if(_showStatisticsOnStop) {
@@ -49,7 +49,7 @@ bool Ichor::EventStatisticsService::stop() {
         }
     }
 
-    return true;
+    return Ichor::StartBehaviour::SUCCEEDED;
 }
 
 bool Ichor::EventStatisticsService::preInterceptEvent(const Event *const evt) {

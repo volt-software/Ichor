@@ -10,13 +10,13 @@ namespace Ichor {
         TcpConnectionService(DependencyRegister &reg, Properties props, DependencyManager *mng);
         ~TcpConnectionService() final = default;
 
-        bool start() final;
-        bool stop() final;
+        StartBehaviour start() final;
+        StartBehaviour stop() final;
 
         void addDependencyInstance(ILogger *logger, IService *isvc);
         void removeDependencyInstance(ILogger *logger, IService *isvc);
 
-        bool send(std::vector<uint8_t, Ichor::PolymorphicAllocator<uint8_t>>&& msg) final;
+        uint64_t sendAsync(std::vector<uint8_t, Ichor::PolymorphicAllocator<uint8_t>>&& msg) final;
         void setPriority(uint64_t priority) final;
         uint64_t getPriority() final;
 
@@ -24,6 +24,7 @@ namespace Ichor {
         int _socket;
         int _attempts;
         uint64_t _priority;
+        uint64_t _msgIdCounter;
         bool _quit;
         ILogger *_logger{nullptr};
         Timer* _timerManager{nullptr};

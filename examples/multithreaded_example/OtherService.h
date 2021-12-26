@@ -14,16 +14,16 @@ public:
         reg.registerDependency<ILogger>(this, true);
     }
     ~OtherService() final = default;
-    bool start() final {
+    StartBehaviour start() final {
         ICHOR_LOG_INFO(_logger, "OtherService started with dependency");
         _customEventHandler = getManager()->registerEventHandler<CustomEvent>(this);
-        return true;
+        return StartBehaviour::SUCCEEDED;
     }
 
-    bool stop() final {
+    StartBehaviour stop() final {
         ICHOR_LOG_INFO(_logger, "OtherService stopped with dependency");
         _customEventHandler.reset();
-        return true;
+        return StartBehaviour::SUCCEEDED;
     }
 
     void addDependencyInstance(ILogger *logger, IService *isvc) {

@@ -1,6 +1,6 @@
 #include <ichor/DependencyManager.h>
 #include <ichor/optional_bundles/network_bundle/tcp/TcpConnectionService.h>
-#include <ichor/optional_bundles/network_bundle/NetworkDataEvent.h>
+#include <ichor/optional_bundles/network_bundle/NetworkEvents.h>
 #include <arpa/inet.h>
 #include <sys/socket.h>
 #include <netinet/tcp.h>
@@ -11,7 +11,7 @@ Ichor::TcpConnectionService::TcpConnectionService(DependencyRegister &reg, Prope
     reg.registerDependency<ILogger>(this, true);
 }
 
-bool Ichor::TcpConnectionService::start() {
+Ichor::StartBehaviour Ichor::TcpConnectionService::start() {
     if(getProperties()->contains("Priority")) {
         _priority = Ichor::any_cast<uint64_t>(getProperties()->operator[]("Priority"));
     }
@@ -24,12 +24,12 @@ bool Ichor::TcpConnectionService::start() {
     } else {
         if(!getProperties()->contains("Address")) {
             getManager()->pushEvent<UnrecoverableErrorEvent>(getServiceId(), 0, "Missing \"Address\" in properties");
-            return false;
+            return Ichor::StartBehaviour::FAILED_DO_NOT_RETRY;
         }
 
         if(!getProperties()->contains("Port")) {
             getManager()->pushEvent<UnrecoverableErrorEvent>(getServiceId(), 1, "Missing \"Port\" in properties");
-            return false;
+            return Ichor::StartBehaviour::FAILED_DO_NOT_RETRY;
         }
 
         // The start function possibly gets called multiple times due to trying to recover from not being able to connect
@@ -37,7 +37,7 @@ bool Ichor::TcpConnectionService::start() {
             _socket = socket(AF_INET, SOCK_STREAM, 0);
             if (_socket == -1) {
                 getManager()->pushEvent<UnrecoverableErrorEvent>(getServiceId(), 2, "Couldn't create socket: errno = " + std::to_string(errno));
-                return false;
+                return Ichor::StartBehaviour::FAILED_DO_NOT_RETRY;
             }
         }
 
@@ -54,7 +54,7 @@ bool Ichor::TcpConnectionService::start() {
         if(ret == 0)
         {
             getManager()->pushEvent<UnrecoverableErrorEvent>(getServiceId(), 3, "inet_pton invalid address for given address family (has to be ipv4-valid address)");
-            return false;
+            return Ichor::StartBehaviour::FAILED_DO_NOT_RETRY;
         }
 
         if(connect(_socket, (struct sockaddr *)&address, sizeof(address)) < 0)
@@ -62,9 +62,9 @@ bool Ichor::TcpConnectionService::start() {
             ICHOR_LOG_ERROR(_logger, "connect error {}", errno);
             if(_attempts < 5) {
                 _attempts++;
-                getManager()->pushEvent<StartServiceEvent>(getServiceId(), getServiceId());
+                return Ichor::StartBehaviour::FAILED_AND_RETRY;
             }
-            return false;
+            return Ichor::StartBehaviour::FAILED_DO_NOT_RETRY;
         }
 
         auto ip = ::inet_ntoa(address.sin_addr);
@@ -92,10 +92,10 @@ bool Ichor::TcpConnectionService::start() {
     });
     _timerManager->startTimer();
 
-    return true;
+    return Ichor::StartBehaviour::SUCCEEDED;
 }
 
-bool Ichor::TcpConnectionService::stop() {
+Ichor::StartBehaviour Ichor::TcpConnectionService::stop() {
     _quit = true;
     _timerManager = nullptr;
 
@@ -104,31 +104,33 @@ bool Ichor::TcpConnectionService::stop() {
         ::close(_socket);
     }
 
-    return true;
+    return Ichor::StartBehaviour::SUCCEEDED;
 }
 
 void Ichor::TcpConnectionService::addDependencyInstance(ILogger *logger, IService *) {
     _logger = logger;
-    ICHOR_LOG_TRACE(_logger, "Inserted logger");
 }
 
 void Ichor::TcpConnectionService::removeDependencyInstance(ILogger *logger, IService *) {
     _logger = nullptr;
 }
 
-bool Ichor::TcpConnectionService::send(std::vector<uint8_t, Ichor::PolymorphicAllocator<uint8_t>> &&msg) {
+uint64_t Ichor::TcpConnectionService::sendAsync(std::vector<uint8_t, Ichor::PolymorphicAllocator<uint8_t>> &&msg) {
+    auto id = ++_msgIdCounter;
     size_t sent_bytes = 0;
+
     while(sent_bytes < msg.size()) {
         auto ret = ::send(_socket, msg.data() + sent_bytes, msg.size() - sent_bytes, 0);
 
         if(ret == -1) {
-            throw std::runtime_error(fmt::format("Error sending: {}", errno));
+            getManager()->pushEvent<FailedSendMessageEvent>(getServiceId(), std::move(msg), id);
+            break;
         }
 
         sent_bytes += ret;
     }
 
-    return true;
+    return id;
 }
 
 void Ichor::TcpConnectionService::setPriority(uint64_t priority) {

@@ -3,7 +3,7 @@
 #include <ichor/DependencyManager.h>
 #include <ichor/optional_bundles/logging_bundle/Logger.h>
 #include <ichor/optional_bundles/timer_bundle/TimerService.h>
-#include <ichor/optional_bundles/network_bundle/NetworkDataEvent.h>
+#include <ichor/optional_bundles/network_bundle/NetworkEvents.h>
 #include <ichor/optional_bundles/network_bundle/IConnectionService.h>
 #include <ichor/optional_bundles/network_bundle/IHostService.h>
 #include <ichor/Service.h>
@@ -22,17 +22,19 @@ public:
     }
     ~UsingWsService() final = default;
 
-    bool start() final {
+    StartBehaviour start() final {
         ICHOR_LOG_INFO(_logger, "UsingWsService started");
-        _timerEventRegistration = getManager()->registerEventHandler<NetworkDataEvent>(this);
-        _connectionService->send(_serializationAdmin->serialize(TestMsg{11, "hello"}));
-        return true;
+        _dataEventRegistration = getManager()->registerEventHandler<NetworkDataEvent>(this);
+        _failureEventRegistration = getManager()->registerEventHandler<FailedSendMessageEvent>(this);
+        _connectionService->sendAsync(_serializationAdmin->serialize(TestMsg{11, "hello"}));
+        return StartBehaviour::SUCCEEDED;
     }
 
-    bool stop() final {
-        _timerEventRegistration = nullptr;
+    StartBehaviour stop() final {
+        _dataEventRegistration = nullptr;
+        _failureEventRegistration = nullptr;
         ICHOR_LOG_INFO(_logger, "UsingWsService stopped");
-        return true;
+        return StartBehaviour::SUCCEEDED;
     }
 
     void addDependencyInstance(ILogger *logger, IService *) {
@@ -76,9 +78,17 @@ public:
         co_return (bool)PreventOthersHandling;
     }
 
+    Generator<bool> handleEvent(FailedSendMessageEvent const * const evt) {
+        ICHOR_LOG_INFO(_logger, "Failed to send message id {}, retrying", evt->msgId);
+        _connectionService->sendAsync(std::move(evt->data));
+
+        co_return (bool)PreventOthersHandling;
+    }
+
 private:
     ILogger *_logger{nullptr};
     ISerializationAdmin *_serializationAdmin{nullptr};
     IConnectionService *_connectionService{nullptr};
-    Ichor::unique_ptr<EventHandlerRegistration> _timerEventRegistration{nullptr};
+    Ichor::unique_ptr<EventHandlerRegistration> _dataEventRegistration{nullptr};
+    Ichor::unique_ptr<EventHandlerRegistration> _failureEventRegistration{nullptr};
 };

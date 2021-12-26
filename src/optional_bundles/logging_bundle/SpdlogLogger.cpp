@@ -53,7 +53,7 @@ Ichor::LogLevel Ichor::SpdlogLogger::getLogLevel() const {
     return _level;
 }
 
-bool Ichor::SpdlogLogger::start() {
+Ichor::StartBehaviour Ichor::SpdlogLogger::start() {
     auto const &sinks = _sharedService->getSinks();
     _logger = std::allocate_shared<spdlog::logger, std::pmr::polymorphic_allocator<>>(getManager()->getMemoryResource(), "multi_sink", sinks.begin(), sinks.end());
 
@@ -87,13 +87,13 @@ bool Ichor::SpdlogLogger::start() {
 
     auto targetServiceId = Ichor::any_cast<uint64_t>(_properties["TargetServiceId"]);
     _logger->trace("SpdlogLogger {} started for component {}", getServiceId(), targetServiceId);
-    return true;
+    return Ichor::StartBehaviour::SUCCEEDED;
 }
 
-bool Ichor::SpdlogLogger::stop() {
+Ichor::StartBehaviour Ichor::SpdlogLogger::stop() {
     auto targetServiceId = Ichor::any_cast<uint64_t>(_properties["TargetServiceId"]);
     _logger->trace("SpdlogLogger {} stopped for component {}", getServiceId(), targetServiceId);
-    return true;
+    return Ichor::StartBehaviour::SUCCEEDED;
 }
 
 void Ichor::SpdlogLogger::addDependencyInstance(ISpdlogSharedService *shared, IService *) noexcept {

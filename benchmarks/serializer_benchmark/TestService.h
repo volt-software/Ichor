@@ -17,22 +17,21 @@ public:
         reg.registerDependency<ISerializationAdmin>(this, true);
     }
     ~TestService() final = default;
-    bool start() final {
+    StartBehaviour start() final {
         ICHOR_LOG_INFO(_logger, "TestService started with dependency");
         _doWorkRegistration = getManager()->registerEventCompletionCallbacks<DoWorkEvent>(this);
         getManager()->pushEvent<DoWorkEvent>(getServiceId());
-        return true;
+        return Ichor::StartBehaviour::SUCCEEDED;
     }
 
-    bool stop() final {
+    StartBehaviour stop() final {
         ICHOR_LOG_INFO(_logger, "TestService stopped with dependency");
         _doWorkRegistration.reset();
-        return true;
+        return Ichor::StartBehaviour::SUCCEEDED;
     }
 
     void addDependencyInstance(ILogger *logger, IService *) {
         _logger = logger;
-        ICHOR_LOG_TRACE(_logger, "Inserted logger");
     }
 
     void removeDependencyInstance(ILogger *logger, IService *) {

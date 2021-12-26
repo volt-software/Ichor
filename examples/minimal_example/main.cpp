@@ -16,7 +16,7 @@ class SigIntService final : public Service<SigIntService> {
 public:
     SigIntService() = default;
 
-    bool start() final {
+    StartBehaviour start() final {
         // Setup a timer that fires every 10 milliseconds and tell that dependency manager that we're interested in the events that the timer fires.
         auto timer = getManager()->createServiceManager<Timer, ITimer>();
         timer->setChronoInterval(std::chrono::milliseconds(10));
@@ -33,11 +33,11 @@ public:
 
         // Register sigint handler
         signal(SIGINT, siginthandler);
-        return true;
+        return StartBehaviour::SUCCEEDED;
     }
 
-    bool stop() final {
-        return true;
+    StartBehaviour stop() final {
+        return StartBehaviour::SUCCEEDED;
     }
 };
 

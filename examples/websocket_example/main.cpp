@@ -37,6 +37,7 @@ int main() {
     dm.createServiceManager<LoggerAdmin<LOGGER_TYPE>, ILoggerAdmin>();
     dm.createServiceManager<SerializationAdmin, ISerializationAdmin>();
     dm.createServiceManager<TestMsgJsonSerializer, ISerializer>();
+    dm.createServiceManager<HttpContextService, IHttpContextService>();
     dm.createServiceManager<WsHostService, IHostService>(Properties{{"Address", Ichor::make_any<std::string>("127.0.0.1")}, {"Port", Ichor::make_any<uint16_t>(8001)}});
     dm.createServiceManager<ClientAdmin<WsConnectionService>, IClientAdmin>();
     dm.createServiceManager<UsingWsService>(Properties{{"Address", Ichor::make_any<std::string>("127.0.0.1")}, {"Port", Ichor::make_any<uint16_t>(8001)}});

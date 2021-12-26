@@ -6,6 +6,22 @@
 #include <string_view>
 #include <unordered_map>
 
+#define SPDLOG_ACTIVE_LEVEL SPDLOG_LEVEL_TRACE
+#if !__has_include(<spdlog/spdlog.h>)
+#define SPDLOG_DEBUG(x)
+#else
+#include <spdlog/spdlog.h>
+#endif
+
+// note that this only works when compiling with spdlog
+static constexpr bool DO_INTERNAL_DEBUG = false;
+
+#define INTERNAL_DEBUG(...) do {      \
+    if constexpr(DO_INTERNAL_DEBUG) { \
+        SPDLOG_DEBUG(__VA_ARGS__);    \
+    }                                 \
+} while (0)
+
 #if __cpp_lib_constexpr_string >= 201907L
 #if __cpp_lib_constexpr_vector >= 201907L
 #define ICHOR_CONSTEXPR constexpr

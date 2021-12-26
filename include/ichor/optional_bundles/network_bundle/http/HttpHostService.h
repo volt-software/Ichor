@@ -3,8 +3,8 @@
 #ifdef USE_BOOST_BEAST
 
 #include <ichor/optional_bundles/network_bundle/http/IHttpService.h>
+#include <ichor/optional_bundles/network_bundle/http/HttpContextService.h>
 #include <ichor/optional_bundles/logging_bundle/Logger.h>
-#include <ichor/optional_bundles/timer_bundle/TimerService.h>
 #include <boost/beast.hpp>
 #include <boost/asio/spawn.hpp>
 
@@ -19,11 +19,13 @@ namespace Ichor {
         HttpHostService(DependencyRegister &reg, Properties props, DependencyManager *mng);
         ~HttpHostService() final = default;
 
-        bool start() final;
-        bool stop() final;
+        StartBehaviour start() final;
+        StartBehaviour stop() final;
 
         void addDependencyInstance(ILogger *logger, IService *isvc);
         void removeDependencyInstance(ILogger *logger, IService *isvc);
+        void addDependencyInstance(IHttpContextService *logger, IService *);
+        void removeDependencyInstance(IHttpContextService *logger, IService *);
 
         Ichor::unique_ptr<HttpRouteRegistration> addRoute(HttpMethod method, std::string_view route, std::function<HttpResponse(HttpRequest&)> handler) final;
         void removeRoute(HttpMethod method, std::string_view route) final;
@@ -36,15 +38,14 @@ namespace Ichor {
         void listen(tcp::endpoint endpoint, net::yield_context yield);
         void read(tcp::socket socket, net::yield_context yield);
 
-        Ichor::unique_ptr<net::io_context> _httpContext{};
         Ichor::unique_ptr<tcp::acceptor> _httpAcceptor{};
         Ichor::unique_ptr<beast::tcp_stream> _httpStream{};
-        uint64_t _priority{INTERNAL_EVENT_PRIORITY};
-        bool _quit{};
+        std::atomic<uint64_t> _priority{INTERNAL_EVENT_PRIORITY};
+        std::atomic<bool> _quit{};
+        std::atomic<bool> _tcpNoDelay{};
         ILogger *_logger{nullptr};
-        Timer* _timerManager{nullptr};
+        IHttpContextService *_httpContextService{nullptr};
         std::unordered_map<HttpMethod, std::unordered_map<std::string, std::function<HttpResponse(HttpRequest&)>, string_hash, std::equal_to<>>> _handlers{};
-//        Ichor::unique_ptr<EventHandlerRegistration> _eventRegistration{};
     };
 }
 

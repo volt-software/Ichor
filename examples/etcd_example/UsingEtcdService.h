@@ -16,7 +16,7 @@ public:
     }
     ~UsingEtcdService() final = default;
 
-    bool start() final {
+    StartBehaviour start() final {
         ICHOR_LOG_INFO(_logger, "UsingEtcdService started");
         if(_etcd->put("test", "2")) {
             ICHOR_LOG_TRACE(_logger, "Succesfully put key/value into etcd");
@@ -31,12 +31,12 @@ public:
         }
 
         getManager()->pushEvent<QuitEvent>(getServiceId(), INTERNAL_EVENT_PRIORITY+1);
-        return true;
+        return StartBehaviour::SUCCEEDED;
     }
 
-    bool stop() final {
+    StartBehaviour stop() final {
         ICHOR_LOG_INFO(_logger, "UsingEtcdService stopped");
-        return true;
+        return StartBehaviour::SUCCEEDED;
     }
 
     void addDependencyInstance(ILogger *logger, IService *) {

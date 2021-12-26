@@ -4,8 +4,8 @@
 
 #include <ichor/optional_bundles/network_bundle/IConnectionService.h>
 #include <ichor/optional_bundles/network_bundle/IHostService.h>
+#include <ichor/optional_bundles/network_bundle/http/HttpContextService.h>
 #include <ichor/optional_bundles/logging_bundle/Logger.h>
-#include <ichor/optional_bundles/timer_bundle/TimerService.h>
 #include <queue>
 #include <boost/beast.hpp>
 #include <boost/asio/spawn.hpp>
@@ -24,8 +24,8 @@ namespace Ichor {
         WsConnectionService(DependencyRegister &reg, Properties props, DependencyManager *mng);
         ~WsConnectionService() final = default;
 
-        bool start() final;
-        bool stop() final;
+        StartBehaviour start() final;
+        StartBehaviour stop() final;
 
         void addDependencyInstance(ILogger *logger, IService *isvc);
         void removeDependencyInstance(ILogger *logger, IService *isvc);
@@ -33,34 +33,28 @@ namespace Ichor {
         void addDependencyInstance(IHostService *, IService *isvc);
         void removeDependencyInstance(IHostService *, IService *isvc);
 
-        /**
-         * Asynchronous send, if send queue is full, doesn't send this message and returns false
-         * @param msg message to send
-         * @return true if added to buffer, false if full
-         */
-        bool send(std::vector<uint8_t, Ichor::PolymorphicAllocator<uint8_t>>&& msg) final;
+        void addDependencyInstance(IHttpContextService *logger, IService *);
+        void removeDependencyInstance(IHttpContextService *logger, IService *);
+
+        uint64_t sendAsync(std::vector<uint8_t, Ichor::PolymorphicAllocator<uint8_t>>&& msg) final;
         void setPriority(uint64_t priority) final;
         uint64_t getPriority() final;
 
     private:
         void fail(beast::error_code, char const* what);
-        void sendStrand(net::yield_context yield);
         void accept(net::yield_context yield); // for when a new connection from WsHost is established
         void connect(net::yield_context yield); // for when connecting as a client
         void read(net::yield_context &yield);
-        void cancelSendTimer();
 
-        Ichor::unique_ptr<net::io_context> _wsContext{};
         Ichor::unique_ptr<websocket::stream<beast::tcp_stream>> _ws{};
-        Ichor::unique_ptr<net::steady_timer> _sendTimer; // used as condition variable
-        std::queue<std::vector<uint8_t, Ichor::PolymorphicAllocator<uint8_t>>> _msgQueue{};
-        int _attempts{};
-        uint64_t _priority{};
-        bool _connected{};
-        bool _connecting{};
-        bool _quit{};
+        uint64_t _msgIdCounter{};
+        std::atomic<uint64_t> _priority{};
+        std::atomic<bool> _connected{};
+        std::atomic<bool> _connecting{};
+        std::atomic<bool> _quit{};
         ILogger *_logger{nullptr};
-        Timer* _timerManager{nullptr};
+        IHttpContextService *_httpContextService{nullptr};
+        RealtimeMutex _mutex{};
     };
 }
 

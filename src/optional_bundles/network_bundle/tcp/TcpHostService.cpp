@@ -13,7 +13,7 @@ Ichor::TcpHostService::TcpHostService(DependencyRegister &reg, Properties props,
     reg.registerDependency<ILogger>(this, true);
 }
 
-bool Ichor::TcpHostService::start() {
+Ichor::StartBehaviour Ichor::TcpHostService::start() {
     if(getProperties()->contains("Priority")) {
         _priority = Ichor::any_cast<uint64_t>(getProperties()->operator[]("Priority"));
     }
@@ -23,7 +23,7 @@ bool Ichor::TcpHostService::start() {
     _socket = ::socket(AF_INET, SOCK_STREAM, 0);
     if(_socket == -1) {
         getManager()->pushEvent<UnrecoverableErrorEvent>(getServiceId(), 0, "Couldn't create socket: errno = " + std::to_string(errno));
-        return false;
+        return Ichor::StartBehaviour::FAILED_DO_NOT_RETRY;
     }
 
     int setting = 1;
@@ -46,7 +46,7 @@ bool Ichor::TcpHostService::start() {
                 _socket = -1;
                 close(_socket);
                 getManager()->pushEvent<UnrecoverableErrorEvent>(getServiceId(), 2, "gethostbyname: errno = " + std::to_string(errno));
-                return false;
+                return Ichor::StartBehaviour::FAILED_DO_NOT_RETRY;
             }
 
             address.sin_addr = *(struct in_addr *) hp->h_addr;
@@ -62,14 +62,14 @@ bool Ichor::TcpHostService::start() {
         _socket = -1;
         close(_socket);
         getManager()->pushEvent<UnrecoverableErrorEvent>(getServiceId(), 3, "Couldn't bind socket: errno = " + std::to_string(errno));
-        return false;
+        return Ichor::StartBehaviour::FAILED_DO_NOT_RETRY;
     }
 
     if(::listen(_socket, 10) != 0) {
         _socket = -1;
         close(_socket);
         getManager()->pushEvent<UnrecoverableErrorEvent>(getServiceId(), 4, "Couldn't listen on socket: errno = " + std::to_string(errno));
-        return false;
+        return Ichor::StartBehaviour::FAILED_DO_NOT_RETRY;
     }
 
     _timerManager = getManager()->createServiceManager<Timer, ITimer>();
@@ -97,10 +97,10 @@ bool Ichor::TcpHostService::start() {
     });
     _timerManager->startTimer();
 
-    return true;
+    return Ichor::StartBehaviour::SUCCEEDED;
 }
 
-bool Ichor::TcpHostService::stop() {
+Ichor::StartBehaviour Ichor::TcpHostService::stop() {
     _quit = true;
 
     _timerManager = nullptr;
@@ -112,12 +112,11 @@ bool Ichor::TcpHostService::stop() {
 
     _newSocketEventHandlerRegistration.reset();
 
-    return true;
+    return Ichor::StartBehaviour::SUCCEEDED;
 }
 
 void Ichor::TcpHostService::addDependencyInstance(ILogger *logger, IService *) {
     _logger = logger;
-    ICHOR_LOG_TRACE(_logger, "Inserted logger");
 }
 
 void Ichor::TcpHostService::removeDependencyInstance(ILogger *logger, IService *) {

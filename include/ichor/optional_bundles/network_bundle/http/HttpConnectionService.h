@@ -3,8 +3,8 @@
 #ifdef USE_BOOST_BEAST
 
 #include <ichor/optional_bundles/network_bundle/http/IHttpConnectionService.h>
+#include <ichor/optional_bundles/network_bundle/http/HttpContextService.h>
 #include <ichor/optional_bundles/logging_bundle/Logger.h>
-#include <ichor/optional_bundles/timer_bundle/TimerService.h>
 #include <boost/beast.hpp>
 #include <boost/asio/spawn.hpp>
 
@@ -19,11 +19,13 @@ namespace Ichor {
         HttpConnectionService(DependencyRegister &reg, Properties props, DependencyManager *mng);
         ~HttpConnectionService() final = default;
 
-        bool start() final;
-        bool stop() final;
+        StartBehaviour start() final;
+        StartBehaviour stop() final;
 
         void addDependencyInstance(ILogger *logger, IService *);
         void removeDependencyInstance(ILogger *logger, IService *);
+        void addDependencyInstance(IHttpContextService *logger, IService *);
+        void removeDependencyInstance(IHttpContextService *logger, IService *);
 
         uint64_t sendAsync(HttpMethod method, std::string_view route, std::vector<HttpHeader, Ichor::PolymorphicAllocator<HttpHeader>> &&headers, std::vector<uint8_t, Ichor::PolymorphicAllocator<uint8_t>>&& msg) final;
 
@@ -36,16 +38,17 @@ namespace Ichor {
         void fail(beast::error_code, char const* what);
         void connect(tcp::endpoint endpoint, net::yield_context yield);
 
-        Ichor::unique_ptr<net::io_context> _httpContext{};
         Ichor::unique_ptr<beast::tcp_stream> _httpStream{};
         std::atomic<uint64_t> _priority{INTERNAL_EVENT_PRIORITY};
-        bool _quit{};
-        bool _connecting{};
-        bool _connected{};
+        std::atomic<bool> _quit{};
+        std::atomic<bool> _connecting{};
+        std::atomic<bool> _connected{};
+        std::atomic<bool> _stopping{};
+        std::atomic<bool> _tcpNoDelay{};
         int _attempts{};
         uint64_t _msgId{};
         ILogger *_logger{nullptr};
-        Timer* _timerManager{nullptr};
+        IHttpContextService *_httpContextService{nullptr};
     };
 }
 

@@ -4,7 +4,7 @@
 
 struct x {};
 struct y {
-    y(const char *t) : z(t) {}
+    explicit y(const char *t) : z(t) {}
     std::string z;
 };
 

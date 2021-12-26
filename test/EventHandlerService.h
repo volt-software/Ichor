@@ -16,16 +16,16 @@ template <Derived<Event> EventT>
 struct EventHandlerService final : public IEventHandlerService, public Service<EventHandlerService<EventT>> {
     EventHandlerService() = default;
 
-    bool start() final {
+    StartBehaviour start() final {
         _handler = this->getManager()->template registerEventHandler<EventT>(this);
 
-        return true;
+        return StartBehaviour::SUCCEEDED;
     }
 
-    bool stop() final {
+    StartBehaviour stop() final {
         _handler.reset();
 
-        return true;
+        return StartBehaviour::SUCCEEDED;
     }
 
     Generator<bool> handleEvent(EventT const * const evt) {

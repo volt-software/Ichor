@@ -13,17 +13,17 @@ namespace Ichor {
         ClientAdmin(Properties properties, DependencyManager *mng) : Service<ClientAdmin<NetworkType, NetworkInterfaceType>>(std::move(properties), mng), _connections{this->getMemoryResource()} {  }
         ~ClientAdmin() override = default;
 
-        bool start() final {
+        StartBehaviour start() final {
             _trackerRegistration = Service<ClientAdmin<NetworkType, NetworkInterfaceType>>::getManager()->template registerDependencyTracker<NetworkInterfaceType>(this);
             _unrecoverableErrorRegistration = Service<ClientAdmin<NetworkType, NetworkInterfaceType>>::getManager()->template registerEventHandler<UnrecoverableErrorEvent>(this);
 
-            return false;
+            return StartBehaviour::SUCCEEDED;
         }
 
-        bool stop() final {
+        StartBehaviour stop() final {
             _trackerRegistration = nullptr;
             _unrecoverableErrorRegistration = nullptr;
-            return false;
+            return StartBehaviour::SUCCEEDED;
         }
 
         void handleDependencyRequest(NetworkInterfaceType*, DependencyRequestEvent const * const evt) {

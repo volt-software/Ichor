@@ -24,8 +24,8 @@ namespace Ichor {
         void setLogLevel(LogLevel level) final;
         [[nodiscard]] LogLevel getLogLevel() const final;
 
-        bool start() final;
-        bool stop() final;
+        StartBehaviour start() final;
+        StartBehaviour stop() final;
     private:
         LogLevel _level;
         static std::atomic<bool> _setting_logger;

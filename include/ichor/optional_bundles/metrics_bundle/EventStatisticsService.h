@@ -46,8 +46,8 @@ namespace Ichor {
 
         Generator<bool> handleEvent(TimerEvent const * const evt);
 
-        bool start() final;
-        bool stop() final;
+        StartBehaviour start() final;
+        StartBehaviour stop() final;
 
         const std::unordered_map<uint64_t, std::vector<StatisticEntry>>& getRecentStatistics() const noexcept final;
         const std::unordered_map<uint64_t, std::vector<AveragedStatisticEntry>>& getAverageStatistics() const noexcept final;

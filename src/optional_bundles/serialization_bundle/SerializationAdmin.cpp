@@ -24,7 +24,6 @@ std::tuple<void*, std::pmr::memory_resource*> Ichor::SerializationAdmin::deseria
 
 void Ichor::SerializationAdmin::addDependencyInstance(ILogger *logger, IService *) {
     _logger = logger;
-    ICHOR_LOG_TRACE(_logger, "Inserted logger");
 }
 
 void Ichor::SerializationAdmin::removeDependencyInstance(ILogger *logger, IService *) {

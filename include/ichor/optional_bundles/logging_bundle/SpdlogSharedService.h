@@ -21,8 +21,8 @@ namespace Ichor {
     public:
         SpdlogSharedService() = default;
         ~SpdlogSharedService() final = default;
-        bool start() final;
-        bool stop() final;
+        StartBehaviour start() final;
+        StartBehaviour stop() final;
 
         std::pmr::vector<std::shared_ptr<spdlog::sinks::sink>> const& getSinks() noexcept final;
     private:

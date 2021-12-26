@@ -31,4 +31,16 @@ namespace Ichor {
         mutable std::vector<uint8_t, Ichor::PolymorphicAllocator<uint8_t>> _data;
         mutable bool _movedFrom;
     };
+
+    struct FailedSendMessageEvent final : public Event {
+        explicit FailedSendMessageEvent(uint64_t _id, uint64_t _originatingService, uint64_t _priority, std::vector<uint8_t, Ichor::PolymorphicAllocator<uint8_t>>&& _data, uint64_t _msgId) noexcept :
+        Event(TYPE, NAME, _id, _originatingService, _priority), data(std::forward<std::vector<uint8_t, Ichor::PolymorphicAllocator<uint8_t>>>(_data)), msgId(_msgId) {}
+        ~FailedSendMessageEvent() final = default;
+
+        static constexpr uint64_t TYPE = typeNameHash<FailedSendMessageEvent>();
+        static constexpr std::string_view NAME = typeName<FailedSendMessageEvent>();
+
+        mutable std::vector<uint8_t, Ichor::PolymorphicAllocator<uint8_t>> data;
+        uint64_t msgId;
+    };
 }

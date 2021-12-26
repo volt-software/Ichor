@@ -9,9 +9,9 @@ struct QuitOnStartWithDependenciesService final : public Service<QuitOnStartWith
         reg.registerDependency<UselessService>(this, false);
     }
     ~QuitOnStartWithDependenciesService() final = default;
-    bool start() final {
+    StartBehaviour start() final {
         getManager()->pushEvent<QuitEvent>(getServiceId());
-        return true;
+        return StartBehaviour::SUCCEEDED;
     }
 
     void addDependencyInstance(UselessService *, IService *) {

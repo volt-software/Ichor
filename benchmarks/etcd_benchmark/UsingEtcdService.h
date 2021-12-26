@@ -16,7 +16,7 @@ public:
     }
     ~UsingEtcdService() final = default;
 
-    bool start() final {
+    StartBehaviour start() final {
         ICHOR_LOG_INFO(_logger, "UsingEtcdService started");
         auto start = std::chrono::steady_clock::now();
         for(uint64_t i = 0; i < 10'000; i++) {
@@ -31,12 +31,12 @@ public:
         auto end = std::chrono::steady_clock::now();
         ICHOR_LOG_INFO(_logger, "finished in {:L} µs", std::chrono::duration_cast<std::chrono::microseconds>(end-start).count());
         getManager()->pushEvent<QuitEvent>(getServiceId(), INTERNAL_EVENT_PRIORITY+1);
-        return true;
+        return Ichor::StartBehaviour::SUCCEEDED;
     }
 
-    bool stop() final {
+    StartBehaviour stop() final {
         ICHOR_LOG_INFO(_logger, "UsingEtcdService stopped");
-        return true;
+        return Ichor::StartBehaviour::SUCCEEDED;
     }
 
     void addDependencyInstance(ILogger *logger, IService *) {

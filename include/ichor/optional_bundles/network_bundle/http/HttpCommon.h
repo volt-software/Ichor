@@ -181,8 +181,8 @@ namespace Ichor {
     };
 
     struct HttpHeader {
-        std::pmr::string name;
-        std::pmr::string value;
+        std::pmr::string name{};
+        std::pmr::string value{};
 
         HttpHeader() noexcept = default;
         HttpHeader(std::string_view _name, std::string_view _value) noexcept : name(_name), value(_value) {}

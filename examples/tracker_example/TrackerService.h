@@ -30,21 +30,20 @@ public:
         reg.registerDependency<ILogger>(this, true);
     }
     ~TrackerService() final = default;
-    bool start() final {
+    StartBehaviour start() final {
         ICHOR_LOG_INFO(_logger, "TrackerService started");
         _trackerRegistration = getManager()->registerDependencyTracker<IRuntimeCreatedService>(this);
-        return true;
+        return StartBehaviour::SUCCEEDED;
     }
 
-    bool stop() final {
+    StartBehaviour stop() final {
         ICHOR_LOG_INFO(_logger, "TrackerService stopped");
         _trackerRegistration = nullptr;
-        return true;
+        return StartBehaviour::SUCCEEDED;
     }
 
     void addDependencyInstance(ILogger *logger, IService *) {
         _logger = logger;
-        ICHOR_LOG_TRACE(_logger, "Inserted logger");
     }
 
     void removeDependencyInstance(ILogger *logger, IService *) {

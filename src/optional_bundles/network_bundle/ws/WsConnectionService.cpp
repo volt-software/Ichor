@@ -4,7 +4,7 @@
 #include <ichor/optional_bundles/network_bundle/ws/WsConnectionService.h>
 #include <ichor/optional_bundles/network_bundle/ws/WsEvents.h>
 #include <ichor/optional_bundles/network_bundle/ws/WsCopyIsMoveWorkaround.h>
-#include <ichor/optional_bundles/network_bundle/NetworkDataEvent.h>
+#include <ichor/optional_bundles/network_bundle/NetworkEvents.h>
 #include <ichor/optional_bundles/network_bundle/IHostService.h>
 
 template<class NextLayer>
@@ -24,6 +24,7 @@ void setup_stream(Ichor::unique_ptr<websocket::stream<NextLayer>>& ws)
 
 Ichor::WsConnectionService::WsConnectionService(DependencyRegister &reg, Properties props, DependencyManager *mng) : Service(std::move(props), mng) {
     reg.registerDependency<ILogger>(this, true);
+    reg.registerDependency<IHttpContextService>(this, true);
     if(props.contains("WsHostServiceId")) {
         reg.registerDependency<IHostService>(this, true,
                                              Ichor::make_properties(getMemoryResource(),
@@ -31,91 +32,50 @@ Ichor::WsConnectionService::WsConnectionService(DependencyRegister &reg, Propert
     }
 }
 
-bool Ichor::WsConnectionService::start() {
-    if(_quit) {
-        return false;
-    }
-
+Ichor::StartBehaviour Ichor::WsConnectionService::start() {
     if(!_connecting && !_connected) {
         _connecting = true;
+        _quit = false;
 
         if (getProperties()->contains("Priority")) {
             _priority = Ichor::any_cast<uint64_t>(getProperties()->operator[]("Priority"));
         }
 
         if (getProperties()->contains("Socket")) {
-            _sendTimer = Ichor::make_unique<net::steady_timer>(getMemoryResource(), Ichor::any_cast<net::executor>(getProperties()->operator[]("Executor")));
-            net::spawn(Ichor::any_cast<net::executor>(getProperties()->operator[]("Executor")), [this](net::yield_context yield) {
+            net::spawn(*_httpContextService->getContext(), [this](net::yield_context yield) {
                 accept(std::move(yield));
             });
-
-            net::spawn(Ichor::any_cast<net::executor>(getProperties()->operator[]("Executor")), [this](net::yield_context yield) {
-                sendStrand(std::move(yield));
-            });
         } else {
-            _wsContext = Ichor::make_unique<net::io_context>(getMemoryResource(), BOOST_ASIO_CONCURRENCY_HINT_UNSAFE);
-            _sendTimer = Ichor::make_unique<net::steady_timer>(getMemoryResource(), *_wsContext);
-
-            net::spawn(*_wsContext, [this](net::yield_context yield) {
+            net::spawn(*_httpContextService->getContext(), [this](net::yield_context yield) {
                 connect(std::move(yield));
             });
-
-            net::spawn(*_wsContext, [this](net::yield_context yield) {
-                sendStrand(std::move(yield));
-            });
-
-            _wsContext->poll();
-
-            _timerManager = getManager()->createServiceManager<Timer, ITimer>();
-            _timerManager->setChronoInterval(std::chrono::milliseconds(20));
-            _timerManager->setCallback([this](TimerEvent const * const evt) -> Generator<bool> {
-                _wsContext->poll();
-                co_return (bool)PreventOthersHandling;
-            });
-            _timerManager->startTimer();
         }
     }
 
-    if(!_connected) {
-        return false;
-    }
-
-    return true;
+    return _connected ? Ichor::StartBehaviour::SUCCEEDED : Ichor::StartBehaviour::FAILED_AND_RETRY;
 }
 
-bool Ichor::WsConnectionService::stop() {
-    ICHOR_LOG_TRACE(_logger, "trying to stop WsConnectionService {}", getServiceId());
-    bool stopWsContext = false;
-    if(_quit) {
-        try {
-            ICHOR_LOG_TRACE(_logger, "ws next layer close WsConnectionService {}", getServiceId());
-            _ws->next_layer().close();
-            cancelSendTimer();
-        } catch (...) {
-            // ignore
-        }
-        stopWsContext = true;
+Ichor::StartBehaviour Ichor::WsConnectionService::stop() {
+    INTERNAL_DEBUG("trying to stop WsConnectionService {}", getServiceId());
+    std::lock_guard lock(_mutex);
+    if(_quit.exchange(true) && _ws != nullptr) {
+        _ws->next_layer().close();
     }
 
-    _timerManager = nullptr;
-
-    if (stopWsContext && _wsContext) {
-        _wsContext->stop();
+    if (!_connected) {
+        _ws = nullptr;
     }
 
-    _sendTimer = nullptr;
-    _ws = nullptr;
-    _wsContext = nullptr;
-
-    return true;
+    return _connected ? Ichor::StartBehaviour::FAILED_AND_RETRY : Ichor::StartBehaviour::SUCCEEDED;
 }
 
 void Ichor::WsConnectionService::addDependencyInstance(ILogger *logger, IService *) {
+    std::lock_guard lock(_mutex);
     _logger = logger;
-    ICHOR_LOG_TRACE(_logger, "Inserted logger");
 }
 
 void Ichor::WsConnectionService::removeDependencyInstance(ILogger *logger, IService *) {
+    std::lock_guard lock(_mutex);
     _logger = nullptr;
 }
 
@@ -127,16 +87,43 @@ void Ichor::WsConnectionService::removeDependencyInstance(IHostService *, IServi
 
 }
 
-bool Ichor::WsConnectionService::send(std::vector<uint8_t, Ichor::PolymorphicAllocator<uint8_t>> &&msg) {
-    if(_quit) {
+void Ichor::WsConnectionService::addDependencyInstance(IHttpContextService *httpContextService, IService *) {
+    _httpContextService = httpContextService;
+}
+
+void Ichor::WsConnectionService::removeDependencyInstance(IHttpContextService *logger, IService *) {
+    std::lock_guard lock(_mutex);
+    _httpContextService = nullptr;
+    if(_quit.exchange(true) && _ws != nullptr) {
+        _ws->next_layer().close();
+    }
+    _connected = false;
+    _ws = nullptr;
+}
+
+uint64_t Ichor::WsConnectionService::sendAsync(std::vector<uint8_t, Ichor::PolymorphicAllocator<uint8_t>> &&msg) {
+    if(_quit || _httpContextService->fibersShouldStop()) {
         return false;
     }
 
-    _msgQueue.push(std::forward<decltype(msg)>(msg));
+    auto id = ++_msgIdCounter;
+    net::spawn(*_httpContextService->getContext(), [this, id, msg = std::forward<decltype(msg)>(msg)](net::yield_context yield) mutable {
+        if(_quit || _httpContextService->fibersShouldStop()) {
+            return;
+        }
 
-    cancelSendTimer();
+        beast::error_code ec;
+        _ws->write(net::buffer(msg.data(), msg.size()), ec);
 
-    return true;
+        if(ec) {
+            _mutex.lock();
+            ICHOR_LOG_ERROR(_logger, "couldn't send msg for service {}: {}", getServiceId(), ec.message());
+            _mutex.unlock();
+            getManager()->pushEvent<FailedSendMessageEvent>(getServiceId(), std::move(msg), id);
+        }
+    });
+
+    return id;
 }
 
 void Ichor::WsConnectionService::setPriority(uint64_t priority) {
@@ -148,37 +135,10 @@ uint64_t Ichor::WsConnectionService::getPriority() {
 }
 
 void Ichor::WsConnectionService::fail(beast::error_code ec, const char *what) {
+    _mutex.lock();
     ICHOR_LOG_ERROR(_logger, "Boost.BEAST fail: {}, {}", what, ec.message());
+    _mutex.unlock();
     getManager()->pushEvent<StopServiceEvent>(getServiceId(), getServiceId());
-}
-
-void Ichor::WsConnectionService::sendStrand(net::yield_context yield) {
-    while(!_quit) {
-        beast::error_code ec;
-
-        if (!_msgQueue.empty()) {
-            auto &msg = _msgQueue.front();
-            _ws->async_write(net::buffer(msg.data(), msg.size()), yield[ec]);
-
-            while(!_quit && ec && ec != websocket::error::closed) {
-                // this timeout should be significantly lower than the _timerManager timeout
-                _sendTimer->expires_after(std::chrono::milliseconds (1));
-                _sendTimer->async_wait(yield[ec]);
-                _ws->async_write(net::buffer(msg.data(), msg.size()), yield[ec]);
-            }
-
-            if(ec == websocket::error::closed) {
-                break;
-            }
-
-            _msgQueue.pop();
-        }
-
-        if(!_quit) {
-            _sendTimer->expires_after(std::chrono::milliseconds(1));
-            _sendTimer->async_wait(yield[ec]);
-        }
-    }
 }
 
 void Ichor::WsConnectionService::accept(net::yield_context yield) {
@@ -204,12 +164,13 @@ void Ichor::WsConnectionService::accept(net::yield_context yield) {
     // Make the connection on the IP address we get from a lookup
     // If it fails (due to connecting earlier than the host is available), wait 250 ms and make another attempt
     // After 5 attempts, fail.
-    while(!_quit && _attempts < 5) {
+    int attempts{};
+    while(!_quit && !_httpContextService->fibersShouldStop() && attempts < 5) {
         // initiate websocket handshake
         _ws->async_accept(yield[ec]);
         if(ec) {
-            _attempts++;
-            net::steady_timer t{Ichor::any_cast<net::executor>(getProperties()->operator[]("Executor"))};
+            attempts++;
+            net::steady_timer t{*_httpContextService->getContext()};
             t.expires_after(std::chrono::milliseconds(250));
             t.async_wait(yield);
         } else {
@@ -234,8 +195,8 @@ void Ichor::WsConnectionService::connect(net::yield_context yield) {
     auto const port = Ichor::any_cast<uint16_t>(getProperties()->operator[]("Port"));
 
     // These objects perform our I/O
-    tcp::resolver resolver(*_wsContext);
-    _ws = Ichor::make_unique<websocket::stream<beast::tcp_stream>>(getMemoryResource(), *_wsContext);
+    tcp::resolver resolver(*_httpContextService->getContext());
+    _ws = Ichor::make_unique<websocket::stream<beast::tcp_stream>>(getMemoryResource(), *_httpContextService->getContext());
 
     // Look up the domain name
     auto const results = resolver.resolve(address, std::to_string(port), ec);
@@ -249,11 +210,12 @@ void Ichor::WsConnectionService::connect(net::yield_context yield) {
     // Make the connection on the IP address we get from a lookup
     // If it fails (due to connecting earlier than the host is available), wait 250 ms and make another attempt
     // After 5 attempts, fail.
-    while(!_quit && _attempts < 5) {
+    int attempts{};
+    while(!_quit && !_httpContextService->fibersShouldStop() && attempts < 5) {
         beast::get_lowest_layer(*_ws).async_connect(results, yield[ec]);
         if(ec) {
-            _attempts++;
-            net::steady_timer t{*_wsContext};
+            attempts++;
+            net::steady_timer t{*_httpContextService->getContext()};
             t.expires_after(std::chrono::milliseconds(250));
             t.async_wait(yield);
         } else {
@@ -292,6 +254,7 @@ void Ichor::WsConnectionService::connect(net::yield_context yield) {
     // Perform the websocket handshake
     _ws->async_handshake(address, "/", yield[ec]);
     if(ec) {
+        _connected = false;
         return fail(ec, "handshake");
     }
 
@@ -301,15 +264,20 @@ void Ichor::WsConnectionService::connect(net::yield_context yield) {
 void Ichor::WsConnectionService::read(net::yield_context &yield) {
     beast::error_code ec;
 
-    while(!_quit)
-    {
-        beast::flat_buffer buffer;
+    while(!_quit && !_httpContextService->fibersShouldStop()) {
+        beast::basic_flat_buffer buffer{Ichor::PolymorphicAllocator<uint8_t>{getMemoryResource()}};
 
         _ws->async_read(buffer, yield[ec]);
+
+        if(_quit || _httpContextService->fibersShouldStop()) {
+            break;
+        }
+
         if(ec == websocket::error::closed) {
             break;
         }
         if(ec) {
+            _connected = false;
             return fail(ec, "read");
         }
 
@@ -318,20 +286,9 @@ void Ichor::WsConnectionService::read(net::yield_context &yield) {
             getManager()->pushPrioritisedEvent<NetworkDataEvent>(getServiceId(), _priority,  std::vector<uint8_t, Ichor::PolymorphicAllocator<uint8_t>>{static_cast<char*>(data.data()), static_cast<char*>(data.data()) + data.size(), getMemoryResource()});
         }
     }
-}
 
-void Ichor::WsConnectionService::cancelSendTimer() {
-    if(_wsContext) {
-        ICHOR_LOG_TRACE(_logger, "cancelSendTimer wsContext->post() WsConnectionService {}", getServiceId());
-        _wsContext->post([this](){
-            _sendTimer->cancel();
-        });
-    } else {
-        ICHOR_LOG_TRACE(_logger, "cancelSendTimer net::spawn WsConnectionService {}", getServiceId());
-        net::spawn(Ichor::any_cast<net::executor>(getProperties()->operator[]("Executor")), [this](net::yield_context yield) {
-            _sendTimer->cancel();
-        });
-    }
+    _connected = false;
+    INTERNAL_DEBUG("read stopped WsConnectionService {}", getServiceId());
 }
 
 #endif

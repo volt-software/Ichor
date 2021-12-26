@@ -93,7 +93,7 @@ namespace Ichor {
                     static_assert(!ListContainsInterface<IFrameworkLogger, Interfaces...>::value, "IFrameworkLogger cannot have any dependencies");
                 }
 
-                logAddService<Impl, Interfaces...>();
+                logAddService<Impl, Interfaces...>(cmpMgr->serviceId());
 
                 for (auto &[key, mgr] : _services) {
                     if (mgr->getServiceState() == ServiceState::ACTIVE) {
@@ -111,16 +111,16 @@ namespace Ichor {
                     }
                 }
 
-                bool started = cmpMgr->start();
+                auto started = cmpMgr->start();
 
                 for (auto const &[key, registration] : cmpMgr->getDependencyRegistry()->_registrations) {
                     auto const &props = std::get<std::optional<Properties>>(registration);
                     pushEventInternal<DependencyRequestEvent>(cmpMgr->serviceId(), priority, std::get<Dependency>(registration), props.has_value() ? &props.value() : std::optional<Properties const *>{});
                 }
 
-                if(!started) {
+                if(started == StartBehaviour::FAILED_AND_RETRY) {
                     pushEventInternal<StartServiceEvent>(cmpMgr->serviceId(), priority, cmpMgr->serviceId());
-                } else {
+                } else if(started == StartBehaviour::SUCCEEDED) {
                     pushEventInternal<DependencyOnlineEvent>(cmpMgr->serviceId(), priority);
                 }
 
@@ -143,11 +143,12 @@ namespace Ichor {
                 cmpMgr->getService().injectDependencyManager(this);
                 cmpMgr->getService().injectPriority(priority);
 
-                logAddService<Impl, Interfaces...>();
+                logAddService<Impl, Interfaces...>(cmpMgr->serviceId());
 
-                if(!cmpMgr->start()) {
+                auto started = cmpMgr->start();
+                if(started == StartBehaviour::FAILED_AND_RETRY) {
                     pushEventInternal<StartServiceEvent>(cmpMgr->serviceId(), priority, cmpMgr->serviceId());
-                } else {
+                } else if(started == StartBehaviour::SUCCEEDED) {
                     pushEventInternal<DependencyOnlineEvent>(cmpMgr->serviceId(), priority);
                 }
 
@@ -415,27 +416,27 @@ namespace Ichor {
         }
 
         template <typename Impl, typename Interface1, typename Interface2, typename... Interfaces>
-        void logAddService() {
+        void logAddService(uint64_t id) {
             if(_logger != nullptr && _logger->getLogLevel() <= LogLevel::DEBUG) {
                 fmt::memory_buffer out;
                 fmt::format_to(out, "added ServiceManager<{}, {}, ", typeName<Interface1>(), typeName<Interface2>());
                 (fmt::format_to(out, "{}, ", typeName<Interfaces>()), ...);
                 fmt::format_to(out, "{}>", typeName<Impl>());
-                ICHOR_LOG_DEBUG(_logger, "{}", out.data());
+                ICHOR_LOG_DEBUG(_logger, "{} {}", out.data(), id);
             }
         }
 
         template <typename Impl, typename Interface>
-        void logAddService() {
+        void logAddService(uint64_t id) {
             if(_logger != nullptr && _logger->getLogLevel() <= LogLevel::DEBUG) {
-                ICHOR_LOG_DEBUG(_logger, "added ServiceManager<{}, {}>", typeName<Interface>(), typeName<Impl>());
+                ICHOR_LOG_DEBUG(_logger, "added ServiceManager<{}, {}> {}", typeName<Interface>(), typeName<Impl>(), id);
             }
         }
 
         template <typename Impl>
-        void logAddService() {
+        void logAddService(uint64_t id) {
             if(_logger != nullptr && _logger->getLogLevel() <= LogLevel::DEBUG) {
-                ICHOR_LOG_DEBUG(_logger, "added ServiceManager<{}>", typeName<Impl>());
+                ICHOR_LOG_DEBUG(_logger, "added ServiceManager<{}> {}", typeName<Impl>(), id);
             }
         }
 

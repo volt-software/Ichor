@@ -17,12 +17,12 @@ public:
         reg.registerDependency<ILogger>(this, true);
     }
     ~TestService() final = default;
-    bool start() final {
-        return true;
+    StartBehaviour start() final {
+        return Ichor::StartBehaviour::SUCCEEDED;
     }
 
-    bool stop() final {
-        return true;
+    StartBehaviour stop() final {
+        return Ichor::StartBehaviour::SUCCEEDED;
     }
 
     void addDependencyInstance(ILogger *logger, IService *) {

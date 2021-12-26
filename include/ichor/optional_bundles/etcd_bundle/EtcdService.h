@@ -11,8 +11,8 @@ namespace Ichor {
         EtcdService(DependencyRegister &reg, Properties props, DependencyManager *mng);
         ~EtcdService() final = default;
 
-        bool start() final;
-        bool stop() final;
+        StartBehaviour start() final;
+        StartBehaviour stop() final;
 
         void addDependencyInstance(ILogger *logger, IService *isvc);
         void removeDependencyInstance(ILogger *logger, IService *isvc);

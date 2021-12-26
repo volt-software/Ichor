@@ -18,16 +18,16 @@ template <Derived<Event> InterceptorT, bool allowProcessing = true>
 struct InterceptorService final : public IInterceptorService, public Service<InterceptorService<InterceptorT, allowProcessing>> {
     InterceptorService() = default;
 
-    bool start() final {
+    StartBehaviour start() final {
         _interceptor = this->getManager()->template registerEventInterceptor<InterceptorT>(this);
 
-        return true;
+        return StartBehaviour::SUCCEEDED;
     }
 
-    bool stop() final {
+    StartBehaviour stop() final {
         _interceptor.reset();
 
-        return true;
+        return StartBehaviour::SUCCEEDED;
     }
 
     bool preInterceptEvent(InterceptorT const * const evt) {

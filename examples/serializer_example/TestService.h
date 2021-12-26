@@ -17,17 +17,17 @@ public:
     }
     ~TestService() final = default;
 
-    bool start() final {
+    StartBehaviour start() final {
         ICHOR_LOG_INFO(_logger, "TestService started with dependency");
         _doWorkRegistration = getManager()->registerEventCompletionCallbacks<DoWorkEvent>(this);
         getManager()->pushEvent<DoWorkEvent>(getServiceId());
-        return true;
+        return StartBehaviour::SUCCEEDED;
     }
 
-    bool stop() final {
+    StartBehaviour stop() final {
         ICHOR_LOG_INFO(_logger, "TestService stopped with dependency");
         _doWorkRegistration.reset();
-        return true;
+        return StartBehaviour::SUCCEEDED;
     }
 
     void addDependencyInstance(ILogger *logger, IService *) {

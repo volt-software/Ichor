@@ -15,15 +15,15 @@ public:
         reg.registerDependency<IRuntimeCreatedService>(this, true, *getProperties());
     }
     ~TestService() final = default;
-    bool start() final {
+    StartBehaviour start() final {
         ICHOR_LOG_INFO(_logger, "TestService started with dependency");
         getManager()->pushEvent<QuitEvent>(getServiceId());
-        return true;
+        return StartBehaviour::SUCCEEDED;
     }
 
-    bool stop() final {
+    StartBehaviour stop() final {
         ICHOR_LOG_INFO(_logger, "TestService stopped with dependency");
-        return true;
+        return StartBehaviour::SUCCEEDED;
     }
 
     void addDependencyInstance(ILogger *logger, IService *isvc) {

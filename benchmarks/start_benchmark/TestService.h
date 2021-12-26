@@ -13,16 +13,16 @@ public:
         reg.registerDependency<ILogger>(this, true);
     }
     ~TestService() final = default;
-    bool start() final {
+    StartBehaviour start() final {
         auto iteration = Ichor::any_cast<uint64_t>(getProperties()->operator[]("Iteration"));
         if(iteration == 9'999) {
             getManager()->pushEvent<QuitEvent>(getServiceId());
         }
-        return true;
+        return Ichor::StartBehaviour::SUCCEEDED;
     }
 
-    bool stop() final {
-        return true;
+    StartBehaviour stop() final {
+        return Ichor::StartBehaviour::SUCCEEDED;
     }
 
     void addDependencyInstance(ILogger *logger, IService *) {
