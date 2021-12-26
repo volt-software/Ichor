@@ -4,8 +4,6 @@
 #include <ichor/Dependency.h>
 #include <ichor/Callbacks.h>
 
-#include <iostream>
-
 namespace Ichor {
     class ILifecycleManager;
     class DependencyManager;
@@ -156,9 +154,7 @@ namespace Ichor {
 
     struct UnrecoverableErrorEvent final : public Event {
         UnrecoverableErrorEvent(uint64_t _id, uint64_t _originatingService, uint64_t _priority, uint64_t _errorType, std::string _error) noexcept : Event(TYPE, NAME, _id, _originatingService, _priority), errorType(_errorType), error(std::move(_error)) {}
-        ~UnrecoverableErrorEvent() final {
-            std::cout << "~UnrecoverableErrorEvent" << std::endl;
-        }
+        ~UnrecoverableErrorEvent() final = default;
 
         uint64_t errorType;
         std::string error;
@@ -168,9 +164,7 @@ namespace Ichor {
 
     struct RecoverableErrorEvent final : public Event {
         RecoverableErrorEvent(uint64_t _id, uint64_t _originatingService, uint64_t _priority, uint64_t _errorType, std::string _error) noexcept : Event(TYPE, NAME, _id, _originatingService, _priority), errorType(_errorType), error(std::move(_error)) {}
-        ~RecoverableErrorEvent() final {
-            std::cout << "~RecoverableErrorEvent" << std::endl;
-        }
+        ~RecoverableErrorEvent() final = default;
 
         uint64_t errorType;
         std::string error;

@@ -8,6 +8,7 @@
 #include <ichor/optional_bundles/logging_bundle/CoutFrameworkLogger.h>
 #include <ichor/optional_bundles/timer_bundle/TimerService.h>
 #include <ichor/Events.h>
+#include <iostream>
 
 struct IMyService {}; // the interface
 

@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.com/volt-software/Ichor.svg?branch=master)](https://travis-ci.com/volt-software/Ichor)
+![example workflow](https://github.com/volt-software/Ichor/actions/workflows/cmake.yml/badge.svg)
 
 # What is this?
 
