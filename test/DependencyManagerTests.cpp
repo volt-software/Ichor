@@ -2,7 +2,7 @@
 #include <ichor/DependencyManager.h>
 #include <ichor/optional_bundles/logging_bundle/NullFrameworkLogger.h>
 #include "UselessService.h"
-#include "spdlog/sinks/stdout_color_sinks.h"
+#include "Common.h"
 
 TEST_CASE("DependencyManager") {
 

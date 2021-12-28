@@ -29,7 +29,11 @@ TEST_CASE("DependencyServices") {
         uint64_t secondUselessServiceId{};
 
         std::thread t([&]() {
+#if __has_include(<spdlog/spdlog.h>)
             dm.createServiceManager<SpdlogFrameworkLogger, IFrameworkLogger>();
+#else
+            dm.createServiceManager<NullFrameworkLogger, IFrameworkLogger>();
+#endif
             dm.createServiceManager<UselessService, IUselessService>();
             secondUselessServiceId = dm.createServiceManager<UselessService, IUselessService>()->getServiceId();
             dm.createServiceManager<DependencyService<true>, ICountService>();

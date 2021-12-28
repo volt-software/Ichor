@@ -8,7 +8,7 @@
 
 #define SPDLOG_ACTIVE_LEVEL SPDLOG_LEVEL_TRACE
 #if !__has_include(<spdlog/spdlog.h>)
-#define SPDLOG_DEBUG(x)
+#define SPDLOG_DEBUG(...)
 #else
 #include <spdlog/spdlog.h>
 #endif
