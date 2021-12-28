@@ -1,7 +1,7 @@
 #include <ichor/optional_bundles/logging_bundle/LoggerAdmin.h>
 #include <ichor/optional_bundles/metrics_bundle/EventStatisticsService.h>
 #include "UsingStatisticsService.h"
-#ifdef USE_SPDLOG
+#ifdef ICHOR_USE_SPDLOG
 #include <ichor/optional_bundles/logging_bundle/SpdlogFrameworkLogger.h>
 #include <ichor/optional_bundles/logging_bundle/SpdlogLogger.h>
 
@@ -26,7 +26,7 @@ int main() {
     auto start = std::chrono::steady_clock::now();
     DependencyManager dm{};
     dm.createServiceManager<FRAMEWORK_LOGGER_TYPE, IFrameworkLogger>({}, 10);
-#ifdef USE_SPDLOG
+#ifdef ICHOR_USE_SPDLOG
     dm.createServiceManager<SpdlogSharedService, ISpdlogSharedService>();
 #endif
     dm.createServiceManager<LoggerAdmin<LOGGER_TYPE>, ILoggerAdmin>();

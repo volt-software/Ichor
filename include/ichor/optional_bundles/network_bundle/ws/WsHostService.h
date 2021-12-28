@@ -1,6 +1,6 @@
 #pragma once
 
-#ifdef USE_BOOST_BEAST
+#ifdef ICHOR_USE_BOOST_BEAST
 
 #include <ichor/optional_bundles/network_bundle/IHostService.h>
 #include <ichor/optional_bundles/logging_bundle/Logger.h>

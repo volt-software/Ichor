@@ -1,4 +1,4 @@
-#ifdef USE_BOOST_BEAST
+#ifdef ICHOR_USE_BOOST_BEAST
 
 #include <ichor/DependencyManager.h>
 #include <ichor/optional_bundles/network_bundle/http/HttpConnectionService.h>

@@ -1,6 +1,6 @@
 #pragma once
 
-#ifdef USE_BOOST_BEAST
+#ifdef ICHOR_USE_BOOST_BEAST
 
 #include <ichor/Events.h>
 #include <boost/asio/ip/tcp.hpp>

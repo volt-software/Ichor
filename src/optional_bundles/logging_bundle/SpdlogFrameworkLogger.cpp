@@ -1,4 +1,4 @@
-#ifdef USE_SPDLOG
+#ifdef ICHOR_USE_SPDLOG
 
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
@@ -25,7 +25,7 @@ Ichor::SpdlogFrameworkLogger::SpdlogFrameworkLogger(Properties props, Dependency
         spdlog::flush_on(spdlog::level::err);
 
         spdlog::set_default_logger(logger);
-#ifndef REMOVE_SOURCE_NAMES_FROM_LOGGING
+#ifndef ICHOR_REMOVE_SOURCE_NAMES_FROM_LOGGING
         spdlog::set_pattern("[%C-%m-%d %H:%M:%S.%e] [%s:%#] [%L] %v");
 #else
         spdlog::set_pattern("[%C-%m-%d %H:%M:%S.%e] [%L] %v");
@@ -94,4 +94,4 @@ Ichor::LogLevel Ichor::SpdlogFrameworkLogger::getLogLevel() const {
 }
 
 
-#endif //USE_SPDLOG
+#endif //ICHOR_USE_SPDLOG

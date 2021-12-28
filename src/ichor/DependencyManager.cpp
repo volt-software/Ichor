@@ -516,7 +516,7 @@ void Ichor::DependencyTrackerRegistration::reset() {
 // ugly hack to catch the place where an exception is thrown
 // boost asio/beast are absolutely terrible when it comes to debugging these things
 // only works on gcc, probably. See https://stackoverflow.com/a/11674810/1460998
-#if USE_UGLY_HACK_EXCEPTION_CATCHING
+#if ICHOR_USE_UGLY_HACK_EXCEPTION_CATCHING
 #include <dlfcn.h>
 #include <execinfo.h>
 #include <typeinfo>

@@ -1,4 +1,4 @@
-#ifdef USE_SPDLOG
+#ifdef ICHOR_USE_SPDLOG
 
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
@@ -57,7 +57,7 @@ Ichor::StartBehaviour Ichor::SpdlogLogger::start() {
     auto const &sinks = _sharedService->getSinks();
     _logger = std::allocate_shared<spdlog::logger, std::pmr::polymorphic_allocator<>>(getManager()->getMemoryResource(), "multi_sink", sinks.begin(), sinks.end());
 
-#ifndef REMOVE_SOURCE_NAMES_FROM_LOGGING
+#ifndef ICHOR_REMOVE_SOURCE_NAMES_FROM_LOGGING
     _logger->set_pattern("[%C-%m-%d %H:%M:%S.%e] [%s:%#] [%L] %v");
 #else
     _logger->set_pattern("[%C-%m-%d %H:%M:%S.%e] [%L] %v");
@@ -89,4 +89,4 @@ void Ichor::SpdlogLogger::removeDependencyInstance(ISpdlogSharedService *, IServ
 }
 
 
-#endif //USE_SPDLOG
+#endif //ICHOR_USE_SPDLOG

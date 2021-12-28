@@ -41,7 +41,7 @@ Builds the benchmarks in the [benchmarks directory](../benchmarks).
 
 Builds the tests in the [test directory](../test).
 
-#### USE_SPDLOG (optional dependency)
+#### ICHOR_USE_SPDLOG (optional dependency)
 
 Enables the use of the [spdlog submodule](../external/spdlog). If examples or benchmarks are enabled, these then use the spdlog variants of loggers instead of cout.
 
@@ -49,30 +49,30 @@ Enables the use of the [spdlog submodule](../external/spdlog). If examples or be
 
 Enables the use of the [rapidjson submodule](../external/spdlog). Used for the serializer examples and benchmarks.
 
-#### USE_PUBSUB
+#### ICHOR_USE_PUBSUB
 
 Not implemented currently.
 
-#### USE_ETCD (optional dependency)
+#### ICHOR_USE_ETCD (optional dependency)
 
 Enables the use of the [rapidjson submodule](../external/spdlog). Used for the etcd examples and benchmarks.
 
-#### USE_BOOST_BEAST
+#### ICHOR_USE_BOOST_BEAST
 
 Requires Boost.BEAST to be installed as a system dependency (version >= 1.70). Used for websocket and http server/client implementations.
 
-#### USE_SANITIZERS
+#### ICHOR_USE_SANITIZERS
 
 Compiles everything (including the optionally enabled submodules) with the AddressSanitizer and UndefinedBehaviourSanitizer. Recommended when debugging. Cannot be combined with the ThreadSanitizer
 
-#### USE_THREAD_SANITIZER
+#### ICHOR_USE_THREAD_SANITIZER
 
 Compiles everything (including the optionally enabled submodules) with the ThreadSanitizer. Recommended when debugging. Cannot be combined with the AddressSanitizer.
 
-#### USE_UGLY_HACK_EXCEPTION_CATCHING
+#### ICHOR_USE_UGLY_HACK_EXCEPTION_CATCHING
 
 Debugging Boost.asio and Boost.BEAST is difficult, this hack enables catching exceptions directly at the source, rather than at the last point of being rethrown. Requires gcc.
-#### REMOVE_SOURCE_NAMES
+#### ICHOR_REMOVE_SOURCE_NAMES
 
 Ichor's logging macros by default adds the current filename and line number to each log statement. This option disables that.
 

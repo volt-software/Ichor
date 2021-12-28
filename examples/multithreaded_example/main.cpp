@@ -1,7 +1,7 @@
 #include "OneService.h"
 #include "OtherService.h"
 #include <ichor/optional_bundles/logging_bundle/LoggerAdmin.h>
-#ifdef USE_SPDLOG
+#ifdef ICHOR_USE_SPDLOG
 #include <ichor/optional_bundles/logging_bundle/SpdlogFrameworkLogger.h>
 #include <ichor/optional_bundles/logging_bundle/SpdlogLogger.h>
 
@@ -32,7 +32,7 @@ int main() {
 
     std::thread t1([&dmOne] {
         dmOne.createServiceManager<FRAMEWORK_LOGGER_TYPE, IFrameworkLogger>({}, 10);
-#ifdef USE_SPDLOG
+#ifdef ICHOR_USE_SPDLOG
         dmOne.createServiceManager<SpdlogSharedService, ISpdlogSharedService>();
 #endif
         dmOne.createServiceManager<LoggerAdmin<LOGGER_TYPE>, ILoggerAdmin>();
@@ -42,7 +42,7 @@ int main() {
 
     std::thread t2([&dmTwo] {
         dmTwo.createServiceManager<FRAMEWORK_LOGGER_TYPE, IFrameworkLogger>({}, 10);
-#ifdef USE_SPDLOG
+#ifdef ICHOR_USE_SPDLOG
         dmTwo.createServiceManager<SpdlogSharedService, ISpdlogSharedService>();
 #endif
         dmTwo.createServiceManager<LoggerAdmin<LOGGER_TYPE>, ILoggerAdmin>();

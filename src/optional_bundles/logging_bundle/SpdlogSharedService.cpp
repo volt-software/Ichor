@@ -1,4 +1,4 @@
-#ifdef USE_SPDLOG
+#ifdef ICHOR_USE_SPDLOG
 
 #include <ichor/optional_bundles/logging_bundle/SpdlogSharedService.h>
 #include <spdlog/sinks/stdout_color_sinks.h>

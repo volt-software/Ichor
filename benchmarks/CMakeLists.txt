@@ -1,11 +1,11 @@
-if(NOT SERIALIZATION_FRAMEWORK STREQUAL "OFF")
+if(NOT ICHOR_SERIALIZATION_FRAMEWORK STREQUAL "OFF")
     file(GLOB_RECURSE PROJECT_EXAMPLE_SOURCES ${ICHOR_TOP_DIR}/benchmarks/serializer_benchmark/*.cpp)
     add_executable(ichor_serializer_benchmark ${PROJECT_EXAMPLE_SOURCES})
     target_link_libraries(ichor_serializer_benchmark ${CMAKE_THREAD_LIBS_INIT})
     target_link_libraries(ichor_serializer_benchmark ichor)
 endif()
 
-if(USE_ETCD)
+if(ICHOR_USE_ETCD)
     file(GLOB_RECURSE PROJECT_EXAMPLE_SOURCES ${ICHOR_TOP_DIR}/benchmarks/etcd_benchmark/*.cpp)
     add_executable(ichor_etcd_benchmark ${PROJECT_EXAMPLE_SOURCES})
     target_link_libraries(ichor_etcd_benchmark ${CMAKE_THREAD_LIBS_INIT})

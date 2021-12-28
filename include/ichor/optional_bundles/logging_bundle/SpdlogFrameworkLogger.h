@@ -1,6 +1,6 @@
 #pragma once
 
-#ifdef USE_SPDLOG
+#ifdef ICHOR_USE_SPDLOG
 
 #include <unordered_map>
 #include <vector>
@@ -33,4 +33,4 @@ namespace Ichor {
     };
 }
 
-#endif //USE_SPDLOG
+#endif //ICHOR_USE_SPDLOG

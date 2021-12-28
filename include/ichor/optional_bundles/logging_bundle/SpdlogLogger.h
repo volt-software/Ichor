@@ -1,6 +1,6 @@
 #pragma once
 
-#ifdef USE_SPDLOG
+#ifdef ICHOR_USE_SPDLOG
 
 #include <memory>
 #include <ichor/interfaces/IFrameworkLogger.h>

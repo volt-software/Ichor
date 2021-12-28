@@ -2,7 +2,7 @@
 #include "../../examples/common/TestMsgJsonSerializer.h"
 #include <ichor/optional_bundles/logging_bundle/LoggerAdmin.h>
 #include <ichor/optional_bundles/serialization_bundle/SerializationAdmin.h>
-#ifdef USE_SPDLOG
+#ifdef ICHOR_USE_SPDLOG
 #include <ichor/optional_bundles/logging_bundle/SpdlogFrameworkLogger.h>
 #include <ichor/optional_bundles/logging_bundle/SpdlogLogger.h>
 
@@ -29,7 +29,7 @@ int main() {
         auto logMgr = dm.createServiceManager<FRAMEWORK_LOGGER_TYPE, IFrameworkLogger>({}, 10);
         logMgr->setLogLevel(LogLevel::INFO);
 
-#ifdef USE_SPDLOG
+#ifdef ICHOR_USE_SPDLOG
         dm.createServiceManager<SpdlogSharedService, ISpdlogSharedService>();
 #endif
 
@@ -54,7 +54,7 @@ int main() {
                 auto logMgr = managers[i].createServiceManager<FRAMEWORK_LOGGER_TYPE, IFrameworkLogger>({}, 10);
                 logMgr->setLogLevel(LogLevel::INFO);
 
-#ifdef USE_SPDLOG
+#ifdef ICHOR_USE_SPDLOG
                 managers[i].createServiceManager<SpdlogSharedService, ISpdlogSharedService>();
 #endif
 
