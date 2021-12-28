@@ -1,6 +1,6 @@
 include(ParseAndAddCatchTests)
 
-file(GLOB_RECURSE PROJECT_TEST_SOURCES ${TOP_DIR}/test/*.cpp)
+file(GLOB_RECURSE PROJECT_TEST_SOURCES ${ICHOR_TOP_DIR}/test/*.cpp)
 
 foreach(filename ${PROJECT_TEST_SOURCES})
     get_filename_component(testname ${filename} NAME_WE)
