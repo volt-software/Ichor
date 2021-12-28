@@ -53,7 +53,7 @@ struct MyTimerService final : public IMyTimerService, public Ichor::Service<MyTi
         co_return (bool)PreventOthersHandling;
     }
 
-    Ichor::unique_ptr<Ichor::EventHandlerRegistration> _timerEventRegistration{nullptr};
+    Ichor::EventHandlerRegistration _timerEventRegistration{};
 };
 
 int example() {
@@ -90,7 +90,7 @@ struct MyInterceptorService final : public Ichor::Service<MyInterceptorService> 
         // Can use this to track how long the processing took
     }
 
-    Ichor::unique_ptr<Ichor::EventInterceptorRegistration> _interceptor{};
+    Ichor::EventInterceptorRegistration _interceptor{};
 };
 
 int memory_resource() {

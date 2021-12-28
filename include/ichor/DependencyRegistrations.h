@@ -12,9 +12,19 @@ namespace Ichor {
         ~EventCompletionHandlerRegistration();
 
         EventCompletionHandlerRegistration(const EventCompletionHandlerRegistration&) = delete;
-        EventCompletionHandlerRegistration(EventCompletionHandlerRegistration&&) noexcept = default;
+        EventCompletionHandlerRegistration(EventCompletionHandlerRegistration&& o) noexcept : _mgr(o._mgr), _key(o._key), _priority(o._priority) {
+            o._mgr = nullptr;
+        }
         EventCompletionHandlerRegistration& operator=(const EventCompletionHandlerRegistration&) = delete;
-        EventCompletionHandlerRegistration& operator=(EventCompletionHandlerRegistration&&) noexcept = default;
+        EventCompletionHandlerRegistration& operator=(EventCompletionHandlerRegistration&& o) noexcept {
+            _mgr = o._mgr;
+            _key = o._key;
+            _priority = o._priority;
+            o._mgr = nullptr;
+            return *this;
+        }
+
+        void reset();
     private:
         DependencyManager *_mgr{nullptr};
         CallbackKey _key{0, 0};
@@ -28,9 +38,19 @@ namespace Ichor {
         ~EventHandlerRegistration();
 
         EventHandlerRegistration(const EventHandlerRegistration&) = delete;
-        EventHandlerRegistration(EventHandlerRegistration&&) noexcept = default;
+        EventHandlerRegistration(EventHandlerRegistration&& o) noexcept : _mgr(o._mgr), _key(o._key), _priority(o._priority) {
+            o._mgr = nullptr;
+        }
         EventHandlerRegistration& operator=(const EventHandlerRegistration&) = delete;
-        EventHandlerRegistration& operator=(EventHandlerRegistration&&) noexcept = default;
+        EventHandlerRegistration& operator=(EventHandlerRegistration&& o) noexcept {
+            _mgr = o._mgr;
+            _key = o._key;
+            _priority = o._priority;
+            o._mgr = nullptr;
+            return *this;
+        }
+
+        void reset();
     private:
         DependencyManager *_mgr{nullptr};
         CallbackKey _key{0, 0};
@@ -44,9 +64,19 @@ namespace Ichor {
         ~EventInterceptorRegistration();
 
         EventInterceptorRegistration(const EventInterceptorRegistration&) = delete;
-        EventInterceptorRegistration(EventInterceptorRegistration&&) noexcept = default;
+        EventInterceptorRegistration(EventInterceptorRegistration&& o) noexcept : _mgr(o._mgr), _key(o._key), _priority(o._priority) {
+            o._mgr = nullptr;
+        }
         EventInterceptorRegistration& operator=(const EventInterceptorRegistration&) = delete;
-        EventInterceptorRegistration& operator=(EventInterceptorRegistration&&) noexcept = default;
+        EventInterceptorRegistration& operator=(EventInterceptorRegistration&& o) noexcept {
+            _mgr = o._mgr;
+            _key = o._key;
+            _priority = o._priority;
+            o._mgr = nullptr;
+            return *this;
+        }
+
+        void reset();
     private:
         DependencyManager *_mgr{nullptr};
         CallbackKey _key{0, 0};
@@ -62,9 +92,19 @@ namespace Ichor {
         ~DependencyTrackerRegistration();
 
         DependencyTrackerRegistration(const DependencyTrackerRegistration&) = delete;
-        DependencyTrackerRegistration(DependencyTrackerRegistration&&) noexcept = default;
+        DependencyTrackerRegistration(DependencyTrackerRegistration&& o) noexcept : _mgr(o._mgr), _interfaceNameHash(o._interfaceNameHash), _priority(o._priority) {
+            o._mgr = nullptr;
+        }
         DependencyTrackerRegistration& operator=(const DependencyTrackerRegistration&) = delete;
-        DependencyTrackerRegistration& operator=(DependencyTrackerRegistration&&) noexcept = default;
+        DependencyTrackerRegistration& operator=(DependencyTrackerRegistration&& o) noexcept {
+            _mgr = o._mgr;
+            _interfaceNameHash = o._interfaceNameHash;
+            _priority = o._priority;
+            o._mgr = nullptr;
+            return *this;
+        }
+
+        void reset();
     private:
         DependencyManager *_mgr{nullptr};
         uint64_t _interfaceNameHash{0};

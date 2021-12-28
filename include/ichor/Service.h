@@ -12,11 +12,11 @@ namespace Ichor {
     enum class ServiceState {
         UNINSTALLED,
         INSTALLED,
-        RESOLVED,
         STARTING,
         STOPPING,
+        INJECTING,
+        UNINJECTING,
         ACTIVE,
-        UNKNOWN
     };
 
     enum class StartBehaviour {
@@ -33,9 +33,10 @@ namespace Ichor {
 
         [[nodiscard]] virtual uint64_t getServicePriority() const noexcept = 0;
 
-        [[nodiscard]] virtual DependencyManager* getManager() noexcept = 0;
+        [[nodiscard]] virtual DependencyManager* getManager() const noexcept = 0;
 
-        [[nodiscard]] virtual Properties* getProperties() noexcept = 0;
+        [[nodiscard]] virtual Properties& getProperties() noexcept = 0;
+        [[nodiscard]] virtual const Properties& getProperties() const noexcept = 0;
 
         [[nodiscard]] std::pmr::memory_resource* getMemoryResource() noexcept;
     };
@@ -76,12 +77,16 @@ namespace Ichor {
             return _servicePriority;
         }
 
-        [[nodiscard]] DependencyManager* getManager() noexcept final {
+        [[nodiscard]] DependencyManager* getManager() const noexcept final {
             return _manager;
         }
 
-        [[nodiscard]] Properties* getProperties() noexcept final {
-            return &_properties;
+        [[nodiscard]] Properties& getProperties() noexcept final {
+            return _properties;
+        }
+
+        [[nodiscard]] const Properties& getProperties() const noexcept final {
+            return _properties;
         }
 
     protected:
@@ -106,8 +111,8 @@ namespace Ichor {
             _serviceState = ServiceState::STARTING;
             auto ret = start();
             if(ret == StartBehaviour::SUCCEEDED) {
-                INTERNAL_DEBUG("service {} state {} -> {}", getServiceId(), getState(), ServiceState::ACTIVE);
-                _serviceState = ServiceState::ACTIVE;
+                INTERNAL_DEBUG("service {} state {} -> {}", getServiceId(), getState(), ServiceState::INJECTING);
+                _serviceState = ServiceState::INJECTING;
             }
 
             return ret;
@@ -115,7 +120,7 @@ namespace Ichor {
         ///
         /// \return true if stopped or already stopped
         [[nodiscard]] StartBehaviour internal_stop() {
-            if(_serviceState != ServiceState::ACTIVE && _serviceState != ServiceState::STOPPING) {
+            if(_serviceState != ServiceState::UNINJECTING && _serviceState != ServiceState::STOPPING) {
                 return StartBehaviour::FAILED_DO_NOT_RETRY;
             }
 
@@ -128,6 +133,26 @@ namespace Ichor {
             }
 
             return ret;
+        }
+
+        [[nodiscard]] bool internalSetInjected() {
+            if(_serviceState != ServiceState::INJECTING) {
+                return false;
+            }
+
+            INTERNAL_DEBUG("service {} state {} -> {}", getServiceId(), getState(), ServiceState::ACTIVE);
+            _serviceState = ServiceState::ACTIVE;
+            return true;
+        }
+
+        [[nodiscard]] bool internalSetUninjected() {
+            if(_serviceState != ServiceState::ACTIVE) {
+                return false;
+            }
+
+            INTERNAL_DEBUG("service {} state {} -> {}", getServiceId(), getState(), ServiceState::UNINJECTING);
+            _serviceState = ServiceState::UNINJECTING;
+            return true;
         }
 
         [[nodiscard]] ServiceState getState() const noexcept {

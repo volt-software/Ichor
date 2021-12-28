@@ -1,22 +1,13 @@
-#include "catch2/catch_test_macros.hpp"
-#include <ichor/DependencyManager.h>
-#include <ichor/optional_bundles/logging_bundle/NullFrameworkLogger.h>
+#include "Common.h"
 #include "InterceptorService.h"
 #include "EventHandlerService.h"
 #include "TestEvents.h"
-#include "spdlog/sinks/stdout_color_sinks.h"
 
 using namespace Ichor;
 
 TEST_CASE("Interceptor Tests") {
 
-#if __has_include(<spdlog/spdlog.h>)
-    //default logger is disabled in cmake
-    if(spdlog::default_logger_raw() == nullptr) {
-        auto new_logger = spdlog::stdout_color_st("new_default_logger");
-        spdlog::set_default_logger(new_logger);
-    }
-#endif
+    ensureInternalLoggerExists();
 
     SECTION("Intercept TestEvent unprocessed") {
         Ichor::DependencyManager dm{};
@@ -26,6 +17,8 @@ TEST_CASE("Interceptor Tests") {
             dm.createServiceManager<InterceptorService<TestEvent>, IInterceptorService>();
             dm.start();
         });
+
+        waitForRunning(dm);
 
         dm.pushEvent<TestEvent>(0);
 
@@ -64,6 +57,8 @@ TEST_CASE("Interceptor Tests") {
             dm.start();
         });
 
+        waitForRunning(dm);
+
         dm.pushEvent<TestEvent>(0);
 
         dm.waitForEmptyQueue();
@@ -100,6 +95,8 @@ TEST_CASE("Interceptor Tests") {
             dm.createServiceManager<EventHandlerService<TestEvent>, IEventHandlerService>();
             dm.start();
         });
+
+        waitForRunning(dm);
 
         dm.pushEvent<TestEvent>(0);
 
@@ -141,6 +138,8 @@ TEST_CASE("Interceptor Tests") {
             dm.start();
         });
 
+        waitForRunning(dm);
+
         dm.waitForEmptyQueue();
 
         dm.pushEvent<RunFunctionEvent>(0, [](DependencyManager* mng){
@@ -180,6 +179,8 @@ TEST_CASE("Interceptor Tests") {
             dm.createServiceManager<InterceptorService<Event>, IInterceptorService>();
             dm.start();
         });
+
+        waitForRunning(dm);
 
         dm.waitForEmptyQueue();
 

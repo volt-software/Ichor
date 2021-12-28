@@ -1,22 +1,13 @@
-#include "catch2/catch_test_macros.hpp"
-#include <ichor/DependencyManager.h>
-#include <ichor/optional_bundles/logging_bundle/NullFrameworkLogger.h>
+#include "Common.h"
 #include "UselessService.h"
 #include "QuitOnStartWithDependenciesService.h"
 #include "DependencyService.h"
 #include "MixingInterfacesService.h"
 #include "StartStopOnSecondAttemptService.h"
-#include "spdlog/sinks/stdout_color_sinks.h"
 
 TEST_CASE("DependencyServices") {
 
-#if __has_include(<spdlog/spdlog.h>)
-    //default logger is disabled in cmake
-    if(spdlog::default_logger_raw() == nullptr) {
-        auto new_logger = spdlog::stdout_color_st("new_default_logger");
-        spdlog::set_default_logger(new_logger);
-    }
-#endif
+    ensureInternalLoggerExists();
 
     SECTION("QuitOnQuitEvent") {
         Ichor::DependencyManager dm{};
@@ -35,12 +26,28 @@ TEST_CASE("DependencyServices") {
 
     SECTION("Required dependencies") {
         Ichor::DependencyManager dm{};
+        uint64_t secondUselessServiceId{};
 
         std::thread t([&]() {
-            dm.createServiceManager<NullFrameworkLogger, IFrameworkLogger>();
+            dm.createServiceManager<SpdlogFrameworkLogger, IFrameworkLogger>();
             dm.createServiceManager<UselessService, IUselessService>();
+            secondUselessServiceId = dm.createServiceManager<UselessService, IUselessService>()->getServiceId();
             dm.createServiceManager<DependencyService<true>, ICountService>();
             dm.start();
+        });
+
+        waitForRunning(dm);
+
+        dm.waitForEmptyQueue();
+
+        dm.pushEvent<RunFunctionEvent>(0, [secondUselessServiceId](DependencyManager* mng){
+            auto services = mng->getStartedServices<ICountService>();
+
+            REQUIRE(services.size() == 1);
+            REQUIRE(services[0]->isRunning());
+            REQUIRE(services[0]->getSvcCount() == 2);
+
+            mng->pushEvent<StopServiceEvent>(0, secondUselessServiceId);
         });
 
         dm.waitForEmptyQueue();
@@ -49,6 +56,7 @@ TEST_CASE("DependencyServices") {
             auto services = mng->getStartedServices<ICountService>();
 
             REQUIRE(services.size() == 1);
+            REQUIRE(services[0]->isRunning());
             REQUIRE(services[0]->getSvcCount() == 1);
 
             mng->pushEvent<QuitEvent>(0);
@@ -66,11 +74,12 @@ TEST_CASE("DependencyServices") {
         std::thread t([&]() {
             dm.createServiceManager<NullFrameworkLogger, IFrameworkLogger>({}, 10);
             dm.createServiceManager<UselessService, IUselessService>();
-            auto secondSvc = dm.createServiceManager<UselessService, IUselessService>();
-            secondUselessServiceId = secondSvc->getServiceId();
+            secondUselessServiceId = dm.createServiceManager<UselessService, IUselessService>()->getServiceId();
             dm.createServiceManager<DependencyService<false>, ICountService>();
             dm.start();
         });
+
+        waitForRunning(dm);
 
         dm.waitForEmptyQueue();
 
@@ -130,6 +139,8 @@ TEST_CASE("DependencyServices") {
             svc = dm.createServiceManager<StartStopOnSecondAttemptService>();
             dm.start();
         });
+
+        waitForRunning(dm);
 
         dm.waitForEmptyQueue();
 

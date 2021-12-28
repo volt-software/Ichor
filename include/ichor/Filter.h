@@ -10,9 +10,9 @@ namespace Ichor {
         PropertiesFilterEntry(std::pmr::string _key, T _val) : key(std::move(_key)), val(std::move(_val)) {}
 
         [[nodiscard]] bool matches(const std::shared_ptr<ILifecycleManager> &manager) const {
-            auto propVal = manager->getProperties()->find(key);
+            auto const propVal = manager->getProperties().find(key);
 
-            if(propVal == end(*manager->getProperties())) {
+            if(propVal == cend(manager->getProperties())) {
                 return false;
             }
 

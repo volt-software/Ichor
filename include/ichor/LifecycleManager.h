@@ -11,6 +11,7 @@
 #include <ichor/DependencyRegister.h>
 
 namespace Ichor {
+
     class ILifecycleManager {
     public:
         ICHOR_CONSTEXPR virtual ~ILifecycleManager() = default;
@@ -24,6 +25,8 @@ namespace Ichor {
         ICHOR_CONSTEXPR virtual bool dependencyOffline(ILifecycleManager* dependentService) = 0;
         [[nodiscard]] ICHOR_CONSTEXPR virtual StartBehaviour start() = 0;
         [[nodiscard]] ICHOR_CONSTEXPR virtual StartBehaviour stop() = 0;
+        [[nodiscard]] ICHOR_CONSTEXPR virtual bool setInjected() = 0;
+        [[nodiscard]] ICHOR_CONSTEXPR virtual bool setUninjected() = 0;
         [[nodiscard]] ICHOR_CONSTEXPR virtual std::string_view implementationName() const noexcept = 0;
         [[nodiscard]] ICHOR_CONSTEXPR virtual uint64_t type() const noexcept = 0;
         [[nodiscard]] ICHOR_CONSTEXPR virtual uint64_t serviceId() const noexcept = 0;
@@ -32,7 +35,7 @@ namespace Ichor {
         [[nodiscard]] ICHOR_CONSTEXPR virtual const std::pmr::vector<Dependency>& getInterfaces() const noexcept = 0;
 
         // for some reason, returning a reference produces garbage??
-        [[nodiscard]] ICHOR_CONSTEXPR virtual Properties const * getProperties() const noexcept = 0;
+        [[nodiscard]] ICHOR_CONSTEXPR virtual Properties const & getProperties() const noexcept = 0;
         [[nodiscard]] ICHOR_CONSTEXPR virtual DependencyRegister const * getDependencyRegistry() const noexcept = 0;
         virtual void insertSelfInto(uint64_t keyOfInterfaceToInject, Ichor::function<void(void*, IService*)>&) = 0;
     };
@@ -41,7 +44,7 @@ namespace Ichor {
     requires DerivedTemplated<ServiceType, Service>
     class DependencyLifecycleManager final : public ILifecycleManager {
     public:
-        explicit ICHOR_CONSTEXPR DependencyLifecycleManager(IFrameworkLogger *logger, std::string_view name, std::pmr::vector<Dependency> interfaces, Properties&& properties, DependencyManager *mng, std::pmr::memory_resource *memResource) : _implementationName(name), _interfaces(std::move(interfaces)), _registry(mng), _dependencies(memResource), _injectedDependencies(memResource), _service(_registry, std::forward<Properties>(properties), mng), _logger(logger) {
+        explicit ICHOR_CONSTEXPR DependencyLifecycleManager(IFrameworkLogger *logger, std::string_view name, std::pmr::vector<Dependency> interfaces, Properties&& properties, DependencyManager *mng, std::pmr::memory_resource *memResource) : _implementationName(name), _interfaces(std::move(interfaces)), _registry(mng), _dependencies(memResource), _service(_registry, std::forward<Properties>(properties), mng), _logger(logger) {
             for(auto const &reg : _registry._registrations) {
                 _dependencies.addDependency(std::get<0>(reg.second));
             }
@@ -51,7 +54,7 @@ namespace Ichor {
             ICHOR_LOG_TRACE(_logger, "destroying {}, id {}", typeName<ServiceType>(), _service.getServiceId());
             for(auto const &dep : _dependencies._dependencies) {
                 // _manager is always injected in DependencyManager::create...Manager functions.
-                _service._manager->template pushPrioritisedEvent<DependencyUndoRequestEvent>(_service.getServiceId(), getPriority(), Dependency{dep.interfaceNameHash, dep.required, dep.satisfied}, getProperties());
+                _service._manager->template pushPrioritisedEvent<DependencyUndoRequestEvent>(_service.getServiceId(), getPriority(), Dependency{dep.interfaceNameHash, dep.required, dep.satisfied}, &getProperties());
             }
         }
 
@@ -72,25 +75,17 @@ namespace Ichor {
             bool interested = false;
             auto const &interfaces = dependentService->getInterfaces();
 
-            if(std::find(_injectedDependencies.cbegin(), _injectedDependencies.cend(), dependentService->serviceId()) != _injectedDependencies.cend()) {
-                return interested;
-            }
-
             for(auto const &interface : interfaces) {
                 auto dep = _dependencies.find(interface);
-                if (dep == _dependencies.end() || (dep->required && dep->satisfied)) {
+                if (dep == _dependencies.end()) {
                     continue;
                 }
 
-                interested = true;
-                injectIntoSelfDoubleDispatch(interface.interfaceNameHash, dependentService);
-                if(dep->required) {
-                    dep->satisfied = true;
+                if(dep->satisfied == 0) {
+                    interested = true;
                 }
-            }
-
-            if(interested) {
-                _injectedDependencies.push_back(dependentService->serviceId());
+                injectIntoSelfDoubleDispatch(interface.interfaceNameHash, dependentService);
+                dep->satisfied++;
             }
 
             return interested;
@@ -125,25 +120,20 @@ namespace Ichor {
             auto const &interfaces = dependentService->getInterfaces();
             bool interested = false;
 
-            if(std::find(_injectedDependencies.begin(), _injectedDependencies.end(), dependentService->serviceId()) == _injectedDependencies.end()) {
-                return interested;
-            }
-
             for(auto const &interface : interfaces) {
                 auto dep = _dependencies.find(interface);
-                if (dep == _dependencies.end() || (dep->required && !dep->satisfied)) {
+                if (dep == _dependencies.end()) {
                     continue;
                 }
 
-                if (dep->required) {
-                    dep->satisfied = false;
+                // dependency should not be marked as unsatisified if there is at least one other of the same type present
+                dep->satisfied--;
+                if (dep->required && dep->satisfied == 0) {
                     interested = true;
                 }
 
                 removeSelfIntoDoubleDispatch(interface.interfaceNameHash, dependentService);
             }
-
-            std::erase(_injectedDependencies, dependentService->serviceId());
 
             return interested;
         }
@@ -185,6 +175,16 @@ namespace Ichor {
             return ret;
         }
 
+        [[nodiscard]]
+        ICHOR_CONSTEXPR bool setInjected() final {
+            return _service.internalSetInjected();
+        }
+
+        [[nodiscard]]
+        ICHOR_CONSTEXPR bool setUninjected() final {
+            return _service.internalSetUninjected();
+        }
+
         [[nodiscard]] ICHOR_CONSTEXPR std::string_view implementationName() const noexcept final {
             return _implementationName;
         }
@@ -213,8 +213,8 @@ namespace Ichor {
             return _interfaces;
         }
 
-        [[nodiscard]] ICHOR_CONSTEXPR Properties const * getProperties() const noexcept final {
-            return &_service._properties;
+        [[nodiscard]] ICHOR_CONSTEXPR Properties const & getProperties() const noexcept final {
+            return _service._properties;
         }
 
         [[nodiscard]] ICHOR_CONSTEXPR DependencyRegister const * getDependencyRegistry() const noexcept final {
@@ -226,7 +226,7 @@ namespace Ichor {
         std::pmr::vector<Dependency> _interfaces;
         DependencyRegister _registry;
         DependencyInfo _dependencies;
-        std::pmr::vector<uint64_t> _injectedDependencies;
+//        std::pmr::vector<uint64_t> _injectedDependencies;
         ServiceType _service;
         IFrameworkLogger *_logger;
     };
@@ -293,6 +293,16 @@ namespace Ichor {
             return ret;
         }
 
+        [[nodiscard]]
+        ICHOR_CONSTEXPR bool setInjected() final {
+            return _service.internalSetInjected();
+        }
+
+        [[nodiscard]]
+        ICHOR_CONSTEXPR bool setUninjected() final {
+            return _service.internalSetUninjected();
+        }
+
         [[nodiscard]] ICHOR_CONSTEXPR std::string_view implementationName() const noexcept final {
             return _implementationName;
         }
@@ -321,8 +331,8 @@ namespace Ichor {
             return _interfaces;
         }
 
-        [[nodiscard]] ICHOR_CONSTEXPR Properties const * getProperties() const noexcept final {
-            return &_service._properties;
+        [[nodiscard]] ICHOR_CONSTEXPR Properties const & getProperties() const noexcept final {
+            return _service._properties;
         }
 
         [[nodiscard]] ICHOR_CONSTEXPR DependencyRegister const * getDependencyRegistry() const noexcept final {

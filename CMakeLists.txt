@@ -34,6 +34,9 @@ option(REMOVE_SOURCE_NAMES "Remove compiling source file names and line numbers 
 set(SERIALIZATION_FRAMEWORK OFF CACHE STRING "Enable serialization support")
 set_property(CACHE SERIALIZATION_FRAMEWORK PROPERTY STRINGS OFF RAPIDJSON BOOST_JSON)
 
+set(ARCH_OPTIMIZATION OFF CACHE STRING "Tell compiler to optimize for target")
+set_property(CACHE ARCH_OPTIMIZATION PROPERTY STRINGS OFF NATIVE X86_64 X86_64_AVX2)
+
 if(USE_SPDLOG)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DSPDLOG_COMPILED_LIB -DSPDLOG_NO_EXCEPTIONS -DSPDLOG_FMT_EXTERNAL -DSPDLOG_DISABLE_DEFAULT_LOGGER -DSPDLOG_NO_ATOMIC_LEVELS -DUSE_SPDLOG -DSPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_TRACE ")
 endif()
@@ -73,6 +76,15 @@ set(CMAKE_CXX_FLAGSCMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Wshadow -W
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fconcepts -fconcepts-diagnostics-depth=3 -pthread ")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-rtti ")
 
+
+if(ARCH_OPTIMIZATION STREQUAL "NATIVE")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native ")
+elseif(ARCH_OPTIMIZATION STREQUAL "X86_64")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=x86-64 ")
+elseif(ARCH_OPTIMIZATION STREQUAL "X86_64_AVX2")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=x86-64-v3 ")
+endif()
+
 if(USE_SANITIZERS)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address,undefined -no-pie -fno-omit-frame-pointer")
     set(CMAKE_EXE_LINKER_FLAGS "-no-pie")
@@ -103,9 +115,9 @@ endif()
 
 # gcc uses gdwarf-4 by default, which messes up using the coz profiler
 #-gdwarf-3
-set(CMAKE_CXX_FLAGS_DEBUG "-g3 -ggdb")
-set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG")
-set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-g3 -ggdb -Og")
+set(CMAKE_CXX_FLAGS_DEBUG "-ggdb3")
+set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG -ggdb")
+set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-ggdb3 -Og")
 set(CMAKE_CXX_FLAGS_MINSIZEREL "-Os -DNDEBUG")
 
 find_package (Threads)
@@ -171,6 +183,8 @@ if(BUILD_BENCHMARKS)
     add_subdirectory(benchmarks)
 endif()
 if(BUILD_TESTING)
-    add_subdirectory(external/Catch2)
+    add_subdirectory(${EXTERNAL_DIR}/Catch2)
+    list(APPEND CMAKE_MODULE_PATH "${EXTERNAL_DIR}/Catch2/extras")
+
     add_subdirectory(test)
 endif()

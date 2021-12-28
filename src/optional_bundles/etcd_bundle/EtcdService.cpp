@@ -11,8 +11,8 @@ Ichor::EtcdService::EtcdService(DependencyRegister &reg, Properties props, Depen
 }
 
 Ichor::StartBehaviour Ichor::EtcdService::start() {
-    auto addressProp = getProperties()->find("EtcdAddress");
-    if(addressProp == end(*getProperties())) {
+    auto const addressProp = getProperties().find("EtcdAddress");
+    if(addressProp == cend(getProperties())) {
         throw std::runtime_error("Missing EtcdAddress");
     }
 

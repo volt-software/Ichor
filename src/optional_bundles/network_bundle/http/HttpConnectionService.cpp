@@ -14,22 +14,22 @@ Ichor::StartBehaviour Ichor::HttpConnectionService::start() {
     if(!_httpContextService->fibersShouldStop() && !_connecting && !_connected) {
         ICHOR_LOG_WARN(_logger, "starting svc {}", getServiceId());
         _quit = false;
-        if (getProperties()->contains("Priority")) {
-            _priority = Ichor::any_cast<uint64_t>(getProperties()->operator[]("Priority"));
+        if (getProperties().contains("Priority")) {
+            _priority = Ichor::any_cast<uint64_t>(getProperties().operator[]("Priority"));
         }
 
-        if (!getProperties()->contains("Port") || !getProperties()->contains("Address")) {
+        if (!getProperties().contains("Port") || !getProperties().contains("Address")) {
             getManager()->pushPrioritisedEvent<UnrecoverableErrorEvent>(getServiceId(), _priority, 0,
                                                                         "Missing port or address when starting HttpConnectionService");
             return Ichor::StartBehaviour::FAILED_DO_NOT_RETRY;
         }
 
-        if(getProperties()->contains("NoDelay")) {
-            _tcpNoDelay = Ichor::any_cast<bool>(getProperties()->operator[]("NoDelay"));
+        if(getProperties().contains("NoDelay")) {
+            _tcpNoDelay = Ichor::any_cast<bool>(getProperties().operator[]("NoDelay"));
         }
 
-        auto address = net::ip::make_address(Ichor::any_cast<std::string &>(getProperties()->operator[]("Address")));
-        auto port = Ichor::any_cast<uint16_t>(getProperties()->operator[]("Port"));
+        auto address = net::ip::make_address(Ichor::any_cast<std::string &>(getProperties().operator[]("Address")));
+        auto port = Ichor::any_cast<uint16_t>(getProperties().operator[]("Port"));
 
         _connecting = true;
         net::spawn(*_httpContextService->getContext(), [this, address = std::move(address), port](net::yield_context yield) {
@@ -107,7 +107,7 @@ uint64_t Ichor::HttpConnectionService::sendAsync(Ichor::HttpMethod method, std::
         for(auto const &header : headers) {
             req.set(header.name, header.value);
         }
-        req.set(http::field::host, Ichor::any_cast<std::string &>(getProperties()->operator[]("Address")));
+        req.set(http::field::host, Ichor::any_cast<std::string &>(getProperties().operator[]("Address")));
         req.prepare_payload();
 
         http::write(*_httpStream, req, ec);
@@ -180,7 +180,7 @@ void Ichor::HttpConnectionService::connect(tcp::endpoint endpoint, net::yield_co
     }
 
     // Set the timeout.
-    _httpStream->expires_after(std::chrono::seconds(30));
+    _httpStream->expires_after(30s);
 
     // Make the connection on the IP address we get from a lookup
     while(!_quit && !_httpContextService->fibersShouldStop() && _attempts < 5) {
@@ -190,7 +190,7 @@ void Ichor::HttpConnectionService::connect(tcp::endpoint endpoint, net::yield_co
         if (ec) {
             _attempts++;
             net::steady_timer t{*_httpContextService->getContext()};
-            t.expires_after(std::chrono::milliseconds(250));
+            t.expires_after(250ms);
             t.async_wait(yield);
         } else {
             break;

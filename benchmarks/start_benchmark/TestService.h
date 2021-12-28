@@ -14,7 +14,7 @@ public:
     }
     ~TestService() final = default;
     StartBehaviour start() final {
-        auto iteration = Ichor::any_cast<uint64_t>(getProperties()->operator[]("Iteration"));
+        auto iteration = Ichor::any_cast<uint64_t>(getProperties().operator[]("Iteration"));
         if(iteration == 9'999) {
             getManager()->pushEvent<QuitEvent>(getServiceId());
         }

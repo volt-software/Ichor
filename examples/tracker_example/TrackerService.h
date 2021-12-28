@@ -16,9 +16,9 @@ public:
     explicit ScopeFilterEntry(const char *_scope) : scope(_scope) {}
 
     [[nodiscard]] bool matches(const std::shared_ptr<ILifecycleManager> &manager) const {
-        auto const scopeProp = manager->getProperties()->find("scope");
+        auto const scopeProp = manager->getProperties().find("scope");
 
-        return scopeProp != end(*manager->getProperties()) && Ichor::any_cast<const std::string&>(scopeProp->second) == scope;
+        return scopeProp != cend(manager->getProperties()) && Ichor::any_cast<const std::string&>(scopeProp->second) == scope;
     }
 
     const std::string scope;
@@ -38,7 +38,7 @@ public:
 
     StartBehaviour stop() final {
         ICHOR_LOG_INFO(_logger, "TrackerService stopped");
-        _trackerRegistration = nullptr;
+        _trackerRegistration.reset();
         return StartBehaviour::SUCCEEDED;
     }
 
@@ -98,6 +98,6 @@ public:
 
 private:
     ILogger *_logger{nullptr};
-    Ichor::unique_ptr<DependencyTrackerRegistration> _trackerRegistration{nullptr};
+    DependencyTrackerRegistration _trackerRegistration{};
     std::unordered_map<std::string, RuntimeCreatedService*> _scopedRuntimeServices{};
 };

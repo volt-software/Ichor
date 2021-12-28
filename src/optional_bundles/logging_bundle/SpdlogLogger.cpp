@@ -62,37 +62,21 @@ Ichor::StartBehaviour Ichor::SpdlogLogger::start() {
 #else
     _logger->set_pattern("[%C-%m-%d %H:%M:%S.%e] [%L] %v");
 #endif
-    _logger->set_level(spdlog::level::trace);
-
 
     auto requestedLevelIt = _properties.find("LogLevel");
     if(requestedLevelIt != end(_properties)) {
-        auto requestedLevel = Ichor::any_cast<LogLevel>(requestedLevelIt->second);
-        if (requestedLevel == LogLevel::TRACE) {
-            _logger->set_level(spdlog::level::trace);
-        } else if (requestedLevel == LogLevel::DEBUG) {
-            _logger->set_level(spdlog::level::debug);
-        } else if (requestedLevel == LogLevel::INFO) {
-            _logger->set_level(spdlog::level::info);
-        } else if (requestedLevel == LogLevel::WARN) {
-            _logger->set_level(spdlog::level::warn);
-        } else if (requestedLevel == LogLevel::ERROR) {
-            _logger->set_level(spdlog::level::err);
-        } else {
-            _logger->set_level(spdlog::level::info);
-        }
+        _level = Ichor::any_cast<LogLevel>(requestedLevelIt->second);
     } else {
-        _logger->set_level(spdlog::level::info);
+        _level = Ichor::LogLevel::INFO;
     }
+    _logger->set_level(spdlog::level::trace);
 
     auto targetServiceId = Ichor::any_cast<uint64_t>(_properties["TargetServiceId"]);
-    _logger->trace("SpdlogLogger {} started for component {}", getServiceId(), targetServiceId);
     return Ichor::StartBehaviour::SUCCEEDED;
 }
 
 Ichor::StartBehaviour Ichor::SpdlogLogger::stop() {
     auto targetServiceId = Ichor::any_cast<uint64_t>(_properties["TargetServiceId"]);
-    _logger->trace("SpdlogLogger {} stopped for component {}", getServiceId(), targetServiceId);
     return Ichor::StartBehaviour::SUCCEEDED;
 }
 

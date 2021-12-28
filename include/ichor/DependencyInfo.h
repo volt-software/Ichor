@@ -86,7 +86,7 @@ namespace Ichor {
         [[nodiscard]]
         ICHOR_CONSTEXPR bool allSatisfied() const noexcept {
             return std::all_of(begin(), end(), [](auto const &dep) {
-                return dep.satisfied || !dep.required;
+                return dep.satisfied > 0 || !dep.required;
             });
         }
 

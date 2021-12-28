@@ -19,8 +19,8 @@ public:
         ICHOR_LOG_INFO(_logger, "UsingStatisticsService started");
         auto quitTimerManager = getManager()->createServiceManager<Timer, ITimer>();
         auto bogusTimerManager = getManager()->createServiceManager<Timer, ITimer>();
-        quitTimerManager->setChronoInterval(std::chrono::seconds (15));
-        bogusTimerManager->setChronoInterval(std::chrono::milliseconds (15));
+        quitTimerManager->setChronoInterval(15s);
+        bogusTimerManager->setChronoInterval(15s);
 
         quitTimerManager->setCallback([this](TimerEvent const * const) -> Generator<bool> {
             getManager()->pushEvent<QuitEvent>(getServiceId(), INTERNAL_EVENT_PRIORITY + 1);

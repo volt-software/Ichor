@@ -1,12 +1,12 @@
 #include <ichor/optional_bundles/metrics_bundle/EventStatisticsService.h>
 
 Ichor::StartBehaviour Ichor::EventStatisticsService::start() {
-    if(getProperties()->contains("ShowStatisticsOnStop")) {
-        _showStatisticsOnStop = Ichor::any_cast<bool>(getProperties()->operator[]("ShowStatisticsOnStop"));
+    if(getProperties().contains("ShowStatisticsOnStop")) {
+        _showStatisticsOnStop = Ichor::any_cast<bool>(getProperties().operator[]("ShowStatisticsOnStop"));
     }
 
-    if(getProperties()->contains("AveragingIntervalMs")) {
-        _averagingIntervalMs = Ichor::any_cast<uint64_t>(getProperties()->operator[]("AveragingIntervalMs"));
+    if(getProperties().contains("AveragingIntervalMs")) {
+        _averagingIntervalMs = Ichor::any_cast<uint64_t>(getProperties().operator[]("AveragingIntervalMs"));
     } else {
         _averagingIntervalMs = 500;
     }

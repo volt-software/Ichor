@@ -21,8 +21,8 @@ namespace Ichor {
         }
 
         StartBehaviour stop() final {
-            _trackerRegistration = nullptr;
-            _unrecoverableErrorRegistration = nullptr;
+            _trackerRegistration.reset();
+            _unrecoverableErrorRegistration.reset();
             return StartBehaviour::SUCCEEDED;
         }
 
@@ -62,10 +62,10 @@ namespace Ichor {
                     continue;
                 }
 
-                auto address = service->getProperties()->find("Address");
-                auto port = service->getProperties()->find("Port");
+                auto const address = service->getProperties().find("Address");
+                auto const port = service->getProperties().find("Port");
                 auto full_address = Ichor::any_cast<std::string>(address->second);
-                if(port != end(*service->getProperties())) {
+                if(port != cend(service->getProperties())) {
                     full_address += ":" + std::to_string(Ichor::any_cast<uint16_t>(port->second));
                 }
                 std::string_view implNameRequestor = Service<ClientAdmin<NetworkType, NetworkInterfaceType>>::getManager()->getImplementationNameFor(evt->originatingService).value();
@@ -81,7 +81,7 @@ namespace Ichor {
     private:
         ILogger *_logger{nullptr};
         std::pmr::unordered_map<uint64_t, IService*> _connections;
-        Ichor::unique_ptr<DependencyTrackerRegistration> _trackerRegistration{nullptr};
-        Ichor::unique_ptr<EventHandlerRegistration> _unrecoverableErrorRegistration{nullptr};
+        DependencyTrackerRegistration _trackerRegistration{};
+        EventHandlerRegistration _unrecoverableErrorRegistration{};
     };
 }

@@ -14,7 +14,7 @@ namespace Ichor {
             }
 
             _registrations.emplace(typeNameHash<Interface>(), std::make_tuple(
-                    Dependency{typeNameHash<Interface>(), required, false},
+                    Dependency{typeNameHash<Interface>(), required, 0},
                     Ichor::function<void(void*, IService*)>{[svc](void* dep, IService* isvc){ svc->addDependencyInstance(reinterpret_cast<Interface*>(dep), isvc); }, svc->getMemoryResource()},
                     Ichor::function<void(void*, IService*)>{[svc](void* dep, IService* isvc){ svc->removeDependencyInstance(reinterpret_cast<Interface*>(dep), isvc); }, svc->getMemoryResource()},
                     std::move(props)));

@@ -14,8 +14,8 @@ Ichor::TcpHostService::TcpHostService(DependencyRegister &reg, Properties props,
 }
 
 Ichor::StartBehaviour Ichor::TcpHostService::start() {
-    if(getProperties()->contains("Priority")) {
-        _priority = Ichor::any_cast<uint64_t>(getProperties()->operator[]("Priority"));
+    if(getProperties().contains("Priority")) {
+        _priority = Ichor::any_cast<uint64_t>(getProperties().operator[]("Priority"));
     }
 
     _newSocketEventHandlerRegistration = getManager()->registerEventHandler<NewSocketEvent>(this);
@@ -35,9 +35,9 @@ Ichor::StartBehaviour Ichor::TcpHostService::start() {
     sockaddr_in address{};
     address.sin_family = AF_INET;
 
-    auto addressProp = getProperties()->find("Address");
+    auto const addressProp = getProperties().find("Address");
 
-    if(addressProp != end(*getProperties())) {
+    if(addressProp != cend(getProperties())) {
         auto hostname = Ichor::any_cast<std::string>(addressProp->second);
         if(::inet_aton(hostname.c_str(), &address.sin_addr) != 0) {
             getManager()->pushEvent<RecoverableErrorEvent>(getServiceId(), 1, "inet_aton: errno = " + std::to_string(errno));
@@ -54,7 +54,7 @@ Ichor::StartBehaviour Ichor::TcpHostService::start() {
     } else {
         address.sin_addr.s_addr = INADDR_ANY;
     }
-    address.sin_port = ::htons(Ichor::any_cast<uint16_t>((*getProperties())["Port"]));
+    address.sin_port = ::htons(Ichor::any_cast<uint16_t>((getProperties())["Port"]));
 
     _bindFd = ::bind(_socket, (sockaddr *)&address, sizeof(address));
 
@@ -73,7 +73,7 @@ Ichor::StartBehaviour Ichor::TcpHostService::start() {
     }
 
     _timerManager = getManager()->createServiceManager<Timer, ITimer>();
-    _timerManager->setChronoInterval(std::chrono::milliseconds(20));
+    _timerManager->setChronoInterval(20ms);
     _timerManager->setCallback([this](TimerEvent const * const evt) -> Generator<bool> {
         sockaddr_in client_addr{};
         socklen_t client_addr_size = sizeof(client_addr);

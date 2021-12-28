@@ -31,12 +31,12 @@ void Ichor::SerializationAdmin::removeDependencyInstance(ILogger *logger, IServi
 }
 
 void Ichor::SerializationAdmin::addDependencyInstance(ISerializer *serializer, IService *isvc) {
-    if(!isvc->getProperties()->contains("type")) {
+    if(!isvc->getProperties().contains("type")) {
         ICHOR_LOG_TRACE(_logger, "No type property for serializer {}", isvc->getServiceId());
         return;
     }
 
-    auto type = Ichor::any_cast<uint64_t>(isvc->getProperties()->operator[]("type"));
+    auto type = Ichor::any_cast<uint64_t>(isvc->getProperties().operator[]("type"));
 
     auto existingSerializer = _serializers.find(type);
     if(existingSerializer != end(_serializers)) {
@@ -49,11 +49,11 @@ void Ichor::SerializationAdmin::addDependencyInstance(ISerializer *serializer, I
 }
 
 void Ichor::SerializationAdmin::removeDependencyInstance(ISerializer *serializer, IService *isvc) {
-    if(!isvc->getProperties()->contains("type")) {
+    if(!isvc->getProperties().contains("type")) {
         ICHOR_LOG_TRACE(_logger, "No type property for serializer {}", isvc->getServiceId());
     }
 
-    auto type = Ichor::any_cast<uint64_t>(isvc->getProperties()->operator[]("type"));
+    auto type = Ichor::any_cast<uint64_t>(isvc->getProperties().operator[]("type"));
 
     auto existingSerializer = _serializers.find(type);
     if(existingSerializer == end(_serializers)) {

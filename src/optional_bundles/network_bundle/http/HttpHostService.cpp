@@ -10,21 +10,21 @@ Ichor::HttpHostService::HttpHostService(DependencyRegister &reg, Properties prop
 }
 
 Ichor::StartBehaviour Ichor::HttpHostService::start() {
-    if(getProperties()->contains("Priority")) {
-        _priority = Ichor::any_cast<uint64_t>(getProperties()->operator[]("Priority"));
+    if(getProperties().contains("Priority")) {
+        _priority = Ichor::any_cast<uint64_t>(getProperties().operator[]("Priority"));
     }
 
-    if(!getProperties()->contains("Port") || !getProperties()->contains("Address")) {
+    if(!getProperties().contains("Port") || !getProperties().contains("Address")) {
         getManager()->pushPrioritisedEvent<UnrecoverableErrorEvent>(getServiceId(), _priority, 0, "Missing port or address when starting HttpHostService");
         return Ichor::StartBehaviour::FAILED_DO_NOT_RETRY;
     }
 
-    if(getProperties()->contains("NoDelay")) {
-        _tcpNoDelay = Ichor::any_cast<bool>(getProperties()->operator[]("NoDelay"));
+    if(getProperties().contains("NoDelay")) {
+        _tcpNoDelay = Ichor::any_cast<bool>(getProperties().operator[]("NoDelay"));
     }
 
-    auto address = net::ip::make_address(Ichor::any_cast<std::string&>(getProperties()->operator[]("Address")));
-    auto port = Ichor::any_cast<uint16_t>(getProperties()->operator[]("Port"));
+    auto address = net::ip::make_address(Ichor::any_cast<std::string&>(getProperties().operator[]("Address")));
+    auto port = Ichor::any_cast<uint16_t>(getProperties().operator[]("Port"));
 
     net::spawn(*_httpContextService->getContext(), [this, address = std::move(address), port](net::yield_context yield){
         listen(tcp::endpoint{address, port}, std::move(yield));
@@ -36,8 +36,10 @@ Ichor::StartBehaviour Ichor::HttpHostService::start() {
 Ichor::StartBehaviour Ichor::HttpHostService::stop() {
     _quit = true;
 
-    _httpAcceptor->close();
-    _httpStream->cancel();
+    if(_httpAcceptor != nullptr) {
+        _httpAcceptor->close();
+        _httpStream->cancel();
+    }
 
     _httpAcceptor = nullptr;
     _httpStream = nullptr;
@@ -59,8 +61,8 @@ void Ichor::HttpHostService::addDependencyInstance(IHttpContextService *httpCont
 }
 
 void Ichor::HttpHostService::removeDependencyInstance(IHttpContextService *httpContextService, IService *) {
+    stop();
     _httpContextService = nullptr;
-    _quit = true;
 }
 
 void Ichor::HttpHostService::setPriority(uint64_t priority) {
@@ -162,7 +164,7 @@ void Ichor::HttpHostService::read(tcp::socket socket, net::yield_context yield) 
     while(!_quit && !_httpContextService->fibersShouldStop())
     {
         // Set the timeout.
-        _httpStream->expires_after(std::chrono::seconds(30));
+        _httpStream->expires_after(30s);
 
         // Read a request
         http::request<http::vector_body<uint8_t, Ichor::PolymorphicAllocator<uint8_t>>, http::basic_fields<Ichor::PolymorphicAllocator<uint8_t>>> req;

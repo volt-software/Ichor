@@ -100,5 +100,5 @@ private:
     int _injectionCount{0};
     int _finishedWorkloads{0};
     std::array<long, ITERATIONS> _executionTimes{};
-    Ichor::unique_ptr<EventHandlerRegistration> _eventHandlerRegistration{nullptr};
+    EventHandlerRegistration _eventHandlerRegistration{};
 };

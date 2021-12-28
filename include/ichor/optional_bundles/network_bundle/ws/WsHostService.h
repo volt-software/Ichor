@@ -41,11 +41,11 @@ namespace Ichor {
 
         Ichor::unique_ptr<tcp::acceptor> _wsAcceptor{};
         uint64_t _priority{INTERNAL_EVENT_PRIORITY};
-        bool _quit{};
+        std::atomic<bool> _quit{};
         ILogger *_logger{nullptr};
         IHttpContextService *_httpContextService{nullptr};
         std::vector<WsConnectionService*> _connections{};
-        Ichor::unique_ptr<EventHandlerRegistration> _eventRegistration{};
+        EventHandlerRegistration _eventRegistration{};
     };
 }
 

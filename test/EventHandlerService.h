@@ -44,6 +44,6 @@ struct EventHandlerService final : public IEventHandlerService, public Service<E
         return handledEvents;
     }
 
-    Ichor::unique_ptr<EventHandlerRegistration> _handler{};
+    EventHandlerRegistration _handler{};
     std::unordered_map<uint64_t, uint64_t> handledEvents;
 };

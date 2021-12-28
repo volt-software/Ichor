@@ -72,6 +72,6 @@ private:
     uint64_t _testServiceId{0};
     std::chrono::steady_clock::time_point _start{};
     uint64_t startCount{0};
-    Ichor::unique_ptr<EventCompletionHandlerRegistration> _startServiceRegistration{nullptr};
-    Ichor::unique_ptr<EventCompletionHandlerRegistration> _stopServiceRegistration{nullptr};
+    EventCompletionHandlerRegistration _startServiceRegistration{};
+    EventCompletionHandlerRegistration _stopServiceRegistration{};
 };

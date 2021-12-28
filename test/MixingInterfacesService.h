@@ -120,6 +120,10 @@ struct CheckMixService final : public ICountService, public Service<CheckMixServ
         return svcCount;
     }
 
+    [[nodiscard]] bool isRunning() const noexcept final {
+        return true;
+    }
+
     uint64_t svcCount{};
     std::unordered_map<uint64_t, Handle> _services;
 };

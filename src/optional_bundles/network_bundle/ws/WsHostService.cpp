@@ -29,19 +29,19 @@ Ichor::WsHostService::WsHostService(DependencyRegister &reg, Properties props, D
 }
 
 Ichor::StartBehaviour Ichor::WsHostService::start() {
-    if(getProperties()->contains("Priority")) {
-        _priority = Ichor::any_cast<uint64_t>(getProperties()->operator[]("Priority"));
+    if(getProperties().contains("Priority")) {
+        _priority = Ichor::any_cast<uint64_t>(getProperties().operator[]("Priority"));
     }
 
-    if(!getProperties()->contains("Port") || !getProperties()->contains("Address")) {
+    if(!getProperties().contains("Port") || !getProperties().contains("Address")) {
         getManager()->pushPrioritisedEvent<UnrecoverableErrorEvent>(getServiceId(), _priority, 0, "Missing port or address when starting WsHostService");
         return Ichor::StartBehaviour::FAILED_DO_NOT_RETRY;
     }
 
     _eventRegistration = getManager()->registerEventHandler<NewWsConnectionEvent>(this, getServiceId());
 
-    auto address = net::ip::make_address(Ichor::any_cast<std::string&>(getProperties()->operator[]("Address")));
-    auto port = Ichor::any_cast<uint16_t>(getProperties()->operator[]("Port"));
+    auto address = net::ip::make_address(Ichor::any_cast<std::string&>(getProperties().operator[]("Address")));
+    auto port = Ichor::any_cast<uint16_t>(getProperties().operator[]("Port"));
 
     net::spawn(*_httpContextService->getContext(), [this, address = std::move(address), port](net::yield_context yield){
         try {
@@ -90,8 +90,8 @@ void Ichor::WsHostService::addDependencyInstance(IHttpContextService *httpContex
 }
 
 void Ichor::WsHostService::removeDependencyInstance(IHttpContextService *logger, IService *) {
+    stop();
     _httpContextService = nullptr;
-    _quit = true;
 }
 
 Ichor::Generator<bool> Ichor::WsHostService::handleEvent(Ichor::NewWsConnectionEvent const * const evt) {

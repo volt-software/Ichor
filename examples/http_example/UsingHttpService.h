@@ -18,7 +18,7 @@ public:
     UsingHttpService(DependencyRegister &reg, Properties props, DependencyManager *mng) : Service(std::move(props), mng) {
         reg.registerDependency<ILogger>(this, true);
         reg.registerDependency<ISerializationAdmin>(this, true);
-        reg.registerDependency<IHttpConnectionService>(this, true, *getProperties());
+        reg.registerDependency<IHttpConnectionService>(this, true, getProperties());
         reg.registerDependency<IHttpService>(this, true);
     }
     ~UsingHttpService() final = default;
@@ -32,9 +32,9 @@ public:
     }
 
     StartBehaviour stop() final {
-        _dataEventRegistration = nullptr;
-        _failureEventRegistration = nullptr;
-        _routeRegistration = nullptr;
+        _dataEventRegistration.reset();
+        _failureEventRegistration.reset();
+        _routeRegistration.reset();
         ICHOR_LOG_INFO(_logger, "UsingHttpService stopped");
         return StartBehaviour::SUCCEEDED;
     }
@@ -71,7 +71,7 @@ public:
     }
 
     void removeDependencyInstance(IHttpService *, IService *) {
-        _routeRegistration = nullptr;
+        _routeRegistration.reset();
     }
 
     void removeDependencyInstance(IHttpConnectionService *connectionService, IService *) {
@@ -101,7 +101,7 @@ private:
     ILogger *_logger{nullptr};
     ISerializationAdmin *_serializationAdmin{nullptr};
     IHttpConnectionService *_connectionService{nullptr};
-    Ichor::unique_ptr<EventHandlerRegistration> _dataEventRegistration{nullptr};
-    Ichor::unique_ptr<EventHandlerRegistration> _failureEventRegistration{nullptr};
+    EventHandlerRegistration _dataEventRegistration{};
+    EventHandlerRegistration _failureEventRegistration{};
     Ichor::unique_ptr<HttpRouteRegistration> _routeRegistration{nullptr};
 };

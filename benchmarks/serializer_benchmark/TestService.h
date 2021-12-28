@@ -49,6 +49,7 @@ public:
     }
 
     void handleCompletion(DoWorkEvent const * const evt) {
+        ICHOR_LOG_ERROR(_logger, "handling DoWorkEvent");
         TestMsg msg{20, "five hundred"};
         auto start = std::chrono::steady_clock::now();
         for(uint64_t i = 0; i < 1'000'000; i++) {
@@ -70,5 +71,5 @@ public:
 private:
     ILogger *_logger{};
     ISerializationAdmin *_serializationAdmin{};
-    Ichor::unique_ptr<EventCompletionHandlerRegistration> _doWorkRegistration{nullptr};
+    EventCompletionHandlerRegistration _doWorkRegistration{};
 };

@@ -4,7 +4,7 @@
 
 namespace Ichor {
     struct Dependency {
-        ICHOR_CONSTEXPR Dependency(uint64_t _interfaceNameHash, bool _required, bool _satisfied) noexcept : interfaceNameHash(_interfaceNameHash), required(_required), satisfied(_satisfied) {}
+        ICHOR_CONSTEXPR Dependency(uint64_t _interfaceNameHash, bool _required, uint64_t _satisfied) noexcept : interfaceNameHash(_interfaceNameHash), required(_required), satisfied(_satisfied) {}
         ICHOR_CONSTEXPR Dependency(const Dependency &other) noexcept = default;
         ICHOR_CONSTEXPR Dependency(Dependency &&other) noexcept = default;
         ICHOR_CONSTEXPR Dependency& operator=(const Dependency &other) noexcept = default;
@@ -15,6 +15,6 @@ namespace Ichor {
 
         uint64_t interfaceNameHash;
         bool required;
-        bool satisfied;
+        uint64_t satisfied;
     };
 }

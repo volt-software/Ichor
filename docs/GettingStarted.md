@@ -211,7 +211,7 @@ struct MyTimerService final : public IMyTimerService, public Ichor::Service<MyTi
         co_return (bool)PreventOthersHandling;        
     }
 
-    Ichor::unique_ptr<Ichor::EventHandlerRegistration> _timerEventRegistration{nullptr};
+    Ichor::EventHandlerRegistration _timerEventRegistration{};
 };
 ```
 
@@ -279,7 +279,7 @@ struct MyTimerService final : public IMyTimerService, public Ichor::Service<MyTi
         co_return (bool)PreventOthersHandling;
     }
     
-    Ichor::unique_ptr<Ichor::EventHandlerRegistration> _timerEventRegistration{nullptr};
+    Ichor::EventHandlerRegistration _timerEventRegistration{};
 };
 ```
 

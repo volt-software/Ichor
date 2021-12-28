@@ -68,5 +68,5 @@ public:
 private:
     ILogger *_logger{};
     ISerializationAdmin *_serializationAdmin{};
-    Ichor::unique_ptr<EventCompletionHandlerRegistration> _doWorkRegistration{nullptr};
+    EventCompletionHandlerRegistration _doWorkRegistration{};
 };

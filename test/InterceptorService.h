@@ -74,7 +74,7 @@ struct InterceptorService final : public IInterceptorService, public Service<Int
         return unprocessedInterceptedCounters;
     }
 
-    Ichor::unique_ptr<EventInterceptorRegistration> _interceptor{};
+    EventInterceptorRegistration _interceptor{};
     std::unordered_map<uint64_t, uint64_t> preinterceptedCounters;
     std::unordered_map<uint64_t, uint64_t> postinterceptedCounters;
     std::unordered_map<uint64_t, uint64_t> unprocessedInterceptedCounters;

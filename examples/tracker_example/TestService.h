@@ -12,7 +12,7 @@ class TestService final : public Service<TestService> {
 public:
     TestService(DependencyRegister &reg, Properties props, DependencyManager *mng) : Service(std::move(props), mng) {
         reg.registerDependency<ILogger>(this, true);
-        reg.registerDependency<IRuntimeCreatedService>(this, true, *getProperties());
+        reg.registerDependency<IRuntimeCreatedService>(this, true, getProperties());
     }
     ~TestService() final = default;
     StartBehaviour start() final {
@@ -37,9 +37,9 @@ public:
     }
 
     void addDependencyInstance(IRuntimeCreatedService *svc, IService *isvc) {
-        auto ownScopeProp = getProperties()->find("scope");
-        auto svcScopeProp = isvc->getProperties()->find("scope");
-        ICHOR_LOG_INFO(_logger, "Inserted IRuntimeCreatedService svcid {} with scope {} for svcid {} with scope {}", isvc->getServiceId(), Ichor::any_cast<std::string&>(svcScopeProp->second), getServiceId(), Ichor::any_cast<std::string>(ownScopeProp->second));
+        auto const ownScopeProp = getProperties().find("scope");
+        auto const svcScopeProp = isvc->getProperties().find("scope");
+        ICHOR_LOG_INFO(_logger, "Inserted IRuntimeCreatedService svcid {} with scope {} for svcid {} with scope {}", isvc->getServiceId(), Ichor::any_cast<std::string&>(svcScopeProp->second), getServiceId(), Ichor::any_cast<std::string&>(ownScopeProp->second));
     }
 
     void removeDependencyInstance(IRuntimeCreatedService *, IService *isvc) {

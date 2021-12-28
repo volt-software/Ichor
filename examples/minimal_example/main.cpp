@@ -19,7 +19,7 @@ public:
     StartBehaviour start() final {
         // Setup a timer that fires every 10 milliseconds and tell that dependency manager that we're interested in the events that the timer fires.
         auto timer = getManager()->createServiceManager<Timer, ITimer>();
-        timer->setChronoInterval(std::chrono::milliseconds(10));
+        timer->setChronoInterval(10ms);
 
         timer->setCallback([this](TimerEvent const * const evt) -> Generator<bool> {
             // If sigint has been fired, send a quit to the event loop.

@@ -47,5 +47,5 @@ public:
 
 private:
     ILogger *_logger;
-    Ichor::unique_ptr<EventHandlerRegistration> _customEventHandler{nullptr};
+    EventHandlerRegistration _customEventHandler{};
 };

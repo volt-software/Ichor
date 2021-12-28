@@ -17,7 +17,7 @@ public:
     UsingTcpService(DependencyRegister &reg, Properties props, DependencyManager *mng) : Service(std::move(props), mng) {
         reg.registerDependency<ILogger>(this, true);
         reg.registerDependency<ISerializationAdmin>(this, true);
-        reg.registerDependency<IConnectionService>(this, true, *getProperties());
+        reg.registerDependency<IConnectionService>(this, true, getProperties());
     }
     ~UsingTcpService() final = default;
 
@@ -30,8 +30,8 @@ public:
     }
 
     StartBehaviour stop() final {
-        _dataEventRegistration = nullptr;
-        _failureEventRegistration = nullptr;
+        _dataEventRegistration.reset();
+        _failureEventRegistration.reset();
         ICHOR_LOG_INFO(_logger, "UsingTcpService stopped");
         return StartBehaviour::SUCCEEDED;
     }
@@ -82,6 +82,6 @@ private:
     ILogger *_logger{nullptr};
     ISerializationAdmin *_serializationAdmin{nullptr};
     IConnectionService *_connectionService{nullptr};
-    Ichor::unique_ptr<EventHandlerRegistration> _dataEventRegistration{nullptr};
-    Ichor::unique_ptr<EventHandlerRegistration> _failureEventRegistration{nullptr};
+    EventHandlerRegistration _dataEventRegistration{};
+    EventHandlerRegistration _failureEventRegistration{};
 };

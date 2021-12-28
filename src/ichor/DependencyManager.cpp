@@ -80,30 +80,24 @@ void Ichor::DependencyManager::start() {
 
                         auto &manager = managerIt->second;
 
-                        auto filterProp = manager->getProperties()->find("Filter");
+                        if(!manager->setInjected()) {
+                            INTERNAL_DEBUG("Couldn't set injected for {} {} {}", manager->serviceId(), manager->implementationName(), manager->getServiceState());
+                            break;
+                        }
+
+                        auto const filterProp = manager->getProperties().find("Filter");
                         const Filter *filter = nullptr;
-                        if (filterProp != end(*manager->getProperties())) {
+                        if (filterProp != cend(manager->getProperties())) {
                             filter = Ichor::any_cast<Filter * const>(&filterProp->second);
                         }
 
-                        std::pmr::vector<ILifecycleManager*> interestedManagers{_memResource};
-                        interestedManagers.reserve(_services.size());
                         for (auto const &[key, possibleDependentLifecycleManager] : _services) {
                             if (filter != nullptr && !filter->compareTo(possibleDependentLifecycleManager)) {
                                 continue;
                             }
 
                             if(possibleDependentLifecycleManager->dependencyOnline(manager.get())) {
-                                interestedManagers.emplace_back(possibleDependentLifecycleManager.get());
-                            }
-                        }
-
-                        for(auto const &interestedManager : interestedManagers) {
-                            auto started = interestedManager->start();
-                            if (started == StartBehaviour::SUCCEEDED) {
-                                pushEventInternal<DependencyOnlineEvent>(interestedManager->serviceId(), interestedManager->getPriority());
-                            } else if(started == StartBehaviour::FAILED_AND_RETRY) {
-                                pushEventInternal<StartServiceEvent>(depOnlineEvt->originatingService, depOnlineEvt->priority, interestedManager->serviceId());
+                                pushEventInternal<StartServiceEvent>(depOnlineEvt->originatingService, INTERNAL_DEPENDENCY_EVENT_PRIORITY, possibleDependentLifecycleManager->serviceId());
                             }
                         }
                     }
@@ -119,30 +113,24 @@ void Ichor::DependencyManager::start() {
 
                         auto &manager = managerIt->second;
 
-                        auto filterProp = manager->getProperties()->find("Filter");
+                        if(!manager->setUninjected()) {
+                            INTERNAL_DEBUG("Couldn't set uninjected for {} {} {}", manager->serviceId(), manager->implementationName(), manager->getServiceState());
+                            break;
+                        }
+
+                        auto const filterProp = manager->getProperties().find("Filter");
                         const Filter *filter = nullptr;
-                        if (filterProp != end(*manager->getProperties())) {
+                        if (filterProp != cend(manager->getProperties())) {
                             filter = Ichor::any_cast<Filter * const>(&filterProp->second);
                         }
 
-                        std::pmr::vector<ILifecycleManager*> interestedManagers{_memResource};
-                        interestedManagers.reserve(_services.size());
                         for (auto const &[key, possibleDependentLifecycleManager] : _services) {
                             if (filter != nullptr && !filter->compareTo(possibleDependentLifecycleManager)) {
                                 continue;
                             }
 
                             if(possibleDependentLifecycleManager->dependencyOffline(manager.get())) {
-                                interestedManagers.emplace_back(possibleDependentLifecycleManager.get());
-                            }
-                        }
-
-                        for(auto const &interestedManager : interestedManagers) {
-                            auto stopped = interestedManager->stop();
-                            if (stopped == StartBehaviour::SUCCEEDED) {
-                                pushEventInternal<DependencyOfflineEvent>(interestedManager->serviceId(), interestedManager->getPriority());
-                            } else if(stopped == StartBehaviour::FAILED_AND_RETRY) {
-                                pushEventInternal<StopServiceEvent>(depOfflineEvt->originatingService, depOfflineEvt->priority, interestedManager->serviceId(), false);
+                                pushEventInternal<StopServiceEvent>(depOfflineEvt->originatingService, INTERNAL_DEPENDENCY_EVENT_PRIORITY, possibleDependentLifecycleManager->serviceId());
                             }
                         }
                     }
@@ -179,7 +167,7 @@ void Ichor::DependencyManager::start() {
                         if (!_quitEvt->dependenciesStopped) {
                             for (auto const &[key, possibleManager] : _services) {
                                 if (possibleManager->getServiceState() != ServiceState::INSTALLED) {
-                                    pushEventInternal<StopServiceEvent>(_quitEvt->originatingService, possibleManager->getPriority(),
+                                    pushEventInternal<StopServiceEvent>(_quitEvt->originatingService, INTERNAL_DEPENDENCY_EVENT_PRIORITY,
                                                                         possibleManager->serviceId());
                                 }
                             }
@@ -222,14 +210,14 @@ void Ichor::DependencyManager::start() {
                                           toStopService->implementationName());
                                 handleEventError(stopServiceEvt);
                                 if(ret == StartBehaviour::FAILED_AND_RETRY) {
-                                    pushEventInternal<StopServiceEvent>(stopServiceEvt->originatingService, stopServiceEvt->priority, stopServiceEvt->serviceId, true);
+                                    pushEventInternal<StopServiceEvent>(stopServiceEvt->originatingService, INTERNAL_DEPENDENCY_EVENT_PRIORITY, stopServiceEvt->serviceId, true);
                                 }
                             } else {
                                 handleEventCompletion(stopServiceEvt);
                             }
                         } else {
-                            pushEventInternal<DependencyOfflineEvent>(toStopService->serviceId(), stopServiceEvt->priority);
-                            pushEventInternal<StopServiceEvent>(stopServiceEvt->originatingService, stopServiceEvt->priority, stopServiceEvt->serviceId, true);
+                            pushEventInternal<DependencyOfflineEvent>(toStopService->serviceId(), INTERNAL_DEPENDENCY_EVENT_PRIORITY);
+                            pushEventInternal<StopServiceEvent>(stopServiceEvt->originatingService, INTERNAL_DEPENDENCY_EVENT_PRIORITY, stopServiceEvt->serviceId, true);
                         }
                     }
                         break;
@@ -253,7 +241,7 @@ void Ichor::DependencyManager::start() {
                                           toRemoveService->implementationName());
                                 handleEventError(removeServiceEvt);
                                 if(ret == StartBehaviour::FAILED_AND_RETRY) {
-                                    pushEventInternal<RemoveServiceEvent>(removeServiceEvt->originatingService, removeServiceEvt->priority, removeServiceEvt->serviceId,
+                                    pushEventInternal<RemoveServiceEvent>(removeServiceEvt->originatingService, INTERNAL_DEPENDENCY_EVENT_PRIORITY, removeServiceEvt->serviceId,
                                                                           true);
                                 }
                             } else {
@@ -261,8 +249,8 @@ void Ichor::DependencyManager::start() {
                                 _services.erase(toRemoveServiceIt);
                             }
                         } else {
-                            pushEventInternal<DependencyOfflineEvent>(toRemoveService->serviceId(), removeServiceEvt->priority);
-                            pushEventInternal<RemoveServiceEvent>(removeServiceEvt->originatingService, removeServiceEvt->priority, removeServiceEvt->serviceId,
+                            pushEventInternal<DependencyOfflineEvent>(toRemoveService->serviceId(), INTERNAL_DEPENDENCY_EVENT_PRIORITY);
+                            pushEventInternal<RemoveServiceEvent>(removeServiceEvt->originatingService, INTERNAL_DEPENDENCY_EVENT_PRIORITY, removeServiceEvt->serviceId,
                                                                   true);
                         }
                     }
@@ -285,14 +273,13 @@ void Ichor::DependencyManager::start() {
                         } else {
                             auto ret = toStartService->start();
                             if (ret == StartBehaviour::SUCCEEDED) {
-                                pushEventInternal<DependencyOnlineEvent>(toStartService->serviceId(), startServiceEvt->priority);
+                                pushEventInternal<DependencyOnlineEvent>(toStartService->serviceId(), INTERNAL_DEPENDENCY_EVENT_PRIORITY);
                                 handleEventCompletion(startServiceEvt);
+                            } else {
                                 INTERNAL_DEBUG("Couldn't start service {}: {}", startServiceEvt->serviceId, toStartService->implementationName());
                                 handleEventError(startServiceEvt);
-                            } else {
-                                handleEventError(startServiceEvt);
                                 if(ret == StartBehaviour::FAILED_AND_RETRY) {
-                                    pushEventInternal<StartServiceEvent>(startServiceEvt->originatingService, startServiceEvt->priority, startServiceEvt->serviceId);
+                                    pushEventInternal<StartServiceEvent>(startServiceEvt->originatingService, INTERNAL_DEPENDENCY_EVENT_PRIORITY, startServiceEvt->serviceId);
                                 }
                             }
                         }
@@ -414,7 +401,7 @@ void Ichor::DependencyManager::handleEventCompletion(const Ichor::Event *const e
     }
 
     auto service = _services.find(evt->originatingService);
-    if(service == end(_services) || service->second->getServiceState() != ServiceState::ACTIVE) {
+    if(service == end(_services) || (service->second->getServiceState() != ServiceState::ACTIVE && service->second->getServiceState() != ServiceState::INJECTING)) {
         return;
     }
 
@@ -434,7 +421,7 @@ uint32_t Ichor::DependencyManager::broadcastEvent(const Ichor::Event *const evt)
 
     for(auto &callbackInfo : registeredListeners->second) {
         auto service = _services.find(callbackInfo.listeningServiceId);
-        if(service == end(_services) || service->second->getServiceState() != ServiceState::ACTIVE) {
+        if(service == end(_services) || (service->second->getServiceState() != ServiceState::ACTIVE && service->second->getServiceState() != ServiceState::INJECTING)) {
             continue;
         }
 
@@ -479,9 +466,23 @@ Ichor::EventCompletionHandlerRegistration::~EventCompletionHandlerRegistration()
     }
 }
 
+void Ichor::EventCompletionHandlerRegistration::reset() {
+    if(_mgr != nullptr) {
+        _mgr->pushPrioritisedEvent<RemoveCompletionCallbacksEvent>(0, _priority, _key);
+        _mgr = nullptr;
+    }
+}
+
 Ichor::EventHandlerRegistration::~EventHandlerRegistration() {
     if(_mgr != nullptr) {
         _mgr->pushPrioritisedEvent<RemoveEventHandlerEvent>(0, _priority, _key);
+    }
+}
+
+void Ichor::EventHandlerRegistration::reset() {
+    if(_mgr != nullptr) {
+        _mgr->pushPrioritisedEvent<RemoveEventHandlerEvent>(0, _priority, _key);
+        _mgr = nullptr;
     }
 }
 
@@ -491,9 +492,23 @@ Ichor::EventInterceptorRegistration::~EventInterceptorRegistration() {
     }
 }
 
+void Ichor::EventInterceptorRegistration::reset() {
+    if(_mgr != nullptr) {
+        _mgr->pushPrioritisedEvent<RemoveEventInterceptorEvent>(0, _priority, _key);
+        _mgr = nullptr;
+    }
+}
+
 Ichor::DependencyTrackerRegistration::~DependencyTrackerRegistration() {
     if(_mgr != nullptr) {
         _mgr->pushPrioritisedEvent<RemoveTrackerEvent>(0, _priority, _interfaceNameHash);
+    }
+}
+
+void Ichor::DependencyTrackerRegistration::reset() {
+    if(_mgr != nullptr) {
+        _mgr->pushPrioritisedEvent<RemoveTrackerEvent>(0, _priority, _interfaceNameHash);
+        _mgr = nullptr;
     }
 }
 
