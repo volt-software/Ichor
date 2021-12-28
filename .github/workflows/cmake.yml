@@ -17,7 +17,9 @@ jobs:
     strategy:
       matrix:
         spdlog: [ON, OFF]
-        sanitizer: [asan, tsan]
+        sanitizer: [asan] #tsan not yet supported due to missing sanitizer implementation in GCC 10, 11. See:
+                      # - https://gcc.gnu.org/git/?p=gcc.git;a=commit;h=80b4ce1a5190ebe764b1009afae57dcef45f92c2
+                      # - https://gcc.gnu.org/bugzilla/show_bug.cgi?id=100655
 
 
     steps:
@@ -25,17 +27,17 @@ jobs:
       with:
         submodules: recursive
 
-    - name: "Configure CMake (json:${{matrix.json}}, spdlog:${{matrix.spdlog}}, asan)"
+    - name: "Configure CMake (spdlog:${{matrix.spdlog}}, asan)"
       if: ${{matrix.sanitizer == 'asan'}}
       # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
       # See https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html?highlight=cmake_build_type
       run: cmake -GNinja -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DBUILD_TESTING=OFF -DICHOR_BUILD_TESTING=ON -DICHOR_BUILD_BENCHMARKS=ON -DICHOR_BUILD_EXAMPLES=ON -DICHOR_USE_SPDLOG=${{matrix.spdlog}} -DICHOR_SERIALIZATION_FRAMEWORK=BOOST_JSON -DICHOR_USE_BOOST_BEAST=ON -DCMAKE_MAKE_PROGRAM=/usr/bin/mninja
 
-    - name: "Configure CMake (json:${{matrix.json}}, spdlog:${{matrix.spdlog}}, tsan)"
+    - name: "Configure CMake (spdlog:${{matrix.spdlog}}, tsan)"
       if: ${{matrix.sanitizer == 'tsan'}}
       # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
       # See https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html?highlight=cmake_build_type
-      run: cmake -GNinja -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DBUILD_TESTING=OFF -DICHOR_BUILD_TESTING=ON -DICHOR_BUILD_BENCHMARKS=ON -DICHOR_BUILD_EXAMPLES=ON -DICHOR_USE_SPDLOG=${{matrix.spdlog}} -DICHOR_SERIALIZATION_FRAMEWORK=RAPIDJSON -DICHOR_USE_BOOST_BEAST=ON -DICHOR_USE_SANITIZERS=OFF -DICHOR_USE_THREAD_SANITIZER=ON -DCMAKE_MAKE_PROGRAM=/usr/bin/mninja
+      run: cmake -GNinja -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DBUILD_TESTING=OFF -DICHOR_BUILD_TESTING=ON -DICHOR_BUILD_BENCHMARKS=OFF -DICHOR_BUILD_EXAMPLES=OFF -DICHOR_USE_SPDLOG=${{matrix.spdlog}} -DICHOR_SERIALIZATION_FRAMEWORK=RAPIDJSON -DICHOR_USE_BOOST_BEAST=ON -DICHOR_USE_SANITIZERS=OFF -DICHOR_USE_THREAD_SANITIZER=ON -DCMAKE_MAKE_PROGRAM=/usr/bin/mninja
 
     - name: Build
       # Build your program with the given configuration

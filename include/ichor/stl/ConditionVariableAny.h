@@ -12,7 +12,7 @@ namespace Ichor {
 
     template <typename MutexT>
     struct ConditionVariableAny final {
-        explicit ConditionVariableAny(MutexT &m) noexcept : _m(m) {
+        explicit ConditionVariableAny() noexcept {
             pthread_cond_init(&_cond, nullptr);
         }
 
@@ -22,7 +22,7 @@ namespace Ichor {
 
         void notify_all() noexcept
         {
-            std::lock_guard<MutexT> lock(_m);
+            std::lock_guard lock(_cvMutex);
             pthread_cond_broadcast(&_cond);
         }
 
@@ -79,7 +79,6 @@ namespace Ichor {
         }
 
     private:
-        MutexT &_m;
         RealtimeMutex _cvMutex{};
         pthread_cond_t _cond{};
     };

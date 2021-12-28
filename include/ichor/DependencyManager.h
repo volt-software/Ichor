@@ -174,7 +174,7 @@ namespace Ichor {
 
             uint64_t eventId = _eventIdCounter.fetch_add(1, std::memory_order_acq_rel);
             _eventQueueMutex.lock();
-            _emptyQueue = false;
+            _emptyQueue.store(false, std::memory_order_release);
             [[maybe_unused]] auto it = _eventQueue.emplace(priority, Ichor::unique_ptr<Event>{new (_memResource->allocate(sizeof(EventT))) EventT(std::forward<uint64_t>(eventId), std::forward<uint64_t>(originatingServiceId), std::forward<uint64_t>(priority), std::forward<Args>(args)...), Deleter{InternalDeleter<EventT>{_memResource}}});
             TSAN_ANNOTATE_HAPPENS_BEFORE((void*)&(*it));
             _eventQueueMutex.unlock();
@@ -199,7 +199,7 @@ namespace Ichor {
 
             uint64_t eventId = _eventIdCounter.fetch_add(1, std::memory_order_acq_rel);
             _eventQueueMutex.lock();
-            _emptyQueue = false;
+            _emptyQueue.store(false, std::memory_order_release);
             [[maybe_unused]] auto it = _eventQueue.emplace(INTERNAL_EVENT_PRIORITY, Ichor::unique_ptr<Event>{new (_memResource->allocate(sizeof(EventT))) EventT(std::forward<uint64_t>(eventId), std::forward<uint64_t>(originatingServiceId), INTERNAL_EVENT_PRIORITY, std::forward<Args>(args)...), Deleter{InternalDeleter<EventT>{_memResource}}});
             TSAN_ANNOTATE_HAPPENS_BEFORE((void*)&(*it));
             _eventQueueMutex.unlock();
@@ -387,7 +387,7 @@ namespace Ichor {
         // This waits on all events done processing, rather than the event queue being empty.
         void waitForEmptyQueue() {
             std::shared_lock lck(_eventQueueMutex);
-            _wakeUp.wait_for(lck, 1ms, [this] { return _emptyQueue || _quit.load(std::memory_order_acquire); });
+            _wakeUp.wait_for(lck, 1ms, [this] { return _emptyQueue.load(std::memory_order_acquire) || _quit.load(std::memory_order_acquire); });
         }
 
         [[nodiscard]] std::optional<std::string_view> getImplementationNameFor(uint64_t serviceId) const noexcept;
@@ -473,11 +473,11 @@ namespace Ichor {
         std::shared_ptr<ILifecycleManager> _preventEarlyDestructionOfFrameworkLogger{nullptr};
         std::multimap<uint64_t, Ichor::unique_ptr<Event>, std::less<>, Ichor::PolymorphicAllocator<std::pair<const uint64_t, Ichor::unique_ptr<Event>>>> _eventQueue{_eventMemResource};
         RealtimeReadWriteMutex _eventQueueMutex{};
-        ConditionVariableAny<RealtimeReadWriteMutex> _wakeUp{_eventQueueMutex};
+        ConditionVariableAny<RealtimeReadWriteMutex> _wakeUp{};
         std::atomic<uint64_t> _eventIdCounter{0};
         std::atomic<bool> _quit{false};
         std::atomic<bool> _started{false};
-        bool _emptyQueue{false}; // only true when all events are done processing, as opposed to having an empty _eventQueue. The latter can be empty before processing due to the usage of extract()
+        std::atomic<bool> _emptyQueue{false}; // only true when all events are done processing, as opposed to having an empty _eventQueue. The latter can be empty before processing due to the usage of extract()
         CommunicationChannel *_communicationChannel{nullptr};
         uint64_t _id{_managerIdCounter++};
         static std::atomic<uint64_t> _managerIdCounter;

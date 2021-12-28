@@ -10,7 +10,7 @@ namespace Ichor {
     enum class cv_status { no_timeout, timeout };
     
     struct ConditionVariable final {
-        explicit ConditionVariable(RealtimeMutex &m) noexcept : _m(m) {
+        explicit ConditionVariable() noexcept {
             pthread_cond_init(&_cond, nullptr);
         }
 
@@ -20,7 +20,6 @@ namespace Ichor {
 
         void notify_all() noexcept
         {
-            std::lock_guard<RealtimeMutex> lock(_m);
             pthread_cond_broadcast(&_cond);
         }
 
@@ -73,7 +72,6 @@ namespace Ichor {
         }
 
     private:
-        RealtimeMutex &_m;
         pthread_cond_t _cond{};
     };
 #endif
