@@ -25,7 +25,9 @@ namespace Ichor {
     using deleteValueFnPtr = void(*)(void*);
 
     struct any final {
-        constexpr any() noexcept = default;
+        any() noexcept : _rsrc(std::pmr::get_default_resource()) {
+
+        }
 
         any(const any& o) : _size(o._size), _rsrc(o._rsrc), _ptr(o._createFn(o._rsrc, o._ptr)), _typeHash(o._typeHash), _hasValue(o._hasValue), _createFn(o._createFn), _deleteFn(o._deleteFn), _typeName(o._typeName) {
 
@@ -41,6 +43,8 @@ namespace Ichor {
                 return *this;
             }
 
+            reset();
+
             _size = o._size;
             _rsrc = o._rsrc;
             _ptr = o._createFn(o._rsrc, o._ptr);
@@ -54,6 +58,8 @@ namespace Ichor {
         }
 
         any& operator=(any&& o) noexcept {
+            reset();
+
             _size = o._size;
             _rsrc = o._rsrc;
             _ptr = o._ptr;
@@ -119,7 +125,7 @@ namespace Ichor {
             using Up = typename std::remove_pointer_t<std::remove_cvref_t<ValueType>>;
             static_assert((std::is_reference_v<ValueType> || std::is_copy_constructible_v<ValueType>), "Template argument must be a reference or CopyConstructible type");
             static_assert(std::is_constructible_v<ValueType, Up&>, "Template argument must be constructible from an lvalue.");
-            if(_typeHash == typeNameHash<Up>()) {
+            if(_hasValue && _typeHash == typeNameHash<Up>()) {
                 return static_cast<ValueType>(*reinterpret_cast<Up*>(_ptr));
             }
             throw bad_any_cast{_rsrc, _typeName, typeName<Up>()};
@@ -131,7 +137,7 @@ namespace Ichor {
             using Up = typename std::remove_pointer_t<std::remove_cvref_t<ValueType>>;
             static_assert((std::is_reference_v<ValueType> || std::is_copy_constructible_v<ValueType>), "Template argument must be a reference or CopyConstructible type");
             static_assert(std::is_constructible_v<ValueType, const Up&>, "Template argument must be constructible from a const lvalue.");
-            if(_typeHash == typeNameHash<Up>()) {
+            if(_hasValue && _typeHash == typeNameHash<Up>()) {
                 return static_cast<ValueType>(*reinterpret_cast<Up*>(_ptr));
             }
             throw bad_any_cast{_rsrc, _typeName, typeName<Up>()};
@@ -143,7 +149,7 @@ namespace Ichor {
             using Up = typename std::remove_pointer_t<std::remove_cvref_t<ValueType>>;
             static_assert((std::is_pointer_v<ValueType> ), "Template argument must be a pointer type");
             auto comparison = typeNameHash<Up>();
-            if(_typeHash == comparison) {
+            if(_hasValue && _typeHash == comparison) {
                 return reinterpret_cast<ValueType>(_ptr);
             }
             throw bad_any_cast{_rsrc, _typeName, typeName<Up>()};

@@ -52,6 +52,10 @@ namespace Ichor {
         function& operator=(function&&) noexcept = default;
 
         ReturnValue operator()(Args... args) const {
+            if(!_callable) {
+                throw std::runtime_error("No callable to invoke");
+            }
+
             return _callable->invoke(args...);
         }
     };

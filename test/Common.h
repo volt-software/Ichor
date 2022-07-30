@@ -1,6 +1,7 @@
 #pragma once
 
-#include "catch2/catch_test_macros.hpp"
+#include <catch2/catch_test_macros.hpp>
+#include <catch2/matchers/catch_matchers.hpp>
 #include <ichor/DependencyManager.h>
 #include <ichor/optional_bundles/logging_bundle/NullFrameworkLogger.h>
 #if __has_include(<spdlog/spdlog.h>)
@@ -31,3 +32,18 @@ void ensureInternalLoggerExists() {
     }
 #endif
 }
+
+class ExceptionMatcher final : public Catch::Matchers::MatcherBase<std::exception> {
+    std::string m_message;
+public:
+
+    ExceptionMatcher() {}
+
+    bool match(std::exception const& ex) const final {
+        return true;
+    }
+
+    std::string describe() const final {
+        return "match exception exactly"; // by not providing custom logic to REQUIRE_THROWS_MATCHES :)
+    }
+};

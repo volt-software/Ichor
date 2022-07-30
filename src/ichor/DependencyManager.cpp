@@ -36,13 +36,19 @@ void Ichor::DependencyManager::start() {
 #endif
 
     while(!_quit.load(std::memory_order_acquire)) {
-        _quit.store(sigintQuit.load(std::memory_order_acquire), std::memory_order_release);
+        bool shouldQuit = sigintQuit.load(std::memory_order_acquire);
+        if(shouldQuit) {
+            _quit.store(true, std::memory_order_release);
+        }
         std::shared_lock lck(_eventQueueMutex);
         while (!_quit.load(std::memory_order_acquire) && !_eventQueue.empty()) {
             TSAN_ANNOTATE_HAPPENS_AFTER((void*)&(*_eventQueue.begin()));
             auto evtNode = _eventQueue.extract(_eventQueue.begin());
             lck.unlock();
-            _quit.store(sigintQuit.load(std::memory_order_acquire), std::memory_order_release);
+            shouldQuit = sigintQuit.load(std::memory_order_acquire);
+            if(shouldQuit) {
+                _quit.store(true, std::memory_order_release);
+            }
 
 //            ICHOR_LOG_ERROR(_logger, "evt id {} type {} has {}-{} prio", evtNode.mapped().get()->id, evtNode.mapped().get()->name, evtNode.key(), evtNode.mapped().get()->priority);
 
