@@ -19,7 +19,6 @@
 #include <ichor/DependencyRegistrations.h>
 #include <ichor/stl/RealtimeMutex.h>
 #include <ichor/stl/RealtimeReadWriteMutex.h>
-#include <ichor/stl/ConditionVariable.h>
 #include <ichor/stl/ConditionVariableAny.h>
 
 // prevent false positives by TSAN
@@ -387,7 +386,9 @@ namespace Ichor {
         // This waits on all events done processing, rather than the event queue being empty.
         void waitForEmptyQueue() {
             std::shared_lock lck(_eventQueueMutex);
-            _wakeUp.wait_for(lck, 1ms, [this] { return _emptyQueue.load(std::memory_order_acquire) || _quit.load(std::memory_order_acquire); });
+            while(!_emptyQueue.load(std::memory_order_acquire) && !_quit.load(std::memory_order_acquire)) {
+                _wakeUp.wait_for(lck, 1ms, [this] { return _emptyQueue.load(std::memory_order_acquire) || _quit.load(std::memory_order_acquire); });
+            }
         }
 
         [[nodiscard]] std::optional<std::string_view> getImplementationNameFor(uint64_t serviceId) const noexcept;

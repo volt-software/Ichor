@@ -17,9 +17,10 @@ jobs:
     strategy:
       matrix:
         spdlog: [ON, OFF]
-        sanitizer: [asan] #tsan not yet supported due to missing sanitizer implementation in GCC 10, 11. See:
+        sanitizer: [asan] #tsan not yet supported due to missing sanitizer implementation in GCC 10, 11. As well as false positives. See:
                       # - https://gcc.gnu.org/git/?p=gcc.git;a=commit;h=80b4ce1a5190ebe764b1009afae57dcef45f92c2
                       # - https://gcc.gnu.org/bugzilla/show_bug.cgi?id=100655
+                      # - https://gcc.gnu.org/bugzilla/show_bug.cgi?id=101978
 
 
     steps:
