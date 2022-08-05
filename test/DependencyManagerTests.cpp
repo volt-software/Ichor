@@ -1,7 +1,6 @@
-#include <catch2/catch_test_macros.hpp>
 #include <ichor/DependencyManager.h>
 #include <ichor/optional_bundles/logging_bundle/NullFrameworkLogger.h>
-#include "UselessService.h"
+#include "TestServices/UselessService.h"
 #include "Common.h"
 
 TEST_CASE("DependencyManager") {

@@ -1,9 +1,9 @@
 #include "Common.h"
-#include "UselessService.h"
-#include "QuitOnStartWithDependenciesService.h"
-#include "DependencyService.h"
-#include "MixingInterfacesService.h"
-#include "StartStopOnSecondAttemptService.h"
+#include "TestServices/UselessService.h"
+#include "TestServices/QuitOnStartWithDependenciesService.h"
+#include "TestServices/DependencyService.h"
+#include "TestServices/MixingInterfacesService.h"
+#include "TestServices/StartStopOnSecondAttemptService.h"
 
 TEST_CASE("DependencyServices") {
 

@@ -1,6 +1,6 @@
 #include "Common.h"
-#include "InterceptorService.h"
-#include "EventHandlerService.h"
+#include "TestServices/InterceptorService.h"
+#include "TestServices/EventHandlerService.h"
 #include "TestEvents.h"
 
 using namespace Ichor;
