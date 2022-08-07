@@ -1,7 +1,7 @@
 #pragma once
 
 #include <cppcoro/generator.hpp>
-#include <ichor/GetThreadLocalMemoryResource.h>
+//#include <cppcoro/async_generator.hpp>
 
 namespace Ichor{
 
@@ -70,17 +70,6 @@ namespace Ichor{
                 if (m_exception) {
                     std::rethrow_exception(m_exception);
                 }
-            }
-
-            void *operator new(std::size_t sz) {
-                auto* rsrc = getThreadLocalMemoryResource();
-                auto* ptr = rsrc->allocate(sz);
-                return ptr;
-            }
-
-            void operator delete(void *ptr, std::size_t sz) noexcept {
-                auto* rsrc = getThreadLocalMemoryResource();
-                rsrc->deallocate(ptr, sz);
             }
 
         private:

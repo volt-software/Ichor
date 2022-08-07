@@ -38,7 +38,7 @@ namespace Ichor {
         bool fibersShouldStop() noexcept final;
 
     private:
-        Ichor::unique_ptr<net::io_context> _httpContext{};
+        std::unique_ptr<net::io_context> _httpContext{};
         std::thread _httpThread{};
         std::atomic<bool> _starting{};
         std::atomic<bool> _stopped{true};

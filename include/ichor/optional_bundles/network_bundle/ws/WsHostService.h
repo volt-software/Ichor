@@ -39,7 +39,7 @@ namespace Ichor {
         void fail(beast::error_code, char const* what);
         void listen(tcp::endpoint endpoint, net::yield_context yield);
 
-        Ichor::unique_ptr<tcp::acceptor> _wsAcceptor{};
+        std::unique_ptr<tcp::acceptor> _wsAcceptor{};
         uint64_t _priority{INTERNAL_EVENT_PRIORITY};
         std::atomic<bool> _quit{};
         ILogger *_logger{nullptr};

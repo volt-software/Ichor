@@ -1,15 +1,14 @@
 #pragma once
 
-#include <memory_resource>
 #include <ichor/ConstevalHash.h>
 
-// Differs from std::any by explicitly requiring a memory_resource to allocate from
+// Differs from std::any by not needing RTTI (no typeid())
 // Probably doesn't work in some situations where std::any would, as compiler support is missing.
 namespace Ichor {
 
     struct bad_any_cast final : public std::bad_cast
     {
-        bad_any_cast(std::pmr::memory_resource *rsrc, std::string_view type, std::string_view cast) : _error(rsrc) {
+        bad_any_cast(std::string_view type, std::string_view cast) : _error() {
             _error = "Bad any_cast. Expected ";
             _error += type;
             _error += " but got request to cast to ";
@@ -18,22 +17,22 @@ namespace Ichor {
 
         [[nodiscard]] const char* what() const noexcept final { return _error.c_str(); }
 
-        std::pmr::string _error;
+        std::string _error;
     };
 
-    using createValueFnPtr = void*(*)(std::pmr::memory_resource *, void*);
+    using createValueFnPtr = void*(*)(void*);
     using deleteValueFnPtr = void(*)(void*);
 
     struct any final {
-        any() noexcept : _rsrc(std::pmr::get_default_resource()) {
+        any() noexcept {
 
         }
 
-        any(const any& o) : _size(o._size), _rsrc(o._rsrc), _ptr(o._createFn(o._rsrc, o._ptr)), _typeHash(o._typeHash), _hasValue(o._hasValue), _createFn(o._createFn), _deleteFn(o._deleteFn), _typeName(o._typeName) {
+        any(const any& o) : _size(o._size), _ptr(o._createFn(o._ptr)), _typeHash(o._typeHash), _hasValue(o._hasValue), _createFn(o._createFn), _deleteFn(o._deleteFn), _typeName(o._typeName) {
 
         }
 
-        any(any&& o) noexcept : _size(o._size), _rsrc(o._rsrc), _ptr(o._ptr), _typeHash(o._typeHash), _hasValue(o._hasValue), _createFn(o._createFn), _deleteFn(o._deleteFn), _typeName(o._typeName) {
+        any(any&& o) noexcept : _size(o._size), _ptr(o._ptr), _typeHash(o._typeHash), _hasValue(o._hasValue), _createFn(o._createFn), _deleteFn(o._deleteFn), _typeName(o._typeName) {
             o._hasValue = false;
             o._ptr = nullptr;
         }
@@ -46,8 +45,7 @@ namespace Ichor {
             reset();
 
             _size = o._size;
-            _rsrc = o._rsrc;
-            _ptr = o._createFn(o._rsrc, o._ptr);
+            _ptr = o._createFn(o._ptr);
             _typeHash = o._typeHash;
             _hasValue = o._hasValue;
             _createFn = o._createFn;
@@ -61,7 +59,6 @@ namespace Ichor {
             reset();
 
             _size = o._size;
-            _rsrc = o._rsrc;
             _ptr = o._ptr;
             _typeHash = o._typeHash;
             _hasValue = o._hasValue;
@@ -80,7 +77,7 @@ namespace Ichor {
         }
 
         template <typename T, typename... Args>
-        std::decay<T>& emplace(std::pmr::memory_resource *rsrc, Args&&... args)
+        std::decay<T>& emplace(Args&&... args)
         {
             static_assert(std::is_copy_constructible_v<T>, "Template argument must be copy constructible.");
             static_assert(!std::is_pointer_v<T>, "Template argument must not be a pointer");
@@ -88,15 +85,14 @@ namespace Ichor {
             reset();
 
             _size = sizeof(T);
-            _rsrc = rsrc;
-            _ptr = new (_rsrc->allocate(sizeof(T))) T(std::forward<Args>(args)...);
+            _ptr = new T(std::forward<Args>(args)...);
             _typeHash = typeNameHash<std::remove_cvref_t<T>>();
             _hasValue = true;
-            _createFn = [](std::pmr::memory_resource *rsrc, void *value) -> void* {
-                return new (rsrc->allocate(sizeof(T))) T(*reinterpret_cast<T*>(value));
+            _createFn = [](void *value) -> void* {
+                return new T(*reinterpret_cast<T*>(value));
             };
             _deleteFn = [](void *value) {
-                static_cast<T*>(value)->~T();
+                delete static_cast<T*>(value);
             };
             _typeName = typeName<std::remove_cvref_t<T>>();
 
@@ -106,7 +102,6 @@ namespace Ichor {
         void reset() {
             if(_hasValue) {
                 _deleteFn(_ptr);
-                _rsrc->deallocate(_ptr, _size);
                 _hasValue = false;
             }
         }
@@ -128,7 +123,7 @@ namespace Ichor {
             if(_hasValue && _typeHash == typeNameHash<Up>()) {
                 return static_cast<ValueType>(*reinterpret_cast<Up*>(_ptr));
             }
-            throw bad_any_cast{_rsrc, _typeName, typeName<Up>()};
+            throw bad_any_cast{_typeName, typeName<Up>()};
         }
 
         template<typename ValueType>
@@ -140,7 +135,7 @@ namespace Ichor {
             if(_hasValue && _typeHash == typeNameHash<Up>()) {
                 return static_cast<ValueType>(*reinterpret_cast<Up*>(_ptr));
             }
-            throw bad_any_cast{_rsrc, _typeName, typeName<Up>()};
+            throw bad_any_cast{_typeName, typeName<Up>()};
         }
 
         template<typename ValueType>
@@ -152,12 +147,11 @@ namespace Ichor {
             if(_hasValue && _typeHash == comparison) {
                 return reinterpret_cast<ValueType>(_ptr);
             }
-            throw bad_any_cast{_rsrc, _typeName, typeName<Up>()};
+            throw bad_any_cast{_typeName, typeName<Up>()};
         }
 
     private:
         std::size_t _size{};
-        std::pmr::memory_resource *_rsrc{};
         void* _ptr{};
         uint64_t _typeHash{};
         bool _hasValue{};
@@ -185,16 +179,9 @@ namespace Ichor {
     }
 
     template <typename T, typename... Args>
-    any make_any(std::pmr::memory_resource *rsrc, Args&&... args) {
-        any a;
-        a.template emplace<T, Args...>(rsrc, std::forward<Args>(args)...);
-        return a;
-    }
-
-    template <typename T, typename... Args>
     any make_any(Args&&... args) {
         any a;
-        a.template emplace<T, Args...>(std::pmr::get_default_resource(), std::forward<Args>(args)...);
+        a.template emplace<T, Args...>(std::forward<Args>(args)...);
         return a;
     }
 }

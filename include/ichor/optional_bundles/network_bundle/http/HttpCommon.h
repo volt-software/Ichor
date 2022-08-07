@@ -181,23 +181,23 @@ namespace Ichor {
     };
 
     struct HttpHeader {
-        std::pmr::string name{};
-        std::pmr::string value{};
+        std::string name{};
+        std::string value{};
 
         HttpHeader() noexcept = default;
         HttpHeader(std::string_view _name, std::string_view _value) noexcept : name(_name), value(_value) {}
     };
 
     struct HttpRequest {
-        std::vector<uint8_t, Ichor::PolymorphicAllocator<uint8_t>> body;
+        std::vector<uint8_t> body;
         HttpMethod method;
         std::string_view route;
-        std::vector<HttpHeader, Ichor::PolymorphicAllocator<HttpHeader>> headers;
+        std::vector<HttpHeader> headers;
     };
 
     struct HttpResponse {
         HttpStatus status;
-        std::vector<uint8_t, Ichor::PolymorphicAllocator<uint8_t>> body;
-        std::vector<HttpHeader, Ichor::PolymorphicAllocator<HttpHeader>> headers;
+        std::vector<uint8_t> body;
+        std::vector<HttpHeader> headers;
     };
 }

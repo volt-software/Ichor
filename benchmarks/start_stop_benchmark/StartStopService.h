@@ -6,6 +6,12 @@
 #include <ichor/Service.h>
 #include <ichor/LifecycleManager.h>
 
+#ifdef __SANITIZE_ADDRESS__
+constexpr uint32_t START_STOP_COUNT = 100'000;
+#else
+constexpr uint32_t START_STOP_COUNT = 1'000'000;
+#endif
+
 using namespace Ichor;
 
 class StartStopService final : public Service<StartStopService> {
@@ -22,7 +28,7 @@ public:
 
             _start = std::chrono::steady_clock::now();
             getManager()->pushEvent<StopServiceEvent>(getServiceId(), _testServiceId);
-        } else if(startCount < 1'000'000) {
+        } else if(startCount < START_STOP_COUNT) {
             getManager()->pushEvent<StopServiceEvent>(getServiceId(), _testServiceId);
         } else {
             auto end = std::chrono::steady_clock::now();

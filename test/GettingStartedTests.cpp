@@ -93,17 +93,6 @@ struct MyInterceptorService final : public Ichor::Service<MyInterceptorService> 
     Ichor::EventInterceptorRegistration _interceptor{};
 };
 
-int memory_resource() {
-    std::pmr::unsynchronized_pool_resource resourceOne{};
-    std::pmr::unsynchronized_pool_resource resourceTwo{};
-    Ichor::DependencyManager dm{&resourceOne, &resourceTwo};
-    dm.createServiceManager<Ichor::CoutFrameworkLogger, Ichor::IFrameworkLogger>();
-    // your services here
-    dm.start();
-
-    return 0;
-}
-
 int communication() {
     Ichor::CommunicationChannel channel{};
     DependencyManager dmOne{}; // ID = 0
@@ -139,7 +128,7 @@ struct MyMemoryStructure {
 
 struct MyMemoryAllocatorService final : public Ichor::Service<MyMemoryAllocatorService> {
     StartBehaviour start() final {
-        _myDataStructure = Ichor::make_unique<MyMemoryStructure>(getMemoryResource(), 1);
+        _myDataStructure = std::make_unique<MyMemoryStructure>(1);
         return StartBehaviour::SUCCEEDED;
     }
 
@@ -148,5 +137,5 @@ struct MyMemoryAllocatorService final : public Ichor::Service<MyMemoryAllocatorS
         return StartBehaviour::SUCCEEDED;
     }
 
-    Ichor::unique_ptr<MyMemoryStructure> _myDataStructure{};
+    std::unique_ptr<MyMemoryStructure> _myDataStructure{};
 };

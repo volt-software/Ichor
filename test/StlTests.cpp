@@ -1,5 +1,4 @@
 #include "Common.h"
-#include <ichor/stl/Function.h>
 #include <ichor/stl/RealtimeMutex.h>
 #include <ichor/stl/RealtimeReadWriteMutex.h>
 
@@ -70,23 +69,6 @@ TEST_CASE("STL Tests") {
         REQUIRE_THROWS_MATCHES(any_cast<float>(noneAny), bad_any_cast, ExceptionMatcher());
         REQUIRE_THROWS_MATCHES(any_cast<float>(movedNoneAny), bad_any_cast, ExceptionMatcher());
 
-    }
-
-    SECTION("Function basics") {
-        function<int(int, int)> lambdaFn([](int a, int b) {
-            return a + b;
-        }, std::pmr::get_default_resource());
-
-        REQUIRE(lambdaFn(23, 34) == 23 + 34);
-
-        function<int(int, int, int)> ptrFn(sum_three, std::pmr::get_default_resource());
-
-        REQUIRE(ptrFn(23, 34, 45) == 23 + 34 + 45);
-
-        auto movedFn = std::move(lambdaFn);
-
-        REQUIRE(movedFn(23, 34) == 23 + 34);
-        REQUIRE_THROWS_MATCHES(lambdaFn(23, 34), std::runtime_error, ExceptionMatcher());
     }
 
     SECTION("RealTimeMutex basics") {

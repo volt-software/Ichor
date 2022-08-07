@@ -5,6 +5,12 @@
 #include <ichor/Service.h>
 #include <ichor/LifecycleManager.h>
 
+#ifdef __SANITIZE_ADDRESS__
+constexpr uint32_t EVENT_COUNT = 500'000;
+#else
+constexpr uint32_t EVENT_COUNT = 5'000'000;
+#endif
+
 using namespace Ichor;
 
 struct UselessEvent final : public Event {
@@ -24,7 +30,7 @@ public:
     ~TestService() final = default;
     StartBehaviour start() final {
         auto start = std::chrono::steady_clock::now();
-        for(uint32_t i = 0; i < 5'000'000; i++) {
+        for(uint32_t i = 0; i < EVENT_COUNT; i++) {
             getManager()->pushEvent<UselessEvent>(getServiceId());
         }
         auto end = std::chrono::steady_clock::now();

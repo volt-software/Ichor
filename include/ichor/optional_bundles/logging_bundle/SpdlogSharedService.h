@@ -12,7 +12,7 @@ namespace spdlog::sinks {
 namespace Ichor {
     class ISpdlogSharedService {
     public:
-        virtual std::pmr::vector<std::shared_ptr<spdlog::sinks::sink>> const& getSinks() noexcept = 0;
+        virtual std::vector<std::shared_ptr<spdlog::sinks::sink>> const& getSinks() noexcept = 0;
     protected:
         ~ISpdlogSharedService() = default;
     };
@@ -24,9 +24,9 @@ namespace Ichor {
         StartBehaviour start() final;
         StartBehaviour stop() final;
 
-        std::pmr::vector<std::shared_ptr<spdlog::sinks::sink>> const& getSinks() noexcept final;
+        std::vector<std::shared_ptr<spdlog::sinks::sink>> const& getSinks() noexcept final;
     private:
-        std::pmr::vector<std::shared_ptr<spdlog::sinks::sink>> _sinks;
+        std::vector<std::shared_ptr<spdlog::sinks::sink>> _sinks;
     };
 }
 

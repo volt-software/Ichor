@@ -2,7 +2,6 @@
 
 #include <ichor/ConstevalHash.h>
 #include <ichor/stl/Any.h>
-#include <ichor/stl/PolymorphicAllocator.h>
 #include <string_view>
 #include <unordered_map>
 
@@ -67,8 +66,8 @@ namespace Ichor {
         size_t operator()(const char* txt) const        { return hash_type{}(txt); }
     };
 
-    using Properties = std::unordered_map<std::pmr::string, Ichor::any, string_hash, std::equal_to<>, Ichor::PolymorphicAllocator<std::pair<const std::pmr::string, Ichor::any>>>;
-    using IchorProperty = std::pair<std::pmr::string, Ichor::any>;
+    using Properties = std::unordered_map<std::string, Ichor::any, string_hash>;
+    using IchorProperty = std::pair<std::string, Ichor::any>;
 
     inline constexpr bool PreventOthersHandling = false;
     inline constexpr bool AllowOthersHandling = true;
@@ -77,8 +76,9 @@ namespace Ichor {
     concept Pair = std::is_same_v<T, IchorProperty>;
 
     template <Pair... Pairs>
-    Properties make_properties(std::pmr::memory_resource *rsrc, Pairs&&... pairs) {
-        Properties props{rsrc};
+    Properties make_properties( Pairs&&... pairs) {
+        Properties props{};
+        props.reserve(sizeof...(Pairs));
         (props.emplace(std::move(pairs.first), std::move(pairs.second)), ...);
         return props;
     }

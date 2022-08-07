@@ -1,7 +1,6 @@
 #include <ichor/DependencyManager.h>
 #include <ichor/CommunicationChannel.h>
 #include <ichor/stl/Any.h>
-#include <ichor/GetThreadLocalMemoryResource.h>
 
 std::atomic<bool> sigintQuit;
 std::atomic<uint64_t> Ichor::DependencyManager::_managerIdCounter = 0;
@@ -13,8 +12,6 @@ void on_sigint([[maybe_unused]] int sig) {
 
 
 void Ichor::DependencyManager::start() {
-    setThreadLocalMemoryResource(_memResource);
-
     if(_logger == nullptr) {
         throw std::runtime_error("Trying to start without a framework logger");
     }
@@ -212,8 +209,8 @@ void Ichor::DependencyManager::start() {
                         if (stopServiceEvt->dependenciesStopped) {
                             auto ret = toStopService->stop();
                             if (toStopService->getServiceState() != ServiceState::INSTALLED && ret != StartBehaviour::SUCCEEDED) {
-                                ICHOR_LOG_ERROR(_logger, "Couldn't stop service {}: {} but all dependencies stopped", stopServiceEvt->serviceId,
-                                          toStopService->implementationName());
+//                                ICHOR_LOG_ERROR(_logger, "Couldn't stop service {}: {} but all dependencies stopped", stopServiceEvt->serviceId,
+//                                          toStopService->implementationName());
                                 handleEventError(stopServiceEvt);
                                 if(ret == StartBehaviour::FAILED_AND_RETRY) {
                                     pushEventInternal<StopServiceEvent>(stopServiceEvt->originatingService, INTERNAL_DEPENDENCY_EVENT_PRIORITY, stopServiceEvt->serviceId, true);

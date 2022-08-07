@@ -8,7 +8,7 @@
 #include <ichor/optional_bundles/network_bundle/IHostService.h>
 
 template<class NextLayer>
-void setup_stream(Ichor::unique_ptr<websocket::stream<NextLayer>>& ws)
+void setup_stream(std::unique_ptr<websocket::stream<NextLayer>>& ws)
 {
     // These values are tuned for Autobahn|Testsuite, and
     // should also be generally helpful for increased performance.
@@ -25,10 +25,10 @@ void setup_stream(Ichor::unique_ptr<websocket::stream<NextLayer>>& ws)
 Ichor::WsConnectionService::WsConnectionService(DependencyRegister &reg, Properties props, DependencyManager *mng) : Service(std::move(props), mng) {
     reg.registerDependency<ILogger>(this, true);
     reg.registerDependency<IHttpContextService>(this, true);
-    if(props.contains("WsHostServiceId")) {
+    if(getProperties().contains("WsHostServiceId")) {
         reg.registerDependency<IHostService>(this, true,
-                                             Ichor::make_properties(getMemoryResource(),
-                                             IchorProperty{"Filter", Ichor::make_any<Filter>(getMemoryResource(), getMemoryResource(), ServiceIdFilterEntry{Ichor::any_cast<uint64_t>(props["WsHostServiceId"])})}));
+                                             Ichor::make_properties(
+                                             IchorProperty{"Filter", Ichor::make_any<Filter>(ServiceIdFilterEntry{Ichor::any_cast<uint64_t>(getProperties()["WsHostServiceId"])})}));
     }
 }
 
@@ -98,7 +98,7 @@ void Ichor::WsConnectionService::removeDependencyInstance(IHttpContextService *l
     _httpContextService = nullptr;
 }
 
-uint64_t Ichor::WsConnectionService::sendAsync(std::vector<uint8_t, Ichor::PolymorphicAllocator<uint8_t>> &&msg) {
+uint64_t Ichor::WsConnectionService::sendAsync(std::vector<uint8_t> &&msg) {
     if(_quit || _httpContextService->fibersShouldStop()) {
         return false;
     }
@@ -143,7 +143,7 @@ void Ichor::WsConnectionService::accept(net::yield_context yield) {
 
     if(!_ws) {
         auto &socket = Ichor::any_cast<CopyIsMoveWorkaround<tcp::socket>&>(getProperties().operator[]("Socket"));
-        _ws = Ichor::make_unique<websocket::stream<beast::tcp_stream>>(getMemoryResource(), socket.moveObject());
+        _ws = std::make_unique<websocket::stream<beast::tcp_stream>>(socket.moveObject());
     }
 
     setup_stream(_ws);
@@ -193,7 +193,7 @@ void Ichor::WsConnectionService::connect(net::yield_context yield) {
 
     // These objects perform our I/O
     tcp::resolver resolver(*_httpContextService->getContext());
-    _ws = Ichor::make_unique<websocket::stream<beast::tcp_stream>>(getMemoryResource(), *_httpContextService->getContext());
+    _ws = std::make_unique<websocket::stream<beast::tcp_stream>>(*_httpContextService->getContext());
 
     // Look up the domain name
     auto const results = resolver.resolve(address, std::to_string(port), ec);
@@ -262,7 +262,7 @@ void Ichor::WsConnectionService::read(net::yield_context &yield) {
     beast::error_code ec;
 
     while(!_quit && !_httpContextService->fibersShouldStop()) {
-        beast::basic_flat_buffer buffer{Ichor::PolymorphicAllocator<uint8_t>{getMemoryResource()}};
+        beast::basic_flat_buffer buffer{std::allocator<uint8_t>{}};
 
         _ws->async_read(buffer, yield[ec]);
 
@@ -280,7 +280,7 @@ void Ichor::WsConnectionService::read(net::yield_context &yield) {
 
         if(_ws->got_text()) {
             auto data = buffer.data();
-            getManager()->pushPrioritisedEvent<NetworkDataEvent>(getServiceId(), _priority,  std::vector<uint8_t, Ichor::PolymorphicAllocator<uint8_t>>{static_cast<char*>(data.data()), static_cast<char*>(data.data()) + data.size(), getMemoryResource()});
+            getManager()->pushPrioritisedEvent<NetworkDataEvent>(getServiceId(), _priority,  std::vector<uint8_t>{static_cast<char*>(data.data()), static_cast<char*>(data.data()) + data.size()});
         }
     }
 

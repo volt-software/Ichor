@@ -22,9 +22,7 @@ int main() {
 
     {
         auto start = std::chrono::steady_clock::now();
-        std::pmr::unsynchronized_pool_resource resourceOne{};
-        std::pmr::unsynchronized_pool_resource resourceTwo{};
-        DependencyManager dm{&resourceOne, &resourceTwo};
+        DependencyManager dm{};
         auto logMgr = dm.createServiceManager<FRAMEWORK_LOGGER_TYPE, IFrameworkLogger>({}, 10);
         logMgr->setLogLevel(LogLevel::INFO);
 
@@ -34,23 +32,21 @@ int main() {
 #endif
 
         dm.createServiceManager<LoggerAdmin<LOGGER_TYPE>, ILoggerAdmin>();
-        for (uint64_t i = 0; i < 10'000; i++) {
-            dm.createServiceManager<TestService>(Properties{{"Iteration", Ichor::make_any<uint64_t>(dm.getMemoryResource(), i)},
-                                                                 {"LogLevel",  Ichor::make_any<LogLevel>(dm.getMemoryResource(), LogLevel::WARN)}});
+        for (uint64_t i = 0; i < SERVICES_COUNT; i++) {
+            dm.createServiceManager<TestService>(Properties{{"Iteration", Ichor::make_any<uint64_t>(i)},
+                                                                 {"LogLevel",  Ichor::make_any<LogLevel>(LogLevel::WARN)}});
         }
         dm.start();
         auto end = std::chrono::steady_clock::now();
         std::cout << fmt::format("Single Threaded Program ran for {:L} µs with {:L} peak memory usage\n", std::chrono::duration_cast<std::chrono::microseconds>(end - start).count(), getPeakRSS());
     }
-
-    std::array<std::pmr::unsynchronized_pool_resource, 16> memoryAllocators{};
     {
         auto start = std::chrono::steady_clock::now();
         std::array<std::thread, 8> threads{};
         std::vector<DependencyManager> managers{};
         managers.reserve(8);
         for (uint_fast32_t i = 0, j = 0; i < 8; i++, j += 2) {
-            managers.emplace_back(&memoryAllocators[j], &memoryAllocators[j + 1]);
+            managers.emplace_back();
             threads[i] = std::thread([&managers, i] {
                 auto logMgr = managers[i].createServiceManager<FRAMEWORK_LOGGER_TYPE, IFrameworkLogger>({}, 10);
                 logMgr->setLogLevel(LogLevel::INFO);
@@ -60,8 +56,8 @@ int main() {
 #endif
 
                 managers[i].createServiceManager<LoggerAdmin<LOGGER_TYPE>, ILoggerAdmin>();
-                for (uint64_t z = 0; z < 10'000; z++) {
-                    managers[i].createServiceManager<TestService>(Properties{{"Iteration", Ichor::make_any<uint64_t>(managers[i].getMemoryResource(), z)}, {"LogLevel", Ichor::make_any<LogLevel>(managers[i].getMemoryResource(), LogLevel::WARN)}});
+                for (uint64_t z = 0; z < SERVICES_COUNT; z++) {
+                    managers[i].createServiceManager<TestService>(Properties{{"Iteration", Ichor::make_any<uint64_t>(z)}, {"LogLevel", Ichor::make_any<LogLevel>(LogLevel::WARN)}});
                 }
                 managers[i].start();
             });

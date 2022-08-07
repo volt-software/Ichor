@@ -4,10 +4,11 @@
 #include <string>
 
 namespace Ichor {
+
     template <typename T>
     class PropertiesFilterEntry final {
     public:
-        PropertiesFilterEntry(std::pmr::string _key, T _val) : key(std::move(_key)), val(std::move(_val)) {}
+        PropertiesFilterEntry(std::string _key, T _val) : key(std::move(_key)), val(std::move(_val)) {}
 
         [[nodiscard]] bool matches(const std::shared_ptr<ILifecycleManager> &manager) const {
             auto const propVal = manager->getProperties().find(key);
@@ -23,7 +24,7 @@ namespace Ichor {
             return Ichor::any_cast<T&>(propVal->second) == val;
         }
 
-        const std::pmr::string key;
+        const std::string key;
         const T val;
     };
 
@@ -70,8 +71,9 @@ namespace Ichor {
     class Filter final {
     public:
         template <typename... T>
-        Filter(std::pmr::memory_resource *rsrc, T&&... entries) : _templatedFilter(new (rsrc->allocate(sizeof(TemplatedFilter<T...>))) TemplatedFilter<T...>(std::forward<T>(entries)...), Deleter{InternalDeleter<TemplatedFilter<T...>>{rsrc}}, std::pmr::polymorphic_allocator<TemplatedFilter<T...>>(rsrc)) {}
+        Filter(T&&... entries) : _templatedFilter(new TemplatedFilter<T...>(std::forward<T>(entries)...)) {}
 
+        Filter(Filter&) = default;
         Filter(const Filter&) = default;
         Filter(Filter&&) noexcept = default;
         Filter& operator=(const Filter&) = default;

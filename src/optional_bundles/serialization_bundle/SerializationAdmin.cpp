@@ -1,12 +1,12 @@
 #include <ichor/optional_bundles/serialization_bundle/SerializationAdmin.h>
 #include <ichor/DependencyManager.h>
 
-Ichor::SerializationAdmin::SerializationAdmin(DependencyRegister &reg, Properties props, DependencyManager *mng) : Service(std::move(props), mng), _serializers(getMemoryResource()) {
+Ichor::SerializationAdmin::SerializationAdmin(DependencyRegister &reg, Properties props, DependencyManager *mng) : Service(std::move(props), mng), _serializers() {
     reg.registerDependency<ILogger>(this, true);
     reg.registerDependency<ISerializer>(this, false);
 }
 
-std::vector<uint8_t, Ichor::PolymorphicAllocator<uint8_t>> Ichor::SerializationAdmin::serialize(const uint64_t type, const void* obj) {
+std::vector<uint8_t> Ichor::SerializationAdmin::serialize(const uint64_t type, const void* obj) {
     auto serializer = _serializers.find(type);
     if(serializer == end(_serializers)) {
         throw std::runtime_error(fmt::format("Couldn't find serializer for type {}", type));
@@ -14,12 +14,12 @@ std::vector<uint8_t, Ichor::PolymorphicAllocator<uint8_t>> Ichor::SerializationA
     return serializer->second->serialize(obj);
 }
 
-std::tuple<void*, std::pmr::memory_resource*> Ichor::SerializationAdmin::deserialize(const uint64_t type, std::vector<uint8_t, Ichor::PolymorphicAllocator<uint8_t>> &&bytes) {
+void* Ichor::SerializationAdmin::deserialize(const uint64_t type, std::vector<uint8_t> &&bytes) {
     auto serializer = _serializers.find(type);
     if(serializer == end(_serializers)) {
         throw std::runtime_error(fmt::format("Couldn't find serializer for type {}", type));
     }
-    return {serializer->second->deserialize(std::move(bytes)), getMemoryResource()};
+    return serializer->second->deserialize(std::move(bytes));
 }
 
 void Ichor::SerializationAdmin::addDependencyInstance(ILogger *logger, IService *) {

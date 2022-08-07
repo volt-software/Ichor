@@ -87,7 +87,7 @@ Ichor::StartBehaviour Ichor::TcpConnectionService::start() {
             co_return (bool)PreventOthersHandling;
         }
 
-        getManager()->pushPrioritisedEvent<NetworkDataEvent>(getServiceId(), _priority, std::vector<uint8_t, Ichor::PolymorphicAllocator<uint8_t>>{buf.data(), buf.data() + ret, getMemoryResource()});
+        getManager()->pushPrioritisedEvent<NetworkDataEvent>(getServiceId(), _priority, std::vector<uint8_t>{buf.data(), buf.data() + ret});
         co_return (bool)PreventOthersHandling;
     });
     _timerManager->startTimer();
@@ -115,7 +115,7 @@ void Ichor::TcpConnectionService::removeDependencyInstance(ILogger *logger, ISer
     _logger = nullptr;
 }
 
-uint64_t Ichor::TcpConnectionService::sendAsync(std::vector<uint8_t, Ichor::PolymorphicAllocator<uint8_t>> &&msg) {
+uint64_t Ichor::TcpConnectionService::sendAsync(std::vector<uint8_t> &&msg) {
     auto id = ++_msgIdCounter;
     size_t sent_bytes = 0;
 

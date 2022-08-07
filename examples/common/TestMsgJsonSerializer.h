@@ -16,39 +16,14 @@
 
 using namespace Ichor;
 
-#ifdef USE_RAPIDJSON
-class RapidJsonMemoryResourceAllocator {
-public:
-    static const bool kNeedFree = true;
-    void* Malloc(size_t size) {
-        return getThreadLocalMemoryResource()->allocate(size);
-    }
-    void* Realloc(void* originalPtr, size_t originalSize, size_t newSize) {
-        (void)originalSize;
-        if (newSize == 0) {
-            getThreadLocalMemoryResource()->deallocate(originalPtr, originalSize);
-            return nullptr;
-        }
-
-        auto ptr = getThreadLocalMemoryResource()->allocate(newSize);
-        std::memcpy(ptr, originalPtr, originalSize);
-        getThreadLocalMemoryResource()->deallocate(originalPtr, originalSize);
-
-        return ptr;
-    }
-    // BAD, this will cause mismatched alloc/dealloc warnings in address sanitizer. Why did RapidJson make this a static function?!
-    static void Free(void *ptr) { getThreadLocalMemoryResource()->deallocate(ptr, 0); }
-};
-#endif
-
 class TestMsgJsonSerializer final : public ISerializer, public Service<TestMsgJsonSerializer> {
 public:
     TestMsgJsonSerializer(Properties props, DependencyManager *mng) : Service(std::move(props), mng) {
-        _properties.insert({"type", Ichor::make_any<uint64_t>(getMemoryResource(), typeNameHash<TestMsg>())});
+        _properties.insert({"type", Ichor::make_any<uint64_t>(typeNameHash<TestMsg>())});
     }
     ~TestMsgJsonSerializer() final = default;
 
-    std::vector<uint8_t, Ichor::PolymorphicAllocator<uint8_t>> serialize(const void* obj) final {
+    std::vector<uint8_t> serialize(const void* obj) final {
         auto msg = static_cast<const TestMsg*>(obj);
 
 #ifdef USE_RAPIDJSON
@@ -65,9 +40,9 @@ public:
 
         writer.EndObject();
         auto *ret = sb.GetString();
-        return std::vector<uint8_t, Ichor::PolymorphicAllocator<uint8_t>>(ret, ret + sb.GetSize() + 1, getMemoryResource());
+        return std::vector<uint8_t>(ret, ret + sb.GetSize() + 1);
 #elif USE_BOOST_JSON
-        boost::json::value jv(getMemoryResource());
+        boost::json::value jv{};
         boost::json::serializer sr;
         jv = {{"id", msg->id}, {"val", msg->val}};
         sr.reset(&jv);
@@ -77,10 +52,10 @@ public:
         sv = sr.read(buf);
 
         if(sr.done()) {
-            return std::vector<uint8_t, Ichor::PolymorphicAllocator<uint8_t>>(sv.data(), sv.data() + sv.size(), getMemoryResource());
+            return std::vector<uint8_t>(sv.data(), sv.data() + sv.size());
         }
 
-        std::vector<uint8_t, Ichor::PolymorphicAllocator<uint8_t>> ret{getMemoryResource()};
+        std::vector<uint8_t> ret{};
         std::size_t len = sv.size();
         ret.reserve(len*2);
         ret.resize(ret.capacity());
@@ -99,7 +74,7 @@ public:
         return ret;
 #endif
     }
-    void* deserialize(std::vector<uint8_t, Ichor::PolymorphicAllocator<uint8_t>> &&stream) final {
+    void* deserialize(std::vector<uint8_t> &&stream) final {
 #ifdef USE_RAPIDJSON
         rapidjson::Document d;
         d.ParseInsitu(reinterpret_cast<char*>(stream.data()));
@@ -108,10 +83,9 @@ public:
             return nullptr;
         }
 
-        return new (getMemoryResource()->allocate(sizeof(TestMsg))) TestMsg{d["id"].GetUint64(), d["val"].GetString()};
+        return new TestMsg{d["id"].GetUint64(), d["val"].GetString()};
 #elif USE_BOOST_JSON
-        unsigned char temp[4096];
-        boost::json::parser p(getMemoryResource(), boost::json::parse_options(), temp);
+        boost::json::parser p{};
 
         std::error_code ec;
         auto size = p.write(reinterpret_cast<char*>(stream.data()), stream.size(), ec);
@@ -122,7 +96,7 @@ public:
 
         auto value = p.release();
 
-        return new (getMemoryResource()->allocate(sizeof(TestMsg))) TestMsg{boost::json::value_to<uint64_t>(value.at("id")), boost::json::value_to<std::string>(value.at("val"))};
+        return new TestMsg{boost::json::value_to<uint64_t>(value.at("id")), boost::json::value_to<std::string>(value.at("val"))};
 #endif
     }
 };

@@ -37,8 +37,6 @@ namespace Ichor {
 
         [[nodiscard]] virtual Properties& getProperties() noexcept = 0;
         [[nodiscard]] virtual const Properties& getProperties() const noexcept = 0;
-
-        [[nodiscard]] std::pmr::memory_resource* getMemoryResource() noexcept;
     };
 
 

@@ -8,6 +8,12 @@
 #include <ichor/LifecycleManager.h>
 #include "../../examples/common/TestMsg.h"
 
+#ifdef __SANITIZE_ADDRESS__
+constexpr uint32_t SERDE_COUNT = 100'000;
+#else
+constexpr uint32_t SERDE_COUNT = 1'000'000;
+#endif
+
 using namespace Ichor;
 
 class TestService final : public Service<TestService> {
@@ -52,7 +58,7 @@ public:
         ICHOR_LOG_ERROR(_logger, "handling DoWorkEvent");
         TestMsg msg{20, "five hundred"};
         auto start = std::chrono::steady_clock::now();
-        for(uint64_t i = 0; i < 1'000'000; i++) {
+        for(uint64_t i = 0; i < SERDE_COUNT; i++) {
             auto res = _serializationAdmin->serialize<TestMsg>(msg);
             auto msg2 = _serializationAdmin->deserialize<TestMsg>(std::move(res));
             if(msg2->id != msg.id || msg2->val != msg.val) {

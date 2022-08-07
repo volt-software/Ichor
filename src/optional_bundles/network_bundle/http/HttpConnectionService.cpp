@@ -55,7 +55,6 @@ Ichor::StartBehaviour Ichor::HttpConnectionService::stop() {
         return Ichor::StartBehaviour::FAILED_AND_RETRY;
     }
 
-    _httpStream = nullptr;
     return Ichor::StartBehaviour::SUCCEEDED;
 }
 
@@ -73,8 +72,9 @@ void Ichor::HttpConnectionService::addDependencyInstance(IHttpContextService *ht
 }
 
 void Ichor::HttpConnectionService::removeDependencyInstance(IHttpContextService *httpContextService, IService *) {
-    _httpContextService = nullptr;
     _quit = true;
+    close();
+    _httpContextService = nullptr;
     _connected = false;
 }
 
@@ -86,7 +86,7 @@ uint64_t Ichor::HttpConnectionService::getPriority() {
     return _priority.load(std::memory_order_acquire);
 }
 
-uint64_t Ichor::HttpConnectionService::sendAsync(Ichor::HttpMethod method, std::string_view route, std::vector<HttpHeader, Ichor::PolymorphicAllocator<HttpHeader>> &&headers, std::vector<uint8_t, Ichor::PolymorphicAllocator<uint8_t>> &&msg) {
+uint64_t Ichor::HttpConnectionService::sendAsync(Ichor::HttpMethod method, std::string_view route, std::vector<HttpHeader> &&headers, std::vector<uint8_t> &&msg) {
 
     if(method == HttpMethod::get && !msg.empty()) {
         throw std::runtime_error("GET requests cannot have a body.");
@@ -102,7 +102,7 @@ uint64_t Ichor::HttpConnectionService::sendAsync(Ichor::HttpMethod method, std::
 
     net::spawn(*_httpContextService->getContext(), [this, msgId, method, route, headers = std::forward<decltype(headers)>(headers), msg = std::forward<decltype(msg)>(msg)](net::yield_context yield) mutable {
         beast::error_code ec;
-        http::request<http::vector_body<uint8_t, Ichor::PolymorphicAllocator<uint8_t>>, http::basic_fields<Ichor::PolymorphicAllocator<uint8_t>>> req{static_cast<http::verb>(method), route, 11, std::move(msg)};
+        http::request<http::vector_body<uint8_t>, http::basic_fields<std::allocator<uint8_t>>> req{static_cast<http::verb>(method), route, 11, std::move(msg)};
 
         for(auto const &header : headers) {
             req.set(header.name, header.value);
@@ -112,15 +112,15 @@ uint64_t Ichor::HttpConnectionService::sendAsync(Ichor::HttpMethod method, std::
 
         http::write(*_httpStream, req, ec);
         if (ec) {
-            getManager()->pushEvent<FailedSendMessageEvent>(getServiceId(), std::move(msg), msgId);
+            getManager()->pushEvent<FailedSendMessageEvent>(getServiceId(), std::move(req.body()), msgId);
             return fail(ec, "HttpConnectionService::sendAsync write");
         }
 
         // This buffer is used for reading and must be persisted
-        beast::basic_flat_buffer b{Ichor::PolymorphicAllocator<uint8_t>{getMemoryResource()}};
+        beast::basic_flat_buffer b{std::allocator<uint8_t>{}};
 
         // Declare a container to hold the response
-        http::response<http::vector_body<uint8_t, Ichor::PolymorphicAllocator<uint8_t>>, http::basic_fields<Ichor::PolymorphicAllocator<uint8_t>>> res;
+        http::response<http::vector_body<uint8_t>, http::basic_fields<std::allocator<uint8_t>>> res;
 
         // Receive the HTTP response
         http::async_read(*_httpStream, b, res, yield[ec]);
@@ -130,14 +130,14 @@ uint64_t Ichor::HttpConnectionService::sendAsync(Ichor::HttpMethod method, std::
 
         ICHOR_LOG_WARN(_logger, "received HTTP response {}", std::string_view(reinterpret_cast<char*>(res.body().data()), res.body().size()));
 
-        std::vector<HttpHeader, Ichor::PolymorphicAllocator<HttpHeader>> resHeaders{getMemoryResource()};
+        std::vector<HttpHeader> resHeaders{};
         resHeaders.reserve(std::distance(std::begin(res), std::end(res)));
         for(auto const &header : res) {
             resHeaders.emplace_back(header.name_string(), header.value());
         }
 
         // need to use move iterator instead of std::move directly, to prevent leaks.
-        std::vector<uint8_t, Ichor::PolymorphicAllocator<uint8_t>> body{getMemoryResource()};
+        std::vector<uint8_t> body{};
         body.insert(body.end(), std::make_move_iterator(res.body().begin()), std::make_move_iterator(res.body().end()));
 
         getManager()->pushPrioritisedEvent<HttpResponseEvent>(getServiceId(), getPriority(), msgId, HttpResponse{static_cast<HttpStatus>(res.result()), std::move(body), std::move(resHeaders)});
@@ -154,6 +154,7 @@ bool Ichor::HttpConnectionService::close() {
             _httpStream->socket().shutdown(tcp::socket::shutdown_both, ec);
 
             _connected = false;
+            _httpStream = nullptr;
             if (ec && ec != beast::errc::not_connected) {
                 fail(ec, "HttpConnectionService::close shutdown");
             }
@@ -172,7 +173,7 @@ void Ichor::HttpConnectionService::connect(tcp::endpoint endpoint, net::yield_co
     beast::error_code ec;
 
     tcp::resolver resolver(*_httpContextService->getContext());
-    _httpStream = Ichor::make_unique<beast::tcp_stream>(getMemoryResource(), *_httpContextService->getContext());
+    _httpStream = std::make_unique<beast::tcp_stream>(*_httpContextService->getContext());
 
     auto const results = resolver.resolve(endpoint, ec);
     if(ec) {

@@ -10,7 +10,7 @@ namespace Ichor {
          * @param msg message to send
          * @return id of message
          */
-        virtual uint64_t sendAsync(std::vector<uint8_t, Ichor::PolymorphicAllocator<uint8_t>>&& msg) = 0;
+        virtual uint64_t sendAsync(std::vector<uint8_t>&& msg) = 0;
 
         /**
          * Sets priority with which to push incoming network events.

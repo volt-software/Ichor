@@ -23,36 +23,32 @@ int main() {
 
     auto start = std::chrono::steady_clock::now();
 
-    std::pmr::unsynchronized_pool_resource resourceOne{};
-    std::pmr::unsynchronized_pool_resource resourceTwo{};
-    std::pmr::unsynchronized_pool_resource resourceThree{};
-    std::pmr::unsynchronized_pool_resource resourceFour{};
     CommunicationChannel channel{};
-    DependencyManager dmOne{&resourceOne, &resourceTwo};
-    DependencyManager dmTwo{&resourceThree, &resourceFour};
+    DependencyManager dmOne{};
+    DependencyManager dmTwo{};
     channel.addManager(&dmOne);
     channel.addManager(&dmTwo);
 
-    std::thread t1([&dmOne, &resourceOne] {
+    std::thread t1([&dmOne] {
         auto logMgr = dmOne.createServiceManager<FRAMEWORK_LOGGER_TYPE, IFrameworkLogger>({}, 10);
         logMgr->setLogLevel(LogLevel::INFO);
 #ifdef ICHOR_USE_SPDLOG
         dmOne.createServiceManager<SpdlogSharedService, ISpdlogSharedService>();
 #endif
         dmOne.createServiceManager<LoggerAdmin<LOGGER_TYPE>, ILoggerAdmin>();
-        dmOne.createServiceManager<EtcdService, IEtcdService>(Properties{{"EtcdAddress", Ichor::make_any<std::string, std::string>(&resourceOne, "localhost:2379")}});
+        dmOne.createServiceManager<EtcdService, IEtcdService>(Properties{{"EtcdAddress", Ichor::make_any<std::string, std::string>("localhost:2379")}});
         dmOne.createServiceManager<UsingEtcdService>();
         dmOne.start();
     });
 
-    std::thread t2([&dmTwo, &resourceThree] {
+    std::thread t2([&dmTwo] {
         auto logMgr = dmTwo.createServiceManager<FRAMEWORK_LOGGER_TYPE, IFrameworkLogger>({}, 10);
         logMgr->setLogLevel(LogLevel::INFO);
 #ifdef ICHOR_USE_SPDLOG
         dmTwo.createServiceManager<SpdlogSharedService, ISpdlogSharedService>();
 #endif
         dmTwo.createServiceManager<LoggerAdmin<LOGGER_TYPE>, ILoggerAdmin>();
-        dmTwo.createServiceManager<EtcdService, IEtcdService>(Properties{{"EtcdAddress", Ichor::make_any<std::string, std::string>(&resourceThree, "localhost:2379")}});
+        dmTwo.createServiceManager<EtcdService, IEtcdService>(Properties{{"EtcdAddress", Ichor::make_any<std::string, std::string>("localhost:2379")}});
         dmTwo.createServiceManager<UsingEtcdService>();
         dmTwo.start();
     });

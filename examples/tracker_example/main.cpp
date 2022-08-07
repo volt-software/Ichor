@@ -30,8 +30,8 @@ int main() {
     dm.createServiceManager<SpdlogSharedService, ISpdlogSharedService>();
 #endif
     dm.createServiceManager<LoggerAdmin<LOGGER_TYPE>, ILoggerAdmin>();
-    dm.createServiceManager<TestService>(Properties{{"scope", Ichor::make_any<std::string>(dm.getMemoryResource(), "one"s)}});
-    dm.createServiceManager<TestService>(Properties{{"scope", Ichor::make_any<std::string>(dm.getMemoryResource(), "two"s)}});
+    dm.createServiceManager<TestService>(Properties{{"scope", Ichor::make_any<std::string>("one"s)}});
+    dm.createServiceManager<TestService>(Properties{{"scope", Ichor::make_any<std::string>("two"s)}});
     dm.createServiceManager<TrackerService>();
     dm.start();
     auto end = std::chrono::steady_clock::now();

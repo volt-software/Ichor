@@ -36,7 +36,7 @@ namespace Ichor {
         void addDependencyInstance(IHttpContextService *logger, IService *);
         void removeDependencyInstance(IHttpContextService *logger, IService *);
 
-        uint64_t sendAsync(std::vector<uint8_t, Ichor::PolymorphicAllocator<uint8_t>>&& msg) final;
+        uint64_t sendAsync(std::vector<uint8_t>&& msg) final;
         void setPriority(uint64_t priority) final;
         uint64_t getPriority() final;
 
@@ -46,7 +46,7 @@ namespace Ichor {
         void connect(net::yield_context yield); // for when connecting as a client
         void read(net::yield_context &yield);
 
-        Ichor::unique_ptr<websocket::stream<beast::tcp_stream>> _ws{};
+        std::unique_ptr<websocket::stream<beast::tcp_stream>> _ws{};
         uint64_t _msgIdCounter{};
         std::atomic<uint64_t> _priority{};
         std::atomic<bool> _connected{};

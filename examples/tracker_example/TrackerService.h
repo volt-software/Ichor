@@ -71,7 +71,7 @@ public:
 
         if(runtimeService == end(_scopedRuntimeServices)) {
             auto newProps = *evt->properties.value();
-            newProps.emplace("Filter", Ichor::make_any<Filter>(getMemoryResource(), Filter{getMemoryResource(), ScopeFilterEntry{scope}}));
+            newProps.emplace("Filter", Ichor::make_any<Filter>(Filter{ScopeFilterEntry{scope}}));
 
             _scopedRuntimeServices.emplace(scope, getManager()->createServiceManager<RuntimeCreatedService, IRuntimeCreatedService>(std::move(newProps)));
         }

@@ -12,7 +12,7 @@ namespace Ichor {
     template<typename LogT>
     class LoggerAdmin final : public ILoggerAdmin, public Service<LoggerAdmin<LogT>> {
     public:
-        LoggerAdmin(DependencyRegister &reg, Properties props, DependencyManager *mng) : Service<LoggerAdmin<LogT>>(std::move(props), mng), _loggers(this->getMemoryResource()) {
+        LoggerAdmin(DependencyRegister &reg, Properties props, DependencyManager *mng) : Service<LoggerAdmin<LogT>>(std::move(props), mng), _loggers() {
             reg.registerDependency<IFrameworkLogger>(this, true);
         }
         ~LoggerAdmin() final = default;
@@ -47,11 +47,11 @@ namespace Ichor {
             }
             if (logger == end(_loggers)) {
 //                ICHOR_LOG_ERROR(_logger, "creating logger for svcid {}", evt->originatingService);
-                    Properties props{this->getMemoryResource()};
+                    Properties props{};
                     props.reserve(3);
-                    props.template emplace("LogLevel",        Ichor::make_any<LogLevel>(this->getMemoryResource(), requestedLevel));
-                    props.template emplace("TargetServiceId", Ichor::make_any<uint64_t>(this->getMemoryResource(), evt->originatingService));
-                    props.template emplace("Filter",          Ichor::make_any<Filter>(this->getMemoryResource(), Filter{this->getMemoryResource(), ServiceIdFilterEntry{evt->originatingService}}));
+                    props.template emplace("LogLevel",        Ichor::make_any<LogLevel>(requestedLevel));
+                    props.template emplace("TargetServiceId", Ichor::make_any<uint64_t>(evt->originatingService));
+                    props.template emplace("Filter",          Ichor::make_any<Filter>(Filter{ServiceIdFilterEntry{evt->originatingService}}));
                     _loggers.emplace(evt->originatingService, Service<LoggerAdmin<LogT>>::getManager()->template createServiceManager<LogT, ILogger>(std::move(props)));
             } else {
                 ICHOR_LOG_TRACE(_logger, "svcid {} already has logger", evt->originatingService);
@@ -65,6 +65,6 @@ namespace Ichor {
     private:
         IFrameworkLogger *_logger{nullptr};
         DependencyTrackerRegistration _loggerTrackerRegistration{};
-        std::pmr::unordered_map<uint64_t, LogT*> _loggers;
+        std::unordered_map<uint64_t, LogT*> _loggers;
     };
 }

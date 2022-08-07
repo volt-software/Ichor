@@ -12,8 +12,8 @@ namespace Ichor {
         SerializationAdmin(DependencyRegister &reg, Properties props, DependencyManager *mng);
         ~SerializationAdmin() final = default;
 
-        std::vector<uint8_t, Ichor::PolymorphicAllocator<uint8_t>> serialize(uint64_t type, const void* obj) final;
-        std::tuple<void*, std::pmr::memory_resource*> deserialize(uint64_t type, std::vector<uint8_t, Ichor::PolymorphicAllocator<uint8_t>> &&bytes) final;
+        std::vector<uint8_t> serialize(uint64_t type, const void* obj) final;
+        void* deserialize(uint64_t type, std::vector<uint8_t> &&bytes) final;
 
         void addDependencyInstance(ILogger *logger, IService *isvc);
         void removeDependencyInstance(ILogger *logger, IService *isvc);
@@ -21,7 +21,7 @@ namespace Ichor {
         void removeDependencyInstance(ISerializer *serializer, IService *isvc);
     private:
 
-        std::pmr::unordered_map<uint64_t, ISerializer*> _serializers;
+        std::unordered_map<uint64_t, ISerializer*> _serializers;
         ILogger *_logger{nullptr};
     };
 }

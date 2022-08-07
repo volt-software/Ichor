@@ -95,9 +95,9 @@ void Ichor::WsHostService::removeDependencyInstance(IHttpContextService *logger,
 }
 
 Ichor::Generator<bool> Ichor::WsHostService::handleEvent(Ichor::NewWsConnectionEvent const * const evt) {
-    auto connection = getManager()->createServiceManager<WsConnectionService, IConnectionService>(Ichor::make_properties(getMemoryResource(),
-        IchorProperty{"WsHostServiceId", Ichor::make_any<uint64_t>(getMemoryResource(), getServiceId())},
-        IchorProperty{"Socket", Ichor::make_any<decltype(evt->_socket)>(getMemoryResource(), std::move(evt->_socket))}
+    auto connection = getManager()->createServiceManager<WsConnectionService, IConnectionService>(Ichor::make_properties(
+        IchorProperty{"WsHostServiceId", Ichor::make_any<uint64_t>(getServiceId())},
+        IchorProperty{"Socket", Ichor::make_any<decltype(evt->_socket)>(std::move(evt->_socket))}
         ));
     _connections.push_back(connection);
 
@@ -121,7 +121,7 @@ void Ichor::WsHostService::listen(tcp::endpoint endpoint, net::yield_context yie
 {
     beast::error_code ec;
 
-    _wsAcceptor = Ichor::make_unique<tcp::acceptor>(getMemoryResource(), *_httpContextService->getContext());
+    _wsAcceptor = std::make_unique<tcp::acceptor>(*_httpContextService->getContext());
     _wsAcceptor->open(endpoint.protocol(), ec);
     if(ec) {
         return fail(ec, "open");

@@ -103,5 +103,5 @@ private:
     IHttpConnectionService *_connectionService{nullptr};
     EventHandlerRegistration _dataEventRegistration{};
     EventHandlerRegistration _failureEventRegistration{};
-    Ichor::unique_ptr<HttpRouteRegistration> _routeRegistration{nullptr};
+    std::unique_ptr<HttpRouteRegistration> _routeRegistration{nullptr};
 };

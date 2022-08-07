@@ -15,11 +15,11 @@ namespace Ichor {
 
             _registrations.emplace(typeNameHash<Interface>(), std::make_tuple(
                     Dependency{typeNameHash<Interface>(), required, 0},
-                    Ichor::function<void(void*, IService*)>{[svc](void* dep, IService* isvc){ svc->addDependencyInstance(reinterpret_cast<Interface*>(dep), isvc); }, svc->getMemoryResource()},
-                    Ichor::function<void(void*, IService*)>{[svc](void* dep, IService* isvc){ svc->removeDependencyInstance(reinterpret_cast<Interface*>(dep), isvc); }, svc->getMemoryResource()},
+                    std::function<void(void*, IService*)>{[svc](void* dep, IService* isvc){ svc->addDependencyInstance(reinterpret_cast<Interface*>(dep), isvc); }},
+                    std::function<void(void*, IService*)>{[svc](void* dep, IService* isvc){ svc->removeDependencyInstance(reinterpret_cast<Interface*>(dep), isvc); }},
                     std::move(props)));
         }
 
-        std::pmr::unordered_map<uint64_t, std::tuple<Dependency, Ichor::function<void(void*, IService*)>, Ichor::function<void(void*, IService*)>, std::optional<Properties>>> _registrations;
+        std::unordered_map<uint64_t, std::tuple<Dependency, std::function<void(void*, IService*)>, std::function<void(void*, IService*)>, std::optional<Properties>>> _registrations;
     };
 }

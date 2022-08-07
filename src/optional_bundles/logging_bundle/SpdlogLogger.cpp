@@ -55,7 +55,7 @@ Ichor::LogLevel Ichor::SpdlogLogger::getLogLevel() const {
 
 Ichor::StartBehaviour Ichor::SpdlogLogger::start() {
     auto const &sinks = _sharedService->getSinks();
-    _logger = std::allocate_shared<spdlog::logger, std::pmr::polymorphic_allocator<>>(getManager()->getMemoryResource(), "multi_sink", sinks.begin(), sinks.end());
+    _logger = std::make_shared<spdlog::logger>("multi_sink", sinks.begin(), sinks.end());
 
 #ifndef ICHOR_REMOVE_SOURCE_NAMES_FROM_LOGGING
     _logger->set_pattern("[%C-%m-%d %H:%M:%S.%e] [%s:%#] [%L] %v");

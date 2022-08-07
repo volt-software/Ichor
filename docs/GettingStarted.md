@@ -331,7 +331,7 @@ struct MyInterceptorService final : public Ichor::Service<MyInterceptorService> 
         // Can use this to track how long the processing took
     }
 
-    Ichor::unique_ptr<Ichor::EventInterceptorRegistration> _interceptor{};
+    std::unique_ptr<Ichor::EventInterceptorRegistration> _interceptor{};
 };
 ```
 
@@ -346,58 +346,7 @@ getManager()->pushPrioritisedEvent<TimerEvent>(getServiceId(), 10);
 
 ### Memory allocation
 
-By default, Ichor uses `std::pmr::get_default_resource()` as the memory allocator for everything internal that allocates memory: events, service creation, shared/unique pointers, you name it.
-Therefore, the easiest way to get some extra performance is to use `std::pmr::synchronized_pool_resource` as the default resource. However, the second constructor for the DependencyManager allows for some more fine-grained control.
-
-The DependencyManager actually has two memory allocators: one which is guarded by mutexes for pushing/popping events into/from the queue and another for everything else like services.
-The best performance can be gotten by instantiating a manager with two `std::pmr::unsynchronized_pool_resource` resources:
-
-```c++
-// main.cpp
-#include <ichor/DependencyManager.h>
-#include <ichor/optional_bundles/logging_bundle/CoutFrameworkLogger.h>
-
-int main() {
-    std::pmr::unsynchronized_pool_resource resourceOne{};
-    std::pmr::unsynchronized_pool_resource resourceTwo{};
-    Ichor::DependencyManager dm{&resourceOne, &resourceTwo};
-    dm.createServiceManager<Ichor::CoutFrameworkLogger, Ichor::IFrameworkLogger>();
-    // your services here
-    dm.start();
-    
-    return 0;
-}
-```
-
-But as can be seen in the [realtime example](../examples/realtime_example/main.cpp), it is also possible to create allocators which only use stack-created memory, eliminating all dynamic memory allocations from Ichor. 
-
-Using the memory allocator from your own Services is relatively easy:
-
-```c++
-// MyMemoryAllocatorService.h
-#include <ichor/DependencyManager.h>
-#include <ichor/Events.h>
-
-struct MyMemoryStructure {
-    MyMemoryStructure(int id_) : id(id_) {}
-    uint64_t id;
-    // etc
-};
-
-struct MyMemoryAllocatorService final : public Ichor::Service<MyMemoryAllocatorService> {
-    Ichor::StartBehaviour start() final {
-        _myDataStructure = Ichor::make_unique<MyMemoryStructure>(getMemoryResource(), 1);
-        return Ichor::StartBehaviour::SUCCEEDED;
-    }
-    
-    Ichor::StartBehaviour stop() final {
-        _myDataStructure.reset();
-        return Ichor::StartBehaviour::SUCCEEDED;
-    }
-
-    Ichor::unique_ptr<MyMemoryStructure> _myDataStructure{};
-};
-```
+Ichor used to provide `std::pmr::memory_resource` based allocation, however that had a big impact on the ergonomy of the code. Moreover, clang 14 does not support `<memory_resource>` at all. Instead, Ichor recommends using tcmalloc or jemalloc to reduce the resource contention when using multiple threads.
 
 ### Multiple Threads
 

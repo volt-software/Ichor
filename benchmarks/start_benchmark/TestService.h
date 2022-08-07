@@ -5,6 +5,12 @@
 #include <ichor/Service.h>
 #include <ichor/LifecycleManager.h>
 
+#ifdef __SANITIZE_ADDRESS__
+constexpr uint32_t SERVICES_COUNT = 1'000;
+#else
+constexpr uint32_t SERVICES_COUNT = 10'000;
+#endif
+
 using namespace Ichor;
 
 class TestService final : public Service<TestService> {
@@ -15,7 +21,7 @@ public:
     ~TestService() final = default;
     StartBehaviour start() final {
         auto iteration = Ichor::any_cast<uint64_t>(getProperties().operator[]("Iteration"));
-        if(iteration == 9'999) {
+        if(iteration == SERVICES_COUNT - 1) {
             getManager()->pushEvent<QuitEvent>(getServiceId());
         }
         return Ichor::StartBehaviour::SUCCEEDED;

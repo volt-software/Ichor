@@ -16,7 +16,7 @@ namespace Ichor {
         void addDependencyInstance(ILogger *logger, IService *isvc);
         void removeDependencyInstance(ILogger *logger, IService *isvc);
 
-        uint64_t sendAsync(std::vector<uint8_t, Ichor::PolymorphicAllocator<uint8_t>>&& msg) final;
+        uint64_t sendAsync(std::vector<uint8_t>&& msg) final;
         void setPriority(uint64_t priority) final;
         uint64_t getPriority() final;
 

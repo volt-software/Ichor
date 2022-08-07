@@ -5,8 +5,7 @@
 namespace Ichor {
     struct DependencyInfo final {
 
-        ICHOR_CONSTEXPR explicit DependencyInfo(std::pmr::memory_resource *memResource) : _dependencies(memResource) {
-        }
+        ICHOR_CONSTEXPR explicit DependencyInfo() = default;
 
         ICHOR_CONSTEXPR ~DependencyInfo() = default;
         ICHOR_CONSTEXPR DependencyInfo(const DependencyInfo&) = delete;
@@ -90,6 +89,6 @@ namespace Ichor {
             });
         }
 
-        ICHOR_CONSTEXPR std::pmr::vector<Dependency> _dependencies;
+        ICHOR_CONSTEXPR std::vector<Dependency> _dependencies;
     };
 }

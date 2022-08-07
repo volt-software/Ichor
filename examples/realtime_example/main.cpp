@@ -1,7 +1,7 @@
 #include "TestService.h"
 #include "OptionalService.h"
 #include <ichor/optional_bundles/logging_bundle/LoggerAdmin.h>
-#include "MemoryResources.h"
+//#include "MemoryResources.h"
 #include "GlobalRealtimeSettings.h"
 #if defined(NDEBUG)
 #include <ichor/optional_bundles/logging_bundle/NullFrameworkLogger.h>
@@ -18,6 +18,9 @@
 #endif
 #include <chrono>
 #include <stdexcept>
+
+// TODO with the removal of memory resources, this example won't run anymore
+// have to merge the allocator in MemoryResources.h with AllocPoison.cpp
 
 
 using namespace std::string_literals;
@@ -37,14 +40,14 @@ void* run_example(void*) {
     auto start = std::chrono::steady_clock::now();
 
     // disable usage of default std::pmr resource, as that would allocate.
-    terminating_resource terminatingResource{};
-    std::pmr::set_default_resource(&terminatingResource);
+//    terminating_resource terminatingResource{};
+//    std::pmr::set_default_resource(&terminatingResource);
 
     {
-        buffer_resource<1024 * 192> resourceOne{}; // need about 160 kb for the 20'000 iteration array in TestService
-        buffer_resource<1024 * 32> resourceTwo{};
+//        buffer_resource<1024 * 192> resourceOne{}; // need about 160 kb for the 20'000 iteration array in TestService
+//        buffer_resource<1024 * 32> resourceTwo{};
 
-        DependencyManager dm{&resourceOne, &resourceTwo};
+        DependencyManager dm{};
         dm.createServiceManager<FRAMEWORK_LOGGER_TYPE, IFrameworkLogger>({}, 10);
         dm.createServiceManager<LoggerAdmin<LOGGER_TYPE>, ILoggerAdmin>();
         dm.createServiceManager<OptionalService, IOptionalService>();

@@ -36,13 +36,13 @@ Ichor::StartBehaviour Ichor::HttpHostService::start() {
 Ichor::StartBehaviour Ichor::HttpHostService::stop() {
     _quit = true;
 
-    if(_httpAcceptor != nullptr) {
+    if(_goingToCleanupStream.exchange(true) && _httpAcceptor != nullptr) {
         _httpAcceptor->close();
         _httpStream->cancel();
-    }
 
-    _httpAcceptor = nullptr;
-    _httpStream = nullptr;
+        _httpAcceptor = nullptr;
+        _httpStream = nullptr;
+    }
 
     return Ichor::StartBehaviour::SUCCEEDED;
 }
@@ -61,6 +61,7 @@ void Ichor::HttpHostService::addDependencyInstance(IHttpContextService *httpCont
 }
 
 void Ichor::HttpHostService::removeDependencyInstance(IHttpContextService *httpContextService, IService *) {
+    ICHOR_LOG_TRACE(_logger, "Removing httpContextService");
     stop();
     _httpContextService = nullptr;
 }
@@ -74,6 +75,7 @@ uint64_t Ichor::HttpHostService::getPriority() {
 }
 
 void Ichor::HttpHostService::fail(beast::error_code ec, const char *what) {
+    // TODO this logging is done in another thread as removeDependencyInstance is
     ICHOR_LOG_ERROR(_logger, "Boost.BEAST fail: {}, {}", what, ec.message());
     getManager()->pushPrioritisedEvent<StopServiceEvent>(getServiceId(), _priority.load(std::memory_order_acquire), getServiceId());
 }
@@ -82,7 +84,7 @@ void Ichor::HttpHostService::listen(tcp::endpoint endpoint, net::yield_context y
 {
     beast::error_code ec;
 
-    _httpAcceptor = Ichor::make_unique<tcp::acceptor>(getMemoryResource(), *_httpContextService->getContext());
+    _httpAcceptor = std::make_unique<tcp::acceptor>(*_httpContextService->getContext());
     _httpAcceptor->open(endpoint.protocol(), ec);
     if(ec) {
         return fail(ec, "HttpHostService::listen open");
@@ -118,14 +120,19 @@ void Ichor::HttpHostService::listen(tcp::endpoint endpoint, net::yield_context y
         socket.set_option(tcp::no_delay(_tcpNoDelay));
 
         net::spawn(*_httpContextService->getContext(), [this, socket = std::move(socket)](net::yield_context _yield) mutable {
+            if(_quit) {
+                return;
+            }
+
             read(std::forward<decltype(socket)>(socket), std::move(_yield));
         });
     }
     ICHOR_LOG_WARN(_logger, "finished listen()");
 }
 
-Ichor::unique_ptr<Ichor::HttpRouteRegistration> Ichor::HttpHostService::addRoute(HttpMethod method, std::string_view route, std::function<HttpResponse(HttpRequest&)> handler) {
+std::unique_ptr<Ichor::HttpRouteRegistration> Ichor::HttpHostService::addRoute(HttpMethod method, std::string_view route, std::function<HttpResponse(HttpRequest&)> handler) {
     auto &routes = _handlers[method];
+    //std::unordered_map<std::string, std::function<HttpResponse(HttpRequest&)>
 
     auto existingHandler = routes.find(route);
 
@@ -136,7 +143,7 @@ Ichor::unique_ptr<Ichor::HttpRouteRegistration> Ichor::HttpHostService::addRoute
     auto insertedIt = routes.emplace(route, handler);
 
     // convoluted way to pass a string_view that doesn't go out of scope after this function
-    return Ichor::make_unique<HttpRouteRegistration>(getMemoryResource(), method, insertedIt.first->first, this);
+    return std::make_unique<HttpRouteRegistration>(method, insertedIt.first->first, this);
 }
 
 void Ichor::HttpHostService::removeRoute(HttpMethod method, std::string_view route) {
@@ -156,10 +163,10 @@ void Ichor::HttpHostService::removeRoute(HttpMethod method, std::string_view rou
 
 void Ichor::HttpHostService::read(tcp::socket socket, net::yield_context yield) {
     beast::error_code ec;
-    _httpStream = Ichor::make_unique<beast::tcp_stream>(getMemoryResource(), std::move(socket));
+    _httpStream = std::make_unique<beast::tcp_stream>(std::move(socket));
 
     // This buffer is required to persist across reads
-    beast::basic_flat_buffer buffer{Ichor::PolymorphicAllocator<uint8_t>{getMemoryResource()}};
+    beast::basic_flat_buffer buffer{std::allocator<uint8_t>{}};
 
     while(!_quit && !_httpContextService->fibersShouldStop())
     {
@@ -167,7 +174,7 @@ void Ichor::HttpHostService::read(tcp::socket socket, net::yield_context yield) 
         _httpStream->expires_after(30s);
 
         // Read a request
-        http::request<http::vector_body<uint8_t, Ichor::PolymorphicAllocator<uint8_t>>, http::basic_fields<Ichor::PolymorphicAllocator<uint8_t>>> req;
+        http::request<http::vector_body<uint8_t>, http::basic_fields<std::allocator<uint8_t>>> req;
         http::async_read(*_httpStream, buffer, req, yield[ec]);
         if(ec == http::error::end_of_stream || ec == net::error::operation_aborted) {
             break;
@@ -184,14 +191,14 @@ void Ichor::HttpHostService::read(tcp::socket socket, net::yield_context yield) 
             auto handler = routes->second.find(req.target());
 
             if(handler != std::end(routes->second)) {
-                std::vector<HttpHeader, Ichor::PolymorphicAllocator<HttpHeader>> headers{getMemoryResource()};
+                std::vector<HttpHeader> headers{};
                 headers.reserve(std::distance(std::begin(req), std::end(req)));
                 for(auto const &field : req) {
                     headers.emplace_back(field.name_string(), field.value());
                 }
                 HttpRequest httpReq{std::move(req.body()), static_cast<HttpMethod>(req.method()), req.target(), std::move(headers)};
                 auto httpRes = handler->second(httpReq);
-                http::response<http::vector_body<uint8_t, Ichor::PolymorphicAllocator<uint8_t>>, http::basic_fields<Ichor::PolymorphicAllocator<uint8_t>>> res{static_cast<http::status>(httpRes.status), req.version()};
+                http::response<http::vector_body<uint8_t>, http::basic_fields<std::allocator<uint8_t>>> res{static_cast<http::status>(httpRes.status), req.version()};
                 res.set(http::field::server, BOOST_BEAST_VERSION_STRING);
                 res.set(http::field::content_type, "text/html");
                 for(auto const& header : httpRes.headers) {
@@ -214,7 +221,7 @@ void Ichor::HttpHostService::read(tcp::socket socket, net::yield_context yield) 
             }
         }
 
-        http::response<http::basic_string_body<char, std::char_traits<char>, Ichor::PolymorphicAllocator<char>>> res{http::status::not_found, req.version()};
+        http::response<http::basic_string_body<char, std::char_traits<char>>> res{http::status::not_found, req.version()};
         res.set(http::field::server, BOOST_BEAST_VERSION_STRING);
         res.set(http::field::content_type, "text/html");
         res.keep_alive(req.keep_alive());
@@ -230,7 +237,13 @@ void Ichor::HttpHostService::read(tcp::socket socket, net::yield_context yield) 
     }
 
     // Send a TCP shutdown
-    _httpStream->socket().shutdown(tcp::socket::shutdown_send, ec);
+    if(!_goingToCleanupStream.exchange(true) && _httpAcceptor) {
+        _httpAcceptor->close();
+        _httpStream->cancel();
+
+        _httpAcceptor = nullptr;
+        _httpStream = nullptr;
+    }
 
     // At this point the connection is closed gracefully
     ICHOR_LOG_WARN(_logger, "finished read()");

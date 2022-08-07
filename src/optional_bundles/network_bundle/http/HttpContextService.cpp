@@ -21,7 +21,7 @@ Ichor::StartBehaviour Ichor::HttpContextService::start() {
         _starting = true;
         _stopped = true;
         _quit = false;
-        _httpContext = Ichor::make_unique<net::io_context>(getMemoryResource());
+        _httpContext = std::make_unique<net::io_context>();
 
         net::spawn(*_httpContext.get(), [this](net::yield_context yield) {
             _stopped = false;

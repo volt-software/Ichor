@@ -2,7 +2,6 @@
 
 #include <cstdint>
 #include <ichor/Generator.h>
-#include <ichor/stl/Function.h>
 #include <optional>
 
 namespace Ichor {
@@ -12,15 +11,15 @@ namespace Ichor {
     public:
         uint64_t listeningServiceId;
         std::optional<uint64_t> filterServiceId;
-        Ichor::function<Generator<bool>(Event const * const)> callback;
+        std::function<Generator<bool>(Event const * const)> callback;
     };
 
     class [[nodiscard]] EventInterceptInfo final {
     public:
         uint64_t listeningServiceId;
         std::optional<uint64_t> filterEventId;
-        Ichor::function<bool(Event const * const)> preIntercept;
-        Ichor::function<void(Event const * const, bool)> postIntercept;
+        std::function<bool(Event const * const)> preIntercept;
+        std::function<void(Event const * const, bool)> postIntercept;
     };
 
     struct CallbackKey {

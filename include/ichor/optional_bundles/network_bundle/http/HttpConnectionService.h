@@ -27,7 +27,7 @@ namespace Ichor {
         void addDependencyInstance(IHttpContextService *logger, IService *);
         void removeDependencyInstance(IHttpContextService *logger, IService *);
 
-        uint64_t sendAsync(HttpMethod method, std::string_view route, std::vector<HttpHeader, Ichor::PolymorphicAllocator<HttpHeader>> &&headers, std::vector<uint8_t, Ichor::PolymorphicAllocator<uint8_t>>&& msg) final;
+        uint64_t sendAsync(HttpMethod method, std::string_view route, std::vector<HttpHeader> &&headers, std::vector<uint8_t>&& msg) final;
 
         bool close() final;
 
@@ -38,7 +38,7 @@ namespace Ichor {
         void fail(beast::error_code, char const* what);
         void connect(tcp::endpoint endpoint, net::yield_context yield);
 
-        Ichor::unique_ptr<beast::tcp_stream> _httpStream{};
+        std::unique_ptr<beast::tcp_stream> _httpStream{};
         std::atomic<uint64_t> _priority{INTERNAL_EVENT_PRIORITY};
         std::atomic<bool> _quit{};
         std::atomic<bool> _connecting{};
