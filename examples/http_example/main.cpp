@@ -1,6 +1,6 @@
 #include "UsingHttpService.h"
 #include "../common/TestMsgJsonSerializer.h"
-#include <ichor/DependencyManager.h>
+#include <ichor/event_queues/MultimapQueue.h>
 #include <ichor/optional_bundles/logging_bundle/LoggerAdmin.h>
 #include <ichor/optional_bundles/network_bundle/http/HttpHostService.h>
 #include <ichor/optional_bundles/network_bundle/http/HttpConnectionService.h>
@@ -30,7 +30,7 @@ int main() {
     std::locale::global(std::locale("en_US.UTF-8"));
 
     auto start = std::chrono::steady_clock::now();
-    DependencyManager dm{};
+    DependencyManager dm{std::make_unique<MultimapQueue>()};
     dm.createServiceManager<FRAMEWORK_LOGGER_TYPE, IFrameworkLogger>({}, 10);
 #ifdef ICHOR_USE_SPDLOG
     dm.createServiceManager<SpdlogSharedService, ISpdlogSharedService>();

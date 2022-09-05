@@ -1,6 +1,7 @@
 #pragma once
 
 #include <ichor/stl/RealtimeMutex.h>
+#include <mutex>
 
 // Differs from std::condition_variable by working on steady clock only, using a reference instead of allocating memory and uses RealtimeMutex rather than needing std::condition_variable_any
 namespace Ichor {

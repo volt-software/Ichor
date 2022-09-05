@@ -81,7 +81,7 @@ net::io_context* Ichor::HttpContextService::getContext() noexcept {
 }
 
 bool Ichor::HttpContextService::fibersShouldStop() noexcept {
-    return _quit;
+    return _quit.load(std::memory_order_acquire);
 }
 
 #endif

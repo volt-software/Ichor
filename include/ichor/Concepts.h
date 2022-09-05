@@ -57,13 +57,6 @@ namespace Ichor {
         { impl.handleEvent(evt) } -> std::same_as<Generator<bool>>;
     };
 
-// TODO gcc 10.2 does not support the std::allocator_arg_t usage in coroutines/coroutine promises.
-//  Decide whether to keep current setup with thread_local memory_resource or implement std::allocator_arg_t in gcc
-//    template <class ImplT, class EventT>
-//    concept ImplementsAllocatorEventHandlers = requires(ImplT impl, std::allocator_arg_t arg, Ichor::PolymorphicAllocator<bool> alloc, EventT const * const evt) {
-//        { impl.handleEvent(arg, alloc, evt) } -> std::same_as<AllocatorGenerator<Ichor::PolymorphicAllocator<bool>, bool>>;
-//    };
-
     template <class ImplT, class EventT>
     concept ImplementsEventInterceptors = requires(ImplT impl, EventT const * const evt, bool processed, uint32_t handlerAmount) {
         { impl.preInterceptEvent(evt) } -> std::same_as<bool>;

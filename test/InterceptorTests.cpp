@@ -2,6 +2,7 @@
 #include "TestServices/InterceptorService.h"
 #include "TestServices/EventHandlerService.h"
 #include "TestEvents.h"
+#include <ichor/event_queues/MultimapQueue.h>
 
 using namespace Ichor;
 
@@ -10,7 +11,7 @@ TEST_CASE("Interceptor Tests") {
     ensureInternalLoggerExists();
 
     SECTION("Intercept TestEvent unprocessed") {
-        Ichor::DependencyManager dm{};
+        Ichor::DependencyManager dm{std::make_unique<MultimapQueue>()};
 
         std::thread t([&]() {
             dm.createServiceManager<NullFrameworkLogger, IFrameworkLogger>();
@@ -22,7 +23,7 @@ TEST_CASE("Interceptor Tests") {
 
         dm.pushEvent<TestEvent>(0);
 
-        dm.waitForEmptyQueue();
+        dm.runForOrQueueEmpty();
 
         dm.pushEvent<RunFunctionEvent>(0, [](DependencyManager* mng){
             auto services = mng->getStartedServices<IInterceptorService>();
@@ -48,7 +49,7 @@ TEST_CASE("Interceptor Tests") {
     }
 
     SECTION("Intercept TestEvent processed") {
-        Ichor::DependencyManager dm{};
+        Ichor::DependencyManager dm{std::make_unique<MultimapQueue>()};
 
         std::thread t([&]() {
             dm.createServiceManager<NullFrameworkLogger, IFrameworkLogger>();
@@ -61,7 +62,7 @@ TEST_CASE("Interceptor Tests") {
 
         dm.pushEvent<TestEvent>(0);
 
-        dm.waitForEmptyQueue();
+        dm.runForOrQueueEmpty();
 
         dm.pushEvent<RunFunctionEvent>(0, [](DependencyManager* mng){
             auto services = mng->getStartedServices<IInterceptorService>();
@@ -87,7 +88,7 @@ TEST_CASE("Interceptor Tests") {
     }
 
     SECTION("Intercept prevent handling") {
-        Ichor::DependencyManager dm{};
+        Ichor::DependencyManager dm{std::make_unique<MultimapQueue>()};
 
         std::thread t([&]() {
             dm.createServiceManager<NullFrameworkLogger, IFrameworkLogger>();
@@ -100,7 +101,7 @@ TEST_CASE("Interceptor Tests") {
 
         dm.pushEvent<TestEvent>(0);
 
-        dm.waitForEmptyQueue();
+        dm.runForOrQueueEmpty();
 
         dm.pushEvent<RunFunctionEvent>(0, [](DependencyManager* mng){
             auto interceptorServices = mng->getStartedServices<IInterceptorService>();
@@ -130,7 +131,7 @@ TEST_CASE("Interceptor Tests") {
     }
 
     SECTION("Intercept all Events") {
-        Ichor::DependencyManager dm{};
+        Ichor::DependencyManager dm{std::make_unique<MultimapQueue>()};
 
         std::thread t([&]() {
             dm.createServiceManager<NullFrameworkLogger, IFrameworkLogger>();
@@ -140,7 +141,7 @@ TEST_CASE("Interceptor Tests") {
 
         waitForRunning(dm);
 
-        dm.waitForEmptyQueue();
+        dm.runForOrQueueEmpty();
 
         dm.pushEvent<RunFunctionEvent>(0, [](DependencyManager* mng){
             auto services = mng->getStartedServices<IInterceptorService>();
@@ -171,7 +172,7 @@ TEST_CASE("Interceptor Tests") {
     }
 
     SECTION("Multiple interceptors") {
-        Ichor::DependencyManager dm{};
+        Ichor::DependencyManager dm{std::make_unique<MultimapQueue>()};
 
         std::thread t([&]() {
             dm.createServiceManager<NullFrameworkLogger, IFrameworkLogger>();
@@ -182,7 +183,7 @@ TEST_CASE("Interceptor Tests") {
 
         waitForRunning(dm);
 
-        dm.waitForEmptyQueue();
+        dm.runForOrQueueEmpty();
 
         dm.pushEvent<RunFunctionEvent>(0, [](DependencyManager* mng){
             auto services = mng->getStartedServices<IInterceptorService>();

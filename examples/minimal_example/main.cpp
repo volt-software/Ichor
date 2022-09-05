@@ -1,8 +1,7 @@
-#include <ichor/DependencyManager.h>
-#include <ichor/Service.h>
-#include <ichor/LifecycleManager.h>
+#include <ichor/event_queues/MultimapQueue.h>
 #include <ichor/optional_bundles/logging_bundle/CoutFrameworkLogger.h>
 #include <ichor/optional_bundles/timer_bundle/TimerService.h>
+#include <csignal>
 
 using namespace Ichor;
 
@@ -32,7 +31,7 @@ public:
         timer->startTimer();
 
         // Register sigint handler
-        signal(SIGINT, siginthandler);
+        ::signal(SIGINT, siginthandler);
         return StartBehaviour::SUCCEEDED;
     }
 
@@ -44,7 +43,7 @@ public:
 int main() {
     std::locale::global(std::locale("en_US.UTF-8")); // some loggers require having a locale
 
-    DependencyManager dm{};
+    DependencyManager dm{std::make_unique<MultimapQueue>()};
     // Register a framework logger and our sig int service.
     auto logger = dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>();
     logger->setLogLevel(LogLevel::DEBUG);

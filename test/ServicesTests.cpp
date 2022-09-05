@@ -4,13 +4,14 @@
 #include "TestServices/DependencyService.h"
 #include "TestServices/MixingInterfacesService.h"
 #include "TestServices/StartStopOnSecondAttemptService.h"
+#include <ichor/event_queues/MultimapQueue.h>
 
 TEST_CASE("DependencyServices") {
 
     ensureInternalLoggerExists();
 
     SECTION("QuitOnQuitEvent") {
-        Ichor::DependencyManager dm{};
+        Ichor::DependencyManager dm{std::make_unique<MultimapQueue>()};
 
         std::thread t([&]() {
             dm.createServiceManager<NullFrameworkLogger, IFrameworkLogger>();
@@ -25,7 +26,7 @@ TEST_CASE("DependencyServices") {
     }
 
     SECTION("Required dependencies") {
-        Ichor::DependencyManager dm{};
+        Ichor::DependencyManager dm{std::make_unique<MultimapQueue>()};
         uint64_t secondUselessServiceId{};
 
         std::thread t([&]() {
@@ -42,7 +43,7 @@ TEST_CASE("DependencyServices") {
 
         waitForRunning(dm);
 
-        dm.waitForEmptyQueue();
+        dm.runForOrQueueEmpty();
 
         dm.pushEvent<RunFunctionEvent>(0, [secondUselessServiceId](DependencyManager* mng){
             auto services = mng->getStartedServices<ICountService>();
@@ -54,7 +55,7 @@ TEST_CASE("DependencyServices") {
             mng->pushEvent<StopServiceEvent>(0, secondUselessServiceId);
         });
 
-        dm.waitForEmptyQueue();
+        dm.runForOrQueueEmpty();
 
         dm.pushEvent<RunFunctionEvent>(0, [](DependencyManager* mng){
             auto services = mng->getStartedServices<ICountService>();
@@ -72,7 +73,7 @@ TEST_CASE("DependencyServices") {
     }
 
     SECTION("Optional dependencies") {
-        Ichor::DependencyManager dm{};
+        Ichor::DependencyManager dm{std::make_unique<MultimapQueue>()};
         uint64_t secondUselessServiceId{};
 
         std::thread t([&]() {
@@ -85,7 +86,7 @@ TEST_CASE("DependencyServices") {
 
         waitForRunning(dm);
 
-        dm.waitForEmptyQueue();
+        dm.runForOrQueueEmpty();
 
         dm.pushEvent<RunFunctionEvent>(0, [](DependencyManager* mng){
             auto services = mng->getStartedServices<ICountService>();
@@ -95,11 +96,11 @@ TEST_CASE("DependencyServices") {
             REQUIRE(services[0]->getSvcCount() == 2);
         });
 
-        dm.waitForEmptyQueue();
+        dm.runForOrQueueEmpty();
 
         dm.pushEvent<StopServiceEvent>(0, secondUselessServiceId);
 
-        dm.waitForEmptyQueue();
+        dm.runForOrQueueEmpty();
 
         dm.pushEvent<RunFunctionEvent>(0, [](DependencyManager* mng){
             auto services = mng->getStartedServices<ICountService>();
@@ -117,7 +118,7 @@ TEST_CASE("DependencyServices") {
     }
 
     SECTION("Mixing services should not cause UB") {
-        Ichor::DependencyManager dm{};
+        Ichor::DependencyManager dm{std::make_unique<MultimapQueue>()};
 
         std::thread t([&]() {
             dm.createServiceManager<NullFrameworkLogger, IFrameworkLogger>();
@@ -135,7 +136,7 @@ TEST_CASE("DependencyServices") {
     }
 
     SECTION("Dependency manager should retry failed starts/stops") {
-        Ichor::DependencyManager dm{};
+        Ichor::DependencyManager dm{std::make_unique<MultimapQueue>()};
         StartStopOnSecondAttemptService *svc;
 
         std::thread t([&]() {
@@ -146,7 +147,7 @@ TEST_CASE("DependencyServices") {
 
         waitForRunning(dm);
 
-        dm.waitForEmptyQueue();
+        dm.runForOrQueueEmpty();
 
         dm.pushEvent<RunFunctionEvent>(0, [&](DependencyManager* mng){
             REQUIRE(svc->starts == 2);
@@ -154,7 +155,7 @@ TEST_CASE("DependencyServices") {
             mng->pushEvent<StopServiceEvent>(0, svc->getServiceId());
         });
 
-        dm.waitForEmptyQueue();
+        dm.runForOrQueueEmpty();
 
         dm.pushEvent<RunFunctionEvent>(0, [&](DependencyManager* mng){
             REQUIRE(svc->stops == 2);

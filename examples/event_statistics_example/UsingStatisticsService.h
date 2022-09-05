@@ -20,7 +20,7 @@ public:
         auto quitTimerManager = getManager()->createServiceManager<Timer, ITimer>();
         auto bogusTimerManager = getManager()->createServiceManager<Timer, ITimer>();
         quitTimerManager->setChronoInterval(15s);
-        bogusTimerManager->setChronoInterval(15s);
+        bogusTimerManager->setChronoInterval(100ms);
 
         quitTimerManager->setCallback([this](TimerEvent const * const) -> Generator<bool> {
             getManager()->pushEvent<QuitEvent>(getServiceId(), INTERNAL_EVENT_PRIORITY + 1);

@@ -1,5 +1,5 @@
 #include <catch2/catch_test_macros.hpp>
-#include <ichor/DependencyManager.h>
+#include <ichor/event_queues/MultimapQueue.h>
 #include <ichor/optional_bundles/logging_bundle/NullFrameworkLogger.h>
 #include "TestServices/UselessService.h"
 
@@ -57,7 +57,7 @@ struct MyTimerService final : public IMyTimerService, public Ichor::Service<MyTi
 };
 
 int example() {
-    Ichor::DependencyManager dm{};
+    Ichor::DependencyManager dm{std::make_unique<MultimapQueue>()};
     dm.createServiceManager<Ichor::CoutFrameworkLogger, Ichor::IFrameworkLogger>();
     dm.createServiceManager<MyService, IMyService>();
     dm.createServiceManager<MyDependencyService, IMyDependencyService>();
@@ -95,8 +95,8 @@ struct MyInterceptorService final : public Ichor::Service<MyInterceptorService> 
 
 int communication() {
     Ichor::CommunicationChannel channel{};
-    DependencyManager dmOne{}; // ID = 0
-    DependencyManager dmTwo{}; // ID = 1
+    DependencyManager dmOne{std::make_unique<MultimapQueue>()}; // ID = 0
+    DependencyManager dmTwo{std::make_unique<MultimapQueue>()}; // ID = 1
 
     // Register the manager to the channel
     channel.addManager(&dmOne);

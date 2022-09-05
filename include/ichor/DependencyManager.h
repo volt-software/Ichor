@@ -2,13 +2,10 @@
 
 #include <vector>
 #include <unordered_map>
-#include <map>
 #include <memory>
-#include <cassert>
 #include <thread>
 #include <chrono>
 #include <atomic>
-#include <csignal>
 #include <mutex>
 #include <shared_mutex>
 #include <ichor/interfaces/IFrameworkLogger.h>
@@ -18,31 +15,7 @@
 #include <ichor/Callbacks.h>
 #include <ichor/Filter.h>
 #include <ichor/DependencyRegistrations.h>
-#include <ichor/stl/RealtimeMutex.h>
-#include <ichor/stl/RealtimeReadWriteMutex.h>
-#include <ichor/stl/ConditionVariableAny.h>
-
-// prevent false positives by TSAN
-// See "ThreadSanitizer – data race detection in practice" by Serebryany et al. for more info: https://static.googleusercontent.com/media/research.google.com/en//pubs/archive/35604.pdf
-#if defined(__SANITIZE_THREAD__)
-#define TSAN_ENABLED
-#elif defined(__has_feature)
-#if __has_feature(thread_sanitizer)
-#define TSAN_ENABLED
-#endif
-#endif
-
-#ifdef TSAN_ENABLED
-#define TSAN_ANNOTATE_HAPPENS_BEFORE(addr) \
-    AnnotateHappensBefore(__FILE__, __LINE__, (void*)(addr))
-#define TSAN_ANNOTATE_HAPPENS_AFTER(addr) \
-    AnnotateHappensAfter(__FILE__, __LINE__, (void*)(addr))
-extern "C" void AnnotateHappensBefore(const char* f, int l, void* addr);
-extern "C" void AnnotateHappensAfter(const char* f, int l, void* addr);
-#else
-#define TSAN_ANNOTATE_HAPPENS_BEFORE(addr)
-#define TSAN_ANNOTATE_HAPPENS_AFTER(addr)
-#endif
+#include <ichor/event_queues/IEventQueue.h>
 
 using namespace std::chrono_literals;
 
@@ -56,7 +29,9 @@ namespace Ichor {
 
     class DependencyManager final {
     public:
-        DependencyManager() = default;
+        DependencyManager(std::unique_ptr<IEventQueue> eventQueue) : _eventQueue(std::move(eventQueue)) {
+
+        }
 
         // DANGEROUS COPY, EFFECTIVELY MAKES A NEW MANAGER AND STARTS OVER!!
         // Only implemented so that the manager can be easily used in STL containers before anything is using it.
@@ -169,12 +144,7 @@ namespace Ichor {
             }
 
             uint64_t eventId = _eventIdCounter.fetch_add(1, std::memory_order_acq_rel);
-            _eventQueueMutex.lock();
-            _emptyQueue.store(false, std::memory_order_release);
-            [[maybe_unused]] auto it = _eventQueue.emplace(priority, std::unique_ptr<Event>{new EventT(std::forward<uint64_t>(eventId), std::forward<uint64_t>(originatingServiceId), std::forward<uint64_t>(priority), std::forward<Args>(args)...)});
-            TSAN_ANNOTATE_HAPPENS_BEFORE((void*)&(*it));
-            _eventQueueMutex.unlock();
-            _wakeUp.notify_all();
+            _eventQueue->pushEvent(priority, std::unique_ptr<Event>{new EventT(std::forward<uint64_t>(eventId), std::forward<uint64_t>(originatingServiceId), std::forward<uint64_t>(priority), std::forward<Args>(args)...)});
 //            ICHOR_LOG_TRACE(_logger, "inserted event of type {} into manager {}", typeName<EventT>(), getId());
             return eventId;
         }
@@ -194,12 +164,7 @@ namespace Ichor {
             }
 
             uint64_t eventId = _eventIdCounter.fetch_add(1, std::memory_order_acq_rel);
-            _eventQueueMutex.lock();
-            _emptyQueue.store(false, std::memory_order_release);
-            [[maybe_unused]] auto it = _eventQueue.emplace(INTERNAL_EVENT_PRIORITY, std::unique_ptr<Event>{new EventT(std::forward<uint64_t>(eventId), std::forward<uint64_t>(originatingServiceId), INTERNAL_EVENT_PRIORITY, std::forward<Args>(args)...)});
-            TSAN_ANNOTATE_HAPPENS_BEFORE((void*)&(*it));
-            _eventQueueMutex.unlock();
-            _wakeUp.notify_all();
+            _eventQueue->pushEvent(INTERNAL_EVENT_PRIORITY, std::unique_ptr<Event>{new EventT(std::forward<uint64_t>(eventId), std::forward<uint64_t>(originatingServiceId), INTERNAL_EVENT_PRIORITY, std::forward<Args>(args)...)});
 //            ICHOR_LOG_TRACE(_logger, "inserted event of type {} into manager {}", typeName<EventT>(), getId());
             return eventId;
         }
@@ -376,13 +341,8 @@ namespace Ichor {
             return ret;
         }
 
-        // This waits on all events done processing, rather than the event queue being empty.
-        void waitForEmptyQueue() {
-            std::shared_lock lck(_eventQueueMutex);
-            while(!_emptyQueue.load(std::memory_order_acquire) && !_quit.load(std::memory_order_acquire)) {
-                _wakeUp.wait_for(lck, 1ms, [this] { return _emptyQueue.load(std::memory_order_acquire) || _quit.load(std::memory_order_acquire); });
-            }
-        }
+        // Mainly useful for tests
+        void runForOrQueueEmpty(std::chrono::milliseconds ms = 100ms) const noexcept;
 
         [[nodiscard]] std::optional<std::string_view> getImplementationNameFor(uint64_t serviceId) const noexcept;
 
@@ -444,12 +404,7 @@ namespace Ichor {
         requires Derived<EventT, Event>
         uint64_t pushEventInternal(uint64_t originatingServiceId, uint64_t priority, Args&&... args) {
             uint64_t eventId = _eventIdCounter.fetch_add(1, std::memory_order_acq_rel);
-            _eventQueueMutex.lock();
-            _emptyQueue = false;
-            [[maybe_unused]] auto it = _eventQueue.emplace(priority, std::unique_ptr<Event>{new EventT(std::forward<uint64_t>(eventId), std::forward<uint64_t>(originatingServiceId), std::forward<uint64_t>(priority), std::forward<Args>(args)...)});
-            TSAN_ANNOTATE_HAPPENS_BEFORE((void*)&(*it));
-            _eventQueueMutex.unlock();
-            _wakeUp.notify_all();
+            _eventQueue->pushEvent(priority, std::unique_ptr<Event>{new EventT(std::forward<uint64_t>(eventId), std::forward<uint64_t>(originatingServiceId), std::forward<uint64_t>(priority), std::forward<Args>(args)...)});
 //            ICHOR_LOG_TRACE(_logger, "inserted event of type {} into manager {}", typeName<EventT>(), getId());
             return eventId;
         }
@@ -461,15 +416,12 @@ namespace Ichor {
         std::unordered_map<CallbackKey, std::function<void(Event const * const)>> _errorCallbacks{}; // key = listening service id + event type
         std::unordered_map<uint64_t, std::vector<EventCallbackInfo>> _eventCallbacks{}; // key = event id
         std::unordered_map<uint64_t, std::vector<EventInterceptInfo>> _eventInterceptors{}; // key = event id
-        std::multimap<uint64_t, std::unique_ptr<Event>> _eventQueue{};
+        std::unique_ptr<IEventQueue> _eventQueue;
         IFrameworkLogger *_logger{nullptr};
         std::shared_ptr<ILifecycleManager> _preventEarlyDestructionOfFrameworkLogger{nullptr};
-        RealtimeReadWriteMutex _eventQueueMutex{};
-        ConditionVariableAny<RealtimeReadWriteMutex> _wakeUp{};
         std::atomic<uint64_t> _eventIdCounter{0};
         std::atomic<bool> _quit{false};
         std::atomic<bool> _started{false};
-        std::atomic<bool> _emptyQueue{false}; // only true when all events are done processing, as opposed to having an empty _eventQueue. The latter can be empty before processing due to the usage of extract()
         CommunicationChannel *_communicationChannel{nullptr};
         uint64_t _id{_managerIdCounter++};
         static std::atomic<uint64_t> _managerIdCounter;

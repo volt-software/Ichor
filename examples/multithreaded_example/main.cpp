@@ -1,5 +1,6 @@
 #include "OneService.h"
 #include "OtherService.h"
+#include <ichor/event_queues/MultimapQueue.h>
 #include <ichor/optional_bundles/logging_bundle/LoggerAdmin.h>
 #ifdef ICHOR_USE_SPDLOG
 #include <ichor/optional_bundles/logging_bundle/SpdlogFrameworkLogger.h>
@@ -25,8 +26,8 @@ int main() {
     auto start = std::chrono::steady_clock::now();
 
     CommunicationChannel channel{};
-    DependencyManager dmOne{};
-    DependencyManager dmTwo{};
+    DependencyManager dmOne{std::make_unique<MultimapQueue>()};
+    DependencyManager dmTwo{std::make_unique<MultimapQueue>()};
     channel.addManager(&dmOne);
     channel.addManager(&dmTwo);
 

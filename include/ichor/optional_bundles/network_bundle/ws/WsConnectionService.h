@@ -2,6 +2,7 @@
 
 #ifdef ICHOR_USE_BOOST_BEAST
 
+#include <ichor/stl/RealtimeMutex.h>
 #include <ichor/optional_bundles/network_bundle/IConnectionService.h>
 #include <ichor/optional_bundles/network_bundle/IHostService.h>
 #include <ichor/optional_bundles/network_bundle/http/HttpContextService.h>

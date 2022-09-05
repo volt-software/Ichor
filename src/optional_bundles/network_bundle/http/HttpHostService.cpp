@@ -36,8 +36,10 @@ Ichor::StartBehaviour Ichor::HttpHostService::start() {
 Ichor::StartBehaviour Ichor::HttpHostService::stop() {
     _quit = true;
 
-    if(_goingToCleanupStream.exchange(true) && _httpAcceptor != nullptr) {
-        _httpAcceptor->close();
+    if(_goingToCleanupStream.exchange(true) && _httpAcceptor) {
+        if (_httpAcceptor->is_open()) {
+            _httpAcceptor->close();
+        }
         _httpStream->cancel();
 
         _httpAcceptor = nullptr;
@@ -238,7 +240,11 @@ void Ichor::HttpHostService::read(tcp::socket socket, net::yield_context yield) 
 
     // Send a TCP shutdown
     if(!_goingToCleanupStream.exchange(true) && _httpAcceptor) {
-        _httpAcceptor->close();
+        _quit = true;
+
+        if(_httpAcceptor->is_open()) {
+            _httpAcceptor->close();
+        }
         _httpStream->cancel();
 
         _httpAcceptor = nullptr;

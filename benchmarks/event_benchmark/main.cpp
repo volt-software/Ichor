@@ -1,4 +1,5 @@
 #include "TestService.h"
+#include <ichor/event_queues/MultimapQueue.h>
 #include <ichor/optional_bundles/logging_bundle/LoggerAdmin.h>
 #include <ichor/optional_bundles/logging_bundle/SpdlogSharedService.h>
 #ifdef ICHOR_USE_SPDLOG
@@ -22,7 +23,7 @@ int main() {
 
     {
         auto start = std::chrono::steady_clock::now();
-        DependencyManager dm{};
+        DependencyManager dm{std::make_unique<MultimapQueue>()};
         auto logMgr = dm.createServiceManager<FRAMEWORK_LOGGER_TYPE, IFrameworkLogger>({}, 10);
         logMgr->setLogLevel(LogLevel::INFO);
 
@@ -43,7 +44,7 @@ int main() {
         std::vector<DependencyManager> managers{};
         managers.reserve(8);
         for (uint_fast32_t i = 0, j = 0; i < 8; i++, j += 2) {
-            managers.emplace_back();
+            managers.emplace_back(std::make_unique<MultimapQueue>());
             threads[i] = std::thread([&managers, i] {
                 auto logMgr = managers[i].createServiceManager<FRAMEWORK_LOGGER_TYPE, IFrameworkLogger>({}, 10);
                 logMgr->setLogLevel(LogLevel::INFO);

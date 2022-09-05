@@ -1,12 +1,13 @@
 #include "Common.h"
 #include "TestServices/GeneratorService.h"
+#include <ichor/event_queues/MultimapQueue.h>
 
 TEST_CASE("DependencyServices") {
 
     ensureInternalLoggerExists();
 
     SECTION("Required dependencies") {
-        Ichor::DependencyManager dm{};
+        Ichor::DependencyManager dm{std::make_unique<MultimapQueue>()};
 
         std::thread t([&]() {
             dm.createServiceManager<NullFrameworkLogger, IFrameworkLogger>();
@@ -16,7 +17,7 @@ TEST_CASE("DependencyServices") {
 
         waitForRunning(dm);
 
-        dm.waitForEmptyQueue();
+        dm.runForOrQueueEmpty();
 
         dm.pushEvent<RunFunctionEvent>(0, [](DependencyManager* mng){
             auto services = mng->getStartedServices<IGeneratorService>();

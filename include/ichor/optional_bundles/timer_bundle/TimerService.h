@@ -91,7 +91,7 @@ namespace Ichor {
             }
         }
 
-        std::atomic<uint64_t> _intervalNanosec{};
+        std::atomic<uint64_t> _intervalNanosec{1'000'000'000};
         std::unique_ptr<std::thread> _eventInsertionThread{};
         EventHandlerRegistration _timerEventRegistration{};
         std::function<Generator<bool>(TimerEvent const * const)> _fn{};

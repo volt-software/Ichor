@@ -1,5 +1,7 @@
 #pragma once
 
+#include <ichor/Common.h>
+
 namespace Ichor {
     struct Dependency {
         ICHOR_CONSTEXPR Dependency(uint64_t _interfaceNameHash, bool _required, uint64_t _satisfied) noexcept : interfaceNameHash(_interfaceNameHash), required(_required), satisfied(_satisfied) {}

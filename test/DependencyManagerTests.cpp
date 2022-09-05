@@ -1,4 +1,4 @@
-#include <ichor/DependencyManager.h>
+#include <ichor/event_queues/MultimapQueue.h>
 #include <ichor/optional_bundles/logging_bundle/NullFrameworkLogger.h>
 #include "TestServices/UselessService.h"
 #include "Common.h"
@@ -18,7 +18,7 @@ TEST_CASE("DependencyManager") {
         std::atomic<bool> thrown_exception = false;
         std::thread t([&]() {
             try {
-                Ichor::DependencyManager dm{};
+                Ichor::DependencyManager dm{std::make_unique<MultimapQueue>()};
                 dm.start();
             } catch (...) {
                 thrown_exception = true;
@@ -37,7 +37,7 @@ TEST_CASE("DependencyManager") {
         std::atomic<bool> thrown_exception = false;
         std::thread t([&]() {
             try {
-                Ichor::DependencyManager dm{};
+                Ichor::DependencyManager dm{std::make_unique<MultimapQueue>()};
                 dm.createServiceManager<UselessService>();
                 dm.start();
             } catch (...) {
@@ -53,7 +53,7 @@ TEST_CASE("DependencyManager") {
     }
 
     SECTION("DependencyManager", "QuitOnQuitEvent") {
-        Ichor::DependencyManager dm{};
+        Ichor::DependencyManager dm{std::make_unique<MultimapQueue>()};
 
         std::thread t([&]() {
             dm.createServiceManager<NullFrameworkLogger, IFrameworkLogger>();
@@ -61,7 +61,7 @@ TEST_CASE("DependencyManager") {
             dm.start();
         });
 
-        dm.waitForEmptyQueue();
+        dm.runForOrQueueEmpty();
 
         REQUIRE(dm.isRunning());
 
