@@ -41,7 +41,7 @@ Ichor::StartBehaviour Ichor::TcpHostService::start() {
         auto hostname = Ichor::any_cast<std::string>(addressProp->second);
         if(::inet_aton(hostname.c_str(), &address.sin_addr) != 0) {
             getManager()->pushEvent<RecoverableErrorEvent>(getServiceId(), 1, "inet_aton: errno = " + std::to_string(errno));
-            auto hp = ::gethostbyname(hostname.c_str());
+            auto *hp = ::gethostbyname(hostname.c_str());
             if (hp == nullptr) {
                 _socket = -1;
                 close(_socket);
@@ -49,7 +49,7 @@ Ichor::StartBehaviour Ichor::TcpHostService::start() {
                 return Ichor::StartBehaviour::FAILED_DO_NOT_RETRY;
             }
 
-            address.sin_addr = *(struct in_addr *) hp->h_addr;
+            memcpy(&address.sin_addr, hp->h_addr, sizeof(address.sin_addr));
         }
     } else {
         address.sin_addr.s_addr = INADDR_ANY;
@@ -74,7 +74,7 @@ Ichor::StartBehaviour Ichor::TcpHostService::start() {
 
     _timerManager = getManager()->createServiceManager<Timer, ITimer>();
     _timerManager->setChronoInterval(20ms);
-    _timerManager->setCallback([this](TimerEvent const * const evt) -> Generator<bool> {
+    _timerManager->setCallback([this](TimerEvent const * const evt) -> AsyncGenerator<bool> {
         sockaddr_in client_addr{};
         socklen_t client_addr_size = sizeof(client_addr);
         int newConnection = ::accept(_socket, (sockaddr *) &client_addr, &client_addr_size);
@@ -89,7 +89,7 @@ Ichor::StartBehaviour Ichor::TcpHostService::start() {
             co_return (bool)PreventOthersHandling;
         }
 
-        auto ip = ::inet_ntoa(client_addr.sin_addr);
+        auto *ip = ::inet_ntoa(client_addr.sin_addr);
         ICHOR_LOG_TRACE(_logger, "new connection from {}:{}", ip, ::ntohs(client_addr.sin_port));
 
         getManager()->pushPrioritisedEvent<NewSocketEvent>(getServiceId(), _priority, newConnection);
@@ -131,7 +131,7 @@ uint64_t Ichor::TcpHostService::getPriority() {
     return _priority;
 }
 
-Ichor::Generator<bool> Ichor::TcpHostService::handleEvent(NewSocketEvent const * const evt) {
+Ichor::AsyncGenerator<bool> Ichor::TcpHostService::handleEvent(NewSocketEvent const * const evt) {
     Properties props{};
     props.emplace("Priority", Ichor::make_any<uint64_t>(_priority));
     props.emplace("Socket", Ichor::make_any<int>(evt->socket));

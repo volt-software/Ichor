@@ -2,6 +2,7 @@
 
 #include <ichor/Dependency.h>
 #include <ichor/Service.h>
+#include <optional>
 
 namespace Ichor {
     struct DependencyRegister final {

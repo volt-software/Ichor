@@ -5,25 +5,18 @@
 #include "sole.hpp"
 #include <ichor/Common.h>
 #include <ichor/Concepts.h>
+#include <ichor/Enums.h>
 
 namespace Ichor {
     class DependencyManager;
-
-    enum class ServiceState {
-        UNINSTALLED,
-        INSTALLED,
-        STARTING,
-        STOPPING,
-        INJECTING,
-        UNINJECTING,
-        ACTIVE,
-    };
-
-    enum class StartBehaviour {
-        FAILED_DO_NOT_RETRY,
-        FAILED_AND_RETRY,
-        SUCCEEDED
-    };
+    template <typename T>
+    class Service;
+    template<class ServiceType, typename... IFaces>
+    requires DerivedTemplated<ServiceType, Service>
+    class LifecycleManager;
+    template<class ServiceType, typename... IFaces>
+    requires DerivedTemplated<ServiceType, Service>
+    class DependencyLifecycleManager;
 
     class IService {
     public:
@@ -105,11 +98,11 @@ namespace Ichor {
                 return StartBehaviour::FAILED_DO_NOT_RETRY;
             }
 
-            INTERNAL_DEBUG("service {} state {} -> {}", getServiceId(), getState(), ServiceState::STARTING);
+            INTERNAL_DEBUG("service {}:{} state {} -> {}", getServiceId(), typeName<T>(), getState(), ServiceState::STARTING);
             _serviceState = ServiceState::STARTING;
             auto ret = start();
             if(ret == StartBehaviour::SUCCEEDED) {
-                INTERNAL_DEBUG("service {} state {} -> {}", getServiceId(), getState(), ServiceState::INJECTING);
+                INTERNAL_DEBUG("service {}:{} state {} -> {}", getServiceId(), typeName<T>(), getState(), ServiceState::INJECTING);
                 _serviceState = ServiceState::INJECTING;
             }
 
@@ -122,11 +115,11 @@ namespace Ichor {
                 return StartBehaviour::FAILED_DO_NOT_RETRY;
             }
 
-            INTERNAL_DEBUG("service {} state {} -> {}", getServiceId(), getState(), ServiceState::STOPPING);
+            INTERNAL_DEBUG("service {}:{} state {} -> {}", getServiceId(), typeName<T>(), getState(), ServiceState::STOPPING);
             _serviceState = ServiceState::STOPPING;
             auto ret = stop();
             if(ret == StartBehaviour::SUCCEEDED) {
-                INTERNAL_DEBUG("service {} state {} -> {}", getServiceId(), getState(), ServiceState::INSTALLED);
+                INTERNAL_DEBUG("service {}:{} state {} -> {}", getServiceId(), typeName<T>(), getState(), ServiceState::INSTALLED);
                 _serviceState = ServiceState::INSTALLED;
             }
 
@@ -138,7 +131,7 @@ namespace Ichor {
                 return false;
             }
 
-            INTERNAL_DEBUG("service {} state {} -> {}", getServiceId(), getState(), ServiceState::ACTIVE);
+            INTERNAL_DEBUG("service {}:{} state {} -> {}", getServiceId(), typeName<T>(), getState(), ServiceState::ACTIVE);
             _serviceState = ServiceState::ACTIVE;
             return true;
         }
@@ -148,7 +141,7 @@ namespace Ichor {
                 return false;
             }
 
-            INTERNAL_DEBUG("service {} state {} -> {}", getServiceId(), getState(), ServiceState::UNINJECTING);
+            INTERNAL_DEBUG("service {}:{} state {} -> {}", getServiceId(), typeName<T>(), getState(), ServiceState::UNINJECTING);
             _serviceState = ServiceState::UNINJECTING;
             return true;
         }

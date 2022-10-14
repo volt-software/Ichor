@@ -139,7 +139,7 @@ namespace std {
 #   ifdef _MSC_VER
 #   pragma comment(lib,"iphlpapi.lib")
 #   endif
-#   define $windows $yes
+#   define _windows _yes
 #elif defined(__FreeBSD__) || defined(__NetBSD__) || \
         defined(__OpenBSD__) || defined(__MINT__) || defined(__bsdi__)
 #   include <ifaddrs.h>
@@ -148,7 +148,7 @@ namespace std {
 #   include <sys/time.h>
 #   include <sys/types.h>
 #   include <unistd.h>
-#   define $bsd $yes
+#   define _bsd _yes
 #elif (defined(__APPLE__) && defined(__MACH__))
 #   include <ifaddrs.h>
 #   include <net/if_dl.h>
@@ -158,7 +158,7 @@ namespace std {
 #   include <unistd.h>
 #   pragma clang diagnostic push
 #   pragma clang diagnostic ignored "-Wdollar-in-identifier-extension"
-#   define $osx $yes
+#   define _osx _yes
 #elif defined(__linux__)
 #   include <arpa/inet.h>
 #   include <net/if.h>
@@ -167,7 +167,7 @@ namespace std {
 #   include <sys/socket.h>
 #   include <sys/time.h>
 #   include <unistd.h>
-#   define $linux $yes
+#   define _linux _yes
 #else //elif defined(__unix__)
 #   if defined(__VMS)
 #      include <ioctl.h>
@@ -187,11 +187,11 @@ namespace std {
 #   include <sys/time.h>
 #   include <sys/types.h>
 #   include <unistd.h>
-#   define $unix $yes
+#   define _unix _yes
 #endif
 
 #ifdef _MSC_VER
-#   define $msvc  $yes
+#   define _msvc  _yes
 #endif
 
 #if defined(__GNUC__) && (__GNUC__ * 10000 + __GNUC_MINOR__ * 100 < 50100)
@@ -208,50 +208,50 @@ namespace std
 
 ////////////////////////////////////////////////////////////////////////////////////
 
-#ifdef  $windows
-#define $welse   $no
+#ifdef  _windows
+#define _welse   _no
 #else
-#define $windows $no
-#define $welse   $yes
+#define _windows _no
+#define _welse   _yes
 #endif
 
-#ifdef  $bsd
-#define $belse   $no
+#ifdef  _bsd
+#define _belse   _no
 #else
-#define $bsd     $no
-#define $belse   $yes
+#define _bsd     _no
+#define _belse   _yes
 #endif
 
-#ifdef  $linux
-#define $lelse   $no
+#ifdef  _linux
+#define _lelse   _no
 #else
-#define $linux   $no
-#define $lelse   $yes
+#define _linux   _no
+#define _lelse   _yes
 #endif
 
-#ifdef  $unix
-#define $uelse   $no
+#ifdef  _unix
+#define _uelse   _no
 #else
-#define $unix    $no
-#define $uelse   $yes
+#define _unix    _no
+#define _uelse   _yes
 #endif
 
-#ifdef  $osx
-#define $oelse   $no
+#ifdef  _osx
+#define _oelse   _no
 #else
-#define $osx     $no
-#define $oelse   $yes
+#define _osx     _no
+#define _oelse   _yes
 #endif
 
-#ifdef  $msvc
-#define $melse   $no
+#ifdef  _msvc
+#define _melse   _no
 #else
-#define $msvc    $no
-#define $melse   $yes
+#define _msvc    _no
+#define _melse   _yes
 #endif
 
-#define $yes(...) __VA_ARGS__
-#define $no(...)
+#define _yes(...) __VA_ARGS__
+#define _no(...)
 
 inline bool sole::uuid::operator==( const sole::uuid &other ) const {
     return ab == other.ab && cd == other.cd;
@@ -275,16 +275,16 @@ namespace sole {
             //std::string locale; // = "es-ES", "Chinese_China.936", "en_US.UTF8", etc...
             std::time_t t = timestamp_secs;
             std::tm tm;
-            $msvc(
+            _msvc(
                     localtime_s( &tm, &t );
             )
-            $melse(
-                    $windows(tm = *localtime( &t ); )
-                    $welse( localtime_r(&t, &tm); )
+            _melse(
+                    _windows(tm = *localtime( &t ); )
+                    _welse( localtime_r(&t, &tm); )
             )
 
             std::stringstream ss;
-            $melse(
+            _melse(
                     std::locale lc( locale.c_str() );
                     ss.imbue( lc );
             )
@@ -370,7 +370,7 @@ namespace sole {
     //////////////////////////////////////////////////////////////////////////////////////
     // multiplatform clock_gettime()
 
-    $windows(
+    _windows(
             struct timespec {
                 uint64_t tv_sec;
                 uint64_t tv_nsec;
@@ -416,11 +416,11 @@ namespace sole {
                     long timezoneSecs = 0;
                     int daylight = 0;
 
-                    $msvc(
+                    _msvc(
                             _get_timezone(&timezoneSecs);
                     _get_daylight(&daylight);
                     )
-                    $melse(
+                    _melse(
                             timezoneSecs = _timezone;
                     daylight = _daylight;
                     )
@@ -432,7 +432,7 @@ namespace sole {
                 return 0;
             }
     )
-    $lelse( $belse( // if not linux, if not bsd... valid for apple/win32
+    _lelse( _belse( // if not linux, if not bsd... valid for apple/win32
                     inline int clock_gettime( int /*clk_id*/, struct timespec* t ) {
                         struct timeval now;
                         int rv = gettimeofday(&now, NULL);
@@ -469,7 +469,7 @@ namespace sole {
 
     // Looks for first MAC address of any network device, any size.
     inline bool get_any_mac( std::vector<unsigned char> &_node ) {
-        $windows({
+        _windows({
                      PIP_ADAPTER_INFO pAdapterInfo;
                      PIP_ADAPTER_INFO pAdapter = 0;
                      ULONG len    = sizeof(IP_ADAPTER_INFO);
@@ -485,7 +485,7 @@ namespace sole {
                      }
                      else if (rc != ERROR_SUCCESS)
                      {
-                         return $no("cannot get network adapter list") false;
+                         return _no("cannot get network adapter list") false;
                      }
 
                      bool found = false, gotten = false;
@@ -509,18 +509,18 @@ namespace sole {
                      delete [] reinterpret_cast<char*>(pAdapterInfo);
 
                      if( !gotten )
-                         return $no("cannot get network adapter list") false;
+                         return _no("cannot get network adapter list") false;
 
                      if (!found)
-                         return $no("no Ethernet adapter found") false;
+                         return _no("no Ethernet adapter found") false;
 
                      return true;
                  })
 
-        $bsd({
+        _bsd({
                  struct ifaddrs* ifaphead;
                  int rc = getifaddrs(&ifaphead);
-                 if (rc) return $no("cannot get network adapter list") false;
+                 if (rc) return _no("cannot get network adapter list") false;
 
                  bool foundAdapter = false;
                  for (struct ifaddrs* ifap = ifaphead; ifap; ifap = ifap->ifa_next)
@@ -540,14 +540,14 @@ namespace sole {
                      }
                  }
                  freeifaddrs(ifaphead);
-                 if (!foundAdapter) return $no("cannot determine MAC address (no suitable network adapter found)") false;
+                 if (!foundAdapter) return _no("cannot determine MAC address (no suitable network adapter found)") false;
                  return true;
              })
 
-        $osx({
+        _osx({
                  struct ifaddrs* ifaphead;
                  int rc = getifaddrs(&ifaphead);
-                 if (rc) return $no("cannot get network adapter list") false;
+                 if (rc) return _no("cannot get network adapter list") false;
 
                  bool foundAdapter = false;
                  for (struct ifaddrs* ifap = ifaphead; ifap; ifap = ifap->ifa_next)
@@ -567,36 +567,36 @@ namespace sole {
                      }
                  }
                  freeifaddrs(ifaphead);
-                 if (!foundAdapter) return $no("cannot determine MAC address (no suitable network adapter found)") false;
+                 if (!foundAdapter) return _no("cannot determine MAC address (no suitable network adapter found)") false;
                  return true;
              })
 
-        $linux({
+        _linux({
                    struct ifreq ifr;
 
                    int s = socket(PF_INET, SOCK_DGRAM, 0);
-                   if (s == -1) return $no("cannot open socket") false;
+                   if (s == -1) return _no("cannot open socket") false;
 
                    std::strcpy(ifr.ifr_name, "eth0");
                    int rc = ioctl(s, SIOCGIFHWADDR, &ifr);
                    close(s);
-                   if (rc < 0) return $no("cannot get MAC address") false;
+                   if (rc < 0) return _no("cannot get MAC address") false;
                    struct sockaddr* sa = reinterpret_cast<struct sockaddr*>(&ifr.ifr_addr);
                    _node.resize( sizeof(sa->sa_data) );
                    std::memcpy(_node.data(), sa->sa_data, _node.size() );
                    return true;
                })
 
-        $unix({
+        _unix({
                   char name[HOST_NAME_MAX];
                   if (gethostname(name, sizeof(name)))
-                      return $no("cannot get host name") false;
+                      return _no("cannot get host name") false;
 
                   struct hostent* pHost = gethostbyname(name);
-                  if (!pHost) return $no("cannot get host IP address") false;
+                  if (!pHost) return _no("cannot get host IP address") false;
 
                   int s = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP);
-                  if (s == -1) return $no("cannot open socket") false;
+                  if (s == -1) return _no("cannot open socket") false;
 
                   struct arpreq ar;
                   std::memset(&ar, 0, sizeof(ar));
@@ -605,7 +605,7 @@ namespace sole {
                   std::memcpy(&pAddr->sin_addr, *pHost->h_addr_list, sizeof(struct in_addr));
                   int rc = ioctl(s, SIOCGARP, &ar);
                   close(s);
-                  if (rc < 0) return $no("cannot get MAC address") false;
+                  if (rc < 0) return _no("cannot get MAC address") false;
                   _node.resize( sizeof(ar.arp_ha.sa_data) );
                   std::memcpy(_node.data(), ar.arp_ha.sa_data, _node.size());
                   return true;
@@ -687,7 +687,7 @@ namespace sole {
     inline uuid uuid0() {
         // Number of 100-ns intervals since Unix epoch time
         uint64_t ns100_intervals = get_time( 0 );
-        uint64_t pid = $windows( _getpid() ) $welse( getpid() );
+        uint64_t pid = _windows( _getpid() ) _welse( getpid() );
         uint16_t pid16 = (uint16_t)( pid & 0xffff ); // 16-bits max
         uint64_t mac = get_any_mac48();              // 48-bits max
 
@@ -763,18 +763,18 @@ namespace sole {
 
 } // ::sole
 
-#undef $bsd
-#undef $belse
-#undef $linux
-#undef $lelse
-#undef $osx
-#undef $oelse
-#undef $unix
-#undef $uelse
-#undef $windows
-#undef $welse
-#undef $yes
-#undef $no
+#undef _bsd
+#undef _belse
+#undef _linux
+#undef _lelse
+#undef _osx
+#undef _oelse
+#undef _unix
+#undef _uelse
+#undef _windows
+#undef _welse
+#undef _yes
+#undef _no
 
 // Pop disabled warnings
 #if (defined(__APPLE__) && defined(__MACH__))

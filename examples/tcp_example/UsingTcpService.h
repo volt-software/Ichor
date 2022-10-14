@@ -63,7 +63,7 @@ public:
         ICHOR_LOG_INFO(_logger, "Removed connectionService");
     }
 
-    Generator<bool> handleEvent(NetworkDataEvent const * const evt) {
+    AsyncGenerator<bool> handleEvent(NetworkDataEvent const * const evt) {
         auto msg = _serializationAdmin->deserialize<TestMsg>(evt->getData());
         ICHOR_LOG_INFO(_logger, "Received TestMsg id {} val {}", msg->id, msg->val);
         getManager()->pushEvent<QuitEvent>(getServiceId());
@@ -71,7 +71,7 @@ public:
         co_return (bool)PreventOthersHandling;
     }
 
-    Generator<bool> handleEvent(FailedSendMessageEvent const * const evt) {
+    AsyncGenerator<bool> handleEvent(FailedSendMessageEvent const * const evt) {
         ICHOR_LOG_INFO(_logger, "Failed to send message id {}, retrying", evt->msgId);
         _connectionService->sendAsync(std::move(evt->data));
 

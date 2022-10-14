@@ -36,7 +36,7 @@ public:
         _logger = nullptr;
     }
 
-    Generator<bool> handleEvent(CustomEvent const * const evt) {
+    AsyncGenerator<bool> handleEvent(CustomEvent const * const evt) {
         ICHOR_LOG_INFO(_logger, "Handling custom event");
         getManager()->pushEvent<QuitEvent>(getServiceId());
         getManager()->getCommunicationChannel()->broadcastEvent<QuitEvent>(getManager(), getServiceId(), INTERNAL_EVENT_PRIORITY+1);

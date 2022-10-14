@@ -11,7 +11,8 @@
 #include <ichor/interfaces/IFrameworkLogger.h>
 #include <ichor/Service.h>
 #include <ichor/LifecycleManager.h>
-#include <ichor/Events.h>
+#include <ichor/events/InternalEvents.h>
+#include <ichor/coroutines//IGenerator.h>
 #include <ichor/Callbacks.h>
 #include <ichor/Filter.h>
 #include <ichor/DependencyRegistrations.h>
@@ -21,6 +22,9 @@ using namespace std::chrono_literals;
 
 namespace Ichor {
     class CommunicationChannel;
+
+    template <typename T>
+    class AsyncGenerator;
 
     struct DependencyTrackerInfo final {
         explicit DependencyTrackerInfo(std::function<void(Event const * const)> _trackFunc) noexcept : trackFunc(std::move(_trackFunc)) {}
@@ -254,21 +258,23 @@ namespace Ichor {
         EventHandlerRegistration registerEventHandler(Impl *impl, std::optional<uint64_t> targetServiceId = {}) {
             auto existingHandlers = _eventCallbacks.find(EventT::TYPE);
             if(existingHandlers == end(_eventCallbacks)) {
-                std::vector<EventCallbackInfo> v{  };
+                std::vector<EventCallbackInfo> v{};
                 v.template emplace_back(EventCallbackInfo{
                         impl->getServiceId(),
                         targetServiceId,
-                        std::function<Generator<bool>(Event const * const)>{
-                                [impl](Event const *const evt) {
-                                    return impl->handleEvent(static_cast<EventT const *const>(evt));
-                                }
-                               
+                        std::function<AsyncGenerator<bool>(Event const * const)>{
+                            [impl](Event const *const evt) { return impl->handleEvent(static_cast<EventT const *const>(evt)); }
                         }
                 });
                 _eventCallbacks.emplace(EventT::TYPE, std::move(v));
             } else {
-                existingHandlers->second.emplace_back(impl->getServiceId(), targetServiceId, std::function<Generator<bool>(Event const *const)>{
-                        [impl](Event const *const evt) { return impl->handleEvent(static_cast<EventT const *const>(evt)); }});
+                existingHandlers->second.emplace_back(EventCallbackInfo{
+                    impl->getServiceId(),
+                    targetServiceId,
+                    std::function<AsyncGenerator<bool>(Event const *const)>{
+                        [impl](Event const *const evt) { return impl->handleEvent(static_cast<EventT const *const>(evt)); }
+                    }
+                });
             }
             return EventHandlerRegistration(this, CallbackKey{impl->getServiceId(), EventT::TYPE}, impl->getServicePriority());
         }
@@ -295,9 +301,9 @@ namespace Ichor {
                                    std::function<void(Event const * const, bool)>{[impl](Event const * const evt, bool processed){ impl->postInterceptEvent(static_cast<EventT const * const>(evt), processed); }}});
                 _eventInterceptors.emplace(targetEventId, std::move(v));
             } else {
-                existingHandlers->second.template emplace_back(impl->getServiceId(), targetEventId,
+                existingHandlers->second.template emplace_back(EventInterceptInfo{impl->getServiceId(), targetEventId,
                                                       std::function<bool(Event const * const)>{[impl](Event const * const evt){ return impl->preInterceptEvent(static_cast<EventT const * const>(evt)); }},
-                                                      std::function<void(Event const * const, bool)>{[impl](Event const * const evt, bool processed){ impl->postInterceptEvent(static_cast<EventT const * const>(evt), processed); }});
+                                                      std::function<void(Event const * const, bool)>{[impl](Event const * const evt, bool processed){ impl->postInterceptEvent(static_cast<EventT const * const>(evt), processed); }}});
             }
             // I think there's a bug in GCC 10.1, where if I don't make this a unique_ptr, the EventHandlerRegistration destructor immediately gets called for some reason.
             // Even if the result is stored in a variable at the caller site.
@@ -373,9 +379,9 @@ namespace Ichor {
         void logAddService(uint64_t id) {
             if(_logger != nullptr && _logger->getLogLevel() <= LogLevel::DEBUG) {
                 fmt::memory_buffer out;
-                fmt::format_to(out, "added ServiceManager<{}, {}, ", typeName<Interface1>(), typeName<Interface2>());
-                (fmt::format_to(out, "{}, ", typeName<Interfaces>()), ...);
-                fmt::format_to(out, "{}>", typeName<Impl>());
+                fmt::format_to(std::back_inserter(out), "added ServiceManager<{}, {}, ", typeName<Interface1>(), typeName<Interface2>());
+                (fmt::format_to(std::back_inserter(out), "{}, ", typeName<Interfaces>()), ...);
+                fmt::format_to(std::back_inserter(out), "{}>", typeName<Impl>());
                 ICHOR_LOG_DEBUG(_logger, "{} {}", out.data(), id);
             }
         }
@@ -416,6 +422,7 @@ namespace Ichor {
         std::unordered_map<CallbackKey, std::function<void(Event const * const)>> _errorCallbacks{}; // key = listening service id + event type
         std::unordered_map<uint64_t, std::vector<EventCallbackInfo>> _eventCallbacks{}; // key = event id
         std::unordered_map<uint64_t, std::vector<EventInterceptInfo>> _eventInterceptors{}; // key = event id
+        std::unordered_map<uint64_t, std::unique_ptr<IGenerator>> _scopedGenerators{}; // key = promise id
         std::unique_ptr<IEventQueue> _eventQueue;
         IFrameworkLogger *_logger{nullptr};
         std::shared_ptr<ILifecycleManager> _preventEarlyDestructionOfFrameworkLogger{nullptr};
@@ -429,4 +436,13 @@ namespace Ichor {
         friend class EventCompletionHandlerRegistration;
         friend class CommunicationChannel;
     };
+
+
+    namespace Detail {
+        // Used internally to insert events where passing around the DM isn't feasible
+        // Only use if you know for sure you're on the correct thread.
+        thread_local extern DependencyManager *_local_dm;
+    }
 }
+
+#include <ichor/coroutines/AsyncGenerator.h>

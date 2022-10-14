@@ -3,6 +3,7 @@
 #include "TestServices/EventHandlerService.h"
 #include "TestEvents.h"
 #include <ichor/event_queues/MultimapQueue.h>
+#include <ichor/events/RunFunctionEvent.h>
 
 using namespace Ichor;
 
@@ -25,7 +26,7 @@ TEST_CASE("Interceptor Tests") {
 
         dm.runForOrQueueEmpty();
 
-        dm.pushEvent<RunFunctionEvent>(0, [](DependencyManager* mng){
+        dm.pushEvent<RunFunctionEvent>(0, [](DependencyManager* mng) -> AsyncGenerator<bool> {
             auto services = mng->getStartedServices<IInterceptorService>();
 
             REQUIRE(services.size() == 1);
@@ -41,6 +42,8 @@ TEST_CASE("Interceptor Tests") {
             REQUIRE(un.find(TestEvent::TYPE)->second == 1);
 
             mng->pushEvent<QuitEvent>(0);
+
+            co_return (bool)PreventOthersHandling;
         });
 
         t.join();
@@ -64,7 +67,7 @@ TEST_CASE("Interceptor Tests") {
 
         dm.runForOrQueueEmpty();
 
-        dm.pushEvent<RunFunctionEvent>(0, [](DependencyManager* mng){
+        dm.pushEvent<RunFunctionEvent>(0, [](DependencyManager* mng) -> AsyncGenerator<bool> {
             auto services = mng->getStartedServices<IInterceptorService>();
 
             REQUIRE(services.size() == 1);
@@ -80,6 +83,8 @@ TEST_CASE("Interceptor Tests") {
             REQUIRE(un.find(TestEvent::TYPE) == end(pre));
 
             mng->pushEvent<QuitEvent>(0);
+
+            co_return (bool)PreventOthersHandling;
         });
 
         t.join();
@@ -103,7 +108,7 @@ TEST_CASE("Interceptor Tests") {
 
         dm.runForOrQueueEmpty();
 
-        dm.pushEvent<RunFunctionEvent>(0, [](DependencyManager* mng){
+        dm.pushEvent<RunFunctionEvent>(0, [](DependencyManager* mng) -> AsyncGenerator<bool> {
             auto interceptorServices = mng->getStartedServices<IInterceptorService>();
             auto eventHandlerServices = mng->getStartedServices<IEventHandlerService>();
 
@@ -123,6 +128,8 @@ TEST_CASE("Interceptor Tests") {
             REQUIRE(eventHandlerServices[0]->getHandledEvents().empty());
 
             mng->pushEvent<QuitEvent>(0);
+
+            co_return (bool)PreventOthersHandling;
         });
 
         t.join();
@@ -143,7 +150,7 @@ TEST_CASE("Interceptor Tests") {
 
         dm.runForOrQueueEmpty();
 
-        dm.pushEvent<RunFunctionEvent>(0, [](DependencyManager* mng){
+        dm.pushEvent<RunFunctionEvent>(0, [](DependencyManager* mng) -> AsyncGenerator<bool> {
             auto services = mng->getStartedServices<IInterceptorService>();
 
             REQUIRE(services.size() == 1);
@@ -164,6 +171,8 @@ TEST_CASE("Interceptor Tests") {
             REQUIRE(un.find(RunFunctionEvent::TYPE) == end(pre));
 
             mng->pushEvent<QuitEvent>(0);
+
+            co_return (bool)PreventOthersHandling;
         });
 
         t.join();
@@ -185,7 +194,7 @@ TEST_CASE("Interceptor Tests") {
 
         dm.runForOrQueueEmpty();
 
-        dm.pushEvent<RunFunctionEvent>(0, [](DependencyManager* mng){
+        dm.pushEvent<RunFunctionEvent>(0, [](DependencyManager* mng) -> AsyncGenerator<bool> {
             auto services = mng->getStartedServices<IInterceptorService>();
 
             REQUIRE(services.size() == 2);
@@ -208,6 +217,8 @@ TEST_CASE("Interceptor Tests") {
             }
 
             mng->pushEvent<QuitEvent>(0);
+
+            co_return (bool)PreventOthersHandling;
         });
 
         t.join();

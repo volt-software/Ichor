@@ -37,13 +37,23 @@ option(ICHOR_USE_SANITIZERS "Enable sanitizers, catching potential errors but sl
 option(ICHOR_USE_THREAD_SANITIZER "Enable thread sanitizer, catching potential threading errors but slowing down compilation and execution speed. Cannot be combined with ICHOR_USE_SANITIZERS" OFF)
 option(ICHOR_USE_UGLY_HACK_EXCEPTION_CATCHING "Enable an ugly hack on gcc to enable debugging the point where exceptions are thrown. Useful for debugging boost asio/beast backtraces." OFF)
 option(ICHOR_REMOVE_SOURCE_NAMES "Remove compiling source file names and line numbers when logging." OFF)
+option(ICHOR_USE_MOLD "Use mold when linking, recommended to use with gcc 12+ or clang" OFF)
+
+if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+    # clang tidy requires the same compiler arguments as clang
+    # some gcc arguments cause it to error out
+    option(ICHOR_RUN_CLANG_TIDY "Runs clang tidy every compile" OFF)
+endif()
 
 set(ICHOR_SERIALIZATION_FRAMEWORK OFF CACHE STRING "Enable serialization support")
 set_property(CACHE ICHOR_SERIALIZATION_FRAMEWORK PROPERTY STRINGS OFF RAPIDJSON BOOST_JSON)
 
 set(ICHOR_ARCH_OPTIMIZATION OFF CACHE STRING "Tell compiler to optimize for target")
-set_property(CACHE ICHOR_ARCH_OPTIMIZATION PROPERTY STRINGS OFF NATIVE X86_64 X86_64_AVX2)
+set_property(CACHE ICHOR_ARCH_OPTIMIZATION PROPERTY STRINGS OFF NATIVE X86_64 X86_64_AVX2 MODERN_ARM_GENERIC)
 
+if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND ICHOR_RUN_CLANG_TIDY)
+    set(CMAKE_CXX_CLANG_TIDY "clang-tidy;-checks=*,-llvmlibc-*,-readability-function-cognitive-complexity,-altera-*,-modernize-use-trailing-return-type,-concurrency-mt-unsafe,-fuchsia-default-arguments-calls,-android-*,-readability-identifier-length,-clang-analyzer-optin.cplusplus.UninitializedObject")
+endif()
 if(ICHOR_USE_SPDLOG)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DSPDLOG_COMPILED_LIB -DSPDLOG_NO_EXCEPTIONS -DSPDLOG_FMT_EXTERNAL -DSPDLOG_DISABLE_DEFAULT_LOGGER -DSPDLOG_NO_ATOMIC_LEVELS -DICHOR_USE_SPDLOG -DSPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_TRACE ")
 endif()
@@ -79,9 +89,17 @@ if(ICHOR_USE_BOOST_BEAST)
 endif()
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DCATCH_CONFIG_FAST_COMPILE ")
-set(CMAKE_CXX_FLAGSCMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Wshadow -Wnon-virtual-dtor -Wno-unused-variable -Wno-long-long -Wno-unused-parameter -Wduplicated-cond -Wduplicated-branches -Wlogical-op -Wnull-dereference -pedantic -Wformat -Wformat-security ")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fconcepts -fconcepts-diagnostics-depth=3 -pthread ")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Werror -Wall -Wextra -Wshadow -Wnon-virtual-dtor -Wno-unused-variable -Wno-long-long -Wno-unused-parameter -Wnull-dereference -pedantic -Wformat -Wformat-security -Wcast-align -Woverloaded-virtual ")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread ")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-rtti ")
+
+if(ICHOR_USE_MOLD)
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fuse-ld=mold ")
+endif()
+
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wduplicated-cond -Wduplicated-branches -Wlogical-op ")
+endif()
 
 
 if(ICHOR_ARCH_OPTIMIZATION STREQUAL "NATIVE")
@@ -95,8 +113,12 @@ elseif(ICHOR_ARCH_OPTIMIZATION STREQUAL "MODERN_ARM_GENERIC")
 endif()
 
 if(ICHOR_USE_SANITIZERS)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address,undefined -no-pie -fno-omit-frame-pointer")
-    set(CMAKE_EXE_LINKER_FLAGS "-no-pie")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address,undefined -fno-omit-frame-pointer")
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -no-pie")
+
+    if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -no-pie")
+    endif()
 
     if(ICHOR_USE_BOOST_BEAST)
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DBOOST_USE_ASAN -DBOOST_USE_UCONTEXT")
@@ -105,7 +127,7 @@ endif()
 
 if(ICHOR_USE_THREAD_SANITIZER)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=thread -no-pie -fno-omit-frame-pointer")
-    set(CMAKE_EXE_LINKER_FLAGS "-no-pie")
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -no-pie")
 endif()
 
 if(NOT DEFINED ICHOR_USE_SANITIZERS AND NOT DEFINED ICHOR_USE_THREAD_SANITIZER)
@@ -117,13 +139,13 @@ if(CMAKE_BUILD_TYPE STREQUAL "Release" OR CMAKE_BUILD_TYPE STREQUAL "RelWithDebI
 endif()
 
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fconcepts-diagnostics-depth=3 ")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fcoroutines")
 elseif(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fcoroutines-ts")
 endif()
 
-# gcc uses gdwarf-4 by default, which messes up using the coz profiler
-#-gdwarf-3
+# gcc uses gdwarf-4 by default, which messes up using the coz profiler, add "-gdwarf-3" if using coz
 set(CMAKE_CXX_FLAGS_DEBUG "-ggdb3")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG -ggdb")
 set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-ggdb3 -Og")
@@ -131,7 +153,7 @@ set(CMAKE_CXX_FLAGS_MINSIZEREL "-Os -DNDEBUG")
 
 find_package (Threads)
 
-file(GLOB_RECURSE FMT_SOURCES ${ICHOR_EXTERNAL_DIR}/fmt/src/*.cc)
+set(FMT_SOURCES ${ICHOR_EXTERNAL_DIR}/fmt/src/format.cc ${ICHOR_EXTERNAL_DIR}/fmt/src/os.cc)
 file(GLOB_RECURSE ICHOR_FRAMEWORK_SOURCES ${ICHOR_TOP_DIR}/src/ichor/*.cpp)
 file(GLOB_RECURSE ICHOR_OPTIONAL_ETCD_SOURCES ${ICHOR_TOP_DIR}/src/optional_bundles/etcd_bundle/*.cpp ${ICHOR_TOP_DIR}/src/optional_bundles/etcd_bundle/*.cc)
 file(GLOB_RECURSE ICHOR_LOGGING_SOURCES ${ICHOR_TOP_DIR}/src/optional_bundles/logging_bundle/*.cpp)

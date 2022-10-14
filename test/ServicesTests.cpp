@@ -5,8 +5,9 @@
 #include "TestServices/MixingInterfacesService.h"
 #include "TestServices/StartStopOnSecondAttemptService.h"
 #include <ichor/event_queues/MultimapQueue.h>
+#include <ichor/events/RunFunctionEvent.h>
 
-TEST_CASE("DependencyServices") {
+TEST_CASE("ServicesTests") {
 
     ensureInternalLoggerExists();
 
@@ -14,7 +15,11 @@ TEST_CASE("DependencyServices") {
         Ichor::DependencyManager dm{std::make_unique<MultimapQueue>()};
 
         std::thread t([&]() {
+#if __has_include(<spdlog/spdlog.h>)
+            dm.createServiceManager<SpdlogFrameworkLogger, IFrameworkLogger>();
+#else
             dm.createServiceManager<NullFrameworkLogger, IFrameworkLogger>();
+#endif
             dm.createServiceManager<UselessService>();
             dm.createServiceManager<QuitOnStartWithDependenciesService>();
             dm.start();
@@ -45,7 +50,7 @@ TEST_CASE("DependencyServices") {
 
         dm.runForOrQueueEmpty();
 
-        dm.pushEvent<RunFunctionEvent>(0, [secondUselessServiceId](DependencyManager* mng){
+        dm.pushEvent<RunFunctionEvent>(0, [secondUselessServiceId](DependencyManager* mng) -> AsyncGenerator<bool> {
             auto services = mng->getStartedServices<ICountService>();
 
             REQUIRE(services.size() == 1);
@@ -53,11 +58,13 @@ TEST_CASE("DependencyServices") {
             REQUIRE(services[0]->getSvcCount() == 2);
 
             mng->pushEvent<StopServiceEvent>(0, secondUselessServiceId);
+
+            co_return (bool)PreventOthersHandling;
         });
 
         dm.runForOrQueueEmpty();
 
-        dm.pushEvent<RunFunctionEvent>(0, [](DependencyManager* mng){
+        dm.pushEvent<RunFunctionEvent>(0, [](DependencyManager* mng) -> AsyncGenerator<bool> {
             auto services = mng->getStartedServices<ICountService>();
 
             REQUIRE(services.size() == 1);
@@ -65,6 +72,8 @@ TEST_CASE("DependencyServices") {
             REQUIRE(services[0]->getSvcCount() == 1);
 
             mng->pushEvent<QuitEvent>(0);
+
+            co_return (bool)PreventOthersHandling;
         });
 
         t.join();
@@ -77,7 +86,11 @@ TEST_CASE("DependencyServices") {
         uint64_t secondUselessServiceId{};
 
         std::thread t([&]() {
-            dm.createServiceManager<NullFrameworkLogger, IFrameworkLogger>({}, 10);
+#if __has_include(<spdlog/spdlog.h>)
+            dm.createServiceManager<SpdlogFrameworkLogger, IFrameworkLogger>();
+#else
+            dm.createServiceManager<NullFrameworkLogger, IFrameworkLogger>();
+#endif
             dm.createServiceManager<UselessService, IUselessService>();
             secondUselessServiceId = dm.createServiceManager<UselessService, IUselessService>()->getServiceId();
             dm.createServiceManager<DependencyService<false>, ICountService>();
@@ -88,12 +101,14 @@ TEST_CASE("DependencyServices") {
 
         dm.runForOrQueueEmpty();
 
-        dm.pushEvent<RunFunctionEvent>(0, [](DependencyManager* mng){
+        dm.pushEvent<RunFunctionEvent>(0, [](DependencyManager* mng) -> AsyncGenerator<bool> {
             auto services = mng->getStartedServices<ICountService>();
 
             REQUIRE(services.size() == 1);
 
             REQUIRE(services[0]->getSvcCount() == 2);
+
+            co_return (bool)PreventOthersHandling;
         });
 
         dm.runForOrQueueEmpty();
@@ -102,7 +117,7 @@ TEST_CASE("DependencyServices") {
 
         dm.runForOrQueueEmpty();
 
-        dm.pushEvent<RunFunctionEvent>(0, [](DependencyManager* mng){
+        dm.pushEvent<RunFunctionEvent>(0, [](DependencyManager* mng) -> AsyncGenerator<bool> {
             auto services = mng->getStartedServices<ICountService>();
 
             REQUIRE(services.size() == 1);
@@ -110,6 +125,8 @@ TEST_CASE("DependencyServices") {
             REQUIRE(services[0]->getSvcCount() == 1);
 
             mng->pushEvent<QuitEvent>(0);
+
+            co_return (bool)PreventOthersHandling;
         });
 
         t.join();
@@ -137,7 +154,7 @@ TEST_CASE("DependencyServices") {
 
     SECTION("Dependency manager should retry failed starts/stops") {
         Ichor::DependencyManager dm{std::make_unique<MultimapQueue>()};
-        StartStopOnSecondAttemptService *svc;
+        StartStopOnSecondAttemptService *svc{};
 
         std::thread t([&]() {
             dm.createServiceManager<NullFrameworkLogger, IFrameworkLogger>();
@@ -149,18 +166,22 @@ TEST_CASE("DependencyServices") {
 
         dm.runForOrQueueEmpty();
 
-        dm.pushEvent<RunFunctionEvent>(0, [&](DependencyManager* mng){
+        dm.pushEvent<RunFunctionEvent>(0, [&](DependencyManager* mng) -> AsyncGenerator<bool> {
             REQUIRE(svc->starts == 2);
 
             mng->pushEvent<StopServiceEvent>(0, svc->getServiceId());
+
+            co_return (bool)PreventOthersHandling;
         });
 
         dm.runForOrQueueEmpty();
 
-        dm.pushEvent<RunFunctionEvent>(0, [&](DependencyManager* mng){
+        dm.pushEvent<RunFunctionEvent>(0, [&](DependencyManager* mng) -> AsyncGenerator<bool> {
             REQUIRE(svc->stops == 2);
 
             mng->pushEvent<QuitEvent>(0);
+
+            co_return (bool)PreventOthersHandling;
         });
 
         t.join();

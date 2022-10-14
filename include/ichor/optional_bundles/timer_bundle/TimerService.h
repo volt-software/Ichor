@@ -55,7 +55,7 @@ namespace Ichor {
             return !_quit.load(std::memory_order_acquire);
         };
 
-        void setCallback(std::function<Generator<bool>(TimerEvent const * const)> fn) {
+        void setCallback(std::function<AsyncGenerator<bool>(TimerEvent const * const)> fn) {
             _fn = std::move(fn);
         }
 
@@ -72,7 +72,7 @@ namespace Ichor {
             return _priority.load(std::memory_order_acquire);
         }
 
-        Generator<bool> handleEvent(TimerEvent const * const evt) {
+        AsyncGenerator<bool> handleEvent(TimerEvent const * const evt) {
             return _fn(evt);
         }
 
@@ -94,7 +94,7 @@ namespace Ichor {
         std::atomic<uint64_t> _intervalNanosec{1'000'000'000};
         std::unique_ptr<std::thread> _eventInsertionThread{};
         EventHandlerRegistration _timerEventRegistration{};
-        std::function<Generator<bool>(TimerEvent const * const)> _fn{};
+        std::function<AsyncGenerator<bool>(TimerEvent const * const)> _fn{};
         std::atomic<bool> _quit{true};
         std::atomic<uint64_t> _priority{INTERNAL_EVENT_PRIORITY};
     };

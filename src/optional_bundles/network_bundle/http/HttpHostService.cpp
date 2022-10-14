@@ -36,7 +36,7 @@ Ichor::StartBehaviour Ichor::HttpHostService::start() {
 Ichor::StartBehaviour Ichor::HttpHostService::stop() {
     _quit = true;
 
-    if(_goingToCleanupStream.exchange(true) && _httpAcceptor) {
+    if(!_goingToCleanupStream.exchange(true) && _httpAcceptor) {
         if (_httpAcceptor->is_open()) {
             _httpAcceptor->close();
         }
@@ -44,6 +44,11 @@ Ichor::StartBehaviour Ichor::HttpHostService::stop() {
 
         _httpAcceptor = nullptr;
         _httpStream = nullptr;
+        _cleanedupStream = true;
+    }
+
+    if(!_cleanedupStream) {
+        return Ichor::StartBehaviour::FAILED_AND_RETRY;
     }
 
     return Ichor::StartBehaviour::SUCCEEDED;
@@ -185,7 +190,7 @@ void Ichor::HttpHostService::read(tcp::socket socket, net::yield_context yield) 
             return fail(ec, "HttpHostService::read read");
         }
 
-        ICHOR_LOG_TRACE(_logger, "New request for {} {}", req.method(), req.target());
+        ICHOR_LOG_TRACE(_logger, "New request for {} {}", (int)req.method(), req.target());
 
         auto routes = _handlers.find(static_cast<HttpMethod>(req.method()));
 
@@ -207,7 +212,7 @@ void Ichor::HttpHostService::read(tcp::socket socket, net::yield_context yield) 
                     res.set(header.value, header.name);
                 }
                 res.keep_alive(req.keep_alive());
-                ICHOR_LOG_WARN(_logger, "sending http response {} - {}", httpRes.status, std::string_view(reinterpret_cast<char*>(httpRes.body.data()), httpRes.body.size()));
+                ICHOR_LOG_WARN(_logger, "sending http response {} - {}", (int)httpRes.status, std::string_view(reinterpret_cast<char*>(httpRes.body.data()), httpRes.body.size()));
 
                 res.body() = std::move(httpRes.body);
                 res.prepare_payload();
@@ -249,6 +254,7 @@ void Ichor::HttpHostService::read(tcp::socket socket, net::yield_context yield) 
 
         _httpAcceptor = nullptr;
         _httpStream = nullptr;
+        _cleanedupStream = true;
     }
 
     // At this point the connection is closed gracefully

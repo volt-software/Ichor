@@ -56,7 +56,7 @@ namespace Ichor {
             }
         }
 
-        Generator<bool> handleEvent(UnrecoverableErrorEvent const * const evt) {
+        AsyncGenerator<bool> handleEvent(UnrecoverableErrorEvent const * const evt) {
             for(auto &[key, service] : _connections) {
                 if(service->getServiceId() != evt->originatingService) {
                     continue;

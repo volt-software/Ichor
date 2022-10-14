@@ -8,7 +8,7 @@ namespace Ichor {
 
     void MultimapQueue::pushEvent(uint64_t priority, std::unique_ptr<Event> &&event) {
         {
-            std::lock_guard l(_eventQueueMutex);
+            std::lock_guard const l(_eventQueueMutex);
             _eventQueue.insert({priority, std::move(event)});
         }
         _wakeup.notify_all();
@@ -30,17 +30,17 @@ namespace Ichor {
     }
 
     bool MultimapQueue::empty() const noexcept {
-        std::shared_lock l(_eventQueueMutex);
+        std::shared_lock const l(_eventQueueMutex);
         return _eventQueue.empty();
     }
 
     uint64_t MultimapQueue::size() const noexcept {
-        std::shared_lock l(_eventQueueMutex);
+        std::shared_lock const l(_eventQueueMutex);
         return _eventQueue.size();
     }
 
     void MultimapQueue::clear() noexcept {
-        std::lock_guard l(_eventQueueMutex);
+        std::lock_guard const l(_eventQueueMutex);
         _eventQueue.clear();
     }
 }

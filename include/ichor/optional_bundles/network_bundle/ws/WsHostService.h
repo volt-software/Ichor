@@ -30,7 +30,7 @@ namespace Ichor {
         void addDependencyInstance(IHttpContextService *logger, IService *);
         void removeDependencyInstance(IHttpContextService *logger, IService *);
 
-        Generator<bool> handleEvent(NewWsConnectionEvent const * const evt);
+        AsyncGenerator<bool> handleEvent(NewWsConnectionEvent const * const evt);
 
         void setPriority(uint64_t priority) final;
         uint64_t getPriority() final;

@@ -43,6 +43,7 @@ namespace Ichor {
         std::atomic<uint64_t> _priority{INTERNAL_EVENT_PRIORITY};
         std::atomic<bool> _quit{};
         std::atomic<bool> _goingToCleanupStream{};
+        std::atomic<bool> _cleanedupStream{};
         std::atomic<bool> _tcpNoDelay{};
         ILogger *_logger{nullptr};
         IHttpContextService *_httpContextService{nullptr};

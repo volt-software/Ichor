@@ -44,7 +44,7 @@ namespace Ichor {
         bool preInterceptEvent(Event const * const evt);
         void postInterceptEvent(Event const * const evt, bool processed);
 
-        Generator<bool> handleEvent(TimerEvent const * const evt);
+        AsyncGenerator<bool> handleEvent(TimerEvent const * const evt);
 
         StartBehaviour start() final;
         StartBehaviour stop() final;

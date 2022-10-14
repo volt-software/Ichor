@@ -2,7 +2,7 @@
 
 #include <cstdint>
 #include <memory>
-#include <ichor/Events.h>
+#include <ichor/events/Event.h>
 
 namespace Ichor {
     class IEventQueue {

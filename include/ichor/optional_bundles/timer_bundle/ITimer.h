@@ -1,6 +1,6 @@
 #pragma once
 
-#include <ichor/Events.h>
+#include <ichor/events/InternalEvents.h>
 
 namespace Ichor {
     struct TimerEvent final : public Event {

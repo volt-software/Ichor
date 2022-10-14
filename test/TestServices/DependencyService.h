@@ -5,6 +5,7 @@
 using namespace Ichor;
 
 struct ICountService {
+    virtual ~ICountService() = default;
     [[nodiscard]] virtual uint64_t getSvcCount() const noexcept = 0;
     [[nodiscard]] virtual bool isRunning() const noexcept = 0;
 };
@@ -24,11 +25,11 @@ struct DependencyService final : public ICountService, public Service<Dependency
         return StartBehaviour::SUCCEEDED;
     }
 
-    void addDependencyInstance(IUselessService *, IService *) {
+    void addDependencyInstance(IUselessService *svc, IService *) {
         svcCount++;
     }
 
-    void removeDependencyInstance(IUselessService *, IService *) {
+    void removeDependencyInstance(IUselessService *svc, IService *) {
         svcCount--;
     }
 
