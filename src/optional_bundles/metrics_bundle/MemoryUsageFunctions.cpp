@@ -21,7 +21,7 @@
 #include <procfs.h>
 
 #elif defined(__linux__) || defined(__linux) || defined(linux) || defined(__gnu_linux__)
-#include <stdio.h>
+#include <cstdio>
 
 #endif
 
@@ -59,12 +59,12 @@ size_t getPeakRSS( )
 
 #elif defined(__unix__) || defined(__unix) || defined(unix) || (defined(__APPLE__) && defined(__MACH__))
     /* BSD, Linux, and OSX -------------------------------------- */
-    struct rusage rusage;
+    struct rusage rusage{};
     getrusage( RUSAGE_SELF, &rusage );
 #if defined(__APPLE__) && defined(__MACH__)
     return (size_t)rusage.ru_maxrss;
 #else
-    return (size_t)(rusage.ru_maxrss * 1024L);
+    return static_cast<size_t>(rusage.ru_maxrss * 1024L);
 #endif
 
 #else
@@ -98,8 +98,8 @@ size_t getCurrentRSS( )
 #elif defined(__linux__) || defined(__linux) || defined(linux) || defined(__gnu_linux__)
     /* Linux ---------------------------------------------------- */
     long rss = 0L;
-    FILE* fp = NULL;
-    if ( (fp = fopen( "/proc/self/statm", "r" )) == NULL )
+    FILE* fp = fopen( "/proc/self/statm", "re" );
+    if ( fp == nullptr )
         return (size_t)0L;      /* Can't open? */
     if ( fscanf( fp, "%*s%ld", &rss ) != 1 )
     {

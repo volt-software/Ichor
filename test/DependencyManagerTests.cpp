@@ -1,7 +1,12 @@
 #include <ichor/event_queues/MultimapQueue.h>
-#include <ichor/optional_bundles/logging_bundle/NullFrameworkLogger.h>
 #include "TestServices/UselessService.h"
 #include "Common.h"
+
+#if __has_include(<spdlog/spdlog.h>)
+#include <ichor/optional_bundles/logging_bundle/SpdlogFrameworkLogger.h>
+#else
+#include <ichor/optional_bundles/logging_bundle/NullFrameworkLogger.h>
+#endif
 
 TEST_CASE("DependencyManager") {
 

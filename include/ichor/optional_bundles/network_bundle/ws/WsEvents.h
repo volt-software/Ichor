@@ -2,7 +2,7 @@
 
 #ifdef ICHOR_USE_BOOST_BEAST
 
-#include <ichor/Events.h>
+#include <ichor/events/Event.h>
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/executor.hpp>
 #include <ichor/optional_bundles/network_bundle/ws/WsCopyIsMoveWorkaround.h>

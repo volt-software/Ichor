@@ -22,7 +22,7 @@ namespace Ichor {
 
         void notify_all() noexcept
         {
-            std::lock_guard lock(_cvMutex);
+            std::lock_guard const lock(_cvMutex);
             pthread_cond_broadcast(&_cond);
         }
 

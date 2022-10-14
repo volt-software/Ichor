@@ -94,7 +94,7 @@ void Ichor::WsHostService::removeDependencyInstance(IHttpContextService *logger,
     _httpContextService = nullptr;
 }
 
-Ichor::Generator<bool> Ichor::WsHostService::handleEvent(Ichor::NewWsConnectionEvent const * const evt) {
+Ichor::AsyncGenerator<bool> Ichor::WsHostService::handleEvent(Ichor::NewWsConnectionEvent const * const evt) {
     auto connection = getManager()->createServiceManager<WsConnectionService, IConnectionService>(Ichor::make_properties(
         IchorProperty{"WsHostServiceId", Ichor::make_any<uint64_t>(getServiceId())},
         IchorProperty{"Socket", Ichor::make_any<decltype(evt->_socket)>(std::move(evt->_socket))}

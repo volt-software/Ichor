@@ -21,16 +21,6 @@ static constexpr bool DO_INTERNAL_DEBUG = false;
     }                                 \
 } while (0)
 
-#if __cpp_lib_constexpr_string >= 201907L
-#if __cpp_lib_constexpr_vector >= 201907L
-#define ICHOR_CONSTEXPR constexpr
-#else
-#define ICHOR_CONSTEXPR
-#endif
-#else
-#define ICHOR_CONSTEXPR
-#endif
-
 // GNU C Library contains defines in sys/sysmacros.h. However, for compatibility reasons, this header is included in sys/types.h. Which is used by std.
 #undef major
 #undef minor

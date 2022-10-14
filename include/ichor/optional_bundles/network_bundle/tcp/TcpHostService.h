@@ -29,7 +29,7 @@ namespace Ichor {
         void setPriority(uint64_t priority) final;
         uint64_t getPriority() final;
 
-        Generator<bool> handleEvent(NewSocketEvent const * const evt);
+        AsyncGenerator<bool> handleEvent(NewSocketEvent const * const evt);
 
     private:
         int _socket;

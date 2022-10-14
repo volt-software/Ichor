@@ -7,7 +7,7 @@
 #include <ichor/CommunicationChannel.h>
 #include <ichor/optional_bundles/logging_bundle/CoutFrameworkLogger.h>
 #include <ichor/optional_bundles/timer_bundle/TimerService.h>
-#include <ichor/Events.h>
+#include <ichor/events/Event.h>
 #include <iostream>
 
 struct IMyService {}; // the interface
@@ -49,7 +49,7 @@ struct MyTimerService final : public IMyTimerService, public Ichor::Service<MyTi
         return StartBehaviour::SUCCEEDED;
     }
 
-    Ichor::Generator<bool> handleEvent(Ichor::TimerEvent const * const) {
+    Ichor::AsyncGenerator<bool> handleEvent(Ichor::TimerEvent const * const) {
         co_return (bool)PreventOthersHandling;
     }
 

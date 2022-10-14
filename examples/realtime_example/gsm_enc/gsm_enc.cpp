@@ -418,7 +418,7 @@ void gsm_enc_Gsm_Coder (
   gsm_enc_Gsm_LPC_Analysis    ( so, LARc );
   gsm_enc_Gsm_Short_Term_Analysis_Filter  ( S, LARc, so );
 
-  _Pragma( "loopbound min 4 max 4" )
+  //_Pragma( "loopbound min 4 max 4" )
   for ( k = 0; k <= 3; k++, xMc += 13 ) {
 
     gsm_enc_Gsm_Long_Term_Predictor (
@@ -440,7 +440,7 @@ void gsm_enc_Gsm_Coder (
     {
       int i;
       longword ltmp;
-      _Pragma( "loopbound min 40 max 40" )
+      //_Pragma( "loopbound min 40 max 40" )
       for ( i = 0; i <= 39; i++ )
         dp[  i  ] = GSM_ADD( e[ 5 + i ], dpp[ i ] );
     }
@@ -489,7 +489,7 @@ void gsm_enc_Weighting_filter (
 
   /*  Compute the signal x[ 0..39 ]
   */
-  _Pragma( "loopbound min 40 max 40" )
+  //_Pragma( "loopbound min 40 max 40" )
   for ( k = 0; k <= 39; k++ ) {
 
     L_result = 8192 >> 1;
@@ -657,7 +657,7 @@ void gsm_enc_RPE_grid_selection (
   /*  Down-sampling by a factor 3 to get the selected xM[ 0..12 ]
       RPE sequence.
   */
-  _Pragma( "loopbound min 13 max 13" )
+  //_Pragma( "loopbound min 13 max 13" )
   for ( i = 0; i <= 12; i ++ ) xM[ i ] = x[ Mc + 3 * i ];
   *Mc_out = Mc;
 
@@ -682,7 +682,7 @@ void gsm_enc_APCM_quantization_xmaxc_to_exp_mant (
     exp  = -4;
     mant = 7;
   } else {
-    _Pragma( "loopbound min 0 max 3" )
+    //_Pragma( "loopbound min 0 max 3" )
     while ( mant <= 7 ) {
       mant = mant << 1 | 1;
       exp--;
@@ -715,7 +715,7 @@ void gsm_enc_APCM_quantization (
 
   xmax = 0;
 
-  _Pragma( "loopbound min 13 max 13" )
+  //_Pragma( "loopbound min 13 max 13" )
   for ( i = 0; i <= 12; i++ ) {
     temp = xM[ i ];
     temp = GSM_ABS( temp );
@@ -729,7 +729,7 @@ void gsm_enc_APCM_quantization (
   temp  = SASR( xmax, 9 );
   itest = 0;
 
-  _Pragma( "loopbound min 6 max 6" )
+  //_Pragma( "loopbound min 6 max 6" )
   for ( i = 0; i <= 5; i++ ) {
 
     itest |= ( temp <= 0 );
@@ -767,7 +767,7 @@ void gsm_enc_APCM_quantization (
   temp1 = 6 - exp;    /* normalization by the exponent */
   temp2 = gsm_enc_NRFAC[  mant  ];    /* inverse mantissa      */
 
-  _Pragma( "loopbound min 13 max 13" )
+  //_Pragma( "loopbound min 13 max 13" )
   for ( i = 0; i <= 12; i++ ) {
 
     temp = xM[ i ] << temp1;
@@ -806,7 +806,7 @@ void gsm_enc_APCM_inverse_quantization (
   temp2 = gsm_enc_sub( 6, exp );  /* see 4.2-15 for exp  */
   temp3 = gsm_enc_asl( 1, gsm_enc_sub( temp2, 1 ) );
 
-  _Pragma( "loopbound min 13 max 13" )
+  //_Pragma( "loopbound min 13 max 13" )
   for ( i = 13; i--; ) {
 
     /* temp = gsm_enc_sub( *xMc++ << 1, 7 ); */
@@ -842,23 +842,27 @@ void gsm_enc_RPE_grid_positioning (
   switch ( Mc ) {
     case 3:
       *ep++ = 0;
+      [[fallthrough]];
     case 2:
       *ep++ = 0;
+      [[fallthrough]];
     case 1:
       *ep++ = 0;
+      [[fallthrough]];
     case 0:
       *ep++ = *xMp++;
       i--;
+      break;
   }
 
-  _Pragma( "loopbound min 12 max 12" )
+  //_Pragma( "loopbound min 12 max 12" )
   do {
     *ep++ = 0;
     *ep++ = 0;
     *ep++ = *xMp++;
   } while ( --i );
 
-  _Pragma( "loopbound min 0 max 3" )
+  //_Pragma( "loopbound min 0 max 3" )
   while ( ++Mc < 4 ) *ep++ = 0;
 
 }
@@ -868,23 +872,23 @@ void gsm_enc_RPE_grid_positioning (
 
   //
   //TODO: removed for WCET analysis
-  //_Pragma("marker outside")
+  ////_Pragma("marker outside")
   switch (Mc) {
     case 3: *ep++ = 0;
     case 2:
-      _Pragma("loopbound min 13 max 13")
+      //_Pragma("loopbound min 13 max 13")
       do {
           ep++ = 0;
          case 1:         *ep++ = 0;
          case 0:
-             //_Pragma("marker inside")
+             ////_Pragma("marker inside")
               ep++ = *xMp++;
        } while (--i);
   }
 
-  //_Pragma("flowrestriction 1*inside <=  13*outside")
+  ////_Pragma("flowrestriction 1*inside <=  13*outside")
 
-  _Pragma("loopbound min 0 max 3")
+  //_Pragma("loopbound min 0 max 3")
   while (++Mc < 4) *ep++ = 0;
 
   }
@@ -908,11 +912,11 @@ void gsm_enc_Gsm_Update_of_reconstructed_short_time_residual_signal P3( ( dpp,
 {
   int     k;
 
-  _Pragma( "loopbound min 80 max 80" )
+  //_Pragma( "loopbound min 80 max 80" )
   for ( k = 0; k <= 79; k++ )
     dp[  -120 + k  ] = dp[  -80 + k  ];
 
-  _Pragma( "loopbound min 40 max 40" )
+  //_Pragma( "loopbound min 40 max 40" )
   for ( k = 0; k <= 39; k++ )
     dp[  -40 + k  ] = gsm_enc_add( ep[ k ], dpp[ k ] );
 }
@@ -999,7 +1003,7 @@ void gsm_enc_Calculation_of_the_LTP_parameters (
   */
   dmax = 0;
 
-  _Pragma( "loopbound min 40 max 40" )
+  //_Pragma( "loopbound min 40 max 40" )
   for ( k = 0; k <= 39; k++ ) {
     temp = d[ k ];
     temp = GSM_ABS( temp );
@@ -1017,7 +1021,7 @@ void gsm_enc_Calculation_of_the_LTP_parameters (
   /*  Initialization of a working array wt
   */
 
-  _Pragma( "loopbound min 40 max 40" )
+  //_Pragma( "loopbound min 40 max 40" )
   for ( k = 0; k <= 39; k++ ) wt[ k ] = SASR( d[ k ], scal );
 
   /* Search for the maximum cross-correlation and coding of the LTP lag
@@ -1025,7 +1029,7 @@ void gsm_enc_Calculation_of_the_LTP_parameters (
   L_max = 0;
   Nc    = 40; /* index for the maximum cross-correlation */
 
-  _Pragma( "loopbound min 81 max 81" )
+  //_Pragma( "loopbound min 81 max 81" )
   for ( lambda = 40; lambda <= 120; lambda++ ) {
 
 # undef STEP
@@ -1097,7 +1101,7 @@ void gsm_enc_Calculation_of_the_LTP_parameters (
        signal dp[ .. ]
   */
   L_power = 0;
-  _Pragma( "loopbound min 40 max 40" )
+  //_Pragma( "loopbound min 40 max 40" )
   for ( k = 0; k <= 39; k++ ) {
 
     longword L_temp;
@@ -1130,7 +1134,7 @@ void gsm_enc_Calculation_of_the_LTP_parameters (
   /*  Table 4.3a must be used to obtain the level DLB[ i ] for the
       quantization of the LTP gain b to get the coded version bc.
   */
-  _Pragma( "loopbound min 3 max 3" )
+  //_Pragma( "loopbound min 3 max 3" )
   for ( bc = 0; bc <= 2; bc++ )
     /* Replaced by macro function. */
     //if (R <= gsm_enc_mult(S, gsm_enc_DLB[ bc ]))
@@ -1163,7 +1167,7 @@ void gsm_enc_Calculation_of_the_LTP_parameters (
   */
   dmax = 0;
 
-  _Pragma( "loopbound min 40 max 40" )
+  //_Pragma( "loopbound min 40 max 40" )
   for ( k = 0; k <= 39; k++ ) {
     temp = d[ k ];
     temp = GSM_ABS( temp );
@@ -1181,9 +1185,9 @@ void gsm_enc_Calculation_of_the_LTP_parameters (
   /*  Initialization of a working array wt
   */
 
-  _Pragma( "loopbound min 40 max 40" )
+  //_Pragma( "loopbound min 40 max 40" )
   for ( k =    0; k < 40; k++ ) wt_float[ k ] =  SASR( d[ k ], scal );
-  _Pragma( "loopbound min 120 max 120" )
+  //_Pragma( "loopbound min 120 max 120" )
   for ( k = -120; k <  0; k++ ) dp_float[ k ] =  dp[ k ];
 
   /* Search for the maximum cross-correlation and coding of the LTP lag
@@ -1191,7 +1195,7 @@ void gsm_enc_Calculation_of_the_LTP_parameters (
   L_max = 0;
   Nc    = 40; /* index for the maximum cross-correlation */
 
-  _Pragma( "loopbound min 9 max 9" )
+  //_Pragma( "loopbound min 9 max 9" )
   for ( lambda = 40; lambda <= 120; lambda += 9 ) {
 
     /*  Calculate L_result for l = lambda .. lambda + 9.
@@ -1323,7 +1327,7 @@ void gsm_enc_Calculation_of_the_LTP_parameters (
        signal dp[ .. ]
   */
   L_power = 0;
-  _Pragma( "loopbound min 40 max 40" )
+  //_Pragma( "loopbound min 40 max 40" )
   for ( k = 0; k <= 39; k++ ) {
 
     longword L_temp;
@@ -1358,7 +1362,7 @@ void gsm_enc_Calculation_of_the_LTP_parameters (
   */
   // Replaced by macro function.
   //for (bc = 0; bc <= 2; bc++) if (R <= gsm_enc_mult(S, gsm_enc_DLB[ bc ])) break;
-  _Pragma( "loopbound min 3 max 3" )
+  //_Pragma( "loopbound min 3 max 3" )
   for ( bc = 0; bc <= 2; bc++ ) if ( R <= GSM_MULT( S, gsm_enc_DLB[ bc ] ) ) break;
   *bc_out = bc;
 }
@@ -1387,8 +1391,8 @@ void gsm_enc_Long_term_analysis_filtering (
   longword ltmp;
 
 # undef STEP
+  //_Pragma("loopbound min 40 max 40")
 # define STEP(BP)         \
-  _Pragma("loopbound min 40 max 40") \
   for (k = 0; k <= 39; k++) {     \
     dpp[ k ]  = GSM_MULT_R( BP, dp[ k - Nc ]);  \
     e[ k ]  = GSM_SUB( d[ k ], dpp[ k ] );  \
@@ -1497,7 +1501,7 @@ void gsm_enc_Coefficients_0_12 (
   int   i;
   longword ltmp;
 
-  _Pragma( "loopbound min 8 max 8" )
+  //_Pragma( "loopbound min 8 max 8" )
   for ( i = 1; i <= 8; i++, LARp++, LARpp_j_1++, LARpp_j++ ) {
     *LARp = GSM_ADD( SASR( *LARpp_j_1, 2 ), SASR( *LARpp_j, 2 ) );
     *LARp = GSM_ADD( *LARp,  SASR( *LARpp_j_1, 1 ) );
@@ -1511,7 +1515,7 @@ void gsm_enc_Coefficients_13_26 (
 {
   int i;
   longword ltmp;
-  _Pragma( "loopbound min 8 max 8" )
+  //_Pragma( "loopbound min 8 max 8" )
   for ( i = 1; i <= 8; i++, LARpp_j_1++, LARpp_j++, LARp++ )
     *LARp = GSM_ADD( SASR( *LARpp_j_1, 1 ), SASR( *LARpp_j, 1 ) );
 }
@@ -1524,7 +1528,7 @@ void gsm_enc_Coefficients_27_39 (
   int i;
   longword ltmp;
 
-  _Pragma( "loopbound min 8 max 8" )
+  //_Pragma( "loopbound min 8 max 8" )
   for ( i = 1; i <= 8; i++, LARpp_j_1++, LARpp_j++, LARp++ ) {
     *LARp = GSM_ADD( SASR( *LARpp_j_1, 2 ), SASR( *LARpp_j, 2 ) );
     *LARp = GSM_ADD( *LARp, SASR( *LARpp_j, 1 ) );
@@ -1538,7 +1542,7 @@ void gsm_enc_Coefficients_40_159 (
 {
   int i;
 
-  _Pragma( "loopbound min 8 max 8" )
+  //_Pragma( "loopbound min 8 max 8" )
   for ( i = 1; i <= 8; i++, LARp++, LARpp_j++ )
     *LARp = *LARpp_j;
 }
@@ -1557,7 +1561,7 @@ void gsm_enc_LARp_to_rp (
   word    temp;
   longword  ltmp;
 
-  _Pragma( "loopbound min 8 max 8" )
+  //_Pragma( "loopbound min 8 max 8" )
   for ( i = 1; i <= 8; i++, LARp++ ) {
 
     /* temp = GSM_ABS( *LARp );
@@ -1608,12 +1612,12 @@ void gsm_enc_Short_term_analysis_filtering (
   longword  ltmp;
   int j;
 
-  _Pragma( "loopbound min 13 max 120" )
+  //_Pragma( "loopbound min 13 max 120" )
   for ( j = 0; j < k_n; ++j ) {
 
     di = sav = *s;
 
-    _Pragma( "loopbound min 8 max 8" )
+    //_Pragma( "loopbound min 8 max 8" )
     for ( i = 0; i < 8; i++ ) { /* YYY */
 
       ui    = u[ i ];
@@ -1696,7 +1700,7 @@ void gsm_enc_Autocorrelation (
   */
   smax = 0;
 
-  _Pragma( "loopbound min 160 max 160" )
+  //_Pragma( "loopbound min 160 max 160" )
   for ( k = 0; k <= 159; k++ ) {
     temp = GSM_ABS( s[ k ] );
     if ( temp > smax ) smax = temp;
@@ -1715,11 +1719,12 @@ void gsm_enc_Autocorrelation (
   if ( scalauto > 0 ) {
 
 #   define SCALE(n) \
-  case n: \
-    _Pragma("loopbound min 160 max 160") \
+  case n:           \
+    break;
+    /*_Pragma("loopbound min 160 max 160") \
     for (k = 0; k <= 159; k++) \
       s[ k ] = GSM_MULT_R( s[ k ], 16384 >> (n-1) );\
-    break;
+    break;*/
 
     switch ( scalauto ) {
         SCALE( 1 )
@@ -1741,7 +1746,7 @@ void gsm_enc_Autocorrelation (
 # define NEXTI   sl = *++sp
 
 
-    _Pragma( "loopbound min 9 max 9" )
+    //_Pragma( "loopbound min 9 max 9" )
     for ( k = 9; k--; L_ACF[ k ] = 0 ) ;
 
     STEP ( 0 );
@@ -1788,7 +1793,7 @@ void gsm_enc_Autocorrelation (
     STEP( 6 );
     STEP( 7 );
 
-    _Pragma( "loopbound min 152 max 152" )
+    //_Pragma( "loopbound min 152 max 152" )
     for ( i = 8; i <= 159; i++ ) {
 
       NEXTI;
@@ -1804,14 +1809,14 @@ void gsm_enc_Autocorrelation (
       STEP( 8 );
     }
 
-    _Pragma( "loopbound min 9 max 9" )
+    //_Pragma( "loopbound min 9 max 9" )
     for ( k = 9; k--; L_ACF[ k ] <<= 1 ) ;
 
   }
   /*   Rescaling of the array s[ 0..159 ]
   */
   if ( scalauto > 0 ) {
-    _Pragma( "loopbound min 160 max 160" )
+    //_Pragma( "loopbound min 160 max 160" )
     for ( k = 160; k--; *s++ <<= scalauto ) ;
   }
 }
@@ -1834,7 +1839,7 @@ void gsm_enc_Reflection_coefficients (
   */
 
   if ( L_ACF[ 0 ] == 0 ) {
-    _Pragma( "loopbound min 8 max 8" )
+    //_Pragma( "loopbound min 8 max 8" )
     for ( i = 8; i--; *r++ = 0 ) ;
     return;
   }
@@ -1842,30 +1847,30 @@ void gsm_enc_Reflection_coefficients (
   temp = gsm_enc_norm( L_ACF[ 0 ] );
 
   /* ? overflow ? */
-  _Pragma( "loopbound min 9 max 9" )
+  //_Pragma( "loopbound min 9 max 9" )
   for ( i = 0; i <= 8; i++ ) ACF[ i ] = SASR( L_ACF[ i ] << temp, 16 );
 
   /*   Initialize array P[ .. ] and K[ .. ] for the recursion.
   */
 
-  _Pragma( "loopbound min 7 max 7" )
+  //_Pragma( "loopbound min 7 max 7" )
   for ( i = 1; i <= 7; i++ ) K[  i  ] = ACF[  i  ];
 
-  _Pragma( "loopbound min 9 max 9" )
+  //_Pragma( "loopbound min 9 max 9" )
   for ( i = 0; i <= 8; i++ ) P[  i  ] = ACF[  i  ];
 
   /*   Compute reflection coefficients
   */
-  _Pragma( "loopbound min 8 max 8" )
-  _Pragma( "marker outer-marker" )
+  //_Pragma( "loopbound min 8 max 8" )
+  //_Pragma( "marker outer-marker" )
   for ( n = 1; n <= 8; n++, r++ ) {
 
     temp = P[ 1 ];
     temp = GSM_ABS( temp );
     if ( P[ 0 ] < temp ) {
                 
-      for ( i = n; i <= 8; i++ ) *r++ = 0; _Pragma( "marker inner-marker" ) 
-      return; _Pragma( "flowrestriction 1*inner-marker <= 36*outer-marker" )
+      for ( i = n; i <= 8; i++ ) *r++ = 0; //_Pragma( "marker inner-marker" ) 
+      return; //_Pragma( "flowrestriction 1*inner-marker <= 36*outer-marker" )
     }
 
     *r = gsm_enc_div( temp, P[ 0 ] );
@@ -1878,7 +1883,7 @@ void gsm_enc_Reflection_coefficients (
     temp = GSM_MULT_R( P[ 1 ], *r );
     P[ 0 ] = GSM_ADD( P[ 0 ], temp );
 
-    _Pragma( "loopbound min 1 max 7" )
+    //_Pragma( "loopbound min 1 max 7" )
     for ( m = 1; m <= 8 - n; ++m ) {
       temp     = GSM_MULT_R( K[  m    ],    *r );
       P[ m ]     = GSM_ADD(    P[  m + 1  ],  temp );
@@ -1908,7 +1913,7 @@ void gsm_enc_Transformation_to_Log_Area_Ratios (
 
   /* Computation of the LAR[ 0..7 ] from the r[ 0..7 ]
   */
-  _Pragma( "loopbound min 8 max 8" )
+  //_Pragma( "loopbound min 8 max 8" )
   for ( i = 1; i <= 8; i++, r++ ) {
 
     temp = *r;
@@ -2024,7 +2029,7 @@ void gsm_enc_Gsm_Preprocess (
 
   int   k = 160;
 
-  _Pragma( "loopbound min 160 max 160" )
+  //_Pragma( "loopbound min 160 max 160" )
   while ( k-- ) {
 
     /*  4.2.1   Downscaling of the input signal
@@ -2159,7 +2164,7 @@ word gsm_enc_div ( word num, word denum )
   if ( num == 0 )
     return 0;
 
-  _Pragma( "loopbound min 15 max 15" )
+  //_Pragma( "loopbound min 15 max 15" )
   while ( k-- ) {
     div   <<= 1;
     L_num <<= 1;
@@ -2182,7 +2187,7 @@ gsm gsm_enc_create( void )
 
   r = &gsm_enc_state;
 
-  _Pragma( "loopbound min 648 max 648" )
+  //_Pragma( "loopbound min 648 max 648" )
   for ( i = 0; i < sizeof( *r ); i++ )
     ( ( char * )r )[ i ] = 0;
 
@@ -2201,7 +2206,7 @@ int gsm_enc_return( void )
   return gsm_enc_result;
 }
 
-void _Pragma( "entrypoint" ) gsm_enc_main( void )
+void /*_Pragma( "entrypoint" )*/ gsm_enc_main( void )
 {
   gsm r;
   unsigned i;
@@ -2209,7 +2214,7 @@ void _Pragma( "entrypoint" ) gsm_enc_main( void )
 
   r = gsm_enc_state_ptr;
 
-  _Pragma( "loopbound min 20 max 20" )
+  //_Pragma( "loopbound min 20 max 20" )
   for ( i = 0; i < SAMPLES; i++ )
     gsm_enc_encode( r, gsm_enc_pcmdata + i * 160,
                     gsm_enc_gsmdata + i * sizeof( gsm_frame ) );

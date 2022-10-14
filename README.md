@@ -6,8 +6,6 @@ Ichor, [Greek Mythos for ethereal fluid that is the blood of the gods/immortals]
 
 Ichor informally stands for "Intuitive Compile-time Hoisted Object Resources".
 
-Although initially started as a rewrite of OSGI-based framework Celix and to a lesser extent CppMicroservices, Ichor has carved out its own path, as god-fluids are wont to do. 
-
 Ichor's greater aim is to bring C++20 to the embedded realm. This means that classic requirements such as the possibility to have 0 dynamic memory allocations, control over scheduling and deterministic execution times are a focus, whilst still allowing much of standard modern C++ development. 
 
 Moreover, the concept of [Fearless Concurrency](https://doc.rust-lang.org/book/ch16-00-concurrency.html) from Rust is attempted to be applied in Ichor through thread confinement.   
@@ -18,6 +16,12 @@ Multithreading is hard. There exist plenty of methods trying to make it easier, 
 
 Thread confinement is one such approach. Instead of having to protect resources, Ichor attempts to make it well-defined on which thread an instance of a C++ class runs and pushes you to only access and modify memory from that thread. Thereby removing the need to think about atomics/mutexes, unless you use threads not managed by, or otherwise trying to circumvent, Ichor.
 In which case, you're on your own.
+
+### Dependency Injection?
+
+To support software lifecycles measured in decades, engineers try to encapsulate functionality. Using the Dependency Injection approach allows engineers to insulate updates to parts of the code.
+
+There exist many Dependency Injection libraries for C++ already, but where those usually only provide Dependency Injection, Ichor also provides service lifecycle management and thread confinement. If a dependency goes away at runtime, e.g. a network client, then all the services depending on it will be cleaned up at that moment. 
 
 ## Quickstart
 
@@ -30,8 +34,13 @@ More examples can be found in the [examples directory](examples).
 ## Supported OSes
 * Linux
 
+## Supported Compilers
+* Gcc 11.3 or newer (see [this gcc bug](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=95137) for why)
+* Clang 14 or newer
+
 ## Currently Unsupported
 * Windows, untested, not sure if compiles but should be relatively easy to get up and running
+  * Tried with MSVC 19.33, but it seemed like coroutines and concepts are not fully working yet
 * Baremetal, might change if someone puts in the effort to modify Ichor to work with freestanding implementations of C++20
 * Far out future plans for any RTOS that supports C++20 such as VxWorks Wind River
 
@@ -40,9 +49,25 @@ More examples can be found in the [examples directory](examples).
 ### Ubuntu 20.04:
 
 ```
-sudo add-apt-repository ppa:ubuntu-toolchain-r/ppa
-sudo apt update
-sudo apt install g++-11 build-essential cmake
+sudo apt install libisl-dev libmpfrc++-dev libmpc-dev libgmp-dev build-essential cmake g++
+wget http://mirror.koddos.net/gcc/releases/gcc-11.3.0/gcc-11.3.0.tar.xz
+tar xf gcc-11.3.0.tar.xz
+mkdir gcc-build
+cd gcc-build
+../gcc-11.3.0/configure --prefix=/opt/gcc-11.3 --enable-languages=c,c++ --disable-multilib
+make -j$(nproc)
+sudo make install
+```
+
+Then with cmake, use
+```
+CXX=/opt/gcc-11.3.0/bin/g++ cmake $PATH_TO_ICHOR_SOURCE
+```
+
+### Ubuntu 22.04:
+
+```
+sudo apt install g++ build-essential cmake
 ```
 
 #### Optional Features
@@ -54,13 +79,34 @@ sudo apt install libgrpc++-dev libprotobuf-dev
 ```
 
 If using the Boost.BEAST (recommended boost 1.70 or newer):
+
+Ubuntu 20.04:
 ```
 sudo apt install libboost1.71-all-dev libssl-dev
 ```
 
+Ubuntu 22.04:
+```
+sudo apt install libboost1.74-all-dev libssl-dev
+```
+
 #### Windows
 
-Untested, latest MSVC should probably work.
+Tried with MSVC 19.33, but it seemed like coroutines and concepts are not fully working yet.
+
+## Building
+
+Linux:
+```
+git clone https://github.com/volt-software/Ichor.git
+mkdir Ichor/build
+cd Ichor/build
+cmake ..
+make -j$(nproc)
+make test
+../bin/ichor_minimal_example
+(ctrl + c to quit)
+```
 
 ## Documentation
 
@@ -86,7 +132,6 @@ The framework provides several core features and optional services behind cmake 
 * Coroutine-based event loop
 * Event-based message passing
 * Dependency Injection
-* Memory allocators for 0 heap allocations
 * Service lifecycle management (sort of like OSGi-lite services)
 * data race free communication between event loops
 * Http server/client
@@ -166,19 +211,15 @@ Business inquiries can be sent to michael AT volt-software.nl
 
 ### I want to have a non-voluntary pre-emption scheduler
 
-Currently Ichor uses a mutex when inserting/extracting events from its queue. Because non-voluntary user-space scheduling requires lock-free data-structures, this is not possible yet.
+By default, Ichor uses a mutex when inserting/extracting events from its queue. Because non-voluntary user-space scheduling requires lock-free data-structures, this is not possible yet.
 
 ### Is it possible to have a completely stack-based allocation while using C++?
 
-Yes, see the [realtime example](examples/realtime_example). This example terminates the program whenever there is a dynamic memory allocation, aside from some allowed exceptions like the std::locale allocation.
-
-### I'd like to use clang
-
-To my knowledge, clang doesn't have certain C++20 features used in Ichor yet. As soon as clang implements those, I'll work on adding support.
+Yes, see the [realtime example](examples/realtime_example).
 
 ### Windows? OS X? VxWorks Wind River? Baremetal?
 
-I don't have a machine with windows/OS X to program for (and also know if there is much demand for it), so I haven't started on it.
+I don't have a machine with OS X to program for (and also don't know if there is much demand for it), so I haven't started on it.
 
 What is necessary to implement before using Ichor on these platforms:
 * Ichor [STL](include/ichor/stl) functionality, namely the RealtimeMutex and ConditionVariable.

@@ -1,7 +1,7 @@
 #pragma once
 
 #include <ichor/Common.h>
-#include <ichor/Events.h>
+#include <ichor/events/InternalEvents.h>
 
 namespace Ichor {
 
@@ -54,7 +54,7 @@ namespace Ichor {
 
     template <class ImplT, class EventT>
     concept ImplementsEventHandlers = requires(ImplT impl, EventT const * const evt) {
-        { impl.handleEvent(evt) } -> std::same_as<Generator<bool>>;
+        { impl.handleEvent(evt) } -> std::same_as<AsyncGenerator<bool>>;
     };
 
     template <class ImplT, class EventT>

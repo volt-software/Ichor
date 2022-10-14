@@ -5,12 +5,14 @@
 using namespace Ichor;
 
 struct IGeneratorService {
-    virtual Generator<int> infinite_int() = 0;
+    virtual ~IGeneratorService() = default;
+    virtual AsyncGenerator<int> infinite_int() = 0;
 };
 struct GeneratorService final : public IGeneratorService, public Service<GeneratorService> {
     GeneratorService() = default;
+    ~GeneratorService() final = default;
 
-    Generator<int> infinite_int() final {
+    AsyncGenerator<int> infinite_int() final {
         int i{};
         for(;;) {
             co_yield i;

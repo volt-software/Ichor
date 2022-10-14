@@ -1,29 +1,15 @@
 #pragma once
 
-#include <memory>
+#include <ichor/events/Event.h>
+#include <ichor/ConstevalHash.h>
 #include <ichor/Dependency.h>
 #include <ichor/Callbacks.h>
+#include <optional>
 
 namespace Ichor {
-    class ILifecycleManager;
-    class DependencyManager;
-
-    constexpr uint64_t INTERNAL_EVENT_PRIORITY = 1000;
-    constexpr uint64_t INTERNAL_DEPENDENCY_EVENT_PRIORITY = 100; // only go below 100 if you know what you're doing
-
-    struct Event {
-        Event(uint64_t _type, std::string_view _name, uint64_t _id, uint64_t _originatingService, uint64_t _priority) noexcept : type{_type}, name{_name}, id{_id}, originatingService{_originatingService}, priority{_priority} {}
-        virtual ~Event() = default;
-        const uint64_t type;
-        const std::string_view name;
-        const uint64_t id;
-        const uint64_t originatingService;
-        const uint64_t priority;
-    };
-
     struct DependencyOnlineEvent final : public Event {
         explicit DependencyOnlineEvent(uint64_t _id, uint64_t _originatingService, uint64_t _priority) noexcept :
-            Event(TYPE, NAME, _id, _originatingService, _priority) {}
+                Event(TYPE, NAME, _id, _originatingService, _priority) {}
         ~DependencyOnlineEvent() final = default;
 
         static constexpr uint64_t TYPE = typeNameHash<DependencyOnlineEvent>();
@@ -32,7 +18,7 @@ namespace Ichor {
 
     struct DependencyOfflineEvent final : public Event {
         explicit DependencyOfflineEvent(uint64_t _id, uint64_t _originatingService, uint64_t _priority) noexcept :
-            Event(TYPE, NAME, _id, _originatingService, _priority) {}
+                Event(TYPE, NAME, _id, _originatingService, _priority) {}
         ~DependencyOfflineEvent() final = default;
 
         static constexpr uint64_t TYPE = typeNameHash<DependencyOfflineEvent>();
@@ -143,16 +129,6 @@ namespace Ichor {
         static constexpr std::string_view NAME = typeName<RemoveTrackerEvent>();
     };
 
-    template <typename GeneratorT>
-    struct ContinuableEvent final : public Event {
-        ContinuableEvent(uint64_t _id, uint64_t _originatingService, uint64_t _priority, GeneratorT _generator) noexcept : Event(TYPE, NAME, _id, _originatingService, _priority), generator(std::move(_generator)) {}
-        ~ContinuableEvent() final = default;
-
-        GeneratorT generator;
-        static constexpr uint64_t TYPE = typeNameHash<ContinuableEvent<GeneratorT>>();
-        static constexpr std::string_view NAME = typeName<ContinuableEvent<GeneratorT>>();
-    };
-
     struct UnrecoverableErrorEvent final : public Event {
         UnrecoverableErrorEvent(uint64_t _id, uint64_t _originatingService, uint64_t _priority, uint64_t _errorType, std::string _error) noexcept : Event(TYPE, NAME, _id, _originatingService, _priority), errorType(_errorType), error(std::move(_error)) {}
         ~UnrecoverableErrorEvent() final = default;
@@ -171,14 +147,5 @@ namespace Ichor {
         std::string error;
         static constexpr uint64_t TYPE = typeNameHash<RecoverableErrorEvent>();
         static constexpr std::string_view NAME = typeName<RecoverableErrorEvent>();
-    };
-
-    struct RunFunctionEvent final : public Event {
-        RunFunctionEvent(uint64_t _id, uint64_t _originatingService, uint64_t _priority, std::function<void(DependencyManager*)> _fun) noexcept : Event(TYPE, NAME, _id, _originatingService, _priority), fun(std::move(_fun)) {}
-        ~RunFunctionEvent() final = default;
-
-        std::function<void(DependencyManager*)> fun;
-        static constexpr uint64_t TYPE = typeNameHash<RunFunctionEvent>();
-        static constexpr std::string_view NAME = typeName<RunFunctionEvent>();
     };
 }

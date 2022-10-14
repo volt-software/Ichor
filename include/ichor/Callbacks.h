@@ -1,17 +1,18 @@
 #pragma once
 
 #include <cstdint>
-#include <ichor/Generator.h>
 #include <optional>
 
 namespace Ichor {
     struct Event;
+    template <typename T>
+    class AsyncGenerator;
 
     class [[nodiscard]] EventCallbackInfo final {
     public:
         uint64_t listeningServiceId;
         std::optional<uint64_t> filterServiceId;
-        std::function<Generator<bool>(Event const * const)> callback;
+        std::function<AsyncGenerator<bool>(Event const * const)> callback;
     };
 
     class [[nodiscard]] EventInterceptInfo final {

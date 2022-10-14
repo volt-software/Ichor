@@ -44,7 +44,7 @@ public:
         _logger = nullptr;
     }
 
-    Generator<bool> handleEvent(TimerEvent const * const evt) {
+    AsyncGenerator<bool> handleEvent(TimerEvent const * const evt) {
         ICHOR_LOG_INFO(_logger, "Timer {} starting 'long' task", getServiceId());
 
         _timerTriggerCount++;

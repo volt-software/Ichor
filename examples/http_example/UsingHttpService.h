@@ -65,7 +65,7 @@ public:
     void addDependencyInstance(IHttpService *svc, IService *) {
         _routeRegistration = svc->addRoute(HttpMethod::post, "/test", [this](HttpRequest &req) -> HttpResponse{
             auto msg = _serializationAdmin->deserialize<TestMsg>(std::move(req.body));
-            ICHOR_LOG_WARN(_logger, "received request on route {} {} with testmsg {} - {}", req.method, req.route, msg->id, msg->val);
+            ICHOR_LOG_WARN(_logger, "received request on route {} {} with testmsg {} - {}", (int)req.method, req.route, msg->id, msg->val);
             return HttpResponse{HttpStatus::ok, _serializationAdmin->serialize(TestMsg{11, "hello"}), {}};
         });
     }
@@ -78,19 +78,19 @@ public:
         ICHOR_LOG_INFO(_logger, "Removed IHttpConnectionService");
     }
 
-    Generator<bool> handleEvent(HttpResponseEvent const * const evt) {
+    AsyncGenerator<bool> handleEvent(HttpResponseEvent const * const evt) {
         if(evt->response.status == HttpStatus::ok) {
             auto msg = _serializationAdmin->deserialize<TestMsg>(evt->response.body);
             ICHOR_LOG_INFO(_logger, "Received TestMsg id {} val {}", msg->id, msg->val);
         } else {
-            ICHOR_LOG_ERROR(_logger, "Received status {}", evt->response.status);
+            ICHOR_LOG_ERROR(_logger, "Received status {}", (int)evt->response.status);
         }
         getManager()->pushEvent<QuitEvent>(getServiceId());
 
         co_return (bool)PreventOthersHandling;
     }
 
-    Generator<bool> handleEvent(FailedSendMessageEvent const * const evt) {
+    AsyncGenerator<bool> handleEvent(FailedSendMessageEvent const * const evt) {
         ICHOR_LOG_INFO(_logger, "Failed to send message id {}, retrying", evt->msgId);
         _connectionService->sendAsync(HttpMethod::post, "/test", {}, std::move(evt->data));
 

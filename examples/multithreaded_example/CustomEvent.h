@@ -1,6 +1,6 @@
 #pragma once
 
-#include <ichor/Events.h>
+#include <ichor/events/Event.h>
 
 namespace Ichor {
     struct CustomEvent final : public Event {

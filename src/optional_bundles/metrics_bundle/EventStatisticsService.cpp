@@ -14,7 +14,7 @@ Ichor::StartBehaviour Ichor::EventStatisticsService::start() {
     auto timerManager = getManager()->createServiceManager<Timer, ITimer>();
     timerManager->setChronoInterval(std::chrono::milliseconds(_averagingIntervalMs));
 
-    timerManager->setCallback([this](TimerEvent const * const evt) -> Generator<bool> {
+    timerManager->setCallback([this](TimerEvent const * const evt) -> AsyncGenerator<bool> {
         return handleEvent(evt);
     });
 
@@ -31,7 +31,7 @@ Ichor::StartBehaviour Ichor::EventStatisticsService::stop() {
         // handle last bit of stored statistics by emulating a handleEvent call
         auto gen = handleEvent(nullptr);
         auto it = gen.begin();
-        while(it != gen.end()) {
+        while(!gen.done() && !it.get_finished()) {
             it = gen.begin();
         }
 
@@ -82,7 +82,7 @@ void Ichor::EventStatisticsService::postInterceptEvent(const Event *const evt, b
     }
 }
 
-Ichor::Generator<bool> Ichor::EventStatisticsService::handleEvent([[maybe_unused]] const TimerEvent *const evt) {
+Ichor::AsyncGenerator<bool> Ichor::EventStatisticsService::handleEvent([[maybe_unused]] const TimerEvent *const evt) {
     int64_t now = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
     decltype(_recentEventStatistics) newVec{};
     newVec.swap(_recentEventStatistics);

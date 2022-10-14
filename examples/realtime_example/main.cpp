@@ -38,7 +38,9 @@ void* run_example(void*) {
     sched_setaffinity(0, sizeof(cpu_set_t), &lock_to_core_set);
 #endif
 
+#ifndef NDEBUG
     auto start = std::chrono::steady_clock::now();
+#endif
 
     // disable usage of default std::pmr resource, as that would allocate.
 //    terminating_resource terminatingResource{};
@@ -56,8 +58,8 @@ void* run_example(void*) {
         dm.createServiceManager<TestService>();
         dm.start();
     }
-    auto end = std::chrono::steady_clock::now();
 #ifndef NDEBUG
+    auto end = std::chrono::steady_clock::now();
     fmt::print("Program ran for {:L} µs\n", std::chrono::duration_cast<std::chrono::microseconds>(end-start).count());
 #endif
 

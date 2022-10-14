@@ -21,10 +21,6 @@
 	path = external/cppcoro
 	url = https://github.com/dutow/cppcoro.git
 	branch = gcc_support
-[submodule "external/liburing"]
-	path = external/liburing
-	url = https://github.com/axboe/liburing.git
-	tag = liburing-0.7
 [submodule "external/json"]
 	path = external/json
 	url = https://github.com/boostorg/json.git

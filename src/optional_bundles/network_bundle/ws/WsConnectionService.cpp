@@ -72,12 +72,12 @@ Ichor::StartBehaviour Ichor::WsConnectionService::stop() {
 }
 
 void Ichor::WsConnectionService::addDependencyInstance(ILogger *logger, IService *) {
-    std::lock_guard lock(_mutex);
+    std::lock_guard const lock(_mutex);
     _logger = logger;
 }
 
 void Ichor::WsConnectionService::removeDependencyInstance(ILogger *logger, IService *) {
-    std::lock_guard lock(_mutex);
+    std::lock_guard const lock(_mutex);
     _logger = nullptr;
 }
 
