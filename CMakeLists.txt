@@ -7,6 +7,8 @@ set(CMAKE_VERBOSE_MAKEFILE ON)
 if(${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.19.0")
     cmake_policy(SET CMP0110 NEW)
 endif()
+set(CMAKE_POLICY_DEFAULT_CMP0077 NEW)
+include(CMakeDependentOption)
 
 if(NOT CMAKE_BUILD_TYPE)
     SET(CMAKE_BUILD_TYPE Debug CACHE STRING
@@ -38,6 +40,9 @@ option(ICHOR_USE_THREAD_SANITIZER "Enable thread sanitizer, catching potential t
 option(ICHOR_USE_UGLY_HACK_EXCEPTION_CATCHING "Enable an ugly hack on gcc to enable debugging the point where exceptions are thrown. Useful for debugging boost asio/beast backtraces." OFF)
 option(ICHOR_REMOVE_SOURCE_NAMES "Remove compiling source file names and line numbers when logging." OFF)
 option(ICHOR_USE_MOLD "Use mold when linking, recommended to use with gcc 12+ or clang" OFF)
+cmake_dependent_option(ICHOR_USE_MIMALLOC "Use mimalloc for significant performance improvements" ON "NOT ICHOR_USE_SANITIZERS" OFF)
+cmake_dependent_option(ICHOR_USE_SYSTEM_MIMALLOC "Use system or vendored mimalloc" OFF "NOT ICHOR_USE_SANITIZERS" OFF)
+set(BUILD_TESTING OFF) #disable Catch 2 testing
 
 if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     # clang tidy requires the same compiler arguments as clang
@@ -89,11 +94,12 @@ if(ICHOR_USE_BOOST_BEAST)
 endif()
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DCATCH_CONFIG_FAST_COMPILE ")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Werror -Wall -Wextra -Wshadow -Wnon-virtual-dtor -Wno-unused-variable -Wno-long-long -Wno-unused-parameter -Wnull-dereference -pedantic -Wformat -Wformat-security -Wcast-align -Woverloaded-virtual ")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Wshadow -Wnon-virtual-dtor -Wno-unused-variable -Wno-long-long -Wno-unused-parameter -Wnull-dereference -pedantic -Wformat -Wformat-security -Wcast-align -Woverloaded-virtual ")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread ")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-rtti ")
 
-if(ICHOR_USE_MOLD)
+# gcc added support for mold in version 12
+if(ICHOR_USE_MOLD AND ((CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 12) OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang"))
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fuse-ld=mold ")
 endif()
 
@@ -164,6 +170,31 @@ file(GLOB_RECURSE ICHOR_SERIALIZATION_SOURCES ${ICHOR_TOP_DIR}/src/optional_bund
 file(GLOB SPDLOG_SOURCES ${ICHOR_EXTERNAL_DIR}/spdlog/src/*.cpp)
 
 add_library(ichor ${FMT_SOURCES} ${ICHOR_FRAMEWORK_SOURCES} ${ICHOR_LOGGING_SOURCES} ${ICHOR_NETWORK_SOURCES} ${ICHOR_METRICS_SOURCES} ${ICHOR_SERIALIZATION_SOURCES})
+target_compile_options(ichor PUBLIC "-Werror") #prevent externally compiled sources to error out on warnings
+
+# By default, we build a bundled mimalloc and statically-link it to
+# Ichor. If you want to dynamically link to the system's
+# libmimalloc.so, pass -DICHOR_USE_SYSTEM_MIMALLOC=ON.
+if(ICHOR_USE_MIMALLOC)
+    if(ICHOR_USE_SYSTEM_MIMALLOC)
+        find_package(mimalloc REQUIRED)
+        target_link_libraries(ichor PRIVATE mimalloc)
+        target_compile_definitions(ichor PRIVATE ICHOR_USE_SYSTEM_MIMALLOC)
+    else()
+        function(ichor_add_mimalloc)
+            set(MI_BUILD_STATIC ON)
+            set(MI_BUILD_SHARED OFF)
+            set(MI_USE_CXX ON)
+            option(MI_BUILD_TESTS "Build test executables" OFF)
+
+            add_subdirectory(external/mimalloc EXCLUDE_FROM_ALL)
+            target_compile_definitions(mimalloc-static PRIVATE MI_USE_ENVIRON=0)
+            target_link_libraries(ichor mimalloc-static)
+        endfunction()
+
+        ichor_add_mimalloc()
+    endif()
+endif()
 
 if(ICHOR_USE_SPDLOG)
     target_sources(ichor PRIVATE ${SPDLOG_SOURCES})
@@ -185,7 +216,6 @@ target_link_libraries(ichor ${CMAKE_THREAD_LIBS_INIT})
 target_link_libraries(ichor -ldl -lrt)
 
 target_include_directories(ichor PUBLIC "${ICHOR_EXTERNAL_DIR}/wyhash")
-target_include_directories(ichor PUBLIC "${ICHOR_EXTERNAL_DIR}/cppcoro/include")
 target_include_directories(ichor PUBLIC "${ICHOR_EXTERNAL_DIR}/fmt/include")
 target_include_directories(ichor PUBLIC "${ICHOR_TOP_DIR}/include")
 
