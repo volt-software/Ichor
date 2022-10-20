@@ -4,6 +4,10 @@
 #include <ichor/events/RunFunctionEvent.h>
 #include <csignal>
 
+#ifdef ICHOR_USE_SYSTEM_MIMALLOC
+#include <mimalloc-new-delete.h>
+#endif
+
 std::atomic<bool> sigintQuit;
 std::atomic<uint64_t> Ichor::DependencyManager::_managerIdCounter = 0;
 

@@ -47,7 +47,7 @@ add_executable(ichor_optional_dependency_example ${EXAMPLE_SOURCES})
 target_link_libraries(ichor_optional_dependency_example ${CMAKE_THREAD_LIBS_INIT})
 target_link_libraries(ichor_optional_dependency_example ichor)
 
-if(NOT ICHOR_USE_SANITIZERS)
+if(NOT ICHOR_USE_SANITIZERS AND NOT ICHOR_USE_MIMALLOC)
     file(GLOB_RECURSE EXAMPLE_SOURCES ${ICHOR_TOP_DIR}/examples/realtime_example/gsm_enc/*.cpp)
     file(GLOB_RECURSE EXAMPLE_SOURCES ${ICHOR_TOP_DIR}/examples/realtime_example/*.cpp)
     add_executable(ichor_realtime_example ${EXAMPLE_SOURCES})

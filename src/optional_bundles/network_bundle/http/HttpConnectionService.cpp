@@ -201,13 +201,16 @@ void Ichor::HttpConnectionService::connect(tcp::endpoint endpoint, net::yield_co
     _httpStream->socket().set_option(tcp::no_delay(_tcpNoDelay));
 
     if(ec) {
+        // see below for why _connecting has to be set last
+        _httpStream = nullptr;
         _quit = true;
         _connecting = false;
         return fail(ec, "HttpConnectionService::connect connect");
     }
 
-    _connecting = false;
+    // set connected before connecting, or races with the start() function may occur.
     _connected = true;
+    _connecting = false;
 }
 
 #endif
