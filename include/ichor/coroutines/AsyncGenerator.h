@@ -356,7 +356,7 @@ namespace Ichor {
 
         AsyncGenerator(AsyncGenerator&& other) noexcept
             : IGenerator(), _coroutine(other._coroutine), _destroyed(other._destroyed) {
-            INTERNAL_DEBUG("AsyncGenerator(AsyncGenerator&& other) {} {}", other._id, _coroutine.promise().get_id());
+            INTERNAL_DEBUG("AsyncGenerator(AsyncGenerator&& other) {}", _coroutine.promise().get_id());
             other._coroutine = nullptr;
         }
 

@@ -32,15 +32,15 @@ namespace Ichor {
     };
 
     class DependencyManager final {
-    public:
-        DependencyManager(std::unique_ptr<IEventQueue> eventQueue) : _eventQueue(std::move(eventQueue)) {
+    private:
+        explicit DependencyManager(IEventQueue *eventQueue) : _eventQueue(eventQueue) {
 
         }
-
+    public:
         // DANGEROUS COPY, EFFECTIVELY MAKES A NEW MANAGER AND STARTS OVER!!
         // Only implemented so that the manager can be easily used in STL containers before anything is using it.
         [[deprecated("DANGEROUS COPY, EFFECTIVELY MAKES A NEW MANAGER AND STARTS OVER!! The moved-from manager cannot be registered with a CommunicationChannel, or UB occurs.")]]
-        DependencyManager(const DependencyManager& other) {
+        DependencyManager(const DependencyManager& other) : _eventQueue(other._eventQueue) {
             if(other._started) {
                 std::terminate();
             }
@@ -48,6 +48,10 @@ namespace Ichor {
 
         // An implementation would be very thread un-safe. Moving the event queue would require no modification by any thread.
         DependencyManager(DependencyManager&&) = delete;
+
+        ~DependencyManager() {
+            stop();
+        }
 
 
         template<DerivedTemplated<Service> Impl, typename... Interfaces>
@@ -142,7 +146,7 @@ namespace Ichor {
         template <typename EventT, typename... Args>
         requires Derived<EventT, Event>
         uint64_t pushPrioritisedEvent(uint64_t originatingServiceId, uint64_t priority, Args&&... args){
-            if(_quit.load(std::memory_order_acquire)) {
+            if(_eventQueue->shouldQuit()) {
                 ICHOR_LOG_TRACE(_logger, "inserting event of type {} into manager {}, but have to quit", typeName<EventT>(), getId());
                 return 0;
             }
@@ -162,7 +166,7 @@ namespace Ichor {
         template <typename EventT, typename... Args>
         requires Derived<EventT, Event>
         uint64_t pushEvent(uint64_t originatingServiceId, Args&&... args){
-            if(_quit.load(std::memory_order_acquire)) {
+            if(_eventQueue->shouldQuit()) {
                 ICHOR_LOG_TRACE(_logger, "inserting event of type {} into manager {}, but have to quit", typeName<EventT>(), getId());
                 return 0;
             }
@@ -352,8 +356,6 @@ namespace Ichor {
 
         [[nodiscard]] std::optional<std::string_view> getImplementationNameFor(uint64_t serviceId) const noexcept;
 
-        void start();
-
     private:
         template <typename EventT>
         requires Derived<EventT, Event>
@@ -415,6 +417,10 @@ namespace Ichor {
             return eventId;
         }
 
+        void start();
+        void processEvent(Event *evt);
+        void stop();
+
         std::unordered_map<uint64_t, std::shared_ptr<ILifecycleManager>> _services{}; // key = service id
         std::unordered_map<uint64_t, std::vector<DependencyTrackerInfo>> _dependencyRequestTrackers{}; // key = interface name hash
         std::unordered_map<uint64_t, std::vector<DependencyTrackerInfo>> _dependencyUndoRequestTrackers{}; // key = interface name hash
@@ -423,16 +429,16 @@ namespace Ichor {
         std::unordered_map<uint64_t, std::vector<EventCallbackInfo>> _eventCallbacks{}; // key = event id
         std::unordered_map<uint64_t, std::vector<EventInterceptInfo>> _eventInterceptors{}; // key = event id
         std::unordered_map<uint64_t, std::unique_ptr<IGenerator>> _scopedGenerators{}; // key = promise id
-        std::unique_ptr<IEventQueue> _eventQueue;
+        IEventQueue *_eventQueue;
         IFrameworkLogger *_logger{nullptr};
         std::shared_ptr<ILifecycleManager> _preventEarlyDestructionOfFrameworkLogger{nullptr};
         std::atomic<uint64_t> _eventIdCounter{0};
-        std::atomic<bool> _quit{false};
         std::atomic<bool> _started{false};
         CommunicationChannel *_communicationChannel{nullptr};
         uint64_t _id{_managerIdCounter++};
         static std::atomic<uint64_t> _managerIdCounter;
 
+        friend class IEventQueue;
         friend class EventCompletionHandlerRegistration;
         friend class CommunicationChannel;
     };

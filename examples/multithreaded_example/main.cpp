@@ -26,29 +26,31 @@ int main() {
     auto start = std::chrono::steady_clock::now();
 
     CommunicationChannel channel{};
-    DependencyManager dmOne{std::make_unique<MultimapQueue>()};
-    DependencyManager dmTwo{std::make_unique<MultimapQueue>()};
+    auto queueOne = std::make_unique<MultimapQueue>();
+    auto &dmOne = queueOne->createManager();
+    auto queueTwo = std::make_unique<MultimapQueue>();
+    auto &dmTwo = queueTwo->createManager();
     channel.addManager(&dmOne);
     channel.addManager(&dmTwo);
 
-    std::thread t1([&dmOne] {
+    std::thread t1([&] {
         dmOne.createServiceManager<FRAMEWORK_LOGGER_TYPE, IFrameworkLogger>({}, 10);
 #ifdef ICHOR_USE_SPDLOG
         dmOne.createServiceManager<SpdlogSharedService, ISpdlogSharedService>();
 #endif
         dmOne.createServiceManager<LoggerAdmin<LOGGER_TYPE>, ILoggerAdmin>();
         dmOne.createServiceManager<OneService>();
-        dmOne.start();
+        queueOne->start(CaptureSigInt);
     });
 
-    std::thread t2([&dmTwo] {
+    std::thread t2([&] {
         dmTwo.createServiceManager<FRAMEWORK_LOGGER_TYPE, IFrameworkLogger>({}, 10);
 #ifdef ICHOR_USE_SPDLOG
         dmTwo.createServiceManager<SpdlogSharedService, ISpdlogSharedService>();
 #endif
         dmTwo.createServiceManager<LoggerAdmin<LOGGER_TYPE>, ILoggerAdmin>();
         dmTwo.createServiceManager<OtherService>();
-        dmTwo.start();
+        queueTwo->start(CaptureSigInt);
     });
 
     t1.join();

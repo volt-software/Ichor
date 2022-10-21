@@ -24,7 +24,8 @@ int main() {
     std::locale::global(std::locale("en_US.UTF-8"));
 
     auto start = std::chrono::steady_clock::now();
-    DependencyManager dm{std::make_unique<MultimapQueue>()};
+    auto queue = std::make_unique<MultimapQueue>();
+    auto &dm = queue->createManager();
     dm.createServiceManager<FRAMEWORK_LOGGER_TYPE, IFrameworkLogger>({}, 10);
 #ifdef ICHOR_USE_SPDLOG
     dm.createServiceManager<SpdlogSharedService, ISpdlogSharedService>();
@@ -32,7 +33,7 @@ int main() {
     dm.createServiceManager<LoggerAdmin<LOGGER_TYPE>, ILoggerAdmin>();
     dm.createServiceManager<EtcdService, IEtcdService>(Properties{{"EtcdAddress", Ichor::make_any<std::string>("localhost:2379")}});
     dm.createServiceManager<UsingEtcdService>();
-    dm.start();
+    queue->start(CaptureSigInt);
     auto end = std::chrono::steady_clock::now();
     fmt::print("Program ran for {:L} µs\n", std::chrono::duration_cast<std::chrono::microseconds>(end-start).count());
 

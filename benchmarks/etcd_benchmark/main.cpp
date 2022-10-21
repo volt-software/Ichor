@@ -25,12 +25,14 @@ int main() {
     auto start = std::chrono::steady_clock::now();
 
     CommunicationChannel channel{};
-    DependencyManager dmOne{std::make_unique<MultimapQueue>()};
-    DependencyManager dmTwo{std::make_unique<MultimapQueue>()};
+    auto queueOne = std::make_unique<MultimapQueue>();
+    auto &dmOne = queueOne->createManager();
+    auto queueTwo = std::make_unique<MultimapQueue>();
+    auto &dmTwo = queueTwo->createManager();
     channel.addManager(&dmOne);
     channel.addManager(&dmTwo);
 
-    std::thread t1([&dmOne] {
+    std::thread t1([&] {
         auto logMgr = dmOne.createServiceManager<FRAMEWORK_LOGGER_TYPE, IFrameworkLogger>({}, 10);
         logMgr->setLogLevel(LogLevel::INFO);
 #ifdef ICHOR_USE_SPDLOG
@@ -39,10 +41,10 @@ int main() {
         dmOne.createServiceManager<LoggerAdmin<LOGGER_TYPE>, ILoggerAdmin>();
         dmOne.createServiceManager<EtcdService, IEtcdService>(Properties{{"EtcdAddress", Ichor::make_any<std::string, std::string>("localhost:2379")}});
         dmOne.createServiceManager<UsingEtcdService>();
-        dmOne.start();
+        queueOne->start(CaptureSigInt);
     });
 
-    std::thread t2([&dmTwo] {
+    std::thread t2([&] {
         auto logMgr = dmTwo.createServiceManager<FRAMEWORK_LOGGER_TYPE, IFrameworkLogger>({}, 10);
         logMgr->setLogLevel(LogLevel::INFO);
 #ifdef ICHOR_USE_SPDLOG
@@ -51,7 +53,7 @@ int main() {
         dmTwo.createServiceManager<LoggerAdmin<LOGGER_TYPE>, ILoggerAdmin>();
         dmTwo.createServiceManager<EtcdService, IEtcdService>(Properties{{"EtcdAddress", Ichor::make_any<std::string, std::string>("localhost:2379")}});
         dmTwo.createServiceManager<UsingEtcdService>();
-        dmTwo.start();
+        queueTwo->start(CaptureSigInt);
     });
 
     t1.join();

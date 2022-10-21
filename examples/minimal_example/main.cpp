@@ -43,13 +43,14 @@ public:
 int main() {
     std::locale::global(std::locale("en_US.UTF-8")); // some loggers require having a locale
 
-    DependencyManager dm{std::make_unique<MultimapQueue>()};
+    auto queue = std::make_unique<MultimapQueue>();
+    auto &dm = queue->createManager();
     // Register a framework logger and our sig int service.
     auto logger = dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>();
     logger->setLogLevel(LogLevel::DEBUG);
     dm.createServiceManager<SigIntService>();
     // Start manager, consumes current thread.
-    dm.start();
+    queue->start(CaptureSigInt);
 
     return 0;
 }

@@ -8,6 +8,7 @@ if(${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.19.0")
     cmake_policy(SET CMP0110 NEW)
 endif()
 set(CMAKE_POLICY_DEFAULT_CMP0077 NEW)
+cmake_policy(SET CMP0077 NEW)
 include(CMakeDependentOption)
 
 if(NOT CMAKE_BUILD_TYPE)
@@ -23,10 +24,16 @@ if(NOT hasParent)
     set(LIBRARY_OUTPUT_PATH ${CMAKE_BINARY_DIR})
 endif()
 
+
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS "11.2")
+    message(FATAL_ERROR "Gcc below 11.2 not supported. See https://gcc.gnu.org/bugzilla/show_bug.cgi?id=95137")
+endif()
+if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS "14")
+    message(FATAL_ERROR "Clang below version 14 does not implement enough of C++20 to use Ichor.")
+endif()
+
 set(ICHOR_TOP_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
 set(ICHOR_EXTERNAL_DIR "${CMAKE_CURRENT_SOURCE_DIR}/external/")
-
-include(CTest)
 
 option(ICHOR_BUILD_EXAMPLES "Build examples" ON)
 option(ICHOR_BUILD_BENCHMARKS "Build benchmarks" ON)
@@ -40,6 +47,7 @@ option(ICHOR_USE_THREAD_SANITIZER "Enable thread sanitizer, catching potential t
 option(ICHOR_USE_UGLY_HACK_EXCEPTION_CATCHING "Enable an ugly hack on gcc to enable debugging the point where exceptions are thrown. Useful for debugging boost asio/beast backtraces." OFF)
 option(ICHOR_REMOVE_SOURCE_NAMES "Remove compiling source file names and line numbers when logging." OFF)
 option(ICHOR_USE_MOLD "Use mold when linking, recommended to use with gcc 12+ or clang" OFF)
+option(ICHOR_USE_SDEVENT "Add sd-event based queue/integration" OFF)
 cmake_dependent_option(ICHOR_USE_MIMALLOC "Use mimalloc for significant performance improvements" ON "NOT ICHOR_USE_SANITIZERS" OFF)
 cmake_dependent_option(ICHOR_USE_SYSTEM_MIMALLOC "Use system or vendored mimalloc" OFF "NOT ICHOR_USE_SANITIZERS" OFF)
 set(BUILD_TESTING OFF) #disable Catch 2 testing
@@ -47,7 +55,7 @@ set(BUILD_TESTING OFF) #disable Catch 2 testing
 if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     # clang tidy requires the same compiler arguments as clang
     # some gcc arguments cause it to error out
-    option(ICHOR_RUN_CLANG_TIDY "Runs clang tidy every compile" OFF)
+    option(ICHOR_RUN_CLANG_TIDY "Runs clang-tidy every compile" OFF)
 endif()
 
 set(ICHOR_SERIALIZATION_FRAMEWORK OFF CACHE STRING "Enable serialization support")
@@ -98,8 +106,8 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Wshadow -Wnon-virtual-dto
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread ")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-rtti ")
 
-# gcc added support for mold in version 12
-if(ICHOR_USE_MOLD AND ((CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 12) OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang"))
+# gcc added support for mold in version 12, but it throws catch off guard when using gcc, mold and sanitizers.
+if(ICHOR_USE_MOLD AND NOT CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fuse-ld=mold ")
 endif()
 
@@ -132,8 +140,12 @@ if(ICHOR_USE_SANITIZERS)
 endif()
 
 if(ICHOR_USE_THREAD_SANITIZER)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=thread -no-pie -fno-omit-frame-pointer")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=thread -fno-omit-frame-pointer")
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -no-pie")
+
+    if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -no-pie")
+    endif()
 endif()
 
 if(NOT DEFINED ICHOR_USE_SANITIZERS AND NOT DEFINED ICHOR_USE_THREAD_SANITIZER)
@@ -170,7 +182,13 @@ file(GLOB_RECURSE ICHOR_SERIALIZATION_SOURCES ${ICHOR_TOP_DIR}/src/optional_bund
 file(GLOB SPDLOG_SOURCES ${ICHOR_EXTERNAL_DIR}/spdlog/src/*.cpp)
 
 add_library(ichor ${FMT_SOURCES} ${ICHOR_FRAMEWORK_SOURCES} ${ICHOR_LOGGING_SOURCES} ${ICHOR_NETWORK_SOURCES} ${ICHOR_METRICS_SOURCES} ${ICHOR_SERIALIZATION_SOURCES})
-target_compile_options(ichor PUBLIC "-Werror") #prevent externally compiled sources to error out on warnings
+
+# Gcc 12.1 and 12.2 have bugs that prevent compilation with Werror at -O2 and higher:
+# https://gcc.gnu.org/bugzilla/show_bug.cgi?id=107138
+# https://gcc.gnu.org/bugzilla/show_bug.cgi?id=105329
+if(NOT CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_VERSION VERSION_LESS "12")
+    target_compile_options(ichor PUBLIC "-Werror") #prevent externally compiled sources to error out on warnings
+endif()
 
 # By default, we build a bundled mimalloc and statically-link it to
 # Ichor. If you want to dynamically link to the system's
@@ -203,6 +221,16 @@ endif()
 if(ICHOR_USE_ETCD)
     target_sources(ichor PRIVATE ${ICHOR_OPTIONAL_ETCD_SOURCES})
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DGOOGLE_PROTOBUF_NO_RTTI")
+endif()
+
+if(ICHOR_USE_SDEVENT)
+    find_package(PkgConfig REQUIRED)
+    pkg_check_modules(Systemd IMPORTED_TARGET GLOBAL libsystemd)
+    if(NOT TARGET PkgConfig::Systemd)
+        message(FATAL_ERROR "libsystemd was not found")
+    endif()
+    target_link_libraries(ichor PkgConfig::Systemd)
+    target_compile_definitions(ichor PUBLIC "ICHOR_USE_SDEVENT")
 endif()
 
 if(ICHOR_USE_BOOST_BEAST)

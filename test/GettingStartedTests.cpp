@@ -57,12 +57,13 @@ struct MyTimerService final : public IMyTimerService, public Ichor::Service<MyTi
 };
 
 int example() {
-    Ichor::DependencyManager dm{std::make_unique<MultimapQueue>()};
+    auto queue = std::make_unique<MultimapQueue>();
+    auto &dm = queue->createManager();
     dm.createServiceManager<Ichor::CoutFrameworkLogger, Ichor::IFrameworkLogger>();
     dm.createServiceManager<MyService, IMyService>();
     dm.createServiceManager<MyDependencyService, IMyDependencyService>();
     dm.createServiceManager<MyTimerService, IMyTimerService>(); // Add this
-    dm.start();
+    queue->start(CaptureSigInt);
 
     return 0;
 }
@@ -95,23 +96,25 @@ struct MyInterceptorService final : public Ichor::Service<MyInterceptorService> 
 
 int communication() {
     Ichor::CommunicationChannel channel{};
-    DependencyManager dmOne{std::make_unique<MultimapQueue>()}; // ID = 0
-    DependencyManager dmTwo{std::make_unique<MultimapQueue>()}; // ID = 1
+    auto queueOne = std::make_unique<MultimapQueue>();
+    auto &dmOne = queueOne->createManager(); // ID = 0
+    auto queueTwo = std::make_unique<MultimapQueue>();
+    auto &dmTwo = queueTwo->createManager(); // ID = 1
 
     // Register the manager to the channel
     channel.addManager(&dmOne);
     channel.addManager(&dmTwo);
 
-    std::thread t1([&dmOne] {
+    std::thread t1([&] {
         dmOne.createServiceManager<Ichor::CoutFrameworkLogger, Ichor::IFrameworkLogger>();
         // your services here
-        dmOne.start();
+        queueOne->start(CaptureSigInt);
     });
 
-    std::thread t2([&dmTwo] {
+    std::thread t2([&] {
         dmTwo.createServiceManager<Ichor::CoutFrameworkLogger, Ichor::IFrameworkLogger>();
         // your services here
-        dmTwo.start();
+        queueTwo->start(CaptureSigInt);
     });
 
     t1.join();

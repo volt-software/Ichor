@@ -18,7 +18,8 @@ TEST_CASE("CoroutineTests") {
     ensureInternalLoggerExists();
 
     SECTION("Required dependencies") {
-        Ichor::DependencyManager dm{std::make_unique<MultimapQueue>()};
+        auto queue = std::make_unique<MultimapQueue>();
+        auto &dm = queue->createManager();
         _evt = std::make_unique<Ichor::AsyncManualResetEvent>();
 
         std::thread t([&]() {
@@ -30,7 +31,7 @@ TEST_CASE("CoroutineTests") {
             dm.createServiceManager<NullFrameworkLogger, IFrameworkLogger>();
 #endif
             dm.createServiceManager<GeneratorService, IGeneratorService>();
-            dm.start();
+            queue->start(CaptureSigInt);
         });
 
         waitForRunning(dm);
@@ -69,7 +70,8 @@ TEST_CASE("CoroutineTests") {
     }
 
     SECTION("co_await in function") {
-        Ichor::DependencyManager dm{std::make_unique<MultimapQueue>()};
+        auto queue = std::make_unique<MultimapQueue>();
+        auto &dm = queue->createManager();
         _evt = std::make_unique<Ichor::AsyncManualResetEvent>();
 
         std::thread t([&]() {
@@ -80,7 +82,7 @@ TEST_CASE("CoroutineTests") {
             dm.createServiceManager<NullFrameworkLogger, IFrameworkLogger>();
 #endif
             dm.createServiceManager<AwaitService, IAwaitService>();
-            dm.start();
+            queue->start(CaptureSigInt);
         });
 
         waitForRunning(dm);
@@ -123,7 +125,8 @@ TEST_CASE("CoroutineTests") {
     }
 
     SECTION("co_await in event handler") {
-        Ichor::DependencyManager dm{std::make_unique<MultimapQueue>()};
+        auto queue = std::make_unique<MultimapQueue>();
+        auto &dm = queue->createManager();
         _evt = std::make_unique<Ichor::AsyncManualResetEvent>();
 
         std::thread t([&]() {
@@ -134,7 +137,7 @@ TEST_CASE("CoroutineTests") {
             dm.createServiceManager<NullFrameworkLogger, IFrameworkLogger>();
 #endif
             dm.createServiceManager<EventAwaitService>();
-            dm.start();
+            queue->start(CaptureSigInt);
         });
 
         waitForRunning(dm);
