@@ -23,7 +23,8 @@ int main() {
 
     {
         auto start = std::chrono::steady_clock::now();
-        DependencyManager dm{std::make_unique<MultimapQueue>()};
+        auto queue = std::make_unique<MultimapQueue>();
+        auto &dm = queue->createManager();
         auto logMgr = dm.createServiceManager<FRAMEWORK_LOGGER_TYPE, IFrameworkLogger>({}, 10);
         logMgr->setLogLevel(LogLevel::INFO);
 #ifdef ICHOR_USE_SPDLOG
@@ -32,7 +33,7 @@ int main() {
         dm.createServiceManager<LoggerAdmin<LOGGER_TYPE>, ILoggerAdmin>();
         dm.createServiceManager<TestService, ITestService>(Properties{{"LogLevel", Ichor::make_any<LogLevel>(LogLevel::INFO)}});
         dm.createServiceManager<StartStopService>(Properties{{"LogLevel", Ichor::make_any<LogLevel>(LogLevel::INFO)}});
-        dm.start();
+        queue->start(CaptureSigInt);
         auto end = std::chrono::steady_clock::now();
         std::cout << fmt::format("Single Threaded Program ran for {:L} µs with {:L} peak memory usage\n", std::chrono::duration_cast<std::chrono::microseconds>(end - start).count(), getPeakRSS());
     }
@@ -40,22 +41,21 @@ int main() {
     {
         auto start = std::chrono::steady_clock::now();
         std::array<std::thread, 8> threads{};
-        std::vector<DependencyManager> managers{};
-        managers.reserve(8);
+        std::array<MultimapQueue, 8> queues{};
         for (uint_fast32_t i = 0, j = 0; i < 8; i++, j += 2) {
-            managers.emplace_back(std::make_unique<MultimapQueue>());
-            threads[i] = std::thread([&managers, i] {
-                auto logMgr = managers[i].createServiceManager<FRAMEWORK_LOGGER_TYPE, IFrameworkLogger>({}, 10);
+            threads[i] = std::thread([&queues, i] {
+                auto &dm = queues[i].createManager();
+                auto logMgr = dm.createServiceManager<FRAMEWORK_LOGGER_TYPE, IFrameworkLogger>({}, 10);
                 logMgr->setLogLevel(LogLevel::INFO);
 
 #ifdef ICHOR_USE_SPDLOG
-                managers[i].createServiceManager<SpdlogSharedService, ISpdlogSharedService>();
+                dm.createServiceManager<SpdlogSharedService, ISpdlogSharedService>();
 #endif
 
-                managers[i].createServiceManager<LoggerAdmin<LOGGER_TYPE>, ILoggerAdmin>();
-                managers[i].createServiceManager<TestService, ITestService>(Properties{{"LogLevel", Ichor::make_any<LogLevel>(LogLevel::INFO)}});
-                managers[i].createServiceManager<StartStopService>(Properties{{"LogLevel", Ichor::make_any<LogLevel>(LogLevel::INFO)}});
-                managers[i].start();
+                dm.createServiceManager<LoggerAdmin<LOGGER_TYPE>, ILoggerAdmin>();
+                dm.createServiceManager<TestService, ITestService>(Properties{{"LogLevel", Ichor::make_any<LogLevel>(LogLevel::INFO)}});
+                dm.createServiceManager<StartStopService>(Properties{{"LogLevel", Ichor::make_any<LogLevel>(LogLevel::INFO)}});
+                queues[i].start(CaptureSigInt);
             });
         }
         for (uint_fast32_t i = 0; i < 8; i++) {

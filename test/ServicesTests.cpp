@@ -12,7 +12,8 @@ TEST_CASE("ServicesTests") {
     ensureInternalLoggerExists();
 
     SECTION("QuitOnQuitEvent") {
-        Ichor::DependencyManager dm{std::make_unique<MultimapQueue>()};
+        auto queue = std::make_unique<MultimapQueue>();
+        auto &dm = queue->createManager();
 
         std::thread t([&]() {
 #if __has_include(<spdlog/spdlog.h>)
@@ -22,7 +23,7 @@ TEST_CASE("ServicesTests") {
 #endif
             dm.createServiceManager<UselessService>();
             dm.createServiceManager<QuitOnStartWithDependenciesService>();
-            dm.start();
+            queue->start(CaptureSigInt);
         });
 
         t.join();
@@ -31,7 +32,8 @@ TEST_CASE("ServicesTests") {
     }
 
     SECTION("Required dependencies") {
-        Ichor::DependencyManager dm{std::make_unique<MultimapQueue>()};
+        auto queue = std::make_unique<MultimapQueue>();
+        auto &dm = queue->createManager();
         uint64_t secondUselessServiceId{};
 
         std::thread t([&]() {
@@ -43,7 +45,7 @@ TEST_CASE("ServicesTests") {
             dm.createServiceManager<UselessService, IUselessService>();
             secondUselessServiceId = dm.createServiceManager<UselessService, IUselessService>()->getServiceId();
             dm.createServiceManager<DependencyService<true>, ICountService>();
-            dm.start();
+            queue->start(CaptureSigInt);
         });
 
         waitForRunning(dm);
@@ -82,7 +84,8 @@ TEST_CASE("ServicesTests") {
     }
 
     SECTION("Optional dependencies") {
-        Ichor::DependencyManager dm{std::make_unique<MultimapQueue>()};
+        auto queue = std::make_unique<MultimapQueue>();
+        auto &dm = queue->createManager();
         uint64_t secondUselessServiceId{};
 
         std::thread t([&]() {
@@ -94,7 +97,7 @@ TEST_CASE("ServicesTests") {
             dm.createServiceManager<UselessService, IUselessService>();
             secondUselessServiceId = dm.createServiceManager<UselessService, IUselessService>()->getServiceId();
             dm.createServiceManager<DependencyService<false>, ICountService>();
-            dm.start();
+            queue->start(CaptureSigInt);
         });
 
         waitForRunning(dm);
@@ -135,7 +138,8 @@ TEST_CASE("ServicesTests") {
     }
 
     SECTION("Mixing services should not cause UB") {
-        Ichor::DependencyManager dm{std::make_unique<MultimapQueue>()};
+        auto queue = std::make_unique<MultimapQueue>();
+        auto &dm = queue->createManager();
 
         std::thread t([&]() {
             dm.createServiceManager<NullFrameworkLogger, IFrameworkLogger>();
@@ -146,20 +150,21 @@ TEST_CASE("ServicesTests") {
             dm.createServiceManager<MixServiceFive, IMixOne, IMixTwo>();
             dm.createServiceManager<MixServiceSix, IMixOne, IMixTwo>();
             dm.createServiceManager<CheckMixService, ICountService>();
-            dm.start();
+            queue->start(CaptureSigInt);
         });
 
         t.join();
     }
 
     SECTION("Dependency manager should retry failed starts/stops") {
-        Ichor::DependencyManager dm{std::make_unique<MultimapQueue>()};
+        auto queue = std::make_unique<MultimapQueue>();
+        auto &dm = queue->createManager();
         StartStopOnSecondAttemptService *svc{};
 
         std::thread t([&]() {
             dm.createServiceManager<NullFrameworkLogger, IFrameworkLogger>();
             svc = dm.createServiceManager<StartStopOnSecondAttemptService>();
-            dm.start();
+            queue->start(CaptureSigInt);
         });
 
         waitForRunning(dm);

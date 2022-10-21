@@ -17,7 +17,8 @@ static constexpr bool DO_INTERNAL_DEBUG = false;
 
 #define INTERNAL_DEBUG(...) do {      \
     if constexpr(DO_INTERNAL_DEBUG) { \
-        SPDLOG_DEBUG(__VA_ARGS__);    \
+        fmt::print(__VA_ARGS__);    \
+        fmt::print("\n");    \
     }                                 \
 } while (0)
 

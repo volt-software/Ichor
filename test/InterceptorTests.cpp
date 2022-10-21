@@ -12,12 +12,13 @@ TEST_CASE("Interceptor Tests") {
     ensureInternalLoggerExists();
 
     SECTION("Intercept TestEvent unprocessed") {
-        Ichor::DependencyManager dm{std::make_unique<MultimapQueue>()};
+        auto queue = std::make_unique<MultimapQueue>();
+        auto &dm = queue->createManager();
 
         std::thread t([&]() {
             dm.createServiceManager<NullFrameworkLogger, IFrameworkLogger>();
             dm.createServiceManager<InterceptorService<TestEvent>, IInterceptorService>();
-            dm.start();
+            queue->start(CaptureSigInt);
         });
 
         waitForRunning(dm);
@@ -52,13 +53,14 @@ TEST_CASE("Interceptor Tests") {
     }
 
     SECTION("Intercept TestEvent processed") {
-        Ichor::DependencyManager dm{std::make_unique<MultimapQueue>()};
+        auto queue = std::make_unique<MultimapQueue>();
+        auto &dm = queue->createManager();
 
         std::thread t([&]() {
             dm.createServiceManager<NullFrameworkLogger, IFrameworkLogger>();
             dm.createServiceManager<InterceptorService<TestEvent>, IInterceptorService>();
             dm.createServiceManager<EventHandlerService<TestEvent>, IEventHandlerService>();
-            dm.start();
+            queue->start(CaptureSigInt);
         });
 
         waitForRunning(dm);
@@ -93,13 +95,14 @@ TEST_CASE("Interceptor Tests") {
     }
 
     SECTION("Intercept prevent handling") {
-        Ichor::DependencyManager dm{std::make_unique<MultimapQueue>()};
+        auto queue = std::make_unique<MultimapQueue>();
+        auto &dm = queue->createManager();
 
         std::thread t([&]() {
             dm.createServiceManager<NullFrameworkLogger, IFrameworkLogger>();
             dm.createServiceManager<InterceptorService<TestEvent, false>, IInterceptorService>();
             dm.createServiceManager<EventHandlerService<TestEvent>, IEventHandlerService>();
-            dm.start();
+            queue->start(CaptureSigInt);
         });
 
         waitForRunning(dm);
@@ -138,12 +141,13 @@ TEST_CASE("Interceptor Tests") {
     }
 
     SECTION("Intercept all Events") {
-        Ichor::DependencyManager dm{std::make_unique<MultimapQueue>()};
+        auto queue = std::make_unique<MultimapQueue>();
+        auto &dm = queue->createManager();
 
         std::thread t([&]() {
             dm.createServiceManager<NullFrameworkLogger, IFrameworkLogger>();
             dm.createServiceManager<InterceptorService<Event>, IInterceptorService>();
-            dm.start();
+            queue->start(CaptureSigInt);
         });
 
         waitForRunning(dm);
@@ -181,13 +185,14 @@ TEST_CASE("Interceptor Tests") {
     }
 
     SECTION("Multiple interceptors") {
-        Ichor::DependencyManager dm{std::make_unique<MultimapQueue>()};
+        auto queue = std::make_unique<MultimapQueue>();
+        auto &dm = queue->createManager();
 
         std::thread t([&]() {
             dm.createServiceManager<NullFrameworkLogger, IFrameworkLogger>();
             dm.createServiceManager<InterceptorService<Event>, IInterceptorService>();
             dm.createServiceManager<InterceptorService<Event>, IInterceptorService>();
-            dm.start();
+            queue->start(CaptureSigInt);
         });
 
         waitForRunning(dm);

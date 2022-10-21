@@ -50,13 +50,14 @@ void* run_example(void*) {
 //        buffer_resource<1024 * 192> resourceOne{}; // need about 160 kb for the 20'000 iteration array in TestService
 //        buffer_resource<1024 * 32> resourceTwo{};
 
-        DependencyManager dm{std::make_unique<MultimapQueue>()};
+        auto queue = std::make_unique<MultimapQueue>();
+        auto &dm = queue->createManager();
         dm.createServiceManager<FRAMEWORK_LOGGER_TYPE, IFrameworkLogger>({}, 10);
         dm.createServiceManager<LoggerAdmin<LOGGER_TYPE>, ILoggerAdmin>();
         dm.createServiceManager<OptionalService, IOptionalService>();
         dm.createServiceManager<OptionalService, IOptionalService>();
         dm.createServiceManager<TestService>();
-        dm.start();
+        queue->start(CaptureSigInt);
     }
 #ifndef NDEBUG
     auto end = std::chrono::steady_clock::now();

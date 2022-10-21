@@ -23,8 +23,9 @@ TEST_CASE("DependencyManager") {
         std::atomic<bool> thrown_exception = false;
         std::thread t([&]() {
             try {
-                Ichor::DependencyManager dm{std::make_unique<MultimapQueue>()};
-                dm.start();
+                auto queue = std::make_unique<MultimapQueue>();
+                auto &dm = queue->createManager();
+                queue->start(CaptureSigInt);
             } catch (...) {
                 thrown_exception = true;
             }
@@ -42,9 +43,10 @@ TEST_CASE("DependencyManager") {
         std::atomic<bool> thrown_exception = false;
         std::thread t([&]() {
             try {
-                Ichor::DependencyManager dm{std::make_unique<MultimapQueue>()};
+                auto queue = std::make_unique<MultimapQueue>();
+                auto &dm = queue->createManager();
                 dm.createServiceManager<UselessService>();
-                dm.start();
+                queue->start(CaptureSigInt);
             } catch (...) {
                 thrown_exception = true;
             }
@@ -58,12 +60,13 @@ TEST_CASE("DependencyManager") {
     }
 
     SECTION("DependencyManager", "QuitOnQuitEvent") {
-        Ichor::DependencyManager dm{std::make_unique<MultimapQueue>()};
+        auto queue = std::make_unique<MultimapQueue>();
+        auto &dm = queue->createManager();
 
         std::thread t([&]() {
             dm.createServiceManager<NullFrameworkLogger, IFrameworkLogger>();
             dm.createServiceManager<UselessService>();
-            dm.start();
+            queue->start(CaptureSigInt);
         });
 
         dm.runForOrQueueEmpty();
