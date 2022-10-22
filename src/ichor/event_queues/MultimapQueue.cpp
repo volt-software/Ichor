@@ -46,16 +46,22 @@ namespace Ichor {
             if (::signal(SIGINT, Ichor::Detail::on_sigint) == SIG_ERR) {
                 throw std::runtime_error("Couldn't set signal");
             }
-            Ichor::Detail::registeredSignalHandler = true;
         }
 
         startDm();
 
         while(!shouldQuit()) {
             std::unique_lock l(_eventQueueMutex);
-            _wakeup.wait_for(l, std::chrono::hours(1), [this]() {
-                return shouldQuit() || !_eventQueue.empty();
-            });
+            while(!shouldQuit() && _eventQueue.empty()) {
+                _wakeup.wait_for(l, 500ms, [this]() {
+                    return shouldQuit() || !_eventQueue.empty();
+                });
+            }
+
+            if(shouldQuit()) {
+                break;
+            }
+
             auto node = _eventQueue.extract(_eventQueue.begin());
             l.unlock();
             processEvent(node.mapped().get());

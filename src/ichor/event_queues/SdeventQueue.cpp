@@ -27,7 +27,8 @@ namespace Ichor {
         if(_initializedSdevent.load(std::memory_order_acquire)) {
             stopDm();
             sd_event_unref(_eventQueue);
-            sd_event_source_unref(_eventfd_source);
+            sd_event_source_unref(_eventfdSource);
+            sd_event_source_unref(_timerSource);
         } else {
             close(_eventfd);
         }
@@ -48,6 +49,10 @@ namespace Ichor {
             auto *procEvent = new ProcessableEvent{this, event.release()};
             int ret = sd_event_add_defer(_eventQueue, &src, [](sd_event_source *source, void *userdata) {
                 auto *e = reinterpret_cast<ProcessableEvent*>(userdata);
+
+                if(e->queue->shouldQuit()) {
+                    e->queue->quit();
+                }
 
                 try {
                     e->queue->processEvent(e->event);
@@ -71,7 +76,8 @@ namespace Ichor {
             }, procEvent);
 
             if(ret < 0) {
-                // memory leak because event.release()
+                delete procEvent->event;
+                delete procEvent;
                 throw std::system_error(-ret, std::generic_category(), "sd_event_add_defer() failed");
             }
 
@@ -118,6 +124,7 @@ namespace Ichor {
         }
 
         registerEventFd();
+        registerTimer();
 
         _initializedSdevent.store(true, std::memory_order_release);
         return _eventQueue;
@@ -127,6 +134,7 @@ namespace Ichor {
         sd_event_ref(event);
         _eventQueue = event;
         registerEventFd();
+        registerTimer();
         _initializedSdevent.store(true, std::memory_order_release);
     }
 
@@ -139,11 +147,11 @@ namespace Ichor {
             throw std::runtime_error("Please create a manager first!");
         }
 
+        // this capture currently has no way to wake all queues. Multimap f.e. polls sigintQuit, but with sdevent the
         if(captureSigInt && !Ichor::Detail::registeredSignalHandler.exchange(true)) {
             if (::signal(SIGINT, Ichor::Detail::on_sigint) == SIG_ERR) {
                 throw std::runtime_error("Couldn't set signal");
             }
-            Ichor::Detail::registeredSignalHandler = true;
         }
 
         startDm();
@@ -183,30 +191,46 @@ namespace Ichor {
     }
 
     void SdeventQueue::registerEventFd() {
-        int ret = sd_event_add_io(_eventQueue, &_eventfd_source, _eventfd, EPOLLIN,
-                              [](sd_event_source *s, int fd, uint32_t revents, void *userdata) {
-                                  auto queue = static_cast<SdeventQueue*>(userdata);
-                                  uint64_t val;
+        int ret = sd_event_add_io(_eventQueue, &_eventfdSource, _eventfd, EPOLLIN,
+                                  [](sd_event_source *s, int fd, uint32_t revents, void *userdata) {
+                                      uint64_t val;
 
-                                  // Decrement semaphore
-                                  auto n = ::read(fd, &val, sizeof(val));
-                                  if (n < 0) {
-                                      if (errno == EINTR) {
-                                          n = 0;
+                                      // Decrement semaphore
+                                      auto n = ::read(fd, &val, sizeof(val));
+                                      if (n < 0) {
+                                          if (errno == EINTR) {
+                                              n = 0;
+                                          }
                                       }
-                                  }
 
-                                  return static_cast<int>(n);
-                              }, this);
+                                      return static_cast<int>(n);
+                                  }, nullptr);
 
         if (ret < 0) {
             throw std::system_error(-ret, std::generic_category(), "sd_event_add_io() failed");
         }
 
-        ret = sd_event_source_set_io_fd_own(_eventfd_source, true);
+        ret = sd_event_source_set_io_fd_own(_eventfdSource, true);
 
         if (ret < 0) {
             throw std::system_error(-ret, std::generic_category(), "sd_event_source_set_io_fd_own() failed");
+        }
+    }
+
+    void SdeventQueue::registerTimer() {
+        constexpr int delayUs = 500'000;
+        int ret = sd_event_add_time_relative(_eventQueue, &_timerSource, CLOCK_MONOTONIC, delayUs, 0,
+                                  [](sd_event_source *s, uint64_t usec, void *userdata) {
+                                      auto *q = reinterpret_cast<SdeventQueue*>(userdata);
+                                      if(q->shouldQuit()) {
+                                          q->quit();
+                                      }
+                                      sd_event_source_set_time(s, usec + delayUs);
+                                      return 0;
+                                  }, this);
+
+        if (ret < 0) {
+            throw std::system_error(-ret, std::generic_category(), "sd_event_add_io() failed");
         }
     }
 }
