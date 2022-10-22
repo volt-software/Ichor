@@ -41,10 +41,10 @@ namespace Ichor {
         EventStatisticsService() = default;
         ~EventStatisticsService() final = default;
 
-        bool preInterceptEvent(Event const * const evt);
-        void postInterceptEvent(Event const * const evt, bool processed);
+        bool preInterceptEvent(Event const &evt);
+        void postInterceptEvent(Event const &evt, bool processed);
 
-        AsyncGenerator<bool> handleEvent(TimerEvent const * const evt);
+        AsyncGenerator<bool> handleEvent(TimerEvent const &evt);
 
         StartBehaviour start() final;
         StartBehaviour stop() final;

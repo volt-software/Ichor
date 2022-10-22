@@ -12,15 +12,15 @@ namespace Ichor {
     public:
         uint64_t listeningServiceId;
         std::optional<uint64_t> filterServiceId;
-        std::function<AsyncGenerator<bool>(Event const * const)> callback;
+        std::function<AsyncGenerator<bool>(Event const &)> callback;
     };
 
     class [[nodiscard]] EventInterceptInfo final {
     public:
         uint64_t listeningServiceId;
         std::optional<uint64_t> filterEventId;
-        std::function<bool(Event const * const)> preIntercept;
-        std::function<void(Event const * const, bool)> postIntercept;
+        std::function<bool(Event const &)> preIntercept;
+        std::function<void(Event const &, bool)> postIntercept;
     };
 
     struct CallbackKey {

@@ -323,11 +323,11 @@ struct MyInterceptorService final : public Ichor::Service<MyInterceptorService> 
         return Ichor::StartBehaviour::SUCCEEDED;
     }
     
-    bool preInterceptEvent(Ichor::TimerEvent const * const evt) {
+    bool preInterceptEvent(Ichor::TimerEvent const &evt) {
         return AllowOthersHandling; //PreventOthersHandling if this event should be discarded
     }
     
-    void postInterceptEvent(Ichor::TimerEvent const * const evt, bool processed) {
+    void postInterceptEvent(Ichor::TimerEvent const &evt, bool processed) {
         // Can use this to track how long the processing took
     }
 

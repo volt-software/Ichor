@@ -27,8 +27,8 @@ namespace Ichor {
     class AsyncGenerator;
 
     struct DependencyTrackerInfo final {
-        explicit DependencyTrackerInfo(std::function<void(Event const * const)> _trackFunc) noexcept : trackFunc(std::move(_trackFunc)) {}
-        std::function<void(Event const * const)> trackFunc;
+        explicit DependencyTrackerInfo(std::function<void(Event const &)> _trackFunc) noexcept : trackFunc(std::move(_trackFunc)) {}
+        std::function<void(Event const &)> trackFunc;
     };
 
     class DependencyManager final {
@@ -190,8 +190,8 @@ namespace Ichor {
             auto requestTrackersForType = _dependencyRequestTrackers.find(typeNameHash<Interface>());
             auto undoRequestTrackersForType = _dependencyUndoRequestTrackers.find(typeNameHash<Interface>());
 
-            DependencyTrackerInfo requestInfo{std::function<void(Event const * const)>{[impl](Event const * const evt){ impl->handleDependencyRequest(static_cast<Interface*>(nullptr), static_cast<DependencyRequestEvent const *>(evt)); }}};
-            DependencyTrackerInfo undoRequestInfo{std::function<void(Event const * const)>{[impl](Event const * const evt){ impl->handleDependencyUndoRequest(static_cast<Interface*>(nullptr), static_cast<DependencyUndoRequestEvent const *>(evt)); }}};
+            DependencyTrackerInfo requestInfo{std::function<void(Event const &)>{[impl](Event const &evt){ impl->handleDependencyRequest(static_cast<Interface*>(nullptr), static_cast<DependencyRequestEvent const &>(evt)); }}};
+            DependencyTrackerInfo undoRequestInfo{std::function<void(Event const &)>{[impl](Event const &evt){ impl->handleDependencyUndoRequest(static_cast<Interface*>(nullptr), static_cast<DependencyUndoRequestEvent const &>(evt)); }}};
             
             std::vector<DependencyRequestEvent> requests{};
             for(auto const &[key, mgr] : _services) {
@@ -211,7 +211,7 @@ namespace Ichor {
             }
 
             for(const auto& request : requests) {
-                requestInfo.trackFunc(&request);
+                requestInfo.trackFunc(request);
             }
 
             if(requestTrackersForType == end(_dependencyRequestTrackers)) {
@@ -244,8 +244,8 @@ namespace Ichor {
         /// \return RAII handler, removes registration upon destruction
         EventCompletionHandlerRegistration registerEventCompletionCallbacks(Impl *impl) {
             CallbackKey key{impl->getServiceId(), EventT::TYPE};
-            _completionCallbacks.emplace(key, std::function<void(Event const * const)>{[impl](Event const * const evt){ impl->handleCompletion(static_cast<EventT const * const>(evt)); }});
-            _errorCallbacks.emplace(key, std::function<void(Event const * const)>{[impl](Event const * const evt){ impl->handleError(static_cast<EventT const * const>(evt)); }});
+            _completionCallbacks.emplace(key, std::function<void(Event const &)>{[impl](Event const &evt){ impl->handleCompletion(static_cast<EventT const &>(evt)); }});
+            _errorCallbacks.emplace(key, std::function<void(Event const &)>{[impl](Event const &evt){ impl->handleError(static_cast<EventT const &>(evt)); }});
             return EventCompletionHandlerRegistration(this, key, impl->getServicePriority());
         }
 
@@ -266,8 +266,8 @@ namespace Ichor {
                 v.template emplace_back(EventCallbackInfo{
                         impl->getServiceId(),
                         targetServiceId,
-                        std::function<AsyncGenerator<bool>(Event const * const)>{
-                            [impl](Event const *const evt) { return impl->handleEvent(static_cast<EventT const *const>(evt)); }
+                        std::function<AsyncGenerator<bool>(Event const &)>{
+                            [impl](Event const &evt) { return impl->handleEvent(static_cast<EventT const &>(evt)); }
                         }
                 });
                 _eventCallbacks.emplace(EventT::TYPE, std::move(v));
@@ -275,8 +275,8 @@ namespace Ichor {
                 existingHandlers->second.emplace_back(EventCallbackInfo{
                     impl->getServiceId(),
                     targetServiceId,
-                    std::function<AsyncGenerator<bool>(Event const *const)>{
-                        [impl](Event const *const evt) { return impl->handleEvent(static_cast<EventT const *const>(evt)); }
+                    std::function<AsyncGenerator<bool>(Event const &)>{
+                        [impl](Event const &evt) { return impl->handleEvent(static_cast<EventT const &>(evt)); }
                     }
                 });
             }
@@ -301,13 +301,13 @@ namespace Ichor {
             if(existingHandlers == end(_eventInterceptors)) {
                 std::vector<EventInterceptInfo> v{};
                 v.template emplace_back(EventInterceptInfo{impl->getServiceId(), targetEventId,
-                                   std::function<bool(Event const * const)>{[impl](Event const * const evt){ return impl->preInterceptEvent(static_cast<EventT const * const>(evt)); }},
-                                   std::function<void(Event const * const, bool)>{[impl](Event const * const evt, bool processed){ impl->postInterceptEvent(static_cast<EventT const * const>(evt), processed); }}});
+                                   std::function<bool(Event const &)>{[impl](Event const &evt){ return impl->preInterceptEvent(static_cast<EventT const &>(evt)); }},
+                                   std::function<void(Event const &, bool)>{[impl](Event const &evt, bool processed){ impl->postInterceptEvent(static_cast<EventT const &>(evt), processed); }}});
                 _eventInterceptors.emplace(targetEventId, std::move(v));
             } else {
                 existingHandlers->second.template emplace_back(EventInterceptInfo{impl->getServiceId(), targetEventId,
-                                                      std::function<bool(Event const * const)>{[impl](Event const * const evt){ return impl->preInterceptEvent(static_cast<EventT const * const>(evt)); }},
-                                                      std::function<void(Event const * const, bool)>{[impl](Event const * const evt, bool processed){ impl->postInterceptEvent(static_cast<EventT const * const>(evt), processed); }}});
+                                                      std::function<bool(Event const &)>{[impl](Event const &evt){ return impl->preInterceptEvent(static_cast<EventT const &>(evt)); }},
+                                                      std::function<void(Event const &, bool)>{[impl](Event const &evt, bool processed){ impl->postInterceptEvent(static_cast<EventT const &>(evt), processed); }}});
             }
             // I think there's a bug in GCC 10.1, where if I don't make this a unique_ptr, the EventHandlerRegistration destructor immediately gets called for some reason.
             // Even if the result is stored in a variable at the caller site.
@@ -359,17 +359,17 @@ namespace Ichor {
     private:
         template <typename EventT>
         requires Derived<EventT, Event>
-        void handleEventError(EventT const * const evt) const {
-            if(evt->originatingService == 0) {
+        void handleEventError(EventT const &evt) const {
+            if(evt.originatingService == 0) {
                 return;
             }
 
-            auto service = _services.find(evt->originatingService);
+            auto service = _services.find(evt.originatingService);
             if(service == end(_services) || service->second->getServiceState() != ServiceState::ACTIVE) {
                 return;
             }
 
-            auto callback = _errorCallbacks.find(CallbackKey{evt->originatingService, EventT::TYPE});
+            auto callback = _errorCallbacks.find(CallbackKey{evt.originatingService, EventT::TYPE});
             if(callback == end(_errorCallbacks)) {
                 return;
             }
@@ -402,9 +402,9 @@ namespace Ichor {
             }
         }
 
-        void handleEventCompletion(Event const * const evt);
+        void handleEventCompletion(Event const &evt);
 
-        [[nodiscard]] uint32_t broadcastEvent(Event const * const evt);
+        [[nodiscard]] uint32_t broadcastEvent(Event const &evt);
 
         void setCommunicationChannel(CommunicationChannel *channel);
 
@@ -424,8 +424,8 @@ namespace Ichor {
         std::unordered_map<uint64_t, std::shared_ptr<ILifecycleManager>> _services{}; // key = service id
         std::unordered_map<uint64_t, std::vector<DependencyTrackerInfo>> _dependencyRequestTrackers{}; // key = interface name hash
         std::unordered_map<uint64_t, std::vector<DependencyTrackerInfo>> _dependencyUndoRequestTrackers{}; // key = interface name hash
-        std::unordered_map<CallbackKey, std::function<void(Event const * const)>> _completionCallbacks{}; // key = listening service id + event type
-        std::unordered_map<CallbackKey, std::function<void(Event const * const)>> _errorCallbacks{}; // key = listening service id + event type
+        std::unordered_map<CallbackKey, std::function<void(Event const &)>> _completionCallbacks{}; // key = listening service id + event type
+        std::unordered_map<CallbackKey, std::function<void(Event const &)>> _errorCallbacks{}; // key = listening service id + event type
         std::unordered_map<uint64_t, std::vector<EventCallbackInfo>> _eventCallbacks{}; // key = event id
         std::unordered_map<uint64_t, std::vector<EventInterceptInfo>> _eventInterceptors{}; // key = event id
         std::unordered_map<uint64_t, std::unique_ptr<IGenerator>> _scopedGenerators{}; // key = promise id

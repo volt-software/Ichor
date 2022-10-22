@@ -47,24 +47,24 @@ namespace Ichor {
     };
 
     template <class ImplT, class EventT>
-    concept ImplementsEventCompletionHandlers = requires(ImplT impl, EventT const * const evt) {
+    concept ImplementsEventCompletionHandlers = requires(ImplT impl, EventT const &evt) {
         { impl.handleCompletion(evt) } -> std::same_as<void>;
         { impl.handleError(evt) } -> std::same_as<void>;
     };
 
     template <class ImplT, class EventT>
-    concept ImplementsEventHandlers = requires(ImplT impl, EventT const * const evt) {
+    concept ImplementsEventHandlers = requires(ImplT impl, EventT const &evt) {
         { impl.handleEvent(evt) } -> std::same_as<AsyncGenerator<bool>>;
     };
 
     template <class ImplT, class EventT>
-    concept ImplementsEventInterceptors = requires(ImplT impl, EventT const * const evt, bool processed, uint32_t handlerAmount) {
+    concept ImplementsEventInterceptors = requires(ImplT impl, EventT const &evt, bool processed, uint32_t handlerAmount) {
         { impl.preInterceptEvent(evt) } -> std::same_as<bool>;
         { impl.postInterceptEvent(evt, processed) } -> std::same_as<void>;
     };
 
     template <class ImplT, class Interface>
-    concept ImplementsTrackingHandlers = requires(ImplT impl, Interface *svc, DependencyRequestEvent const * const reqEvt, DependencyUndoRequestEvent const * const reqUndoEvt) {
+    concept ImplementsTrackingHandlers = requires(ImplT impl, Interface *svc, DependencyRequestEvent const &reqEvt, DependencyUndoRequestEvent const &reqUndoEvt) {
         { impl.handleDependencyRequest(svc, reqEvt) } -> std::same_as<void>;
         { impl.handleDependencyUndoRequest(svc, reqUndoEvt) } -> std::same_as<void>;
     };

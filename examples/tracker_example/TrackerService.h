@@ -50,15 +50,15 @@ public:
         _logger = nullptr;
     }
 
-    void handleDependencyRequest(IRuntimeCreatedService*, DependencyRequestEvent const * const evt) {
-        if(!evt->properties.has_value()) {
+    void handleDependencyRequest(IRuntimeCreatedService*, DependencyRequestEvent const &evt) {
+        if(!evt.properties.has_value()) {
             ICHOR_LOG_ERROR(_logger, "missing properties");
             return;
         }
 
-        auto scopeProp = evt->properties.value()->find("scope");
+        auto scopeProp = evt.properties.value()->find("scope");
 
-        if(scopeProp == end(*evt->properties.value())) {
+        if(scopeProp == end(*evt.properties.value())) {
             ICHOR_LOG_ERROR(_logger, "scope missing");
             return;
         }
@@ -70,17 +70,17 @@ public:
         auto runtimeService = _scopedRuntimeServices.find(scope);
 
         if(runtimeService == end(_scopedRuntimeServices)) {
-            auto newProps = *evt->properties.value();
+            auto newProps = *evt.properties.value();
             newProps.emplace("Filter", Ichor::make_any<Filter>(Filter{ScopeFilterEntry{scope}}));
 
             _scopedRuntimeServices.emplace(scope, getManager()->createServiceManager<RuntimeCreatedService, IRuntimeCreatedService>(std::move(newProps)));
         }
     }
 
-    void handleDependencyUndoRequest(IRuntimeCreatedService*, DependencyUndoRequestEvent const * const evt) {
-        auto scopeProp = evt->properties->find("scope");
+    void handleDependencyUndoRequest(IRuntimeCreatedService*, DependencyUndoRequestEvent const &evt) {
+        auto scopeProp = evt.properties->find("scope");
 
-        if(scopeProp == end(*evt->properties)) {
+        if(scopeProp == end(*evt.properties)) {
             ICHOR_LOG_ERROR(_logger, "scope missing");
             return;
         }
@@ -91,7 +91,7 @@ public:
 
         auto service = _scopedRuntimeServices.find(scope);
         if(service != end(_scopedRuntimeServices)) {
-            getManager()->pushEvent<RemoveServiceEvent>(evt->originatingService, service->second->getServiceId());
+            getManager()->pushEvent<RemoveServiceEvent>(evt.originatingService, service->second->getServiceId());
             _scopedRuntimeServices.erase(scope);
         }
     }

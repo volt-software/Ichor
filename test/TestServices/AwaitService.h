@@ -45,7 +45,7 @@ struct EventAwaitService final : public Service<EventAwaitService> {
         return StartBehaviour::SUCCEEDED;
     }
 
-    AsyncGenerator<bool> handleEvent(AwaitEvent const * const evt) {
+    AsyncGenerator<bool> handleEvent(AwaitEvent const &evt) {
         co_await *_evt;
         co_yield false;
 
