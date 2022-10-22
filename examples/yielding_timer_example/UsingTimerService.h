@@ -23,7 +23,7 @@ public:
         ICHOR_LOG_INFO(_logger, "UsingTimerService started");
         _timerManager = getManager()->createServiceManager<Timer, ITimer>();
         _timerManager->setChronoInterval(std::chrono::milliseconds(250));
-        _timerManager->setCallback([this](TimerEvent const * const evt) {
+        _timerManager->setCallback([this](TimerEvent const &evt) {
             return handleEvent(evt);
         });
         _timerManager->startTimer();
@@ -44,7 +44,7 @@ public:
         _logger = nullptr;
     }
 
-    AsyncGenerator<bool> handleEvent(TimerEvent const * const evt) {
+    AsyncGenerator<bool> handleEvent(TimerEvent const &evt) {
         ICHOR_LOG_INFO(_logger, "Timer {} starting 'long' task", getServiceId());
 
         _timerTriggerCount++;

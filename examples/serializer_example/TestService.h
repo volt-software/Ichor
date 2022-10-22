@@ -49,7 +49,7 @@ public:
         ICHOR_LOG_INFO(_logger, "Removed serializationAdmin");
     }
 
-    void handleCompletion(DoWorkEvent const * const evt) {
+    void handleCompletion(DoWorkEvent const &evt) {
         TestMsg msg{20, "five hundred"};
         auto res = _serializationAdmin->serialize<TestMsg>(msg);
         auto msg2 = _serializationAdmin->deserialize<TestMsg>(std::move(res));
@@ -61,7 +61,7 @@ public:
         getManager()->pushEvent<QuitEvent>(getServiceId());
     }
 
-    void handleError(DoWorkEvent const * const evt) {
+    void handleError(DoWorkEvent const &evt) {
         ICHOR_LOG_ERROR(_logger, "Error handling DoWorkEvent");
     }
 

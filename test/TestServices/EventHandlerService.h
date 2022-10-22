@@ -28,11 +28,11 @@ struct EventHandlerService final : public IEventHandlerService, public Service<E
         return StartBehaviour::SUCCEEDED;
     }
 
-    AsyncGenerator<bool> handleEvent(EventT const * const evt) {
-        auto counter = handledEvents.find(evt->type);
+    AsyncGenerator<bool> handleEvent(EventT const &evt) {
+        auto counter = handledEvents.find(evt.type);
 
         if(counter == end(handledEvents)) {
-            handledEvents.template emplace(evt->type, 1);
+            handledEvents.template emplace(evt.type, 1);
         } else {
             counter->second++;
         }

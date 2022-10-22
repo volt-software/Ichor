@@ -14,7 +14,7 @@ Ichor::StartBehaviour Ichor::EventStatisticsService::start() {
     auto timerManager = getManager()->createServiceManager<Timer, ITimer>();
     timerManager->setChronoInterval(std::chrono::milliseconds(_averagingIntervalMs));
 
-    timerManager->setCallback([this](TimerEvent const * const evt) -> AsyncGenerator<bool> {
+    timerManager->setCallback([this](TimerEvent const &evt) -> AsyncGenerator<bool> {
         return handleEvent(evt);
     });
 
@@ -29,7 +29,7 @@ Ichor::StartBehaviour Ichor::EventStatisticsService::stop() {
 
     if(_showStatisticsOnStop) {
         // handle last bit of stored statistics by emulating a handleEvent call
-        auto gen = handleEvent(nullptr);
+        auto gen = handleEvent(TimerEvent{0, 0, 0});
         auto it = gen.begin();
         while(!gen.done() && !it.get_finished()) {
             it = gen.begin();
@@ -52,27 +52,27 @@ Ichor::StartBehaviour Ichor::EventStatisticsService::stop() {
     return Ichor::StartBehaviour::SUCCEEDED;
 }
 
-bool Ichor::EventStatisticsService::preInterceptEvent(const Event *const evt) {
+bool Ichor::EventStatisticsService::preInterceptEvent(Event const &evt) {
     _startProcessingTimestamp = std::chrono::steady_clock::now();
 
-    if(!_eventTypeToNameMapper.contains(evt->type)) {
-        _eventTypeToNameMapper.emplace(evt->type, evt->name);
+    if(!_eventTypeToNameMapper.contains(evt.type)) {
+        _eventTypeToNameMapper.emplace(evt.type, evt.name);
     }
 
     return (bool)AllowOthersHandling;
 }
 
-void Ichor::EventStatisticsService::postInterceptEvent(const Event *const evt, bool processed) {
+void Ichor::EventStatisticsService::postInterceptEvent(Event const &evt, bool processed) {
     if(!processed) {
         return;
     }
 
     auto now = std::chrono::steady_clock::now();
     auto processingTime = now - _startProcessingTimestamp;
-    auto statistics = _recentEventStatistics.find(evt->type);
+    auto statistics = _recentEventStatistics.find(evt.type);
 
     if(statistics == end(_recentEventStatistics)) {
-        _recentEventStatistics.emplace(evt->type, std::vector<StatisticEntry>{{StatisticEntry{
+        _recentEventStatistics.emplace(evt.type, std::vector<StatisticEntry>{{StatisticEntry{
             std::chrono::duration_cast<std::chrono::nanoseconds>(now.time_since_epoch()).count(),
             std::chrono::duration_cast<std::chrono::nanoseconds>(processingTime).count()}}});
     } else {
@@ -82,7 +82,7 @@ void Ichor::EventStatisticsService::postInterceptEvent(const Event *const evt, b
     }
 }
 
-Ichor::AsyncGenerator<bool> Ichor::EventStatisticsService::handleEvent([[maybe_unused]] const TimerEvent *const evt) {
+Ichor::AsyncGenerator<bool> Ichor::EventStatisticsService::handleEvent([[maybe_unused]] TimerEvent const &evt) {
     int64_t now = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
     decltype(_recentEventStatistics) newVec{};
     newVec.swap(_recentEventStatistics);

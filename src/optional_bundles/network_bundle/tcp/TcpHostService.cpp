@@ -74,7 +74,7 @@ Ichor::StartBehaviour Ichor::TcpHostService::start() {
 
     _timerManager = getManager()->createServiceManager<Timer, ITimer>();
     _timerManager->setChronoInterval(20ms);
-    _timerManager->setCallback([this](TimerEvent const * const evt) -> AsyncGenerator<bool> {
+    _timerManager->setCallback([this](TimerEvent const &evt) -> AsyncGenerator<bool> {
         sockaddr_in client_addr{};
         socklen_t client_addr_size = sizeof(client_addr);
         int newConnection = ::accept(_socket, (sockaddr *) &client_addr, &client_addr_size);
@@ -131,10 +131,10 @@ uint64_t Ichor::TcpHostService::getPriority() {
     return _priority;
 }
 
-Ichor::AsyncGenerator<bool> Ichor::TcpHostService::handleEvent(NewSocketEvent const * const evt) {
+Ichor::AsyncGenerator<bool> Ichor::TcpHostService::handleEvent(NewSocketEvent const &evt) {
     Properties props{};
     props.emplace("Priority", Ichor::make_any<uint64_t>(_priority));
-    props.emplace("Socket", Ichor::make_any<int>(evt->socket));
+    props.emplace("Socket", Ichor::make_any<int>(evt.socket));
     _connections.emplace_back(getManager()->template createServiceManager<TcpConnectionService, IConnectionService>(std::move(props)));
 
     co_return (bool)AllowOthersHandling;

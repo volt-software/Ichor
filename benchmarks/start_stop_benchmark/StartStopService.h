@@ -61,16 +61,16 @@ public:
     void removeDependencyInstance(ITestService *, IService *) {
     }
 
-    void handleCompletion(StartServiceEvent const * const evt) {
+    void handleCompletion(StartServiceEvent const &evt) {
     }
 
-    void handleError(StartServiceEvent const * const evt) {
+    void handleError(StartServiceEvent const &evt) {
     }
 
-    void handleCompletion(StopServiceEvent const * const evt) {
+    void handleCompletion(StopServiceEvent const &evt) {
     }
 
-    void handleError(StopServiceEvent const * const evt) {
+    void handleError(StopServiceEvent const &evt) {
     }
 
 private:

@@ -219,7 +219,8 @@ namespace Ichor {
 
     void SdeventQueue::registerTimer() {
         constexpr int delayUs = 500'000;
-        int ret = sd_event_add_time_relative(_eventQueue, &_timerSource, CLOCK_MONOTONIC, delayUs, 0,
+        // check if loop should quit every 500 ms
+        int ret = sd_event_add_time(_eventQueue, &_timerSource, CLOCK_MONOTONIC, 0, 0,
                                   [](sd_event_source *s, uint64_t usec, void *userdata) {
                                       auto *q = reinterpret_cast<SdeventQueue*>(userdata);
                                       if(q->shouldQuit()) {

@@ -162,7 +162,11 @@ TEST_CASE("ServicesTests") {
         StartStopOnSecondAttemptService *svc{};
 
         std::thread t([&]() {
+#if __has_include(<spdlog/spdlog.h>)
+            dm.createServiceManager<SpdlogFrameworkLogger, IFrameworkLogger>();
+#else
             dm.createServiceManager<NullFrameworkLogger, IFrameworkLogger>();
+#endif
             svc = dm.createServiceManager<StartStopOnSecondAttemptService>();
             queue->start(CaptureSigInt);
         });

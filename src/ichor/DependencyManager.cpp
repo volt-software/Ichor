@@ -50,7 +50,7 @@ void Ichor::DependencyManager::processEvent(Event *evt) {
 
     if (interceptorsForAllEvents != end(_eventInterceptors)) {
         for (EventInterceptInfo const &info: interceptorsForAllEvents->second) {
-            if (!info.preIntercept(evt)) {
+            if (!info.preIntercept(*evt)) {
                 allowProcessing = false;
             }
         }
@@ -58,7 +58,7 @@ void Ichor::DependencyManager::processEvent(Event *evt) {
 
     if (interceptorsForEvent != end(_eventInterceptors)) {
         for (EventInterceptInfo const &info: interceptorsForEvent->second) {
-            if (!info.preIntercept(evt)) {
+            if (!info.preIntercept(*evt)) {
                 allowProcessing = false;
             }
         }
@@ -143,7 +143,7 @@ void Ichor::DependencyManager::processEvent(Event *evt) {
                 }
 
                 for (DependencyTrackerInfo &info: trackers->second) {
-                    info.trackFunc(depReqEvt);
+                    info.trackFunc(*depReqEvt);
                 }
             }
                 break;
@@ -156,7 +156,7 @@ void Ichor::DependencyManager::processEvent(Event *evt) {
                 }
 
                 for (DependencyTrackerInfo &info: trackers->second) {
-                    info.trackFunc(depUndoReqEvt);
+                    info.trackFunc(*depUndoReqEvt);
                 }
             }
                 break;
@@ -198,7 +198,7 @@ void Ichor::DependencyManager::processEvent(Event *evt) {
 
                 if (toStopServiceIt == end(_services)) {
                     ICHOR_LOG_ERROR(_logger, "Couldn't stop service {}, missing from known services", stopServiceEvt->serviceId);
-                    handleEventError(stopServiceEvt);
+                    handleEventError(*stopServiceEvt);
                     break;
                 }
 
@@ -208,13 +208,13 @@ void Ichor::DependencyManager::processEvent(Event *evt) {
                     if (toStopService->getServiceState() != ServiceState::INSTALLED && ret != StartBehaviour::SUCCEEDED) {
 //                                ICHOR_LOG_ERROR(_logger, "Couldn't stop service {}: {} but all dependencies stopped", stopServiceEvt->serviceId,
 //                                          toStopService->implementationName());
-                        handleEventError(stopServiceEvt);
+                        handleEventError(*stopServiceEvt);
                         if (ret == StartBehaviour::FAILED_AND_RETRY) {
                             pushEventInternal<StopServiceEvent>(stopServiceEvt->originatingService, INTERNAL_DEPENDENCY_EVENT_PRIORITY,
                                                                 stopServiceEvt->serviceId, true);
                         }
                     } else {
-                        handleEventCompletion(stopServiceEvt);
+                        handleEventCompletion(*stopServiceEvt);
                     }
                 } else {
                     pushEventInternal<DependencyOfflineEvent>(toStopService->serviceId(), INTERNAL_DEPENDENCY_EVENT_PRIORITY);
@@ -231,7 +231,7 @@ void Ichor::DependencyManager::processEvent(Event *evt) {
 
                 if (toRemoveServiceIt == end(_services)) {
                     ICHOR_LOG_ERROR(_logger, "Couldn't remove service {}, missing from known services", removeServiceEvt->serviceId);
-                    handleEventError(removeServiceEvt);
+                    handleEventError(*removeServiceEvt);
                     break;
                 }
 
@@ -241,14 +241,14 @@ void Ichor::DependencyManager::processEvent(Event *evt) {
                     if (toRemoveService->getServiceState() == ServiceState::ACTIVE && ret != StartBehaviour::SUCCEEDED) {
                         ICHOR_LOG_ERROR(_logger, "Couldn't remove service {}: {} but all dependencies stopped", removeServiceEvt->serviceId,
                                         toRemoveService->implementationName());
-                        handleEventError(removeServiceEvt);
+                        handleEventError(*removeServiceEvt);
                         if (ret == StartBehaviour::FAILED_AND_RETRY) {
                             pushEventInternal<RemoveServiceEvent>(removeServiceEvt->originatingService, INTERNAL_DEPENDENCY_EVENT_PRIORITY,
                                                                   removeServiceEvt->serviceId,
                                                                   true);
                         }
                     } else {
-                        handleEventCompletion(removeServiceEvt);
+                        handleEventCompletion(*removeServiceEvt);
                         _services.erase(toRemoveServiceIt);
                     }
                 } else {
@@ -267,21 +267,21 @@ void Ichor::DependencyManager::processEvent(Event *evt) {
 
                 if (toStartServiceIt == end(_services)) {
                     ICHOR_LOG_ERROR(_logger, "Couldn't start service {}, missing from known services", startServiceEvt->serviceId);
-                    handleEventError(startServiceEvt);
+                    handleEventError(*startServiceEvt);
                     break;
                 }
 
                 auto &toStartService = toStartServiceIt->second;
                 if (toStartService->getServiceState() == ServiceState::ACTIVE) {
-                    handleEventCompletion(startServiceEvt);
+                    handleEventCompletion(*startServiceEvt);
                 } else {
                     auto ret = toStartService->start();
                     if (ret == StartBehaviour::SUCCEEDED) {
                         pushEventInternal<DependencyOnlineEvent>(toStartService->serviceId(), INTERNAL_DEPENDENCY_EVENT_PRIORITY);
-                        handleEventCompletion(startServiceEvt);
+                        handleEventCompletion(*startServiceEvt);
                     } else {
                         INTERNAL_DEBUG("Couldn't start service {}: {}", startServiceEvt->serviceId, toStartService->implementationName());
-                        handleEventError(startServiceEvt);
+                        handleEventError(*startServiceEvt);
                         if (ret == StartBehaviour::FAILED_AND_RETRY) {
                             pushEventInternal<StartServiceEvent>(startServiceEvt->originatingService, INTERNAL_DEPENDENCY_EVENT_PRIORITY,
                                                                  startServiceEvt->serviceId);
@@ -292,7 +292,7 @@ void Ichor::DependencyManager::processEvent(Event *evt) {
                 break;
             case DoWorkEvent::TYPE: {
                 INTERNAL_DEBUG("DoWorkEvent");
-                handleEventCompletion(evt);
+                handleEventCompletion(*evt);
             }
                 break;
             case RemoveCompletionCallbacksEvent::TYPE: {
@@ -389,7 +389,7 @@ void Ichor::DependencyManager::processEvent(Event *evt) {
                 break;
             default: {
                 INTERNAL_DEBUG("broadcastEvent");
-                handlerAmount = broadcastEvent(evt);
+                handlerAmount = broadcastEvent(*evt);
             }
                 break;
         }
@@ -397,13 +397,13 @@ void Ichor::DependencyManager::processEvent(Event *evt) {
 
     if (interceptorsForAllEvents != end(_eventInterceptors)) {
         for (EventInterceptInfo const &info: interceptorsForAllEvents->second) {
-            info.postIntercept(evt, allowProcessing && handlerAmount > 0);
+            info.postIntercept(*evt, allowProcessing && handlerAmount > 0);
         }
     }
 
     if (interceptorsForEvent != end(_eventInterceptors)) {
         for (EventInterceptInfo const &info: interceptorsForEvent->second) {
-            info.postIntercept(evt, allowProcessing && handlerAmount > 0);
+            info.postIntercept(*evt, allowProcessing && handlerAmount > 0);
         }
     }
 
@@ -424,17 +424,17 @@ void Ichor::DependencyManager::stop() {
     Ichor::Detail::_local_dm = nullptr;
 }
 
-void Ichor::DependencyManager::handleEventCompletion(const Ichor::Event *const evt) {
-    if(evt->originatingService == 0) {
+void Ichor::DependencyManager::handleEventCompletion(Ichor::Event const &evt) {
+    if(evt.originatingService == 0) {
         return;
     }
 
-    auto service = _services.find(evt->originatingService);
+    auto service = _services.find(evt.originatingService);
     if(service == end(_services) || (service->second->getServiceState() != ServiceState::ACTIVE && service->second->getServiceState() != ServiceState::INJECTING)) {
         return;
     }
 
-    auto callback = _completionCallbacks.find(CallbackKey{evt->originatingService, evt->type});
+    auto callback = _completionCallbacks.find(CallbackKey{evt.originatingService, evt.type});
     if(callback == end(_completionCallbacks)) {
         return;
     }
@@ -442,8 +442,8 @@ void Ichor::DependencyManager::handleEventCompletion(const Ichor::Event *const e
     callback->second(evt);
 }
 
-uint32_t Ichor::DependencyManager::broadcastEvent(const Ichor::Event *const evt) {
-    auto registeredListeners = _eventCallbacks.find(evt->type);
+uint32_t Ichor::DependencyManager::broadcastEvent(Ichor::Event const &evt) {
+    auto registeredListeners = _eventCallbacks.find(evt.type);
     if(registeredListeners == end(_eventCallbacks)) {
         return 0;
     }
@@ -454,7 +454,7 @@ uint32_t Ichor::DependencyManager::broadcastEvent(const Ichor::Event *const evt)
             continue;
         }
 
-        if(callbackInfo.filterServiceId.has_value() && *callbackInfo.filterServiceId != evt->originatingService) {
+        if(callbackInfo.filterServiceId.has_value() && *callbackInfo.filterServiceId != evt.originatingService) {
             continue;
         }
 
@@ -471,7 +471,7 @@ uint32_t Ichor::DependencyManager::broadcastEvent(const Ichor::Event *const evt)
             }
 
             if(!it.get_finished() && it.get_promise_state() != state::value_not_ready_consumer_active) {
-                pushEventInternal<ContinuableEvent>(evt->originatingService, evt->priority, it.get_promise_id());
+                pushEventInternal<ContinuableEvent>(evt.originatingService, evt.priority, it.get_promise_id());
             }
 
             if(it.get_finished()) {
@@ -492,7 +492,8 @@ void Ichor::DependencyManager::runForOrQueueEmpty(std::chrono::milliseconds ms) 
         if(now != start && _started && _eventQueue->empty()) {
             return;
         }
-        std::this_thread::sleep_for(1ms);
+        // value of 1ms may lead to races depending on processor speed
+        std::this_thread::sleep_for(5ms);
         now = std::chrono::steady_clock::now();
     }
 }

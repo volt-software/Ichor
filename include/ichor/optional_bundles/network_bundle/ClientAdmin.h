@@ -26,39 +26,39 @@ namespace Ichor {
             return StartBehaviour::SUCCEEDED;
         }
 
-        void handleDependencyRequest(NetworkInterfaceType*, DependencyRequestEvent const * const evt) {
-            if(!evt->properties.has_value()) {
+        void handleDependencyRequest(NetworkInterfaceType*, DependencyRequestEvent const &evt) {
+            if(!evt.properties.has_value()) {
                 throw std::runtime_error("Missing properties");
             }
 
-            if(!evt->properties.value()->contains("Address")) {
+            if(!evt.properties.value()->contains("Address")) {
                 throw std::runtime_error("Missing address");
             }
 
-            if(!evt->properties.value()->contains("Port")) {
+            if(!evt.properties.value()->contains("Port")) {
                 throw std::runtime_error("Missing port");
             }
 
-            if(!_connections.contains(evt->originatingService)) {
-                auto newProps = *evt->properties.value();
-                newProps.emplace("Filter", Ichor::make_any<Filter>(ServiceIdFilterEntry{evt->originatingService}));
+            if(!_connections.contains(evt.originatingService)) {
+                auto newProps = *evt.properties.value();
+                newProps.emplace("Filter", Ichor::make_any<Filter>(ServiceIdFilterEntry{evt.originatingService}));
 
-                _connections.emplace(evt->originatingService, Service<ClientAdmin<NetworkType, NetworkInterfaceType>>::getManager()->template createServiceManager<NetworkType, NetworkInterfaceType>(std::move(newProps)));
+                _connections.emplace(evt.originatingService, Service<ClientAdmin<NetworkType, NetworkInterfaceType>>::getManager()->template createServiceManager<NetworkType, NetworkInterfaceType>(std::move(newProps)));
             }
         }
 
-        void handleDependencyUndoRequest(NetworkInterfaceType*, DependencyUndoRequestEvent const * const evt) {
-            auto connection = _connections.find(evt->originatingService);
+        void handleDependencyUndoRequest(NetworkInterfaceType*, DependencyUndoRequestEvent const &evt) {
+            auto connection = _connections.find(evt.originatingService);
 
             if(connection != end(_connections)) {
-                Service<ClientAdmin<NetworkType, NetworkInterfaceType>>::getManager()->template pushEvent<RemoveServiceEvent>(evt->originatingService, connection->second->getServiceId());
+                Service<ClientAdmin<NetworkType, NetworkInterfaceType>>::getManager()->template pushEvent<RemoveServiceEvent>(evt.originatingService, connection->second->getServiceId());
                 _connections.erase(connection);
             }
         }
 
-        AsyncGenerator<bool> handleEvent(UnrecoverableErrorEvent const * const evt) {
+        AsyncGenerator<bool> handleEvent(UnrecoverableErrorEvent const &evt) {
             for(auto &[key, service] : _connections) {
-                if(service->getServiceId() != evt->originatingService) {
+                if(service->getServiceId() != evt.originatingService) {
                     continue;
                 }
 
@@ -68,8 +68,8 @@ namespace Ichor {
                 if(port != cend(service->getProperties())) {
                     full_address += ":" + std::to_string(Ichor::any_cast<uint16_t>(port->second));
                 }
-                std::string_view implNameRequestor = Service<ClientAdmin<NetworkType, NetworkInterfaceType>>::getManager()->getImplementationNameFor(evt->originatingService).value();
-                ICHOR_LOG_ERROR(_logger, "Couldn't start connection of type {} on address {} for service of type {} with id {} because \"{}\"", typeNameHash<NetworkType>(), full_address, implNameRequestor, service->getServiceId(), evt->error);
+                std::string_view implNameRequestor = Service<ClientAdmin<NetworkType, NetworkInterfaceType>>::getManager()->getImplementationNameFor(evt.originatingService).value();
+                ICHOR_LOG_ERROR(_logger, "Couldn't start connection of type {} on address {} for service of type {} with id {} because \"{}\"", typeNameHash<NetworkType>(), full_address, implNameRequestor, service->getServiceId(), evt.error);
 
                 break;
             }

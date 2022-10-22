@@ -22,12 +22,12 @@ public:
         quitTimerManager->setChronoInterval(15s);
         bogusTimerManager->setChronoInterval(100ms);
 
-        quitTimerManager->setCallback([this](TimerEvent const * const) -> AsyncGenerator<bool> {
+        quitTimerManager->setCallback([this](TimerEvent const &) -> AsyncGenerator<bool> {
             getManager()->pushEvent<QuitEvent>(getServiceId(), INTERNAL_EVENT_PRIORITY + 1);
             co_return (bool)PreventOthersHandling;
         });
 
-        bogusTimerManager->setCallback([this](TimerEvent const * const) -> AsyncGenerator<bool> {
+        bogusTimerManager->setCallback([this](TimerEvent const &) -> AsyncGenerator<bool> {
             std::this_thread::sleep_for(std::chrono::milliseconds(_dist(_mt)));
             co_return (bool)PreventOthersHandling;
         });

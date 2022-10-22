@@ -54,7 +54,7 @@ public:
         ICHOR_LOG_INFO(_logger, "Removed serializationAdmin");
     }
 
-    void handleCompletion(DoWorkEvent const * const evt) {
+    void handleCompletion(DoWorkEvent const &evt) {
         ICHOR_LOG_ERROR(_logger, "handling DoWorkEvent");
         TestMsg msg{20, "five hundred"};
         auto start = std::chrono::steady_clock::now();
@@ -70,7 +70,7 @@ public:
         getManager()->pushEvent<QuitEvent>(getServiceId());
     }
 
-    void handleError(DoWorkEvent const * const evt) {
+    void handleError(DoWorkEvent const &evt) {
         ICHOR_LOG_ERROR(_logger, "Error handling DoWorkEvent");
     }
 

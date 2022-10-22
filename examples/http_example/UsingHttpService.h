@@ -78,21 +78,21 @@ public:
         ICHOR_LOG_INFO(_logger, "Removed IHttpConnectionService");
     }
 
-    AsyncGenerator<bool> handleEvent(HttpResponseEvent const * const evt) {
-        if(evt->response.status == HttpStatus::ok) {
-            auto msg = _serializationAdmin->deserialize<TestMsg>(evt->response.body);
+    AsyncGenerator<bool> handleEvent(HttpResponseEvent const &evt) {
+        if(evt.response.status == HttpStatus::ok) {
+            auto msg = _serializationAdmin->deserialize<TestMsg>(evt.response.body);
             ICHOR_LOG_INFO(_logger, "Received TestMsg id {} val {}", msg->id, msg->val);
         } else {
-            ICHOR_LOG_ERROR(_logger, "Received status {}", (int)evt->response.status);
+            ICHOR_LOG_ERROR(_logger, "Received status {}", (int)evt.response.status);
         }
         getManager()->pushEvent<QuitEvent>(getServiceId());
 
         co_return (bool)PreventOthersHandling;
     }
 
-    AsyncGenerator<bool> handleEvent(FailedSendMessageEvent const * const evt) {
-        ICHOR_LOG_INFO(_logger, "Failed to send message id {}, retrying", evt->msgId);
-        _connectionService->sendAsync(HttpMethod::post, "/test", {}, std::move(evt->data));
+    AsyncGenerator<bool> handleEvent(FailedSendMessageEvent const &evt) {
+        ICHOR_LOG_INFO(_logger, "Failed to send message id {}, retrying", evt.msgId);
+        _connectionService->sendAsync(HttpMethod::post, "/test", {}, std::move(evt.data));
 
         co_return (bool)PreventOthersHandling;
     }

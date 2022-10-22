@@ -69,7 +69,7 @@ public:
         getManager()->pushPrioritisedEvent<ExecuteTaskEvent>(getServiceId(), 10);
     }
 
-    AsyncGenerator<bool> handleEvent(ExecuteTaskEvent const * const evt) {
+    AsyncGenerator<bool> handleEvent(ExecuteTaskEvent const &evt) {
         auto start = std::chrono::high_resolution_clock::now();
         run_gsm_enc_bench(); // run gsm_bench from TACLe bench
         auto endtime = std::chrono::high_resolution_clock::now();
