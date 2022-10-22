@@ -30,6 +30,7 @@ namespace Ichor {
 
     private:
         void registerEventFd();
+        void registerTimer();
 
         mutable Ichor::RealtimeReadWriteMutex _eventQueueMutex{};
         sd_event* _eventQueue{};
@@ -37,7 +38,8 @@ namespace Ichor {
         std::atomic<bool> _initializedSdevent{false};
         int _eventfd{};
         std::thread::id _threadId{};
-        sd_event_source *_eventfd_source{nullptr};
+        sd_event_source *_eventfdSource{nullptr};
+        sd_event_source *_timerSource{nullptr};
     };
 }
 

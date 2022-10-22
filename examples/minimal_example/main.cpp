@@ -16,9 +16,9 @@ public:
     SigIntService() = default;
 
     StartBehaviour start() final {
-        // Setup a timer that fires every 10 milliseconds and tell that dependency manager that we're interested in the events that the timer fires.
+        // Setup a timer that fires every 100 milliseconds and tell that dependency manager that we're interested in the events that the timer fires.
         auto timer = getManager()->createServiceManager<Timer, ITimer>();
-        timer->setChronoInterval(10ms);
+        timer->setChronoInterval(100ms);
 
         timer->setCallback([this](TimerEvent const * const evt) -> AsyncGenerator<bool> {
             // If sigint has been fired, send a quit to the event loop.
@@ -50,7 +50,7 @@ int main() {
     logger->setLogLevel(LogLevel::DEBUG);
     dm.createServiceManager<SigIntService>();
     // Start manager, consumes current thread.
-    queue->start(CaptureSigInt);
+    queue->start(DoNotCaptureSigInt);
 
     return 0;
 }
