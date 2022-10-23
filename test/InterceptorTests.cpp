@@ -27,8 +27,8 @@ TEST_CASE("Interceptor Tests") {
 
         dm.runForOrQueueEmpty();
 
-        dm.pushEvent<RunFunctionEvent>(0, [](DependencyManager* mng) -> AsyncGenerator<bool> {
-            auto services = mng->getStartedServices<IInterceptorService>();
+        dm.pushEvent<RunFunctionEvent>(0, [](DependencyManager& mng) -> AsyncGenerator<bool> {
+            auto services = mng.getStartedServices<IInterceptorService>();
 
             REQUIRE(services.size() == 1);
 
@@ -42,7 +42,7 @@ TEST_CASE("Interceptor Tests") {
             REQUIRE(un.find(TestEvent::TYPE) != end(pre));
             REQUIRE(un.find(TestEvent::TYPE)->second == 1);
 
-            mng->pushEvent<QuitEvent>(0);
+            mng.pushEvent<QuitEvent>(0);
 
             co_return (bool)PreventOthersHandling;
         });
@@ -69,8 +69,8 @@ TEST_CASE("Interceptor Tests") {
 
         dm.runForOrQueueEmpty();
 
-        dm.pushEvent<RunFunctionEvent>(0, [](DependencyManager* mng) -> AsyncGenerator<bool> {
-            auto services = mng->getStartedServices<IInterceptorService>();
+        dm.pushEvent<RunFunctionEvent>(0, [](DependencyManager& mng) -> AsyncGenerator<bool> {
+            auto services = mng.getStartedServices<IInterceptorService>();
 
             REQUIRE(services.size() == 1);
 
@@ -84,7 +84,7 @@ TEST_CASE("Interceptor Tests") {
             REQUIRE(post.find(TestEvent::TYPE)->second == 1);
             REQUIRE(un.find(TestEvent::TYPE) == end(pre));
 
-            mng->pushEvent<QuitEvent>(0);
+            mng.pushEvent<QuitEvent>(0);
 
             co_return (bool)PreventOthersHandling;
         });
@@ -111,9 +111,9 @@ TEST_CASE("Interceptor Tests") {
 
         dm.runForOrQueueEmpty();
 
-        dm.pushEvent<RunFunctionEvent>(0, [](DependencyManager* mng) -> AsyncGenerator<bool> {
-            auto interceptorServices = mng->getStartedServices<IInterceptorService>();
-            auto eventHandlerServices = mng->getStartedServices<IEventHandlerService>();
+        dm.pushEvent<RunFunctionEvent>(0, [](DependencyManager& mng) -> AsyncGenerator<bool> {
+            auto interceptorServices = mng.getStartedServices<IInterceptorService>();
+            auto eventHandlerServices = mng.getStartedServices<IEventHandlerService>();
 
             REQUIRE(interceptorServices.size() == 1);
             REQUIRE(eventHandlerServices.size() == 1);
@@ -130,7 +130,7 @@ TEST_CASE("Interceptor Tests") {
 
             REQUIRE(eventHandlerServices[0]->getHandledEvents().empty());
 
-            mng->pushEvent<QuitEvent>(0);
+            mng.pushEvent<QuitEvent>(0);
 
             co_return (bool)PreventOthersHandling;
         });
@@ -154,8 +154,8 @@ TEST_CASE("Interceptor Tests") {
 
         dm.runForOrQueueEmpty();
 
-        dm.pushEvent<RunFunctionEvent>(0, [](DependencyManager* mng) -> AsyncGenerator<bool> {
-            auto services = mng->getStartedServices<IInterceptorService>();
+        dm.pushEvent<RunFunctionEvent>(0, [](DependencyManager& mng) -> AsyncGenerator<bool> {
+            auto services = mng.getStartedServices<IInterceptorService>();
 
             REQUIRE(services.size() == 1);
 
@@ -174,7 +174,7 @@ TEST_CASE("Interceptor Tests") {
             REQUIRE(un.find(DependencyOnlineEvent::TYPE) == end(pre));
             REQUIRE(un.find(RunFunctionEvent::TYPE) == end(pre));
 
-            mng->pushEvent<QuitEvent>(0);
+            mng.pushEvent<QuitEvent>(0);
 
             co_return (bool)PreventOthersHandling;
         });
@@ -199,8 +199,8 @@ TEST_CASE("Interceptor Tests") {
 
         dm.runForOrQueueEmpty();
 
-        dm.pushEvent<RunFunctionEvent>(0, [](DependencyManager* mng) -> AsyncGenerator<bool> {
-            auto services = mng->getStartedServices<IInterceptorService>();
+        dm.pushEvent<RunFunctionEvent>(0, [](DependencyManager& mng) -> AsyncGenerator<bool> {
+            auto services = mng.getStartedServices<IInterceptorService>();
 
             REQUIRE(services.size() == 2);
 
@@ -221,7 +221,7 @@ TEST_CASE("Interceptor Tests") {
                 REQUIRE(un.find(RunFunctionEvent::TYPE) == end(pre));
             }
 
-            mng->pushEvent<QuitEvent>(0);
+            mng.pushEvent<QuitEvent>(0);
 
             co_return (bool)PreventOthersHandling;
         });

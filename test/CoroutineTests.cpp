@@ -38,8 +38,8 @@ TEST_CASE("CoroutineTests") {
 
         dm.runForOrQueueEmpty();
 
-        dm.pushEvent<RunFunctionEvent>(0, [](DependencyManager* mng) -> AsyncGenerator<bool>{
-            auto services = mng->getStartedServices<IGeneratorService>();
+        dm.pushEvent<RunFunctionEvent>(0, [](DependencyManager& mng) -> AsyncGenerator<bool>{
+            auto services = mng.getStartedServices<IGeneratorService>();
 
             REQUIRE(services.size() == 1);
 
@@ -58,7 +58,7 @@ TEST_CASE("CoroutineTests") {
             REQUIRE(*it.await_resume() == 2);
             INTERNAL_DEBUG("resume3");
 
-            mng->pushEvent<QuitEvent>(0);
+            mng.pushEvent<QuitEvent>(0);
             INTERNAL_DEBUG("quit");
 
             co_return (bool)PreventOthersHandling;
@@ -89,8 +89,8 @@ TEST_CASE("CoroutineTests") {
 
         dm.runForOrQueueEmpty();
 
-        dm.pushEvent<RunFunctionEvent>(0, [](DependencyManager* mng) -> AsyncGenerator<bool> {
-            auto services = mng->getStartedServices<IAwaitService>();
+        dm.pushEvent<RunFunctionEvent>(0, [](DependencyManager& mng) -> AsyncGenerator<bool> {
+            auto services = mng.getStartedServices<IAwaitService>();
 
             REQUIRE(services.size() == 1);
 
@@ -104,7 +104,7 @@ TEST_CASE("CoroutineTests") {
 
             INTERNAL_DEBUG("quit");
 
-            mng->pushEvent<QuitEvent>(0);
+            mng.pushEvent<QuitEvent>(0);
 
             INTERNAL_DEBUG("after2");
 
@@ -113,7 +113,7 @@ TEST_CASE("CoroutineTests") {
 
         std::this_thread::sleep_for(5ms);
 
-        dm.pushEvent<RunFunctionEvent>(0, [](DependencyManager* mng) -> AsyncGenerator<bool> {
+        dm.pushEvent<RunFunctionEvent>(0, [](DependencyManager& mng) -> AsyncGenerator<bool> {
             INTERNAL_DEBUG("set");
             _evt->set();
             co_return (bool)PreventOthersHandling;
@@ -148,7 +148,7 @@ TEST_CASE("CoroutineTests") {
 
         std::this_thread::sleep_for(5ms);
 
-        dm.pushEvent<RunFunctionEvent>(0, [](DependencyManager* mng) -> AsyncGenerator<bool> {
+        dm.pushEvent<RunFunctionEvent>(0, [](DependencyManager& mng) -> AsyncGenerator<bool> {
             INTERNAL_DEBUG("set");
             _evt->set();
             co_return (bool)PreventOthersHandling;

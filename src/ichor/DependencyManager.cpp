@@ -367,7 +367,7 @@ void Ichor::DependencyManager::processEvent(Event *evt) {
             case RunFunctionEvent::TYPE: {
                 INTERNAL_DEBUG("RunFunctionEvent");
                 auto *runFunctionEvt = static_cast<RunFunctionEvent *>(evt);
-                auto gen = runFunctionEvt->fun(this);
+                auto gen = runFunctionEvt->fun(*this);
                 auto it = gen.begin();
                 INTERNAL_DEBUG("state: {} {} {} {} {}", gen.done(), it.get_finished(), it.get_op_state(), it.get_promise_state(), it.get_promise_id());
 

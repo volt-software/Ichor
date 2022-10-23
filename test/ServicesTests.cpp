@@ -52,28 +52,28 @@ TEST_CASE("ServicesTests") {
 
         dm.runForOrQueueEmpty();
 
-        dm.pushEvent<RunFunctionEvent>(0, [secondUselessServiceId](DependencyManager* mng) -> AsyncGenerator<bool> {
-            auto services = mng->getStartedServices<ICountService>();
+        dm.pushEvent<RunFunctionEvent>(0, [secondUselessServiceId](DependencyManager& mng) -> AsyncGenerator<bool> {
+            auto services = mng.getStartedServices<ICountService>();
 
             REQUIRE(services.size() == 1);
             REQUIRE(services[0]->isRunning());
             REQUIRE(services[0]->getSvcCount() == 2);
 
-            mng->pushEvent<StopServiceEvent>(0, secondUselessServiceId);
+            mng.pushEvent<StopServiceEvent>(0, secondUselessServiceId);
 
             co_return (bool)PreventOthersHandling;
         });
 
         dm.runForOrQueueEmpty();
 
-        dm.pushEvent<RunFunctionEvent>(0, [](DependencyManager* mng) -> AsyncGenerator<bool> {
-            auto services = mng->getStartedServices<ICountService>();
+        dm.pushEvent<RunFunctionEvent>(0, [](DependencyManager& mng) -> AsyncGenerator<bool> {
+            auto services = mng.getStartedServices<ICountService>();
 
             REQUIRE(services.size() == 1);
             REQUIRE(services[0]->isRunning());
             REQUIRE(services[0]->getSvcCount() == 1);
 
-            mng->pushEvent<QuitEvent>(0);
+            mng.pushEvent<QuitEvent>(0);
 
             co_return (bool)PreventOthersHandling;
         });
@@ -104,8 +104,8 @@ TEST_CASE("ServicesTests") {
 
         dm.runForOrQueueEmpty();
 
-        dm.pushEvent<RunFunctionEvent>(0, [](DependencyManager* mng) -> AsyncGenerator<bool> {
-            auto services = mng->getStartedServices<ICountService>();
+        dm.pushEvent<RunFunctionEvent>(0, [](DependencyManager& mng) -> AsyncGenerator<bool> {
+            auto services = mng.getStartedServices<ICountService>();
 
             REQUIRE(services.size() == 1);
 
@@ -120,14 +120,14 @@ TEST_CASE("ServicesTests") {
 
         dm.runForOrQueueEmpty();
 
-        dm.pushEvent<RunFunctionEvent>(0, [](DependencyManager* mng) -> AsyncGenerator<bool> {
-            auto services = mng->getStartedServices<ICountService>();
+        dm.pushEvent<RunFunctionEvent>(0, [](DependencyManager& mng) -> AsyncGenerator<bool> {
+            auto services = mng.getStartedServices<ICountService>();
 
             REQUIRE(services.size() == 1);
 
             REQUIRE(services[0]->getSvcCount() == 1);
 
-            mng->pushEvent<QuitEvent>(0);
+            mng.pushEvent<QuitEvent>(0);
 
             co_return (bool)PreventOthersHandling;
         });
@@ -175,20 +175,20 @@ TEST_CASE("ServicesTests") {
 
         dm.runForOrQueueEmpty();
 
-        dm.pushEvent<RunFunctionEvent>(0, [&](DependencyManager* mng) -> AsyncGenerator<bool> {
+        dm.pushEvent<RunFunctionEvent>(0, [&](DependencyManager& mng) -> AsyncGenerator<bool> {
             REQUIRE(svc->starts == 2);
 
-            mng->pushEvent<StopServiceEvent>(0, svc->getServiceId());
+            mng.pushEvent<StopServiceEvent>(0, svc->getServiceId());
 
             co_return (bool)PreventOthersHandling;
         });
 
         dm.runForOrQueueEmpty();
 
-        dm.pushEvent<RunFunctionEvent>(0, [&](DependencyManager* mng) -> AsyncGenerator<bool> {
+        dm.pushEvent<RunFunctionEvent>(0, [&](DependencyManager& mng) -> AsyncGenerator<bool> {
             REQUIRE(svc->stops == 2);
 
-            mng->pushEvent<QuitEvent>(0);
+            mng.pushEvent<QuitEvent>(0);
 
             co_return (bool)PreventOthersHandling;
         });
