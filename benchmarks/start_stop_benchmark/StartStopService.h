@@ -23,26 +23,26 @@ public:
     ~StartStopService() final = default;
     StartBehaviour start() final {
         if(startCount == 0) {
-            _startServiceRegistration = getManager()->registerEventCompletionCallbacks<StartServiceEvent>(this);
-            _stopServiceRegistration = getManager()->registerEventCompletionCallbacks<StopServiceEvent>(this);
+            _startServiceRegistration = getManager().registerEventCompletionCallbacks<StartServiceEvent>(this);
+            _stopServiceRegistration = getManager().registerEventCompletionCallbacks<StopServiceEvent>(this);
 
             _start = std::chrono::steady_clock::now();
-            getManager()->pushEvent<StopServiceEvent>(getServiceId(), _testServiceId);
+            getManager().pushEvent<StopServiceEvent>(getServiceId(), _testServiceId);
         } else if(startCount < START_STOP_COUNT) {
-            getManager()->pushEvent<StopServiceEvent>(getServiceId(), _testServiceId);
+            getManager().pushEvent<StopServiceEvent>(getServiceId(), _testServiceId);
         } else {
             auto end = std::chrono::steady_clock::now();
-            getManager()->pushEvent<QuitEvent>(getServiceId());
+            getManager().pushEvent<QuitEvent>(getServiceId());
             _startServiceRegistration.reset();
             _stopServiceRegistration.reset();
-            ICHOR_LOG_INFO(_logger, "dm {} finished in {:L} µs", getManager()->getId(), std::chrono::duration_cast<std::chrono::microseconds>(end-_start).count());
+            ICHOR_LOG_INFO(_logger, "dm {} finished in {:L} µs", getManager().getId(), std::chrono::duration_cast<std::chrono::microseconds>(end-_start).count());
         }
         startCount++;
         return Ichor::StartBehaviour::SUCCEEDED;
     }
 
     StartBehaviour stop() final {
-        getManager()->pushEvent<StartServiceEvent>(getServiceId(), _testServiceId);
+        getManager().pushEvent<StartServiceEvent>(getServiceId(), _testServiceId);
         return Ichor::StartBehaviour::SUCCEEDED;
     }
 

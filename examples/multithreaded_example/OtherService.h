@@ -16,7 +16,7 @@ public:
     ~OtherService() final = default;
     StartBehaviour start() final {
         ICHOR_LOG_INFO(_logger, "OtherService started with dependency");
-        _customEventHandler = getManager()->registerEventHandler<CustomEvent>(this);
+        _customEventHandler = getManager().registerEventHandler<CustomEvent>(this);
         return StartBehaviour::SUCCEEDED;
     }
 
@@ -38,8 +38,8 @@ public:
 
     AsyncGenerator<bool> handleEvent(CustomEvent const &evt) {
         ICHOR_LOG_INFO(_logger, "Handling custom event");
-        getManager()->pushEvent<QuitEvent>(getServiceId());
-        getManager()->getCommunicationChannel()->broadcastEvent<QuitEvent>(getManager(), getServiceId(), INTERNAL_EVENT_PRIORITY+1);
+        getManager().pushEvent<QuitEvent>(getServiceId());
+        getManager().getCommunicationChannel()->broadcastEvent<QuitEvent>(getManager(), getServiceId(), INTERNAL_EVENT_PRIORITY+1);
 
         // we dealt with it, don't let other services handle this event
         co_return (bool)PreventOthersHandling;

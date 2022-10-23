@@ -25,8 +25,8 @@ public:
 
     StartBehaviour start() final {
         ICHOR_LOG_INFO(_logger, "UsingHttpService started");
-        _dataEventRegistration = getManager()->registerEventHandler<HttpResponseEvent>(this);
-        _failureEventRegistration = getManager()->registerEventHandler<FailedSendMessageEvent>(this);
+        _dataEventRegistration = getManager().registerEventHandler<HttpResponseEvent>(this);
+        _failureEventRegistration = getManager().registerEventHandler<FailedSendMessageEvent>(this);
         _connectionService->sendAsync(HttpMethod::post, "/test", {}, _serializationAdmin->serialize(TestMsg{11, "hello"}));
         return StartBehaviour::SUCCEEDED;
     }
@@ -85,7 +85,7 @@ public:
         } else {
             ICHOR_LOG_ERROR(_logger, "Received status {}", (int)evt.response.status);
         }
-        getManager()->pushEvent<QuitEvent>(getServiceId());
+        getManager().pushEvent<QuitEvent>(getServiceId());
 
         co_return (bool)PreventOthersHandling;
     }

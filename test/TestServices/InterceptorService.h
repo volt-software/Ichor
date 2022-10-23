@@ -19,7 +19,7 @@ struct InterceptorService final : public IInterceptorService, public Service<Int
     InterceptorService() = default;
 
     StartBehaviour start() final {
-        _interceptor = this->getManager()->template registerEventInterceptor<InterceptorT>(this);
+        _interceptor = this->getManager().template registerEventInterceptor<InterceptorT>(this);
 
         return StartBehaviour::SUCCEEDED;
     }

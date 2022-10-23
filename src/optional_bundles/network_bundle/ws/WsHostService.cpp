@@ -34,11 +34,11 @@ Ichor::StartBehaviour Ichor::WsHostService::start() {
     }
 
     if(!getProperties().contains("Port") || !getProperties().contains("Address")) {
-        getManager()->pushPrioritisedEvent<UnrecoverableErrorEvent>(getServiceId(), _priority, 0, "Missing port or address when starting WsHostService");
+        getManager().pushPrioritisedEvent<UnrecoverableErrorEvent>(getServiceId(), _priority, 0, "Missing port or address when starting WsHostService");
         return Ichor::StartBehaviour::FAILED_DO_NOT_RETRY;
     }
 
-    _eventRegistration = getManager()->registerEventHandler<NewWsConnectionEvent>(this, getServiceId());
+    _eventRegistration = getManager().registerEventHandler<NewWsConnectionEvent>(this, getServiceId());
 
     auto address = net::ip::make_address(Ichor::any_cast<std::string&>(getProperties().operator[]("Address")));
     auto port = Ichor::any_cast<uint16_t>(getProperties().operator[]("Port"));
@@ -48,10 +48,10 @@ Ichor::StartBehaviour Ichor::WsHostService::start() {
             listen(tcp::endpoint{address, port}, std::move(yield));
         } catch (std::runtime_error &e) {
             ICHOR_LOG_ERROR(_logger, "caught std runtime_error {}", e.what());
-            getManager()->pushEvent<StopServiceEvent>(getServiceId(), getServiceId());
+            getManager().pushEvent<StopServiceEvent>(getServiceId(), getServiceId());
         } catch (...) {
             ICHOR_LOG_ERROR(_logger, "caught unknown error");
-            getManager()->pushEvent<StopServiceEvent>(getServiceId(), getServiceId());
+            getManager().pushEvent<StopServiceEvent>(getServiceId(), getServiceId());
         }
     });
 
@@ -95,7 +95,7 @@ void Ichor::WsHostService::removeDependencyInstance(IHttpContextService *logger,
 }
 
 Ichor::AsyncGenerator<bool> Ichor::WsHostService::handleEvent(Ichor::NewWsConnectionEvent const &evt) {
-    auto connection = getManager()->createServiceManager<WsConnectionService, IConnectionService>(Ichor::make_properties(
+    auto connection = getManager().createServiceManager<WsConnectionService, IConnectionService>(Ichor::make_properties(
         IchorProperty{"WsHostServiceId", Ichor::make_any<uint64_t>(getServiceId())},
         IchorProperty{"Socket", Ichor::make_any<decltype(evt._socket)>(std::move(evt._socket))}
         ));
@@ -114,7 +114,7 @@ uint64_t Ichor::WsHostService::getPriority() {
 
 void Ichor::WsHostService::fail(beast::error_code ec, const char *what) {
     ICHOR_LOG_ERROR(_logger, "Boost.BEAST fail: {}, {}", what, ec.message());
-    getManager()->pushPrioritisedEvent<StopServiceEvent>(getServiceId(), _priority, getServiceId());
+    getManager().pushPrioritisedEvent<StopServiceEvent>(getServiceId(), _priority, getServiceId());
 }
 
 void Ichor::WsHostService::listen(tcp::endpoint endpoint, net::yield_context yield)
@@ -154,7 +154,7 @@ void Ichor::WsHostService::listen(tcp::endpoint endpoint, net::yield_context yie
             continue;
         }
 
-        getManager()->pushPrioritisedEvent<NewWsConnectionEvent>(getServiceId(), _priority, CopyIsMoveWorkaround(std::move(socket)));
+        getManager().pushPrioritisedEvent<NewWsConnectionEvent>(getServiceId(), _priority, CopyIsMoveWorkaround(std::move(socket)));
     }
 }
 

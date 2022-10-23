@@ -30,7 +30,7 @@ public:
         }
         auto end = std::chrono::steady_clock::now();
         ICHOR_LOG_INFO(_logger, "finished in {:L} µs", std::chrono::duration_cast<std::chrono::microseconds>(end-start).count());
-        getManager()->pushEvent<QuitEvent>(getServiceId(), INTERNAL_EVENT_PRIORITY+1);
+        getManager().pushEvent<QuitEvent>(getServiceId(), INTERNAL_EVENT_PRIORITY+1);
         return Ichor::StartBehaviour::SUCCEEDED;
     }
 

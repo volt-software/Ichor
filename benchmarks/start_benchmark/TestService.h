@@ -22,7 +22,7 @@ public:
     StartBehaviour start() final {
         auto iteration = Ichor::any_cast<uint64_t>(getProperties().operator[]("Iteration"));
         if(iteration == SERVICES_COUNT - 1) {
-            getManager()->pushEvent<QuitEvent>(getServiceId());
+            getManager().pushEvent<QuitEvent>(getServiceId());
         }
         return Ichor::StartBehaviour::SUCCEEDED;
     }

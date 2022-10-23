@@ -19,8 +19,8 @@ public:
 
     StartBehaviour start() final {
         ICHOR_LOG_INFO(_logger, "TestService started with dependency");
-        _doWorkRegistration = getManager()->registerEventCompletionCallbacks<DoWorkEvent>(this);
-        getManager()->pushEvent<DoWorkEvent>(getServiceId());
+        _doWorkRegistration = getManager().registerEventCompletionCallbacks<DoWorkEvent>(this);
+        getManager().pushEvent<DoWorkEvent>(getServiceId());
         return StartBehaviour::SUCCEEDED;
     }
 
@@ -58,7 +58,7 @@ public:
         } else {
             ICHOR_LOG_ERROR(_logger, "serde correct!");
         }
-        getManager()->pushEvent<QuitEvent>(getServiceId());
+        getManager().pushEvent<QuitEvent>(getServiceId());
     }
 
     void handleError(DoWorkEvent const &evt) {

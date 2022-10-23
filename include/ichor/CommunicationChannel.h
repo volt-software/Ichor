@@ -24,10 +24,10 @@ namespace Ichor {
 
         template <typename EventT, typename... Args>
         requires Derived<EventT, Event>
-        void broadcastEvent(DependencyManager *originatingManager, Args&&... args) {
+        void broadcastEvent(DependencyManager &originatingManager, Args&&... args) {
             std::shared_lock l(_mutex);
             for(auto &[key, manager] : _managers) {
-                if(manager->getId() == originatingManager->getId()) {
+                if(manager->getId() == originatingManager.getId()) {
                     continue;
                 }
 

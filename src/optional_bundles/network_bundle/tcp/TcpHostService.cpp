@@ -18,11 +18,11 @@ Ichor::StartBehaviour Ichor::TcpHostService::start() {
         _priority = Ichor::any_cast<uint64_t>(getProperties().operator[]("Priority"));
     }
 
-    _newSocketEventHandlerRegistration = getManager()->registerEventHandler<NewSocketEvent>(this);
+    _newSocketEventHandlerRegistration = getManager().registerEventHandler<NewSocketEvent>(this);
 
     _socket = ::socket(AF_INET, SOCK_STREAM, 0);
     if(_socket == -1) {
-        getManager()->pushEvent<UnrecoverableErrorEvent>(getServiceId(), 0, "Couldn't create socket: errno = " + std::to_string(errno));
+        getManager().pushEvent<UnrecoverableErrorEvent>(getServiceId(), 0, "Couldn't create socket: errno = " + std::to_string(errno));
         return Ichor::StartBehaviour::FAILED_DO_NOT_RETRY;
     }
 
@@ -40,12 +40,12 @@ Ichor::StartBehaviour Ichor::TcpHostService::start() {
     if(addressProp != cend(getProperties())) {
         auto hostname = Ichor::any_cast<std::string>(addressProp->second);
         if(::inet_aton(hostname.c_str(), &address.sin_addr) != 0) {
-            getManager()->pushEvent<RecoverableErrorEvent>(getServiceId(), 1, "inet_aton: errno = " + std::to_string(errno));
+            getManager().pushEvent<RecoverableErrorEvent>(getServiceId(), 1, "inet_aton: errno = " + std::to_string(errno));
             auto *hp = ::gethostbyname(hostname.c_str());
             if (hp == nullptr) {
                 _socket = -1;
                 close(_socket);
-                getManager()->pushEvent<UnrecoverableErrorEvent>(getServiceId(), 2, "gethostbyname: errno = " + std::to_string(errno));
+                getManager().pushEvent<UnrecoverableErrorEvent>(getServiceId(), 2, "gethostbyname: errno = " + std::to_string(errno));
                 return Ichor::StartBehaviour::FAILED_DO_NOT_RETRY;
             }
 
@@ -61,18 +61,18 @@ Ichor::StartBehaviour Ichor::TcpHostService::start() {
     if(_bindFd == -1) {
         _socket = -1;
         close(_socket);
-        getManager()->pushEvent<UnrecoverableErrorEvent>(getServiceId(), 3, "Couldn't bind socket: errno = " + std::to_string(errno));
+        getManager().pushEvent<UnrecoverableErrorEvent>(getServiceId(), 3, "Couldn't bind socket: errno = " + std::to_string(errno));
         return Ichor::StartBehaviour::FAILED_DO_NOT_RETRY;
     }
 
     if(::listen(_socket, 10) != 0) {
         _socket = -1;
         close(_socket);
-        getManager()->pushEvent<UnrecoverableErrorEvent>(getServiceId(), 4, "Couldn't listen on socket: errno = " + std::to_string(errno));
+        getManager().pushEvent<UnrecoverableErrorEvent>(getServiceId(), 4, "Couldn't listen on socket: errno = " + std::to_string(errno));
         return Ichor::StartBehaviour::FAILED_DO_NOT_RETRY;
     }
 
-    _timerManager = getManager()->createServiceManager<Timer, ITimer>();
+    _timerManager = getManager().createServiceManager<Timer, ITimer>();
     _timerManager->setChronoInterval(20ms);
     _timerManager->setCallback([this](TimerEvent const &evt) -> AsyncGenerator<bool> {
         sockaddr_in client_addr{};
@@ -82,17 +82,17 @@ Ichor::StartBehaviour Ichor::TcpHostService::start() {
         if (newConnection == -1) {
             ICHOR_LOG_ERROR(_logger, "New connection but accept() returned {} errno {}", newConnection, errno);
             if(errno == EINVAL) {
-                getManager()->pushEvent<UnrecoverableErrorEvent>(getServiceId(), 4, "Accept() generated error. errno = " + std::to_string(errno));
+                getManager().pushEvent<UnrecoverableErrorEvent>(getServiceId(), 4, "Accept() generated error. errno = " + std::to_string(errno));
                 co_return (bool)PreventOthersHandling;
             }
-            getManager()->pushEvent<RecoverableErrorEvent>(getServiceId(), 4, "Accept() generated error. errno = " + std::to_string(errno));
+            getManager().pushEvent<RecoverableErrorEvent>(getServiceId(), 4, "Accept() generated error. errno = " + std::to_string(errno));
             co_return (bool)PreventOthersHandling;
         }
 
         auto *ip = ::inet_ntoa(client_addr.sin_addr);
         ICHOR_LOG_TRACE(_logger, "new connection from {}:{}", ip, ::ntohs(client_addr.sin_port));
 
-        getManager()->pushPrioritisedEvent<NewSocketEvent>(getServiceId(), _priority, newConnection);
+        getManager().pushPrioritisedEvent<NewSocketEvent>(getServiceId(), _priority, newConnection);
         co_return (bool)PreventOthersHandling;
     });
     _timerManager->startTimer();
@@ -135,7 +135,7 @@ Ichor::AsyncGenerator<bool> Ichor::TcpHostService::handleEvent(NewSocketEvent co
     Properties props{};
     props.emplace("Priority", Ichor::make_any<uint64_t>(_priority));
     props.emplace("Socket", Ichor::make_any<int>(evt.socket));
-    _connections.emplace_back(getManager()->template createServiceManager<TcpConnectionService, IConnectionService>(std::move(props)));
+    _connections.emplace_back(getManager().template createServiceManager<TcpConnectionService, IConnectionService>(std::move(props)));
 
     co_return (bool)AllowOthersHandling;
 }

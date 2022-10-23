@@ -34,7 +34,7 @@ struct EventAwaitService final : public Service<EventAwaitService> {
     EventAwaitService() = default;
     ~EventAwaitService() final = default;
     StartBehaviour start() final {
-        _handler = this->getManager()->template registerEventHandler<AwaitEvent>(this);
+        _handler = this->getManager().template registerEventHandler<AwaitEvent>(this);
 
         return StartBehaviour::SUCCEEDED;
     }
@@ -49,7 +49,7 @@ struct EventAwaitService final : public Service<EventAwaitService> {
         co_await *_evt;
         co_yield false;
 
-        this->getManager()->pushEvent<QuitEvent>(getServiceId());
+        this->getManager().pushEvent<QuitEvent>(getServiceId());
 
         co_return (bool)AllowOthersHandling;
     }

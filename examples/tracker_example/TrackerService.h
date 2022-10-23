@@ -32,7 +32,7 @@ public:
     ~TrackerService() final = default;
     StartBehaviour start() final {
         ICHOR_LOG_INFO(_logger, "TrackerService started");
-        _trackerRegistration = getManager()->registerDependencyTracker<IRuntimeCreatedService>(this);
+        _trackerRegistration = getManager().registerDependencyTracker<IRuntimeCreatedService>(this);
         return StartBehaviour::SUCCEEDED;
     }
 
@@ -73,7 +73,7 @@ public:
             auto newProps = *evt.properties.value();
             newProps.emplace("Filter", Ichor::make_any<Filter>(Filter{ScopeFilterEntry{scope}}));
 
-            _scopedRuntimeServices.emplace(scope, getManager()->createServiceManager<RuntimeCreatedService, IRuntimeCreatedService>(std::move(newProps)));
+            _scopedRuntimeServices.emplace(scope, getManager().createServiceManager<RuntimeCreatedService, IRuntimeCreatedService>(std::move(newProps)));
         }
     }
 
@@ -91,7 +91,7 @@ public:
 
         auto service = _scopedRuntimeServices.find(scope);
         if(service != end(_scopedRuntimeServices)) {
-            getManager()->pushEvent<RemoveServiceEvent>(evt.originatingService, service->second->getServiceId());
+            getManager().pushEvent<RemoveServiceEvent>(evt.originatingService, service->second->getServiceId());
             _scopedRuntimeServices.erase(scope);
         }
     }

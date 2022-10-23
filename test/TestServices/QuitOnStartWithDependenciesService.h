@@ -10,7 +10,7 @@ struct QuitOnStartWithDependenciesService final : public Service<QuitOnStartWith
     }
     ~QuitOnStartWithDependenciesService() final = default;
     StartBehaviour start() final {
-        getManager()->pushEvent<QuitEvent>(getServiceId());
+        getManager().pushEvent<QuitEvent>(getServiceId());
         return StartBehaviour::SUCCEEDED;
     }
 

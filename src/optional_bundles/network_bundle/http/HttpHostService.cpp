@@ -15,7 +15,7 @@ Ichor::StartBehaviour Ichor::HttpHostService::start() {
     }
 
     if(!getProperties().contains("Port") || !getProperties().contains("Address")) {
-        getManager()->pushPrioritisedEvent<UnrecoverableErrorEvent>(getServiceId(), _priority, 0, "Missing port or address when starting HttpHostService");
+        getManager().pushPrioritisedEvent<UnrecoverableErrorEvent>(getServiceId(), _priority, 0, "Missing port or address when starting HttpHostService");
         return Ichor::StartBehaviour::FAILED_DO_NOT_RETRY;
     }
 
@@ -84,7 +84,7 @@ uint64_t Ichor::HttpHostService::getPriority() {
 void Ichor::HttpHostService::fail(beast::error_code ec, const char *what) {
     // TODO this logging is done in another thread as removeDependencyInstance is
     ICHOR_LOG_ERROR(_logger, "Boost.BEAST fail: {}, {}", what, ec.message());
-    getManager()->pushPrioritisedEvent<StopServiceEvent>(getServiceId(), _priority.load(std::memory_order_acquire), getServiceId());
+    getManager().pushPrioritisedEvent<StopServiceEvent>(getServiceId(), _priority.load(std::memory_order_acquire), getServiceId());
 }
 
 void Ichor::HttpHostService::listen(tcp::endpoint endpoint, net::yield_context yield)

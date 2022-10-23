@@ -90,7 +90,7 @@ struct CheckMixService final : public ICountService, public Service<CheckMixServ
         }
 
         if(svcCount == 12) {
-            getManager()->pushEvent<QuitEvent>(0);
+            getManager().pushEvent<QuitEvent>(0);
         }
     }
 
@@ -116,7 +116,7 @@ struct CheckMixService final : public ICountService, public Service<CheckMixServ
         }
 
         if(svcCount == 12) {
-            getManager()->pushEvent<QuitEvent>(0);
+            getManager().pushEvent<QuitEvent>(0);
         }
     }
 

@@ -11,14 +11,14 @@ Ichor::StartBehaviour Ichor::EventStatisticsService::start() {
         _averagingIntervalMs = 500;
     }
 
-    auto timerManager = getManager()->createServiceManager<Timer, ITimer>();
+    auto timerManager = getManager().createServiceManager<Timer, ITimer>();
     timerManager->setChronoInterval(std::chrono::milliseconds(_averagingIntervalMs));
 
     timerManager->setCallback([this](TimerEvent const &evt) -> AsyncGenerator<bool> {
         return handleEvent(evt);
     });
 
-    _interceptorRegistration = getManager()->registerEventInterceptor<Event>(this);
+    _interceptorRegistration = getManager().registerEventInterceptor<Event>(this);
     timerManager->startTimer();
 
     return Ichor::StartBehaviour::SUCCEEDED;
@@ -45,7 +45,7 @@ Ichor::StartBehaviour Ichor::EventStatisticsService::stop() {
             auto avg = std::accumulate(begin(statistics), end(statistics), 0L, [](int64_t i, const AveragedStatisticEntry &entry){ return i + entry.avgProcessingTimeRequired; }) / statistics.size();
             auto occ = std::accumulate(begin(statistics), end(statistics), 0L, [](int64_t i, const AveragedStatisticEntry &entry){ return i + entry.occurances; });
 
-            ICHOR_LOG_ERROR(getManager()->getLogger(), "Dm {:L} Event type {} occurred {:L} times, min/max/avg processing: {:L}/{:L}/{:L} ns", getManager()->getId(), _eventTypeToNameMapper[key], occ, min, max, avg);
+            ICHOR_LOG_ERROR(getManager().getLogger(), "Dm {:L} Event type {} occurred {:L} times, min/max/avg processing: {:L}/{:L}/{:L} ns", getManager().getId(), _eventTypeToNameMapper[key], occ, min, max, avg);
         }
     }
 

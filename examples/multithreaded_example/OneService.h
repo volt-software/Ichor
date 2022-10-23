@@ -19,7 +19,7 @@ public:
         ICHOR_LOG_INFO(_logger, "OneService started with dependency");
         // this component sometimes starts up before the other thread has started the OtherService
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
-        getManager()->getCommunicationChannel()->broadcastEvent<CustomEvent>(getManager(), getServiceId());
+        getManager().getCommunicationChannel()->broadcastEvent<CustomEvent>(getManager(), getServiceId());
         return StartBehaviour::SUCCEEDED;
     }
 

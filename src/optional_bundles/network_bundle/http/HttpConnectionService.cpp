@@ -19,7 +19,7 @@ Ichor::StartBehaviour Ichor::HttpConnectionService::start() {
         }
 
         if (!getProperties().contains("Port") || !getProperties().contains("Address")) {
-            getManager()->pushPrioritisedEvent<UnrecoverableErrorEvent>(getServiceId(), _priority, 0,
+            getManager().pushPrioritisedEvent<UnrecoverableErrorEvent>(getServiceId(), _priority, 0,
                                                                         "Missing port or address when starting HttpConnectionService");
             return Ichor::StartBehaviour::FAILED_DO_NOT_RETRY;
         }
@@ -112,7 +112,7 @@ uint64_t Ichor::HttpConnectionService::sendAsync(Ichor::HttpMethod method, std::
 
         http::write(*_httpStream, req, ec);
         if (ec) {
-            getManager()->pushEvent<FailedSendMessageEvent>(getServiceId(), std::move(req.body()), msgId);
+            getManager().pushEvent<FailedSendMessageEvent>(getServiceId(), std::move(req.body()), msgId);
             return fail(ec, "HttpConnectionService::sendAsync write");
         }
 
@@ -140,7 +140,7 @@ uint64_t Ichor::HttpConnectionService::sendAsync(Ichor::HttpMethod method, std::
         std::vector<uint8_t> body{};
         body.insert(body.end(), std::make_move_iterator(res.body().begin()), std::make_move_iterator(res.body().end()));
 
-        getManager()->pushPrioritisedEvent<HttpResponseEvent>(getServiceId(), getPriority(), msgId, HttpResponse{static_cast<HttpStatus>(res.result()), std::move(body), std::move(resHeaders)});
+        getManager().pushPrioritisedEvent<HttpResponseEvent>(getServiceId(), getPriority(), msgId, HttpResponse{static_cast<HttpStatus>(res.result()), std::move(body), std::move(resHeaders)});
     });
 
     return msgId;
@@ -166,7 +166,7 @@ bool Ichor::HttpConnectionService::close() {
 
 void Ichor::HttpConnectionService::fail(beast::error_code ec, const char *what) {
     ICHOR_LOG_ERROR(_logger, "Boost.BEAST fail: {}, {}", what, ec.message());
-    getManager()->pushPrioritisedEvent<StopServiceEvent>(getServiceId(), _priority.load(std::memory_order_acquire), getServiceId());
+    getManager().pushPrioritisedEvent<StopServiceEvent>(getServiceId(), _priority.load(std::memory_order_acquire), getServiceId());
 }
 
 void Ichor::HttpConnectionService::connect(tcp::endpoint endpoint, net::yield_context yield) {

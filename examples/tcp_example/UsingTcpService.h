@@ -23,8 +23,8 @@ public:
 
     StartBehaviour start() final {
         ICHOR_LOG_INFO(_logger, "UsingTcpService started");
-        _dataEventRegistration = getManager()->registerEventHandler<NetworkDataEvent>(this);
-        _failureEventRegistration = getManager()->registerEventHandler<FailedSendMessageEvent>(this);
+        _dataEventRegistration = getManager().registerEventHandler<NetworkDataEvent>(this);
+        _failureEventRegistration = getManager().registerEventHandler<FailedSendMessageEvent>(this);
         _connectionService->sendAsync(_serializationAdmin->serialize(TestMsg{11, "hello"}));
         return StartBehaviour::SUCCEEDED;
     }
@@ -66,7 +66,7 @@ public:
     AsyncGenerator<bool> handleEvent(NetworkDataEvent const &evt) {
         auto msg = _serializationAdmin->deserialize<TestMsg>(evt.getData());
         ICHOR_LOG_INFO(_logger, "Received TestMsg id {} val {}", msg->id, msg->val);
-        getManager()->pushEvent<QuitEvent>(getServiceId());
+        getManager().pushEvent<QuitEvent>(getServiceId());
 
         co_return (bool)PreventOthersHandling;
     }

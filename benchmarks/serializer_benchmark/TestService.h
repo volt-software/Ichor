@@ -25,8 +25,8 @@ public:
     ~TestService() final = default;
     StartBehaviour start() final {
         ICHOR_LOG_INFO(_logger, "TestService started with dependency");
-        _doWorkRegistration = getManager()->registerEventCompletionCallbacks<DoWorkEvent>(this);
-        getManager()->pushEvent<DoWorkEvent>(getServiceId());
+        _doWorkRegistration = getManager().registerEventCompletionCallbacks<DoWorkEvent>(this);
+        getManager().pushEvent<DoWorkEvent>(getServiceId());
         return Ichor::StartBehaviour::SUCCEEDED;
     }
 
@@ -67,7 +67,7 @@ public:
         }
         auto end = std::chrono::steady_clock::now();
         ICHOR_LOG_INFO(_logger, "finished in {:L} µs", std::chrono::duration_cast<std::chrono::microseconds>(end-start).count());
-        getManager()->pushEvent<QuitEvent>(getServiceId());
+        getManager().pushEvent<QuitEvent>(getServiceId());
     }
 
     void handleError(DoWorkEvent const &evt) {

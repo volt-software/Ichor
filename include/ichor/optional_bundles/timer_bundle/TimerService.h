@@ -19,7 +19,7 @@ namespace Ichor {
         }
 
         StartBehaviour start() final {
-            _timerEventRegistration = getManager()->registerEventHandler<TimerEvent>(this, getServiceId());
+            _timerEventRegistration = getManager().registerEventHandler<TimerEvent>(this, getServiceId());
             return Ichor::StartBehaviour::SUCCEEDED;
         }
 
@@ -85,7 +85,7 @@ namespace Ichor {
                     std::this_thread::sleep_for(std::chrono::nanoseconds(_intervalNanosec.load(std::memory_order_acquire)/10));
                     now = std::chrono::steady_clock::now();
                 }
-                getManager()->pushPrioritisedEvent<TimerEvent>(getServiceId(), _priority.load(std::memory_order_acquire));
+                getManager().pushPrioritisedEvent<TimerEvent>(getServiceId(), _priority.load(std::memory_order_acquire));
 
                 next += std::chrono::nanoseconds(_intervalNanosec.load(std::memory_order_acquire));
             }

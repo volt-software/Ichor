@@ -19,7 +19,7 @@ public:
         ICHOR_LOG_INFO(_logger, "TestService started with dependency");
         _started = true;
         if(_injectionCount == 2) {
-            getManager()->pushEvent<QuitEvent>(getServiceId());
+            getManager().pushEvent<QuitEvent>(getServiceId());
         }
         return StartBehaviour::SUCCEEDED;
     }
@@ -44,7 +44,7 @@ public:
 
         _injectionCount++;
         if(_started && _injectionCount == 2) {
-            getManager()->pushEvent<QuitEvent>(getServiceId());
+            getManager().pushEvent<QuitEvent>(getServiceId());
         }
     }
 

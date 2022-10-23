@@ -17,13 +17,13 @@ public:
 
     StartBehaviour start() final {
         ICHOR_LOG_INFO(_logger, "UsingStatisticsService started");
-        auto quitTimerManager = getManager()->createServiceManager<Timer, ITimer>();
-        auto bogusTimerManager = getManager()->createServiceManager<Timer, ITimer>();
+        auto quitTimerManager = getManager().createServiceManager<Timer, ITimer>();
+        auto bogusTimerManager = getManager().createServiceManager<Timer, ITimer>();
         quitTimerManager->setChronoInterval(15s);
         bogusTimerManager->setChronoInterval(100ms);
 
         quitTimerManager->setCallback([this](TimerEvent const &) -> AsyncGenerator<bool> {
-            getManager()->pushEvent<QuitEvent>(getServiceId(), INTERNAL_EVENT_PRIORITY + 1);
+            getManager().pushEvent<QuitEvent>(getServiceId(), INTERNAL_EVENT_PRIORITY + 1);
             co_return (bool)PreventOthersHandling;
         });
 

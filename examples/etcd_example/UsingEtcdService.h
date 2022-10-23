@@ -30,7 +30,7 @@ public:
             ICHOR_LOG_ERROR(_logger, "Error putting key/value into etcd");
         }
 
-        getManager()->pushEvent<QuitEvent>(getServiceId(), INTERNAL_EVENT_PRIORITY+1);
+        getManager().pushEvent<QuitEvent>(getServiceId(), INTERNAL_EVENT_PRIORITY+1);
         return StartBehaviour::SUCCEEDED;
     }
 

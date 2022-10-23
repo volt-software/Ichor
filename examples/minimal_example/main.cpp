@@ -17,14 +17,14 @@ public:
 
     StartBehaviour start() final {
         // Setup a timer that fires every 100 milliseconds and tell that dependency manager that we're interested in the events that the timer fires.
-        auto timer = getManager()->createServiceManager<Timer, ITimer>();
+        auto timer = getManager().createServiceManager<Timer, ITimer>();
         timer->setChronoInterval(100ms);
 
         timer->setCallback([this](TimerEvent const &evt) -> AsyncGenerator<bool> {
             // If sigint has been fired, send a quit to the event loop.
             // This can't be done from within the handler itself, as the mutex surrounding pushEvent might already be locked, resulting in a deadlock!
             if(quit) {
-                getManager()->pushEvent<QuitEvent>(getServiceId());
+                getManager().pushEvent<QuitEvent>(getServiceId());
             }
             co_return (bool)PreventOthersHandling;
         });

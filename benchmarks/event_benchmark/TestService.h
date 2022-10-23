@@ -31,10 +31,10 @@ public:
     StartBehaviour start() final {
         auto start = std::chrono::steady_clock::now();
         for(uint32_t i = 0; i < EVENT_COUNT; i++) {
-            getManager()->pushEvent<UselessEvent>(getServiceId());
+            getManager().pushEvent<UselessEvent>(getServiceId());
         }
         auto end = std::chrono::steady_clock::now();
-        getManager()->pushEvent<QuitEvent>(getServiceId());
+        getManager().pushEvent<QuitEvent>(getServiceId());
         ICHOR_LOG_WARN(_logger, "Inserted events in {:L} µs", std::chrono::duration_cast<std::chrono::microseconds>(end-start).count());
         return Ichor::StartBehaviour::SUCCEEDED;
     }

@@ -17,7 +17,7 @@ struct EventHandlerService final : public IEventHandlerService, public Service<E
     EventHandlerService() = default;
 
     StartBehaviour start() final {
-        _handler = this->getManager()->template registerEventHandler<EventT>(this);
+        _handler = this->getManager().template registerEventHandler<EventT>(this);
 
         return StartBehaviour::SUCCEEDED;
     }

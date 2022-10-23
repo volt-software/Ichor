@@ -18,7 +18,7 @@ namespace Ichor {
         ~LoggerAdmin() final = default;
 
         StartBehaviour start() final {
-            _loggerTrackerRegistration = Service<LoggerAdmin<LogT>>::getManager()->template registerDependencyTracker<ILogger>(this);
+            _loggerTrackerRegistration = Service<LoggerAdmin<LogT>>::getManager().template registerDependencyTracker<ILogger>(this);
             return StartBehaviour::SUCCEEDED;
         }
 
@@ -38,7 +38,7 @@ namespace Ichor {
         void handleDependencyRequest(ILogger *, DependencyRequestEvent const &evt) {
             auto logger = _loggers.find(evt.originatingService);
 
-//            ICHOR_LOG_ERROR(_logger, "dep req {} dm {}", evt.originatingService, getManager()->getId());
+//            ICHOR_LOG_ERROR(_logger, "dep req {} dm {}", evt.originatingService, getManager().getId());
 
             auto requestedLevel = LogLevel::INFO;
             if(evt.properties.has_value()) {
@@ -52,7 +52,7 @@ namespace Ichor {
                     props.template emplace("LogLevel",        Ichor::make_any<LogLevel>(requestedLevel));
                     props.template emplace("TargetServiceId", Ichor::make_any<uint64_t>(evt.originatingService));
                     props.template emplace("Filter",          Ichor::make_any<Filter>(Filter{ServiceIdFilterEntry{evt.originatingService}}));
-                    _loggers.emplace(evt.originatingService, Service<LoggerAdmin<LogT>>::getManager()->template createServiceManager<LogT, ILogger>(std::move(props)));
+                    _loggers.emplace(evt.originatingService, Service<LoggerAdmin<LogT>>::getManager().template createServiceManager<LogT, ILogger>(std::move(props)));
             } else {
                 ICHOR_LOG_TRACE(_logger, "svcid {} already has logger", evt.originatingService);
             }

@@ -17,7 +17,7 @@ public:
     ~TestService() final = default;
     StartBehaviour start() final {
         ICHOR_LOG_INFO(_logger, "TestService started with dependency");
-        getManager()->pushEvent<QuitEvent>(getServiceId());
+        getManager().pushEvent<QuitEvent>(getServiceId());
         return StartBehaviour::SUCCEEDED;
     }
 

@@ -116,7 +116,7 @@ uint64_t Ichor::WsConnectionService::sendAsync(std::vector<uint8_t> &&msg) {
             _mutex.lock();
             ICHOR_LOG_ERROR(_logger, "couldn't send msg for service {}: {}", getServiceId(), ec.message());
             _mutex.unlock();
-            getManager()->pushEvent<FailedSendMessageEvent>(getServiceId(), std::move(msg), id);
+            getManager().pushEvent<FailedSendMessageEvent>(getServiceId(), std::move(msg), id);
         }
     });
 
@@ -135,7 +135,7 @@ void Ichor::WsConnectionService::fail(beast::error_code ec, const char *what) {
     _mutex.lock();
     ICHOR_LOG_ERROR(_logger, "Boost.BEAST fail: {}, {}", what, ec.message());
     _mutex.unlock();
-    getManager()->pushEvent<StopServiceEvent>(getServiceId(), getServiceId());
+    getManager().pushEvent<StopServiceEvent>(getServiceId(), getServiceId());
 }
 
 void Ichor::WsConnectionService::accept(net::yield_context yield) {
@@ -181,7 +181,7 @@ void Ichor::WsConnectionService::accept(net::yield_context yield) {
     _connected = true;
     _connecting = false;
 
-    getManager()->pushEvent<StartServiceEvent>(getServiceId(), getServiceId());
+    getManager().pushEvent<StartServiceEvent>(getServiceId(), getServiceId());
 
     read(yield);
 }
@@ -228,7 +228,7 @@ void Ichor::WsConnectionService::connect(net::yield_context yield) {
     _connected = true;
     _connecting = false;
 
-    getManager()->pushEvent<StartServiceEvent>(getServiceId(), getServiceId());
+    getManager().pushEvent<StartServiceEvent>(getServiceId(), getServiceId());
 
     // Turn off the timeout on the tcp_stream, because
     // the websocket stream has its own timeout system.
@@ -280,7 +280,7 @@ void Ichor::WsConnectionService::read(net::yield_context &yield) {
 
         if(_ws->got_text()) {
             auto data = buffer.data();
-            getManager()->pushPrioritisedEvent<NetworkDataEvent>(getServiceId(), _priority,  std::vector<uint8_t>{static_cast<char*>(data.data()), static_cast<char*>(data.data()) + data.size()});
+            getManager().pushPrioritisedEvent<NetworkDataEvent>(getServiceId(), _priority,  std::vector<uint8_t>{static_cast<char*>(data.data()), static_cast<char*>(data.data()) + data.size()});
         }
     }
 

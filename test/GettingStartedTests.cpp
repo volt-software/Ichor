@@ -37,9 +37,9 @@ struct IMyTimerService {};
 struct MyTimerService final : public IMyTimerService, public Ichor::Service<MyTimerService> {
     MyTimerService() = default;
     StartBehaviour start() final {
-        auto timer = getManager()->createServiceManager<Ichor::Timer, Ichor::ITimer>();
+        auto timer = getManager().createServiceManager<Ichor::Timer, Ichor::ITimer>();
         timer->setChronoInterval(std::chrono::seconds(1));
-        _timerEventRegistration = getManager()->registerEventHandler<Ichor::TimerEvent>(this, timer->getServiceId());
+        _timerEventRegistration = getManager().registerEventHandler<Ichor::TimerEvent>(this, timer->getServiceId());
         timer->startTimer();
         return StartBehaviour::SUCCEEDED;
     }
@@ -74,7 +74,7 @@ struct ServiceWithoutInterface final : public Ichor::Service<ServiceWithoutInter
 
 struct MyInterceptorService final : public Ichor::Service<MyInterceptorService> {
     StartBehaviour start() final {
-        _interceptor = this->getManager()->template registerEventInterceptor<Ichor::TimerEvent>(this); // Can change TimerEvent to just Event if you want to intercept *all* events
+        _interceptor = this->getManager().template registerEventInterceptor<Ichor::TimerEvent>(this); // Can change TimerEvent to just Event if you want to intercept *all* events
         return StartBehaviour::SUCCEEDED;
     }
 

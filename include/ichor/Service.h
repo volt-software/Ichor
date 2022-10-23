@@ -26,7 +26,7 @@ namespace Ichor {
 
         [[nodiscard]] virtual uint64_t getServicePriority() const noexcept = 0;
 
-        [[nodiscard]] virtual DependencyManager* getManager() const noexcept = 0;
+        [[nodiscard]] virtual DependencyManager& getManager() const noexcept = 0;
 
         [[nodiscard]] virtual Properties& getProperties() noexcept = 0;
         [[nodiscard]] virtual const Properties& getProperties() const noexcept = 0;
@@ -68,8 +68,8 @@ namespace Ichor {
             return _servicePriority;
         }
 
-        [[nodiscard]] DependencyManager* getManager() const noexcept final {
-            return _manager;
+        [[nodiscard]] DependencyManager& getManager() const noexcept final {
+            return *_manager;
         }
 
         [[nodiscard]] Properties& getProperties() noexcept final {

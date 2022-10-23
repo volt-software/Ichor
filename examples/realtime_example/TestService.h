@@ -30,7 +30,7 @@ public:
     StartBehaviour start() final {
         ICHOR_LOG_INFO(_logger, "TestService started with dependency");
         _started = true;
-        _eventHandlerRegistration = getManager()->registerEventHandler<ExecuteTaskEvent>(this);
+        _eventHandlerRegistration = getManager().registerEventHandler<ExecuteTaskEvent>(this);
         if(_injectionCount == 2) {
             enqueueWorkload();
         }
@@ -66,7 +66,7 @@ public:
     }
 
     void enqueueWorkload() {
-        getManager()->pushPrioritisedEvent<ExecuteTaskEvent>(getServiceId(), 10);
+        getManager().pushPrioritisedEvent<ExecuteTaskEvent>(getServiceId(), 10);
     }
 
     AsyncGenerator<bool> handleEvent(ExecuteTaskEvent const &evt) {
@@ -80,7 +80,7 @@ public:
         }
 
         if(_finishedWorkloads == ITERATIONS) {
-            getManager()->pushEvent<QuitEvent>(getServiceId());
+            getManager().pushEvent<QuitEvent>(getServiceId());
 
             long min = *std::min_element(begin(_executionTimes), end(_executionTimes), [](long &a, long &b){return a < b; });
             long max = *std::max_element(begin(_executionTimes), end(_executionTimes), [](long &a, long &b){return a < b; });
@@ -88,7 +88,7 @@ public:
             
             fmt::print("duration min/max/avg: {:L}/{:L}/{:L} µs\n", min, max, avg);
         } else {
-            getManager()->pushPrioritisedEvent<ExecuteTaskEvent>(getServiceId(), 10);
+            getManager().pushPrioritisedEvent<ExecuteTaskEvent>(getServiceId(), 10);
         }
 
         co_return (bool)PreventOthersHandling;
