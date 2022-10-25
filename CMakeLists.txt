@@ -173,15 +173,16 @@ find_package (Threads)
 
 set(FMT_SOURCES ${ICHOR_EXTERNAL_DIR}/fmt/src/format.cc ${ICHOR_EXTERNAL_DIR}/fmt/src/os.cc)
 file(GLOB_RECURSE ICHOR_FRAMEWORK_SOURCES ${ICHOR_TOP_DIR}/src/ichor/*.cpp)
-file(GLOB_RECURSE ICHOR_OPTIONAL_ETCD_SOURCES ${ICHOR_TOP_DIR}/src/optional_bundles/etcd_bundle/*.cpp ${ICHOR_TOP_DIR}/src/optional_bundles/etcd_bundle/*.cc)
-file(GLOB_RECURSE ICHOR_LOGGING_SOURCES ${ICHOR_TOP_DIR}/src/optional_bundles/logging_bundle/*.cpp)
-file(GLOB_RECURSE ICHOR_NETWORK_SOURCES ${ICHOR_TOP_DIR}/src/optional_bundles/network_bundle/*.cpp)
-file(GLOB_RECURSE ICHOR_METRICS_SOURCES ${ICHOR_TOP_DIR}/src/optional_bundles/metrics_bundle/*.cpp)
-file(GLOB_RECURSE ICHOR_SERIALIZATION_SOURCES ${ICHOR_TOP_DIR}/src/optional_bundles/serialization_bundle/*.cpp)
+file(GLOB_RECURSE ICHOR_OPTIONAL_ETCD_SOURCES ${ICHOR_TOP_DIR}/src/services/etcd/*.cpp ${ICHOR_TOP_DIR}/src/services/etcd/*.cc)
+file(GLOB_RECURSE ICHOR_LOGGING_SOURCES ${ICHOR_TOP_DIR}/src/services/logging/*.cpp)
+file(GLOB_RECURSE ICHOR_NETWORK_SOURCES ${ICHOR_TOP_DIR}/src/services/network/*.cpp)
+file(GLOB_RECURSE ICHOR_METRICS_SOURCES ${ICHOR_TOP_DIR}/src/services/metrics/*.cpp)
+file(GLOB_RECURSE ICHOR_SERIALIZATION_SOURCES ${ICHOR_TOP_DIR}/src/services/serialization/*.cpp)
+file(GLOB_RECURSE ICHOR_TIMER_SOURCES ${ICHOR_TOP_DIR}/src/services/timer/*.cpp)
 
 file(GLOB SPDLOG_SOURCES ${ICHOR_EXTERNAL_DIR}/spdlog/src/*.cpp)
 
-add_library(ichor ${FMT_SOURCES} ${ICHOR_FRAMEWORK_SOURCES} ${ICHOR_LOGGING_SOURCES} ${ICHOR_NETWORK_SOURCES} ${ICHOR_METRICS_SOURCES} ${ICHOR_SERIALIZATION_SOURCES})
+add_library(ichor ${FMT_SOURCES} ${ICHOR_FRAMEWORK_SOURCES} ${ICHOR_LOGGING_SOURCES} ${ICHOR_NETWORK_SOURCES} ${ICHOR_METRICS_SOURCES} ${ICHOR_SERIALIZATION_SOURCES} ${ICHOR_TIMER_SOURCES})
 
 # Gcc 12.1 and 12.2 have bugs that prevent compilation with Werror at -O2 and higher:
 # https://gcc.gnu.org/bugzilla/show_bug.cgi?id=107138
@@ -259,7 +260,7 @@ endif()
 
 if(ICHOR_USE_ETCD)
     #necessary to get generator protobuf/grpc code to compile
-    target_include_directories(ichor PUBLIC "${ICHOR_TOP_DIR}/include/ichor/optional_bundles/etcd_bundle")
+    target_include_directories(ichor PUBLIC "${ICHOR_TOP_DIR}/include/ichor/services/etcd")
 endif()
 
 if(ICHOR_BUILD_EXAMPLES)

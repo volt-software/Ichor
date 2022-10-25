@@ -1,13 +1,13 @@
 #pragma once
 
 #include <ichor/DependencyManager.h>
-#include <ichor/optional_bundles/logging_bundle/Logger.h>
-#include <ichor/optional_bundles/timer_bundle/TimerService.h>
-#include <ichor/optional_bundles/network_bundle/NetworkEvents.h>
-#include <ichor/optional_bundles/network_bundle/IConnectionService.h>
+#include <ichor/services/logging/Logger.h>
+#include <ichor/services/timer/TimerService.h>
+#include <ichor/services/network/NetworkEvents.h>
+#include <ichor/services/network/IConnectionService.h>
 #include <ichor/Service.h>
 #include <ichor/LifecycleManager.h>
-#include <ichor/optional_bundles/serialization_bundle/ISerializationAdmin.h>
+#include <ichor/services/serialization/ISerializationAdmin.h>
 #include "../common/TestMsg.h"
 
 using namespace Ichor;
@@ -63,19 +63,19 @@ public:
         ICHOR_LOG_INFO(_logger, "Removed connectionService");
     }
 
-    AsyncGenerator<bool> handleEvent(NetworkDataEvent const &evt) {
+    AsyncGenerator<void> handleEvent(NetworkDataEvent const &evt) {
         auto msg = _serializationAdmin->deserialize<TestMsg>(evt.getData());
         ICHOR_LOG_INFO(_logger, "Received TestMsg id {} val {}", msg->id, msg->val);
         getManager().pushEvent<QuitEvent>(getServiceId());
 
-        co_return (bool)PreventOthersHandling;
+        co_return;
     }
 
-    AsyncGenerator<bool> handleEvent(FailedSendMessageEvent const &evt) {
+    AsyncGenerator<void> handleEvent(FailedSendMessageEvent const &evt) {
         ICHOR_LOG_INFO(_logger, "Failed to send message id {}, retrying", evt.msgId);
         _connectionService->sendAsync(std::move(evt.data));
 
-        co_return (bool)PreventOthersHandling;
+        co_return;
     }
 
 private:

@@ -13,6 +13,12 @@ namespace Ichor::Detail {
 namespace Ichor {
     MultimapQueue::~MultimapQueue() {
         stopDm();
+
+        if(Detail::registeredSignalHandler) {
+            if (::signal(SIGINT, SIG_DFL) == SIG_ERR) {
+                fmt::print("Couldn't unset signal handler\n");
+            }
+        }
     }
 
     void MultimapQueue::pushEvent(uint64_t priority, std::unique_ptr<Event> &&event) {
@@ -64,8 +70,7 @@ namespace Ichor {
 
             auto node = _eventQueue.extract(_eventQueue.begin());
             l.unlock();
-            processEvent(node.mapped().get());
-//            return {node.mapped().get()->priority, std::move(node.mapped())};
+            processEvent(std::move(node.mapped()));
         }
 
         stopDm();

@@ -2,8 +2,7 @@
 
 ## Compiling Ichor
 
-Compiling is done through the help of CMake. Ichor requires at least gcc 10.2 and has also been tested with gcc 10.3. Clang does not yet implement the required C++20 bits and I do not have access to a windows machine currently.
-
+Compiling is done through the help of CMake. Ichor requires at least gcc 11.2 (11.3 recommended due to [this gcc bug](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=95137)) or clang 14, and is tested with gcc 11.3, 12, clang 14, clang 15 and clang 16.
 ### Dependencies
 
 ### Ubuntu 20.04:
@@ -85,7 +84,7 @@ Starting a dependency manager is quite easy. Instantiate it, tell it which servi
 ```c++
 // main.cpp
 #include <ichor/DependencyManager.h>
-#include <ichor/optional_bundles/logging_bundle/CoutFrameworkLogger.h>
+#include <ichor/services/logging/CoutFrameworkLogger.h>
 
 int main() {
     Ichor::DependencyManager dm{};
@@ -114,7 +113,7 @@ struct MyService final : public IMyService, public Ichor::Service<MyService> {
 ```c++
 // main.cpp
 #include <ichor/DependencyManager.h>
-#include <ichor/optional_bundles/logging_bundle/CoutFrameworkLogger.h>
+#include <ichor/services/logging/CoutFrameworkLogger.h>
 #include "MyService.h" // Add this
 
 int main() {
@@ -163,7 +162,7 @@ The service requires this specific constructor, which means that any extra argum
 ```c++
 // main.cpp
 #include <ichor/DependencyManager.h>
-#include <ichor/optional_bundles/logging_bundle/CoutFrameworkLogger.h>
+#include <ichor/services/logging/CoutFrameworkLogger.h>
 #include "MyService.h"
 #include "MyDependencyService.h" // Add this
 
@@ -187,7 +186,7 @@ Before we get to the point where we are able to start and stop the program, let'
 ```c++
 // MyTimerService.h
 #include <ichor/DependencyManager.h>
-#include <ichor/optional_bundles/timer_bundle/TimerService.h>
+#include <ichor/services/timer/TimerService.h>
 
 struct IMyTimerService {};
 
@@ -208,7 +207,7 @@ struct MyTimerService final : public IMyTimerService, public Ichor::Service<MyTi
     }
 
     Ichor::Generator<bool> handleEvent(Ichor::TimerEvent const * const) {
-        co_return (bool)PreventOthersHandling;        
+        co_return;        
     }
 
     Ichor::EventHandlerRegistration _timerEventRegistration{};
@@ -222,13 +221,12 @@ If they are present, they are called when all required dependencies are met. In 
 * Register an event handler for all `TimerEvent` types. The second parameter ensures that we only register it for events created by the timer service that we ourselves just created.
 
 Registering an event handler requires adding the `handleEvent` function with this exact signature. The TimerEvent contains information such as which service created it, but for this example we don't need the event.
-The return type a c++20 coroutine. Currently only `co_return` and `co_yield` are supported, both which require a boolean. The options are `PreventOthersHandling` and `AllowOthersHandling`, which tell Ichor whether other registered event handlers for this type are allowed to handle this event.
-Since we created the timer, no one else has any use for it and therefore we disallow others.
+The return type a c++20 coroutine. Currently `co_return`, `co_await` and `co_yield` are supported on `AsyncGenerator<T>`.
 
 ```c++
 // main.cpp
 #include <ichor/DependencyManager.h>
-#include <ichor/optional_bundles/logging_bundle/CoutFrameworkLogger.h>
+#include <ichor/services/logging/CoutFrameworkLogger.h>
 #include "MyService.h"
 #include "MyDependencyService.h"
 #include "MyTimerService.h" // Add this
@@ -254,7 +252,7 @@ The only thing left to do is tell Ichor to stop. This can easily be done by push
 ```c++
 // MyTimerService.h
 #include <ichor/DependencyManager.h>
-#include <ichor/optional_bundles/timer_bundle/TimerService.h>
+#include <ichor/services/timer/TimerService.h>
 
 struct IMyTimerService {};
 
@@ -276,7 +274,7 @@ struct MyTimerService final : public IMyTimerService, public Ichor::Service<MyTi
 
     Ichor::Generator<bool> handleEvent(Ichor::TimerEvent const * const) {
         getManager().pushEvent<Ichor::QuitEvent>(getServiceId()); // Add this
-        co_return (bool)PreventOthersHandling;
+        co_return;
     }
     
     Ichor::EventHandlerRegistration _timerEventRegistration{};
@@ -310,11 +308,11 @@ It is possible to intercept all events before they're handled by registered serv
 // MyInterceptorService.h
 #include <ichor/DependencyManager.h>
 #include <ichor/Events.h>
-#include <ichor/optional_bundles/timer_bundle/TimerService.h>
+#include <ichor/services/timer/TimerService.h>
 
 struct MyInterceptorService final : public Ichor::Service<MyInterceptorService> {
     Ichor::StartBehaviour start() final {
-        _interceptor = this->getManager().template registerEventInterceptor<Ichor::TimerEvent>(this); // Can change TimerEvent to just Event if you want to intercept *all* events
+        _interceptor = this->getManager().template registerEventInterceptor<Ichor::RunFunctionEvent>(this); // Can change TimerEvent to just Event if you want to intercept *all* events
         return Ichor::StartBehaviour::SUCCEEDED;
     }
     
@@ -323,11 +321,11 @@ struct MyInterceptorService final : public Ichor::Service<MyInterceptorService> 
         return Ichor::StartBehaviour::SUCCEEDED;
     }
     
-    bool preInterceptEvent(Ichor::TimerEvent const &evt) {
+    bool preInterceptEvent(Ichor::RunFunctionEvent const &) {
         return AllowOthersHandling; //PreventOthersHandling if this event should be discarded
     }
     
-    void postInterceptEvent(Ichor::TimerEvent const &evt, bool processed) {
+    void postInterceptEvent(Ichor::RunFunctionEvent const &, bool processed) {
         // Can use this to track how long the processing took
     }
 
@@ -359,7 +357,7 @@ Starting up two manager is easy, but allowing services to communicate to service
 // main.cpp
 #include <ichor/DependencyManager.h>
 #include <ichor/CommunicationChannel.h>
-#include <ichor/optional_bundles/logging_bundle/CoutFrameworkLogger.h>
+#include <ichor/services/logging/CoutFrameworkLogger.h>
 
 int main() {
     Ichor::CommunicationChannel channel{};

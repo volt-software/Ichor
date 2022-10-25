@@ -1,7 +1,7 @@
 #pragma once
 
 #include <ichor/DependencyManager.h>
-#include <ichor/optional_bundles/logging_bundle/Logger.h>
+#include <ichor/services/logging/Logger.h>
 #include <ichor/Service.h>
 #include <ichor/LifecycleManager.h>
 #include "OptionalService.h"
@@ -69,7 +69,7 @@ public:
         getManager().pushPrioritisedEvent<ExecuteTaskEvent>(getServiceId(), 10);
     }
 
-    AsyncGenerator<bool> handleEvent(ExecuteTaskEvent const &evt) {
+    AsyncGenerator<void> handleEvent(ExecuteTaskEvent const &evt) {
         auto start = std::chrono::high_resolution_clock::now();
         run_gsm_enc_bench(); // run gsm_bench from TACLe bench
         auto endtime = std::chrono::high_resolution_clock::now();
@@ -91,7 +91,7 @@ public:
             getManager().pushPrioritisedEvent<ExecuteTaskEvent>(getServiceId(), 10);
         }
 
-        co_return (bool)PreventOthersHandling;
+        co_return;
     }
 
 private:

@@ -336,6 +336,9 @@ namespace Ichor {
         }
     }
 
+    struct Empty{};
+    constexpr static Empty empty = {};
+
     template<typename T>
     class AsyncGenerator final : public IGenerator {
     public:
@@ -450,34 +453,54 @@ namespace Ichor {
 
 namespace Ichor::Detail {
     template <typename T>
-    inline AsyncGeneratorYieldOperation AsyncGeneratorPromise<T>::yield_value(value_type& value) noexcept(std::is_nothrow_constructible_v<T, T&>) {
+    inline AsyncGeneratorYieldOperation AsyncGeneratorPromise<T>::yield_value(value_type& value) noexcept(std::is_nothrow_constructible_v<T, T&&>) {
+        static_assert(std::is_move_constructible_v<T>, "T needs to be move constructible");
         INTERNAL_DEBUG("yield_value {}", _id);
-        ::new(static_cast<void *>(std::addressof(_currentValue))) T(std::forward<T>(value));
+        _currentValue.emplace(std::move(value));
         Ichor::Detail::_local_dm->pushEvent<Ichor::ContinuableEvent>(0, _id);
         return internal_yield_value();
     }
 
     template <typename T>
     inline AsyncGeneratorYieldOperation AsyncGeneratorPromise<T>::yield_value(value_type&& value) noexcept(std::is_nothrow_constructible_v<T, T&&>) {
+        static_assert(std::is_move_constructible_v<T>, "T needs to be move constructible");
         INTERNAL_DEBUG("yield_value {}", _id);
-        ::new(static_cast<void *>(std::addressof(_currentValue))) T(std::forward<T>(value));
+        _currentValue.emplace(std::forward<T>(value));
         Ichor::Detail::_local_dm->pushEvent<Ichor::ContinuableEvent>(0, _id);
         return internal_yield_value();
     }
 
     template <typename T>
-    AsyncGeneratorYieldOperation AsyncGeneratorPromise<T>::return_value(value_type &value) noexcept(std::is_nothrow_constructible_v<T, T&>) {
+    inline AsyncGeneratorYieldOperation AsyncGeneratorPromise<T>::return_value(value_type &value) noexcept(std::is_nothrow_constructible_v<T, T&&>) {
+        static_assert(std::is_move_constructible_v<T>, "T needs to be move constructible");
         INTERNAL_DEBUG("return_value {}", _id);
-        ::new(static_cast<void *>(std::addressof(_currentValue))) T(std::forward<T>(value));
+        _currentValue.emplace(std::move(value));
         Ichor::Detail::_local_dm->pushEvent<Ichor::ContinuableEvent>(0, _id);
         return AsyncGeneratorYieldOperation{ *this, _state.load(std::memory_order_acquire) };
     }
 
     template <typename T>
-    AsyncGeneratorYieldOperation AsyncGeneratorPromise<T>::return_value(value_type &&value) noexcept(std::is_nothrow_constructible_v<T, T&&>) {
+    inline AsyncGeneratorYieldOperation AsyncGeneratorPromise<T>::return_value(value_type &&value) noexcept(std::is_nothrow_constructible_v<T, T&&>) {
+        static_assert(std::is_move_constructible_v<T>, "T needs to be move constructible");
         INTERNAL_DEBUG("return_value {}", _id);
-        ::new(static_cast<void *>(std::addressof(_currentValue))) T(std::forward<T>(value));
+        _currentValue.emplace(std::forward<T>(value));
         Ichor::Detail::_local_dm->pushEvent<Ichor::ContinuableEvent>(0, _id);
         return AsyncGeneratorYieldOperation{ *this, _state.load(std::memory_order_acquire) };
+    }
+
+    inline AsyncGeneratorYieldOperation AsyncGeneratorPromise<void>::yield_value(Empty) noexcept {
+        INTERNAL_DEBUG("yield_value {}", _id);;
+        Ichor::Detail::_local_dm->pushEvent<Ichor::ContinuableEvent>(0, _id);
+        return internal_yield_value();
+    }
+
+    inline AsyncGeneratorYieldOperation AsyncGeneratorPromise<void>::return_void() noexcept {
+        INTERNAL_DEBUG("return_value {}", _id);
+        Ichor::Detail::_local_dm->pushEvent<Ichor::ContinuableEvent>(0, _id);
+        return AsyncGeneratorYieldOperation{ *this, _state.load(std::memory_order_acquire) };
+    }
+
+    inline AsyncGenerator<void> AsyncGeneratorPromise<void>::get_return_object() noexcept {
+        return AsyncGenerator<void>{ *this };
     }
 }

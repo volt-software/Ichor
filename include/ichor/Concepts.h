@@ -54,7 +54,7 @@ namespace Ichor {
 
     template <class ImplT, class EventT>
     concept ImplementsEventHandlers = requires(ImplT impl, EventT const &evt) {
-        { impl.handleEvent(evt) } -> std::same_as<AsyncGenerator<bool>>;
+        { impl.handleEvent(evt) } -> std::same_as<AsyncGenerator<void>>;
     };
 
     template <class ImplT, class EventT>

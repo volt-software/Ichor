@@ -1,8 +1,8 @@
 #pragma once
 
 #include <ichor/DependencyManager.h>
-#include <ichor/optional_bundles/logging_bundle/Logger.h>
-#include <ichor/optional_bundles/timer_bundle/TimerService.h>
+#include <ichor/services/logging/Logger.h>
+#include <ichor/services/timer/TimerService.h>
 #include <ichor/Service.h>
 #include <ichor/LifecycleManager.h>
 
@@ -23,8 +23,8 @@ public:
         ICHOR_LOG_INFO(_logger, "UsingTimerService started");
         _timerManager = getManager().createServiceManager<Timer, ITimer>();
         _timerManager->setChronoInterval(std::chrono::milliseconds(250));
-        _timerManager->setCallback([this](TimerEvent const &evt) {
-            return handleEvent(evt);
+        _timerManager->setCallback([this](DependencyManager &dm) {
+            return handleEvent(dm);
         });
         _timerManager->startTimer();
         return StartBehaviour::SUCCEEDED;
@@ -44,7 +44,7 @@ public:
         _logger = nullptr;
     }
 
-    AsyncGenerator<bool> handleEvent(TimerEvent const &evt) {
+    AsyncGenerator<void> handleEvent(DependencyManager &dm) {
         ICHOR_LOG_INFO(_logger, "Timer {} starting 'long' task", getServiceId());
 
         _timerTriggerCount++;
@@ -53,7 +53,7 @@ public:
             std::this_thread::sleep_for(std::chrono::milliseconds(20));
             ICHOR_LOG_INFO(_logger, "Timer {} completed 'long' task {} times", getServiceId(), i);
             // schedule us again later in the event loop for the next iteration, don't let other handlers handle this event.
-            co_yield (bool)PreventOthersHandling;
+            co_yield empty;
         }
 
         if(_timerTriggerCount == 2) {
@@ -61,7 +61,7 @@ public:
         }
 
         ICHOR_LOG_INFO(_logger, "Timer {} completed 'long' task", getServiceId());
-        co_return (bool)PreventOthersHandling;
+        co_return;
     }
 
 private:

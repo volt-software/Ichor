@@ -15,7 +15,7 @@ namespace Ichor::Detail {
 namespace Ichor {
     struct ProcessableEvent {
         SdeventQueue *queue;
-        Event *event;
+        std::unique_ptr<Event> event;
     };
 
     SdeventQueue::SdeventQueue() {
@@ -32,6 +32,12 @@ namespace Ichor {
         } else {
             close(_eventfd);
         }
+
+        if(Detail::registeredSignalHandler) {
+            if (::signal(SIGINT, SIG_DFL) == SIG_ERR) {
+                fmt::print("Couldn't unset signal handler\n");
+            }
+        }
     }
 
     void SdeventQueue::pushEvent(uint64_t priority, std::unique_ptr<Event> &&event) {
@@ -46,7 +52,7 @@ namespace Ichor {
         {
             std::lock_guard const l(_eventQueueMutex);
             sd_event_source *src;
-            auto *procEvent = new ProcessableEvent{this, event.release()};
+            auto *procEvent = new ProcessableEvent{this, std::move(event)};
             int ret = sd_event_add_defer(_eventQueue, &src, [](sd_event_source *source, void *userdata) {
                 auto *e = reinterpret_cast<ProcessableEvent*>(userdata);
 
@@ -55,7 +61,7 @@ namespace Ichor {
                 }
 
                 try {
-                    e->queue->processEvent(e->event);
+                    e->queue->processEvent(std::move(e->event));
                 } catch(const std::exception &ex) {
                     fmt::print("Encountered exception: \"{}\", quitting\n", ex.what());
                     e->queue->quit();
@@ -69,14 +75,12 @@ namespace Ichor {
                     sd_event_source_unref(source);
                 }
 
-                delete e->event;
                 delete e;
 
                 return 0;
             }, procEvent);
 
             if(ret < 0) {
-                delete procEvent->event;
                 delete procEvent;
                 throw std::system_error(-ret, std::generic_category(), "sd_event_add_defer() failed");
             }

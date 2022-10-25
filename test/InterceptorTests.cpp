@@ -9,14 +9,12 @@ using namespace Ichor;
 
 TEST_CASE("Interceptor Tests") {
 
-    ensureInternalLoggerExists();
-
     SECTION("Intercept TestEvent unprocessed") {
         auto queue = std::make_unique<MultimapQueue>();
         auto &dm = queue->createManager();
 
         std::thread t([&]() {
-            dm.createServiceManager<NullFrameworkLogger, IFrameworkLogger>();
+            dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>();
             dm.createServiceManager<InterceptorService<TestEvent>, IInterceptorService>();
             queue->start(CaptureSigInt);
         });
@@ -27,7 +25,7 @@ TEST_CASE("Interceptor Tests") {
 
         dm.runForOrQueueEmpty();
 
-        dm.pushEvent<RunFunctionEvent>(0, [](DependencyManager& mng) -> AsyncGenerator<bool> {
+        dm.pushEvent<RunFunctionEvent>(0, [](DependencyManager& mng) -> AsyncGenerator<void> {
             auto services = mng.getStartedServices<IInterceptorService>();
 
             REQUIRE(services.size() == 1);
@@ -44,7 +42,7 @@ TEST_CASE("Interceptor Tests") {
 
             mng.pushEvent<QuitEvent>(0);
 
-            co_return (bool)PreventOthersHandling;
+            co_return;
         });
 
         t.join();
@@ -57,7 +55,7 @@ TEST_CASE("Interceptor Tests") {
         auto &dm = queue->createManager();
 
         std::thread t([&]() {
-            dm.createServiceManager<NullFrameworkLogger, IFrameworkLogger>();
+            dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>();
             dm.createServiceManager<InterceptorService<TestEvent>, IInterceptorService>();
             dm.createServiceManager<EventHandlerService<TestEvent>, IEventHandlerService>();
             queue->start(CaptureSigInt);
@@ -69,7 +67,7 @@ TEST_CASE("Interceptor Tests") {
 
         dm.runForOrQueueEmpty();
 
-        dm.pushEvent<RunFunctionEvent>(0, [](DependencyManager& mng) -> AsyncGenerator<bool> {
+        dm.pushEvent<RunFunctionEvent>(0, [](DependencyManager& mng) -> AsyncGenerator<void> {
             auto services = mng.getStartedServices<IInterceptorService>();
 
             REQUIRE(services.size() == 1);
@@ -86,7 +84,7 @@ TEST_CASE("Interceptor Tests") {
 
             mng.pushEvent<QuitEvent>(0);
 
-            co_return (bool)PreventOthersHandling;
+            co_return;
         });
 
         t.join();
@@ -99,7 +97,7 @@ TEST_CASE("Interceptor Tests") {
         auto &dm = queue->createManager();
 
         std::thread t([&]() {
-            dm.createServiceManager<NullFrameworkLogger, IFrameworkLogger>();
+            dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>();
             dm.createServiceManager<InterceptorService<TestEvent, false>, IInterceptorService>();
             dm.createServiceManager<EventHandlerService<TestEvent>, IEventHandlerService>();
             queue->start(CaptureSigInt);
@@ -111,7 +109,7 @@ TEST_CASE("Interceptor Tests") {
 
         dm.runForOrQueueEmpty();
 
-        dm.pushEvent<RunFunctionEvent>(0, [](DependencyManager& mng) -> AsyncGenerator<bool> {
+        dm.pushEvent<RunFunctionEvent>(0, [](DependencyManager& mng) -> AsyncGenerator<void> {
             auto interceptorServices = mng.getStartedServices<IInterceptorService>();
             auto eventHandlerServices = mng.getStartedServices<IEventHandlerService>();
 
@@ -132,7 +130,7 @@ TEST_CASE("Interceptor Tests") {
 
             mng.pushEvent<QuitEvent>(0);
 
-            co_return (bool)PreventOthersHandling;
+            co_return;
         });
 
         t.join();
@@ -145,7 +143,7 @@ TEST_CASE("Interceptor Tests") {
         auto &dm = queue->createManager();
 
         std::thread t([&]() {
-            dm.createServiceManager<NullFrameworkLogger, IFrameworkLogger>();
+            dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>();
             dm.createServiceManager<InterceptorService<Event>, IInterceptorService>();
             queue->start(CaptureSigInt);
         });
@@ -154,7 +152,7 @@ TEST_CASE("Interceptor Tests") {
 
         dm.runForOrQueueEmpty();
 
-        dm.pushEvent<RunFunctionEvent>(0, [](DependencyManager& mng) -> AsyncGenerator<bool> {
+        dm.pushEvent<RunFunctionEvent>(0, [](DependencyManager& mng) -> AsyncGenerator<void> {
             auto services = mng.getStartedServices<IInterceptorService>();
 
             REQUIRE(services.size() == 1);
@@ -176,7 +174,7 @@ TEST_CASE("Interceptor Tests") {
 
             mng.pushEvent<QuitEvent>(0);
 
-            co_return (bool)PreventOthersHandling;
+            co_return;
         });
 
         t.join();
@@ -189,7 +187,7 @@ TEST_CASE("Interceptor Tests") {
         auto &dm = queue->createManager();
 
         std::thread t([&]() {
-            dm.createServiceManager<NullFrameworkLogger, IFrameworkLogger>();
+            dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>();
             dm.createServiceManager<InterceptorService<Event>, IInterceptorService>();
             dm.createServiceManager<InterceptorService<Event>, IInterceptorService>();
             queue->start(CaptureSigInt);
@@ -199,7 +197,7 @@ TEST_CASE("Interceptor Tests") {
 
         dm.runForOrQueueEmpty();
 
-        dm.pushEvent<RunFunctionEvent>(0, [](DependencyManager& mng) -> AsyncGenerator<bool> {
+        dm.pushEvent<RunFunctionEvent>(0, [](DependencyManager& mng) -> AsyncGenerator<void> {
             auto services = mng.getStartedServices<IInterceptorService>();
 
             REQUIRE(services.size() == 2);
@@ -223,7 +221,7 @@ TEST_CASE("Interceptor Tests") {
 
             mng.pushEvent<QuitEvent>(0);
 
-            co_return (bool)PreventOthersHandling;
+            co_return;
         });
 
         t.join();

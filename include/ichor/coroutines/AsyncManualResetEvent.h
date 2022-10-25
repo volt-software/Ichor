@@ -5,13 +5,13 @@
 
 // Copied and modified from Lewis Baker's cppcoro
 
+#pragma once
+
 #include <atomic>
 #include <cstdint>
 #include <coroutine>
-#include <ichor/coroutines/AsyncGeneratorPromiseBase.h>
 
-namespace Ichor
-{
+namespace Ichor {
     class AsyncManualResetEventOperation;
     class DependencyManager;
 
@@ -24,8 +24,7 @@ namespace Ichor
     /// suspended and is later resumed inside the call to 'set()'.
     ///
     /// \seealso async_auto_reset_event
-    class AsyncManualResetEvent
-    {
+    class AsyncManualResetEvent {
     public:
 
         /// Initialise the event to either 'set' or 'not set' state.
@@ -79,17 +78,15 @@ namespace Ichor
         //             Points to an 'AsyncManualResetEventOperation' that is
         //             the head of a linked-list of waiters.
         mutable std::atomic<void*> _state;
-//        DependencyManager &_dm;
     };
 
-    class AsyncManualResetEventOperation
-    {
+    class AsyncManualResetEventOperation {
     public:
 
         explicit AsyncManualResetEventOperation(const AsyncManualResetEvent& event) noexcept;
 
         bool await_ready() const noexcept;
-        bool await_suspend(std::coroutine_handle<Detail::AsyncGeneratorPromise<bool>> _awaiter) noexcept;
+        bool await_suspend(std::coroutine_handle<> _awaiter) noexcept;
         void await_resume() const noexcept {}
 
     private:
@@ -98,7 +95,7 @@ namespace Ichor
 
         const AsyncManualResetEvent& _event;
         AsyncManualResetEventOperation* _next;
-        std::coroutine_handle<Detail::AsyncGeneratorPromise<bool>> _awaiter;
+        std::coroutine_handle<> _awaiter;
 
     };
 }

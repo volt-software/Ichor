@@ -1,17 +1,17 @@
 #include "UsingEtcdService.h"
 #include <ichor/event_queues/MultimapQueue.h>
-#include <ichor/optional_bundles/logging_bundle/LoggerAdmin.h>
-#include <ichor/optional_bundles/etcd_bundle/EtcdService.h>
+#include <ichor/services/logging/LoggerAdmin.h>
+#include <ichor/services/etcd/EtcdService.h>
 #include <ichor/CommunicationChannel.h>
 #ifdef ICHOR_USE_SPDLOG
-#include <ichor/optional_bundles/logging_bundle/SpdlogFrameworkLogger.h>
-#include <ichor/optional_bundles/logging_bundle/SpdlogLogger.h>
+#include <ichor/services/logging/SpdlogFrameworkLogger.h>
+#include <ichor/services/logging/SpdlogLogger.h>
 
 #define FRAMEWORK_LOGGER_TYPE SpdlogFrameworkLogger
 #define LOGGER_TYPE SpdlogLogger
 #else
-#include <ichor/optional_bundles/logging_bundle/CoutFrameworkLogger.h>
-#include <ichor/optional_bundles/logging_bundle/CoutLogger.h>
+#include <ichor/services/logging/CoutFrameworkLogger.h>
+#include <ichor/services/logging/CoutLogger.h>
 
 #define FRAMEWORK_LOGGER_TYPE CoutFrameworkLogger
 #define LOGGER_TYPE CoutLogger

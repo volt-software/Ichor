@@ -16,6 +16,8 @@
 namespace Ichor {
     template<typename T>
     class AsyncGenerator;
+
+    struct Empty;
 }
 
 namespace Ichor::Detail {
@@ -156,16 +158,16 @@ namespace Ichor::Detail {
             return AsyncGenerator<T>{ *this };
         }
 
-        AsyncGeneratorYieldOperation yield_value(value_type& value) noexcept(std::is_nothrow_constructible_v<T, T&>);
+        AsyncGeneratorYieldOperation yield_value(value_type& value) noexcept(std::is_nothrow_constructible_v<T, T&&>);
 
         AsyncGeneratorYieldOperation yield_value(value_type&& value) noexcept(std::is_nothrow_constructible_v<T, T&&>);
 
-        AsyncGeneratorYieldOperation return_value(value_type &value) noexcept(std::is_nothrow_constructible_v<T, T&>);
+        AsyncGeneratorYieldOperation return_value(value_type &value) noexcept(std::is_nothrow_constructible_v<T, T&&>);
 
         AsyncGeneratorYieldOperation return_value(value_type &&value) noexcept(std::is_nothrow_constructible_v<T, T&&>);
 
         T& value() noexcept {
-            return _currentValue;
+            return _currentValue.value();
         }
 
         [[nodiscard]] bool finished() const noexcept final {
@@ -182,7 +184,43 @@ namespace Ichor::Detail {
             _finished = true;
         }
 
-        T _currentValue;
+        std::optional<T> _currentValue;
+        bool _finished{};
+        std::shared_ptr<bool> _destroyed;
+    };
+
+    template<>
+    class AsyncGeneratorPromise<void> final : public AsyncGeneratorPromiseBase
+    {
+    public:
+        AsyncGeneratorPromise() noexcept : _destroyed(new bool(false)) {
+
+        }
+        ~AsyncGeneratorPromise() final {
+            INTERNAL_DEBUG("destroyed promise {}", _id);
+            *_destroyed = true;
+        };
+
+        AsyncGenerator<void> get_return_object() noexcept;
+
+        AsyncGeneratorYieldOperation yield_value(Ichor::Empty) noexcept;
+
+        AsyncGeneratorYieldOperation return_void() noexcept;
+
+        [[nodiscard]] bool finished() const noexcept final {
+            return _finished;
+        }
+
+        std::shared_ptr<bool>& get_destroyed() noexcept  {
+            return _destroyed;
+        }
+
+    private:
+        void set_finished() noexcept final {
+            INTERNAL_DEBUG("set_finished {}", _id);
+            _finished = true;
+        }
+
         bool _finished{};
         std::shared_ptr<bool> _destroyed;
     };

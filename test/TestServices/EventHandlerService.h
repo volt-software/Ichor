@@ -28,7 +28,7 @@ struct EventHandlerService final : public IEventHandlerService, public Service<E
         return StartBehaviour::SUCCEEDED;
     }
 
-    AsyncGenerator<bool> handleEvent(EventT const &evt) {
+    AsyncGenerator<void> handleEvent(EventT const &evt) {
         auto counter = handledEvents.find(evt.type);
 
         if(counter == end(handledEvents)) {
@@ -37,7 +37,7 @@ struct EventHandlerService final : public IEventHandlerService, public Service<E
             counter->second++;
         }
 
-        co_return (bool)AllowOthersHandling;
+        co_return;
     }
 
     std::unordered_map<uint64_t, uint64_t>& getHandledEvents() final {

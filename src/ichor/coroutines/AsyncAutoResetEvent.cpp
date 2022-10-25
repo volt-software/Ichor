@@ -10,27 +10,22 @@
 #include <cassert>
 #include <algorithm>
 
-namespace
-{
-    namespace local
-    {
+namespace {
+    namespace local {
         // Some helpers for manipulating the 'm_state' value.
 
         constexpr std::uint64_t set_increment = 1;
         constexpr std::uint64_t waiter_increment = std::uint64_t(1) << 32;
 
-        constexpr std::uint32_t get_set_count(std::uint64_t state)
-        {
+        constexpr std::uint32_t get_set_count(std::uint64_t state) {
             return static_cast<std::uint32_t>(state);
         }
 
-        constexpr std::uint32_t get_waiter_count(std::uint64_t state)
-        {
+        constexpr std::uint32_t get_waiter_count(std::uint64_t state) {
             return static_cast<std::uint32_t>(state >> 32);
         }
 
-        constexpr std::uint32_t get_resumable_waiter_count(std::uint64_t state)
-        {
+        constexpr std::uint32_t get_resumable_waiter_count(std::uint64_t state) {
             return std::min(get_set_count(state), get_waiter_count(state));
         }
     }
@@ -43,15 +38,13 @@ Ichor::AsyncAutoResetEvent::AsyncAutoResetEvent(bool initiallySet) noexcept
 {
 }
 
-Ichor::AsyncAutoResetEvent::~AsyncAutoResetEvent()
-{
+Ichor::AsyncAutoResetEvent::~AsyncAutoResetEvent() {
     assert(m_newWaiters.load(std::memory_order_relaxed) == nullptr);
     assert(m_waiters == nullptr);
 }
 
 Ichor::AsyncAutoResetEventOperation
-        Ichor::AsyncAutoResetEvent::operator co_await() const noexcept
-{
+        Ichor::AsyncAutoResetEvent::operator co_await() const noexcept {
     std::uint64_t oldState = m_state.load(std::memory_order_relaxed);
     if (local::get_set_count(oldState) > local::get_waiter_count(oldState)) {
         // Try to synchronously acquire the event.
@@ -64,13 +57,10 @@ Ichor::AsyncAutoResetEventOperation
     return AsyncAutoResetEventOperation{ *this };
 }
 
-void Ichor::AsyncAutoResetEvent::set() noexcept
-{
+void Ichor::AsyncAutoResetEvent::set() noexcept {
     std::uint64_t oldState = m_state.load(std::memory_order_relaxed);
-    do
-    {
-        if (local::get_set_count(oldState) > local::get_waiter_count(oldState))
-        {
+    do {
+        if (local::get_set_count(oldState) > local::get_waiter_count(oldState)) {
             // Already set.
             return;
         }
@@ -85,23 +75,45 @@ void Ichor::AsyncAutoResetEvent::set() noexcept
     // Did we transition from non-zero waiters and zero set-count
     // to non-zero set-count?
     // If so then we acquired the lock and are responsible for resuming waiters.
-    if (oldState != 0 && local::get_set_count(oldState) == 0)
-    {
+    if (oldState != 0 && local::get_set_count(oldState) == 0) {
         // We acquired the lock.
         resume_waiters(oldState + local::set_increment);
     }
 }
 
-void Ichor::AsyncAutoResetEvent::reset() noexcept
-{
+void Ichor::AsyncAutoResetEvent::set_all() noexcept {
+    while(true) {
+        std::uint64_t oldState = m_state.load(std::memory_order_relaxed);
+        do {
+            if (local::get_set_count(oldState) > local::get_waiter_count(oldState)) {
+                // Already set.
+                return;
+            }
+
+            // Increment the set-count
+        } while (!m_state.compare_exchange_weak(
+                oldState,
+                oldState + local::set_increment,
+                std::memory_order_acq_rel,
+                std::memory_order_acquire));
+
+        // Did we transition from non-zero waiters and zero set-count
+        // to non-zero set-count?
+        // If so then we acquired the lock and are responsible for resuming waiters.
+        if (oldState != 0 && local::get_set_count(oldState) == 0) {
+            // We acquired the lock.
+            resume_waiters(oldState + local::set_increment);
+        }
+    }
+}
+
+void Ichor::AsyncAutoResetEvent::reset() noexcept {
     std::uint64_t oldState = m_state.load(std::memory_order_relaxed);
-    while (local::get_set_count(oldState) > local::get_waiter_count(oldState))
-    {
+    while (local::get_set_count(oldState) > local::get_waiter_count(oldState)) {
         if (m_state.compare_exchange_weak(
                 oldState,
                 oldState - local::set_increment,
-                std::memory_order_relaxed))
-        {
+                std::memory_order_relaxed)) {
             // Successfully reset.
             return;
         }
@@ -110,9 +122,7 @@ void Ichor::AsyncAutoResetEvent::reset() noexcept
     // Not set. Nothing to do.
 }
 
-void Ichor::AsyncAutoResetEvent::resume_waiters(
-        std::uint64_t initialState) const noexcept
-{
+void Ichor::AsyncAutoResetEvent::resume_waiters(std::uint64_t initialState) const noexcept {
     AsyncAutoResetEventOperation* waitersToResumeList = nullptr;
     AsyncAutoResetEventOperation** waitersToResumeListEnd = &waitersToResumeList;
 
@@ -120,14 +130,11 @@ void Ichor::AsyncAutoResetEvent::resume_waiters(
 
     assert(waiterCountToResume > 0);
 
-    do
-    {
+    do {
         // Dequeue 'waiterCountToResume' from m_waiters/m_newWaiters and
         // push them onto 'waitersToResumeList'.
-        for (std::uint32_t i = 0; i < waiterCountToResume; ++i)
-        {
-            if (m_waiters == nullptr)
-            {
+        for (std::uint32_t i = 0; i < waiterCountToResume; ++i) {
+            if (m_waiters == nullptr) {
                 // We've run out of waiters that we can consume without synchronisation
                 // Dequeue the list of new waiters atomically.
                 auto* newWaiters = m_newWaiters.exchange(nullptr, std::memory_order_acquire);
@@ -147,8 +154,7 @@ void Ichor::AsyncAutoResetEvent::resume_waiters(
                 // are guaranteed to process all waiters in this list before
                 // looking at any waiters newly queued after this point.
                 // Something to consider.
-                do
-                {
+                do {
                     auto* next = newWaiters->m_next;
                     newWaiters->m_next = m_waiters;
                     m_waiters = newWaiters;
@@ -194,8 +200,7 @@ void Ichor::AsyncAutoResetEvent::resume_waiters(
     // There should be at least one.
     assert(waitersToResumeList != nullptr);
 
-    do
-    {
+    do {
         auto* const waiter = waitersToResumeList;
 
         // Read 'next' before resuming since resuming the waiter is
@@ -232,14 +237,12 @@ Ichor::AsyncAutoResetEventOperation::AsyncAutoResetEventOperation(
 {}
 
 bool Ichor::AsyncAutoResetEventOperation::await_suspend(
-        std::coroutine_handle<> awaiter) noexcept
-{
+        std::coroutine_handle<> awaiter) noexcept {
     m_awaiter = awaiter;
 
     // Queue the waiter to the m_newWaiters list.
     AsyncAutoResetEventOperation* head = m_event->m_newWaiters.load(std::memory_order_relaxed);
-    do
-    {
+    do {
         m_next = head;
     } while (!m_event->m_newWaiters.compare_exchange_weak(
             head,
@@ -255,8 +258,7 @@ bool Ichor::AsyncAutoResetEventOperation::await_suspend(
     const std::uint64_t oldState =
             m_event->m_state.fetch_add(local::waiter_increment, std::memory_order_acq_rel);
 
-    if (oldState != 0 && local::get_waiter_count(oldState) == 0)
-    {
+    if (oldState != 0 && local::get_waiter_count(oldState) == 0) {
         // We transitioned from non-zero set and zero waiters to
         // non-zero set and non-zero waiters, so we acquired the lock
         // and thus responsibility for resuming waiters.

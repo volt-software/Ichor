@@ -23,7 +23,7 @@ namespace Ichor {
         [[nodiscard]] virtual bool shouldQuit() = 0;
         virtual void quit() = 0;
         void startDm();
-        void processEvent(Event *evt);
+        void processEvent(std::unique_ptr<Event> &&evt);
         void stopDm();
 
         std::unique_ptr<DependencyManager> _dm;
