@@ -18,16 +18,16 @@ struct AwaitEvent final : public Event {
 
 struct IAwaitService {
     virtual ~IAwaitService() = default;
-    virtual AsyncGenerator<bool> await_something() = 0;
+    virtual AsyncGenerator<void> await_something() = 0;
 };
 struct AwaitService final : public IAwaitService, public Service<AwaitService> {
     AwaitService() = default;
     ~AwaitService() final = default;
 
-    AsyncGenerator<bool> await_something() final
+    AsyncGenerator<void> await_something() final
     {
         co_await *_evt;
-        co_return (bool)PreventOthersHandling;
+        co_return;
     }
 };
 struct EventAwaitService final : public Service<EventAwaitService> {
@@ -45,13 +45,13 @@ struct EventAwaitService final : public Service<EventAwaitService> {
         return StartBehaviour::SUCCEEDED;
     }
 
-    AsyncGenerator<bool> handleEvent(AwaitEvent const &evt) {
+    AsyncGenerator<void> handleEvent(AwaitEvent const &evt) {
         co_await *_evt;
-        co_yield false;
+        co_yield empty;
 
         this->getManager().pushEvent<QuitEvent>(getServiceId());
 
-        co_return (bool)AllowOthersHandling;
+        co_return;
     }
 
     EventHandlerRegistration _handler{};

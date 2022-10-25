@@ -1,6 +1,6 @@
 #include <ichor/event_queues/MultimapQueue.h>
-#include <ichor/optional_bundles/logging_bundle/CoutFrameworkLogger.h>
-#include <ichor/optional_bundles/timer_bundle/TimerService.h>
+#include <ichor/services/logging/CoutFrameworkLogger.h>
+#include <ichor/services/timer/TimerService.h>
 #include <csignal>
 
 using namespace Ichor;
@@ -20,13 +20,13 @@ public:
         auto timer = getManager().createServiceManager<Timer, ITimer>();
         timer->setChronoInterval(100ms);
 
-        timer->setCallback([this](TimerEvent const &evt) -> AsyncGenerator<bool> {
+        timer->setCallback([this](DependencyManager &dm) -> AsyncGenerator<void> {
             // If sigint has been fired, send a quit to the event loop.
             // This can't be done from within the handler itself, as the mutex surrounding pushEvent might already be locked, resulting in a deadlock!
             if(quit) {
                 getManager().pushEvent<QuitEvent>(getServiceId());
             }
-            co_return (bool)PreventOthersHandling;
+            co_return;
         });
         timer->startTimer();
 

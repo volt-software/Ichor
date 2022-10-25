@@ -1,8 +1,8 @@
 #pragma once
 
 #include <ichor/DependencyManager.h>
-#include <ichor/optional_bundles/logging_bundle/Logger.h>
-#include <ichor/optional_bundles/timer_bundle/TimerService.h>
+#include <ichor/services/logging/Logger.h>
+#include <ichor/services/timer/TimerService.h>
 #include <ichor/Service.h>
 #include <ichor/LifecycleManager.h>
 
@@ -19,8 +19,8 @@ public:
         ICHOR_LOG_INFO(_logger, "UsingTimerService started");
         _timerManager = getManager().createServiceManager<Timer, ITimer>();
         _timerManager->setChronoInterval(std::chrono::milliseconds(50));
-        _timerManager->setCallback([this](TimerEvent const &evt) {
-            return handleEvent(evt);
+        _timerManager->setCallback([this](DependencyManager &dm) {
+            return handleEvent(dm);
         });
         _timerManager->startTimer();
         return StartBehaviour::SUCCEEDED;
@@ -40,14 +40,14 @@ public:
         _logger = nullptr;
     }
 
-    AsyncGenerator<bool> handleEvent(TimerEvent const &evt) {
+    AsyncGenerator<void> handleEvent(DependencyManager &dm) {
         _timerTriggerCount++;
         ICHOR_LOG_INFO(_logger, "Timer {} triggered {} times", _timerManager->getServiceId(), _timerTriggerCount);
         if(_timerTriggerCount == 5) {
             getManager().pushEvent<QuitEvent>(getServiceId());
         }
 
-        co_return (bool)PreventOthersHandling;
+        co_return;
     }
 
 private:

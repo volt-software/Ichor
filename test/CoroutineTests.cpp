@@ -1,21 +1,20 @@
 #include "Common.h"
 #include "TestServices/GeneratorService.h"
 #include "TestServices/AwaitService.h"
+#include "TestServices/MultipleAwaitersService.h"
+#include "TestServices/AsyncUsingTimerService.h"
+#include "TestServices/AwaitReturnService.h"
 #include <ichor/event_queues/MultimapQueue.h>
 #include <ichor/events/RunFunctionEvent.h>
 #include <memory>
 
-#if __has_include(<spdlog/spdlog.h>)
-#include <ichor/optional_bundles/logging_bundle/SpdlogFrameworkLogger.h>
-#else
-#include <ichor/optional_bundles/logging_bundle/NullFrameworkLogger.h>
-#endif
-
 std::unique_ptr<Ichor::AsyncManualResetEvent> _evt;
+std::unique_ptr<Ichor::AsyncAutoResetEvent> _autoEvt;
+uint64_t AwaitNoCopy::countConstructed{};
+uint64_t AwaitNoCopy::countDestructed{};
+uint64_t AwaitNoCopy::countMoved{};
 
 TEST_CASE("CoroutineTests") {
-
-    ensureInternalLoggerExists();
 
     SECTION("Required dependencies") {
         auto queue = std::make_unique<MultimapQueue>();
@@ -23,13 +22,7 @@ TEST_CASE("CoroutineTests") {
         _evt = std::make_unique<Ichor::AsyncManualResetEvent>();
 
         std::thread t([&]() {
-
-#if __has_include(<spdlog/spdlog.h>)
-            auto logger = dm.createServiceManager<SpdlogFrameworkLogger, IFrameworkLogger>({}, 10);
-            logger->setLogLevel(Ichor::LogLevel::DEBUG);
-#else
-            dm.createServiceManager<NullFrameworkLogger, IFrameworkLogger>();
-#endif
+            dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>();
             dm.createServiceManager<GeneratorService, IGeneratorService>();
             queue->start(CaptureSigInt);
         });
@@ -38,7 +31,7 @@ TEST_CASE("CoroutineTests") {
 
         dm.runForOrQueueEmpty();
 
-        dm.pushEvent<RunFunctionEvent>(0, [](DependencyManager& mng) -> AsyncGenerator<bool>{
+        dm.pushEvent<RunFunctionEvent>(0, [](DependencyManager& mng) -> AsyncGenerator<void>{
             auto services = mng.getStartedServices<IGeneratorService>();
 
             REQUIRE(services.size() == 1);
@@ -61,7 +54,7 @@ TEST_CASE("CoroutineTests") {
             mng.pushEvent<QuitEvent>(0);
             INTERNAL_DEBUG("quit");
 
-            co_return (bool)PreventOthersHandling;
+            co_return;
         });
 
         t.join();
@@ -75,12 +68,7 @@ TEST_CASE("CoroutineTests") {
         _evt = std::make_unique<Ichor::AsyncManualResetEvent>();
 
         std::thread t([&]() {
-#if __has_include(<spdlog/spdlog.h>)
-            auto logger = dm.createServiceManager<SpdlogFrameworkLogger, IFrameworkLogger>({}, 10);
-            logger->setLogLevel(Ichor::LogLevel::DEBUG);
-#else
-            dm.createServiceManager<NullFrameworkLogger, IFrameworkLogger>();
-#endif
+            dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>();
             dm.createServiceManager<AwaitService, IAwaitService>();
             queue->start(CaptureSigInt);
         });
@@ -89,7 +77,7 @@ TEST_CASE("CoroutineTests") {
 
         dm.runForOrQueueEmpty();
 
-        dm.pushEvent<RunFunctionEvent>(0, [](DependencyManager& mng) -> AsyncGenerator<bool> {
+        dm.pushEvent<RunFunctionEvent>(0, [](DependencyManager& mng) -> AsyncGenerator<void> {
             auto services = mng.getStartedServices<IAwaitService>();
 
             REQUIRE(services.size() == 1);
@@ -100,7 +88,7 @@ TEST_CASE("CoroutineTests") {
 
             INTERNAL_DEBUG("after");
 
-            co_yield (bool)PreventOthersHandling;
+            co_yield empty;
 
             INTERNAL_DEBUG("quit");
 
@@ -108,15 +96,15 @@ TEST_CASE("CoroutineTests") {
 
             INTERNAL_DEBUG("after2");
 
-            co_return (bool)PreventOthersHandling;
+            co_return;
         });
 
-        std::this_thread::sleep_for(5ms);
+        dm.runForOrQueueEmpty();
 
-        dm.pushEvent<RunFunctionEvent>(0, [](DependencyManager& mng) -> AsyncGenerator<bool> {
+        dm.pushEvent<RunFunctionEvent>(0, [](DependencyManager& mng) -> AsyncGenerator<void> {
             INTERNAL_DEBUG("set");
             _evt->set();
-            co_return (bool)PreventOthersHandling;
+            co_return;
         });
 
         t.join();
@@ -130,12 +118,7 @@ TEST_CASE("CoroutineTests") {
         _evt = std::make_unique<Ichor::AsyncManualResetEvent>();
 
         std::thread t([&]() {
-#if __has_include(<spdlog/spdlog.h>)
-            auto logger = dm.createServiceManager<SpdlogFrameworkLogger, IFrameworkLogger>({}, 10);
-            logger->setLogLevel(Ichor::LogLevel::DEBUG);
-#else
-            dm.createServiceManager<NullFrameworkLogger, IFrameworkLogger>();
-#endif
+            dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>();
             dm.createServiceManager<EventAwaitService>();
             queue->start(CaptureSigInt);
         });
@@ -146,15 +129,110 @@ TEST_CASE("CoroutineTests") {
 
         dm.pushEvent<AwaitEvent>(0);
 
-        std::this_thread::sleep_for(5ms);
+        dm.runForOrQueueEmpty();
 
-        dm.pushEvent<RunFunctionEvent>(0, [](DependencyManager& mng) -> AsyncGenerator<bool> {
+        dm.pushEvent<RunFunctionEvent>(0, [](DependencyManager& mng) -> AsyncGenerator<void> {
             INTERNAL_DEBUG("set");
             _evt->set();
-            co_return (bool)PreventOthersHandling;
+            co_return;
         });
 
         t.join();
+
+        REQUIRE_FALSE(dm.isRunning());
+    }
+
+    SECTION("multiple awaiters in event handler") {
+        auto queue = std::make_unique<MultimapQueue>();
+        auto &dm = queue->createManager();
+        _autoEvt = std::make_unique<Ichor::AsyncAutoResetEvent>();
+        MultipleAwaitService *svc{};
+
+        std::thread t([&]() {
+            dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>();
+            svc = dm.createServiceManager<MultipleAwaitService>();
+            queue->start(CaptureSigInt);
+        });
+
+        waitForRunning(dm);
+
+        dm.runForOrQueueEmpty();
+
+        dm.pushEvent<RunFunctionEvent>(0, [&](DependencyManager& mng) -> AsyncGenerator<void> {
+            INTERNAL_DEBUG("set");
+            _autoEvt->set_all();
+            REQUIRE(svc->count == 2);
+            mng.pushEvent<QuitEvent>(0);
+            co_return;
+        });
+
+        t.join();
+
+        REQUIRE_FALSE(dm.isRunning());
+    }
+
+    SECTION("co_await in timer service") {
+        auto queue = std::make_unique<MultimapQueue>();
+        auto &dm = queue->createManager();
+        _evt = std::make_unique<Ichor::AsyncManualResetEvent>();
+
+        std::thread t([&]() {
+            dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>();
+            dm.createServiceManager<AwaitService, IAwaitService>();
+            dm.createServiceManager<AsyncUsingTimerService>();
+            queue->start(CaptureSigInt);
+        });
+
+        waitForRunning(dm);
+
+        dm.runForOrQueueEmpty();
+
+        dm.pushEvent<RunFunctionEvent>(0, [](DependencyManager& mng) -> AsyncGenerator<void> {
+            INTERNAL_DEBUG("set");
+            _evt->set();
+            co_return;
+        });
+
+        t.join();
+
+        REQUIRE_FALSE(dm.isRunning());
+    }
+
+    SECTION("co_await user defined struct") {
+        auto queue = std::make_unique<MultimapQueue>();
+        auto &dm = queue->createManager();
+        _evt = std::make_unique<Ichor::AsyncManualResetEvent>();
+        AwaitReturnService *svc{};
+
+        std::thread t([&]() {
+            dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>();
+            svc = dm.createServiceManager<AwaitReturnService>();
+            queue->start(CaptureSigInt);
+        });
+
+        waitForRunning(dm);
+
+        dm.runForOrQueueEmpty();
+
+        dm.pushEvent<RunFunctionEvent>(0, [&](DependencyManager& mng) -> AsyncGenerator<void> {
+            auto &str = *co_await svc->Await().begin();
+            co_return;
+        });
+
+        dm.runForOrQueueEmpty();
+
+        dm.pushEvent<RunFunctionEvent>(0, [&](DependencyManager& mng) -> AsyncGenerator<void> {
+            INTERNAL_DEBUG("set");
+            _evt->set();
+            mng.pushEvent<QuitEvent>(0);
+            co_return;
+        });
+
+        t.join();
+
+        REQUIRE(AwaitNoCopy::countConstructed == 1);
+        REQUIRE(AwaitNoCopy::countDestructed == 2);
+        REQUIRE(AwaitNoCopy::countMoved == 1);
 
         REQUIRE_FALSE(dm.isRunning());
     }

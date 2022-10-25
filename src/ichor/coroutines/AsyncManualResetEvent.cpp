@@ -13,27 +13,23 @@ Ichor::AsyncManualResetEvent::AsyncManualResetEvent(bool initiallySet) noexcept
         : _state(initiallySet ? static_cast<void*>(this) : nullptr)
 {}
 
-Ichor::AsyncManualResetEvent::~AsyncManualResetEvent()
-{
+Ichor::AsyncManualResetEvent::~AsyncManualResetEvent() {
     // There should be no coroutines still awaiting the event.
     assert(
             _state.load(std::memory_order_relaxed) == nullptr ||
             _state.load(std::memory_order_relaxed) == static_cast<void*>(this));
 }
 
-bool Ichor::AsyncManualResetEvent::is_set() const noexcept
-{
+bool Ichor::AsyncManualResetEvent::is_set() const noexcept {
     return _state.load(std::memory_order_acquire) == static_cast<const void*>(this);
 }
 
 Ichor::AsyncManualResetEventOperation
-        Ichor::AsyncManualResetEvent::operator co_await() const noexcept
-{
+        Ichor::AsyncManualResetEvent::operator co_await() const noexcept {
     return AsyncManualResetEventOperation{ *this };
 }
 
-void Ichor::AsyncManualResetEvent::set() noexcept
-{
+void Ichor::AsyncManualResetEvent::set() noexcept {
     void* const setState = static_cast<void*>(this);
 
     // Needs 'release' semantics so that prior writes are visible to event awaiters
@@ -42,11 +38,9 @@ void Ichor::AsyncManualResetEvent::set() noexcept
     // prior writes to the waiting coroutine's state and to the contents of
     // the queued AsyncManualResetEventOperation objects.
     void* oldState = _state.exchange(setState, std::memory_order_acq_rel);
-    if (oldState != setState)
-    {
+    if (oldState != setState) {
         auto* current = static_cast<AsyncManualResetEventOperation*>(oldState);
-        while (current != nullptr)
-        {
+        while (current != nullptr) {
             auto* next = current->_next;
             current->_awaiter.resume();
             current = next;
@@ -54,8 +48,7 @@ void Ichor::AsyncManualResetEvent::set() noexcept
     }
 }
 
-void Ichor::AsyncManualResetEvent::reset() noexcept
-{
+void Ichor::AsyncManualResetEvent::reset() noexcept {
     void* oldState = static_cast<void*>(this);
     _state.compare_exchange_strong(oldState, nullptr, std::memory_order_relaxed);
 }
@@ -66,24 +59,18 @@ Ichor::AsyncManualResetEventOperation::AsyncManualResetEventOperation(
 {
 }
 
-bool Ichor::AsyncManualResetEventOperation::await_ready() const noexcept
-{
+bool Ichor::AsyncManualResetEventOperation::await_ready() const noexcept {
     return _event.is_set();
 }
 
-bool Ichor::AsyncManualResetEventOperation::await_suspend(std::coroutine_handle<Detail::AsyncGeneratorPromise<bool>> awaiter) noexcept
-{
+bool Ichor::AsyncManualResetEventOperation::await_suspend(std::coroutine_handle<> awaiter) noexcept {
     _awaiter = awaiter;
-    auto &promise = _awaiter.promise();
-    INTERNAL_DEBUG("await_suspend address {}, {}, {}, {}", promise.get_id(), static_cast<void*>(&promise), promise._consumerCoroutine.address(), awaiter.address());
 
     const void* const setState = static_cast<const void*>(&_event);
 
     void* oldState = _event._state.load(std::memory_order_acquire);
-    do
-    {
-        if (oldState == setState)
-        {
+    do {
+        if (oldState == setState) {
             // State is now 'set' no need to suspend.
             return false;
         }

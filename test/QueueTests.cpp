@@ -8,8 +8,6 @@
 
 TEST_CASE("QueueTests") {
 
-    ensureInternalLoggerExists();
-
     SECTION("MultimapQueue") {
         auto queue = std::make_unique<MultimapQueue>();
         auto &dm = queue->createManager();
@@ -61,7 +59,7 @@ TEST_CASE("QueueTests") {
             _dm.store(&dm, std::memory_order_release);
 
             auto *loop = queue->createEventLoop();
-            dm.createServiceManager<NullFrameworkLogger, IFrameworkLogger>();
+            dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>();
             dm.createServiceManager<UselessService>();
             queue->start(DoNotCaptureSigInt);
 

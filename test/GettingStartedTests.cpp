@@ -1,12 +1,11 @@
 #include <catch2/catch_test_macros.hpp>
 #include <ichor/event_queues/MultimapQueue.h>
-#include <ichor/optional_bundles/logging_bundle/NullFrameworkLogger.h>
 #include "TestServices/UselessService.h"
 
 #include <ichor/DependencyManager.h>
 #include <ichor/CommunicationChannel.h>
-#include <ichor/optional_bundles/logging_bundle/CoutFrameworkLogger.h>
-#include <ichor/optional_bundles/timer_bundle/TimerService.h>
+#include <ichor/services/timer/TimerService.h>
+#include <ichor/services/logging/CoutFrameworkLogger.h>
 #include <ichor/events/Event.h>
 #include <iostream>
 
@@ -39,7 +38,10 @@ struct MyTimerService final : public IMyTimerService, public Ichor::Service<MyTi
     StartBehaviour start() final {
         auto timer = getManager().createServiceManager<Ichor::Timer, Ichor::ITimer>();
         timer->setChronoInterval(std::chrono::seconds(1));
-        _timerEventRegistration = getManager().registerEventHandler<Ichor::TimerEvent>(this, timer->getServiceId());
+        timer->setCallback([](DependencyManager &dm) -> AsyncGenerator<void> {
+            fmt::print("Timer fired\n");
+            co_return;
+        });
         timer->startTimer();
         return StartBehaviour::SUCCEEDED;
     }
@@ -47,10 +49,6 @@ struct MyTimerService final : public IMyTimerService, public Ichor::Service<MyTi
     StartBehaviour stop() final {
         _timerEventRegistration.reset();
         return StartBehaviour::SUCCEEDED;
-    }
-
-    Ichor::AsyncGenerator<bool> handleEvent(Ichor::TimerEvent const &) {
-        co_return (bool)PreventOthersHandling;
     }
 
     Ichor::EventHandlerRegistration _timerEventRegistration{};
@@ -74,7 +72,7 @@ struct ServiceWithoutInterface final : public Ichor::Service<ServiceWithoutInter
 
 struct MyInterceptorService final : public Ichor::Service<MyInterceptorService> {
     StartBehaviour start() final {
-        _interceptor = this->getManager().template registerEventInterceptor<Ichor::TimerEvent>(this); // Can change TimerEvent to just Event if you want to intercept *all* events
+        _interceptor = this->getManager().template registerEventInterceptor<Ichor::RunFunctionEvent>(this); // Can change TimerEvent to just Event if you want to intercept *all* events
         return StartBehaviour::SUCCEEDED;
     }
 
@@ -83,11 +81,11 @@ struct MyInterceptorService final : public Ichor::Service<MyInterceptorService> 
         return StartBehaviour::SUCCEEDED;
     }
 
-    bool preInterceptEvent(Ichor::TimerEvent const &evt) {
+    bool preInterceptEvent(Ichor::RunFunctionEvent const &) {
         return AllowOthersHandling; //PreventOthersHandling if this event should be discarded
     }
 
-    void postInterceptEvent(Ichor::TimerEvent const &evt, bool processed) {
+    void postInterceptEvent(Ichor::RunFunctionEvent const &, bool processed) {
         // Can use this to track how long the processing took
     }
 

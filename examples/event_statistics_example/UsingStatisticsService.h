@@ -1,8 +1,8 @@
 #pragma once
 
 #include <ichor/DependencyManager.h>
-#include <ichor/optional_bundles/logging_bundle/Logger.h>
-#include <ichor/optional_bundles/timer_bundle/TimerService.h>
+#include <ichor/services/logging/Logger.h>
+#include <ichor/services/timer/TimerService.h>
 #include <ichor/Service.h>
 #include <ichor/LifecycleManager.h>
 
@@ -22,14 +22,14 @@ public:
         quitTimerManager->setChronoInterval(15s);
         bogusTimerManager->setChronoInterval(100ms);
 
-        quitTimerManager->setCallback([this](TimerEvent const &) -> AsyncGenerator<bool> {
+        quitTimerManager->setCallback([this](DependencyManager &dm) -> AsyncGenerator<void> {
             getManager().pushEvent<QuitEvent>(getServiceId(), INTERNAL_EVENT_PRIORITY + 1);
-            co_return (bool)PreventOthersHandling;
+            co_return;
         });
 
-        bogusTimerManager->setCallback([this](TimerEvent const &) -> AsyncGenerator<bool> {
+        bogusTimerManager->setCallback([this](DependencyManager &dm) -> AsyncGenerator<void> {
             std::this_thread::sleep_for(std::chrono::milliseconds(_dist(_mt)));
-            co_return (bool)PreventOthersHandling;
+            co_return;
         });
 
         quitTimerManager->startTimer();

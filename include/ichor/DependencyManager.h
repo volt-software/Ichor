@@ -266,7 +266,7 @@ namespace Ichor {
                 v.template emplace_back(EventCallbackInfo{
                         impl->getServiceId(),
                         targetServiceId,
-                        std::function<AsyncGenerator<bool>(Event const &)>{
+                        std::function<AsyncGenerator<void>(Event const &)>{
                             [impl](Event const &evt) { return impl->handleEvent(static_cast<EventT const &>(evt)); }
                         }
                 });
@@ -275,7 +275,7 @@ namespace Ichor {
                 existingHandlers->second.emplace_back(EventCallbackInfo{
                     impl->getServiceId(),
                     targetServiceId,
-                    std::function<AsyncGenerator<bool>(Event const &)>{
+                    std::function<AsyncGenerator<void>(Event const &)>{
                         [impl](Event const &evt) { return impl->handleEvent(static_cast<EventT const &>(evt)); }
                     }
                 });
@@ -404,7 +404,7 @@ namespace Ichor {
 
         void handleEventCompletion(Event const &evt);
 
-        [[nodiscard]] uint32_t broadcastEvent(Event const &evt);
+        [[nodiscard]] uint32_t broadcastEvent(std::shared_ptr<Event> &evt);
 
         void setCommunicationChannel(CommunicationChannel *channel);
 
@@ -418,7 +418,7 @@ namespace Ichor {
         }
 
         void start();
-        void processEvent(Event *evt);
+        void processEvent(std::unique_ptr<Event> &&evt);
         void stop();
 
         std::unordered_map<uint64_t, std::shared_ptr<ILifecycleManager>> _services{}; // key = service id
@@ -429,6 +429,7 @@ namespace Ichor {
         std::unordered_map<uint64_t, std::vector<EventCallbackInfo>> _eventCallbacks{}; // key = event id
         std::unordered_map<uint64_t, std::vector<EventInterceptInfo>> _eventInterceptors{}; // key = event id
         std::unordered_map<uint64_t, std::unique_ptr<IGenerator>> _scopedGenerators{}; // key = promise id
+        std::unordered_map<uint64_t, std::shared_ptr<Event>> _scopedEvents{}; // key = promise id
         IEventQueue *_eventQueue;
         IFrameworkLogger *_logger{nullptr};
         std::shared_ptr<ILifecycleManager> _preventEarlyDestructionOfFrameworkLogger{nullptr};

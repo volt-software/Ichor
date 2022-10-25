@@ -10,8 +10,6 @@ int sum_three(int a, int b, int c) noexcept {
 
 TEST_CASE("STL Tests") {
 
-    ensureInternalLoggerExists();
-
     SECTION("Any basics") {
         auto someInt = make_any<uint64_t>(5);
         REQUIRE_NOTHROW(any_cast<uint64_t>(someInt));

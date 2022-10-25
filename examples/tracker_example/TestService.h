@@ -1,7 +1,7 @@
 #pragma once
 
 #include <ichor/DependencyManager.h>
-#include <ichor/optional_bundles/logging_bundle/Logger.h>
+#include <ichor/services/logging/Logger.h>
 #include <ichor/Service.h>
 #include <ichor/LifecycleManager.h>
 #include "RuntimeCreatedService.h"

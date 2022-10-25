@@ -1,7 +1,7 @@
 #pragma once
 
 #include <ichor/DependencyManager.h>
-#include <ichor/optional_bundles/logging_bundle/Logger.h>
+#include <ichor/services/logging/Logger.h>
 #include <ichor/Service.h>
 #include <ichor/LifecycleManager.h>
 #include "CustomEvent.h"
@@ -36,13 +36,13 @@ public:
         _logger = nullptr;
     }
 
-    AsyncGenerator<bool> handleEvent(CustomEvent const &evt) {
+    AsyncGenerator<void> handleEvent(CustomEvent const &evt) {
         ICHOR_LOG_INFO(_logger, "Handling custom event");
         getManager().pushEvent<QuitEvent>(getServiceId());
         getManager().getCommunicationChannel()->broadcastEvent<QuitEvent>(getManager(), getServiceId(), INTERNAL_EVENT_PRIORITY+1);
 
         // we dealt with it, don't let other services handle this event
-        co_return (bool)PreventOthersHandling;
+        co_return;
     }
 
 private:

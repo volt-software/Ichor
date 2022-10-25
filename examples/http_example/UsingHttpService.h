@@ -1,14 +1,15 @@
 #pragma once
 
 #include <ichor/DependencyManager.h>
-#include <ichor/optional_bundles/logging_bundle/Logger.h>
-#include <ichor/optional_bundles/timer_bundle/TimerService.h>
-#include <ichor/optional_bundles/network_bundle/NetworkEvents.h>
-#include <ichor/optional_bundles/network_bundle/http/IHttpConnectionService.h>
-#include <ichor/optional_bundles/network_bundle/http/IHttpService.h>
+#include <ichor/services/logging/Logger.h>
+#include <ichor/services/timer/TimerService.h>
+#include <ichor/services/network/NetworkEvents.h>
+#include <ichor/services/network/http/IHttpConnectionService.h>
+#include <ichor/services/network/http/IHttpService.h>
+#include <ichor/events/RunFunctionEvent.h>
 #include <ichor/Service.h>
 #include <ichor/LifecycleManager.h>
-#include <ichor/optional_bundles/serialization_bundle/ISerializationAdmin.h>
+#include <ichor/services/serialization/ISerializationAdmin.h>
 #include "../common/TestMsg.h"
 
 using namespace Ichor;
@@ -25,9 +26,15 @@ public:
 
     StartBehaviour start() final {
         ICHOR_LOG_INFO(_logger, "UsingHttpService started");
-        _dataEventRegistration = getManager().registerEventHandler<HttpResponseEvent>(this);
         _failureEventRegistration = getManager().registerEventHandler<FailedSendMessageEvent>(this);
-        _connectionService->sendAsync(HttpMethod::post, "/test", {}, _serializationAdmin->serialize(TestMsg{11, "hello"}));
+
+        getManager().pushEvent<RunFunctionEvent>(getServiceId(), [this](DependencyManager &dm) -> AsyncGenerator<void> {
+            auto toSendMsg = _serializationAdmin->serialize(TestMsg{11, "hello"});
+
+            co_await sendTestRequest(std::move(toSendMsg)).begin();
+            co_return;
+        });
+
         return StartBehaviour::SUCCEEDED;
     }
 
@@ -66,7 +73,7 @@ public:
         _routeRegistration = svc->addRoute(HttpMethod::post, "/test", [this](HttpRequest &req) -> HttpResponse{
             auto msg = _serializationAdmin->deserialize<TestMsg>(std::move(req.body));
             ICHOR_LOG_WARN(_logger, "received request on route {} {} with testmsg {} - {}", (int)req.method, req.route, msg->id, msg->val);
-            return HttpResponse{HttpStatus::ok, _serializationAdmin->serialize(TestMsg{11, "hello"}), {}};
+            return HttpResponse{false, HttpStatus::ok, _serializationAdmin->serialize(TestMsg{11, "hello"}), {}};
         });
     }
 
@@ -78,26 +85,26 @@ public:
         ICHOR_LOG_INFO(_logger, "Removed IHttpConnectionService");
     }
 
-    AsyncGenerator<bool> handleEvent(HttpResponseEvent const &evt) {
-        if(evt.response.status == HttpStatus::ok) {
-            auto msg = _serializationAdmin->deserialize<TestMsg>(evt.response.body);
-            ICHOR_LOG_INFO(_logger, "Received TestMsg id {} val {}", msg->id, msg->val);
-        } else {
-            ICHOR_LOG_ERROR(_logger, "Received status {}", (int)evt.response.status);
-        }
-        getManager().pushEvent<QuitEvent>(getServiceId());
-
-        co_return (bool)PreventOthersHandling;
-    }
-
-    AsyncGenerator<bool> handleEvent(FailedSendMessageEvent const &evt) {
+    AsyncGenerator<void> handleEvent(FailedSendMessageEvent const &evt) {
         ICHOR_LOG_INFO(_logger, "Failed to send message id {}, retrying", evt.msgId);
-        _connectionService->sendAsync(HttpMethod::post, "/test", {}, std::move(evt.data));
-
-        co_return (bool)PreventOthersHandling;
+        return sendTestRequest(std::move(evt.data));
     }
 
 private:
+    AsyncGenerator<void> sendTestRequest(std::vector<uint8_t> &&toSendMsg) {
+        auto response = *co_await _connectionService->sendAsync(HttpMethod::post, "/test", {}, std::move(toSendMsg)).begin();
+
+        if(response.status == HttpStatus::ok) {
+            auto msg = _serializationAdmin->deserialize<TestMsg>(response.body);
+            ICHOR_LOG_INFO(_logger, "Received TestMsg id {} val {}", msg->id, msg->val);
+        } else {
+            ICHOR_LOG_ERROR(_logger, "Received status {}", (int)response.status);
+        }
+        getManager().pushEvent<QuitEvent>(getServiceId());
+
+        co_return;
+    }
+
     ILogger *_logger{nullptr};
     ISerializationAdmin *_serializationAdmin{nullptr};
     IHttpConnectionService *_connectionService{nullptr};

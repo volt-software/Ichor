@@ -11,8 +11,7 @@
 #include <cstdint>
 #include <coroutine>
 
-namespace Ichor
-{
+namespace Ichor {
     class AsyncAutoResetEventOperation;
 
     /// An async auto-reset event is a coroutine synchronisation abstraction
@@ -21,8 +20,7 @@ namespace Ichor
     ///
     /// When a coroutine awaits a 'set' event the event is automatically
     /// reset back to the 'not set' state, thus the name 'auto reset' event.
-    class AsyncAutoResetEvent
-    {
+    class AsyncAutoResetEvent {
     public:
 
         /// Initialise the event to either 'set' or 'not set' state.
@@ -50,6 +48,11 @@ namespace Ichor
         /// This operation is a no-op if the event was already 'set'.
         void set() noexcept;
 
+        /// Set the state of the event to 'set' and run all pending coroutines.
+        ///
+        /// This operation is a no-op if the event was already 'set'.
+        void set_all() noexcept;
+
         /// Set the state of the event to 'not-set'.
         ///
         /// This is a no-op if the state was already 'not set'.
@@ -71,8 +74,7 @@ namespace Ichor
 
     };
 
-    class AsyncAutoResetEventOperation
-    {
+    class AsyncAutoResetEventOperation {
     public:
 
         AsyncAutoResetEventOperation() noexcept;
