@@ -17,20 +17,20 @@ namespace Ichor {
 
     struct AveragedStatisticEntry {
         AveragedStatisticEntry() = default;
-        AveragedStatisticEntry(int64_t _timestamp, int64_t _minProcessingTimeRequired, int64_t _maxProcessingTimeRequired, int64_t _avgProcessingTimeRequired, uint64_t _occurances) :
+        AveragedStatisticEntry(int64_t _timestamp, int64_t _minProcessingTimeRequired, int64_t _maxProcessingTimeRequired, int64_t _avgProcessingTimeRequired, uint64_t _occurrences) :
             timestamp(_timestamp), minProcessingTimeRequired(_minProcessingTimeRequired), maxProcessingTimeRequired(_maxProcessingTimeRequired), avgProcessingTimeRequired(_avgProcessingTimeRequired),
-            occurances(_occurances) {}
+            occurrences(_occurrences) {}
         int64_t timestamp{};
         int64_t minProcessingTimeRequired{};
         int64_t maxProcessingTimeRequired{};
         int64_t avgProcessingTimeRequired{};
-        uint64_t occurances{};
+        uint64_t occurrences{};
     };
 
     class IEventStatisticsService {
     public:
-        [[nodiscard]] virtual const std::unordered_map<uint64_t, std::vector<StatisticEntry>>& getRecentStatistics() const noexcept = 0;
-        [[nodiscard]] virtual const std::unordered_map<uint64_t, std::vector<AveragedStatisticEntry>>& getAverageStatistics() const noexcept = 0;
+        [[nodiscard]] virtual const unordered_map<uint64_t, std::vector<StatisticEntry>>& getRecentStatistics() const noexcept = 0;
+        [[nodiscard]] virtual const unordered_map<uint64_t, std::vector<AveragedStatisticEntry>>& getAverageStatistics() const noexcept = 0;
 
     protected:
         ~IEventStatisticsService() = default;
@@ -49,12 +49,12 @@ namespace Ichor {
         StartBehaviour start() final;
         StartBehaviour stop() final;
 
-        const std::unordered_map<uint64_t, std::vector<StatisticEntry>>& getRecentStatistics() const noexcept final;
-        const std::unordered_map<uint64_t, std::vector<AveragedStatisticEntry>>& getAverageStatistics() const noexcept final;
+        const unordered_map<uint64_t, std::vector<StatisticEntry>>& getRecentStatistics() const noexcept final;
+        const unordered_map<uint64_t, std::vector<AveragedStatisticEntry>>& getAverageStatistics() const noexcept final;
     private:
-        std::unordered_map<uint64_t, std::vector<StatisticEntry>> _recentEventStatistics;
-        std::unordered_map<uint64_t, std::vector<AveragedStatisticEntry>> _averagedStatistics;
-        std::unordered_map<uint64_t, std::string_view> _eventTypeToNameMapper;
+        unordered_map<uint64_t, std::vector<StatisticEntry>> _recentEventStatistics;
+        unordered_map<uint64_t, std::vector<AveragedStatisticEntry>> _averagedStatistics;
+        unordered_map<uint64_t, std::string_view> _eventTypeToNameMapper;
         std::chrono::time_point<std::chrono::steady_clock> _startProcessingTimestamp{};
         bool _showStatisticsOnStop{false};
         uint64_t _averagingIntervalMs{5000};

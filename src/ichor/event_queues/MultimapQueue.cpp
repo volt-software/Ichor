@@ -28,7 +28,7 @@ namespace Ichor {
 
         {
             std::lock_guard const l(_eventQueueMutex);
-            _eventQueue.insert({priority, std::move(event)});
+            _eventQueue.emplace(priority, std::move(event));
         }
         _wakeup.notify_all();
     }

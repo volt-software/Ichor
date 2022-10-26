@@ -48,9 +48,13 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &&uniqueEvt) 
     uint32_t handlerAmount = 1; // for the non-default case below, the DepMan handles the event
     auto interceptorsForAllEvents = _eventInterceptors.find(0);
     auto interceptorsForEvent = _eventInterceptors.find(evt->type);
+    std::vector<EventInterceptInfo> allEventInterceptorsCopy{};
+    std::vector<EventInterceptInfo> eventInterceptorsCopy{};
 
     if (interceptorsForAllEvents != end(_eventInterceptors)) {
-        for (EventInterceptInfo const &info: interceptorsForAllEvents->second) {
+        // Make copy because the vector can be modified in the preIntercept() call.
+        allEventInterceptorsCopy = interceptorsForAllEvents->second;
+        for (EventInterceptInfo const &info : allEventInterceptorsCopy) {
             if (!info.preIntercept(*evt)) {
                 allowProcessing = false;
             }
@@ -58,7 +62,9 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &&uniqueEvt) 
     }
 
     if (interceptorsForEvent != end(_eventInterceptors)) {
-        for (EventInterceptInfo const &info: interceptorsForEvent->second) {
+        // Make copy because the vector can be modified in the preIntercept() call.
+        eventInterceptorsCopy = interceptorsForEvent->second;
+        for (EventInterceptInfo const &info : eventInterceptorsCopy) {
             if (!info.preIntercept(*evt)) {
                 allowProcessing = false;
             }
@@ -203,7 +209,7 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &&uniqueEvt) 
                     break;
                 }
 
-                auto &toStopService = toStopServiceIt->second;
+                auto toStopService = toStopServiceIt->second;
                 if (stopServiceEvt->dependenciesStopped) {
                     auto ret = toStopService->stop();
                     if (toStopService->getServiceState() != ServiceState::INSTALLED && ret != StartBehaviour::SUCCEEDED) {
@@ -236,7 +242,7 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &&uniqueEvt) 
                     break;
                 }
 
-                auto &toRemoveService = toRemoveServiceIt->second;
+                auto toRemoveService = toRemoveServiceIt->second;
                 if (removeServiceEvt->dependenciesStopped) {
                     auto ret = toRemoveService->stop();
                     if (toRemoveService->getServiceState() == ServiceState::ACTIVE && ret != StartBehaviour::SUCCEEDED) {
@@ -272,7 +278,7 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &&uniqueEvt) 
                     break;
                 }
 
-                auto &toStartService = toStartServiceIt->second;
+                auto toStartService = toStartServiceIt->second;
                 if (toStartService->getServiceState() == ServiceState::ACTIVE) {
                     handleEventCompletion(*startServiceEvt);
                 } else {
@@ -401,13 +407,13 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &&uniqueEvt) 
     }
 
     if (interceptorsForAllEvents != end(_eventInterceptors)) {
-        for (EventInterceptInfo const &info: interceptorsForAllEvents->second) {
+        for (EventInterceptInfo const &info : allEventInterceptorsCopy) {
             info.postIntercept(*evt, allowProcessing && handlerAmount > 0);
         }
     }
 
     if (interceptorsForEvent != end(_eventInterceptors)) {
-        for (EventInterceptInfo const &info: interceptorsForEvent->second) {
+        for (EventInterceptInfo const &info : eventInterceptorsCopy) {
             info.postIntercept(*evt, allowProcessing && handlerAmount > 0);
         }
     }
@@ -449,11 +455,15 @@ void Ichor::DependencyManager::handleEventCompletion(Ichor::Event const &evt) {
 
 uint32_t Ichor::DependencyManager::broadcastEvent(std::shared_ptr<Event> &evt) {
     auto registeredListeners = _eventCallbacks.find(evt->type);
+
     if(registeredListeners == end(_eventCallbacks)) {
         return 0;
     }
 
-    for(auto &callbackInfo : registeredListeners->second) {
+    // Make copy because the vector can be modified in the callback() call.
+    std::vector<EventCallbackInfo> callbacksCopy = registeredListeners->second;
+
+    for(auto &callbackInfo : callbacksCopy) {
         auto service = _services.find(callbackInfo.listeningServiceId);
         if(service == end(_services) || (service->second->getServiceState() != ServiceState::ACTIVE && service->second->getServiceState() != ServiceState::INJECTING)) {
             continue;
@@ -487,7 +497,7 @@ uint32_t Ichor::DependencyManager::broadcastEvent(std::shared_ptr<Event> &evt) {
         }
     }
 
-    return registeredListeners->second.size();
+    return callbacksCopy.size();
 }
 
 void Ichor::DependencyManager::runForOrQueueEmpty(std::chrono::milliseconds ms) const noexcept {

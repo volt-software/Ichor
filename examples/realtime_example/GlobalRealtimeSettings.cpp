@@ -5,6 +5,7 @@
 //TODO
 #else
 #include <sys/mman.h>
+#include <sys/resource.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <array>
@@ -62,6 +63,10 @@ GlobalRealtimeSettings::GlobalRealtimeSettings() {
                 std::terminate();
             }
         }
+    }
+
+    if(setpriority(PRIO_PROCESS, 0, -20) != 0) {
+        std::terminate();
     }
 #endif
 }

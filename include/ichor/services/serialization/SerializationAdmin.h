@@ -21,7 +21,7 @@ namespace Ichor {
         void removeDependencyInstance(ISerializer *serializer, IService *isvc);
     private:
 
-        std::unordered_map<uint64_t, ISerializer*> _serializers;
+        unordered_map<uint64_t, ISerializer*> _serializers;
         ILogger *_logger{nullptr};
     };
 }

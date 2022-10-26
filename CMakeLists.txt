@@ -48,6 +48,7 @@ option(ICHOR_USE_UGLY_HACK_EXCEPTION_CATCHING "Enable an ugly hack on gcc to ena
 option(ICHOR_REMOVE_SOURCE_NAMES "Remove compiling source file names and line numbers when logging." OFF)
 option(ICHOR_USE_MOLD "Use mold when linking, recommended to use with gcc 12+ or clang" OFF)
 option(ICHOR_USE_SDEVENT "Add sd-event based queue/integration" OFF)
+option(ICHOR_USE_ABSEIL "Use abseil provided classes where applicable" OFF)
 cmake_dependent_option(ICHOR_USE_MIMALLOC "Use mimalloc for significant performance improvements" ON "NOT ICHOR_USE_SANITIZERS" OFF)
 cmake_dependent_option(ICHOR_USE_SYSTEM_MIMALLOC "Use system or vendored mimalloc" OFF "NOT ICHOR_USE_SANITIZERS" OFF)
 set(BUILD_TESTING OFF) #disable Catch 2 testing
@@ -67,20 +68,25 @@ set_property(CACHE ICHOR_ARCH_OPTIMIZATION PROPERTY STRINGS OFF NATIVE X86_64 X8
 if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND ICHOR_RUN_CLANG_TIDY)
     set(CMAKE_CXX_CLANG_TIDY "clang-tidy;-checks=*,-llvmlibc-*,-readability-function-cognitive-complexity,-altera-*,-modernize-use-trailing-return-type,-concurrency-mt-unsafe,-fuchsia-default-arguments-calls,-android-*,-readability-identifier-length,-clang-analyzer-optin.cplusplus.UninitializedObject")
 endif()
+
 if(ICHOR_USE_SPDLOG)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DSPDLOG_COMPILED_LIB -DSPDLOG_NO_EXCEPTIONS -DSPDLOG_FMT_EXTERNAL -DSPDLOG_DISABLE_DEFAULT_LOGGER -DSPDLOG_NO_ATOMIC_LEVELS -DICHOR_USE_SPDLOG -DSPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_TRACE ")
 endif()
+
 if(ICHOR_SERIALIZATION_FRAMEWORK STREQUAL "RAPIDJSON")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DUSE_RAPIDJSON ")
 elseif(ICHOR_SERIALIZATION_FRAMEWORK STREQUAL "BOOST_JSON")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DUSE_BOOST_JSON -DBOOST_JSON_STANDALONE")
 endif()
+
 if(ICHOR_REMOVE_SOURCE_NAMES)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DICHOR_REMOVE_SOURCE_NAMES_FROM_LOGGING ")
 endif()
+
 if(ICHOR_USE_UGLY_HACK_EXCEPTION_CATCHING)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DICHOR_USE_UGLY_HACK_EXCEPTION_CATCHING ")
 endif()
+
 if(ICHOR_USE_ETCD)
     find_package(Protobuf REQUIRED)
     find_package(gRPC CONFIG)
@@ -169,8 +175,6 @@ set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG -ggdb")
 set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-ggdb3 -Og")
 set(CMAKE_CXX_FLAGS_MINSIZEREL "-Os -DNDEBUG")
 
-find_package (Threads)
-
 set(FMT_SOURCES ${ICHOR_EXTERNAL_DIR}/fmt/src/format.cc ${ICHOR_EXTERNAL_DIR}/fmt/src/os.cc)
 file(GLOB_RECURSE ICHOR_FRAMEWORK_SOURCES ${ICHOR_TOP_DIR}/src/ichor/*.cpp)
 file(GLOB_RECURSE ICHOR_OPTIONAL_ETCD_SOURCES ${ICHOR_TOP_DIR}/src/services/etcd/*.cpp ${ICHOR_TOP_DIR}/src/services/etcd/*.cc)
@@ -213,6 +217,12 @@ if(ICHOR_USE_MIMALLOC)
 
         ichor_add_mimalloc()
     endif()
+endif()
+
+if(ICHOR_USE_ABSEIL)
+    find_package(absl REQUIRED)
+    target_link_libraries(ichor absl::flat_hash_map absl::node_hash_map absl::btree absl::hash)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DICHOR_USE_ABSEIL")
 endif()
 
 if(ICHOR_USE_SPDLOG)

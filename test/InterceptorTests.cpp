@@ -1,11 +1,17 @@
 #include "Common.h"
 #include "TestServices/InterceptorService.h"
 #include "TestServices/EventHandlerService.h"
+#include "TestServices/AddInterceptorDuringEventHandlingService.h"
 #include "TestEvents.h"
 #include <ichor/event_queues/MultimapQueue.h>
 #include <ichor/events/RunFunctionEvent.h>
 
 using namespace Ichor;
+
+bool AddInterceptorDuringEventHandlingService::_addedPreIntercept{};
+bool AddInterceptorDuringEventHandlingService::_addedPostIntercept{};
+bool AddInterceptorDuringEventHandlingService::_addedPreInterceptAll{};
+bool AddInterceptorDuringEventHandlingService::_addedPostInterceptAll{};
 
 TEST_CASE("Interceptor Tests") {
 
@@ -223,6 +229,31 @@ TEST_CASE("Interceptor Tests") {
 
             co_return;
         });
+
+        t.join();
+
+        REQUIRE_FALSE(dm.isRunning());
+    }
+
+    SECTION("Add interceptors during intercept") {
+        auto queue = std::make_unique<MultimapQueue>();
+        auto &dm = queue->createManager();
+
+        std::thread t([&]() {
+            dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>();
+            dm.createServiceManager<AddInterceptorDuringEventHandlingService>();
+            queue->start(CaptureSigInt);
+        });
+
+        waitForRunning(dm);
+
+        dm.runForOrQueueEmpty();
+
+        dm.pushEvent<TestEvent>(0);
+
+        dm.runForOrQueueEmpty();
+
+        dm.pushEvent<QuitEvent>(0);
 
         t.join();
 
