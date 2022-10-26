@@ -12,6 +12,13 @@
 #include <spdlog/spdlog.h>
 #endif
 
+
+#ifdef ICHOR_USE_ABSEIL
+#include <absl/container/flat_hash_map.h>
+#include <absl/container/node_hash_map.h>
+#include <absl/hash/hash.h>
+#endif
+
 // note that this only works when compiling with spdlog
 static constexpr bool DO_INTERNAL_DEBUG = false;
 
@@ -48,16 +55,40 @@ namespace Ichor {
     template<typename... Type>
     inline constexpr InterfacesList_t<Type...> InterfacesList{};
 
+
     struct string_hash {
         using is_transparent = void;  // Pred to use
         using key_equal = std::equal_to<>;  // Pred to use
+#ifdef ICHOR_USE_ABSEIL
+        using hash_type = absl::Hash<std::string_view>;  // just a helper local type
+#else
         using hash_type = std::hash<std::string_view>;  // just a helper local type
+#endif
         size_t operator()(std::string_view txt) const   { return hash_type{}(txt); }
         size_t operator()(const std::string& txt) const { return hash_type{}(txt); }
         size_t operator()(const char* txt) const        { return hash_type{}(txt); }
     };
 
-    using Properties = std::unordered_map<std::string, Ichor::any, string_hash>;
+
+#ifdef ICHOR_USE_ABSEIL
+    template <
+            class Key,
+            class T,
+            class Hash = absl::Hash<Key>,
+            class KeyEqual = std::equal_to<Key>,
+            class Allocator = std::allocator<std::pair<const Key, T>>>
+    using unordered_map = absl::flat_hash_map<Key, T, Hash, KeyEqual, Allocator>;
+#else
+    template <
+            class Key,
+            class T,
+            class Hash = std::hash<Key>,
+            class KeyEqual = std::equal_to<Key>,
+            class Allocator = std::allocator<std::pair<const Key, T>>>
+    using unordered_map = std::unordered_map<Key, T, Hash, KeyEqual, Allocator>;
+#endif
+
+    using Properties = unordered_map<std::string, Ichor::any, string_hash>;
     using IchorProperty = std::pair<std::string, Ichor::any>;
 
     inline constexpr bool PreventOthersHandling = false;

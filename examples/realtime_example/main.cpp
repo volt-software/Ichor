@@ -2,7 +2,6 @@
 #include "OptionalService.h"
 #include <ichor/event_queues/MultimapQueue.h>
 #include <ichor/services/logging/LoggerAdmin.h>
-//#include "MemoryResources.h"
 #include "GlobalRealtimeSettings.h"
 #if defined(NDEBUG)
 #include <ichor/services/logging/NullFrameworkLogger.h>
@@ -19,10 +18,6 @@
 #endif
 #include <chrono>
 #include <stdexcept>
-
-// TODO with the removal of memory resources, this example won't run anymore
-// have to merge the allocator in MemoryResources.h with AllocPoison.cpp
-
 
 using namespace std::string_literals;
 
@@ -42,14 +37,7 @@ void* run_example(void*) {
     auto start = std::chrono::steady_clock::now();
 #endif
 
-    // disable usage of default std::pmr resource, as that would allocate.
-//    terminating_resource terminatingResource{};
-//    std::pmr::set_default_resource(&terminatingResource);
-
     {
-//        buffer_resource<1024 * 192> resourceOne{}; // need about 160 kb for the 20'000 iteration array in TestService
-//        buffer_resource<1024 * 32> resourceTwo{};
-
         auto queue = std::make_unique<MultimapQueue>();
         auto &dm = queue->createManager();
         dm.createServiceManager<FRAMEWORK_LOGGER_TYPE, IFrameworkLogger>({}, 10);

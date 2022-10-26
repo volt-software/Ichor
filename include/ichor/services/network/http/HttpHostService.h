@@ -47,7 +47,7 @@ namespace Ichor {
         std::atomic<bool> _tcpNoDelay{};
         ILogger *_logger{nullptr};
         IHttpContextService *_httpContextService{nullptr};
-        std::unordered_map<HttpMethod, std::unordered_map<std::string, std::function<HttpResponse(HttpRequest&)>, string_hash, std::equal_to<>>> _handlers{};
+        unordered_map<HttpMethod, unordered_map<std::string, std::function<HttpResponse(HttpRequest&)>, string_hash, std::equal_to<>>> _handlers{};
     };
 }
 

@@ -6,7 +6,7 @@ Ichor, [Greek Mythos for ethereal fluid that is the blood of the gods/immortals]
 
 Ichor informally stands for "Intuitive Compile-time Hoisted Object Resources".
 
-Ichor's greater aim is to bring C++20 to the embedded realm. This means that classic requirements such as the possibility to have 0 dynamic memory allocations, control over scheduling and deterministic execution times are a focus, whilst still allowing much of standard modern C++ development. 
+Ichor's greater aim is to support C++ projects with long software lifecycles. Think 10-40 years. By decoupling interface and implement, library updates or changes to user requirements are confined to a smaller area.  
 
 Moreover, the concept of [Fearless Concurrency](https://doc.rust-lang.org/book/ch16-00-concurrency.html) from Rust is attempted to be applied in Ichor through thread confinement.   
 
@@ -40,9 +40,9 @@ More examples can be found in the [examples directory](examples).
 
 ## Currently Unsupported
 * Windows, untested, not sure if compiles but should be relatively easy to get up and running
-  * Tried with MSVC 19.33, but it seemed like coroutines and concepts are not fully working yet
+  * Tried with MSVC 19.33, but it seemed like coroutines and concepts are not fully implemented yet
 * Baremetal, might change if someone puts in the effort to modify Ichor to work with freestanding implementations of C++20
-* Far out future plans for any RTOS that supports C++20 such as VxWorks Wind River
+* Far out future plans for any RTOS that supports C++20 such as VxWorks Wind River, FreeRTOS
 
 ## Dependencies
 
@@ -92,7 +92,7 @@ sudo apt install libboost1.74-all-dev libssl-dev
 
 #### Windows
 
-Tried with MSVC 19.33, but it seemed like coroutines and concepts are not fully working yet.
+Tried with MSVC 19.33, but it seemed like coroutines and concepts are not fully implemented yet.
 
 ## Building
 
@@ -121,7 +121,6 @@ Documentation can be found in the [docs directory](docs).
     * Use of an event loop
     * Where multi-threading is desired, provide easy to use abstractions to prevent issues
 * Performance-oriented design in all-parts of the framework / making it easy to get high performance and low latency
-* Usage of memory allocators, enabling 0 heap allocation C++ usage.
 * Fully utilise OOP, RAII and C++20 Concepts to steer users to using the framework correctly
 * Implement business logic in the least amount of code possible 
 * Hopefully this culminates and less error-prone code and better time to market 
@@ -149,61 +148,23 @@ Optional services:
 
 * EDF scheduling / WCET measurements
 * CMake stuff to include ichor library from external project
-* expand etcd support, currently only simply put/get supported
+* expand/re-do etcd support, currently only simply put/get supported
 * Pubsub interfaces
     * Kafka? Pulsar? Ecal?
 * Shell Commands
 * Tracing interface
     * Opentracing? Jaeger?
 * Docker integration/compilation
+* "Remote" services, where services are either in a different thread or a different machine
 * ...
 
-# Preliminary benchmark results
-These benchmarks are mainly used to identify bottlenecks, not to showcase the performance of the framework. Proper throughput and latency benchmarks are TBD.
+# Benchmarks
 
-Setup: AMD 3900X, 3600MHz@CL17 RAM, ubuntu 20.04
-* 1 thread inserting ~5 million events and then processing them in ~1,353 ms and ~647 MB memory usage
-* 8 threads inserting ~5 million events and then processing them in ~1,938 ms and ~5,137 MB memory usage
-* 1 thread creating 10,000 services with dependencies in ~3,060 ms and ~42 MB memory usage
-* 8 threads creating 10,000 services with dependencies in ~10,100 ms and ~320 MB memory usage
-* 1 thread starting/stopping 1 service 10,000 times in ~1,470 ms and ~4 MB memory usage
-* 8 threads starting/stopping 1 service 10,000 times in ~3,060 ms and ~6 MB memory usage
-* 1 thread serializing & deserializing 1,000,000 JSON messages in ~380 ms and ~4 MB memory usage
-* 8 threads serializing & deserializing 1,000,000 JSON messages in ~400 ms and ~5 MB memory usage
-
-Realtime example on a vanilla linux:
-```
-root# echo 950000 > /proc/sys/kernel/sched_rt_runtime_us #force kernel to fail our deadlines
-root# ./ichor_realtime_example 
-duration of run 4,076 is 51,298 µs which exceeded maximum of 2,000 µs
-duration of run 6,750 is 50,296 µs which exceeded maximum of 2,000 µs
-duration of run 9,396 is 50,293 µs which exceeded maximum of 2,000 µs
-duration of run 12,055 is 50,296 µs which exceeded maximum of 2,000 µs
-duration of run 14,719 is 50,295 µs which exceeded maximum of 2,000 µs
-duration of run 17,374 is 50,297 µs which exceeded maximum of 2,000 µs
-duration min/max/avg: 349/51,298/371 µs
-root#
-root# echo 999999 > /proc/sys/kernel/sched_rt_runtime_us
-root# ./ichor_realtime_example 
-duration min/max/avg: 179/838/204 µs
-root#
-root# echo -1 > /proc/sys/kernel/sched_rt_runtime_us
-root# ./ichor_realtime_example 
-duration min/max/avg: 274/368/276 µs
-```
-
-These benchmarks currently lead to the characteristics:
-* creating services with dependencies overhead is likely O(N²).
-* Starting services, stopping services overhead is likely O(N)
-* event handling overhead is amortized O(1)
-* Creating more threads is not 100% linearizable in all cases (pure event creation/handling seems to be, otherwise not really)
-* Latency spikes while scheduling in user-space is in the order of 100's of microseconds, lower if a proper [realtime tuning guide](https://rigtorp.se/low-latency-guide/) is used (except if the queue goes empty and is forced to sleep)
-
-Help with improving memory usage and the O(N²) behaviour would be appreciated.
+See [benchmarks directory](benchmarks)
 
 # Support
 
-Feel free to make issues/pull requests and I'm sometimes online on Discord: https://discord.gg/r9BtesB
+Feel free to make issues/pull requests, and I'm sometimes online on Discord: https://discord.gg/r9BtesB
 
 Business inquiries can be sent to michael AT volt-software.nl
 
@@ -211,11 +172,12 @@ Business inquiries can be sent to michael AT volt-software.nl
 
 ### I want to have a non-voluntary pre-emption scheduler
 
-By default, Ichor uses a mutex when inserting/extracting events from its queue. Because non-voluntary user-space scheduling requires lock-free data-structures, this is not possible yet.
+By default, Ichor uses a mutex when inserting/extracting events from its queue. Because non-voluntary user-space scheduling requires lock-free data-structures, this is not possible.
 
 ### Is it possible to have a completely stack-based allocation while using C++?
 
-Yes, see the [realtime example](examples/realtime_example).
+Ichor used to have full support for the polymorphic allocators, but as not all compilers support it yet (looking at you clang) as well as having a negative impact on developer ergonomy, it has been removed.
+Instead, Ichor now recommends usage with [mimalloc](https://github.com/microsoft/mimalloc): "it does not suffer from blowup, has bounded worst-case allocation times (wcat), bounded space overhead (~0.2% meta-data, with low internal fragmentation), and has no internal points of contention using only atomic operations."
 
 ### Windows? OS X? VxWorks Wind River? Baremetal?
 
@@ -229,9 +191,9 @@ The same goes for Wind River. Freestanding implementations might be necessary fo
 
 ### Why re-implement parts of the STL?
 
-To add support for memory allocators and achieve 0 dynamic memory allocation support. Particularly std::any and the (read/write) mutexes.
+To add support for `-fno-rtti` while providing the functionality of `std::any` and realtime mutexes (at least on linux).
 
-But also because the real-time extensions to mutexes (PTHREAD_MUTEX_ADAPTIVE_NP/PTHREAD_PRIO_INHERIT/PTHREAD_RWLOCK_PREFER_WRITER_NONRECURSIVE_NP) is either not a standard extension or not exposed by the standard library equivalents.
+The real-time extensions to mutexes (PTHREAD_MUTEX_ADAPTIVE_NP/PTHREAD_PRIO_INHERIT/PTHREAD_RWLOCK_PREFER_WRITER_NONRECURSIVE_NP) are either not a standard extension or not exposed by the standard library equivalents.
 
 # License
 

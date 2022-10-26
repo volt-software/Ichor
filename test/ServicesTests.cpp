@@ -5,8 +5,11 @@
 #include "TestServices/MixingInterfacesService.h"
 #include "TestServices/StartStopOnSecondAttemptService.h"
 #include "TestServices/TimerRunsOnceService.h"
+#include "TestServices/AddEventHandlerDuringEventHandlingService.h"
 #include <ichor/event_queues/MultimapQueue.h>
 #include <ichor/events/RunFunctionEvent.h>
+
+bool AddEventHandlerDuringEventHandlingService::_addedReg{};
 
 TEST_CASE("ServicesTests") {
 
@@ -201,6 +204,30 @@ TEST_CASE("ServicesTests") {
 
             co_return;
         });
+
+        t.join();
+    }
+
+    SECTION("Add event handler during event handling") {
+        auto queue = std::make_unique<MultimapQueue>();
+        auto &dm = queue->createManager();
+
+        std::thread t([&]() {
+            dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>();
+            dm.createServiceManager<AddEventHandlerDuringEventHandlingService>();
+            dm.createServiceManager<AddEventHandlerDuringEventHandlingService>();
+            queue->start(CaptureSigInt);
+        });
+
+        waitForRunning(dm);
+
+        dm.runForOrQueueEmpty();
+
+        dm.pushEvent<TestEvent>(0);
+
+        dm.runForOrQueueEmpty();
+
+        dm.pushEvent<QuitEvent>(0);
 
         t.join();
     }

@@ -56,13 +56,13 @@ namespace Ichor {
 
         template<DerivedTemplated<Service> Impl, typename... Interfaces>
         requires ImplementsAll<Impl, Interfaces...>
-        auto createServiceManager() {
+        Impl* createServiceManager() {
             return createServiceManager<Impl, Interfaces...>(Properties{});
         }
 
         template<DerivedTemplated<Service> Impl, typename... Interfaces>
         requires ImplementsAll<Impl, Interfaces...>
-        auto createServiceManager(Properties&& properties, uint64_t priority = INTERNAL_EVENT_PRIORITY) {
+        Impl* createServiceManager(Properties&& properties, uint64_t priority = INTERNAL_EVENT_PRIORITY) {
             if constexpr(RequestsDependencies<Impl>) {
                 static_assert(!std::is_default_constructible_v<Impl>, "Cannot have a dependencies constructor and a default constructor simultaneously.");
                 static_assert(!RequestsProperties<Impl>, "Cannot have a dependencies constructor and a properties constructor simultaneously.");
@@ -105,9 +105,13 @@ namespace Ichor {
 
                 cmpMgr->getService().injectPriority(priority);
 
+                if(_services.contains(cmpMgr->serviceId())) {
+                    std::terminate();
+                }
+
                 _services.emplace(cmpMgr->serviceId(), cmpMgr);
 
-                return &cmpMgr->getService();
+                return &(cmpMgr->getService());
             } else {
                 static_assert(!(std::is_default_constructible_v<Impl> && RequestsProperties<Impl>), "Cannot have a properties constructor and a default constructor simultaneously.");
                 auto cmpMgr = LifecycleManager<Impl, Interfaces...>::template create(_logger, "", std::forward<Properties>(properties), this, InterfacesList<Interfaces...>);
@@ -131,9 +135,13 @@ namespace Ichor {
                     pushEventInternal<DependencyOnlineEvent>(cmpMgr->serviceId(), priority);
                 }
 
+                if(_services.contains(cmpMgr->serviceId())) {
+                    std::terminate();
+                }
+
                 _services.emplace(cmpMgr->serviceId(), cmpMgr);
 
-                return &cmpMgr->getService();
+                return &(cmpMgr->getService());
             }
         }
 
@@ -421,15 +429,15 @@ namespace Ichor {
         void processEvent(std::unique_ptr<Event> &&evt);
         void stop();
 
-        std::unordered_map<uint64_t, std::shared_ptr<ILifecycleManager>> _services{}; // key = service id
-        std::unordered_map<uint64_t, std::vector<DependencyTrackerInfo>> _dependencyRequestTrackers{}; // key = interface name hash
-        std::unordered_map<uint64_t, std::vector<DependencyTrackerInfo>> _dependencyUndoRequestTrackers{}; // key = interface name hash
-        std::unordered_map<CallbackKey, std::function<void(Event const &)>> _completionCallbacks{}; // key = listening service id + event type
-        std::unordered_map<CallbackKey, std::function<void(Event const &)>> _errorCallbacks{}; // key = listening service id + event type
-        std::unordered_map<uint64_t, std::vector<EventCallbackInfo>> _eventCallbacks{}; // key = event id
-        std::unordered_map<uint64_t, std::vector<EventInterceptInfo>> _eventInterceptors{}; // key = event id
-        std::unordered_map<uint64_t, std::unique_ptr<IGenerator>> _scopedGenerators{}; // key = promise id
-        std::unordered_map<uint64_t, std::shared_ptr<Event>> _scopedEvents{}; // key = promise id
+        unordered_map<uint64_t, std::shared_ptr<ILifecycleManager>> _services{}; // key = service id
+        unordered_map<uint64_t, std::vector<DependencyTrackerInfo>> _dependencyRequestTrackers{}; // key = interface name hash
+        unordered_map<uint64_t, std::vector<DependencyTrackerInfo>> _dependencyUndoRequestTrackers{}; // key = interface name hash
+        unordered_map<CallbackKey, std::function<void(Event const &)>> _completionCallbacks{}; // key = listening service id + event type
+        unordered_map<CallbackKey, std::function<void(Event const &)>> _errorCallbacks{}; // key = listening service id + event type
+        unordered_map<uint64_t, std::vector<EventCallbackInfo>> _eventCallbacks{}; // key = event id
+        unordered_map<uint64_t, std::vector<EventInterceptInfo>> _eventInterceptors{}; // key = event id
+        unordered_map<uint64_t, std::unique_ptr<IGenerator>> _scopedGenerators{}; // key = promise id
+        unordered_map<uint64_t, std::shared_ptr<Event>> _scopedEvents{}; // key = promise id
         IEventQueue *_eventQueue;
         IFrameworkLogger *_logger{nullptr};
         std::shared_ptr<ILifecycleManager> _preventEarlyDestructionOfFrameworkLogger{nullptr};

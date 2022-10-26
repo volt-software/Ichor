@@ -21,6 +21,6 @@ namespace Ichor {
                     std::move(props)));
         }
 
-        std::unordered_map<uint64_t, std::tuple<Dependency, std::function<void(void*, IService*)>, std::function<void(void*, IService*)>, std::optional<Properties>>> _registrations;
+        unordered_map<uint64_t, std::tuple<Dependency, std::function<void(void*, IService*)>, std::function<void(void*, IService*)>, std::optional<Properties>>> _registrations;
     };
 }

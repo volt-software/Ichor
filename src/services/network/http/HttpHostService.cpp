@@ -139,7 +139,6 @@ void Ichor::HttpHostService::listen(tcp::endpoint endpoint, net::yield_context y
 
 std::unique_ptr<Ichor::HttpRouteRegistration> Ichor::HttpHostService::addRoute(HttpMethod method, std::string_view route, std::function<HttpResponse(HttpRequest&)> handler) {
     auto &routes = _handlers[method];
-    //std::unordered_map<std::string, std::function<HttpResponse(HttpRequest&)>
 
     auto existingHandler = routes.find(route);
 

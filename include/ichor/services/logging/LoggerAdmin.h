@@ -65,6 +65,6 @@ namespace Ichor {
     private:
         IFrameworkLogger *_logger{nullptr};
         DependencyTrackerRegistration _loggerTrackerRegistration{};
-        std::unordered_map<uint64_t, LogT*> _loggers;
+        unordered_map<uint64_t, LogT*> _loggers;
     };
 }

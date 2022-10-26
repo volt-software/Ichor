@@ -80,7 +80,7 @@ namespace Ichor {
 
     private:
         ILogger *_logger{nullptr};
-        std::unordered_map<uint64_t, IService*> _connections;
+        unordered_map<uint64_t, IService*> _connections;
         DependencyTrackerRegistration _trackerRegistration{};
         EventHandlerRegistration _unrecoverableErrorRegistration{};
     };
