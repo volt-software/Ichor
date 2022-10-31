@@ -191,7 +191,8 @@ namespace Ichor {
     struct HttpRequest {
         std::vector<uint8_t> body;
         HttpMethod method;
-        std::string_view route;
+        std::string route;
+        std::string_view address;
         std::vector<HttpHeader> headers;
     };
 

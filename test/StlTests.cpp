@@ -4,10 +4,6 @@
 
 using namespace Ichor;
 
-int sum_three(int a, int b, int c) noexcept {
-    return a + b + c;
-}
-
 TEST_CASE("STL Tests") {
 
     SECTION("Any basics") {

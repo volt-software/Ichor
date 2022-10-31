@@ -98,11 +98,15 @@ namespace Ichor {
                 return StartBehaviour::FAILED_DO_NOT_RETRY;
             }
 
-            INTERNAL_DEBUG("service {}:{} state {} -> {}", getServiceId(), typeName<T>(), getState(), ServiceState::STARTING);
+            if constexpr(DO_INTERNAL_DEBUG) {
+                if(getState() != ServiceState::STARTING) {
+                    INTERNAL_DEBUG("internal_start service {}:{} state {} -> {}", getServiceId(), typeName<T>(), getState(), ServiceState::STARTING);
+                }
+            }
             _serviceState = ServiceState::STARTING;
             auto ret = start();
             if(ret == StartBehaviour::SUCCEEDED) {
-                INTERNAL_DEBUG("service {}:{} state {} -> {}", getServiceId(), typeName<T>(), getState(), ServiceState::INJECTING);
+                INTERNAL_DEBUG("internal_start service {}:{} state {} -> {}", getServiceId(), typeName<T>(), getState(), ServiceState::INJECTING);
                 _serviceState = ServiceState::INJECTING;
             }
 
@@ -115,11 +119,15 @@ namespace Ichor {
                 return StartBehaviour::FAILED_DO_NOT_RETRY;
             }
 
-            INTERNAL_DEBUG("service {}:{} state {} -> {}", getServiceId(), typeName<T>(), getState(), ServiceState::STOPPING);
+            if constexpr(DO_INTERNAL_DEBUG) {
+                if(getState() != ServiceState::STOPPING) {
+                    INTERNAL_DEBUG("internal_stop service {}:{} state {} -> {}", getServiceId(), typeName<T>(), getState(), ServiceState::STOPPING);
+                }
+            }
             _serviceState = ServiceState::STOPPING;
             auto ret = stop();
             if(ret == StartBehaviour::SUCCEEDED) {
-                INTERNAL_DEBUG("service {}:{} state {} -> {}", getServiceId(), typeName<T>(), getState(), ServiceState::INSTALLED);
+                INTERNAL_DEBUG("internal_stop service {}:{} state {} -> {}", getServiceId(), typeName<T>(), getState(), ServiceState::INSTALLED);
                 _serviceState = ServiceState::INSTALLED;
             }
 
@@ -131,7 +139,7 @@ namespace Ichor {
                 return false;
             }
 
-            INTERNAL_DEBUG("service {}:{} state {} -> {}", getServiceId(), typeName<T>(), getState(), ServiceState::ACTIVE);
+            INTERNAL_DEBUG("internalSetInjected service {}:{} state {} -> {}", getServiceId(), typeName<T>(), getState(), ServiceState::ACTIVE);
             _serviceState = ServiceState::ACTIVE;
             return true;
         }
@@ -141,7 +149,7 @@ namespace Ichor {
                 return false;
             }
 
-            INTERNAL_DEBUG("service {}:{} state {} -> {}", getServiceId(), typeName<T>(), getState(), ServiceState::UNINJECTING);
+            INTERNAL_DEBUG("internalSetUninjected service {}:{} state {} -> {}", getServiceId(), typeName<T>(), getState(), ServiceState::UNINJECTING);
             _serviceState = ServiceState::UNINJECTING;
             return true;
         }

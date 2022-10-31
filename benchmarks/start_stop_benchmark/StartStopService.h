@@ -42,7 +42,9 @@ public:
     }
 
     StartBehaviour stop() final {
-        getManager().pushEvent<StartServiceEvent>(getServiceId(), _testServiceId);
+        if(startCount <= START_STOP_COUNT) {
+            getManager().pushEvent<StartServiceEvent>(getServiceId(), _testServiceId);
+        }
         return Ichor::StartBehaviour::SUCCEEDED;
     }
 

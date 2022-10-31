@@ -11,8 +11,13 @@ Ichor::HttpContextService::HttpContextService(DependencyRegister &reg, Propertie
 Ichor::HttpContextService::~HttpContextService() {
     if (_httpThread.joinable()) {
         _quit = true;
+        while(!_keepAliveStopped) {
+            std::this_thread::sleep_for(5ms);
+        }
         _httpContext->stop();
+        while(_httpContext->poll_one() > 0);
         _httpThread.join();
+        _httpContext = nullptr;
     }
 }
 
@@ -26,17 +31,18 @@ Ichor::StartBehaviour Ichor::HttpContextService::start() {
         net::spawn(*_httpContext, [this](net::yield_context yield) {
             _stopped = false;
             _starting = false;
-            ICHOR_LOG_INFO(_logger, "HttpContext keep alive fiber started");
+            INTERNAL_DEBUG("HttpContext keep alive fiber started");
             net::steady_timer t{*_httpContext};
             while (!_quit) {
                 t.expires_after(std::chrono::milliseconds(50));
                 t.async_wait(yield);
             }
-            ICHOR_LOG_INFO(_logger, "HttpContext keep alive fiber stopped");
+            INTERNAL_DEBUG("HttpContext keep alive fiber stopped");
+            _keepAliveStopped = true;
         });
 
         _httpThread = std::thread([this]() {
-            ICHOR_LOG_INFO(_logger, "HttpContext started");
+            INTERNAL_DEBUG("HttpContext started");
             boost::system::error_code ec;
             while (!ec && !_httpContext->stopped()) {
                 _httpContext->run(ec);
@@ -46,7 +52,7 @@ Ichor::StartBehaviour Ichor::HttpContextService::start() {
             }
             _starting = false;
             _stopped = true;
-            ICHOR_LOG_INFO(_logger, "HttpContext stopped");
+            INTERNAL_DEBUG("HttpContext stopped");
         });
 
 #ifdef __linux__
@@ -54,13 +60,21 @@ Ichor::StartBehaviour Ichor::HttpContextService::start() {
 #endif
     }
 
+    // It can take a while to start the boost I/O context and thread
+    // Prevent an event storm by delaying the event queue by sleeping
+    std::this_thread::sleep_for(1ms);
+
     return _stopped || _starting ? Ichor::StartBehaviour::FAILED_AND_RETRY : Ichor::StartBehaviour::SUCCEEDED;
 }
 
 Ichor::StartBehaviour Ichor::HttpContextService::stop() {
-    INTERNAL_DEBUG("HttpContextService stop: {} {}", _quit, _stopped);
     _quit = true;
     if (_stopped) {
+        while(!_keepAliveStopped) {
+            std::this_thread::sleep_for(5ms);
+        }
+        _httpContext->stop();
+        while(_httpContext->poll_one() > 0);
         _httpThread.join();
         _httpContext = nullptr;
     }

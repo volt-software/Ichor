@@ -25,8 +25,8 @@ if(NOT hasParent)
 endif()
 
 
-if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS "11.2")
-    message(FATAL_ERROR "Gcc below 11.2 not supported. See https://gcc.gnu.org/bugzilla/show_bug.cgi?id=95137")
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS_EQUAL "11.2")
+    message(FATAL_ERROR "Gcc 11.2 and below not supported. See https://gcc.gnu.org/bugzilla/show_bug.cgi?id=95137")
 endif()
 if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS "14")
     message(FATAL_ERROR "Clang below version 14 does not implement enough of C++20 to use Ichor.")
@@ -38,6 +38,7 @@ set(ICHOR_EXTERNAL_DIR "${CMAKE_CURRENT_SOURCE_DIR}/external/")
 option(ICHOR_BUILD_EXAMPLES "Build examples" ON)
 option(ICHOR_BUILD_BENCHMARKS "Build benchmarks" ON)
 option(ICHOR_BUILD_TESTING "Build tests" ON)
+option(ICHOR_ENABLE_INTERNAL_DEBUGGING "Add verbose logging of Ichor internals" OFF)
 option(ICHOR_USE_SPDLOG "Use spdlog as framework logging implementation" OFF)
 option(ICHOR_USE_PUBSUB "Add various dependencies to enable pubsub bundle to be built" OFF)
 option(ICHOR_USE_ETCD "Add various dependencies to enable pubsub bundle to be built" OFF)
@@ -67,6 +68,10 @@ set_property(CACHE ICHOR_ARCH_OPTIMIZATION PROPERTY STRINGS OFF NATIVE X86_64 X8
 
 if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND ICHOR_RUN_CLANG_TIDY)
     set(CMAKE_CXX_CLANG_TIDY "clang-tidy;-checks=*,-llvmlibc-*,-readability-function-cognitive-complexity,-altera-*,-modernize-use-trailing-return-type,-concurrency-mt-unsafe,-fuchsia-default-arguments-calls,-android-*,-readability-identifier-length,-clang-analyzer-optin.cplusplus.UninitializedObject")
+endif()
+
+if(ICHOR_ENABLE_INTERNAL_DEBUGGING)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DICHOR_ENABLE_INTERNAL_DEBUGGING ")
 endif()
 
 if(ICHOR_USE_SPDLOG)
@@ -221,7 +226,7 @@ endif()
 
 if(ICHOR_USE_ABSEIL)
     find_package(absl REQUIRED)
-    target_link_libraries(ichor absl::flat_hash_map absl::node_hash_map absl::btree absl::hash)
+    target_link_libraries(ichor absl::flat_hash_map absl::flat_hash_set absl::btree absl::hash)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DICHOR_USE_ABSEIL")
 endif()
 

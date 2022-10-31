@@ -73,7 +73,7 @@ Ichor::StartBehaviour Ichor::TcpConnectionService::start() {
 
     _timerManager = getManager().createServiceManager<Timer, ITimer>();
     _timerManager->setChronoInterval(20ms);
-    _timerManager->setCallback([this](DependencyManager &dm) -> AsyncGenerator<void> {
+    _timerManager->setCallback(this, [this](DependencyManager &dm) -> AsyncGenerator<void> {
         std::array<char, 1024> buf;
         auto ret = recv(_socket, buf.data(), buf.size(), 0);
 

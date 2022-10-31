@@ -19,7 +19,7 @@ public:
         ICHOR_LOG_INFO(_logger, "UsingTimerService started");
         _timerManager = getManager().createServiceManager<Timer, ITimer>();
         _timerManager->setChronoInterval(std::chrono::milliseconds(50));
-        _timerManager->setCallback([this](DependencyManager &dm) {
+        _timerManager->setCallback(this, [this](DependencyManager &dm) {
             return handleEvent(dm);
         });
         _timerManager->startTimer();

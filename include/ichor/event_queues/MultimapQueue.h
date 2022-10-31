@@ -28,6 +28,8 @@ namespace Ichor {
         void quit() final;
 
     private:
+        void shouldAddQuitEvent();
+
 #ifdef ICHOR_USE_ABSEIL
         absl::btree_multimap<uint64_t, std::unique_ptr<Event>> _eventQueue{};
 #else
@@ -36,5 +38,7 @@ namespace Ichor {
         mutable Ichor::RealtimeReadWriteMutex _eventQueueMutex{};
         ConditionVariableAny<RealtimeReadWriteMutex> _wakeup{};
         std::atomic<bool> _quit{false};
+        bool _quitEventSent{false};
+        std::chrono::steady_clock::time_point _whenQuitEventWasSent{};
     };
 }

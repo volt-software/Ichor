@@ -48,20 +48,18 @@ namespace Ichor {
     };
 
     struct QuitEvent final : public Event {
-        QuitEvent(uint64_t _id, uint64_t _originatingService, uint64_t _priority, bool _dependenciesStopped = false) noexcept : Event(TYPE, NAME, _id, _originatingService, _priority), dependenciesStopped(_dependenciesStopped) {}
+        QuitEvent(uint64_t _id, uint64_t _originatingService, uint64_t _priority) noexcept : Event(TYPE, NAME, _id, _originatingService, _priority) {}
         ~QuitEvent() final = default;
 
-        const bool dependenciesStopped;
         static constexpr uint64_t TYPE = typeNameHash<QuitEvent>();
         static constexpr std::string_view NAME = typeName<QuitEvent>();
     };
 
     struct StopServiceEvent final : public Event {
-        StopServiceEvent(uint64_t _id, uint64_t _originatingService, uint64_t _priority, uint64_t _serviceId, bool _dependenciesStopped = false) noexcept : Event(TYPE, NAME, _id, _originatingService, _priority), serviceId(_serviceId), dependenciesStopped(_dependenciesStopped) {}
+        StopServiceEvent(uint64_t _id, uint64_t _originatingService, uint64_t _priority, uint64_t _serviceId) noexcept : Event(TYPE, NAME, _id, _originatingService, _priority), serviceId(_serviceId) {}
         ~StopServiceEvent() final = default;
 
         const uint64_t serviceId;
-        const bool dependenciesStopped;
         static constexpr uint64_t TYPE = typeNameHash<StopServiceEvent>();
         static constexpr std::string_view NAME = typeName<StopServiceEvent>();
     };

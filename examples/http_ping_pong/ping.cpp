@@ -1,7 +1,10 @@
-#include "TestService.h"
-#include "../common/TestMsgJsonSerializer.h"
+#include "PingService.h"
+#include "PingMsgJsonSerializer.h"
 #include <ichor/event_queues/MultimapQueue.h>
 #include <ichor/services/logging/LoggerAdmin.h>
+#include <ichor/services/network/http/HttpConnectionService.h>
+#include <ichor/services/network/http/HttpContextService.h>
+#include <ichor/services/network/ClientAdmin.h>
 #include <ichor/services/serialization/SerializationAdmin.h>
 #ifdef ICHOR_USE_SPDLOG
 #include <ichor/services/logging/SpdlogFrameworkLogger.h>
@@ -19,6 +22,9 @@
 #include <chrono>
 #include <iostream>
 
+using namespace std::string_literals;
+using namespace Ichor;
+
 int main(int argc, char *argv[]) {
     std::locale::global(std::locale("en_US.UTF-8"));
 
@@ -31,8 +37,10 @@ int main(int argc, char *argv[]) {
 #endif
     dm.createServiceManager<LoggerAdmin<LOGGER_TYPE>, ILoggerAdmin>();
     dm.createServiceManager<SerializationAdmin, ISerializationAdmin>();
-    dm.createServiceManager<TestMsgJsonSerializer, ISerializer>();
-    dm.createServiceManager<TestService>();
+    dm.createServiceManager<PingMsgJsonSerializer, ISerializer>();
+    dm.createServiceManager<HttpContextService, IHttpContextService>();
+    dm.createServiceManager<ClientAdmin<HttpConnectionService, IHttpConnectionService>, IClientAdmin>();
+    dm.createServiceManager<PingService>(Properties{{"Address", Ichor::make_any<std::string>("127.0.0.1")}, {"Port", Ichor::make_any<uint16_t>(8001)}});
     queue->start(CaptureSigInt);
     auto end = std::chrono::steady_clock::now();
     fmt::print("{} ran for {:L} µs\n", argv[0], std::chrono::duration_cast<std::chrono::microseconds>(end-start).count());

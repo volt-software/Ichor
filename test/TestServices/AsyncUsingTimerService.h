@@ -19,9 +19,9 @@ public:
         fmt::print("start\n");
         _timerManager = getManager().createServiceManager<Timer, ITimer>();
         _timerManager->setChronoInterval(std::chrono::milliseconds(100));
-        _timerManager->setCallback([this](DependencyManager &dm) -> AsyncGenerator<void> {
+        _timerManager->setCallback(this, [this](DependencyManager &dm) -> AsyncGenerator<void> {
             co_await _awaitSvc->await_something().begin();
-            _timerManager->stop();
+            _timerManager->stopTimer();
             getManager().pushEvent<QuitEvent>(getServiceId());
 
             co_return;

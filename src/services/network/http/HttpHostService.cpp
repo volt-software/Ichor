@@ -2,7 +2,7 @@
 
 #include <ichor/DependencyManager.h>
 #include <ichor/services/network/http/HttpHostService.h>
-
+#include <ichor/services/network/http/HttpScopeGuardFinish.h>
 
 Ichor::HttpHostService::HttpHostService(DependencyRegister &reg, Properties props, DependencyManager *mng) : Service(std::move(props), mng) {
     reg.registerDependency<ILogger>(this, true);
@@ -34,22 +34,25 @@ Ichor::StartBehaviour Ichor::HttpHostService::start() {
 }
 
 Ichor::StartBehaviour Ichor::HttpHostService::stop() {
+    INTERNAL_DEBUG("HttpHostService::stop()");
     _quit = true;
 
     if(!_goingToCleanupStream.exchange(true) && _httpAcceptor) {
         if (_httpAcceptor->is_open()) {
             _httpAcceptor->close();
         }
-        _httpStream->cancel();
+        for(auto &[id, stream] : _httpStreams) {
+            stream->cancel();
+        }
 
         _httpAcceptor = nullptr;
-        _httpStream = nullptr;
         _cleanedupStream = true;
     }
 
-    if(!_cleanedupStream) {
+    if(_finishedListenAndRead.load(std::memory_order_acquire) != 0 || !_cleanedupStream) {
         return Ichor::StartBehaviour::FAILED_AND_RETRY;
     }
+    _httpStreams.clear();
 
     return Ichor::StartBehaviour::SUCCEEDED;
 }
@@ -70,6 +73,10 @@ void Ichor::HttpHostService::addDependencyInstance(IHttpContextService *httpCont
 void Ichor::HttpHostService::removeDependencyInstance(IHttpContextService *httpContextService, IService *) {
     ICHOR_LOG_TRACE(_logger, "Removing httpContextService");
     stop();
+    while(_finishedListenAndRead.load(std::memory_order_acquire) != 0) {
+        // sleep this thread so that this thread won´t starve other threads (especially noticeable under callgrind)
+        std::this_thread::sleep_for(1ms);
+    }
     _httpContextService = nullptr;
 }
 
@@ -81,63 +88,7 @@ uint64_t Ichor::HttpHostService::getPriority() {
     return _priority.load(std::memory_order_acquire);
 }
 
-void Ichor::HttpHostService::fail(beast::error_code ec, const char *what) {
-    // TODO this logging is done in another thread as removeDependencyInstance is
-    ICHOR_LOG_ERROR(_logger, "Boost.BEAST fail: {}, {}", what, ec.message());
-    getManager().pushPrioritisedEvent<StopServiceEvent>(getServiceId(), _priority.load(std::memory_order_acquire), getServiceId());
-}
-
-void Ichor::HttpHostService::listen(tcp::endpoint endpoint, net::yield_context yield)
-{
-    beast::error_code ec;
-
-    _httpAcceptor = std::make_unique<tcp::acceptor>(*_httpContextService->getContext());
-    _httpAcceptor->open(endpoint.protocol(), ec);
-    if(ec) {
-        return fail(ec, "HttpHostService::listen open");
-    }
-
-    _httpAcceptor->set_option(net::socket_base::reuse_address(true), ec);
-    if(ec) {
-        return fail(ec, "HttpHostService::listen set_option");
-    }
-
-    _httpAcceptor->bind(endpoint, ec);
-    if(ec) {
-        return fail(ec, "HttpHostService::listen bind");
-    }
-
-    _httpAcceptor->listen(net::socket_base::max_listen_connections, ec);
-    if(ec) {
-        return fail(ec, "HttpHostService::listen listen");
-    }
-
-    while(!_quit && !_httpContextService->fibersShouldStop())
-    {
-        auto socket = tcp::socket(*_httpContextService->getContext());
-
-        // tcp accept new connections
-        _httpAcceptor->async_accept(socket, yield[ec]);
-        if(ec)
-        {
-            fail(ec, "HttpHostService::listen accept");
-            continue;
-        }
-
-        socket.set_option(tcp::no_delay(_tcpNoDelay));
-
-        net::spawn(*_httpContextService->getContext(), [this, socket = std::move(socket)](net::yield_context _yield) mutable {
-            if(_quit) {
-                return;
-            }
-
-            read(std::forward<decltype(socket)>(socket), std::move(_yield));
-        });
-    }
-    ICHOR_LOG_WARN(_logger, "finished listen()");
-}
-
-std::unique_ptr<Ichor::HttpRouteRegistration> Ichor::HttpHostService::addRoute(HttpMethod method, std::string_view route, std::function<HttpResponse(HttpRequest&)> handler) {
+std::unique_ptr<Ichor::HttpRouteRegistration> Ichor::HttpHostService::addRoute(HttpMethod method, std::string_view route, std::function<AsyncGenerator<HttpResponse>(HttpRequest&)> handler) {
     auto &routes = _handlers[method];
 
     auto existingHandler = routes.find(route);
@@ -146,10 +97,9 @@ std::unique_ptr<Ichor::HttpRouteRegistration> Ichor::HttpHostService::addRoute(H
         throw std::runtime_error("Route already present in handlers");
     }
 
-    auto insertedIt = routes.emplace(route, handler);
+    routes.emplace(route, handler);
 
-    // convoluted way to pass a string_view that doesn't go out of scope after this function
-    return std::make_unique<HttpRouteRegistration>(method, insertedIt.first->first, this);
+    return std::make_unique<HttpRouteRegistration>(method, route, this);
 }
 
 void Ichor::HttpHostService::removeRoute(HttpMethod method, std::string_view route) {
@@ -167,9 +117,72 @@ void Ichor::HttpHostService::removeRoute(HttpMethod method, std::string_view rou
 
 }
 
-void Ichor::HttpHostService::read(tcp::socket socket, net::yield_context yield) {
+void Ichor::HttpHostService::fail(beast::error_code ec, const char *what, bool stopSelf) {
+    ICHOR_LOG_ERROR(_logger, "Boost.BEAST fail: {}, {}", what, ec.message());
+    if(stopSelf) {
+        getManager().pushPrioritisedEvent<StopServiceEvent>(getServiceId(), _priority.load(std::memory_order_acquire), getServiceId());
+    }
+}
+
+void Ichor::HttpHostService::listen(tcp::endpoint endpoint, net::yield_context yield)
+{
+    ScopeGuardAtomicCount guard{_finishedListenAndRead};
     beast::error_code ec;
-    _httpStream = std::make_unique<beast::tcp_stream>(std::move(socket));
+
+    _httpAcceptor = std::make_unique<tcp::acceptor>(*_httpContextService->getContext());
+    _httpAcceptor->open(endpoint.protocol(), ec);
+    if(ec) {
+        return fail(ec, "HttpHostService::listen open", true);
+    }
+
+    _httpAcceptor->set_option(net::socket_base::reuse_address(true), ec);
+    if(ec) {
+        return fail(ec, "HttpHostService::listen set_option", true);
+    }
+
+    _httpAcceptor->bind(endpoint, ec);
+    if(ec) {
+        return fail(ec, "HttpHostService::listen bind", true);
+    }
+
+    _httpAcceptor->listen(net::socket_base::max_listen_connections, ec);
+    if(ec) {
+        return fail(ec, "HttpHostService::listen listen", true);
+    }
+
+    while(!_quit && !_httpContextService->fibersShouldStop())
+    {
+        auto socket = tcp::socket(*_httpContextService->getContext());
+
+        // tcp accept new connections
+        _httpAcceptor->async_accept(socket, yield[ec]);
+        if(ec)
+        {
+            fail(ec, "HttpHostService::listen accept", false);
+            continue;
+        }
+
+        socket.set_option(tcp::no_delay(_tcpNoDelay));
+
+        net::spawn(*_httpContextService->getContext(), [this, socket = std::move(socket)](net::yield_context _yield) mutable {
+            if(_quit) {
+                return;
+            }
+
+            read(std::move(socket), std::move(_yield));
+        });
+    }
+
+    ICHOR_LOG_WARN(_logger, "finished listen() {} {}", _quit, _httpContextService->fibersShouldStop());
+    stop();
+}
+
+void Ichor::HttpHostService::read(tcp::socket socket, net::yield_context yield) {
+    ScopeGuardAtomicCount guard{_finishedListenAndRead};
+    beast::error_code ec;
+    auto addr = socket.remote_endpoint().address().to_string();
+    uint64_t streamId = _streamIdCounter++;
+    auto *httpStream = _httpStreams.emplace(streamId, std::make_unique<beast::tcp_stream>(std::move(socket))).first->second.get();
 
     // This buffer is required to persist across reads
     beast::basic_flat_buffer buffer{std::allocator<uint8_t>{}};
@@ -177,87 +190,130 @@ void Ichor::HttpHostService::read(tcp::socket socket, net::yield_context yield) 
     while(!_quit && !_httpContextService->fibersShouldStop())
     {
         // Set the timeout.
-        _httpStream->expires_after(30s);
+        httpStream->expires_after(30s);
 
         // Read a request
         http::request<http::vector_body<uint8_t>, http::basic_fields<std::allocator<uint8_t>>> req;
-        http::async_read(*_httpStream, buffer, req, yield[ec]);
-        if(ec == http::error::end_of_stream || ec == net::error::operation_aborted) {
+        http::async_read(*httpStream, buffer, req, yield[ec]);
+        if(ec == http::error::end_of_stream) {
+            fail(ec, "HttpHostService::read end of stream", false);
+            break;
+        }
+        if(ec == net::error::operation_aborted) {
+            fail(ec, "HttpHostService::read operation aborted", false);
+            break;
+        }
+        if(ec == net::error::timed_out) {
+            fail(ec, "HttpHostService::read operation timed out", false);
+            break;
+        }
+        if(ec == net::error::bad_descriptor) {
+            fail(ec, "HttpHostService::read bad descriptor", false);
             break;
         }
         if(ec) {
-            return fail(ec, "HttpHostService::read read");
+            fail(ec, "HttpHostService::read read", false);
+            continue;
         }
 
-        ICHOR_LOG_TRACE(_logger, "New request for {} {}", (int)req.method(), req.target());
+        ICHOR_LOG_TRACE(_logger, "New request for {} {}", (int) req.method(), req.target());
 
-        auto routes = _handlers.find(static_cast<HttpMethod>(req.method()));
+        std::vector<HttpHeader> headers{};
+        headers.reserve(std::distance(std::begin(req), std::end(req)));
+        for (auto const &field: req) {
+            headers.emplace_back(field.name_string(), field.value());
+        }
+        HttpRequest httpReq{std::move(req.body()), static_cast<HttpMethod>(req.method()), std::string{req.target()}, addr, std::move(headers)};
 
-        if(routes != std::end(_handlers)) {
-            auto handler = routes->second.find(req.target());
+        getManager().pushEvent<RunFunctionEvent>(getServiceId(), [this, streamId, httpReq = std::move(httpReq), version = req.version(), keep_alive = req.keep_alive()](DependencyManager &dm) mutable -> AsyncGenerator<void> {
 
-            if(handler != std::end(routes->second)) {
-                std::vector<HttpHeader> headers{};
-                headers.reserve(std::distance(std::begin(req), std::end(req)));
-                for(auto const &field : req) {
-                    headers.emplace_back(field.name_string(), field.value());
+            auto routes = _handlers.find(static_cast<HttpMethod>(httpReq.method));
+
+            if (routes != std::end(_handlers)) {
+                auto handler = routes->second.find(httpReq.route);
+
+                if (handler != std::end(routes->second)) {
+
+                    // using reference here leads to heap use after free. Not sure why.
+                    HttpResponse httpRes = std::move(*co_await handler->second(httpReq).begin());
+                    http::response<http::vector_body<uint8_t>, http::basic_fields<std::allocator<uint8_t>>> res{static_cast<http::status>(httpRes.status),
+                                                                                                                version};
+                    res.set(http::field::server, BOOST_BEAST_VERSION_STRING);
+                    res.set(http::field::content_type, "text/html");
+                    for (auto const &header: httpRes.headers) {
+                        res.set(header.value, header.name);
+                    }
+                    res.keep_alive(keep_alive);
+                    ICHOR_LOG_TRACE(_logger, "sending http response {} - {}", (int) httpRes.status,
+                                    std::string_view(reinterpret_cast<char *>(httpRes.body.data()), httpRes.body.size()));
+
+                    res.body() = std::move(httpRes.body);
+                    res.prepare_payload();
+                    sendInternal(streamId, std::move(res));
+
+                    co_return;
                 }
-                HttpRequest httpReq{std::move(req.body()), static_cast<HttpMethod>(req.method()), req.target(), std::move(headers)};
-                auto httpRes = handler->second(httpReq);
-                http::response<http::vector_body<uint8_t>, http::basic_fields<std::allocator<uint8_t>>> res{static_cast<http::status>(httpRes.status), req.version()};
-                res.set(http::field::server, BOOST_BEAST_VERSION_STRING);
-                res.set(http::field::content_type, "text/html");
-                for(auto const& header : httpRes.headers) {
-                    res.set(header.value, header.name);
-                }
-                res.keep_alive(req.keep_alive());
-                ICHOR_LOG_WARN(_logger, "sending http response {} - {}", (int)httpRes.status, std::string_view(reinterpret_cast<char*>(httpRes.body.data()), httpRes.body.size()));
-
-                res.body() = std::move(httpRes.body);
-                res.prepare_payload();
-                http::async_write(*_httpStream, res, yield[ec]);
-                if(ec == http::error::end_of_stream || ec == net::error::operation_aborted) {
-                    break;
-                }
-                if(ec) {
-                    return fail(ec, "HttpHostService::read write");
-                }
-
-                continue;
             }
-        }
 
-        http::response<http::basic_string_body<char, std::char_traits<char>>> res{http::status::not_found, req.version()};
-        res.set(http::field::server, BOOST_BEAST_VERSION_STRING);
-        res.set(http::field::content_type, "text/html");
-        res.keep_alive(req.keep_alive());
-//        res.body() = std::pmr::string("");
-        res.prepare_payload();
-        http::async_write(*_httpStream, res, yield[ec]);
-        if(ec == http::error::end_of_stream || ec == net::error::operation_aborted) {
-            break;
-        }
-        if(ec) {
-            return fail(ec, "HttpHostService::read write2");
-        }
+            http::response<http::vector_body<uint8_t>, http::basic_fields<std::allocator<uint8_t>>> res{http::status::not_found, version};
+            res.set(http::field::server, BOOST_BEAST_VERSION_STRING);
+            res.set(http::field::content_type, "text/html");
+            res.keep_alive(keep_alive);
+            res.prepare_payload();
+            sendInternal(streamId, std::move(res));
+
+            co_return;
+        });
     }
-
-    // Send a TCP shutdown
-    if(!_goingToCleanupStream.exchange(true) && _httpAcceptor) {
-        _quit = true;
-
-        if(_httpAcceptor->is_open()) {
-            _httpAcceptor->close();
-        }
-        _httpStream->cancel();
-
-        _httpAcceptor = nullptr;
-        _httpStream = nullptr;
-        _cleanedupStream = true;
-    }
+    _httpStreams.erase(streamId);
 
     // At this point the connection is closed gracefully
-    ICHOR_LOG_WARN(_logger, "finished read()");
+    ICHOR_LOG_WARN(_logger, "finished read() {} {}", _quit, _httpContextService->fibersShouldStop());
+}
+
+void Ichor::HttpHostService::sendInternal(uint64_t streamId, http::response<http::vector_body<uint8_t>, http::basic_fields<std::allocator<uint8_t>>> &&res) {
+    static_assert(std::is_move_assignable_v<Detail::HostOutboxMessage>, "HostOutboxMessage should be move assignable");
+
+    net::spawn(*_httpContextService->getContext(), [this, streamId, res = std::move(res)](net::yield_context yield) mutable {
+        if(_quit) {
+            return;
+        }
+
+        if(_outbox.full()) {
+            _outbox.set_capacity(std::max(_outbox.capacity() * 2, 10ul));
+        }
+        _outbox.push_back({streamId, std::move(res)});
+        if(_outbox.size() > 1) {
+            // handled by existing net::spawn
+            return;
+        }
+
+        while(!_outbox.empty()) {
+            // Move message, should be trivially copyable and prevents iterator invalidation
+            auto next = std::move(_outbox.front());
+            auto streamIt = _httpStreams.find(next.streamId);
+
+            if (streamIt == end(_httpStreams)) {
+                ICHOR_LOG_WARN(_logger, "http stream id {} already disconnected, cannot send response {} {} {}", streamId, _httpStreams.size(), _outbox.size(), _outbox.capacity());
+                _outbox.pop_front();
+                continue;
+            }
+
+            streamIt->second->expires_after(30s);
+            beast::error_code ec;
+            http::async_write(*streamIt->second, next.res, yield[ec]);
+            if (ec == http::error::end_of_stream) {
+                fail(ec, "HttpHostService::sendInternal end of stream", false);
+            } else if (ec == net::error::operation_aborted) {
+                fail(ec, "HttpHostService::sendInternal operation aborted", false);
+            } else if (ec == net::error::bad_descriptor) {
+                fail(ec, "HttpHostService::sendInternal bad descriptor", false);
+            } else if (ec) {
+                fail(ec, "HttpHostService::sendInternal write", false);
+            }
+            _outbox.pop_front();
+        }
+    });
 }
 
 #endif

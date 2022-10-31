@@ -20,7 +20,7 @@ public:
         auto timer = getManager().createServiceManager<Timer, ITimer>();
         timer->setChronoInterval(100ms);
 
-        timer->setCallback([this](DependencyManager &dm) -> AsyncGenerator<void> {
+        timer->setCallback(this, [this](DependencyManager &dm) -> AsyncGenerator<void> {
             // If sigint has been fired, send a quit to the event loop.
             // This can't be done from within the handler itself, as the mutex surrounding pushEvent might already be locked, resulting in a deadlock!
             if(quit) {
@@ -40,7 +40,7 @@ public:
     }
 };
 
-int main() {
+int main(int argc, char *argv[]) {
     std::locale::global(std::locale("en_US.UTF-8")); // some loggers require having a locale
 
     auto queue = std::make_unique<MultimapQueue>();

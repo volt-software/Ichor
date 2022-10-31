@@ -4,6 +4,15 @@
 
 namespace Ichor
 {
+    namespace Detail {
+        enum class DependencyChange {
+            NOT_FOUND,
+            FOUND,
+            FOUND_AND_START_ME,
+            FOUND_AND_STOP_ME,
+        };
+    }
+
     enum class ServiceState {
         UNINSTALLED,
         INSTALLED,
@@ -111,6 +120,8 @@ struct fmt::formatter<Ichor::StartBehaviour>
                 return format_to(ctx.out(), "FAILED_AND_RETRY");
             case Ichor::StartBehaviour::SUCCEEDED:
                 return format_to(ctx.out(), "ACTIVE");
+            default:
+                return format_to(ctx.out(), "error, please file a bug in Ichor");
         }
     }
 };
@@ -138,6 +149,33 @@ struct fmt::formatter<Ichor::state>
                 return format_to(ctx.out(), "value_ready_producer_suspended");
             case Ichor::state::cancelled:
                 return format_to(ctx.out(), "cancelled");
+            default:
+                return format_to(ctx.out(), "error, please file a bug in Ichor");
+        }
+    }
+};
+
+template <>
+struct fmt::formatter<Ichor::Detail::DependencyChange>
+{
+    constexpr auto parse(format_parse_context& ctx)
+    {
+        return ctx.end();
+    }
+
+    template <typename FormatContext>
+    auto format(const Ichor::Detail::DependencyChange& change, FormatContext& ctx)
+    {
+        switch(change)
+        {
+            case Ichor::Detail::DependencyChange::NOT_FOUND:
+                return format_to(ctx.out(), "NOT_FOUND");
+            case Ichor::Detail::DependencyChange::FOUND:
+                return format_to(ctx.out(), "FOUND");
+            case Ichor::Detail::DependencyChange::FOUND_AND_START_ME:
+                return format_to(ctx.out(), "FOUND_AND_START_ME");
+            case Ichor::Detail::DependencyChange::FOUND_AND_STOP_ME:
+                return format_to(ctx.out(), "FOUND_AND_STOP_ME");
             default:
                 return format_to(ctx.out(), "error, please file a bug in Ichor");
         }
