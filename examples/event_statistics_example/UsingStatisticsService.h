@@ -22,12 +22,12 @@ public:
         quitTimerManager->setChronoInterval(15s);
         bogusTimerManager->setChronoInterval(100ms);
 
-        quitTimerManager->setCallback([this](DependencyManager &dm) -> AsyncGenerator<void> {
-            getManager().pushEvent<QuitEvent>(getServiceId(), INTERNAL_EVENT_PRIORITY + 1);
+        quitTimerManager->setCallback(this, [this](DependencyManager &dm) -> AsyncGenerator<void> {
+            getManager().pushEvent<QuitEvent>(getServiceId());
             co_return;
         });
 
-        bogusTimerManager->setCallback([this](DependencyManager &dm) -> AsyncGenerator<void> {
+        bogusTimerManager->setCallback(this, [this](DependencyManager &dm) -> AsyncGenerator<void> {
             std::this_thread::sleep_for(std::chrono::milliseconds(_dist(_mt)));
             co_return;
         });

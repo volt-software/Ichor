@@ -38,7 +38,7 @@ struct MyTimerService final : public IMyTimerService, public Ichor::Service<MyTi
     StartBehaviour start() final {
         auto timer = getManager().createServiceManager<Ichor::Timer, Ichor::ITimer>();
         timer->setChronoInterval(std::chrono::seconds(1));
-        timer->setCallback([](DependencyManager &dm) -> AsyncGenerator<void> {
+        timer->setCallback(this, [](DependencyManager &dm) -> AsyncGenerator<void> {
             fmt::print("Timer fired\n");
             co_return;
         });

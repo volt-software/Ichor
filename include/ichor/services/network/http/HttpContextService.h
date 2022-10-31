@@ -28,20 +28,23 @@ namespace Ichor {
         HttpContextService(DependencyRegister &reg, Properties props, DependencyManager *mng);
         ~HttpContextService() final;
 
+        net::io_context* getContext() noexcept final;
+        bool fibersShouldStop() noexcept final;
+
+    private:
         StartBehaviour start() final;
         StartBehaviour stop() final;
 
         void addDependencyInstance(ILogger *logger, IService *isvc);
         void removeDependencyInstance(ILogger *logger, IService *isvc);
 
-        net::io_context* getContext() noexcept final;
-        bool fibersShouldStop() noexcept final;
+        friend DependencyRegister;
 
-    private:
         std::unique_ptr<net::io_context> _httpContext{};
         std::thread _httpThread{};
         std::atomic<bool> _starting{};
         std::atomic<bool> _stopped{true};
+        std::atomic<bool> _keepAliveStopped{};
         std::atomic<bool> _quit{};
         ILogger *_logger{nullptr};
     };

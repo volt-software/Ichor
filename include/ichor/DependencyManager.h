@@ -66,7 +66,7 @@ namespace Ichor {
             if constexpr(RequestsDependencies<Impl>) {
                 static_assert(!std::is_default_constructible_v<Impl>, "Cannot have a dependencies constructor and a default constructor simultaneously.");
                 static_assert(!RequestsProperties<Impl>, "Cannot have a dependencies constructor and a properties constructor simultaneously.");
-                auto cmpMgr = DependencyLifecycleManager<Impl>::template create(_logger, "", std::forward<Properties>(properties), this, InterfacesList<Interfaces...>);
+                auto cmpMgr = DependencyLifecycleManager<Impl>::template create(std::forward<Properties>(properties), this, InterfacesList<Interfaces...>);
 
                 if constexpr (sizeof...(Interfaces) > 0) {
                     static_assert(!ListContainsInterface<IFrameworkLogger, Interfaces...>::value, "IFrameworkLogger cannot have any dependencies");
@@ -94,19 +94,22 @@ namespace Ichor {
 
                 for (auto const &[key, registration] : cmpMgr->getDependencyRegistry()->_registrations) {
                     auto const &props = std::get<std::optional<Properties>>(registration);
-                    pushEventInternal<DependencyRequestEvent>(cmpMgr->serviceId(), priority, std::get<Dependency>(registration), props.has_value() ? &props.value() : std::optional<Properties const *>{});
+                    pushPrioritisedEvent<DependencyRequestEvent>(cmpMgr->serviceId(), priority, std::get<Dependency>(registration), props.has_value() ? &props.value() : std::optional<Properties const *>{});
                 }
 
+                auto event_priority = std::min(INTERNAL_DEPENDENCY_EVENT_PRIORITY, priority);
                 if(started == StartBehaviour::FAILED_AND_RETRY) {
-                    pushEventInternal<StartServiceEvent>(cmpMgr->serviceId(), priority, cmpMgr->serviceId());
+                    pushPrioritisedEvent<StartServiceEvent>(cmpMgr->serviceId(), event_priority, cmpMgr->serviceId());
                 } else if(started == StartBehaviour::SUCCEEDED) {
-                    pushEventInternal<DependencyOnlineEvent>(cmpMgr->serviceId(), priority);
+                    pushPrioritisedEvent<DependencyOnlineEvent>(cmpMgr->serviceId(), event_priority);
                 }
 
                 cmpMgr->getService().injectPriority(priority);
 
-                if(_services.contains(cmpMgr->serviceId())) {
-                    std::terminate();
+                if constexpr (DO_INTERNAL_DEBUG) {
+                    if (_services.contains(cmpMgr->serviceId())) {
+                        std::terminate();
+                    }
                 }
 
                 _services.emplace(cmpMgr->serviceId(), cmpMgr);
@@ -114,7 +117,7 @@ namespace Ichor {
                 return &(cmpMgr->getService());
             } else {
                 static_assert(!(std::is_default_constructible_v<Impl> && RequestsProperties<Impl>), "Cannot have a properties constructor and a default constructor simultaneously.");
-                auto cmpMgr = LifecycleManager<Impl, Interfaces...>::template create(_logger, "", std::forward<Properties>(properties), this, InterfacesList<Interfaces...>);
+                auto cmpMgr = LifecycleManager<Impl, Interfaces...>::template create(std::forward<Properties>(properties), this, InterfacesList<Interfaces...>);
 
                 if constexpr (sizeof...(Interfaces) > 0) {
                     if constexpr (ListContainsInterface<IFrameworkLogger, Interfaces...>::value) {
@@ -129,14 +132,17 @@ namespace Ichor {
                 logAddService<Impl, Interfaces...>(cmpMgr->serviceId());
 
                 auto started = cmpMgr->start();
+                auto event_priority = std::min(INTERNAL_DEPENDENCY_EVENT_PRIORITY, priority);
                 if(started == StartBehaviour::FAILED_AND_RETRY) {
-                    pushEventInternal<StartServiceEvent>(cmpMgr->serviceId(), priority, cmpMgr->serviceId());
+                    pushPrioritisedEvent<StartServiceEvent>(cmpMgr->serviceId(), event_priority, cmpMgr->serviceId());
                 } else if(started == StartBehaviour::SUCCEEDED) {
-                    pushEventInternal<DependencyOnlineEvent>(cmpMgr->serviceId(), priority);
+                    pushPrioritisedEvent<DependencyOnlineEvent>(cmpMgr->serviceId(), event_priority);
                 }
 
-                if(_services.contains(cmpMgr->serviceId())) {
-                    std::terminate();
+                if constexpr (DO_INTERNAL_DEBUG) {
+                    if (_services.contains(cmpMgr->serviceId())) {
+                        std::terminate();
+                    }
                 }
 
                 _services.emplace(cmpMgr->serviceId(), cmpMgr);
@@ -154,11 +160,6 @@ namespace Ichor {
         template <typename EventT, typename... Args>
         requires Derived<EventT, Event>
         uint64_t pushPrioritisedEvent(uint64_t originatingServiceId, uint64_t priority, Args&&... args){
-            if(_eventQueue->shouldQuit()) {
-                ICHOR_LOG_TRACE(_logger, "inserting event of type {} into manager {}, but have to quit", typeName<EventT>(), getId());
-                return 0;
-            }
-
             uint64_t eventId = _eventIdCounter.fetch_add(1, std::memory_order_acq_rel);
             _eventQueue->pushEvent(priority, std::unique_ptr<Event>{new EventT(std::forward<uint64_t>(eventId), std::forward<uint64_t>(originatingServiceId), std::forward<uint64_t>(priority), std::forward<Args>(args)...)});
 //            ICHOR_LOG_TRACE(_logger, "inserted event of type {} into manager {}", typeName<EventT>(), getId());
@@ -174,11 +175,6 @@ namespace Ichor {
         template <typename EventT, typename... Args>
         requires Derived<EventT, Event>
         uint64_t pushEvent(uint64_t originatingServiceId, Args&&... args){
-            if(_eventQueue->shouldQuit()) {
-                ICHOR_LOG_TRACE(_logger, "inserting event of type {} into manager {}, but have to quit", typeName<EventT>(), getId());
-                return 0;
-            }
-
             uint64_t eventId = _eventIdCounter.fetch_add(1, std::memory_order_acq_rel);
             _eventQueue->pushEvent(INTERNAL_EVENT_PRIORITY, std::unique_ptr<Event>{new EventT(std::forward<uint64_t>(eventId), std::forward<uint64_t>(originatingServiceId), INTERNAL_EVENT_PRIORITY, std::forward<Args>(args)...)});
 //            ICHOR_LOG_TRACE(_logger, "inserted event of type {} into manager {}", typeName<EventT>(), getId());
@@ -353,7 +349,8 @@ namespace Ichor {
                     continue;
                 }
                 std::function<void(void*, IService*)> f{[&ret](void *svc2, IService *isvc){ ret.push_back(reinterpret_cast<Interface*>(svc2)); }};
-                svc->insertSelfInto(typeNameHash<Interface>(), f);
+                svc->insertSelfInto(typeNameHash<Interface>(), 0, f);
+                svc->getDependees().erase(0);
             }
 
             return ret;
@@ -363,6 +360,8 @@ namespace Ichor {
         void runForOrQueueEmpty(std::chrono::milliseconds ms = 100ms) const noexcept;
 
         [[nodiscard]] std::optional<std::string_view> getImplementationNameFor(uint64_t serviceId) const noexcept;
+
+        [[nodiscard]] uint64_t getNextEventId() noexcept;
 
     private:
         template <typename EventT>
@@ -411,20 +410,8 @@ namespace Ichor {
         }
 
         void handleEventCompletion(Event const &evt);
-
         [[nodiscard]] uint32_t broadcastEvent(std::shared_ptr<Event> &evt);
-
         void setCommunicationChannel(CommunicationChannel *channel);
-
-        template <typename EventT, typename... Args>
-        requires Derived<EventT, Event>
-        uint64_t pushEventInternal(uint64_t originatingServiceId, uint64_t priority, Args&&... args) {
-            uint64_t eventId = _eventIdCounter.fetch_add(1, std::memory_order_acq_rel);
-            _eventQueue->pushEvent(priority, std::unique_ptr<Event>{new EventT(std::forward<uint64_t>(eventId), std::forward<uint64_t>(originatingServiceId), std::forward<uint64_t>(priority), std::forward<Args>(args)...)});
-//            ICHOR_LOG_TRACE(_logger, "inserted event of type {} into manager {}", typeName<EventT>(), getId());
-            return eventId;
-        }
-
         void start();
         void processEvent(std::unique_ptr<Event> &&evt);
         void stop();

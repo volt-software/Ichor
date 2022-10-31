@@ -23,7 +23,7 @@ public:
         ICHOR_LOG_INFO(_logger, "UsingTimerService started");
         _timerManager = getManager().createServiceManager<Timer, ITimer>();
         _timerManager->setChronoInterval(std::chrono::milliseconds(250));
-        _timerManager->setCallback([this](DependencyManager &dm) {
+        _timerManager->setCallback(this, [this](DependencyManager &dm) {
             return handleEvent(dm);
         });
         _timerManager->startTimer();
@@ -57,7 +57,7 @@ public:
         }
 
         if(_timerTriggerCount == 2) {
-            getManager().pushEvent<QuitEvent>(getServiceId(), INTERNAL_EVENT_PRIORITY+1);
+            getManager().pushEvent<QuitEvent>(getServiceId());
         }
 
         ICHOR_LOG_INFO(_logger, "Timer {} completed 'long' task", getServiceId());

@@ -1,11 +1,17 @@
 #ifdef ICHOR_USE_BOOST_BEAST
 
 #include <ichor/DependencyManager.h>
-#include <ichor/coroutines/AsyncManualResetEvent.h>
 #include <ichor/events/RunFunctionEvent.h>
 #include <ichor/services/network/http/HttpConnectionService.h>
-#include "ichor/services/network/NetworkEvents.h"
+#include <ichor/services/network/http/HttpScopeGuardFinish.h>
+#include <ichor/services/network/NetworkEvents.h>
 
+namespace Ichor {
+    struct FunctionGuardParameters {
+        HttpConnectionService *svc;
+        AsyncManualResetEvent *evt;
+    };
+}
 
 Ichor::HttpConnectionService::HttpConnectionService(DependencyRegister &reg, Properties props, DependencyManager *mng) : Service(std::move(props), mng) {
     reg.registerDependency<ILogger>(this, true);
@@ -44,6 +50,8 @@ Ichor::StartBehaviour Ichor::HttpConnectionService::start() {
     }
 
     if(!_connected) {
+        // sleep this thread so that this thread won´t starve other threads (especially noticeable under callgrind)
+        std::this_thread::sleep_for(1ms);
         return Ichor::StartBehaviour::FAILED_AND_RETRY;
     }
 
@@ -76,8 +84,12 @@ void Ichor::HttpConnectionService::addDependencyInstance(IHttpContextService *ht
 void Ichor::HttpConnectionService::removeDependencyInstance(IHttpContextService *httpContextService, IService *) {
     _quit = true;
     close();
+    while(_connected) {
+        // sleep this thread so that this thread won´t starve other threads (especially noticeable under callgrind)
+        std::this_thread::sleep_for(1ms);
+        close();
+    }
     _httpContextService = nullptr;
-    _connected = false;
 }
 
 void Ichor::HttpConnectionService::setPriority(uint64_t priority) {
@@ -89,7 +101,6 @@ uint64_t Ichor::HttpConnectionService::getPriority() {
 }
 
 Ichor::AsyncGenerator<Ichor::HttpResponse> Ichor::HttpConnectionService::sendAsync(Ichor::HttpMethod method, std::string_view route, std::vector<HttpHeader> &&headers, std::vector<uint8_t> &&msg) {
-
     if(method == HttpMethod::get && !msg.empty()) {
         throw std::runtime_error("GET requests cannot have a body.");
     }
@@ -103,56 +114,90 @@ Ichor::AsyncGenerator<Ichor::HttpResponse> Ichor::HttpConnectionService::sendAsy
         co_return response;
     }
 
-//    auto msgId = ++_msgId;
+    AsyncManualResetEvent event{};
 
-    AsyncManualResetEvent event;
+    net::spawn(*_httpContextService->getContext(), [this, method, route, &event, &response, &headers, &msg](net::yield_context yield) mutable {
+        static_assert(std::is_trivially_copyable_v<Detail::ConnectionOutboxMessage>, "ConnectionOutboxMessage should be trivially copyable");
+        ScopeGuardAtomicCount guard{_finishedListenAndRead};
 
-    net::spawn(*_httpContextService->getContext(), [this, method, route, &event, &response, headers = std::forward<decltype(headers)>(headers), msg = std::forward<decltype(msg)>(msg)](net::yield_context yield) mutable {
-        beast::error_code ec;
-        http::request<http::vector_body<uint8_t>, http::basic_fields<std::allocator<uint8_t>>> req{static_cast<http::verb>(method), route, 11, std::move(msg)};
-
-        for(auto const &header : headers) {
-            req.set(header.name, header.value);
+        if(_outbox.full()) {
+            _outbox.set_capacity(std::max(_outbox.capacity() * 2, 10ul));
         }
-        req.set(http::field::host, Ichor::any_cast<std::string &>(getProperties().operator[]("Address")));
-        req.prepare_payload();
-
-        http::write(*_httpStream, req, ec);
-        if (ec) {
-//            getManager().pushEvent<FailedSendMessageEvent>(getServiceId(), std::move(req.body()), msgId);
-            getManager().pushPrioritisedEvent<RunFunctionEvent>(getServiceId(), getPriority(), [&event](DependencyManager &dm) -> AsyncGenerator<void> {
-                event.set();
-                co_return;
-            });
-            return fail(ec, "HttpConnectionService::sendAsync write");
+        _outbox.push_back({method, route, &event, &response, &headers, &msg});
+        if(_outbox.size() > 1) {
+            // handled by existing net::spawn
+            return;
         }
+        while(!_outbox.empty()) {
+            // Copy message, should be trivially copyable and prevents iterator invalidation
+            auto next = _outbox.front();
 
-        // This buffer is used for reading and must be persisted
-        beast::basic_flat_buffer b{std::allocator<uint8_t>{}};
+            ScopeGuardFunction<FunctionGuardParameters> coroutineGuard{FunctionGuardParameters{this, next.event}, [](FunctionGuardParameters& evt) noexcept {
+                // use service id 0 to ensure event gets run, even if service is stopped. Otherwise, the coroutine will never complete.
+                // Similarly, use priority 0 to ensure these events run before any dependency changes, otherwise the service might be destroyed
+                // before we can finish all the coroutines.
+                evt.svc->getManager().pushPrioritisedEvent<RunFunctionEvent>(0, 0, [event = evt.evt](DependencyManager &dm) -> AsyncGenerator<void> {
+                    event->set();
+                    co_return;
+                });
+                evt.svc->_outbox.pop_front();
+            }};
 
-        // Declare a container to hold the response
-        http::response<http::vector_body<uint8_t>, http::basic_fields<std::allocator<uint8_t>>> res;
+            if(_quit.load(std::memory_order_acquire)) {
+                continue;
+            }
 
-        // Receive the HTTP response
-        http::async_read(*_httpStream, b, res, yield[ec]);
-        if(ec) {
-            return fail(ec, "HttpConnectionService::sendAsync read");
+            beast::error_code ec;
+            http::request<http::vector_body<uint8_t>, http::basic_fields<std::allocator<uint8_t>>> req{
+                static_cast<http::verb>(next.method),
+                next.route,
+                11,
+                std::move(*next.body)
+            };
+
+            for (auto const &header : *next.headers) {
+                req.set(header.name, header.value);
+            }
+            req.set(http::field::host, Ichor::any_cast<std::string &>(getProperties().operator[]("Address")));
+            req.prepare_payload();
+            req.keep_alive();
+
+            // Set the timeout for this operation.
+            _httpStream->expires_after(30s);
+            INTERNAL_DEBUG("http::write");
+            http::async_write(*_httpStream, req, yield[ec]);
+            if (ec) {
+                fail(ec, "HttpConnectionService::sendAsync write");
+                continue;
+            }
+
+            // This buffer is used for reading and must be persisted
+            beast::basic_flat_buffer b{std::allocator<uint8_t>{}};
+
+            // Declare a container to hold the response
+            http::response<http::vector_body<uint8_t>, http::basic_fields<std::allocator<uint8_t>>> res;
+
+            INTERNAL_DEBUG("http::read");
+            // Receive the HTTP response
+            http::async_read(*_httpStream, b, res, yield[ec]);
+            if (ec) {
+                fail(ec, "HttpConnectionService::sendAsync read");
+                continue;
+            }
+
+            INTERNAL_DEBUG("received HTTP response {}", std::string_view(reinterpret_cast<char *>(res.body().data()), res.body().size()));
+            // unset the timeout for the next operation.
+            _httpStream->expires_never();
+
+            next.response->status = (HttpStatus) (int) res.result();
+            next.response->headers.reserve(std::distance(std::begin(res), std::end(res)));
+            for (auto const &header: res) {
+                next.response->headers.emplace_back(header.name_string(), header.value());
+            }
+
+            // need to use move iterator instead of std::move directly, to prevent leaks.
+            next.response->body.insert(next.response->body.end(), std::make_move_iterator(res.body().begin()), std::make_move_iterator(res.body().end()));
         }
-
-        ICHOR_LOG_WARN(_logger, "received HTTP response {}", std::string_view(reinterpret_cast<char*>(res.body().data()), res.body().size()));
-
-        response.headers.reserve(std::distance(std::begin(res), std::end(res)));
-        for(auto const &header : res) {
-            response.headers.emplace_back(header.name_string(), header.value());
-        }
-
-        // need to use move iterator instead of std::move directly, to prevent leaks.
-        response.body.insert(response.body.end(), std::make_move_iterator(res.body().begin()), std::make_move_iterator(res.body().end()));
-        getManager().pushPrioritisedEvent<RunFunctionEvent>(getServiceId(), getPriority(), [&event](DependencyManager &dm) -> AsyncGenerator<void> {
-            event.set();
-            co_return;
-        });
-//        getManager().pushPrioritisedEvent<HttpResponseEvent>(getServiceId(), getPriority(), msgId, HttpResponse{static_cast<HttpStatus>(res.result()), std::move(body), std::move(resHeaders)});
     });
 
     co_await event;
@@ -161,29 +206,25 @@ Ichor::AsyncGenerator<Ichor::HttpResponse> Ichor::HttpConnectionService::sendAsy
 }
 
 bool Ichor::HttpConnectionService::close() {
-    if((_quit || _httpContextService->fibersShouldStop()) && !_stopping) {
-        _stopping = true;
-        net::spawn(*_httpContextService->getContext(), [this](net::yield_context yield) {
-            beast::error_code ec;
-            _httpStream->socket().shutdown(tcp::socket::shutdown_both, ec);
+    if(_httpStream != nullptr) {
+        _httpStream->cancel();
+    }
 
-            _connected = false;
-            _httpStream = nullptr;
-            if (ec && ec != beast::errc::not_connected) {
-                fail(ec, "HttpConnectionService::close shutdown");
-            }
-        });
+    if(_finishedListenAndRead.load(std::memory_order_acquire) == 0) {
+        _connected = false;
+        _httpStream = nullptr;
     }
 
     return !_connected;
 }
 
 void Ichor::HttpConnectionService::fail(beast::error_code ec, const char *what) {
-    ICHOR_LOG_ERROR(_logger, "Boost.BEAST fail: {}, {}", what, ec.message());
-    getManager().pushPrioritisedEvent<StopServiceEvent>(getServiceId(), _priority.load(std::memory_order_acquire), getServiceId());
+        ICHOR_LOG_ERROR(_logger, "Boost.BEAST fail: {}, {}", what, ec.message());
+        getManager().pushPrioritisedEvent<StopServiceEvent>(getServiceId(), _priority.load(std::memory_order_acquire), getServiceId());
 }
 
 void Ichor::HttpConnectionService::connect(tcp::endpoint endpoint, net::yield_context yield) {
+    ScopeGuardAtomicCount guard{_finishedListenAndRead};
     beast::error_code ec;
 
     tcp::resolver resolver(*_httpContextService->getContext());
@@ -194,14 +235,12 @@ void Ichor::HttpConnectionService::connect(tcp::endpoint endpoint, net::yield_co
         return fail(ec, "HttpConnectionService::connect resolve");
     }
 
-    // Set the timeout.
-    _httpStream->expires_after(30s);
+    // Never expire until we actually have an operation.
+    _httpStream->expires_never();
 
     // Make the connection on the IP address we get from a lookup
     while(!_quit && !_httpContextService->fibersShouldStop() && _attempts < 5) {
-//        ICHOR_LOG_WARN(_logger, "async_connect {}", _attempts);
         _httpStream->async_connect(results, yield[ec]);
-//        ICHOR_LOG_WARN(_logger, "async_connect after {}", _attempts);
         if (ec) {
             _attempts++;
             net::steady_timer t{*_httpContextService->getContext()};
@@ -216,7 +255,6 @@ void Ichor::HttpConnectionService::connect(tcp::endpoint endpoint, net::yield_co
 
     if(ec) {
         // see below for why _connecting has to be set last
-        _httpStream = nullptr;
         _quit = true;
         _connecting = false;
         return fail(ec, "HttpConnectionService::connect connect");

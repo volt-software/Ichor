@@ -74,7 +74,7 @@ Ichor::StartBehaviour Ichor::TcpHostService::start() {
 
     _timerManager = getManager().createServiceManager<Timer, ITimer>();
     _timerManager->setChronoInterval(20ms);
-    _timerManager->setCallback([this](DependencyManager &dm) -> AsyncGenerator<void> {
+    _timerManager->setCallback(this, [this](DependencyManager &dm) -> AsyncGenerator<void> {
         sockaddr_in client_addr{};
         socklen_t client_addr_size = sizeof(client_addr);
         int newConnection = ::accept(_socket, (sockaddr *) &client_addr, &client_addr_size);

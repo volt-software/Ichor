@@ -22,6 +22,7 @@
 using namespace std::string_literals;
 
 std::atomic<uint64_t> idCounter = 0;
+std::string_view progName;
 
 void* run_example(void*) {
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)
@@ -49,14 +50,15 @@ void* run_example(void*) {
     }
 #ifndef NDEBUG
     auto end = std::chrono::steady_clock::now();
-    fmt::print("Program ran for {:L} µs\n", std::chrono::duration_cast<std::chrono::microseconds>(end-start).count());
+    fmt::print("{} ran for {:L} µs\n", progName, std::chrono::duration_cast<std::chrono::microseconds>(end-start).count());
 #endif
 
     return nullptr;
 }
 
-int main() {
+int main(int argc, char *argv[]) {
     std::locale::global(std::locale("en_US.UTF-8"));
+    progName = argv[0];
 
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)
     //TODO check for elevated permissions

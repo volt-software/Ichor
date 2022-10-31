@@ -17,10 +17,12 @@ struct MultipleAwaitService final : public Service<MultipleAwaitService> {
         getManager().pushEvent<RunFunctionEvent>(getServiceId(), [this](DependencyManager &dm) -> AsyncGenerator<void> {
             co_await *_autoEvt;
             count++;
+            co_return;
         });
         getManager().pushEvent<RunFunctionEvent>(getServiceId(), [this](DependencyManager &dm) -> AsyncGenerator<void> {
             co_await *_autoEvt;
             count++;
+            co_return;
         });
         return StartBehaviour::SUCCEEDED;
     }

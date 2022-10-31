@@ -14,22 +14,22 @@ namespace Ichor {
 
         ~Timer() noexcept final;
 
-        StartBehaviour start() final;
-        StartBehaviour stop() final;
-
         void startTimer() final;
         void startTimer(bool fireImmediately) final;
         void stopTimer() final;
 
-        bool running() const noexcept final;
+        [[nodiscard]] bool running() const noexcept final;
 
-        void setCallback(decltype(RunFunctionEvent::fun) fn);
+        void setCallback(IService *svc, decltype(RunFunctionEvent::fun) fn);
         void setInterval(uint64_t nanoseconds) noexcept final;
 
         void setPriority(uint64_t priority) noexcept final;
-        uint64_t getPriority() const noexcept final;
+        [[nodiscard]] uint64_t getPriority() const noexcept final;
 
     private:
+        StartBehaviour start() final;
+        StartBehaviour stop() final;
+
         void insertEventLoop(bool fireImmediately);
 
         std::atomic<uint64_t> _intervalNanosec{1'000'000'000};
@@ -37,5 +37,6 @@ namespace Ichor {
         decltype(RunFunctionEvent::fun) _fn{};
         std::atomic<bool> _quit{true};
         std::atomic<uint64_t> _priority{INTERNAL_EVENT_PRIORITY};
+        uint64_t _requestingServiceId{};
     };
 }

@@ -60,9 +60,12 @@ namespace Ichor {
             std::unique_lock l(_eventQueueMutex);
             while(!shouldQuit() && _eventQueue.empty()) {
                 _wakeup.wait_for(l, 500ms, [this]() {
+                    shouldAddQuitEvent();
                     return shouldQuit() || !_eventQueue.empty();
                 });
             }
+
+            shouldAddQuitEvent();
 
             if(shouldQuit()) {
                 break;
@@ -79,11 +82,23 @@ namespace Ichor {
     bool MultimapQueue::shouldQuit() {
         bool const shouldQuit = Detail::sigintQuit.load(std::memory_order_acquire);
 
-        if (shouldQuit) {
+//        INTERNAL_DEBUG("shouldQuit() {} {:L}", shouldQuit, (std::chrono::steady_clock::now() - _whenQuitEventWasSent).count());
+        if (shouldQuit && _quitEventSent && std::chrono::steady_clock::now() - _whenQuitEventWasSent >= 500ms) {
             _quit.store(true, std::memory_order_release);
         }
 
         return _quit.load(std::memory_order_acquire);
+    }
+
+    void MultimapQueue::shouldAddQuitEvent() {
+        bool const shouldQuit = Detail::sigintQuit.load(std::memory_order_acquire);
+
+        if(shouldQuit && !_quitEventSent) {
+            // assume _eventQueueMutex is locked
+            _eventQueue.emplace(INTERNAL_EVENT_PRIORITY, std::make_unique<QuitEvent>(_dm->getNextEventId(), 0, INTERNAL_EVENT_PRIORITY));
+            _quitEventSent = true;
+            _whenQuitEventWasSent = std::chrono::steady_clock::now();
+        }
     }
 
     void MultimapQueue::quit() {

@@ -25,7 +25,7 @@
 using namespace std::string_literals;
 using namespace Ichor;
 
-int main() {
+int main(int argc, char *argv[]) {
     std::locale::global(std::locale("en_US.UTF-8"));
 
     auto start = std::chrono::steady_clock::now();
@@ -44,7 +44,7 @@ int main() {
     dm.createServiceManager<UsingWsService>(Properties{{"Address", Ichor::make_any<std::string>("127.0.0.1")}, {"Port", Ichor::make_any<uint16_t>(8001)}});
     queue->start(CaptureSigInt);
     auto end = std::chrono::steady_clock::now();
-    fmt::print("Program ran for {:L} µs\n", std::chrono::duration_cast<std::chrono::microseconds>(end-start).count());
+    fmt::print("{} ran for {:L} µs\n", argv[0], std::chrono::duration_cast<std::chrono::microseconds>(end-start).count());
 
     return 0;
 }

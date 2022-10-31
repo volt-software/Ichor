@@ -3,7 +3,6 @@
 #include <ichor/ConstevalHash.h>
 #include <ichor/stl/Any.h>
 #include <string_view>
-#include <unordered_map>
 
 #define SPDLOG_ACTIVE_LEVEL SPDLOG_LEVEL_TRACE
 #if !__has_include(<spdlog/spdlog.h>)
@@ -15,15 +14,23 @@
 
 #ifdef ICHOR_USE_ABSEIL
 #include <absl/container/flat_hash_map.h>
-#include <absl/container/node_hash_map.h>
+#include <absl/container/flat_hash_set.h>
 #include <absl/hash/hash.h>
+#else
+#include <unordered_map>
+#include <unordered_set>
 #endif
 
 // note that this only works when compiling with spdlog
+#ifdef ICHOR_ENABLE_INTERNAL_DEBUGGING
+static constexpr bool DO_INTERNAL_DEBUG = true;
+#else
 static constexpr bool DO_INTERNAL_DEBUG = false;
+#endif
 
 #define INTERNAL_DEBUG(...) do {      \
     if constexpr(DO_INTERNAL_DEBUG) { \
+        fmt::print("[{}:{}] ", __FILE__, __LINE__);    \
         fmt::print(__VA_ARGS__);    \
         fmt::print("\n");    \
     }                                 \
@@ -78,6 +85,14 @@ namespace Ichor {
             class KeyEqual = std::equal_to<Key>,
             class Allocator = std::allocator<std::pair<const Key, T>>>
     using unordered_map = absl::flat_hash_map<Key, T, Hash, KeyEqual, Allocator>;
+    template <
+            class T,
+            class Hash = absl::Hash<T>,
+            class Eq = std::equal_to<T>,
+            class Allocator = std::allocator<T>>
+    using unordered_set = absl::flat_hash_set<T, Hash, Eq, Allocator>;
+    template <class T>
+    using b = std::unordered_set<T>;
 #else
     template <
             class Key,
@@ -86,6 +101,12 @@ namespace Ichor {
             class KeyEqual = std::equal_to<Key>,
             class Allocator = std::allocator<std::pair<const Key, T>>>
     using unordered_map = std::unordered_map<Key, T, Hash, KeyEqual, Allocator>;
+    template <
+            class T,
+            class Hash = std::hash<T>,
+            class Eq = std::equal_to<T>,
+            class Allocator = std::allocator<T>>
+    using unordered_set = std::unordered_set<T, Hash, Eq, Allocator>;
 #endif
 
     using Properties = unordered_map<std::string, Ichor::any, string_hash>;

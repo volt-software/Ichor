@@ -457,7 +457,7 @@ namespace Ichor::Detail {
         static_assert(std::is_move_constructible_v<T>, "T needs to be move constructible");
         INTERNAL_DEBUG("yield_value {}", _id);
         _currentValue.emplace(std::move(value));
-        Ichor::Detail::_local_dm->pushEvent<Ichor::ContinuableEvent>(0, _id);
+        Ichor::Detail::_local_dm->pushPrioritisedEvent<Ichor::ContinuableEvent>(0, INTERNAL_DEPENDENCY_EVENT_PRIORITY, _id);
         return internal_yield_value();
     }
 
@@ -466,7 +466,7 @@ namespace Ichor::Detail {
         static_assert(std::is_move_constructible_v<T>, "T needs to be move constructible");
         INTERNAL_DEBUG("yield_value {}", _id);
         _currentValue.emplace(std::forward<T>(value));
-        Ichor::Detail::_local_dm->pushEvent<Ichor::ContinuableEvent>(0, _id);
+        Ichor::Detail::_local_dm->pushPrioritisedEvent<Ichor::ContinuableEvent>(0, INTERNAL_DEPENDENCY_EVENT_PRIORITY, _id);
         return internal_yield_value();
     }
 
@@ -475,7 +475,7 @@ namespace Ichor::Detail {
         static_assert(std::is_move_constructible_v<T>, "T needs to be move constructible");
         INTERNAL_DEBUG("return_value {}", _id);
         _currentValue.emplace(std::move(value));
-        Ichor::Detail::_local_dm->pushEvent<Ichor::ContinuableEvent>(0, _id);
+        Ichor::Detail::_local_dm->pushPrioritisedEvent<Ichor::ContinuableEvent>(0, INTERNAL_DEPENDENCY_EVENT_PRIORITY, _id);
         return AsyncGeneratorYieldOperation{ *this, _state.load(std::memory_order_acquire) };
     }
 
@@ -484,19 +484,19 @@ namespace Ichor::Detail {
         static_assert(std::is_move_constructible_v<T>, "T needs to be move constructible");
         INTERNAL_DEBUG("return_value {}", _id);
         _currentValue.emplace(std::forward<T>(value));
-        Ichor::Detail::_local_dm->pushEvent<Ichor::ContinuableEvent>(0, _id);
+        Ichor::Detail::_local_dm->pushPrioritisedEvent<Ichor::ContinuableEvent>(0, INTERNAL_DEPENDENCY_EVENT_PRIORITY, _id);
         return AsyncGeneratorYieldOperation{ *this, _state.load(std::memory_order_acquire) };
     }
 
     inline AsyncGeneratorYieldOperation AsyncGeneratorPromise<void>::yield_value(Empty) noexcept {
         INTERNAL_DEBUG("yield_value {}", _id);;
-        Ichor::Detail::_local_dm->pushEvent<Ichor::ContinuableEvent>(0, _id);
+        Ichor::Detail::_local_dm->pushPrioritisedEvent<Ichor::ContinuableEvent>(0, INTERNAL_DEPENDENCY_EVENT_PRIORITY, _id);
         return internal_yield_value();
     }
 
     inline AsyncGeneratorYieldOperation AsyncGeneratorPromise<void>::return_void() noexcept {
         INTERNAL_DEBUG("return_value {}", _id);
-        Ichor::Detail::_local_dm->pushEvent<Ichor::ContinuableEvent>(0, _id);
+        Ichor::Detail::_local_dm->pushPrioritisedEvent<Ichor::ContinuableEvent>(0, INTERNAL_DEPENDENCY_EVENT_PRIORITY, _id);
         return AsyncGeneratorYieldOperation{ *this, _state.load(std::memory_order_acquire) };
     }
 
