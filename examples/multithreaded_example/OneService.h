@@ -15,6 +15,8 @@ public:
         reg.registerDependency<ILogger>(this, true);
     }
     ~OneService() final = default;
+
+private:
     StartBehaviour start() final {
         ICHOR_LOG_INFO(_logger, "OneService started with dependency");
         // this component sometimes starts up before the other thread has started the OtherService
@@ -38,6 +40,7 @@ public:
         _logger = nullptr;
     }
 
-private:
-    ILogger *_logger;
+    friend DependencyRegister;
+
+    ILogger *_logger{};
 };

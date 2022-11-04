@@ -14,6 +14,8 @@ public:
         reg.registerDependency<ILogger>(this, true);
     }
     ~OtherService() final = default;
+
+private:
     StartBehaviour start() final {
         ICHOR_LOG_INFO(_logger, "OtherService started with dependency");
         _customEventHandler = getManager().registerEventHandler<CustomEvent>(this);
@@ -45,7 +47,9 @@ public:
         co_return;
     }
 
-private:
-    ILogger *_logger;
+    friend DependencyRegister;
+    friend DependencyManager;
+
+    ILogger *_logger{};
     EventHandlerRegistration _customEventHandler{};
 };

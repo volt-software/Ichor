@@ -22,6 +22,7 @@ public:
     }
     ~PongService() final = default;
 
+private:
     StartBehaviour start() final {
         ICHOR_LOG_INFO(_logger, "PongService started");
 
@@ -64,7 +65,9 @@ public:
         _routeRegistration.reset();
     }
 
-private:
+    friend DependencyRegister;
+    friend DependencyManager;
+
     ILogger *_logger{nullptr};
     ISerializationAdmin *_serializationAdmin{nullptr};
     std::unique_ptr<HttpRouteRegistration> _routeRegistration{nullptr};

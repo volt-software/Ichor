@@ -30,6 +30,8 @@ public:
         reg.registerDependency<ILogger>(this, true);
     }
     ~TrackerService() final = default;
+
+private:
     StartBehaviour start() final {
         ICHOR_LOG_INFO(_logger, "TrackerService started");
         _trackerRegistration = getManager().registerDependencyTracker<IRuntimeCreatedService>(this);
@@ -96,7 +98,9 @@ public:
         }
     }
 
-private:
+    friend DependencyRegister;
+    friend DependencyManager;
+
     ILogger *_logger{nullptr};
     DependencyTrackerRegistration _trackerRegistration{};
     std::unordered_map<std::string, RuntimeCreatedService*> _scopedRuntimeServices{};

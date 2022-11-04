@@ -15,6 +15,7 @@ class SigIntService final : public Service<SigIntService> {
 public:
     SigIntService() = default;
 
+private:
     StartBehaviour start() final {
         // Setup a timer that fires every 100 milliseconds and tell that dependency manager that we're interested in the events that the timer fires.
         auto timer = getManager().createServiceManager<Timer, ITimer>();

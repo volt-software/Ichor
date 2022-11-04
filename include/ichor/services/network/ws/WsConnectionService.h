@@ -20,11 +20,18 @@ using tcp = boost::asio::ip::tcp;       // from <boost/asio/ip/tcp.hpp>
 #include <iostream>
 
 namespace Ichor {
+    class WsHostService;
+
     class WsConnectionService final : public IConnectionService, public Service<WsConnectionService> {
     public:
         WsConnectionService(DependencyRegister &reg, Properties props, DependencyManager *mng);
         ~WsConnectionService() final = default;
 
+        uint64_t sendAsync(std::vector<uint8_t>&& msg) final;
+        void setPriority(uint64_t priority) final;
+        uint64_t getPriority() final;
+
+    private:
         StartBehaviour start() final;
         StartBehaviour stop() final;
 
@@ -37,11 +44,10 @@ namespace Ichor {
         void addDependencyInstance(IHttpContextService *logger, IService *);
         void removeDependencyInstance(IHttpContextService *logger, IService *);
 
-        uint64_t sendAsync(std::vector<uint8_t>&& msg) final;
-        void setPriority(uint64_t priority) final;
-        uint64_t getPriority() final;
+        friend DependencyRegister;
+        friend DependencyManager;
+        friend WsHostService;
 
-    private:
         void fail(beast::error_code, char const* what);
         void accept(net::yield_context yield); // for when a new connection from WsHost is established
         void connect(net::yield_context yield); // for when connecting as a client

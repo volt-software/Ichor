@@ -20,18 +20,21 @@ namespace Ichor {
         TcpHostService(DependencyRegister &reg, Properties props, DependencyManager *mng);
         ~TcpHostService() final = default;
 
+        void setPriority(uint64_t priority) final;
+        uint64_t getPriority() final;
+
+    private:
         StartBehaviour start() final;
         StartBehaviour stop() final;
 
         void addDependencyInstance(ILogger *logger, IService *isvc);
         void removeDependencyInstance(ILogger *logger, IService *isvc);
 
-        void setPriority(uint64_t priority) final;
-        uint64_t getPriority() final;
-
         AsyncGenerator<void> handleEvent(NewSocketEvent const &evt);
 
-    private:
+        friend DependencyRegister;
+        friend DependencyManager;
+
         int _socket;
         int _bindFd;
         uint64_t _priority;

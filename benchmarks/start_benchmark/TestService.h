@@ -19,6 +19,8 @@ public:
         reg.registerDependency<ILogger>(this, true);
     }
     ~TestService() final = default;
+
+private:
     StartBehaviour start() final {
         auto iteration = Ichor::any_cast<uint64_t>(getProperties().operator[]("Iteration"));
         if(iteration == SERVICES_COUNT - 1) {
@@ -39,6 +41,7 @@ public:
         _logger = nullptr;
     }
 
-private:
+    friend DependencyRegister;
+
     ILogger *_logger{nullptr};
 };

@@ -15,6 +15,8 @@ public:
         reg.registerDependency<IRuntimeCreatedService>(this, true, getProperties());
     }
     ~TestService() final = default;
+
+private:
     StartBehaviour start() final {
         ICHOR_LOG_INFO(_logger, "TestService started with dependency");
         getManager().pushEvent<QuitEvent>(getServiceId());
@@ -45,6 +47,7 @@ public:
     void removeDependencyInstance(IRuntimeCreatedService *, IService *isvc) {
     }
 
-private:
+    friend DependencyRegister;
+
     ILogger *_logger{nullptr};
 };

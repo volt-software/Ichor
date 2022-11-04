@@ -24,6 +24,7 @@ public:
     }
     ~UsingHttpService() final = default;
 
+private:
     StartBehaviour start() final {
         ICHOR_LOG_INFO(_logger, "UsingHttpService started");
         _failureEventRegistration = getManager().registerEventHandler<FailedSendMessageEvent>(this);
@@ -92,7 +93,9 @@ public:
         return sendTestRequest(std::move(evt.data));
     }
 
-private:
+    friend DependencyRegister;
+    friend DependencyManager;
+
     AsyncGenerator<void> sendTestRequest(std::vector<uint8_t> &&toSendMsg) {
         ICHOR_LOG_INFO(_logger, "sendTestRequest");
         auto &response = *co_await _connectionService->sendAsync(HttpMethod::post, "/test", {}, std::move(toSendMsg)).begin();

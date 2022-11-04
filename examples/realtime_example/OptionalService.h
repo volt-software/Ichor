@@ -18,6 +18,8 @@ public:
     }
 
     ~OptionalService() final = default;
+
+private:
     StartBehaviour start() final {
         ICHOR_LOG_INFO(_logger, "OptionalService {} started", getServiceId());
         return StartBehaviour::SUCCEEDED;
@@ -37,6 +39,7 @@ public:
         _logger = nullptr;
     }
 
-private:
+    friend DependencyRegister;
+
     ILogger *_logger{nullptr};
 };

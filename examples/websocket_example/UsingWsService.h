@@ -22,6 +22,7 @@ public:
     }
     ~UsingWsService() final = default;
 
+private:
     StartBehaviour start() final {
         ICHOR_LOG_INFO(_logger, "UsingWsService started");
         _dataEventRegistration = getManager().registerEventHandler<NetworkDataEvent>(this);
@@ -85,7 +86,9 @@ public:
         co_return;
     }
 
-private:
+    friend DependencyRegister;
+    friend DependencyManager;
+
     ILogger *_logger{nullptr};
     ISerializationAdmin *_serializationAdmin{nullptr};
     IConnectionService *_connectionService{nullptr};

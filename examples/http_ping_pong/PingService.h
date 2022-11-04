@@ -24,6 +24,7 @@ public:
     }
     ~PingService() final = default;
 
+private:
     StartBehaviour start() final {
         ICHOR_LOG_INFO(_logger, "PingService started");
         _failureEventRegistration = getManager().registerEventHandler<FailedSendMessageEvent>(this);
@@ -93,7 +94,9 @@ public:
         co_return;
     }
 
-private:
+    friend DependencyRegister;
+    friend DependencyManager;
+
     AsyncGenerator<std::unique_ptr<PingMsg>> sendTestRequest(std::vector<uint8_t> &&toSendMsg) {
         auto &response = *co_await _connectionService->sendAsync(HttpMethod::post, "/ping", {}, std::move(toSendMsg)).begin();
 

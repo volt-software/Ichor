@@ -23,10 +23,12 @@ namespace Ichor {
 
         void setLogLevel(LogLevel level) final;
         [[nodiscard]] LogLevel getLogLevel() const final;
-
+    private:
         StartBehaviour start() final;
         StartBehaviour stop() final;
-    private:
+
+        friend DependencyRegister;
+
         LogLevel _level;
         static std::atomic<bool> _setting_logger;
         static std::atomic<bool> _logger_set;

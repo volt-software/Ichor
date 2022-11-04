@@ -17,6 +17,8 @@ public:
         reg.registerDependency<ILogger>(this, true);
     }
     ~TestService() final = default;
+
+private:
     StartBehaviour start() final {
         return Ichor::StartBehaviour::SUCCEEDED;
     }
@@ -33,6 +35,7 @@ public:
         _logger = nullptr;
     }
 
-private:
+    friend DependencyRegister;
+
     ILogger *_logger;
 };

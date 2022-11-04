@@ -41,6 +41,9 @@ namespace Ichor {
         EventStatisticsService() = default;
         ~EventStatisticsService() final = default;
 
+        const unordered_map<uint64_t, std::vector<StatisticEntry>>& getRecentStatistics() const noexcept final;
+        const unordered_map<uint64_t, std::vector<AveragedStatisticEntry>>& getAverageStatistics() const noexcept final;
+    private:
         bool preInterceptEvent(Event const &evt);
         void postInterceptEvent(Event const &evt, bool processed);
 
@@ -49,9 +52,9 @@ namespace Ichor {
         StartBehaviour start() final;
         StartBehaviour stop() final;
 
-        const unordered_map<uint64_t, std::vector<StatisticEntry>>& getRecentStatistics() const noexcept final;
-        const unordered_map<uint64_t, std::vector<AveragedStatisticEntry>>& getAverageStatistics() const noexcept final;
-    private:
+        friend DependencyRegister;
+        friend DependencyManager;
+
         unordered_map<uint64_t, std::vector<StatisticEntry>> _recentEventStatistics;
         unordered_map<uint64_t, std::vector<AveragedStatisticEntry>> _averagedStatistics;
         unordered_map<uint64_t, std::string_view> _eventTypeToNameMapper;
