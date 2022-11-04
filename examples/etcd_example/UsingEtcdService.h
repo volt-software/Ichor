@@ -16,6 +16,7 @@ public:
     }
     ~UsingEtcdService() final = default;
 
+private:
     StartBehaviour start() final {
         ICHOR_LOG_INFO(_logger, "UsingEtcdService started");
         if(_etcd->put("test", "2")) {
@@ -30,7 +31,7 @@ public:
             ICHOR_LOG_ERROR(_logger, "Error putting key/value into etcd");
         }
 
-        getManager().pushEvent<QuitEvent>(getServiceId(), INTERNAL_EVENT_PRIORITY+1);
+        getManager().pushEvent<QuitEvent>(getServiceId());
         return StartBehaviour::SUCCEEDED;
     }
 
@@ -55,7 +56,9 @@ public:
         _etcd = nullptr;
     }
 
-private:
+    friend DependencyRegister;
+    friend DependencyManager;
+
     ILogger *_logger{nullptr};
     IEtcdService *_etcd{nullptr};
 };

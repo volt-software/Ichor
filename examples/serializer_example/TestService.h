@@ -17,6 +17,7 @@ public:
     }
     ~TestService() final = default;
 
+private:
     StartBehaviour start() final {
         ICHOR_LOG_INFO(_logger, "TestService started with dependency");
         _doWorkRegistration = getManager().registerEventCompletionCallbacks<DoWorkEvent>(this);
@@ -65,7 +66,9 @@ public:
         ICHOR_LOG_ERROR(_logger, "Error handling DoWorkEvent");
     }
 
-private:
+    friend DependencyRegister;
+    friend DependencyManager;
+
     ILogger *_logger{};
     ISerializationAdmin *_serializationAdmin{};
     EventCompletionHandlerRegistration _doWorkRegistration{};

@@ -27,6 +27,8 @@ public:
         reg.registerDependency<IOptionalService>(this, false);
     }
     ~TestService() final = default;
+
+private:
     StartBehaviour start() final {
         ICHOR_LOG_INFO(_logger, "TestService started with dependency");
         _started = true;
@@ -85,7 +87,7 @@ public:
             long min = *std::min_element(begin(_executionTimes), end(_executionTimes), [](long &a, long &b){return a < b; });
             long max = *std::max_element(begin(_executionTimes), end(_executionTimes), [](long &a, long &b){return a < b; });
             long avg = std::accumulate(begin(_executionTimes), end(_executionTimes), 0L, [](long i, long &entry){ return i + entry; }) / static_cast<long>(_executionTimes.size());
-            
+
             fmt::print("duration min/max/avg: {:L}/{:L}/{:L} µs\n", min, max, avg);
         } else {
             getManager().pushPrioritisedEvent<ExecuteTaskEvent>(getServiceId(), 10);
@@ -94,7 +96,9 @@ public:
         co_return;
     }
 
-private:
+    friend DependencyRegister;
+    friend DependencyManager;
+
     ILogger *_logger{nullptr};
     bool _started{false};
     int _injectionCount{0};

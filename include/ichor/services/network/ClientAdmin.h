@@ -13,6 +13,7 @@ namespace Ichor {
         ClientAdmin(Properties properties, DependencyManager *mng) : Service<ClientAdmin<NetworkType, NetworkInterfaceType>>(std::move(properties), mng), _connections{} {  }
         ~ClientAdmin() override = default;
 
+    private:
         StartBehaviour start() final {
             _trackerRegistration = Service<ClientAdmin<NetworkType, NetworkInterfaceType>>::getManager().template registerDependencyTracker<NetworkInterfaceType>(this);
             _unrecoverableErrorRegistration = Service<ClientAdmin<NetworkType, NetworkInterfaceType>>::getManager().template registerEventHandler<UnrecoverableErrorEvent>(this);
@@ -78,7 +79,9 @@ namespace Ichor {
             co_return;
         }
 
-    private:
+        friend DependencyRegister;
+        friend DependencyManager;
+
         ILogger *_logger{nullptr};
         unordered_map<uint64_t, IService*> _connections;
         DependencyTrackerRegistration _trackerRegistration{};

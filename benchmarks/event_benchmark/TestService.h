@@ -28,6 +28,8 @@ public:
         reg.registerDependency<ILogger>(this, true);
     }
     ~TestService() final = default;
+
+private:
     StartBehaviour start() final {
         auto start = std::chrono::steady_clock::now();
         for(uint32_t i = 0; i < EVENT_COUNT; i++) {
@@ -51,6 +53,7 @@ public:
         _logger = nullptr;
     }
 
-private:
+    friend DependencyRegister;
+
     ILogger *_logger{nullptr};
 };

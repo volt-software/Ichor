@@ -17,9 +17,6 @@ namespace Ichor {
     public:
         SpdlogLogger(DependencyRegister &reg, Properties props, DependencyManager *mng);
 
-        StartBehaviour start() final;
-        StartBehaviour stop() final;
-
         void trace(const char *filename_in, int line_in, const char *funcname_in, std::string_view format_str, fmt::format_args args) final;
         void debug(const char *filename_in, int line_in, const char *funcname_in, std::string_view format_str, fmt::format_args args) final;
         void info(const char *filename_in, int line_in, const char *funcname_in, std::string_view format_str, fmt::format_args args) final;
@@ -33,6 +30,11 @@ namespace Ichor {
         [[nodiscard]] LogLevel getLogLevel() const final;
 
     private:
+        StartBehaviour start() final;
+        StartBehaviour stop() final;
+
+        friend DependencyRegister;
+
         std::shared_ptr<spdlog::logger> _logger{nullptr};
         LogLevel _level{LogLevel::TRACE};
         ISpdlogSharedService* _sharedService{nullptr};

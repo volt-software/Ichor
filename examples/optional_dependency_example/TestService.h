@@ -15,6 +15,8 @@ public:
         reg.registerDependency<IOptionalService>(this, false);
     }
     ~TestService() final = default;
+
+private:
     StartBehaviour start() final {
         ICHOR_LOG_INFO(_logger, "TestService started with dependency");
         _started = true;
@@ -51,7 +53,8 @@ public:
     void removeDependencyInstance(IOptionalService *, IService *) {
     }
 
-private:
+    friend DependencyRegister;
+
     ILogger *_logger{nullptr};
     bool _started{false};
     int _injectionCount{0};

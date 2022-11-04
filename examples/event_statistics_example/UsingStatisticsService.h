@@ -15,6 +15,7 @@ public:
     }
     ~UsingStatisticsService() final = default;
 
+private:
     StartBehaviour start() final {
         ICHOR_LOG_INFO(_logger, "UsingStatisticsService started");
         auto quitTimerManager = getManager().createServiceManager<Timer, ITimer>();
@@ -50,7 +51,9 @@ public:
         _logger = nullptr;
     }
 
-private:
+    friend DependencyRegister;
+    friend DependencyManager;
+
     ILogger *_logger{nullptr};
     std::random_device _rd{};
     std::mt19937 _mt{_rd()};

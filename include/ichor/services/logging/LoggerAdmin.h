@@ -17,6 +17,7 @@ namespace Ichor {
         }
         ~LoggerAdmin() final = default;
 
+    private:
         StartBehaviour start() final {
             _loggerTrackerRegistration = Service<LoggerAdmin<LogT>>::getManager().template registerDependencyTracker<ILogger>(this);
             return StartBehaviour::SUCCEEDED;
@@ -47,12 +48,12 @@ namespace Ichor {
             }
             if (logger == end(_loggers)) {
 //                ICHOR_LOG_ERROR(_logger, "creating logger for svcid {}", evt.originatingService);
-                    Properties props{};
-                    props.reserve(3);
-                    props.template emplace("LogLevel",        Ichor::make_any<LogLevel>(requestedLevel));
-                    props.template emplace("TargetServiceId", Ichor::make_any<uint64_t>(evt.originatingService));
-                    props.template emplace("Filter",          Ichor::make_any<Filter>(Filter{ServiceIdFilterEntry{evt.originatingService}}));
-                    _loggers.emplace(evt.originatingService, Service<LoggerAdmin<LogT>>::getManager().template createServiceManager<LogT, ILogger>(std::move(props)));
+                Properties props{};
+                props.reserve(3);
+                props.template emplace("LogLevel",        Ichor::make_any<LogLevel>(requestedLevel));
+                props.template emplace("TargetServiceId", Ichor::make_any<uint64_t>(evt.originatingService));
+                props.template emplace("Filter",          Ichor::make_any<Filter>(Filter{ServiceIdFilterEntry{evt.originatingService}}));
+                _loggers.emplace(evt.originatingService, Service<LoggerAdmin<LogT>>::getManager().template createServiceManager<LogT, ILogger>(std::move(props)));
             } else {
                 ICHOR_LOG_TRACE(_logger, "svcid {} already has logger", evt.originatingService);
             }
@@ -62,7 +63,9 @@ namespace Ichor {
             _loggers.erase(evt.originatingService);
         }
 
-    private:
+        friend DependencyRegister;
+        friend DependencyManager;
+
         IFrameworkLogger *_logger{nullptr};
         DependencyTrackerRegistration _loggerTrackerRegistration{};
         unordered_map<uint64_t, LogT*> _loggers;

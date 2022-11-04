@@ -21,6 +21,8 @@ public:
         reg.registerDependency<ITestService>(this, true);
     }
     ~StartStopService() final = default;
+
+private:
     StartBehaviour start() final {
         if(startCount == 0) {
             _startServiceRegistration = getManager().registerEventCompletionCallbacks<StartServiceEvent>(this);
@@ -75,7 +77,9 @@ public:
     void handleError(StopServiceEvent const &evt) {
     }
 
-private:
+    friend DependencyRegister;
+    friend DependencyManager;
+
     ILogger *_logger{nullptr};
     uint64_t _testServiceId{0};
     std::chrono::steady_clock::time_point _start{};

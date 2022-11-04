@@ -22,6 +22,10 @@ namespace Ichor {
         WsHostService(DependencyRegister &reg, Properties props, DependencyManager *mng);
         ~WsHostService() final = default;
 
+        void setPriority(uint64_t priority) final;
+        uint64_t getPriority() final;
+
+    private:
         StartBehaviour start() final;
         StartBehaviour stop() final;
 
@@ -32,10 +36,9 @@ namespace Ichor {
 
         AsyncGenerator<void> handleEvent(NewWsConnectionEvent const &evt);
 
-        void setPriority(uint64_t priority) final;
-        uint64_t getPriority() final;
+        friend DependencyRegister;
+        friend DependencyManager;
 
-    private:
         void fail(beast::error_code, char const* what);
         void listen(tcp::endpoint endpoint, net::yield_context yield);
 

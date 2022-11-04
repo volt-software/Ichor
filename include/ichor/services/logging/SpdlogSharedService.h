@@ -21,11 +21,14 @@ namespace Ichor {
     public:
         SpdlogSharedService() = default;
         ~SpdlogSharedService() final = default;
-        StartBehaviour start() final;
-        StartBehaviour stop() final;
 
         std::vector<std::shared_ptr<spdlog::sinks::sink>> const& getSinks() noexcept final;
     private:
+        StartBehaviour start() final;
+        StartBehaviour stop() final;
+
+        friend DependencyRegister;
+
         std::vector<std::shared_ptr<spdlog::sinks::sink>> _sinks;
     };
 }

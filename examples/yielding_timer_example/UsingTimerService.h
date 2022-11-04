@@ -19,6 +19,7 @@ public:
     }
     ~UsingTimerService() final = default;
 
+private:
     StartBehaviour start() final {
         ICHOR_LOG_INFO(_logger, "UsingTimerService started");
         _timerManager = getManager().createServiceManager<Timer, ITimer>();
@@ -64,7 +65,9 @@ public:
         co_return;
     }
 
-private:
+    friend DependencyRegister;
+    friend DependencyManager;
+
     ILogger *_logger{nullptr};
     uint64_t _timerTriggerCount{0};
     Timer* _timerManager{nullptr};

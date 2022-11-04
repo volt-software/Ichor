@@ -18,6 +18,8 @@ public:
     }
 
     ~RuntimeCreatedService() final = default;
+
+private:
     StartBehaviour start() final {
         auto const& scope = Ichor::any_cast<std::string&>(_properties["scope"]);
         ICHOR_LOG_INFO(_logger, "RuntimeCreatedService started with scope {}", scope);
@@ -38,6 +40,7 @@ public:
         _logger = nullptr;
     }
 
-private:
+    friend DependencyRegister;
+
     ILogger *_logger{nullptr};
 };

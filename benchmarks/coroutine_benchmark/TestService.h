@@ -30,6 +30,8 @@ public:
         reg.registerDependency<ILogger>(this, true);
     }
     ~TestService() final = default;
+
+private:
     StartBehaviour start() final {
         getManager().pushEvent<RunFunctionEvent>(getServiceId(), [this](DependencyManager &dm) -> AsyncGenerator<void> {
             for(uint32_t i = 0; i < EVENT_COUNT; i++) {
@@ -61,7 +63,8 @@ public:
         _logger = nullptr;
     }
 
-private:
+    friend DependencyRegister;
+
     ILogger *_logger{nullptr};
     AsyncAutoResetEvent _evt{};
 };
