@@ -10,28 +10,45 @@
 #include <ichor/Service.h>
 #include <ichor/LifecycleManager.h>
 #include <ichor/services/serialization/ISerializationAdmin.h>
-#include "../common/TestMsg.h"
+#include "../examples/common/TestMsg.h"
 
 using namespace Ichor;
 
-class UsingHttpService final : public Service<UsingHttpService> {
+extern std::unique_ptr<Ichor::AsyncManualResetEvent> _evt;
+extern bool evtGate;
+extern std::thread::id testThreadId;
+extern std::thread::id dmThreadId;
+
+class HttpThreadService final : public Service<HttpThreadService> {
 public:
-    UsingHttpService(DependencyRegister &reg, Properties props, DependencyManager *mng) : Service(std::move(props), mng) {
-        reg.registerDependency<ILogger>(this, true);
+    HttpThreadService(DependencyRegister &reg, Properties props, DependencyManager *mng) : Service(std::move(props), mng) {
         reg.registerDependency<ISerializationAdmin>(this, true);
         reg.registerDependency<IHttpConnectionService>(this, true, getProperties());
         reg.registerDependency<IHttpService>(this, true);
     }
-    ~UsingHttpService() final = default;
+    ~HttpThreadService() final = default;
 
 private:
     StartBehaviour start() final {
-        ICHOR_LOG_INFO(_logger, "UsingHttpService started");
-
         getManager().pushEvent<RunFunctionEvent>(getServiceId(), [this](DependencyManager &dm) -> AsyncGenerator<void> {
             auto toSendMsg = _serializationAdmin->serialize(TestMsg{11, "hello"});
 
+            if(dmThreadId != std::this_thread::get_id()) {
+                throw std::runtime_error("dmThreadId id incorrect");
+            }
+            if(testThreadId == std::this_thread::get_id()) {
+                throw std::runtime_error("testThreadId id incorrect");
+            }
+
             co_await sendTestRequest(std::move(toSendMsg)).begin();
+
+            if(dmThreadId != std::this_thread::get_id()) {
+                throw std::runtime_error("dmThreadId id incorrect");
+            }
+            if(testThreadId == std::this_thread::get_id()) {
+                throw std::runtime_error("testThreadId id incorrect");
+            }
+
             co_return;
         });
 
@@ -40,70 +57,69 @@ private:
 
     StartBehaviour stop() final {
         _routeRegistration.reset();
-        ICHOR_LOG_INFO(_logger, "UsingHttpService stopped");
         return StartBehaviour::SUCCEEDED;
-    }
-
-    void addDependencyInstance(ILogger *logger, IService *) {
-        _logger = logger;
-    }
-
-    void removeDependencyInstance(ILogger *logger, IService *) {
-        _logger = nullptr;
     }
 
     void addDependencyInstance(ISerializationAdmin *serializationAdmin, IService *) {
         _serializationAdmin = serializationAdmin;
-        ICHOR_LOG_INFO(_logger, "Inserted serializationAdmin");
     }
 
     void removeDependencyInstance(ISerializationAdmin *serializationAdmin, IService *) {
         _serializationAdmin = nullptr;
-        ICHOR_LOG_INFO(_logger, "Removed serializationAdmin");
     }
 
     void addDependencyInstance(IHttpConnectionService *connectionService, IService *) {
         _connectionService = connectionService;
-        ICHOR_LOG_INFO(_logger, "Inserted IHttpConnectionService");
     }
 
     void addDependencyInstance(IHttpService *svc, IService *) {
-        ICHOR_LOG_INFO(_logger, "Inserted IHttpService");
         _routeRegistration = svc->addRoute(HttpMethod::post, "/test", [this](HttpRequest &req) -> AsyncGenerator<HttpResponse> {
+            if(dmThreadId != std::this_thread::get_id()) {
+                throw std::runtime_error("dmThreadId id incorrect");
+            }
+            if(testThreadId == std::this_thread::get_id()) {
+                throw std::runtime_error("testThreadId id incorrect");
+            }
+
             auto msg = _serializationAdmin->deserialize<TestMsg>(std::move(req.body));
-            ICHOR_LOG_WARN(_logger, "received request on route {} {} with testmsg {} - {}", (int)req.method, req.route, msg->id, msg->val);
+            evtGate = true;
+
+            co_await *_evt;
+
+            if(dmThreadId != std::this_thread::get_id()) {
+                throw std::runtime_error("dmThreadId id incorrect");
+            }
+            if(testThreadId == std::this_thread::get_id()) {
+                throw std::runtime_error("testThreadId id incorrect");
+            }
+
             co_return HttpResponse{false, HttpStatus::ok, _serializationAdmin->serialize(TestMsg{11, "hello"}), {}};
         });
     }
 
     void removeDependencyInstance(IHttpService *, IService *) {
-        ICHOR_LOG_INFO(_logger, "Removed IHttpService");
         _routeRegistration.reset();
     }
 
     void removeDependencyInstance(IHttpConnectionService *connectionService, IService *) {
-        ICHOR_LOG_INFO(_logger, "Removed IHttpConnectionService");
     }
 
     friend DependencyRegister;
     friend DependencyManager;
 
     AsyncGenerator<void> sendTestRequest(std::vector<uint8_t> &&toSendMsg) {
-        ICHOR_LOG_INFO(_logger, "sendTestRequest");
         auto &response = *co_await _connectionService->sendAsync(HttpMethod::post, "/test", {}, std::move(toSendMsg)).begin();
 
         if(response.status == HttpStatus::ok) {
             auto msg = _serializationAdmin->deserialize<TestMsg>(response.body);
-            ICHOR_LOG_INFO(_logger, "Received TestMsg id {} val {}", msg->id, msg->val);
         } else {
-            ICHOR_LOG_ERROR(_logger, "Received status {}", (int)response.status);
+            throw std::runtime_error("Status not ok");
         }
         getManager().pushEvent<QuitEvent>(getServiceId());
 
         co_return;
     }
 
-    ILogger *_logger{nullptr};
     ISerializationAdmin *_serializationAdmin{nullptr};
     IHttpConnectionService *_connectionService{nullptr};
     std::unique_ptr<HttpRouteRegistration> _routeRegistration{nullptr};
