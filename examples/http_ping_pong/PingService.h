@@ -27,7 +27,6 @@ public:
 private:
     StartBehaviour start() final {
         ICHOR_LOG_INFO(_logger, "PingService started");
-        _failureEventRegistration = getManager().registerEventHandler<FailedSendMessageEvent>(this);
 
         _timer = getManager().createServiceManager<Timer, ITimer>();
         _timer->setCallback(this, [this](DependencyManager &dm) -> AsyncGenerator<void> {
@@ -55,8 +54,6 @@ private:
 
     StartBehaviour stop() final {
         _timer->stopTimer();
-        _dataEventRegistration.reset();
-        _failureEventRegistration.reset();
         ICHOR_LOG_INFO(_logger, "PingService stopped");
         return StartBehaviour::SUCCEEDED;
     }
@@ -88,12 +85,6 @@ private:
         ICHOR_LOG_INFO(_logger, "Removed IHttpConnectionService");
     }
 
-    AsyncGenerator<void> handleEvent(FailedSendMessageEvent const &evt) {
-        ++_failed;
-        ICHOR_LOG_INFO(_logger, "Failed to send message id {}, total failed {}", evt.msgId, _failed);
-        co_return;
-    }
-
     friend DependencyRegister;
     friend DependencyManager;
 
@@ -114,8 +105,6 @@ private:
     Timer *_timer{nullptr};
     ISerializationAdmin *_serializationAdmin{nullptr};
     IHttpConnectionService *_connectionService{nullptr};
-    EventHandlerRegistration _dataEventRegistration{};
-    EventHandlerRegistration _failureEventRegistration{};
     uint64_t _sequence{};
     uint64_t _failed{};
 };

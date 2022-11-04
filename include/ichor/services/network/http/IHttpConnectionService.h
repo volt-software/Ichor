@@ -8,11 +8,11 @@ namespace Ichor {
     public:
 
         /**
-         * Send message asynchronously to the connected http server. An HttpResponseEvent is queued when the request finishes. In case of failure, pushes a FailedSendMessageEvent
+         * Send message asynchronously to the connected http server. Use co_await to get the response.
          * @param method method type (GET, POST, etc)
          * @param route The route, or path, of this request. Has to be pointing to valid memory until an HttpResponseEvent is received.
          * @param msg Usually json, ignored for GET requests
-         * @return id of the request, will be available in the HttpResponseEvent
+         * @return response
          */
         virtual AsyncGenerator<HttpResponse> sendAsync(HttpMethod method, std::string_view route, std::vector<HttpHeader> &&headers, std::vector<uint8_t>&& msg) = 0;
 
