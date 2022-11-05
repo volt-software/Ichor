@@ -1,6 +1,5 @@
 #include "Common.h"
 #include <ichor/coroutines/AsyncManualResetEvent.h>
-#include <memory>
 
 TEST_CASE("AsyncManualResetEventTests") {
 

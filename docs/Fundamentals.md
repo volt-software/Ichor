@@ -6,11 +6,16 @@ Ichor is a combination of three components:
 * Service Lifecycle Management (SLM)
 * Event Queue (EQ)
 
+Using the latest C++20 features:
+* Coroutines
+* Concepts
+
 ## Dependency Injection (DI)
 
 Ichor's DI is run-time. There's some compile time stuff to determine which interfaces are requested, but resolving and registering happens at run-time.
 The main feature Ichor aims for is run-time interception of dependency requests and creating a new dependency instance specifically for that request.
 One of the use-cases is to easily setup factories separated per function domain. E.g. to create two workflows which share common code but separate data. 
+Another would be to dynamically load .so or .dll files which expose common Ichor dependencies, to be easily shared accross multiple projects.
 
 ### Requesting Dependencies
 
@@ -24,7 +29,7 @@ struct DependencyService final : public Service<DependencyService> {
     }
     ~DependencyService() final = default;
 
-    void addDependencyInstance(ISomeDependency *, IService *) {}
+    void addDependencyInstance(ISomeDependency * /* Injected service */, IService * /* service interface for injected service, e.g. service id and properties */) {}
     void removeDependencyInstance(ISomeDependency *, IService *) {}
     void addDependencyInstance(ISomeOptionalDependency *, IService *) {}
     void removeDependencyInstance(ISomeOptionalDependency *, IService *) {}
@@ -38,7 +43,7 @@ It is only when also taking Service Lifecyce Management and the thread safety gu
 
 #### Boost.DI
 
-Boost.DI is a purely compile-time DI framework. This enables it to have no run-time overhead, but doesn't allow creating a new instance per dependency request.
+Boost.DI is a purely compile-time DI framework. This enables it to have no run-time overhead, but doesn't allow creating a new instance per dependency request. It requires all possible interfaces and how to instantiate them to be known at compile time.
 
 #### Google Fruit
 
@@ -70,3 +75,41 @@ Ichor, at least on Linux, ensures that the highest priority thread trying to ins
 ### Real-time scheduling
 
 When combined with a real-time kernel, each thread can be run with a real-time guarantee. Although Ichor provides the concept of priorities, these are discouraged in real-time usage. Most real-time tasks run in a linear fashion so that doesn't create issues.
+
+### Supported Out-Of-The-Box
+
+Ichor provides a multimap-based priority queue as well as an [sdevent](https://www.freedesktop.org/software/systemd/man/sd-event.html) implementation out of the box. Custom ones can be made to suit your needs.
+The sdevent implementation is a showcase on how to implement Ichor on top of your existing event queue.
+
+## C++20
+
+### Coroutines
+
+Ichor provides a co_yield and co_await capable generator for use in conjunction with its event queue integration. An example:
+
+```c++
+AsyncManualResetEvent evt;
+dm.pushEvent<RunFunctionEvent>(0, [&](DependencyManager& mng) -> AsyncGenerator<void> {
+    co_await evt;
+    co_return;
+});
+
+// ... Sometime Later ...
+
+dm.pushEvent<RunFunctionEvent>(0, [&](DependencyManager& mng) -> AsyncGenerator<void> {
+    evt.set();
+    co_return;
+});
+```
+
+What happens under the hood is that a `RunFunctionEvent` gets inserted into the queue and executed. Upon encountering a `co_await`, a coroutine handle gets created and stored in Ichor.
+
+Sometime later, another `RunFunctionEvent` is inserted and executed, which sets the Async event, immediately continuing the execution of the previous coroutine, after which its execution is finished.
+
+Big thanks for Lewis Baker's [cppcoro](https://github.com/lewissbaker/cppcoro), which Ichor borrowed heavily from.
+
+For more details see the `sendTestRequest` function in `UsingHttpService.h` in the [http example](../examples/http_example)
+
+### Concepts
+
+For registering dependencies, trackers, http routes and more, Ichor uses templated with concepts to ensure the right function signatures are present. These then get stored in Ichor using type-erasure through `std::function`.

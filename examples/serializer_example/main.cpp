@@ -21,6 +21,7 @@
 
 int main(int argc, char *argv[]) {
     std::locale::global(std::locale("en_US.UTF-8"));
+    std::ios::sync_with_stdio(false);
 
     auto start = std::chrono::steady_clock::now();
     auto queue = std::make_unique<MultimapQueue>();

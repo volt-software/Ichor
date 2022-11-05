@@ -2,15 +2,31 @@
 
 ## Compiling Ichor
 
-Compiling is done through the help of CMake. Ichor requires at least gcc 11.2 (11.3 recommended due to [this gcc bug](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=95137)) or clang 14, and is tested with gcc 11.3, 12, clang 14, clang 15 and clang 16.
+Compiling is done through the help of CMake. Ichor requires at least gcc 11.3 (due to [this gcc bug](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=95137)) or clang 14, and is tested with gcc 11.3, 12.1, clang 14, clang 15 and clang 16.
 ### Dependencies
 
-### Ubuntu 20.04:
+#### Ubuntu 20.04:
 
 ```
-sudo add-apt-repository ppa:ubuntu-toolchain-r/ppa
-sudo apt update
-sudo apt install g++-10 build-essential cmake
+sudo apt install libisl-dev libmpfrc++-dev libmpc-dev libgmp-dev build-essential cmake g++
+wget http://mirror.koddos.net/gcc/releases/gcc-11.3.0/gcc-11.3.0.tar.xz
+tar xf gcc-11.3.0.tar.xz
+mkdir gcc-build
+cd gcc-build
+../gcc-11.3.0/configure --prefix=/opt/gcc-11.3 --enable-languages=c,c++ --disable-multilib
+make -j$(nproc)
+sudo make install
+```
+
+Then with cmake, use
+```
+CXX=/opt/gcc-11.3.0/bin/g++ cmake $PATH_TO_ICHOR_SOURCE
+```
+
+#### Ubuntu 22.04:
+
+```
+sudo apt install g++ build-essential cmake
 ```
 
 #### Optional Features
@@ -22,9 +38,30 @@ sudo apt install libgrpc++-dev libprotobuf-dev
 ```
 
 If using the Boost.BEAST (recommended boost 1.70 or newer):
+
+Ubuntu 20.04:
 ```
 sudo apt install libboost1.71-all-dev libssl-dev
 ```
+
+Ubuntu 22.04:
+```
+sudo apt install libboost1.74-all-dev libssl-dev
+```
+
+If using abseil:
+Ubuntu 20.04:
+Not available on apt. Please compile manually.
+
+Ubuntu 22.04:
+```
+sudo apt install libabsl-dev
+```
+
+#### Windows
+
+Tried with MSVC 19.33, but it seemed like coroutines and concepts are not fully implemented yet.
+
 
 ### CMake Options
 
@@ -40,13 +77,13 @@ Builds the benchmarks in the [benchmarks directory](../benchmarks).
 
 Builds the tests in the [test directory](../test).
 
+#### ICHOR_ENABLE_INTERNAL_DEBUGGING
+
+Enables verbose logging at various points in the Ichor framework. Recommended only when trying to figure out if you've encountered a bug in Ichor.
+
 #### ICHOR_USE_SPDLOG (optional dependency)
 
 Enables the use of the [spdlog submodule](../external/spdlog). If examples or benchmarks are enabled, these then use the spdlog variants of loggers instead of cout.
-
-#### USE_RAPIDJSON (optional dependency)
-
-Enables the use of the [rapidjson submodule](../external/spdlog). Used for the serializer examples and benchmarks.
 
 #### ICHOR_USE_PUBSUB
 
@@ -58,7 +95,15 @@ Enables the use of the [rapidjson submodule](../external/spdlog). Used for the e
 
 #### ICHOR_USE_BOOST_BEAST
 
-Requires Boost.BEAST to be installed as a system dependency (version >= 1.70). Used for websocket and http server/client implementations.
+Requires Boost.BEAST to be installed as a system dependency (version >= 1.70). Used for websocket and http server/client implementations. All examples require `ICHOR_SERIALIZATION_FRAMEWORK` to be set as well.
+
+#### ICHOR_SERIALIZATION_FRAMEWORK
+
+Controls which JSON serializer to be used in benchmarks and examples.
+
+Can be one of: OFF RAPIDJSON BOOST_JSON
+
+BOOST_JSON requires boost to be installed (version >= 1.70).
 
 #### ICHOR_USE_SANITIZERS
 
@@ -66,14 +111,36 @@ Compiles everything (including the optionally enabled submodules) with the Addre
 
 #### ICHOR_USE_THREAD_SANITIZER
 
-Compiles everything (including the optionally enabled submodules) with the ThreadSanitizer. Recommended when debugging. Cannot be combined with the AddressSanitizer.
+Compiles everything (including the optionally enabled submodules) with the ThreadSanitizer. Recommended when debugging. Cannot be combined with the AddressSanitizer. Note that compiler bugs may exist, like for [gcc](https://gcc.gnu.org/bugzilla//show_bug.cgi?id=101978). 
 
 #### ICHOR_USE_UGLY_HACK_EXCEPTION_CATCHING
 
-Debugging Boost.asio and Boost.BEAST is difficult, this hack enables catching exceptions directly at the source, rather than at the last point of being rethrown. Requires gcc.
+Debugging Boost.Asio and Boost.BEAST is difficult, this hack enables catching exceptions directly at the source, rather than at the last point of being rethrown. Requires gcc.
+
 #### ICHOR_REMOVE_SOURCE_NAMES
 
 Ichor's logging macros by default adds the current filename and line number to each log statement. This option disables that.
+
+#### ICHOR_USE_MOLD
+
+For clang compilers, add the `-fuse-ld=mold` linker flag. This speeds up the linking stage.
+Usage with gcc 12+ is technically possible, but throws off [Catch2 unit test detection](https://github.com/catchorg/Catch2/issues/2507).
+
+#### ICHOR_USE_SDEVENT
+
+Enables the use of the [sdevent event queue](../include/ichor/event_queues/SdeventQueue.h). Requires having sdevent headers and libraries installed on your system.
+
+#### ICHOR_USE_ABSEIL
+
+Enables the use of the abseil containers in Ichor. Requires having abseil headers and libraries installed on your system.
+
+#### ICHOR_USE_MIMALLOC
+
+If `ICHOR_USE_SANITIZERS` is turned OFF, Ichor by default compiles itself with mimalloc, speeding up the runtime a lot and reducing peak memory usage.
+
+#### ICHOR_USE_SYSTEM_MIMALLOC
+
+If `ICHOR_USE_MIMALLOC` is turned ON, this option can be used to use the system installed mimalloc instead of the Ichor provided one.
 
 ## Your first Ichor program
 
@@ -206,7 +273,7 @@ struct MyTimerService final : public IMyTimerService, public Ichor::Service<MyTi
         return Ichor::StartBehaviour::SUCCEEDED;
     }
 
-    Ichor::Generator<bool> handleEvent(Ichor::TimerEvent const * const) {
+    Ichor::AsyncGenerator<void> handleEvent(Ichor::TimerEvent const * const) {
         co_return;        
     }
 
@@ -214,7 +281,7 @@ struct MyTimerService final : public IMyTimerService, public Ichor::Service<MyTi
 };
 ```
 
-This service does a couple things:
+This service does a couple of things:
 * It overrides the start and stop methods, which are virtual methods from the `Service` parent.
 If they are present, they are called when all required dependencies are met. In this case, since there are no dependencies, the service is started as soon as possible.
 * In the start function, it starts another service: a timer. The `main.cpp` file is not the only place this is allowed in! The created service is not started yet, but it is possible to start using its interface straight away. In this example, we set the timer to trigger every second.
@@ -272,7 +339,7 @@ struct MyTimerService final : public IMyTimerService, public Ichor::Service<MyTi
         return Ichor::StartBehaviour::SUCCEEDED;
     }
 
-    Ichor::Generator<bool> handleEvent(Ichor::TimerEvent const * const) {
+    Ichor::AsyncGenerator<void> handleEvent(Ichor::TimerEvent const * const) {
         getManager().pushEvent<Ichor::QuitEvent>(getServiceId()); // Add this
         co_return;
     }
@@ -342,9 +409,11 @@ Pushing an event with a priority is done with the `pushPrioritisedEvent` functio
 getManager().pushPrioritisedEvent<TimerEvent>(getServiceId(), 10);
 ```
 
+The default priority for events is 1000. For dependency related things (like start service, dependency online events) this is 100.
+
 ### Memory allocation
 
-Ichor used to provide `std::pmr::memory_resource` based allocation, however that had a big impact on the ergonomy of the code. Moreover, clang 14 does not support `<memory_resource>` at all. Instead, Ichor recommends using tcmalloc or jemalloc to reduce the resource contention when using multiple threads.
+Ichor used to provide `std::pmr::memory_resource` based allocation, however that had a big impact on the ergonomy of the code. Moreover, clang 14 does not support `<memory_resource>` at all. Instead, Ichor recommends using mimalloc to reduce the resource contention when using multiple threads.
 
 ### Multiple Threads
 

@@ -44,69 +44,9 @@ More examples can be found in the [examples directory](examples).
 * Baremetal, might change if someone puts in the effort to modify Ichor to work with freestanding implementations of C++20
 * Far out future plans for any RTOS that supports C++20 such as VxWorks Wind River, FreeRTOS
 
-## Dependencies
-
-### Ubuntu 20.04:
-
-```
-sudo apt install libisl-dev libmpfrc++-dev libmpc-dev libgmp-dev build-essential cmake g++
-wget http://mirror.koddos.net/gcc/releases/gcc-11.3.0/gcc-11.3.0.tar.xz
-tar xf gcc-11.3.0.tar.xz
-mkdir gcc-build
-cd gcc-build
-../gcc-11.3.0/configure --prefix=/opt/gcc-11.3 --enable-languages=c,c++ --disable-multilib
-make -j$(nproc)
-sudo make install
-```
-
-Then with cmake, use
-```
-CXX=/opt/gcc-11.3.0/bin/g++ cmake $PATH_TO_ICHOR_SOURCE
-```
-
-### Ubuntu 22.04:
-
-```
-sudo apt install g++ build-essential cmake
-```
-
-#### Optional Features
-Some features are behind feature flags and have their own dependencies.
-
-If using etcd:
-```
-sudo apt install libgrpc++-dev libprotobuf-dev
-```
-
-If using the Boost.BEAST (recommended boost 1.70 or newer):
-
-Ubuntu 20.04:
-```
-sudo apt install libboost1.71-all-dev libssl-dev
-```
-
-Ubuntu 22.04:
-```
-sudo apt install libboost1.74-all-dev libssl-dev
-```
-
-#### Windows
-
-Tried with MSVC 19.33, but it seemed like coroutines and concepts are not fully implemented yet.
-
 ## Building
 
-Linux:
-```
-git clone https://github.com/volt-software/Ichor.git
-mkdir Ichor/build
-cd Ichor/build
-cmake ..
-make -j$(nproc)
-make test
-../bin/ichor_minimal_example
-(ctrl + c to quit)
-```
+For build instructions and required dependencies, please see [GettingStarted](docs/GettingStarted.md).
 
 ## Documentation
 
@@ -133,29 +73,28 @@ The framework provides several core features and optional services behind cmake 
 * Dependency Injection
 * Service lifecycle management (sort of like OSGi-lite services)
 * data race free communication between event loops
-* Http server/client
 
 Optional services:
 * Websocket service through Boost.BEAST
 * HTTP client and server services through Boost.BEAST
 * Spdlog logging service
 * TCP communication service
-* RapidJson serialization services
+* JSON serialization services examples
 * Timer service
-* Partial etcd service
+* Partial etcd service (may be broken, unused for a while)
 
 # Roadmap
 
 * EDF scheduling / WCET measurements
-* CMake stuff to include ichor library from external project
 * expand/re-do etcd support, currently only simply put/get supported
 * Pubsub interfaces
     * Kafka? Pulsar? Ecal?
-* Shell Commands
+* Shell Commands / REPL
 * Tracing interface
     * Opentracing? Jaeger?
 * Docker integration/compilation
 * "Remote" services, where services are either in a different thread or a different machine
+* Code generator for remote communication boilerplate
 * ...
 
 # Benchmarks

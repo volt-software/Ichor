@@ -70,13 +70,10 @@ Ichor::StartBehaviour Ichor::SpdlogLogger::start() {
         _level = Ichor::LogLevel::INFO;
     }
     _logger->set_level(spdlog::level::trace);
-
-    auto targetServiceId = Ichor::any_cast<uint64_t>(_properties["TargetServiceId"]);
     return Ichor::StartBehaviour::SUCCEEDED;
 }
 
 Ichor::StartBehaviour Ichor::SpdlogLogger::stop() {
-    auto targetServiceId = Ichor::any_cast<uint64_t>(_properties["TargetServiceId"]);
     return Ichor::StartBehaviour::SUCCEEDED;
 }
 
