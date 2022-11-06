@@ -50,6 +50,7 @@ namespace Ichor {
         friend DependencyRegister;
 
         std::unique_ptr<tcp::acceptor> _httpAcceptor{};
+        // _httpStreams should only be modified from the boost thread
         unordered_map<uint64_t, std::unique_ptr<beast::tcp_stream>> _httpStreams{};
         std::atomic<uint64_t> _priority{INTERNAL_EVENT_PRIORITY};
         std::atomic<bool> _quit{};

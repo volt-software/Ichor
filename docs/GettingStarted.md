@@ -3,6 +3,7 @@
 ## Compiling Ichor
 
 Compiling is done through the help of CMake. Ichor requires at least gcc 11.3 (due to [this gcc bug](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=95137)) or clang 14, and is tested with gcc 11.3, 12.1, clang 14, clang 15 and clang 16.
+
 ### Dependencies
 
 #### Ubuntu 20.04:
@@ -62,6 +63,20 @@ sudo apt install libabsl-dev
 
 Tried with MSVC 19.33, but it seemed like coroutines and concepts are not fully implemented yet.
 
+#### CMakeLists.txt
+
+To use Ichor, compile and install it in a location that cmake can find (e.g. /usr) and use the following CMakeLists.txt:
+
+```cmake
+cmake_minimum_required(VERSION 3.12)
+project(my_project)
+
+set(CMAKE_CXX_STANDARD 20)
+find_package(my_exe CONFIG REQUIRED)
+
+add_executable(my_exe main.cpp)
+target_link_libraries(my_exe Ichor::ichor)
+```
 
 ### CMake Options
 
@@ -133,6 +148,10 @@ Enables the use of the [sdevent event queue](../include/ichor/event_queues/Sdeve
 #### ICHOR_USE_ABSEIL
 
 Enables the use of the abseil containers in Ichor. Requires having abseil headers and libraries installed on your system.
+
+#### ICHOR_DISABLE_RTTI
+
+Disables `dynamic_cast<>()` in most cases as well as `typeid`. Ichor is an opinionated piece of software and we strongly encourage you to disable RTTI. We believe `dynamic_cast<>()` is wrong in almost all instances. Virtual methods and double dispatch should be used instead. If, however, you really want to use RTTI, use this option to re-enable it. 
 
 #### ICHOR_USE_MIMALLOC
 
@@ -273,7 +292,7 @@ struct MyTimerService final : public IMyTimerService, public Ichor::Service<MyTi
         return Ichor::StartBehaviour::SUCCEEDED;
     }
 
-    Ichor::AsyncGenerator<void> handleEvent(Ichor::TimerEvent const * const) {
+    Ichor::AsyncGenerator<void> handleEvent(Ichor::TimerEvent const &) {
         co_return;        
     }
 
@@ -339,7 +358,7 @@ struct MyTimerService final : public IMyTimerService, public Ichor::Service<MyTi
         return Ichor::StartBehaviour::SUCCEEDED;
     }
 
-    Ichor::AsyncGenerator<void> handleEvent(Ichor::TimerEvent const * const) {
+    Ichor::AsyncGenerator<void> handleEvent(Ichor::TimerEvent const &) {
         getManager().pushEvent<Ichor::QuitEvent>(getServiceId()); // Add this
         co_return;
     }
@@ -409,7 +428,7 @@ Pushing an event with a priority is done with the `pushPrioritisedEvent` functio
 getManager().pushPrioritisedEvent<TimerEvent>(getServiceId(), 10);
 ```
 
-The default priority for events is 1000. For dependency related things (like start service, dependency online events) this is 100.
+The default priority for events is 1000. For dependency related things (like start service, dependency online events) it is 100.
 
 ### Memory allocation
 

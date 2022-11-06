@@ -2,7 +2,7 @@
 
 #include <ichor/DependencyManager.h>
 #include <ichor/services/network/http/HttpHostService.h>
-#include <ichor/services/network/http/HttpScopeGuardFinish.h>
+#include <ichor/services/network/http/HttpScopeGuards.h>
 
 Ichor::HttpHostService::HttpHostService(DependencyRegister &reg, Properties props, DependencyManager *mng) : Service(std::move(props), mng) {
     reg.registerDependency<ILogger>(this, true);
@@ -41,9 +41,12 @@ Ichor::StartBehaviour Ichor::HttpHostService::stop() {
         if (_httpAcceptor->is_open()) {
             _httpAcceptor->close();
         }
-        for(auto &[id, stream] : _httpStreams) {
-            stream->cancel();
-        }
+        net::spawn(*_httpContextService->getContext(), [this](net::yield_context _yield) {
+            // _httpStreams should only be modified from the boost thread
+            for (auto &[id, stream]: _httpStreams) {
+                stream->cancel();
+            }
+        });
 
         _httpAcceptor = nullptr;
         _cleanedupStream = true;
@@ -52,6 +55,7 @@ Ichor::StartBehaviour Ichor::HttpHostService::stop() {
     if(_finishedListenAndRead.load(std::memory_order_acquire) != 0 || !_cleanedupStream) {
         return Ichor::StartBehaviour::FAILED_AND_RETRY;
     }
+    // _httpStreams should only be modified from the boost thread, except here where we know there are no fibers running
     _httpStreams.clear();
 
     return Ichor::StartBehaviour::SUCCEEDED;
@@ -182,6 +186,7 @@ void Ichor::HttpHostService::read(tcp::socket socket, net::yield_context yield) 
     beast::error_code ec;
     auto addr = socket.remote_endpoint().address().to_string();
     uint64_t streamId = _streamIdCounter++;
+    // _httpStreams should only be modified from the boost thread
     auto *httpStream = _httpStreams.emplace(streamId, std::make_unique<beast::tcp_stream>(std::move(socket))).first->second.get();
 
     // This buffer is required to persist across reads
@@ -265,6 +270,7 @@ void Ichor::HttpHostService::read(tcp::socket socket, net::yield_context yield) 
             co_return;
         });
     }
+    // _httpStreams should only be modified from the boost thread
     _httpStreams.erase(streamId);
 
     // At this point the connection is closed gracefully
@@ -291,6 +297,7 @@ void Ichor::HttpHostService::sendInternal(uint64_t streamId, http::response<http
         while(!_outbox.empty()) {
             // Move message, should be trivially copyable and prevents iterator invalidation
             auto next = std::move(_outbox.front());
+            // _httpStreams should only be modified from the boost thread
             auto streamIt = _httpStreams.find(next.streamId);
 
             if (streamIt == end(_httpStreams)) {

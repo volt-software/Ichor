@@ -2,7 +2,7 @@
 
 #include <cstdint>
 #include <atomic>
-#include "sole.hpp"
+#include <sole/sole.h>
 #include <ichor/Common.h>
 #include <ichor/Concepts.h>
 #include <ichor/Enums.h>

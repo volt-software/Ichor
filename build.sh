@@ -1,5 +1,5 @@
 #!/bin/bash
-
+#sudo rm -rf * ../bin/* /usr/include/ichor/ ../../ichor-install/ /usr/lib/cmake/ichor && cmake -GNinja -DICHOR_BUILD_TESTING=OFF -DICHOR_BUILD_EXAMPLES=OFF -DICHOR_BUILD_BENCHMARKS=OFF -DCMAKE_BUILD_TYPE=Debug -DICHOR_USE_SANITIZERS=ON -DICHOR_ARCH_OPTIMIZATION=X86_64_AVX512 -DICHOR_USE_ABSEIL=ON -DICHOR_SERIALIZATION_FRAMEWORK=BOOST_JSON -DICHOR_USE_BOOST_BEAST=ON -DICHOR_USE_SPDLOG=ON -DCMAKE_INSTALL_PREFIX=/usr .. && ninja && sudo ninja install
 cleanup ()
 {
     kill -s SIGTERM $!

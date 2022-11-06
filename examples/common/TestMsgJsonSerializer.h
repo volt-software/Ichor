@@ -7,10 +7,10 @@
 #include <ichor/LifecycleManager.h>
 #include "TestMsg.h"
 
-#ifdef USE_RAPIDJSON
+#ifdef ICHOR_USE_RAPIDJSON
 #include <rapidjson/document.h>
 #include <rapidjson/writer.h>
-#elif USE_BOOST_JSON
+#elif ICHOR_USE_BOOST_JSON
 #pragma GCC diagnostic push
 #ifndef __clang__
 #pragma GCC diagnostic ignored "-Wduplicated-branches"
@@ -35,7 +35,7 @@ public:
     std::vector<uint8_t> serialize(const void* obj) final {
         auto msg = static_cast<const TestMsg*>(obj);
 
-#ifdef USE_RAPIDJSON
+#ifdef ICHOR_USE_RAPIDJSON
         rapidjson::StringBuffer sb;
         rapidjson::Writer<rapidjson::StringBuffer> writer(sb);
 
@@ -50,7 +50,7 @@ public:
         writer.EndObject();
         auto *ret = sb.GetString();
         return std::vector<uint8_t>(ret, ret + sb.GetSize() + 1);
-#elif USE_BOOST_JSON
+#elif ICHOR_USE_BOOST_JSON
         boost::json::value jv{};
         boost::json::serializer sr;
         jv = {{"id", msg->id}, {"val", msg->val}};
@@ -84,7 +84,7 @@ public:
 #endif
     }
     void* deserialize(std::vector<uint8_t> &&stream) final {
-#ifdef USE_RAPIDJSON
+#ifdef ICHOR_USE_RAPIDJSON
         rapidjson::Document d;
         d.ParseInsitu(reinterpret_cast<char*>(stream.data()));
 
@@ -93,7 +93,7 @@ public:
         }
 
         return new TestMsg{d["id"].GetUint64(), d["val"].GetString()};
-#elif USE_BOOST_JSON
+#elif ICHOR_USE_BOOST_JSON
         boost::json::parser p{};
 
         std::error_code ec;

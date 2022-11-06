@@ -3,7 +3,7 @@
 #include <ichor/DependencyManager.h>
 #include <ichor/events/RunFunctionEvent.h>
 #include <ichor/services/network/http/HttpConnectionService.h>
-#include <ichor/services/network/http/HttpScopeGuardFinish.h>
+#include <ichor/services/network/http/HttpScopeGuards.h>
 #include <ichor/services/network/NetworkEvents.h>
 
 namespace Ichor {
