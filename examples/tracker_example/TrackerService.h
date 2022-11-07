@@ -15,10 +15,10 @@ public:
     explicit ScopeFilterEntry(std::string _scope) : scope(std::move(_scope)) {}
     explicit ScopeFilterEntry(const char *_scope) : scope(_scope) {}
 
-    [[nodiscard]] bool matches(const std::shared_ptr<ILifecycleManager> &manager) const {
-        auto const scopeProp = manager->getProperties().find("scope");
+    [[nodiscard]] bool matches(ILifecycleManager const &manager) const {
+        auto const scopeProp = manager.getProperties().find("scope");
 
-        return scopeProp != cend(manager->getProperties()) && Ichor::any_cast<const std::string&>(scopeProp->second) == scope;
+        return scopeProp != cend(manager.getProperties()) && Ichor::any_cast<const std::string&>(scopeProp->second) == scope;
     }
 
     const std::string scope;

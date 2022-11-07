@@ -10,10 +10,10 @@ namespace Ichor {
     public:
         PropertiesFilterEntry(std::string _key, T _val) : key(std::move(_key)), val(std::move(_val)) {}
 
-        [[nodiscard]] bool matches(const std::shared_ptr<ILifecycleManager> &manager) const {
-            auto const propVal = manager->getProperties().find(key);
+        [[nodiscard]] bool matches(ILifecycleManager const &manager) const {
+            auto const propVal = manager.getProperties().find(key);
 
-            if(propVal == cend(manager->getProperties())) {
+            if(propVal == cend(manager.getProperties())) {
                 return false;
             }
 
@@ -32,8 +32,8 @@ namespace Ichor {
     public:
         explicit ServiceIdFilterEntry(uint64_t _id) : id(_id) {}
 
-        [[nodiscard]] bool matches(const std::shared_ptr<ILifecycleManager> &manager) const noexcept {
-            return manager->serviceId() == id;
+        [[nodiscard]] bool matches(ILifecycleManager const &manager) const noexcept {
+            return manager.serviceId() == id;
         }
 
         const uint64_t id;
@@ -42,7 +42,7 @@ namespace Ichor {
     class ITemplatedFilter {
     public:
         virtual ~ITemplatedFilter() = default;
-        [[nodiscard]] virtual bool compareTo(const std::shared_ptr<ILifecycleManager> &manager) const = 0;
+        [[nodiscard]] virtual bool compareTo(ILifecycleManager const &manager) const = 0;
     };
 
     // workaround std::any not supporting polymorphism
@@ -57,7 +57,7 @@ namespace Ichor {
         TemplatedFilter& operator=(const TemplatedFilter&) = default;
         TemplatedFilter& operator=(TemplatedFilter&&) noexcept = default;
 
-        [[nodiscard]] bool compareTo(const std::shared_ptr<ILifecycleManager> &manager) const final {
+        [[nodiscard]] bool compareTo(ILifecycleManager const &manager) const final {
             bool matches = true;
             std::apply([&manager, &matches](auto ...x){
                 ((matches = matches && x.matches(manager)), ...);
@@ -79,7 +79,7 @@ namespace Ichor {
         Filter& operator=(const Filter&) = default;
         Filter& operator=(Filter&&) noexcept = default;
 
-        [[nodiscard]] bool compareTo(const std::shared_ptr<ILifecycleManager> &manager) const {
+        [[nodiscard]] bool compareTo(ILifecycleManager const &manager) const {
             return _templatedFilter->compareTo(manager);
         }
 
