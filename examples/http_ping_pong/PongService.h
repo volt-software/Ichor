@@ -8,7 +8,7 @@
 #include <ichor/services/network/http/IHttpService.h>
 #include <ichor/Service.h>
 #include <ichor/LifecycleManager.h>
-#include <ichor/services/serialization/ISerializationAdmin.h>
+#include <ichor/services/serialization/ISerializer.h>
 #include "PingMsg.h"
 
 using namespace Ichor;
@@ -17,7 +17,7 @@ class PongService final : public Service<PongService> {
 public:
     PongService(DependencyRegister &reg, Properties props, DependencyManager *mng) : Service(std::move(props), mng) {
         reg.registerDependency<ILogger>(this, true);
-        reg.registerDependency<ISerializationAdmin>(this, true);
+        reg.registerDependency<ISerializer<PingMsg>>(this, true);
         reg.registerDependency<IHttpService>(this, true);
     }
     ~PongService() final = default;
@@ -43,21 +43,21 @@ private:
         _logger = nullptr;
     }
 
-    void addDependencyInstance(ISerializationAdmin *serializationAdmin, IService *) {
-        _serializationAdmin = serializationAdmin;
-        ICHOR_LOG_INFO(_logger, "Inserted serializationAdmin");
+    void addDependencyInstance(ISerializer<PingMsg> *serializer, IService *) {
+        _serializer = serializer;
+        ICHOR_LOG_INFO(_logger, "Inserted serializer");
     }
 
-    void removeDependencyInstance(ISerializationAdmin *serializationAdmin, IService *) {
-        _serializationAdmin = nullptr;
-        ICHOR_LOG_INFO(_logger, "Removed serializationAdmin");
+    void removeDependencyInstance(ISerializer<PingMsg> *serializer, IService *) {
+        _serializer = nullptr;
+        ICHOR_LOG_INFO(_logger, "Removed serializer");
     }
 
     void addDependencyInstance(IHttpService *svc, IService *) {
         _routeRegistration = svc->addRoute(HttpMethod::post, "/ping", [this](HttpRequest &req) -> AsyncGenerator<HttpResponse> {
-            auto msg = _serializationAdmin->deserialize<PingMsg>(std::move(req.body));
+            auto msg = _serializer->deserialize(std::move(req.body));
             ICHOR_LOG_WARN(_logger, "received request from {} on route {} {} with PingMsg {}", req.address, (int) req.method, req.route, msg->sequence);
-            co_return HttpResponse{false, HttpStatus::ok, _serializationAdmin->serialize(PingMsg{msg->sequence}), {}};
+            co_return HttpResponse{false, HttpStatus::ok, _serializer->serialize(PingMsg{msg->sequence}), {}};
         });
     }
 
@@ -69,6 +69,6 @@ private:
     friend DependencyManager;
 
     ILogger *_logger{nullptr};
-    ISerializationAdmin *_serializationAdmin{nullptr};
+    ISerializer<PingMsg> *_serializer{nullptr};
     std::unique_ptr<HttpRouteRegistration> _routeRegistration{nullptr};
 };

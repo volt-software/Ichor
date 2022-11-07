@@ -3,7 +3,7 @@
 #include <ichor/DependencyManager.h>
 #include <ichor/services/logging/Logger.h>
 #include <ichor/Service.h>
-#include <ichor/services/serialization/ISerializationAdmin.h>
+#include <ichor/services/serialization/ISerializer.h>
 #include <ichor/LifecycleManager.h>
 #include "TestMsg.h"
 
@@ -25,16 +25,14 @@
 
 using namespace Ichor;
 
-class TestMsgJsonSerializer final : public ISerializer, public Service<TestMsgJsonSerializer> {
+class TestMsgJsonSerializer final : public ISerializer<TestMsg>, public Service<TestMsgJsonSerializer> {
 public:
     TestMsgJsonSerializer(Properties props, DependencyManager *mng) : Service(std::move(props), mng) {
         _properties.insert({"type", Ichor::make_any<uint64_t>(typeNameHash<TestMsg>())});
     }
     ~TestMsgJsonSerializer() final = default;
 
-    std::vector<uint8_t> serialize(const void* obj) final {
-        auto msg = static_cast<const TestMsg*>(obj);
-
+    std::vector<uint8_t> serialize(TestMsg const &msg) final {
 #ifdef ICHOR_USE_RAPIDJSON
         rapidjson::StringBuffer sb;
         rapidjson::Writer<rapidjson::StringBuffer> writer(sb);
@@ -42,10 +40,10 @@ public:
         writer.StartObject();
 
         writer.String("id");
-        writer.Uint64(msg->id);
+        writer.Uint64(msg.id);
 
         writer.String("val");
-        writer.String(msg->val.c_str(), msg->val.size());
+        writer.String(msg.val.c_str(), msg.val.size());
 
         writer.EndObject();
         auto *ret = sb.GetString();
@@ -53,7 +51,7 @@ public:
 #elif ICHOR_USE_BOOST_JSON
         boost::json::value jv{};
         boost::json::serializer sr;
-        jv = {{"id", msg->id}, {"val", msg->val}};
+        jv = {{"id", msg.id}, {"val", msg.val}};
         sr.reset(&jv);
 
         std::string_view sv;
@@ -83,16 +81,16 @@ public:
         return ret;
 #endif
     }
-    void* deserialize(std::vector<uint8_t> &&stream) final {
+    std::optional<TestMsg> deserialize(std::vector<uint8_t> &&stream) final {
 #ifdef ICHOR_USE_RAPIDJSON
         rapidjson::Document d;
         d.ParseInsitu(reinterpret_cast<char*>(stream.data()));
 
         if(d.HasParseError() || !d.HasMember("id") || !d.HasMember("val")) {
-            return nullptr;
+            return {};
         }
 
-        return new TestMsg{d["id"].GetUint64(), d["val"].GetString()};
+        return TestMsg{d["id"].GetUint64(), d["val"].GetString()};
 #elif ICHOR_USE_BOOST_JSON
         boost::json::parser p{};
 
@@ -100,12 +98,12 @@ public:
         auto size = p.write(reinterpret_cast<char*>(stream.data()), stream.size(), ec);
 
         if(ec || size != stream.size()) {
-            return nullptr;
+            return {};
         }
 
         auto value = p.release();
 
-        return new TestMsg{boost::json::value_to<uint64_t>(value.at("id")), boost::json::value_to<std::string>(value.at("val"))};
+        return TestMsg{boost::json::value_to<uint64_t>(value.at("id")), boost::json::value_to<std::string>(value.at("val"))};
 #endif
     }
 };

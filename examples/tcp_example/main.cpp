@@ -4,7 +4,7 @@
 #include <ichor/services/logging/LoggerAdmin.h>
 #include <ichor/services/network/tcp/TcpHostService.h>
 #include <ichor/services/network/ClientAdmin.h>
-#include <ichor/services/serialization/SerializationAdmin.h>
+#include <ichor/services/serialization/ISerializer.h>
 #ifdef ICHOR_USE_SPDLOG
 #include <ichor/services/logging/SpdlogFrameworkLogger.h>
 #include <ichor/services/logging/SpdlogLogger.h>
@@ -35,8 +35,7 @@ int main(int argc, char *argv[]) {
     dm.createServiceManager<SpdlogSharedService, ISpdlogSharedService>();
 #endif
     dm.createServiceManager<LoggerAdmin<LOGGER_TYPE>, ILoggerAdmin>();
-    dm.createServiceManager<SerializationAdmin, ISerializationAdmin>();
-    dm.createServiceManager<TestMsgJsonSerializer, ISerializer>();
+    dm.createServiceManager<TestMsgJsonSerializer, ISerializer<TestMsg>>();
     dm.createServiceManager<TcpHostService, IHostService>(Properties{{"Address", Ichor::make_any<std::string>("127.0.0.1"s)}, {"Port", Ichor::make_any<uint16_t>(8001)}});
     dm.createServiceManager<ClientAdmin<TcpConnectionService>, IClientAdmin>();
     dm.createServiceManager<UsingTcpService>(Properties{{"Address", Ichor::make_any<std::string>("127.0.0.1"s)}, {"Port", Ichor::make_any<uint16_t>(8001)}});

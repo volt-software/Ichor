@@ -9,7 +9,7 @@
 #include <ichor/events/RunFunctionEvent.h>
 #include <ichor/Service.h>
 #include <ichor/LifecycleManager.h>
-#include <ichor/services/serialization/ISerializationAdmin.h>
+#include <ichor/services/serialization/ISerializer.h>
 #include "../examples/common/TestMsg.h"
 
 using namespace Ichor;
@@ -22,7 +22,7 @@ extern std::thread::id dmThreadId;
 class HttpThreadService final : public Service<HttpThreadService> {
 public:
     HttpThreadService(DependencyRegister &reg, Properties props, DependencyManager *mng) : Service(std::move(props), mng) {
-        reg.registerDependency<ISerializationAdmin>(this, true);
+        reg.registerDependency<ISerializer<TestMsg>>(this, true);
         reg.registerDependency<IHttpConnectionService>(this, true, getProperties());
         reg.registerDependency<IHttpService>(this, true);
     }
@@ -31,7 +31,7 @@ public:
 private:
     StartBehaviour start() final {
         getManager().pushEvent<RunFunctionEvent>(getServiceId(), [this](DependencyManager &dm) -> AsyncGenerator<void> {
-            auto toSendMsg = _serializationAdmin->serialize(TestMsg{11, "hello"});
+            auto toSendMsg = _serializer->serialize(TestMsg{11, "hello"});
 
             if(dmThreadId != std::this_thread::get_id()) {
                 throw std::runtime_error("dmThreadId id incorrect");
@@ -60,12 +60,12 @@ private:
         return StartBehaviour::SUCCEEDED;
     }
 
-    void addDependencyInstance(ISerializationAdmin *serializationAdmin, IService *) {
-        _serializationAdmin = serializationAdmin;
+    void addDependencyInstance(ISerializer<TestMsg> *serializer, IService *) {
+        _serializer = serializer;
     }
 
-    void removeDependencyInstance(ISerializationAdmin *serializationAdmin, IService *) {
-        _serializationAdmin = nullptr;
+    void removeDependencyInstance(ISerializer<TestMsg> *serializer, IService *) {
+        _serializer = nullptr;
     }
 
     void addDependencyInstance(IHttpConnectionService *connectionService, IService *) {
@@ -81,7 +81,7 @@ private:
                 throw std::runtime_error("testThreadId id incorrect");
             }
 
-            auto msg = _serializationAdmin->deserialize<TestMsg>(std::move(req.body));
+            auto msg = _serializer->deserialize(std::move(req.body));
             evtGate = true;
 
             co_await *_evt;
@@ -93,7 +93,7 @@ private:
                 throw std::runtime_error("testThreadId id incorrect");
             }
 
-            co_return HttpResponse{false, HttpStatus::ok, _serializationAdmin->serialize(TestMsg{11, "hello"}), {}};
+            co_return HttpResponse{false, HttpStatus::ok, _serializer->serialize(TestMsg{11, "hello"}), {}};
         });
     }
 
@@ -111,7 +111,7 @@ private:
         auto &response = *co_await _connectionService->sendAsync(HttpMethod::post, "/test", {}, std::move(toSendMsg)).begin();
 
         if(response.status == HttpStatus::ok) {
-            auto msg = _serializationAdmin->deserialize<TestMsg>(response.body);
+            auto msg = _serializer->deserialize(std::move(response.body));
         } else {
             throw std::runtime_error("Status not ok");
         }
@@ -120,7 +120,7 @@ private:
         co_return;
     }
 
-    ISerializationAdmin *_serializationAdmin{nullptr};
+    ISerializer<TestMsg> *_serializer{nullptr};
     IHttpConnectionService *_connectionService{nullptr};
     std::unique_ptr<HttpRouteRegistration> _routeRegistration{nullptr};
 };
