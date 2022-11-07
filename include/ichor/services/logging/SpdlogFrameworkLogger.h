@@ -2,9 +2,6 @@
 
 #ifdef ICHOR_USE_SPDLOG
 
-#include <unordered_map>
-#include <vector>
-#include <memory>
 #include <ichor/interfaces/IFrameworkLogger.h>
 #include <ichor/Service.h>
 
@@ -30,8 +27,6 @@ namespace Ichor {
         friend DependencyRegister;
 
         LogLevel _level;
-        static std::atomic<bool> _setting_logger;
-        static std::atomic<bool> _logger_set;
     };
 }
 

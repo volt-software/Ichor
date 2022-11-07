@@ -6,31 +6,38 @@
 #include <ichor/services/logging/SpdlogFrameworkLogger.h>
 #include <ichor/DependencyManager.h>
 
-std::atomic<bool> Ichor::SpdlogFrameworkLogger::_setting_logger{false};
-std::atomic<bool> Ichor::SpdlogFrameworkLogger::_logger_set{false};
+
+namespace Ichor {
+    std::atomic<bool> _setting_logger{false};
+    std::atomic<bool> _logger_set{false};
+
+    void _setup_spdlog() {
+        bool already_set = _setting_logger.exchange(true);
+        if(!already_set) {
+            auto console_sink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
+
+            auto time_since_epoch = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch());
+            auto file_sink = make_shared<spdlog::sinks::basic_file_sink_mt>(
+                    fmt::format("logs/framework-log-{}.txt", time_since_epoch.count()), true);
+
+            auto logger = make_shared<spdlog::logger>("multi_sink", spdlog::sinks_init_list{console_sink, file_sink});
+
+            logger->set_level(spdlog::level::trace);
+            spdlog::flush_on(spdlog::level::err);
+
+            spdlog::set_default_logger(logger);
+#ifndef ICHOR_REMOVE_SOURCE_NAMES_FROM_LOGGING
+            spdlog::set_pattern("[%C-%m-%d %H:%M:%S.%e] [%s:%#] [%L] %v");
+#else
+            spdlog::set_pattern("[%C-%m-%d %H:%M:%S.%e] [%L] %v");
+#endif
+            _logger_set.store(true, std::memory_order_release);
+        }
+    }
+}
 
 Ichor::SpdlogFrameworkLogger::SpdlogFrameworkLogger(Properties props, DependencyManager *mng) : Service(std::move(props), mng), _level(LogLevel::TRACE) {
-    bool already_set = _setting_logger.exchange(true);
-    if(!already_set) {
-        auto console_sink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
-
-        auto time_since_epoch = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch());
-        auto file_sink = make_shared<spdlog::sinks::basic_file_sink_mt>(
-                fmt::format("logs/framework-log-{}.txt", time_since_epoch.count()), true);
-
-        auto logger = make_shared<spdlog::logger>("multi_sink", spdlog::sinks_init_list{console_sink, file_sink});
-
-        logger->set_level(spdlog::level::trace);
-        spdlog::flush_on(spdlog::level::err);
-
-        spdlog::set_default_logger(logger);
-#ifndef ICHOR_REMOVE_SOURCE_NAMES_FROM_LOGGING
-        spdlog::set_pattern("[%C-%m-%d %H:%M:%S.%e] [%s:%#] [%L] %v");
-#else
-        spdlog::set_pattern("[%C-%m-%d %H:%M:%S.%e] [%L] %v");
-#endif
-        _logger_set.store(true, std::memory_order_release);
-    }
+    _setup_spdlog();
 
     while(!_logger_set.load(std::memory_order_acquire)) {
         // spinlock

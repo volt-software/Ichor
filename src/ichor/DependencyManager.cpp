@@ -16,9 +16,9 @@ thread_local Ichor::DependencyManager *Ichor::Detail::_local_dm = nullptr;
 
 
 void Ichor::DependencyManager::start() {
-    if (_logger == nullptr) {
-        throw std::runtime_error("Trying to start without a framework logger");
-    }
+//    if (_logger == nullptr) {
+//        throw std::runtime_error("Trying to start without a framework logger");
+//    }
 
     if (_services.size() < 2) {
         throw std::runtime_error("Trying to start without any registered services");

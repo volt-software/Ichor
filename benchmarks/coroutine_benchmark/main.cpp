@@ -1,7 +1,6 @@
 #include "TestService.h"
 #include <ichor/event_queues/MultimapQueue.h>
 #include <ichor/services/logging/LoggerAdmin.h>
-#include <ichor/services/logging/NullFrameworkLogger.h>
 #include <ichor/services/logging/NullLogger.h>
 #include <ichor/services/metrics/MemoryUsageFunctions.h>
 #include <iostream>
@@ -14,7 +13,6 @@ int main(int argc, char *argv[]) {
         auto start = std::chrono::steady_clock::now();
         auto queue = std::make_unique<MultimapQueue>();
         auto &dm = queue->createManager();
-        dm.createServiceManager<NullFrameworkLogger, IFrameworkLogger>({}, 10);
         dm.createServiceManager<LoggerAdmin<NullLogger>, ILoggerAdmin>();
         dm.createServiceManager<TestService>(Properties{{"LogLevel", Ichor::make_any<LogLevel>(LogLevel::WARN)}});
         queue->start(CaptureSigInt);
@@ -29,7 +27,6 @@ int main(int argc, char *argv[]) {
         for (uint_fast32_t i = 0, j = 0; i < 8; i++, j += 2) {
             threads[i] = std::thread([&queues, i] {
                 auto &dm = queues[i].createManager();
-                dm.createServiceManager<NullFrameworkLogger, IFrameworkLogger>({}, 10);
                 dm.createServiceManager<LoggerAdmin<NullLogger>, ILoggerAdmin>();
                 dm.createServiceManager<TestService>(Properties{{"LogLevel", Ichor::make_any<LogLevel>(LogLevel::WARN)}});
                 queues[i].start(CaptureSigInt);
