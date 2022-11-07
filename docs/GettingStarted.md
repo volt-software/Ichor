@@ -170,11 +170,11 @@ Starting a dependency manager is quite easy. Instantiate it, tell it which servi
 ```c++
 // main.cpp
 #include <ichor/DependencyManager.h>
-#include <ichor/services/logging/CoutFrameworkLogger.h>
+#include <ichor/event_queues/MultimapQueue.h>
 
 int main() {
-    Ichor::DependencyManager dm{};
-    dm.createServiceManager<Ichor::CoutFrameworkLogger, Ichor::IFrameworkLogger>(); // Without a framework logger, the manager won't start!
+    auto queue = std::make_unique<MultimapQueue>(); // use a priority queue based on Multimap
+    auto &dm = queue->createManager(); // create the dependency manager
     dm.start();
     
     return 0;
@@ -187,6 +187,7 @@ Just starting a manager without any custom services is not very interesting. So 
 
 ```c++
 // MyService.h
+#include <ichor/DependencyManager.h>
 #include <ichor/Service.h>
 
 struct IMyService {}; // the interface
@@ -199,12 +200,12 @@ struct MyService final : public IMyService, public Ichor::Service<MyService> {
 ```c++
 // main.cpp
 #include <ichor/DependencyManager.h>
-#include <ichor/services/logging/CoutFrameworkLogger.h>
+#include <ichor/event_queues/MultimapQueue.h>
 #include "MyService.h" // Add this
 
 int main() {
-    Ichor::DependencyManager dm{};
-    dm.createServiceManager<Ichor::CoutFrameworkLogger, Ichor::IFrameworkLogger>();
+    auto queue = std::make_unique<MultimapQueue>();
+    auto &dm = queue->createManager();
     dm.createServiceManager<MyService, IMyService>(); // Add this
     dm.start();
     
@@ -220,6 +221,7 @@ Now that we have a basic service registered and instantiated, let's add a servic
 
 ```c++
 // MyDependencyService.h
+#include <ichor/DependencyManager.h>
 #include <ichor/Service.h>
 #include <iostream>
 
@@ -248,13 +250,13 @@ The service requires this specific constructor, which means that any extra argum
 ```c++
 // main.cpp
 #include <ichor/DependencyManager.h>
-#include <ichor/services/logging/CoutFrameworkLogger.h>
+#include <ichor/event_queues/MultimapQueue.h>
 #include "MyService.h"
 #include "MyDependencyService.h" // Add this
 
 int main() {
-    Ichor::DependencyManager dm{};
-    dm.createServiceManager<Ichor::CoutFrameworkLogger, Ichor::IFrameworkLogger>();
+    auto queue = std::make_unique<MultimapQueue>();
+    auto &dm = queue->createManager();
     dm.createServiceManager<MyService, IMyService>();
     dm.createServiceManager<MyDependencyService, IMyDependencyService>(); // Add this
     dm.start();
@@ -312,14 +314,14 @@ The return type a c++20 coroutine. Currently `co_return`, `co_await` and `co_yie
 ```c++
 // main.cpp
 #include <ichor/DependencyManager.h>
-#include <ichor/services/logging/CoutFrameworkLogger.h>
+#include <ichor/event_queues/MultimapQueue.h>
 #include "MyService.h"
 #include "MyDependencyService.h"
 #include "MyTimerService.h" // Add this
 
 int main() {
-    Ichor::DependencyManager dm{};
-    dm.createServiceManager<Ichor::CoutFrameworkLogger, Ichor::IFrameworkLogger>();
+    auto queue = std::make_unique<MultimapQueue>();
+    auto &dm = queue->createManager();
     dm.createServiceManager<MyService, IMyService>();
     dm.createServiceManager<MyDependencyService, IMyDependencyService>();
     dm.createServiceManager<MyTimerService, IMyTimerService>(); // Add this
@@ -444,26 +446,26 @@ Starting up two manager is easy, but allowing services to communicate to service
 ```c++
 // main.cpp
 #include <ichor/DependencyManager.h>
+#include <ichor/event_queues/MultimapQueue.h>
 #include <ichor/CommunicationChannel.h>
-#include <ichor/services/logging/CoutFrameworkLogger.h>
 
 int main() {
     Ichor::CommunicationChannel channel{};
-    DependencyManager dmOne{}; // ID = 0
-    DependencyManager dmTwo{}; // ID = 1
+    auto queueOne = std::make_unique<MultimapQueue>();
+    auto &dmOne = queue->createManager(); // ID = 0
+    auto queueTwo = std::make_unique<MultimapQueue>();
+    auto &dmTwo = queue->createManager(); // ID = 1
     
     // Register the manager to the channel
     channel.addManager(&dmOne);
     channel.addManager(&dmTwo);
     
     std::thread t1([&dmOne] {
-        dmOne.createServiceManager<Ichor::CoutFrameworkLogger, Ichor::IFrameworkLogger>();
         // your services here
         dmOne.start();
     });
 
     std::thread t2([&dmTwo] {
-        dmTwo.createServiceManager<Ichor::CoutFrameworkLogger, Ichor::IFrameworkLogger>();
         // your services here
         dmTwo.start();
     });

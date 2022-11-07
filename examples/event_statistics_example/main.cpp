@@ -2,19 +2,15 @@
 #include <ichor/services/logging/LoggerAdmin.h>
 #include <ichor/services/metrics/EventStatisticsService.h>
 #include "UsingStatisticsService.h"
-#ifdef ICHOR_USE_SPDLOG
-#include <ichor/services/logging/SpdlogFrameworkLogger.h>
-#include <ichor/services/logging/SpdlogLogger.h>
 
-#define FRAMEWORK_LOGGER_TYPE SpdlogFrameworkLogger
+#ifdef ICHOR_USE_SPDLOG
+#include <ichor/services/logging/SpdlogLogger.h>
 #define LOGGER_TYPE SpdlogLogger
 #else
-#include <ichor/services/logging/CoutFrameworkLogger.h>
 #include <ichor/services/logging/CoutLogger.h>
-
-#define FRAMEWORK_LOGGER_TYPE CoutFrameworkLogger
 #define LOGGER_TYPE CoutLogger
 #endif
+
 #include <chrono>
 #include <iostream>
 
@@ -28,7 +24,6 @@ int main(int argc, char *argv[]) {
     auto start = std::chrono::steady_clock::now();
     auto queue = std::make_unique<MultimapQueue>();
     auto &dm = queue->createManager();
-    dm.createServiceManager<FRAMEWORK_LOGGER_TYPE, IFrameworkLogger>({}, 10);
 #ifdef ICHOR_USE_SPDLOG
     dm.createServiceManager<SpdlogSharedService, ISpdlogSharedService>();
 #endif

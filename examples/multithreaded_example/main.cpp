@@ -2,19 +2,15 @@
 #include "OtherService.h"
 #include <ichor/event_queues/MultimapQueue.h>
 #include <ichor/services/logging/LoggerAdmin.h>
-#ifdef ICHOR_USE_SPDLOG
-#include <ichor/services/logging/SpdlogFrameworkLogger.h>
-#include <ichor/services/logging/SpdlogLogger.h>
 
-#define FRAMEWORK_LOGGER_TYPE SpdlogFrameworkLogger
+#ifdef ICHOR_USE_SPDLOG
+#include <ichor/services/logging/SpdlogLogger.h>
 #define LOGGER_TYPE SpdlogLogger
 #else
-#include <ichor/services/logging/CoutFrameworkLogger.h>
 #include <ichor/services/logging/CoutLogger.h>
-
-#define FRAMEWORK_LOGGER_TYPE CoutFrameworkLogger
 #define LOGGER_TYPE CoutLogger
 #endif
+
 #include <ichor/CommunicationChannel.h>
 #include <chrono>
 #include <iostream>
@@ -35,7 +31,6 @@ int main(int argc, char *argv[]) {
     channel.addManager(&dmTwo);
 
     std::thread t1([&] {
-        dmOne.createServiceManager<FRAMEWORK_LOGGER_TYPE, IFrameworkLogger>({}, 10);
 #ifdef ICHOR_USE_SPDLOG
         dmOne.createServiceManager<SpdlogSharedService, ISpdlogSharedService>();
 #endif
@@ -45,7 +40,6 @@ int main(int argc, char *argv[]) {
     });
 
     std::thread t2([&] {
-        dmTwo.createServiceManager<FRAMEWORK_LOGGER_TYPE, IFrameworkLogger>({}, 10);
 #ifdef ICHOR_USE_SPDLOG
         dmTwo.createServiceManager<SpdlogSharedService, ISpdlogSharedService>();
 #endif

@@ -5,7 +5,6 @@
 #include <ichor/DependencyManager.h>
 #include <ichor/CommunicationChannel.h>
 #include <ichor/services/timer/TimerService.h>
-#include <ichor/services/logging/CoutFrameworkLogger.h>
 #include <ichor/events/Event.h>
 #include <iostream>
 
@@ -57,7 +56,6 @@ struct MyTimerService final : public IMyTimerService, public Ichor::Service<MyTi
 int example() {
     auto queue = std::make_unique<MultimapQueue>();
     auto &dm = queue->createManager();
-    dm.createServiceManager<Ichor::CoutFrameworkLogger, Ichor::IFrameworkLogger>();
     dm.createServiceManager<MyService, IMyService>();
     dm.createServiceManager<MyDependencyService, IMyDependencyService>();
     dm.createServiceManager<MyTimerService, IMyTimerService>(); // Add this
@@ -104,13 +102,11 @@ int communication() {
     channel.addManager(&dmTwo);
 
     std::thread t1([&] {
-        dmOne.createServiceManager<Ichor::CoutFrameworkLogger, Ichor::IFrameworkLogger>();
         // your services here
         queueOne->start(CaptureSigInt);
     });
 
     std::thread t2([&] {
-        dmTwo.createServiceManager<Ichor::CoutFrameworkLogger, Ichor::IFrameworkLogger>();
         // your services here
         queueTwo->start(CaptureSigInt);
     });

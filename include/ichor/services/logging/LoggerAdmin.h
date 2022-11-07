@@ -13,7 +13,7 @@ namespace Ichor {
     class LoggerAdmin final : public ILoggerAdmin, public Service<LoggerAdmin<LogT>> {
     public:
         LoggerAdmin(DependencyRegister &reg, Properties props, DependencyManager *mng) : Service<LoggerAdmin<LogT>>(std::move(props), mng), _loggers() {
-            reg.registerDependency<IFrameworkLogger>(this, true);
+            reg.registerDependency<IFrameworkLogger>(this, false);
         }
         ~LoggerAdmin() final = default;
 

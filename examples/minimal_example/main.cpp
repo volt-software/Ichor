@@ -1,5 +1,4 @@
 #include <ichor/event_queues/MultimapQueue.h>
-#include <ichor/services/logging/CoutFrameworkLogger.h>
 #include <ichor/services/timer/TimerService.h>
 #include <csignal>
 
@@ -47,10 +46,9 @@ int main(int argc, char *argv[]) {
 
     auto queue = std::make_unique<MultimapQueue>();
     auto &dm = queue->createManager();
-    // Register a framework logger and our sig int service.
-    auto logger = dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>();
-    logger->setLogLevel(LogLevel::DEBUG);
+
     dm.createServiceManager<SigIntService>();
+
     // Start manager, consumes current thread.
     queue->start(DoNotCaptureSigInt);
 

@@ -3,19 +3,15 @@
 #include <ichor/event_queues/MultimapQueue.h>
 #include <ichor/services/logging/LoggerAdmin.h>
 #include "GlobalRealtimeSettings.h"
-#if defined(NDEBUG)
-#include <ichor/services/logging/NullFrameworkLogger.h>
-#include <ichor/services/logging/NullLogger.h>
 
-#define FRAMEWORK_LOGGER_TYPE NullFrameworkLogger
+#if defined(NDEBUG)
+#include <ichor/services/logging/NullLogger.h>
 #define LOGGER_TYPE NullLogger
 #else
-#include <ichor/services/logging/CoutFrameworkLogger.h>
 #include <ichor/services/logging/CoutLogger.h>
-
-#define FRAMEWORK_LOGGER_TYPE CoutFrameworkLogger
 #define LOGGER_TYPE CoutLogger
 #endif
+
 #include <chrono>
 #include <stdexcept>
 
@@ -41,7 +37,6 @@ void* run_example(void*) {
     {
         auto queue = std::make_unique<MultimapQueue>();
         auto &dm = queue->createManager();
-        dm.createServiceManager<FRAMEWORK_LOGGER_TYPE, IFrameworkLogger>({}, 10);
         dm.createServiceManager<LoggerAdmin<LOGGER_TYPE>, ILoggerAdmin>();
         dm.createServiceManager<OptionalService, IOptionalService>();
         dm.createServiceManager<OptionalService, IOptionalService>();
