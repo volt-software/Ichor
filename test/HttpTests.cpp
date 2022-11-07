@@ -8,7 +8,7 @@
 #include <ichor/services/network/http/HttpConnectionService.h>
 #include <ichor/services/network/http/HttpContextService.h>
 #include <ichor/services/network/ClientAdmin.h>
-#include <ichor/services/serialization/SerializationAdmin.h>
+#include <ichor/services/serialization/ISerializer.h>
 #include <ichor/services/logging/CoutFrameworkLogger.h>
 #include <ichor/services/logging/CoutLogger.h>
 #include "Common.h"
@@ -35,8 +35,7 @@ TEST_CASE("HttpTests") {
 
             dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>({}, 10);
             dm.createServiceManager<LoggerAdmin<CoutLogger>, ILoggerAdmin>();
-            dm.createServiceManager<SerializationAdmin, ISerializationAdmin>();
-            dm.createServiceManager<TestMsgJsonSerializer, ISerializer>();
+            dm.createServiceManager<TestMsgJsonSerializer, ISerializer<TestMsg>>();
             dm.createServiceManager<HttpContextService, IHttpContextService>();
             dm.createServiceManager<HttpHostService, IHttpService>(Properties{{"Address", Ichor::make_any<std::string>("127.0.0.1")}, {"Port", Ichor::make_any<uint16_t>(8001)}});
             dm.createServiceManager<ClientAdmin<HttpConnectionService, IHttpConnectionService>, IClientAdmin>();

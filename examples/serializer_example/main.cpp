@@ -2,7 +2,7 @@
 #include "../common/TestMsgJsonSerializer.h"
 #include <ichor/event_queues/MultimapQueue.h>
 #include <ichor/services/logging/LoggerAdmin.h>
-#include <ichor/services/serialization/SerializationAdmin.h>
+#include <ichor/services/serialization/ISerializer.h>
 #ifdef ICHOR_USE_SPDLOG
 #include <ichor/services/logging/SpdlogFrameworkLogger.h>
 #include <ichor/services/logging/SpdlogLogger.h>
@@ -31,8 +31,7 @@ int main(int argc, char *argv[]) {
     dm.createServiceManager<SpdlogSharedService, ISpdlogSharedService>();
 #endif
     dm.createServiceManager<LoggerAdmin<LOGGER_TYPE>, ILoggerAdmin>();
-    dm.createServiceManager<SerializationAdmin, ISerializationAdmin>();
-    dm.createServiceManager<TestMsgJsonSerializer, ISerializer>();
+    dm.createServiceManager<TestMsgJsonSerializer, ISerializer<TestMsg>>();
     dm.createServiceManager<TestService>();
     queue->start(CaptureSigInt);
     auto end = std::chrono::steady_clock::now();

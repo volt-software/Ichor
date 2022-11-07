@@ -7,7 +7,7 @@
 #include <ichor/services/network/IConnectionService.h>
 #include <ichor/Service.h>
 #include <ichor/LifecycleManager.h>
-#include <ichor/services/serialization/ISerializationAdmin.h>
+#include <ichor/services/serialization/ISerializer.h>
 #include "../common/TestMsg.h"
 
 using namespace Ichor;
@@ -16,7 +16,7 @@ class UsingTcpService final : public Service<UsingTcpService> {
 public:
     UsingTcpService(DependencyRegister &reg, Properties props, DependencyManager *mng) : Service(std::move(props), mng) {
         reg.registerDependency<ILogger>(this, true);
-        reg.registerDependency<ISerializationAdmin>(this, true);
+        reg.registerDependency<ISerializer<TestMsg>>(this, true);
         reg.registerDependency<IConnectionService>(this, true, getProperties());
     }
     ~UsingTcpService() final = default;
@@ -26,7 +26,7 @@ private:
         ICHOR_LOG_INFO(_logger, "UsingTcpService started");
         _dataEventRegistration = getManager().registerEventHandler<NetworkDataEvent>(this);
         _failureEventRegistration = getManager().registerEventHandler<FailedSendMessageEvent>(this);
-        _connectionService->sendAsync(_serializationAdmin->serialize(TestMsg{11, "hello"}));
+        _connectionService->sendAsync(_serializer->serialize(TestMsg{11, "hello"}));
         return StartBehaviour::SUCCEEDED;
     }
 
@@ -45,14 +45,14 @@ private:
         _logger = nullptr;
     }
 
-    void addDependencyInstance(ISerializationAdmin *serializationAdmin, IService *) {
-        _serializationAdmin = serializationAdmin;
-        ICHOR_LOG_INFO(_logger, "Inserted serializationAdmin");
+    void addDependencyInstance(ISerializer<TestMsg> *serializer, IService *) {
+        _serializer = serializer;
+        ICHOR_LOG_INFO(_logger, "Inserted serializer");
     }
 
-    void removeDependencyInstance(ISerializationAdmin *serializationAdmin, IService *) {
-        _serializationAdmin = nullptr;
-        ICHOR_LOG_INFO(_logger, "Removed serializationAdmin");
+    void removeDependencyInstance(ISerializer<TestMsg> *serializer, IService *) {
+        _serializer = nullptr;
+        ICHOR_LOG_INFO(_logger, "Removed serializer");
     }
 
     void addDependencyInstance(IConnectionService *connectionService, IService *) {
@@ -65,7 +65,7 @@ private:
     }
 
     AsyncGenerator<void> handleEvent(NetworkDataEvent const &evt) {
-        auto msg = _serializationAdmin->deserialize<TestMsg>(evt.getData());
+        auto msg = _serializer->deserialize(std::vector<uint8_t>{evt.getData()});
         ICHOR_LOG_INFO(_logger, "Received TestMsg id {} val {}", msg->id, msg->val);
         getManager().pushEvent<QuitEvent>(getServiceId());
 
@@ -83,7 +83,7 @@ private:
     friend DependencyManager;
 
     ILogger *_logger{nullptr};
-    ISerializationAdmin *_serializationAdmin{nullptr};
+    ISerializer<TestMsg> *_serializer{nullptr};
     IConnectionService *_connectionService{nullptr};
     EventHandlerRegistration _dataEventRegistration{};
     EventHandlerRegistration _failureEventRegistration{};

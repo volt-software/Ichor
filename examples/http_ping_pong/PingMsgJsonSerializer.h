@@ -3,7 +3,7 @@
 #include <ichor/DependencyManager.h>
 #include <ichor/services/logging/Logger.h>
 #include <ichor/Service.h>
-#include <ichor/services/serialization/ISerializationAdmin.h>
+#include <ichor/services/serialization/ISerializer.h>
 #include <ichor/LifecycleManager.h>
 #include "PingMsg.h"
 
@@ -25,16 +25,14 @@
 
 using namespace Ichor;
 
-class PingMsgJsonSerializer final : public ISerializer, public Service<PingMsgJsonSerializer> {
+class PingMsgJsonSerializer final : public ISerializer<PingMsg>, public Service<PingMsgJsonSerializer> {
 public:
     PingMsgJsonSerializer(Properties props, DependencyManager *mng) : Service(std::move(props), mng) {
         _properties.insert({"type", Ichor::make_any<uint64_t>(typeNameHash<PingMsg>())});
     }
     ~PingMsgJsonSerializer() final = default;
 
-    std::vector<uint8_t> serialize(const void* obj) final {
-        auto msg = static_cast<const PingMsg*>(obj);
-
+    std::vector<uint8_t> serialize(PingMsg const &msg) final {
 #ifdef ICHOR_USE_RAPIDJSON
         rapidjson::StringBuffer sb;
         rapidjson::Writer<rapidjson::StringBuffer> writer(sb);
@@ -42,7 +40,7 @@ public:
         writer.StartObject();
 
         writer.String("sequence");
-        writer.Uint64(msg->sequence);
+        writer.Uint64(msg.sequence);
 
         writer.EndObject();
         auto *ret = sb.GetString();
@@ -50,7 +48,7 @@ public:
 #elif ICHOR_USE_BOOST_JSON
         boost::json::value jv{};
         boost::json::serializer sr;
-        jv = {{"sequence", msg->sequence}};
+        jv = {{"sequence", msg.sequence}};
         sr.reset(&jv);
 
         std::string_view sv;
@@ -80,16 +78,16 @@ public:
         return ret;
 #endif
     }
-    void* deserialize(std::vector<uint8_t> &&stream) final {
+    std::optional<PingMsg> deserialize(std::vector<uint8_t> &&stream) final {
 #ifdef ICHOR_USE_RAPIDJSON
         rapidjson::Document d;
         d.ParseInsitu(reinterpret_cast<char*>(stream.data()));
 
         if(d.HasParseError() || !d.HasMember("sequence")) {
-            return nullptr;
+            return {};
         }
 
-        return new PingMsg{d["sequence"].GetUint64()};
+        return PingMsg{d["sequence"].GetUint64()};
 #elif ICHOR_USE_BOOST_JSON
         boost::json::parser p{};
 
@@ -97,12 +95,12 @@ public:
         auto size = p.write(reinterpret_cast<char*>(stream.data()), stream.size(), ec);
 
         if(ec || size != stream.size()) {
-            return nullptr;
+            return {};
         }
 
         auto value = p.release();
 
-        return new PingMsg{boost::json::value_to<uint64_t>(value.at("sequence"))};
+        return PingMsg{boost::json::value_to<uint64_t>(value.at("sequence"))};
 #endif
     }
 };

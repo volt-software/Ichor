@@ -9,7 +9,7 @@
 #include <ichor/events/RunFunctionEvent.h>
 #include <ichor/Service.h>
 #include <ichor/LifecycleManager.h>
-#include <ichor/services/serialization/ISerializationAdmin.h>
+#include <ichor/services/serialization/ISerializer.h>
 #include "../common/TestMsg.h"
 
 using namespace Ichor;
@@ -18,7 +18,7 @@ class UsingHttpService final : public Service<UsingHttpService> {
 public:
     UsingHttpService(DependencyRegister &reg, Properties props, DependencyManager *mng) : Service(std::move(props), mng) {
         reg.registerDependency<ILogger>(this, true);
-        reg.registerDependency<ISerializationAdmin>(this, true);
+        reg.registerDependency<ISerializer<TestMsg>>(this, true);
         reg.registerDependency<IHttpConnectionService>(this, true, getProperties());
         reg.registerDependency<IHttpService>(this, true);
     }
@@ -29,7 +29,7 @@ private:
         ICHOR_LOG_INFO(_logger, "UsingHttpService started");
 
         getManager().pushEvent<RunFunctionEvent>(getServiceId(), [this](DependencyManager &dm) -> AsyncGenerator<void> {
-            auto toSendMsg = _serializationAdmin->serialize(TestMsg{11, "hello"});
+            auto toSendMsg = _serializer->serialize(TestMsg{11, "hello"});
 
             co_await sendTestRequest(std::move(toSendMsg)).begin();
             co_return;
@@ -52,14 +52,14 @@ private:
         _logger = nullptr;
     }
 
-    void addDependencyInstance(ISerializationAdmin *serializationAdmin, IService *) {
-        _serializationAdmin = serializationAdmin;
-        ICHOR_LOG_INFO(_logger, "Inserted serializationAdmin");
+    void addDependencyInstance(ISerializer<TestMsg> *serializer, IService *) {
+        _serializer = serializer;
+        ICHOR_LOG_INFO(_logger, "Inserted serializer");
     }
 
-    void removeDependencyInstance(ISerializationAdmin *serializationAdmin, IService *) {
-        _serializationAdmin = nullptr;
-        ICHOR_LOG_INFO(_logger, "Removed serializationAdmin");
+    void removeDependencyInstance(ISerializer<TestMsg> *serializer, IService *) {
+        _serializer = nullptr;
+        ICHOR_LOG_INFO(_logger, "Removed serializer");
     }
 
     void addDependencyInstance(IHttpConnectionService *connectionService, IService *) {
@@ -70,9 +70,9 @@ private:
     void addDependencyInstance(IHttpService *svc, IService *) {
         ICHOR_LOG_INFO(_logger, "Inserted IHttpService");
         _routeRegistration = svc->addRoute(HttpMethod::post, "/test", [this](HttpRequest &req) -> AsyncGenerator<HttpResponse> {
-            auto msg = _serializationAdmin->deserialize<TestMsg>(std::move(req.body));
+            auto msg = _serializer->deserialize(std::move(req.body));
             ICHOR_LOG_WARN(_logger, "received request on route {} {} with testmsg {} - {}", (int)req.method, req.route, msg->id, msg->val);
-            co_return HttpResponse{false, HttpStatus::ok, _serializationAdmin->serialize(TestMsg{11, "hello"}), {}};
+            co_return HttpResponse{false, HttpStatus::ok, _serializer->serialize(TestMsg{11, "hello"}), {}};
         });
     }
 
@@ -93,7 +93,7 @@ private:
         auto &response = *co_await _connectionService->sendAsync(HttpMethod::post, "/test", {}, std::move(toSendMsg)).begin();
 
         if(response.status == HttpStatus::ok) {
-            auto msg = _serializationAdmin->deserialize<TestMsg>(response.body);
+            auto msg = _serializer->deserialize(std::move(response.body));
             ICHOR_LOG_INFO(_logger, "Received TestMsg id {} val {}", msg->id, msg->val);
         } else {
             ICHOR_LOG_ERROR(_logger, "Received status {}", (int)response.status);
@@ -104,7 +104,7 @@ private:
     }
 
     ILogger *_logger{nullptr};
-    ISerializationAdmin *_serializationAdmin{nullptr};
+    ISerializer<TestMsg> *_serializer{nullptr};
     IHttpConnectionService *_connectionService{nullptr};
     std::unique_ptr<HttpRouteRegistration> _routeRegistration{nullptr};
 };

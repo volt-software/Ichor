@@ -2,7 +2,7 @@
 #include <ichor/event_queues/MultimapQueue.h>
 #include "../../examples/common/TestMsgJsonSerializer.h"
 #include <ichor/services/logging/LoggerAdmin.h>
-#include <ichor/services/serialization/SerializationAdmin.h>
+#include <ichor/services/serialization/ISerializer.h>
 #include <ichor/services/logging/NullFrameworkLogger.h>
 #include <ichor/services/logging/NullLogger.h>
 #include <ichor/services/metrics/MemoryUsageFunctions.h>
@@ -18,8 +18,7 @@ int main(int argc, char *argv[]) {
         auto &dm = queue->createManager();
         dm.createServiceManager<NullFrameworkLogger, IFrameworkLogger>({}, 10);
         dm.createServiceManager<LoggerAdmin<NullLogger>, ILoggerAdmin>();
-        dm.createServiceManager<SerializationAdmin, ISerializationAdmin>();
-        dm.createServiceManager<TestMsgJsonSerializer, ISerializer>();
+        dm.createServiceManager<TestMsgJsonSerializer, ISerializer<TestMsg>>();
         dm.createServiceManager<TestService>();
         queue->start(CaptureSigInt);
         auto end = std::chrono::steady_clock::now();
@@ -35,8 +34,7 @@ int main(int argc, char *argv[]) {
                 auto &dm = queues[i].createManager();
                 dm.createServiceManager<NullFrameworkLogger, IFrameworkLogger>({}, 10);
                 dm.createServiceManager<LoggerAdmin<NullLogger>, ILoggerAdmin>();
-                dm.createServiceManager<SerializationAdmin, ISerializationAdmin>();
-                dm.createServiceManager<TestMsgJsonSerializer, ISerializer>();
+                dm.createServiceManager<TestMsgJsonSerializer, ISerializer<TestMsg>>();
                 dm.createServiceManager<TestService>();
                 queues[i].start(CaptureSigInt);
             });
