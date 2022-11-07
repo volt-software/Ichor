@@ -82,7 +82,7 @@ namespace Ichor {
                             filter = Ichor::any_cast<Filter * const>(&filterProp->second);
                         }
 
-                        if (filter != nullptr && !filter->compareTo(cmpMgr)) {
+                        if (filter != nullptr && !filter->compareTo(*cmpMgr.get())) {
                             continue;
                         }
 
@@ -112,9 +112,10 @@ namespace Ichor {
                     }
                 }
 
-                _services.emplace(cmpMgr->serviceId(), cmpMgr);
+                Impl* impl = &cmpMgr->getService();
+                _services.emplace(cmpMgr->serviceId(), std::move(cmpMgr));
 
-                return &(cmpMgr->getService());
+                return impl;
             } else {
                 static_assert(!(std::is_default_constructible_v<Impl> && RequestsProperties<Impl>), "Cannot have a properties constructor and a default constructor simultaneously.");
                 auto cmpMgr = LifecycleManager<Impl, Interfaces...>::template create(std::forward<Properties>(properties), this, InterfacesList<Interfaces...>);
@@ -122,7 +123,6 @@ namespace Ichor {
                 if constexpr (sizeof...(Interfaces) > 0) {
                     if constexpr (ListContainsInterface<IFrameworkLogger, Interfaces...>::value) {
                         _logger = &cmpMgr->getService();
-                        _preventEarlyDestructionOfFrameworkLogger = cmpMgr;
                     }
                 }
 
@@ -145,9 +145,10 @@ namespace Ichor {
                     }
                 }
 
-                _services.emplace(cmpMgr->serviceId(), cmpMgr);
+                Impl* impl = &cmpMgr->getService();
+                _services.emplace(cmpMgr->serviceId(), std::move(cmpMgr));
 
-                return &(cmpMgr->getService());
+                return impl;
             }
         }
 
@@ -416,7 +417,7 @@ namespace Ichor {
         void processEvent(std::unique_ptr<Event> &&evt);
         void stop();
 
-        unordered_map<uint64_t, std::shared_ptr<ILifecycleManager>> _services{}; // key = service id
+        unordered_map<uint64_t, std::unique_ptr<ILifecycleManager>> _services{}; // key = service id
         unordered_map<uint64_t, std::vector<DependencyTrackerInfo>> _dependencyRequestTrackers{}; // key = interface name hash
         unordered_map<uint64_t, std::vector<DependencyTrackerInfo>> _dependencyUndoRequestTrackers{}; // key = interface name hash
         unordered_map<CallbackKey, std::function<void(Event const &)>> _completionCallbacks{}; // key = listening service id + event type
@@ -427,7 +428,6 @@ namespace Ichor {
         unordered_map<uint64_t, std::shared_ptr<Event>> _scopedEvents{}; // key = promise id
         IEventQueue *_eventQueue;
         IFrameworkLogger *_logger{nullptr};
-        std::shared_ptr<ILifecycleManager> _preventEarlyDestructionOfFrameworkLogger{nullptr};
         std::atomic<uint64_t> _eventIdCounter{0};
         std::atomic<bool> _started{false};
         CommunicationChannel *_communicationChannel{nullptr};

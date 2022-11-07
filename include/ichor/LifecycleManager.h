@@ -63,11 +63,11 @@ namespace Ichor {
 
         template<typename... Interfaces>
         [[nodiscard]]
-        static std::shared_ptr<DependencyLifecycleManager<ServiceType, Interfaces...>> create(Properties&& properties, DependencyManager *mng, InterfacesList_t<Interfaces...>) {
+        static std::unique_ptr<DependencyLifecycleManager<ServiceType, Interfaces...>> create(Properties&& properties, DependencyManager *mng, InterfacesList_t<Interfaces...>) {
             std::vector<Dependency> interfaces{};
             interfaces.reserve(sizeof...(Interfaces));
             (interfaces.emplace_back(typeNameHash<Interfaces>(), false, false),...);
-            return std::make_shared<DependencyLifecycleManager<ServiceType, Interfaces...>>(std::move(interfaces), std::forward<Properties>(properties), mng);
+            return std::make_unique<DependencyLifecycleManager<ServiceType, Interfaces...>>(std::move(interfaces), std::forward<Properties>(properties), mng);
         }
 
         Detail::DependencyChange dependencyOnline(ILifecycleManager* dependentService) final {
@@ -267,11 +267,11 @@ namespace Ichor {
 
         template<typename... Interfaces>
         [[nodiscard]]
-        static std::shared_ptr<LifecycleManager<ServiceType, Interfaces...>> create(Properties&& properties, DependencyManager *mng, InterfacesList_t<Interfaces...>) {
+        static std::unique_ptr<LifecycleManager<ServiceType, Interfaces...>> create(Properties&& properties, DependencyManager *mng, InterfacesList_t<Interfaces...>) {
             std::vector<Dependency> interfaces{};
             interfaces.reserve(sizeof...(Interfaces));
             (interfaces.emplace_back(typeNameHash<Interfaces>(), false, false),...);
-            return std::make_shared<LifecycleManager<ServiceType, Interfaces...>>(std::move(interfaces), std::forward<Properties>(properties), mng);
+            return std::make_unique<LifecycleManager<ServiceType, Interfaces...>>(std::move(interfaces), std::forward<Properties>(properties), mng);
         }
 
         Detail::DependencyChange dependencyOnline(ILifecycleManager* dependentService) final {

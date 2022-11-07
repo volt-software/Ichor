@@ -97,7 +97,7 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &&uniqueEvt) 
                 }
 
                 for (auto const &[key, possibleDependentLifecycleManager]: _services) {
-                    if (key == depOnlineEvt->originatingService || (filter != nullptr && !filter->compareTo(possibleDependentLifecycleManager))) {
+                    if (key == depOnlineEvt->originatingService || (filter != nullptr && !filter->compareTo(*possibleDependentLifecycleManager.get()))) {
                         continue;
                     }
 
@@ -208,7 +208,7 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &&uniqueEvt) 
                     break;
                 }
 
-                auto toStopService = toStopServiceIt->second;
+                auto *toStopService = toStopServiceIt->second.get();
 
                 INTERNAL_DEBUG("StopServiceEvent {} {}:{} state {} dependees {}", evt->id, stopServiceEvt->serviceId, toStopService->implementationName(), toStopService->getServiceState(), toStopService->getDependees().size());
 
@@ -281,7 +281,7 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &&uniqueEvt) 
                     break;
                 }
 
-                auto toRemoveService = toRemoveServiceIt->second;
+                auto *toRemoveService = toRemoveServiceIt->second.get();
                 if (removeServiceEvt->dependenciesStopped) {
                     auto ret = toRemoveService->stop();
                     if (toRemoveService->getServiceState() == ServiceState::ACTIVE && ret != StartBehaviour::SUCCEEDED) {
@@ -317,7 +317,7 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &&uniqueEvt) 
                     break;
                 }
 
-                auto toStartService = toStartServiceIt->second;
+                auto *toStartService = toStartServiceIt->second.get();
                 if (toStartService->getServiceState() == ServiceState::ACTIVE) {
                     handleEventCompletion(*startServiceEvt);
                 } else {

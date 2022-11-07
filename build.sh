@@ -52,7 +52,7 @@ for i in ${!ccompilers[@]}; do
   run_examples
 
   rm -rf ./* ../bin/*
-  CC=${ccompilers[i]} CXX=${cppcompilers[i]} cmake -GNinja -DCMAKE_BUILD_TYPE=Debug -DICHOR_USE_SANITIZERS=ON -DICHOR_USE_ABSEIL=OFF -DICHOR_ENABLE_INTERNAL_DEBUGGING=ON -DICHOR_USE_MOLD=ON -DICHOR_SERIALIZATION_FRAMEWORK=BOOST_JSON -DICHOR_USE_BOOST_BEAST=ON .. || exit 1
+  CC=${ccompilers[i]} CXX=${cppcompilers[i]} cmake -GNinja -DCMAKE_BUILD_TYPE=Debug -DICHOR_USE_SANITIZERS=ON -DICHOR_USE_ABSEIL=OFF -DICHOR_ENABLE_INTERNAL_DEBUGGING=ON -DICHOR_USE_MOLD=ON -DICHOR_SERIALIZATION_FRAMEWORK=BOOST_JSON -DICHOR_USE_BOOST_BEAST=ON -DICHOR_USE_SPDLOG=ON .. || exit 1
   ninja || exit 1
   ninja test || exit 1
   run_examples
