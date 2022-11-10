@@ -69,7 +69,12 @@ TEST_CASE("STL Tests") {
         RealtimeMutex m;
         m.lock();
 
+#if defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)
+        // critical section in windows is recursive
+        REQUIRE(m.try_lock() == true);
+#else
         REQUIRE(m.try_lock() == false);
+#endif
 
         m.unlock();
 

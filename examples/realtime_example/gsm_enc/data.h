@@ -1,6 +1,12 @@
 #ifndef DATA_H
 #define DATA_H
 
+#ifdef WIN32
+#pragma warning(push)
+// This is imported code, not something we're going to fix
+#pragma warning(disable: 4310)
+#endif
+
 gsm_signal gsm_enc_pcmdata[  ]  = {
   ( short )0x0000, ( short )0x0000, ( short )0x0010, ( short )0x0010, ( short )0x0010, ( short )0x0020, ( short )0x0020, ( short )0x0018,
   ( short )0x0028, ( short )0x0020, ( short )0x0020, ( short )0x0028, ( short )0x0028, ( short )0x0020, ( short )0x0030, ( short )0x0030,
@@ -448,5 +454,9 @@ gsm_byte gsm_enc_gsmdata[  ]  = {
   0x81, 0xA8, 0xD2, 0xB1, 0xE7, 0x18, 0xBE, 0xC0, 0xFC, 0xE4, 0x85, 0xB5, 0x06, 0xB4, 0x81, 0x35,
   0x46, 0xB6, 0xC8, 0x9B
 };
+
+#ifdef WIN32
+#pragma warning(pop)
+#endif
 
 #endif /* end of include guard: DATA_H */

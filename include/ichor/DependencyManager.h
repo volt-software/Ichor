@@ -55,18 +55,23 @@ namespace Ichor {
 
 
         template<DerivedTemplated<Service> Impl, typename... Interfaces>
+        // msvc compiler bug, see https://developercommunity.visualstudio.com/t/c20-Friend-definition-of-class-with-re/10197302
+#if (!defined(WIN32) && !defined(_WIN32) && !defined(__WIN32)) || defined(__CYGWIN__)
         requires ImplementsAll<Impl, Interfaces...>
+#endif
         Impl* createServiceManager() {
             return createServiceManager<Impl, Interfaces...>(Properties{});
         }
 
         template<DerivedTemplated<Service> Impl, typename... Interfaces>
+#if (!defined(WIN32) && !defined(_WIN32) && !defined(__WIN32)) || defined(__CYGWIN__)
         requires ImplementsAll<Impl, Interfaces...>
+#endif
         Impl* createServiceManager(Properties&& properties, uint64_t priority = INTERNAL_EVENT_PRIORITY) {
             if constexpr(RequestsDependencies<Impl>) {
                 static_assert(!std::is_default_constructible_v<Impl>, "Cannot have a dependencies constructor and a default constructor simultaneously.");
                 static_assert(!RequestsProperties<Impl>, "Cannot have a dependencies constructor and a properties constructor simultaneously.");
-                auto cmpMgr = DependencyLifecycleManager<Impl>::template create(std::forward<Properties>(properties), this, InterfacesList<Interfaces...>);
+                auto cmpMgr = DependencyLifecycleManager<Impl>::template create<>(std::forward<Properties>(properties), this, InterfacesList<Interfaces...>);
 
                 if constexpr (sizeof...(Interfaces) > 0) {
                     static_assert(!ListContainsInterface<IFrameworkLogger, Interfaces...>::value, "IFrameworkLogger cannot have any dependencies");
@@ -118,7 +123,7 @@ namespace Ichor {
                 return impl;
             } else {
                 static_assert(!(std::is_default_constructible_v<Impl> && RequestsProperties<Impl>), "Cannot have a properties constructor and a default constructor simultaneously.");
-                auto cmpMgr = LifecycleManager<Impl, Interfaces...>::template create(std::forward<Properties>(properties), this, InterfacesList<Interfaces...>);
+                auto cmpMgr = LifecycleManager<Impl, Interfaces...>::template create<>(std::forward<Properties>(properties), this, InterfacesList<Interfaces...>);
 
                 if constexpr (sizeof...(Interfaces) > 0) {
                     if constexpr (ListContainsInterface<IFrameworkLogger, Interfaces...>::value) {
@@ -159,7 +164,9 @@ namespace Ichor {
         /// \param args arguments for EventT constructor
         /// \return event id (can be used in completion/error handlers)
         template <typename EventT, typename... Args>
+#if (!defined(WIN32) && !defined(_WIN32) && !defined(__WIN32)) || defined(__CYGWIN__)
         requires Derived<EventT, Event>
+#endif
         uint64_t pushPrioritisedEvent(uint64_t originatingServiceId, uint64_t priority, Args&&... args){
             uint64_t eventId = _eventIdCounter.fetch_add(1, std::memory_order_acq_rel);
             _eventQueue->pushEvent(priority, std::unique_ptr<Event>{new EventT(std::forward<uint64_t>(eventId), std::forward<uint64_t>(originatingServiceId), std::forward<uint64_t>(priority), std::forward<Args>(args)...)});
@@ -174,7 +181,9 @@ namespace Ichor {
         /// \param args arguments for EventT constructor
         /// \return event id (can be used in completion/error handlers)
         template <typename EventT, typename... Args>
+#if (!defined(WIN32) && !defined(_WIN32) && !defined(__WIN32)) || defined(__CYGWIN__)
         requires Derived<EventT, Event>
+#endif
         uint64_t pushEvent(uint64_t originatingServiceId, Args&&... args){
             uint64_t eventId = _eventIdCounter.fetch_add(1, std::memory_order_acq_rel);
             _eventQueue->pushEvent(INTERNAL_EVENT_PRIORITY, std::unique_ptr<Event>{new EventT(std::forward<uint64_t>(eventId), std::forward<uint64_t>(originatingServiceId), INTERNAL_EVENT_PRIORITY, std::forward<Args>(args)...)});
@@ -183,7 +192,9 @@ namespace Ichor {
         }
 
         template <typename Interface, typename Impl>
+#if (!defined(WIN32) && !defined(_WIN32) && !defined(__WIN32)) || defined(__CYGWIN__)
         requires DerivedTemplated<Impl, Service> && ImplementsTrackingHandlers<Impl, Interface>
+#endif
         [[nodiscard]]
         /// Register handlers for when dependencies get requested/unrequested
         /// \tparam Interface type of interface where dependency is requested for (has to derive from Event)
@@ -239,7 +250,9 @@ namespace Ichor {
         }
 
         template <typename EventT, typename Impl>
+#if (!defined(WIN32) && !defined(_WIN32) && !defined(__WIN32)) || defined(__CYGWIN__)
         requires Derived<EventT, Event> && ImplementsEventCompletionHandlers<Impl, EventT>
+#endif
         [[nodiscard]]
         /// Register event error/completion handlers
         /// \tparam EventT type of event (has to derive from Event)
@@ -255,7 +268,9 @@ namespace Ichor {
         }
 
         template <typename EventT, typename Impl>
+#if (!defined(WIN32) && !defined(_WIN32) && !defined(__WIN32)) || defined(__CYGWIN__)
         requires Derived<EventT, Event> && ImplementsEventHandlers<Impl, EventT>
+#endif
         [[nodiscard]]
         /// Register an event handler
         /// \tparam EventT type of event (has to derive from Event)
@@ -268,7 +283,7 @@ namespace Ichor {
             auto existingHandlers = _eventCallbacks.find(EventT::TYPE);
             if(existingHandlers == end(_eventCallbacks)) {
                 std::vector<EventCallbackInfo> v{};
-                v.template emplace_back(EventCallbackInfo{
+                v.template emplace_back<>(EventCallbackInfo{
                         impl->getServiceId(),
                         targetServiceId,
                         std::function<AsyncGenerator<void>(Event const &)>{
@@ -289,7 +304,9 @@ namespace Ichor {
         }
 
         template <typename EventT, typename Impl>
+#if (!defined(WIN32) && !defined(_WIN32) && !defined(__WIN32)) || defined(__CYGWIN__)
         requires Derived<EventT, Event> && ImplementsEventInterceptors<Impl, EventT>
+#endif
         [[nodiscard]]
         /// Register an event interceptor. If EventT equals Event, intercept all events. Otherwise only intercept given event.
         /// \tparam EventT type of event (has to derive from Event)
@@ -305,12 +322,12 @@ namespace Ichor {
             auto existingHandlers = _eventInterceptors.find(targetEventId);
             if(existingHandlers == end(_eventInterceptors)) {
                 std::vector<EventInterceptInfo> v{};
-                v.template emplace_back(EventInterceptInfo{impl->getServiceId(), targetEventId,
+                v.template emplace_back<>(EventInterceptInfo{impl->getServiceId(), targetEventId,
                                    std::function<bool(Event const &)>{[impl](Event const &evt){ return impl->preInterceptEvent(static_cast<EventT const &>(evt)); }},
                                    std::function<void(Event const &, bool)>{[impl](Event const &evt, bool processed){ impl->postInterceptEvent(static_cast<EventT const &>(evt), processed); }}});
                 _eventInterceptors.emplace(targetEventId, std::move(v));
             } else {
-                existingHandlers->second.template emplace_back(EventInterceptInfo{impl->getServiceId(), targetEventId,
+                existingHandlers->second.template emplace_back<>(EventInterceptInfo{impl->getServiceId(), targetEventId,
                                                       std::function<bool(Event const &)>{[impl](Event const &evt){ return impl->preInterceptEvent(static_cast<EventT const &>(evt)); }},
                                                       std::function<void(Event const &, bool)>{[impl](Event const &evt, bool processed){ impl->postInterceptEvent(static_cast<EventT const &>(evt), processed); }}});
             }
@@ -366,7 +383,9 @@ namespace Ichor {
 
     private:
         template <typename EventT>
+#if (!defined(WIN32) && !defined(_WIN32) && !defined(__WIN32)) || defined(__CYGWIN__)
         requires Derived<EventT, Event>
+#endif
         void handleEventError(EventT const &evt) const {
             if(evt.originatingService == 0) {
                 return;
@@ -387,7 +406,7 @@ namespace Ichor {
 
         template <typename Impl, typename Interface1, typename Interface2, typename... Interfaces>
         void logAddService(uint64_t id) {
-            if(_logger != nullptr && _logger->getLogLevel() <= LogLevel::DEBUG) {
+            if(_logger != nullptr && _logger->getLogLevel() <= LogLevel::LOG_DEBUG) {
                 fmt::memory_buffer out;
                 fmt::format_to(std::back_inserter(out), "added ServiceManager<{}, {}, ", typeName<Interface1>(), typeName<Interface2>());
                 (fmt::format_to(std::back_inserter(out), "{}, ", typeName<Interfaces>()), ...);
@@ -398,20 +417,20 @@ namespace Ichor {
 
         template <typename Impl, typename Interface>
         void logAddService(uint64_t id) {
-            if(_logger != nullptr && _logger->getLogLevel() <= LogLevel::DEBUG) {
+            if(_logger != nullptr && _logger->getLogLevel() <= LogLevel::LOG_DEBUG) {
                 ICHOR_LOG_DEBUG(_logger, "added ServiceManager<{}, {}> {}", typeName<Interface>(), typeName<Impl>(), id);
             }
         }
 
         template <typename Impl>
         void logAddService(uint64_t id) {
-            if(_logger != nullptr && _logger->getLogLevel() <= LogLevel::DEBUG) {
+            if(_logger != nullptr && _logger->getLogLevel() <= LogLevel::LOG_DEBUG) {
                 ICHOR_LOG_DEBUG(_logger, "added ServiceManager<{}> {}", typeName<Impl>(), id);
             }
         }
 
         void handleEventCompletion(Event const &evt);
-        [[nodiscard]] uint32_t broadcastEvent(std::shared_ptr<Event> &evt);
+        [[nodiscard]] uint64_t broadcastEvent(std::shared_ptr<Event> &evt);
         void setCommunicationChannel(CommunicationChannel *channel);
         void start();
         void processEvent(std::unique_ptr<Event> &&evt);

@@ -1,7 +1,9 @@
 #pragma once
 
-#include <wyhash.h>
+//#include <wyhash.h>
+#include <string_view>
 
+const	uint64_t	_wyp0 = 0xa0761d6478bd642full, _wyp1 = 0xe7037ed1a0b428dbull, _wyp2 = 0x8ebc6af09c88c6e3ull, _wyp3 = 0x589965cc75374cc3ull, _wyp4 = 0x1d8e4e27c47d124full;
 static consteval uint64_t consteval_wyrotr(uint64_t v, unsigned k) { return (v >> k) | (v << (64 - k)); }
 
 static consteval uint64_t consteval_wymum(uint64_t A, uint64_t B) {
@@ -13,8 +15,6 @@ static consteval uint64_t consteval_wymum(uint64_t A, uint64_t B) {
     __uint128_t r = A;
     r *= B;
     return (r >> 64U) ^ r;
-#elif    defined(_MSC_VER) && defined(_M_X64)
-    A=_umul128(A, B, &B);	return	A^B;
 #else
         uint64_t	ha=A>>32,	hb=B>>32,	la=(uint32_t)A,	lb=(uint32_t)B,	hi, lo;
         uint64_t	rh=ha*hb,	rm0=ha*lb,	rm1=hb*la,	rl=la*lb,	t=rl+(rm0<<32),	c=t<rl;
@@ -39,7 +39,7 @@ static consteval uint64_t consteval_wyr4(const T *p) {
 }
 
 template<typename T>
-static consteval uint64_t consteval_wyr3(const T *p, unsigned k) {
+static consteval uint64_t consteval_wyr3(const T *p, uint64_t k) {
     return (((uint64_t) p[0]) << 16U) | (((uint64_t) p[k >> 1U]) << 8U) | p[k - 1];
 }
 
@@ -115,11 +115,17 @@ static consteval uint64_t consteval_wyhash(const T *key, uint64_t len, uint64_t 
 namespace Ichor {
     template<typename INTERFACE_TYPENAME>
     [[nodiscard]] consteval auto typeName() {
+#if defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)
+        constexpr std::string_view result = __FUNCSIG__;
+        constexpr std::string_view templateStr = "auto __cdecl Ichor::typeName<";
+
+        return result.substr(templateStr.size(), result.size() - 7);
+#else
         constexpr std::string_view result = __PRETTY_FUNCTION__;
         constexpr std::string_view templateStr = "INTERFACE_TYPENAME = ";
 
-        constexpr size_t bpos = result.find(templateStr) + templateStr.size(); //find begin pos after INTERFACE_TYPENAME = entry
-        return result.substr(bpos, result.size() - bpos - 1);
+        return result.substr(templateStr.size(), result.size() - 1);
+#endif
     }
 
     template<typename INTERFACE_TYPENAME>

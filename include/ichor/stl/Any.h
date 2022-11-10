@@ -1,6 +1,7 @@
 #pragma once
 
 #include <ichor/ConstevalHash.h>
+#include <typeinfo>
 
 // Differs from std::any by not needing RTTI (no typeid())
 // Probably doesn't work in some situations where std::any would, as compiler support is missing.

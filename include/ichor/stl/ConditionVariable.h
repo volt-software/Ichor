@@ -5,7 +5,7 @@
 
 // Differs from std::condition_variable by working on steady clock only, using a reference instead of allocating memory and uses RealtimeMutex rather than needing std::condition_variable_any
 namespace Ichor {
-#if defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)
+#if (defined(WIN32) || defined(_WIN32) || defined(__WIN32)) && !defined(__CYGWIN__)
     using ConditionVariable = std::condition_variable_any;
 #else
     enum class cv_status { no_timeout, timeout };

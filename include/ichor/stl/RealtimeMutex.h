@@ -1,6 +1,6 @@
 #pragma once
 
-#if defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)
+#if (defined(WIN32) || defined(_WIN32) || defined(__WIN32)) && !defined(__CYGWIN__)
 #include <synchapi.h>
 #else
 #include <pthread.h>
@@ -10,14 +10,14 @@
 namespace Ichor {
     class RealtimeMutex final {
     public:
-#if defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)
+#if (defined(WIN32) || defined(_WIN32) || defined(__WIN32)) && !defined(__CYGWIN__)
         typedef CRITICAL_SECTION native_handle_type;
 #else
         typedef pthread_mutex_t native_handle_type;
 #endif
 
         RealtimeMutex() noexcept {
-#if defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)
+#if (defined(WIN32) || defined(_WIN32) || defined(__WIN32)) && !defined(__CYGWIN__)
             ::InitializeCriticalSectionAndSpinCount(native_handle(), 100);
 #else
             ::pthread_mutexattr_t attr;
@@ -30,7 +30,7 @@ namespace Ichor {
         }
 
         ~RealtimeMutex() noexcept {
-#if defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)
+#if (defined(WIN32) || defined(_WIN32) || defined(__WIN32)) && !defined(__CYGWIN__)
             ::DeleteCriticalSection(native_handle());
 #else
             ::pthread_mutex_destroy(native_handle());
@@ -38,7 +38,7 @@ namespace Ichor {
         }
 
         void lock() noexcept {
-#if defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)
+#if (defined(WIN32) || defined(_WIN32) || defined(__WIN32)) && !defined(__CYGWIN__)
             ::EnterCriticalSection(native_handle());
 #else
             ::pthread_mutex_lock(native_handle());
@@ -46,7 +46,7 @@ namespace Ichor {
         }
 
         bool try_lock() noexcept {
-#if defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)
+#if (defined(WIN32) || defined(_WIN32) || defined(__WIN32)) && !defined(__CYGWIN__)
             return ::TryEnterCriticalSection(native_handle()) != 0;
 #else
             return ::pthread_mutex_trylock(native_handle()) == 0;
@@ -54,7 +54,7 @@ namespace Ichor {
         }
 
         void unlock() noexcept {
-#if defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)
+#if (defined(WIN32) || defined(_WIN32) || defined(__WIN32)) && !defined(__CYGWIN__)
             ::LeaveCriticalSection(native_handle());
 #else
             ::pthread_mutex_unlock(native_handle());

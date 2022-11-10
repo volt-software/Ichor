@@ -6,6 +6,8 @@
 #include <ichor/LifecycleManager.h>
 #include "OptionalService.h"
 #include "gsm_enc/gsm_enc.h"
+#include <array>
+#include <numeric>
 
 using namespace Ichor;
 

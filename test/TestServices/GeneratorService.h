@@ -18,5 +18,6 @@ struct GeneratorService final : public IGeneratorService, public Service<Generat
             co_yield i;
             i++;
         }
+        co_return i;
     }
 };

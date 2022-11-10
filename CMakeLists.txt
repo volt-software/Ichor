@@ -1,7 +1,10 @@
 cmake_minimum_required(VERSION 3.12) #might need 3.13 due to https://gitlab.kitware.com/cmake/cmake/-/issues/14444
 cmake_policy(SET CMP0048 NEW)
 project(ichor VERSION 0.1.0 DESCRIPTION "C++20 dependency injection framework" HOMEPAGE_URL https://github.com/volt-software/Ichor LANGUAGES CXX)
-set(CMAKE_CXX_STANDARD 20)
+if(NOT WIN32)
+    # we set this flag manually later on to enable the experimental C++20 stuff
+    set(CMAKE_CXX_STANDARD 20)
+endif()
 set(CMAKE CXX STANDARD REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_VERBOSE_MAKEFILE ON)
@@ -47,11 +50,11 @@ option(ICHOR_USE_PUBSUB "Add various dependencies to enable pubsub bundle to be 
 option(ICHOR_USE_ETCD "Add various dependencies to enable pubsub bundle to be built" OFF)
 option(ICHOR_USE_BOOST_BEAST "Add boost asio and boost BEAST as dependencies" OFF)
 option(ICHOR_USE_SANITIZERS "Enable sanitizers, catching potential errors but slowing down compilation and execution speed" ON)
-option(ICHOR_USE_THREAD_SANITIZER "Enable thread sanitizer, catching potential threading errors but slowing down compilation and execution speed. Cannot be combined with ICHOR_USE_SANITIZERS" OFF)
+cmake_dependent_option(ICHOR_USE_THREAD_SANITIZER "Enable thread sanitizer, catching potential threading errors but slowing down compilation and execution speed. Cannot be combined with ICHOR_USE_SANITIZERS" OFF "NOT WIN32" OFF)
 option(ICHOR_USE_UGLY_HACK_EXCEPTION_CATCHING "Enable an ugly hack on gcc to enable debugging the point where exceptions are thrown. Useful for debugging boost asio/beast backtraces." OFF)
 option(ICHOR_REMOVE_SOURCE_NAMES "Remove compiling source file names and line numbers when logging." OFF)
-option(ICHOR_USE_MOLD "Use mold when linking, recommended to use with gcc 12+ or clang" OFF)
-option(ICHOR_USE_SDEVENT "Add sd-event based queue/integration" OFF)
+cmake_dependent_option(ICHOR_USE_MOLD "Use mold when linking, recommended to use with gcc 12+ or clang" OFF "NOT WIN32" OFF)
+cmake_dependent_option(ICHOR_USE_SDEVENT "Add sd-event based queue/integration" OFF "NOT WIN32" OFF)
 option(ICHOR_USE_ABSEIL "Use abseil provided classes where applicable" OFF)
 option(ICHOR_DISABLE_RTTI "Disable RTTI. Reduces memory usage, disables dynamic_cast<>()" ON)
 cmake_dependent_option(ICHOR_USE_MIMALLOC "Use mimalloc for significant performance improvements" ON "NOT ICHOR_USE_SANITIZERS" OFF)
@@ -125,12 +128,18 @@ if(ICHOR_USE_ETCD)
 endif()
 
 if(ICHOR_USE_BOOST_BEAST)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DICHOR_USE_BOOST_BEAST ")
+    target_compile_definitions(ichor PUBLIC ICHOR_USE_BOOST_BEAST)
 endif()
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Wshadow -Wnon-virtual-dtor -Wno-unused-variable -Wno-long-long -Wno-unused-parameter -Wnull-dereference -pedantic -Wformat -Wformat-security -Wcast-align -Woverloaded-virtual ")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread ")
-
+if(NOT WIN32)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Wshadow -Wnon-virtual-dtor -Wno-unused-variable -Wno-long-long -Wno-unused-parameter -Wnull-dereference -pedantic -Wformat -Wformat-security -Wcast-align -Woverloaded-virtual ")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread ")
+else()
+    #msvc sets some stupid defaults. We can do better.
+    set(CMAKE_CXX_FLAGS "/nologo /DWIN32 /D_WINDOWS /EHsc /TP /W4 /await:strict /std:c++latest /permissive- /wd4100")
+    target_compile_definitions(ichor PUBLIC NOMINMAX WIN32_LEAN_AND_MEAN )
+    set(CMAKE_VERBOSE_MAKEFILE ON)
+endif()
 # gcc added support for mold in version 12, but it throws catch off guard when using gcc, mold and sanitizers.
 if(ICHOR_USE_MOLD AND NOT CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fuse-ld=mold ")
@@ -156,15 +165,24 @@ elseif(ICHOR_ARCH_OPTIMIZATION STREQUAL "MODERN_ARM_GENERIC")
 endif()
 
 if(ICHOR_DISABLE_RTTI)
-    target_compile_options(ichor PUBLIC -fno-rtti)
+    if(WIN32)
+        target_compile_options(ichor PUBLIC /GR-)
+    else()
+        target_compile_options(ichor PUBLIC -fno-rtti)
+    endif()
 endif()
 
 if(ICHOR_USE_SANITIZERS)
-    target_compile_options(ichor PUBLIC -fsanitize=address,undefined -fno-omit-frame-pointer)
-    target_link_options(ichor PUBLIC -fsanitize=address,undefined -no-pie)
+    if(WIN32)
+        # MSVC does not support UBsan
+        target_compile_options(ichor PUBLIC /fsanitize=address)
+    else()
+        target_compile_options(ichor PUBLIC -fsanitize=address,undefined -fno-omit-frame-pointer)
+        target_link_options(ichor PUBLIC -fsanitize=address,undefined -no-pie)
 
-    if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-        target_compile_options(ichor PUBLIC -no-pie)
+        if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+            target_compile_options(ichor PUBLIC -no-pie)
+        endif()
     endif()
 
     if(ICHOR_USE_BOOST_BEAST)
@@ -185,7 +203,10 @@ if(NOT DEFINED ICHOR_USE_SANITIZERS AND NOT DEFINED ICHOR_USE_THREAD_SANITIZER)
     # see https://github.com/google/sanitizers/issues/856
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIE")
 endif()
-if(CMAKE_BUILD_TYPE STREQUAL "Release" OR CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo")
+
+if(WIN32)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /GS")
+else()
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fstack-protector-strong -fstack-clash-protection -fcf-protection")
 endif()
 
@@ -196,16 +217,18 @@ elseif(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     target_compile_options(ichor PUBLIC -fcoroutines-ts)
 endif()
 
-# gcc uses gdwarf-4 by default, which messes up using the coz profiler, add "-gdwarf-3" if using coz
-set(CMAKE_CXX_FLAGS_DEBUG "-ggdb3")
-set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG -ggdb")
-set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-ggdb3 -Og")
-set(CMAKE_CXX_FLAGS_MINSIZEREL "-Os -DNDEBUG")
+if(NOT WIN32)
+    # gcc uses gdwarf-4 by default, which messes up using the coz profiler, add "-gdwarf-3" if using coz
+    set(CMAKE_CXX_FLAGS_DEBUG "-ggdb3")
+    set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG -ggdb")
+    set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-ggdb3 -Og")
+    set(CMAKE_CXX_FLAGS_MINSIZEREL "-Os -DNDEBUG")
+endif()
 
 # Gcc 12.1 and 12.2 have bugs that prevent compilation with Werror at -O2 and higher:
 # https://gcc.gnu.org/bugzilla/show_bug.cgi?id=107138
 # https://gcc.gnu.org/bugzilla/show_bug.cgi?id=105329
-if(NOT CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_VERSION VERSION_LESS "12")
+if((NOT CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_VERSION VERSION_LESS "12") AND NOT WIN32)
     target_compile_options(ichor PRIVATE "-Werror") #prevent externally compiled sources to error out on warnings
 endif()
 
@@ -269,7 +292,9 @@ if(ICHOR_USE_BOOST_BEAST)
 endif()
 
 target_link_libraries(ichor PUBLIC ${CMAKE_THREAD_LIBS_INIT})
-target_link_libraries(ichor PUBLIC -ldl -lrt)
+if(NOT WIN32)
+    target_link_libraries(ichor PUBLIC -ldl -lrt)
+endif()
 
 target_include_directories(ichor PUBLIC
         $<BUILD_INTERFACE:${ICHOR_EXTERNAL_DIR}/wyhash>
@@ -316,6 +341,13 @@ if(ICHOR_BUILD_TESTING)
 
     enable_testing()
     add_subdirectory(test)
+
+    if(ICHOR_USE_SANITIZERS)
+        if(WIN32)
+            target_compile_options(Catch2 PUBLIC /fsanitize=address)
+        endif()
+    endif()
+
 endif()
 
 if(hasParent)

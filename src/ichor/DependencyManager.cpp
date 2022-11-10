@@ -46,7 +46,7 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &&uniqueEvt) 
 
     std::shared_ptr<Event> evt{std::move(uniqueEvt)};
     bool allowProcessing = true;
-    uint32_t handlerAmount = 1; // for the non-default case below, the DepMan handles the event
+    uint64_t handlerAmount = 1; // for the non-default case below, the DepMan handles the event
     auto interceptorsForAllEvents = _eventInterceptors.find(0);
     auto interceptorsForEvent = _eventInterceptors.find(evt->type);
     std::vector<EventInterceptInfo> allEventInterceptorsCopy{};
@@ -500,7 +500,7 @@ void Ichor::DependencyManager::handleEventCompletion(Ichor::Event const &evt) {
     callback->second(evt);
 }
 
-uint32_t Ichor::DependencyManager::broadcastEvent(std::shared_ptr<Event> &evt) {
+uint64_t Ichor::DependencyManager::broadcastEvent(std::shared_ptr<Event> &evt) {
     auto registeredListeners = _eventCallbacks.find(evt->type);
 
     if(registeredListeners == end(_eventCallbacks)) {

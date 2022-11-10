@@ -1,3 +1,5 @@
+#if (!defined(WIN32) && !defined(_WIN32) && !defined(__WIN32)) || defined(__CYGWIN__)
+
 #include <ichor/DependencyManager.h>
 #include <ichor/services/network/IConnectionService.h>
 #include <ichor/services/network/tcp/TcpHostService.h>
@@ -139,3 +141,5 @@ Ichor::AsyncGenerator<void> Ichor::TcpHostService::handleEvent(NewSocketEvent co
 
     co_return;
 }
+
+#endif

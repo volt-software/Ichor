@@ -1,3 +1,5 @@
+#if (!defined(WIN32) && !defined(_WIN32) && !defined(__WIN32)) || defined(__CYGWIN__)
+
 #include <ichor/DependencyManager.h>
 #include <ichor/services/network/tcp/TcpConnectionService.h>
 #include <ichor/services/network/NetworkEvents.h>
@@ -140,3 +142,5 @@ void Ichor::TcpConnectionService::setPriority(uint64_t priority) {
 uint64_t Ichor::TcpConnectionService::getPriority() {
     return _priority;
 }
+
+#endif
