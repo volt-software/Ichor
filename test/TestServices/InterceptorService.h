@@ -34,7 +34,7 @@ struct InterceptorService final : public IInterceptorService, public Service<Int
         auto counter = preinterceptedCounters.find(evt.type);
 
         if(counter == end(preinterceptedCounters)) {
-            preinterceptedCounters.template emplace(evt.type, 1);
+            preinterceptedCounters.template emplace<>(evt.type, 1);
         } else {
             counter->second++;
         }
@@ -47,7 +47,7 @@ struct InterceptorService final : public IInterceptorService, public Service<Int
             auto counter = postinterceptedCounters.find(evt.type);
 
             if (counter == end(postinterceptedCounters)) {
-                postinterceptedCounters.template emplace(evt.type, 1);
+                postinterceptedCounters.template emplace<>(evt.type, 1);
             } else {
                 counter->second++;
             }
@@ -55,7 +55,7 @@ struct InterceptorService final : public IInterceptorService, public Service<Int
             auto counter = unprocessedInterceptedCounters.find(evt.type);
 
             if(counter == end(unprocessedInterceptedCounters)) {
-                unprocessedInterceptedCounters.template emplace(evt.type, 1);
+                unprocessedInterceptedCounters.template emplace<>(evt.type, 1);
             } else {
                 counter->second++;
             }

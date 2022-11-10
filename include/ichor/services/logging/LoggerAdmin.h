@@ -41,18 +41,18 @@ namespace Ichor {
 
 //            ICHOR_LOG_ERROR(_logger, "dep req {} dm {}", evt.originatingService, getManager().getId());
 
-            auto requestedLevel = LogLevel::INFO;
+            auto requestedLevel = LogLevel::LOG_INFO;
             if(evt.properties.has_value()) {
                 auto requestedLevelIt = evt.properties.value()->find("LogLevel");
-                requestedLevel = requestedLevelIt != end(*evt.properties.value()) ? Ichor::any_cast<LogLevel>(requestedLevelIt->second) : LogLevel::INFO;
+                requestedLevel = requestedLevelIt != end(*evt.properties.value()) ? Ichor::any_cast<LogLevel>(requestedLevelIt->second) : LogLevel::LOG_INFO;
             }
             if (logger == end(_loggers)) {
 //                ICHOR_LOG_ERROR(_logger, "creating logger for svcid {}", evt.originatingService);
                 Properties props{};
                 props.reserve(3);
-                props.template emplace("LogLevel",        Ichor::make_any<LogLevel>(requestedLevel));
-                props.template emplace("TargetServiceId", Ichor::make_any<uint64_t>(evt.originatingService));
-                props.template emplace("Filter",          Ichor::make_any<Filter>(Filter{ServiceIdFilterEntry{evt.originatingService}}));
+                props.template emplace<>("LogLevel",        Ichor::make_any<LogLevel>(requestedLevel));
+                props.template emplace<>("TargetServiceId", Ichor::make_any<uint64_t>(evt.originatingService));
+                props.template emplace<>("Filter",          Ichor::make_any<Filter>(Filter{ServiceIdFilterEntry{evt.originatingService}}));
                 _loggers.emplace(evt.originatingService, Service<LoggerAdmin<LogT>>::getManager().template createServiceManager<LogT, ILogger>(std::move(props)));
             } else {
                 ICHOR_LOG_TRACE(_logger, "svcid {} already has logger", evt.originatingService);

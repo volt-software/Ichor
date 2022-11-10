@@ -1,5 +1,7 @@
 #pragma once
 
+#if (!defined(WIN32) && !defined(_WIN32) && !defined(__WIN32)) || defined(__CYGWIN__)
+
 #include <ichor/services/network/IConnectionService.h>
 #include <ichor/services/logging/Logger.h>
 #include <ichor/services/timer/TimerService.h>
@@ -32,3 +34,5 @@ namespace Ichor {
         Timer* _timerManager{nullptr};
     };
 }
+
+#endif

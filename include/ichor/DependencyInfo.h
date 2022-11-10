@@ -1,6 +1,7 @@
 #pragma once
 
 #include <ichor/Dependency.h>
+#include <algorithm>
 
 namespace Ichor {
     struct DependencyInfo final {

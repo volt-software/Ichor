@@ -7,6 +7,12 @@
 
 #include "private.h"
 
+#ifdef WIN32
+#pragma warning(push)
+// This is imported code, not something we're going to fix
+#pragma warning(disable: 4244)
+#endif
+
 /*
     Prototypes from add.c
 */
@@ -1458,7 +1464,7 @@ void gsm_enc_Decoding_of_the_coded_Log_Area_Ratios (
 #undef  STEP
 #define STEP( B, MIC, INVA )  \
   temp1    = GSM_ADD( *LARc++, MIC ) << 10; \
-  temp1    = GSM_SUB( temp1, (B >= 0 ? B << 1 : -((-B) << 1)));   \
+  temp1    = GSM_SUB( temp1, (B >= 0 ? B << 1 : -((-(B)) << 1)));   \
   temp1    = GSM_MULT_R( INVA, temp1 );   \
   *LARpp++ = GSM_ADD( temp1, temp1 );
 
@@ -2226,3 +2232,7 @@ int run_gsm_enc_bench( void )
   gsm_enc_main();
   return ( gsm_enc_return() );
 }
+
+#ifdef WIN32
+#pragma warning(pop)
+#endif

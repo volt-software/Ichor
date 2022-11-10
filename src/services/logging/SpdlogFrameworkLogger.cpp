@@ -36,7 +36,7 @@ namespace Ichor {
     }
 }
 
-Ichor::SpdlogFrameworkLogger::SpdlogFrameworkLogger(Properties props, DependencyManager *mng) : Service(std::move(props), mng), _level(LogLevel::TRACE) {
+Ichor::SpdlogFrameworkLogger::SpdlogFrameworkLogger(Properties props, DependencyManager *mng) : Service(std::move(props), mng), _level(LogLevel::LOG_TRACE) {
     _setup_spdlog();
 
     while(!_logger_set.load(std::memory_order_acquire)) {
@@ -48,35 +48,35 @@ Ichor::SpdlogFrameworkLogger::SpdlogFrameworkLogger(Properties props, Dependency
 
 void Ichor::SpdlogFrameworkLogger::trace(const char *filename_in, int line_in, const char *funcname_in,
                                           std::string_view format_str, fmt::format_args args) {
-    if(_level <= LogLevel::TRACE) {
+    if(_level <= LogLevel::LOG_TRACE) {
         spdlog::log(spdlog::source_loc{filename_in, line_in, funcname_in}, spdlog::level::trace, fmt::vformat(format_str, args));
     }
 }
 
 void Ichor::SpdlogFrameworkLogger::debug(const char *filename_in, int line_in, const char *funcname_in,
                                           std::string_view format_str, fmt::format_args args) {
-    if(_level <= LogLevel::DEBUG) {
+    if(_level <= LogLevel::LOG_DEBUG) {
         spdlog::log(spdlog::source_loc{filename_in, line_in, funcname_in}, spdlog::level::debug, fmt::vformat(format_str, args));
     }
 }
 
 void Ichor::SpdlogFrameworkLogger::info(const char *filename_in, int line_in, const char *funcname_in,
                                           std::string_view format_str, fmt::format_args args) {
-    if(_level <= LogLevel::INFO) {
+    if(_level <= LogLevel::LOG_INFO) {
         spdlog::log(spdlog::source_loc{filename_in, line_in, funcname_in}, spdlog::level::info, fmt::vformat(format_str, args));
     }
 }
 
 void Ichor::SpdlogFrameworkLogger::warn(const char *filename_in, int line_in, const char *funcname_in,
                                           std::string_view format_str, fmt::format_args args) {
-    if(_level <= LogLevel::WARN) {
+    if(_level <= LogLevel::LOG_WARN) {
         spdlog::log(spdlog::source_loc{filename_in, line_in, funcname_in}, spdlog::level::warn, fmt::vformat(format_str, args));
     }
 }
 
 void Ichor::SpdlogFrameworkLogger::error(const char *filename_in, int line_in, const char *funcname_in,
                                           std::string_view format_str, fmt::format_args args) {
-    if(_level <= LogLevel::ERROR) {
+    if(_level <= LogLevel::LOG_ERROR) {
         spdlog::log(spdlog::source_loc{filename_in, line_in, funcname_in}, spdlog::level::err, fmt::vformat(format_str, args));
     }
 }

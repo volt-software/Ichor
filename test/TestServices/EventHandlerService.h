@@ -32,7 +32,7 @@ struct EventHandlerService final : public IEventHandlerService, public Service<E
         auto counter = handledEvents.find(evt.type);
 
         if(counter == end(handledEvents)) {
-            handledEvents.template emplace(evt.type, 1);
+            handledEvents.template emplace<>(evt.type, 1);
         } else {
             counter->second++;
         }

@@ -44,7 +44,9 @@ namespace Ichor {
     };
 
     template<class ServiceType, typename... IFaces>
+#if (!defined(WIN32) && !defined(_WIN32) && !defined(__WIN32)) || defined(__CYGWIN__)
     requires DerivedTemplated<ServiceType, Service>
+#endif
     class DependencyLifecycleManager final : public ILifecycleManager {
     public:
         explicit DependencyLifecycleManager(std::vector<Dependency> interfaces, Properties&& properties, DependencyManager *mng) : _implementationName(typeName<ServiceType>()), _interfaces(std::move(interfaces)), _registry(mng), _dependencies(), _service(_registry, std::forward<Properties>(properties), mng) {
@@ -251,7 +253,9 @@ namespace Ichor {
     };
 
     template<class ServiceType, typename... IFaces>
+#if (!defined(WIN32) && !defined(_WIN32) && !defined(__WIN32)) || defined(__CYGWIN__)
     requires DerivedTemplated<ServiceType, Service>
+#endif
     class LifecycleManager final : public ILifecycleManager {
     public:
         template <typename U = ServiceType> requires RequestsProperties<U>

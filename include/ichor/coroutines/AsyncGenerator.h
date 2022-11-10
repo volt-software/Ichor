@@ -471,21 +471,19 @@ namespace Ichor::Detail {
     }
 
     template <typename T>
-    inline AsyncGeneratorYieldOperation AsyncGeneratorPromise<T>::return_value(value_type &value) noexcept(std::is_nothrow_constructible_v<T, T&&>) {
+    inline void AsyncGeneratorPromise<T>::return_value(value_type &value) noexcept(std::is_nothrow_constructible_v<T, T&&>) {
         static_assert(std::is_move_constructible_v<T>, "T needs to be move constructible");
         INTERNAL_DEBUG("return_value {}", _id);
         _currentValue.emplace(std::move(value));
         Ichor::Detail::_local_dm->pushPrioritisedEvent<Ichor::ContinuableEvent>(0, INTERNAL_DEPENDENCY_EVENT_PRIORITY, _id);
-        return AsyncGeneratorYieldOperation{ *this, _state.load(std::memory_order_acquire) };
     }
 
     template <typename T>
-    inline AsyncGeneratorYieldOperation AsyncGeneratorPromise<T>::return_value(value_type &&value) noexcept(std::is_nothrow_constructible_v<T, T&&>) {
+    inline void AsyncGeneratorPromise<T>::return_value(value_type &&value) noexcept(std::is_nothrow_constructible_v<T, T&&>) {
         static_assert(std::is_move_constructible_v<T>, "T needs to be move constructible");
         INTERNAL_DEBUG("return_value {}", _id);
         _currentValue.emplace(std::forward<T>(value));
         Ichor::Detail::_local_dm->pushPrioritisedEvent<Ichor::ContinuableEvent>(0, INTERNAL_DEPENDENCY_EVENT_PRIORITY, _id);
-        return AsyncGeneratorYieldOperation{ *this, _state.load(std::memory_order_acquire) };
     }
 
     inline AsyncGeneratorYieldOperation AsyncGeneratorPromise<void>::yield_value(Empty) noexcept {
@@ -494,10 +492,9 @@ namespace Ichor::Detail {
         return internal_yield_value();
     }
 
-    inline AsyncGeneratorYieldOperation AsyncGeneratorPromise<void>::return_void() noexcept {
+    inline void AsyncGeneratorPromise<void>::return_void() noexcept {
         INTERNAL_DEBUG("return_value {}", _id);
         Ichor::Detail::_local_dm->pushPrioritisedEvent<Ichor::ContinuableEvent>(0, INTERNAL_DEPENDENCY_EVENT_PRIORITY, _id);
-        return AsyncGeneratorYieldOperation{ *this, _state.load(std::memory_order_acquire) };
     }
 
     inline AsyncGenerator<void> AsyncGeneratorPromise<void>::get_return_object() noexcept {

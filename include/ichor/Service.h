@@ -12,10 +12,14 @@ namespace Ichor {
     template <typename T>
     class Service;
     template<class ServiceType, typename... IFaces>
+#if (!defined(WIN32) && !defined(_WIN32) && !defined(__WIN32)) || defined(__CYGWIN__)
     requires DerivedTemplated<ServiceType, Service>
+#endif
     class LifecycleManager;
     template<class ServiceType, typename... IFaces>
+#if (!defined(WIN32) && !defined(_WIN32) && !defined(__WIN32)) || defined(__CYGWIN__)
     requires DerivedTemplated<ServiceType, Service>
+#endif
     class DependencyLifecycleManager;
 
     class IService {
@@ -50,8 +54,8 @@ namespace Ichor {
 
         ~Service() noexcept override {
             _serviceId = 0;
-            _serviceGid.ab = 0;
-            _serviceGid.cd = 0;
+            //_serviceGid.ab = 0;
+            //_serviceGid.cd = 0;
             _serviceState = ServiceState::UNINSTALLED;
         }
 
@@ -178,11 +182,18 @@ namespace Ichor {
         DependencyManager *_manager{nullptr};
 
         friend class DependencyManager;
+
         template<class ServiceType, typename... IFaces>
+#if (!defined(WIN32) && !defined(_WIN32) && !defined(__WIN32)) || defined(__CYGWIN__)
         requires DerivedTemplated<ServiceType, Service>
+#endif
         friend class LifecycleManager;
+
         template<class ServiceType, typename... IFaces>
+#if (!defined(WIN32) && !defined(_WIN32) && !defined(__WIN32)) || defined(__CYGWIN__)
         requires DerivedTemplated<ServiceType, Service>
+#endif
         friend class DependencyLifecycleManager;
+
     };
 }

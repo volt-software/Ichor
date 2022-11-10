@@ -37,10 +37,9 @@ More examples can be found in the [examples directory](examples).
 ## Supported Compilers
 * Gcc 11.3 or newer (see [this gcc bug](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=95137) for why)
 * Clang 14 or newer
+* MSVC 17.4+ (though some workarounds for compiler bugs are used)
 
 ## Currently Unsupported
-* Windows, untested, not sure if compiles but should be relatively easy to get up and running
-  * Tried with MSVC 19.33, but it seemed like coroutines and concepts are not fully implemented yet
 * Baremetal, might change if someone puts in the effort to modify Ichor to work with freestanding implementations of C++20
 * Far out future plans for any RTOS that supports C++20 such as VxWorks Wind River, FreeRTOS
 
@@ -118,7 +117,7 @@ By default, Ichor uses a mutex when inserting/extracting events from its queue. 
 Ichor used to have full support for the polymorphic allocators, but as not all compilers support it yet (looking at you clang) as well as having a negative impact on developer ergonomy, it has been removed.
 Instead, Ichor now recommends usage with [mimalloc](https://github.com/microsoft/mimalloc): "it does not suffer from blowup, has bounded worst-case allocation times (wcat), bounded space overhead (~0.2% meta-data, with low internal fragmentation), and has no internal points of contention using only atomic operations."
 
-### Windows? OS X? VxWorks Wind River? Baremetal?
+### OS X? VxWorks Wind River? Baremetal?
 
 I don't have a machine with OS X to program for (and also don't know if there is much demand for it), so I haven't started on it.
 

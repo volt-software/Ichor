@@ -1,4 +1,5 @@
 #include <ichor/services/metrics/EventStatisticsService.h>
+#include <numeric>
 
 Ichor::StartBehaviour Ichor::EventStatisticsService::start() {
     if(getProperties().contains("ShowStatisticsOnStop")) {

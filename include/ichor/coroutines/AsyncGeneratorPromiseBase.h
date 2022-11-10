@@ -162,9 +162,9 @@ namespace Ichor::Detail {
 
         AsyncGeneratorYieldOperation yield_value(value_type&& value) noexcept(std::is_nothrow_constructible_v<T, T&&>);
 
-        AsyncGeneratorYieldOperation return_value(value_type &value) noexcept(std::is_nothrow_constructible_v<T, T&&>);
+        void return_value(value_type &value) noexcept(std::is_nothrow_constructible_v<T, T&&>);
 
-        AsyncGeneratorYieldOperation return_value(value_type &&value) noexcept(std::is_nothrow_constructible_v<T, T&&>);
+        void return_value(value_type &&value) noexcept(std::is_nothrow_constructible_v<T, T&&>);
 
         T& value() noexcept {
             return _currentValue.value();
@@ -205,7 +205,7 @@ namespace Ichor::Detail {
 
         AsyncGeneratorYieldOperation yield_value(Ichor::Empty) noexcept;
 
-        AsyncGeneratorYieldOperation return_void() noexcept;
+        void return_void() noexcept;
 
         [[nodiscard]] bool finished() const noexcept final {
             return _finished;

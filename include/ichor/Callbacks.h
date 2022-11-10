@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <optional>
+#include <functional>
 
 namespace Ichor {
     struct Event;

@@ -4,6 +4,8 @@
 #include <ichor/services/logging/NullLogger.h>
 #include <ichor/services/metrics/MemoryUsageFunctions.h>
 #include <iostream>
+#include <thread>
+#include <array>
 
 int main(int argc, char *argv[]) {
     std::locale::global(std::locale("en_US.UTF-8"));
@@ -16,7 +18,7 @@ int main(int argc, char *argv[]) {
         dm.createServiceManager<LoggerAdmin<NullLogger>, ILoggerAdmin>();
         for (uint64_t i = 0; i < SERVICES_COUNT; i++) {
             dm.createServiceManager<TestService>(Properties{{"Iteration", Ichor::make_any<uint64_t>(i)},
-                                                                 {"LogLevel",  Ichor::make_any<LogLevel>(LogLevel::WARN)}});
+                                                                 {"LogLevel",  Ichor::make_any<LogLevel>(LogLevel::LOG_WARN)}});
         }
         queue->start(CaptureSigInt);
         auto end = std::chrono::steady_clock::now();
@@ -31,7 +33,7 @@ int main(int argc, char *argv[]) {
                 auto &dm = queues[i].createManager();
                 dm.createServiceManager<LoggerAdmin<NullLogger>, ILoggerAdmin>();
                 for (uint64_t z = 0; z < SERVICES_COUNT; z++) {
-                    dm.createServiceManager<TestService>(Properties{{"Iteration", Ichor::make_any<uint64_t>(z)}, {"LogLevel", Ichor::make_any<LogLevel>(LogLevel::WARN)}});
+                    dm.createServiceManager<TestService>(Properties{{"Iteration", Ichor::make_any<uint64_t>(z)}, {"LogLevel", Ichor::make_any<LogLevel>(LogLevel::LOG_WARN)}});
                 }
                 queues[i].start(CaptureSigInt);
             });

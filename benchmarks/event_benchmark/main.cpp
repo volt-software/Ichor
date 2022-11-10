@@ -4,6 +4,8 @@
 #include <ichor/services/logging/NullLogger.h>
 #include <ichor/services/metrics/MemoryUsageFunctions.h>
 #include <iostream>
+#include <thread>
+#include <array>
 
 int main(int argc, char *argv[]) {
     std::locale::global(std::locale("en_US.UTF-8"));
@@ -14,7 +16,7 @@ int main(int argc, char *argv[]) {
         auto queue = std::make_unique<MultimapQueue>();
         auto &dm = queue->createManager();
         dm.createServiceManager<LoggerAdmin<NullLogger>, ILoggerAdmin>();
-        dm.createServiceManager<TestService>(Properties{{"LogLevel", Ichor::make_any<LogLevel>(LogLevel::WARN)}});
+        dm.createServiceManager<TestService>(Properties{{"LogLevel", Ichor::make_any<LogLevel>(LogLevel::LOG_WARN)}});
         queue->start(CaptureSigInt);
         auto end = std::chrono::steady_clock::now();
         std::cout << fmt::format("{} single threaded ran for {:L} µs with {:L} peak memory usage\n",argv[0],  std::chrono::duration_cast<std::chrono::microseconds>(end - start).count(), getPeakRSS());
@@ -28,7 +30,7 @@ int main(int argc, char *argv[]) {
             threads[i] = std::thread([&queues, i] {
                 auto &dm = queues[i].createManager();
                 dm.createServiceManager<LoggerAdmin<NullLogger>, ILoggerAdmin>();
-                dm.createServiceManager<TestService>(Properties{{"LogLevel", Ichor::make_any<LogLevel>(LogLevel::WARN)}});
+                dm.createServiceManager<TestService>(Properties{{"LogLevel", Ichor::make_any<LogLevel>(LogLevel::LOG_WARN)}});
                 queues[i].start(CaptureSigInt);
             });
         }

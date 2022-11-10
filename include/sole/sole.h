@@ -61,7 +61,7 @@ namespace sole
 {
     // 128-bit basic UUID type that allows comparison and sorting.
     // Use .str() for printing and .pretty() for pretty printing.
-    // Also, ostream friendly.
+    // Also, ostream friendly.  
     struct uuid
     {
         uint64_t ab;
@@ -132,7 +132,7 @@ namespace std {
 #include <string>
 #include <vector>
 
-#if defined(_WIN32)
+#if defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)
 #   include <winsock2.h>
 #   include <process.h>
 #   include <iphlpapi.h>
