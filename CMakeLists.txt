@@ -102,6 +102,10 @@ if(ICHOR_SERIALIZATION_FRAMEWORK STREQUAL "RAPIDJSON")
     target_compile_definitions(ichor PUBLIC ICHOR_USE_RAPIDJSON)
 elseif(ICHOR_SERIALIZATION_FRAMEWORK STREQUAL "BOOST_JSON")
     target_compile_definitions(ichor PUBLIC ICHOR_USE_BOOST_JSON BOOST_JSON_STANDALONE)
+    find_package(Boost 1.75.0 REQUIRED COMPONENTS json context)
+    target_include_directories(ichor PUBLIC ${Boost_INCLUDE_DIR})
+    target_link_directories(ichor PUBLIC ${Boost_LIBRARY_DIRS})
+    target_link_libraries(ichor PUBLIC ${Boost_LIBRARIES})
 endif()
 
 if(ICHOR_REMOVE_SOURCE_NAMES)
@@ -211,8 +215,10 @@ endif()
 
 if(WIN32 AND ICHOR_USE_HARDENING)
     target_compile_options(ichor PUBLIC /GS)
+    target_compile_definitions(ichor PUBLIC ICHOR_USE_HARDENING)
 elseif(ICHOR_USE_HARDENING)
     target_compile_options(ichor PUBLIC -fstack-protector-strong -fstack-clash-protection -fcf-protection)
+    target_compile_definitions(ichor PUBLIC ICHOR_USE_HARDENING)
 endif()
 
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
@@ -290,9 +296,10 @@ if(ICHOR_USE_SDEVENT)
 endif()
 
 if(ICHOR_USE_BOOST_BEAST)
-#TODO figure out how to make asio/beast compile as libraries, rather than header only. This would hopefully save some compilation time.
-#    target_link_libraries(ichor asio beast)
-    target_link_libraries(ichor PUBLIC boost_coroutine)
+    find_package(Boost 1.70.0 REQUIRED COMPONENTS context coroutine)
+    target_include_directories(ichor PUBLIC ${Boost_INCLUDE_DIRS})
+    target_link_directories(ichor PUBLIC ${Boost_LIBRARY_DIRS})
+    target_link_libraries(ichor PUBLIC ${Boost_LIBRARIES})
     target_compile_definitions(ichor PUBLIC BOOST_BEAST_USE_STD_STRING_VIEW)
 endif()
 
@@ -323,36 +330,11 @@ if(ICHOR_SERIALIZATION_FRAMEWORK STREQUAL "RAPIDJSON")
     target_include_directories(ichor PUBLIC
             $<BUILD_INTERFACE:${ICHOR_EXTERNAL_DIR}/rapidjson/include>
             $<INSTALL_INTERFACE:include/ichor/external>)
-elseif(ICHOR_SERIALIZATION_FRAMEWORK STREQUAL "BOOST_JSON")
-    target_include_directories(ichor PUBLIC
-            $<BUILD_INTERFACE:${ICHOR_EXTERNAL_DIR}/json/include>
-            $<INSTALL_INTERFACE:include/ichor/external>)
 endif()
 
 if(ICHOR_USE_ETCD)
     #necessary to get generator protobuf/grpc code to compile
     target_include_directories(ichor PUBLIC "${ICHOR_TOP_DIR}/include/ichor/services/etcd")
-endif()
-
-if(ICHOR_BUILD_EXAMPLES)
-    add_subdirectory(examples)
-endif()
-if(ICHOR_BUILD_BENCHMARKS)
-    add_subdirectory(benchmarks)
-endif()
-if(ICHOR_BUILD_TESTING)
-    add_subdirectory(${ICHOR_EXTERNAL_DIR}/Catch2)
-    list(APPEND CMAKE_MODULE_PATH "${ICHOR_EXTERNAL_DIR}/Catch2/extras")
-
-    enable_testing()
-    add_subdirectory(test)
-
-    if(ICHOR_USE_SANITIZERS)
-        if(WIN32)
-            target_compile_options(Catch2 PUBLIC /fsanitize=address)
-        endif()
-    endif()
-
 endif()
 
 if(hasParent)
@@ -415,12 +397,6 @@ if(ICHOR_SERIALIZATION_FRAMEWORK STREQUAL "RAPIDJSON")
             FILES_MATCHING # install only matched files
             PATTERN "*.h" # select header files
             )
-elseif(ICHOR_SERIALIZATION_FRAMEWORK STREQUAL "BOOST_JSON")
-    install(DIRECTORY "${CMAKE_SOURCE_DIR}/external/json/include/boost" # source directory
-            DESTINATION "include/ichor/external" # target directory
-            FILES_MATCHING # install only matched files
-            PATTERN "*.h" # select header files
-            )
 endif()
 
 install(TARGETS ichor ${MIMALLOC_TARGET}
@@ -448,3 +424,26 @@ install(FILES "${CMAKE_CURRENT_BINARY_DIR}/IchorConfig.cmake"
         "${CMAKE_CURRENT_BINARY_DIR}/IchorConfigVersion.cmake"
         DESTINATION lib/cmake/ichor
         )
+
+
+
+if(ICHOR_BUILD_EXAMPLES)
+    add_subdirectory(examples)
+endif()
+if(ICHOR_BUILD_BENCHMARKS)
+    add_subdirectory(benchmarks)
+endif()
+if(ICHOR_BUILD_TESTING)
+    add_subdirectory(${ICHOR_EXTERNAL_DIR}/Catch2)
+    list(APPEND CMAKE_MODULE_PATH "${ICHOR_EXTERNAL_DIR}/Catch2/extras")
+
+    enable_testing()
+    add_subdirectory(test)
+
+    if(ICHOR_USE_SANITIZERS)
+        if(WIN32)
+            target_compile_options(Catch2 PUBLIC /fsanitize=address)
+        endif()
+    endif()
+
+endif()

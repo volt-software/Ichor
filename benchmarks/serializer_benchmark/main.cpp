@@ -6,6 +6,8 @@
 #include <ichor/services/logging/NullLogger.h>
 #include <ichor/services/metrics/MemoryUsageFunctions.h>
 #include <iostream>
+#include <thread>
+#include <array>
 
 int main(int argc, char *argv[]) {
     std::locale::global(std::locale("en_US.UTF-8"));

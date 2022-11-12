@@ -2,10 +2,22 @@
 #include <ichor/CommunicationChannel.h>
 #include <ichor/stl/Any.h>
 #include <ichor/events/RunFunctionEvent.h>
-#include <csignal>
 
 #ifdef ICHOR_USE_SYSTEM_MIMALLOC
 #include <mimalloc-new-delete.h>
+#endif
+
+#ifdef ICHOR_USE_BOOST_JSON
+#pragma GCC diagnostic push
+#ifndef __clang__
+#pragma GCC diagnostic ignored "-Wduplicated-branches"
+#pragma GCC diagnostic ignored "-Wstringop-overflow"
+#endif
+#pragma GCC diagnostic ignored "-Wcast-align"
+#pragma GCC diagnostic ignored "-Wdeprecated-copy"
+#pragma GCC diagnostic ignored "-Warray-bounds"
+#include <boost/json/src.hpp>
+#pragma GCC diagnostic pop
 #endif
 
 std::atomic<uint64_t> Ichor::DependencyManager::_managerIdCounter = 0;
@@ -233,12 +245,14 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &&uniqueEvt) 
                 auto &dependencies = toStopService->getDependencies();
                 auto &dependees = toStopService->getDependees();
 
-                for (auto &serviceId : dependencies) {
-                    INTERNAL_DEBUG("dependency: {}", serviceId);
-                }
+                if constexpr (DO_INTERNAL_DEBUG) {
+                    for (auto &serviceId : dependencies) {
+                        INTERNAL_DEBUG("dependency: {}", serviceId);
+                    }
 
-                for (auto &serviceId : dependees) {
-                    INTERNAL_DEBUG("dependee: {}", serviceId);
+                    for (auto &serviceId : dependees) {
+                        INTERNAL_DEBUG("dependee: {}", serviceId);
+                    }
                 }
 
                 // If all services depending on this one have removed this one and we've had a DependencyOfflineEvent
@@ -581,52 +595,52 @@ void Ichor::DependencyManager::setCommunicationChannel(Ichor::CommunicationChann
 
 Ichor::EventCompletionHandlerRegistration::~EventCompletionHandlerRegistration() {
     if(_mgr != nullptr) {
-        _mgr->pushPrioritisedEvent<RemoveCompletionCallbacksEvent>(0, _priority, _key);
+        _mgr->pushPrioritisedEvent<RemoveCompletionCallbacksEvent>(_key.id, _priority, _key);
     }
 }
 
 void Ichor::EventCompletionHandlerRegistration::reset() {
     if(_mgr != nullptr) {
-        _mgr->pushPrioritisedEvent<RemoveCompletionCallbacksEvent>(0, _priority, _key);
+        _mgr->pushPrioritisedEvent<RemoveCompletionCallbacksEvent>(_key.id, _priority, _key);
         _mgr = nullptr;
     }
 }
 
 Ichor::EventHandlerRegistration::~EventHandlerRegistration() {
     if(_mgr != nullptr) {
-        _mgr->pushPrioritisedEvent<RemoveEventHandlerEvent>(0, _priority, _key);
+        _mgr->pushPrioritisedEvent<RemoveEventHandlerEvent>(_key.id, _priority, _key);
     }
 }
 
 void Ichor::EventHandlerRegistration::reset() {
     if(_mgr != nullptr) {
-        _mgr->pushPrioritisedEvent<RemoveEventHandlerEvent>(0, _priority, _key);
+        _mgr->pushPrioritisedEvent<RemoveEventHandlerEvent>(_key.id, _priority, _key);
         _mgr = nullptr;
     }
 }
 
 Ichor::EventInterceptorRegistration::~EventInterceptorRegistration() {
     if(_mgr != nullptr) {
-        _mgr->pushPrioritisedEvent<RemoveEventInterceptorEvent>(0, _priority, _key);
+        _mgr->pushPrioritisedEvent<RemoveEventInterceptorEvent>(_key.id, _priority, _key);
     }
 }
 
 void Ichor::EventInterceptorRegistration::reset() {
     if(_mgr != nullptr) {
-        _mgr->pushPrioritisedEvent<RemoveEventInterceptorEvent>(0, _priority, _key);
+        _mgr->pushPrioritisedEvent<RemoveEventInterceptorEvent>(_key.id, _priority, _key);
         _mgr = nullptr;
     }
 }
 
 Ichor::DependencyTrackerRegistration::~DependencyTrackerRegistration() {
     if(_mgr != nullptr) {
-        _mgr->pushPrioritisedEvent<RemoveTrackerEvent>(0, _priority, _interfaceNameHash);
+        _mgr->pushPrioritisedEvent<RemoveTrackerEvent>(_serviceId, _priority, _interfaceNameHash);
     }
 }
 
 void Ichor::DependencyTrackerRegistration::reset() {
     if(_mgr != nullptr) {
-        _mgr->pushPrioritisedEvent<RemoveTrackerEvent>(0, _priority, _interfaceNameHash);
+        _mgr->pushPrioritisedEvent<RemoveTrackerEvent>(_serviceId, _priority, _interfaceNameHash);
         _mgr = nullptr;
     }
 }

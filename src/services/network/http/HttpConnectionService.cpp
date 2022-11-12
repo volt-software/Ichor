@@ -121,7 +121,7 @@ Ichor::AsyncGenerator<Ichor::HttpResponse> Ichor::HttpConnectionService::sendAsy
         ScopeGuardAtomicCount guard{_finishedListenAndRead};
 
         if(_outbox.full()) {
-            _outbox.set_capacity(std::max(_outbox.capacity() * 2, 10ul));
+            _outbox.set_capacity(std::max<uint64_t>(_outbox.capacity() * 2, 10ul));
         }
         _outbox.push_back({method, route, &event, &response, &headers, &msg});
         if(_outbox.size() > 1) {

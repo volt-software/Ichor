@@ -21,11 +21,16 @@
 #include <unordered_set>
 #endif
 
-// note that this only works when compiling with spdlog
 #ifdef ICHOR_ENABLE_INTERNAL_DEBUGGING
 static constexpr bool DO_INTERNAL_DEBUG = true;
 #else
 static constexpr bool DO_INTERNAL_DEBUG = false;
+#endif
+
+#ifdef ICHOR_USE_HARDENING
+static constexpr bool DO_HARDENING = true;
+#else
+static constexpr bool DO_HARDENING = false;
 #endif
 
 #define INTERNAL_DEBUG(...) do {      \

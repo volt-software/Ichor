@@ -13,13 +13,6 @@
 [submodule "external/rapidjson"]
 	path = external/rapidjson
 	url = https://github.com/Tencent/rapidjson.git
-[submodule "external/wyhash"]
-	path = external/wyhash
-	url = https://github.com/wangyi-fudan/wyhash.git
-	tag = V3
-[submodule "external/json"]
-	path = external/json
-	url = https://github.com/boostorg/json.git
 [submodule "external/mimalloc"]
 	path = external/mimalloc
 	url = https://github.com/microsoft/mimalloc.git

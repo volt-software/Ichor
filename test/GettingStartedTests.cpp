@@ -8,6 +8,8 @@
 #include <ichor/events/Event.h>
 #include <iostream>
 
+using namespace Ichor;
+
 struct IMyService {}; // the interface
 
 struct MyService final : public IMyService, public Ichor::Service<MyService> {

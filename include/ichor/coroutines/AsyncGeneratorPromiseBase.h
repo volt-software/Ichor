@@ -64,7 +64,7 @@ namespace Ichor::Detail {
         ///
         /// Only valid to call after resuming from an awaited advance operation.
         /// i.e. Either a begin() or iterator::operator++() operation.
-        virtual bool finished() const noexcept = 0;
+        [[nodiscard]] virtual bool finished() const noexcept = 0;
 
         virtual void set_finished() noexcept = 0;
 
@@ -115,6 +115,9 @@ namespace Ichor::Detail {
         std::coroutine_handle<> _consumerCoroutine;
         uint64_t _id;
         static thread_local uint64_t _idCounter;
+#ifdef ICHOR_USE_HARDENING
+        DependencyManager *_dmAtTimeOfCreation{_local_dm};
+#endif
     };
 
 

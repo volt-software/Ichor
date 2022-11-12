@@ -1,6 +1,7 @@
 #include "Common.h"
 #include <ichor/stl/RealtimeMutex.h>
 #include <ichor/stl/RealtimeReadWriteMutex.h>
+#include "TestServices/UselessService.h"
 
 using namespace Ichor;
 
@@ -103,5 +104,10 @@ TEST_CASE("STL Tests") {
 
         m.unlock_shared();
         m.unlock_shared();
+    }
+
+    SECTION("typeName tests") {
+        REQUIRE(typeName<UselessService>() == typeName<Ichor::UselessService>());
+        REQUIRE(typeNameHash<UselessService>() == typeNameHash<Ichor::UselessService>());
     }
 }

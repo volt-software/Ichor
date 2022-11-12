@@ -19,7 +19,7 @@ TEST_CASE("ServicesTests") {
 
         std::thread t([&]() {
             dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>();
-            dm.createServiceManager<UselessService>();
+            dm.createServiceManager<UselessService, IUselessService>();
             dm.createServiceManager<QuitOnStartWithDependenciesService>();
             queue->start(CaptureSigInt);
         });

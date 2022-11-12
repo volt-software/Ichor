@@ -455,6 +455,14 @@ namespace Ichor::Detail {
     template <typename T>
     inline AsyncGeneratorYieldOperation AsyncGeneratorPromise<T>::yield_value(value_type& value) noexcept(std::is_nothrow_constructible_v<T, T&&>) {
         static_assert(std::is_move_constructible_v<T>, "T needs to be move constructible");
+
+#ifdef ICHOR_USE_HARDENING
+        // check if currently on a different thread than creation time (which would be undefined behaviour)
+        if(_dmAtTimeOfCreation != _local_dm) {
+            std::terminate();
+        }
+#endif
+
         INTERNAL_DEBUG("yield_value {}", _id);
         _currentValue.emplace(std::move(value));
         Ichor::Detail::_local_dm->pushPrioritisedEvent<Ichor::ContinuableEvent>(0, INTERNAL_DEPENDENCY_EVENT_PRIORITY, _id);
@@ -464,6 +472,14 @@ namespace Ichor::Detail {
     template <typename T>
     inline AsyncGeneratorYieldOperation AsyncGeneratorPromise<T>::yield_value(value_type&& value) noexcept(std::is_nothrow_constructible_v<T, T&&>) {
         static_assert(std::is_move_constructible_v<T>, "T needs to be move constructible");
+
+#ifdef ICHOR_USE_HARDENING
+        // check if currently on a different thread than creation time (which would be undefined behaviour)
+        if(_dmAtTimeOfCreation != _local_dm) {
+            std::terminate();
+        }
+#endif
+
         INTERNAL_DEBUG("yield_value {}", _id);
         _currentValue.emplace(std::forward<T>(value));
         Ichor::Detail::_local_dm->pushPrioritisedEvent<Ichor::ContinuableEvent>(0, INTERNAL_DEPENDENCY_EVENT_PRIORITY, _id);
@@ -473,6 +489,14 @@ namespace Ichor::Detail {
     template <typename T>
     inline void AsyncGeneratorPromise<T>::return_value(value_type &value) noexcept(std::is_nothrow_constructible_v<T, T&&>) {
         static_assert(std::is_move_constructible_v<T>, "T needs to be move constructible");
+
+#ifdef ICHOR_USE_HARDENING
+        // check if currently on a different thread than creation time (which would be undefined behaviour)
+        if(_dmAtTimeOfCreation != _local_dm) {
+            std::terminate();
+        }
+#endif
+
         INTERNAL_DEBUG("return_value {}", _id);
         _currentValue.emplace(std::move(value));
         Ichor::Detail::_local_dm->pushPrioritisedEvent<Ichor::ContinuableEvent>(0, INTERNAL_DEPENDENCY_EVENT_PRIORITY, _id);
@@ -481,6 +505,14 @@ namespace Ichor::Detail {
     template <typename T>
     inline void AsyncGeneratorPromise<T>::return_value(value_type &&value) noexcept(std::is_nothrow_constructible_v<T, T&&>) {
         static_assert(std::is_move_constructible_v<T>, "T needs to be move constructible");
+
+#ifdef ICHOR_USE_HARDENING
+        // check if currently on a different thread than creation time (which would be undefined behaviour)
+        if(_dmAtTimeOfCreation != _local_dm) {
+            std::terminate();
+        }
+#endif
+
         INTERNAL_DEBUG("return_value {}", _id);
         _currentValue.emplace(std::forward<T>(value));
         Ichor::Detail::_local_dm->pushPrioritisedEvent<Ichor::ContinuableEvent>(0, INTERNAL_DEPENDENCY_EVENT_PRIORITY, _id);
@@ -488,12 +520,28 @@ namespace Ichor::Detail {
 
     inline AsyncGeneratorYieldOperation AsyncGeneratorPromise<void>::yield_value(Empty) noexcept {
         INTERNAL_DEBUG("yield_value {}", _id);;
+
+#ifdef ICHOR_USE_HARDENING
+        // check if currently on a different thread than creation time (which would be undefined behaviour)
+        if(_dmAtTimeOfCreation != _local_dm) {
+            std::terminate();
+        }
+#endif
+
         Ichor::Detail::_local_dm->pushPrioritisedEvent<Ichor::ContinuableEvent>(0, INTERNAL_DEPENDENCY_EVENT_PRIORITY, _id);
         return internal_yield_value();
     }
 
     inline void AsyncGeneratorPromise<void>::return_void() noexcept {
         INTERNAL_DEBUG("return_value {}", _id);
+
+#ifdef ICHOR_USE_HARDENING
+        // check if currently on a different thread than creation time (which would be undefined behaviour)
+        if(_dmAtTimeOfCreation != _local_dm) {
+            std::terminate();
+        }
+#endif
+
         Ichor::Detail::_local_dm->pushPrioritisedEvent<Ichor::ContinuableEvent>(0, INTERNAL_DEPENDENCY_EVENT_PRIORITY, _id);
     }
 
