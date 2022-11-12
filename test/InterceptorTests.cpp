@@ -42,8 +42,8 @@ TEST_CASE("Interceptor Tests") {
 
             REQUIRE(pre.find(TestEvent::TYPE) != end(pre));
             REQUIRE(pre.find(TestEvent::TYPE)->second == 1);
-            REQUIRE(post.find(TestEvent::TYPE) == end(pre));
-            REQUIRE(un.find(TestEvent::TYPE) != end(pre));
+            REQUIRE(post.find(TestEvent::TYPE) == end(post));
+            REQUIRE(un.find(TestEvent::TYPE) != end(un));
             REQUIRE(un.find(TestEvent::TYPE)->second == 1);
 
             mng.pushEvent<QuitEvent>(0);
@@ -84,9 +84,9 @@ TEST_CASE("Interceptor Tests") {
 
             REQUIRE(pre.find(TestEvent::TYPE) != end(pre));
             REQUIRE(pre.find(TestEvent::TYPE)->second == 1);
-            REQUIRE(post.find(TestEvent::TYPE) != end(pre));
+            REQUIRE(post.find(TestEvent::TYPE) != end(post));
             REQUIRE(post.find(TestEvent::TYPE)->second == 1);
-            REQUIRE(un.find(TestEvent::TYPE) == end(pre));
+            REQUIRE(un.find(TestEvent::TYPE) == end(un));
 
             mng.pushEvent<QuitEvent>(0);
 
@@ -128,8 +128,8 @@ TEST_CASE("Interceptor Tests") {
 
             REQUIRE(pre.find(TestEvent::TYPE) != end(pre));
             REQUIRE(pre.find(TestEvent::TYPE)->second == 1);
-            REQUIRE(post.find(TestEvent::TYPE) == end(pre));
-            REQUIRE(un.find(TestEvent::TYPE) != end(pre));
+            REQUIRE(post.find(TestEvent::TYPE) == end(post));
+            REQUIRE(un.find(TestEvent::TYPE) != end(un));
             REQUIRE(un.find(TestEvent::TYPE)->second == 1);
 
             REQUIRE(eventHandlerServices[0]->getHandledEvents().empty());
@@ -172,11 +172,11 @@ TEST_CASE("Interceptor Tests") {
             REQUIRE(pre.find(DependencyOnlineEvent::TYPE)->second == 2);
             REQUIRE(pre.find(RunFunctionEvent::TYPE) != end(pre));
             REQUIRE(pre.find(RunFunctionEvent::TYPE)->second == 1);
-            REQUIRE(post.find(DependencyOnlineEvent::TYPE) != end(pre));
+            REQUIRE(post.find(DependencyOnlineEvent::TYPE) != end(post));
             REQUIRE(post.find(DependencyOnlineEvent::TYPE)->second == 2);
-            REQUIRE(post.find(RunFunctionEvent::TYPE) == end(pre));
-            REQUIRE(un.find(DependencyOnlineEvent::TYPE) == end(pre));
-            REQUIRE(un.find(RunFunctionEvent::TYPE) == end(pre));
+            REQUIRE(post.find(RunFunctionEvent::TYPE) == end(post));
+            REQUIRE(un.find(DependencyOnlineEvent::TYPE) == end(un));
+            REQUIRE(un.find(RunFunctionEvent::TYPE) == end(un));
 
             mng.pushEvent<QuitEvent>(0);
 
@@ -218,11 +218,11 @@ TEST_CASE("Interceptor Tests") {
                 REQUIRE(pre.find(DependencyOnlineEvent::TYPE)->second == 3);
                 REQUIRE(pre.find(RunFunctionEvent::TYPE) != end(pre));
                 REQUIRE(pre.find(RunFunctionEvent::TYPE)->second == 1);
-                REQUIRE(post.find(DependencyOnlineEvent::TYPE) != end(pre));
+                REQUIRE(post.find(DependencyOnlineEvent::TYPE) != end(post));
                 REQUIRE(post.find(DependencyOnlineEvent::TYPE)->second == 3);
-                REQUIRE(post.find(RunFunctionEvent::TYPE) == end(pre));
-                REQUIRE(un.find(DependencyOnlineEvent::TYPE) == end(pre));
-                REQUIRE(un.find(RunFunctionEvent::TYPE) == end(pre));
+                REQUIRE(post.find(RunFunctionEvent::TYPE) == end(post));
+                REQUIRE(un.find(DependencyOnlineEvent::TYPE) == end(un));
+                REQUIRE(un.find(RunFunctionEvent::TYPE) == end(un));
             }
 
             mng.pushEvent<QuitEvent>(0);

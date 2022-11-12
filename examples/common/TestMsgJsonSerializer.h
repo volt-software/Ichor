@@ -19,7 +19,7 @@
 #pragma GCC diagnostic ignored "-Wcast-align"
 #pragma GCC diagnostic ignored "-Wdeprecated-copy"
 #pragma GCC diagnostic ignored "-Warray-bounds"
-#include <boost/json/src.hpp>
+#include <boost/json.hpp>
 #pragma GCC diagnostic pop
 #endif
 

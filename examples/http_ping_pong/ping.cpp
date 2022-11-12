@@ -7,7 +7,6 @@
 #include <ichor/services/network/ClientAdmin.h>
 #include <ichor/services/serialization/ISerializer.h>
 
-
 #ifdef ICHOR_USE_SPDLOG
 #include <ichor/services/logging/SpdlogLogger.h>
 #define LOGGER_TYPE SpdlogLogger

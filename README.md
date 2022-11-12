@@ -114,8 +114,10 @@ By default, Ichor uses a mutex when inserting/extracting events from its queue. 
 
 ### Is it possible to have a completely stack-based allocation while using C++?
 
-Ichor used to have full support for the polymorphic allocators, but as not all compilers support it yet (looking at you clang) as well as having a negative impact on developer ergonomy, it has been removed.
-Instead, Ichor now recommends usage with [mimalloc](https://github.com/microsoft/mimalloc): "it does not suffer from blowup, has bounded worst-case allocation times (wcat), bounded space overhead (~0.2% meta-data, with low internal fragmentation), and has no internal points of contention using only atomic operations."
+Ichor used to have full support for the polymorphic allocators, but as not all compilers support it yet (looking at you libc++) as well as having a negative impact on developer ergonomy, it has been removed.
+Instead, Ichor now recommends usage with [mimalloc](https://github.com/microsoft/mimalloc): 
+
+> it does not suffer from blowup, has bounded worst-case allocation times (wcat), bounded space overhead (~0.2% meta-data, with low internal fragmentation), and has no internal points of contention using only atomic operations.
 
 ### OS X? VxWorks Wind River? Baremetal?
 

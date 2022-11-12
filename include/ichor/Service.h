@@ -30,6 +30,8 @@ namespace Ichor {
 
         [[nodiscard]] virtual uint64_t getServicePriority() const noexcept = 0;
 
+        [[nodiscard]] virtual bool isStarted() const noexcept = 0;
+
         [[nodiscard]] virtual DependencyManager& getManager() const noexcept = 0;
 
         [[nodiscard]] virtual Properties& getProperties() noexcept = 0;
@@ -70,6 +72,10 @@ namespace Ichor {
 
         [[nodiscard]] uint64_t getServicePriority() const noexcept final {
             return _servicePriority;
+        }
+
+        [[nodiscard]] bool isStarted() const noexcept final {
+            return _serviceState == ServiceState::ACTIVE;
         }
 
         [[nodiscard]] DependencyManager& getManager() const noexcept final {

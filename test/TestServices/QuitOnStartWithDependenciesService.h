@@ -6,7 +6,7 @@ using namespace Ichor;
 
 struct QuitOnStartWithDependenciesService final : public Service<QuitOnStartWithDependenciesService> {
     QuitOnStartWithDependenciesService(DependencyRegister &reg, Properties props, DependencyManager *mng) : Service(std::move(props), mng) {
-        reg.registerDependency<UselessService>(this, false);
+        reg.registerDependency<IUselessService>(this, true);
     }
     ~QuitOnStartWithDependenciesService() final = default;
     StartBehaviour start() final {
@@ -14,9 +14,9 @@ struct QuitOnStartWithDependenciesService final : public Service<QuitOnStartWith
         return StartBehaviour::SUCCEEDED;
     }
 
-    void addDependencyInstance(UselessService *, IService *) {
+    void addDependencyInstance(IUselessService *, IService *) {
     }
 
-    void removeDependencyInstance(UselessService *, IService *) {
+    void removeDependencyInstance(IUselessService *, IService *) {
     }
 };

@@ -111,7 +111,7 @@ namespace Ichor {
 
                 cmpMgr->getService().injectPriority(priority);
 
-                if constexpr (DO_INTERNAL_DEBUG) {
+                if constexpr (DO_INTERNAL_DEBUG || DO_HARDENING) {
                     if (_services.contains(cmpMgr->serviceId())) {
                         std::terminate();
                     }
@@ -144,7 +144,7 @@ namespace Ichor {
                     pushPrioritisedEvent<DependencyOnlineEvent>(cmpMgr->serviceId(), event_priority);
                 }
 
-                if constexpr (DO_INTERNAL_DEBUG) {
+                if constexpr (DO_INTERNAL_DEBUG || DO_HARDENING) {
                     if (_services.contains(cmpMgr->serviceId())) {
                         std::terminate();
                     }
@@ -206,8 +206,12 @@ namespace Ichor {
             auto requestTrackersForType = _dependencyRequestTrackers.find(typeNameHash<Interface>());
             auto undoRequestTrackersForType = _dependencyUndoRequestTrackers.find(typeNameHash<Interface>());
 
-            DependencyTrackerInfo requestInfo{std::function<void(Event const &)>{[impl](Event const &evt){ impl->handleDependencyRequest(static_cast<Interface*>(nullptr), static_cast<DependencyRequestEvent const &>(evt)); }}};
-            DependencyTrackerInfo undoRequestInfo{std::function<void(Event const &)>{[impl](Event const &evt){ impl->handleDependencyUndoRequest(static_cast<Interface*>(nullptr), static_cast<DependencyUndoRequestEvent const &>(evt)); }}};
+            DependencyTrackerInfo requestInfo{std::function<void(Event const &)>{[impl](Event const &evt) {
+                impl->handleDependencyRequest(static_cast<Interface*>(nullptr), static_cast<DependencyRequestEvent const &>(evt));
+            }}};
+            DependencyTrackerInfo undoRequestInfo{std::function<void(Event const &)>{[impl](Event const &evt) {
+                impl->handleDependencyUndoRequest(static_cast<Interface*>(nullptr), static_cast<DependencyUndoRequestEvent const &>(evt));
+            }}};
             
             std::vector<DependencyRequestEvent> requests{};
             for(auto const &[key, mgr] : _services) {
@@ -246,7 +250,7 @@ namespace Ichor {
                 undoRequestTrackersForType->second.emplace_back(std::move(undoRequestInfo));
             }
 
-            return DependencyTrackerRegistration(this, typeNameHash<Interface>(), impl->getServicePriority());
+            return DependencyTrackerRegistration(this, impl->getServiceId(), typeNameHash<Interface>(), impl->getServicePriority());
         }
 
         template <typename EventT, typename Impl>

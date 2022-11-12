@@ -61,7 +61,20 @@ sudo apt install libabsl-dev
 
 #### Windows
 
-Tried with MSVC 19.33, but it seemed like coroutines and concepts are not fully implemented yet.
+Install MSVC 17.4 or newer. Open Ichor in MSVC and configure CMake according to your wishes. Build and install and you should find an `out` directory in Ichor's top level directory.
+
+Use that directory in your personal project, preferably with cmake as Ichor exports compile-time definitions in it.
+
+If boost is desired, please download the [windows prebuilt packages](https://sourceforge.net/projects/boost/files/boost-binaries/) (`boost_1_80_0-msvc-14.3-64.exe` is the latest at time of writing).
+
+Then add the following [system variables](https://www.alphr.com/set-environment-variables-windows-11/), with the path you've extracted boost into:
+```
+    BOOST_INCLUDEDIR    C:\SDKs\boost_1_80_0\
+    BOOST_LIBRARYDIR    C:\SDKs\boost_1_80_0\lib64-msvc-14.3
+    BOOST_ROOT          C:\SDKs\boost_1_80_0\boost
+```
+
+To run the examples/tests that use boost, copy the dlls in `C:\SDKs\boost_1_80_0\lib64-msvc-14.3` (or where you installed boost) into the generated `bin` folder.
 
 #### CMakeLists.txt
 
@@ -105,8 +118,8 @@ Enables the use of the [spdlog submodule](../external/spdlog). If examples or be
 Not implemented currently.
 
 #### ICHOR_USE_ETCD (optional dependency)
-
-Enables the use of the [rapidjson submodule](../external/spdlog). Used for the etcd examples and benchmarks.
+ 
+Used for the etcd examples and benchmarks.
 
 #### ICHOR_USE_BOOST_BEAST
 
@@ -118,7 +131,7 @@ Controls which JSON serializer to be used in benchmarks and examples.
 
 Can be one of: OFF RAPIDJSON BOOST_JSON
 
-BOOST_JSON requires boost to be installed (version >= 1.70).
+BOOST_JSON requires boost to be installed (version >= 1.75).
 
 #### ICHOR_USE_SANITIZERS
 

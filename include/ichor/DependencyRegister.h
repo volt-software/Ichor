@@ -11,6 +11,9 @@ namespace Ichor {
 
         template<typename Interface, DerivedTemplated<Service> Impl>
         void registerDependency(Impl *svc, bool required, std::optional<Properties> props = {}) {
+            static_assert(!std::is_same_v<Interface, Impl>, "Impl and interface need to be separate classes");
+            static_assert(!DerivedTemplated<Interface, Service>, "Interface needs to be a non-service class.");
+
             if(_registrations.contains(typeNameHash<Interface>())) {
                 throw std::runtime_error("Already registered interface");
             }

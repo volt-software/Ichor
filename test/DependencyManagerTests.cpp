@@ -2,6 +2,7 @@
 #include <ichor/events/RunFunctionEvent.h>
 #include <ichor/coroutines/AsyncManualResetEvent.h>
 #include "TestServices/UselessService.h"
+#include "TestServices/RegistrationCheckerService.h"
 #include "Common.h"
 
 TEST_CASE("DependencyManager") {
@@ -61,6 +62,23 @@ TEST_CASE("DependencyManager") {
         REQUIRE(dm.isRunning());
 
         dm.pushEvent<QuitEvent>(0);
+
+        t.join();
+
+        REQUIRE_FALSE(dm.isRunning());
+    }
+
+    SECTION("DependencyManager", "Check Registrations") {
+        auto queue = std::make_unique<MultimapQueue>();
+        auto &dm = queue->createManager();
+
+        std::thread t([&]() {
+            dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>();
+            dm.createServiceManager<RegistrationCheckerService>();
+            dm.createServiceManager<UselessService, IUselessService>();
+            dm.createServiceManager<Ichor::UselessService, Ichor::IUselessService>();
+            queue->start(CaptureSigInt);
+        });
 
         t.join();
 

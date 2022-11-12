@@ -87,17 +87,18 @@ namespace Ichor {
 
     class [[nodiscard]] DependencyTrackerRegistration final {
     public:
-        DependencyTrackerRegistration(DependencyManager *mgr, uint64_t interfaceNameHash, uint64_t priority) noexcept : _mgr(mgr), _interfaceNameHash(interfaceNameHash), _priority(priority) {}
+        DependencyTrackerRegistration(DependencyManager *mgr, uint64_t serviceId, uint64_t interfaceNameHash, uint64_t priority) noexcept : _mgr(mgr), _serviceId(serviceId), _interfaceNameHash(interfaceNameHash), _priority(priority) {}
         DependencyTrackerRegistration() noexcept = default;
         ~DependencyTrackerRegistration();
 
         DependencyTrackerRegistration(const DependencyTrackerRegistration&) = delete;
-        DependencyTrackerRegistration(DependencyTrackerRegistration&& o) noexcept : _mgr(o._mgr), _interfaceNameHash(o._interfaceNameHash), _priority(o._priority) {
+        DependencyTrackerRegistration(DependencyTrackerRegistration&& o) noexcept : _mgr(o._mgr), _serviceId(o._serviceId), _interfaceNameHash(o._interfaceNameHash), _priority(o._priority) {
             o._mgr = nullptr;
         }
         DependencyTrackerRegistration& operator=(const DependencyTrackerRegistration&) = delete;
         DependencyTrackerRegistration& operator=(DependencyTrackerRegistration&& o) noexcept {
             _mgr = o._mgr;
+            _serviceId = o._serviceId;
             _interfaceNameHash = o._interfaceNameHash;
             _priority = o._priority;
             o._mgr = nullptr;
@@ -107,6 +108,7 @@ namespace Ichor {
         void reset();
     private:
         DependencyManager *_mgr{nullptr};
+        uint64_t _serviceId{0};
         uint64_t _interfaceNameHash{0};
         uint64_t _priority{0};
     };
