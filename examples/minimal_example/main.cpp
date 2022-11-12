@@ -16,7 +16,7 @@ public:
 
 private:
     StartBehaviour start() final {
-        // Setup a timer that fires every 100 milliseconds and tell that dependency manager that we're interested in the events that the timer fires.
+        // Setup a timer that fires every 100 milliseconds
         auto timer = getManager().createServiceManager<Timer, ITimer>();
         timer->setChronoInterval(100ms);
 

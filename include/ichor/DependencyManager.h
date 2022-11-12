@@ -358,6 +358,10 @@ namespace Ichor {
             return _started;
         };
 
+        uint64_t getServiceCount() const noexcept {
+            return _services.size();
+        }
+
         template <typename Interface>
         [[nodiscard]] std::vector<Interface*> getStartedServices() noexcept {
             std::vector<Interface*> ret{};

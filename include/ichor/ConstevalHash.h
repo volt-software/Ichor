@@ -119,12 +119,13 @@ namespace Ichor {
         constexpr std::string_view result = __FUNCSIG__;
         constexpr std::string_view templateStr = "auto __cdecl Ichor::typeName<";
 
-        return result.substr(templateStr.size(), result.size() - 7);
+        return result.substr(templateStr.size(), result.size() - templateStr.size() - 7);
 #else
         constexpr std::string_view result = __PRETTY_FUNCTION__;
         constexpr std::string_view templateStr = "INTERFACE_TYPENAME = ";
 
-        return result.substr(templateStr.size(), result.size() - 1);
+        constexpr size_t bpos = result.find(templateStr) + templateStr.size(); //find begin pos after INTERFACE_TYPENAME = entry
+        return result.substr(bpos, result.size() - bpos - 1);
 #endif
     }
 
