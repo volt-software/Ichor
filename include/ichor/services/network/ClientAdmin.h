@@ -75,7 +75,6 @@ namespace Ichor {
                 break;
             }
 
-            // maybe others want to log this as well
             co_return;
         }
 

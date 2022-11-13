@@ -2,13 +2,9 @@
 
 # What is this?
 
-Ichor, [Greek Mythos for ethereal fluid that is the blood of the gods/immortals](https://en.wikipedia.org/wiki/Ichor), is a C++ framework/middleware for thread confinement and dependency injection. 
+Ichor, [Greek Mythos for ethereal fluid that is the blood of the gods/immortals](https://en.wikipedia.org/wiki/Ichor), is a C++ framework/middleware for microservices. Ichor allows re-usable services and components to be used in multiple microservices, greatly supporting the workflow for large teams. It also supports reasoning in multithreaded environments, reducing the chances for data races.
 
-Ichor informally stands for "Intuitive Compile-time Hoisted Object Resources".
-
-Ichor's greater aim is to support C++ projects with long software lifecycles. Think 10-40 years. By decoupling interface and implement, library updates or changes to user requirements are confined to a smaller area.  
-
-Moreover, the concept of [Fearless Concurrency](https://doc.rust-lang.org/book/ch16-00-concurrency.html) from Rust is attempted to be applied in Ichor through thread confinement.   
+Ichor borrows from the concept of [Fearless Concurrency](https://doc.rust-lang.org/book/ch16-00-concurrency.html) and offers thread confinement.
 
 ### Thread confinement? Fearless Concurrency?
 
@@ -19,7 +15,7 @@ In which case, you're on your own.
 
 ### Dependency Injection?
 
-To support software lifecycles measured in decades, engineers try to encapsulate functionality. Using the Dependency Injection approach allows engineers to insulate updates to parts of the code.
+To support software lifecycles measured in decades, engineers try to encapsulate functionality. Using the [Dependency Injection](https://www.youtube.com/watch?v=yVogS4NbL6U) approach allows engineers to insulate updates to parts of the code.
 
 There exist many Dependency Injection libraries for C++ already, but where those usually only provide Dependency Injection, Ichor also provides service lifecycle management and thread confinement. If a dependency goes away at runtime, e.g. a network client, then all the services depending on it will be cleaned up at that moment. 
 
@@ -33,6 +29,7 @@ More examples can be found in the [examples directory](examples).
 
 ## Supported OSes
 * Linux
+* Windows
 
 ## Supported Compilers
 * Gcc 11.3 or newer (see [this gcc bug](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=95137) for why)
@@ -53,8 +50,7 @@ Documentation can be found in the [docs directory](docs).
 
 ### Current design focuses
 
-* Less magic configuration
-    * code as configuration, as much as possible bundled in one place
+* code as configuration, as much as possible bundled in one place
 * As much type-safety as possible, prefer compile errors over run-time errors.
 * Well-defined and managed multi-threading to prevent data races and similar issues
     * Use of an event loop
@@ -62,7 +58,7 @@ Documentation can be found in the [docs directory](docs).
 * Performance-oriented design in all-parts of the framework / making it easy to get high performance and low latency
 * Fully utilise OOP, RAII and C++20 Concepts to steer users to using the framework correctly
 * Implement business logic in the least amount of code possible 
-* Hopefully this culminates and less error-prone code and better time to market 
+* Less error-prone code and better time to market 
 
 ### Supported features
 
@@ -93,7 +89,7 @@ Optional services:
     * Opentracing? Jaeger?
 * Docker integration/compilation
 * "Remote" services, where services are either in a different thread or a different machine
-* Code generator for remote communication boilerplate
+* Code generator to reduce boilerplate
 * ...
 
 # Benchmarks

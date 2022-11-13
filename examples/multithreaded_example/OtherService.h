@@ -42,8 +42,6 @@ private:
         ICHOR_LOG_INFO(_logger, "Handling custom event");
         getManager().pushEvent<QuitEvent>(getServiceId());
         getManager().getCommunicationChannel()->broadcastEvent<QuitEvent>(getManager(), getServiceId());
-
-        // we dealt with it, don't let other services handle this event
         co_return;
     }
 

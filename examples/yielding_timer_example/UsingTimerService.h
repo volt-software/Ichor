@@ -53,7 +53,7 @@ private:
             //simulate long task
             std::this_thread::sleep_for(std::chrono::milliseconds(20));
             ICHOR_LOG_INFO(_logger, "Timer {} completed 'long' task {} times", getServiceId(), i);
-            // schedule us again later in the event loop for the next iteration, don't let other handlers handle this event.
+            // schedule us again later in the event loop for the next iteration.
             co_yield empty;
         }
 
