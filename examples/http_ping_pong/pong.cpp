@@ -84,7 +84,7 @@ int main(int argc, char *argv[]) {
 
     dm.createServiceManager<PingMsgJsonSerializer, ISerializer<PingMsg>>();
     dm.createServiceManager<HttpContextService, IHttpContextService>();
-    dm.createServiceManager<HttpHostService, IHttpService>(Properties{{"Address", Ichor::make_any<std::string>("127.0.0.1")}, {"Port", Ichor::make_any<uint16_t>(8001)}});
+    dm.createServiceManager<HttpHostService, IHttpService>(Properties{{"Address", Ichor::make_any<std::string>("127.0.0.1")}, {"Port", Ichor::make_any<uint16_t>(static_cast<uint16_t>(8001))}});
     dm.createServiceManager<PongService>();
     queue->start(CaptureSigInt);
     auto end = std::chrono::steady_clock::now();

@@ -14,7 +14,15 @@ namespace Ichor {
 
         template <typename Dur>
         void setChronoInterval(Dur duration) noexcept {
-            setInterval(std::chrono::nanoseconds(duration).count());
+            int64_t val = std::chrono::nanoseconds(duration).count();
+
+#ifdef ICHOR_USE_HARDENING
+            if(val < 0) {
+                std::terminate();
+            }
+#endif
+
+            setInterval(static_cast<uint64_t>(val));
         }
 
     protected:

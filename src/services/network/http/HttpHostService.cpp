@@ -15,7 +15,7 @@ Ichor::StartBehaviour Ichor::HttpHostService::start() {
     }
 
     if(!getProperties().contains("Port") || !getProperties().contains("Address")) {
-        getManager().pushPrioritisedEvent<UnrecoverableErrorEvent>(getServiceId(), _priority, 0, "Missing port or address when starting HttpHostService");
+        getManager().pushPrioritisedEvent<UnrecoverableErrorEvent>(getServiceId(), _priority, 0u, "Missing port or address when starting HttpHostService");
         return Ichor::StartBehaviour::FAILED_DO_NOT_RETRY;
     }
 
@@ -225,7 +225,7 @@ void Ichor::HttpHostService::read(tcp::socket socket, net::yield_context yield) 
         ICHOR_LOG_TRACE_ATOMIC(_logger, "New request for {} {}", (int) req.method(), req.target());
 
         std::vector<HttpHeader> headers{};
-        headers.reserve(std::distance(std::begin(req), std::end(req)));
+        headers.reserve(static_cast<unsigned long>(std::distance(std::begin(req), std::end(req))));
         for (auto const &field: req) {
             headers.emplace_back(field.name_string(), field.value());
         }

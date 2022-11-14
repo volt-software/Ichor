@@ -34,7 +34,7 @@ Ichor::StartBehaviour Ichor::WsHostService::start() {
     }
 
     if(!getProperties().contains("Port") || !getProperties().contains("Address")) {
-        getManager().pushPrioritisedEvent<UnrecoverableErrorEvent>(getServiceId(), _priority, 0, "Missing port or address when starting WsHostService");
+        getManager().pushPrioritisedEvent<UnrecoverableErrorEvent>(getServiceId(), _priority, 0u, "Missing port or address when starting WsHostService");
         return Ichor::StartBehaviour::FAILED_DO_NOT_RETRY;
     }
 

@@ -17,14 +17,14 @@ namespace Ichor {
 
     struct AveragedStatisticEntry {
         AveragedStatisticEntry() = default;
-        AveragedStatisticEntry(int64_t _timestamp, int64_t _minProcessingTimeRequired, int64_t _maxProcessingTimeRequired, int64_t _avgProcessingTimeRequired, uint64_t _occurrences) :
+        AveragedStatisticEntry(int64_t _timestamp, int64_t _minProcessingTimeRequired, int64_t _maxProcessingTimeRequired, int64_t _avgProcessingTimeRequired, int64_t _occurrences) :
             timestamp(_timestamp), minProcessingTimeRequired(_minProcessingTimeRequired), maxProcessingTimeRequired(_maxProcessingTimeRequired), avgProcessingTimeRequired(_avgProcessingTimeRequired),
             occurrences(_occurrences) {}
         int64_t timestamp{};
         int64_t minProcessingTimeRequired{};
         int64_t maxProcessingTimeRequired{};
         int64_t avgProcessingTimeRequired{};
-        uint64_t occurrences{};
+        int64_t occurrences{};
     };
 
     class IEventStatisticsService {

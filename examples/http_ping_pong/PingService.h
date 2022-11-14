@@ -39,7 +39,7 @@ private:
             auto addr = Ichor::any_cast<std::string&>(getProperties()["Address"]);
             if(msg) {
                 ICHOR_LOG_INFO(_logger, "{} bytes from {}: icmp_seq={}, time={:L} ms", sizeof(PingMsg), addr, msg->sequence,
-                               std::chrono::duration_cast<std::chrono::microseconds>(end - start).count() / 1000.);
+                               static_cast<double>(std::chrono::duration_cast<std::chrono::microseconds>(end - start).count()) / 1000.);
             } else {
                 _failed++;
                 ICHOR_LOG_INFO(_logger, "Couldn't ping {}: total failed={}", addr, _failed);

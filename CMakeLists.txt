@@ -143,6 +143,10 @@ if(NOT WIN32)
         # Enable libstdc++ specific debug checks (like checking two different iterators from different containers)
         target_compile_definitions(ichor PUBLIC _GLIBCXX_DEBUG _GLIBCXX_DEBUG_PEDANTIC _GLIBCXX_SANITIZE_VECTOR)
     endif()
+    target_compile_definitions(ichor PUBLIC _FILE_OFFSET_BITS=64 _TIME_BITS=64)
+
+    # Don't want to enable this for external source code
+    target_compile_options(ichor PUBLIC -Wconversion)
 else()
     #msvc sets some stupid defaults. We can do better.
     set(CMAKE_CXX_FLAGS "/nologo /DWIN32 /D_WINDOWS /EHsc /TP /W4 /await:strict /std:c++latest /permissive- /wd4100")

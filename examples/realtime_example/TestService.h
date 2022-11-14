@@ -70,7 +70,7 @@ private:
     }
 
     void enqueueWorkload() {
-        getManager().pushPrioritisedEvent<ExecuteTaskEvent>(getServiceId(), 10);
+        getManager().pushPrioritisedEvent<ExecuteTaskEvent>(getServiceId(), 10u);
     }
 
     AsyncGenerator<void> handleEvent(ExecuteTaskEvent const &evt) {
@@ -92,7 +92,7 @@ private:
 
             fmt::print("duration min/max/avg: {:L}/{:L}/{:L} µs\n", min, max, avg);
         } else {
-            getManager().pushPrioritisedEvent<ExecuteTaskEvent>(getServiceId(), 10);
+            getManager().pushPrioritisedEvent<ExecuteTaskEvent>(getServiceId(), 10u);
         }
 
         co_return;
@@ -103,8 +103,8 @@ private:
 
     ILogger *_logger{nullptr};
     bool _started{false};
-    int _injectionCount{0};
-    int _finishedWorkloads{0};
+    uint64_t _injectionCount{0};
+    uint64_t _finishedWorkloads{0};
     std::array<long, ITERATIONS> _executionTimes{};
     EventHandlerRegistration _eventHandlerRegistration{};
 };

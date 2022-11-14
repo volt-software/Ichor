@@ -11,6 +11,10 @@
 #pragma warning(push)
 // This is imported code, not something we're going to fix
 #pragma warning(disable: 4244)
+#else
+#pragma GCC diagnostic push
+// This is imported code, not something we're going to fix
+#pragma GCC diagnostic ignored "-Wconversion"
 #endif
 
 /*
@@ -2235,4 +2239,6 @@ int run_gsm_enc_bench( void )
 
 #ifdef WIN32
 #pragma warning(pop)
+#else
+#pragma GCC diagnostic pop
 #endif

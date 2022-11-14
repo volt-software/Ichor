@@ -8,7 +8,7 @@ using namespace Ichor;
 TEST_CASE("STL Tests") {
 
     SECTION("Any basics") {
-        auto someInt = make_any<uint64_t>(5);
+        auto someInt = make_any<uint64_t>(5u);
         REQUIRE_NOTHROW(any_cast<uint64_t>(someInt));
         REQUIRE(any_cast<uint64_t>(someInt) == 5u);
         REQUIRE_THROWS_MATCHES(any_cast<float>(someInt), bad_any_cast, ExceptionMatcher());
