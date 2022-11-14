@@ -71,9 +71,9 @@ namespace sole
         bool operator!=( const uuid &other ) const;
         bool operator <( const uuid &other ) const;
 
-        std::string pretty() const;
-        std::string base62() const;
-        std::string str() const;
+        [[nodiscard]] std::string pretty() const;
+        [[nodiscard]] std::string base62() const;
+        [[nodiscard]] std::string str() const;
 
         template<typename ostream>
         inline friend ostream &operator<<( ostream &os, const uuid &self ) {
@@ -273,7 +273,7 @@ namespace sole {
         try {
             // Taken from parameter
             //std::string locale; // = "es-ES", "Chinese_China.936", "en_US.UTF8", etc...
-            std::time_t t = timestamp_secs;
+            std::time_t t = static_cast<int64_t>(timestamp_secs);
             std::tm tm;
             _msvc(
                     localtime_s( &tm, &t );
@@ -346,7 +346,7 @@ namespace sole {
     }
 
     inline std::string uuid::base62() const {
-        int base62len = 10 + 26 + 26;
+        uint64_t base62len = 10 + 26 + 26;
         const char base62[] =
                 "0123456789"
                 "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
@@ -453,8 +453,8 @@ namespace sole {
 
         // Convert to 100-nanosecond intervals
         uint64_t uuid_time;
-        uuid_time = tp.tv_sec * 10000000;
-        uuid_time = uuid_time + (tp.tv_nsec / 100);
+        uuid_time = static_cast<uint64_t>(tp.tv_sec * 10000000);
+        uuid_time = uuid_time + static_cast<uint64_t>(tp.tv_nsec / 100);
         uuid_time = uuid_time + offset;
 
         // If the clock looks like it went backwards, or is the same, increment it.
@@ -678,7 +678,7 @@ namespace sole {
 
         // Set the version number.
         enum { version = 1 };
-        upper_ &= ~0xf000;
+        upper_ &= ~0xf000u;
         upper_ |= version << 12;
 
         return u;
@@ -687,7 +687,7 @@ namespace sole {
     inline uuid uuid0() {
         // Number of 100-ns intervals since Unix epoch time
         uint64_t ns100_intervals = get_time( 0 );
-        uint64_t pid = _windows( _getpid() ) _welse( getpid() );
+        uint64_t pid = _windows( _getpid() ) _welse( static_cast<uint64_t>(getpid()) );
         uint16_t pid16 = (uint16_t)( pid & 0xffff ); // 16-bits max
         uint64_t mac = get_any_mac48();              // 48-bits max
 
@@ -712,7 +712,7 @@ namespace sole {
 
         // Set the version number.
         enum { version = 0 };
-        upper_ &= ~0xf000;
+        upper_ &= ~0xf000u;
         upper_ |= version << 12;
 
         return u;
@@ -733,11 +733,11 @@ namespace sole {
             // single separator, base62 notation
             if( uustr.find_first_of("-",idx+1) == std::string::npos ) {
                 auto rebase62 = [&]( const char *input, size_t limit ) -> uint64_t {
-                    int base62len = 10 + 26 + 26;
+                    uint64_t base62len = 10 + 26 + 26;
                     auto strpos = []( char ch ) -> size_t {
-                        if( ch >= 'a' ) return ch - 'a' + 10 + 26;
-                        if( ch >= 'A' ) return ch - 'A' + 10;
-                        return ch - '0';
+                        if( ch >= 'a' ) return static_cast<uint64_t>(ch - 'a' + 10 + 26);
+                        if( ch >= 'A' ) return static_cast<uint64_t>(ch - 'A' + 10);
+                        return static_cast<uint64_t>(ch - '0');
                     };
                     uint64_t res = strpos( input[0] );
                     for( size_t i = 1; i < limit; ++i )
@@ -898,4 +898,3 @@ int main() {
 }
 
 #endif
-

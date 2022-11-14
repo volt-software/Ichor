@@ -40,7 +40,7 @@ namespace Ichor {
 
     uint64_t MultimapQueue::size() const noexcept {
         std::shared_lock const l(_eventQueueMutex);
-        return _eventQueue.size();
+        return static_cast<uint64_t>(_eventQueue.size());
     }
 
     void MultimapQueue::start(bool captureSigInt) {

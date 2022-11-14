@@ -440,7 +440,7 @@ Ichor gives every event a default priority, but if necessary, you can push event
 
 Pushing an event with a priority is done with the `pushPrioritisedEvent` function:
 ```c++
-getManager().pushPrioritisedEvent<TimerEvent>(getServiceId(), 10);
+getManager().pushPrioritisedEvent<TimerEvent>(getServiceId(), 10u);
 ```
 
 The default priority for events is 1000. For dependency related things (like start service, dependency online events) it is 100.

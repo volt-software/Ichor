@@ -27,7 +27,7 @@ Ichor::StartBehaviour Ichor::HttpConnectionService::start() {
         }
 
         if (!getProperties().contains("Port") || !getProperties().contains("Address")) {
-            getManager().pushPrioritisedEvent<UnrecoverableErrorEvent>(getServiceId(), _priority, 0,
+            getManager().pushPrioritisedEvent<UnrecoverableErrorEvent>(getServiceId(), _priority, 0u,
                                                                         "Missing port or address when starting HttpConnectionService");
             return Ichor::StartBehaviour::FAILED_DO_NOT_RETRY;
         }
@@ -134,7 +134,7 @@ Ichor::AsyncGenerator<Ichor::HttpResponse> Ichor::HttpConnectionService::sendAsy
                 // use service id 0 to ensure event gets run, even if service is stopped. Otherwise, the coroutine will never complete.
                 // Similarly, use priority 0 to ensure these events run before any dependency changes, otherwise the service might be destroyed
                 // before we can finish all the coroutines.
-                evt.svc->getManager().pushPrioritisedEvent<RunFunctionEvent>(0, 0, [event = evt.evt](DependencyManager &dm) -> AsyncGenerator<void> {
+                evt.svc->getManager().pushPrioritisedEvent<RunFunctionEvent>(0u, 0u, [event = evt.evt](DependencyManager &dm) -> AsyncGenerator<void> {
                     event->set();
                     co_return;
                 });
@@ -189,7 +189,7 @@ Ichor::AsyncGenerator<Ichor::HttpResponse> Ichor::HttpConnectionService::sendAsy
             _httpStream->expires_never();
 
             next.response->status = (HttpStatus) (int) res.result();
-            next.response->headers.reserve(std::distance(std::begin(res), std::end(res)));
+            next.response->headers.reserve(static_cast<unsigned long>(std::distance(std::begin(res), std::end(res))));
             for (auto const &header: res) {
                 next.response->headers.emplace_back(header.name_string(), header.value());
             }

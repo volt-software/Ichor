@@ -24,7 +24,7 @@ Ichor::StartBehaviour Ichor::TcpHostService::start() {
 
     _socket = ::socket(AF_INET, SOCK_STREAM, 0);
     if(_socket == -1) {
-        getManager().pushEvent<UnrecoverableErrorEvent>(getServiceId(), 0, "Couldn't create socket: errno = " + std::to_string(errno));
+        getManager().pushEvent<UnrecoverableErrorEvent>(getServiceId(), 0u, "Couldn't create socket: errno = " + std::to_string(errno));
         return Ichor::StartBehaviour::FAILED_DO_NOT_RETRY;
     }
 
@@ -42,12 +42,12 @@ Ichor::StartBehaviour Ichor::TcpHostService::start() {
     if(addressProp != cend(getProperties())) {
         auto hostname = Ichor::any_cast<std::string>(addressProp->second);
         if(::inet_aton(hostname.c_str(), &address.sin_addr) != 0) {
-            getManager().pushEvent<RecoverableErrorEvent>(getServiceId(), 1, "inet_aton: errno = " + std::to_string(errno));
+            getManager().pushEvent<RecoverableErrorEvent>(getServiceId(), 1u, "inet_aton: errno = " + std::to_string(errno));
             auto *hp = ::gethostbyname(hostname.c_str());
             if (hp == nullptr) {
                 _socket = -1;
                 close(_socket);
-                getManager().pushEvent<UnrecoverableErrorEvent>(getServiceId(), 2, "gethostbyname: errno = " + std::to_string(errno));
+                getManager().pushEvent<UnrecoverableErrorEvent>(getServiceId(), 2u, "gethostbyname: errno = " + std::to_string(errno));
                 return Ichor::StartBehaviour::FAILED_DO_NOT_RETRY;
             }
 
@@ -63,14 +63,14 @@ Ichor::StartBehaviour Ichor::TcpHostService::start() {
     if(_bindFd == -1) {
         _socket = -1;
         close(_socket);
-        getManager().pushEvent<UnrecoverableErrorEvent>(getServiceId(), 3, "Couldn't bind socket: errno = " + std::to_string(errno));
+        getManager().pushEvent<UnrecoverableErrorEvent>(getServiceId(), 3u, "Couldn't bind socket: errno = " + std::to_string(errno));
         return Ichor::StartBehaviour::FAILED_DO_NOT_RETRY;
     }
 
     if(::listen(_socket, 10) != 0) {
         _socket = -1;
         close(_socket);
-        getManager().pushEvent<UnrecoverableErrorEvent>(getServiceId(), 4, "Couldn't listen on socket: errno = " + std::to_string(errno));
+        getManager().pushEvent<UnrecoverableErrorEvent>(getServiceId(), 4u, "Couldn't listen on socket: errno = " + std::to_string(errno));
         return Ichor::StartBehaviour::FAILED_DO_NOT_RETRY;
     }
 
@@ -84,10 +84,10 @@ Ichor::StartBehaviour Ichor::TcpHostService::start() {
         if (newConnection == -1) {
             ICHOR_LOG_ERROR(_logger, "New connection but accept() returned {} errno {}", newConnection, errno);
             if(errno == EINVAL) {
-                getManager().pushEvent<UnrecoverableErrorEvent>(getServiceId(), 4, "Accept() generated error. errno = " + std::to_string(errno));
+                getManager().pushEvent<UnrecoverableErrorEvent>(getServiceId(), 4u, "Accept() generated error. errno = " + std::to_string(errno));
                 co_return;
             }
-            getManager().pushEvent<RecoverableErrorEvent>(getServiceId(), 4, "Accept() generated error. errno = " + std::to_string(errno));
+            getManager().pushEvent<RecoverableErrorEvent>(getServiceId(), 4u, "Accept() generated error. errno = " + std::to_string(errno));
             co_return;
         }
 

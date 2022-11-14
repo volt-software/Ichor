@@ -43,7 +43,7 @@ public:
         writer.Uint64(msg.id);
 
         writer.String("val");
-        writer.String(msg.val.c_str(), msg.val.size());
+        writer.String(msg.val.c_str(), static_cast<uint32_t>(msg.val.size()));
 
         writer.EndObject();
         auto *ret = sb.GetString();

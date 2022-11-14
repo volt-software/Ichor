@@ -118,23 +118,3 @@ int communication() {
 
     return 0;
 }
-
-struct MyMemoryStructure {
-    MyMemoryStructure(int id_) : id(id_) {}
-    uint64_t id;
-    // etc
-};
-
-struct MyMemoryAllocatorService final : public Ichor::Service<MyMemoryAllocatorService> {
-    StartBehaviour start() final {
-        _myDataStructure = std::make_unique<MyMemoryStructure>(1);
-        return StartBehaviour::SUCCEEDED;
-    }
-
-    StartBehaviour stop() final {
-        _myDataStructure.reset();
-        return StartBehaviour::SUCCEEDED;
-    }
-
-    std::unique_ptr<MyMemoryStructure> _myDataStructure{};
-};
