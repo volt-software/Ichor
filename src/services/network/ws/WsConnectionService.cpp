@@ -27,8 +27,7 @@ Ichor::WsConnectionService::WsConnectionService(DependencyRegister &reg, Propert
     reg.registerDependency<IHttpContextService>(this, true);
     if(getProperties().contains("WsHostServiceId")) {
         reg.registerDependency<IHostService>(this, true,
-                                             Ichor::make_properties(
-                                             IchorProperty{"Filter", Ichor::make_any<Filter>(ServiceIdFilterEntry{Ichor::any_cast<uint64_t>(getProperties()["WsHostServiceId"])})}));
+                                             Properties{{"Filter", Ichor::make_any<Filter>(ServiceIdFilterEntry{Ichor::any_cast<uint64_t>(getProperties()["WsHostServiceId"])})}});
     }
 }
 

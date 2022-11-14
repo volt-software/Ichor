@@ -26,7 +26,7 @@ Ichor::StartBehaviour Ichor::HttpContextService::start() {
         _starting = true;
         _stopped = true;
         _quit = false;
-        _httpContext = std::make_unique<net::io_context>();
+        _httpContext = std::make_unique<net::io_context>(BOOST_ASIO_CONCURRENCY_HINT_UNSAFE_IO);
 
         net::spawn(*_httpContext, [this](net::yield_context yield) {
             _stopped = false;
@@ -43,11 +43,13 @@ Ichor::StartBehaviour Ichor::HttpContextService::start() {
 
         _httpThread = std::thread([this]() {
             INTERNAL_DEBUG("HttpContext started");
-            boost::system::error_code ec;
-            while (!ec && !_httpContext->stopped()) {
-                _httpContext->run(ec);
-                if (ec) {
-                    ICHOR_LOG_ERROR(_logger, "ec error {}", ec.message());
+            while (!_httpContext->stopped()) {
+                try {
+                    _httpContext->run();
+                } catch (boost::system::system_error const &e) {
+                    ICHOR_LOG_ERROR(_logger, "http io context system error {}", e.what());
+                } catch (std::exception const &e) {
+                    ICHOR_LOG_ERROR(_logger, "http io context std error {}", e.what());
                 }
             }
             _starting = false;

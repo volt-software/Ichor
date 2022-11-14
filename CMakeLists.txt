@@ -300,7 +300,12 @@ if(ICHOR_USE_BOOST_BEAST)
     target_include_directories(ichor PUBLIC ${Boost_INCLUDE_DIRS})
     target_link_directories(ichor PUBLIC ${Boost_LIBRARY_DIRS})
     target_link_libraries(ichor PUBLIC ${Boost_LIBRARIES})
-    target_compile_definitions(ichor PUBLIC BOOST_BEAST_USE_STD_STRING_VIEW)
+    target_compile_definitions(ichor PUBLIC BOOST_BEAST_USE_STD_STRING_VIEW BOOST_ASIO_NO_DEPRECATED)
+
+    if(ICHOR_USE_HARDENING OR ICHOR_ENABLE_INTERNAL_DEBUGGING)
+        target_compile_definitions(ichor PUBLIC BOOST_ASIO_ENABLE_BUFFER_DEBUGGING)
+    endif()
+
 endif()
 
 target_link_libraries(ichor PUBLIC ${CMAKE_THREAD_LIBS_INIT})

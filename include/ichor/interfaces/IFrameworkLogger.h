@@ -21,16 +21,28 @@ namespace Ichor {
     };
 
 #ifndef ICHOR_REMOVE_SOURCE_NAMES_FROM_LOGGING
-#define ICHOR_LOG_TRACE(logger, str, ...) if(logger != nullptr) logger->trace(__FILE__, __LINE__, static_cast<const char *>(__FUNCTION__), str, fmt::make_format_args(__VA_ARGS__))
-#define ICHOR_LOG_DEBUG(logger, str, ...) if(logger != nullptr) logger->debug(__FILE__, __LINE__, static_cast<const char *>(__FUNCTION__), str, fmt::make_format_args(__VA_ARGS__))
-#define ICHOR_LOG_INFO(logger, str, ...) if(logger != nullptr) logger->info(__FILE__, __LINE__, static_cast<const char *>(__FUNCTION__), str, fmt::make_format_args(__VA_ARGS__))
-#define ICHOR_LOG_WARN(logger, str, ...) if(logger != nullptr) logger->warn(__FILE__, __LINE__, static_cast<const char *>(__FUNCTION__), str, fmt::make_format_args(__VA_ARGS__))
-#define ICHOR_LOG_ERROR(logger, str, ...) if(logger != nullptr) logger->error(__FILE__, __LINE__, static_cast<const char *>(__FUNCTION__), str, fmt::make_format_args(__VA_ARGS__))
+#define ICHOR_LOG_TRACE(logger, str, ...) { if(logger != nullptr) logger->trace(__FILE__, __LINE__, static_cast<const char *>(__FUNCTION__), str, fmt::make_format_args(__VA_ARGS__)); }; static_assert(true, "")
+#define ICHOR_LOG_DEBUG(logger, str, ...) { if(logger != nullptr) logger->debug(__FILE__, __LINE__, static_cast<const char *>(__FUNCTION__), str, fmt::make_format_args(__VA_ARGS__)); }; static_assert(true, "")
+#define ICHOR_LOG_INFO(logger, str, ...) { if(logger != nullptr) logger->info(__FILE__, __LINE__, static_cast<const char *>(__FUNCTION__), str, fmt::make_format_args(__VA_ARGS__)); }; static_assert(true, "")
+#define ICHOR_LOG_WARN(logger, str, ...) { if(logger != nullptr) logger->warn(__FILE__, __LINE__, static_cast<const char *>(__FUNCTION__), str, fmt::make_format_args(__VA_ARGS__)); }; static_assert(true, "")
+#define ICHOR_LOG_ERROR(logger, str, ...) { if(logger != nullptr) logger->error(__FILE__, __LINE__, static_cast<const char *>(__FUNCTION__), str, fmt::make_format_args(__VA_ARGS__)); }; static_assert(true, "")
+
+#define ICHOR_LOG_TRACE_ATOMIC(logger, str, ...) { auto *l = logger.load(std::memory_order_acquire); if(l != nullptr) l->trace(__FILE__, __LINE__, static_cast<const char *>(__FUNCTION__), str, fmt::make_format_args(__VA_ARGS__)); }; static_assert(true, "")
+#define ICHOR_LOG_DEBUG_ATOMIC(logger, str, ...) { auto *l = logger.load(std::memory_order_acquire); if(l != nullptr) l->debug(__FILE__, __LINE__, static_cast<const char *>(__FUNCTION__), str, fmt::make_format_args(__VA_ARGS__)); }; static_assert(true, "")
+#define ICHOR_LOG_INFO_ATOMIC(logger, str, ...) { auto *l = logger.load(std::memory_order_acquire); if(l != nullptr) l->info(__FILE__, __LINE__, static_cast<const char *>(__FUNCTION__), str, fmt::make_format_args(__VA_ARGS__)); }; static_assert(true, "")
+#define ICHOR_LOG_WARN_ATOMIC(logger, str, ...) { auto *l = logger.load(std::memory_order_acquire); if(l != nullptr) l->warn(__FILE__, __LINE__, static_cast<const char *>(__FUNCTION__), str, fmt::make_format_args(__VA_ARGS__)); }; static_assert(true, "")
+#define ICHOR_LOG_ERROR_ATOMIC(logger, str, ...) { auto *l = logger.load(std::memory_order_acquire); if(l != nullptr) l->error(__FILE__, __LINE__, static_cast<const char *>(__FUNCTION__), str, fmt::make_format_args(__VA_ARGS__)); }; static_assert(true, "")
 #else
-#define ICHOR_LOG_TRACE(logger, str, ...) if(logger != nullptr) logger->trace(nullptr, 0, nullptr, str, fmt::make_format_args(__VA_ARGS__))
-#define ICHOR_LOG_DEBUG(logger, str, ...) if(logger != nullptr) logger->debug(nullptr, 0, nullptr, str, fmt::make_format_args(__VA_ARGS__))
-#define ICHOR_LOG_INFO(logger, str, ...) if(logger != nullptr) logger->info(nullptr, 0, nullptr, str, fmt::make_format_args(__VA_ARGS__))
-#define ICHOR_LOG_WARN(logger, str, ...) if(logger != nullptr) logger->warn(nullptr, 0, nullptr, str, fmt::make_format_args(__VA_ARGS__))
-#define ICHOR_LOG_ERROR(logger, str, ...) if(logger != nullptr) logger->error(nullptr, 0, nullptr, str, fmt::make_format_args(__VA_ARGS__))
+#define ICHOR_LOG_TRACE(logger, str, ...) { if(logger != nullptr) logger->trace(nullptr, 0, nullptr, str, fmt::make_format_args(__VA_ARGS__)); }; static_assert(true, "")
+#define ICHOR_LOG_DEBUG(logger, str, ...) { if(logger != nullptr) logger->debug(nullptr, 0, nullptr, str, fmt::make_format_args(__VA_ARGS__)); }; static_assert(true, "")
+#define ICHOR_LOG_INFO(logger, str, ...) { if(logger != nullptr) logger->info(nullptr, 0, nullptr, str, fmt::make_format_args(__VA_ARGS__)); }; static_assert(true, "")
+#define ICHOR_LOG_WARN(logger, str, ...) { if(logger != nullptr) logger->warn(nullptr, 0, nullptr, str, fmt::make_format_args(__VA_ARGS__)); }; static_assert(true, "")
+#define ICHOR_LOG_ERROR(logger, str, ...) { if(logger != nullptr) logger->error(nullptr, 0, nullptr, str, fmt::make_format_args(__VA_ARGS__)); }; static_assert(true, "")
+
+#define ICHOR_LOG_TRACE_ATOMIC(logger, str, ...) { auto *l = logger.load(std::memory_order_acquire); if(l != nullptr) l->trace(nullptr, 0, nullptr, str, fmt::make_format_args(__VA_ARGS__)); }; static_assert(true, "")
+#define ICHOR_LOG_DEBUG_ATOMIC(logger, str, ...) { auto *l = logger.load(std::memory_order_acquire); if(l != nullptr) l->debug(nullptr, 0, nullptr, str, fmt::make_format_args(__VA_ARGS__)); }; static_assert(true, "")
+#define ICHOR_LOG_INFO_ATOMIC(logger, str, ...) { auto *l = logger.load(std::memory_order_acquire); if(l != nullptr) l->info(nullptr, 0, nullptr, str, fmt::make_format_args(__VA_ARGS__)); }; static_assert(true, "")
+#define ICHOR_LOG_WARN_ATOMIC(logger, str, ...) { auto *l = logger.load(std::memory_order_acquire); if(l != nullptr) l->warn(nullptr, 0, nullptr, str, fmt::make_format_args(__VA_ARGS__)); }; static_assert(true, "")
+#define ICHOR_LOG_ERROR_ATOMIC(logger, str, ...) { auto *l = logger.load(std::memory_order_acquire); if(l != nullptr) l->error(nullptr, 0, nullptr, str, fmt::make_format_args(__VA_ARGS__)); }; static_assert(true, "")
 #endif
 }

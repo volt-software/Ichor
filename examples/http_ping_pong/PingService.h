@@ -18,7 +18,7 @@ using namespace Ichor;
 class PingService final : public Service<PingService> {
 public:
     PingService(DependencyRegister &reg, Properties props, DependencyManager *mng) : Service(std::move(props), mng) {
-        reg.registerDependency<ILogger>(this, true);
+        reg.registerDependency<ILogger>(this, true, Properties{{"LogLevel", Ichor::make_any<LogLevel>(LogLevel::LOG_INFO)}});
         reg.registerDependency<ISerializer<PingMsg>>(this, true);
         reg.registerDependency<IHttpConnectionService>(this, true, getProperties());
     }
@@ -91,9 +91,13 @@ private:
     AsyncGenerator<std::optional<PingMsg>> sendTestRequest(std::vector<uint8_t> &&toSendMsg) {
         auto &response = *co_await _connectionService->sendAsync(HttpMethod::post, "/ping", {}, std::move(toSendMsg)).begin();
 
+        if(_serializer == nullptr) {
+            // we're stopping, gotta bail.
+            co_return std::optional<PingMsg>{};
+        }
+
         if(response.status == HttpStatus::ok) {
             auto msg = _serializer->deserialize(std::move(response.body));
-//            ICHOR_LOG_INFO(_logger, "Received PingMsg sequence {}", msg->sequence);
             co_return msg;
         } else {
             ICHOR_LOG_ERROR(_logger, "Received status {}", (int)response.status);

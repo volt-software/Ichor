@@ -7,6 +7,11 @@
 
 namespace Ichor {
     struct ILoggerAdmin {
+        virtual void setDefaultLogLevel(LogLevel level) = 0;
+        [[nodiscard]] virtual LogLevel getDefaultLogLevel() const = 0;
+
+        protected:
+            ~ILoggerAdmin() = default;
     };
 
     template<typename LogT>
@@ -16,6 +21,15 @@ namespace Ichor {
             reg.registerDependency<IFrameworkLogger>(this, false);
         }
         ~LoggerAdmin() final = default;
+
+
+        void setDefaultLogLevel(LogLevel level) final {
+            _defaultLevel = level;
+        }
+
+        [[nodiscard]] LogLevel getDefaultLogLevel() const final {
+            return _defaultLevel;
+        }
 
     private:
         StartBehaviour start() final {
@@ -39,21 +53,16 @@ namespace Ichor {
         void handleDependencyRequest(ILogger *, DependencyRequestEvent const &evt) {
             auto logger = _loggers.find(evt.originatingService);
 
-//            ICHOR_LOG_ERROR(_logger, "dep req {} dm {}", evt.originatingService, getManager().getId());
-
-            auto requestedLevel = LogLevel::LOG_INFO;
+            auto requestedLevel = _defaultLevel;
             if(evt.properties.has_value()) {
                 auto requestedLevelIt = evt.properties.value()->find("LogLevel");
-                requestedLevel = requestedLevelIt != end(*evt.properties.value()) ? Ichor::any_cast<LogLevel>(requestedLevelIt->second) : LogLevel::LOG_INFO;
+                requestedLevel = requestedLevelIt != end(*evt.properties.value()) ? Ichor::any_cast<LogLevel>(requestedLevelIt->second) : requestedLevel;
             }
             if (logger == end(_loggers)) {
-//                ICHOR_LOG_ERROR(_logger, "creating logger for svcid {}", evt.originatingService);
                 Properties props{};
-                props.reserve(3);
-                props.template emplace<>("LogLevel",        Ichor::make_any<LogLevel>(requestedLevel));
-                props.template emplace<>("TargetServiceId", Ichor::make_any<uint64_t>(evt.originatingService));
                 props.template emplace<>("Filter",          Ichor::make_any<Filter>(Filter{ServiceIdFilterEntry{evt.originatingService}}));
-                _loggers.emplace(evt.originatingService, Service<LoggerAdmin<LogT>>::getManager().template createServiceManager<LogT, ILogger>(std::move(props)));
+                auto it = _loggers.emplace(evt.originatingService, Service<LoggerAdmin<LogT>>::getManager().template createServiceManager<LogT, ILogger>(std::move(props)));
+                it.first->second->setLogLevel(requestedLevel);
             } else {
                 ICHOR_LOG_TRACE(_logger, "svcid {} already has logger", evt.originatingService);
             }
@@ -69,5 +78,6 @@ namespace Ichor {
         IFrameworkLogger *_logger{nullptr};
         DependencyTrackerRegistration _loggerTrackerRegistration{};
         unordered_map<uint64_t, LogT*> _loggers;
+        LogLevel _defaultLevel{LogLevel::LOG_ERROR};
     };
 }

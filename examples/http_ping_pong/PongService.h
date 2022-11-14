@@ -16,7 +16,7 @@ using namespace Ichor;
 class PongService final : public Service<PongService> {
 public:
     PongService(DependencyRegister &reg, Properties props, DependencyManager *mng) : Service(std::move(props), mng) {
-        reg.registerDependency<ILogger>(this, true);
+        reg.registerDependency<ILogger>(this, true, Properties{{"LogLevel", Ichor::make_any<LogLevel>(LogLevel::LOG_INFO)}});
         reg.registerDependency<ISerializer<PingMsg>>(this, true);
         reg.registerDependency<IHttpService>(this, true);
     }

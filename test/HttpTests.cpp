@@ -20,7 +20,7 @@ using namespace Ichor;
 std::unique_ptr<Ichor::AsyncManualResetEvent> _evt;
 std::thread::id testThreadId;
 std::thread::id dmThreadId;
-bool evtGate;
+std::atomic<bool> evtGate;
 
 TEST_CASE("HttpTests") {
     SECTION("Http events on same thread") {

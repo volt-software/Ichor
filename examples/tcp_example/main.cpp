@@ -21,7 +21,6 @@ using namespace std::string_literals;
 
 int main(int argc, char *argv[]) {
     std::locale::global(std::locale("en_US.UTF-8"));
-    std::ios::sync_with_stdio(false);
 
     auto start = std::chrono::steady_clock::now();
     auto queue = std::make_unique<MultimapQueue>();
@@ -29,7 +28,7 @@ int main(int argc, char *argv[]) {
 #ifdef ICHOR_USE_SPDLOG
     dm.createServiceManager<SpdlogSharedService, ISpdlogSharedService>();
 #endif
-    dm.createServiceManager<LoggerAdmin<LOGGER_TYPE>, ILoggerAdmin>();
+    dm.createServiceManager<LoggerAdmin<LOGGER_TYPE>, ILoggerAdmin>()->setDefaultLogLevel(Ichor::LogLevel::LOG_INFO);
     dm.createServiceManager<TestMsgJsonSerializer, ISerializer<TestMsg>>();
     dm.createServiceManager<TcpHostService, IHostService>(Properties{{"Address", Ichor::make_any<std::string>("127.0.0.1"s)}, {"Port", Ichor::make_any<uint16_t>(8001)}});
     dm.createServiceManager<ClientAdmin<TcpConnectionService>, IClientAdmin>();

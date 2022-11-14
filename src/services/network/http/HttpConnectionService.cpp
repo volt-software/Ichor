@@ -20,7 +20,7 @@ Ichor::HttpConnectionService::HttpConnectionService(DependencyRegister &reg, Pro
 
 Ichor::StartBehaviour Ichor::HttpConnectionService::start() {
     if(!_httpContextService->fibersShouldStop() && !_connecting && !_connected) {
-        ICHOR_LOG_WARN(_logger, "starting svc {}", getServiceId());
+        ICHOR_LOG_WARN_ATOMIC(_logger, "starting svc {}", getServiceId());
         _quit = false;
         if (getProperties().contains("Priority")) {
             _priority = Ichor::any_cast<uint64_t>(getProperties().operator[]("Priority"));
@@ -69,25 +69,23 @@ Ichor::StartBehaviour Ichor::HttpConnectionService::stop() {
 }
 
 void Ichor::HttpConnectionService::addDependencyInstance(ILogger *logger, IService *) {
-    _logger = logger;
+    _logger.store(logger, std::memory_order_release);
 }
 
 void Ichor::HttpConnectionService::removeDependencyInstance(ILogger *logger, IService *) {
-    _logger = nullptr;
+    _logger.store(nullptr, std::memory_order_release);
 }
 
 void Ichor::HttpConnectionService::addDependencyInstance(IHttpContextService *httpContextService, IService *) {
     _httpContextService = httpContextService;
-    ICHOR_LOG_TRACE(_logger, "Inserted httpContextService");
+    ICHOR_LOG_TRACE_ATOMIC(_logger, "Inserted httpContextService");
 }
 
 void Ichor::HttpConnectionService::removeDependencyInstance(IHttpContextService *httpContextService, IService *) {
     _quit = true;
-    close();
-    while(_connected) {
+    while(!close()) {
         // sleep this thread so that this thread won´t starve other threads (especially noticeable under callgrind)
         std::this_thread::sleep_for(1ms);
-        close();
     }
     _httpContextService = nullptr;
 }
@@ -105,7 +103,7 @@ Ichor::AsyncGenerator<Ichor::HttpResponse> Ichor::HttpConnectionService::sendAsy
         throw std::runtime_error("GET requests cannot have a body.");
     }
 
-    ICHOR_LOG_DEBUG(_logger, "sending to {}", route);
+    ICHOR_LOG_DEBUG_ATOMIC(_logger, "sending to {}", route);
 
     HttpResponse response{};
     response.error = true;
@@ -163,6 +161,7 @@ Ichor::AsyncGenerator<Ichor::HttpResponse> Ichor::HttpConnectionService::sendAsy
             req.keep_alive();
 
             // Set the timeout for this operation.
+            // _httpStream should only be modified from the boost thread
             _httpStream->expires_after(30s);
             INTERNAL_DEBUG("http::write");
             http::async_write(*_httpStream, req, yield[ec]);
@@ -206,21 +205,30 @@ Ichor::AsyncGenerator<Ichor::HttpResponse> Ichor::HttpConnectionService::sendAsy
 }
 
 bool Ichor::HttpConnectionService::close() {
-    if(_httpStream != nullptr) {
-        _httpStream->cancel();
+    if(_httpStream && !_connecting.exchange(true, std::memory_order_acq_rel)) {
+        net::spawn(*_httpContextService->getContext(), [this](net::yield_context _yield) {
+            // _httpStream should only be modified from the boost thread
+            if (_httpStream != nullptr) {
+                _httpStream->cancel();
+            }
+
+            _stopping.store(true, std::memory_order_release);
+        });
     }
 
-    if(_finishedListenAndRead.load(std::memory_order_acquire) == 0) {
-        _connected = false;
+    if(_finishedListenAndRead.load(std::memory_order_acquire) == 0 && _stopping.load(std::memory_order_acquire)) {
+        _connected.store(false, std::memory_order_release);
+        _stopping.store(false, std::memory_order_release);
+        _connecting.store(false, std::memory_order_release);
         _httpStream = nullptr;
     }
 
-    return !_connected;
+    return !_connected.load(std::memory_order_acquire);
 }
 
 void Ichor::HttpConnectionService::fail(beast::error_code ec, const char *what) {
-        ICHOR_LOG_ERROR(_logger, "Boost.BEAST fail: {}, {}", what, ec.message());
-        getManager().pushPrioritisedEvent<StopServiceEvent>(getServiceId(), _priority.load(std::memory_order_acquire), getServiceId());
+    ICHOR_LOG_ERROR_ATOMIC(_logger, "Boost.BEAST fail: {}, {}", what, ec.message());
+    getManager().pushPrioritisedEvent<StopServiceEvent>(getServiceId(), _priority.load(std::memory_order_acquire), getServiceId());
 }
 
 void Ichor::HttpConnectionService::connect(tcp::endpoint endpoint, net::yield_context yield) {
@@ -228,6 +236,7 @@ void Ichor::HttpConnectionService::connect(tcp::endpoint endpoint, net::yield_co
     beast::error_code ec;
 
     tcp::resolver resolver(*_httpContextService->getContext());
+    // _httpStream should only be modified from the boost thread
     _httpStream = std::make_unique<beast::tcp_stream>(*_httpContextService->getContext());
 
     auto const results = resolver.resolve(endpoint, ec);

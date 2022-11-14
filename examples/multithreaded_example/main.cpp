@@ -18,7 +18,6 @@
 
 int main(int argc, char *argv[]) {
     std::locale::global(std::locale("en_US.UTF-8"));
-    std::ios::sync_with_stdio(false);
 
     auto start = std::chrono::steady_clock::now();
 
@@ -34,7 +33,7 @@ int main(int argc, char *argv[]) {
 #ifdef ICHOR_USE_SPDLOG
         dmOne.createServiceManager<SpdlogSharedService, ISpdlogSharedService>();
 #endif
-        dmOne.createServiceManager<LoggerAdmin<LOGGER_TYPE>, ILoggerAdmin>();
+        dmOne.createServiceManager<LoggerAdmin<LOGGER_TYPE>, ILoggerAdmin>()->setDefaultLogLevel(Ichor::LogLevel::LOG_INFO);
         dmOne.createServiceManager<OneService>();
         queueOne->start(CaptureSigInt);
     });
@@ -43,7 +42,7 @@ int main(int argc, char *argv[]) {
 #ifdef ICHOR_USE_SPDLOG
         dmTwo.createServiceManager<SpdlogSharedService, ISpdlogSharedService>();
 #endif
-        dmTwo.createServiceManager<LoggerAdmin<LOGGER_TYPE>, ILoggerAdmin>();
+        dmTwo.createServiceManager<LoggerAdmin<LOGGER_TYPE>, ILoggerAdmin>()->setDefaultLogLevel(Ichor::LogLevel::LOG_INFO);
         dmTwo.createServiceManager<OtherService>();
         queueTwo->start(CaptureSigInt);
     });
