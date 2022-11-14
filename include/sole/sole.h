@@ -306,7 +306,7 @@ namespace sole {
         uint64_t c = (cd >> 32);
         uint64_t d = (cd & 0xFFFFFFFF);
 
-        int version = (b & 0xF000) >> 12;
+        int version = static_cast<int>(b & 0xF000) >> 12;
         uint64_t timestamp = ((b & 0x0FFF) << 48 ) | (( b >> 16 ) << 32) | a; // in 100ns units
 
         ss << "version=" << (version) << ',';
@@ -330,10 +330,10 @@ namespace sole {
         std::stringstream ss;
         ss << std::hex << std::nouppercase << std::setfill('0');
 
-        uint32_t a = (ab >> 32);
-        uint32_t b = (ab & 0xFFFFFFFF);
-        uint32_t c = (cd >> 32);
-        uint32_t d = (cd & 0xFFFFFFFF);
+        auto a = static_cast<uint32_t>(ab >> 32);
+        auto b = static_cast<uint32_t>(ab & 0xFFFFFFFF);
+        auto c = static_cast<uint32_t>(cd >> 32);
+        auto d = static_cast<uint32_t>(cd & 0xFFFFFFFF);
 
         ss << std::setw(8) << (a) << '-';
         ss << std::setw(4) << (b >> 16) << '-';
@@ -656,7 +656,7 @@ namespace sole {
         uint32_t time_low = ns100_intervals & 0xffffffff;
         uint16_t time_mid = (ns100_intervals >> 32) & 0xffff;
         uint16_t time_hi_version = (ns100_intervals >> 48) & 0xfff;
-        uint8_t clock_seq_low = clock_seq & 0xff;
+        uint8_t clock_seq_low = static_cast<uint8_t>(clock_seq & 0xff);
         uint8_t clock_seq_hi_variant = (clock_seq >> 8) & 0x3f;
 
         uuid u;
@@ -694,8 +694,8 @@ namespace sole {
         uint32_t time_low = ns100_intervals & 0xffffffff;
         uint16_t time_mid = (ns100_intervals >> 32) & 0xffff;
         uint16_t time_hi_version = (ns100_intervals >> 48) & 0xfff;
-        uint8_t pid_low = pid16 & 0xff;
-        uint8_t pid_hi = (pid16 >> 8) & 0xff;
+        uint8_t pid_low = static_cast<uint8_t>(pid16 & 0xff);
+        uint8_t pid_hi = static_cast<uint8_t>((pid16 >> 8) & 0xff);
 
         uuid u;
         uint64_t &upper_ = u.ab;

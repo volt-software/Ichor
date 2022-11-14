@@ -1,4 +1,5 @@
-![example workflow](https://github.com/volt-software/Ichor/actions/workflows/cmake.yml/badge.svg)
+![CI](https://github.com/volt-software/Ichor/actions/workflows/cmake.yml/badge.svg)
+[![codecov](https://codecov.io/gh/volt-software/Ichor/branch/main/graph/badge.svg?token=ATIZ63PTFJ)](https://codecov.io/gh/volt-software/Ichor)
 
 # What is this?
 

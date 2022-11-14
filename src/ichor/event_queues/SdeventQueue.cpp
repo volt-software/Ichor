@@ -85,7 +85,7 @@ namespace Ichor {
                 throw std::system_error(-ret, std::generic_category(), "sd_event_add_defer() failed");
             }
 
-            ret = sd_event_source_set_priority(src, static_cast<std::make_signed_t<uint64_t>>(priority) - INTERNAL_EVENT_PRIORITY);
+            ret = sd_event_source_set_priority(src, static_cast<int64_t>(priority) - static_cast<int64_t>(INTERNAL_EVENT_PRIORITY));
 
             if (ret < 0) {
                 throw std::system_error(-ret, std::generic_category(), "sd_event_source_set_priority() failed");
