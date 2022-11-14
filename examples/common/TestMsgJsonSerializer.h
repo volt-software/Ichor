@@ -74,7 +74,7 @@ public:
             if(sr.done()) {
                 break;
             }
-            ret.resize(ret.capacity()*1.5);
+            ret.resize(static_cast<unsigned long>(static_cast<double>(ret.capacity()) * 1.5));
         }
         ret.resize(len);
 

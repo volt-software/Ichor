@@ -24,7 +24,7 @@ GlobalRealtimeSettings::GlobalRealtimeSettings() {
         if(dma_latency_file == -1) {
             std::terminate();
         }
-        int ret = write(dma_latency_file, &target_latency, 4);
+        auto ret = write(dma_latency_file, &target_latency, 4);
         if(ret == -1) {
             std::terminate();
         }
@@ -58,7 +58,7 @@ GlobalRealtimeSettings::GlobalRealtimeSettings() {
             reenable_smt = false;
             close(smt_file);
         } else {
-            int ret = write(smt_file, target_control, 3);
+            auto ret = write(smt_file, target_control, 3);
             if (ret == -1) {
                 std::terminate();
             }
@@ -82,7 +82,7 @@ GlobalRealtimeSettings::~GlobalRealtimeSettings() {
 
     if(reenable_smt) {
         const char *target_control = "on";
-        int ret = write(smt_file, target_control, 3);
+        auto ret = write(smt_file, target_control, 3);
         if (ret == -1) {
             std::terminate();
         }

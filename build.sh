@@ -16,6 +16,11 @@ if [[ "$1" == "--dev" ]]; then
   cppcompilers=("clang++" "g++")
 fi
 
+if [[ "$1" == "--gcc" ]]; then
+  ccompilers=("gcc")
+  cppcompilers=("g++")
+fi
+
 curr=`basename $(pwd)`
 
 if [[ "$curr" != "build" ]]; then
