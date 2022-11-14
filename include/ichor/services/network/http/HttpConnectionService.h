@@ -57,11 +57,12 @@ namespace Ichor {
         std::atomic<uint64_t> _priority{INTERNAL_EVENT_PRIORITY};
         std::atomic<bool> _quit{};
         std::atomic<bool> _connecting{};
+        std::atomic<bool> _stopping{};
         std::atomic<bool> _connected{};
         std::atomic<bool> _tcpNoDelay{};
         std::atomic<int64_t> _finishedListenAndRead{};
         int _attempts{};
-        ILogger *_logger{nullptr};
+        std::atomic<ILogger*> _logger{nullptr};
         IHttpContextService *_httpContextService{nullptr};
         boost::circular_buffer<Detail::ConnectionOutboxMessage> _outbox{10};
     };

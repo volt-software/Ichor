@@ -42,14 +42,15 @@ Ichor::StartBehaviour Ichor::HttpHostService::stop() {
             _httpAcceptor->close();
         }
         net::spawn(*_httpContextService->getContext(), [this](net::yield_context _yield) {
+            ScopeGuardAtomicCount guard{_finishedListenAndRead};
             // _httpStreams should only be modified from the boost thread
             for (auto &[id, stream]: _httpStreams) {
                 stream->cancel();
             }
-        });
 
-        _httpAcceptor = nullptr;
-        _cleanedupStream = true;
+            _httpAcceptor = nullptr;
+            _cleanedupStream = true;
+        });
     }
 
     if(_finishedListenAndRead.load(std::memory_order_acquire) != 0 || !_cleanedupStream) {
@@ -62,20 +63,20 @@ Ichor::StartBehaviour Ichor::HttpHostService::stop() {
 }
 
 void Ichor::HttpHostService::addDependencyInstance(ILogger *logger, IService *) {
-    _logger = logger;
+    _logger.store(logger, std::memory_order_release);
 }
 
 void Ichor::HttpHostService::removeDependencyInstance(ILogger *logger, IService *) {
-    _logger = nullptr;
+    _logger.store(nullptr, std::memory_order_release);
 }
 
 void Ichor::HttpHostService::addDependencyInstance(IHttpContextService *httpContextService, IService *) {
     _httpContextService = httpContextService;
-    ICHOR_LOG_TRACE(_logger, "Inserted httpContextService");
+    ICHOR_LOG_TRACE_ATOMIC(_logger, "Inserted httpContextService");
 }
 
 void Ichor::HttpHostService::removeDependencyInstance(IHttpContextService *httpContextService, IService *) {
-    ICHOR_LOG_TRACE(_logger, "Removing httpContextService");
+    ICHOR_LOG_TRACE_ATOMIC(_logger, "Removing httpContextService");
     stop();
     while(_finishedListenAndRead.load(std::memory_order_acquire) != 0) {
         // sleep this thread so that this thread won´t starve other threads (especially noticeable under callgrind)
@@ -122,7 +123,7 @@ void Ichor::HttpHostService::removeRoute(HttpMethod method, std::string_view rou
 }
 
 void Ichor::HttpHostService::fail(beast::error_code ec, const char *what, bool stopSelf) {
-    ICHOR_LOG_ERROR(_logger, "Boost.BEAST fail: {}, {}", what, ec.message());
+    ICHOR_LOG_ERROR_ATOMIC(_logger, "Boost.BEAST fail: {}, {}", what, ec.message());
     if(stopSelf) {
         getManager().pushPrioritisedEvent<StopServiceEvent>(getServiceId(), _priority.load(std::memory_order_acquire), getServiceId());
     }
@@ -177,7 +178,7 @@ void Ichor::HttpHostService::listen(tcp::endpoint endpoint, net::yield_context y
         });
     }
 
-    ICHOR_LOG_WARN(_logger, "finished listen() {} {}", _quit, _httpContextService->fibersShouldStop());
+    ICHOR_LOG_WARN_ATOMIC(_logger, "finished listen() {} {}", _quit, _httpContextService->fibersShouldStop());
     stop();
 }
 
@@ -221,7 +222,7 @@ void Ichor::HttpHostService::read(tcp::socket socket, net::yield_context yield) 
             continue;
         }
 
-        ICHOR_LOG_TRACE(_logger, "New request for {} {}", (int) req.method(), req.target());
+        ICHOR_LOG_TRACE_ATOMIC(_logger, "New request for {} {}", (int) req.method(), req.target());
 
         std::vector<HttpHeader> headers{};
         headers.reserve(std::distance(std::begin(req), std::end(req)));
@@ -249,7 +250,7 @@ void Ichor::HttpHostService::read(tcp::socket socket, net::yield_context yield) 
                         res.set(header.value, header.name);
                     }
                     res.keep_alive(keep_alive);
-                    ICHOR_LOG_TRACE(_logger, "sending http response {} - {}", (int) httpRes.status,
+                    ICHOR_LOG_TRACE_ATOMIC(_logger, "sending http response {} - {}", (int) httpRes.status,
                                     std::string_view(reinterpret_cast<char *>(httpRes.body.data()), httpRes.body.size()));
 
                     res.body() = std::move(httpRes.body);
@@ -274,7 +275,7 @@ void Ichor::HttpHostService::read(tcp::socket socket, net::yield_context yield) 
     _httpStreams.erase(streamId);
 
     // At this point the connection is closed gracefully
-    ICHOR_LOG_WARN(_logger, "finished read() {} {}", _quit, _httpContextService->fibersShouldStop());
+    ICHOR_LOG_WARN_ATOMIC(_logger, "finished read() {} {}", _quit, _httpContextService->fibersShouldStop());
 }
 
 void Ichor::HttpHostService::sendInternal(uint64_t streamId, http::response<http::vector_body<uint8_t>, http::basic_fields<std::allocator<uint8_t>>> &&res) {
@@ -301,7 +302,7 @@ void Ichor::HttpHostService::sendInternal(uint64_t streamId, http::response<http
             auto streamIt = _httpStreams.find(next.streamId);
 
             if (streamIt == end(_httpStreams)) {
-                ICHOR_LOG_WARN(_logger, "http stream id {} already disconnected, cannot send response {} {} {}", streamId, _httpStreams.size(), _outbox.size(), _outbox.capacity());
+                ICHOR_LOG_WARN_ATOMIC(_logger, "http stream id {} already disconnected, cannot send response {} {} {}", streamId, _httpStreams.size(), _outbox.size(), _outbox.capacity());
                 _outbox.pop_front();
                 continue;
             }

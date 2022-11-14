@@ -115,19 +115,7 @@ namespace Ichor {
 #endif
 
     using Properties = unordered_map<std::string, Ichor::any, string_hash>;
-    using IchorProperty = std::pair<std::string, Ichor::any>;
 
     inline constexpr bool PreventOthersHandling = false;
     inline constexpr bool AllowOthersHandling = true;
-
-    template <class T>
-    concept Pair = std::is_same_v<T, IchorProperty>;
-
-    template <Pair... Pairs>
-    Properties make_properties( Pairs&&... pairs) {
-        Properties props{};
-        props.reserve(sizeof...(Pairs));
-        (props.emplace(std::move(pairs.first), std::move(pairs.second)), ...);
-        return props;
-    }
 }

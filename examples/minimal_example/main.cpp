@@ -42,7 +42,6 @@ private:
 
 int main(int argc, char *argv[]) {
     std::locale::global(std::locale("en_US.UTF-8")); // some loggers require having a locale
-    std::ios::sync_with_stdio(false); // Nothing in Ichor uses c-style prints. See https://en.cppreference.com/w/cpp/io/ios_base/sync_with_stdio for more info.
 
     auto queue = std::make_unique<MultimapQueue>();
     auto &dm = queue->createManager();

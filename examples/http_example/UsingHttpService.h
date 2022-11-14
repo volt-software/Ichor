@@ -92,6 +92,11 @@ private:
         ICHOR_LOG_INFO(_logger, "sendTestRequest");
         auto &response = *co_await _connectionService->sendAsync(HttpMethod::post, "/test", {}, std::move(toSendMsg)).begin();
 
+        if(_serializer == nullptr) {
+            // we're stopping, gotta bail.
+            co_return;
+        }
+
         if(response.status == HttpStatus::ok) {
             auto msg = _serializer->deserialize(std::move(response.body));
             ICHOR_LOG_INFO(_logger, "Received TestMsg id {} val {}", msg->id, msg->val);

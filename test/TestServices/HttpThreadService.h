@@ -15,7 +15,7 @@
 using namespace Ichor;
 
 extern std::unique_ptr<Ichor::AsyncManualResetEvent> _evt;
-extern bool evtGate;
+extern std::atomic<bool> evtGate;
 extern std::thread::id testThreadId;
 extern std::thread::id dmThreadId;
 
@@ -109,6 +109,11 @@ private:
 
     AsyncGenerator<void> sendTestRequest(std::vector<uint8_t> &&toSendMsg) {
         auto &response = *co_await _connectionService->sendAsync(HttpMethod::post, "/test", {}, std::move(toSendMsg)).begin();
+
+        if(_serializer == nullptr) {
+            // we're stopping, gotta bail.
+            co_return;
+        }
 
         if(response.status == HttpStatus::ok) {
             auto msg = _serializer->deserialize(std::move(response.body));
