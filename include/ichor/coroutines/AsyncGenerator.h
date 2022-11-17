@@ -25,7 +25,8 @@ namespace Ichor {
             AsyncGeneratorAdvanceOperation(std::nullptr_t) noexcept
                 : _promise(nullptr)
                 , _producerCoroutine(nullptr)
-            {}
+            {
+            }
 
             AsyncGeneratorAdvanceOperation(
                 AsyncGeneratorPromiseBase& promise,
@@ -113,7 +114,8 @@ namespace Ichor {
             AsyncGeneratorIncrementOperation(AsyncGeneratorIterator<T>& iterator) noexcept
                 : AsyncGeneratorAdvanceOperation(iterator._coroutine.promise(), iterator._coroutine)
                 , _iterator(iterator)
-            {}
+            {
+            }
 
             AsyncGeneratorIterator<T>& await_resume();
 
@@ -186,11 +188,13 @@ namespace Ichor {
 
             AsyncGeneratorBeginOperation(std::nullptr_t) noexcept
                 : AsyncGeneratorAdvanceOperation(nullptr)
-            {}
+            {
+            }
 
             AsyncGeneratorBeginOperation(handle_type producerCoroutine) noexcept
                 : AsyncGeneratorAdvanceOperation(producerCoroutine.promise(), producerCoroutine)
-            {}
+            {
+            }
 
             ~AsyncGeneratorBeginOperation() final = default;
 
@@ -465,7 +469,6 @@ namespace Ichor::Detail {
 
         INTERNAL_DEBUG("yield_value {}", _id);
         _currentValue.emplace(std::move(value));
-        Ichor::Detail::_local_dm->pushPrioritisedEvent<Ichor::ContinuableEvent>(0u, INTERNAL_DEPENDENCY_EVENT_PRIORITY, _id);
         return internal_yield_value();
     }
 
@@ -482,7 +485,6 @@ namespace Ichor::Detail {
 
         INTERNAL_DEBUG("yield_value {}", _id);
         _currentValue.emplace(std::forward<T>(value));
-        Ichor::Detail::_local_dm->pushPrioritisedEvent<Ichor::ContinuableEvent>(0u, INTERNAL_DEPENDENCY_EVENT_PRIORITY, _id);
         return internal_yield_value();
     }
 
@@ -499,7 +501,6 @@ namespace Ichor::Detail {
 
         INTERNAL_DEBUG("return_value {}", _id);
         _currentValue.emplace(std::move(value));
-        Ichor::Detail::_local_dm->pushPrioritisedEvent<Ichor::ContinuableEvent>(0u, INTERNAL_DEPENDENCY_EVENT_PRIORITY, _id);
     }
 
     template <typename T>
@@ -515,7 +516,6 @@ namespace Ichor::Detail {
 
         INTERNAL_DEBUG("return_value {}", _id);
         _currentValue.emplace(std::forward<T>(value));
-        Ichor::Detail::_local_dm->pushPrioritisedEvent<Ichor::ContinuableEvent>(0u, INTERNAL_DEPENDENCY_EVENT_PRIORITY, _id);
     }
 
     inline AsyncGeneratorYieldOperation AsyncGeneratorPromise<void>::yield_value(Empty) noexcept {
@@ -528,7 +528,9 @@ namespace Ichor::Detail {
         }
 #endif
 
-        Ichor::Detail::_local_dm->pushPrioritisedEvent<Ichor::ContinuableEvent>(0u, INTERNAL_DEPENDENCY_EVENT_PRIORITY, _id);
+        if(!finished()) {
+            Ichor::Detail::_local_dm->pushPrioritisedEvent<Ichor::ContinuableEvent>(0u, INTERNAL_DEPENDENCY_EVENT_PRIORITY, _id);
+        }
         return internal_yield_value();
     }
 
@@ -542,7 +544,9 @@ namespace Ichor::Detail {
         }
 #endif
 
-        Ichor::Detail::_local_dm->pushPrioritisedEvent<Ichor::ContinuableEvent>(0u, INTERNAL_DEPENDENCY_EVENT_PRIORITY, _id);
+        if(!finished()) {
+            Ichor::Detail::_local_dm->pushPrioritisedEvent<Ichor::ContinuableEvent>(0u, INTERNAL_DEPENDENCY_EVENT_PRIORITY, _id);
+        }
     }
 
     inline AsyncGenerator<void> AsyncGeneratorPromise<void>::get_return_object() noexcept {

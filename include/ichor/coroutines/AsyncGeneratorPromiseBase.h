@@ -128,7 +128,8 @@ namespace Ichor::Detail {
         AsyncGeneratorYieldOperation(AsyncGeneratorPromiseBase& promise, state initialState) noexcept
                 : _promise(promise)
                 , _initialState(initialState)
-        {}
+        {
+        }
 
         bool await_ready() const noexcept {
             return _initialState == state::value_not_ready_consumer_suspended;
@@ -136,7 +137,8 @@ namespace Ichor::Detail {
 
         bool await_suspend(std::coroutine_handle<> producer) noexcept;
 
-        void await_resume() noexcept {}
+        void await_resume() noexcept {
+        }
 
     private:
         AsyncGeneratorPromiseBase& _promise;

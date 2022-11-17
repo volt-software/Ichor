@@ -6,6 +6,7 @@
 #include <ichor/services/network/http/HttpHostService.h>
 #include <ichor/services/network/http/HttpContextService.h>
 #include <ichor/services/serialization/ISerializer.h>
+#include <ichor/services/logging/NullLogger.h>
 
 #ifdef ICHOR_USE_SPDLOG
 #include <ichor/services/logging/SpdlogFrameworkLogger.h>
@@ -49,10 +50,12 @@ int main(int argc, char *argv[]) {
     std::locale::global(std::locale("en_US.UTF-8"));
 
     uint64_t verbosity{};
+    bool silent{};
     bool showHelp{};
 
     auto cli = lyra::help(showHelp)
-               | lyra::opt([&verbosity](bool) { verbosity++; })["-v"]["--verbose"]("Increase logging for each -v").cardinality(0, 4);
+               | lyra::opt([&verbosity](bool) { verbosity++; })["-v"]["--verbose"]("Increase logging for each -v").cardinality(0, 4)
+               | lyra::opt(silent)["-s"]["--silent"]("No output");
 
     auto result = cli.parse( { argc, argv } );
     if (!result) {
@@ -79,8 +82,12 @@ int main(int argc, char *argv[]) {
     dm.createServiceManager<SpdlogSharedService, ISpdlogSharedService>();
 #endif
 
-    auto *admin = dm.createServiceManager<LoggerAdmin<LOGGER_TYPE>, ILoggerAdmin>();
-    setLevel(verbosity, admin);
+    if(silent) {
+        dm.createServiceManager<LoggerAdmin<NullLogger>, ILoggerAdmin>();
+    } else {
+        auto *admin = dm.createServiceManager<LoggerAdmin<LOGGER_TYPE>, ILoggerAdmin>();
+        setLevel(verbosity, admin);
+    }
 
     dm.createServiceManager<PingMsgJsonSerializer, ISerializer<PingMsg>>();
     dm.createServiceManager<HttpContextService, IHttpContextService>();
