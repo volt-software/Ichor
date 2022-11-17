@@ -15,6 +15,7 @@ constexpr uint32_t SERDE_COUNT = 1'000'000;
 #endif
 
 using namespace Ichor;
+extern uint64_t sizeof_test;
 
 class TestService final : public Service<TestService> {
 public:
@@ -59,6 +60,7 @@ private:
     void handleCompletion(DoWorkEvent const &evt) {
         ICHOR_LOG_ERROR(_logger, "handling DoWorkEvent");
         TestMsg msg{20, "five hundred"};
+        sizeof_test = _serializer->serialize(msg).size();
         auto start = std::chrono::steady_clock::now();
         for(uint64_t i = 0; i < SERDE_COUNT; i++) {
             auto res = _serializer->serialize(msg);

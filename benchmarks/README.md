@@ -5,53 +5,53 @@ Setup: AMD 7950X, 6000MHz@CL38 RAM, ubuntu 22.04, gcc 11.3
 
 | Compile<br/>Options           |      coroutines      |                  events |                  start |         start & stop | 
 |-------------------------------|:--------------------:|------------------------:|-----------------------:|---------------------:|
-| std containers<br/>std alloc  | 1,181,501 µs<br/>5MB | 1,800,140 µs<br/>5765MB | 4,243,344 µs<br/>265MB | 1,377,814 µs<br/>5MB |
-| absl containers<br/>std alloc | 1,993,405 µs<br/>5MB | 1,339,492 µs<br/>3725MB | 2,474,879 µs<br/>200MB | 2,322,150 µs<br/>5MB |
-| std containers<br/>mimalloc   | 1,040,090 µs<br/>6MB |   800,751 µs<br/>4597MB | 2,912,374 µs<br/>244MB | 1,183,614 µs<br/>6MB |
-| absl containers<br/>mimalloc  | 1,892,567 µs<br/>6MB |   662,971 µs<br/>3350MB | 2,407,267 µs<br/>185MB | 2,061,239 µs<br/>6MB |
+| std containers<br/>std alloc  | 1,221,534 µs<br/>5MB | 1,726,927 µs<br/>5765MB | 4,121,798 µs<br/>237MB | 1,369,609 µs<br/>5MB |
+| absl containers<br/>std alloc | 1,914,536 µs<br/>5MB | 1,450,696 µs<br/>3725MB | 1,240,699 µs<br/>171MB | 1,944,217 µs<br/>5MB |
+| std containers<br/>mimalloc   | 1,030,269 µs<br/>6MB |   772,448 µs<br/>4596MB | 2,860,991 µs<br/>227MB | 1,100,787 µs<br/>6MB |
+| absl containers<br/>mimalloc  | 2,027,534 µs<br/>6MB |   745,321 µs<br/>3350MB | 1,221,573 µs<br/>162MB | 1,931,636 µs<br/>6MB |
 
 Detailed data:
 ```
-../std_std/ichor_coroutine_benchmark single threaded ran for 726,930 µs with 2,048,000 peak memory usage
-../std_std/ichor_coroutine_benchmark multi threaded ran for 1,181,501 µs with 4,980,736 peak memory usage
-../std_std/ichor_event_benchmark single threaded ran for 1,027,811 µs with 644,333,568 peak memory usage
-../std_std/ichor_event_benchmark multi threaded ran for 1,800,140 µs with 5,764,935,680 peak memory usage
-../std_std/ichor_serializer_benchmark single threaded ran for 126,093 µs with 4,472,832 peak memory usage
-../std_std/ichor_serializer_benchmark multi threaded ran for 160,487 µs with 5,021,696 peak memory usage
-../std_std/ichor_start_benchmark single threaded ran for 1,506,940 µs with 33,914,880 peak memory usage
-../std_std/ichor_start_benchmark multi threaded ran for 4,243,344 µs with 264,970,240 peak memory usage
-../std_std/ichor_start_stop_benchmark single threaded ran for 708,308 µs with 2,048,000 peak memory usage
-../std_std/ichor_start_stop_benchmark multi threaded ran for 1,377,814 µs with 4,997,120 peak memory usage
-../std_mimalloc/ichor_coroutine_benchmark single threaded ran for 532,867 µs with 4,370,432 peak memory usage
-../std_mimalloc/ichor_coroutine_benchmark multi threaded ran for 1,040,090 µs with 6,201,344 peak memory usage
-../std_mimalloc/ichor_event_benchmark single threaded ran for 543,139 µs with 566,661,120 peak memory usage
-../std_mimalloc/ichor_event_benchmark multi threaded ran for 800,751 µs with 4,597,104,640 peak memory usage
-../std_mimalloc/ichor_serializer_benchmark single threaded ran for 100,978 µs with 4,419,584 peak memory usage
-../std_mimalloc/ichor_serializer_benchmark multi threaded ran for 105,303 µs with 6,664,192 peak memory usage
-../std_mimalloc/ichor_start_benchmark single threaded ran for 1,265,096 µs with 31,125,504 peak memory usage
-../std_mimalloc/ichor_start_benchmark multi threaded ran for 2,912,374 µs with 244,310,016 peak memory usage
-../std_mimalloc/ichor_start_stop_benchmark single threaded ran for 571,592 µs with 4,378,624 peak memory usage
-../std_mimalloc/ichor_start_stop_benchmark multi threaded ran for 1,183,614 µs with 6,320,128 peak memory usage
-../absl_std/ichor_coroutine_benchmark single threaded ran for 829,385 µs with 2,105,344 peak memory usage
-../absl_std/ichor_coroutine_benchmark multi threaded ran for 1,993,405 µs with 5,038,080 peak memory usage
-../absl_std/ichor_event_benchmark single threaded ran for 494,519 µs with 417,583,104 peak memory usage
-../absl_std/ichor_event_benchmark multi threaded ran for 1,339,492 µs with 3,725,058,048 peak memory usage
-../absl_std/ichor_serializer_benchmark single threaded ran for 124,899 µs with 4,542,464 peak memory usage
-../absl_std/ichor_serializer_benchmark multi threaded ran for 144,409 µs with 5,107,712 peak memory usage
-../absl_std/ichor_start_benchmark single threaded ran for 2,275,728 µs with 26,370,048 peak memory usage
-../absl_std/ichor_start_benchmark multi threaded ran for 2,474,879 µs with 200,626,176 peak memory usage
-../absl_std/ichor_start_stop_benchmark single threaded ran for 831,378 µs with 4,550,656 peak memory usage
-../absl_std/ichor_start_stop_benchmark multi threaded ran for 2,322,150 µs with 5,091,328 peak memory usage
-../absl_mimalloc/ichor_coroutine_benchmark single threaded ran for 707,157 µs with 4,333,568 peak memory usage
-../absl_mimalloc/ichor_coroutine_benchmark multi threaded ran for 1,892,567 µs with 6,340,608 peak memory usage
-../absl_mimalloc/ichor_event_benchmark single threaded ran for 433,040 µs with 414,236,672 peak memory usage
-../absl_mimalloc/ichor_event_benchmark multi threaded ran for 662,971 µs with 3,349,970,944 peak memory usage
-../absl_mimalloc/ichor_serializer_benchmark single threaded ran for 93,149 µs with 4,321,280 peak memory usage
-../absl_mimalloc/ichor_serializer_benchmark multi threaded ran for 126,922 µs with 6,889,472 peak memory usage
-../absl_mimalloc/ichor_start_benchmark single threaded ran for 2,102,909 µs with 24,690,688 peak memory usage
-../absl_mimalloc/ichor_start_benchmark multi threaded ran for 2,407,267 µs with 184,938,496 peak memory usage
-../absl_mimalloc/ichor_start_stop_benchmark single threaded ran for 699,493 µs with 4,313,088 peak memory usage
-../absl_mimalloc/ichor_start_stop_benchmark multi threaded ran for 2,061,239 µs with 6,365,184 peak memory usage
+../std_std/ichor_coroutine_benchmark single threaded ran for 788,072 µs with 2,060,288 peak memory usage 6,344,597 coroutines/s
+../std_std/ichor_coroutine_benchmark multi threaded ran for 1,221,534 µs with 4,972,544 peak memory usage 32,745,711 coroutines/s
+../std_std/ichor_event_benchmark single threaded ran for 1,021,796 µs with 644,202,496 peak memory usage 4,893,344 events/s
+../std_std/ichor_event_benchmark multi threaded ran for 1,726,927 µs with 5,764,931,584 peak memory usage 23,162,530 events/s
+../std_std/ichor_serializer_benchmark single threaded ran for 128,512 µs with 4,349,952 peak memory usage 241,222,609 B/s
+../std_std/ichor_serializer_benchmark multi threaded ran for 170,078 µs with 5,050,368 peak memory usage 1,458,154,493 B/s
+../std_std/ichor_start_benchmark single threaded ran for 1,355,569 µs with 30,830,592 peak memory usage
+../std_std/ichor_start_benchmark multi threaded ran for 4,121,798 µs with 237,264,896 peak memory usage
+../std_std/ichor_start_stop_benchmark single threaded ran for 729,747 µs with 2,064,384 peak memory usage 1,370,337 start & stop /s
+../std_std/ichor_start_stop_benchmark multi threaded ran for 1,369,609 µs with 4,988,928 peak memory usage 5,841,083 start & stop /s
+../std_mimalloc/ichor_coroutine_benchmark single threaded ran for 526,518 µs with 4,382,720 peak memory usage 9,496,351 coroutines/s
+../std_mimalloc/ichor_coroutine_benchmark multi threaded ran for 1,030,269 µs with 6,266,880 peak memory usage 38,824,811 coroutines/s
+../std_mimalloc/ichor_event_benchmark single threaded ran for 530,509 µs with 566,640,640 peak memory usage 9,424,910 events/s
+../std_mimalloc/ichor_event_benchmark multi threaded ran for 772,448 µs with 4,595,884,032 peak memory usage 51,783,421 events/s
+../std_mimalloc/ichor_serializer_benchmark single threaded ran for 89,272 µs with 4,423,680 peak memory usage 347,253,338 B/s
+../std_mimalloc/ichor_serializer_benchmark multi threaded ran for 109,884 µs with 6,721,536 peak memory usage 2,256,925,485 B/s
+../std_mimalloc/ichor_start_benchmark single threaded ran for 1,081,355 µs with 29,233,152 peak memory usage
+../std_mimalloc/ichor_start_benchmark multi threaded ran for 2,860,991 µs with 226,861,056 peak memory usage
+../std_mimalloc/ichor_start_stop_benchmark single threaded ran for 566,299 µs with 4,407,296 peak memory usage 1,765,851 start & stop /s
+../std_mimalloc/ichor_start_stop_benchmark multi threaded ran for 1,100,787 µs with 6,275,072 peak memory usage 7,267,527 start & stop /s
+../absl_std/ichor_coroutine_benchmark single threaded ran for 781,776 µs with 2,121,728 peak memory usage 6,395,693 coroutines/s
+../absl_std/ichor_coroutine_benchmark multi threaded ran for 1,914,536 µs with 5,009,408 peak memory usage 20,892,790 coroutines/s
+../absl_std/ichor_event_benchmark single threaded ran for 490,068 µs with 417,484,800 peak memory usage 10,202,665 events/s
+../absl_std/ichor_event_benchmark multi threaded ran for 1,450,696 µs with 3,725,062,144 peak memory usage 27,572,971 events/s
+../absl_std/ichor_serializer_benchmark single threaded ran for 125,925 µs with 4,411,392 peak memory usage 246,178,280 B/s
+../absl_std/ichor_serializer_benchmark multi threaded ran for 257,721 µs with 5,111,808 peak memory usage 962,280,916 B/s
+../absl_std/ichor_start_benchmark single threaded ran for 1,221,086 µs with 22,859,776 peak memory usage
+../absl_std/ichor_start_benchmark multi threaded ran for 1,240,699 µs with 171,200,512 peak memory usage
+../absl_std/ichor_start_stop_benchmark single threaded ran for 839,179 µs with 2,117,632 peak memory usage 1,191,640 start & stop /s
+../absl_std/ichor_start_stop_benchmark multi threaded ran for 1,944,217 µs with 5,070,848 peak memory usage 4,114,767 start & stop /s
+../absl_mimalloc/ichor_coroutine_benchmark single threaded ran for 623,569 µs with 4,337,664 peak memory usage 8,018,358 coroutines/s
+../absl_mimalloc/ichor_coroutine_benchmark multi threaded ran for 2,027,534 µs with 6,447,104 peak memory usage 19,728,399 coroutines/s
+../absl_mimalloc/ichor_event_benchmark single threaded ran for 423,526 µs with 414,257,152 peak memory usage 11,805,650 events/s
+../absl_mimalloc/ichor_event_benchmark multi threaded ran for 745,321 µs with 3,350,261,760 peak memory usage 53,668,151 events/s
+../absl_mimalloc/ichor_serializer_benchmark single threaded ran for 90,178 µs with 4,358,144 peak memory usage 343,764,554 B/s
+../absl_mimalloc/ichor_serializer_benchmark multi threaded ran for 109,462 µs with 6,828,032 peak memory usage 2,265,626,427 B/s
+../absl_mimalloc/ichor_start_benchmark single threaded ran for 1,220,268 µs with 21,995,520 peak memory usage
+../absl_mimalloc/ichor_start_benchmark multi threaded ran for 1,221,573 µs with 161,972,224 peak memory usage
+../absl_mimalloc/ichor_start_stop_benchmark single threaded ran for 629,772 µs with 4,304,896 peak memory usage 1,587,876 start & stop /s
+../absl_mimalloc/ichor_start_stop_benchmark multi threaded ran for 1,931,636 µs with 6,365,184 peak memory usage 4,141,567 start & stop /s
 ```
 
 Realtime example on a vanilla linux:

@@ -9,6 +9,8 @@
 #include <thread>
 #include <array>
 
+uint64_t sizeof_test{};
+
 int main(int argc, char *argv[]) {
     std::locale::global(std::locale("en_US.UTF-8"));
 
@@ -21,7 +23,8 @@ int main(int argc, char *argv[]) {
         dm.createServiceManager<TestService>();
         queue->start(CaptureSigInt);
         auto end = std::chrono::steady_clock::now();
-        std::cout << fmt::format("{} single threaded ran for {:L} µs with {:L} peak memory usage\n", argv[0], std::chrono::duration_cast<std::chrono::microseconds>(end - start).count(), getPeakRSS());
+        std::cout << fmt::format("{} single threaded ran for {:L} µs with {:L} peak memory usage {:L} B/s\n", argv[0], std::chrono::duration_cast<std::chrono::microseconds>(end - start).count(), getPeakRSS(),
+                                 std::floor(1'000'000. / static_cast<double>(std::chrono::duration_cast<std::chrono::microseconds>(end - start).count()) * SERDE_COUNT * static_cast<double>(sizeof_test)));
     }
 
     {
@@ -41,8 +44,9 @@ int main(int argc, char *argv[]) {
             threads[i].join();
         }
         auto end = std::chrono::steady_clock::now();
-        std::cout << fmt::format("{} multi threaded ran for {:L} µs with {:L} peak memory usage\n",
-                                 argv[0], std::chrono::duration_cast<std::chrono::microseconds>(end - start).count(), getPeakRSS());
+        std::cout << fmt::format("{} multi threaded ran for {:L} µs with {:L} peak memory usage {:L} B/s\n",
+                                 argv[0], std::chrono::duration_cast<std::chrono::microseconds>(end - start).count(), getPeakRSS(),
+                                 std::floor(1'000'000. / static_cast<double>(std::chrono::duration_cast<std::chrono::microseconds>(end - start).count()) * SERDE_COUNT * 8. * static_cast<double>(sizeof_test)));
     }
 
     return 0;

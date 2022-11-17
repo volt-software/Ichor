@@ -83,16 +83,19 @@ namespace Ichor {
 
 
 #ifdef ICHOR_USE_ABSEIL
+    // We use std::hash instead of absl::hash because a lot of Ichor uses various ints as keys
+    // and absl::hash opts to hash those instead of using an identity function. This gives better
+    // avalanching, at the cost of performance. Ichor doesn't need avalanching in its use-cases.
     template <
             class Key,
             class T,
-            class Hash = absl::Hash<Key>,
+            class Hash = std::hash<Key>,
             class KeyEqual = std::equal_to<Key>,
             class Allocator = std::allocator<std::pair<const Key, T>>>
     using unordered_map = absl::flat_hash_map<Key, T, Hash, KeyEqual, Allocator>;
     template <
             class T,
-            class Hash = absl::Hash<T>,
+            class Hash = std::hash<T>,
             class Eq = std::equal_to<T>,
             class Allocator = std::allocator<T>>
     using unordered_set = absl::flat_hash_set<T, Hash, Eq, Allocator>;
