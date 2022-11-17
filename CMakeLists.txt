@@ -191,7 +191,12 @@ if(ICHOR_USE_SANITIZERS)
         target_compile_options(ichor PUBLIC /fsanitize=address)
     else()
         target_compile_options(ichor PUBLIC -fsanitize=address,undefined -fno-omit-frame-pointer)
-        target_link_options(ichor PUBLIC -fsanitize=address,undefined -no-pie)
+        target_link_options(ichor PUBLIC -fsanitize=address,undefined)
+
+        # clang on OSX doesn't accept -no-pie for some reason
+        if(NOT APPLE)
+            target_link_options(ichor PUBLIC -no-pie)
+        endif()
 
         if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
             target_compile_options(ichor PUBLIC -no-pie)
@@ -205,7 +210,12 @@ endif()
 
 if(ICHOR_USE_THREAD_SANITIZER)
     target_compile_options(ichor PUBLIC -fsanitize=thread -fno-omit-frame-pointer)
-    target_link_options(ichor PUBLIC -fsanitize=thread -no-pie)
+    target_link_options(ichor PUBLIC -fsanitize=thread)
+
+    # clang on OSX doesn't accept -no-pie for some reason
+    if(NOT APPLE)
+        target_link_options(ichor PUBLIC -no-pie)
+    endif()
 
     if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
         target_compile_options(ichor PUBLIC -no-pie)
@@ -221,7 +231,13 @@ if(WIN32 AND ICHOR_USE_HARDENING)
     target_compile_options(ichor PUBLIC /GS /guard:cf)
     target_compile_definitions(ichor PUBLIC ICHOR_USE_HARDENING)
 elseif(ICHOR_USE_HARDENING)
-    target_compile_options(ichor PUBLIC -fstack-protector-strong -fstack-clash-protection -fcf-protection)
+    target_compile_options(ichor PUBLIC -fstack-protector-strong -fcf-protection)
+
+    # stack clash protection not available on OSX
+    if(NOT APPLE)
+        target_compile_options(ichor PUBLIC -fstack-clash-protection)
+    endif()
+
     target_compile_definitions(ichor PUBLIC ICHOR_USE_HARDENING)
 endif()
 
@@ -322,13 +338,9 @@ if(ICHOR_USE_BOOST_BEAST)
 endif()
 
 target_link_libraries(ichor PUBLIC ${CMAKE_THREAD_LIBS_INIT})
-if(NOT WIN32)
+if(NOT WIN32 AND NOT APPLE)
     target_link_libraries(ichor PUBLIC -ldl -lrt)
 endif()
-
-target_include_directories(ichor PUBLIC
-        $<BUILD_INTERFACE:${ICHOR_EXTERNAL_DIR}/wyhash>
-        $<INSTALL_INTERFACE:include/ichor/external/wyhash>)
 
 target_include_directories(ichor PUBLIC
         $<BUILD_INTERFACE:${ICHOR_EXTERNAL_DIR}/fmt/include>
@@ -378,12 +390,6 @@ install(DIRECTORY "${CMAKE_SOURCE_DIR}/include/ichor" # source directory
         )
 
 install(DIRECTORY "${CMAKE_SOURCE_DIR}/external/fmt/include/fmt" # source directory
-        DESTINATION "include/ichor/external" # target directory
-        FILES_MATCHING # install only matched files
-        PATTERN "*.h" # select header files
-        )
-
-install(DIRECTORY "${CMAKE_SOURCE_DIR}/external/wyhash" # source directory
         DESTINATION "include/ichor/external" # target directory
         FILES_MATCHING # install only matched files
         PATTERN "*.h" # select header files

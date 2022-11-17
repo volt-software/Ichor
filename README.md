@@ -31,6 +31,7 @@ More examples can be found in the [examples directory](examples).
 ## Supported OSes
 * Linux
 * Windows
+* Partial support for OSX Monterey (using `brew install llvm@15`, ASAN and boost beast don't seem to work)
 
 ## Supported Compilers
 * Gcc 11.3 or newer (see [this gcc bug](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=95137) for why)

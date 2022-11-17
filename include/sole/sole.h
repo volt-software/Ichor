@@ -559,7 +559,7 @@ namespace sole {
                          int alen = sdl->sdl_alen;
                          if (ap && alen > 0)
                          {
-                             _node.resize( alen );
+                             _node.resize( static_cast<uint64_t>(alen) );
                              std::memcpy(_node.data(), ap, _node.size() );
                              foundAdapter = true;
                              break;

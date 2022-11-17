@@ -3,13 +3,13 @@
 #include <ichor/stl/RealtimeMutex.h>
 #include <ichor/stl/ConditionVariable.h>
 
-#if (defined(WIN32) || defined(_WIN32) || defined(__WIN32)) && !defined(__CYGWIN__)
+#if (defined(WIN32) || defined(_WIN32) || defined(__WIN32) || defined(__APPLE__)) && !defined(__CYGWIN__)
 #include <condition_variable>
 #endif
 
 // Differs from std::condition_variable_any by working on steady clock only, using a reference instead of allocating memory and uses RealtimeMutex/RealtimeReadWriteMutex
 namespace Ichor {
-#if (defined(WIN32) || defined(_WIN32) || defined(__WIN32)) && !defined(__CYGWIN__)
+#if (defined(WIN32) || defined(_WIN32) || defined(__WIN32) || defined(__APPLE__)) && !defined(__CYGWIN__)
     template <typename MutexT>
     using ConditionVariableAny = std::condition_variable_any;
 #else

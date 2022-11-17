@@ -23,7 +23,11 @@ namespace Ichor {
             ::pthread_mutexattr_t attr;
             ::pthread_mutexattr_init(&attr);
             ::pthread_mutexattr_setprotocol(&attr, PTHREAD_PRIO_INHERIT);
+
+#ifndef __APPLE__
             ::pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_ADAPTIVE_NP);
+#endif
+
             ::pthread_mutex_init(native_handle(), &attr);
             ::pthread_mutexattr_destroy(&attr);
 #endif

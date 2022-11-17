@@ -15,7 +15,7 @@ add_executable(ichor_tracker_example ${EXAMPLE_SOURCES})
 target_link_libraries(ichor_tracker_example ${CMAKE_THREAD_LIBS_INIT})
 target_link_libraries(ichor_tracker_example ichor)
 
-if(NOT ICHOR_SERIALIZATION_FRAMEWORK STREQUAL "OFF" AND NOT WIN32)
+if(NOT ICHOR_SERIALIZATION_FRAMEWORK STREQUAL "OFF" AND NOT WIN32 AND NOT APPLE)
 	file(GLOB_RECURSE EXAMPLE_SOURCES ${ICHOR_TOP_DIR}/examples/tcp_example/*.cpp)
 	add_executable(ichor_tcp_example ${EXAMPLE_SOURCES})
 	target_link_libraries(ichor_tcp_example ${CMAKE_THREAD_LIBS_INIT})

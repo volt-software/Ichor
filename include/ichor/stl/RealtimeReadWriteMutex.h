@@ -23,7 +23,11 @@ namespace Ichor {
 #else
             ::pthread_rwlockattr_t attr;
             ::pthread_rwlockattr_init(&attr);
+
+#ifndef __APPLE__
             ::pthread_rwlockattr_setkind_np(&attr, PTHREAD_RWLOCK_PREFER_WRITER_NONRECURSIVE_NP);
+#endif
+
             ::pthread_rwlock_init(native_handle(), &attr);
             ::pthread_rwlockattr_destroy(&attr);
 #endif

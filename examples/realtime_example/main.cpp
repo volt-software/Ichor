@@ -21,7 +21,7 @@ std::atomic<uint64_t> idCounter = 0;
 std::string_view progName;
 
 void* run_example(void*) {
-#if defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)
+#if (defined(WIN32) || defined(_WIN32) || defined(__WIN32) || defined(__APPLE__)) && !defined(__CYGWIN__)
     //TODO realtime settings
 #else
     cpu_set_t lock_to_core_set;
@@ -55,7 +55,7 @@ int main(int argc, char *argv[]) {
     std::locale::global(std::locale("en_US.UTF-8"));
     progName = argv[0];
 
-#if defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)
+#if (defined(WIN32) || defined(_WIN32) || defined(__WIN32) || defined(__APPLE__)) && !defined(__CYGWIN__)
     //TODO check for elevated permissions
 #else
 
@@ -69,7 +69,7 @@ int main(int argc, char *argv[]) {
 
     GlobalRealtimeSettings settings{};
 
-#if defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)
+#if (defined(WIN32) || defined(_WIN32) || defined(__WIN32) || defined(__APPLE__)) && !defined(__CYGWIN__)
     //TODO realtime settings
     run_example(nullptr);
 #else

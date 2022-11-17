@@ -76,6 +76,23 @@ Then add the following [system variables](https://www.alphr.com/set-environment-
 
 To run the examples/tests that use boost, copy the dlls in `C:\SDKs\boost_1_80_0\lib64-msvc-14.3` (or where you installed boost) into the generated `bin` folder.
 
+#### OSX Monterey
+
+Work in progress, initial support available, sanitizers with boost seem to get false positives.
+
+```shell
+brew install llvm@15
+brew install ninja
+brew install boost
+brew install cmake
+```
+
+Then with cmake, set the CC and CXX variables explicitly:
+```shell
+CC=$(brew --prefix llvm)/bin/clang CXX=$(brew --prefix llvm)/bin/clang++ cmake -GNinja -DICHOR_USE_SANITIZERS=OFF -DICHOR_SERIALIZATION_FRAMEWORK=RAPIDJSON -DICHOR_USE_BOOST_BEAST=ON ..
+ninja
+```
+
 #### CMakeLists.txt
 
 To use Ichor, compile and install it in a location that cmake can find (e.g. /usr) and use the following CMakeLists.txt:
@@ -85,7 +102,7 @@ cmake_minimum_required(VERSION 3.12)
 project(my_project)
 
 set(CMAKE_CXX_STANDARD 20)
-find_package(my_exe CONFIG REQUIRED)
+find_package(Ichor CONFIG REQUIRED)
 
 add_executable(my_exe main.cpp)
 target_link_libraries(my_exe Ichor::ichor)
