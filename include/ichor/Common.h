@@ -3,11 +3,10 @@
 #include <ichor/ConstevalHash.h>
 #include <ichor/stl/Any.h>
 #include <string_view>
+#include <chrono>
 
 #define SPDLOG_ACTIVE_LEVEL SPDLOG_LEVEL_TRACE
-#if !__has_include(<spdlog/spdlog.h>)
-#define SPDLOG_DEBUG(...)
-#else
+#if __has_include(<spdlog/spdlog.h>)
 #include <spdlog/spdlog.h>
 #endif
 
@@ -33,13 +32,14 @@ static constexpr bool DO_HARDENING = true;
 static constexpr bool DO_HARDENING = false;
 #endif
 
-#define INTERNAL_DEBUG(...) do {      \
+#define INTERNAL_DEBUG(...)      \
     if constexpr(DO_INTERNAL_DEBUG) { \
+        fmt::print("[{:L}] ", std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now().time_since_epoch()).count());    \
         fmt::print("[{}:{}] ", __FILE__, __LINE__);    \
         fmt::print(__VA_ARGS__);    \
         fmt::print("\n");    \
     }                                 \
-} while (0)
+static_assert(true, "")
 
 // GNU C Library contains defines in sys/sysmacros.h. However, for compatibility reasons, this header is included in sys/types.h. Which is used by std.
 #undef major

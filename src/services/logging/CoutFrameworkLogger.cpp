@@ -2,7 +2,7 @@
 #include <iostream>
 #define FMT_INLINE_BUFFER_SIZE 1024
 
-Ichor::CoutFrameworkLogger::CoutFrameworkLogger() : IFrameworkLogger(), Service(), _level(LogLevel::LOG_TRACE) {
+Ichor::CoutFrameworkLogger::CoutFrameworkLogger() : IFrameworkLogger(), Service(), _level(LogLevel::LOG_WARN) {
     std::cout << "CoutFrameworkLogger constructor\n";
 }
 
@@ -51,14 +51,14 @@ void Ichor::CoutFrameworkLogger::error(const char *filename_in, int line_in, con
     }
 }
 
-Ichor::StartBehaviour Ichor::CoutFrameworkLogger::start() {
+Ichor::AsyncGenerator<void> Ichor::CoutFrameworkLogger::start() {
     std::cout << "CoutFrameworkLogger started\n";
-    return Ichor::StartBehaviour::SUCCEEDED;
+    co_return;
 }
 
-Ichor::StartBehaviour Ichor::CoutFrameworkLogger::stop() {
+Ichor::AsyncGenerator<void> Ichor::CoutFrameworkLogger::stop() {
     std::cout << "CoutFrameworkLogger stopped\n";
-    return Ichor::StartBehaviour::SUCCEEDED;
+    co_return;
 }
 
 void Ichor::CoutFrameworkLogger::setLogLevel(Ichor::LogLevel level) {

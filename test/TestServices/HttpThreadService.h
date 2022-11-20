@@ -8,7 +8,7 @@
 #include <ichor/services/network/http/IHttpService.h>
 #include <ichor/events/RunFunctionEvent.h>
 #include <ichor/Service.h>
-#include <ichor/LifecycleManager.h>
+#include "ichor/dependency_management/ILifecycleManager.h"
 #include <ichor/services/serialization/ISerializer.h>
 #include "../examples/common/TestMsg.h"
 
@@ -29,8 +29,8 @@ public:
     ~HttpThreadService() final = default;
 
 private:
-    StartBehaviour start() final {
-        getManager().pushEvent<RunFunctionEvent>(getServiceId(), [this](DependencyManager &dm) -> AsyncGenerator<void> {
+    AsyncGenerator<void> start() final {
+        getManager().pushEvent<RunFunctionEvent>(getServiceId(), [this](DependencyManager &dm) -> AsyncGenerator<IchorBehaviour> {
             auto toSendMsg = _serializer->serialize(TestMsg{11, "hello"});
 
             if(dmThreadId != std::this_thread::get_id()) {
@@ -49,15 +49,15 @@ private:
                 throw std::runtime_error("testThreadId id incorrect");
             }
 
-            co_return;
+            co_return {};
         });
 
-        return StartBehaviour::SUCCEEDED;
+        co_return;
     }
 
-    StartBehaviour stop() final {
+    AsyncGenerator<void> stop() final {
         _routeRegistration.reset();
-        return StartBehaviour::SUCCEEDED;
+        co_return;
     }
 
     void addDependencyInstance(ISerializer<TestMsg> *serializer, IService *) {

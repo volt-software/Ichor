@@ -27,8 +27,8 @@ namespace Ichor {
         [[nodiscard]] uint64_t getPriority() const noexcept final;
 
     private:
-        StartBehaviour start() final;
-        StartBehaviour stop() final;
+        AsyncGenerator<void> start() final;
+        AsyncGenerator<void> stop() final;
 
         void insertEventLoop(bool fireImmediately);
 

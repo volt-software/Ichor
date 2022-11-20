@@ -2,7 +2,6 @@
 
 #include <fmt/format.h>
 #include <ichor/Common.h>
-#include <ichor/Service.h>
 #include <ichor/Enums.h>
 
 namespace Ichor {

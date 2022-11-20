@@ -3,7 +3,7 @@
 #include <ichor/DependencyManager.h>
 #include <ichor/services/logging/Logger.h>
 #include <ichor/Service.h>
-#include <ichor/LifecycleManager.h>
+#include "ichor/dependency_management/ILifecycleManager.h"
 
 #ifdef __SANITIZE_ADDRESS__
 constexpr uint32_t EVENT_COUNT = 500'000;
@@ -30,7 +30,7 @@ public:
     ~TestService() final = default;
 
 private:
-    StartBehaviour start() final {
+    AsyncGenerator<void> start() final {
         auto start = std::chrono::steady_clock::now();
         for(uint32_t i = 0; i < EVENT_COUNT; i++) {
             getManager().pushEvent<UselessEvent>(getServiceId());
@@ -38,11 +38,11 @@ private:
         auto end = std::chrono::steady_clock::now();
         getManager().pushEvent<QuitEvent>(getServiceId());
         ICHOR_LOG_WARN(_logger, "Inserted events in {:L} µs", std::chrono::duration_cast<std::chrono::microseconds>(end-start).count());
-        return Ichor::StartBehaviour::SUCCEEDED;
+        co_return;
     }
 
-    StartBehaviour stop() final {
-        return Ichor::StartBehaviour::SUCCEEDED;
+    AsyncGenerator<void> stop() final {
+        co_return;
     }
 
     void addDependencyInstance(ILogger *logger, IService *) {

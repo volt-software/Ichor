@@ -18,26 +18,24 @@ Ichor::HttpConnectionService::HttpConnectionService(DependencyRegister &reg, Pro
     reg.registerDependency<IHttpContextService>(this, true);
 }
 
-Ichor::StartBehaviour Ichor::HttpConnectionService::start() {
+Ichor::AsyncGenerator<void> Ichor::HttpConnectionService::start() {
     if(!_httpContextService->fibersShouldStop() && !_connecting && !_connected) {
         ICHOR_LOG_WARN_ATOMIC(_logger, "starting svc {}", getServiceId());
         _quit = false;
         if (getProperties().contains("Priority")) {
-            _priority = Ichor::any_cast<uint64_t>(getProperties().operator[]("Priority"));
+            _priority = Ichor::any_cast<uint64_t>(getProperties()["Priority"]);
         }
 
         if (!getProperties().contains("Port") || !getProperties().contains("Address")) {
-            getManager().pushPrioritisedEvent<UnrecoverableErrorEvent>(getServiceId(), _priority, 0u,
-                                                                        "Missing port or address when starting HttpConnectionService");
-            return Ichor::StartBehaviour::FAILED_DO_NOT_RETRY;
+            throw std::runtime_error("Missing port or address when starting HttpConnectionService");
         }
 
         if(getProperties().contains("NoDelay")) {
-            _tcpNoDelay = Ichor::any_cast<bool>(getProperties().operator[]("NoDelay"));
+            _tcpNoDelay = Ichor::any_cast<bool>(getProperties()["NoDelay"]);
         }
 
-        auto address = net::ip::make_address(Ichor::any_cast<std::string &>(getProperties().operator[]("Address")));
-        auto port = Ichor::any_cast<uint16_t>(getProperties().operator[]("Port"));
+        auto address = net::ip::make_address(Ichor::any_cast<std::string &>(getProperties()["Address"]));
+        auto port = Ichor::any_cast<uint16_t>(getProperties()["Port"]);
 
         _connecting = true;
         net::spawn(*_httpContextService->getContext(), [this, address = std::move(address), port](net::yield_context yield) {
@@ -46,26 +44,24 @@ Ichor::StartBehaviour Ichor::HttpConnectionService::start() {
     }
 
     if(_httpContextService->fibersShouldStop()) {
-        return Ichor::StartBehaviour::FAILED_DO_NOT_RETRY;
+        co_return;
     }
 
-    if(!_connected) {
-        // sleep this thread so that this thread won´t starve other threads (especially noticeable under callgrind)
-        std::this_thread::sleep_for(1ms);
-        return Ichor::StartBehaviour::FAILED_AND_RETRY;
-    }
+    co_await _startStopEvent;
+    _startStopEvent.reset();
 
-    return Ichor::StartBehaviour::SUCCEEDED;
+    co_return;
 }
 
-Ichor::StartBehaviour Ichor::HttpConnectionService::stop() {
+Ichor::AsyncGenerator<void> Ichor::HttpConnectionService::stop() {
     _quit = true;
+    INTERNAL_DEBUG("----------------------------------------------- STOP");
 
-    if(!close()) {
-        return Ichor::StartBehaviour::FAILED_AND_RETRY;
-    }
+    co_await close().begin();
+    
+    INTERNAL_DEBUG("----------------------------------------------- STOP DONE");
 
-    return Ichor::StartBehaviour::SUCCEEDED;
+    co_return;
 }
 
 void Ichor::HttpConnectionService::addDependencyInstance(ILogger *logger, IService *) {
@@ -82,11 +78,6 @@ void Ichor::HttpConnectionService::addDependencyInstance(IHttpContextService *ht
 }
 
 void Ichor::HttpConnectionService::removeDependencyInstance(IHttpContextService *httpContextService, IService *) {
-    _quit = true;
-    while(!close()) {
-        // sleep this thread so that this thread won´t starve other threads (especially noticeable under callgrind)
-        std::this_thread::sleep_for(1ms);
-    }
     _httpContextService = nullptr;
 }
 
@@ -134,9 +125,9 @@ Ichor::AsyncGenerator<Ichor::HttpResponse> Ichor::HttpConnectionService::sendAsy
                 // use service id 0 to ensure event gets run, even if service is stopped. Otherwise, the coroutine will never complete.
                 // Similarly, use priority 0 to ensure these events run before any dependency changes, otherwise the service might be destroyed
                 // before we can finish all the coroutines.
-                evt.svc->getManager().pushPrioritisedEvent<RunFunctionEvent>(0u, 0u, [event = evt.evt](DependencyManager &dm) -> AsyncGenerator<void> {
+                evt.svc->getManager().pushPrioritisedEvent<RunFunctionEvent>(0u, 0u, [event = evt.evt](DependencyManager &dm) -> AsyncGenerator<IchorBehaviour> {
                     event->set();
-                    co_return;
+                    co_return {};
                 });
                 evt.svc->_outbox.pop_front();
             }};
@@ -156,7 +147,7 @@ Ichor::AsyncGenerator<Ichor::HttpResponse> Ichor::HttpConnectionService::sendAsy
             for (auto const &header : *next.headers) {
                 req.set(header.name, header.value);
             }
-            req.set(http::field::host, Ichor::any_cast<std::string &>(getProperties().operator[]("Address")));
+            req.set(http::field::host, Ichor::any_cast<std::string &>(getProperties()["Address"]));
             req.prepare_payload();
             req.keep_alive();
 
@@ -204,7 +195,11 @@ Ichor::AsyncGenerator<Ichor::HttpResponse> Ichor::HttpConnectionService::sendAsy
     co_return response;
 }
 
-bool Ichor::HttpConnectionService::close() {
+Ichor::AsyncGenerator<void> Ichor::HttpConnectionService::close() {
+    if(!_httpStream) {
+        co_return;
+    }
+
     if(_httpStream && !_connecting.exchange(true, std::memory_order_acq_rel)) {
         net::spawn(*_httpContextService->getContext(), [this](net::yield_context _yield) {
             // _httpStream should only be modified from the boost thread
@@ -212,18 +207,25 @@ bool Ichor::HttpConnectionService::close() {
                 _httpStream->cancel();
             }
 
-            _stopping.store(true, std::memory_order_release);
+            getManager().pushEvent<RunFunctionEvent>(getServiceId(), [this](DependencyManager &dm) -> AsyncGenerator<IchorBehaviour> {
+                _startStopEvent.set();
+                co_return {};
+            });
         });
     }
 
-    if(_finishedListenAndRead.load(std::memory_order_acquire) == 0 && _stopping.load(std::memory_order_acquire)) {
-        _connected.store(false, std::memory_order_release);
-        _stopping.store(false, std::memory_order_release);
-        _connecting.store(false, std::memory_order_release);
-        _httpStream = nullptr;
+    co_await _startStopEvent;
+    _startStopEvent.reset();
+
+    while(_finishedListenAndRead.load(std::memory_order_acquire) != 0) {
+        std::this_thread::sleep_for(1ms);
     }
 
-    return !_connected.load(std::memory_order_acquire);
+    _connected.store(false, std::memory_order_release);
+    _connecting.store(false, std::memory_order_release);
+    _httpStream = nullptr;
+
+    co_return;
 }
 
 void Ichor::HttpConnectionService::fail(beast::error_code ec, const char *what) {
@@ -270,6 +272,10 @@ void Ichor::HttpConnectionService::connect(tcp::endpoint endpoint, net::yield_co
     }
 
     // set connected before connecting, or races with the start() function may occur.
+    getManager().pushEvent<RunFunctionEvent>(getServiceId(), [this](DependencyManager &dm) -> AsyncGenerator<IchorBehaviour> {
+        _startStopEvent.set();
+        co_return {};
+    });
     _connected = true;
     _connecting = false;
 }

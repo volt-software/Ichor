@@ -4,7 +4,7 @@
 #include <ichor/services/logging/Logger.h>
 #include <ichor/Service.h>
 #include <ichor/services/serialization/ISerializer.h>
-#include <ichor/LifecycleManager.h>
+#include "ichor/dependency_management/ILifecycleManager.h"
 #include "../common/TestMsg.h"
 
 using namespace Ichor;
@@ -18,17 +18,17 @@ public:
     ~TestService() final = default;
 
 private:
-    StartBehaviour start() final {
+    AsyncGenerator<void> start() final {
         ICHOR_LOG_INFO(_logger, "TestService started with dependency");
         _doWorkRegistration = getManager().registerEventCompletionCallbacks<DoWorkEvent>(this);
         getManager().pushEvent<DoWorkEvent>(getServiceId());
-        return StartBehaviour::SUCCEEDED;
+        co_return;
     }
 
-    StartBehaviour stop() final {
+    AsyncGenerator<void> stop() final {
         ICHOR_LOG_INFO(_logger, "TestService stopped with dependency");
         _doWorkRegistration.reset();
-        return StartBehaviour::SUCCEEDED;
+        co_return;
     }
 
     void addDependencyInstance(ILogger *logger, IService *) {

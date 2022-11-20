@@ -15,28 +15,28 @@ public:
     SigIntService() = default;
 
 private:
-    StartBehaviour start() final {
+    AsyncGenerator<void> start() final {
         // Setup a timer that fires every 100 milliseconds
         auto timer = getManager().createServiceManager<Timer, ITimer>();
         timer->setChronoInterval(100ms);
 
-        timer->setCallback(this, [this](DependencyManager &dm) -> AsyncGenerator<void> {
+        timer->setCallback(this, [this](DependencyManager &dm) -> AsyncGenerator<IchorBehaviour> {
             // If sigint has been fired, send a quit to the event loop.
             // This can't be done from within the handler itself, as the mutex surrounding pushEvent might already be locked, resulting in a deadlock!
             if(quit) {
                 getManager().pushEvent<QuitEvent>(getServiceId());
             }
-            co_return;
+            co_return {};
         });
         timer->startTimer();
 
         // Register sigint handler
         ::signal(SIGINT, siginthandler);
-        return StartBehaviour::SUCCEEDED;
+        co_return;
     }
 
-    StartBehaviour stop() final {
-        return StartBehaviour::SUCCEEDED;
+    AsyncGenerator<void> stop() final {
+        co_return;
     }
 };
 

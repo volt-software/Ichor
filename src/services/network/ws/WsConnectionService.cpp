@@ -3,12 +3,11 @@
 #include <ichor/DependencyManager.h>
 #include <ichor/services/network/ws/WsConnectionService.h>
 #include <ichor/services/network/ws/WsEvents.h>
-#include <ichor/services/network/ws/WsCopyIsMoveWorkaround.h>
 #include <ichor/services/network/NetworkEvents.h>
 #include <ichor/services/network/IHostService.h>
 
 template<class NextLayer>
-void setup_stream(std::unique_ptr<websocket::stream<NextLayer>>& ws)
+void setup_stream(std::shared_ptr<websocket::stream<NextLayer>>& ws)
 {
     // These values are tuned for Autobahn|Testsuite, and
     // should also be generally helpful for increased performance.
@@ -31,52 +30,53 @@ Ichor::WsConnectionService::WsConnectionService(DependencyRegister &reg, Propert
     }
 }
 
-Ichor::StartBehaviour Ichor::WsConnectionService::start() {
-    if(!_connecting && !_connected) {
-        _connecting = true;
-        _quit = false;
-
-        if (getProperties().contains("Priority")) {
-            _priority = Ichor::any_cast<uint64_t>(getProperties().operator[]("Priority"));
-        }
-
-        if (getProperties().contains("Socket")) {
-            net::spawn(*_httpContextService->getContext(), [this](net::yield_context yield) {
-                accept(std::move(yield));
-            });
-        } else {
-            net::spawn(*_httpContextService->getContext(), [this](net::yield_context yield) {
-                connect(std::move(yield));
-            });
-        }
+Ichor::AsyncGenerator<void> Ichor::WsConnectionService::start() {
+    if(_connected.load(std::memory_order_acquire)) {
+        co_return;
     }
 
-    return _connected ? Ichor::StartBehaviour::SUCCEEDED : Ichor::StartBehaviour::FAILED_AND_RETRY;
+    _quit.store(false, std::memory_order_release);
+
+    if (getProperties().contains("Priority")) {
+        _priority = Ichor::any_cast<uint64_t>(getProperties()["Priority"]);
+    }
+
+    if (getProperties().contains("Socket")) {
+        net::spawn(*_httpContextService->getContext(), [this](net::yield_context yield) {
+            accept(std::move(yield));
+        });
+    } else {
+        net::spawn(*_httpContextService->getContext(), [this](net::yield_context yield) {
+            connect(std::move(yield));
+        });
+    }
+
+    co_return;
 }
 
-Ichor::StartBehaviour Ichor::WsConnectionService::stop() {
-    INTERNAL_DEBUG("trying to stop WsConnectionService {}", getServiceId());
-    _quit = true;
+Ichor::AsyncGenerator<void> Ichor::WsConnectionService::stop() {
+    INTERNAL_DEBUG("----------------------------------------------- trying to stop WsConnectionService {}", getServiceId());
+    fmt::print("----------------------------------------------- {}:{} stop\n", getServiceId(), getServiceName());
+    _quit.store(true, std::memory_order_release);
     if(_ws != nullptr) {
         _ws->next_layer().close();
 
-        while (_connected) {
-            std::this_thread::sleep_for(1ms);
-        }
+        fmt::print("----------------------------------------------- {}:{} wait\n", getServiceId(), getServiceName());
+        co_await _startStopEvent;
+        fmt::print("----------------------------------------------- {}:{} wait done\n", getServiceId(), getServiceName());
 
         _ws = nullptr;
     }
+    fmt::print("----------------------------------------------- {}:{} stop done\n", getServiceId(), getServiceName());
 
-    return Ichor::StartBehaviour::SUCCEEDED;
+    co_return;
 }
 
 void Ichor::WsConnectionService::addDependencyInstance(ILogger *logger, IService *) {
-    std::lock_guard const lock(_mutex);
     _logger = logger;
 }
 
 void Ichor::WsConnectionService::removeDependencyInstance(ILogger *logger, IService *) {
-    std::lock_guard const lock(_mutex);
     _logger = nullptr;
 }
 
@@ -93,7 +93,7 @@ void Ichor::WsConnectionService::addDependencyInstance(IHttpContextService *http
 }
 
 void Ichor::WsConnectionService::removeDependencyInstance(IHttpContextService *logger, IService *) {
-    stop();
+    fmt::print("{}:{} set nullptr\n", getServiceId(), getServiceName());
     _httpContextService = nullptr;
 }
 
@@ -112,9 +112,7 @@ uint64_t Ichor::WsConnectionService::sendAsync(std::vector<uint8_t> &&msg) {
         _ws->write(net::buffer(msg.data(), msg.size()), ec);
 
         if(ec) {
-            _mutex.lock();
             ICHOR_LOG_ERROR(_logger, "couldn't send msg for service {}: {}", getServiceId(), ec.message());
-            _mutex.unlock();
             getManager().pushEvent<FailedSendMessageEvent>(getServiceId(), std::move(msg), id);
         }
     });
@@ -123,17 +121,22 @@ uint64_t Ichor::WsConnectionService::sendAsync(std::vector<uint8_t> &&msg) {
 }
 
 void Ichor::WsConnectionService::setPriority(uint64_t priority) {
-    _priority = priority;
+    _priority.store(priority, std::memory_order_release);
 }
 
 uint64_t Ichor::WsConnectionService::getPriority() {
-    return _priority;
+    return _priority.load(std::memory_order_acquire);
 }
 
 void Ichor::WsConnectionService::fail(beast::error_code ec, const char *what) {
-    _mutex.lock();
+    fmt::print("{}:{} fail {}\n", getServiceId(), getServiceName(), ec.message());
     ICHOR_LOG_ERROR(_logger, "Boost.BEAST fail: {}, {}", what, ec.message());
-    _mutex.unlock();
+
+    getManager().pushPrioritisedEvent<RunFunctionEvent>(getServiceId(), _priority.load(std::memory_order_acquire), [this](DependencyManager &dm) -> AsyncGenerator<IchorBehaviour> {
+        fmt::print("{}:{} rfe\n", getServiceId(), getServiceName());
+        _startStopEvent.set();
+        co_return {};
+    });
     getManager().pushEvent<StopServiceEvent>(getServiceId(), getServiceId());
 }
 
@@ -141,8 +144,14 @@ void Ichor::WsConnectionService::accept(net::yield_context yield) {
     beast::error_code ec;
 
     if(!_ws) {
-        auto &socket = Ichor::any_cast<CopyIsMoveWorkaround<tcp::socket>&>(getProperties().operator[]("Socket"));
-        _ws = std::make_unique<websocket::stream<beast::tcp_stream>>(socket.moveObject());
+        auto socketIt = getProperties().find("Socket");
+
+        if(socketIt == getProperties().end()) [[unlikely]] {
+            return fail(ec, "socket setup");
+        }
+
+        _ws = Ichor::any_cast<std::shared_ptr<websocket::stream<beast::tcp_stream>>&>(socketIt->second);
+        socketIt->second = Ichor::make_any<bool>(false); // ensure we cannot start again by making a bogus reference to socket
     }
 
     setup_stream(_ws);
@@ -154,7 +163,7 @@ void Ichor::WsConnectionService::accept(net::yield_context yield) {
     _ws->set_option(websocket::stream_base::decorator(
             [](websocket::response_type &res) {
                 res.set(http::field::server, std::string(
-                        BOOST_BEAST_VERSION_STRING) + "-Fiber");
+                        BOOST_BEAST_VERSION_STRING) + "-Ichor");
             }));
 
     // Make the connection on the IP address we get from a lookup
@@ -177,18 +186,16 @@ void Ichor::WsConnectionService::accept(net::yield_context yield) {
     if (ec) {
         return fail(ec, "accept");
     }
-    _connected = true;
-    _connecting = false;
 
-    getManager().pushEvent<StartServiceEvent>(getServiceId(), getServiceId());
+    _connected.store(true, std::memory_order_release);
 
     read(yield);
 }
 
 void Ichor::WsConnectionService::connect(net::yield_context yield) {
     beast::error_code ec;
-    auto const& address = Ichor::any_cast<std::string&>(getProperties().operator[]("Address"));
-    auto const port = Ichor::any_cast<uint16_t>(getProperties().operator[]("Port"));
+    auto const& address = Ichor::any_cast<std::string&>(getProperties()["Address"]);
+    auto const port = Ichor::any_cast<uint16_t>(getProperties()["Port"]);
 
     // These objects perform our I/O
     tcp::resolver resolver(*_httpContextService->getContext());
@@ -224,10 +231,7 @@ void Ichor::WsConnectionService::connect(net::yield_context yield) {
         return fail(ec, "connect");
     }
 
-    _connected = true;
-    _connecting = false;
-
-    getManager().pushEvent<StartServiceEvent>(getServiceId(), getServiceId());
+    _connected.store(true, std::memory_order_release);
 
     // Turn off the timeout on the tcp_stream, because
     // the websocket stream has its own timeout system.
@@ -244,7 +248,7 @@ void Ichor::WsConnectionService::connect(net::yield_context yield) {
             {
                 req.set(http::field::user_agent,
                         std::string(BOOST_BEAST_VERSION_STRING) +
-                        " websocket-client-coro");
+                        " ichor");
             }));
 
     // Perform the websocket handshake
@@ -260,12 +264,14 @@ void Ichor::WsConnectionService::connect(net::yield_context yield) {
 void Ichor::WsConnectionService::read(net::yield_context &yield) {
     beast::error_code ec;
 
-    while(!_quit && !_httpContextService->fibersShouldStop()) {
+    while(!_quit.load(std::memory_order_acquire) && !_httpContextService->fibersShouldStop()) {
+        fmt::print("{}:{} read\n", getServiceId(), getServiceName());
         beast::basic_flat_buffer buffer{std::allocator<uint8_t>{}};
 
         _ws->async_read(buffer, yield[ec]);
+        fmt::print("{}:{} read post async_read\n", getServiceId(), getServiceName());
 
-        if(_quit || _httpContextService->fibersShouldStop()) {
+        if(_quit.load(std::memory_order_acquire) || _httpContextService->fibersShouldStop()) {
             break;
         }
 
@@ -279,12 +285,19 @@ void Ichor::WsConnectionService::read(net::yield_context &yield) {
 
         if(_ws->got_text()) {
             auto data = buffer.data();
-            getManager().pushPrioritisedEvent<NetworkDataEvent>(getServiceId(), _priority,  std::vector<uint8_t>{static_cast<char*>(data.data()), static_cast<char*>(data.data()) + data.size()});
+            getManager().pushPrioritisedEvent<NetworkDataEvent>(getServiceId(), _priority.load(std::memory_order_acquire),  std::vector<uint8_t>{static_cast<char*>(data.data()), static_cast<char*>(data.data()) + data.size()});
         }
     }
 
     _connected = false;
     INTERNAL_DEBUG("read stopped WsConnectionService {}", getServiceId());
+    fmt::print("{}:{} read done\n", getServiceId(), getServiceName());
+
+    getManager().pushPrioritisedEvent<RunFunctionEvent>(getServiceId(), _priority.load(std::memory_order_acquire), [this](DependencyManager &dm) -> AsyncGenerator<IchorBehaviour> {
+        fmt::print("{}:{} rfe2\n", getServiceId(), getServiceName());
+        _startStopEvent.set();
+        co_return {};
+    });
 }
 
 #endif

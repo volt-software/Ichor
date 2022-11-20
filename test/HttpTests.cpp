@@ -48,13 +48,13 @@ TEST_CASE("HttpTests") {
             std::this_thread::sleep_for(1ms);
         }
 
-        dm.pushEvent<RunFunctionEvent>(0, [&](DependencyManager &_dm) -> AsyncGenerator<void> {
+        dm.pushEvent<RunFunctionEvent>(0, [&](DependencyManager &_dm) -> AsyncGenerator<IchorBehaviour> {
             REQUIRE(Ichor::Detail::_local_dm == &_dm);
             REQUIRE(Ichor::Detail::_local_dm == &dm);
             REQUIRE(testThreadId != std::this_thread::get_id());
             REQUIRE(dmThreadId == std::this_thread::get_id());
             _evt->set();
-            co_return;
+            co_return {};
         });
 
         t.join();

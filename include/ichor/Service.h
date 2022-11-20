@@ -6,11 +6,16 @@
 #include <ichor/Common.h>
 #include <ichor/Concepts.h>
 #include <ichor/Enums.h>
+#include <ichor/coroutines/AsyncGenerator.h>
+#include <ichor/dependency_management/DependencyInfo.h>
 
 namespace Ichor {
+
     class DependencyManager;
+
     template <typename T>
     class Service;
+
     template<class ServiceType, typename... IFaces>
 #if (!defined(WIN32) && !defined(_WIN32) && !defined(__WIN32)) || defined(__CYGWIN__)
     requires DerivedTemplated<ServiceType, Service>
@@ -26,7 +31,19 @@ namespace Ichor {
     public:
         virtual ~IService() = default;
 
+        /// Process-local unique service id
+        /// \return id
         [[nodiscard]] virtual uint64_t getServiceId() const noexcept = 0;
+
+        /// Global unique service id
+        /// \return gid
+        [[nodiscard]] virtual sole::uuid getServiceGid() const noexcept = 0;
+
+        /// Name of the user-specified service (e.g. CoutFrameworkLogger)
+        /// \return
+        [[nodiscard]] virtual std::string_view getServiceName() const noexcept = 0;
+
+        [[nodiscard]] virtual ServiceState getServiceState() const noexcept = 0;
 
         [[nodiscard]] virtual uint64_t getServicePriority() const noexcept = 0;
 
@@ -45,19 +62,17 @@ namespace Ichor {
     class Service : public IService {
     public:
         template <typename U = T> requires (!RequestsProperties<U> && !RequestsDependencies<U>)
-        Service() noexcept : IService(), _properties(), _serviceId(_serviceIdCounter.fetch_add(1, std::memory_order_acq_rel)), _servicePriority(1000), _serviceGid(sole::uuid4()), _serviceState(ServiceState::INSTALLED) {
+        Service() noexcept : IService(), _serviceId(_serviceIdCounter.fetch_add(1, std::memory_order_acq_rel)), _servicePriority(INTERNAL_EVENT_PRIORITY), _serviceGid(sole::uuid4()), _serviceState(ServiceState::INSTALLED) {
 
         }
 
         template <typename U = T> requires (RequestsProperties<U> || RequestsDependencies<U>)
-        Service(Properties&& props, DependencyManager *mng) noexcept: IService(), _properties(std::forward<Properties>(props)), _serviceId(_serviceIdCounter.fetch_add(1, std::memory_order_acq_rel)), _servicePriority(1000), _serviceGid(sole::uuid4()), _serviceState(ServiceState::INSTALLED), _manager(mng) {
+        Service(Properties&& props, DependencyManager *mng) noexcept : IService(), _properties(std::forward<Properties>(props)), _serviceId(_serviceIdCounter.fetch_add(1, std::memory_order_acq_rel)), _servicePriority(INTERNAL_EVENT_PRIORITY), _serviceGid(sole::uuid4()), _serviceState(ServiceState::INSTALLED), _manager(mng) {
 
         }
 
         ~Service() noexcept override {
             _serviceId = 0;
-            //_serviceGid.ab = 0;
-            //_serviceGid.cd = 0;
             _serviceState = ServiceState::UNINSTALLED;
         }
 
@@ -66,8 +81,26 @@ namespace Ichor {
         Service& operator=(const Service&) = default;
         Service& operator=(Service&&) noexcept = default;
 
+        /// Process-local unique service id
+        /// \return id
         [[nodiscard]] uint64_t getServiceId() const noexcept final {
             return _serviceId;
+        }
+
+        /// Global unique service id
+        /// \return gid
+        [[nodiscard]] sole::uuid getServiceGid() const noexcept final {
+            return _serviceGid;
+        }
+
+        /// Name of the user-specified service (e.g. CoutFrameworkLogger)
+        /// \return
+        [[nodiscard]] std::string_view getServiceName() const noexcept final {
+            return typeName<T>();
+        }
+
+        [[nodiscard]] ServiceState getServiceState() const noexcept final {
+            return _serviceState;
         }
 
         [[nodiscard]] uint64_t getServicePriority() const noexcept final {
@@ -91,57 +124,66 @@ namespace Ichor {
         }
 
     protected:
-        [[nodiscard]] virtual StartBehaviour start() {
-            return StartBehaviour::SUCCEEDED;
+        [[nodiscard]] virtual AsyncGenerator<void> start() {
+            co_return;
         }
 
-        [[nodiscard]] virtual StartBehaviour stop() {
-            return StartBehaviour::SUCCEEDED;
+        [[nodiscard]] virtual AsyncGenerator<void> stop() {
+            co_return;
         }
 
         Properties _properties;
     private:
         ///
         /// \return true if started
-        [[nodiscard]] StartBehaviour internal_start() {
-            if(_serviceState != ServiceState::INSTALLED && _serviceState != ServiceState::STARTING) {
-                return StartBehaviour::FAILED_DO_NOT_RETRY;
+        [[nodiscard]] AsyncGenerator<StartBehaviour> internal_start(DependencyInfo *_dependencies) {
+            if(_serviceState != ServiceState::INSTALLED || (_dependencies != nullptr && !_dependencies->allSatisfied())) {
+                INTERNAL_DEBUG("internal_start service {}:{} state {} dependencies {} {}", getServiceId(), typeName<T>(), getState(), _dependencies->size(), _dependencies->allSatisfied());
+                co_return {};
             }
 
-            if constexpr(DO_INTERNAL_DEBUG) {
-                if(getState() != ServiceState::STARTING) {
-                    INTERNAL_DEBUG("internal_start service {}:{} state {} -> {}", getServiceId(), typeName<T>(), getState(), ServiceState::STARTING);
-                }
-            }
+            INTERNAL_DEBUG("internal_start service {}:{} state {} -> {}", getServiceId(), typeName<T>(), getState(), ServiceState::STARTING);
             _serviceState = ServiceState::STARTING;
-            auto ret = start();
-            if(ret == StartBehaviour::SUCCEEDED) {
-                INTERNAL_DEBUG("internal_start service {}:{} state {} -> {}", getServiceId(), typeName<T>(), getState(), ServiceState::INJECTING);
-                _serviceState = ServiceState::INJECTING;
-            }
+            auto gen = start();
+            auto it = gen.begin();
+            co_await it;
 
-            return ret;
+#ifdef ICHOR_USE_HARDENING
+            if(!it.get_finished()) [[unlikely]] {
+                throw std::runtime_error("Start not finished somehow");
+            }
+#endif
+
+            INTERNAL_DEBUG("internal_start service {}:{} state {} -> {}", getServiceId(), typeName<T>(), getState(), ServiceState::INJECTING);
+            _serviceState = ServiceState::INJECTING;
+
+            co_return {};
         }
         ///
         /// \return true if stopped or already stopped
-        [[nodiscard]] StartBehaviour internal_stop() {
-            if(_serviceState != ServiceState::UNINJECTING && _serviceState != ServiceState::STOPPING) {
-                return StartBehaviour::FAILED_DO_NOT_RETRY;
+        [[nodiscard]] AsyncGenerator<StartBehaviour> internal_stop() {
+#ifdef ICHOR_USE_HARDENING
+            if(_serviceState != ServiceState::UNINJECTING) [[unlikely]] {
+                std::terminate();
             }
+#endif
 
-            if constexpr(DO_INTERNAL_DEBUG) {
-                if(getState() != ServiceState::STOPPING) {
-                    INTERNAL_DEBUG("internal_stop service {}:{} state {} -> {}", getServiceId(), typeName<T>(), getState(), ServiceState::STOPPING);
-                }
-            }
+            INTERNAL_DEBUG("internal_stop service {}:{} state {} -> {}", getServiceId(), typeName<T>(), getState(), ServiceState::STOPPING);
             _serviceState = ServiceState::STOPPING;
-            auto ret = stop();
-            if(ret == StartBehaviour::SUCCEEDED) {
-                INTERNAL_DEBUG("internal_stop service {}:{} state {} -> {}", getServiceId(), typeName<T>(), getState(), ServiceState::INSTALLED);
-                _serviceState = ServiceState::INSTALLED;
-            }
+            auto gen = stop();
+            auto it = gen.begin();
+            co_await it;
 
-            return ret;
+#ifdef ICHOR_USE_HARDENING
+            if(!it.get_finished()) [[unlikely]] {
+                throw std::runtime_error("Stop not finished somehow");
+            }
+#endif
+
+            INTERNAL_DEBUG("internal_stop service {}:{} state {} -> {}", getServiceId(), typeName<T>(), getState(), ServiceState::INSTALLED);
+            _serviceState = ServiceState::INSTALLED;
+
+            co_return {};
         }
 
         [[nodiscard]] bool internalSetInjected() {
@@ -203,3 +245,8 @@ namespace Ichor {
 
     };
 }
+
+#ifndef ICHOR_DEPENDENCY_MANAGER
+#include <ichor/DependencyManager.h>
+#include <ichor/coroutines/AsyncGeneratorDetail.h>
+#endif

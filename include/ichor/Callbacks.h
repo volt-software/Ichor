@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <optional>
 #include <functional>
+#include <ichor/Enums.h>
 
 namespace Ichor {
     struct Event;
@@ -13,7 +14,7 @@ namespace Ichor {
     public:
         uint64_t listeningServiceId;
         std::optional<uint64_t> filterServiceId;
-        std::function<AsyncGenerator<void>(Event const &)> callback;
+        std::function<AsyncGenerator<IchorBehaviour>(Event const &)> callback;
     };
 
     class [[nodiscard]] EventInterceptInfo final {

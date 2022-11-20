@@ -43,7 +43,7 @@ namespace Ichor {
     }
 
     void MultimapQueue::start(bool captureSigInt) {
-        if(!_dm) {
+        if(!_dm) [[unlikely]] {
             throw std::runtime_error("Please create a manager first!");
         }
 
@@ -55,9 +55,11 @@ namespace Ichor {
 
         startDm();
 
-        while(!shouldQuit()) {
+        while(!shouldQuit()) [[unlikely]] {
             std::unique_lock l(_eventQueueMutex);
             while(!shouldQuit() && _eventQueue.empty()) {
+                // Being woken up from another thread incurs a cost of ~0.4ms on my machine
+                // This can be reduced by spinlocking, at the expense of CPU usage
                 _wakeup.wait_for(l, 500ms, [this]() {
                     shouldAddQuitEvent();
                     return shouldQuit() || !_eventQueue.empty();
@@ -66,7 +68,7 @@ namespace Ichor {
 
             shouldAddQuitEvent();
 
-            if(shouldQuit()) {
+            if(shouldQuit()) [[unlikely]] {
                 break;
             }
 
@@ -82,7 +84,7 @@ namespace Ichor {
         bool const shouldQuit = Detail::sigintQuit.load(std::memory_order_acquire);
 
 //        INTERNAL_DEBUG("shouldQuit() {} {:L}", shouldQuit, (std::chrono::steady_clock::now() - _whenQuitEventWasSent).count());
-        if (shouldQuit && _quitEventSent && std::chrono::steady_clock::now() - _whenQuitEventWasSent >= 500ms) {
+        if (shouldQuit && _quitEventSent && std::chrono::steady_clock::now() - _whenQuitEventWasSent >= 500ms) [[unlikely]] {
             _quit.store(true, std::memory_order_release);
         }
 

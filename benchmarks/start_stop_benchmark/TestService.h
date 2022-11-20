@@ -3,7 +3,7 @@
 #include <ichor/DependencyManager.h>
 #include <ichor/services/logging/Logger.h>
 #include <ichor/Service.h>
-#include <ichor/LifecycleManager.h>
+#include "ichor/dependency_management/ILifecycleManager.h"
 
 using namespace Ichor;
 
@@ -19,12 +19,12 @@ public:
     ~TestService() final = default;
 
 private:
-    StartBehaviour start() final {
-        return Ichor::StartBehaviour::SUCCEEDED;
+    AsyncGenerator<void> start() final {
+        co_return;
     }
 
-    StartBehaviour stop() final {
-        return Ichor::StartBehaviour::SUCCEEDED;
+    AsyncGenerator<void> stop() final {
+        co_return;
     }
 
     void addDependencyInstance(ILogger *logger, IService *) {

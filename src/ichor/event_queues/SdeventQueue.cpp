@@ -40,11 +40,11 @@ namespace Ichor {
     }
 
     void SdeventQueue::pushEvent(uint64_t priority, std::unique_ptr<Event> &&event) {
-        if(!_initializedSdevent.load(std::memory_order_acquire)) {
+        if(!_initializedSdevent.load(std::memory_order_acquire)) [[unlikely]] {
             throw std::runtime_error("sdevent not initialized. Call createEventLoop or useEventLoop first.");
         }
 
-        if(!event) {
+        if(!event) [[unlikely]] {
             throw std::runtime_error("Pushing nullptr");
         }
 
@@ -55,7 +55,7 @@ namespace Ichor {
             int ret = sd_event_add_defer(_eventQueue, &src, [](sd_event_source *source, void *userdata) {
                 auto *e = reinterpret_cast<ProcessableEvent*>(userdata);
 
-                if(e->queue->shouldQuit()) {
+                if(e->queue->shouldQuit()) [[unlikely]] {
                     e->queue->quit();
                 }
 
@@ -79,18 +79,18 @@ namespace Ichor {
                 return 0;
             }, procEvent);
 
-            if(ret < 0) {
+            if(ret < 0) [[unlikely]] {
                 delete procEvent;
                 throw std::system_error(-ret, std::generic_category(), "sd_event_add_defer() failed");
             }
 
             ret = sd_event_source_set_priority(src, static_cast<int64_t>(priority) - static_cast<int64_t>(INTERNAL_EVENT_PRIORITY));
 
-            if (ret < 0) {
+            if (ret < 0) [[unlikely]] {
                 throw std::system_error(-ret, std::generic_category(), "sd_event_source_set_priority() failed");
             }
 
-            if(std::this_thread::get_id() != _threadId) {
+            if(std::this_thread::get_id() != _threadId) [[unlikely]] {
                 uint64_t val = 1;
                 if (write(_eventfd, &val, sizeof(val)) < 0) {
                     throw std::system_error(-errno, std::generic_category(), "write() failed");
@@ -100,7 +100,7 @@ namespace Ichor {
     }
 
     bool SdeventQueue::empty() const {
-        if(!_initializedSdevent.load(std::memory_order_acquire)) {
+        if(!_initializedSdevent.load(std::memory_order_acquire)) [[unlikely]] {
             throw std::runtime_error("sdevent not initialized. Call createEventLoop or useEventLoop first.");
         }
 
@@ -110,7 +110,7 @@ namespace Ichor {
     }
 
     uint64_t SdeventQueue::size() const {
-        if(!_initializedSdevent.load(std::memory_order_acquire)) {
+        if(!_initializedSdevent.load(std::memory_order_acquire)) [[unlikely]] {
             throw std::runtime_error("sdevent not initialized. Call createEventLoop or useEventLoop first.");
         }
 
@@ -122,7 +122,7 @@ namespace Ichor {
     [[nodiscard]] sd_event* SdeventQueue::createEventLoop() {
         auto ret = sd_event_default(&_eventQueue);
 
-        if(ret < 0) {
+        if(ret < 0) [[unlikely]] {
             throw std::system_error(-ret, std::generic_category(), "sd_event_default() failed");
         }
 
@@ -142,11 +142,11 @@ namespace Ichor {
     }
 
     void SdeventQueue::start(bool captureSigInt) {
-        if(!_initializedSdevent.load(std::memory_order_acquire)) {
+        if(!_initializedSdevent.load(std::memory_order_acquire)) [[unlikely]] {
             throw std::runtime_error("sdevent not initialized. Call createEventLoop or useEventLoop first.");
         }
 
-        if(!_dm) {
+        if(!_dm) [[unlikely]] {
             throw std::runtime_error("Please create a manager first!");
         }
 
@@ -163,7 +163,7 @@ namespace Ichor {
     bool SdeventQueue::shouldQuit() {
         bool const shouldQuit = Detail::sigintQuit.load(std::memory_order_acquire);
 
-        if (shouldQuit) {
+        if (shouldQuit) [[unlikely]] {
             _quit.store(true, std::memory_order_release);
         }
 
@@ -185,7 +185,7 @@ namespace Ichor {
             return 0;
         }, this);
 
-        if(ret < 0) {
+        if(ret < 0) [[unlikely]] {
             // memory leak because event.release()
             throw std::system_error(-ret, std::generic_category(), "sd_event_add_defer() failed");
         }
@@ -200,7 +200,7 @@ namespace Ichor {
 
                                       // Decrement semaphore
                                       auto n = ::read(fd, &val, sizeof(val));
-                                      if (n < 0) {
+                                      if (n < 0) [[unlikely]] {
                                           if (errno == EINTR) {
                                               n = 0;
                                           }
@@ -209,13 +209,13 @@ namespace Ichor {
                                       return static_cast<int>(n);
                                   }, nullptr);
 
-        if (ret < 0) {
+        if (ret < 0) [[unlikely]] {
             throw std::system_error(-ret, std::generic_category(), "sd_event_add_io() failed");
         }
 
         ret = sd_event_source_set_io_fd_own(_eventfdSource, true);
 
-        if (ret < 0) {
+        if (ret < 0) [[unlikely]] {
             throw std::system_error(-ret, std::generic_category(), "sd_event_source_set_io_fd_own() failed");
         }
     }
@@ -233,7 +233,7 @@ namespace Ichor {
                                       return 0;
                                   }, this);
 
-        if (ret < 0) {
+        if (ret < 0) [[unlikely]] {
             throw std::system_error(-ret, std::generic_category(), "sd_event_add_io() failed");
         }
     }

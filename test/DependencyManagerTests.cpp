@@ -6,47 +6,6 @@
 #include "Common.h"
 
 TEST_CASE("DependencyManager") {
-    SECTION("ExceptionOnStart_WhenNoRegistrations") {
-        std::atomic<bool> stopped = false;
-        std::atomic<bool> thrown_exception = false;
-        std::thread t([&]() {
-            try {
-                auto queue = std::make_unique<MultimapQueue>();
-                auto &dm = queue->createManager();
-                queue->start(CaptureSigInt);
-            } catch (...) {
-                thrown_exception = true;
-            }
-            stopped = true;
-        });
-
-        t.join();
-
-        REQUIRE(stopped);
-        REQUIRE(thrown_exception);
-    }
-
-    SECTION("DependencyManager", "ExceptionOnStart_WhenNoFrameworkLogger") {
-        std::atomic<bool> stopped = false;
-        std::atomic<bool> thrown_exception = false;
-        std::thread t([&]() {
-            try {
-                auto queue = std::make_unique<MultimapQueue>();
-                auto &dm = queue->createManager();
-                dm.createServiceManager<UselessService>();
-                queue->start(CaptureSigInt);
-            } catch (...) {
-                thrown_exception = true;
-            }
-            stopped = true;
-        });
-
-        t.join();
-
-        REQUIRE(stopped);
-        REQUIRE(thrown_exception);
-    }
-
     SECTION("DependencyManager", "QuitOnQuitEvent") {
         auto queue = std::make_unique<MultimapQueue>();
         auto &dm = queue->createManager();
@@ -85,6 +44,50 @@ TEST_CASE("DependencyManager") {
         REQUIRE_FALSE(dm.isRunning());
     }
 
+    SECTION("DependencyManager", "Get services functions") {
+        auto queue = std::make_unique<MultimapQueue>();
+        auto &dm = queue->createManager();
+        uint64_t uselessSvcId{};
+        sole::uuid loggerUuid{};
+
+        std::thread t([&]() {
+            loggerUuid = dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>()->getServiceGid();
+            uselessSvcId = dm.createServiceManager<UselessService, IUselessService>()->getServiceId();
+            dm.createServiceManager<Ichor::UselessService, Ichor::IUselessService>();
+            queue->start(CaptureSigInt);
+        });
+
+        waitForRunning(dm);
+
+        dm.runForOrQueueEmpty();
+
+        dm.pushEvent<RunFunctionEvent>(0, [&](DependencyManager &_dm) -> AsyncGenerator<IchorBehaviour> {
+            REQUIRE(_dm.getServiceCount() == 3);
+
+            auto svc = _dm.getService(uselessSvcId);
+            REQUIRE(svc.has_value());
+            REQUIRE(svc.value()->getServiceId() == uselessSvcId);
+            REQUIRE(svc.value()->getServiceName() == typeName<UselessService>());
+
+            auto loggerSvc = _dm.getService(loggerUuid);
+            REQUIRE(loggerSvc.has_value());
+            REQUIRE(loggerSvc.value()->getServiceGid() == loggerUuid);
+
+            auto uselessSvcs = _dm.getAllServicesOfType<IUselessService>();
+            REQUIRE(uselessSvcs.size() == 2);
+
+            auto startedSvc = _dm.getStartedServices<IUselessService>();
+            REQUIRE(startedSvc.size() == 2);
+
+            dm.pushEvent<QuitEvent>(0);
+            co_return {};
+        });
+
+        t.join();
+
+        REQUIRE_FALSE(dm.isRunning());
+    }
+
     SECTION("DependencyManager", "RunFunctionEvent thread") {
         auto queue = std::make_unique<MultimapQueue>();
         auto &dm = queue->createManager();
@@ -108,7 +111,7 @@ TEST_CASE("DependencyManager") {
 
         AsyncManualResetEvent evt;
 
-        dm.pushEvent<RunFunctionEvent>(0, [&](DependencyManager &_dm) -> AsyncGenerator<void> {
+        dm.pushEvent<RunFunctionEvent>(0, [&](DependencyManager &_dm) -> AsyncGenerator<IchorBehaviour> {
             REQUIRE(Ichor::Detail::_local_dm == &_dm);
             REQUIRE(Ichor::Detail::_local_dm == &dm);
             REQUIRE(testThreadId != std::this_thread::get_id());
@@ -119,20 +122,20 @@ TEST_CASE("DependencyManager") {
             REQUIRE(testThreadId != std::this_thread::get_id());
             REQUIRE(dmThreadId == std::this_thread::get_id());
             dm.pushEvent<QuitEvent>(0);
-            co_return;
+            co_return {};
         });
 
         dm.runForOrQueueEmpty();
 
         REQUIRE(Ichor::Detail::_local_dm == nullptr);
 
-        dm.pushEvent<RunFunctionEvent>(0, [&](DependencyManager &_dm) -> AsyncGenerator<void> {
+        dm.pushEvent<RunFunctionEvent>(0, [&](DependencyManager &_dm) -> AsyncGenerator<IchorBehaviour> {
             REQUIRE(Ichor::Detail::_local_dm == &_dm);
             REQUIRE(Ichor::Detail::_local_dm == &dm);
             REQUIRE(testThreadId != std::this_thread::get_id());
             REQUIRE(dmThreadId == std::this_thread::get_id());
             evt.set();
-            co_return;
+            co_return {};
         });
 
         t.join();

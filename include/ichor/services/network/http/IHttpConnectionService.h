@@ -20,7 +20,7 @@ namespace Ichor {
          * Close the connection
          * @return true if closed, false if already closed
          */
-        virtual bool close() = 0;
+        virtual AsyncGenerator<void> close() = 0;
 
         /**
          * Sets priority with which to push incoming network events.

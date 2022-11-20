@@ -31,7 +31,7 @@ TEST_CASE("Interceptor Tests") {
 
         dm.runForOrQueueEmpty();
 
-        dm.pushEvent<RunFunctionEvent>(0, [](DependencyManager& mng) -> AsyncGenerator<void> {
+        dm.pushEvent<RunFunctionEvent>(0, [](DependencyManager& mng) -> AsyncGenerator<IchorBehaviour> {
             auto services = mng.getStartedServices<IInterceptorService>();
 
             REQUIRE(services.size() == 1);
@@ -48,7 +48,7 @@ TEST_CASE("Interceptor Tests") {
 
             mng.pushEvent<QuitEvent>(0);
 
-            co_return;
+            co_return {};
         });
 
         t.join();
@@ -73,7 +73,7 @@ TEST_CASE("Interceptor Tests") {
 
         dm.runForOrQueueEmpty();
 
-        dm.pushEvent<RunFunctionEvent>(0, [](DependencyManager& mng) -> AsyncGenerator<void> {
+        dm.pushEvent<RunFunctionEvent>(0, [](DependencyManager& mng) -> AsyncGenerator<IchorBehaviour> {
             auto services = mng.getStartedServices<IInterceptorService>();
 
             REQUIRE(services.size() == 1);
@@ -90,7 +90,7 @@ TEST_CASE("Interceptor Tests") {
 
             mng.pushEvent<QuitEvent>(0);
 
-            co_return;
+            co_return {};
         });
 
         t.join();
@@ -115,7 +115,7 @@ TEST_CASE("Interceptor Tests") {
 
         dm.runForOrQueueEmpty();
 
-        dm.pushEvent<RunFunctionEvent>(0, [](DependencyManager& mng) -> AsyncGenerator<void> {
+        dm.pushEvent<RunFunctionEvent>(0, [](DependencyManager& mng) -> AsyncGenerator<IchorBehaviour> {
             auto interceptorServices = mng.getStartedServices<IInterceptorService>();
             auto eventHandlerServices = mng.getStartedServices<IEventHandlerService>();
 
@@ -136,7 +136,7 @@ TEST_CASE("Interceptor Tests") {
 
             mng.pushEvent<QuitEvent>(0);
 
-            co_return;
+            co_return {};
         });
 
         t.join();
@@ -158,7 +158,7 @@ TEST_CASE("Interceptor Tests") {
 
         dm.runForOrQueueEmpty();
 
-        dm.pushEvent<RunFunctionEvent>(0, [](DependencyManager& mng) -> AsyncGenerator<void> {
+        dm.pushEvent<RunFunctionEvent>(0, [](DependencyManager& mng) -> AsyncGenerator<IchorBehaviour> {
             auto services = mng.getStartedServices<IInterceptorService>();
 
             REQUIRE(services.size() == 1);
@@ -180,7 +180,7 @@ TEST_CASE("Interceptor Tests") {
 
             mng.pushEvent<QuitEvent>(0);
 
-            co_return;
+            co_return {};
         });
 
         t.join();
@@ -203,7 +203,7 @@ TEST_CASE("Interceptor Tests") {
 
         dm.runForOrQueueEmpty();
 
-        dm.pushEvent<RunFunctionEvent>(0, [](DependencyManager& mng) -> AsyncGenerator<void> {
+        dm.pushEvent<RunFunctionEvent>(0, [](DependencyManager& mng) -> AsyncGenerator<IchorBehaviour> {
             auto services = mng.getStartedServices<IInterceptorService>();
 
             REQUIRE(services.size() == 2);
@@ -213,7 +213,8 @@ TEST_CASE("Interceptor Tests") {
                 auto &post = services[i]->getPostinterceptedCounters();
                 auto &un = services[i]->getUnprocessedInterceptedCounters();
 
-                REQUIRE(pre.size() == 2);
+                // One of the services will see a StartServiceEvent, but we won't check it here
+                REQUIRE(pre.size() >= 2);
                 REQUIRE(pre.find(DependencyOnlineEvent::TYPE) != end(pre));
                 REQUIRE(pre.find(DependencyOnlineEvent::TYPE)->second == 3);
                 REQUIRE(pre.find(RunFunctionEvent::TYPE) != end(pre));
@@ -227,7 +228,7 @@ TEST_CASE("Interceptor Tests") {
 
             mng.pushEvent<QuitEvent>(0);
 
-            co_return;
+            co_return {};
         });
 
         t.join();

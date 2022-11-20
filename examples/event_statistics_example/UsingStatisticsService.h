@@ -4,7 +4,7 @@
 #include <ichor/services/logging/Logger.h>
 #include <ichor/services/timer/TimerService.h>
 #include <ichor/Service.h>
-#include <ichor/LifecycleManager.h>
+#include "ichor/dependency_management/ILifecycleManager.h"
 
 using namespace Ichor;
 
@@ -16,31 +16,31 @@ public:
     ~UsingStatisticsService() final = default;
 
 private:
-    StartBehaviour start() final {
+    AsyncGenerator<void> start() final {
         ICHOR_LOG_INFO(_logger, "UsingStatisticsService started");
         auto quitTimerManager = getManager().createServiceManager<Timer, ITimer>();
         auto bogusTimerManager = getManager().createServiceManager<Timer, ITimer>();
         quitTimerManager->setChronoInterval(15s);
         bogusTimerManager->setChronoInterval(100ms);
 
-        quitTimerManager->setCallback(this, [this](DependencyManager &dm) -> AsyncGenerator<void> {
+        quitTimerManager->setCallback(this, [this](DependencyManager &dm) -> AsyncGenerator<IchorBehaviour> {
             getManager().pushEvent<QuitEvent>(getServiceId());
-            co_return;
+            co_return {};
         });
 
-        bogusTimerManager->setCallback(this, [this](DependencyManager &dm) -> AsyncGenerator<void> {
+        bogusTimerManager->setCallback(this, [this](DependencyManager &dm) -> AsyncGenerator<IchorBehaviour> {
             std::this_thread::sleep_for(std::chrono::milliseconds(_dist(_mt)));
-            co_return;
+            co_return {};
         });
 
         quitTimerManager->startTimer();
         bogusTimerManager->startTimer();
-        return StartBehaviour::SUCCEEDED;
+        co_return;
     }
 
-    StartBehaviour stop() final {
+    AsyncGenerator<void> stop() final {
         ICHOR_LOG_INFO(_logger, "UsingStatisticsService stopped");
-        return StartBehaviour::SUCCEEDED;
+        co_return;
     }
 
     void addDependencyInstance(ILogger *logger, IService *) {

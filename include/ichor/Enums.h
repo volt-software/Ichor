@@ -16,17 +16,12 @@ namespace Ichor
     enum class ServiceState {
         UNINSTALLED,
         INSTALLED,
-        STARTING,
-        STOPPING,
         INJECTING,
-        UNINJECTING,
+        STARTING,
         ACTIVE,
-    };
-
-    enum class StartBehaviour {
-        FAILED_DO_NOT_RETRY,
-        FAILED_AND_RETRY,
-        SUCCEEDED
+        UNINJECTING,
+//        UNINJECTED,
+        STOPPING,
     };
 
     enum class LogLevel {
@@ -66,6 +61,23 @@ namespace Ichor
         value_ready_producer_suspended,
         cancelled
     };
+
+    // coroutine specific 'enums'
+    struct Empty{};
+    constexpr static Empty empty = {};
+
+    enum class StartBehaviour {
+        DONE,
+        STARTED,
+        STOPPED
+    };
+
+    // Necessary to prevent excessive events on the queue.
+    // Every async call using this will end up adding an event to the queue on co_return/co_yield.
+    enum class IchorBehaviour {
+        DONE
+    };
+
 }
 
 template <>
@@ -94,31 +106,6 @@ struct fmt::formatter<Ichor::ServiceState>
             case Ichor::ServiceState::UNINJECTING:
                 return format_to(ctx.out(), "UNINJECTING");
             case Ichor::ServiceState::ACTIVE:
-                return format_to(ctx.out(), "ACTIVE");
-            default:
-                return format_to(ctx.out(), "error, please file a bug in Ichor");
-        }
-    }
-};
-
-template <>
-struct fmt::formatter<Ichor::StartBehaviour>
-{
-    constexpr auto parse(format_parse_context& ctx)
-    {
-        return ctx.end();
-    }
-
-    template <typename FormatContext>
-    auto format(const Ichor::StartBehaviour& behaviour, FormatContext& ctx)
-    {
-        switch(behaviour)
-        {
-            case Ichor::StartBehaviour::FAILED_DO_NOT_RETRY:
-                return format_to(ctx.out(), "FAILED_DO_NOT_RETRY");
-            case Ichor::StartBehaviour::FAILED_AND_RETRY:
-                return format_to(ctx.out(), "FAILED_AND_RETRY");
-            case Ichor::StartBehaviour::SUCCEEDED:
                 return format_to(ctx.out(), "ACTIVE");
             default:
                 return format_to(ctx.out(), "error, please file a bug in Ichor");
@@ -176,6 +163,31 @@ struct fmt::formatter<Ichor::Detail::DependencyChange>
                 return format_to(ctx.out(), "FOUND_AND_START_ME");
             case Ichor::Detail::DependencyChange::FOUND_AND_STOP_ME:
                 return format_to(ctx.out(), "FOUND_AND_STOP_ME");
+            default:
+                return format_to(ctx.out(), "error, please file a bug in Ichor");
+        }
+    }
+};
+
+template <>
+struct fmt::formatter<Ichor::StartBehaviour>
+{
+    constexpr auto parse(format_parse_context& ctx)
+    {
+        return ctx.end();
+    }
+
+    template <typename FormatContext>
+    auto format(const Ichor::StartBehaviour& change, FormatContext& ctx)
+    {
+        switch(change)
+        {
+            case Ichor::StartBehaviour::DONE:
+                return format_to(ctx.out(), "DONE");
+            case Ichor::StartBehaviour::STARTED:
+                return format_to(ctx.out(), "STARTED");
+            case Ichor::StartBehaviour::STOPPED:
+                return format_to(ctx.out(), "STOPPED");
             default:
                 return format_to(ctx.out(), "error, please file a bug in Ichor");
         }

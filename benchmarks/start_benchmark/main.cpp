@@ -6,9 +6,28 @@
 #include <iostream>
 #include <thread>
 #include <array>
+#include "../../examples/common/lyra.hpp"
 
 int main(int argc, char *argv[]) {
     std::locale::global(std::locale("en_US.UTF-8"));
+
+    bool showHelp{};
+    bool singleOnly{};
+
+    auto cli = lyra::help(showHelp)
+               | lyra::opt(singleOnly)["-s"]["--single"]("Single core only");
+
+    auto result = cli.parse( { argc, argv } );
+    if (!result) {
+        fmt::print("Error in command line: {}\n", result.message());
+        return 1;
+    }
+
+    if (showHelp)
+    {
+        std::cout << cli << "\n";
+        return 0;
+    }
 
     {
         auto start = std::chrono::steady_clock::now();
@@ -23,7 +42,8 @@ int main(int argc, char *argv[]) {
         auto end = std::chrono::steady_clock::now();
         std::cout << fmt::format("{} single threaded ran for {:L} µs with {:L} peak memory usage\n", argv[0], std::chrono::duration_cast<std::chrono::microseconds>(end - start).count(), getPeakRSS());
     }
-    {
+
+    if(!singleOnly) {
         auto start = std::chrono::steady_clock::now();
         std::array<std::thread, 8> threads{};
         std::array<MultimapQueue, 8> queues{};

@@ -2,7 +2,7 @@
 
 #include <ichor/DependencyManager.h>
 #include <ichor/Service.h>
-#include <ichor/LifecycleManager.h>
+#include "ichor/dependency_management/ILifecycleManager.h"
 #include <ichor/services/logging/Logger.h>
 
 namespace Ichor {
@@ -32,14 +32,14 @@ namespace Ichor {
         }
 
     private:
-        StartBehaviour start() final {
+        AsyncGenerator<void> start() final {
             _loggerTrackerRegistration = Service<LoggerAdmin<LogT>>::getManager().template registerDependencyTracker<ILogger>(this);
-            return StartBehaviour::SUCCEEDED;
+            co_return;
         }
 
-        StartBehaviour stop() final {
+        AsyncGenerator<void> stop() final {
             _loggerTrackerRegistration.reset();
-            return StartBehaviour::SUCCEEDED;
+            co_return;
         }
 
         void addDependencyInstance(IFrameworkLogger *logger, IService *isvc) noexcept {
@@ -60,7 +60,7 @@ namespace Ichor {
             }
             if (logger == end(_loggers)) {
                 Properties props{};
-                props.template emplace<>("Filter",          Ichor::make_any<Filter>(Filter{ServiceIdFilterEntry{evt.originatingService}}));
+                props.template emplace<>("Filter", Ichor::make_any<Filter>(Filter{ServiceIdFilterEntry{evt.originatingService}}));
                 auto it = _loggers.emplace(evt.originatingService, Service<LoggerAdmin<LogT>>::getManager().template createServiceManager<LogT, ILogger>(std::move(props)));
                 it.first->second->setLogLevel(requestedLevel);
             } else {
@@ -69,7 +69,13 @@ namespace Ichor {
         }
 
         void handleDependencyUndoRequest(ILogger *, DependencyUndoRequestEvent const &evt) {
-            _loggers.erase(evt.originatingService);
+            auto service = _loggers.find(evt.originatingService);
+            if(service != end(_loggers)) {
+                Service<LoggerAdmin<LogT>>::getManager().template pushEvent<StopServiceEvent>(Service<LoggerAdmin<LogT>>::getServiceId(), service->second->getServiceId());
+                // + 11 because the first stop triggers a dep offline event and inserts a new stop with 10 higher priority.
+                Service<LoggerAdmin<LogT>>::getManager().template pushPrioritisedEvent<RemoveServiceEvent>(Service<LoggerAdmin<LogT>>::getServiceId(), INTERNAL_EVENT_PRIORITY + 11, service->second->getServiceId());
+                _loggers.erase(service);
+            }
         }
 
         friend DependencyRegister;

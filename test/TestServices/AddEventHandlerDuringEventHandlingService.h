@@ -9,30 +9,30 @@ using namespace Ichor;
 struct AddEventHandlerDuringEventHandlingService final : public Service<AddEventHandlerDuringEventHandlingService> {
     AddEventHandlerDuringEventHandlingService() = default;
 
-    StartBehaviour start() final {
+    AsyncGenerator<void> start() final {
         _reg = getManager().registerEventHandler<TestEvent>(this);
 
-        return StartBehaviour::SUCCEEDED;
+        co_return;
     }
 
-    StartBehaviour stop() final {
+    AsyncGenerator<void> stop() final {
         _reg.reset();
         _reg2.reset();
 
-        return StartBehaviour::SUCCEEDED;
+        co_return;
     }
 
-    AsyncGenerator<void> handleEvent(TestEvent const &evt) {
+    AsyncGenerator<IchorBehaviour> handleEvent(TestEvent const &evt) {
         if(!_addedReg) {
             getManager().createServiceManager<AddEventHandlerDuringEventHandlingService>();
             _reg2 = getManager().registerEventHandler<TestEvent2>(this);
             _addedReg = true;
         }
-        co_return;
+        co_return {};
     }
 
-    AsyncGenerator<void> handleEvent(TestEvent2 const &evt) {
-        co_return;
+    AsyncGenerator<IchorBehaviour> handleEvent(TestEvent2 const &evt) {
+        co_return {};
     }
 
     EventHandlerRegistration _reg{};

@@ -5,7 +5,7 @@
 #include <ichor/services/logging/Logger.h>
 #include <ichor/Service.h>
 #include <ichor/services/serialization/ISerializer.h>
-#include <ichor/LifecycleManager.h>
+#include "ichor/dependency_management/ILifecycleManager.h"
 #include "../../examples/common/TestMsg.h"
 
 #ifdef __SANITIZE_ADDRESS__
@@ -26,17 +26,17 @@ public:
     ~TestService() final = default;
 
 private:
-    StartBehaviour start() final {
+    AsyncGenerator<void> start() final {
         ICHOR_LOG_INFO(_logger, "TestService started with dependency");
         _doWorkRegistration = getManager().registerEventCompletionCallbacks<DoWorkEvent>(this);
         getManager().pushEvent<DoWorkEvent>(getServiceId());
-        return Ichor::StartBehaviour::SUCCEEDED;
+        co_return;
     }
 
-    StartBehaviour stop() final {
+    AsyncGenerator<void> stop() final {
         ICHOR_LOG_INFO(_logger, "TestService stopped with dependency");
         _doWorkRegistration.reset();
-        return Ichor::StartBehaviour::SUCCEEDED;
+        co_return;
     }
 
     void addDependencyInstance(ILogger *logger, IService *) {
@@ -70,7 +70,7 @@ private:
             }
         }
         auto end = std::chrono::steady_clock::now();
-        ICHOR_LOG_INFO(_logger, "finished in {:L} µs", std::chrono::duration_cast<std::chrono::microseconds>(end-start).count());
+        ICHOR_LOG_ERROR(_logger, "finished in {:L} µs", std::chrono::duration_cast<std::chrono::microseconds>(end-start).count());
         getManager().pushEvent<QuitEvent>(getServiceId());
     }
 

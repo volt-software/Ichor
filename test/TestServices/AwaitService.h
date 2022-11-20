@@ -33,25 +33,25 @@ struct AwaitService final : public IAwaitService, public Service<AwaitService> {
 struct EventAwaitService final : public Service<EventAwaitService> {
     EventAwaitService() = default;
     ~EventAwaitService() final = default;
-    StartBehaviour start() final {
+    AsyncGenerator<void> start() final {
         _handler = this->getManager().template registerEventHandler<AwaitEvent>(this);
 
-        return StartBehaviour::SUCCEEDED;
+        co_return;
     }
 
-    StartBehaviour stop() final {
+    AsyncGenerator<void> stop() final {
         _handler.reset();
 
-        return StartBehaviour::SUCCEEDED;
+        co_return;
     }
 
-    AsyncGenerator<void> handleEvent(AwaitEvent const &evt) {
+    AsyncGenerator<IchorBehaviour> handleEvent(AwaitEvent const &evt) {
         co_await *_evt;
-        co_yield empty;
+        co_yield {};
 
         this->getManager().pushEvent<QuitEvent>(getServiceId());
 
-        co_return;
+        co_return {};
     }
 
     EventHandlerRegistration _handler{};

@@ -13,33 +13,30 @@ Ichor::TcpConnectionService::TcpConnectionService(DependencyRegister &reg, Prope
     reg.registerDependency<ILogger>(this, true);
 }
 
-Ichor::StartBehaviour Ichor::TcpConnectionService::start() {
+Ichor::AsyncGenerator<void> Ichor::TcpConnectionService::start() {
     if(getProperties().contains("Priority")) {
-        _priority = Ichor::any_cast<uint64_t>(getProperties().operator[]("Priority"));
+        _priority = Ichor::any_cast<uint64_t>(getProperties()["Priority"]);
     }
 
 
     if(getProperties().contains("Socket")) {
-        _socket = Ichor::any_cast<int>(getProperties().operator[]("Socket"));
+        _socket = Ichor::any_cast<int>(getProperties()["Socket"]);
 
         ICHOR_LOG_TRACE(_logger, "Starting TCP connection for existing socket");
     } else {
         if(!getProperties().contains("Address")) {
-            getManager().pushEvent<UnrecoverableErrorEvent>(getServiceId(), 0u, "Missing \"Address\" in properties");
-            return Ichor::StartBehaviour::FAILED_DO_NOT_RETRY;
+            throw std::runtime_error("Missing \"Address\" in properties");
         }
 
         if(!getProperties().contains("Port")) {
-            getManager().pushEvent<UnrecoverableErrorEvent>(getServiceId(), 1u, "Missing \"Port\" in properties");
-            return Ichor::StartBehaviour::FAILED_DO_NOT_RETRY;
+            throw std::runtime_error("Missing \"Port\" in properties");
         }
 
         // The start function possibly gets called multiple times due to trying to recover from not being able to connect
         if(_socket == -1) {
             _socket = socket(AF_INET, SOCK_STREAM, 0);
             if (_socket == -1) {
-                getManager().pushEvent<UnrecoverableErrorEvent>(getServiceId(), 2u, "Couldn't create socket: errno = " + std::to_string(errno));
-                return Ichor::StartBehaviour::FAILED_DO_NOT_RETRY;
+                throw std::runtime_error("Couldn't create socket: errno = " + std::to_string(errno));
             }
         }
 
@@ -55,18 +52,15 @@ Ichor::StartBehaviour Ichor::TcpConnectionService::start() {
         int ret = inet_pton(AF_INET, Ichor::any_cast<std::string&>((getProperties())["Address"]).c_str(), &address.sin_addr);
         if(ret == 0)
         {
-            getManager().pushEvent<UnrecoverableErrorEvent>(getServiceId(), 3u, "inet_pton invalid address for given address family (has to be ipv4-valid address)");
-            return Ichor::StartBehaviour::FAILED_DO_NOT_RETRY;
+            throw std::runtime_error("inet_pton invalid address for given address family (has to be ipv4-valid address)");
         }
 
-        if(connect(_socket, (struct sockaddr *)&address, sizeof(address)) < 0)
+        while(connect(_socket, (struct sockaddr *)&address, sizeof(address)) < 0)
         {
             ICHOR_LOG_ERROR(_logger, "connect error {}", errno);
-            if(_attempts < 5) {
-                _attempts++;
-                return Ichor::StartBehaviour::FAILED_AND_RETRY;
+            if(_attempts++ >= 5) {
+                throw std::runtime_error("Couldn't connect");
             }
-            return Ichor::StartBehaviour::FAILED_DO_NOT_RETRY;
         }
 
         auto ip = ::inet_ntoa(address.sin_addr);
@@ -75,29 +69,29 @@ Ichor::StartBehaviour Ichor::TcpConnectionService::start() {
 
     _timerManager = getManager().createServiceManager<Timer, ITimer>();
     _timerManager->setChronoInterval(20ms);
-    _timerManager->setCallback(this, [this](DependencyManager &dm) -> AsyncGenerator<void> {
+    _timerManager->setCallback(this, [this](DependencyManager &dm) -> AsyncGenerator<IchorBehaviour> {
         std::array<char, 1024> buf;
         auto ret = recv(_socket, buf.data(), buf.size(), 0);
 
         if (ret == 0) {
-            co_return;
+            co_return {};
         }
 
         if(ret < 0) {
             ICHOR_LOG_ERROR(_logger, "Error receiving from socket: {}", errno);
             getManager().pushEvent<RecoverableErrorEvent>(getServiceId(), 4u, "Error receiving from socket. errno = " + std::to_string(errno));
-            co_return;
+            co_return {};
         }
 
         getManager().pushPrioritisedEvent<NetworkDataEvent>(getServiceId(), _priority, std::vector<uint8_t>{buf.data(), buf.data() + ret});
-        co_return;
+        co_return {};
     });
     _timerManager->startTimer();
 
-    return Ichor::StartBehaviour::SUCCEEDED;
+    co_return;
 }
 
-Ichor::StartBehaviour Ichor::TcpConnectionService::stop() {
+Ichor::AsyncGenerator<void> Ichor::TcpConnectionService::stop() {
     _quit = true;
     _timerManager = nullptr;
 
@@ -106,7 +100,7 @@ Ichor::StartBehaviour Ichor::TcpConnectionService::stop() {
         ::close(_socket);
     }
 
-    return Ichor::StartBehaviour::SUCCEEDED;
+    co_return;
 }
 
 void Ichor::TcpConnectionService::addDependencyInstance(ILogger *logger, IService *) {

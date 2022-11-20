@@ -3,7 +3,7 @@
 #include <ichor/DependencyManager.h>
 #include <ichor/services/logging/Logger.h>
 #include <ichor/Service.h>
-#include <ichor/LifecycleManager.h>
+#include "ichor/dependency_management/ILifecycleManager.h"
 #include "OptionalService.h"
 #include "gsm_enc/gsm_enc.h"
 #include <array>
@@ -31,20 +31,20 @@ public:
     ~TestService() final = default;
 
 private:
-    StartBehaviour start() final {
+    AsyncGenerator<void> start() final {
         ICHOR_LOG_INFO(_logger, "TestService started with dependency");
         _started = true;
         _eventHandlerRegistration = getManager().registerEventHandler<ExecuteTaskEvent>(this);
         if(_injectionCount == 2) {
             enqueueWorkload();
         }
-        return StartBehaviour::SUCCEEDED;
+        co_return;
     }
 
-    StartBehaviour stop() final {
+    AsyncGenerator<void> stop() final {
         ICHOR_LOG_INFO(_logger, "TestService stopped with dependency");
         _eventHandlerRegistration.reset();
-        return StartBehaviour::SUCCEEDED;
+        co_return;
     }
 
     void addDependencyInstance(ILogger *logger, IService *isvc) {
@@ -73,7 +73,7 @@ private:
         getManager().pushPrioritisedEvent<ExecuteTaskEvent>(getServiceId(), 10u);
     }
 
-    AsyncGenerator<void> handleEvent(ExecuteTaskEvent const &evt) {
+    AsyncGenerator<IchorBehaviour> handleEvent(ExecuteTaskEvent const &evt) {
         auto start = std::chrono::high_resolution_clock::now();
         run_gsm_enc_bench(); // run gsm_bench from TACLe bench
         auto endtime = std::chrono::high_resolution_clock::now();
@@ -95,7 +95,7 @@ private:
             getManager().pushPrioritisedEvent<ExecuteTaskEvent>(getServiceId(), 10u);
         }
 
-        co_return;
+        co_return {};
     }
 
     friend DependencyRegister;

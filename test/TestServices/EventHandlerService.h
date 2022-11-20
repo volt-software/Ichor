@@ -16,19 +16,19 @@ template <Derived<Event> EventT>
 struct EventHandlerService final : public IEventHandlerService, public Service<EventHandlerService<EventT>> {
     EventHandlerService() = default;
 
-    StartBehaviour start() final {
+    AsyncGenerator<void> start() final {
         _handler = this->getManager().template registerEventHandler<EventT>(this);
 
-        return StartBehaviour::SUCCEEDED;
+        co_return;
     }
 
-    StartBehaviour stop() final {
+    AsyncGenerator<void> stop() final {
         _handler.reset();
 
-        return StartBehaviour::SUCCEEDED;
+        co_return;
     }
 
-    AsyncGenerator<void> handleEvent(EventT const &evt) {
+    AsyncGenerator<IchorBehaviour> handleEvent(EventT const &evt) {
         auto counter = handledEvents.find(evt.type);
 
         if(counter == end(handledEvents)) {
@@ -37,7 +37,7 @@ struct EventHandlerService final : public IEventHandlerService, public Service<E
             counter->second++;
         }
 
-        co_return;
+        co_return {};
     }
 
     std::unordered_map<uint64_t, uint64_t>& getHandledEvents() final {

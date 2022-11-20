@@ -14,17 +14,18 @@ namespace Ichor {
         ~ClientAdmin() override = default;
 
     private:
-        StartBehaviour start() final {
+        AsyncGenerator<void> start() final {
             _trackerRegistration = Service<ClientAdmin<NetworkType, NetworkInterfaceType>>::getManager().template registerDependencyTracker<NetworkInterfaceType>(this);
             _unrecoverableErrorRegistration = Service<ClientAdmin<NetworkType, NetworkInterfaceType>>::getManager().template registerEventHandler<UnrecoverableErrorEvent>(this);
 
-            return StartBehaviour::SUCCEEDED;
+            co_return;
         }
 
-        StartBehaviour stop() final {
+        AsyncGenerator<void> stop() final {
             _trackerRegistration.reset();
             _unrecoverableErrorRegistration.reset();
-            return StartBehaviour::SUCCEEDED;
+
+            co_return;
         }
 
         void handleDependencyRequest(NetworkInterfaceType*, DependencyRequestEvent const &evt) {
@@ -52,12 +53,15 @@ namespace Ichor {
             auto connection = _connections.find(evt.originatingService);
 
             if(connection != end(_connections)) {
-                Service<ClientAdmin<NetworkType, NetworkInterfaceType>>::getManager().template pushEvent<RemoveServiceEvent>(evt.originatingService, connection->second->getServiceId());
+                // TODO: turn into async and await a stop service before calling remove. Current connections already are async, which will lead to the remove service event being ignored.
+                Service<ClientAdmin<NetworkType, NetworkInterfaceType>>::getManager().template pushEvent<StopServiceEvent>(Service<ClientAdmin<NetworkType, NetworkInterfaceType>>::getServiceId(), connection->second->getServiceId());
+                // + 11 because the first stop triggers a dep offline event and inserts a new stop with 10 higher priority.
+                Service<ClientAdmin<NetworkType, NetworkInterfaceType>>::getManager().template pushPrioritisedEvent<RemoveServiceEvent>(Service<ClientAdmin<NetworkType, NetworkInterfaceType>>::getServiceId(), INTERNAL_EVENT_PRIORITY + 11, connection->second->getServiceId());
                 _connections.erase(connection);
             }
         }
 
-        AsyncGenerator<void> handleEvent(UnrecoverableErrorEvent const &evt) {
+        AsyncGenerator<IchorBehaviour> handleEvent(UnrecoverableErrorEvent const &evt) {
             for(auto &[key, service] : _connections) {
                 if(service->getServiceId() != evt.originatingService) {
                     continue;
@@ -75,7 +79,7 @@ namespace Ichor {
                 break;
             }
 
-            co_return;
+            co_return {};
         }
 
         friend DependencyRegister;

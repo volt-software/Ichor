@@ -9,57 +9,64 @@ Ichor::HttpHostService::HttpHostService(DependencyRegister &reg, Properties prop
     reg.registerDependency<IHttpContextService>(this, true);
 }
 
-Ichor::StartBehaviour Ichor::HttpHostService::start() {
+Ichor::AsyncGenerator<void> Ichor::HttpHostService::start() {
     if(getProperties().contains("Priority")) {
-        _priority = Ichor::any_cast<uint64_t>(getProperties().operator[]("Priority"));
+        _priority = Ichor::any_cast<uint64_t>(getProperties()["Priority"]);
     }
 
     if(!getProperties().contains("Port") || !getProperties().contains("Address")) {
-        getManager().pushPrioritisedEvent<UnrecoverableErrorEvent>(getServiceId(), _priority, 0u, "Missing port or address when starting HttpHostService");
-        return Ichor::StartBehaviour::FAILED_DO_NOT_RETRY;
+        throw std::runtime_error("Missing port or address when starting HttpHostService");
     }
 
     if(getProperties().contains("NoDelay")) {
-        _tcpNoDelay = Ichor::any_cast<bool>(getProperties().operator[]("NoDelay"));
+        _tcpNoDelay = Ichor::any_cast<bool>(getProperties()["NoDelay"]);
     }
 
-    auto address = net::ip::make_address(Ichor::any_cast<std::string&>(getProperties().operator[]("Address")));
-    auto port = Ichor::any_cast<uint16_t>(getProperties().operator[]("Port"));
+    auto address = net::ip::make_address(Ichor::any_cast<std::string&>(getProperties()["Address"]));
+    auto port = Ichor::any_cast<uint16_t>(getProperties()["Port"]);
 
     net::spawn(*_httpContextService->getContext(), [this, address = std::move(address), port](net::yield_context yield){
         listen(tcp::endpoint{address, port}, std::move(yield));
     });
 
-    return Ichor::StartBehaviour::SUCCEEDED;
+    co_return;
 }
 
-Ichor::StartBehaviour Ichor::HttpHostService::stop() {
-    INTERNAL_DEBUG("HttpHostService::stop()");
+Ichor::AsyncGenerator<void> Ichor::HttpHostService::stop() {
+    INTERNAL_DEBUG("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! HttpHostService::stop()");
     _quit = true;
 
-    if(!_goingToCleanupStream.exchange(true) && _httpAcceptor) {
+    if(!_goingToCleanupStream.exchange(true, std::memory_order_acq_rel) && _httpAcceptor) {
         if (_httpAcceptor->is_open()) {
             _httpAcceptor->close();
         }
         net::spawn(*_httpContextService->getContext(), [this](net::yield_context _yield) {
             ScopeGuardAtomicCount guard{_finishedListenAndRead};
             // _httpStreams should only be modified from the boost thread
-            for (auto &[id, stream]: _httpStreams) {
+            for (auto &[id, stream] : _httpStreams) {
                 stream->cancel();
             }
 
             _httpAcceptor = nullptr;
-            _cleanedupStream = true;
+
+            getManager().pushEvent<RunFunctionEvent>(getServiceId(), [this](DependencyManager &dm) -> AsyncGenerator<IchorBehaviour> {
+                _startStopEvent.set();
+                co_return {};
+            });
         });
     }
 
-    if(_finishedListenAndRead.load(std::memory_order_acquire) != 0 || !_cleanedupStream) {
-        return Ichor::StartBehaviour::FAILED_AND_RETRY;
+    co_await _startStopEvent;
+    INTERNAL_DEBUG("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! post await");
+
+    while(_finishedListenAndRead.load(std::memory_order_acquire) != 0) {
+        std::this_thread::sleep_for(1ms);
     }
     // _httpStreams should only be modified from the boost thread, except here where we know there are no fibers running
     _httpStreams.clear();
+    INTERNAL_DEBUG("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! done");
 
-    return Ichor::StartBehaviour::SUCCEEDED;
+    co_return;
 }
 
 void Ichor::HttpHostService::addDependencyInstance(ILogger *logger, IService *) {
@@ -77,11 +84,6 @@ void Ichor::HttpHostService::addDependencyInstance(IHttpContextService *httpCont
 
 void Ichor::HttpHostService::removeDependencyInstance(IHttpContextService *httpContextService, IService *) {
     ICHOR_LOG_TRACE_ATOMIC(_logger, "Removing httpContextService");
-    stop();
-    while(_finishedListenAndRead.load(std::memory_order_acquire) != 0) {
-        // sleep this thread so that this thread won´t starve other threads (especially noticeable under callgrind)
-        std::this_thread::sleep_for(1ms);
-    }
     _httpContextService = nullptr;
 }
 
@@ -129,8 +131,7 @@ void Ichor::HttpHostService::fail(beast::error_code ec, const char *what, bool s
     }
 }
 
-void Ichor::HttpHostService::listen(tcp::endpoint endpoint, net::yield_context yield)
-{
+void Ichor::HttpHostService::listen(tcp::endpoint endpoint, net::yield_context yield) {
     ScopeGuardAtomicCount guard{_finishedListenAndRead};
     beast::error_code ec;
 
@@ -179,7 +180,9 @@ void Ichor::HttpHostService::listen(tcp::endpoint endpoint, net::yield_context y
     }
 
     ICHOR_LOG_WARN_ATOMIC(_logger, "finished listen() {} {}", _quit, _httpContextService->fibersShouldStop());
-    stop();
+    if(!_goingToCleanupStream.exchange(true, std::memory_order_acq_rel) && _httpAcceptor) {
+        getManager().pushPrioritisedEvent<StopServiceEvent>(getServiceId(), getPriority(), getServiceId());
+    }
 }
 
 void Ichor::HttpHostService::read(tcp::socket socket, net::yield_context yield) {
@@ -231,7 +234,7 @@ void Ichor::HttpHostService::read(tcp::socket socket, net::yield_context yield) 
         }
         HttpRequest httpReq{std::move(req.body()), static_cast<HttpMethod>(req.method()), std::string{req.target()}, addr, std::move(headers)};
 
-        getManager().pushEvent<RunFunctionEvent>(getServiceId(), [this, streamId, httpReq = std::move(httpReq), version = req.version(), keep_alive = req.keep_alive()](DependencyManager &dm) mutable -> AsyncGenerator<void> {
+        getManager().pushEvent<RunFunctionEvent>(getServiceId(), [this, streamId, httpReq = std::move(httpReq), version = req.version(), keep_alive = req.keep_alive()](DependencyManager &dm) mutable -> AsyncGenerator<IchorBehaviour> {
 
             auto routes = _handlers.find(static_cast<HttpMethod>(httpReq.method));
 
@@ -257,7 +260,7 @@ void Ichor::HttpHostService::read(tcp::socket socket, net::yield_context yield) 
                     res.prepare_payload();
                     sendInternal(streamId, std::move(res));
 
-                    co_return;
+                    co_return {};
                 }
             }
 
@@ -268,7 +271,7 @@ void Ichor::HttpHostService::read(tcp::socket socket, net::yield_context yield) 
             res.prepare_payload();
             sendInternal(streamId, std::move(res));
 
-            co_return;
+            co_return {};
         });
     }
     // _httpStreams should only be modified from the boost thread

@@ -4,7 +4,7 @@
 #include <ichor/services/logging/Logger.h>
 #include <ichor/services/etcd/IEtcdService.h>
 #include <ichor/Service.h>
-#include <ichor/LifecycleManager.h>
+#include "ichor/dependency_management/ILifecycleManager.h"
 
 using namespace Ichor;
 
@@ -17,7 +17,7 @@ public:
     ~UsingEtcdService() final = default;
 
 private:
-    StartBehaviour start() final {
+    AsyncGenerator<void> start() final {
         ICHOR_LOG_INFO(_logger, "UsingEtcdService started");
         if(_etcd->put("test", "2")) {
             ICHOR_LOG_TRACE(_logger, "Succesfully put key/value into etcd");
@@ -32,12 +32,12 @@ private:
         }
 
         getManager().pushEvent<QuitEvent>(getServiceId());
-        return StartBehaviour::SUCCEEDED;
+        co_return;
     }
 
-    StartBehaviour stop() final {
+    AsyncGenerator<void> stop() final {
         ICHOR_LOG_INFO(_logger, "UsingEtcdService stopped");
-        return StartBehaviour::SUCCEEDED;
+        co_return;
     }
 
     void addDependencyInstance(ILogger *logger, IService *) {

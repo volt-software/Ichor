@@ -11,6 +11,7 @@
 #include <atomic>
 #include <cassert>
 #include <functional>
+#include <memory>
 #include <ichor/Enums.h>
 
 namespace Ichor {
@@ -38,7 +39,6 @@ namespace Ichor::Detail {
             // Other variables left intentionally uninitialised as they're
             // only referenced in certain states by which time they should
             // have been initialised.
-            INTERNAL_DEBUG("Promise {}", _id);
         }
         virtual ~AsyncGeneratorPromiseBase() = default;
 
@@ -46,6 +46,7 @@ namespace Ichor::Detail {
         AsyncGeneratorPromiseBase& operator=(const AsyncGeneratorPromiseBase& other) = delete;
 
         std::suspend_always initial_suspend() const noexcept {
+            INTERNAL_DEBUG("AsyncGeneratorPromiseBase::initial_suspend {}", _id);
             return {};
         }
 
@@ -118,6 +119,7 @@ namespace Ichor::Detail {
 #ifdef ICHOR_USE_HARDENING
         DependencyManager *_dmAtTimeOfCreation{_local_dm};
 #endif
+        std::optional<bool> _hasSuspended{};
     };
 
 
@@ -132,6 +134,7 @@ namespace Ichor::Detail {
         }
 
         bool await_ready() const noexcept {
+            INTERNAL_DEBUG("AsyncGeneratorYieldOperation::await_ready {} {}", _initialState, _promise._id);
             return _initialState == state::value_not_ready_consumer_suspended;
         }
 
@@ -155,7 +158,6 @@ namespace Ichor::Detail {
 
         }
         ~AsyncGeneratorPromise() final {
-            INTERNAL_DEBUG("destroyed promise {}", _id);
             *_destroyed = true;
         };
 
@@ -163,8 +165,10 @@ namespace Ichor::Detail {
             return AsyncGenerator<T>{ *this };
         }
 
+        template <typename U = T> requires(!std::is_same_v<U, StartBehaviour>)
         AsyncGeneratorYieldOperation yield_value(value_type& value) noexcept(std::is_nothrow_constructible_v<T, T&&>);
 
+        template <typename U = T> requires(!std::is_same_v<U, StartBehaviour>)
         AsyncGeneratorYieldOperation yield_value(value_type&& value) noexcept(std::is_nothrow_constructible_v<T, T&&>);
 
         void return_value(value_type &value) noexcept(std::is_nothrow_constructible_v<T, T&&>);
@@ -202,7 +206,6 @@ namespace Ichor::Detail {
 
         }
         ~AsyncGeneratorPromise() final {
-            INTERNAL_DEBUG("destroyed promise {}", _id);
             *_destroyed = true;
         };
 

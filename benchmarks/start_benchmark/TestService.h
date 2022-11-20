@@ -3,7 +3,7 @@
 #include <ichor/DependencyManager.h>
 #include <ichor/services/logging/Logger.h>
 #include <ichor/Service.h>
-#include <ichor/LifecycleManager.h>
+#include "ichor/dependency_management/ILifecycleManager.h"
 
 #ifdef __SANITIZE_ADDRESS__
 constexpr uint32_t SERVICES_COUNT = 1'000;
@@ -21,16 +21,16 @@ public:
     ~TestService() final = default;
 
 private:
-    StartBehaviour start() final {
-        auto iteration = Ichor::any_cast<uint64_t>(getProperties().operator[]("Iteration"));
+    AsyncGenerator<void> start() final {
+        auto iteration = Ichor::any_cast<uint64_t>(getProperties()["Iteration"]);
         if(iteration == SERVICES_COUNT - 1) {
             getManager().pushEvent<QuitEvent>(getServiceId());
         }
-        return Ichor::StartBehaviour::SUCCEEDED;
+        co_return;
     }
 
-    StartBehaviour stop() final {
-        return Ichor::StartBehaviour::SUCCEEDED;
+    AsyncGenerator<void> stop() final {
+        co_return;
     }
 
     void addDependencyInstance(ILogger *logger, IService *) {

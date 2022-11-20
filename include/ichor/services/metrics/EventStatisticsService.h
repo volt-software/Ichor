@@ -47,10 +47,10 @@ namespace Ichor {
         bool preInterceptEvent(Event const &evt);
         void postInterceptEvent(Event const &evt, bool processed);
 
-        AsyncGenerator<void> handleEvent(DependencyManager &dm);
+        AsyncGenerator<IchorBehaviour> handleEvent(DependencyManager &dm);
 
-        StartBehaviour start() final;
-        StartBehaviour stop() final;
+        AsyncGenerator<void> start() final;
+        AsyncGenerator<void> stop() final;
 
         friend DependencyRegister;
         friend DependencyManager;

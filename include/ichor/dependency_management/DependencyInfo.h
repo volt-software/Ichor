@@ -1,6 +1,6 @@
 #pragma once
 
-#include <ichor/Dependency.h>
+#include "Dependency.h"
 #include <algorithm>
 
 namespace Ichor {

@@ -9,18 +9,18 @@ using namespace Ichor;
 struct AddInterceptorDuringEventHandlingService final : public Service<AddInterceptorDuringEventHandlingService> {
     AddInterceptorDuringEventHandlingService() = default;
 
-    StartBehaviour start() final {
+    AsyncGenerator<void> start() final {
         _interceptor = getManager().registerEventInterceptor<TestEvent>(this);
         _interceptorAll = getManager().registerEventInterceptor<Event>(this);
 
-        return StartBehaviour::SUCCEEDED;
+        co_return;
     }
 
-    StartBehaviour stop() final {
+    AsyncGenerator<void> stop() final {
         _interceptor.reset();
         _interceptorAll.reset();
 
-        return StartBehaviour::SUCCEEDED;
+        co_return;
     }
 
     bool preInterceptEvent(TestEvent const &evt) {

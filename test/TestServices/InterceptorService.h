@@ -18,20 +18,22 @@ template <Derived<Event> InterceptorT, bool allowProcessing = true>
 struct InterceptorService final : public IInterceptorService, public Service<InterceptorService<InterceptorT, allowProcessing>> {
     InterceptorService() = default;
 
-    StartBehaviour start() final {
+    AsyncGenerator<void> start() final {
         _interceptor = this->getManager().template registerEventInterceptor<InterceptorT>(this);
 
-        return StartBehaviour::SUCCEEDED;
+        co_return;
     }
 
-    StartBehaviour stop() final {
+    AsyncGenerator<void> stop() final {
         _interceptor.reset();
 
-        return StartBehaviour::SUCCEEDED;
+        co_return;
     }
 
     bool preInterceptEvent(InterceptorT const &evt) {
         auto counter = preinterceptedCounters.find(evt.type);
+
+        INTERNAL_DEBUG("---------------------------- pre intercepted {}:{}", evt.id, evt.name);
 
         if(counter == end(preinterceptedCounters)) {
             preinterceptedCounters.template emplace<>(evt.type, 1);
@@ -44,6 +46,8 @@ struct InterceptorService final : public IInterceptorService, public Service<Int
 
     void postInterceptEvent(InterceptorT const &evt, bool processed) {
         if(processed) {
+            INTERNAL_DEBUG("---------------------------- post intercepted {}:{}", evt.id, evt.name);
+
             auto counter = postinterceptedCounters.find(evt.type);
 
             if (counter == end(postinterceptedCounters)) {
@@ -52,6 +56,8 @@ struct InterceptorService final : public IInterceptorService, public Service<Int
                 counter->second++;
             }
         } else {
+            INTERNAL_DEBUG("---------------------------- unproc intercepted {}:{}", evt.id, evt.name);
+
             auto counter = unprocessedInterceptedCounters.find(evt.type);
 
             if(counter == end(unprocessedInterceptedCounters)) {

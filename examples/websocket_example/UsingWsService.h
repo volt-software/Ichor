@@ -7,7 +7,7 @@
 #include <ichor/services/network/IConnectionService.h>
 #include <ichor/services/network/IHostService.h>
 #include <ichor/Service.h>
-#include <ichor/LifecycleManager.h>
+#include "ichor/dependency_management/ILifecycleManager.h"
 #include <ichor/services/serialization/ISerializer.h>
 #include "../common/TestMsg.h"
 
@@ -23,19 +23,19 @@ public:
     ~UsingWsService() final = default;
 
 private:
-    StartBehaviour start() final {
+    AsyncGenerator<void> start() final {
         ICHOR_LOG_INFO(_logger, "UsingWsService started");
         _dataEventRegistration = getManager().registerEventHandler<NetworkDataEvent>(this);
         _failureEventRegistration = getManager().registerEventHandler<FailedSendMessageEvent>(this);
         _connectionService->sendAsync(_serializer->serialize(TestMsg{11, "hello"}));
-        return StartBehaviour::SUCCEEDED;
+        co_return;
     }
 
-    StartBehaviour stop() final {
+    AsyncGenerator<void> stop() final {
         _dataEventRegistration.reset();
         _failureEventRegistration.reset();
         ICHOR_LOG_INFO(_logger, "UsingWsService stopped");
-        return StartBehaviour::SUCCEEDED;
+        co_return;
     }
 
     void addDependencyInstance(ILogger *logger, IService *) {
@@ -71,19 +71,19 @@ private:
     void removeDependencyInstance(IHostService *, IService *) {
     }
 
-    AsyncGenerator<void> handleEvent(NetworkDataEvent const &evt) {
+    AsyncGenerator<IchorBehaviour> handleEvent(NetworkDataEvent const &evt) {
         auto msg = _serializer->deserialize(std::vector<uint8_t>{evt.getData()});
         ICHOR_LOG_INFO(_logger, "Received TestMsg id {} val {}", msg->id, msg->val);
         getManager().pushEvent<QuitEvent>(getServiceId());
 
-        co_return;
+        co_return {};
     }
 
-    AsyncGenerator<void> handleEvent(FailedSendMessageEvent const &evt) {
+    AsyncGenerator<IchorBehaviour> handleEvent(FailedSendMessageEvent const &evt) {
         ICHOR_LOG_INFO(_logger, "Failed to send message id {}, retrying", evt.msgId);
         _connectionService->sendAsync(std::move(evt.data));
 
-        co_return;
+        co_return {};
     }
 
     friend DependencyRegister;

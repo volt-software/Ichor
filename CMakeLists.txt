@@ -60,6 +60,12 @@ option(ICHOR_DISABLE_RTTI "Disable RTTI. Reduces memory usage, disables dynamic_
 option(ICHOR_USE_HARDENING "Uses compiler-specific flags which add stack protection and similar features, as well as adding safety checks in Ichor itself." ON)
 cmake_dependent_option(ICHOR_USE_MIMALLOC "Use mimalloc for significant performance improvements" ON "NOT ICHOR_USE_SANITIZERS" OFF)
 cmake_dependent_option(ICHOR_USE_SYSTEM_MIMALLOC "Use system or vendored mimalloc" OFF "NOT ICHOR_USE_SANITIZERS" OFF)
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    option(ICHOR_USE_BACKWARD "Use backward-cpp to print stacktraces on crashes or when the user wants to. Useful for debugging." ON)
+else()
+    option(ICHOR_USE_BACKWARD "Use backward-cpp to print stacktraces on crashes or when the user wants to. Useful for debugging." OFF)
+endif()
+
 set(BUILD_TESTING OFF) #disable Catch 2 testing
 
 if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
@@ -138,18 +144,21 @@ endif()
 
 if(NOT WIN32)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Wshadow -Wnon-virtual-dtor -Wno-unused-variable -Wno-long-long -Wno-unused-parameter -Wnull-dereference -pedantic -Wformat -Wformat-security -Wcast-align -Woverloaded-virtual ")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread ")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread -ftemplate-backtrace-limit=0 ")
     if(ICHOR_USE_HARDENING AND (CMAKE_BUILD_TYPE MATCHES DEBUG OR CMAKE_BUILD_TYPE MATCHES RELWITHDEBINFO))
         # Enable runtime iterator debug checks (like checking two different iterators from different containers)
-        target_compile_definitions(ichor PUBLIC _GLIBCXX_DEBUG _GLIBCXX_DEBUG_PEDANTIC _GLIBCXX_SANITIZE_VECTOR _ITERATOR_DEBUG_LEVEL=2)
+        target_compile_definitions(ichor PUBLIC _GLIBCXX_CONCEPT_CHECKS _GLIBCXX_ASSERTIONS _GLIBCXX_DEBUG _GLIBCXX_DEBUG_PEDANTIC _GLIBCXX_SANITIZE_VECTOR _ITERATOR_DEBUG_LEVEL=2)
     endif()
     target_compile_definitions(ichor PUBLIC _FILE_OFFSET_BITS=64 _TIME_BITS=64)
 
     # Don't want to enable this for external source code
     target_compile_options(ichor PUBLIC -Wconversion)
+    # don't optimize away overflows
+    target_compile_options(ichor PUBLIC -fwrapv)
 else()
     #msvc sets some stupid defaults. We can do better.
-    set(CMAKE_CXX_FLAGS "/nologo /DWIN32 /D_WINDOWS /EHsc /TP /W4 /await:strict /std:c++latest /permissive- /wd4100")
+    # d2SSAOptimizer-: treat arithmetic overflow as defined behaviour (like fwrapv)
+    set(CMAKE_CXX_FLAGS "/nologo /DWIN32 /D_WINDOWS /EHsc /TP /W4 /await:strict /std:c++latest /permissive- /wd4100 /d2SSAOptimizer-")
     target_compile_definitions(ichor PUBLIC NOMINMAX WIN32_LEAN_AND_MEAN )
 endif()
 
@@ -162,19 +171,28 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wduplicated-cond -Wduplicated-branches -Wlogical-op ")
 endif()
 
-
-if(ICHOR_ARCH_OPTIMIZATION STREQUAL "NATIVE")
-    target_compile_options(ichor PUBLIC -march=native)
-elseif(ICHOR_ARCH_OPTIMIZATION STREQUAL "X86_64")
-    target_compile_options(ichor PUBLIC -march=x86-64)
-elseif(ICHOR_ARCH_OPTIMIZATION STREQUAL "X86_64_SSE4")
-    target_compile_options(ichor PUBLIC -march=x86-64-v2)
-elseif(ICHOR_ARCH_OPTIMIZATION STREQUAL "X86_64_AVX2")
-    target_compile_options(ichor PUBLIC -march=x86-64-v3)
-elseif(ICHOR_ARCH_OPTIMIZATION STREQUAL "X86_64_AVX512")
-    target_compile_options(ichor PUBLIC -march=x86-64-v4)
-elseif(ICHOR_ARCH_OPTIMIZATION STREQUAL "MODERN_ARM_GENERIC")
-    target_compile_options(ichor PUBLIC -march=armv8-a)
+if(WIN32)
+    if(ICHOR_ARCH_OPTIMIZATION STREQUAL "X86_64_AVX2")
+        target_compile_options(ichor PUBLIC /arch:AVX2)
+    elseif(ICHOR_ARCH_OPTIMIZATION STREQUAL "X86_64_AVX512")
+        target_compile_options(ichor PUBLIC /arch:AVX512)
+    elseif(ICHOR_ARCH_OPTIMIZATION STREQUAL "MODERN_ARM_GENERIC")
+        target_compile_options(ichor PUBLIC /arch:armv8.1)
+    endif()
+else()
+    if(ICHOR_ARCH_OPTIMIZATION STREQUAL "NATIVE")
+        target_compile_options(ichor PUBLIC -march=native)
+    elseif(ICHOR_ARCH_OPTIMIZATION STREQUAL "X86_64")
+        target_compile_options(ichor PUBLIC -march=x86-64)
+    elseif(ICHOR_ARCH_OPTIMIZATION STREQUAL "X86_64_SSE4")
+        target_compile_options(ichor PUBLIC -march=x86-64-v2)
+    elseif(ICHOR_ARCH_OPTIMIZATION STREQUAL "X86_64_AVX2")
+        target_compile_options(ichor PUBLIC -march=x86-64-v3)
+    elseif(ICHOR_ARCH_OPTIMIZATION STREQUAL "X86_64_AVX512")
+        target_compile_options(ichor PUBLIC -march=x86-64-v4)
+    elseif(ICHOR_ARCH_OPTIMIZATION STREQUAL "MODERN_ARM_GENERIC")
+        target_compile_options(ichor PUBLIC -march=armv8-a)
+    endif()
 endif()
 
 if(ICHOR_DISABLE_RTTI)
@@ -251,8 +269,8 @@ endif()
 if(NOT WIN32 AND NOT ICHOR_BUILD_COVERAGE)
     # gcc uses gdwarf-4 by default, which messes up using the coz profiler, add "-gdwarf-3" if using coz
     set(CMAKE_CXX_FLAGS_DEBUG "-ggdb3")
-    set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG -ggdb")
-    set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-ggdb3 -Og")
+    set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG")
+    set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-ggdb -Og")
     set(CMAKE_CXX_FLAGS_MINSIZEREL "-Os -DNDEBUG")
 endif()
 
@@ -329,7 +347,12 @@ if(ICHOR_USE_BOOST_BEAST)
     target_include_directories(ichor PUBLIC ${Boost_INCLUDE_DIRS})
     target_link_directories(ichor PUBLIC ${Boost_LIBRARY_DIRS})
     target_link_libraries(ichor PUBLIC ${Boost_LIBRARIES})
-    target_compile_definitions(ichor PUBLIC BOOST_BEAST_USE_STD_STRING_VIEW BOOST_ASIO_NO_DEPRECATED)
+    target_compile_definitions(ichor PUBLIC BOOST_ASIO_NO_DEPRECATED)
+
+    if(Boost_VERSION_STRING VERSION_LESS "1.81.0")
+        target_compile_definitions(ichor PUBLIC BOOST_BEAST_USE_STD_STRING_VIEW)
+    endif()
+
 
     if(ICHOR_USE_HARDENING OR ICHOR_ENABLE_INTERNAL_DEBUGGING)
         target_compile_definitions(ichor PUBLIC BOOST_ASIO_ENABLE_BUFFER_DEBUGGING)
@@ -367,6 +390,31 @@ if(ICHOR_USE_ETCD)
     target_include_directories(ichor PUBLIC "${ICHOR_TOP_DIR}/include/ichor/services/etcd")
 endif()
 
+# Detection for backward-cpp, works without external libraries on windows and apple
+# On linux, it still works without these libraries (on gcc at least), but provides less functionality.
+if(ICHOR_USE_BACKWARD)
+    target_compile_definitions(ichor PUBLIC ICHOR_USE_BACKWARD=1)
+    if(NOT WIN32 AND NOT APPLE)
+        find_package(PkgConfig REQUIRED)
+        if(NOT CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+            pkg_check_modules(LIBUNWIND libunwind-generic)
+            if(LIBUNWIND_FOUND)
+                target_include_directories(ichor PRIVATE ${LIBUNWIND_INCLUDE_DIR})
+                target_link_directories(ichor PRIVATE ${LIBUNWIND_LIBRARY_DIRS})
+                target_link_libraries(ichor PUBLIC ${LIBUNWIND_LIBRARIES})
+                target_compile_definitions(ichor PUBLIC BACKWARD_HAS_LIBUNWIND=1)
+            endif()
+        endif()
+        pkg_check_modules(LIBDW libdw)
+        if(LIBDW_FOUND)
+            target_include_directories(ichor PRIVATE ${LIBDW_INCLUDE_DIR})
+            target_link_directories(ichor PRIVATE ${LIBDW_LIBRARY_DIRS})
+            target_link_libraries(ichor PUBLIC ${LIBDW_LIBRARIES})
+            target_compile_definitions(ichor PUBLIC BACKWARD_HAS_DW=1)
+        endif()
+    endif()
+endif()
+
 if(hasParent)
     set(ICHOR_TOP_DIR "${ICHOR_TOP_DIR}" PARENT_SCOPE)
     set(ICHOR_EXTERNAL_DIR "${ICHOR_EXTERNAL_DIR}" PARENT_SCOPE)
@@ -395,13 +443,19 @@ install(DIRECTORY "${CMAKE_SOURCE_DIR}/external/fmt/include/fmt" # source direct
         PATTERN "*.h" # select header files
         )
 
+install(DIRECTORY "${CMAKE_SOURCE_DIR}/include/sole" # source directory
+        DESTINATION "include/ichor/external" # target directory
+        FILES_MATCHING # install only matched files
+        PATTERN "*.h" # select header files
+        )
+
 install(DIRECTORY "${CMAKE_SOURCE_DIR}/include/tl" # source directory
         DESTINATION "include/ichor/external" # target directory
         FILES_MATCHING # install only matched files
         PATTERN "*.h" # select header files
         )
 
-install(DIRECTORY "${CMAKE_SOURCE_DIR}/include/sole" # source directory
+install(DIRECTORY "${CMAKE_SOURCE_DIR}/include/backward" # source directory
         DESTINATION "include/ichor/external" # target directory
         FILES_MATCHING # install only matched files
         PATTERN "*.h" # select header files

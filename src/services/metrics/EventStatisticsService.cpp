@@ -1,13 +1,13 @@
 #include <ichor/services/metrics/EventStatisticsService.h>
 #include <numeric>
 
-Ichor::StartBehaviour Ichor::EventStatisticsService::start() {
+Ichor::AsyncGenerator<void> Ichor::EventStatisticsService::start() {
     if(getProperties().contains("ShowStatisticsOnStop")) {
-        _showStatisticsOnStop = Ichor::any_cast<bool>(getProperties().operator[]("ShowStatisticsOnStop"));
+        _showStatisticsOnStop = Ichor::any_cast<bool>(getProperties()["ShowStatisticsOnStop"]);
     }
 
     if(getProperties().contains("AveragingIntervalMs")) {
-        _averagingIntervalMs = Ichor::any_cast<uint64_t>(getProperties().operator[]("AveragingIntervalMs"));
+        _averagingIntervalMs = Ichor::any_cast<uint64_t>(getProperties()["AveragingIntervalMs"]);
     } else {
         _averagingIntervalMs = 500;
     }
@@ -15,17 +15,17 @@ Ichor::StartBehaviour Ichor::EventStatisticsService::start() {
     auto timerManager = getManager().createServiceManager<Timer, ITimer>();
     timerManager->setChronoInterval(std::chrono::milliseconds(_averagingIntervalMs));
 
-    timerManager->setCallback(this, [this](DependencyManager &dm) -> AsyncGenerator<void> {
+    timerManager->setCallback(this, [this](DependencyManager &dm) -> AsyncGenerator<IchorBehaviour> {
         return handleEvent(dm);
     });
 
     _interceptorRegistration = getManager().registerEventInterceptor<Event>(this);
     timerManager->startTimer();
 
-    return Ichor::StartBehaviour::SUCCEEDED;
+    co_return;
 }
 
-Ichor::StartBehaviour Ichor::EventStatisticsService::stop() {
+Ichor::AsyncGenerator<void> Ichor::EventStatisticsService::stop() {
     _interceptorRegistration.reset();
 
     if(_showStatisticsOnStop) {
@@ -50,7 +50,7 @@ Ichor::StartBehaviour Ichor::EventStatisticsService::stop() {
         }
     }
 
-    return Ichor::StartBehaviour::SUCCEEDED;
+    co_return;
 }
 
 bool Ichor::EventStatisticsService::preInterceptEvent(Event const &evt) {
@@ -83,7 +83,7 @@ void Ichor::EventStatisticsService::postInterceptEvent(Event const &evt, bool pr
     }
 }
 
-Ichor::AsyncGenerator<void> Ichor::EventStatisticsService::handleEvent(DependencyManager &dm) {
+Ichor::AsyncGenerator<Ichor::IchorBehaviour> Ichor::EventStatisticsService::handleEvent(DependencyManager &dm) {
     int64_t now = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
     decltype(_recentEventStatistics) newVec{};
     newVec.swap(_recentEventStatistics);
@@ -106,9 +106,9 @@ Ichor::AsyncGenerator<void> Ichor::EventStatisticsService::handleEvent(Dependenc
             avgStatistics->second.emplace_back(now, min, max, avg, statistics.size());
         }
 
-        co_yield empty;
+        co_yield {};
     }
-    co_return;
+    co_return {};
 }
 
 const Ichor::unordered_map<uint64_t, std::vector<Ichor::StatisticEntry>> &Ichor::EventStatisticsService::getRecentStatistics() const noexcept {

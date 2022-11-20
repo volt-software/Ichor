@@ -129,7 +129,7 @@ namespace Ichor {
         constexpr std::string_view result = __PRETTY_FUNCTION__;
         constexpr std::string_view templateStr = "INTERFACE_TYPENAME = ";
 
-        constexpr size_t bpos = result.find(templateStr) + templateStr.size(); //find begin pos after INTERFACE_TYPENAME = entry
+        constexpr std::size_t bpos = result.find(templateStr) + templateStr.size(); //find begin pos after INTERFACE_TYPENAME = entry
         return result.substr(bpos, result.size() - bpos - 1);
 #endif
     }

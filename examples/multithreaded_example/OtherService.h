@@ -3,7 +3,7 @@
 #include <ichor/DependencyManager.h>
 #include <ichor/services/logging/Logger.h>
 #include <ichor/Service.h>
-#include <ichor/LifecycleManager.h>
+#include "ichor/dependency_management/ILifecycleManager.h"
 #include "CustomEvent.h"
 
 using namespace Ichor;
@@ -16,16 +16,16 @@ public:
     ~OtherService() final = default;
 
 private:
-    StartBehaviour start() final {
+    AsyncGenerator<void> start() final {
         ICHOR_LOG_INFO(_logger, "OtherService started with dependency");
         _customEventHandler = getManager().registerEventHandler<CustomEvent>(this);
-        return StartBehaviour::SUCCEEDED;
+        co_return;
     }
 
-    StartBehaviour stop() final {
+    AsyncGenerator<void> stop() final {
         ICHOR_LOG_INFO(_logger, "OtherService stopped with dependency");
         _customEventHandler.reset();
-        return StartBehaviour::SUCCEEDED;
+        co_return;
     }
 
     void addDependencyInstance(ILogger *logger, IService *isvc) {
@@ -38,11 +38,11 @@ private:
         _logger = nullptr;
     }
 
-    AsyncGenerator<void> handleEvent(CustomEvent const &evt) {
+    AsyncGenerator<IchorBehaviour> handleEvent(CustomEvent const &evt) {
         ICHOR_LOG_INFO(_logger, "Handling custom event");
         getManager().pushEvent<QuitEvent>(getServiceId());
         getManager().getCommunicationChannel()->broadcastEvent<QuitEvent>(getManager(), getServiceId());
-        co_return;
+        co_return {};
     }
 
     friend DependencyRegister;

@@ -5,7 +5,7 @@
 
 #include <utility>
 #include <ichor/Service.h>
-#include <ichor/LifecycleManager.h>
+#include "ichor/dependency_management/ILifecycleManager.h"
 #include "RuntimeCreatedService.h"
 
 using namespace Ichor;
@@ -15,7 +15,7 @@ public:
     explicit ScopeFilterEntry(std::string _scope) : scope(std::move(_scope)) {}
     explicit ScopeFilterEntry(const char *_scope) : scope(_scope) {}
 
-    [[nodiscard]] bool matches(ILifecycleManager const &manager) const {
+    [[nodiscard]] bool matches(ILifecycleManager const &manager) const noexcept {
         auto const scopeProp = manager.getProperties().find("scope");
 
         return scopeProp != cend(manager.getProperties()) && Ichor::any_cast<const std::string&>(scopeProp->second) == scope;
@@ -32,16 +32,16 @@ public:
     ~TrackerService() final = default;
 
 private:
-    StartBehaviour start() final {
+    AsyncGenerator<void> start() final {
         ICHOR_LOG_INFO(_logger, "TrackerService started");
         _trackerRegistration = getManager().registerDependencyTracker<IRuntimeCreatedService>(this);
-        return StartBehaviour::SUCCEEDED;
+        co_return;
     }
 
-    StartBehaviour stop() final {
+    AsyncGenerator<void> stop() final {
         ICHOR_LOG_INFO(_logger, "TrackerService stopped");
         _trackerRegistration.reset();
-        return StartBehaviour::SUCCEEDED;
+        co_return;
     }
 
     void addDependencyInstance(ILogger *logger, IService *) {
@@ -80,9 +80,9 @@ private:
     }
 
     void handleDependencyUndoRequest(IRuntimeCreatedService*, DependencyUndoRequestEvent const &evt) {
-        auto scopeProp = evt.properties->find("scope");
+        auto scopeProp = evt.properties.find("scope");
 
-        if(scopeProp == end(*evt.properties)) {
+        if(scopeProp == end(evt.properties)) {
             ICHOR_LOG_ERROR(_logger, "scope missing");
             return;
         }
@@ -93,7 +93,9 @@ private:
 
         auto service = _scopedRuntimeServices.find(scope);
         if(service != end(_scopedRuntimeServices)) {
-            getManager().pushEvent<RemoveServiceEvent>(evt.originatingService, service->second->getServiceId());
+            // TODO: This only works for synchronous start/stop loggers, maybe turn into async and await a stop before removing?
+            getManager().pushEvent<StopServiceEvent>(getServiceId(), service->second->getServiceId());
+            getManager().pushPrioritisedEvent<RemoveServiceEvent>(getServiceId(), INTERNAL_EVENT_PRIORITY + 11, service->second->getServiceId());
             _scopedRuntimeServices.erase(scope);
         }
     }
