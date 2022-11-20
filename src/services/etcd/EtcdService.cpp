@@ -10,7 +10,7 @@ Ichor::EtcdService::EtcdService(DependencyRegister &reg, Properties props, Depen
     reg.registerDependency<ILogger>(this, true);
 }
 
-Ichor::StartBehaviour Ichor::EtcdService::start() {
+Ichor::AsyncGenerator<void> Ichor::EtcdService::start() {
     auto const addressProp = getProperties().find("EtcdAddress");
     if(addressProp == cend(getProperties())) {
         throw std::runtime_error("Missing EtcdAddress");
@@ -18,13 +18,13 @@ Ichor::StartBehaviour Ichor::EtcdService::start() {
 
     _channel = grpc::CreateChannel(Ichor::any_cast<std::string>(addressProp->second), grpc::InsecureChannelCredentials());
     _stub = etcdserverpb::KV::NewStub(_channel);
-    return Ichor::StartBehaviour::SUCCEEDED;
+    co_return;
 }
 
-Ichor::StartBehaviour Ichor::EtcdService::stop() {
+Ichor::AsyncGenerator<void> Ichor::EtcdService::stop() {
     _stub = nullptr;
     _channel = nullptr;
-    return Ichor::StartBehaviour::SUCCEEDED;
+    co_return;
 }
 
 void Ichor::EtcdService::addDependencyInstance(ILogger *logger, IService *) {

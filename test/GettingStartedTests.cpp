@@ -36,20 +36,20 @@ struct IMyTimerService {};
 
 struct MyTimerService final : public IMyTimerService, public Ichor::Service<MyTimerService> {
     MyTimerService() = default;
-    StartBehaviour start() final {
+    AsyncGenerator<void> start() final {
         auto timer = getManager().createServiceManager<Ichor::Timer, Ichor::ITimer>();
         timer->setChronoInterval(std::chrono::seconds(1));
-        timer->setCallback(this, [](DependencyManager &dm) -> AsyncGenerator<void> {
+        timer->setCallback(this, [](DependencyManager &dm) -> AsyncGenerator<IchorBehaviour> {
             fmt::print("Timer fired\n");
-            co_return;
+            co_return {};
         });
         timer->startTimer();
-        return StartBehaviour::SUCCEEDED;
+        co_return;
     }
 
-    StartBehaviour stop() final {
+    AsyncGenerator<void> stop() final {
         _timerEventRegistration.reset();
-        return StartBehaviour::SUCCEEDED;
+        co_return;
     }
 
     Ichor::EventHandlerRegistration _timerEventRegistration{};
@@ -71,14 +71,14 @@ struct ServiceWithoutInterface final : public Ichor::Service<ServiceWithoutInter
 };
 
 struct MyInterceptorService final : public Ichor::Service<MyInterceptorService> {
-    StartBehaviour start() final {
+    AsyncGenerator<void> start() final {
         _interceptor = this->getManager().template registerEventInterceptor<Ichor::RunFunctionEvent>(this); // Can change TimerEvent to just Event if you want to intercept *all* events
-        return StartBehaviour::SUCCEEDED;
+        co_return;
     }
 
-    StartBehaviour stop() final {
+    AsyncGenerator<void> stop() final {
         _interceptor.reset();
-        return StartBehaviour::SUCCEEDED;
+        co_return;
     }
 
     bool preInterceptEvent(Ichor::RunFunctionEvent const &) {

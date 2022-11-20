@@ -4,6 +4,7 @@
 #include "TestServices/MultipleAwaitersService.h"
 #include "TestServices/AsyncUsingTimerService.h"
 #include "TestServices/AwaitReturnService.h"
+#include "TestServices/StopsInAsyncStartService.h"
 #include <ichor/event_queues/MultimapQueue.h>
 #include <ichor/events/RunFunctionEvent.h>
 #include <memory>
@@ -31,7 +32,7 @@ TEST_CASE("CoroutineTests") {
 
         dm.runForOrQueueEmpty();
 
-        dm.pushEvent<RunFunctionEvent>(0, [](DependencyManager& mng) -> AsyncGenerator<void>{
+        dm.pushEvent<RunFunctionEvent>(0, [](DependencyManager& mng) -> AsyncGenerator<IchorBehaviour>{
             auto services = mng.getStartedServices<IGeneratorService>();
 
             REQUIRE(services.size() == 1);
@@ -54,7 +55,7 @@ TEST_CASE("CoroutineTests") {
             mng.pushEvent<QuitEvent>(0);
             INTERNAL_DEBUG("quit");
 
-            co_return;
+            co_return {};
         });
 
         t.join();
@@ -77,7 +78,7 @@ TEST_CASE("CoroutineTests") {
 
         dm.runForOrQueueEmpty();
 
-        dm.pushEvent<RunFunctionEvent>(0, [](DependencyManager& mng) -> AsyncGenerator<void> {
+        dm.pushEvent<RunFunctionEvent>(0, [](DependencyManager& mng) -> AsyncGenerator<IchorBehaviour> {
             auto services = mng.getStartedServices<IAwaitService>();
 
             REQUIRE(services.size() == 1);
@@ -88,7 +89,7 @@ TEST_CASE("CoroutineTests") {
 
             INTERNAL_DEBUG("after");
 
-            co_yield empty;
+            co_yield {};
 
             INTERNAL_DEBUG("quit");
 
@@ -96,15 +97,15 @@ TEST_CASE("CoroutineTests") {
 
             INTERNAL_DEBUG("after2");
 
-            co_return;
+            co_return {};
         });
 
         dm.runForOrQueueEmpty();
 
-        dm.pushEvent<RunFunctionEvent>(0, [](DependencyManager& mng) -> AsyncGenerator<void> {
+        dm.pushEvent<RunFunctionEvent>(0, [](DependencyManager& mng) -> AsyncGenerator<IchorBehaviour> {
             INTERNAL_DEBUG("set");
             _evt->set();
-            co_return;
+            co_return {};
         });
 
         t.join();
@@ -131,10 +132,10 @@ TEST_CASE("CoroutineTests") {
 
         dm.runForOrQueueEmpty();
 
-        dm.pushEvent<RunFunctionEvent>(0, [](DependencyManager& mng) -> AsyncGenerator<void> {
+        dm.pushEvent<RunFunctionEvent>(0, [](DependencyManager& mng) -> AsyncGenerator<IchorBehaviour> {
             INTERNAL_DEBUG("set");
             _evt->set();
-            co_return;
+            co_return {};
         });
 
         t.join();
@@ -158,12 +159,12 @@ TEST_CASE("CoroutineTests") {
 
         dm.runForOrQueueEmpty();
 
-        dm.pushEvent<RunFunctionEvent>(0, [&](DependencyManager& mng) -> AsyncGenerator<void> {
+        dm.pushEvent<RunFunctionEvent>(0, [&](DependencyManager& mng) -> AsyncGenerator<IchorBehaviour> {
             INTERNAL_DEBUG("set");
             _autoEvt->set_all();
             REQUIRE(svc->count == 2);
             mng.pushEvent<QuitEvent>(0);
-            co_return;
+            co_return {};
         });
 
         t.join();
@@ -172,6 +173,7 @@ TEST_CASE("CoroutineTests") {
     }
 
     SECTION("co_await in timer service") {
+        fmt::print("co_await in timer service\n");
         auto queue = std::make_unique<MultimapQueue>();
         auto &dm = queue->createManager();
         _evt = std::make_unique<Ichor::AsyncManualResetEvent>();
@@ -187,10 +189,10 @@ TEST_CASE("CoroutineTests") {
 
         dm.runForOrQueueEmpty();
 
-        dm.pushEvent<RunFunctionEvent>(0, [](DependencyManager& mng) -> AsyncGenerator<void> {
+        dm.pushEvent<RunFunctionEvent>(0, [](DependencyManager& mng) -> AsyncGenerator<IchorBehaviour> {
             INTERNAL_DEBUG("set");
             _evt->set();
-            co_return;
+            co_return {};
         });
 
         t.join();
@@ -214,18 +216,18 @@ TEST_CASE("CoroutineTests") {
 
         dm.runForOrQueueEmpty();
 
-        dm.pushEvent<RunFunctionEvent>(0, [&](DependencyManager& mng) -> AsyncGenerator<void> {
+        dm.pushEvent<RunFunctionEvent>(0, [&](DependencyManager& mng) -> AsyncGenerator<IchorBehaviour> {
             auto &str = *co_await svc->Await().begin();
-            co_return;
+            co_return {};
         });
 
         dm.runForOrQueueEmpty();
 
-        dm.pushEvent<RunFunctionEvent>(0, [&](DependencyManager& mng) -> AsyncGenerator<void> {
+        dm.pushEvent<RunFunctionEvent>(0, [&](DependencyManager& mng) -> AsyncGenerator<IchorBehaviour> {
             INTERNAL_DEBUG("set");
             _evt->set();
             mng.pushEvent<QuitEvent>(0);
-            co_return;
+            co_return {};
         });
 
         t.join();
@@ -233,6 +235,21 @@ TEST_CASE("CoroutineTests") {
         REQUIRE(AwaitNoCopy::countConstructed == 1);
         REQUIRE(AwaitNoCopy::countDestructed == 2);
         REQUIRE(AwaitNoCopy::countMoved == 1);
+
+        REQUIRE_FALSE(dm.isRunning());
+    }
+
+    SECTION("stop in async start") {
+        auto queue = std::make_unique<MultimapQueue>();
+        auto &dm = queue->createManager();
+
+        std::thread t([&]() {
+            dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>();
+            dm.createServiceManager<StopsInAsyncStartService>();
+            queue->start(CaptureSigInt);
+        });
+
+        t.join();
 
         REQUIRE_FALSE(dm.isRunning());
     }

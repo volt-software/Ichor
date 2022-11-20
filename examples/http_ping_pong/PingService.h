@@ -9,7 +9,7 @@
 #include <ichor/services/timer/TimerService.h>
 #include <ichor/events/RunFunctionEvent.h>
 #include <ichor/Service.h>
-#include <ichor/LifecycleManager.h>
+#include "ichor/dependency_management/ILifecycleManager.h"
 #include <ichor/services/serialization/ISerializer.h>
 #include "PingMsg.h"
 
@@ -25,11 +25,11 @@ public:
     ~PingService() final = default;
 
 private:
-    StartBehaviour start() final {
+    AsyncGenerator<void> start() final {
         ICHOR_LOG_INFO(_logger, "PingService started");
 
         _timer = getManager().createServiceManager<Timer, ITimer>();
-        _timer->setCallback(this, [this](DependencyManager &dm) -> AsyncGenerator<void> {
+        _timer->setCallback(this, [this](DependencyManager &dm) -> AsyncGenerator<IchorBehaviour> {
             auto toSendMsg = _serializer->serialize(PingMsg{_sequence});
 
             _sequence++;
@@ -44,18 +44,18 @@ private:
                 _failed++;
                 ICHOR_LOG_INFO(_logger, "Couldn't ping {}: total failed={}", addr, _failed);
             }
-            co_return;
+            co_return {};
         });
         _timer->setChronoInterval(10ms);
         _timer->startTimer();
 
-        return StartBehaviour::SUCCEEDED;
+        co_return;
     }
 
-    StartBehaviour stop() final {
+    AsyncGenerator<void> stop() final {
         _timer->stopTimer();
         ICHOR_LOG_INFO(_logger, "PingService stopped");
-        return StartBehaviour::SUCCEEDED;
+        co_return;
     }
 
     void addDependencyInstance(ILogger *logger, IService *) {

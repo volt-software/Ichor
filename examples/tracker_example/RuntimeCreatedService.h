@@ -3,7 +3,7 @@
 #include <ichor/DependencyManager.h>
 #include <ichor/services/logging/Logger.h>
 #include <ichor/Service.h>
-#include <ichor/LifecycleManager.h>
+#include "ichor/dependency_management/ILifecycleManager.h"
 
 using namespace Ichor;
 
@@ -20,15 +20,15 @@ public:
     ~RuntimeCreatedService() final = default;
 
 private:
-    StartBehaviour start() final {
+    AsyncGenerator<void> start() final {
         auto const& scope = Ichor::any_cast<std::string&>(_properties["scope"]);
         ICHOR_LOG_INFO(_logger, "RuntimeCreatedService started with scope {}", scope);
-        return StartBehaviour::SUCCEEDED;
+        co_return;
     }
 
-    StartBehaviour stop() final {
+    AsyncGenerator<void> stop() final {
         ICHOR_LOG_INFO(_logger, "RuntimeCreatedService stopped");
-        return StartBehaviour::SUCCEEDED;
+        co_return;
     }
 
     void addDependencyInstance(ILogger *logger, IService *isvc) {

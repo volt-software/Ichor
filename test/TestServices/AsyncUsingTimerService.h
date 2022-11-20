@@ -3,7 +3,7 @@
 #include <ichor/DependencyManager.h>
 #include <ichor/services/timer/TimerService.h>
 #include <ichor/Service.h>
-#include <ichor/LifecycleManager.h>
+#include "ichor/dependency_management/ILifecycleManager.h"
 #include "AwaitService.h"
 
 using namespace Ichor;
@@ -15,19 +15,21 @@ public:
     }
     ~AsyncUsingTimerService() final = default;
 
-    StartBehaviour start() final {
+    AsyncGenerator<void> start() final {
         fmt::print("start\n");
         _timerManager = getManager().createServiceManager<Timer, ITimer>();
-        _timerManager->setChronoInterval(std::chrono::milliseconds(100));
-        _timerManager->setCallback(this, [this](DependencyManager &dm) -> AsyncGenerator<void> {
+        _timerManager->setChronoInterval(100ms);
+        _timerManager->setCallback(this, [this](DependencyManager &dm) -> AsyncGenerator<IchorBehaviour> {
+            fmt::print("timer 1\n");
             co_await _awaitSvc->await_something().begin();
+            fmt::print("timer 2\n");
             _timerManager->stopTimer();
             getManager().pushEvent<QuitEvent>(getServiceId());
 
-            co_return;
+            co_return {};
         });
         _timerManager->startTimer();
-        return StartBehaviour::SUCCEEDED;
+        co_return;
     }
 
     void addDependencyInstance(IAwaitService *svc, IService *) {
@@ -38,9 +40,9 @@ public:
         _awaitSvc = nullptr;
     }
 
-    StartBehaviour stop() final {
+    AsyncGenerator<void> stop() final {
         _timerManager = nullptr;
-        return StartBehaviour::SUCCEEDED;
+        co_return;
     }
 
 private:

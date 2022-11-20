@@ -24,8 +24,8 @@ namespace Ichor {
 
         std::vector<std::shared_ptr<spdlog::sinks::sink>> const& getSinks() noexcept final;
     private:
-        StartBehaviour start() final;
-        StartBehaviour stop() final;
+        AsyncGenerator<void> start() final;
+        AsyncGenerator<void> stop() final;
 
         friend DependencyRegister;
 

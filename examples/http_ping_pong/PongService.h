@@ -7,7 +7,7 @@
 #include <ichor/services/network/http/IHttpConnectionService.h>
 #include <ichor/services/network/http/IHttpService.h>
 #include <ichor/Service.h>
-#include <ichor/LifecycleManager.h>
+#include "ichor/dependency_management/ILifecycleManager.h"
 #include <ichor/services/serialization/ISerializer.h>
 #include "PingMsg.h"
 
@@ -23,16 +23,16 @@ public:
     ~PongService() final = default;
 
 private:
-    StartBehaviour start() final {
+    AsyncGenerator<void> start() final {
         ICHOR_LOG_INFO(_logger, "PongService started");
 
-        return StartBehaviour::SUCCEEDED;
+        co_return;
     }
 
-    StartBehaviour stop() final {
+    AsyncGenerator<void> stop() final {
         _routeRegistration.reset();
         ICHOR_LOG_INFO(_logger, "PongService stopped");
-        return StartBehaviour::SUCCEEDED;
+        co_return;
     }
 
     void addDependencyInstance(ILogger *logger, IService *) {

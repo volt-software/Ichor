@@ -4,13 +4,13 @@ Ichor::Timer::~Timer() noexcept {
     stopTimer();
 }
 
-Ichor::StartBehaviour Ichor::Timer::start() {
-    return Ichor::StartBehaviour::SUCCEEDED;
+Ichor::AsyncGenerator<void> Ichor::Timer::start() {
+    co_return;
 }
 
-Ichor::StartBehaviour Ichor::Timer::stop() {
+Ichor::AsyncGenerator<void> Ichor::Timer::stop() {
     stopTimer();
-    return Ichor::StartBehaviour::SUCCEEDED;
+    co_return;
 }
 
 void Ichor::Timer::startTimer() {

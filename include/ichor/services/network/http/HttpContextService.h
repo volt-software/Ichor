@@ -5,6 +5,7 @@
 #include <ichor/services/network/http/IHttpService.h>
 #include <ichor/services/logging/Logger.h>
 #include <ichor/services/timer/TimerService.h>
+#include <ichor/coroutines/AsyncManualResetEvent.h>
 #include <boost/beast.hpp>
 #include <boost/asio/spawn.hpp>
 
@@ -32,8 +33,8 @@ namespace Ichor {
         bool fibersShouldStop() noexcept final;
 
     private:
-        StartBehaviour start() final;
-        StartBehaviour stop() final;
+        AsyncGenerator<void> start() final;
+        AsyncGenerator<void> stop() final;
 
         void addDependencyInstance(ILogger *logger, IService *isvc);
         void removeDependencyInstance(ILogger *logger, IService *isvc);
@@ -42,11 +43,9 @@ namespace Ichor {
 
         std::unique_ptr<net::io_context> _httpContext{};
         std::thread _httpThread{};
-        std::atomic<bool> _starting{};
-        std::atomic<bool> _stopped{true};
-        std::atomic<bool> _keepAliveStopped{};
         std::atomic<bool> _quit{};
         ILogger *_logger{nullptr};
+        AsyncManualResetEvent _startStopEvent{};
     };
 }
 

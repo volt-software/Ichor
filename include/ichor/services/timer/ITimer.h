@@ -17,7 +17,7 @@ namespace Ichor {
             int64_t val = std::chrono::nanoseconds(duration).count();
 
 #ifdef ICHOR_USE_HARDENING
-            if(val < 0) {
+            if(val < 0) [[unlikely]] {
                 std::terminate();
             }
 #endif

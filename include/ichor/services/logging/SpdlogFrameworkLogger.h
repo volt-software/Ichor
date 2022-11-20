@@ -21,8 +21,8 @@ namespace Ichor {
         void setLogLevel(LogLevel level) final;
         [[nodiscard]] LogLevel getLogLevel() const final;
     private:
-        StartBehaviour start() final;
-        StartBehaviour stop() final;
+        AsyncGenerator<void> start() final;
+        AsyncGenerator<void> stop() final;
 
         friend DependencyRegister;
 

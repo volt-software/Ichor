@@ -13,22 +13,22 @@ struct MultipleAwaitService final : public Service<MultipleAwaitService> {
     MultipleAwaitService() = default;
     ~MultipleAwaitService() final = default;
 
-    StartBehaviour start() final {
-        getManager().pushEvent<RunFunctionEvent>(getServiceId(), [this](DependencyManager &dm) -> AsyncGenerator<void> {
+    AsyncGenerator<void> start() final {
+        getManager().pushEvent<RunFunctionEvent>(getServiceId(), [this](DependencyManager &dm) -> AsyncGenerator<IchorBehaviour> {
             co_await *_autoEvt;
             count++;
-            co_return;
+            co_return {};
         });
-        getManager().pushEvent<RunFunctionEvent>(getServiceId(), [this](DependencyManager &dm) -> AsyncGenerator<void> {
+        getManager().pushEvent<RunFunctionEvent>(getServiceId(), [this](DependencyManager &dm) -> AsyncGenerator<IchorBehaviour> {
             co_await *_autoEvt;
             count++;
-            co_return;
+            co_return {};
         });
-        return StartBehaviour::SUCCEEDED;
+        co_return;
     }
 
-    StartBehaviour stop() final {
-        return StartBehaviour::SUCCEEDED;
+    AsyncGenerator<void> stop() final {
+        co_return;
     }
 
     uint64_t count{};

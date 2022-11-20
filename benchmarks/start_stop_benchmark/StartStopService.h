@@ -4,7 +4,7 @@
 #include <ichor/DependencyManager.h>
 #include <ichor/services/logging/Logger.h>
 #include <ichor/Service.h>
-#include <ichor/LifecycleManager.h>
+#include "ichor/dependency_management/ILifecycleManager.h"
 
 #ifdef __SANITIZE_ADDRESS__
 constexpr uint32_t START_STOP_COUNT = 100'000;
@@ -23,7 +23,7 @@ public:
     ~StartStopService() final = default;
 
 private:
-    StartBehaviour start() final {
+    AsyncGenerator<void> start() final {
         if(startCount == 0) {
             _startServiceRegistration = getManager().registerEventCompletionCallbacks<StartServiceEvent>(this);
             _stopServiceRegistration = getManager().registerEventCompletionCallbacks<StopServiceEvent>(this);
@@ -40,14 +40,14 @@ private:
             ICHOR_LOG_INFO(_logger, "dm {} finished in {:L} µs", getManager().getId(), std::chrono::duration_cast<std::chrono::microseconds>(end-_start).count());
         }
         startCount++;
-        return Ichor::StartBehaviour::SUCCEEDED;
+        co_return;
     }
 
-    StartBehaviour stop() final {
+    AsyncGenerator<void> stop() final {
         if(startCount <= START_STOP_COUNT) {
             getManager().pushEvent<StartServiceEvent>(getServiceId(), _testServiceId);
         }
-        return Ichor::StartBehaviour::SUCCEEDED;
+        co_return;
     }
 
     void addDependencyInstance(ILogger *logger, IService *) {

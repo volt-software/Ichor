@@ -36,7 +36,7 @@ namespace Ichor {
     }
 }
 
-Ichor::SpdlogFrameworkLogger::SpdlogFrameworkLogger(Properties props, DependencyManager *mng) : Service(std::move(props), mng), _level(LogLevel::LOG_TRACE) {
+Ichor::SpdlogFrameworkLogger::SpdlogFrameworkLogger(Properties props, DependencyManager *mng) : Service(std::move(props), mng), _level(LogLevel::LOG_WARN) {
     _setup_spdlog();
 
     while(!_logger_set.load(std::memory_order_acquire)) {
@@ -81,14 +81,14 @@ void Ichor::SpdlogFrameworkLogger::error(const char *filename_in, int line_in, c
     }
 }
 
-Ichor::StartBehaviour Ichor::SpdlogFrameworkLogger::start() {
+Ichor::AsyncGenerator<void> Ichor::SpdlogFrameworkLogger::start() {
     SPDLOG_TRACE("SpdlogFrameworkLogger started");
-    return Ichor::StartBehaviour::SUCCEEDED;
+    co_return;
 }
 
-Ichor::StartBehaviour Ichor::SpdlogFrameworkLogger::stop() {
+Ichor::AsyncGenerator<void> Ichor::SpdlogFrameworkLogger::stop() {
     SPDLOG_TRACE("SpdlogFrameworkLogger stopped");
-    return Ichor::StartBehaviour::SUCCEEDED;
+    co_return;
 }
 
 void Ichor::SpdlogFrameworkLogger::setLogLevel(Ichor::LogLevel level) {

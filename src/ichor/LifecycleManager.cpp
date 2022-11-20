@@ -1,6 +1,5 @@
-#include <ichor/LifecycleManager.h>
 #include <ichor/DependencyManager.h>
 
-Ichor::DependencyRegister::DependencyRegister(DependencyManager *mng) noexcept : _registrations() {
-
+Ichor::AsyncGenerator<void> Ichor::ILifecycleManager::waitForService(DependencyManager &dm, uint64_t serviceId, uint64_t eventType) noexcept {
+    return dm.waitForService(serviceId, eventType);
 }

@@ -4,7 +4,7 @@
 #include <ichor/services/logging/Logger.h>
 #include <ichor/services/timer/TimerService.h>
 #include <ichor/Service.h>
-#include <ichor/LifecycleManager.h>
+#include "ichor/dependency_management/ILifecycleManager.h"
 
 using namespace Ichor;
 
@@ -16,7 +16,7 @@ public:
     ~UsingTimerService() final = default;
 
 private:
-    StartBehaviour start() final {
+    AsyncGenerator<void> start() final {
         ICHOR_LOG_INFO(_logger, "UsingTimerService started");
         _timerManager = getManager().createServiceManager<Timer, ITimer>();
         _timerManager->setChronoInterval(std::chrono::milliseconds(50));
@@ -24,13 +24,13 @@ private:
             return handleEvent(dm);
         });
         _timerManager->startTimer();
-        return StartBehaviour::SUCCEEDED;
+        co_return;
     }
 
-    StartBehaviour stop() final {
+    AsyncGenerator<void> stop() final {
         _timerManager = nullptr;
         ICHOR_LOG_INFO(_logger, "UsingTimerService stopped");
-        return StartBehaviour::SUCCEEDED;
+        co_return;
     }
 
     void addDependencyInstance(ILogger *logger, IService *) {
@@ -41,14 +41,14 @@ private:
         _logger = nullptr;
     }
 
-    AsyncGenerator<void> handleEvent(DependencyManager &dm) {
+    AsyncGenerator<IchorBehaviour> handleEvent(DependencyManager &dm) {
         _timerTriggerCount++;
         ICHOR_LOG_INFO(_logger, "Timer {} triggered {} times", _timerManager->getServiceId(), _timerTriggerCount);
         if(_timerTriggerCount == 5) {
             getManager().pushEvent<QuitEvent>(getServiceId());
         }
 
-        co_return;
+        co_return {};
     }
 
     friend DependencyRegister;

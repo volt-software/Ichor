@@ -3,7 +3,7 @@
 #include <ichor/DependencyManager.h>
 #include <ichor/services/logging/Logger.h>
 #include <ichor/Service.h>
-#include <ichor/LifecycleManager.h>
+#include "ichor/dependency_management/ILifecycleManager.h"
 #include <ichor/events/RunFunctionEvent.h>
 #include <ichor/coroutines/AsyncAutoResetEvent.h>
 
@@ -32,27 +32,27 @@ public:
     ~TestService() final = default;
 
 private:
-    StartBehaviour start() final {
-        getManager().pushEvent<RunFunctionEvent>(getServiceId(), [this](DependencyManager &dm) -> AsyncGenerator<void> {
+    AsyncGenerator<void> start() final {
+        getManager().pushEvent<RunFunctionEvent>(getServiceId(), [this](DependencyManager &dm) -> AsyncGenerator<IchorBehaviour> {
             for(uint32_t i = 0; i < EVENT_COUNT; i++) {
                 co_await _evt;
-                dm.pushEvent<RunFunctionEvent>(getServiceId(), [this](DependencyManager &) -> AsyncGenerator<void> {
+                dm.pushEvent<RunFunctionEvent>(getServiceId(), [this](DependencyManager &) -> AsyncGenerator<IchorBehaviour> {
                     _evt.set();
-                    co_return;
+                    co_return {};
                 });
             }
             getManager().pushEvent<QuitEvent>(getServiceId());
-            co_return;
+            co_return {};
         });
-        getManager().pushEvent<RunFunctionEvent>(getServiceId(), [this](DependencyManager &) -> AsyncGenerator<void> {
+        getManager().pushEvent<RunFunctionEvent>(getServiceId(), [this](DependencyManager &) -> AsyncGenerator<IchorBehaviour> {
             _evt.set();
-            co_return;
+            co_return {};
         });
-        return Ichor::StartBehaviour::SUCCEEDED;
+        co_return;
     }
 
-    StartBehaviour stop() final {
-        return Ichor::StartBehaviour::SUCCEEDED;
+    AsyncGenerator<void> stop() final {
+        co_return;
     }
 
     void addDependencyInstance(ILogger *logger, IService *) {

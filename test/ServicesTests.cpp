@@ -3,11 +3,13 @@
 #include "TestServices/QuitOnStartWithDependenciesService.h"
 #include "TestServices/DependencyService.h"
 #include "TestServices/MixingInterfacesService.h"
-#include "TestServices/StartStopOnSecondAttemptService.h"
 #include "TestServices/TimerRunsOnceService.h"
 #include "TestServices/AddEventHandlerDuringEventHandlingService.h"
+#include "TestServices/RequestsLoggingService.h"
 #include <ichor/event_queues/MultimapQueue.h>
 #include <ichor/events/RunFunctionEvent.h>
+#include <ichor/services/logging/LoggerAdmin.h>
+#include <ichor/services/logging/CoutLogger.h>
 
 bool AddEventHandlerDuringEventHandlingService::_addedReg{};
 
@@ -46,7 +48,7 @@ TEST_CASE("ServicesTests") {
 
         dm.runForOrQueueEmpty();
 
-        dm.pushEvent<RunFunctionEvent>(0, [secondUselessServiceId](DependencyManager& mng) -> AsyncGenerator<void> {
+        dm.pushEvent<RunFunctionEvent>(0, [secondUselessServiceId](DependencyManager& mng) -> AsyncGenerator<IchorBehaviour> {
             auto services = mng.getStartedServices<ICountService>();
 
             REQUIRE(services.size() == 1);
@@ -55,12 +57,12 @@ TEST_CASE("ServicesTests") {
 
             mng.pushEvent<StopServiceEvent>(0, secondUselessServiceId);
 
-            co_return;
+            co_return {};
         });
 
         dm.runForOrQueueEmpty();
 
-        dm.pushEvent<RunFunctionEvent>(0, [](DependencyManager& mng) -> AsyncGenerator<void> {
+        dm.pushEvent<RunFunctionEvent>(0, [](DependencyManager& mng) -> AsyncGenerator<IchorBehaviour> {
             auto services = mng.getStartedServices<ICountService>();
 
             REQUIRE(services.size() == 1);
@@ -69,7 +71,7 @@ TEST_CASE("ServicesTests") {
 
             mng.pushEvent<QuitEvent>(0);
 
-            co_return;
+            co_return {};
         });
 
         t.join();
@@ -94,14 +96,14 @@ TEST_CASE("ServicesTests") {
 
         dm.runForOrQueueEmpty();
 
-        dm.pushEvent<RunFunctionEvent>(0, [](DependencyManager& mng) -> AsyncGenerator<void> {
+        dm.pushEvent<RunFunctionEvent>(0, [](DependencyManager& mng) -> AsyncGenerator<IchorBehaviour> {
             auto services = mng.getStartedServices<ICountService>();
 
             REQUIRE(services.size() == 1);
 
             REQUIRE(services[0]->getSvcCount() == 2);
 
-            co_return;
+            co_return {};
         });
 
         dm.runForOrQueueEmpty();
@@ -110,7 +112,7 @@ TEST_CASE("ServicesTests") {
 
         dm.runForOrQueueEmpty();
 
-        dm.pushEvent<RunFunctionEvent>(0, [](DependencyManager& mng) -> AsyncGenerator<void> {
+        dm.pushEvent<RunFunctionEvent>(0, [](DependencyManager& mng) -> AsyncGenerator<IchorBehaviour> {
             auto services = mng.getStartedServices<ICountService>();
 
             REQUIRE(services.size() == 1);
@@ -119,7 +121,7 @@ TEST_CASE("ServicesTests") {
 
             mng.pushEvent<QuitEvent>(0);
 
-            co_return;
+            co_return {};
         });
 
         t.join();
@@ -146,42 +148,6 @@ TEST_CASE("ServicesTests") {
         t.join();
     }
 
-    SECTION("Dependency manager should retry failed starts/stops") {
-        auto queue = std::make_unique<MultimapQueue>();
-        auto &dm = queue->createManager();
-        StartStopOnSecondAttemptService *svc{};
-
-        std::thread t([&]() {
-            dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>();
-            svc = dm.createServiceManager<StartStopOnSecondAttemptService>();
-            queue->start(CaptureSigInt);
-        });
-
-        waitForRunning(dm);
-
-        dm.runForOrQueueEmpty();
-
-        dm.pushEvent<RunFunctionEvent>(0, [&](DependencyManager& mng) -> AsyncGenerator<void> {
-            REQUIRE(svc->starts == 2);
-
-            mng.pushEvent<StopServiceEvent>(0, svc->getServiceId());
-
-            co_return;
-        });
-
-        dm.runForOrQueueEmpty();
-
-        dm.pushEvent<RunFunctionEvent>(0, [&](DependencyManager& mng) -> AsyncGenerator<void> {
-            REQUIRE(svc->stops == 2);
-
-            mng.pushEvent<QuitEvent>(0);
-
-            co_return;
-        });
-
-        t.join();
-    }
-
     SECTION("TimerService runs exactly once") {
         auto queue = std::make_unique<MultimapQueue>();
         auto &dm = queue->createManager();
@@ -197,12 +163,12 @@ TEST_CASE("ServicesTests") {
 
         dm.runForOrQueueEmpty();
 
-        dm.pushEvent<RunFunctionEvent>(0, [&](DependencyManager& mng) -> AsyncGenerator<void> {
+        dm.pushEvent<RunFunctionEvent>(0, [&](DependencyManager& mng) -> AsyncGenerator<IchorBehaviour> {
             REQUIRE(svc->count == 1);
 
             mng.pushEvent<QuitEvent>(svc->getServiceId());
 
-            co_return;
+            co_return {};
         });
 
         t.join();
@@ -228,6 +194,44 @@ TEST_CASE("ServicesTests") {
         dm.runForOrQueueEmpty();
 
         dm.pushEvent<QuitEvent>(0);
+
+        t.join();
+    }
+
+    SECTION("LoggerAdmin removes logger when service is gone") {
+        auto queue = std::make_unique<MultimapQueue>();
+        auto &dm = queue->createManager();
+        uint64_t svcId{};
+
+        std::thread t([&]() {
+            dm.createServiceManager<LoggerAdmin<CoutLogger>, ILoggerAdmin>();
+            svcId = dm.createServiceManager<RequestsLoggingService, IRequestsLoggingService>()->getServiceId();
+            queue->start(CaptureSigInt);
+        });
+
+        waitForRunning(dm);
+
+        dm.runForOrQueueEmpty();
+
+        dm.pushEvent<RunFunctionEvent>(0, [&](DependencyManager& mng) -> AsyncGenerator<IchorBehaviour> {
+            REQUIRE(mng.getServiceCount() == 3);
+
+            mng.pushEvent<StopServiceEvent>(0, svcId);
+            // + 11 because the first stop triggers a dep offline event and inserts a new stop with 10 higher priority.
+            mng.pushPrioritisedEvent<RemoveServiceEvent>(0, INTERNAL_EVENT_PRIORITY + 11, svcId);
+
+            co_return {};
+        });
+
+        dm.runForOrQueueEmpty();
+
+        dm.pushEvent<RunFunctionEvent>(0, [&](DependencyManager& mng) -> AsyncGenerator<IchorBehaviour> {
+            REQUIRE(mng.getServiceCount() == 1);
+
+            mng.pushEvent<QuitEvent>(0);
+
+            co_return {};
+        });
 
         t.join();
     }

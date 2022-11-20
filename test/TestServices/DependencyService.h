@@ -16,13 +16,13 @@ struct DependencyService final : public ICountService, public Service<Dependency
         reg.registerDependency<IUselessService>(this, required);
     }
     ~DependencyService() final = default;
-    StartBehaviour start() final {
+    AsyncGenerator<void> start() final {
         running = true;
-        return StartBehaviour::SUCCEEDED;
+        co_return;
     }
-    StartBehaviour stop() final {
+    AsyncGenerator<void> stop() final {
         running = false;
-        return StartBehaviour::SUCCEEDED;
+        co_return;
     }
 
     void addDependencyInstance(IUselessService *svc, IService *) {

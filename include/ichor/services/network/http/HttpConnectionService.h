@@ -34,14 +34,14 @@ namespace Ichor {
 
         AsyncGenerator<HttpResponse> sendAsync(HttpMethod method, std::string_view route, std::vector<HttpHeader> &&headers, std::vector<uint8_t>&& msg) final;
 
-        bool close() final;
+        AsyncGenerator<void> close() final;
 
         void setPriority(uint64_t priority) final;
         uint64_t getPriority() final;
 
     private:
-        StartBehaviour start() final;
-        StartBehaviour stop() final;
+        AsyncGenerator<void> start() final;
+        AsyncGenerator<void> stop() final;
 
         void addDependencyInstance(ILogger *logger, IService *);
         void removeDependencyInstance(ILogger *logger, IService *);
@@ -57,7 +57,6 @@ namespace Ichor {
         std::atomic<uint64_t> _priority{INTERNAL_EVENT_PRIORITY};
         std::atomic<bool> _quit{};
         std::atomic<bool> _connecting{};
-        std::atomic<bool> _stopping{};
         std::atomic<bool> _connected{};
         std::atomic<bool> _tcpNoDelay{};
         std::atomic<int64_t> _finishedListenAndRead{};
@@ -65,6 +64,7 @@ namespace Ichor {
         std::atomic<ILogger*> _logger{nullptr};
         IHttpContextService *_httpContextService{nullptr};
         boost::circular_buffer<Detail::ConnectionOutboxMessage> _outbox{10};
+        AsyncManualResetEvent _startStopEvent{};
     };
 }
 
