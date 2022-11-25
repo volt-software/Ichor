@@ -50,16 +50,11 @@ namespace Ichor {
         {
             static_assert(std::chrono::is_clock_v<std::chrono::steady_clock>);
             const typename std::chrono::steady_clock::time_point _c_entry = std::chrono::steady_clock::now();
-            const std::chrono::steady_clock::time_point _s_entry = std::chrono::steady_clock::now();
+            const std::chrono::steady_clock::time_point _s_entry = _c_entry;
             const auto _delta = atime - _c_entry;
             const auto _s_atime = _s_entry + _delta;
 
             if (_wait_until_impl(lock, _s_atime) == cv_status::no_timeout)
-                return cv_status::no_timeout;
-            // We got a timeout when measured against __clock_t but
-            // we need to check against the caller-supplied clock
-            // to tell whether we should return a timeout.
-            if (std::chrono::steady_clock::now() < atime)
                 return cv_status::no_timeout;
             return cv_status::timeout;
         }

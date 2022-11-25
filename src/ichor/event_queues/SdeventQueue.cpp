@@ -2,7 +2,6 @@
 
 #include <ichor/event_queues/SdeventQueue.h>
 #include <shared_mutex>
-#include <condition_variable>
 #include <ichor/DependencyManager.h>
 #include <sys/eventfd.h>
 

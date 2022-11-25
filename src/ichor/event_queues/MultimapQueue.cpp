@@ -1,6 +1,5 @@
 #include <ichor/event_queues/MultimapQueue.h>
 #include <shared_mutex>
-#include <condition_variable>
 #include <ichor/DependencyManager.h>
 #include <csignal>
 
