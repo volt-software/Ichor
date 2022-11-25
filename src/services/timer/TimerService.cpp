@@ -77,7 +77,7 @@ void Ichor::Timer::insertEventLoop(bool fireImmediately) {
             }
         }
         // Make copy of function, in case setCallback() gets called during async stuff.
-        getManager().pushPrioritisedEvent<RunFunctionEvent>(_requestingServiceId, _priority.load(std::memory_order_acquire), _fn);
+        getManager().pushPrioritisedEvent<RunFunctionEvent>(_requestingServiceId, getPriority(), _fn);
 
         next += std::chrono::nanoseconds(_intervalNanosec.load(std::memory_order_acquire));
     }
