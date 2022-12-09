@@ -74,9 +74,6 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     option(ICHOR_RUN_CLANG_TIDY "Runs clang-tidy every compile" OFF)
 endif()
 
-set(ICHOR_SERIALIZATION_FRAMEWORK OFF CACHE STRING "Enable serialization support")
-set_property(CACHE ICHOR_SERIALIZATION_FRAMEWORK PROPERTY STRINGS OFF RAPIDJSON BOOST_JSON)
-
 set(ICHOR_ARCH_OPTIMIZATION OFF CACHE STRING "Tell compiler to optimize for target")
 set_property(CACHE ICHOR_ARCH_OPTIMIZATION PROPERTY STRINGS OFF NATIVE X86_64 X86_64_SSE4 X86_64_AVX2 X86_64_AVX512 MODERN_ARM_GENERIC)
 
@@ -104,9 +101,7 @@ if(ICHOR_USE_SPDLOG)
     target_compile_definitions(ichor PUBLIC SPDLOG_COMPILED_LIB SPDLOG_NO_EXCEPTIONS SPDLOG_FMT_EXTERNAL SPDLOG_DISABLE_DEFAULT_LOGGER SPDLOG_NO_ATOMIC_LEVELS ICHOR_USE_SPDLOG SPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_TRACE)
 endif()
 
-if(ICHOR_SERIALIZATION_FRAMEWORK STREQUAL "RAPIDJSON")
-    target_compile_definitions(ichor PUBLIC ICHOR_USE_RAPIDJSON)
-elseif(ICHOR_SERIALIZATION_FRAMEWORK STREQUAL "BOOST_JSON")
+if(ICHOR_USE_BOOST_BEAST)
     target_compile_definitions(ichor PUBLIC ICHOR_USE_BOOST_JSON BOOST_JSON_STANDALONE)
     find_package(Boost 1.75.0 REQUIRED COMPONENTS json context)
     target_include_directories(ichor PUBLIC ${Boost_INCLUDE_DIR})
@@ -379,11 +374,9 @@ if(ICHOR_USE_SPDLOG)
             $<INSTALL_INTERFACE:include/ichor/external>)
 endif()
 
-if(ICHOR_SERIALIZATION_FRAMEWORK STREQUAL "RAPIDJSON")
-    target_include_directories(ichor PUBLIC
-            $<BUILD_INTERFACE:${ICHOR_EXTERNAL_DIR}/rapidjson/include>
-            $<INSTALL_INTERFACE:include/ichor/external>)
-endif()
+target_include_directories(ichor PUBLIC
+        $<BUILD_INTERFACE:${ICHOR_EXTERNAL_DIR}/rapidjson/include>
+        $<INSTALL_INTERFACE:include/ichor/external>)
 
 if(ICHOR_USE_ETCD)
     #necessary to get generator protobuf/grpc code to compile
@@ -469,13 +462,11 @@ if(ICHOR_USE_SPDLOG)
             )
 endif()
 
-if(ICHOR_SERIALIZATION_FRAMEWORK STREQUAL "RAPIDJSON")
-    install(DIRECTORY "${CMAKE_SOURCE_DIR}/external/rapidjson/include/rapidjson" # source directory
-            DESTINATION "include/ichor/external" # target directory
-            FILES_MATCHING # install only matched files
-            PATTERN "*.h" # select header files
-            )
-endif()
+install(DIRECTORY "${CMAKE_SOURCE_DIR}/external/rapidjson/include/rapidjson" # source directory
+        DESTINATION "include/ichor/external" # target directory
+        FILES_MATCHING # install only matched files
+        PATTERN "*.h" # select header files
+        )
 
 install(TARGETS ichor ${MIMALLOC_TARGET}
         EXPORT IchorTargets

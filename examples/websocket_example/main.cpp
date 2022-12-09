@@ -1,5 +1,5 @@
 #include "UsingWsService.h"
-#include "../common/TestMsgJsonSerializer.h"
+#include "../common/TestMsgRapidJsonSerializer.h"
 #include <ichor/event_queues/MultimapQueue.h>
 #include <ichor/services/logging/LoggerAdmin.h>
 #include <ichor/services/network/ws/WsHostService.h>
@@ -31,7 +31,7 @@ int main(int argc, char *argv[]) {
     dm.createServiceManager<SpdlogSharedService, ISpdlogSharedService>();
 #endif
     dm.createServiceManager<LoggerAdmin<LOGGER_TYPE>, ILoggerAdmin>()->setDefaultLogLevel(Ichor::LogLevel::LOG_INFO);
-    dm.createServiceManager<TestMsgJsonSerializer, ISerializer<TestMsg>>();
+    dm.createServiceManager<TestMsgRapidJsonSerializer, ISerializer<TestMsg>>();
     dm.createServiceManager<HttpContextService, IHttpContextService>();
     dm.createServiceManager<WsHostService, IHostService>(Properties{{"Address", Ichor::make_any<std::string>("127.0.0.1")}, {"Port", Ichor::make_any<uint16_t>(static_cast<uint16_t>(8001))}});
     dm.createServiceManager<ClientAdmin<WsConnectionService>, IClientAdmin>();

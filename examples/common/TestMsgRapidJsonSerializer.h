@@ -5,38 +5,42 @@
 #include <ichor/Service.h>
 #include <ichor/services/serialization/ISerializer.h>
 #include "ichor/dependency_management/ILifecycleManager.h"
-#include "PingMsg.h"
+#include "TestMsg.h"
 #include <rapidjson/document.h>
 #include <rapidjson/writer.h>
 
 using namespace Ichor;
 
-class PingMsgJsonSerializer final : public ISerializer<PingMsg>, public Service<PingMsgJsonSerializer> {
+class TestMsgRapidJsonSerializer final : public ISerializer<TestMsg>, public Service<TestMsgRapidJsonSerializer> {
 public:
-    PingMsgJsonSerializer() = default;
-    ~PingMsgJsonSerializer() final = default;
+    TestMsgRapidJsonSerializer() = default;
+    ~TestMsgRapidJsonSerializer() final = default;
 
-    std::vector<uint8_t> serialize(PingMsg const &msg) final {
+    std::vector<uint8_t> serialize(TestMsg const &msg) final {
         rapidjson::StringBuffer sb;
         rapidjson::Writer<rapidjson::StringBuffer> writer(sb);
 
         writer.StartObject();
 
-        writer.String("sequence");
-        writer.Uint64(msg.sequence);
+        writer.String("id");
+        writer.Uint64(msg.id);
+
+        writer.String("val");
+        writer.String(msg.val.c_str(), static_cast<uint32_t>(msg.val.size()));
 
         writer.EndObject();
         auto *ret = sb.GetString();
         return std::vector<uint8_t>(ret, ret + sb.GetSize() + 1);
     }
-    std::optional<PingMsg> deserialize(std::vector<uint8_t> &&stream) final {
+
+    std::optional<TestMsg> deserialize(std::vector<uint8_t> &&stream) final {
         rapidjson::Document d;
         d.ParseInsitu(reinterpret_cast<char*>(stream.data()));
 
-        if(d.HasParseError() || !d.HasMember("sequence")) {
+        if(d.HasParseError() || !d.HasMember("id") || !d.HasMember("val")) {
             return {};
         }
 
-        return PingMsg{d["sequence"].GetUint64()};
+        return TestMsg{d["id"].GetUint64(), d["val"].GetString()};
     }
 };

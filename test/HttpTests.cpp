@@ -13,7 +13,7 @@
 #include <ichor/services/logging/CoutLogger.h>
 #include "Common.h"
 #include "TestServices/HttpThreadService.h"
-#include "../examples/common/TestMsgJsonSerializer.h"
+#include "../examples/common/TestMsgRapidJsonSerializer.h"
 
 using namespace Ichor;
 
@@ -35,7 +35,7 @@ TEST_CASE("HttpTests") {
 
             dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>({}, 10);
             dm.createServiceManager<LoggerAdmin<CoutLogger>, ILoggerAdmin>();
-            dm.createServiceManager<TestMsgJsonSerializer, ISerializer<TestMsg>>();
+            dm.createServiceManager<TestMsgRapidJsonSerializer, ISerializer<TestMsg>>();
             dm.createServiceManager<HttpContextService, IHttpContextService>();
             dm.createServiceManager<HttpHostService, IHttpService>(Properties{{"Address", Ichor::make_any<std::string>("127.0.0.1")}, {"Port", Ichor::make_any<uint16_t>(static_cast<uint16_t>(8001))}});
             dm.createServiceManager<ClientAdmin<HttpConnectionService, IHttpConnectionService>, IClientAdmin>();
