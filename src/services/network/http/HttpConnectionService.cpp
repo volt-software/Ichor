@@ -58,7 +58,7 @@ Ichor::AsyncGenerator<void> Ichor::HttpConnectionService::stop() {
     INTERNAL_DEBUG("----------------------------------------------- STOP");
 
     co_await close().begin();
-    
+
     INTERNAL_DEBUG("----------------------------------------------- STOP DONE");
 
     co_return;
@@ -125,9 +125,8 @@ Ichor::AsyncGenerator<Ichor::HttpResponse> Ichor::HttpConnectionService::sendAsy
                 // use service id 0 to ensure event gets run, even if service is stopped. Otherwise, the coroutine will never complete.
                 // Similarly, use priority 0 to ensure these events run before any dependency changes, otherwise the service might be destroyed
                 // before we can finish all the coroutines.
-                evt.svc->getManager().pushPrioritisedEvent<RunFunctionEvent>(0u, 0u, [event = evt.evt](DependencyManager &dm) -> AsyncGenerator<IchorBehaviour> {
+                evt.svc->getManager().pushPrioritisedEvent<RunFunctionEvent>(0u, 0u, [event = evt.evt](DependencyManager &dm) {
                     event->set();
-                    co_return {};
                 });
                 evt.svc->_outbox.pop_front();
             }};
@@ -207,9 +206,9 @@ Ichor::AsyncGenerator<void> Ichor::HttpConnectionService::close() {
                 _httpStream->cancel();
             }
 
-            getManager().pushEvent<RunFunctionEvent>(getServiceId(), [this](DependencyManager &dm) -> AsyncGenerator<IchorBehaviour> {
+            getManager().pushEvent<RunFunctionEvent>(getServiceId(), [this](DependencyManager &dm) {
                 _startStopEvent.set();
-                co_return {};
+                return;
             });
         });
     }
@@ -272,9 +271,9 @@ void Ichor::HttpConnectionService::connect(tcp::endpoint endpoint, net::yield_co
     }
 
     // set connected before connecting, or races with the start() function may occur.
-    getManager().pushEvent<RunFunctionEvent>(getServiceId(), [this](DependencyManager &dm) -> AsyncGenerator<IchorBehaviour> {
+    getManager().pushEvent<RunFunctionEvent>(getServiceId(), [this](DependencyManager &dm) {
         _startStopEvent.set();
-        co_return {};
+        return;
     });
     _connected = true;
     _connecting = false;

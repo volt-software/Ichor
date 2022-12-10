@@ -36,14 +36,14 @@ namespace backward {
 void Ichor::DependencyManager::start() {
     ICHOR_LOG_DEBUG(_logger, "starting dm {}", _id);
 
-    ICHOR_LOG_TRACE(_logger, "depman {} has {} events", _id, _eventQueue->size());
-
     if(Detail::_local_dm != nullptr) [[unlikely]] {
         throw std::runtime_error("This thread already has a manager");
     }
 
     Ichor::Detail::_local_dm = this;
     _started.store(true, std::memory_order_release);
+
+    ICHOR_LOG_TRACE(_logger, "depman {} has {} events", _id, _eventQueue->size());
 
 #ifdef __linux__
     pthread_setname_np(pthread_self(), fmt::format("DepMan #{}", _id).c_str());
@@ -730,9 +730,28 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &&uniqueEvt) 
                 }
             }
                 break;
+
             case RunFunctionEvent::TYPE: {
                 INTERNAL_DEBUG("RunFunctionEvent {} {}", evt->id, evt->priority);
                 auto *runFunctionEvt = static_cast<RunFunctionEvent *>(evt.get());
+
+                // Do not handle stale run function events
+                if(runFunctionEvt->originatingService != 0) {
+                    auto requestingServiceIt = _services.find(runFunctionEvt->originatingService);
+                    if(requestingServiceIt != end(_services) && requestingServiceIt->second->getServiceState() == ServiceState::INSTALLED) {
+                        INTERNAL_DEBUG("Service {}:{} not active", runFunctionEvt->originatingService, requestingServiceIt->second->implementationName());
+                        handleEventError(*runFunctionEvt);
+                        break;
+                    }
+                }
+
+                runFunctionEvt->fun(*this);
+                handleEventCompletion(*runFunctionEvt);
+            }
+                break;
+            case RunFunctionEventAsync::TYPE: {
+                INTERNAL_DEBUG("RunFunctionEventAsync {} {}", evt->id, evt->priority);
+                auto *runFunctionEvt = static_cast<RunFunctionEventAsync *>(evt.get());
 
                 // Do not handle stale run function events
                 if(runFunctionEvt->originatingService != 0) {

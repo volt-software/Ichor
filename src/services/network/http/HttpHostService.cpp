@@ -49,9 +49,8 @@ Ichor::AsyncGenerator<void> Ichor::HttpHostService::stop() {
 
             _httpAcceptor = nullptr;
 
-            getManager().pushEvent<RunFunctionEvent>(getServiceId(), [this](DependencyManager &dm) -> AsyncGenerator<IchorBehaviour> {
+            getManager().pushEvent<RunFunctionEvent>(getServiceId(), [this](DependencyManager &dm) {
                 _startStopEvent.set();
-                co_return {};
             });
         });
     }
@@ -234,7 +233,7 @@ void Ichor::HttpHostService::read(tcp::socket socket, net::yield_context yield) 
         }
         HttpRequest httpReq{std::move(req.body()), static_cast<HttpMethod>(req.method()), std::string{req.target()}, addr, std::move(headers)};
 
-        getManager().pushEvent<RunFunctionEvent>(getServiceId(), [this, streamId, httpReq = std::move(httpReq), version = req.version(), keep_alive = req.keep_alive()](DependencyManager &dm) mutable -> AsyncGenerator<IchorBehaviour> {
+        getManager().pushEvent<RunFunctionEventAsync>(getServiceId(), [this, streamId, httpReq = std::move(httpReq), version = req.version(), keep_alive = req.keep_alive()](DependencyManager &dm) mutable -> AsyncGenerator<IchorBehaviour> {
 
             auto routes = _handlers.find(static_cast<HttpMethod>(httpReq.method));
 

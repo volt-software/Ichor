@@ -89,22 +89,21 @@ Ichor provides a co_yield and co_await capable generator for use in conjunction 
 
 ```c++
 AsyncManualResetEvent evt;
-dm.pushEvent<RunFunctionEvent>(0, [&](DependencyManager& mng) -> AsyncGenerator<IchorBehaviour> {
+dm.pushEvent<RunFunctionEventAsync>(0, [&](DependencyManager& mng) -> AsyncGenerator<IchorBehaviour> {
     co_await evt;
     co_return;
 });
 
 // ... Sometime Later ...
 
-dm.pushEvent<RunFunctionEvent>(0, [&](DependencyManager& mng) -> AsyncGenerator<IchorBehaviour> {
+dm.pushEvent<RunFunctionEvent>(0, [&](DependencyManager& mng) {
     evt.set();
-    co_return;
 });
 ```
 
-What happens under the hood is that a `RunFunctionEvent` gets inserted into the queue and executed. Upon encountering a `co_await`, a coroutine handle gets created and stored in Ichor.
+What happens under the hood is that a `RunFunctionEventAsync` gets inserted into the queue and executed. Upon encountering a `co_await`, a coroutine handle gets created and stored in Ichor.
 
-Sometime later, another `RunFunctionEvent` is inserted and executed, which sets the Async event, immediately continuing the execution of the previous coroutine, after which its execution is finished.
+Sometime later, a non-coroutine based `RunFunctionEvent` is inserted and executed, which sets the Async event, immediately continuing the execution of the previous coroutine, after which its execution is finished.
 
 Big thanks for Lewis Baker's [cppcoro](https://github.com/lewissbaker/cppcoro), which Ichor borrowed heavily from.
 

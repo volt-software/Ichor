@@ -11,7 +11,7 @@
 #ifdef __SANITIZE_ADDRESS__
 constexpr uint32_t SERDE_COUNT = 100'000;
 #else
-constexpr uint32_t SERDE_COUNT = 10'000'000;
+constexpr uint32_t SERDE_COUNT = 5'000'000;
 #endif
 
 using namespace Ichor;

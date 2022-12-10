@@ -105,10 +105,9 @@ uint64_t Ichor::WsHostService::getPriority() {
 void Ichor::WsHostService::fail(beast::error_code ec, const char *what) {
     ICHOR_LOG_ERROR(_logger, "Boost.BEAST fail: {}, {}", what, ec.message());
     INTERNAL_DEBUG("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! push {}", getServiceId());
-    getManager().pushPrioritisedEvent<RunFunctionEvent>(getServiceId(), 1000, [this](DependencyManager &dm) -> AsyncGenerator<IchorBehaviour> {
+    getManager().pushPrioritisedEvent<RunFunctionEvent>(getServiceId(), 1000, [this](DependencyManager &dm) {
         INTERNAL_DEBUG("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! _startStopEvent set {}", getServiceId());
         _startStopEvent.set();
-        co_return {};
     });
     getManager().pushPrioritisedEvent<StopServiceEvent>(getServiceId(), _priority, getServiceId());
 }
@@ -157,10 +156,9 @@ void Ichor::WsHostService::listen(tcp::endpoint endpoint, net::yield_context yie
     }
 
     INTERNAL_DEBUG("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! push2 {}", getServiceId());
-    getManager().pushPrioritisedEvent<RunFunctionEvent>(getServiceId(), 1000, [this](DependencyManager &dm) -> AsyncGenerator<IchorBehaviour> {
+    getManager().pushPrioritisedEvent<RunFunctionEvent>(getServiceId(), 1000, [this](DependencyManager &dm) {
         INTERNAL_DEBUG("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! _startStopEvent set2 {}", getServiceId());
         _startStopEvent.set();
-        co_return {};
     });
 }
 

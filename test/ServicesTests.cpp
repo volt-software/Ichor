@@ -48,7 +48,7 @@ TEST_CASE("ServicesTests") {
 
         dm.runForOrQueueEmpty();
 
-        dm.pushEvent<RunFunctionEvent>(0, [secondUselessServiceId](DependencyManager& mng) -> AsyncGenerator<IchorBehaviour> {
+        dm.pushEvent<RunFunctionEvent>(0, [secondUselessServiceId](DependencyManager& mng) {
             auto services = mng.getStartedServices<ICountService>();
 
             REQUIRE(services.size() == 1);
@@ -56,13 +56,11 @@ TEST_CASE("ServicesTests") {
             REQUIRE(services[0]->getSvcCount() == 2);
 
             mng.pushEvent<StopServiceEvent>(0, secondUselessServiceId);
-
-            co_return {};
         });
 
         dm.runForOrQueueEmpty();
 
-        dm.pushEvent<RunFunctionEvent>(0, [](DependencyManager& mng) -> AsyncGenerator<IchorBehaviour> {
+        dm.pushEvent<RunFunctionEvent>(0, [](DependencyManager& mng) {
             auto services = mng.getStartedServices<ICountService>();
 
             REQUIRE(services.size() == 1);
@@ -70,8 +68,6 @@ TEST_CASE("ServicesTests") {
             REQUIRE(services[0]->getSvcCount() == 1);
 
             mng.pushEvent<QuitEvent>(0);
-
-            co_return {};
         });
 
         t.join();
@@ -96,14 +92,12 @@ TEST_CASE("ServicesTests") {
 
         dm.runForOrQueueEmpty();
 
-        dm.pushEvent<RunFunctionEvent>(0, [](DependencyManager& mng) -> AsyncGenerator<IchorBehaviour> {
+        dm.pushEvent<RunFunctionEvent>(0, [](DependencyManager& mng) {
             auto services = mng.getStartedServices<ICountService>();
 
             REQUIRE(services.size() == 1);
 
             REQUIRE(services[0]->getSvcCount() == 2);
-
-            co_return {};
         });
 
         dm.runForOrQueueEmpty();
@@ -112,7 +106,7 @@ TEST_CASE("ServicesTests") {
 
         dm.runForOrQueueEmpty();
 
-        dm.pushEvent<RunFunctionEvent>(0, [](DependencyManager& mng) -> AsyncGenerator<IchorBehaviour> {
+        dm.pushEvent<RunFunctionEvent>(0, [](DependencyManager& mng) {
             auto services = mng.getStartedServices<ICountService>();
 
             REQUIRE(services.size() == 1);
@@ -120,8 +114,6 @@ TEST_CASE("ServicesTests") {
             REQUIRE(services[0]->getSvcCount() == 1);
 
             mng.pushEvent<QuitEvent>(0);
-
-            co_return {};
         });
 
         t.join();
@@ -163,12 +155,10 @@ TEST_CASE("ServicesTests") {
 
         dm.runForOrQueueEmpty();
 
-        dm.pushEvent<RunFunctionEvent>(0, [&](DependencyManager& mng) -> AsyncGenerator<IchorBehaviour> {
+        dm.pushEvent<RunFunctionEvent>(0, [&](DependencyManager& mng) {
             REQUIRE(svc->count == 1);
 
             mng.pushEvent<QuitEvent>(svc->getServiceId());
-
-            co_return {};
         });
 
         t.join();
@@ -213,24 +203,20 @@ TEST_CASE("ServicesTests") {
 
         dm.runForOrQueueEmpty();
 
-        dm.pushEvent<RunFunctionEvent>(0, [&](DependencyManager& mng) -> AsyncGenerator<IchorBehaviour> {
+        dm.pushEvent<RunFunctionEvent>(0, [&](DependencyManager& mng) {
             REQUIRE(mng.getServiceCount() == 3);
 
             mng.pushEvent<StopServiceEvent>(0, svcId);
             // + 11 because the first stop triggers a dep offline event and inserts a new stop with 10 higher priority.
             mng.pushPrioritisedEvent<RemoveServiceEvent>(0, INTERNAL_EVENT_PRIORITY + 11, svcId);
-
-            co_return {};
         });
 
         dm.runForOrQueueEmpty();
 
-        dm.pushEvent<RunFunctionEvent>(0, [&](DependencyManager& mng) -> AsyncGenerator<IchorBehaviour> {
+        dm.pushEvent<RunFunctionEvent>(0, [&](DependencyManager& mng) {
             REQUIRE(mng.getServiceCount() == 1);
 
             mng.pushEvent<QuitEvent>(0);
-
-            co_return {};
         });
 
         t.join();

@@ -72,7 +72,7 @@ struct ServiceWithoutInterface final : public Ichor::Service<ServiceWithoutInter
 
 struct MyInterceptorService final : public Ichor::Service<MyInterceptorService> {
     AsyncGenerator<void> start() final {
-        _interceptor = this->getManager().template registerEventInterceptor<Ichor::RunFunctionEvent>(this); // Can change TimerEvent to just Event if you want to intercept *all* events
+        _interceptor = this->getManager().template registerEventInterceptor<Ichor::RunFunctionEventAsync>(this); // Can change TimerEvent to just Event if you want to intercept *all* events
         co_return;
     }
 
@@ -81,11 +81,11 @@ struct MyInterceptorService final : public Ichor::Service<MyInterceptorService> 
         co_return;
     }
 
-    bool preInterceptEvent(Ichor::RunFunctionEvent const &) {
+    bool preInterceptEvent(Ichor::RunFunctionEventAsync const &) {
         return AllowOthersHandling; //PreventOthersHandling if this event should be discarded
     }
 
-    void postInterceptEvent(Ichor::RunFunctionEvent const &, bool processed) {
+    void postInterceptEvent(Ichor::RunFunctionEventAsync const &, bool processed) {
         // Can use this to track how long the processing took
     }
 

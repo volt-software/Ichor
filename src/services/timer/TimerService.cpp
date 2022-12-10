@@ -43,7 +43,7 @@ bool Ichor::Timer::running() const noexcept {
     return !_quit.load(std::memory_order_acquire);
 };
 
-void Ichor::Timer::setCallback(IService *svc, decltype(RunFunctionEvent::fun) fn) {
+void Ichor::Timer::setCallback(IService *svc, decltype(RunFunctionEventAsync::fun) fn) {
     _requestingServiceId = svc->getServiceId();
     _fn = std::move(fn);
 }
@@ -77,7 +77,7 @@ void Ichor::Timer::insertEventLoop(bool fireImmediately) {
             }
         }
         // Make copy of function, in case setCallback() gets called during async stuff.
-        getManager().pushPrioritisedEvent<RunFunctionEvent>(_requestingServiceId, getPriority(), _fn);
+        getManager().pushPrioritisedEvent<RunFunctionEventAsync>(_requestingServiceId, getPriority(), _fn);
 
         next += std::chrono::nanoseconds(_intervalNanosec.load(std::memory_order_acquire));
     }

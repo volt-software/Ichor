@@ -61,7 +61,7 @@ TEST_CASE("DependencyManager") {
 
         dm.runForOrQueueEmpty();
 
-        dm.pushEvent<RunFunctionEvent>(0, [&](DependencyManager &_dm) -> AsyncGenerator<IchorBehaviour> {
+        dm.pushEvent<RunFunctionEvent>(0, [&](DependencyManager &_dm) {
             REQUIRE(_dm.getServiceCount() == 3);
 
             auto svc = _dm.getService(uselessSvcId);
@@ -80,7 +80,6 @@ TEST_CASE("DependencyManager") {
             REQUIRE(startedSvc.size() == 2);
 
             dm.pushEvent<QuitEvent>(0);
-            co_return {};
         });
 
         t.join();
@@ -88,7 +87,7 @@ TEST_CASE("DependencyManager") {
         REQUIRE_FALSE(dm.isRunning());
     }
 
-    SECTION("DependencyManager", "RunFunctionEvent thread") {
+    SECTION("DependencyManager", "RunFunctionEventAsync thread") {
         auto queue = std::make_unique<MultimapQueue>();
         auto &dm = queue->createManager();
         std::thread::id testThreadId = std::this_thread::get_id();
@@ -111,7 +110,7 @@ TEST_CASE("DependencyManager") {
 
         AsyncManualResetEvent evt;
 
-        dm.pushEvent<RunFunctionEvent>(0, [&](DependencyManager &_dm) -> AsyncGenerator<IchorBehaviour> {
+        dm.pushEvent<RunFunctionEventAsync>(0, [&](DependencyManager &_dm) -> AsyncGenerator<IchorBehaviour> {
             REQUIRE(Ichor::Detail::_local_dm == &_dm);
             REQUIRE(Ichor::Detail::_local_dm == &dm);
             REQUIRE(testThreadId != std::this_thread::get_id());
@@ -129,13 +128,12 @@ TEST_CASE("DependencyManager") {
 
         REQUIRE(Ichor::Detail::_local_dm == nullptr);
 
-        dm.pushEvent<RunFunctionEvent>(0, [&](DependencyManager &_dm) -> AsyncGenerator<IchorBehaviour> {
+        dm.pushEvent<RunFunctionEvent>(0, [&](DependencyManager &_dm) {
             REQUIRE(Ichor::Detail::_local_dm == &_dm);
             REQUIRE(Ichor::Detail::_local_dm == &dm);
             REQUIRE(testThreadId != std::this_thread::get_id());
             REQUIRE(dmThreadId == std::this_thread::get_id());
             evt.set();
-            co_return {};
         });
 
         t.join();

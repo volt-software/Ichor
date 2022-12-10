@@ -32,7 +32,7 @@ TEST_CASE("CoroutineTests") {
 
         dm.runForOrQueueEmpty();
 
-        dm.pushEvent<RunFunctionEvent>(0, [](DependencyManager& mng) -> AsyncGenerator<IchorBehaviour>{
+        dm.pushEvent<RunFunctionEventAsync>(0, [](DependencyManager& mng) -> AsyncGenerator<IchorBehaviour>{
             auto services = mng.getStartedServices<IGeneratorService>();
 
             REQUIRE(services.size() == 1);
@@ -78,7 +78,7 @@ TEST_CASE("CoroutineTests") {
 
         dm.runForOrQueueEmpty();
 
-        dm.pushEvent<RunFunctionEvent>(0, [](DependencyManager& mng) -> AsyncGenerator<IchorBehaviour> {
+        dm.pushEvent<RunFunctionEventAsync>(0, [](DependencyManager& mng) -> AsyncGenerator<IchorBehaviour> {
             auto services = mng.getStartedServices<IAwaitService>();
 
             REQUIRE(services.size() == 1);
@@ -102,7 +102,7 @@ TEST_CASE("CoroutineTests") {
 
         dm.runForOrQueueEmpty();
 
-        dm.pushEvent<RunFunctionEvent>(0, [](DependencyManager& mng) -> AsyncGenerator<IchorBehaviour> {
+        dm.pushEvent<RunFunctionEventAsync>(0, [](DependencyManager& mng) -> AsyncGenerator<IchorBehaviour> {
             INTERNAL_DEBUG("set");
             _evt->set();
             co_return {};
@@ -132,7 +132,7 @@ TEST_CASE("CoroutineTests") {
 
         dm.runForOrQueueEmpty();
 
-        dm.pushEvent<RunFunctionEvent>(0, [](DependencyManager& mng) -> AsyncGenerator<IchorBehaviour> {
+        dm.pushEvent<RunFunctionEventAsync>(0, [](DependencyManager& mng) -> AsyncGenerator<IchorBehaviour> {
             INTERNAL_DEBUG("set");
             _evt->set();
             co_return {};
@@ -159,7 +159,7 @@ TEST_CASE("CoroutineTests") {
 
         dm.runForOrQueueEmpty();
 
-        dm.pushEvent<RunFunctionEvent>(0, [&](DependencyManager& mng) -> AsyncGenerator<IchorBehaviour> {
+        dm.pushEvent<RunFunctionEventAsync>(0, [&](DependencyManager& mng) -> AsyncGenerator<IchorBehaviour> {
             INTERNAL_DEBUG("set");
             _autoEvt->set_all();
             REQUIRE(svc->count == 2);
@@ -189,7 +189,7 @@ TEST_CASE("CoroutineTests") {
 
         dm.runForOrQueueEmpty();
 
-        dm.pushEvent<RunFunctionEvent>(0, [](DependencyManager& mng) -> AsyncGenerator<IchorBehaviour> {
+        dm.pushEvent<RunFunctionEventAsync>(0, [](DependencyManager& mng) -> AsyncGenerator<IchorBehaviour> {
             INTERNAL_DEBUG("set");
             _evt->set();
             co_return {};
@@ -216,14 +216,14 @@ TEST_CASE("CoroutineTests") {
 
         dm.runForOrQueueEmpty();
 
-        dm.pushEvent<RunFunctionEvent>(0, [&](DependencyManager& mng) -> AsyncGenerator<IchorBehaviour> {
+        dm.pushEvent<RunFunctionEventAsync>(0, [&](DependencyManager& mng) -> AsyncGenerator<IchorBehaviour> {
             auto &str = *co_await svc->Await().begin();
             co_return {};
         });
 
         dm.runForOrQueueEmpty();
 
-        dm.pushEvent<RunFunctionEvent>(0, [&](DependencyManager& mng) -> AsyncGenerator<IchorBehaviour> {
+        dm.pushEvent<RunFunctionEventAsync>(0, [&](DependencyManager& mng) -> AsyncGenerator<IchorBehaviour> {
             INTERNAL_DEBUG("set");
             _evt->set();
             mng.pushEvent<QuitEvent>(0);

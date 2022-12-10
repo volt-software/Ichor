@@ -132,10 +132,9 @@ void Ichor::WsConnectionService::fail(beast::error_code ec, const char *what) {
     fmt::print("{}:{} fail {}\n", getServiceId(), getServiceName(), ec.message());
     ICHOR_LOG_ERROR(_logger, "Boost.BEAST fail: {}, {}", what, ec.message());
 
-    getManager().pushPrioritisedEvent<RunFunctionEvent>(getServiceId(), _priority.load(std::memory_order_acquire), [this](DependencyManager &dm) -> AsyncGenerator<IchorBehaviour> {
+    getManager().pushPrioritisedEvent<RunFunctionEvent>(getServiceId(), _priority.load(std::memory_order_acquire), [this](DependencyManager &dm) {
         fmt::print("{}:{} rfe\n", getServiceId(), getServiceName());
         _startStopEvent.set();
-        co_return {};
     });
     getManager().pushEvent<StopServiceEvent>(getServiceId(), getServiceId());
 }
@@ -293,10 +292,9 @@ void Ichor::WsConnectionService::read(net::yield_context &yield) {
     INTERNAL_DEBUG("read stopped WsConnectionService {}", getServiceId());
     fmt::print("{}:{} read done\n", getServiceId(), getServiceName());
 
-    getManager().pushPrioritisedEvent<RunFunctionEvent>(getServiceId(), _priority.load(std::memory_order_acquire), [this](DependencyManager &dm) -> AsyncGenerator<IchorBehaviour> {
+    getManager().pushPrioritisedEvent<RunFunctionEvent>(getServiceId(), _priority.load(std::memory_order_acquire), [this](DependencyManager &dm) {
         fmt::print("{}:{} rfe2\n", getServiceId(), getServiceName());
         _startStopEvent.set();
-        co_return {};
     });
 }
 

@@ -4,7 +4,7 @@ Any and all tech choices come with pros and cons. Anyone who only tells you abou
 
 * Inability to have custom defined constructors (could maybe be improved?)
 * Using co_await messes up lifetime management. E.g. using a timer, using co_await inside the handler and then changing the timer after the await may result in UB.
-* Using anything getManager() bases in the no-arguments service constructor segfaults, as it is not available at that point.
+* Using anything getManager()-based in the no-arguments service constructor segfaults, as it is not available at that point.
 * Creating a service that has its own thread and making interaction between Ichor and that thread thread-safe is difficult. It took a couple of iterations to get a safe http implementation.
 * Debugging issues in Ichor itself is painful. Going outside of the existing best practices for Ichor will lead to painful debugging.
 * Ichor relies on bleeding edge C++, which results in having to deal with compiler bugs.

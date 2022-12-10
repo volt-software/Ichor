@@ -21,9 +21,8 @@ Ichor::AsyncGenerator<void> Ichor::HttpContextService::start() {
 
     net::spawn(*_httpContext, [this](net::yield_context yield) {
         // notify start()
-        getManager().pushPrioritisedEvent<RunFunctionEvent>(getServiceId(), INTERNAL_COROUTINE_EVENT_PRIORITY, [this](DependencyManager &dm) -> AsyncGenerator<IchorBehaviour> {
+        getManager().pushPrioritisedEvent<RunFunctionEvent>(getServiceId(), INTERNAL_COROUTINE_EVENT_PRIORITY, [this](DependencyManager &dm) {
             _startStopEvent.set();
-            co_return {};
         });
 
         net::steady_timer t{*_httpContext};
@@ -34,9 +33,8 @@ Ichor::AsyncGenerator<void> Ichor::HttpContextService::start() {
         INTERNAL_DEBUG("+++++++++++++++++++++++++++++++++++++++++++++++ NOTIFY STOP ++++++++++++++++++++++++++++++++");
 
         // notify stop()
-        getManager().pushPrioritisedEvent<RunFunctionEvent>(getServiceId(), INTERNAL_COROUTINE_EVENT_PRIORITY, [this](DependencyManager &dm) -> AsyncGenerator<IchorBehaviour> {
+        getManager().pushPrioritisedEvent<RunFunctionEvent>(getServiceId(), INTERNAL_COROUTINE_EVENT_PRIORITY, [this](DependencyManager &dm) {
             _startStopEvent.set();
-            co_return {};
         });
     });
 

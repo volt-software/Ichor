@@ -28,7 +28,7 @@ private:
     AsyncGenerator<void> start() final {
         ICHOR_LOG_INFO(_logger, "UsingHttpService started");
 
-        getManager().pushEvent<RunFunctionEvent>(getServiceId(), [this](DependencyManager &dm) -> AsyncGenerator<IchorBehaviour> {
+        getManager().pushEvent<RunFunctionEventAsync>(getServiceId(), [this](DependencyManager &dm) -> AsyncGenerator<IchorBehaviour> {
             auto toSendMsg = _serializer->serialize(TestMsg{11, "hello"});
 
             co_await sendTestRequest(std::move(toSendMsg)).begin();
