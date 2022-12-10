@@ -33,10 +33,10 @@ public:
 
 private:
     AsyncGenerator<void> start() final {
-        getManager().pushEvent<RunFunctionEvent>(getServiceId(), [this](DependencyManager &dm) -> AsyncGenerator<IchorBehaviour> {
+        getManager().pushEvent<RunFunctionEventAsync>(getServiceId(), [this](DependencyManager &dm) -> AsyncGenerator<IchorBehaviour> {
             for(uint32_t i = 0; i < EVENT_COUNT; i++) {
                 co_await _evt;
-                dm.pushEvent<RunFunctionEvent>(getServiceId(), [this](DependencyManager &) -> AsyncGenerator<IchorBehaviour> {
+                dm.pushEvent<RunFunctionEventAsync>(getServiceId(), [this](DependencyManager &) -> AsyncGenerator<IchorBehaviour> {
                     _evt.set();
                     co_return {};
                 });
@@ -44,7 +44,7 @@ private:
             getManager().pushEvent<QuitEvent>(getServiceId());
             co_return {};
         });
-        getManager().pushEvent<RunFunctionEvent>(getServiceId(), [this](DependencyManager &) -> AsyncGenerator<IchorBehaviour> {
+        getManager().pushEvent<RunFunctionEventAsync>(getServiceId(), [this](DependencyManager &) -> AsyncGenerator<IchorBehaviour> {
             _evt.set();
             co_return {};
         });
