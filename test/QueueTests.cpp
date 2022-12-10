@@ -35,6 +35,8 @@ TEST_CASE("QueueTests") {
         auto queue = std::make_unique<SdeventQueue>();
         auto &dm = queue->createManager();
 
+        Detail::_local_dm = &dm;
+
         REQUIRE_THROWS(queue->pushEvent(0, nullptr));
         REQUIRE_THROWS(queue->empty());
         REQUIRE_THROWS(queue->size());
@@ -66,16 +68,17 @@ TEST_CASE("QueueTests") {
             REQUIRE(r >= 0);
         });
 
-        while(_dm == nullptr) {
+        while(_dm.load(std::memory_order_acquire) == nullptr) {
             std::this_thread::sleep_for(1ms);
         }
+        auto *dm = _dm.load(std::memory_order_acquire);
 
-        _dm.load(std::memory_order_acquire)->runForOrQueueEmpty();
+        dm->runForOrQueueEmpty();
 
-        REQUIRE(_dm.load(std::memory_order_acquire)->isRunning());
+        REQUIRE(dm->isRunning());
 
         try {
-            _dm.load(std::memory_order_acquire)->pushEvent<QuitEvent>(0);
+            dm->pushEvent<QuitEvent>(0);
         } catch(const std::exception &e) {
             fmt::print("exception: {}\n", e.what());
             throw;

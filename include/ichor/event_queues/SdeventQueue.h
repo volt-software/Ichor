@@ -10,6 +10,12 @@
 #include <atomic>
 #include <thread>
 
+#ifdef ICHOR_USE_ABSEIL
+#include <absl/container/btree_map.h>
+#else
+#include <map>
+#endif
+
 namespace Ichor {
     class SdeventQueue final : public IEventQueue {
     public:
@@ -33,6 +39,11 @@ namespace Ichor {
         void registerTimer();
 
         mutable Ichor::RealtimeReadWriteMutex _eventQueueMutex{};
+#ifdef ICHOR_USE_ABSEIL
+        absl::btree_multimap<uint64_t, std::unique_ptr<Event>> _otherThreadEventQueue{};
+#else
+        std::multimap<uint64_t, std::unique_ptr<Event>> _otherThreadEventQueue{};
+#endif
         sd_event* _eventQueue{};
         std::atomic<bool> _quit{false};
         std::atomic<bool> _initializedSdevent{false};
