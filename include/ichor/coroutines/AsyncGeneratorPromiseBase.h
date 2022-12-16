@@ -189,11 +189,21 @@ namespace Ichor::Detail {
 
     private:
         void set_finished() noexcept final {
-            INTERNAL_DEBUG("set_finished {}", _id);
+            INTERNAL_DEBUG("set_finished {} {}", _id, typeName<T>());
+
+#ifdef ICHOR_USE_HARDENING
+            if(!_currentValue) [[unlikely]] {
+                if(_exception) {
+                    std::rethrow_exception(std::move(_exception));
+                } else {
+                    std::terminate();
+                }
+            }
+#endif
             _finished = true;
         }
 
-        std::optional<T> _currentValue;
+        std::optional<T> _currentValue{};
         bool _finished{};
         std::shared_ptr<bool> _destroyed;
     };

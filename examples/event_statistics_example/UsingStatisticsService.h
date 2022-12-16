@@ -23,14 +23,12 @@ private:
         quitTimerManager->setChronoInterval(15s);
         bogusTimerManager->setChronoInterval(100ms);
 
-        quitTimerManager->setCallback(this, [this](DependencyManager &dm) -> AsyncGenerator<IchorBehaviour> {
+        quitTimerManager->setCallback(this, [this](DependencyManager &dm) {
             getManager().pushEvent<QuitEvent>(getServiceId());
-            co_return {};
         });
 
-        bogusTimerManager->setCallback(this, [this](DependencyManager &dm) -> AsyncGenerator<IchorBehaviour> {
+        bogusTimerManager->setCallback(this, [this](DependencyManager &dm) {
             std::this_thread::sleep_for(std::chrono::milliseconds(_dist(_mt)));
-            co_return {};
         });
 
         quitTimerManager->startTimer();

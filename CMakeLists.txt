@@ -65,6 +65,7 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
 else()
     option(ICHOR_USE_BACKWARD "Use backward-cpp to print stacktraces on crashes or when the user wants to. Useful for debugging." OFF)
 endif()
+option(ICHOR_USE_HIREDIS "Add hiredis dependency" OFF)
 
 set(BUILD_TESTING OFF) #disable Catch 2 testing
 
@@ -88,10 +89,11 @@ file(GLOB_RECURSE ICHOR_LOGGING_SOURCES ${ICHOR_TOP_DIR}/src/services/logging/*.
 file(GLOB_RECURSE ICHOR_NETWORK_SOURCES ${ICHOR_TOP_DIR}/src/services/network/*.cpp)
 file(GLOB_RECURSE ICHOR_METRICS_SOURCES ${ICHOR_TOP_DIR}/src/services/metrics/*.cpp)
 file(GLOB_RECURSE ICHOR_TIMER_SOURCES ${ICHOR_TOP_DIR}/src/services/timer/*.cpp)
+file(GLOB_RECURSE ICHOR_HIREDIS_SOURCES ${ICHOR_TOP_DIR}/src/services/redis/*.cpp)
 
 file(GLOB SPDLOG_SOURCES ${ICHOR_EXTERNAL_DIR}/spdlog/src/*.cpp)
 
-add_library(ichor ${FMT_SOURCES} ${ICHOR_FRAMEWORK_SOURCES} ${ICHOR_LOGGING_SOURCES} ${ICHOR_NETWORK_SOURCES} ${ICHOR_METRICS_SOURCES} ${ICHOR_TIMER_SOURCES})
+add_library(ichor ${FMT_SOURCES} ${ICHOR_FRAMEWORK_SOURCES} ${ICHOR_LOGGING_SOURCES} ${ICHOR_NETWORK_SOURCES} ${ICHOR_METRICS_SOURCES} ${ICHOR_TIMER_SOURCES} ${ICHOR_HIREDIS_SOURCES})
 
 if(ICHOR_ENABLE_INTERNAL_DEBUGGING)
     target_compile_definitions(ichor PUBLIC ICHOR_ENABLE_INTERNAL_DEBUGGING)
@@ -353,6 +355,12 @@ if(ICHOR_USE_BOOST_BEAST)
         target_compile_definitions(ichor PUBLIC BOOST_ASIO_ENABLE_BUFFER_DEBUGGING)
     endif()
 
+endif()
+
+if(ICHOR_USE_HIREDIS)
+    find_package(hiredis REQUIRED)
+    target_link_libraries(ichor PUBLIC hiredis)
+    target_compile_definitions(ichor PUBLIC ICHOR_USE_HIREDIS)
 endif()
 
 target_link_libraries(ichor PUBLIC ${CMAKE_THREAD_LIBS_INIT})

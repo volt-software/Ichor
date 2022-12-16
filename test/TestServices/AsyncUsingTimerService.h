@@ -19,7 +19,7 @@ public:
         fmt::print("start\n");
         _timerManager = getManager().createServiceManager<Timer, ITimer>();
         _timerManager->setChronoInterval(100ms);
-        _timerManager->setCallback(this, [this](DependencyManager &dm) -> AsyncGenerator<IchorBehaviour> {
+        _timerManager->setCallbackAsync(this, [this](DependencyManager &dm) -> AsyncGenerator<IchorBehaviour> {
             fmt::print("timer 1\n");
             co_await _awaitSvc->await_something().begin();
             fmt::print("timer 2\n");
@@ -32,6 +32,11 @@ public:
         co_return;
     }
 
+    AsyncGenerator<void> stop() final {
+        _timerManager = nullptr;
+        co_return;
+    }
+
     void addDependencyInstance(IAwaitService *svc, IService *) {
         _awaitSvc = svc;
     }
@@ -40,12 +45,10 @@ public:
         _awaitSvc = nullptr;
     }
 
-    AsyncGenerator<void> stop() final {
-        _timerManager = nullptr;
-        co_return;
-    }
-
 private:
     Timer* _timerManager{};
     IAwaitService* _awaitSvc{};
+
+    friend DependencyRegister;
+    friend DependencyManager;
 };

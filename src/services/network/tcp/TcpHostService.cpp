@@ -71,7 +71,7 @@ Ichor::AsyncGenerator<void> Ichor::TcpHostService::start() {
 
     _timerManager = getManager().createServiceManager<Timer, ITimer>();
     _timerManager->setChronoInterval(20ms);
-    _timerManager->setCallback(this, [this](DependencyManager &dm) -> AsyncGenerator<IchorBehaviour> {
+    _timerManager->setCallback(this, [this](DependencyManager &dm) {
         sockaddr_in client_addr{};
         socklen_t client_addr_size = sizeof(client_addr);
         int newConnection = ::accept(_socket, (sockaddr *) &client_addr, &client_addr_size);
@@ -80,17 +80,17 @@ Ichor::AsyncGenerator<void> Ichor::TcpHostService::start() {
             ICHOR_LOG_ERROR(_logger, "New connection but accept() returned {} errno {}", newConnection, errno);
             if(errno == EINVAL) {
                 getManager().pushEvent<UnrecoverableErrorEvent>(getServiceId(), 4u, "Accept() generated error. errno = " + std::to_string(errno));
-                co_return {};
+                return;
             }
             getManager().pushEvent<RecoverableErrorEvent>(getServiceId(), 4u, "Accept() generated error. errno = " + std::to_string(errno));
-            co_return {};
+            return;
         }
 
         auto *ip = ::inet_ntoa(client_addr.sin_addr);
         ICHOR_LOG_TRACE(_logger, "new connection from {}:{}", ip, ::ntohs(client_addr.sin_port));
 
         getManager().pushPrioritisedEvent<NewSocketEvent>(getServiceId(), _priority, newConnection);
-        co_return {};
+        return;
     });
     _timerManager->startTimer();
 

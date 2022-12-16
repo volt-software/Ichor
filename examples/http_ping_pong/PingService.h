@@ -29,7 +29,7 @@ private:
         ICHOR_LOG_INFO(_logger, "PingService started");
 
         _timer = getManager().createServiceManager<Timer, ITimer>();
-        _timer->setCallback(this, [this](DependencyManager &dm) -> AsyncGenerator<IchorBehaviour> {
+        _timer->setCallbackAsync(this, [this](DependencyManager &dm) -> AsyncGenerator<IchorBehaviour> {
             auto toSendMsg = _serializer->serialize(PingMsg{_sequence});
 
             _sequence++;

@@ -15,7 +15,7 @@ Ichor::AsyncGenerator<void> Ichor::EventStatisticsService::start() {
     auto timerManager = getManager().createServiceManager<Timer, ITimer>();
     timerManager->setChronoInterval(std::chrono::milliseconds(_averagingIntervalMs));
 
-    timerManager->setCallback(this, [this](DependencyManager &dm) -> AsyncGenerator<IchorBehaviour> {
+    timerManager->setCallbackAsync(this, [this](DependencyManager &dm) -> AsyncGenerator<IchorBehaviour> {
         return handleEvent(dm);
     });
 

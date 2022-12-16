@@ -69,22 +69,22 @@ Ichor::AsyncGenerator<void> Ichor::TcpConnectionService::start() {
 
     _timerManager = getManager().createServiceManager<Timer, ITimer>();
     _timerManager->setChronoInterval(20ms);
-    _timerManager->setCallback(this, [this](DependencyManager &dm) -> AsyncGenerator<IchorBehaviour> {
-        std::array<char, 1024> buf;
+    _timerManager->setCallback(this, [this](DependencyManager &dm) {
+        std::array<char, 1024> buf{};
         auto ret = recv(_socket, buf.data(), buf.size(), 0);
 
         if (ret == 0) {
-            co_return {};
+            return;
         }
 
         if(ret < 0) {
             ICHOR_LOG_ERROR(_logger, "Error receiving from socket: {}", errno);
             getManager().pushEvent<RecoverableErrorEvent>(getServiceId(), 4u, "Error receiving from socket. errno = " + std::to_string(errno));
-            co_return {};
+            return;
         }
 
         getManager().pushPrioritisedEvent<NetworkDataEvent>(getServiceId(), _priority, std::vector<uint8_t>{buf.data(), buf.data() + ret});
-        co_return {};
+        return;
     });
     _timerManager->startTimer();
 

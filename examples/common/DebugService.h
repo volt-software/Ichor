@@ -17,12 +17,11 @@ public:
 private:
     AsyncGenerator<void> start() final {
         _timer = getManager().createServiceManager<Timer, ITimer>();
-        _timer->setCallback(this, [this](DependencyManager &dm) -> AsyncGenerator<IchorBehaviour> {
+        _timer->setCallback(this, [this](DependencyManager &dm) {
             auto svcs = dm.getServiceInfo();
             for(auto &[id, svc] : svcs) {
                 ICHOR_LOG_INFO(_logger, "Svc {}:{} {}", svc->getServiceId(), svc->getServiceName(), svc->getServiceState());
             }
-            co_return {};
         });
         _timer->setChronoInterval(1s);
         _timer->startTimer();

@@ -21,7 +21,7 @@ private:
         _timerManager = getManager().createServiceManager<Timer, ITimer>();
         _timerManager->setChronoInterval(std::chrono::milliseconds(50));
         _timerManager->setCallback(this, [this](DependencyManager &dm) {
-            return handleEvent(dm);
+            handleEvent(dm);
         });
         _timerManager->startTimer();
         co_return;
@@ -41,14 +41,12 @@ private:
         _logger = nullptr;
     }
 
-    AsyncGenerator<IchorBehaviour> handleEvent(DependencyManager &dm) {
+    void handleEvent(DependencyManager &) {
         _timerTriggerCount++;
         ICHOR_LOG_INFO(_logger, "Timer {} triggered {} times", _timerManager->getServiceId(), _timerTriggerCount);
         if(_timerTriggerCount == 5) {
             getManager().pushEvent<QuitEvent>(getServiceId());
         }
-
-        co_return {};
     }
 
     friend DependencyRegister;

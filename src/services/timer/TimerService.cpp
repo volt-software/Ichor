@@ -18,7 +18,7 @@ void Ichor::Timer::startTimer() {
 }
 
 void Ichor::Timer::startTimer(bool fireImmediately) {
-    if(!_fn) {
+    if(!_fn && !_fnAsync) {
         throw std::runtime_error("No callback set.");
     }
 
@@ -43,8 +43,15 @@ bool Ichor::Timer::running() const noexcept {
     return !_quit.load(std::memory_order_acquire);
 };
 
-void Ichor::Timer::setCallback(IService *svc, decltype(RunFunctionEventAsync::fun) fn) {
+void Ichor::Timer::setCallbackAsync(IService *svc, decltype(RunFunctionEventAsync::fun) fn) {
     _requestingServiceId = svc->getServiceId();
+    _fnAsync = std::move(fn);
+    _fn = {};
+}
+
+void Ichor::Timer::setCallback(IService *svc, decltype(RunFunctionEvent::fun) fn) {
+    _requestingServiceId = svc->getServiceId();
+    _fnAsync = {};
     _fn = std::move(fn);
 }
 
@@ -77,7 +84,11 @@ void Ichor::Timer::insertEventLoop(bool fireImmediately) {
             }
         }
         // Make copy of function, in case setCallback() gets called during async stuff.
-        getManager().pushPrioritisedEvent<RunFunctionEventAsync>(_requestingServiceId, getPriority(), _fn);
+        if(_fnAsync) {
+            getManager().pushPrioritisedEvent<RunFunctionEventAsync>(_requestingServiceId, getPriority(), _fnAsync);
+        } else {
+            getManager().pushPrioritisedEvent<RunFunctionEvent>(_requestingServiceId, getPriority(), _fn);
+        }
 
         next += std::chrono::nanoseconds(_intervalNanosec.load(std::memory_order_acquire));
     }

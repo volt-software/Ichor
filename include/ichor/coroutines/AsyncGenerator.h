@@ -267,7 +267,6 @@ namespace Ichor {
                     _promise->rethrow_if_unhandled_exception();
                 }
                 INTERNAL_DEBUG("AsyncGeneratorIterator<{}>::await_resume {}", typeName<T>(), _promise->_id);
-//                std::terminate();
 
                 return AsyncGeneratorIterator<T>{
                     handle_type::from_promise(*static_cast<promise_type*>(_promise))
@@ -408,7 +407,7 @@ namespace Ichor {
         }
 
         AsyncGenerator(AsyncGenerator&& other) noexcept
-            : IGenerator(), _coroutine(other._coroutine), _destroyed(other._destroyed) {
+            : IGenerator(), _coroutine(std::move(other._coroutine)), _destroyed(other._destroyed) {
             INTERNAL_DEBUG("AsyncGenerator<{}>(AsyncGenerator&& other) {}", typeName<T>(), _coroutine.promise().get_id());
             other._coroutine = nullptr;
             if(_coroutine != nullptr) {

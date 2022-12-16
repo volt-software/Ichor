@@ -16,10 +16,9 @@ public:
         fmt::print("start\n");
         _timerManager = getManager().createServiceManager<Timer, ITimer>();
         _timerManager->setChronoInterval(std::chrono::milliseconds(5));
-        _timerManager->setCallback(this, [this](DependencyManager &dm) -> AsyncGenerator<IchorBehaviour> {
+        _timerManager->setCallback(this, [this](DependencyManager &dm) {
             count++;
             _timerManager->stopTimer();
-            co_return {};
         });
         _timerManager->startTimer(true);
         co_return;

@@ -325,6 +325,7 @@ struct MyTimerService final : public IMyTimerService, public Ichor::Service<MyTi
     }
 
     Ichor::AsyncGenerator<IchorBehaviour> handleEvent(Ichor::TimerEvent const &) {
+        fmt::print("Timer callback\n");
         co_return {};        
     }
 
@@ -362,6 +363,29 @@ int main() {
 ```
 
 We also add this to the main file.
+
+Using event handlers for timers is a lot of boilerplate, but this example allows us to demonstrate multiple concepts. Normally, one would use timers like so:
+
+```c++
+    Ichor::AsyncGenerator<void> start() final {
+        _timer = getManager().createServiceManager<Ichor::Timer, Ichor::ITimer>();
+        _timer->setChronoInterval(std::chrono::seconds(1));
+        // Synchronous callback
+        _timer->setCallback(this, []() {
+            fmt::print("Timer callback\n");
+        });
+        // Asynchronous callback, choose one of the two, not both
+        _timer->setCallbackAsync(this, []() -> AsyncGenerator<IchorBehaviour> {
+            fmt::print("Timer callback\n");
+            // maybe a co_await here
+            co_return {};
+        });
+        _timer->startTimer();
+        co_return;
+    }
+    
+    Timer *_timer{};
+```
 
 ### Quitting the program
 

@@ -150,7 +150,7 @@ namespace Ichor {
 
 #ifdef ICHOR_USE_HARDENING
             if(!it.get_finished()) [[unlikely]] {
-                throw std::runtime_error("Start not finished somehow");
+                std::terminate();
             }
 #endif
 
@@ -176,7 +176,7 @@ namespace Ichor {
 
 #ifdef ICHOR_USE_HARDENING
             if(!it.get_finished()) [[unlikely]] {
-                throw std::runtime_error("Stop not finished somehow");
+                std::terminate();
             }
 #endif
 
@@ -248,5 +248,4 @@ namespace Ichor {
 
 #ifndef ICHOR_DEPENDENCY_MANAGER
 #include <ichor/DependencyManager.h>
-#include <ichor/coroutines/AsyncGeneratorDetail.h>
 #endif

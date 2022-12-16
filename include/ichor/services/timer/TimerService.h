@@ -20,7 +20,15 @@ namespace Ichor {
 
         [[nodiscard]] bool running() const noexcept final;
 
-        void setCallback(IService *svc, decltype(RunFunctionEventAsync::fun) fn);
+        /// Sets coroutine based callback, adds some overhead compared to sync version. Executed when timer expires.
+        /// \param svc service using timer, usually `this`
+        /// \param fn callback
+        void setCallbackAsync(IService *svc, decltype(RunFunctionEventAsync::fun) fn);
+
+        /// Set sync callback to execute when timer expires.
+        /// \param svc service using timer, usually `this`
+        /// \param fn callback
+        void setCallback(IService *svc, decltype(RunFunctionEvent::fun) fn);
         void setInterval(uint64_t nanoseconds) noexcept final;
 
         void setPriority(uint64_t priority) noexcept final;
@@ -34,7 +42,8 @@ namespace Ichor {
 
         std::atomic<uint64_t> _intervalNanosec{1'000'000'000};
         std::unique_ptr<std::thread> _eventInsertionThread{};
-        decltype(RunFunctionEventAsync::fun) _fn{};
+        decltype(RunFunctionEventAsync::fun) _fnAsync{};
+        decltype(RunFunctionEvent::fun) _fn{};
         std::atomic<bool> _quit{true};
         std::atomic<uint64_t> _priority{INTERNAL_EVENT_PRIORITY};
         uint64_t _requestingServiceId{};
