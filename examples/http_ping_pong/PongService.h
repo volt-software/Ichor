@@ -55,6 +55,7 @@ private:
 
     void addDependencyInstance(IHttpService *svc, IService *) {
         _routeRegistration = svc->addRoute(HttpMethod::post, "/ping", [this](HttpRequest &req) -> AsyncGenerator<HttpResponse> {
+            ICHOR_LOG_WARN(_logger, "received request from {} with body {} ", req.address, std::string_view{reinterpret_cast<char*>(req.body.data()), req.body.size()});
             auto msg = _serializer->deserialize(std::move(req.body));
             ICHOR_LOG_WARN(_logger, "received request from {} on route {} {} with PingMsg {}", req.address, (int) req.method, req.route, msg->sequence);
             co_return HttpResponse{false, HttpStatus::ok, _serializer->serialize(PingMsg{msg->sequence}), {}};

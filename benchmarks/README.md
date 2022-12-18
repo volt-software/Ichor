@@ -78,6 +78,75 @@ duration min/max/avg: 142/328/142 µs
 
 ```
 
+## HTTP benchmark
+
+```bash
+$ mkdir build && cd build && cmake -GNinja -DCMAKE_BUILD_TYPE=Release -DICHOR_ARCH_OPTIMIZATION=X86_64_AVX2 -DICHOR_USE_ABSEIL=ON -DICHOR_USE_BOOST_BEAST=ON .. && ninja
+$ ../bin/ichor_pong_example -s &
+$ wrk -c 2 -t1 -d 60s --latency -s ./test.lua "http://localhost:8001/ping"
+Running 1m test @ http://localhost:8001/ping
+  1 threads and 2 connections
+  Thread Stats   Avg      Stdev     Max   +/- Stdev
+    Latency    29.54us    7.47us   1.84ms   95.90%
+    Req/Sec    66.72k     5.59k  103.37k    71.55%
+  Latency Distribution
+     50%   29.00us
+     75%   30.00us
+     90%   33.00us
+     99%   40.00us
+  3990488 requests in 1.00m, 395.79MB read
+Requests/sec:  66397.50
+Transfer/sec:      6.59MB
+```
+```bash
+$ wrk -c 400 -t2 -d 60s --latency -s ./test.lua "http://localhost:8001/ping"
+Running 1m test @ http://localhost:8001/ping
+  2 threads and 400 connections
+  Thread Stats   Avg      Stdev     Max   +/- Stdev
+    Latency     5.03ms  662.78us  21.06ms   59.24%
+    Req/Sec    40.00k     5.31k   51.98k    86.33%
+  Latency Distribution
+     50%    4.66ms
+     75%    5.70ms
+     90%    5.74ms
+     99%    5.89ms
+  4775393 requests in 1.00m, 473.63MB read
+Requests/sec:  79573.33
+Transfer/sec:      7.89MB
+```
+```bash
+$ wrk -c 2000 -t4 -d 60s --latency -s ./test.lua "http://localhost:8001/ping"
+Running 1m test @ http://localhost:8001/ping
+  4 threads and 2000 connections
+  Thread Stats   Avg      Stdev     Max   +/- Stdev
+    Latency    13.52ms    2.08ms  30.17ms   69.18%
+    Req/Sec    18.90k     2.93k   23.35k    49.88%
+  Latency Distribution
+     50%   11.86ms
+     75%   15.64ms
+     90%   16.39ms
+     99%   16.54ms
+  4512207 requests in 1.00m, 447.53MB read
+  Socket errors: connect 983, read 0, write 0, timeout 0
+Requests/sec:  75168.09
+Transfer/sec:      7.46MB
+```
+```bash
+top -H -d2
+  14625       20   0  179804  12232  10364 R  99,9   0,0   1:57.51 HttpCon #3
+  14624       20   0  179804  12232  10364 S  49,5   0,0   0:41.34 DepMan #0
+  15809       20   0  251068   4684   3992 S  26,2   0,0   0:05.13 wrk
+  15808       20   0  251068   4684   3992 S  25,7   0,0   0:06.16 wrk
+```
+```bash
+$ cat test.lua
+wrk.method = "POST"
+
+-- post json data
+wrk.body = '{"sequence": 2}'
+wrk.headers['Content-Type'] = "application/json"
+```
+
 These benchmarks currently lead to the characteristics:
 * creating services with dependencies overhead is likely O(N²).
 * Starting services, stopping services overhead is likely O(N)

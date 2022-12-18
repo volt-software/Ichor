@@ -53,8 +53,10 @@ int main(int argc, char *argv[]) {
     uint64_t verbosity{};
     bool silent{};
     bool showHelp{};
+    std::string address{"127.0.0.1"};
 
     auto cli = lyra::help(showHelp)
+               | lyra::opt(address, "address")["-a"]["--address"]("Address to connect to, e.g. 127.0.0.1")
                | lyra::opt([&verbosity](bool) { verbosity++; })["-v"]["--verbose"]("Increase logging for each -v").cardinality(0, 4)
                | lyra::opt(silent)["-s"]["--silent"]("No output");
 
@@ -93,7 +95,7 @@ int main(int argc, char *argv[]) {
     dm.createServiceManager<PingMsgJsonSerializer, ISerializer<PingMsg>>();
     dm.createServiceManager<HttpContextService, IHttpContextService>();
     dm.createServiceManager<ClientAdmin<HttpConnectionService, IHttpConnectionService>, IClientAdmin>();
-    dm.createServiceManager<PingService>(Properties{{"Address", Ichor::make_any<std::string>("127.0.0.1")}, {"Port", Ichor::make_any<uint16_t>(static_cast<uint16_t>(8001))}});
+    dm.createServiceManager<PingService>(Properties{{"Address", Ichor::make_any<std::string>(address)}, {"Port", Ichor::make_any<uint16_t>(static_cast<uint16_t>(8001))}});
     queue->start(CaptureSigInt);
     auto end = std::chrono::steady_clock::now();
     fmt::print("{} ran for {:L} µs\n", argv[0], std::chrono::duration_cast<std::chrono::microseconds>(end-start).count());

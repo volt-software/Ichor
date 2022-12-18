@@ -44,9 +44,16 @@ private:
                 _failed++;
                 ICHOR_LOG_INFO(_logger, "Couldn't ping {}: total failed={}", addr, _failed);
             }
+
+            // prevent sending more than we can handle
+            if(std::chrono::duration_cast<std::chrono::microseconds>(end - start) > _timerTimeout) {
+                _timerTimeout = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+                _timer->setChronoInterval(_timerTimeout);
+            }
+
             co_return {};
         });
-        _timer->setChronoInterval(10ms);
+        _timer->setChronoInterval(_timerTimeout);
         _timer->startTimer();
 
         co_return;
@@ -111,4 +118,5 @@ private:
     IHttpConnectionService *_connectionService{nullptr};
     uint64_t _sequence{};
     uint64_t _failed{};
+    std::chrono::milliseconds _timerTimeout{10ms};
 };
