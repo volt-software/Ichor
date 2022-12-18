@@ -29,9 +29,9 @@ private:
             _stopServiceRegistration = getManager().registerEventCompletionCallbacks<StopServiceEvent>(this);
 
             _start = std::chrono::steady_clock::now();
-            getManager().pushEvent<StopServiceEvent>(getServiceId(), _testServiceId);
+            getManager().pushPrioritisedEvent<StopServiceEvent>(getServiceId(), INTERNAL_DEPENDENCY_EVENT_PRIORITY, _testServiceId);
         } else if(startCount < START_STOP_COUNT) {
-            getManager().pushEvent<StopServiceEvent>(getServiceId(), _testServiceId);
+            getManager().pushPrioritisedEvent<StopServiceEvent>(getServiceId(), INTERNAL_DEPENDENCY_EVENT_PRIORITY, _testServiceId);
         } else {
             auto end = std::chrono::steady_clock::now();
             getManager().pushEvent<QuitEvent>(getServiceId());
