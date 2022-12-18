@@ -133,14 +133,14 @@ uint64_t Ichor::HiredisService::getPriority() {
 }
 
 Ichor::AsyncGenerator<Ichor::RedisAuthReply> Ichor::HiredisService::auth(std::string_view user, std::string_view password) {
-    auto evt = std::make_unique<IchorRedisReply>();
-    auto ret = redisAsyncCommand(_redisContext, _onAsyncReply, evt.get(), "AUTH %b %b", user.data(), user.size(), password.data(), password.size());
+    IchorRedisReply evt{};
+    auto ret = redisAsyncCommand(_redisContext, _onAsyncReply, &evt, "AUTH %b %b", user.data(), user.size(), password.data(), password.size());
     if(ret == REDIS_ERR) [[unlikely]] {
         throw std::runtime_error("couldn't run async command");
     }
-    co_await evt->evt;
+    co_await evt.evt;
 
-    if(evt->reply == nullptr) [[unlikely]] {
+    if(evt.reply == nullptr) [[unlikely]] {
         co_return RedisAuthReply{};
     }
 
@@ -148,35 +148,35 @@ Ichor::AsyncGenerator<Ichor::RedisAuthReply> Ichor::HiredisService::auth(std::st
 }
 
 Ichor::AsyncGenerator<Ichor::RedisSetReply> Ichor::HiredisService::set(std::string_view key, std::string_view value) {
-    auto evt = std::make_unique<IchorRedisReply>();
-    auto ret = redisAsyncCommand(_redisContext, _onAsyncReply, evt.get(), "SET %b %b", key.data(), key.size(), value.data(), value.size());
+    IchorRedisReply evt{};
+    auto ret = redisAsyncCommand(_redisContext, _onAsyncReply, &evt, "SET %b %b", key.data(), key.size(), value.data(), value.size());
     if(ret == REDIS_ERR) [[unlikely]] {
         throw std::runtime_error("couldn't run async command");
     }
-    co_await evt->evt;
+    co_await evt.evt;
 
-    if(evt->reply == nullptr) [[unlikely]] {
+    if(evt.reply == nullptr) [[unlikely]] {
         co_return RedisSetReply{};
     }
 
-    co_return RedisSetReply{true, evt->reply->str};
+    co_return RedisSetReply{true, evt.reply->str};
 }
 
 Ichor::AsyncGenerator<Ichor::RedisSetReply> Ichor::HiredisService::set(std::string_view key, std::string_view value, RedisSetOptions const &opts) {
     auto buf = _formatSet(key, value, opts);
 
-    auto evt = std::make_unique<IchorRedisReply>();
-    auto ret = redisAsyncCommand(_redisContext, _onAsyncReply, evt.get(), buf.data());
+    IchorRedisReply evt{};
+    auto ret = redisAsyncCommand(_redisContext, _onAsyncReply, &evt, buf.data());
     if(ret == REDIS_ERR) [[unlikely]] {
         throw std::runtime_error("couldn't run async command");
     }
-    co_await evt->evt;
+    co_await evt.evt;
 
-    if(evt->reply == nullptr) [[unlikely]] {
+    if(evt.reply == nullptr) [[unlikely]] {
         co_return RedisSetReply{};
     }
 
-    co_return RedisSetReply{true, evt->reply->str};
+    co_return RedisSetReply{true, evt.reply->str};
 }
 
 void Ichor::HiredisService::setAndForget(std::string_view key, std::string_view value) {
@@ -196,18 +196,18 @@ void Ichor::HiredisService::setAndForget(std::string_view key, std::string_view 
 }
 
 Ichor::AsyncGenerator<Ichor::RedisGetReply> Ichor::HiredisService::get(std::string_view key) {
-    auto evt = std::make_unique<IchorRedisReply>();
-    auto ret = redisAsyncCommand(_redisContext, _onAsyncReply, evt.get(), "GET %b", key.data(), key.size());
+    IchorRedisReply evt{};
+    auto ret = redisAsyncCommand(_redisContext, _onAsyncReply, &evt, "GET %b", key.data(), key.size());
     if(ret == REDIS_ERR) [[unlikely]] {
         throw std::runtime_error("couldn't run async command");
     }
-    co_await evt->evt;
+    co_await evt.evt;
 
-    if(evt->reply == nullptr) [[unlikely]] {
+    if(evt.reply == nullptr) [[unlikely]] {
         co_return RedisGetReply{};
     }
 
-    co_return RedisGetReply{evt->reply->str};
+    co_return RedisGetReply{evt.reply->str};
 }
 
 void Ichor::HiredisService::onRedisConnect(int status) {
