@@ -1,6 +1,6 @@
 #pragma once
 
-#include "ichor/Callbacks.h"
+#include <ichor/Callbacks.h>
 
 namespace Ichor {
     class DependencyManager;

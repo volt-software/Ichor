@@ -311,12 +311,12 @@ struct IMyTimerService {};
 struct MyTimerService final : public IMyTimerService, public Ichor::Service<MyTimerService> {
     MyTimerService() = default;
 
-    Ichor::AsyncGenerator<void> start() final {
+    Ichor::AsyncGenerator<tl::expected<void, Ichor::StartError>> start() final {
         auto timer = getManager().createServiceManager<Ichor::Timer, Ichor::ITimer>();
         timer->setChronoInterval(std::chrono::seconds(1));
         _timerEventRegistration = getManager().registerEventHandler<Ichor::TimerEvent>(this, timer->getServiceId());
         timer->startTimer();
-        co_return;
+        co_return {};
     }
     
     Ichor::AsyncGenerator<void> stop() final {
@@ -367,7 +367,7 @@ We also add this to the main file.
 Using event handlers for timers is a lot of boilerplate, but this example allows us to demonstrate multiple concepts. Normally, one would use timers like so:
 
 ```c++
-    Ichor::AsyncGenerator<void> start() final {
+    Ichor::AsyncGenerator<tl::expected<void, Ichor::StartError>> start() final {
         _timer = getManager().createServiceManager<Ichor::Timer, Ichor::ITimer>();
         _timer->setChronoInterval(std::chrono::seconds(1));
         // Synchronous callback
@@ -381,7 +381,7 @@ Using event handlers for timers is a lot of boilerplate, but this example allows
             co_return {};
         });
         _timer->startTimer();
-        co_return;
+        co_return {};
     }
     
     Timer *_timer{};
@@ -401,12 +401,12 @@ struct IMyTimerService {};
 struct MyTimerService final : public IMyTimerService, public Ichor::Service<MyTimerService> {
     MyTimerService() = default;
 
-    Ichor::AsyncGenerator<void> start() final {
+    Ichor::AsyncGenerator<tl::expected<void, Ichor::StartError>> start() final {
         auto timer = getManager().createServiceManager<Ichor::Timer, Ichor::ITimer>();
         timer->setChronoInterval(std::chrono::seconds(1));
         _timerEventRegistration = getManager().registerEventHandler<Ichor::TimerEvent>(this, timer->getServiceId());
         timer->startTimer();
-        co_return;
+        co_return {};
     }
     
     Ichor::AsyncGenerator<void> stop() final {
@@ -453,14 +453,14 @@ It is possible to intercept all events before they're handled by registered serv
 #include <ichor/services/timer/TimerService.h>
 
 struct MyInterceptorService final : public Ichor::Service<MyInterceptorService> {
-    Ichor::AsyncGenerator<void> start() final {
+    Ichor::AsyncGenerator<tl::expected<void, Ichor::StartError>> start() final {
         _interceptor = this->getManager().template registerEventInterceptor<Ichor::RunFunctionEvent>(this); // Can change TimerEvent to just Event if you want to intercept *all* events
         co_return {};
     }
     
     Ichor::AsyncGenerator<void> stop() final {
         _interceptor.reset();
-        co_return {};
+        co_return;
     }
     
     bool preInterceptEvent(Ichor::RunFunctionEvent const &) {
@@ -539,7 +539,7 @@ This then allows services to send events to other manager:
 #include <ichor/Events.h>
 
 struct MyCommunicatingService final : public Ichor::Service<MyCommunicatingService> {
-    Ichor::AsyncGenerator<void> start() final {
+    Ichor::AsyncGenerator<tl::expected<void, Ichor::StartError>> start() final {
         getManager().getCommunicationChannel()->broadcastEvent<QuitEvent>(getManager(), getServiceId()); // sends to all other managers, except the one this service is registered to
         co_return {};
     }

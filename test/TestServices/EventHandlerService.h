@@ -1,6 +1,6 @@
 #pragma once
 
-#include <ichor/Service.h>
+#include <ichor/dependency_management/Service.h>
 #include <ichor/events/Event.h>
 
 using namespace Ichor;
@@ -16,10 +16,10 @@ template <Derived<Event> EventT>
 struct EventHandlerService final : public IEventHandlerService, public Service<EventHandlerService<EventT>> {
     EventHandlerService() = default;
 
-    AsyncGenerator<void> start() final {
+    AsyncGenerator<tl::expected<void, Ichor::StartError>> start() final {
         _handler = this->getManager().template registerEventHandler<EventT>(this);
 
-        co_return;
+        co_return {};
     }
 
     AsyncGenerator<void> stop() final {

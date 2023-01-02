@@ -5,7 +5,7 @@
 #include <spdlog/sinks/basic_file_sink.h>
 #include <ichor/DependencyManager.h>
 
-Ichor::AsyncGenerator<void> Ichor::SpdlogSharedService::start() {
+Ichor::AsyncGenerator<tl::expected<void, Ichor::StartError>> Ichor::SpdlogSharedService::start() {
     auto console_sink = std::make_shared<spdlog::sinks::stdout_color_sink_st>();
 
     auto time_since_epoch = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch());
@@ -14,7 +14,7 @@ Ichor::AsyncGenerator<void> Ichor::SpdlogSharedService::start() {
     _sinks = std::vector<std::shared_ptr<spdlog::sinks::sink>>{};
     _sinks.emplace_back(std::move(console_sink));
     _sinks.emplace_back(std::move(file_sink));
-    co_return;
+    co_return {};
 }
 
 Ichor::AsyncGenerator<void> Ichor::SpdlogSharedService::stop() {

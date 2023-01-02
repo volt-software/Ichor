@@ -1,7 +1,7 @@
 #include <ichor/services/metrics/EventStatisticsService.h>
 #include <numeric>
 
-Ichor::AsyncGenerator<void> Ichor::EventStatisticsService::start() {
+Ichor::AsyncGenerator<tl::expected<void, Ichor::StartError>> Ichor::EventStatisticsService::start() {
     if(getProperties().contains("ShowStatisticsOnStop")) {
         _showStatisticsOnStop = Ichor::any_cast<bool>(getProperties()["ShowStatisticsOnStop"]);
     }
@@ -22,7 +22,7 @@ Ichor::AsyncGenerator<void> Ichor::EventStatisticsService::start() {
     _interceptorRegistration = getManager().registerEventInterceptor<Event>(this);
     timerManager->startTimer();
 
-    co_return;
+    co_return {};
 }
 
 Ichor::AsyncGenerator<void> Ichor::EventStatisticsService::stop() {

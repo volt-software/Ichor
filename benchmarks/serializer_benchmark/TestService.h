@@ -3,9 +3,9 @@
 #include <chrono>
 #include <ichor/DependencyManager.h>
 #include <ichor/services/logging/Logger.h>
-#include <ichor/Service.h>
+#include <ichor/dependency_management/Service.h>
 #include <ichor/services/serialization/ISerializer.h>
-#include "ichor/dependency_management/ILifecycleManager.h"
+#include <ichor/dependency_management/ILifecycleManager.h>
 #include "../../examples/common/TestMsg.h"
 
 #ifdef __SANITIZE_ADDRESS__
@@ -26,11 +26,11 @@ public:
     ~TestService() final = default;
 
 private:
-    AsyncGenerator<void> start() final {
+    AsyncGenerator<tl::expected<void, Ichor::StartError>> start() final {
         ICHOR_LOG_INFO(_logger, "TestService started with dependency");
         _doWorkRegistration = getManager().registerEventCompletionCallbacks<DoWorkEvent>(this);
         getManager().pushEvent<DoWorkEvent>(getServiceId());
-        co_return;
+        co_return {};
     }
 
     AsyncGenerator<void> stop() final {

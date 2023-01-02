@@ -8,8 +8,8 @@
 #include <ichor/services/network/http/IHttpService.h>
 #include <ichor/services/timer/TimerService.h>
 #include <ichor/events/RunFunctionEvent.h>
-#include <ichor/Service.h>
-#include "ichor/dependency_management/ILifecycleManager.h"
+#include <ichor/dependency_management/Service.h>
+#include <ichor/dependency_management/ILifecycleManager.h>
 #include <ichor/services/serialization/ISerializer.h>
 #include "PingMsg.h"
 
@@ -25,7 +25,7 @@ public:
     ~PingService() final = default;
 
 private:
-    AsyncGenerator<void> start() final {
+    AsyncGenerator<tl::expected<void, Ichor::StartError>> start() final {
         ICHOR_LOG_INFO(_logger, "PingService started");
 
         _timer = getManager().createServiceManager<Timer, ITimer>();
@@ -56,7 +56,7 @@ private:
         _timer->setChronoInterval(_timerTimeout);
         _timer->startTimer();
 
-        co_return;
+        co_return {};
     }
 
     AsyncGenerator<void> stop() final {
@@ -96,7 +96,8 @@ private:
     friend DependencyManager;
 
     AsyncGenerator<std::optional<PingMsg>> sendTestRequest(std::vector<uint8_t> &&toSendMsg) {
-        auto &response = *co_await _connectionService->sendAsync(HttpMethod::post, "/ping", {}, std::move(toSendMsg)).begin();
+        std::vector<HttpHeader> headers{HttpHeader{"Content-Type", "application/json"}};
+        auto &response = *co_await _connectionService->sendAsync(HttpMethod::post, "/ping", std::move(headers), std::move(toSendMsg)).begin();
 
         if(_serializer == nullptr) {
             // we're stopping, gotta bail.

@@ -1,6 +1,6 @@
 #pragma once
 
-#include <ichor/Service.h>
+#include <ichor/dependency_management/Service.h>
 #include <ichor/events/Event.h>
 #include "../TestEvents.h"
 
@@ -9,10 +9,10 @@ using namespace Ichor;
 struct AddEventHandlerDuringEventHandlingService final : public Service<AddEventHandlerDuringEventHandlingService> {
     AddEventHandlerDuringEventHandlingService() = default;
 
-    AsyncGenerator<void> start() final {
+    AsyncGenerator<tl::expected<void, Ichor::StartError>> start() final {
         _reg = getManager().registerEventHandler<TestEvent>(this);
 
-        co_return;
+        co_return {};
     }
 
     AsyncGenerator<void> stop() final {

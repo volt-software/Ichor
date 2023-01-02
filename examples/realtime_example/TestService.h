@@ -2,8 +2,8 @@
 
 #include <ichor/DependencyManager.h>
 #include <ichor/services/logging/Logger.h>
-#include <ichor/Service.h>
-#include "ichor/dependency_management/ILifecycleManager.h"
+#include <ichor/dependency_management/Service.h>
+#include <ichor/dependency_management/ILifecycleManager.h>
 #include "OptionalService.h"
 #include "gsm_enc/gsm_enc.h"
 #include <array>
@@ -31,14 +31,14 @@ public:
     ~TestService() final = default;
 
 private:
-    AsyncGenerator<void> start() final {
+    AsyncGenerator<tl::expected<void, Ichor::StartError>> start() final {
         ICHOR_LOG_INFO(_logger, "TestService started with dependency");
         _started = true;
         _eventHandlerRegistration = getManager().registerEventHandler<ExecuteTaskEvent>(this);
         if(_injectionCount == 2) {
             enqueueWorkload();
         }
-        co_return;
+        co_return {};
     }
 
     AsyncGenerator<void> stop() final {

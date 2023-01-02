@@ -2,8 +2,8 @@
 
 #include <ichor/DependencyManager.h>
 #include <ichor/services/timer/TimerService.h>
-#include <ichor/Service.h>
-#include "ichor/dependency_management/ILifecycleManager.h"
+#include <ichor/dependency_management/Service.h>
+#include <ichor/dependency_management/ILifecycleManager.h>
 #include "AwaitService.h"
 
 using namespace Ichor;
@@ -15,7 +15,7 @@ public:
     }
     ~AsyncUsingTimerService() final = default;
 
-    AsyncGenerator<void> start() final {
+    AsyncGenerator<tl::expected<void, Ichor::StartError>> start() final {
         fmt::print("start\n");
         _timerManager = getManager().createServiceManager<Timer, ITimer>();
         _timerManager->setChronoInterval(100ms);
@@ -29,7 +29,7 @@ public:
             co_return {};
         });
         _timerManager->startTimer();
-        co_return;
+        co_return {};
     }
 
     AsyncGenerator<void> stop() final {

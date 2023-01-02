@@ -20,7 +20,6 @@ namespace Ichor
         STARTING,
         ACTIVE,
         UNINJECTING,
-//        UNINJECTED,
         STOPPING,
     };
 
@@ -70,6 +69,10 @@ namespace Ichor
         DONE,
         STARTED,
         STOPPED
+    };
+
+    enum class StartError {
+        FAILED
     };
 
     // Necessary to prevent excessive events on the queue.

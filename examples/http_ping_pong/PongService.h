@@ -6,8 +6,8 @@
 #include <ichor/services/network/NetworkEvents.h>
 #include <ichor/services/network/http/IHttpConnectionService.h>
 #include <ichor/services/network/http/IHttpService.h>
-#include <ichor/Service.h>
-#include "ichor/dependency_management/ILifecycleManager.h"
+#include <ichor/dependency_management/Service.h>
+#include <ichor/dependency_management/ILifecycleManager.h>
 #include <ichor/services/serialization/ISerializer.h>
 #include "PingMsg.h"
 
@@ -23,10 +23,9 @@ public:
     ~PongService() final = default;
 
 private:
-    AsyncGenerator<void> start() final {
+    AsyncGenerator<tl::expected<void, Ichor::StartError>> start() final {
         ICHOR_LOG_INFO(_logger, "PongService started");
-
-        co_return;
+        co_return {};
     }
 
     AsyncGenerator<void> stop() final {
@@ -55,10 +54,10 @@ private:
 
     void addDependencyInstance(IHttpService *svc, IService *) {
         _routeRegistration = svc->addRoute(HttpMethod::post, "/ping", [this](HttpRequest &req) -> AsyncGenerator<HttpResponse> {
-            ICHOR_LOG_WARN(_logger, "received request from {} with body {} ", req.address, std::string_view{reinterpret_cast<char*>(req.body.data()), req.body.size()});
+//            ICHOR_LOG_WARN(_logger, "received request from {} with body {} ", req.address, std::string_view{reinterpret_cast<char*>(req.body.data()), req.body.size()});
             auto msg = _serializer->deserialize(std::move(req.body));
-            ICHOR_LOG_WARN(_logger, "received request from {} on route {} {} with PingMsg {}", req.address, (int) req.method, req.route, msg->sequence);
-            co_return HttpResponse{false, HttpStatus::ok, _serializer->serialize(PingMsg{msg->sequence}), {}};
+//            ICHOR_LOG_WARN(_logger, "received request from {} on route {} {} with PingMsg {}", req.address, (int) req.method, req.route, msg->sequence);
+            co_return HttpResponse{false, HttpStatus::ok, "application/json", _serializer->serialize(PingMsg{msg->sequence}), {}};
         });
     }
 

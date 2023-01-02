@@ -51,9 +51,9 @@ void Ichor::CoutFrameworkLogger::error(const char *filename_in, int line_in, con
     }
 }
 
-Ichor::AsyncGenerator<void> Ichor::CoutFrameworkLogger::start() {
+Ichor::AsyncGenerator<tl::expected<void, Ichor::StartError>> Ichor::CoutFrameworkLogger::start() {
     std::cout << "CoutFrameworkLogger started\n";
-    co_return;
+    co_return {};
 }
 
 Ichor::AsyncGenerator<void> Ichor::CoutFrameworkLogger::stop() {

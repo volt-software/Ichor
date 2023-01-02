@@ -1,13 +1,10 @@
 #pragma once
 
-#include <cstdint>
-#include <atomic>
-#include <sole/sole.h>
-#include <ichor/Common.h>
 #include <ichor/Concepts.h>
-#include <ichor/Enums.h>
 #include <ichor/coroutines/AsyncGenerator.h>
 #include <ichor/dependency_management/DependencyInfo.h>
+#include <ichor/dependency_management/IService.h>
+#include <tl/expected.h>
 
 namespace Ichor {
 
@@ -23,38 +20,9 @@ namespace Ichor {
     class LifecycleManager;
     template<class ServiceType, typename... IFaces>
 #if (!defined(WIN32) && !defined(_WIN32) && !defined(__WIN32)) || defined(__CYGWIN__)
-    requires DerivedTemplated<ServiceType, Service>
+    requires Derived<ServiceType, IService>
 #endif
     class DependencyLifecycleManager;
-
-    class IService {
-    public:
-        virtual ~IService() = default;
-
-        /// Process-local unique service id
-        /// \return id
-        [[nodiscard]] virtual uint64_t getServiceId() const noexcept = 0;
-
-        /// Global unique service id
-        /// \return gid
-        [[nodiscard]] virtual sole::uuid getServiceGid() const noexcept = 0;
-
-        /// Name of the user-specified service (e.g. CoutFrameworkLogger)
-        /// \return
-        [[nodiscard]] virtual std::string_view getServiceName() const noexcept = 0;
-
-        [[nodiscard]] virtual ServiceState getServiceState() const noexcept = 0;
-
-        [[nodiscard]] virtual uint64_t getServicePriority() const noexcept = 0;
-
-        [[nodiscard]] virtual bool isStarted() const noexcept = 0;
-
-        [[nodiscard]] virtual DependencyManager& getManager() const noexcept = 0;
-
-        [[nodiscard]] virtual Properties& getProperties() noexcept = 0;
-        [[nodiscard]] virtual const Properties& getProperties() const noexcept = 0;
-    };
-
 
     extern std::atomic<uint64_t> _serviceIdCounter;
 
@@ -67,7 +35,7 @@ namespace Ichor {
         }
 
         template <typename U = T> requires (RequestsProperties<U> || RequestsDependencies<U>)
-        Service(Properties&& props, DependencyManager *mng) noexcept : IService(), _properties(std::forward<Properties>(props)), _serviceId(_serviceIdCounter.fetch_add(1, std::memory_order_acq_rel)), _servicePriority(INTERNAL_EVENT_PRIORITY), _serviceGid(sole::uuid4()), _serviceState(ServiceState::INSTALLED), _manager(mng) {
+        Service(Properties&& props, DependencyManager *mng) noexcept : IService(), _properties(std::move(props)), _serviceId(_serviceIdCounter.fetch_add(1, std::memory_order_acq_rel)), _servicePriority(INTERNAL_EVENT_PRIORITY), _serviceGid(sole::uuid4()), _serviceState(ServiceState::INSTALLED), _manager(mng) {
 
         }
 
@@ -124,8 +92,8 @@ namespace Ichor {
         }
 
     protected:
-        [[nodiscard]] virtual AsyncGenerator<void> start() {
-            co_return;
+        [[nodiscard]] virtual AsyncGenerator<tl::expected<void, StartError>> start() {
+            co_return {};
         }
 
         [[nodiscard]] virtual AsyncGenerator<void> stop() {
@@ -138,7 +106,7 @@ namespace Ichor {
         /// \return true if started
         [[nodiscard]] AsyncGenerator<StartBehaviour> internal_start(DependencyInfo *_dependencies) {
             if(_serviceState != ServiceState::INSTALLED || (_dependencies != nullptr && !_dependencies->allSatisfied())) {
-                INTERNAL_DEBUG("internal_start service {}:{} state {} dependencies {} {}", getServiceId(), typeName<T>(), getState(), _dependencies->size(), _dependencies->allSatisfied());
+                INTERNAL_DEBUG("internal_start service {}:{} state {} dependencies {} {}", getServiceId(), typeName<T>(), getState(), _dependencies != nullptr ? _dependencies->size() : (size_t)-1, _dependencies != nullptr ? _dependencies->allSatisfied() : false);
                 co_return {};
             }
 
@@ -146,13 +114,19 @@ namespace Ichor {
             _serviceState = ServiceState::STARTING;
             auto gen = start();
             auto it = gen.begin();
-            co_await it;
+            tl::expected<void, StartError> &outcome = *co_await it;
 
 #ifdef ICHOR_USE_HARDENING
             if(!it.get_finished()) [[unlikely]] {
                 std::terminate();
             }
 #endif
+
+            if(!outcome) {
+                INTERNAL_DEBUG("internal_start service {}:{} state {} error starting", getServiceId(), typeName<T>(), getState());
+                _serviceState = ServiceState::INSTALLED;
+                co_return StartBehaviour::STOPPED;
+            }
 
             INTERNAL_DEBUG("internal_start service {}:{} state {} -> {}", getServiceId(), typeName<T>(), getState(), ServiceState::INJECTING);
             _serviceState = ServiceState::INJECTING;
@@ -211,7 +185,7 @@ namespace Ichor {
         }
 
         void setProperties(Properties&& properties) noexcept(std::is_nothrow_move_assignable_v<Properties>) {
-            _properties = std::forward<Properties>(properties);
+            _properties = std::move(properties);
         }
 
         void injectDependencyManager(DependencyManager *mng) noexcept {
@@ -239,7 +213,7 @@ namespace Ichor {
 
         template<class ServiceType, typename... IFaces>
 #if (!defined(WIN32) && !defined(_WIN32) && !defined(__WIN32)) || defined(__CYGWIN__)
-        requires DerivedTemplated<ServiceType, Service>
+        requires Derived<ServiceType, IService>
 #endif
         friend class DependencyLifecycleManager;
 

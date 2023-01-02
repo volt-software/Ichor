@@ -4,7 +4,7 @@
 #include <ichor/event_queues/MultimapQueue.h>
 #include <ichor/services/logging/LoggerAdmin.h>
 #include <ichor/services/network/http/HttpHostService.h>
-#include <ichor/services/network/http/HttpContextService.h>
+#include <ichor/services/network/AsioContextService.h>
 #include <ichor/services/serialization/ISerializer.h>
 #include <ichor/services/logging/NullLogger.h>
 
@@ -50,13 +50,17 @@ int main(int argc, char *argv[]) {
     std::locale::global(std::locale("en_US.UTF-8"));
 
     uint64_t verbosity{};
+    uint64_t threads{1};
     bool silent{};
+    bool spinlock{};
     bool showHelp{};
     std::string address{"127.0.0.1"};
 
     auto cli = lyra::help(showHelp)
                | lyra::opt(address, "address")["-a"]["--address"]("Address to bind to, e.g. 127.0.0.1")
                | lyra::opt([&verbosity](bool) { verbosity++; })["-v"]["--verbose"]("Increase logging for each -v").cardinality(0, 4)
+               | lyra::opt(threads, "threads")["-t"]["--threads"]("Number of threads to use for I/O, default: 1")
+               | lyra::opt(spinlock)["-p"]["--spinlock"]("Spinlock 10ms before going to sleep, improves latency in high workload cases at the expense of CPU usage")
                | lyra::opt(silent)["-s"]["--silent"]("No output");
 
     auto result = cli.parse( { argc, argv } );
@@ -65,24 +69,23 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    if (showHelp)
-    {
+    if (showHelp) {
         std::cout << cli << "\n";
         return 0;
     }
 
     auto start = std::chrono::steady_clock::now();
-    auto queue = std::make_unique<MultimapQueue>();
+    auto queue = std::make_unique<MultimapQueue>(spinlock);
     auto &dm = queue->createManager();
+
+#ifdef ICHOR_USE_SPDLOG
+    dm.createServiceManager<SpdlogSharedService, ISpdlogSharedService>();
+#endif
 
     if(verbosity > 0) {
         auto *logger = dm.createServiceManager<FRAMEWORK_LOGGER_TYPE, IFrameworkLogger>();
         setLevel(verbosity, logger);
     }
-
-#ifdef ICHOR_USE_SPDLOG
-    dm.createServiceManager<SpdlogSharedService, ISpdlogSharedService>();
-#endif
 
     if(silent) {
         dm.createServiceManager<LoggerAdmin<NullLogger>, ILoggerAdmin>();
@@ -92,7 +95,7 @@ int main(int argc, char *argv[]) {
     }
 
     dm.createServiceManager<PingMsgJsonSerializer, ISerializer<PingMsg>>();
-    dm.createServiceManager<HttpContextService, IHttpContextService>();
+    dm.createServiceManager<AsioContextService, IAsioContextService>(Properties{{"Threads", Ichor::make_any<uint64_t>(threads)}});
     dm.createServiceManager<HttpHostService, IHttpService>(Properties{{"Address", Ichor::make_any<std::string>(address)}, {"Port", Ichor::make_any<uint16_t>(static_cast<uint16_t>(8001))}});
     dm.createServiceManager<PongService>();
     queue->start(CaptureSigInt);

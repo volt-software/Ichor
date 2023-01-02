@@ -1,6 +1,6 @@
 #pragma once
 
-#include <ichor/Service.h>
+#include <ichor/dependency_management/Service.h>
 #include <ichor/events/Event.h>
 
 using namespace Ichor;
@@ -18,10 +18,10 @@ template <Derived<Event> InterceptorT, bool allowProcessing = true>
 struct InterceptorService final : public IInterceptorService, public Service<InterceptorService<InterceptorT, allowProcessing>> {
     InterceptorService() = default;
 
-    AsyncGenerator<void> start() final {
+    AsyncGenerator<tl::expected<void, Ichor::StartError>> start() final {
         _interceptor = this->getManager().template registerEventInterceptor<InterceptorT>(this);
 
-        co_return;
+        co_return {};
     }
 
     AsyncGenerator<void> stop() final {

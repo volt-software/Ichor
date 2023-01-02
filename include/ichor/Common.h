@@ -26,6 +26,12 @@ static constexpr bool DO_INTERNAL_DEBUG = true;
 static constexpr bool DO_INTERNAL_DEBUG = false;
 #endif
 
+#ifdef ICHOR_ENABLE_INTERNAL_COROUTINE_DEBUGGING
+static constexpr bool DO_INTERNAL_COROUTINE_DEBUG = true;
+#else
+static constexpr bool DO_INTERNAL_COROUTINE_DEBUG = false;
+#endif
+
 #ifdef ICHOR_USE_HARDENING
 static constexpr bool DO_HARDENING = true;
 #else
@@ -34,6 +40,15 @@ static constexpr bool DO_HARDENING = false;
 
 #define INTERNAL_DEBUG(...)      \
     if constexpr(DO_INTERNAL_DEBUG) { \
+        fmt::print("[{:L}] ", std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now().time_since_epoch()).count());    \
+        fmt::print("[{}:{}] ", __FILE__, __LINE__);    \
+        fmt::print(__VA_ARGS__);    \
+        fmt::print("\n");    \
+    }                                 \
+static_assert(true, "")
+
+#define INTERNAL_COROUTINE_DEBUG(...)      \
+    if constexpr(DO_INTERNAL_COROUTINE_DEBUG) { \
         fmt::print("[{:L}] ", std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now().time_since_epoch()).count());    \
         fmt::print("[{}:{}] ", __FILE__, __LINE__);    \
         fmt::print(__VA_ARGS__);    \

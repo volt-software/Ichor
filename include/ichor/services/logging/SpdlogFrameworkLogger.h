@@ -3,7 +3,7 @@
 #ifdef ICHOR_USE_SPDLOG
 
 #include <ichor/interfaces/IFrameworkLogger.h>
-#include <ichor/Service.h>
+#include <ichor/dependency_management/Service.h>
 
 namespace Ichor {
 
@@ -21,7 +21,7 @@ namespace Ichor {
         void setLogLevel(LogLevel level) final;
         [[nodiscard]] LogLevel getLogLevel() const final;
     private:
-        AsyncGenerator<void> start() final;
+        AsyncGenerator<tl::expected<void, Ichor::StartError>> start() final;
         AsyncGenerator<void> stop() final;
 
         friend DependencyRegister;

@@ -45,6 +45,7 @@ option(ICHOR_BUILD_EXAMPLES "Build examples" ON)
 option(ICHOR_BUILD_BENCHMARKS "Build benchmarks" ON)
 option(ICHOR_BUILD_TESTING "Build tests" ON)
 option(ICHOR_ENABLE_INTERNAL_DEBUGGING "Add verbose logging of Ichor internals" OFF)
+option(ICHOR_ENABLE_INTERNAL_COROUTINE_DEBUGGING "Add verbose logging of Ichor coroutine internals" OFF)
 option(ICHOR_BUILD_COVERAGE "Build ichor with coverage" OFF)
 option(ICHOR_USE_SPDLOG "Use spdlog as framework logging implementation" OFF)
 option(ICHOR_USE_ETCD "Add various dependencies to enable pubsub bundle to be built" OFF)
@@ -98,12 +99,15 @@ add_library(ichor ${FMT_SOURCES} ${ICHOR_FRAMEWORK_SOURCES} ${ICHOR_LOGGING_SOUR
 if(ICHOR_ENABLE_INTERNAL_DEBUGGING)
     target_compile_definitions(ichor PUBLIC ICHOR_ENABLE_INTERNAL_DEBUGGING)
 endif()
+if(ICHOR_ENABLE_INTERNAL_COROUTINE_DEBUGGING)
+    target_compile_definitions(ichor PUBLIC ICHOR_ENABLE_INTERNAL_COROUTINE_DEBUGGING)
+endif()
 
 if(ICHOR_USE_SPDLOG)
     target_compile_definitions(ichor PUBLIC SPDLOG_COMPILED_LIB SPDLOG_NO_EXCEPTIONS SPDLOG_FMT_EXTERNAL SPDLOG_DISABLE_DEFAULT_LOGGER SPDLOG_NO_ATOMIC_LEVELS ICHOR_USE_SPDLOG SPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_TRACE)
 endif()
 
-if(ICHOR_USE_BOOST_BEAST)
+if(ICHOR_USE_BOOST_BEAST) #json
     target_compile_definitions(ichor PUBLIC ICHOR_USE_BOOST_JSON BOOST_JSON_STANDALONE)
     find_package(Boost 1.75.0 REQUIRED COMPONENTS json context)
     target_include_directories(ichor PUBLIC ${Boost_INCLUDE_DIR})
@@ -155,7 +159,9 @@ if(NOT WIN32)
 else()
     #msvc sets some stupid defaults. We can do better.
     # d2SSAOptimizer-: treat arithmetic overflow as defined behaviour (like fwrapv)
-    set(CMAKE_CXX_FLAGS "/nologo /DWIN32 /D_WINDOWS /EHsc /TP /W4 /await:strict /std:c++latest /permissive- /wd4100 /d2SSAOptimizer-")
+    # try d2UndefIntOverflow-
+    set(CMAKE_CXX_FLAGS "/W4")
+    target_compile_options(ichor PUBLIC /nologo /DWIN32 /D_WINDOWS /EHsc /TP /await:strict /std:c++latest /wd4100 /d2SSAOptimizer- /permissive- /Zc:throwingNew /Zc:__cplusplus /Zc:preprocessor /volatile:iso /Zc:inline /Zc:referenceBinding /Zc:strictStrings /Zc:templateScope /utf-8 /vd0)
     target_compile_definitions(ichor PUBLIC NOMINMAX WIN32_LEAN_AND_MEAN )
 endif()
 
@@ -220,6 +226,7 @@ if(ICHOR_USE_SANITIZERS)
 
     if(ICHOR_USE_BOOST_BEAST)
         target_compile_definitions(ichor PUBLIC BOOST_USE_ASAN BOOST_USE_UCONTEXT)
+        message(WARNING "Sanitizers seem to have issues with stack switches. Need to compile boost library specifically to deal with this, or continue at your own peril. Please see https://www.boost.org/doc/libs/master/libs/context/doc/html/context/stack/sanitizers.html and https://github.com/boostorg/beast/issues/2615")
     endif()
 endif()
 
@@ -235,6 +242,11 @@ if(ICHOR_USE_THREAD_SANITIZER)
     if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
         target_compile_options(ichor PUBLIC -no-pie)
     endif()
+
+    if(ICHOR_USE_BOOST_BEAST)
+        target_compile_definitions(ichor PUBLIC BOOST_USE_UCONTEXT)
+        message(WARNING "Sanitizers seem to have issues with stack switches. Need to compile boost library specifically to deal with this, and then still thread sanitizer seems to have issues. Please see https://www.boost.org/doc/libs/master/libs/context/doc/html/context/stack/sanitizers.html and https://github.com/boostorg/beast/issues/2615")
+    endif()
 endif()
 
 if(NOT DEFINED ICHOR_USE_SANITIZERS AND NOT DEFINED ICHOR_USE_THREAD_SANITIZER)
@@ -243,7 +255,7 @@ if(NOT DEFINED ICHOR_USE_SANITIZERS AND NOT DEFINED ICHOR_USE_THREAD_SANITIZER)
 endif()
 
 if(WIN32 AND ICHOR_USE_HARDENING)
-    target_compile_options(ichor PUBLIC /GS /guard:cf)
+    target_compile_options(ichor PUBLIC /sdl /guard:cf /RTCsu)
     target_compile_definitions(ichor PUBLIC ICHOR_USE_HARDENING)
 elseif(ICHOR_USE_HARDENING)
     target_compile_options(ichor PUBLIC -fstack-protector-strong -fcf-protection)
@@ -339,8 +351,8 @@ if(ICHOR_USE_SDEVENT)
     target_compile_definitions(ichor PUBLIC ICHOR_USE_SDEVENT)
 endif()
 
-if(ICHOR_USE_BOOST_BEAST)
-    find_package(Boost 1.70.0 REQUIRED COMPONENTS context coroutine)
+if(ICHOR_USE_BOOST_BEAST) #beast
+    find_package(Boost 1.70.0 REQUIRED COMPONENTS context coroutine fiber)
     target_include_directories(ichor PUBLIC ${Boost_INCLUDE_DIRS})
     target_link_directories(ichor PUBLIC ${Boost_LIBRARY_DIRS})
     target_link_libraries(ichor PUBLIC ${Boost_LIBRARIES})
@@ -349,7 +361,6 @@ if(ICHOR_USE_BOOST_BEAST)
     if(Boost_VERSION_STRING VERSION_LESS "1.81.0")
         target_compile_definitions(ichor PUBLIC BOOST_BEAST_USE_STD_STRING_VIEW)
     endif()
-
 
     if(ICHOR_USE_HARDENING OR ICHOR_ENABLE_INTERNAL_DEBUGGING)
         target_compile_definitions(ichor PUBLIC BOOST_ASIO_ENABLE_BUFFER_DEBUGGING)

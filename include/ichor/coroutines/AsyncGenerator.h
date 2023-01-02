@@ -53,12 +53,12 @@ namespace Ichor {
 
         public:
             bool await_ready() const noexcept {
-                INTERNAL_DEBUG("AsyncGeneratorAdvanceOperation::await_ready {} {}", _initialState, _promise->_id);
+                INTERNAL_COROUTINE_DEBUG("AsyncGeneratorAdvanceOperation::await_ready {} {}", _initialState, _promise->_id);
                 return _initialState == state::value_ready_producer_suspended;
             }
 
             bool await_suspend(std::coroutine_handle<> consumerCoroutine) noexcept {
-                INTERNAL_DEBUG("AsyncGeneratorAdvanceOperation::await_suspend {} {}", _promise->_id, _promise->finished());
+                INTERNAL_COROUTINE_DEBUG("AsyncGeneratorAdvanceOperation::await_suspend {} {}", _promise->_id, _promise->finished());
                 _promise->_consumerCoroutine = consumerCoroutine;
                 if(!_promise->_hasSuspended.has_value()) {
                     _promise->_hasSuspended = false;
@@ -76,7 +76,7 @@ namespace Ichor {
                         if(!_promise->finished()) {
                             _promise->_hasSuspended = true;
                         }
-                        INTERNAL_DEBUG("AsyncGeneratorAdvanceOperation::await_suspend1");
+                        INTERNAL_COROUTINE_DEBUG("AsyncGeneratorAdvanceOperation::await_suspend1");
                         return true;
                     }
 
@@ -89,7 +89,7 @@ namespace Ichor {
                     currentState = _promise->_state.load(std::memory_order_acquire);
                     if (currentState == state::value_ready_producer_suspended) {
                         // Producer coroutine produced a value synchronously.
-                        INTERNAL_DEBUG("AsyncGeneratorAdvanceOperation::await_suspend2");
+                        INTERNAL_COROUTINE_DEBUG("AsyncGeneratorAdvanceOperation::await_suspend2");
                         return false;
                     }
                 }
@@ -109,10 +109,10 @@ namespace Ichor {
                     std::memory_order_release,
                     std::memory_order_acquire)) {
                     _promise->_hasSuspended = true;
-                    INTERNAL_DEBUG("AsyncGeneratorAdvanceOperation::await_suspend3");
+                    INTERNAL_COROUTINE_DEBUG("AsyncGeneratorAdvanceOperation::await_suspend3");
                     return true;
                 }
-                INTERNAL_DEBUG("AsyncGeneratorAdvanceOperation::await_suspend4");
+                INTERNAL_COROUTINE_DEBUG("AsyncGeneratorAdvanceOperation::await_suspend4");
                 return false;
             }
 
@@ -185,7 +185,7 @@ namespace Ichor {
 
         template<typename T>
         AsyncGeneratorIterator<T>& AsyncGeneratorIncrementOperation<T>::await_resume() {
-            INTERNAL_DEBUG("AsyncGeneratorIncrementOperation<{}>::await_resume {}", typeName<T>(), _promise->_id);
+            INTERNAL_COROUTINE_DEBUG("AsyncGeneratorIncrementOperation<{}>::await_resume {}", typeName<T>(), _promise->_id);
             if (_promise->finished()) {
                 // Update iterator to end()
                 _iterator = AsyncGeneratorIterator<T>{ nullptr };
@@ -216,7 +216,7 @@ namespace Ichor {
             ~AsyncGeneratorBeginOperation() final = default;
 
             bool await_ready() const noexcept {
-                INTERNAL_DEBUG("AsyncGeneratorBeginOperation<{}>::await_ready {}", typeName<T>(), _promise == nullptr ? 0u : _promise->_id);
+                INTERNAL_COROUTINE_DEBUG("AsyncGeneratorBeginOperation<{}>::await_ready {}", typeName<T>(), _promise == nullptr ? 0u : _promise->_id);
                 return _promise == nullptr || AsyncGeneratorAdvanceOperation::await_ready();
             }
 
@@ -260,13 +260,13 @@ namespace Ichor {
 
             AsyncGeneratorIterator<T> await_resume() {
                 if (_promise == nullptr) {
-                    INTERNAL_DEBUG("AsyncGeneratorIterator<{}>::await_resume NULL", typeName<T>());
+                    INTERNAL_COROUTINE_DEBUG("AsyncGeneratorIterator<{}>::await_resume NULL", typeName<T>());
                     // Called begin() on the empty generator.
                     return AsyncGeneratorIterator<T>{ nullptr };
                 } else if (_promise->finished()) {
                     _promise->rethrow_if_unhandled_exception();
                 }
-                INTERNAL_DEBUG("AsyncGeneratorIterator<{}>::await_resume {}", typeName<T>(), _promise->_id);
+                INTERNAL_COROUTINE_DEBUG("AsyncGeneratorIterator<{}>::await_resume {}", typeName<T>(), _promise->_id);
 
                 return AsyncGeneratorIterator<T>{
                     handle_type::from_promise(*static_cast<promise_type*>(_promise))
@@ -275,7 +275,7 @@ namespace Ichor {
         };
 
         inline bool AsyncGeneratorYieldOperation::await_suspend(std::coroutine_handle<> producer) noexcept {
-            INTERNAL_DEBUG("AsyncGeneratorYieldOperation::await_suspend {} {}", _promise._id, _promise.finished());
+            INTERNAL_COROUTINE_DEBUG("AsyncGeneratorYieldOperation::await_suspend {} {}", _promise._id, _promise.finished());
             state currentState = _initialState;
             if(!_promise._hasSuspended.has_value()) {
                 _promise._hasSuspended = false;
@@ -288,7 +288,7 @@ namespace Ichor {
                     std::memory_order_release,
                     std::memory_order_acquire);
                 if (producerSuspended) {
-                    INTERNAL_DEBUG("AsyncGeneratorYieldOperation::await_suspend1");
+                    INTERNAL_COROUTINE_DEBUG("AsyncGeneratorYieldOperation::await_suspend1");
                     if(!_promise.finished()) {
                         _promise._hasSuspended = true;
                     }
@@ -312,7 +312,7 @@ namespace Ichor {
                     // with the call to _consumerCoro.resume() above.
                     currentState = _promise._state.load(std::memory_order_acquire);
                     if (currentState == state::value_not_ready_consumer_suspended) {
-                        INTERNAL_DEBUG("AsyncGeneratorYieldOperation::await_suspend2");
+                        INTERNAL_COROUTINE_DEBUG("AsyncGeneratorYieldOperation::await_suspend2");
                         return false;
                     }
                 }
@@ -331,13 +331,13 @@ namespace Ichor {
                     std::memory_order_acquire);
                 if (suspendedProducer) {
                     _promise._hasSuspended = true;
-                    INTERNAL_DEBUG("AsyncGeneratorYieldOperation::await_suspend3");
+                    INTERNAL_COROUTINE_DEBUG("AsyncGeneratorYieldOperation::await_suspend3");
                     return true;
                 }
 
                 if (currentState == state::value_not_ready_consumer_suspended) {
                     // Consumer has asked for the next value.
-                    INTERNAL_DEBUG("AsyncGeneratorYieldOperation::await_suspend4");
+                    INTERNAL_COROUTINE_DEBUG("AsyncGeneratorYieldOperation::await_suspend4");
                     return false;
                 }
             }
@@ -349,12 +349,12 @@ namespace Ichor {
             // the coroutine.
             producer.destroy();
 
-            INTERNAL_DEBUG("AsyncGeneratorYieldOperation::await_suspend5");
+            INTERNAL_COROUTINE_DEBUG("AsyncGeneratorYieldOperation::await_suspend5");
             return true;
         }
 
         inline AsyncGeneratorYieldOperation AsyncGeneratorPromiseBase::final_suspend() noexcept {
-            INTERNAL_DEBUG("AsyncGeneratorPromiseBase::final_suspend {}", _id);
+            INTERNAL_COROUTINE_DEBUG("AsyncGeneratorPromiseBase::final_suspend {}", _id);
             set_finished();
             return internal_yield_value();
         }
@@ -397,18 +397,18 @@ namespace Ichor {
         AsyncGenerator() noexcept
             : IGenerator(), _coroutine(nullptr), _destroyed()
         {
-            INTERNAL_DEBUG("AsyncGenerator<{}>()", typeName<T>());
+            INTERNAL_COROUTINE_DEBUG("AsyncGenerator<{}>()", typeName<T>());
         }
 
         explicit AsyncGenerator(promise_type& promise) noexcept
             : IGenerator(), _coroutine(std::coroutine_handle<promise_type>::from_promise(promise)), _destroyed(promise.get_destroyed())
         {
-            INTERNAL_DEBUG("AsyncGenerator<{}>(promise_type& promise) {}", typeName<T>(), _coroutine.promise().get_id());
+            INTERNAL_COROUTINE_DEBUG("AsyncGenerator<{}>(promise_type& promise) {}", typeName<T>(), _coroutine.promise().get_id());
         }
 
         AsyncGenerator(AsyncGenerator&& other) noexcept
             : IGenerator(), _coroutine(std::move(other._coroutine)), _destroyed(other._destroyed) {
-            INTERNAL_DEBUG("AsyncGenerator<{}>(AsyncGenerator&& other) {}", typeName<T>(), _coroutine.promise().get_id());
+            INTERNAL_COROUTINE_DEBUG("AsyncGenerator<{}>(AsyncGenerator&& other) {}", typeName<T>(), _coroutine.promise().get_id());
             other._coroutine = nullptr;
             if(_coroutine != nullptr) {
                 // Assume we're moving because an iterator has not finished and has suspended
@@ -417,7 +417,7 @@ namespace Ichor {
         }
 
         ~AsyncGenerator() final {
-//            INTERNAL_DEBUG("~AsyncGenerator<{}>() {} {} {}", typeName<T>(), *_destroyed, _coroutine == nullptr, !(*_destroyed) && _coroutine != nullptr ? _coroutine.promise().get_id() : 0);
+//            INTERNAL_COROUTINE_DEBUG("~AsyncGenerator<{}>() {} {} {}", typeName<T>(), *_destroyed, _coroutine == nullptr, !(*_destroyed) && _coroutine != nullptr ? _coroutine.promise().get_id() : 0);
             if (!(*_destroyed) && _coroutine) {
                 if (_coroutine.promise().request_cancellation()) {
                     _coroutine.destroy();
@@ -427,7 +427,7 @@ namespace Ichor {
         }
 
         AsyncGenerator& operator=(AsyncGenerator&& other) noexcept {
-            INTERNAL_DEBUG("operator=(AsyncGenerator<{}>&& other) {}", typeName<T>(), other._coroutine.promise().get_id());
+            INTERNAL_COROUTINE_DEBUG("operator=(AsyncGenerator<{}>&& other) {}", typeName<T>(), other._coroutine.promise().get_id());
             AsyncGenerator temp(std::move(other));
             swap(temp);
             if(_coroutine != nullptr) {

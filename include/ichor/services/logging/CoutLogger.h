@@ -2,7 +2,7 @@
 
 #include <memory>
 #include <ichor/interfaces/IFrameworkLogger.h>
-#include <ichor/Service.h>
+#include <ichor/dependency_management/Service.h>
 #include <ichor/services/logging/Logger.h>
 
 namespace Ichor {

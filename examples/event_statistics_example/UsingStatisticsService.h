@@ -3,8 +3,8 @@
 #include <ichor/DependencyManager.h>
 #include <ichor/services/logging/Logger.h>
 #include <ichor/services/timer/TimerService.h>
-#include <ichor/Service.h>
-#include "ichor/dependency_management/ILifecycleManager.h"
+#include <ichor/dependency_management/Service.h>
+#include <ichor/dependency_management/ILifecycleManager.h>
 
 using namespace Ichor;
 
@@ -16,7 +16,7 @@ public:
     ~UsingStatisticsService() final = default;
 
 private:
-    AsyncGenerator<void> start() final {
+    AsyncGenerator<tl::expected<void, Ichor::StartError>> start() final {
         ICHOR_LOG_INFO(_logger, "UsingStatisticsService started");
         auto quitTimerManager = getManager().createServiceManager<Timer, ITimer>();
         auto bogusTimerManager = getManager().createServiceManager<Timer, ITimer>();
@@ -33,7 +33,7 @@ private:
 
         quitTimerManager->startTimer();
         bogusTimerManager->startTimer();
-        co_return;
+        co_return {};
     }
 
     AsyncGenerator<void> stop() final {

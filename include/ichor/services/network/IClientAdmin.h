@@ -1,6 +1,6 @@
 #pragma once
 
-#include <ichor/Service.h>
+#include <ichor/dependency_management/Service.h>
 
 namespace Ichor {
     class IClientAdmin {

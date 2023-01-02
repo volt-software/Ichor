@@ -81,9 +81,9 @@ void Ichor::SpdlogFrameworkLogger::error(const char *filename_in, int line_in, c
     }
 }
 
-Ichor::AsyncGenerator<void> Ichor::SpdlogFrameworkLogger::start() {
+Ichor::AsyncGenerator<tl::expected<void, Ichor::StartError>> Ichor::SpdlogFrameworkLogger::start() {
     SPDLOG_TRACE("SpdlogFrameworkLogger started");
-    co_return;
+    co_return {};
 }
 
 Ichor::AsyncGenerator<void> Ichor::SpdlogFrameworkLogger::stop() {

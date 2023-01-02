@@ -1,7 +1,7 @@
 #pragma once
 
 #include <unordered_map>
-#include <ichor/Service.h>
+#include <ichor/dependency_management/Service.h>
 #include <ichor/services/logging/Logger.h>
 #include <ichor/services/timer/TimerService.h>
 #include <chrono>
@@ -49,7 +49,7 @@ namespace Ichor {
 
         AsyncGenerator<IchorBehaviour> handleEvent(DependencyManager &dm);
 
-        AsyncGenerator<void> start() final;
+        AsyncGenerator<tl::expected<void, Ichor::StartError>> start() final;
         AsyncGenerator<void> stop() final;
 
         friend DependencyRegister;

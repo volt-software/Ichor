@@ -2,8 +2,8 @@
 
 #include <ichor/DependencyManager.h>
 #include <ichor/services/logging/Logger.h>
-#include <ichor/Service.h>
-#include "ichor/dependency_management/ILifecycleManager.h"
+#include <ichor/dependency_management/Service.h>
+#include <ichor/dependency_management/ILifecycleManager.h>
 
 #ifdef __SANITIZE_ADDRESS__
 constexpr uint32_t EVENT_COUNT = 500'000;
@@ -30,7 +30,7 @@ public:
     ~TestService() final = default;
 
 private:
-    AsyncGenerator<void> start() final {
+    AsyncGenerator<tl::expected<void, Ichor::StartError>> start() final {
         auto start = std::chrono::steady_clock::now();
         for(uint32_t i = 0; i < EVENT_COUNT; i++) {
             getManager().pushEvent<UselessEvent>(getServiceId());
@@ -38,7 +38,7 @@ private:
         auto end = std::chrono::steady_clock::now();
         getManager().pushEvent<QuitEvent>(getServiceId());
         ICHOR_LOG_WARN(_logger, "Inserted events in {:L} µs", std::chrono::duration_cast<std::chrono::microseconds>(end-start).count());
-        co_return;
+        co_return {};
     }
 
     AsyncGenerator<void> stop() final {

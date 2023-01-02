@@ -12,12 +12,12 @@ namespace Ichor {
         TcpConnectionService(DependencyRegister &reg, Properties props, DependencyManager *mng);
         ~TcpConnectionService() final = default;
 
-        uint64_t sendAsync(std::vector<uint8_t>&& msg) final;
+        tl::expected<uint64_t, SendErrorReason> sendAsync(std::vector<uint8_t>&& msg) final;
         void setPriority(uint64_t priority) final;
         uint64_t getPriority() final;
 
     private:
-        AsyncGenerator<void> start() final;
+        AsyncGenerator<tl::expected<void, Ichor::StartError>> start() final;
         AsyncGenerator<void> stop() final;
 
         void addDependencyInstance(ILogger *logger, IService *isvc);

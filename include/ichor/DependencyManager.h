@@ -12,15 +12,15 @@
 #include <mutex>
 #include <shared_mutex>
 #include <ichor/interfaces/IFrameworkLogger.h>
-#include <ichor/Service.h>
-#include "ichor/dependency_management/ILifecycleManager.h"
+#include <ichor/dependency_management/Service.h>
+#include <ichor/dependency_management/ILifecycleManager.h>
 #include <ichor/events/InternalEvents.h>
 #include <ichor/coroutines/IGenerator.h>
 #include <ichor/coroutines/AsyncGenerator.h>
 #include <ichor/coroutines/AsyncManualResetEvent.h>
 #include <ichor/Callbacks.h>
 #include <ichor/Filter.h>
-#include "ichor/dependency_management/DependencyRegistrations.h"
+#include <ichor/dependency_management/DependencyRegistrations.h>
 #include <ichor/event_queues/IEventQueue.h>
 
 using namespace std::chrono_literals;
@@ -79,7 +79,7 @@ namespace Ichor {
         }
 
 
-        template<DerivedTemplated<Service> Impl, typename... Interfaces>
+        template<typename Impl, typename... Interfaces>
         // msvc compiler bug, see https://developercommunity.visualstudio.com/t/c20-Friend-definition-of-class-with-re/10197302
 #if (!defined(WIN32) && !defined(_WIN32) && !defined(__WIN32)) || defined(__CYGWIN__)
         requires ImplementsAll<Impl, Interfaces...>
@@ -88,7 +88,7 @@ namespace Ichor {
             return createServiceManager<Impl, Interfaces...>(Properties{});
         }
 
-        template<DerivedTemplated<Service> Impl, typename... Interfaces>
+        template<typename Impl, typename... Interfaces>
 #if (!defined(WIN32) && !defined(_WIN32) && !defined(__WIN32)) || defined(__CYGWIN__)
         requires ImplementsAll<Impl, Interfaces...>
 #endif
@@ -327,7 +327,7 @@ namespace Ichor {
             DependencyTrackerInfo undoRequestInfo{std::function<void(Event const &)>{[impl](Event const &evt) {
                 impl->handleDependencyUndoRequest(static_cast<Interface*>(nullptr), static_cast<DependencyUndoRequestEvent const &>(evt));
             }}};
-            
+
             std::vector<DependencyRequestEvent> requests{};
             for(auto const &[key, mgr] : _services) {
                 auto const *depRegistry = mgr->getDependencyRegistry();
@@ -561,11 +561,11 @@ namespace Ichor {
 #endif
             std::vector<Interface*> ret{};
             ret.reserve(_services.size());
+            std::function<void(void*, IService*)> f{[&ret](void *svc2, IService * /*isvc*/){ ret.push_back(reinterpret_cast<Interface*>(svc2)); }};
             for(auto &[key, svc] : _services) {
                 if(svc->getServiceState() != ServiceState::ACTIVE) {
                     continue;
                 }
-                std::function<void(void*, IService*)> f{[&ret](void *svc2, IService * /*isvc*/){ ret.push_back(reinterpret_cast<Interface*>(svc2)); }};
                 svc->insertSelfInto(typeNameHash<Interface>(), 0, f);
                 svc->getDependees().erase(0);
             }
@@ -585,6 +585,7 @@ namespace Ichor {
 #endif
             std::vector<Interface*> ret{};
             ret.reserve(_services.size());
+            std::function<void(void*, IService*)> f{[&ret](void *svc2, IService * /*isvc*/){ ret.push_back(reinterpret_cast<Interface*>(svc2)); }};
             for(auto &[key, svc] : _services) {
                 auto intf = std::find_if(svc->getInterfaces().begin(), svc->getInterfaces().end(), [](const Dependency &dep) {
                     return dep.interfaceNameHash == typeNameHash<Interface>();
@@ -592,7 +593,6 @@ namespace Ichor {
                 if(intf == svc->getInterfaces().end()) {
                     continue;
                 }
-                std::function<void(void*, IService*)> f{[&ret](void *svc2, IService * /*isvc*/){ ret.push_back(reinterpret_cast<Interface*>(svc2)); }};
                 svc->insertSelfInto(typeNameHash<Interface>(), 0, f);
                 svc->getDependees().erase(0);
             }

@@ -1,7 +1,6 @@
 #pragma once
 
-#include <ichor/Service.h>
-#include <ichor/services/logging/Logger.h>
+#include <ichor/dependency_management/Service.h>
 
 namespace Ichor {
     struct IStopsInAsyncStartService {
@@ -11,11 +10,11 @@ namespace Ichor {
         StopsInAsyncStartService() = default;
         ~StopsInAsyncStartService() final = default;
 
-        AsyncGenerator<void> start() final {
+        AsyncGenerator<tl::expected<void, Ichor::StartError>> start() final {
             co_await getManager().pushPrioritisedEventAsync<StopServiceEvent>(getServiceId(), 50, false, getServiceId()).begin();
             getManager().pushEvent<QuitEvent>(getServiceId());
 
-            co_return;
+            co_return {};
         }
 
         AsyncGenerator<void> stop() final {

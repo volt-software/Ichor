@@ -4,8 +4,8 @@
 #include <ichor/services/logging/Logger.h>
 
 #include <utility>
-#include <ichor/Service.h>
-#include "ichor/dependency_management/ILifecycleManager.h"
+#include <ichor/dependency_management/Service.h>
+#include <ichor/dependency_management/ILifecycleManager.h>
 #include "RuntimeCreatedService.h"
 
 using namespace Ichor;
@@ -32,10 +32,10 @@ public:
     ~TrackerService() final = default;
 
 private:
-    AsyncGenerator<void> start() final {
+    AsyncGenerator<tl::expected<void, Ichor::StartError>> start() final {
         ICHOR_LOG_INFO(_logger, "TrackerService started");
         _trackerRegistration = getManager().registerDependencyTracker<IRuntimeCreatedService>(this);
-        co_return;
+        co_return {};
     }
 
     AsyncGenerator<void> stop() final {

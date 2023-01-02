@@ -35,8 +35,7 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    if (showHelp)
-    {
+    if (showHelp) {
         std::cout << cli << "\n";
         return 0;
     }
@@ -52,8 +51,8 @@ int main(int argc, char *argv[]) {
             dm.createServiceManager<TestService>();
             queue->start(CaptureSigInt);
             auto end = std::chrono::steady_clock::now();
-            std::cout << fmt::format("{} single threaded rapidjson ran for {:L} µs with {:L} peak memory usage {:L} B/s\n", argv[0], std::chrono::duration_cast<std::chrono::microseconds>(end - start).count(), getPeakRSS(),
-                                     std::floor(1'000'000. / static_cast<double>(std::chrono::duration_cast<std::chrono::microseconds>(end - start).count()) * SERDE_COUNT * static_cast<double>(sizeof_test)));
+            std::cout << fmt::format("{} single threaded rapidjson ran for {:L} µs with {:L} peak memory usage {:L} MB/s\n", argv[0], std::chrono::duration_cast<std::chrono::microseconds>(end - start).count(), getPeakRSS(),
+                                     std::floor(1'000'000. / static_cast<double>(std::chrono::duration_cast<std::chrono::microseconds>(end - start).count()) * SERDE_COUNT * static_cast<double>(sizeof_test) / 1'000'000.));
         }
 
         if(!singleOnly) {
@@ -73,9 +72,9 @@ int main(int argc, char *argv[]) {
                 threads[i].join();
             }
             auto end = std::chrono::steady_clock::now();
-            std::cout << fmt::format("{} multi threaded rapidjson ran for {:L} µs with {:L} peak memory usage {:L} B/s\n",
+            std::cout << fmt::format("{} multi threaded rapidjson ran for {:L} µs with {:L} peak memory usage {:L} MB/s\n",
                                      argv[0], std::chrono::duration_cast<std::chrono::microseconds>(end - start).count(), getPeakRSS(),
-                                     std::floor(1'000'000. / static_cast<double>(std::chrono::duration_cast<std::chrono::microseconds>(end - start).count()) * SERDE_COUNT * threadCount * static_cast<double>(sizeof_test)));
+                                     std::floor(1'000'000. / static_cast<double>(std::chrono::duration_cast<std::chrono::microseconds>(end - start).count()) * SERDE_COUNT * threadCount * static_cast<double>(sizeof_test) / 1'000'000.));
         }
     }
 
@@ -91,8 +90,8 @@ int main(int argc, char *argv[]) {
             dm.createServiceManager<TestService>();
             queue->start(CaptureSigInt);
             auto end = std::chrono::steady_clock::now();
-            std::cout << fmt::format("{} single threaded boost.JSON ran for {:L} µs with {:L} peak memory usage {:L} B/s\n", argv[0], std::chrono::duration_cast<std::chrono::microseconds>(end - start).count(), getPeakRSS(),
-                                     std::floor(1'000'000. / static_cast<double>(std::chrono::duration_cast<std::chrono::microseconds>(end - start).count()) * SERDE_COUNT * static_cast<double>(sizeof_test)));
+            std::cout << fmt::format("{} single threaded boost.JSON ran for {:L} µs with {:L} peak memory usage {:L} MB/s\n", argv[0], std::chrono::duration_cast<std::chrono::microseconds>(end - start).count(), getPeakRSS(),
+                                     std::floor(1'000'000. / static_cast<double>(std::chrono::duration_cast<std::chrono::microseconds>(end - start).count()) * SERDE_COUNT * static_cast<double>(sizeof_test) / 1'000'000.));
         }
 
         if(!singleOnly) {
@@ -112,9 +111,9 @@ int main(int argc, char *argv[]) {
                 threads[i].join();
             }
             auto end = std::chrono::steady_clock::now();
-            std::cout << fmt::format("{} multi threaded boost.JSON ran for {:L} µs with {:L} peak memory usage {:L} B/s\n",
+            std::cout << fmt::format("{} multi threaded boost.JSON ran for {:L} µs with {:L} peak memory usage {:L} MB/s\n",
                                      argv[0], std::chrono::duration_cast<std::chrono::microseconds>(end - start).count(), getPeakRSS(),
-                                     std::floor(1'000'000. / static_cast<double>(std::chrono::duration_cast<std::chrono::microseconds>(end - start).count()) * SERDE_COUNT * threadCount * static_cast<double>(sizeof_test)));
+                                     std::floor(1'000'000. / static_cast<double>(std::chrono::duration_cast<std::chrono::microseconds>(end - start).count()) * SERDE_COUNT * threadCount * static_cast<double>(sizeof_test) / 1'000'000.));
         }
     }
 #endif

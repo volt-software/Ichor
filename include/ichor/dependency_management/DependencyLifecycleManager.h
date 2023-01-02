@@ -4,11 +4,11 @@ namespace Ichor {
 
     template<class ServiceType, typename... IFaces>
 #if (!defined(WIN32) && !defined(_WIN32) && !defined(__WIN32)) || defined(__CYGWIN__)
-    requires DerivedTemplated<ServiceType, Service>
+    requires Derived<ServiceType, IService>
 #endif
     class DependencyLifecycleManager final : public ILifecycleManager {
     public:
-        explicit DependencyLifecycleManager(std::vector<Dependency> interfaces, Properties&& properties, DependencyManager *mng) : _interfaces(std::move(interfaces)), _registry(mng), _dependencies(), _service(_registry, std::forward<Properties>(properties), mng) {
+        explicit DependencyLifecycleManager(std::vector<Dependency> interfaces, Properties&& properties, DependencyManager *mng) : _interfaces(std::move(interfaces)), _registry(mng), _dependencies(), _service(_registry, std::move(properties), mng) {
             for(auto const &reg : _registry._registrations) {
                 _dependencies.addDependency(std::get<0>(reg.second));
             }
@@ -28,7 +28,7 @@ namespace Ichor {
             std::vector<Dependency> interfaces{};
             interfaces.reserve(sizeof...(Interfaces));
             (interfaces.emplace_back(typeNameHash<Interfaces>(), false, false),...);
-            return std::make_unique<DependencyLifecycleManager<ServiceType, Interfaces...>>(std::move(interfaces), std::forward<Properties>(properties), mng);
+            return std::make_unique<DependencyLifecycleManager<ServiceType, Interfaces...>>(std::move(interfaces), std::move(properties), mng);
         }
 
         std::vector<decltype(std::declval<DependencyInfo>().begin())> interestedInDependency(ILifecycleManager *dependentService, bool online) noexcept final {
@@ -77,11 +77,19 @@ namespace Ichor {
             if(interested == Detail::DependencyChange::FOUND && getServiceState() <= ServiceState::INSTALLED && _dependencies.allSatisfied()) {
                 auto gen = _service.internal_start(nullptr); // we already checked the dependencies, pass in nullptr
                 auto it = gen.begin();
-                co_await it;
+                StartBehaviour ret = *co_await it;
+
 #ifdef ICHOR_USE_HARDENING
                 if(!it.get_finished()) [[unlikely]] {
                     std::terminate();
                 }
+#endif
+
+                if(ret == StartBehaviour::STOPPED) {
+                    co_return StartBehaviour::STOPPED;
+                }
+
+#ifdef ICHOR_USE_HARDENING
                 if(getServiceState() != ServiceState::INJECTING) [[unlikely]] {
                     std::terminate();
                 }
@@ -94,7 +102,6 @@ namespace Ichor {
 
         AsyncGenerator<StartBehaviour> dependencyOffline(ILifecycleManager* dependentService, std::vector<decltype(std::declval<DependencyInfo>().begin())> iterators) final {
             INTERNAL_DEBUG("dependencyOffline() svc {}:{} {} dependent {}:{}", serviceId(), implementationName(), getServiceState(), dependentService->serviceId(), dependentService->implementationName());
-            auto const &interfaces = dependentService->getInterfaces();
             auto interested = Detail::DependencyChange::NOT_FOUND;
             StartBehaviour ret = StartBehaviour::DONE;
 
@@ -118,6 +125,11 @@ namespace Ichor {
                 }
 #endif
 
+                if(dep->required && dep->satisfied == 0 && (getServiceState() == ServiceState::STARTING || getServiceState() == ServiceState::INJECTING)) {
+                    INTERNAL_DEBUG("{}:{}:{} dependencyOffline waitForService {} {} {} {}", serviceId(), _service.getServiceName(), getServiceState(), interested, dep->satisfied, dep->required, getDependees().size());
+                    co_await waitForService(_service.getManager(), serviceId(), DependencyOnlineEvent::TYPE).begin();
+                }
+
                 if (dep->required && dep->satisfied == 0 && interested != Detail::DependencyChange::FOUND_AND_STOP_ME && getServiceState() == ServiceState::ACTIVE) {
                     INTERNAL_DEBUG("{}:{}:{} dependencyOffline stopping {}", serviceId(), _service.getServiceName(), getServiceState(), interested);
 
@@ -130,10 +142,6 @@ namespace Ichor {
                         for(auto d : _serviceIdsOfDependees) {
                             fmt::print("{}\n", d);
                         }
-                        std::terminate();
-                    }
-
-                    if(getServiceState() == ServiceState::ACTIVE) [[unlikely]] {
                         std::terminate();
                     }
 #endif
@@ -162,18 +170,13 @@ namespace Ichor {
                     interested = Detail::DependencyChange::FOUND;
                 }
 
-                if(getServiceState() == ServiceState::UNINJECTING) {
+                if(dep->required && dep->satisfied == 0 && (getServiceState() == ServiceState::UNINJECTING || getServiceState() == ServiceState::STOPPING)) {
                     INTERNAL_DEBUG("{}:{}:{} dependencyOffline waitForService {} {} {} {}", serviceId(), _service.getServiceName(), getServiceState(), interested, dep->satisfied, dep->required, getDependees().size());
                     co_await waitForService(_service.getManager(), serviceId(), StopServiceEvent::TYPE).begin();
                 }
-                if(getServiceState() == ServiceState::STOPPING) {
-                    INTERNAL_DEBUG("{}:{}:{} dependencyOffline waitForService {} {} {} {}", serviceId(), _service.getServiceName(), getServiceState(), interested, dep->satisfied, dep->required, getDependees().size());
-                    co_await waitForService(_service.getManager(), serviceId(), StopServiceEvent::TYPE).begin();
-                }
-
 
 #ifdef ICHOR_USE_HARDENING
-                if(getServiceState() == ServiceState::UNINJECTING || getServiceState() == ServiceState::STOPPING) [[unlikely]] {
+                if(dep->required && dep->satisfied == 0 && getServiceState() >= ServiceState::INJECTING) [[unlikely]] {
                     INTERNAL_DEBUG("{}:{}:{} dependencyOffline terminating {} {} {} {}", serviceId(), _service.getServiceName(), getServiceState(), interested, dep->satisfied, dep->required, getDependees().size());
                     std::terminate();
                 }

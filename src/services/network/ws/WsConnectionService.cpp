@@ -5,6 +5,7 @@
 #include <ichor/services/network/ws/WsEvents.h>
 #include <ichor/services/network/NetworkEvents.h>
 #include <ichor/services/network/IHostService.h>
+#include <ichor/services/network/http/HttpScopeGuards.h>
 
 template<class NextLayer>
 void setup_stream(std::shared_ptr<websocket::stream<NextLayer>>& ws)
@@ -23,16 +24,16 @@ void setup_stream(std::shared_ptr<websocket::stream<NextLayer>>& ws)
 
 Ichor::WsConnectionService::WsConnectionService(DependencyRegister &reg, Properties props, DependencyManager *mng) : Service(std::move(props), mng) {
     reg.registerDependency<ILogger>(this, true);
-    reg.registerDependency<IHttpContextService>(this, true);
+    reg.registerDependency<IAsioContextService>(this, true);
     if(getProperties().contains("WsHostServiceId")) {
         reg.registerDependency<IHostService>(this, true,
                                              Properties{{"Filter", Ichor::make_any<Filter>(ServiceIdFilterEntry{Ichor::any_cast<uint64_t>(getProperties()["WsHostServiceId"])})}});
     }
 }
 
-Ichor::AsyncGenerator<void> Ichor::WsConnectionService::start() {
+Ichor::AsyncGenerator<tl::expected<void, Ichor::StartError>> Ichor::WsConnectionService::start() {
     if(_connected.load(std::memory_order_acquire)) {
-        co_return;
+        co_return {};
     }
 
     _quit.store(false, std::memory_order_release);
@@ -41,33 +42,65 @@ Ichor::AsyncGenerator<void> Ichor::WsConnectionService::start() {
         _priority = Ichor::any_cast<uint64_t>(getProperties()["Priority"]);
     }
 
+    _strand = std::make_unique<net::strand<net::io_context::executor_type>>(_asioContextService->getContext()->get_executor());
     if (getProperties().contains("Socket")) {
-        net::spawn(*_httpContextService->getContext(), [this](net::yield_context yield) {
+        net::spawn(*_strand, [this](net::yield_context yield) {
+            ScopeGuardAtomicCount const guard{_finishedListenAndRead};
             accept(std::move(yield));
-        });
+        }ASIO_SPAWN_COMPLETION_TOKEN);
     } else {
-        net::spawn(*_httpContextService->getContext(), [this](net::yield_context yield) {
+        net::spawn(*_strand, [this](net::yield_context yield) {
+            ScopeGuardAtomicCount const guard{_finishedListenAndRead};
             connect(std::move(yield));
-        });
+        }ASIO_SPAWN_COMPLETION_TOKEN);
     }
 
-    co_return;
+    co_await _startStopEvent;
+    _startStopEvent.reset();
+
+    if(!_connected.load(std::memory_order_acquire)) {
+        auto const& address = Ichor::any_cast<std::string&>(getProperties()["Address"]);
+        auto const port = Ichor::any_cast<uint16_t>(getProperties()["Port"]);
+        ICHOR_LOG_ERROR(_logger, "Could not connect to {}:{}", address, port);
+        co_return tl::unexpected(StartError::FAILED);
+    }
+//    fmt::print("----------------------------------------------- {}:{} start done\n", getServiceId(), getServiceName());
+
+    co_return {};
 }
 
 Ichor::AsyncGenerator<void> Ichor::WsConnectionService::stop() {
-    INTERNAL_DEBUG("----------------------------------------------- trying to stop WsConnectionService {}", getServiceId());
-    fmt::print("----------------------------------------------- {}:{} stop\n", getServiceId(), getServiceName());
+//    INTERNAL_DEBUG("----------------------------------------------- trying to stop WsConnectionService {}", getServiceId());
+//    fmt::print("----------------------------------------------- {}:{} stop\n", getServiceId(), getServiceName());
     _quit.store(true, std::memory_order_release);
     if(_ws != nullptr) {
-        _ws->next_layer().close();
+        net::spawn(*_strand, [this](net::yield_context yield) {
+            ScopeGuardAtomicCount const guard{_finishedListenAndRead};
+            boost::system::error_code ec;
+//            fmt::print("----------------------------------------------- {}:{} async_close\n", getServiceId(), getServiceName());
+            _ws->async_close(beast::websocket::close_code::normal, yield[ec]);
+//            fmt::print("----------------------------------------------- {}:{} async_close done\n", getServiceId(), getServiceName());
+            if (ec) {
+                ICHOR_LOG_ERROR(_logger, "Boost.BEAST fail: {}", ec.message());
+            }
+            getManager().pushPrioritisedEvent<RunFunctionEvent>(getServiceId(), _priority.load(std::memory_order_acquire), [this](DependencyManager &dm) {
+//                fmt::print("{}:{} rfe2\n", getServiceId(), getServiceName());
+                _startStopEvent.set();
+            });
+        }ASIO_SPAWN_COMPLETION_TOKEN);
 
-        fmt::print("----------------------------------------------- {}:{} wait\n", getServiceId(), getServiceName());
+//        fmt::print("----------------------------------------------- {}:{} wait {}\n", getServiceId(), getServiceName(), _startStopEvent.is_set());
         co_await _startStopEvent;
-        fmt::print("----------------------------------------------- {}:{} wait done\n", getServiceId(), getServiceName());
+//        fmt::print("----------------------------------------------- {}:{} wait done\n", getServiceId(), getServiceName());
+
+        while(_finishedListenAndRead.load(std::memory_order_acquire) != 0) {
+            std::this_thread::sleep_for(1ms);
+        }
 
         _ws = nullptr;
+        _strand = nullptr;
     }
-    fmt::print("----------------------------------------------- {}:{} stop done\n", getServiceId(), getServiceName());
+//    fmt::print("----------------------------------------------- {}:{} stop done\n", getServiceId(), getServiceName());
 
     co_return;
 }
@@ -88,34 +121,60 @@ void Ichor::WsConnectionService::removeDependencyInstance(IHostService *, IServi
 
 }
 
-void Ichor::WsConnectionService::addDependencyInstance(IHttpContextService *httpContextService, IService *) {
-    _httpContextService = httpContextService;
+void Ichor::WsConnectionService::addDependencyInstance(IAsioContextService *AsioContextService, IService *) {
+    _asioContextService = AsioContextService;
 }
 
-void Ichor::WsConnectionService::removeDependencyInstance(IHttpContextService *logger, IService *) {
-    fmt::print("{}:{} set nullptr\n", getServiceId(), getServiceName());
-    _httpContextService = nullptr;
+void Ichor::WsConnectionService::removeDependencyInstance(IAsioContextService *logger, IService *) {
+//    fmt::print("{}:{} {} set nullptr\n", getServiceId(), getServiceName(), getServiceState());
+    if(getServiceState() != ServiceState::INSTALLED) {
+        std::terminate();
+    }
+    _asioContextService = nullptr;
 }
 
-uint64_t Ichor::WsConnectionService::sendAsync(std::vector<uint8_t> &&msg) {
-    if(_quit || _httpContextService->fibersShouldStop()) {
-        return false;
+tl::expected<uint64_t, Ichor::SendErrorReason> Ichor::WsConnectionService::sendAsync(std::vector<uint8_t> &&msg) {
+    static_assert(std::is_move_assignable_v<Detail::WsConnectionOutboxMessage>, "ConnectionOutboxMessage should be move assignable");
+    if(_quit.load(std::memory_order_acquire) || !_connected.load(std::memory_order_acquire) || _asioContextService->fibersShouldStop()) {
+        return tl::unexpected(SendErrorReason::QUITTING);
     }
 
     auto id = ++_msgIdCounter;
-    net::spawn(*_httpContextService->getContext(), [this, id, msg = std::forward<decltype(msg)>(msg)](net::yield_context yield) mutable {
-        if(_quit || _httpContextService->fibersShouldStop()) {
+    net::spawn(*_strand, [this, id, msg = std::move(msg)](net::yield_context yield) mutable {
+        ScopeGuardAtomicCount const guard{_finishedListenAndRead};
+        if(_quit.load(std::memory_order_acquire) || !_connected.load(std::memory_order_acquire) || _asioContextService->fibersShouldStop()) {
             return;
         }
 
-        beast::error_code ec;
-        _ws->write(net::buffer(msg.data(), msg.size()), ec);
-
-        if(ec) {
-            ICHOR_LOG_ERROR(_logger, "couldn't send msg for service {}: {}", getServiceId(), ec.message());
-            getManager().pushEvent<FailedSendMessageEvent>(getServiceId(), std::move(msg), id);
+        if(_outbox.full()) {
+            _outbox.set_capacity(std::max<uint64_t>(_outbox.capacity() * 2, 10ul));
         }
-    });
+        _outbox.push_back({id, std::move(msg)});
+        if(_outbox.size() > 1) {
+            // handled by existing net::spawn
+            return;
+        }
+        auto ws = _ws;
+        while(!_outbox.empty()) {
+            auto next = std::move(_outbox.front());
+
+            ScopeGuardFunction const coroutineGuard{[this]() {
+                _outbox.pop_front();
+            }};
+
+            if(_quit.load(std::memory_order_acquire)) {
+                continue;
+            }
+
+            beast::error_code ec;
+            ws->async_write(net::const_buffer(next.msg.data(), next.msg.size()), yield[ec]);
+
+            if(ec) {
+                ICHOR_LOG_ERROR(_logger, "couldn't send msg for service {}: {}", getServiceId(), ec.message());
+                getManager().pushEvent<FailedSendMessageEvent>(getServiceId(), std::move(next.msg), next.msgId);
+            }
+        }
+    }ASIO_SPAWN_COMPLETION_TOKEN);
 
     return id;
 }
@@ -129,11 +188,11 @@ uint64_t Ichor::WsConnectionService::getPriority() {
 }
 
 void Ichor::WsConnectionService::fail(beast::error_code ec, const char *what) {
-    fmt::print("{}:{} fail {}\n", getServiceId(), getServiceName(), ec.message());
+//    fmt::print("{}:{} fail {}\n", getServiceId(), getServiceName(), ec.message());
     ICHOR_LOG_ERROR(_logger, "Boost.BEAST fail: {}, {}", what, ec.message());
 
     getManager().pushPrioritisedEvent<RunFunctionEvent>(getServiceId(), _priority.load(std::memory_order_acquire), [this](DependencyManager &dm) {
-        fmt::print("{}:{} rfe\n", getServiceId(), getServiceName());
+//        fmt::print("{}:{} rfe\n", getServiceId(), getServiceName());
         _startStopEvent.set();
     });
     getManager().pushEvent<StopServiceEvent>(getServiceId(), getServiceId());
@@ -142,51 +201,60 @@ void Ichor::WsConnectionService::fail(beast::error_code ec, const char *what) {
 void Ichor::WsConnectionService::accept(net::yield_context yield) {
     beast::error_code ec;
 
-    if(!_ws) {
-        auto socketIt = getProperties().find("Socket");
+    {
+        ScopeGuardFunction const coroutineGuard{[this]() {
+            getManager().pushPrioritisedEvent<RunFunctionEvent>(getServiceId(), _priority.load(std::memory_order_acquire), [this](DependencyManager &dm) {
+//                fmt::print("{}:{} rfe accept\n", getServiceId(), getServiceName());
+                _startStopEvent.set();
+            });
+        }};
 
-        if(socketIt == getProperties().end()) [[unlikely]] {
-            return fail(ec, "socket setup");
+        if (!_ws) {
+            auto socketIt = getProperties().find("Socket");
+
+            if (socketIt == getProperties().end()) [[unlikely]] {
+                return fail(ec, "socket setup");
+            }
+
+            _ws = Ichor::any_cast<std::shared_ptr<websocket::stream<beast::tcp_stream>> &>(socketIt->second);
+            socketIt->second = Ichor::make_any<bool>(false); // ensure we cannot start again by making a bogus reference to socket
         }
 
-        _ws = Ichor::any_cast<std::shared_ptr<websocket::stream<beast::tcp_stream>>&>(socketIt->second);
-        socketIt->second = Ichor::make_any<bool>(false); // ensure we cannot start again by making a bogus reference to socket
-    }
+        setup_stream(_ws);
 
-    setup_stream(_ws);
+        // Set suggested timeout settings for the websocket
+        _ws->set_option(websocket::stream_base::timeout::suggested(beast::role_type::server));
 
-    // Set suggested timeout settings for the websocket
-    _ws->set_option(websocket::stream_base::timeout::suggested(beast::role_type::server));
+        // Set a decorator to change the Server of the handshake
+        _ws->set_option(websocket::stream_base::decorator(
+                [](websocket::response_type &res) {
+                    res.set(http::field::server, std::string(
+                            BOOST_BEAST_VERSION_STRING) + "-Ichor");
+                }));
 
-    // Set a decorator to change the Server of the handshake
-    _ws->set_option(websocket::stream_base::decorator(
-            [](websocket::response_type &res) {
-                res.set(http::field::server, std::string(
-                        BOOST_BEAST_VERSION_STRING) + "-Ichor");
-            }));
-
-    // Make the connection on the IP address we get from a lookup
-    // If it fails (due to connecting earlier than the host is available), wait 250 ms and make another attempt
-    // After 5 attempts, fail.
-    int attempts{};
-    while(!_quit && !_httpContextService->fibersShouldStop() && attempts < 5) {
-        // initiate websocket handshake
-        _ws->async_accept(yield[ec]);
-        if(ec) {
-            attempts++;
-            net::steady_timer t{*_httpContextService->getContext()};
-            t.expires_after(250ms);
-            t.async_wait(yield);
-        } else {
-            break;
+        // Make the connection on the IP address we get from a lookup
+        // If it fails (due to connecting earlier than the host is available), wait 250 ms and make another attempt
+        // After 5 attempts, fail.
+        int attempts{};
+        while (!_quit.load(std::memory_order_acquire) && !_asioContextService->fibersShouldStop() && attempts < 5) {
+            // initiate websocket handshake
+            _ws->async_accept(yield[ec]);
+            if (ec) {
+                attempts++;
+                net::steady_timer t{*_asioContextService->getContext()};
+                t.expires_after(250ms);
+                t.async_wait(yield);
+            } else {
+                break;
+            }
         }
-    }
 
-    if (ec) {
-        return fail(ec, "accept");
-    }
+        if (ec) {
+            return fail(ec, "accept");
+        }
 
-    _connected.store(true, std::memory_order_release);
+        _connected.store(true, std::memory_order_release);
+    }
 
     read(yield);
 }
@@ -197,64 +265,72 @@ void Ichor::WsConnectionService::connect(net::yield_context yield) {
     auto const port = Ichor::any_cast<uint16_t>(getProperties()["Port"]);
 
     // These objects perform our I/O
-    tcp::resolver resolver(*_httpContextService->getContext());
-    _ws = std::make_unique<websocket::stream<beast::tcp_stream>>(*_httpContextService->getContext());
+    tcp::resolver resolver(*_asioContextService->getContext());
+    _ws = std::make_shared<websocket::stream<beast::tcp_stream>>(*_asioContextService->getContext());
 
-    // Look up the domain name
-    auto const results = resolver.resolve(address, std::to_string(port), ec);
-    if(ec) {
-        return fail(ec, "resolve");
-    }
+    {
+        ScopeGuardFunction const coroutineGuard{[this]() {
+            getManager().pushPrioritisedEvent<RunFunctionEvent>(getServiceId(), _priority.load(std::memory_order_acquire), [this](DependencyManager &dm) {
+//                fmt::print("{}:{} rfe connect\n", getServiceId(), getServiceName());
+                _startStopEvent.set();
+            });
+        }};
 
-    // Set a timeout on the operation
-    beast::get_lowest_layer(*_ws).expires_after(10s);
-
-    // Make the connection on the IP address we get from a lookup
-    // If it fails (due to connecting earlier than the host is available), wait 250 ms and make another attempt
-    // After 5 attempts, fail.
-    int attempts{};
-    while(!_quit && !_httpContextService->fibersShouldStop() && attempts < 5) {
-        beast::get_lowest_layer(*_ws).async_connect(results, yield[ec]);
-        if(ec) {
-            attempts++;
-            net::steady_timer t{*_httpContextService->getContext()};
-            t.expires_after(std::chrono::milliseconds(250));
-            t.async_wait(yield);
-        } else {
-            break;
+        // Look up the domain name
+        auto const results = resolver.resolve(address, std::to_string(port), ec);
+        if (ec) {
+            return fail(ec, "resolve");
         }
-    }
+
+        // Set a timeout on the operation
+        beast::get_lowest_layer(*_ws).expires_after(10s);
+
+        // Make the connection on the IP address we get from a lookup
+        // If it fails (due to connecting earlier than the host is available), wait 250 ms and make another attempt
+        // After 5 attempts, fail.
+        int attempts{};
+        while (!_quit.load(std::memory_order_acquire) && !_asioContextService->fibersShouldStop() && attempts < 5) {
+            beast::get_lowest_layer(*_ws).async_connect(results, yield[ec]);
+            if (ec) {
+                attempts++;
+                net::steady_timer t{*_asioContextService->getContext()};
+                t.expires_after(std::chrono::milliseconds(250));
+                t.async_wait(yield);
+            } else {
+                break;
+            }
+        }
 
 
-    if (ec) {
-        return fail(ec, "connect");
-    }
+        if (ec) {
+            return fail(ec, "connect");
+        }
 
-    _connected.store(true, std::memory_order_release);
+        _connected.store(true, std::memory_order_release);
 
-    // Turn off the timeout on the tcp_stream, because
-    // the websocket stream has its own timeout system.
-    beast::get_lowest_layer(*_ws).expires_never();
+        // Turn off the timeout on the tcp_stream, because
+        // the websocket stream has its own timeout system.
+        beast::get_lowest_layer(*_ws).expires_never();
 
-    // Set suggested timeout settings for the websocket
-    _ws->set_option(
-            websocket::stream_base::timeout::suggested(
-                    beast::role_type::client));
+        // Set suggested timeout settings for the websocket
+        _ws->set_option(
+                websocket::stream_base::timeout::suggested(
+                        beast::role_type::client));
 
-    // Set a decorator to change the User-Agent of the handshake
-    _ws->set_option(websocket::stream_base::decorator(
-            [](websocket::request_type& req)
-            {
-                req.set(http::field::user_agent,
-                        std::string(BOOST_BEAST_VERSION_STRING) +
-                        " ichor");
-            }));
+        // Set a decorator to change the User-Agent of the handshake
+        _ws->set_option(websocket::stream_base::decorator(
+                [](websocket::request_type &req) {
+                    req.set(http::field::user_agent,
+                            std::string(BOOST_BEAST_VERSION_STRING) +
+                            " ichor");
+                }));
 
-    // Perform the websocket handshake
-    _ws->async_handshake(address, "/", yield[ec]);
-    if(ec) {
-        _connected = false;
-        return fail(ec, "handshake");
+        // Perform the websocket handshake
+        _ws->async_handshake(address, "/", yield[ec]);
+        if (ec) {
+            _connected.store(false, std::memory_order_release);
+            return fail(ec, "handshake");
+        }
     }
 
     read(yield);
@@ -263,14 +339,14 @@ void Ichor::WsConnectionService::connect(net::yield_context yield) {
 void Ichor::WsConnectionService::read(net::yield_context &yield) {
     beast::error_code ec;
 
-    while(!_quit.load(std::memory_order_acquire) && !_httpContextService->fibersShouldStop()) {
-        fmt::print("{}:{} read\n", getServiceId(), getServiceName());
+    while(!_quit.load(std::memory_order_acquire) && !_asioContextService->fibersShouldStop()) {
+//        fmt::print("{}:{} read\n", getServiceId(), getServiceName());
         beast::basic_flat_buffer buffer{std::allocator<uint8_t>{}};
 
         _ws->async_read(buffer, yield[ec]);
-        fmt::print("{}:{} read post async_read\n", getServiceId(), getServiceName());
+//        fmt::print("{}:{} read post async_read\n", getServiceId(), getServiceName());
 
-        if(_quit.load(std::memory_order_acquire) || _httpContextService->fibersShouldStop()) {
+        if(_quit.load(std::memory_order_acquire) || _asioContextService->fibersShouldStop()) {
             break;
         }
 
@@ -278,7 +354,7 @@ void Ichor::WsConnectionService::read(net::yield_context &yield) {
             break;
         }
         if(ec) {
-            _connected = false;
+            _connected.store(false, std::memory_order_release);
             return fail(ec, "read");
         }
 
@@ -288,14 +364,9 @@ void Ichor::WsConnectionService::read(net::yield_context &yield) {
         }
     }
 
-    _connected = false;
+    _connected.store(false, std::memory_order_release);
     INTERNAL_DEBUG("read stopped WsConnectionService {}", getServiceId());
-    fmt::print("{}:{} read done\n", getServiceId(), getServiceName());
-
-    getManager().pushPrioritisedEvent<RunFunctionEvent>(getServiceId(), _priority.load(std::memory_order_acquire), [this](DependencyManager &dm) {
-        fmt::print("{}:{} rfe2\n", getServiceId(), getServiceName());
-        _startStopEvent.set();
-    });
+//    fmt::print("{}:{} read done\n", getServiceId(), getServiceName());
 }
 
 #endif

@@ -24,8 +24,7 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    if (showHelp)
-    {
+    if (showHelp) {
         std::cout << cli << "\n";
         return 0;
     }

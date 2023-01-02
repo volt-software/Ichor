@@ -6,7 +6,7 @@
 #include <ichor/services/logging/Logger.h>
 #include <ichor/services/network/ws/WsConnectionService.h>
 #include <ichor/services/network/ws/WsEvents.h>
-#include <ichor/services/network/http/HttpContextService.h>
+#include <ichor/services/network/AsioContextService.h>
 #include <ichor/coroutines/AsyncManualResetEvent.h>
 #include <boost/beast.hpp>
 #include <boost/asio/spawn.hpp>
@@ -27,13 +27,13 @@ namespace Ichor {
         uint64_t getPriority() final;
 
     private:
-        AsyncGenerator<void> start() final;
+        AsyncGenerator<tl::expected<void, Ichor::StartError>> start() final;
         AsyncGenerator<void> stop() final;
 
         void addDependencyInstance(ILogger *logger, IService *isvc);
         void removeDependencyInstance(ILogger *logger, IService *isvc);
-        void addDependencyInstance(IHttpContextService *logger, IService *);
-        void removeDependencyInstance(IHttpContextService *logger, IService *);
+        void addDependencyInstance(IAsioContextService *logger, IService *);
+        void removeDependencyInstance(IAsioContextService *logger, IService *);
 
         AsyncGenerator<IchorBehaviour> handleEvent(NewWsConnectionEvent const &evt);
 
@@ -44,11 +44,13 @@ namespace Ichor {
         void listen(tcp::endpoint endpoint, net::yield_context yield);
 
         std::unique_ptr<tcp::acceptor> _wsAcceptor{};
+        std::unique_ptr<net::strand<net::io_context::executor_type>> _strand{};
         uint64_t _priority{INTERNAL_EVENT_PRIORITY};
         std::atomic<bool> _quit{};
         std::atomic<bool> _tcpNoDelay{};
+        std::atomic<int64_t> _finishedListenAndRead{};
         ILogger *_logger{nullptr};
-        IHttpContextService *_httpContextService{nullptr};
+        IAsioContextService *_asioContextService{nullptr};
         std::vector<WsConnectionService*> _connections{};
         EventHandlerRegistration _eventRegistration{};
         AsyncManualResetEvent _startStopEvent{};

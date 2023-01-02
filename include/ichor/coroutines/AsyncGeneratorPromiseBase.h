@@ -46,7 +46,7 @@ namespace Ichor::Detail {
         AsyncGeneratorPromiseBase& operator=(const AsyncGeneratorPromiseBase& other) = delete;
 
         std::suspend_always initial_suspend() const noexcept {
-            INTERNAL_DEBUG("AsyncGeneratorPromiseBase::initial_suspend {}", _id);
+            INTERNAL_COROUTINE_DEBUG("AsyncGeneratorPromiseBase::initial_suspend {}", _id);
             return {};
         }
 
@@ -86,7 +86,7 @@ namespace Ichor::Detail {
         /// The coroutine will be destroyed when it next reaches a co_yield or co_return
         /// statement.
         bool request_cancellation() noexcept {
-            INTERNAL_DEBUG("request_cancellation {}", _id);
+            INTERNAL_COROUTINE_DEBUG("request_cancellation {}", _id);
             const auto previousState = _state.exchange(state::cancelled, std::memory_order_acq_rel);
 
             // Not valid to destroy async_generator<T> object if consumer coroutine still suspended
@@ -134,7 +134,7 @@ namespace Ichor::Detail {
         }
 
         bool await_ready() const noexcept {
-            INTERNAL_DEBUG("AsyncGeneratorYieldOperation::await_ready {} {}", _initialState, _promise._id);
+            INTERNAL_COROUTINE_DEBUG("AsyncGeneratorYieldOperation::await_ready {} {}", _initialState, _promise._id);
             return _initialState == state::value_not_ready_consumer_suspended;
         }
 
@@ -189,7 +189,7 @@ namespace Ichor::Detail {
 
     private:
         void set_finished() noexcept final {
-            INTERNAL_DEBUG("set_finished {} {}", _id, typeName<T>());
+            INTERNAL_COROUTINE_DEBUG("set_finished {} {}", _id, typeName<T>());
 
 #ifdef ICHOR_USE_HARDENING
             if(!_currentValue) [[unlikely]] {
@@ -235,7 +235,7 @@ namespace Ichor::Detail {
 
     private:
         void set_finished() noexcept final {
-            INTERNAL_DEBUG("set_finished {}", _id);
+            INTERNAL_COROUTINE_DEBUG("set_finished {}", _id);
             _finished = true;
         }
 

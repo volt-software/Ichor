@@ -36,14 +36,14 @@ struct RegistrationCheckerService final : public Service<RegistrationCheckerServ
     }
     ~RegistrationCheckerService() final = default;
 
-    AsyncGenerator<void> start() final {
+    AsyncGenerator<tl::expected<void, Ichor::StartError>> start() final {
         if(!_executedTests) {
             throw std::runtime_error("Should have executed tests");
         }
         if(_depCount == 2) {
             getManager().pushEvent<QuitEvent>(getServiceId());
         }
-        co_return;
+        co_return {};
     }
 
     void addDependencyInstance(IUselessService *, IService *) {

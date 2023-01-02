@@ -87,12 +87,15 @@ Ichor::HiredisService::HiredisService(DependencyRegister &reg, Properties props,
     reg.registerDependency<ILogger>(this, true);
 }
 
-Ichor::AsyncGenerator<void> Ichor::HiredisService::start() {
+Ichor::AsyncGenerator<tl::expected<void, Ichor::StartError>> Ichor::HiredisService::start() {
     if(getProperties().contains("Priority")) {
         _priority = Ichor::any_cast<uint64_t>(getProperties()["Priority"]);
     }
 
-    connect();
+    auto outcome = connect();
+    if(!outcome) {
+        co_return tl::unexpected(StartError::FAILED);
+    }
 
     _pollTimer = getManager().createServiceManager<Timer, ITimer>();
     _pollTimer->setCallback(this, [this](DependencyManager &) {
@@ -103,7 +106,7 @@ Ichor::AsyncGenerator<void> Ichor::HiredisService::start() {
 
     INTERNAL_DEBUG("HiredisService::start() co_return");
 
-    co_return;
+    co_return {};
 }
 
 Ichor::AsyncGenerator<void> Ichor::HiredisService::stop() {
@@ -224,12 +227,14 @@ void Ichor::HiredisService::onRedisDisconnect(int status) {
     } else {
         ICHOR_LOG_WARN(_logger, "Redis disconnected, attempting reconnect, reason: \"{}\"", _redisContext->errstr);
         _redisContext = nullptr;
-        connect();
+        if(!connect()) {
+            getManager().pushEvent<StopServiceEvent>(getServiceId(), getServiceId());
+        }
     }
 }
 
 
-void Ichor::HiredisService::connect() {
+tl::expected<void, Ichor::StartError> Ichor::HiredisService::connect() {
     auto addrIt = getProperties().find("Address");
     auto portIt = getProperties().find("Port");
 
@@ -250,14 +255,21 @@ void Ichor::HiredisService::connect() {
         // handle error
         redisAsyncFree(_redisContext);
         _redisContext = nullptr;
-        throw std::runtime_error("Error when starting HiredisService");
+        return tl::unexpected(StartError::FAILED);
     }
 
     _redisContext->data = this; /* store application pointer for the callbacks */
 
-    redisPollAttach(_redisContext);
+    if(redisPollAttach(_redisContext)) [[unlikely]] {
+        ICHOR_LOG_ERROR(_logger, "redis error attaching poll");
+        redisAsyncFree(_redisContext);
+        _redisContext = nullptr;
+        return tl::unexpected(StartError::FAILED);
+    }
     redisAsyncSetConnectCallback(_redisContext, _onRedisConnect);
     redisAsyncSetDisconnectCallback(_redisContext, _onRedisDisconnect);
+
+    return {};
 }
 
 #endif

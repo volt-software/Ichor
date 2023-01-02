@@ -7,17 +7,8 @@
 #include <mimalloc-new-delete.h>
 #endif
 
-#ifdef ICHOR_USE_BOOST_JSON
-#pragma GCC diagnostic push
-#ifndef __clang__
-#pragma GCC diagnostic ignored "-Wduplicated-branches"
-#pragma GCC diagnostic ignored "-Wstringop-overflow"
-#endif
-#pragma GCC diagnostic ignored "-Wcast-align"
-#pragma GCC diagnostic ignored "-Wdeprecated-copy"
-#pragma GCC diagnostic ignored "-Warray-bounds"
-#include <boost/json/src.hpp>
-#pragma GCC diagnostic pop
+#if (defined(WIN32) || defined(_WIN32) || defined(__WIN32)) && !defined(__CYGWIN__)
+#include <processthreadsapi.h>
 #endif
 
 std::atomic<uint64_t> Ichor::DependencyManager::_managerIdCounter = 0;
@@ -45,7 +36,13 @@ void Ichor::DependencyManager::start() {
 
     ICHOR_LOG_TRACE(_logger, "depman {} has {} events", _id, _eventQueue->size());
 
-#ifdef __linux__
+#if defined(__APPLE__)
+    pthread_setname_np(fmt::format("DepMan #{}", _id).c_str());
+#endif
+#if (defined(WIN32) || defined(_WIN32) || defined(__WIN32)) && !defined(__CYGWIN__)
+    SetThreadDescription(GetCurrentThread(), fmt::format("DepMan #{}", _id).c_str());
+#endif
+#if defined(__linux__) || defined(__CYGWIN__)
     pthread_setname_np(pthread_self(), fmt::format("DepMan #{}", _id).c_str());
 #endif
 }
@@ -102,6 +99,8 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &&uniqueEvt) 
                     handleEventError(*depOnlineEvt);
                     break;
                 }
+
+                finishWaitingService(depOnlineEvt->originatingService, DependencyOnlineEvent::TYPE, DependencyOnlineEvent::NAME);
 
                 auto const filterProp = manager->getProperties().find("Filter");
                 const Filter *filter = nullptr;
@@ -578,7 +577,7 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &&uniqueEvt) 
                                 }
                             }
 
-                            handleEventCompletion(*origEventIt->second.get());
+                            handleEventCompletion(*origEventIt->second);
                             _scopedGenerators.erase(continuableEvt->promiseId);
                             _scopedEvents.erase(continuableEvt->promiseId);
                         }
@@ -592,7 +591,7 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &&uniqueEvt) 
                             }
                         }
 
-                        handleEventCompletion(*origEventIt->second.get());
+                        handleEventCompletion(*origEventIt->second);
                         _scopedGenerators.erase(continuableEvt->promiseId);
                         _scopedEvents.erase(continuableEvt->promiseId);
                     }
@@ -865,31 +864,42 @@ Ichor::AsyncGenerator<void> Ichor::DependencyManager::waitForService(uint64_t se
     if(it != _dependencyWaiters.end()) {
         auto &waiter = it->second.events.emplace_back(eventType, std::make_unique<AsyncManualResetEvent>());
         INTERNAL_DEBUG("waitForService {} {} {}", serviceId, eventType, it->second.events.size());
-        co_await *waiter.second.get();
+        co_await *waiter.second;
         co_return;
     }
     auto inserted = _dependencyWaiters.emplace(serviceId, EventWaiter{serviceId, eventType});
     INTERNAL_DEBUG("waitForService {} {} 1", serviceId, eventType);
-    co_await *inserted.first->second.events.rbegin()->second.get();
+    co_await *inserted.first->second.events.rbegin()->second;
     co_return;
 }
 
 bool Ichor::DependencyManager::finishWaitingService(uint64_t serviceId, uint64_t eventType, [[maybe_unused]] std::string_view eventName) noexcept {
     bool ret{};
     auto waiter = _dependencyWaiters.find(serviceId);
+    std::vector<std::unique_ptr<AsyncManualResetEvent>> evts{};
 
+    // caution: setting events and triggering their coroutines can result in the containers used here, to be modified.
     if(waiter != _dependencyWaiters.end()) {
-        for (auto it = waiter->second.events.begin(); it != waiter->second.events.end(); ) {
-            if(it->first == eventType) {
-                INTERNAL_DEBUG("waitForService set {} {} {}", serviceId, eventName, waiter->second.events.size());
-                it->second->set();
-                it = waiter->second.events.erase(it);
-                ret = true;
-            } else {
-                INTERNAL_DEBUG("waitForService not set {} {} {}", serviceId, it->first, waiter->second.events.size());
-                it++;
+        do {
+            evts.clear();
+            for (auto it = waiter->second.events.begin(); it != waiter->second.events.end();) {
+                if (it->first == eventType) {
+                    INTERNAL_DEBUG("waitForService set {} {} {}", serviceId, eventName, waiter->second.events.size());
+                    evts.emplace_back(std::move(it->second));
+                    it = waiter->second.events.erase(it);
+                    ret = true;
+                } else {
+                    INTERNAL_DEBUG("waitForService not set {} {} {}", serviceId, it->first, waiter->second.events.size());
+                    it++;
+                }
             }
-        }
+            for(auto &evt : evts) {
+                evt->set();
+            }
+            if(!evts.empty()) {
+                waiter = _dependencyWaiters.find(serviceId);
+            }
+        } while(!evts.empty());
         if(waiter->second.events.empty()) {
             INTERNAL_DEBUG("waitForService done {} {} {}", serviceId, eventName, waiter->second.events.size());
             _dependencyWaiters.erase(waiter);
@@ -944,7 +954,7 @@ uint64_t Ichor::DependencyManager::broadcastEvent(std::shared_ptr<Event> &evt) {
     auto registeredListeners = _eventCallbacks.find(evt->type);
 
     if(registeredListeners == end(_eventCallbacks)) {
-        handleEventCompletion(*evt.get());
+        handleEventCompletion(*evt);
         return 0;
     }
 
@@ -997,7 +1007,7 @@ uint64_t Ichor::DependencyManager::broadcastEvent(std::shared_ptr<Event> &evt) {
         }
     }
 
-    handleEventCompletion(*evt.get());
+    handleEventCompletion(*evt);
 
     return callbacksCopy.size();
 }

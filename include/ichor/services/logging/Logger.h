@@ -3,7 +3,7 @@
 #include <fmt/format.h>
 #include <ichor/interfaces/IFrameworkLogger.h>
 #include <ichor/Common.h>
-#include <ichor/Service.h>
+#include <ichor/dependency_management/Service.h>
 #include <ichor/Enums.h>
 
 namespace Ichor {

@@ -5,9 +5,10 @@
 using namespace Ichor;
 
 struct ICountService {
-    virtual ~ICountService() = default;
     [[nodiscard]] virtual uint64_t getSvcCount() const noexcept = 0;
     [[nodiscard]] virtual bool isRunning() const noexcept = 0;
+protected:
+    ~ICountService() = default;
 };
 
 template<bool required>
@@ -16,20 +17,20 @@ struct DependencyService final : public ICountService, public Service<Dependency
         reg.registerDependency<IUselessService>(this, required);
     }
     ~DependencyService() final = default;
-    AsyncGenerator<void> start() final {
+    AsyncGenerator<tl::expected<void, Ichor::StartError>> start() final {
         running = true;
-        co_return;
+        co_return {};
     }
     AsyncGenerator<void> stop() final {
         running = false;
         co_return;
     }
 
-    void addDependencyInstance(IUselessService *svc, IService *) {
+    void addDependencyInstance(IUselessService *, IService *) {
         svcCount++;
     }
 
-    void removeDependencyInstance(IUselessService *svc, IService *) {
+    void removeDependencyInstance(IUselessService *, IService *) {
         svcCount--;
     }
 

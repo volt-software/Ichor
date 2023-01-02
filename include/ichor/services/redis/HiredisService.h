@@ -29,13 +29,13 @@ namespace Ichor {
         AsyncGenerator<RedisGetReply> get(std::string_view key) final;
 
     private:
-        AsyncGenerator<void> start() final;
+        AsyncGenerator<tl::expected<void, Ichor::StartError>> start() final;
         AsyncGenerator<void> stop() final;
 
         void addDependencyInstance(ILogger *logger, IService *);
         void removeDependencyInstance(ILogger *logger, IService *);
 
-        void connect();
+        tl::expected<void, Ichor::StartError> connect();
 
         friend DependencyRegister;
         friend DependencyManager;

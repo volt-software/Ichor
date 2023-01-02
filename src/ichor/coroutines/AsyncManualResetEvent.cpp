@@ -5,7 +5,6 @@
 
 // Copied and modified from Lewis Baker's cppcoro
 
-#include <ichor/DependencyManager.h>
 #include <ichor/coroutines/AsyncManualResetEvent.h>
 #include <cassert>
 

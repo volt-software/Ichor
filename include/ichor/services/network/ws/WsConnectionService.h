@@ -4,12 +4,14 @@
 
 #include <ichor/services/network/IConnectionService.h>
 #include <ichor/services/network/IHostService.h>
-#include <ichor/services/network/http/HttpContextService.h>
+#include <ichor/services/network/AsioContextService.h>
 #include <ichor/services/logging/Logger.h>
 #include <ichor/coroutines/AsyncManualResetEvent.h>
+#include <ichor/stl/RealtimeMutex.h>
 #include <queue>
 #include <boost/beast.hpp>
 #include <boost/asio/spawn.hpp>
+#include <boost/circular_buffer.hpp>
 
 namespace beast = boost::beast;         // from <boost/beast.hpp>
 namespace http = beast::http;           // from <boost/beast/http.hpp>
@@ -17,22 +19,25 @@ namespace websocket = beast::websocket; // from <boost/beast/websocket.hpp>
 namespace net = boost::asio;            // from <boost/asio.hpp>
 using tcp = boost::asio::ip::tcp;       // from <boost/asio/ip/tcp.hpp>
 
-#include <iostream>
-
 namespace Ichor {
-    class WsHostService;
+    namespace Detail {
+        struct WsConnectionOutboxMessage {
+            uint64_t msgId;
+            std::vector<uint8_t> msg;
+        };
+    }
 
     class WsConnectionService final : public IConnectionService, public Service<WsConnectionService> {
     public:
         WsConnectionService(DependencyRegister &reg, Properties props, DependencyManager *mng);
         ~WsConnectionService() final = default;
 
-        uint64_t sendAsync(std::vector<uint8_t>&& msg) final;
+        tl::expected<uint64_t, SendErrorReason> sendAsync(std::vector<uint8_t>&& msg) final;
         void setPriority(uint64_t priority) final;
         uint64_t getPriority() final;
 
     private:
-        AsyncGenerator<void> start() final;
+        AsyncGenerator<tl::expected<void, StartError>> start() final;
         AsyncGenerator<void> stop() final;
 
         void addDependencyInstance(ILogger *logger, IService *isvc);
@@ -41,8 +46,8 @@ namespace Ichor {
         void addDependencyInstance(IHostService *, IService *isvc);
         void removeDependencyInstance(IHostService *, IService *isvc);
 
-        void addDependencyInstance(IHttpContextService *logger, IService *);
-        void removeDependencyInstance(IHttpContextService *logger, IService *);
+        void addDependencyInstance(IAsioContextService *logger, IService *);
+        void removeDependencyInstance(IAsioContextService *logger, IService *);
 
         friend DependencyRegister;
         friend DependencyManager;
@@ -58,8 +63,11 @@ namespace Ichor {
         std::atomic<bool> _connected{};
         std::atomic<bool> _quit{};
         ILogger *_logger{nullptr};
-        IHttpContextService *_httpContextService{nullptr};
+        IAsioContextService *_asioContextService{nullptr};
+        std::unique_ptr<net::strand<net::io_context::executor_type>> _strand{};
+        std::atomic<int64_t> _finishedListenAndRead{};
         AsyncManualResetEvent _startStopEvent{};
+        boost::circular_buffer<Detail::WsConnectionOutboxMessage> _outbox{10};
     };
 }
 

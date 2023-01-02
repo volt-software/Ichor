@@ -1,7 +1,7 @@
 #pragma once
 
 #include <variant>
-#include <ichor/Service.h>
+#include <ichor/dependency_management/Service.h>
 #include "DependencyService.h"
 
 using namespace Ichor;

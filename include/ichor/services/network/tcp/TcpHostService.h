@@ -26,7 +26,7 @@ namespace Ichor {
         uint64_t getPriority() final;
 
     private:
-        AsyncGenerator<void> start() final;
+        AsyncGenerator<tl::expected<void, Ichor::StartError>> start() final;
         AsyncGenerator<void> stop() final;
 
         void addDependencyInstance(ILogger *logger, IService *isvc);

@@ -15,7 +15,7 @@ Ichor::TcpHostService::TcpHostService(DependencyRegister &reg, Properties props,
     reg.registerDependency<ILogger>(this, true);
 }
 
-Ichor::AsyncGenerator<void> Ichor::TcpHostService::start() {
+Ichor::AsyncGenerator<tl::expected<void, Ichor::StartError>> Ichor::TcpHostService::start() {
     if(getProperties().contains("Priority")) {
         _priority = Ichor::any_cast<uint64_t>(getProperties()["Priority"]);
     }
@@ -94,7 +94,7 @@ Ichor::AsyncGenerator<void> Ichor::TcpHostService::start() {
     });
     _timerManager->startTimer();
 
-    co_return;
+    co_return {};
 }
 
 Ichor::AsyncGenerator<void> Ichor::TcpHostService::stop() {

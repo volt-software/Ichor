@@ -20,16 +20,13 @@ namespace Ichor {
     template <typename T>
     class ScopeGuardFunction final {
     public:
-        static_assert(std::is_trivially_copyable_v<T>, "ScopeGuardFunction only works with trivially copyable types.");
-        static_assert(std::is_trivially_copy_constructible_v<T>, "ScopeGuardFunction only works with trivially copy constructible types.");
-        explicit ScopeGuardFunction(T t, tl::function_ref<void(T&)> fn) noexcept : _t(t), _fn(fn) {
+        explicit ScopeGuardFunction(T &&fn) noexcept : _fn(std::forward<T>(fn)) {
         }
 
         ~ScopeGuardFunction() noexcept {
-            _fn(_t);
+            _fn();
         }
     private:
-        T _t;
-        tl::function_ref<void(T&)> _fn;
+        T _fn;
     };
 }

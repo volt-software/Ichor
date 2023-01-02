@@ -12,6 +12,8 @@ trap cleanup SIGINT SIGTERM
 
 while [ 1 ]
 do
-    #gdb -ex run -ex quit ../bin/ichor_websocket_example
+#    gdb -ex "run -t4" -ex quit ../bin/ichor_websocket_example
     ../bin/ichor_websocket_example || exit
+#    gdb -ex run -ex quit ../bin/HttpTests || exit
+#    ../bin/HttpTests || exit
 done

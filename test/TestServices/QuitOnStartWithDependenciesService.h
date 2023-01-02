@@ -9,9 +9,9 @@ struct QuitOnStartWithDependenciesService final : public Service<QuitOnStartWith
         reg.registerDependency<IUselessService>(this, true);
     }
     ~QuitOnStartWithDependenciesService() final = default;
-    AsyncGenerator<void> start() final {
+    AsyncGenerator<tl::expected<void, Ichor::StartError>> start() final {
         getManager().pushEvent<QuitEvent>(getServiceId());
-        co_return;
+        co_return {};
     }
 
     void addDependencyInstance(IUselessService *, IService *) {

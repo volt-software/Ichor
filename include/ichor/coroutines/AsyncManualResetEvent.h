@@ -13,7 +13,6 @@
 
 namespace Ichor {
     class AsyncManualResetEventOperation;
-    class DependencyManager;
 
     /// An async manual-reset event is a coroutine synchronisation abstraction
     /// that allows one or more coroutines to wait until some thread calls

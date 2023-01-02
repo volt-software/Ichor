@@ -15,7 +15,7 @@ public:
     SigIntService() = default;
 
 private:
-    AsyncGenerator<void> start() final {
+    AsyncGenerator<tl::expected<void, Ichor::StartError>> start() final {
         // Setup a timer that fires every 100 milliseconds
         auto timer = getManager().createServiceManager<Timer, ITimer>();
         timer->setChronoInterval(100ms);
@@ -31,7 +31,7 @@ private:
 
         // Register sigint handler
         ::signal(SIGINT, siginthandler);
-        co_return;
+        co_return {};
     }
 
     AsyncGenerator<void> stop() final {

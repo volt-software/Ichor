@@ -1,6 +1,6 @@
 #pragma once
 
-#include <ichor/Service.h>
+#include <ichor/dependency_management/Service.h>
 #include <thread>
 #include <ichor/services/timer/ITimer.h>
 #include <ichor/events/RunFunctionEvent.h>
@@ -35,7 +35,7 @@ namespace Ichor {
         [[nodiscard]] uint64_t getPriority() const noexcept final;
 
     private:
-        AsyncGenerator<void> start() final;
+        AsyncGenerator<tl::expected<void, Ichor::StartError>> start() final;
         AsyncGenerator<void> stop() final;
 
         void insertEventLoop(bool fireImmediately);

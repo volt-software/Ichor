@@ -2,9 +2,9 @@
 
 #include <ichor/DependencyManager.h>
 #include <ichor/services/logging/Logger.h>
-#include <ichor/Service.h>
+#include <ichor/dependency_management/Service.h>
 #include <ichor/services/serialization/ISerializer.h>
-#include "ichor/dependency_management/ILifecycleManager.h"
+#include <ichor/dependency_management/ILifecycleManager.h>
 #include "PingMsg.h"
 #include <rapidjson/document.h>
 #include <rapidjson/writer.h>

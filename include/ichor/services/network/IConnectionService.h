@@ -1,8 +1,13 @@
 #pragma once
 
-#include <ichor/Service.h>
+#include <ichor/dependency_management/Service.h>
+#include <tl/expected.h>
 
 namespace Ichor {
+    enum class SendErrorReason {
+        QUITTING
+    };
+
     class IConnectionService {
     public:
         /**
@@ -10,7 +15,7 @@ namespace Ichor {
          * @param msg message to send
          * @return id of message
          */
-        virtual uint64_t sendAsync(std::vector<uint8_t>&& msg) = 0;
+        virtual tl::expected<uint64_t, SendErrorReason> sendAsync(std::vector<uint8_t>&& msg) = 0;
 
         /**
          * Sets priority with which to push incoming network events.

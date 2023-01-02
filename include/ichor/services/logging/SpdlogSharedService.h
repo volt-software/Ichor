@@ -3,7 +3,7 @@
 #ifdef ICHOR_USE_SPDLOG
 
 #include <vector>
-#include <ichor/Service.h>
+#include <ichor/dependency_management/Service.h>
 
 namespace spdlog::sinks {
     class sink;
@@ -24,7 +24,7 @@ namespace Ichor {
 
         std::vector<std::shared_ptr<spdlog::sinks::sink>> const& getSinks() noexcept final;
     private:
-        AsyncGenerator<void> start() final;
+        AsyncGenerator<tl::expected<void, Ichor::StartError>> start() final;
         AsyncGenerator<void> stop() final;
 
         friend DependencyRegister;

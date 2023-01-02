@@ -3,8 +3,8 @@
 #include <chrono>
 #include <ichor/DependencyManager.h>
 #include <ichor/services/logging/Logger.h>
-#include <ichor/Service.h>
-#include "ichor/dependency_management/ILifecycleManager.h"
+#include <ichor/dependency_management/Service.h>
+#include <ichor/dependency_management/ILifecycleManager.h>
 
 #ifdef __SANITIZE_ADDRESS__
 constexpr uint32_t START_STOP_COUNT = 100'000;
@@ -23,7 +23,7 @@ public:
     ~StartStopService() final = default;
 
 private:
-    AsyncGenerator<void> start() final {
+    AsyncGenerator<tl::expected<void, Ichor::StartError>> start() final {
         if(startCount == 0) {
             _startServiceRegistration = getManager().registerEventCompletionCallbacks<StartServiceEvent>(this);
             _stopServiceRegistration = getManager().registerEventCompletionCallbacks<StopServiceEvent>(this);
@@ -40,7 +40,7 @@ private:
             ICHOR_LOG_INFO(_logger, "dm {} finished in {:L} µs", getManager().getId(), std::chrono::duration_cast<std::chrono::microseconds>(end-_start).count());
         }
         startCount++;
-        co_return;
+        co_return {};
     }
 
     AsyncGenerator<void> stop() final {

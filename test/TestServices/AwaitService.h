@@ -1,6 +1,6 @@
 #pragma once
 
-#include <ichor/Service.h>
+#include <ichor/dependency_management/Service.h>
 #include <ichor/events/Event.h>
 #include <ichor/coroutines/AsyncManualResetEvent.h>
 
@@ -33,10 +33,10 @@ struct AwaitService final : public IAwaitService, public Service<AwaitService> {
 struct EventAwaitService final : public Service<EventAwaitService> {
     EventAwaitService() = default;
     ~EventAwaitService() final = default;
-    AsyncGenerator<void> start() final {
+    AsyncGenerator<tl::expected<void, Ichor::StartError>> start() final {
         _handler = this->getManager().template registerEventHandler<AwaitEvent>(this);
 
-        co_return;
+        co_return {};
     }
 
     AsyncGenerator<void> stop() final {

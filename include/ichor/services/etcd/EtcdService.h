@@ -15,7 +15,7 @@ namespace Ichor {
         std::optional<std::string> get(std::string&& key) final;
 
     private:
-        AsyncGenerator<void> start() final;
+        AsyncGenerator<tl::expected<void, Ichor::StartError>> start() final;
         AsyncGenerator<void> stop() final;
 
         void addDependencyInstance(ILogger *logger, IService *isvc);

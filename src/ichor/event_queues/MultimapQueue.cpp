@@ -10,6 +10,10 @@ namespace Ichor::Detail {
 }
 
 namespace Ichor {
+    MultimapQueue::MultimapQueue() = default;
+    MultimapQueue::MultimapQueue(bool spinlock) : _spinlock(spinlock) {
+    }
+
     MultimapQueue::~MultimapQueue() {
         stopDm();
 
@@ -21,7 +25,7 @@ namespace Ichor {
     }
 
     void MultimapQueue::pushEvent(uint64_t priority, std::unique_ptr<Event> &&event) {
-        if(!event) {
+        if(!event) [[unlikely]] {
             throw std::runtime_error("Pushing nullptr");
         }
 
@@ -55,16 +59,29 @@ namespace Ichor {
 
         startDm();
 
-        while(!shouldQuit()) [[unlikely]] {
+        while(!shouldQuit()) [[likely]] {
             std::unique_lock l(_eventQueueMutex);
             while(!shouldQuit() && _eventQueue.empty()) {
-                // Being woken up from another thread incurs a cost of ~0.4ms on my machine
-                // This can be reduced by spinlocking, at the expense of CPU usage
+                // Spinlock 10ms before going to sleep, improves latency in high workload cases at the expense of CPU usage
+                if(_spinlock) {
+                    l.unlock();
+                    auto start = std::chrono::steady_clock::now();
+                    while(std::chrono::steady_clock::now() < start + 10ms) {
+                        l.lock();
+                        if(!_eventQueue.empty()) {
+                            goto spinlockBreak;
+                        }
+                        l.unlock();
+                    }
+                    l.lock();
+                }
+                // Being woken up from another thread incurs a cost of ~0.4ms on my machine (see benchmarks/README.md for specs)
                 _wakeup.wait_for(l, 500ms, [this]() {
                     shouldAddQuitEvent();
                     return shouldQuit() || !_eventQueue.empty();
                 });
             }
+            spinlockBreak:
 
             shouldAddQuitEvent();
 
@@ -84,7 +101,7 @@ namespace Ichor {
         bool const shouldQuit = Detail::sigintQuit.load(std::memory_order_acquire);
 
 //        INTERNAL_DEBUG("shouldQuit() {} {:L}", shouldQuit, (std::chrono::steady_clock::now() - _whenQuitEventWasSent).count());
-        if (shouldQuit && _quitEventSent && std::chrono::steady_clock::now() - _whenQuitEventWasSent >= 500ms) [[unlikely]] {
+        if (shouldQuit && _quitEventSent && std::chrono::steady_clock::now() - _whenQuitEventWasSent >= 5000ms) [[unlikely]] {
             _quit.store(true, std::memory_order_release);
         }
 

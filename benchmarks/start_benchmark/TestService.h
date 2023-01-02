@@ -2,8 +2,8 @@
 
 #include <ichor/DependencyManager.h>
 #include <ichor/services/logging/Logger.h>
-#include <ichor/Service.h>
-#include "ichor/dependency_management/ILifecycleManager.h"
+#include <ichor/dependency_management/Service.h>
+#include <ichor/dependency_management/ILifecycleManager.h>
 
 #ifdef __SANITIZE_ADDRESS__
 constexpr uint32_t SERVICES_COUNT = 1'000;
@@ -21,12 +21,12 @@ public:
     ~TestService() final = default;
 
 private:
-    AsyncGenerator<void> start() final {
+    AsyncGenerator<tl::expected<void, Ichor::StartError>> start() final {
         auto iteration = Ichor::any_cast<uint64_t>(getProperties()["Iteration"]);
         if(iteration == SERVICES_COUNT - 1) {
             getManager().pushEvent<QuitEvent>(getServiceId());
         }
-        co_return;
+        co_return {};
     }
 
     AsyncGenerator<void> stop() final {

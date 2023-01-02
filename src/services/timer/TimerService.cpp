@@ -1,11 +1,14 @@
 #include <ichor/services/timer/TimerService.h>
+#if (defined(WIN32) || defined(_WIN32) || defined(__WIN32)) && !defined(__CYGWIN__)
+#include <processthreadsapi.h>
+#endif
 
 Ichor::Timer::~Timer() noexcept {
     stopTimer();
 }
 
-Ichor::AsyncGenerator<void> Ichor::Timer::start() {
-    co_return;
+Ichor::AsyncGenerator<tl::expected<void, Ichor::StartError>> Ichor::Timer::start() {
+    co_return {};
 }
 
 Ichor::AsyncGenerator<void> Ichor::Timer::stop() {
@@ -25,7 +28,7 @@ void Ichor::Timer::startTimer(bool fireImmediately) {
     bool expected = true;
     if(_quit.compare_exchange_strong(expected, false, std::memory_order_acq_rel)) {
         _eventInsertionThread = std::make_unique<std::thread>([this, fireImmediately]() { this->insertEventLoop(fireImmediately); });
-#ifdef __linux__
+#if defined(__linux__) || defined(__CYGWIN__)
         pthread_setname_np(_eventInsertionThread->native_handle(), fmt::format("Tmr #{}", getServiceId()).c_str());
 #endif
     }
@@ -69,6 +72,13 @@ uint64_t Ichor::Timer::getPriority() const noexcept {
 }
 
 void Ichor::Timer::insertEventLoop(bool fireImmediately) {
+#if defined(__APPLE__)
+    pthread_setname_np(fmt::format("Tmr #{}", getServiceId()).c_str());
+#endif
+#if (defined(WIN32) || defined(_WIN32) || defined(__WIN32)) && !defined(__CYGWIN__)
+    SetThreadDescription(GetCurrentThread(), fmt::format("Tmr #{}", getServiceId()).c_str());
+#endif
+
     auto now = std::chrono::steady_clock::now();
     auto next = now;
     if(!fireImmediately) {

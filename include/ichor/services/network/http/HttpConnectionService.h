@@ -3,9 +3,10 @@
 #ifdef ICHOR_USE_BOOST_BEAST
 
 #include <ichor/services/network/http/IHttpConnectionService.h>
-#include <ichor/services/network/http/HttpContextService.h>
+#include <ichor/services/network/AsioContextService.h>
 #include <ichor/coroutines/AsyncManualResetEvent.h>
 #include <ichor/services/logging/Logger.h>
+#include <ichor/stl/RealtimeMutex.h>
 #include <boost/beast.hpp>
 #include <boost/asio/spawn.hpp>
 #include <boost/circular_buffer.hpp>
@@ -40,13 +41,13 @@ namespace Ichor {
         uint64_t getPriority() final;
 
     private:
-        AsyncGenerator<void> start() final;
+        AsyncGenerator<tl::expected<void, Ichor::StartError>> start() final;
         AsyncGenerator<void> stop() final;
 
         void addDependencyInstance(ILogger *logger, IService *);
         void removeDependencyInstance(ILogger *logger, IService *);
-        void addDependencyInstance(IHttpContextService *logger, IService *);
-        void removeDependencyInstance(IHttpContextService *logger, IService *);
+        void addDependencyInstance(IAsioContextService *logger, IService *);
+        void removeDependencyInstance(IAsioContextService *logger, IService *);
 
         void fail(beast::error_code, char const* what);
         void connect(tcp::endpoint endpoint, net::yield_context yield);
@@ -60,10 +61,10 @@ namespace Ichor {
         std::atomic<bool> _connected{};
         std::atomic<bool> _tcpNoDelay{};
         std::atomic<int64_t> _finishedListenAndRead{};
-        int _attempts{};
         std::atomic<ILogger*> _logger{nullptr};
-        IHttpContextService *_httpContextService{nullptr};
+        IAsioContextService *_asioContextService{nullptr};
         boost::circular_buffer<Detail::ConnectionOutboxMessage> _outbox{10};
+        RealtimeMutex _outboxMutex{};
         AsyncManualResetEvent _startStopEvent{};
     };
 }

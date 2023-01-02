@@ -2,7 +2,7 @@
 
 #include <fmt/format.h>
 #include <ichor/Common.h>
-#include <ichor/Service.h>
+#include <ichor/dependency_management/Service.h"
 
 namespace Ichor {
     class IShellCommand {

@@ -4,7 +4,7 @@
 #include <ichor/event_queues/MultimapQueue.h>
 #include <ichor/services/logging/LoggerAdmin.h>
 #include <ichor/services/network/http/HttpConnectionService.h>
-#include <ichor/services/network/http/HttpContextService.h>
+#include <ichor/services/network/AsioContextService.h>
 #include <ichor/services/network/ClientAdmin.h>
 #include <ichor/services/serialization/ISerializer.h>
 #include <ichor/services/logging/NullLogger.h>
@@ -66,8 +66,7 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    if (showHelp)
-    {
+    if (showHelp) {
         std::cout << cli << "\n";
         return 0;
     }
@@ -76,14 +75,14 @@ int main(int argc, char *argv[]) {
     auto queue = std::make_unique<MultimapQueue>();
     auto &dm = queue->createManager();
 
+#ifdef ICHOR_USE_SPDLOG
+    dm.createServiceManager<SpdlogSharedService, ISpdlogSharedService>();
+#endif
+
     if(verbosity > 0) {
         auto *logger = dm.createServiceManager<FRAMEWORK_LOGGER_TYPE, IFrameworkLogger>();
         setLevel(verbosity, logger);
     }
-
-#ifdef ICHOR_USE_SPDLOG
-    dm.createServiceManager<SpdlogSharedService, ISpdlogSharedService>();
-#endif
 
     if(silent) {
         dm.createServiceManager<LoggerAdmin<NullLogger>, ILoggerAdmin>();
@@ -93,7 +92,7 @@ int main(int argc, char *argv[]) {
     }
 
     dm.createServiceManager<PingMsgJsonSerializer, ISerializer<PingMsg>>();
-    dm.createServiceManager<HttpContextService, IHttpContextService>();
+    dm.createServiceManager<AsioContextService, IAsioContextService>();
     dm.createServiceManager<ClientAdmin<HttpConnectionService, IHttpConnectionService>, IClientAdmin>();
     dm.createServiceManager<PingService>(Properties{{"Address", Ichor::make_any<std::string>(address)}, {"Port", Ichor::make_any<uint16_t>(static_cast<uint16_t>(8001))}});
     queue->start(CaptureSigInt);

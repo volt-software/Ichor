@@ -1,8 +1,8 @@
 #pragma once
 
 #include <ichor/DependencyManager.h>
-#include <ichor/Service.h>
-#include "ichor/dependency_management/ILifecycleManager.h"
+#include <ichor/dependency_management/Service.h>
+#include <ichor/dependency_management/ILifecycleManager.h>
 #include <ichor/services/logging/Logger.h>
 
 namespace Ichor {
@@ -32,9 +32,9 @@ namespace Ichor {
         }
 
     private:
-        AsyncGenerator<void> start() final {
+        AsyncGenerator<tl::expected<void, Ichor::StartError>> start() final {
             _loggerTrackerRegistration = Service<LoggerAdmin<LogT>>::getManager().template registerDependencyTracker<ILogger>(this);
-            co_return;
+            co_return {};
         }
 
         AsyncGenerator<void> stop() final {

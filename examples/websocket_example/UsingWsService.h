@@ -6,8 +6,8 @@
 #include <ichor/services/network/NetworkEvents.h>
 #include <ichor/services/network/IConnectionService.h>
 #include <ichor/services/network/IHostService.h>
-#include <ichor/Service.h>
-#include "ichor/dependency_management/ILifecycleManager.h"
+#include <ichor/dependency_management/Service.h>
+#include <ichor/dependency_management/ILifecycleManager.h>
 #include <ichor/services/serialization/ISerializer.h>
 #include "../common/TestMsg.h"
 
@@ -23,12 +23,12 @@ public:
     ~UsingWsService() final = default;
 
 private:
-    AsyncGenerator<void> start() final {
+    AsyncGenerator<tl::expected<void, Ichor::StartError>> start() final {
         ICHOR_LOG_INFO(_logger, "UsingWsService started");
         _dataEventRegistration = getManager().registerEventHandler<NetworkDataEvent>(this);
         _failureEventRegistration = getManager().registerEventHandler<FailedSendMessageEvent>(this);
         _connectionService->sendAsync(_serializer->serialize(TestMsg{11, "hello"}));
-        co_return;
+        co_return {};
     }
 
     AsyncGenerator<void> stop() final {

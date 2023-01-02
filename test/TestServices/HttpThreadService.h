@@ -7,8 +7,8 @@
 #include <ichor/services/network/http/IHttpConnectionService.h>
 #include <ichor/services/network/http/IHttpService.h>
 #include <ichor/events/RunFunctionEvent.h>
-#include <ichor/Service.h>
-#include "ichor/dependency_management/ILifecycleManager.h"
+#include <ichor/dependency_management/Service.h>
+#include <ichor/dependency_management/ILifecycleManager.h>
 #include <ichor/services/serialization/ISerializer.h>
 #include "../examples/common/TestMsg.h"
 
@@ -29,7 +29,7 @@ public:
     ~HttpThreadService() final = default;
 
 private:
-    AsyncGenerator<void> start() final {
+    AsyncGenerator<tl::expected<void, Ichor::StartError>> start() final {
         getManager().pushEvent<RunFunctionEventAsync>(getServiceId(), [this](DependencyManager &dm) -> AsyncGenerator<IchorBehaviour> {
             auto toSendMsg = _serializer->serialize(TestMsg{11, "hello"});
 
@@ -52,7 +52,7 @@ private:
             co_return {};
         });
 
-        co_return;
+        co_return {};
     }
 
     AsyncGenerator<void> stop() final {
@@ -93,7 +93,7 @@ private:
                 throw std::runtime_error("testThreadId id incorrect");
             }
 
-            co_return HttpResponse{false, HttpStatus::ok, _serializer->serialize(TestMsg{11, "hello"}), {}};
+            co_return HttpResponse{false, HttpStatus::ok, "application/json", _serializer->serialize(TestMsg{11, "hello"}), {}};
         });
     }
 
@@ -108,7 +108,8 @@ private:
     friend DependencyManager;
 
     AsyncGenerator<void> sendTestRequest(std::vector<uint8_t> &&toSendMsg) {
-        auto &response = *co_await _connectionService->sendAsync(HttpMethod::post, "/test", {}, std::move(toSendMsg)).begin();
+        std::vector<HttpHeader> headers{HttpHeader("Content-Type", "application/json")};
+        auto &response = *co_await _connectionService->sendAsync(HttpMethod::post, "/test", std::move(headers), std::move(toSendMsg)).begin();
 
         if(_serializer == nullptr) {
             // we're stopping, gotta bail.

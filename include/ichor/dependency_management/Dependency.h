@@ -1,6 +1,6 @@
 #pragma once
 
-#include "ichor/Common.h"
+#include <ichor/Common.h>
 
 namespace Ichor {
     struct Dependency {

@@ -16,6 +16,10 @@ namespace Ichor {
 
     class MultimapQueue final : public IEventQueue {
     public:
+        /// Construct a multimap based queue, supporting priorities
+        /// \param spinlock Spinlock 10ms before going to sleep, improves latency in high workload cases at the expense of CPU usage
+        MultimapQueue();
+        explicit MultimapQueue(bool spinlock);
         ~MultimapQueue() final;
 
         void pushEvent(uint64_t priority, std::unique_ptr<Event> &&event) final;
@@ -39,6 +43,7 @@ namespace Ichor {
         ConditionVariableAny<RealtimeReadWriteMutex> _wakeup{};
         std::atomic<bool> _quit{false};
         bool _quitEventSent{false};
+        bool _spinlock{false};
         std::chrono::steady_clock::time_point _whenQuitEventWasSent{};
     };
 }

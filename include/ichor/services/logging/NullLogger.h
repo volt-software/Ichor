@@ -4,7 +4,7 @@
 #include <vector>
 #include <memory>
 #include <ichor/services/logging/Logger.h>
-#include <ichor/Service.h>
+#include <ichor/dependency_management/Service.h>
 
 namespace Ichor {
 

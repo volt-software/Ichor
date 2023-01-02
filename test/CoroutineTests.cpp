@@ -5,6 +5,8 @@
 #include "TestServices/AsyncUsingTimerService.h"
 #include "TestServices/AwaitReturnService.h"
 #include "TestServices/StopsInAsyncStartService.h"
+#include "TestServices/DependencyOfflineWhileStartingService.h"
+#include "TestServices/DependencyOnlineWhileStoppingService.h"
 #include <ichor/event_queues/MultimapQueue.h>
 #include <ichor/events/RunFunctionEvent.h>
 #include <memory>
@@ -16,11 +18,11 @@ uint64_t AwaitNoCopy::countDestructed{};
 uint64_t AwaitNoCopy::countMoved{};
 
 TEST_CASE("CoroutineTests") {
+    _evt = std::make_unique<Ichor::AsyncManualResetEvent>();
 
     SECTION("Required dependencies") {
         auto queue = std::make_unique<MultimapQueue>();
         auto &dm = queue->createManager();
-        _evt = std::make_unique<Ichor::AsyncManualResetEvent>();
 
         std::thread t([&]() {
             dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>();
@@ -66,7 +68,6 @@ TEST_CASE("CoroutineTests") {
     SECTION("co_await in function") {
         auto queue = std::make_unique<MultimapQueue>();
         auto &dm = queue->createManager();
-        _evt = std::make_unique<Ichor::AsyncManualResetEvent>();
 
         std::thread t([&]() {
             dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>();
@@ -102,10 +103,9 @@ TEST_CASE("CoroutineTests") {
 
         dm.runForOrQueueEmpty();
 
-        dm.pushEvent<RunFunctionEventAsync>(0, [](DependencyManager& mng) -> AsyncGenerator<IchorBehaviour> {
+        dm.pushEvent<RunFunctionEvent>(0, [](DependencyManager& mng) {
             INTERNAL_DEBUG("set");
             _evt->set();
-            co_return {};
         });
 
         t.join();
@@ -116,7 +116,6 @@ TEST_CASE("CoroutineTests") {
     SECTION("co_await in event handler") {
         auto queue = std::make_unique<MultimapQueue>();
         auto &dm = queue->createManager();
-        _evt = std::make_unique<Ichor::AsyncManualResetEvent>();
 
         std::thread t([&]() {
             dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>();
@@ -132,10 +131,9 @@ TEST_CASE("CoroutineTests") {
 
         dm.runForOrQueueEmpty();
 
-        dm.pushEvent<RunFunctionEventAsync>(0, [](DependencyManager& mng) -> AsyncGenerator<IchorBehaviour> {
+        dm.pushEvent<RunFunctionEvent>(0, [](DependencyManager& mng) {
             INTERNAL_DEBUG("set");
             _evt->set();
-            co_return {};
         });
 
         t.join();
@@ -159,12 +157,11 @@ TEST_CASE("CoroutineTests") {
 
         dm.runForOrQueueEmpty();
 
-        dm.pushEvent<RunFunctionEventAsync>(0, [&](DependencyManager& mng) -> AsyncGenerator<IchorBehaviour> {
+        dm.pushEvent<RunFunctionEvent>(0, [&](DependencyManager& mng) {
             INTERNAL_DEBUG("set");
             _autoEvt->set_all();
             REQUIRE(svc->count == 2);
             mng.pushEvent<QuitEvent>(0);
-            co_return {};
         });
 
         t.join();
@@ -176,7 +173,6 @@ TEST_CASE("CoroutineTests") {
         fmt::print("co_await in timer service\n");
         auto queue = std::make_unique<MultimapQueue>();
         auto &dm = queue->createManager();
-        _evt = std::make_unique<Ichor::AsyncManualResetEvent>();
 
         std::thread t([&]() {
             dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>();
@@ -189,10 +185,9 @@ TEST_CASE("CoroutineTests") {
 
         dm.runForOrQueueEmpty();
 
-        dm.pushEvent<RunFunctionEventAsync>(0, [](DependencyManager& mng) -> AsyncGenerator<IchorBehaviour> {
+        dm.pushEvent<RunFunctionEvent>(0, [](DependencyManager& mng) {
             INTERNAL_DEBUG("set");
             _evt->set();
-            co_return {};
         });
 
         t.join();
@@ -203,7 +198,6 @@ TEST_CASE("CoroutineTests") {
     SECTION("co_await user defined struct") {
         auto queue = std::make_unique<MultimapQueue>();
         auto &dm = queue->createManager();
-        _evt = std::make_unique<Ichor::AsyncManualResetEvent>();
         AwaitReturnService *svc{};
 
         std::thread t([&]() {
@@ -217,17 +211,16 @@ TEST_CASE("CoroutineTests") {
         dm.runForOrQueueEmpty();
 
         dm.pushEvent<RunFunctionEventAsync>(0, [&](DependencyManager& mng) -> AsyncGenerator<IchorBehaviour> {
-            auto &str = *co_await svc->Await().begin();
+            auto &await = *co_await svc->Await().begin();
             co_return {};
         });
 
         dm.runForOrQueueEmpty();
 
-        dm.pushEvent<RunFunctionEventAsync>(0, [&](DependencyManager& mng) -> AsyncGenerator<IchorBehaviour> {
+        dm.pushEvent<RunFunctionEvent>(0, [](DependencyManager& mng) {
             INTERNAL_DEBUG("set");
             _evt->set();
             mng.pushEvent<QuitEvent>(0);
-            co_return {};
         });
 
         t.join();
@@ -247,6 +240,107 @@ TEST_CASE("CoroutineTests") {
             dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>();
             dm.createServiceManager<StopsInAsyncStartService>();
             queue->start(CaptureSigInt);
+        });
+
+        t.join();
+
+        REQUIRE_FALSE(dm.isRunning());
+    }
+
+    SECTION("Dependency offline while starting service") {
+        auto queue = std::make_unique<MultimapQueue>();
+        auto &dm = queue->createManager();
+        uint64_t svcId{};
+
+        std::thread t([&]() {
+            svcId = dm.createServiceManager<DependencyOfflineWhileStartingService, IDependencyOfflineWhileStartingService>()->getServiceId();
+            dm.createServiceManager<UselessService, IUselessService>();
+            queue->start(CaptureSigInt);
+        });
+
+        waitForRunning(dm);
+
+        dm.runForOrQueueEmpty();
+
+        dm.pushEvent<RunFunctionEvent>(0, [svcId](DependencyManager& mng) {
+            auto services = mng.getStartedServices<IDependencyOfflineWhileStartingService>();
+
+            REQUIRE(services.empty());
+
+            auto svcs = mng.getServiceInfo();
+
+            REQUIRE(svcs.size() == 2);
+
+            REQUIRE(svcs[svcId]->getServiceState() == Ichor::ServiceState::STARTING);
+
+            _evt->set();
+
+            REQUIRE(svcs[svcId]->getServiceState() == Ichor::ServiceState::INJECTING);
+        });
+
+        dm.runForOrQueueEmpty();
+
+        dm.pushEvent<RunFunctionEvent>(0, [svcId](DependencyManager& mng) {
+            auto svcs = mng.getServiceInfo();
+
+            REQUIRE(svcs[svcId]->getServiceState() == Ichor::ServiceState::INSTALLED);
+
+            auto services = mng.getStartedServices<IDependencyOfflineWhileStartingService>();
+
+            REQUIRE(services.empty());
+
+            mng.pushEvent<QuitEvent>(0);
+        });
+
+        t.join();
+
+        REQUIRE_FALSE(dm.isRunning());
+    }
+
+    SECTION("Dependency online while stopping service") {
+        auto queue = std::make_unique<MultimapQueue>();
+        auto &dm = queue->createManager();
+        uint64_t svcId{};
+
+        std::thread t([&]() {
+            svcId = dm.createServiceManager<DependencyOnlineWhileStoppingService, IDependencyOnlineWhileStoppingService>()->getServiceId();
+            dm.createServiceManager<UselessService, IUselessService>();
+            queue->start(CaptureSigInt);
+        });
+
+        waitForRunning(dm);
+
+        dm.runForOrQueueEmpty();
+
+        dm.pushEvent<RunFunctionEvent>(0, [svcId](DependencyManager& mng) {
+            auto services = mng.getStartedServices<IDependencyOnlineWhileStoppingService>();
+
+            REQUIRE(services.empty());
+
+            auto svcs = mng.getServiceInfo();
+
+            REQUIRE(svcs.size() == 2);
+
+            REQUIRE(svcs[svcId]->getServiceState() == Ichor::ServiceState::STOPPING);
+
+            _evt->set();
+
+            REQUIRE(svcs[svcId]->getServiceState() == Ichor::ServiceState::INSTALLED);
+        });
+
+        dm.runForOrQueueEmpty();
+
+        dm.pushEvent<RunFunctionEvent>(0, [svcId](DependencyManager& mng) {
+            auto services = mng.getStartedServices<IDependencyOnlineWhileStoppingService>();
+
+            REQUIRE(services.empty());
+
+            auto svcs = mng.getServiceInfo();
+
+            REQUIRE(svcs.size() == 2);
+            REQUIRE(svcs[svcId]->getServiceState() == Ichor::ServiceState::INSTALLED);
+
+            mng.pushEvent<QuitEvent>(0);
         });
 
         t.join();

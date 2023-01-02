@@ -6,19 +6,21 @@
 #include <ichor/services/network/ws/WsConnectionService.h>
 #include <ichor/services/network/ws/WsEvents.h>
 #include <ichor/services/network/NetworkEvents.h>
+#include <ichor/services/network/http/HttpScopeGuards.h>
 
 Ichor::WsHostService::WsHostService(DependencyRegister &reg, Properties props, DependencyManager *mng) : Service(std::move(props), mng) {
     reg.registerDependency<ILogger>(this, true);
-    reg.registerDependency<IHttpContextService>(this, true);
+    reg.registerDependency<IAsioContextService>(this, true);
 }
 
-Ichor::AsyncGenerator<void> Ichor::WsHostService::start() {
+Ichor::AsyncGenerator<tl::expected<void, Ichor::StartError>> Ichor::WsHostService::start() {
     if(getProperties().contains("Priority")) {
         _priority = Ichor::any_cast<uint64_t>(getProperties()["Priority"]);
     }
 
     if(!getProperties().contains("Port") || !getProperties().contains("Address")) {
-        throw std::runtime_error("Missing port or address when starting WsHostService");
+        ICHOR_LOG_ERROR(_logger, "Missing port or address when starting WsHostService");
+        co_return tl::unexpected(StartError::FAILED);
     }
 
     if(getProperties().contains("NoDelay")) {
@@ -29,8 +31,10 @@ Ichor::AsyncGenerator<void> Ichor::WsHostService::start() {
 
     auto address = net::ip::make_address(Ichor::any_cast<std::string&>(getProperties()["Address"]));
     auto port = Ichor::any_cast<uint16_t>(getProperties()["Port"]);
+    _strand = std::make_unique<net::strand<net::io_context::executor_type>>(_asioContextService->getContext()->get_executor());
 
-    net::spawn(*_httpContextService->getContext(), [this, address = std::move(address), port](net::yield_context yield){
+    net::spawn(*_strand, [this, address = std::move(address), port](net::yield_context yield) {
+        ScopeGuardAtomicCount const guard{_finishedListenAndRead};
         try {
             listen(tcp::endpoint{address, port}, std::move(yield));
         } catch (std::runtime_error &e) {
@@ -40,9 +44,9 @@ Ichor::AsyncGenerator<void> Ichor::WsHostService::start() {
             ICHOR_LOG_ERROR(_logger, "caught unknown error");
             getManager().pushEvent<StopServiceEvent>(getServiceId(), getServiceId());
         }
-    });
+    }ASIO_SPAWN_COMPLETION_TOKEN);
 
-    co_return;
+    co_return {};
 }
 
 Ichor::AsyncGenerator<void> Ichor::WsHostService::stop() {
@@ -54,11 +58,23 @@ Ichor::AsyncGenerator<void> Ichor::WsHostService::stop() {
     }
 
     INTERNAL_DEBUG("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! acceptor {}", getServiceId());
-    _wsAcceptor->close();
+    net::spawn(*_strand, [this](net::yield_context yield) {
+        ScopeGuardAtomicCount const guard{_finishedListenAndRead};
+//        fmt::print("----------------------------------------------- {}:{} ws acceptor close\n", getServiceId(), getServiceName());
+        _wsAcceptor->close();
+//        fmt::print("----------------------------------------------- {}:{} ws acceptor done\n", getServiceId(), getServiceName());
+    }ASIO_SPAWN_COMPLETION_TOKEN);
 
     INTERNAL_DEBUG("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! pre-await {} {}", getServiceId(), _startStopEvent.is_set());
     co_await _startStopEvent;
+
+    while(_finishedListenAndRead.load(std::memory_order_acquire) != 0) {
+        std::this_thread::sleep_for(1ms);
+    }
+
     INTERNAL_DEBUG("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! stopped WsHostService {}", getServiceId());
+    _strand = nullptr;
+    _wsAcceptor = nullptr;
 
     co_return;
 }
@@ -71,12 +87,12 @@ void Ichor::WsHostService::removeDependencyInstance(ILogger *logger, IService *)
     _logger = nullptr;
 }
 
-void Ichor::WsHostService::addDependencyInstance(IHttpContextService *httpContextService, IService *) {
-    _httpContextService = httpContextService;
+void Ichor::WsHostService::addDependencyInstance(IAsioContextService *AsioContextService, IService *) {
+    _asioContextService = AsioContextService;
 }
 
-void Ichor::WsHostService::removeDependencyInstance(IHttpContextService *logger, IService *) {
-    _httpContextService = nullptr;
+void Ichor::WsHostService::removeDependencyInstance(IAsioContextService *logger, IService *) {
+    _asioContextService = nullptr;
 }
 
 Ichor::AsyncGenerator<Ichor::IchorBehaviour> Ichor::WsHostService::handleEvent(Ichor::NewWsConnectionEvent const &evt) {
@@ -86,7 +102,7 @@ Ichor::AsyncGenerator<Ichor::IchorBehaviour> Ichor::WsHostService::handleEvent(I
 
     auto connection = getManager().createServiceManager<WsConnectionService, IConnectionService>(Properties{
         {"WsHostServiceId", Ichor::make_any<uint64_t>(getServiceId())},
-        {"Socket", Ichor::make_any<decltype(evt._socket)>(std::move(evt._socket))},
+        {"Socket", Ichor::make_any<decltype(evt._socket)>(evt._socket)},
         {"Filter", Ichor::make_any<Filter>(Filter{ClientConnectionFilter{}})}
     });
     _connections.push_back(connection);
@@ -116,7 +132,7 @@ void Ichor::WsHostService::listen(tcp::endpoint endpoint, net::yield_context yie
 {
     beast::error_code ec;
 
-    _wsAcceptor = std::make_unique<tcp::acceptor>(*_httpContextService->getContext());
+    _wsAcceptor = std::make_unique<tcp::acceptor>(*_asioContextService->getContext());
     _wsAcceptor->open(endpoint.protocol(), ec);
     if(ec) {
         return fail(ec, "open");
@@ -137,9 +153,9 @@ void Ichor::WsHostService::listen(tcp::endpoint endpoint, net::yield_context yie
         return fail(ec, "listen");
     }
 
-    while(!_quit && !_httpContextService->fibersShouldStop())
+    while(!_quit && !_asioContextService->fibersShouldStop())
     {
-        tcp::socket socket(*_httpContextService->getContext());
+        tcp::socket socket(*_asioContextService->getContext());
 
         // tcp accept new connections
         _wsAcceptor->async_accept(socket, yield[ec]);

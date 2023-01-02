@@ -22,7 +22,7 @@ namespace Ichor::Detail {
 
         Ichor::Detail::_local_dm->pushPrioritisedEvent<Ichor::ContinuableEvent>(0u, INTERNAL_DEPENDENCY_EVENT_PRIORITY, _id);
 
-        INTERNAL_DEBUG("yield_value<{}>(&) {} {}", typeName<T>(), _id, !!_consumerCoroutine);
+        INTERNAL_COROUTINE_DEBUG("yield_value<{}>(&) {} {}", typeName<T>(), _id, !!_consumerCoroutine);
         _currentValue.emplace(std::move(value));
         return internal_yield_value();
     }
@@ -41,7 +41,7 @@ namespace Ichor::Detail {
 
         Ichor::Detail::_local_dm->pushPrioritisedEvent<Ichor::ContinuableEvent>(0u, INTERNAL_DEPENDENCY_EVENT_PRIORITY, _id);
 
-        INTERNAL_DEBUG("yield_value<{}>(&&) {} {}", typeName<T>(), _id, !!_consumerCoroutine);
+        INTERNAL_COROUTINE_DEBUG("yield_value<{}>(&&) {} {}", typeName<T>(), _id, !!_consumerCoroutine);
         _currentValue.emplace(std::forward<T>(value));
         return internal_yield_value();
     }
@@ -60,17 +60,17 @@ namespace Ichor::Detail {
         if constexpr(std::is_same_v<T, StartBehaviour>) {
             if(_hasSuspended.has_value() && *_hasSuspended) {
                 auto evtId = Ichor::Detail::_local_dm->pushPrioritisedEvent<Ichor::ContinuableStartEvent>(0u, INTERNAL_COROUTINE_EVENT_PRIORITY, _id);
-                INTERNAL_DEBUG("push continuable {} {}", _id, evtId);
+                INTERNAL_COROUTINE_DEBUG("push continuable {} {}", _id, evtId);
             }
         }
         if constexpr(std::is_same_v<T, IchorBehaviour>) {
             if(_hasSuspended.has_value() && *_hasSuspended) {
                 auto evtId = Ichor::Detail::_local_dm->pushPrioritisedEvent<Ichor::ContinuableEvent>(0u, INTERNAL_COROUTINE_EVENT_PRIORITY, _id);
-                INTERNAL_DEBUG("push {} {}", _id, evtId);
+                INTERNAL_COROUTINE_DEBUG("push {} {}", _id, evtId);
             }
         }
 
-        INTERNAL_DEBUG("return_value<{}>(&) {} {}", typeName<T>(), _id, !!_consumerCoroutine);
+        INTERNAL_COROUTINE_DEBUG("return_value<{}>(&) {} {}", typeName<T>(), _id, !!_consumerCoroutine);
         _currentValue.emplace(std::move(value));
     }
 
@@ -88,22 +88,22 @@ namespace Ichor::Detail {
         if constexpr(std::is_same_v<T, StartBehaviour>) {
             if(_hasSuspended.has_value() && *_hasSuspended) {
                 auto evtId = Ichor::Detail::_local_dm->pushPrioritisedEvent<Ichor::ContinuableStartEvent>(0u, INTERNAL_COROUTINE_EVENT_PRIORITY, _id);
-                INTERNAL_DEBUG("push continuable {} {}", _id, evtId);
+                INTERNAL_COROUTINE_DEBUG("push continuable {} {}", _id, evtId);
             }
         }
         if constexpr(std::is_same_v<T, IchorBehaviour>) {
             if(_hasSuspended.has_value() && *_hasSuspended) {
                 auto evtId = Ichor::Detail::_local_dm->pushPrioritisedEvent<Ichor::ContinuableEvent>(0u, INTERNAL_COROUTINE_EVENT_PRIORITY, _id);
-                INTERNAL_DEBUG("push {}", _id, evtId);
+                INTERNAL_COROUTINE_DEBUG("push {}", _id, evtId);
             }
         }
 
-        INTERNAL_DEBUG("return_value<{}>(&&) {} {}", typeName<T>(), _id, !!_consumerCoroutine);
+        INTERNAL_COROUTINE_DEBUG("return_value<{}>(&&) {} {}", typeName<T>(), _id, !!_consumerCoroutine);
         _currentValue.emplace(std::forward<T>(value));
     }
 
     inline AsyncGeneratorYieldOperation AsyncGeneratorPromise<void>::yield_value(Empty) noexcept {
-        INTERNAL_DEBUG("yield_value<void> {} {}", _id, !!_consumerCoroutine);
+        INTERNAL_COROUTINE_DEBUG("yield_value<void> {} {}", _id, !!_consumerCoroutine);
 
 #ifdef ICHOR_USE_HARDENING
         // check if currently on a different thread than creation time (which would be undefined behaviour)
@@ -116,7 +116,7 @@ namespace Ichor::Detail {
     }
 
     inline void AsyncGeneratorPromise<void>::return_void() noexcept {
-        INTERNAL_DEBUG("return_value<void> {} {}", _id, !!_consumerCoroutine);
+        INTERNAL_COROUTINE_DEBUG("return_value<void> {} {}", _id, !!_consumerCoroutine);
 
 #ifdef ICHOR_USE_HARDENING
         // check if currently on a different thread than creation time (which would be undefined behaviour)
