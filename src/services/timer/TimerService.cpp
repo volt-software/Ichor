@@ -1,6 +1,7 @@
 #include <ichor/services/timer/TimerService.h>
 #if (defined(WIN32) || defined(_WIN32) || defined(__WIN32)) && !defined(__CYGWIN__)
 #include <processthreadsapi.h>
+#include <fmt/xchar.h>
 #endif
 
 Ichor::Timer::~Timer() noexcept {
@@ -76,7 +77,7 @@ void Ichor::Timer::insertEventLoop(bool fireImmediately) {
     pthread_setname_np(fmt::format("Tmr #{}", getServiceId()).c_str());
 #endif
 #if (defined(WIN32) || defined(_WIN32) || defined(__WIN32)) && !defined(__CYGWIN__)
-    SetThreadDescription(GetCurrentThread(), fmt::format("Tmr #{}", getServiceId()).c_str());
+    SetThreadDescription(GetCurrentThread(), fmt::format(L"Tmr #{}", getServiceId()).c_str());
 #endif
 
     auto now = std::chrono::steady_clock::now();

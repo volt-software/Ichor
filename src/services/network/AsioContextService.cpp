@@ -4,6 +4,7 @@
 #include <ichor/services/network/AsioContextService.h>
 #if (defined(WIN32) || defined(_WIN32) || defined(__WIN32)) && !defined(__CYGWIN__)
 #include <processthreadsapi.h>
+#include <fmt/xchar.h>
 #endif
 
 Ichor::AsioContextService::AsioContextService(DependencyRegister &reg, Properties props, DependencyManager *mng) : Service(std::move(props), mng) {
@@ -61,7 +62,7 @@ Ichor::AsyncGenerator<tl::expected<void, Ichor::StartError>> Ichor::AsioContextS
             pthread_setname_np(fmt::format("Asio #{}-{}", getServiceId(), i).c_str());
 #endif
 #if (defined(WIN32) || defined(_WIN32) || defined(__WIN32)) && !defined(__CYGWIN__)
-            SetThreadDescription(GetCurrentThread(), fmt::format("Asio #{}-{}", getServiceId(), i).c_str());
+            SetThreadDescription(GetCurrentThread(), fmt::format(L"Asio #{}-{}", getServiceId(), i).c_str());
 #endif
             INTERNAL_DEBUG("AsioContext started");
             while (!_context->stopped()) {

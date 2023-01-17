@@ -162,6 +162,7 @@ else()
     # try d2UndefIntOverflow-
     set(CMAKE_CXX_FLAGS "/W4")
     target_compile_options(ichor PUBLIC /nologo /DWIN32 /D_WINDOWS /EHsc /TP /await:strict /std:c++latest /wd4100 /d2SSAOptimizer- /permissive- /Zc:throwingNew /Zc:__cplusplus /Zc:preprocessor /volatile:iso /Zc:inline /Zc:referenceBinding /Zc:strictStrings /Zc:templateScope /utf-8 /vd0)
+    target_compile_options(ichor PUBLIC /bigobj) #some files, like WsConnectionService with sanitizers enabled, need more addressable sections
     target_compile_definitions(ichor PUBLIC NOMINMAX WIN32_LEAN_AND_MEAN )
 endif()
 
@@ -209,7 +210,7 @@ endif()
 if(ICHOR_USE_SANITIZERS)
     if(WIN32)
         # MSVC does not support UBsan
-        target_compile_options(ichor PUBLIC /fsanitize=address)
+        target_compile_options(ichor PUBLIC /fsanitize=address /Zi)
     else()
         target_compile_options(ichor PUBLIC -fsanitize=address,undefined -fno-omit-frame-pointer)
         target_link_options(ichor PUBLIC -fsanitize=address,undefined)
@@ -225,8 +226,11 @@ if(ICHOR_USE_SANITIZERS)
     endif()
 
     if(ICHOR_USE_BOOST_BEAST)
-        target_compile_definitions(ichor PUBLIC BOOST_USE_ASAN BOOST_USE_UCONTEXT)
-        message(WARNING "Sanitizers seem to have issues with stack switches. Need to compile boost library specifically to deal with this, or continue at your own peril. Please see https://www.boost.org/doc/libs/master/libs/context/doc/html/context/stack/sanitizers.html and https://github.com/boostorg/beast/issues/2615")
+        target_compile_definitions(ichor PUBLIC BOOST_USE_ASAN)
+        if(NOT WIN32 AND NOT APPLE) #boost provided windows compiled dlls/libs, as well as homebrew provided ones, do not provide ucontext
+            target_compile_definitions(ichor PUBLIC BOOST_USE_UCONTEXT)
+        endif()
+        message(WARNING "Sanitizers seem to have issues with stack switches. Need to compile boost library specifically to deal with this, or continue at your own peril. Please see https://www.boost.org/doc/libs/master/libs/context/doc/html/context/stack/sanitizers.html and https://github.com/boostorg/beast/issues/2615 and https://learn.microsoft.com/en-us/answers/questions/652967/address-sanitizer-missing-output")
     endif()
 endif()
 
@@ -255,7 +259,10 @@ if(NOT DEFINED ICHOR_USE_SANITIZERS AND NOT DEFINED ICHOR_USE_THREAD_SANITIZER)
 endif()
 
 if(WIN32 AND ICHOR_USE_HARDENING)
-    target_compile_options(ichor PUBLIC /sdl /guard:cf /RTCsu)
+    if(CMAKE_BUILD_TYPE MATCHES DEBUG)
+        target_compile_options(ichor PUBLIC /RTCsu)
+    endif()
+    target_compile_options(ichor PUBLIC /GS /guard:cf)
     target_compile_definitions(ichor PUBLIC ICHOR_USE_HARDENING)
 elseif(ICHOR_USE_HARDENING)
     target_compile_options(ichor PUBLIC -fstack-protector-strong -fcf-protection)
@@ -356,7 +363,8 @@ if(ICHOR_USE_BOOST_BEAST) #beast
     target_include_directories(ichor PUBLIC ${Boost_INCLUDE_DIRS})
     target_link_directories(ichor PUBLIC ${Boost_LIBRARY_DIRS})
     target_link_libraries(ichor PUBLIC ${Boost_LIBRARIES})
-    target_compile_definitions(ichor PUBLIC BOOST_ASIO_NO_DEPRECATED)
+    #_SILENCE_ALL_CXX23_DEPRECATION_WARNINGS -> MSVC gives warnings on things like std::aligned_storage, which is still valid in C++20.
+    target_compile_definitions(ichor PUBLIC BOOST_ASIO_NO_DEPRECATED _SILENCE_ALL_CXX23_DEPRECATION_WARNINGS)
 
     if(Boost_VERSION_STRING VERSION_LESS "1.81.0")
         target_compile_definitions(ichor PUBLIC BOOST_BEAST_USE_STD_STRING_VIEW)
@@ -523,6 +531,8 @@ if(ICHOR_BUILD_BENCHMARKS)
 endif()
 if(ICHOR_BUILD_TESTING)
     add_subdirectory(${ICHOR_EXTERNAL_DIR}/Catch2)
+    #enable string_view support in catch2
+    target_compile_features(Catch2 PRIVATE cxx_std_20)
     list(APPEND CMAKE_MODULE_PATH "${ICHOR_EXTERNAL_DIR}/Catch2/extras")
 
     enable_testing()
@@ -530,7 +540,7 @@ if(ICHOR_BUILD_TESTING)
 
     if(ICHOR_USE_SANITIZERS)
         if(WIN32)
-            target_compile_options(Catch2 PUBLIC /fsanitize=address)
+            target_compile_options(Catch2 PUBLIC /fsanitize=address /Zi)
         endif()
     endif()
 

@@ -13,6 +13,8 @@
 //
 //------------------------------------------------------------------------------
 
+#ifdef ICHOR_USE_BOOST_BEAST
+
 #include "fields_alloc.hpp"
 
 #include <rapidjson/document.h>
@@ -266,3 +268,11 @@ int main(int argc, char* argv[])
         return EXIT_FAILURE;
     }
 }
+
+#else
+
+int main() {
+    return 0;
+}
+
+#endif

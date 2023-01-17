@@ -79,7 +79,7 @@ namespace Ichor {
         }
 
 
-        template<typename Impl, typename... Interfaces>
+        template<Derived<IService> Impl, typename... Interfaces>
         // msvc compiler bug, see https://developercommunity.visualstudio.com/t/c20-Friend-definition-of-class-with-re/10197302
 #if (!defined(WIN32) && !defined(_WIN32) && !defined(__WIN32)) || defined(__CYGWIN__)
         requires ImplementsAll<Impl, Interfaces...>
@@ -88,7 +88,7 @@ namespace Ichor {
             return createServiceManager<Impl, Interfaces...>(Properties{});
         }
 
-        template<typename Impl, typename... Interfaces>
+        template<Derived<IService> Impl, typename... Interfaces>
 #if (!defined(WIN32) && !defined(_WIN32) && !defined(__WIN32)) || defined(__CYGWIN__)
         requires ImplementsAll<Impl, Interfaces...>
 #endif
