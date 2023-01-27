@@ -3,7 +3,6 @@
 #include <string_view>
 #include <memory>
 #include "Service.h"
-#include "ConstructorInjectionService.h"
 #include <ichor/Common.h>
 #include "Dependency.h"
 #include "DependencyRegister.h"

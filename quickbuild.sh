@@ -26,6 +26,11 @@ while [[ $# -gt 0 ]]; do
       TSAN=1
       shift # past value
       ;;
+    --nosan)
+      ASAN=0
+      TSAN=0
+      shift # past value
+      ;;
     --release)
       ASAN=0
       TSAN=0

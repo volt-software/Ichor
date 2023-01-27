@@ -731,6 +731,8 @@ namespace Ichor {
         // Only use if you know for sure you're on the correct thread.
         thread_local extern DependencyManager *_local_dm;
     }
+
+    [[nodiscard]] DependencyManager& GetThreadLocalManager() noexcept;
 }
 
 #include <ichor/coroutines/AsyncGeneratorDetail.h>

@@ -12,6 +12,7 @@
 #include <ichor/events/RunFunctionEvent.h>
 #include <ichor/services/logging/LoggerAdmin.h>
 #include <ichor/services/logging/CoutLogger.h>
+#include <ichor/dependency_management/ConstructorInjectionService.h>
 
 bool AddEventHandlerDuringEventHandlingService::_addedReg{};
 
@@ -296,7 +297,8 @@ TEST_CASE("ServicesTests") {
 
         std::thread t([&]() {
             dm.createServiceManager<LoggerAdmin<CoutLogger>, ILoggerAdmin>();
-            svcId = dm.createServiceManager<ConstructorInjectionService<ConstructorInjectionTestService, ILogger>>()->getServiceId();
+            dm.createServiceManager<DependencyService<false>, ICountService>();
+            svcId = dm.createServiceManager<ConstructorInjectionService<ConstructorInjectionTestService>>()->getServiceId();
             queue->start(CaptureSigInt);
         });
 
@@ -315,7 +317,7 @@ TEST_CASE("ServicesTests") {
         dm.runForOrQueueEmpty();
 
         dm.pushEvent<RunFunctionEvent>(0, [&](DependencyManager& mng) {
-            REQUIRE(mng.getServiceCount() == 1);
+            REQUIRE(mng.getServiceCount() == 2);
 
             mng.pushEvent<QuitEvent>(0);
         });

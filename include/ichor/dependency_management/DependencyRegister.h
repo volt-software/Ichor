@@ -1,15 +1,12 @@
 #pragma once
 
-#include "Dependency.h"
-#include "Service.h"
-#include "ConstructorInjectionService.h"
+#include <ichor/dependency_management/Dependency.h>
+#include <ichor/dependency_management/Service.h>
 #include <optional>
 #include <stdexcept>
 
 namespace Ichor {
     struct DependencyRegister final {
-        explicit DependencyRegister(DependencyManager *mng) noexcept {}
-
         template<typename Interface, DerivedTemplated<Service> Impl>
         void registerDependency(Impl *svc, bool required, std::optional<Properties> props = {}) {
             static_assert(!std::is_same_v<Interface, Impl>, "Impl and interface need to be separate classes");
@@ -41,8 +38,8 @@ namespace Ichor {
 
             _registrations.emplace(typeNameHash<Interface>(), std::make_tuple(
                     Dependency{typeNameHash<Interface>(), true, 0},
-                    std::function<void(void*, IService*)>{[svc](void* dep, IService* isvc){ svc->template addDependencyInstance<Interface>(reinterpret_cast<Interface*>(dep), isvc); }},
-                    std::function<void(void*, IService*)>{[svc](void* dep, IService* isvc){ svc->template removeDependencyInstance<Interface>(reinterpret_cast<Interface*>(dep), isvc); }},
+                    std::function<void(void*, IService*)>{[svc](void* dep, IService* isvc){ svc->template addDependencyInstance<Interface>(reinterpret_cast<Interface>(dep), isvc); }},
+                    std::function<void(void*, IService*)>{[svc](void* dep, IService* isvc){ svc->template removeDependencyInstance<Interface>(reinterpret_cast<Interface>(dep), isvc); }},
                     std::optional<Properties>{}));
         }
 

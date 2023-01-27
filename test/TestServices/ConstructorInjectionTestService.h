@@ -4,20 +4,20 @@
 #include "DependencyService.h"
 
 using namespace Ichor;
+struct IConstructorInjectionTestService {};
 
-struct ConstructorInjectionTestService final : public ICountService {
-    ConstructorInjectionTestService(IService* ourselves, ILogger *svc) {
+struct ConstructorInjectionTestService final : public IConstructorInjectionTestService {
+    ConstructorInjectionTestService(ILogger *logSvc, ICountService *countSvc) {
+        if(logSvc == nullptr) {
+            std::terminate();
+        }
+        if(countSvc == nullptr) {
+            std::terminate();
+        }
+        ICHOR_LOG_INFO(logSvc, "test");
 
+        if(!countSvc->isRunning()) {
+            std::terminate();
+        }
     }
-
-    [[nodiscard]] uint64_t getSvcCount() const noexcept final {
-        return svcCount;
-    }
-
-    [[nodiscard]] bool isRunning() const noexcept final {
-        return running;
-    }
-
-    uint64_t svcCount{1};
-    bool running{true};
 };

@@ -1113,6 +1113,16 @@ void Ichor::DependencyTrackerRegistration::reset() {
     }
 }
 
+[[nodiscard]] Ichor::DependencyManager& Ichor::GetThreadLocalManager() noexcept {
+#ifdef ICHOR_USE_HARDENING
+    if(Detail::_local_dm == nullptr) {
+        std::terminate();
+    }
+#endif
+
+    return *Detail::_local_dm;
+}
+
 // Instantiate the async generator
 template class Ichor::AsyncGenerator<void>;
 template class Ichor::AsyncGenerator<Ichor::IchorBehaviour>;
