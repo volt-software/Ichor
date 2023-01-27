@@ -278,7 +278,7 @@ endif()
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     target_compile_options(ichor PRIVATE -fconcepts-diagnostics-depth=3)
     target_compile_options(ichor PUBLIC -fcoroutines)
-elseif(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+elseif(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS_EQUAL "15")
     target_compile_options(ichor PUBLIC -fcoroutines-ts)
 endif()
 
