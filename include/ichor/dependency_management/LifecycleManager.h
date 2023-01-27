@@ -11,7 +11,7 @@ namespace Ichor {
     /// \tparam IFaces
     template<class ServiceType, typename... IFaces>
 #if (!defined(WIN32) && !defined(_WIN32) && !defined(__WIN32)) || defined(__CYGWIN__)
-    requires DerivedTemplated<ServiceType, Service>
+    requires DerivedTemplated<ServiceType, Service> || IsConstructorInjector<ServiceType>
 #endif
     class LifecycleManager final : public ILifecycleManager {
     public:
@@ -110,6 +110,10 @@ namespace Ichor {
             return static_cast<IService const *>(&_service);
         }
 
+        [[nodiscard]] void const * getTypedServicePtr() const noexcept final {
+            return _service.getTypedServicePtr();
+        }
+
         [[nodiscard]] const std::vector<Dependency>& getInterfaces() const noexcept final {
             return _interfaces;
         }
@@ -140,7 +144,7 @@ namespace Ichor {
         template <int i, typename Iface1, typename... otherIfaces>
         void insertSelfInto2(uint64_t keyOfInterfaceToInject, std::function<void(void*, IService*)> &fn) {
             if(typeNameHash<Iface1>() == keyOfInterfaceToInject) {
-                fn(static_cast<Iface1*>(&_service), static_cast<IService*>(&_service));
+                fn(static_cast<Iface1*>(_service.getImplementation()), static_cast<IService*>(&_service));
             } else {
                 if constexpr(i > 1) {
                     insertSelfInto2<sizeof...(otherIfaces), otherIfaces...>(keyOfInterfaceToInject, fn);

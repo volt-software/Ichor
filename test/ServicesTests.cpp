@@ -298,7 +298,7 @@ TEST_CASE("ServicesTests") {
         std::thread t([&]() {
             dm.createServiceManager<LoggerAdmin<CoutLogger>, ILoggerAdmin>();
             dm.createServiceManager<DependencyService<false>, ICountService>();
-            svcId = dm.createServiceManager<ConstructorInjectionService<ConstructorInjectionTestService>>()->getServiceId();
+            svcId = dm.createServiceManager<ConstructorInjectionTestService>()->getServiceId();
             queue->start(CaptureSigInt);
         });
 
@@ -307,7 +307,7 @@ TEST_CASE("ServicesTests") {
         dm.runForOrQueueEmpty();
 
         dm.pushEvent<RunFunctionEvent>(0, [&](DependencyManager& mng) {
-            REQUIRE(mng.getServiceCount() == 3);
+            REQUIRE(mng.getServiceCount() == 4);
 
             mng.pushEvent<StopServiceEvent>(0, svcId);
             // + 11 because the first stop triggers a dep offline event and inserts a new stop with 10 higher priority.

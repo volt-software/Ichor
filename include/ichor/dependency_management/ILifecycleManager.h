@@ -28,6 +28,7 @@ namespace Ichor {
         [[nodiscard]] virtual uint64_t getPriority() const noexcept = 0;
         [[nodiscard]] virtual ServiceState getServiceState() const noexcept = 0;
         [[nodiscard]] virtual IService const * getIService() const noexcept = 0;
+        [[nodiscard]] virtual void const * getTypedServicePtr() const noexcept = 0;
         [[nodiscard]] virtual const std::vector<Dependency>& getInterfaces() const noexcept = 0;
         [[nodiscard]] virtual Properties const & getProperties() const noexcept = 0;
         [[nodiscard]] virtual DependencyRegister const * getDependencyRegistry() const noexcept = 0;

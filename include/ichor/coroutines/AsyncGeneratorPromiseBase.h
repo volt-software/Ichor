@@ -57,7 +57,9 @@ namespace Ichor::Detail {
             // as there is no consumer that will see it.
             if (_state.load(std::memory_order_relaxed) != state::cancelled)
             {
+//                std::terminate();
                 _exception = std::current_exception();
+                std::rethrow_exception(std::move(_exception));
             }
         }
 

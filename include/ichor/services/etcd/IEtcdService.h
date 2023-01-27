@@ -1,6 +1,7 @@
 #pragma once
 
-#include <ichor/dependency_management/Service.h"
+#include <string>
+#include <optional>
 
 namespace Ichor {
     class IEtcdService {

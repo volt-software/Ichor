@@ -7,7 +7,7 @@
 #include <ichor/events/RunFunctionEvent.h>
 #include <ichor/coroutines/AsyncAutoResetEvent.h>
 
-#ifdef __SANITIZE_ADDRESS__
+#if defined(__SANITIZE_ADDRESS__)
 constexpr uint32_t EVENT_COUNT = 500'000;
 #else
 constexpr uint32_t EVENT_COUNT = 5'000'000;

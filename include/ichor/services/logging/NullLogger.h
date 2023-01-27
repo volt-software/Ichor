@@ -1,17 +1,11 @@
 #pragma once
 
-#include <unordered_map>
-#include <vector>
-#include <memory>
 #include <ichor/services/logging/Logger.h>
-#include <ichor/dependency_management/Service.h>
 
 namespace Ichor {
 
-    class NullLogger final : public ILogger, public Service<NullLogger> {
+    class NullLogger final : public ILogger {
     public:
-        NullLogger() = default;
-        ~NullLogger() final = default;
 
         void trace(const char *filename_in, int line_in, const char *funcname_in, std::string_view format_str, fmt::format_args args) final {}
         void debug(const char *filename_in, int line_in, const char *funcname_in, std::string_view format_str, fmt::format_args args) final {}

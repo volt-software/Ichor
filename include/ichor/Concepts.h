@@ -30,6 +30,16 @@ namespace Ichor {
     template <class T, class... U>
     concept ImplementsAll = sizeof...(U) == 0 || DerivedTrait<T, U...>::value;
 
+    template <template<class> class SERVICE_T, class T, class... U>
+    concept ConstructorInjectionImplementsAll = sizeof...(U) == 0 || DerivedTrait<T, U...>::value;
+
+    // check if `ConstructorInjector` is usable in a constexpr setting
+    template<bool> using ConstructorInjectorHelper = void;
+    template <class ImplT>
+    concept IsConstructorInjector = requires(ImplT impl) {
+        typename ConstructorInjectorHelper<ImplT::ConstructorInjector>;
+    };
+
     template <class ImplT>
     concept RequestsDependencies = requires(ImplT impl, DependencyRegister &deps, Properties properties, DependencyManager *mng) {
         { ImplT(deps, properties, mng) };

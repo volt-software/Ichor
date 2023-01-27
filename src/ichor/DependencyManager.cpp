@@ -1115,7 +1115,7 @@ void Ichor::DependencyTrackerRegistration::reset() {
 
 [[nodiscard]] Ichor::DependencyManager& Ichor::GetThreadLocalManager() noexcept {
 #ifdef ICHOR_USE_HARDENING
-    if(Detail::_local_dm == nullptr) {
+    if(Detail::_local_dm == nullptr) { // are we on the right thread?
         std::terminate();
     }
 #endif
