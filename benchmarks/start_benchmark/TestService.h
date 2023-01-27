@@ -5,7 +5,7 @@
 #include <ichor/dependency_management/Service.h>
 #include <ichor/dependency_management/ILifecycleManager.h>
 
-#ifdef __SANITIZE_ADDRESS__
+#if defined(__SANITIZE_ADDRESS__)
 constexpr uint32_t SERVICES_COUNT = 1'000;
 #else
 constexpr uint32_t SERVICES_COUNT = 10'000;
@@ -23,6 +23,7 @@ public:
 private:
     AsyncGenerator<tl::expected<void, Ichor::StartError>> start() final {
         auto iteration = Ichor::any_cast<uint64_t>(getProperties()["Iteration"]);
+//        fmt::print("Created {} #{} #{}\n", typeName<TestService>(), iteration, SERVICES_COUNT);
         if(iteration == SERVICES_COUNT - 1) {
             getManager().pushEvent<QuitEvent>(getServiceId());
         }

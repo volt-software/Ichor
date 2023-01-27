@@ -6,7 +6,7 @@
 #include <ichor/dependency_management/Service.h>
 #include <ichor/dependency_management/ILifecycleManager.h>
 
-#ifdef __SANITIZE_ADDRESS__
+#if defined(__SANITIZE_ADDRESS__)
 constexpr uint32_t START_STOP_COUNT = 100'000;
 #else
 constexpr uint32_t START_STOP_COUNT = 1'000'000;

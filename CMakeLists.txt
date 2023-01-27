@@ -214,6 +214,7 @@ if(ICHOR_USE_SANITIZERS)
     else()
         target_compile_options(ichor PUBLIC -fsanitize=address,undefined -fno-omit-frame-pointer)
         target_link_options(ichor PUBLIC -fsanitize=address,undefined)
+        target_compile_definitions(ichor PUBLIC __SANITIZE_ADDRESS__)
 
         # clang on OSX doesn't accept -no-pie for some reason
         if(NOT APPLE)

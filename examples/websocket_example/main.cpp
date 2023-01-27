@@ -84,14 +84,14 @@ int main(int argc, char *argv[]) {
 
     if(verbosity > 0) {
         auto *logger = dm.createServiceManager<FRAMEWORK_LOGGER_TYPE, IFrameworkLogger>();
-        setLevel(verbosity, logger);
+        setLevel(verbosity, logger->getImplementation());
     }
 
     if(silent) {
         dm.createServiceManager<LoggerAdmin<NullLogger>, ILoggerAdmin>();
     } else {
         auto *admin = dm.createServiceManager<LoggerAdmin<LOGGER_TYPE>, ILoggerAdmin>();
-        setLevel(verbosity, admin);
+        setLevel(verbosity, admin->getImplementation());
     }
     dm.createServiceManager<TestMsgRapidJsonSerializer, ISerializer<TestMsg>>();
     dm.createServiceManager<AsioContextService, IAsioContextService>(Properties{{"Threads", Ichor::make_any<uint64_t>(threads)}});

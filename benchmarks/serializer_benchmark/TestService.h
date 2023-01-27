@@ -8,7 +8,7 @@
 #include <ichor/dependency_management/ILifecycleManager.h>
 #include "../../examples/common/TestMsg.h"
 
-#ifdef __SANITIZE_ADDRESS__
+#if defined(__SANITIZE_ADDRESS__)
 constexpr uint32_t SERDE_COUNT = 100'000;
 #else
 constexpr uint32_t SERDE_COUNT = 5'000'000;

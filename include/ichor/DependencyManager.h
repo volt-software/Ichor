@@ -21,6 +21,7 @@
 #include <ichor/Callbacks.h>
 #include <ichor/Filter.h>
 #include <ichor/dependency_management/DependencyRegistrations.h>
+#include <ichor/dependency_management/ConstructorInjectionService.h>
 #include <ichor/event_queues/IEventQueue.h>
 
 using namespace std::chrono_literals;
@@ -78,21 +79,53 @@ namespace Ichor {
             stop();
         }
 
-
-        template<Derived<IService> Impl, typename... Interfaces>
+        template<DerivedTemplated<Service> Impl, typename... Interfaces>
         // msvc compiler bug, see https://developercommunity.visualstudio.com/t/c20-Friend-definition-of-class-with-re/10197302
 #if (!defined(WIN32) && !defined(_WIN32) && !defined(__WIN32)) || defined(__CYGWIN__)
         requires ImplementsAll<Impl, Interfaces...>
 #endif
         Impl* createServiceManager() {
-            return createServiceManager<Impl, Interfaces...>(Properties{});
+            return internalCreateServiceManager<Impl, Interfaces...>(Properties{});
         }
 
-        template<Derived<IService> Impl, typename... Interfaces>
+        template<DerivedTemplated<Service> Impl, typename... Interfaces>
+        // msvc compiler bug, see https://developercommunity.visualstudio.com/t/c20-Friend-definition-of-class-with-re/10197302
 #if (!defined(WIN32) && !defined(_WIN32) && !defined(__WIN32)) || defined(__CYGWIN__)
         requires ImplementsAll<Impl, Interfaces...>
 #endif
         Impl* createServiceManager(Properties&& properties, uint64_t priority = INTERNAL_EVENT_PRIORITY) {
+            return internalCreateServiceManager<Impl, Interfaces...>(std::move(properties), priority);
+        }
+
+        template<typename Impl, typename... Interfaces>
+        // msvc compiler bug, see https://developercommunity.visualstudio.com/t/c20-Friend-definition-of-class-with-re/10197302
+#if (!defined(WIN32) && !defined(_WIN32) && !defined(__WIN32)) || defined(__CYGWIN__)
+        requires ImplementsAll<Impl, Interfaces...>
+#endif
+        ConstructorInjectionService<Impl>* createServiceManager() {
+            return createConstructorInjectorServiceManager<Impl, Interfaces...>(Properties{}, INTERNAL_EVENT_PRIORITY);
+        }
+
+        template<typename Impl, typename... Interfaces>
+        // msvc compiler bug, see https://developercommunity.visualstudio.com/t/c20-Friend-definition-of-class-with-re/10197302
+#if (!defined(WIN32) && !defined(_WIN32) && !defined(__WIN32)) || defined(__CYGWIN__)
+        requires ImplementsAll<Impl, Interfaces...>
+#endif
+        ConstructorInjectionService<Impl>* createServiceManager(Properties&& properties, uint64_t priority = INTERNAL_EVENT_PRIORITY) {
+            return createConstructorInjectorServiceManager<Impl, Interfaces...>(std::move(properties), priority);
+        }
+
+        template<typename Impl, typename... Interfaces>
+        // msvc compiler bug, see https://developercommunity.visualstudio.com/t/c20-Friend-definition-of-class-with-re/10197302
+#if (!defined(WIN32) && !defined(_WIN32) && !defined(__WIN32)) || defined(__CYGWIN__)
+        requires ImplementsAll<Impl, Interfaces...>
+#endif
+        ConstructorInjectionService<Impl>* createConstructorInjectorServiceManager(Properties&& properties, uint64_t priority = INTERNAL_EVENT_PRIORITY) {
+            return internalCreateServiceManager<ConstructorInjectionService<Impl>, Interfaces...>(std::move(properties), priority);
+        }
+
+        template<typename Impl, typename... Interfaces>
+        Impl* internalCreateServiceManager(Properties&& properties, uint64_t priority = INTERNAL_EVENT_PRIORITY) {
 #ifdef ICHOR_USE_HARDENING
             if(_started.load(std::memory_order_acquire) && this != Detail::_local_dm) [[unlikely]] { // are we on the right thread?
                 std::terminate();
@@ -167,7 +200,8 @@ namespace Ichor {
 
                 if constexpr (sizeof...(Interfaces) > 0) {
                     if constexpr (ListContainsInterface<IFrameworkLogger, Interfaces...>::value) {
-                        _logger = &cmpMgr->getService();
+                        static_assert(!IsConstructorInjector<Impl>, "Framework loggers cannot use constructor injection");
+                        _logger = cmpMgr->getService().getImplementation();
                     }
                 }
 
@@ -613,6 +647,16 @@ namespace Ichor {
 
         [[nodiscard]] uint64_t getNextEventId() noexcept {
             return _eventIdCounter.fetch_add(1, std::memory_order_acq_rel);
+        }
+
+        [[nodiscard]] IService const * getIServiceForSelf(void const *ptr) const noexcept {
+            for(auto &[k, svc] : _services) {
+                if(svc->getTypedServicePtr() == ptr) {
+                    return svc->getIService();
+                }
+            }
+
+            std::terminate();
         }
 
     private:

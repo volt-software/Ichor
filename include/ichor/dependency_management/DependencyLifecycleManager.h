@@ -227,7 +227,7 @@ namespace Ichor {
         template <int i, typename Iface1, typename... otherIfaces>
         void insertSelfInto2(uint64_t keyOfInterfaceToInject, std::function<void(void*, IService*)> &fn) {
             if(typeNameHash<Iface1>() == keyOfInterfaceToInject) {
-                fn(static_cast<Iface1*>(&_service), static_cast<IService*>(&_service));
+                fn(static_cast<Iface1*>(_service.getImplementation()), static_cast<IService*>(&_service));
             } else {
                 if constexpr(i > 1) {
                     insertSelfInto2<sizeof...(otherIfaces), otherIfaces...>(keyOfInterfaceToInject, fn);
@@ -317,6 +317,10 @@ namespace Ichor {
 
         [[nodiscard]] IService const * getIService() const noexcept final {
             return static_cast<IService const *>(&_service);
+        }
+
+        [[nodiscard]] void const * getTypedServicePtr() const noexcept final {
+            return _service.getTypedServicePtr();
         }
 
         [[nodiscard]] const std::vector<Dependency>& getInterfaces() const noexcept final {

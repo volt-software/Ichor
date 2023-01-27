@@ -15,7 +15,7 @@ namespace Ichor {
 
     template<class ServiceType, typename... IFaces>
 #if (!defined(WIN32) && !defined(_WIN32) && !defined(__WIN32)) || defined(__CYGWIN__)
-    requires DerivedTemplated<ServiceType, Service>
+    requires DerivedTemplated<ServiceType, Service> || IsConstructorInjector<ServiceType>
 #endif
     class LifecycleManager;
     template<class ServiceType, typename... IFaces>
@@ -89,6 +89,14 @@ namespace Ichor {
 
         [[nodiscard]] const Properties& getProperties() const noexcept final {
             return _properties;
+        }
+
+        [[nodiscard]] void const * getTypedServicePtr() const noexcept {
+            return this;
+        }
+
+        [[nodiscard]] T* getImplementation() noexcept {
+            return static_cast<T*>(this);
         }
 
     protected:
@@ -207,7 +215,7 @@ namespace Ichor {
 
         template<class ServiceType, typename... IFaces>
 #if (!defined(WIN32) && !defined(_WIN32) && !defined(__WIN32)) || defined(__CYGWIN__)
-        requires DerivedTemplated<ServiceType, Service>
+        requires DerivedTemplated<ServiceType, Service> || IsConstructorInjector<ServiceType>
 #endif
         friend class LifecycleManager;
 

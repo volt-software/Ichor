@@ -38,8 +38,8 @@ namespace Ichor {
 
             _registrations.emplace(typeNameHash<Interface>(), std::make_tuple(
                     Dependency{typeNameHash<Interface>(), true, 0},
-                    std::function<void(void*, IService*)>{[svc](void* dep, IService* isvc){ svc->template addDependencyInstance<Interface>(reinterpret_cast<Interface>(dep), isvc); }},
-                    std::function<void(void*, IService*)>{[svc](void* dep, IService* isvc){ svc->template removeDependencyInstance<Interface>(reinterpret_cast<Interface>(dep), isvc); }},
+                    std::function<void(void*, IService*)>{[svc](void* dep, IService* isvc){ svc->template addDependencyInstance<Interface>(reinterpret_cast<Interface*>(dep), isvc); }},
+                    std::function<void(void*, IService*)>{[svc](void* dep, IService* isvc){ svc->template removeDependencyInstance<Interface>(reinterpret_cast<Interface*>(dep), isvc); }},
                     std::optional<Properties>{}));
         }
 

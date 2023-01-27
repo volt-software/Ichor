@@ -1,6 +1,8 @@
 #pragma once
 
-#include <ichor/dependency_management/Service.h>
+#include <ichor/coroutines/AsyncGenerator.h>
+#include <string_view>
+#include <optional>
 
 namespace Ichor {
     struct RedisAuthReply {

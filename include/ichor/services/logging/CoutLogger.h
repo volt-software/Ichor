@@ -2,14 +2,11 @@
 
 #include <memory>
 #include <ichor/interfaces/IFrameworkLogger.h>
-#include <ichor/dependency_management/Service.h>
 #include <ichor/services/logging/Logger.h>
 
 namespace Ichor {
-    class CoutLogger final : public ILogger, public Service<CoutLogger> {
+    class CoutLogger final : public ILogger {
     public:
-        CoutLogger();
-
         void trace(const char *filename_in, int line_in, const char *funcname_in, std::string_view format_str, fmt::format_args args) final;
         void debug(const char *filename_in, int line_in, const char *funcname_in, std::string_view format_str, fmt::format_args args) final;
         void info(const char *filename_in, int line_in, const char *funcname_in, std::string_view format_str, fmt::format_args args) final;
@@ -20,6 +17,6 @@ namespace Ichor {
         [[nodiscard]] LogLevel getLogLevel() const final;
 
     private:
-        LogLevel _level;
+        LogLevel _level{LogLevel::LOG_WARN};
     };
 }

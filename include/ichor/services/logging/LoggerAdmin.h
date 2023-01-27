@@ -2,6 +2,7 @@
 
 #include <ichor/DependencyManager.h>
 #include <ichor/dependency_management/Service.h>
+#include <ichor/dependency_management/ConstructorInjectionService.h>
 #include <ichor/dependency_management/ILifecycleManager.h>
 #include <ichor/services/logging/Logger.h>
 
@@ -51,7 +52,7 @@ namespace Ichor {
         }
 
         void handleDependencyRequest(ILogger *, DependencyRequestEvent const &evt) {
-            auto logger = _loggers.find(evt.originatingService);
+            auto logger = _loggers.find(evt.originatingService);;
 
             auto requestedLevel = _defaultLevel;
             if(evt.properties.has_value()) {
@@ -61,8 +62,15 @@ namespace Ichor {
             if (logger == end(_loggers)) {
                 Properties props{};
                 props.template emplace<>("Filter", Ichor::make_any<Filter>(Filter{ServiceIdFilterEntry{evt.originatingService}}));
-                auto it = _loggers.emplace(evt.originatingService, Service<LoggerAdmin<LogT>>::getManager().template createServiceManager<LogT, ILogger>(std::move(props)));
-                it.first->second->setLogLevel(requestedLevel);
+                if constexpr (Derived<LogT, IService>) {
+                    auto *newLogger = Service<LoggerAdmin<LogT>>::getManager().template createServiceManager<LogT, ILogger>(std::move(props));
+                    _loggers.emplace(evt.originatingService, newLogger);
+                    newLogger->setLogLevel(requestedLevel);
+                } else {
+                    auto *newLogger = Service<LoggerAdmin<LogT>>::getManager().template createServiceManager<LogT, ILogger>(std::move(props));
+                    _loggers.emplace(evt.originatingService, newLogger);
+                    newLogger->getImplementation()->setLogLevel(requestedLevel);
+                }
             } else {
                 ICHOR_LOG_TRACE(_logger, "svcid {} already has logger", evt.originatingService);
             }
@@ -83,7 +91,7 @@ namespace Ichor {
 
         IFrameworkLogger *_logger{nullptr};
         DependencyTrackerRegistration _loggerTrackerRegistration{};
-        unordered_map<uint64_t, LogT*> _loggers;
+        unordered_map<uint64_t, IService*> _loggers;
         LogLevel _defaultLevel{LogLevel::LOG_ERROR};
     };
 }
