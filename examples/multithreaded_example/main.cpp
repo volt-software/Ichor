@@ -1,7 +1,7 @@
 #include "OneService.h"
 #include "OtherService.h"
 #include <ichor/event_queues/MultimapQueue.h>
-#include <ichor/services/logging/LoggerAdmin.h>
+#include <ichor/services/logging/LoggerFactory.h>
 
 #ifdef ICHOR_USE_SPDLOG
 #include <ichor/services/logging/SpdlogLogger.h>
@@ -33,7 +33,7 @@ int main(int argc, char *argv[]) {
 #ifdef ICHOR_USE_SPDLOG
         dmOne.createServiceManager<SpdlogSharedService, ISpdlogSharedService>();
 #endif
-        dmOne.createServiceManager<LoggerAdmin<LOGGER_TYPE>, ILoggerAdmin>()->setDefaultLogLevel(Ichor::LogLevel::LOG_INFO);
+        dmOne.createServiceManager<LoggerFactory<LOGGER_TYPE>, ILoggerFactory>()->setDefaultLogLevel(Ichor::LogLevel::LOG_INFO);
         dmOne.createServiceManager<OneService>();
         queueOne->start(CaptureSigInt);
     });
@@ -42,7 +42,7 @@ int main(int argc, char *argv[]) {
 #ifdef ICHOR_USE_SPDLOG
         dmTwo.createServiceManager<SpdlogSharedService, ISpdlogSharedService>();
 #endif
-        dmTwo.createServiceManager<LoggerAdmin<LOGGER_TYPE>, ILoggerAdmin>()->setDefaultLogLevel(Ichor::LogLevel::LOG_INFO);
+        dmTwo.createServiceManager<LoggerFactory<LOGGER_TYPE>, ILoggerFactory>()->setDefaultLogLevel(Ichor::LogLevel::LOG_INFO);
         dmTwo.createServiceManager<OtherService>();
         queueTwo->start(CaptureSigInt);
     });

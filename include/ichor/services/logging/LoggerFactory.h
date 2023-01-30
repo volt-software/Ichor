@@ -7,21 +7,21 @@
 #include <ichor/services/logging/Logger.h>
 
 namespace Ichor {
-    struct ILoggerAdmin {
+    struct ILoggerFactory {
         virtual void setDefaultLogLevel(LogLevel level) = 0;
         [[nodiscard]] virtual LogLevel getDefaultLogLevel() const = 0;
 
         protected:
-            ~ILoggerAdmin() = default;
+            ~ILoggerFactory() = default;
     };
 
     template<typename LogT>
-    class LoggerAdmin final : public ILoggerAdmin, public Service<LoggerAdmin<LogT>> {
+    class LoggerFactory final : public ILoggerFactory, public Service<LoggerFactory<LogT>> {
     public:
-        LoggerAdmin(DependencyRegister &reg, Properties props, DependencyManager *mng) : Service<LoggerAdmin<LogT>>(std::move(props), mng), _loggers() {
+        LoggerFactory(DependencyRegister &reg, Properties props, DependencyManager *mng) : Service<LoggerFactory<LogT>>(std::move(props), mng), _loggers() {
             reg.registerDependency<IFrameworkLogger>(this, false);
         }
-        ~LoggerAdmin() final = default;
+        ~LoggerFactory() final = default;
 
 
         void setDefaultLogLevel(LogLevel level) final {
@@ -34,7 +34,7 @@ namespace Ichor {
 
     private:
         AsyncGenerator<tl::expected<void, Ichor::StartError>> start() final {
-            _loggerTrackerRegistration = Service<LoggerAdmin<LogT>>::getManager().template registerDependencyTracker<ILogger>(this);
+            _loggerTrackerRegistration = Service<LoggerFactory<LogT>>::getManager().template registerDependencyTracker<ILogger>(this);
             co_return {};
         }
 
@@ -43,11 +43,11 @@ namespace Ichor {
             co_return;
         }
 
-        void addDependencyInstance(IFrameworkLogger *logger, IService *isvc) noexcept {
+        void addDependencyInstance(IFrameworkLogger *logger, IService *) noexcept {
             _logger = logger;
         }
 
-        void removeDependencyInstance(IFrameworkLogger *logger, IService *isvc) noexcept {
+        void removeDependencyInstance(IFrameworkLogger *, IService *) noexcept {
             _logger = nullptr;
         }
 
@@ -62,15 +62,9 @@ namespace Ichor {
             if (logger == end(_loggers)) {
                 Properties props{};
                 props.template emplace<>("Filter", Ichor::make_any<Filter>(Filter{ServiceIdFilterEntry{evt.originatingService}}));
-                if constexpr (Derived<LogT, IService>) {
-                    auto *newLogger = Service<LoggerAdmin<LogT>>::getManager().template createServiceManager<LogT, ILogger>(std::move(props));
-                    _loggers.emplace(evt.originatingService, newLogger);
-                    newLogger->setLogLevel(requestedLevel);
-                } else {
-                    auto *newLogger = Service<LoggerAdmin<LogT>>::getManager().template createServiceManager<LogT, ILogger>(std::move(props));
-                    _loggers.emplace(evt.originatingService, newLogger);
-                    newLogger->getImplementation()->setLogLevel(requestedLevel);
-                }
+                auto *newLogger = Service<LoggerFactory<LogT>>::getManager().template createServiceManager<LogT, ILogger>(std::move(props));
+                _loggers.emplace(evt.originatingService, newLogger);
+                newLogger->getImplementation()->setLogLevel(requestedLevel);
             } else {
                 ICHOR_LOG_TRACE(_logger, "svcid {} already has logger", evt.originatingService);
             }
@@ -79,9 +73,9 @@ namespace Ichor {
         void handleDependencyUndoRequest(ILogger *, DependencyUndoRequestEvent const &evt) {
             auto service = _loggers.find(evt.originatingService);
             if(service != end(_loggers)) {
-                Service<LoggerAdmin<LogT>>::getManager().template pushEvent<StopServiceEvent>(Service<LoggerAdmin<LogT>>::getServiceId(), service->second->getServiceId());
+                Service<LoggerFactory<LogT>>::getManager().template pushEvent<StopServiceEvent>(Service<LoggerFactory<LogT>>::getServiceId(), service->second->getServiceId());
                 // + 11 because the first stop triggers a dep offline event and inserts a new stop with 10 higher priority.
-                Service<LoggerAdmin<LogT>>::getManager().template pushPrioritisedEvent<RemoveServiceEvent>(Service<LoggerAdmin<LogT>>::getServiceId(), INTERNAL_EVENT_PRIORITY + 11, service->second->getServiceId());
+                Service<LoggerFactory<LogT>>::getManager().template pushPrioritisedEvent<RemoveServiceEvent>(Service<LoggerFactory<LogT>>::getServiceId(), INTERNAL_EVENT_PRIORITY + 11, service->second->getServiceId());
                 _loggers.erase(service);
             }
         }

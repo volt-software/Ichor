@@ -1,7 +1,7 @@
 #include "TestService.h"
 #include "OptionalService.h"
 #include <ichor/event_queues/MultimapQueue.h>
-#include <ichor/services/logging/LoggerAdmin.h>
+#include <ichor/services/logging/LoggerFactory.h>
 #include "GlobalRealtimeSettings.h"
 
 #if defined(NDEBUG)
@@ -37,7 +37,7 @@ void* run_example(void*) {
     {
         auto queue = std::make_unique<MultimapQueue>();
         auto &dm = queue->createManager();
-        dm.createServiceManager<LoggerAdmin<LOGGER_TYPE>, ILoggerAdmin>()->setDefaultLogLevel(Ichor::LogLevel::LOG_INFO);
+        dm.createServiceManager<LoggerFactory<LOGGER_TYPE>, ILoggerFactory>()->setDefaultLogLevel(Ichor::LogLevel::LOG_INFO);
         dm.createServiceManager<OptionalService, IOptionalService>();
         dm.createServiceManager<OptionalService, IOptionalService>();
         dm.createServiceManager<TestService>();

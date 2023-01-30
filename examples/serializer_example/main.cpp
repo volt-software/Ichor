@@ -1,7 +1,7 @@
 #include "TestService.h"
 #include "../common/TestMsgRapidJsonSerializer.h"
 #include <ichor/event_queues/MultimapQueue.h>
-#include <ichor/services/logging/LoggerAdmin.h>
+#include <ichor/services/logging/LoggerFactory.h>
 #include <ichor/services/serialization/ISerializer.h>
 
 #ifdef ICHOR_USE_SPDLOG
@@ -24,7 +24,7 @@ int main(int argc, char *argv[]) {
 #ifdef ICHOR_USE_SPDLOG
     dm.createServiceManager<SpdlogSharedService, ISpdlogSharedService>();
 #endif
-    dm.createServiceManager<LoggerAdmin<LOGGER_TYPE>, ILoggerAdmin>()->setDefaultLogLevel(Ichor::LogLevel::LOG_INFO);
+    dm.createServiceManager<LoggerFactory<LOGGER_TYPE>, ILoggerFactory>()->setDefaultLogLevel(Ichor::LogLevel::LOG_INFO);
     dm.createServiceManager<TestMsgRapidJsonSerializer, ISerializer<TestMsg>>();
     dm.createServiceManager<TestService>();
     queue->start(CaptureSigInt);
