@@ -3,7 +3,7 @@
 #include "../common/lyra.hpp"
 #include <ichor/services/logging/NullLogger.h>
 #include <ichor/event_queues/MultimapQueue.h>
-#include <ichor/services/logging/LoggerAdmin.h>
+#include <ichor/services/logging/LoggerFactory.h>
 #include <ichor/services/network/ws/WsHostService.h>
 #include <ichor/services/network/ws/WsConnectionService.h>
 #include <ichor/services/network/ClientAdmin.h>
@@ -88,9 +88,9 @@ int main(int argc, char *argv[]) {
     }
 
     if(silent) {
-        dm.createServiceManager<LoggerAdmin<NullLogger>, ILoggerAdmin>();
+        dm.createServiceManager<LoggerFactory<NullLogger>, ILoggerFactory>();
     } else {
-        auto *admin = dm.createServiceManager<LoggerAdmin<LOGGER_TYPE>, ILoggerAdmin>();
+        auto *admin = dm.createServiceManager<LoggerFactory<LOGGER_TYPE>, ILoggerFactory>();
         setLevel(verbosity, admin->getImplementation());
     }
     dm.createServiceManager<TestMsgRapidJsonSerializer, ISerializer<TestMsg>>();

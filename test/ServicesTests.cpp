@@ -10,7 +10,7 @@
 #include "TestServices/ConstructorInjectionTestService.h"
 #include <ichor/event_queues/MultimapQueue.h>
 #include <ichor/events/RunFunctionEvent.h>
-#include <ichor/services/logging/LoggerAdmin.h>
+#include <ichor/services/logging/LoggerFactory.h>
 #include <ichor/services/logging/CoutLogger.h>
 #include <ichor/dependency_management/ConstructorInjectionService.h>
 
@@ -262,7 +262,7 @@ TEST_CASE("ServicesTests") {
         uint64_t svcId{};
 
         std::thread t([&]() {
-            dm.createServiceManager<LoggerAdmin<CoutLogger>, ILoggerAdmin>();
+            dm.createServiceManager<LoggerFactory<CoutLogger>, ILoggerFactory>();
             svcId = dm.createServiceManager<RequestsLoggingService, IRequestsLoggingService>()->getServiceId();
             queue->start(CaptureSigInt);
         });
@@ -296,7 +296,7 @@ TEST_CASE("ServicesTests") {
         uint64_t svcId{};
 
         std::thread t([&]() {
-            dm.createServiceManager<LoggerAdmin<CoutLogger>, ILoggerAdmin>();
+            dm.createServiceManager<LoggerFactory<CoutLogger>, ILoggerFactory>();
             dm.createServiceManager<DependencyService<false>, ICountService>();
             svcId = dm.createServiceManager<ConstructorInjectionTestService>()->getServiceId();
             queue->start(CaptureSigInt);

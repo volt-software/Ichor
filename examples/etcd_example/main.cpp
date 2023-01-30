@@ -1,6 +1,6 @@
 #include "UsingEtcdService.h"
 #include <ichor/event_queues/MultimapQueue.h>
-#include <ichor/services/logging/LoggerAdmin.h>
+#include <ichor/services/logging/LoggerFactory.h>
 #include <ichor/services/etcd/EtcdService.h>
 
 #ifdef ICHOR_USE_SPDLOG

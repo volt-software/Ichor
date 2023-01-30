@@ -1,5 +1,5 @@
 #include <ichor/event_queues/MultimapQueue.h>
-#include <ichor/services/logging/LoggerAdmin.h>
+#include <ichor/services/logging/LoggerFactory.h>
 #include <ichor/services/metrics/EventStatisticsService.h>
 #include "UsingStatisticsService.h"
 
@@ -26,7 +26,7 @@ int main(int argc, char *argv[]) {
 #ifdef ICHOR_USE_SPDLOG
     dm.createServiceManager<SpdlogSharedService, ISpdlogSharedService>();
 #endif
-    dm.createServiceManager<LoggerAdmin<LOGGER_TYPE>, ILoggerAdmin>()->setDefaultLogLevel(Ichor::LogLevel::LOG_INFO);
+    dm.createServiceManager<LoggerFactory<LOGGER_TYPE>, ILoggerFactory>()->setDefaultLogLevel(Ichor::LogLevel::LOG_INFO);
     dm.createServiceManager<EventStatisticsService, IEventStatisticsService>(Properties{{"ShowStatisticsOnStop", make_any<bool>(true)}});
     dm.createServiceManager<UsingStatisticsService>();
     queue->start(CaptureSigInt);

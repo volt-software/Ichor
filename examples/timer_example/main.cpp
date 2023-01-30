@@ -1,6 +1,6 @@
 #include "UsingTimerService.h"
 #include <ichor/event_queues/MultimapQueue.h>
-#include <ichor/services/logging/LoggerAdmin.h>
+#include <ichor/services/logging/LoggerFactory.h>
 
 #ifdef ICHOR_USE_SPDLOG
 #include <ichor/services/logging/SpdlogLogger.h>
@@ -24,7 +24,7 @@ int main(int argc, char *argv[]) {
 #ifdef ICHOR_USE_SPDLOG
     dm.createServiceManager<SpdlogSharedService, ISpdlogSharedService>();
 #endif
-    dm.createServiceManager<LoggerAdmin<LOGGER_TYPE>, ILoggerAdmin>()->setDefaultLogLevel(Ichor::LogLevel::LOG_INFO);
+    dm.createServiceManager<LoggerFactory<LOGGER_TYPE>, ILoggerFactory>()->setDefaultLogLevel(Ichor::LogLevel::LOG_INFO);
     dm.createServiceManager<UsingTimerService>();
     dm.createServiceManager<UsingTimerService>();
     queue->start(CaptureSigInt);
