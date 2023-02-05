@@ -43,6 +43,11 @@ Ichor::SpdlogFrameworkLogger::SpdlogFrameworkLogger(Properties props, Dependency
         // spinlock
     }
 
+    auto logLevelProp = getProperties().find("LogLevel");
+    if(logLevelProp != end(getProperties())) {
+        setLogLevel(Ichor::any_cast<LogLevel>(logLevelProp->second));
+    }
+
     SPDLOG_TRACE("SpdlogFrameworkLogger constructor");
 }
 

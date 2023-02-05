@@ -2,8 +2,6 @@
 
 #include <ichor/DependencyManager.h>
 #include <ichor/dependency_management/Service.h>
-#include <ichor/dependency_management/ConstructorInjectionService.h>
-#include <ichor/dependency_management/ILifecycleManager.h>
 #include <ichor/services/logging/Logger.h>
 
 namespace Ichor {
@@ -18,8 +16,13 @@ namespace Ichor {
     template<typename LogT>
     class LoggerFactory final : public ILoggerFactory, public Service<LoggerFactory<LogT>> {
     public:
-        LoggerFactory(DependencyRegister &reg, Properties props, DependencyManager *mng) : Service<LoggerFactory<LogT>>(std::move(props), mng), _loggers() {
+        LoggerFactory(DependencyRegister &reg, Properties props, DependencyManager *mng) : Service<LoggerFactory<LogT>>(std::move(props), mng) {
             reg.registerDependency<IFrameworkLogger>(this, false);
+
+            auto logLevelProp = Service<LoggerFactory<LogT>>::getProperties().find("DefaultLogLevel");
+            if(logLevelProp != end(Service<LoggerFactory<LogT>>::getProperties())) {
+                setDefaultLogLevel(Ichor::any_cast<LogLevel>(logLevelProp->second));
+            }
         }
         ~LoggerFactory() final = default;
 
@@ -52,19 +55,20 @@ namespace Ichor {
         }
 
         void handleDependencyRequest(ILogger *, DependencyRequestEvent const &evt) {
-            auto logger = _loggers.find(evt.originatingService);;
+            auto logger = _loggers.find(evt.originatingService);
 
-            auto requestedLevel = _defaultLevel;
-            if(evt.properties.has_value()) {
-                auto requestedLevelIt = evt.properties.value()->find("LogLevel");
-                requestedLevel = requestedLevelIt != end(*evt.properties.value()) ? Ichor::any_cast<LogLevel>(requestedLevelIt->second) : requestedLevel;
-            }
             if (logger == end(_loggers)) {
+                auto requestedLevel = _defaultLevel;
+                if(evt.properties.has_value()) {
+                    auto requestedLevelIt = evt.properties.value()->find("LogLevel");
+                    requestedLevel = requestedLevelIt != end(*evt.properties.value()) ? Ichor::any_cast<LogLevel>(requestedLevelIt->second) : requestedLevel;
+                }
+
                 Properties props{};
                 props.template emplace<>("Filter", Ichor::make_any<Filter>(Filter{ServiceIdFilterEntry{evt.originatingService}}));
+                props.template emplace<>("DefaultLogLevel", Ichor::make_any<LogLevel>(requestedLevel));
                 auto *newLogger = Service<LoggerFactory<LogT>>::getManager().template createServiceManager<LogT, ILogger>(std::move(props));
                 _loggers.emplace(evt.originatingService, newLogger);
-                newLogger->getImplementation()->setLogLevel(requestedLevel);
             } else {
                 ICHOR_LOG_TRACE(_logger, "svcid {} already has logger", evt.originatingService);
             }

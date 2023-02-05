@@ -219,13 +219,6 @@ namespace Ichor {
             return buf;
         }
 
-        [[nodiscard]] T* getImplementation() noexcept {
-            if(_serviceState < ServiceState::INJECTING) {
-                std::terminate();
-            }
-            return reinterpret_cast<T*>(buf);
-        }
-
         // checked by IsConstructorInjector concept, to help with function overload resolution
         static constexpr bool ConstructorInjector = true;
 
@@ -312,6 +305,13 @@ namespace Ichor {
         template <typename depT>
         void removeDependencyInstance(depT*, IService *) {
             _deps.erase(typeNameHash<depT>());
+        }
+
+        [[nodiscard]] T* getImplementation() noexcept {
+            if(_serviceState < ServiceState::INJECTING) {
+                std::terminate();
+            }
+            return reinterpret_cast<T*>(buf);
         }
 
 

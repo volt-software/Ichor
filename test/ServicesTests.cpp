@@ -298,7 +298,9 @@ TEST_CASE("ServicesTests") {
         std::thread t([&]() {
             dm.createServiceManager<LoggerFactory<CoutLogger>, ILoggerFactory>();
             dm.createServiceManager<DependencyService<false>, ICountService>();
-            svcId = dm.createServiceManager<ConstructorInjectionTestService>()->getServiceId();
+            auto *service = dm.createServiceManager<ConstructorInjectionTestService, IConstructorInjectionTestService>();
+            svcId = service->getServiceId();
+            static_assert(std::is_same_v<decltype(service), IService*>, "");
             queue->start(CaptureSigInt);
         });
 
@@ -308,6 +310,9 @@ TEST_CASE("ServicesTests") {
 
         dm.pushEvent<RunFunctionEvent>(0, [&](DependencyManager& mng) {
             REQUIRE(mng.getServiceCount() == 4);
+            auto svcs = mng.getAllServicesOfType<IConstructorInjectionTestService>();
+            REQUIRE(svcs.size() == 1);
+            REQUIRE(svcs[0]->getServiceId() == svcId);
 
             mng.pushEvent<StopServiceEvent>(0, svcId);
             // + 11 because the first stop triggers a dep offline event and inserts a new stop with 10 higher priority.

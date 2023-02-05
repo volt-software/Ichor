@@ -158,10 +158,10 @@ if(NOT WIN32)
     target_compile_options(ichor PUBLIC -fwrapv)
 else()
     #msvc sets some stupid defaults. We can do better.
-    # d2SSAOptimizer-: treat arithmetic overflow as defined behaviour (like fwrapv)
-    # try d2UndefIntOverflow-
+    # d2UndefIntOverflow-: treat arithmetic overflow as defined behaviour (like fwrapv)
+    # if that doesn't work, we can always try d2SSAOptimizer-
     set(CMAKE_CXX_FLAGS "/W4")
-    target_compile_options(ichor PUBLIC /nologo /DWIN32 /D_WINDOWS /EHsc /TP /await:strict /std:c++latest /wd4100 /d2SSAOptimizer- /permissive- /Zc:throwingNew /Zc:__cplusplus /Zc:preprocessor /volatile:iso /Zc:inline /Zc:referenceBinding /Zc:strictStrings /Zc:templateScope /utf-8 /vd0)
+    target_compile_options(ichor PUBLIC /nologo /DWIN32 /D_WINDOWS /EHsc /TP /await:strict /std:c++latest /wd4100 /d2UndefIntOverflow- /permissive- /Zc:throwingNew /Zc:__cplusplus /Zc:preprocessor /volatile:iso /Zc:inline /Zc:referenceBinding /Zc:strictStrings /Zc:templateScope /utf-8 /vd0)
     target_compile_options(ichor PUBLIC /bigobj) #some files, like WsConnectionService with sanitizers enabled, need more addressable sections
     target_compile_definitions(ichor PUBLIC NOMINMAX WIN32_LEAN_AND_MEAN )
 endif()

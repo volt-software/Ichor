@@ -26,7 +26,7 @@ int main(int argc, char *argv[]) {
 #ifdef ICHOR_USE_SPDLOG
     dm.createServiceManager<SpdlogSharedService, ISpdlogSharedService>();
 #endif
-    dm.createServiceManager<LoggerFactory<LOGGER_TYPE>, ILoggerFactory>()->setDefaultLogLevel(Ichor::LogLevel::LOG_INFO);
+    dm.createServiceManager<LoggerFactory<LOGGER_TYPE>, ILoggerFactory>(Properties{{"DefaultLogLevel", Ichor::make_any<LogLevel>(LogLevel::LOG_INFO)}});
     dm.createServiceManager<TestService>(Properties{{"scope", Ichor::make_any<std::string>("one"s)}});
     dm.createServiceManager<TestService>(Properties{{"scope", Ichor::make_any<std::string>("two"s)}});
     dm.createServiceManager<TrackerService>();

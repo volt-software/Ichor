@@ -4,7 +4,10 @@
 #include "DependencyService.h"
 
 using namespace Ichor;
-struct IConstructorInjectionTestService {};
+struct IConstructorInjectionTestService {
+    virtual ~IConstructorInjectionTestService() {}
+    [[nodiscard]] virtual uint64_t getServiceId() const noexcept = 0;
+};
 
 struct ConstructorInjectionTestService final : public IConstructorInjectionTestService {
     ConstructorInjectionTestService(ILogger *logSvc, ICountService *countSvc) {
@@ -19,5 +22,17 @@ struct ConstructorInjectionTestService final : public IConstructorInjectionTestS
         if(!countSvc->isRunning()) {
             std::terminate();
         }
+
+        auto *self = GetThreadLocalManager().getIServiceForImplementation(this);
+        if(self == nullptr) {
+            std::terminate();
+        }
+        _serviceId = self->getServiceId();
     }
+
+    [[nodiscard]] uint64_t getServiceId() const noexcept final {
+        return _serviceId;
+    }
+
+    uint64_t _serviceId{};
 };

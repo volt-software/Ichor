@@ -8,6 +8,11 @@
 
 Ichor::SpdlogLogger::SpdlogLogger(DependencyRegister &reg, Properties props, DependencyManager *mng) : Service(std::move(props), mng) {
     reg.registerDependency<ISpdlogSharedService>(this, true);
+
+    auto logLevelProp = getProperties().find("LogLevel");
+    if(logLevelProp != end(getProperties())) {
+        setLogLevel(Ichor::any_cast<LogLevel>(logLevelProp->second));
+    }
 }
 
 void Ichor::SpdlogLogger::trace(const char *filename_in, int line_in, const char *funcname_in,
