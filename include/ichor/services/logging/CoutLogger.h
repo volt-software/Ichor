@@ -2,11 +2,14 @@
 
 #include <memory>
 #include <ichor/interfaces/IFrameworkLogger.h>
+#include <ichor/dependency_management/Service.h>
 #include <ichor/services/logging/Logger.h>
 
 namespace Ichor {
-    class CoutLogger final : public ILogger {
+    class CoutLogger final : public ILogger, public Service<CoutLogger> {
     public:
+        CoutLogger(Properties props, DependencyManager *mng);
+
         void trace(const char *filename_in, int line_in, const char *funcname_in, std::string_view format_str, fmt::format_args args) final;
         void debug(const char *filename_in, int line_in, const char *funcname_in, std::string_view format_str, fmt::format_args args) final;
         void info(const char *filename_in, int line_in, const char *funcname_in, std::string_view format_str, fmt::format_args args) final;

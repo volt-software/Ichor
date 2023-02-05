@@ -102,7 +102,7 @@ namespace Ichor {
 #if (!defined(WIN32) && !defined(_WIN32) && !defined(__WIN32)) || defined(__CYGWIN__)
         requires ImplementsAll<Impl, Interfaces...>
 #endif
-        ConstructorInjectionService<Impl>* createServiceManager() {
+        IService* createServiceManager() {
             return createConstructorInjectorServiceManager<Impl, Interfaces...>(Properties{}, INTERNAL_EVENT_PRIORITY);
         }
 
@@ -111,7 +111,7 @@ namespace Ichor {
 #if (!defined(WIN32) && !defined(_WIN32) && !defined(__WIN32)) || defined(__CYGWIN__)
         requires ImplementsAll<Impl, Interfaces...>
 #endif
-        ConstructorInjectionService<Impl>* createServiceManager(Properties&& properties, uint64_t priority = INTERNAL_EVENT_PRIORITY) {
+        IService* createServiceManager(Properties&& properties, uint64_t priority = INTERNAL_EVENT_PRIORITY) {
             return createConstructorInjectorServiceManager<Impl, Interfaces...>(std::move(properties), priority);
         }
 
@@ -120,7 +120,7 @@ namespace Ichor {
 #if (!defined(WIN32) && !defined(_WIN32) && !defined(__WIN32)) || defined(__CYGWIN__)
         requires ImplementsAll<Impl, Interfaces...>
 #endif
-        ConstructorInjectionService<Impl>* createConstructorInjectorServiceManager(Properties&& properties, uint64_t priority = INTERNAL_EVENT_PRIORITY) {
+        IService* createConstructorInjectorServiceManager(Properties&& properties, uint64_t priority = INTERNAL_EVENT_PRIORITY) {
             return internalCreateServiceManager<ConstructorInjectionService<Impl>, Interfaces...>(std::move(properties), priority);
         }
 
@@ -649,7 +649,7 @@ namespace Ichor {
             return _eventIdCounter.fetch_add(1, std::memory_order_acq_rel);
         }
 
-        [[nodiscard]] IService const * getIServiceForSelf(void const *ptr) const noexcept {
+        [[nodiscard]] IService const * getIServiceForImplementation(void const *ptr) const noexcept {
             for(auto &[k, svc] : _services) {
                 if(svc->getTypedServicePtr() == ptr) {
                     return svc->getIService();
@@ -657,6 +657,10 @@ namespace Ichor {
             }
 
             std::terminate();
+        }
+
+        [[nodiscard]] AsyncGenerator<void> waitForStarted(IService *svc) {
+            co_await waitForService(svc->getServiceId(), DependencyOnlineEvent::TYPE).begin();
         }
 
     private:

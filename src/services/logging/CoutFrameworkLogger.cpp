@@ -4,6 +4,11 @@
 
 Ichor::CoutFrameworkLogger::CoutFrameworkLogger() : IFrameworkLogger(), Service(), _level(LogLevel::LOG_WARN) {
     std::cout << "CoutFrameworkLogger constructor\n";
+
+    auto logLevelProp = getProperties().find("LogLevel");
+    if(logLevelProp != end(getProperties())) {
+        setLogLevel(Ichor::any_cast<LogLevel>(logLevelProp->second));
+    }
 }
 
 void Ichor::CoutFrameworkLogger::trace(const char *filename_in, int line_in, const char *funcname_in,

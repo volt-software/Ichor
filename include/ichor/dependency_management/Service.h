@@ -95,10 +95,6 @@ namespace Ichor {
             return this;
         }
 
-        [[nodiscard]] T* getImplementation() noexcept {
-            return static_cast<T*>(this);
-        }
-
     protected:
         [[nodiscard]] virtual AsyncGenerator<tl::expected<void, StartError>> start() {
             co_return {};
@@ -204,6 +200,9 @@ namespace Ichor {
             _servicePriority = priority;
         }
 
+        [[nodiscard]] T* getImplementation() noexcept {
+            return static_cast<T*>(this);
+        }
 
         uint64_t _serviceId;
         uint64_t _servicePriority;

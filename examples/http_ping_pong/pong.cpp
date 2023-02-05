@@ -26,26 +26,6 @@
 using namespace std::string_literals;
 using namespace Ichor;
 
-template <typename Logger>
-void setLevel(uint64_t verbosity, Logger *logger) {
-    Ichor::LogLevel level{Ichor::LogLevel::LOG_ERROR};
-    if(verbosity == 1) {
-        level = Ichor::LogLevel::LOG_WARN;
-    } else if(verbosity == 2) {
-        level = Ichor::LogLevel::LOG_INFO;
-    } else if(verbosity == 3) {
-        level = Ichor::LogLevel::LOG_DEBUG;
-    } else if(verbosity >= 4) {
-        level = Ichor::LogLevel::LOG_TRACE;
-    }
-
-    if constexpr(Derived<Logger, IFrameworkLogger>) {
-        logger->setLogLevel(level);
-    } else {
-        logger->setDefaultLogLevel(level);
-    }
-}
-
 int main(int argc, char *argv[]) {
     std::locale::global(std::locale("en_US.UTF-8"));
 
@@ -74,6 +54,17 @@ int main(int argc, char *argv[]) {
         return 0;
     }
 
+    Ichor::LogLevel level{Ichor::LogLevel::LOG_ERROR};
+    if(verbosity == 1) {
+        level = Ichor::LogLevel::LOG_WARN;
+    } else if(verbosity == 2) {
+        level = Ichor::LogLevel::LOG_INFO;
+    } else if(verbosity == 3) {
+        level = Ichor::LogLevel::LOG_DEBUG;
+    } else if(verbosity >= 4) {
+        level = Ichor::LogLevel::LOG_TRACE;
+    }
+
     auto start = std::chrono::steady_clock::now();
     auto queue = std::make_unique<MultimapQueue>(spinlock);
     auto &dm = queue->createManager();
@@ -83,15 +74,13 @@ int main(int argc, char *argv[]) {
 #endif
 
     if(verbosity > 0) {
-        auto *logger = dm.createServiceManager<FRAMEWORK_LOGGER_TYPE, IFrameworkLogger>();
-        setLevel(verbosity, logger->getImplementation());
+        dm.createServiceManager<FRAMEWORK_LOGGER_TYPE, IFrameworkLogger>(Properties{{"LogLevel", Ichor::make_any<LogLevel>(level)}});
     }
 
     if(silent) {
         dm.createServiceManager<LoggerFactory<NullLogger>, ILoggerFactory>();
     } else {
-        auto *admin = dm.createServiceManager<LoggerFactory<LOGGER_TYPE>, ILoggerFactory>();
-        setLevel(verbosity, admin->getImplementation());
+        dm.createServiceManager<LoggerFactory<LOGGER_TYPE>, ILoggerFactory>(Properties{{"DefaultLogLevel", Ichor::make_any<LogLevel>(level)}});
     }
 
     dm.createServiceManager<PingMsgJsonSerializer, ISerializer<PingMsg>>();
