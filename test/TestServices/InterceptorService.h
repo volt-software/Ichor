@@ -1,6 +1,6 @@
 #pragma once
 
-#include <ichor/dependency_management/Service.h>
+#include <ichor/dependency_management/AdvancedService.h>
 #include <ichor/events/Event.h>
 
 using namespace Ichor;
@@ -15,7 +15,7 @@ protected:
 };
 
 template <Derived<Event> InterceptorT, bool allowProcessing = true>
-struct InterceptorService final : public IInterceptorService, public Service<InterceptorService<InterceptorT, allowProcessing>> {
+struct InterceptorService final : public IInterceptorService, public AdvancedService<InterceptorService<InterceptorT, allowProcessing>> {
     InterceptorService() = default;
 
     AsyncGenerator<tl::expected<void, Ichor::StartError>> start() final {

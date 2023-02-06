@@ -1,6 +1,6 @@
 #pragma once
 
-#include <ichor/dependency_management/Service.h>
+#include <ichor/dependency_management/AdvancedService.h>
 #include <ichor/events/Event.h>
 #include <ichor/events/RunFunctionEvent.h>
 #include <ichor/coroutines/AsyncAutoResetEvent.h>
@@ -9,7 +9,7 @@ using namespace Ichor;
 
 extern std::unique_ptr<Ichor::AsyncAutoResetEvent> _autoEvt;
 
-struct MultipleAwaitService final : public Service<MultipleAwaitService> {
+struct MultipleAwaitService final : public AdvancedService<MultipleAwaitService> {
     MultipleAwaitService() = default;
     ~MultipleAwaitService() final = default;
 

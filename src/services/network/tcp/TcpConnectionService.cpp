@@ -9,7 +9,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 
-Ichor::TcpConnectionService::TcpConnectionService(DependencyRegister &reg, Properties props, DependencyManager *mng) : Service(std::move(props), mng), _socket(-1), _attempts(), _priority(INTERNAL_EVENT_PRIORITY),  _quit() {
+Ichor::TcpConnectionService::TcpConnectionService(DependencyRegister &reg, Properties props, DependencyManager *mng) : AdvancedService(std::move(props), mng), _socket(-1), _attempts(), _priority(INTERNAL_EVENT_PRIORITY), _quit() {
     reg.registerDependency<ILogger>(this, true);
 }
 

@@ -1,12 +1,12 @@
 #pragma once
 
-#include <ichor/dependency_management/Service.h>
+#include <ichor/dependency_management/AdvancedService.h>
 #include <ichor/events/Event.h>
 #include "../TestEvents.h"
 
 using namespace Ichor;
 
-struct AddEventHandlerDuringEventHandlingService final : public Service<AddEventHandlerDuringEventHandlingService> {
+struct AddEventHandlerDuringEventHandlingService final : public AdvancedService<AddEventHandlerDuringEventHandlingService> {
     AddEventHandlerDuringEventHandlingService() = default;
 
     AsyncGenerator<tl::expected<void, Ichor::StartError>> start() final {

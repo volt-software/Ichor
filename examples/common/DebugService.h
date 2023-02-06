@@ -3,7 +3,7 @@
 #include <ichor/DependencyManager.h>
 #include <ichor/services/timer/TimerService.h>
 #include <ichor/services/logging/Logger.h>
-#include <ichor/dependency_management/Service.h>
+#include <ichor/dependency_management/AdvancedService.h>
 #include "TestMsg.h"
 
 using namespace Ichor;

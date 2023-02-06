@@ -1,6 +1,6 @@
 #pragma once
 
-#include <ichor/dependency_management/Service.h>
+#include <ichor/dependency_management/AdvancedService.h>
 
 using namespace Ichor;
 
@@ -8,7 +8,7 @@ struct IGeneratorService {
     virtual ~IGeneratorService() = default;
     virtual AsyncGenerator<int> infinite_int() = 0;
 };
-struct GeneratorService final : public IGeneratorService, public Service<GeneratorService> {
+struct GeneratorService final : public IGeneratorService, public AdvancedService<GeneratorService> {
     GeneratorService() = default;
     ~GeneratorService() final = default;
 

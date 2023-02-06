@@ -3,7 +3,7 @@
 #include <chrono>
 #include <ichor/DependencyManager.h>
 #include <ichor/services/logging/Logger.h>
-#include <ichor/dependency_management/Service.h>
+#include <ichor/dependency_management/AdvancedService.h>
 #include <ichor/dependency_management/ILifecycleManager.h>
 
 #if defined(__SANITIZE_ADDRESS__)
@@ -14,9 +14,9 @@ constexpr uint32_t START_STOP_COUNT = 1'000'000;
 
 using namespace Ichor;
 
-class StartStopService final : public Service<StartStopService> {
+class StartStopService final : public AdvancedService<StartStopService> {
 public:
-    StartStopService(DependencyRegister &reg, Properties props, DependencyManager *mng) : Service(std::move(props), mng) {
+    StartStopService(DependencyRegister &reg, Properties props, DependencyManager *mng) : AdvancedService(std::move(props), mng) {
         reg.registerDependency<ILogger>(this, true);
         reg.registerDependency<ITestService>(this, true);
     }

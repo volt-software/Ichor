@@ -4,7 +4,7 @@
 #include <ichor/services/network/http/HttpHostService.h>
 #include <ichor/services/network/http/HttpScopeGuards.h>
 
-Ichor::HttpHostService::HttpHostService(DependencyRegister &reg, Properties props, DependencyManager *mng) : Service(std::move(props), mng) {
+Ichor::HttpHostService::HttpHostService(DependencyRegister &reg, Properties props, DependencyManager *mng) : AdvancedService(std::move(props), mng) {
     reg.registerDependency<ILogger>(this, true);
     reg.registerDependency<IAsioContextService>(this, true);
 }

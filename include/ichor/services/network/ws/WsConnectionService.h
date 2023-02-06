@@ -27,7 +27,7 @@ namespace Ichor {
         };
     }
 
-    class WsConnectionService final : public IConnectionService, public Service<WsConnectionService> {
+    class WsConnectionService final : public IConnectionService, public AdvancedService<WsConnectionService> {
     public:
         WsConnectionService(DependencyRegister &reg, Properties props, DependencyManager *mng);
         ~WsConnectionService() final = default;

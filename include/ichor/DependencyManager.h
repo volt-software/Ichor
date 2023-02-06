@@ -12,7 +12,7 @@
 #include <mutex>
 #include <shared_mutex>
 #include <ichor/interfaces/IFrameworkLogger.h>
-#include <ichor/dependency_management/Service.h>
+#include <ichor/dependency_management/AdvancedService.h>
 #include <ichor/dependency_management/ILifecycleManager.h>
 #include <ichor/events/InternalEvents.h>
 #include <ichor/coroutines/IGenerator.h>
@@ -79,7 +79,7 @@ namespace Ichor {
             stop();
         }
 
-        template<DerivedTemplated<Service> Impl, typename... Interfaces>
+        template<DerivedTemplated<AdvancedService> Impl, typename... Interfaces>
         // msvc compiler bug, see https://developercommunity.visualstudio.com/t/c20-Friend-definition-of-class-with-re/10197302
 #if (!defined(WIN32) && !defined(_WIN32) && !defined(__WIN32)) || defined(__CYGWIN__)
         requires ImplementsAll<Impl, Interfaces...>
@@ -88,7 +88,7 @@ namespace Ichor {
             return internalCreateServiceManager<Impl, Interfaces...>(Properties{});
         }
 
-        template<DerivedTemplated<Service> Impl, typename... Interfaces>
+        template<DerivedTemplated<AdvancedService> Impl, typename... Interfaces>
         // msvc compiler bug, see https://developercommunity.visualstudio.com/t/c20-Friend-definition-of-class-with-re/10197302
 #if (!defined(WIN32) && !defined(_WIN32) && !defined(__WIN32)) || defined(__CYGWIN__)
         requires ImplementsAll<Impl, Interfaces...>
@@ -337,7 +337,7 @@ namespace Ichor {
 
         template <typename Interface, typename Impl>
 #if (!defined(WIN32) && !defined(_WIN32) && !defined(__WIN32)) || defined(__CYGWIN__)
-        requires DerivedTemplated<Impl, Service> && ImplementsTrackingHandlers<Impl, Interface>
+        requires DerivedTemplated<Impl, AdvancedService> && ImplementsTrackingHandlers<Impl, Interface>
 #endif
         [[nodiscard]]
         /// Register handlers for when dependencies get requested/unrequested

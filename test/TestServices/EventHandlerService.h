@@ -1,6 +1,6 @@
 #pragma once
 
-#include <ichor/dependency_management/Service.h>
+#include <ichor/dependency_management/AdvancedService.h>
 #include <ichor/events/Event.h>
 
 using namespace Ichor;
@@ -13,7 +13,7 @@ protected:
 };
 
 template <Derived<Event> EventT>
-struct EventHandlerService final : public IEventHandlerService, public Service<EventHandlerService<EventT>> {
+struct EventHandlerService final : public IEventHandlerService, public AdvancedService<EventHandlerService<EventT>> {
     EventHandlerService() = default;
 
     AsyncGenerator<tl::expected<void, Ichor::StartError>> start() final {

@@ -1,6 +1,6 @@
 #pragma once
 
-#include <ichor/dependency_management/Service.h>
+#include <ichor/dependency_management/AdvancedService.h>
 #include <ichor/events/Event.h>
 #include <ichor/events/RunFunctionEvent.h>
 #include <ichor/coroutines/AsyncManualResetEvent.h>
@@ -28,7 +28,7 @@ struct AwaitNoCopy{
     static uint64_t countMoved;
 };
 
-struct AwaitReturnService final : public Service<AwaitReturnService> {
+struct AwaitReturnService final : public AdvancedService<AwaitReturnService> {
     AwaitReturnService() = default;
     ~AwaitReturnService() final = default;
 

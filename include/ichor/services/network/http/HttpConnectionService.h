@@ -28,7 +28,7 @@ namespace Ichor {
         };
     }
 
-    class HttpConnectionService final : public IHttpConnectionService, public Service<HttpConnectionService> {
+    class HttpConnectionService final : public IHttpConnectionService, public AdvancedService<HttpConnectionService> {
     public:
         HttpConnectionService(DependencyRegister &reg, Properties props, DependencyManager *mng);
         ~HttpConnectionService() final = default;

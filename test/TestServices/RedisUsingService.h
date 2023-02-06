@@ -1,14 +1,14 @@
 #pragma once
 
-#include <ichor/dependency_management/Service.h>
+#include <ichor/dependency_management/AdvancedService.h>
 #include <ichor/services/redis/IRedis.h>
 
 namespace Ichor {
     struct IRedisUsingService {
     };
 
-    struct RedisUsingService final : public IRedisUsingService, public Service<RedisUsingService> {
-        RedisUsingService(DependencyRegister &reg, Properties props, DependencyManager *mng) : Service(std::move(props), mng) {
+    struct RedisUsingService final : public IRedisUsingService, public AdvancedService<RedisUsingService> {
+        RedisUsingService(DependencyRegister &reg, Properties props, DependencyManager *mng) : AdvancedService(std::move(props), mng) {
             reg.registerDependency<IRedis>(this, true);
         }
 

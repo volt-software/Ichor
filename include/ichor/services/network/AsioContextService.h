@@ -30,7 +30,7 @@ namespace Ichor {
         ~IAsioContextService() = default;
     };
 
-    class AsioContextService final : public IAsioContextService, public Service<AsioContextService> {
+    class AsioContextService final : public IAsioContextService, public AdvancedService<AsioContextService> {
     public:
         AsioContextService(DependencyRegister &reg, Properties props, DependencyManager *mng);
         ~AsioContextService() final;

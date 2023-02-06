@@ -4,11 +4,11 @@
 #include <vector>
 #include <memory>
 #include <ichor/interfaces/IFrameworkLogger.h>
-#include <ichor/dependency_management/Service.h>
+#include <ichor/dependency_management/AdvancedService.h>
 
 namespace Ichor {
 
-    class CoutFrameworkLogger final : public IFrameworkLogger, public Service<CoutFrameworkLogger> {
+    class CoutFrameworkLogger final : public IFrameworkLogger, public AdvancedService<CoutFrameworkLogger> {
     public:
         CoutFrameworkLogger();
         ~CoutFrameworkLogger() final = default;

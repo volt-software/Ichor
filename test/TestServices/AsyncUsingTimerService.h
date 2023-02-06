@@ -2,15 +2,15 @@
 
 #include <ichor/DependencyManager.h>
 #include <ichor/services/timer/TimerService.h>
-#include <ichor/dependency_management/Service.h>
+#include <ichor/dependency_management/AdvancedService.h>
 #include <ichor/dependency_management/ILifecycleManager.h>
 #include "AwaitService.h"
 
 using namespace Ichor;
 
-class AsyncUsingTimerService final : public Service<AsyncUsingTimerService> {
+class AsyncUsingTimerService final : public AdvancedService<AsyncUsingTimerService> {
 public:
-    AsyncUsingTimerService(DependencyRegister &reg, Properties props, DependencyManager *mng) : Service(std::move(props), mng) {
+    AsyncUsingTimerService(DependencyRegister &reg, Properties props, DependencyManager *mng) : AdvancedService(std::move(props), mng) {
         reg.registerDependency<IAwaitService>(this, true);
     }
     ~AsyncUsingTimerService() final = default;

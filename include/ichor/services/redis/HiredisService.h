@@ -9,7 +9,7 @@
 #include <hiredis/hiredis.h>
 
 namespace Ichor {
-    class HiredisService final : public IRedis, public Service<HiredisService> {
+    class HiredisService final : public IRedis, public AdvancedService<HiredisService> {
     public:
         HiredisService(DependencyRegister &reg, Properties props, DependencyManager *mng);
         ~HiredisService() override = default;

@@ -2,7 +2,7 @@
 
 #include <ichor/DependencyManager.h>
 #include <ichor/services/logging/Logger.h>
-#include <ichor/dependency_management/Service.h>
+#include <ichor/dependency_management/AdvancedService.h>
 #include <ichor/services/serialization/ISerializer.h>
 #include <ichor/dependency_management/ILifecycleManager.h>
 #include "PingMsg.h"
@@ -11,7 +11,7 @@
 
 using namespace Ichor;
 
-class PingMsgJsonSerializer final : public ISerializer<PingMsg>, public Service<PingMsgJsonSerializer> {
+class PingMsgJsonSerializer final : public ISerializer<PingMsg>, public AdvancedService<PingMsgJsonSerializer> {
 public:
     PingMsgJsonSerializer() = default;
     ~PingMsgJsonSerializer() final = default;

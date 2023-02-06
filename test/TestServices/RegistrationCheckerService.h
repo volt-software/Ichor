@@ -4,8 +4,8 @@
 
 using namespace Ichor;
 
-struct RegistrationCheckerService final : public Service<RegistrationCheckerService> {
-    RegistrationCheckerService(DependencyRegister &reg, Properties props, DependencyManager *mng) : Service(std::move(props), mng) {
+struct RegistrationCheckerService final : public AdvancedService<RegistrationCheckerService> {
+    RegistrationCheckerService(DependencyRegister &reg, Properties props, DependencyManager *mng) : AdvancedService(std::move(props), mng) {
         bool threwException{};
 
         reg.registerDependency<IUselessService>(this, false);

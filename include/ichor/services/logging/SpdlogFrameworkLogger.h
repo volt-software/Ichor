@@ -3,11 +3,11 @@
 #ifdef ICHOR_USE_SPDLOG
 
 #include <ichor/interfaces/IFrameworkLogger.h>
-#include <ichor/dependency_management/Service.h>
+#include <ichor/dependency_management/AdvancedService.h>
 
 namespace Ichor {
 
-    class SpdlogFrameworkLogger final : public IFrameworkLogger, public Service<SpdlogFrameworkLogger> {
+    class SpdlogFrameworkLogger final : public IFrameworkLogger, public AdvancedService<SpdlogFrameworkLogger> {
     public:
         SpdlogFrameworkLogger(Properties props, DependencyManager *mng);
         ~SpdlogFrameworkLogger() final = default;

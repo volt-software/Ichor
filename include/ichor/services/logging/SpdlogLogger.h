@@ -4,7 +4,7 @@
 
 #include <memory>
 #include <ichor/interfaces/IFrameworkLogger.h>
-#include <ichor/dependency_management/Service.h>
+#include <ichor/dependency_management/AdvancedService.h>
 #include <ichor/services/logging/Logger.h>
 #include <ichor/services/logging/SpdlogSharedService.h>
 
@@ -13,7 +13,7 @@ namespace spdlog {
 }
 
 namespace Ichor {
-    class SpdlogLogger final : public ILogger, public Service<SpdlogLogger> {
+    class SpdlogLogger final : public ILogger, public AdvancedService<SpdlogLogger> {
     public:
         SpdlogLogger(DependencyRegister &reg, Properties props, DependencyManager *mng);
 

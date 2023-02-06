@@ -36,7 +36,7 @@ namespace Ichor {
     }
 }
 
-Ichor::SpdlogFrameworkLogger::SpdlogFrameworkLogger(Properties props, DependencyManager *mng) : Service(std::move(props), mng), _level(LogLevel::LOG_WARN) {
+Ichor::SpdlogFrameworkLogger::SpdlogFrameworkLogger(Properties props, DependencyManager *mng) : AdvancedService(std::move(props), mng), _level(LogLevel::LOG_WARN) {
     _setup_spdlog();
 
     while(!_logger_set.load(std::memory_order_acquire)) {

@@ -6,16 +6,16 @@
 #include <ichor/services/network/NetworkEvents.h>
 #include <ichor/services/network/IConnectionService.h>
 #include <ichor/services/network/IHostService.h>
-#include <ichor/dependency_management/Service.h>
+#include <ichor/dependency_management/AdvancedService.h>
 #include <ichor/dependency_management/ILifecycleManager.h>
 #include <ichor/services/serialization/ISerializer.h>
 #include "../common/TestMsg.h"
 
 using namespace Ichor;
 
-class UsingWsService final : public Service<UsingWsService> {
+class UsingWsService final : public AdvancedService<UsingWsService> {
 public:
-    UsingWsService(DependencyRegister &reg, Properties props, DependencyManager *mng) : Service(std::move(props), mng) {
+    UsingWsService(DependencyRegister &reg, Properties props, DependencyManager *mng) : AdvancedService(std::move(props), mng) {
         reg.registerDependency<ILogger>(this, true);
         reg.registerDependency<ISerializer<TestMsg>>(this, true);
         reg.registerDependency<IConnectionService>(this, true, getProperties());

@@ -8,7 +8,7 @@
 #include <ichor/services/network/NetworkEvents.h>
 #include <ichor/services/network/http/HttpScopeGuards.h>
 
-Ichor::WsHostService::WsHostService(DependencyRegister &reg, Properties props, DependencyManager *mng) : Service(std::move(props), mng) {
+Ichor::WsHostService::WsHostService(DependencyRegister &reg, Properties props, DependencyManager *mng) : AdvancedService(std::move(props), mng) {
     reg.registerDependency<ILogger>(this, true);
     reg.registerDependency<IAsioContextService>(this, true);
 }

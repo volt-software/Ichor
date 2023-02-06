@@ -1,6 +1,6 @@
 #pragma once
 
-#include <ichor/dependency_management/Service.h>
+#include <ichor/dependency_management/AdvancedService.h>
 #include "UselessService.h"
 
 namespace Ichor {
@@ -10,7 +10,7 @@ namespace Ichor {
         ~IFailOnStartService() = default;
     };
 
-    struct FailOnStartService final : public IFailOnStartService, public Service<FailOnStartService> {
+    struct FailOnStartService final : public IFailOnStartService, public AdvancedService<FailOnStartService> {
         FailOnStartService() = default;
         ~FailOnStartService() final = default;
 
@@ -30,8 +30,8 @@ namespace Ichor {
         uint64_t startCount{};
     };
 
-    struct FailOnStartWithDependenciesService final : public IFailOnStartService, public Service<FailOnStartWithDependenciesService> {
-        FailOnStartWithDependenciesService(DependencyRegister &reg, Properties props, DependencyManager *mng) : Service(std::move(props), mng) {
+    struct FailOnStartWithDependenciesService final : public IFailOnStartService, public AdvancedService<FailOnStartWithDependenciesService> {
+        FailOnStartWithDependenciesService(DependencyRegister &reg, Properties props, DependencyManager *mng) : AdvancedService(std::move(props), mng) {
             reg.registerDependency<IUselessService>(this, true);
         }
         ~FailOnStartWithDependenciesService() final = default;

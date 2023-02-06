@@ -5,16 +5,16 @@
 #include <ichor/services/timer/TimerService.h>
 #include <ichor/services/network/NetworkEvents.h>
 #include <ichor/services/network/IConnectionService.h>
-#include <ichor/dependency_management/Service.h>
+#include <ichor/dependency_management/AdvancedService.h>
 #include <ichor/dependency_management/ILifecycleManager.h>
 #include <ichor/services/serialization/ISerializer.h>
 #include "../common/TestMsg.h"
 
 using namespace Ichor;
 
-class UsingTcpService final : public Service<UsingTcpService> {
+class UsingTcpService final : public AdvancedService<UsingTcpService> {
 public:
-    UsingTcpService(DependencyRegister &reg, Properties props, DependencyManager *mng) : Service(std::move(props), mng) {
+    UsingTcpService(DependencyRegister &reg, Properties props, DependencyManager *mng) : AdvancedService(std::move(props), mng) {
         reg.registerDependency<ILogger>(this, true);
         reg.registerDependency<ISerializer<TestMsg>>(this, true);
         reg.registerDependency<IConnectionService>(this, true, getProperties());

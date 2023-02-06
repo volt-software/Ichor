@@ -1,16 +1,16 @@
 #pragma once
 
 #include <ichor/dependency_management/Dependency.h>
-#include <ichor/dependency_management/Service.h>
+#include <ichor/dependency_management/AdvancedService.h>
 #include <optional>
 #include <stdexcept>
 
 namespace Ichor {
     struct DependencyRegister final {
-        template<typename Interface, DerivedTemplated<Service> Impl>
+        template<typename Interface, DerivedTemplated<AdvancedService> Impl>
         void registerDependency(Impl *svc, bool required, std::optional<Properties> props = {}) {
             static_assert(!std::is_same_v<Interface, Impl>, "Impl and interface need to be separate classes");
-            static_assert(!DerivedTemplated<Interface, Service>, "Interface needs to be a non-service class.");
+            static_assert(!DerivedTemplated<Interface, AdvancedService>, "Interface needs to be a non-service class.");
 
             if constexpr (DO_INTERNAL_DEBUG || DO_HARDENING) {
                 if (_registrations.contains(typeNameHash<Interface>())) [[unlikely]] {

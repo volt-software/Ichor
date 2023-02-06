@@ -3,14 +3,14 @@
 #include <ichor/DependencyManager.h>
 #include <ichor/services/logging/Logger.h>
 #include <ichor/services/timer/TimerService.h>
-#include <ichor/dependency_management/Service.h>
+#include <ichor/dependency_management/AdvancedService.h>
 #include <ichor/dependency_management/ILifecycleManager.h>
 
 using namespace Ichor;
 
-class UsingStatisticsService final : public Service<UsingStatisticsService> {
+class UsingStatisticsService final : public AdvancedService<UsingStatisticsService> {
 public:
-    UsingStatisticsService(DependencyRegister &reg, Properties props, DependencyManager *mng) : Service(std::move(props), mng) {
+    UsingStatisticsService(DependencyRegister &reg, Properties props, DependencyManager *mng) : AdvancedService(std::move(props), mng) {
         reg.registerDependency<ILogger>(this, true);
     }
     ~UsingStatisticsService() final = default;

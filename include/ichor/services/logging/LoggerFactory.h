@@ -1,7 +1,7 @@
 #pragma once
 
 #include <ichor/DependencyManager.h>
-#include <ichor/dependency_management/Service.h>
+#include <ichor/dependency_management/AdvancedService.h>
 #include <ichor/services/logging/Logger.h>
 
 namespace Ichor {
@@ -14,13 +14,13 @@ namespace Ichor {
     };
 
     template<typename LogT>
-    class LoggerFactory final : public ILoggerFactory, public Service<LoggerFactory<LogT>> {
+    class LoggerFactory final : public ILoggerFactory, public AdvancedService<LoggerFactory<LogT>> {
     public:
-        LoggerFactory(DependencyRegister &reg, Properties props, DependencyManager *mng) : Service<LoggerFactory<LogT>>(std::move(props), mng) {
+        LoggerFactory(DependencyRegister &reg, Properties props, DependencyManager *mng) : AdvancedService<LoggerFactory<LogT>>(std::move(props), mng) {
             reg.registerDependency<IFrameworkLogger>(this, false);
 
-            auto logLevelProp = Service<LoggerFactory<LogT>>::getProperties().find("DefaultLogLevel");
-            if(logLevelProp != end(Service<LoggerFactory<LogT>>::getProperties())) {
+            auto logLevelProp = AdvancedService<LoggerFactory<LogT>>::getProperties().find("DefaultLogLevel");
+            if(logLevelProp != end(AdvancedService<LoggerFactory<LogT>>::getProperties())) {
                 setDefaultLogLevel(Ichor::any_cast<LogLevel>(logLevelProp->second));
             }
         }
@@ -37,7 +37,7 @@ namespace Ichor {
 
     private:
         AsyncGenerator<tl::expected<void, Ichor::StartError>> start() final {
-            _loggerTrackerRegistration = Service<LoggerFactory<LogT>>::getManager().template registerDependencyTracker<ILogger>(this);
+            _loggerTrackerRegistration = AdvancedService<LoggerFactory<LogT>>::getManager().template registerDependencyTracker<ILogger>(this);
             co_return {};
         }
 
@@ -67,7 +67,7 @@ namespace Ichor {
                 Properties props{};
                 props.template emplace<>("Filter", Ichor::make_any<Filter>(Filter{ServiceIdFilterEntry{evt.originatingService}}));
                 props.template emplace<>("DefaultLogLevel", Ichor::make_any<LogLevel>(requestedLevel));
-                auto *newLogger = Service<LoggerFactory<LogT>>::getManager().template createServiceManager<LogT, ILogger>(std::move(props));
+                auto *newLogger = AdvancedService<LoggerFactory<LogT>>::getManager().template createServiceManager<LogT, ILogger>(std::move(props));
                 _loggers.emplace(evt.originatingService, newLogger);
             } else {
                 ICHOR_LOG_TRACE(_logger, "svcid {} already has logger", evt.originatingService);
@@ -77,9 +77,9 @@ namespace Ichor {
         void handleDependencyUndoRequest(ILogger *, DependencyUndoRequestEvent const &evt) {
             auto service = _loggers.find(evt.originatingService);
             if(service != end(_loggers)) {
-                Service<LoggerFactory<LogT>>::getManager().template pushEvent<StopServiceEvent>(Service<LoggerFactory<LogT>>::getServiceId(), service->second->getServiceId());
+                AdvancedService<LoggerFactory<LogT>>::getManager().template pushEvent<StopServiceEvent>(AdvancedService<LoggerFactory<LogT>>::getServiceId(), service->second->getServiceId());
                 // + 11 because the first stop triggers a dep offline event and inserts a new stop with 10 higher priority.
-                Service<LoggerFactory<LogT>>::getManager().template pushPrioritisedEvent<RemoveServiceEvent>(Service<LoggerFactory<LogT>>::getServiceId(), INTERNAL_EVENT_PRIORITY + 11, service->second->getServiceId());
+                AdvancedService<LoggerFactory<LogT>>::getManager().template pushPrioritisedEvent<RemoveServiceEvent>(AdvancedService<LoggerFactory<LogT>>::getServiceId(), INTERNAL_EVENT_PRIORITY + 11, service->second->getServiceId());
                 _loggers.erase(service);
             }
         }

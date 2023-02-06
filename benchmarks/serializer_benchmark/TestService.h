@@ -3,7 +3,7 @@
 #include <chrono>
 #include <ichor/DependencyManager.h>
 #include <ichor/services/logging/Logger.h>
-#include <ichor/dependency_management/Service.h>
+#include <ichor/dependency_management/AdvancedService.h>
 #include <ichor/services/serialization/ISerializer.h>
 #include <ichor/dependency_management/ILifecycleManager.h>
 #include "../../examples/common/TestMsg.h"
@@ -17,9 +17,9 @@ constexpr uint32_t SERDE_COUNT = 5'000'000;
 using namespace Ichor;
 extern uint64_t sizeof_test;
 
-class TestService final : public Service<TestService> {
+class TestService final : public AdvancedService<TestService> {
 public:
-    TestService(DependencyRegister &reg, Properties props, DependencyManager *mng) : Service(std::move(props), mng) {
+    TestService(DependencyRegister &reg, Properties props, DependencyManager *mng) : AdvancedService(std::move(props), mng) {
         reg.registerDependency<ILogger>(this, true);
         reg.registerDependency<ISerializer<TestMsg>>(this, true);
     }

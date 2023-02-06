@@ -11,7 +11,7 @@ namespace Ichor {
     /// \tparam IFaces
     template<class ServiceType, typename... IFaces>
 #if (!defined(WIN32) && !defined(_WIN32) && !defined(__WIN32)) || defined(__CYGWIN__)
-    requires DerivedTemplated<ServiceType, Service> || IsConstructorInjector<ServiceType>
+    requires DerivedTemplated<ServiceType, AdvancedService> || IsConstructorInjector<ServiceType>
 #endif
     class LifecycleManager final : public ILifecycleManager {
     public:
