@@ -18,7 +18,7 @@ namespace net = boost::asio;            // from <boost/asio.hpp>
 using tcp = boost::asio::ip::tcp;       // from <boost/asio/ip/tcp.hpp>
 
 namespace Ichor {
-    class WsHostService final : public IHostService, public Service<WsHostService> {
+    class WsHostService final : public IHostService, public AdvancedService<WsHostService> {
     public:
         WsHostService(DependencyRegister &reg, Properties props, DependencyManager *mng);
         ~WsHostService() final = default;

@@ -7,7 +7,7 @@
 #include <ichor/services/network/http/IHttpConnectionService.h>
 #include <ichor/services/network/http/IHttpService.h>
 #include <ichor/events/RunFunctionEvent.h>
-#include <ichor/dependency_management/Service.h>
+#include <ichor/dependency_management/AdvancedService.h>
 #include <ichor/dependency_management/ILifecycleManager.h>
 #include <ichor/services/serialization/ISerializer.h>
 #include "../examples/common/TestMsg.h"
@@ -19,9 +19,9 @@ extern std::atomic<bool> evtGate;
 extern std::thread::id testThreadId;
 extern std::thread::id dmThreadId;
 
-class HttpThreadService final : public Service<HttpThreadService> {
+class HttpThreadService final : public AdvancedService<HttpThreadService> {
 public:
-    HttpThreadService(DependencyRegister &reg, Properties props, DependencyManager *mng) : Service(std::move(props), mng) {
+    HttpThreadService(DependencyRegister &reg, Properties props, DependencyManager *mng) : AdvancedService(std::move(props), mng) {
         reg.registerDependency<ISerializer<TestMsg>>(this, true);
         reg.registerDependency<IHttpConnectionService>(this, true, getProperties());
         reg.registerDependency<IHttpService>(this, true);

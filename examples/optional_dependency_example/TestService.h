@@ -2,15 +2,15 @@
 
 #include <ichor/DependencyManager.h>
 #include <ichor/services/logging/Logger.h>
-#include <ichor/dependency_management/Service.h>
+#include <ichor/dependency_management/AdvancedService.h>
 #include <ichor/dependency_management/ILifecycleManager.h>
 #include "OptionalService.h"
 
 using namespace Ichor;
 
-class TestService final : public Service<TestService> {
+class TestService final : public AdvancedService<TestService> {
 public:
-    TestService(DependencyRegister &reg, Properties props, DependencyManager *mng) : Service(std::move(props), mng) {
+    TestService(DependencyRegister &reg, Properties props, DependencyManager *mng) : AdvancedService(std::move(props), mng) {
         reg.registerDependency<ILogger>(this, true);
         reg.registerDependency<IOptionalService>(this, false);
     }

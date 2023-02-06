@@ -3,7 +3,7 @@
 #ifdef ICHOR_USE_SPDLOG
 
 #include <vector>
-#include <ichor/dependency_management/Service.h>
+#include <ichor/dependency_management/AdvancedService.h>
 
 namespace spdlog::sinks {
     class sink;
@@ -17,7 +17,7 @@ namespace Ichor {
         ~ISpdlogSharedService() = default;
     };
 
-    class SpdlogSharedService final : public ISpdlogSharedService, public Service<SpdlogSharedService> {
+    class SpdlogSharedService final : public ISpdlogSharedService, public AdvancedService<SpdlogSharedService> {
     public:
         SpdlogSharedService() = default;
         ~SpdlogSharedService() final = default;

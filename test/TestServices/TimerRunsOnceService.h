@@ -2,12 +2,12 @@
 
 #include <ichor/DependencyManager.h>
 #include <ichor/services/timer/TimerService.h>
-#include <ichor/dependency_management/Service.h>
+#include <ichor/dependency_management/AdvancedService.h>
 #include <ichor/dependency_management/ILifecycleManager.h>
 
 using namespace Ichor;
 
-class TimerRunsOnceService final : public Service<TimerRunsOnceService> {
+class TimerRunsOnceService final : public AdvancedService<TimerRunsOnceService> {
 public:
     TimerRunsOnceService() = default;
     ~TimerRunsOnceService() final = default;

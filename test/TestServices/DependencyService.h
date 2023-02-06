@@ -12,8 +12,8 @@ protected:
 };
 
 template<bool required>
-struct DependencyService final : public ICountService, public Service<DependencyService<required>> {
-    DependencyService(DependencyRegister &reg, Properties props, DependencyManager *mng) : Service<DependencyService<required>>(std::move(props), mng) {
+struct DependencyService final : public ICountService, public AdvancedService<DependencyService<required>> {
+    DependencyService(DependencyRegister &reg, Properties props, DependencyManager *mng) : AdvancedService<DependencyService<required>>(std::move(props), mng) {
         reg.registerDependency<IUselessService>(this, required);
     }
     ~DependencyService() final = default;

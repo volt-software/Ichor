@@ -4,7 +4,7 @@
 #include <ichor/services/logging/Logger.h>
 
 #include <utility>
-#include <ichor/dependency_management/Service.h>
+#include <ichor/dependency_management/AdvancedService.h>
 #include <ichor/dependency_management/ILifecycleManager.h>
 #include "RuntimeCreatedService.h"
 
@@ -24,9 +24,9 @@ public:
     const std::string scope;
 };
 
-class TrackerService final : public Service<TrackerService> {
+class TrackerService final : public AdvancedService<TrackerService> {
 public:
-    TrackerService(DependencyRegister &reg, Properties props, DependencyManager *mng) : Service(std::move(props), mng) {
+    TrackerService(DependencyRegister &reg, Properties props, DependencyManager *mng) : AdvancedService(std::move(props), mng) {
         reg.registerDependency<ILogger>(this, true);
     }
     ~TrackerService() final = default;

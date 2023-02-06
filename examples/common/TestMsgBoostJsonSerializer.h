@@ -4,7 +4,7 @@
 
 #include <ichor/DependencyManager.h>
 #include <ichor/services/logging/Logger.h>
-#include <ichor/dependency_management/Service.h>
+#include <ichor/dependency_management/AdvancedService.h>
 #include <ichor/services/serialization/ISerializer.h>
 #include <ichor/dependency_management/ILifecycleManager.h>
 #include "TestMsg.h"
@@ -22,7 +22,7 @@
 
 using namespace Ichor;
 
-class TestMsgBoostJsonSerializer final : public ISerializer<TestMsg>, public Service<TestMsgBoostJsonSerializer> {
+class TestMsgBoostJsonSerializer final : public ISerializer<TestMsg>, public AdvancedService<TestMsgBoostJsonSerializer> {
 public:
     TestMsgBoostJsonSerializer() = default;
     ~TestMsgBoostJsonSerializer() final = default;

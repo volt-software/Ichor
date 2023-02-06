@@ -1,6 +1,6 @@
 #pragma once
 
-#include <ichor/dependency_management/Service.h>
+#include <ichor/dependency_management/AdvancedService.h>
 
 namespace Ichor {
     class IHostService {

@@ -17,7 +17,7 @@ namespace Ichor {
         static constexpr std::string_view NAME = Ichor::typeName<NewSocketEvent>();
     };
 
-    class TcpHostService final : public IHostService, public Service<TcpHostService> {
+    class TcpHostService final : public IHostService, public AdvancedService<TcpHostService> {
     public:
         TcpHostService(DependencyRegister &reg, Properties props, DependencyManager *mng);
         ~TcpHostService() final = default;

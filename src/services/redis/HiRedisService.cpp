@@ -83,7 +83,7 @@ namespace Ichor {
     }
 }
 
-Ichor::HiredisService::HiredisService(DependencyRegister &reg, Properties props, DependencyManager *mng) : Service<HiredisService>(std::move(props), mng) {
+Ichor::HiredisService::HiredisService(DependencyRegister &reg, Properties props, DependencyManager *mng) : AdvancedService<HiredisService>(std::move(props), mng) {
     reg.registerDependency<ILogger>(this, true);
 }
 

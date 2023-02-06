@@ -12,14 +12,14 @@ using namespace Ichor;
 
 struct IMyService {}; // the interface
 
-struct MyService final : public IMyService, public Ichor::Service<MyService> {
+struct MyService final : public IMyService, public Ichor::AdvancedService<MyService> {
     MyService() = default;
 }; // a minimal implementation
 
 struct IMyDependencyService {};
 
-struct MyDependencyService final : public IMyDependencyService, public Ichor::Service<MyDependencyService> {
-    MyDependencyService(Ichor::DependencyRegister &reg, Ichor::Properties props, Ichor::DependencyManager *mng) : Ichor::Service<MyDependencyService>(std::move(props), mng) {
+struct MyDependencyService final : public IMyDependencyService, public Ichor::AdvancedService<MyDependencyService> {
+    MyDependencyService(Ichor::DependencyRegister &reg, Ichor::Properties props, Ichor::DependencyManager *mng) : Ichor::AdvancedService<MyDependencyService>(std::move(props), mng) {
         reg.registerDependency<IMyService>(this, true);
     }
     ~MyDependencyService() final = default;
@@ -34,7 +34,7 @@ struct MyDependencyService final : public IMyDependencyService, public Ichor::Se
 
 struct IMyTimerService {};
 
-struct MyTimerService final : public IMyTimerService, public Ichor::Service<MyTimerService> {
+struct MyTimerService final : public IMyTimerService, public Ichor::AdvancedService<MyTimerService> {
     MyTimerService() = default;
     AsyncGenerator<tl::expected<void, Ichor::StartError>> start() final {
         auto timer = getManager().createServiceManager<Ichor::Timer, Ichor::ITimer>();
@@ -65,11 +65,11 @@ int example() {
     return 0;
 }
 
-struct ServiceWithoutInterface final : public Ichor::Service<ServiceWithoutInterface> {
+struct ServiceWithoutInterface final : public Ichor::AdvancedService<ServiceWithoutInterface> {
     ServiceWithoutInterface() = default;
 };
 
-struct MyInterceptorService final : public Ichor::Service<MyInterceptorService> {
+struct MyInterceptorService final : public Ichor::AdvancedService<MyInterceptorService> {
     AsyncGenerator<tl::expected<void, Ichor::StartError>> start() final {
         _interceptor = this->getManager().template registerEventInterceptor<Ichor::RunFunctionEventAsync>(this); // Can change TimerEvent to just Event if you want to intercept *all* events
         co_return {};

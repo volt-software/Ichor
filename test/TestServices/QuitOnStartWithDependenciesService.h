@@ -4,8 +4,8 @@
 
 using namespace Ichor;
 
-struct QuitOnStartWithDependenciesService final : public Service<QuitOnStartWithDependenciesService> {
-    QuitOnStartWithDependenciesService(DependencyRegister &reg, Properties props, DependencyManager *mng) : Service(std::move(props), mng) {
+struct QuitOnStartWithDependenciesService final : public AdvancedService<QuitOnStartWithDependenciesService> {
+    QuitOnStartWithDependenciesService(DependencyRegister &reg, Properties props, DependencyManager *mng) : AdvancedService(std::move(props), mng) {
         reg.registerDependency<IUselessService>(this, true);
     }
     ~QuitOnStartWithDependenciesService() final = default;

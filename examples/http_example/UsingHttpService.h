@@ -7,16 +7,16 @@
 #include <ichor/services/network/http/IHttpConnectionService.h>
 #include <ichor/services/network/http/IHttpService.h>
 #include <ichor/events/RunFunctionEvent.h>
-#include <ichor/dependency_management/Service.h>
+#include <ichor/dependency_management/AdvancedService.h>
 #include <ichor/dependency_management/ILifecycleManager.h>
 #include <ichor/services/serialization/ISerializer.h>
 #include "../common/TestMsg.h"
 
 using namespace Ichor;
 
-class UsingHttpService final : public Service<UsingHttpService> {
+class UsingHttpService final : public AdvancedService<UsingHttpService> {
 public:
-    UsingHttpService(DependencyRegister &reg, Properties props, DependencyManager *mng) : Service(std::move(props), mng) {
+    UsingHttpService(DependencyRegister &reg, Properties props, DependencyManager *mng) : AdvancedService(std::move(props), mng) {
         reg.registerDependency<ILogger>(this, true);
         reg.registerDependency<ISerializer<TestMsg>>(this, true);
         reg.registerDependency<IHttpConnectionService>(this, true, getProperties());

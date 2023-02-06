@@ -7,7 +7,7 @@
 #include <ichor/services/timer/TimerService.h>
 
 namespace Ichor {
-    class TcpConnectionService final : public IConnectionService, public Service<TcpConnectionService> {
+    class TcpConnectionService final : public IConnectionService, public AdvancedService<TcpConnectionService> {
     public:
         TcpConnectionService(DependencyRegister &reg, Properties props, DependencyManager *mng);
         ~TcpConnectionService() final = default;

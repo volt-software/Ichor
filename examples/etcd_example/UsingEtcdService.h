@@ -3,7 +3,7 @@
 #include <ichor/DependencyManager.h>
 #include <ichor/services/logging/Logger.h>
 #include <ichor/services/etcd/IEtcdService.h>
-#include <ichor/dependency_management/Service.h>
+#include <ichor/dependency_management/AdvancedService.h>
 #include <ichor/dependency_management/ILifecycleManager.h>
 
 using namespace Ichor;

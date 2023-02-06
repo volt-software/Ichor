@@ -1,6 +1,6 @@
 #pragma once
 
-#include <ichor/dependency_management/Service.h>
+#include <ichor/dependency_management/AdvancedService.h>
 #include <ichor/events/Event.h>
 #include <ichor/coroutines/AsyncManualResetEvent.h>
 
@@ -20,7 +20,7 @@ struct IAwaitService {
     virtual ~IAwaitService() = default;
     virtual AsyncGenerator<void> await_something() = 0;
 };
-struct AwaitService final : public IAwaitService, public Service<AwaitService> {
+struct AwaitService final : public IAwaitService, public AdvancedService<AwaitService> {
     AwaitService() = default;
     ~AwaitService() final = default;
 
@@ -30,7 +30,7 @@ struct AwaitService final : public IAwaitService, public Service<AwaitService> {
         co_return;
     }
 };
-struct EventAwaitService final : public Service<EventAwaitService> {
+struct EventAwaitService final : public AdvancedService<EventAwaitService> {
     EventAwaitService() = default;
     ~EventAwaitService() final = default;
     AsyncGenerator<tl::expected<void, Ichor::StartError>> start() final {

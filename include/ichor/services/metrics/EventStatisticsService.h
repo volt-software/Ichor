@@ -1,7 +1,7 @@
 #pragma once
 
 #include <unordered_map>
-#include <ichor/dependency_management/Service.h>
+#include <ichor/dependency_management/AdvancedService.h>
 #include <ichor/services/logging/Logger.h>
 #include <ichor/services/timer/TimerService.h>
 #include <chrono>
@@ -36,7 +36,7 @@ namespace Ichor {
         ~IEventStatisticsService() = default;
     };
 
-    class EventStatisticsService final : public IEventStatisticsService, public Service<EventStatisticsService> {
+    class EventStatisticsService final : public IEventStatisticsService, public AdvancedService<EventStatisticsService> {
     public:
         EventStatisticsService() = default;
         ~EventStatisticsService() final = default;

@@ -27,7 +27,7 @@ namespace Ichor {
         };
     }
 
-    class HttpHostService final : public IHttpService, public Service<HttpHostService> {
+    class HttpHostService final : public IHttpService, public AdvancedService<HttpHostService> {
     public:
         HttpHostService(DependencyRegister &reg, Properties props, DependencyManager *mng);
         ~HttpHostService() final = default;

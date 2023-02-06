@@ -7,7 +7,7 @@
 #include <fmt/xchar.h>
 #endif
 
-Ichor::AsioContextService::AsioContextService(DependencyRegister &reg, Properties props, DependencyManager *mng) : Service(std::move(props), mng) {
+Ichor::AsioContextService::AsioContextService(DependencyRegister &reg, Properties props, DependencyManager *mng) : AdvancedService(std::move(props), mng) {
     if(getProperties().contains("Threads")) {
         _threads = Ichor::any_cast<uint64_t>(getProperties()["Threads"]);
         if(_threads == 0) {

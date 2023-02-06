@@ -2,15 +2,15 @@
 
 #include <ichor/DependencyManager.h>
 #include <ichor/services/logging/Logger.h>
-#include <ichor/dependency_management/Service.h>
+#include <ichor/dependency_management/AdvancedService.h>
 #include <ichor/dependency_management/ILifecycleManager.h>
 #include "CustomEvent.h"
 
 using namespace Ichor;
 
-class OtherService final : public Service<OtherService> {
+class OtherService final : public AdvancedService<OtherService> {
 public:
-    OtherService(DependencyRegister &reg, Properties props, DependencyManager *mng) : Service(std::move(props), mng) {
+    OtherService(DependencyRegister &reg, Properties props, DependencyManager *mng) : AdvancedService(std::move(props), mng) {
         reg.registerDependency<ILogger>(this, true);
     }
     ~OtherService() final = default;

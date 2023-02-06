@@ -2,11 +2,11 @@
 
 #include <memory>
 #include <ichor/interfaces/IFrameworkLogger.h>
-#include <ichor/dependency_management/Service.h>
+#include <ichor/dependency_management/AdvancedService.h>
 #include <ichor/services/logging/Logger.h>
 
 namespace Ichor {
-    class CoutLogger final : public ILogger, public Service<CoutLogger> {
+    class CoutLogger final : public ILogger, public AdvancedService<CoutLogger> {
     public:
         CoutLogger(Properties props, DependencyManager *mng);
 

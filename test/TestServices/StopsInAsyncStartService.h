@@ -1,12 +1,12 @@
 #pragma once
 
-#include <ichor/dependency_management/Service.h>
+#include <ichor/dependency_management/AdvancedService.h>
 
 namespace Ichor {
     struct IStopsInAsyncStartService {
     };
 
-    struct StopsInAsyncStartService final : public IStopsInAsyncStartService, public Service<StopsInAsyncStartService> {
+    struct StopsInAsyncStartService final : public IStopsInAsyncStartService, public AdvancedService<StopsInAsyncStartService> {
         StopsInAsyncStartService() = default;
         ~StopsInAsyncStartService() final = default;
 

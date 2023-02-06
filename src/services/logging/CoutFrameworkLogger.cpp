@@ -2,7 +2,7 @@
 #include <iostream>
 #define FMT_INLINE_BUFFER_SIZE 1024
 
-Ichor::CoutFrameworkLogger::CoutFrameworkLogger() : IFrameworkLogger(), Service(), _level(LogLevel::LOG_WARN) {
+Ichor::CoutFrameworkLogger::CoutFrameworkLogger() : IFrameworkLogger(), AdvancedService(), _level(LogLevel::LOG_WARN) {
     std::cout << "CoutFrameworkLogger constructor\n";
 
     auto logLevelProp = getProperties().find("LogLevel");

@@ -10,7 +10,7 @@ void siginthandler(int param) {
     quit = true;
 }
 
-class SigIntService final : public Service<SigIntService> {
+class SigIntService final : public AdvancedService<SigIntService> {
 public:
     SigIntService() = default;
 

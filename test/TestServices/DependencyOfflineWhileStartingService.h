@@ -1,6 +1,6 @@
 #pragma once
 
-#include <ichor/dependency_management/Service.h>
+#include <ichor/dependency_management/AdvancedService.h>
 #include "UselessService.h"
 
 extern std::unique_ptr<Ichor::AsyncManualResetEvent> _evt;
@@ -9,8 +9,8 @@ namespace Ichor {
     struct IDependencyOfflineWhileStartingService {
     };
 
-    struct DependencyOfflineWhileStartingService final : public IDependencyOfflineWhileStartingService, public Service<DependencyOfflineWhileStartingService> {
-        DependencyOfflineWhileStartingService(DependencyRegister &reg, Properties props, DependencyManager *mng) : Service(std::move(props), mng) {
+    struct DependencyOfflineWhileStartingService final : public IDependencyOfflineWhileStartingService, public AdvancedService<DependencyOfflineWhileStartingService> {
+        DependencyOfflineWhileStartingService(DependencyRegister &reg, Properties props, DependencyManager *mng) : AdvancedService(std::move(props), mng) {
             reg.registerDependency<IUselessService>(this, true);
         }
         ~DependencyOfflineWhileStartingService() final = default;

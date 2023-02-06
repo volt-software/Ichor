@@ -8,16 +8,16 @@
 #include <ichor/services/network/http/IHttpService.h>
 #include <ichor/services/timer/TimerService.h>
 #include <ichor/events/RunFunctionEvent.h>
-#include <ichor/dependency_management/Service.h>
+#include <ichor/dependency_management/AdvancedService.h>
 #include <ichor/dependency_management/ILifecycleManager.h>
 #include <ichor/services/serialization/ISerializer.h>
 #include "PingMsg.h"
 
 using namespace Ichor;
 
-class PingService final : public Service<PingService> {
+class PingService final : public AdvancedService<PingService> {
 public:
-    PingService(DependencyRegister &reg, Properties props, DependencyManager *mng) : Service(std::move(props), mng) {
+    PingService(DependencyRegister &reg, Properties props, DependencyManager *mng) : AdvancedService(std::move(props), mng) {
         reg.registerDependency<ILogger>(this, true, Properties{{"LogLevel", Ichor::make_any<LogLevel>(LogLevel::LOG_INFO)}});
         reg.registerDependency<ISerializer<PingMsg>>(this, true);
         reg.registerDependency<IHttpConnectionService>(this, true, getProperties());

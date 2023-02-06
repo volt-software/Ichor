@@ -1,7 +1,7 @@
 #pragma once
 
 #include <variant>
-#include <ichor/dependency_management/Service.h>
+#include <ichor/dependency_management/AdvancedService.h>
 #include "DependencyService.h"
 
 using namespace Ichor;
@@ -14,37 +14,37 @@ struct IMixTwo {
     virtual ~IMixTwo() = default;
     virtual uint32_t two() = 0;
 };
-struct MixServiceOne final : public IMixOne, public IMixTwo, public Service<MixServiceOne> {
+struct MixServiceOne final : public IMixOne, public IMixTwo, public AdvancedService<MixServiceOne> {
     MixServiceOne() = default;
     ~MixServiceOne() final = default;
     uint32_t one() final { return 1; }
     uint32_t two() final { return 2; }
 };
-struct MixServiceTwo final : public IMixTwo, public IMixOne, public Service<MixServiceTwo> {
+struct MixServiceTwo final : public IMixTwo, public IMixOne, public AdvancedService<MixServiceTwo> {
     MixServiceTwo() = default;
     ~MixServiceTwo() final = default;
     uint32_t one() final { return 3; }
     uint32_t two() final { return 4; }
 };
-struct MixServiceThree final : public IMixTwo, public Service<MixServiceThree>, public IMixOne {
+struct MixServiceThree final : public IMixTwo, public AdvancedService<MixServiceThree>, public IMixOne {
     MixServiceThree() = default;
     ~MixServiceThree() final = default;
     uint32_t one() final { return 5; }
     uint32_t two() final { return 6; }
 };
-struct MixServiceFour final : public Service<MixServiceFour>, public IMixTwo, public IMixOne {
+struct MixServiceFour final : public AdvancedService<MixServiceFour>, public IMixTwo, public IMixOne {
     MixServiceFour() = default;
     ~MixServiceFour() final = default;
     uint32_t one() final { return 7; }
     uint32_t two() final { return 8; }
 };
-struct MixServiceFive final : public Service<MixServiceFive>, public IMixOne, public IMixTwo {
+struct MixServiceFive final : public AdvancedService<MixServiceFive>, public IMixOne, public IMixTwo {
     MixServiceFive() = default;
     ~MixServiceFive() final = default;
     uint32_t one() final { return 9; }
     uint32_t two() final { return 10; }
 };
-struct MixServiceSix final : public IMixOne, public Service<MixServiceSix>, public IMixTwo {
+struct MixServiceSix final : public IMixOne, public AdvancedService<MixServiceSix>, public IMixTwo {
     MixServiceSix() = default;
     ~MixServiceSix() final = default;
     uint32_t one() final { return 11; }
@@ -56,8 +56,8 @@ struct Handle {
     std::variant<IMixOne*, IMixTwo*> iface{};
 };
 
-struct CheckMixService final : public ICountService, public Service<CheckMixService> {
-    CheckMixService(DependencyRegister &reg, Properties props, DependencyManager *mng) : Service<CheckMixService>(std::move(props), mng) {
+struct CheckMixService final : public ICountService, public AdvancedService<CheckMixService> {
+    CheckMixService(DependencyRegister &reg, Properties props, DependencyManager *mng) : AdvancedService<CheckMixService>(std::move(props), mng) {
         reg.registerDependency<IMixOne>(this, false);
         reg.registerDependency<IMixTwo>(this, false);
     }

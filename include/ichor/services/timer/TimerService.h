@@ -1,6 +1,6 @@
 #pragma once
 
-#include <ichor/dependency_management/Service.h>
+#include <ichor/dependency_management/AdvancedService.h>
 #include <thread>
 #include <ichor/services/timer/ITimer.h>
 #include <ichor/events/RunFunctionEvent.h>
@@ -8,7 +8,7 @@
 namespace Ichor {
 
     // Rather shoddy implementation, setting the interval does not reset the insertEventLoop function and the sleep_for is sketchy at best.
-    class Timer final : public ITimer, public Service<Timer> {
+    class Timer final : public ITimer, public AdvancedService<Timer> {
     public:
         Timer() noexcept = default;
 
