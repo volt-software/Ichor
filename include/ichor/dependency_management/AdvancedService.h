@@ -1,10 +1,11 @@
 #pragma once
 
 #include <ichor/Concepts.h>
-#include <ichor/coroutines/AsyncGenerator.h>
+#include <ichor/coroutines/Task.h>
 #include <ichor/dependency_management/DependencyInfo.h>
 #include <ichor/dependency_management/IService.h>
 #include <tl/expected.h>
+#include <atomic>
 
 namespace Ichor {
 
@@ -96,11 +97,11 @@ namespace Ichor {
         }
 
     protected:
-        [[nodiscard]] virtual AsyncGenerator<tl::expected<void, StartError>> start() {
+        [[nodiscard]] virtual Task<tl::expected<void, StartError>> start() {
             co_return {};
         }
 
-        [[nodiscard]] virtual AsyncGenerator<void> stop() {
+        [[nodiscard]] virtual Task<void> stop() {
             co_return;
         }
 
@@ -108,7 +109,7 @@ namespace Ichor {
     private:
         ///
         /// \return true if started
-        [[nodiscard]] AsyncGenerator<StartBehaviour> internal_start(DependencyInfo *_dependencies) {
+        [[nodiscard]] Task<StartBehaviour> internal_start(DependencyInfo *_dependencies) {
             if(_serviceState != ServiceState::INSTALLED || (_dependencies != nullptr && !_dependencies->allSatisfied())) {
                 INTERNAL_DEBUG("internal_start service {}:{} state {} dependencies {} {}", getServiceId(), typeName<T>(), getState(), _dependencies != nullptr ? _dependencies->size() : (size_t)-1, _dependencies != nullptr ? _dependencies->allSatisfied() : false);
                 co_return {};
@@ -116,15 +117,7 @@ namespace Ichor {
 
             INTERNAL_DEBUG("internal_start service {}:{} state {} -> {}", getServiceId(), typeName<T>(), getState(), ServiceState::STARTING);
             _serviceState = ServiceState::STARTING;
-            auto gen = start();
-            auto it = gen.begin();
-            tl::expected<void, StartError> &outcome = *co_await it;
-
-#ifdef ICHOR_USE_HARDENING
-            if(!it.get_finished()) [[unlikely]] {
-                std::terminate();
-            }
-#endif
+            tl::expected<void, StartError> outcome = co_await start();
 
             if(!outcome) {
                 INTERNAL_DEBUG("internal_start service {}:{} state {} error starting", getServiceId(), typeName<T>(), getState());
@@ -139,7 +132,7 @@ namespace Ichor {
         }
         ///
         /// \return true if stopped or already stopped
-        [[nodiscard]] AsyncGenerator<StartBehaviour> internal_stop() {
+        [[nodiscard]] Task<StartBehaviour> internal_stop() {
 #ifdef ICHOR_USE_HARDENING
             if(_serviceState != ServiceState::UNINJECTING) [[unlikely]] {
                 std::terminate();
@@ -148,15 +141,7 @@ namespace Ichor {
 
             INTERNAL_DEBUG("internal_stop service {}:{} state {} -> {}", getServiceId(), typeName<T>(), getState(), ServiceState::STOPPING);
             _serviceState = ServiceState::STOPPING;
-            auto gen = stop();
-            auto it = gen.begin();
-            co_await it;
-
-#ifdef ICHOR_USE_HARDENING
-            if(!it.get_finished()) [[unlikely]] {
-                std::terminate();
-            }
-#endif
+            co_await stop();
 
             INTERNAL_DEBUG("internal_stop service {}:{} state {} -> {}", getServiceId(), typeName<T>(), getState(), ServiceState::INSTALLED);
             _serviceState = ServiceState::INSTALLED;

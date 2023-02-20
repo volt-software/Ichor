@@ -16,13 +16,13 @@ template <Derived<Event> EventT>
 struct EventHandlerService final : public IEventHandlerService, public AdvancedService<EventHandlerService<EventT>> {
     EventHandlerService() = default;
 
-    AsyncGenerator<tl::expected<void, Ichor::StartError>> start() final {
+    Task<tl::expected<void, Ichor::StartError>> start() final {
         _handler = this->getManager().template registerEventHandler<EventT>(this);
 
         co_return {};
     }
 
-    AsyncGenerator<void> stop() final {
+    Task<void> stop() final {
         _handler.reset();
 
         co_return;

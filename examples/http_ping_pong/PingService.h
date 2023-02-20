@@ -25,7 +25,7 @@ public:
     ~PingService() final = default;
 
 private:
-    AsyncGenerator<tl::expected<void, Ichor::StartError>> start() final {
+    Task<tl::expected<void, Ichor::StartError>> start() final {
         ICHOR_LOG_INFO(_logger, "PingService started");
 
         _timer = getManager().createServiceManager<Timer, ITimer>();
@@ -34,7 +34,7 @@ private:
 
             _sequence++;
             auto start = std::chrono::steady_clock::now();
-            auto &msg = *co_await sendTestRequest(std::move(toSendMsg)).begin();
+            auto msg = co_await sendTestRequest(std::move(toSendMsg));
             auto end = std::chrono::steady_clock::now();
             auto &addr = Ichor::any_cast<std::string&>(getProperties()["Address"]);
             if(msg) {
@@ -59,7 +59,7 @@ private:
         co_return {};
     }
 
-    AsyncGenerator<void> stop() final {
+    Task<void> stop() final {
         _timer->stopTimer();
         ICHOR_LOG_INFO(_logger, "PingService stopped");
         co_return;
@@ -95,9 +95,9 @@ private:
     friend DependencyRegister;
     friend DependencyManager;
 
-    AsyncGenerator<std::optional<PingMsg>> sendTestRequest(std::vector<uint8_t> &&toSendMsg) {
+    Task<std::optional<PingMsg>> sendTestRequest(std::vector<uint8_t> &&toSendMsg) {
         std::vector<HttpHeader> headers{HttpHeader{"Content-Type", "application/json"}};
-        auto &response = *co_await _connectionService->sendAsync(HttpMethod::post, "/ping", std::move(headers), std::move(toSendMsg)).begin();
+        auto response = co_await _connectionService->sendAsync(HttpMethod::post, "/ping", std::move(headers), std::move(toSendMsg));
 
         if(_serializer == nullptr) {
             // we're stopping, gotta bail.

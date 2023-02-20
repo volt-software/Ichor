@@ -23,12 +23,12 @@ public:
     ~PongService() final = default;
 
 private:
-    AsyncGenerator<tl::expected<void, Ichor::StartError>> start() final {
+    Task<tl::expected<void, Ichor::StartError>> start() final {
         ICHOR_LOG_INFO(_logger, "PongService started");
         co_return {};
     }
 
-    AsyncGenerator<void> stop() final {
+    Task<void> stop() final {
         _routeRegistration.reset();
         ICHOR_LOG_INFO(_logger, "PongService stopped");
         co_return;

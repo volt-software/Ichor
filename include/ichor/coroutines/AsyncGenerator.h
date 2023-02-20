@@ -8,7 +8,6 @@
 #pragma once
 
 #include <coroutine>
-#include <atomic>
 #include <cassert>
 #include <functional>
 #include <ichor/Enums.h>
@@ -34,18 +33,13 @@ namespace Ichor {
                 : _promise(std::addressof(promise))
                 , _producerCoroutine(producerCoroutine)
             {
-                state initialState = promise._state.load(std::memory_order_acquire);
+                state initialState = promise._state;
                 if (initialState == state::value_ready_producer_suspended) {
-                    // Can use relaxed memory order here as we will be resuming the producer
-                    // on the same thread.
-                    promise._state.store(state::value_not_ready_consumer_active, std::memory_order_relaxed);
+                    promise._state = state::value_not_ready_consumer_active;
 
                     producerCoroutine.resume();
 
-                    // Need to use acquire memory order here since it's possible that the
-                    // coroutine may have transferred execution to another thread and
-                    // completed on that other thread before the call to resume() returns.
-                    initialState = promise._state.load(std::memory_order_acquire);
+                    initialState = promise._state;
                 }
 
                 _initialState = initialState;
@@ -66,27 +60,23 @@ namespace Ichor {
 
                 auto currentState = _initialState;
                 if (currentState == state::value_ready_producer_active) {
-                    // A potential race between whether consumer or producer coroutine
-                    // suspends first. Resolve the race using a compare-exchange.
-                    if (_promise->_state.compare_exchange_strong(
-                        currentState,
-                        state::value_not_ready_consumer_suspended,
-                        std::memory_order_release,
-                        std::memory_order_acquire)) {
+                    if (_promise->_state == currentState) {
+                        _promise->_state = state::value_not_ready_consumer_suspended;
                         if(!_promise->finished()) {
                             _promise->_hasSuspended = true;
                         }
                         INTERNAL_COROUTINE_DEBUG("AsyncGeneratorAdvanceOperation::await_suspend1");
                         return true;
                     }
+                    currentState = _promise->_state;
 
                     assert(currentState == state::value_ready_producer_suspended);
 
-                    _promise->_state.store(state::value_not_ready_consumer_active, std::memory_order_relaxed);
+                    _promise->_state = state::value_not_ready_consumer_active;
 
                     _producerCoroutine.resume();
 
-                    currentState = _promise->_state.load(std::memory_order_acquire);
+                    currentState = _promise->_state;
                     if (currentState == state::value_ready_producer_suspended) {
                         // Producer coroutine produced a value synchronously.
                         INTERNAL_COROUTINE_DEBUG("AsyncGeneratorAdvanceOperation::await_suspend2");
@@ -96,18 +86,8 @@ namespace Ichor {
 
                 assert(currentState == state::value_not_ready_consumer_active);
 
-                // Try to suspend consumer coroutine, transitioning to value_not_ready_consumer_suspended.
-                // This could be racing with producer making the next value available and suspending
-                // (transition to value_ready_producer_suspended) so we use compare_exchange to decide who
-                // wins the race.
-                // If compare_exchange succeeds then consumer suspended (and we return true).
-                // If it fails then producer yielded next value and suspended and we can return
-                // synchronously without suspended (ie. return false).
-                if(_promise->_state.compare_exchange_strong(
-                    currentState,
-                    state::value_not_ready_consumer_suspended,
-                    std::memory_order_release,
-                    std::memory_order_acquire)) {
+                if(_promise->_state == currentState) {
+                    _promise->_state = state::value_not_ready_consumer_suspended;
                     _promise->_hasSuspended = true;
                     INTERNAL_COROUTINE_DEBUG("AsyncGeneratorAdvanceOperation::await_suspend3");
                     return true;
@@ -282,11 +262,11 @@ namespace Ichor {
             }
 
             if (currentState == state::value_not_ready_consumer_active) {
-                bool const producerSuspended = _promise._state.compare_exchange_strong(
-                    currentState,
-                    state::value_ready_producer_suspended,
-                    std::memory_order_release,
-                    std::memory_order_acquire);
+                bool producerSuspended{};
+                if(_promise._state == currentState) {
+                    _promise._state = state::value_ready_producer_suspended;
+                    producerSuspended = true;
+                }
                 if (producerSuspended) {
                     INTERNAL_COROUTINE_DEBUG("AsyncGeneratorYieldOperation::await_suspend1");
                     if(!_promise.finished()) {
@@ -295,27 +275,7 @@ namespace Ichor {
                     return true;
                 }
 
-                if (currentState == state::value_not_ready_consumer_suspended) {
-                    // Can get away with using relaxed memory semantics here since we're
-                    // resuming the consumer on the current thread.
-                    _promise._state.store(state::value_ready_producer_active, std::memory_order_relaxed);
-
-                    _promise._consumerCoroutine.resume();
-
-                    // The consumer might have asked for another value before returning, in which case
-                    // it'll transition to value_not_ready_consumer_suspended and we can return without
-                    // suspending, otherwise we should try to suspend the producer, in which case the
-                    // consumer will wake us up again when it wants the next value.
-                    //
-                    // Need to use acquire semantics here since it's possible that the consumer might
-                    // have asked for the next value on a different thread which executed concurrently
-                    // with the call to _consumerCoro.resume() above.
-                    currentState = _promise._state.load(std::memory_order_acquire);
-                    if (currentState == state::value_not_ready_consumer_suspended) {
-                        INTERNAL_COROUTINE_DEBUG("AsyncGeneratorYieldOperation::await_suspend2");
-                        return false;
-                    }
-                }
+                std::terminate();
             }
 
             // By this point the consumer has been resumed if required and is now active.
@@ -324,22 +284,18 @@ namespace Ichor {
                 // Try to suspend the producer.
                 // If we failed to suspend then it's either because the consumer destructed, transitioning
                 // the state to cancelled, or requested the next item, transitioning the state to value_not_ready_consumer_suspended.
-                bool const suspendedProducer = _promise._state.compare_exchange_strong(
-                    currentState,
-                    state::value_ready_producer_suspended,
-                    std::memory_order_release,
-                    std::memory_order_acquire);
+                bool suspendedProducer{};
+                if(_promise._state == currentState) {
+                    _promise._state = state::value_ready_producer_suspended;
+                    suspendedProducer = true;
+                }
                 if (suspendedProducer) {
                     _promise._hasSuspended = true;
                     INTERNAL_COROUTINE_DEBUG("AsyncGeneratorYieldOperation::await_suspend3");
                     return true;
                 }
 
-                if (currentState == state::value_not_ready_consumer_suspended) {
-                    // Consumer has asked for the next value.
-                    INTERNAL_COROUTINE_DEBUG("AsyncGeneratorYieldOperation::await_suspend4");
-                    return false;
-                }
+                std::terminate();
             }
 
             assert(currentState == state::cancelled);
@@ -360,14 +316,11 @@ namespace Ichor {
         }
 
         inline AsyncGeneratorYieldOperation AsyncGeneratorPromiseBase::internal_yield_value() noexcept {
-            state currentState = _state.load(std::memory_order_acquire);
-            assert(currentState != state::value_ready_producer_active);
-            assert(currentState != state::value_ready_producer_suspended);
+            assert(_state != state::value_ready_producer_active);
+            assert(_state != state::value_ready_producer_suspended);
 
-            if (currentState == state::value_not_ready_consumer_suspended) {
-                // Only need relaxed memory order since we're resuming the
-                // consumer on the same thread.
-                _state.store(state::value_ready_producer_active, std::memory_order_relaxed);
+            if (_state == state::value_not_ready_consumer_suspended) {
+                _state = state::value_ready_producer_active;
 
                 // Resume the consumer.
                 // It might ask for another value before returning, in which case it'll
@@ -376,15 +329,9 @@ namespace Ichor {
                 // the producer in which case the consumer will wake us up again
                 // when it wants the next value.
                 _consumerCoroutine.resume();
-
-                // Need to use acquire semantics here since it's possible that the
-                // consumer might have asked for the next value on a different thread
-                // which executed concurrently with the call to _consumerCoro on the
-                // current thread above.
-                currentState = _state.load(std::memory_order_acquire);
             }
 
-            return AsyncGeneratorYieldOperation{ *this, currentState };
+            return AsyncGeneratorYieldOperation{ *this, _state };
         }
     }
 

@@ -13,7 +13,7 @@ Ichor::WsHostService::WsHostService(DependencyRegister &reg, Properties props, D
     reg.registerDependency<IAsioContextService>(this, true);
 }
 
-Ichor::AsyncGenerator<tl::expected<void, Ichor::StartError>> Ichor::WsHostService::start() {
+Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::WsHostService::start() {
     if(getProperties().contains("Priority")) {
         _priority = Ichor::any_cast<uint64_t>(getProperties()["Priority"]);
     }
@@ -49,7 +49,7 @@ Ichor::AsyncGenerator<tl::expected<void, Ichor::StartError>> Ichor::WsHostServic
     co_return {};
 }
 
-Ichor::AsyncGenerator<void> Ichor::WsHostService::stop() {
+Ichor::Task<void> Ichor::WsHostService::stop() {
     INTERNAL_DEBUG("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! trying to stop WsHostService {}", getServiceId());
     _quit = true;
 

@@ -16,7 +16,7 @@ public:
     ~UsingStatisticsService() final = default;
 
 private:
-    AsyncGenerator<tl::expected<void, Ichor::StartError>> start() final {
+    Task<tl::expected<void, Ichor::StartError>> start() final {
         ICHOR_LOG_INFO(_logger, "UsingStatisticsService started");
         auto quitTimerManager = getManager().createServiceManager<Timer, ITimer>();
         auto bogusTimerManager = getManager().createServiceManager<Timer, ITimer>();
@@ -36,7 +36,7 @@ private:
         co_return {};
     }
 
-    AsyncGenerator<void> stop() final {
+    Task<void> stop() final {
         ICHOR_LOG_INFO(_logger, "UsingStatisticsService stopped");
         co_return;
     }

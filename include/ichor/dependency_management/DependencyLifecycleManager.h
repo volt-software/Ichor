@@ -75,15 +75,7 @@ namespace Ichor {
             }
 
             if(interested == Detail::DependencyChange::FOUND && getServiceState() <= ServiceState::INSTALLED && _dependencies.allSatisfied()) {
-                auto gen = _service.internal_start(nullptr); // we already checked the dependencies, pass in nullptr
-                auto it = gen.begin();
-                StartBehaviour ret = *co_await it;
-
-#ifdef ICHOR_USE_HARDENING
-                if(!it.get_finished()) [[unlikely]] {
-                    std::terminate();
-                }
-#endif
+                StartBehaviour ret = co_await _service.internal_start(nullptr); // we already checked the dependencies, pass in nullptr;
 
                 if(ret == StartBehaviour::STOPPED) {
                     co_return StartBehaviour::STOPPED;
@@ -273,12 +265,12 @@ namespace Ichor {
 
         [[nodiscard]]
         AsyncGenerator<StartBehaviour> start() final {
-            return _service.internal_start(&_dependencies);
+            co_return co_await _service.internal_start(&_dependencies);
         }
 
         [[nodiscard]]
         AsyncGenerator<StartBehaviour> stop() final {
-            return _service.internal_stop();
+            co_return co_await _service.internal_stop();
         }
 
         [[nodiscard]]

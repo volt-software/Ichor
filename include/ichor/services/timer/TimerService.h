@@ -35,8 +35,8 @@ namespace Ichor {
         [[nodiscard]] uint64_t getPriority() const noexcept final;
 
     private:
-        AsyncGenerator<tl::expected<void, Ichor::StartError>> start() final;
-        AsyncGenerator<void> stop() final;
+        Task<tl::expected<void, Ichor::StartError>> start() final;
+        Task<void> stop() final;
 
         void insertEventLoop(bool fireImmediately);
 

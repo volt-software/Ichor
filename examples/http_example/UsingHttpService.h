@@ -25,7 +25,7 @@ public:
     ~UsingHttpService() final = default;
 
 private:
-    AsyncGenerator<tl::expected<void, Ichor::StartError>> start() final {
+    Task<tl::expected<void, Ichor::StartError>> start() final {
         ICHOR_LOG_INFO(_logger, "UsingHttpService started");
 
         getManager().pushEvent<RunFunctionEventAsync>(getServiceId(), [this](DependencyManager &dm) -> AsyncGenerator<IchorBehaviour> {
@@ -38,7 +38,7 @@ private:
         co_return {};
     }
 
-    AsyncGenerator<void> stop() final {
+    Task<void> stop() final {
         _routeRegistration.reset();
         ICHOR_LOG_INFO(_logger, "UsingHttpService stopped");
         co_return;
@@ -91,7 +91,7 @@ private:
     AsyncGenerator<void> sendTestRequest(std::vector<uint8_t> &&toSendMsg) {
         ICHOR_LOG_INFO(_logger, "sendTestRequest");
         std::vector<HttpHeader> headers{HttpHeader{"Content-Type", "application/json"}};
-        auto &response = *co_await _connectionService->sendAsync(HttpMethod::post, "/test", std::move(headers), std::move(toSendMsg)).begin();
+        auto response = co_await _connectionService->sendAsync(HttpMethod::post, "/test", std::move(headers), std::move(toSendMsg));
 
         if(_serializer == nullptr) {
             // we're stopping, gotta bail.

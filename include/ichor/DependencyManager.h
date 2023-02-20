@@ -13,10 +13,10 @@
 #include <shared_mutex>
 #include <ichor/interfaces/IFrameworkLogger.h>
 #include <ichor/dependency_management/AdvancedService.h>
-#include <ichor/dependency_management/ILifecycleManager.h>
 #include <ichor/events/InternalEvents.h>
 #include <ichor/coroutines/IGenerator.h>
 #include <ichor/coroutines/AsyncGenerator.h>
+#include <ichor/dependency_management/ILifecycleManager.h>
 #include <ichor/coroutines/AsyncManualResetEvent.h>
 #include <ichor/Callbacks.h>
 #include <ichor/Filter.h>

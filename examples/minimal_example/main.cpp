@@ -15,7 +15,7 @@ public:
     SigIntService() = default;
 
 private:
-    AsyncGenerator<tl::expected<void, Ichor::StartError>> start() final {
+    Task<tl::expected<void, Ichor::StartError>> start() final {
         // Setup a timer that fires every 100 milliseconds
         auto timer = getManager().createServiceManager<Timer, ITimer>();
         timer->setChronoInterval(100ms);
@@ -34,7 +34,7 @@ private:
         co_return {};
     }
 
-    AsyncGenerator<void> stop() final {
+    Task<void> stop() final {
         co_return;
     }
 };

@@ -7,7 +7,6 @@
 
 #pragma once
 
-#include <atomic>
 #include <cstdint>
 #include <coroutine>
 
@@ -76,7 +75,7 @@ namespace Ichor {
         // - other   - The state is 'not set'.
         //             Points to an 'AsyncManualResetEventOperation' that is
         //             the head of a linked-list of waiters.
-        mutable std::atomic<void*> _state;
+        mutable void* _state;
     };
 
     class AsyncManualResetEventOperation {

@@ -17,7 +17,7 @@ public:
     ~UsingEtcdService() final = default;
 
 private:
-    AsyncGenerator<tl::expected<void, Ichor::StartError>> start() final {
+    Task<tl::expected<void, Ichor::StartError>> start() final {
         ICHOR_LOG_INFO(_logger, "UsingEtcdService started");
         if(_etcd->put("test", "2")) {
             ICHOR_LOG_TRACE(_logger, "Succesfully put key/value into etcd");
@@ -35,7 +35,7 @@ private:
         co_return {};
     }
 
-    AsyncGenerator<void> stop() final {
+    Task<void> stop() final {
         ICHOR_LOG_INFO(_logger, "UsingEtcdService stopped");
         co_return;
     }

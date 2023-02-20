@@ -18,13 +18,13 @@ template <Derived<Event> InterceptorT, bool allowProcessing = true>
 struct InterceptorService final : public IInterceptorService, public AdvancedService<InterceptorService<InterceptorT, allowProcessing>> {
     InterceptorService() = default;
 
-    AsyncGenerator<tl::expected<void, Ichor::StartError>> start() final {
+    Task<tl::expected<void, Ichor::StartError>> start() final {
         _interceptor = this->getManager().template registerEventInterceptor<InterceptorT>(this);
 
         co_return {};
     }
 
-    AsyncGenerator<void> stop() final {
+    Task<void> stop() final {
         _interceptor.reset();
 
         co_return;

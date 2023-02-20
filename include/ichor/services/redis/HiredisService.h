@@ -29,8 +29,8 @@ namespace Ichor {
         AsyncGenerator<RedisGetReply> get(std::string_view key) final;
 
     private:
-        AsyncGenerator<tl::expected<void, Ichor::StartError>> start() final;
-        AsyncGenerator<void> stop() final;
+        Task<tl::expected<void, Ichor::StartError>> start() final;
+        Task<void> stop() final;
 
         void addDependencyInstance(ILogger *logger, IService *);
         void removeDependencyInstance(ILogger *logger, IService *);

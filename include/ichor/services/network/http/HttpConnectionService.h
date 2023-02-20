@@ -33,16 +33,16 @@ namespace Ichor {
         HttpConnectionService(DependencyRegister &reg, Properties props, DependencyManager *mng);
         ~HttpConnectionService() final = default;
 
-        AsyncGenerator<HttpResponse> sendAsync(HttpMethod method, std::string_view route, std::vector<HttpHeader> &&headers, std::vector<uint8_t>&& msg) final;
+        Task<HttpResponse> sendAsync(HttpMethod method, std::string_view route, std::vector<HttpHeader> &&headers, std::vector<uint8_t>&& msg) final;
 
-        AsyncGenerator<void> close() final;
+        Task<void> close() final;
 
         void setPriority(uint64_t priority) final;
         uint64_t getPriority() final;
 
     private:
-        AsyncGenerator<tl::expected<void, Ichor::StartError>> start() final;
-        AsyncGenerator<void> stop() final;
+        Task<tl::expected<void, Ichor::StartError>> start() final;
+        Task<void> stop() final;
 
         void addDependencyInstance(ILogger *logger, IService *);
         void removeDependencyInstance(ILogger *logger, IService *);

@@ -27,7 +27,7 @@ Ichor::AsioContextService::~AsioContextService() {
     }
 }
 
-Ichor::AsyncGenerator<tl::expected<void, Ichor::StartError>> Ichor::AsioContextService::start() {
+Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::AsioContextService::start() {
     _quit = false;
     if(_threads == 1) {
         _context = std::make_unique<net::io_context>(BOOST_ASIO_CONCURRENCY_HINT_UNSAFE_IO);
@@ -90,7 +90,7 @@ Ichor::AsyncGenerator<tl::expected<void, Ichor::StartError>> Ichor::AsioContextS
     co_return {};
 }
 
-Ichor::AsyncGenerator<void> Ichor::AsioContextService::stop() {
+Ichor::Task<void> Ichor::AsioContextService::stop() {
     _quit.store(true, std::memory_order_release);
     INTERNAL_DEBUG("+++++++++++++++++++++++++++++++++++++++++++++++ STOP ++++++++++++++++++++++++++++++++");
 

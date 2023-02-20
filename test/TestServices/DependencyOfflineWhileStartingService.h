@@ -15,13 +15,13 @@ namespace Ichor {
         }
         ~DependencyOfflineWhileStartingService() final = default;
 
-        AsyncGenerator<tl::expected<void, Ichor::StartError>> start() final {
+        Task<tl::expected<void, Ichor::StartError>> start() final {
             co_await *_evt;
 
             co_return {};
         }
 
-        AsyncGenerator<void> stop() final {
+        Task<void> stop() final {
             co_return;
         }
 

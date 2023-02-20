@@ -8,11 +8,11 @@ Ichor::Timer::~Timer() noexcept {
     stopTimer();
 }
 
-Ichor::AsyncGenerator<tl::expected<void, Ichor::StartError>> Ichor::Timer::start() {
+Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::Timer::start() {
     co_return {};
 }
 
-Ichor::AsyncGenerator<void> Ichor::Timer::stop() {
+Ichor::Task<void> Ichor::Timer::stop() {
     stopTimer();
     co_return;
 }

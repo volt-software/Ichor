@@ -12,7 +12,7 @@ namespace Ichor {
             reg.registerDependency<IRedis>(this, true);
         }
 
-        AsyncGenerator<tl::expected<void, Ichor::StartError>> start() final {
+        Task<tl::expected<void, Ichor::StartError>> start() final {
             co_await _redis->set("test_key", "test_value").begin();
             RedisGetReply &reply = *co_await _redis->get("test_key").begin();
 

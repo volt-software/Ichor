@@ -24,8 +24,8 @@ namespace Ichor {
 
         std::vector<std::shared_ptr<spdlog::sinks::sink>> const& getSinks() noexcept final;
     private:
-        AsyncGenerator<tl::expected<void, Ichor::StartError>> start() final;
-        AsyncGenerator<void> stop() final;
+        Task<tl::expected<void, Ichor::StartError>> start() final;
+        Task<void> stop() final;
 
         friend DependencyRegister;
 

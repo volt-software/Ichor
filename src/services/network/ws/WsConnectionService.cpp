@@ -31,7 +31,7 @@ Ichor::WsConnectionService::WsConnectionService(DependencyRegister &reg, Propert
     }
 }
 
-Ichor::AsyncGenerator<tl::expected<void, Ichor::StartError>> Ichor::WsConnectionService::start() {
+Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::WsConnectionService::start() {
     if(_connected.load(std::memory_order_acquire)) {
         co_return {};
     }
@@ -69,7 +69,7 @@ Ichor::AsyncGenerator<tl::expected<void, Ichor::StartError>> Ichor::WsConnection
     co_return {};
 }
 
-Ichor::AsyncGenerator<void> Ichor::WsConnectionService::stop() {
+Ichor::Task<void> Ichor::WsConnectionService::stop() {
 //    INTERNAL_DEBUG("----------------------------------------------- trying to stop WsConnectionService {}", getServiceId());
 //    fmt::print("----------------------------------------------- {}:{} stop\n", getServiceId(), getServiceName());
     _quit.store(true, std::memory_order_release);

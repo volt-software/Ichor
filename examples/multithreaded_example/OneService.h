@@ -17,7 +17,7 @@ public:
     ~OneService() final = default;
 
 private:
-    AsyncGenerator<tl::expected<void, Ichor::StartError>> start() final {
+    Task<tl::expected<void, Ichor::StartError>> start() final {
         ICHOR_LOG_INFO(_logger, "OneService started with dependency");
         // this component sometimes starts up before the other thread has started the OtherService
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
@@ -25,7 +25,7 @@ private:
         co_return {};
     }
 
-    AsyncGenerator<void> stop() final {
+    Task<void> stop() final {
         ICHOR_LOG_INFO(_logger, "OneService stopped with dependency");
         co_return;
     }

@@ -30,8 +30,8 @@ namespace Ichor {
         [[nodiscard]] LogLevel getLogLevel() const final;
 
     private:
-        AsyncGenerator<tl::expected<void, Ichor::StartError>> start() final;
-        AsyncGenerator<void> stop() final;
+        Task<tl::expected<void, Ichor::StartError>> start() final;
+        Task<void> stop() final;
 
         friend DependencyRegister;
 

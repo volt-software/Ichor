@@ -15,12 +15,12 @@ namespace Ichor {
         }
         ~DependencyOnlineWhileStoppingService() final = default;
 
-        AsyncGenerator<tl::expected<void, Ichor::StartError>> start() final {
+        Task<tl::expected<void, Ichor::StartError>> start() final {
             getManager().pushEvent<StopServiceEvent>(getServiceId(), svcId);
             co_return {};
         }
 
-        AsyncGenerator<void> stop() final {
+        Task<void> stop() final {
             getManager().pushEvent<StartServiceEvent>(getServiceId(), svcId);
             co_await *_evt;
 
