@@ -3,6 +3,7 @@
 #include <ichor/dependency_management/AdvancedService.h>
 #include <ichor/events/Event.h>
 #include <ichor/coroutines/AsyncManualResetEvent.h>
+#include <ichor/coroutines/Task.h>
 
 using namespace Ichor;
 
@@ -18,13 +19,13 @@ struct AwaitEvent final : public Event {
 
 struct IAwaitService {
     virtual ~IAwaitService() = default;
-    virtual AsyncGenerator<void> await_something() = 0;
+    virtual Task<void> await_something() = 0;
 };
 struct AwaitService final : public IAwaitService, public AdvancedService<AwaitService> {
     AwaitService() = default;
     ~AwaitService() final = default;
 
-    AsyncGenerator<void> await_something() final
+    Task<void> await_something() final
     {
         co_await *_evt;
         co_return;
@@ -33,13 +34,13 @@ struct AwaitService final : public IAwaitService, public AdvancedService<AwaitSe
 struct EventAwaitService final : public AdvancedService<EventAwaitService> {
     EventAwaitService() = default;
     ~EventAwaitService() final = default;
-    AsyncGenerator<tl::expected<void, Ichor::StartError>> start() final {
+    Task<tl::expected<void, Ichor::StartError>> start() final {
         _handler = this->getManager().template registerEventHandler<AwaitEvent>(this);
 
         co_return {};
     }
 
-    AsyncGenerator<void> stop() final {
+    Task<void> stop() final {
         _handler.reset();
 
         co_return;

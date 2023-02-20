@@ -36,12 +36,12 @@ namespace Ichor {
         }
 
     private:
-        AsyncGenerator<tl::expected<void, Ichor::StartError>> start() final {
+        Task<tl::expected<void, Ichor::StartError>> start() final {
             _loggerTrackerRegistration = AdvancedService<LoggerFactory<LogT>>::getManager().template registerDependencyTracker<ILogger>(this);
             co_return {};
         }
 
-        AsyncGenerator<void> stop() final {
+        Task<void> stop() final {
             _loggerTrackerRegistration.reset();
             co_return;
         }

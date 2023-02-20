@@ -16,7 +16,7 @@ public:
     ~UsingTimerService() final = default;
 
 private:
-    AsyncGenerator<tl::expected<void, Ichor::StartError>> start() final {
+    Task<tl::expected<void, Ichor::StartError>> start() final {
         ICHOR_LOG_INFO(_logger, "UsingTimerService started");
         _timerManager = getManager().createServiceManager<Timer, ITimer>();
         _timerManager->setChronoInterval(std::chrono::milliseconds(50));
@@ -27,7 +27,7 @@ private:
         co_return {};
     }
 
-    AsyncGenerator<void> stop() final {
+    Task<void> stop() final {
         _timerManager = nullptr;
         ICHOR_LOG_INFO(_logger, "UsingTimerService stopped");
         co_return;

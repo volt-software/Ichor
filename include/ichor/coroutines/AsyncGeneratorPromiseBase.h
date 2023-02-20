@@ -8,7 +8,6 @@
 #pragma once
 
 #include <coroutine>
-#include <atomic>
 #include <cassert>
 #include <functional>
 #include <memory>
@@ -55,7 +54,7 @@ namespace Ichor::Detail {
         void unhandled_exception() noexcept {
             // Don't bother capturing the exception if we have been cancelled
             // as there is no consumer that will see it.
-            if (_state.load(std::memory_order_relaxed) != state::cancelled)
+            if (_state != state::cancelled)
             {
 //                std::terminate();
                 _exception = std::current_exception();
@@ -89,7 +88,7 @@ namespace Ichor::Detail {
         /// statement.
         bool request_cancellation() noexcept {
             INTERNAL_COROUTINE_DEBUG("request_cancellation {}", _id);
-            const auto previousState = _state.exchange(state::cancelled, std::memory_order_acq_rel);
+            const auto previousState = std::exchange(_state, state::cancelled);
 
             // Not valid to destroy async_generator<T> object if consumer coroutine still suspended
             // in a co_await for next item.
@@ -113,7 +112,9 @@ namespace Ichor::Detail {
         friend class AsyncGeneratorYieldOperation;
         friend class AsyncGeneratorAdvanceOperation;
 
-        std::atomic<state> _state;
+        // Ichor forces everything to be on the same thread (or terminates the program)
+        // Therefore, we don't need atomic state, like is used in cppcoro
+        state _state;
         std::exception_ptr _exception;
         std::coroutine_handle<> _consumerCoroutine;
         uint64_t _id;

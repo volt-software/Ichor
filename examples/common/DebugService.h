@@ -15,7 +15,7 @@ public:
     }
     ~DebugService() final = default;
 private:
-    AsyncGenerator<tl::expected<void, Ichor::StartError>> start() final {
+    Task<tl::expected<void, Ichor::StartError>> start() final {
         _timer = getManager().createServiceManager<Timer, ITimer>();
         _timer->setCallback(this, [this](DependencyManager &dm) {
             auto svcs = dm.getServiceInfo();
@@ -29,7 +29,7 @@ private:
         co_return {};
     }
 
-    AsyncGenerator<void> stop() final {
+    Task<void> stop() final {
         _timer->stopTimer();
 
         co_return;

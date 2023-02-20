@@ -23,7 +23,7 @@ public:
     ~StartStopService() final = default;
 
 private:
-    AsyncGenerator<tl::expected<void, Ichor::StartError>> start() final {
+    Task<tl::expected<void, Ichor::StartError>> start() final {
         if(startCount == 0) {
             _startServiceRegistration = getManager().registerEventCompletionCallbacks<StartServiceEvent>(this);
             _stopServiceRegistration = getManager().registerEventCompletionCallbacks<StopServiceEvent>(this);
@@ -43,7 +43,7 @@ private:
         co_return {};
     }
 
-    AsyncGenerator<void> stop() final {
+    Task<void> stop() final {
         if(startCount <= START_STOP_COUNT) {
             getManager().pushEvent<StartServiceEvent>(getServiceId(), _testServiceId);
         }

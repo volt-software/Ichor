@@ -17,11 +17,11 @@ struct DependencyService final : public ICountService, public AdvancedService<De
         reg.registerDependency<IUselessService>(this, required);
     }
     ~DependencyService() final = default;
-    AsyncGenerator<tl::expected<void, Ichor::StartError>> start() final {
+    Task<tl::expected<void, Ichor::StartError>> start() final {
         running = true;
         co_return {};
     }
-    AsyncGenerator<void> stop() final {
+    Task<void> stop() final {
         running = false;
         co_return;
     }

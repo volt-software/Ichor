@@ -9,7 +9,7 @@ struct QuitOnStartWithDependenciesService final : public AdvancedService<QuitOnS
         reg.registerDependency<IUselessService>(this, true);
     }
     ~QuitOnStartWithDependenciesService() final = default;
-    AsyncGenerator<tl::expected<void, Ichor::StartError>> start() final {
+    Task<tl::expected<void, Ichor::StartError>> start() final {
         getManager().pushEvent<QuitEvent>(getServiceId());
         co_return {};
     }

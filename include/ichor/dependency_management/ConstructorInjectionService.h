@@ -1,7 +1,7 @@
 #pragma once
 
 #include <ichor/Concepts.h>
-#include <ichor/coroutines/AsyncGenerator.h>
+#include <ichor/coroutines/Task.h>
 #include <ichor/dependency_management/DependencyInfo.h>
 #include <ichor/dependency_management/DependencyRegister.h>
 #include <ichor/dependency_management/IService.h>
@@ -227,7 +227,7 @@ namespace Ichor {
     private:
         ///
         /// \return true if started
-        [[nodiscard]] AsyncGenerator<StartBehaviour> internal_start(DependencyInfo *_dependencies) {
+        [[nodiscard]] Task<StartBehaviour> internal_start(DependencyInfo *_dependencies) {
             if(_serviceState != ServiceState::INSTALLED || (_dependencies != nullptr && !_dependencies->allSatisfied())) {
                 INTERNAL_DEBUG("internal_start service {}:{} state {} dependencies {} {}", getServiceId(), typeName<T>(), getState(), _dependencies->size(), _dependencies->allSatisfied());
                 co_return {};
@@ -244,7 +244,7 @@ namespace Ichor {
         }
         ///
         /// \return true if stopped or already stopped
-        [[nodiscard]] AsyncGenerator<StartBehaviour> internal_stop() {
+        [[nodiscard]] Task<StartBehaviour> internal_stop() {
 #ifdef ICHOR_USE_HARDENING
             if(_serviceState != ServiceState::UNINJECTING) [[unlikely]] {
                 std::terminate();
@@ -408,7 +408,7 @@ namespace Ichor {
     private:
         ///
         /// \return true if started
-        [[nodiscard]] AsyncGenerator<StartBehaviour> internal_start(DependencyInfo *_dependencies) {
+        [[nodiscard]] Task<StartBehaviour> internal_start(DependencyInfo *_dependencies) {
             if(_serviceState != ServiceState::INSTALLED || (_dependencies != nullptr && !_dependencies->allSatisfied())) {
                 INTERNAL_DEBUG("internal_start service {}:{} state {} dependencies {} {}", getServiceId(), typeName<T>(), getState(), _dependencies->size(), _dependencies->allSatisfied());
                 co_return {};
@@ -425,7 +425,7 @@ namespace Ichor {
         }
         ///
         /// \return true if stopped or already stopped
-        [[nodiscard]] AsyncGenerator<StartBehaviour> internal_stop() {
+        [[nodiscard]] Task<StartBehaviour> internal_stop() {
 #ifdef ICHOR_USE_HARDENING
             if(_serviceState != ServiceState::UNINJECTING) [[unlikely]] {
                 std::terminate();

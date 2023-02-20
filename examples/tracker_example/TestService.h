@@ -17,13 +17,13 @@ public:
     ~TestService() final = default;
 
 private:
-    AsyncGenerator<tl::expected<void, Ichor::StartError>> start() final {
+    Task<tl::expected<void, Ichor::StartError>> start() final {
         ICHOR_LOG_INFO(_logger, "TestService started with dependency");
         getManager().pushEvent<QuitEvent>(getServiceId());
         co_return {};
     }
 
-    AsyncGenerator<void> stop() final {
+    Task<void> stop() final {
         ICHOR_LOG_INFO(_logger, "TestService stopped with dependency");
         co_return;
     }

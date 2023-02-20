@@ -36,7 +36,7 @@ struct RegistrationCheckerService final : public AdvancedService<RegistrationChe
     }
     ~RegistrationCheckerService() final = default;
 
-    AsyncGenerator<tl::expected<void, Ichor::StartError>> start() final {
+    Task<tl::expected<void, Ichor::StartError>> start() final {
         if(!_executedTests) {
             throw std::runtime_error("Should have executed tests");
         }

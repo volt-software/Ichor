@@ -23,7 +23,7 @@ public:
     ~UsingWsService() final = default;
 
 private:
-    AsyncGenerator<tl::expected<void, Ichor::StartError>> start() final {
+    Task<tl::expected<void, Ichor::StartError>> start() final {
         ICHOR_LOG_INFO(_logger, "UsingWsService started");
         _dataEventRegistration = getManager().registerEventHandler<NetworkDataEvent>(this);
         _failureEventRegistration = getManager().registerEventHandler<FailedSendMessageEvent>(this);
@@ -31,7 +31,7 @@ private:
         co_return {};
     }
 
-    AsyncGenerator<void> stop() final {
+    Task<void> stop() final {
         _dataEventRegistration.reset();
         _failureEventRegistration.reset();
         ICHOR_LOG_INFO(_logger, "UsingWsService stopped");

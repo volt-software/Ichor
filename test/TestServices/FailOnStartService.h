@@ -14,12 +14,12 @@ namespace Ichor {
         FailOnStartService() = default;
         ~FailOnStartService() final = default;
 
-        AsyncGenerator<tl::expected<void, Ichor::StartError>> start() final {
+        Task<tl::expected<void, Ichor::StartError>> start() final {
             startCount++;
             co_return tl::unexpected(StartError::FAILED);
         }
 
-        AsyncGenerator<void> stop() final {
+        Task<void> stop() final {
             co_return;
         }
 
@@ -36,12 +36,12 @@ namespace Ichor {
         }
         ~FailOnStartWithDependenciesService() final = default;
 
-        AsyncGenerator<tl::expected<void, Ichor::StartError>> start() final {
+        Task<tl::expected<void, Ichor::StartError>> start() final {
             startCount++;
             co_return tl::unexpected(StartError::FAILED);
         }
 
-        AsyncGenerator<void> stop() final {
+        Task<void> stop() final {
             co_return;
         }
 

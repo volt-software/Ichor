@@ -86,7 +86,7 @@ TEST_CASE("CoroutineTests") {
 
             INTERNAL_DEBUG("before");
 
-            co_await services[0]->await_something().begin();
+            co_await services[0]->await_something();
 
             INTERNAL_DEBUG("after");
 

@@ -212,8 +212,16 @@ if(ICHOR_USE_SANITIZERS)
         # MSVC does not support UBsan
         target_compile_options(ichor PUBLIC /fsanitize=address /Zi)
     else()
-        target_compile_options(ichor PUBLIC -fsanitize=address,undefined -fno-omit-frame-pointer)
-        target_link_options(ichor PUBLIC -fsanitize=address,undefined)
+        set(ICHOR_SANITIZE_OPTIONS -fsanitize=address,undefined)
+
+        if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND CMAKE_CXX_COMPILER_VERSION VERSION_EQUAL "14")
+            message(WARNING "Clang version 14 has a bug that prevents coroutines and UBSan to be used together. See https://github.com/llvm/llvm-project/issues/49689")
+            message(WARNING "DISABLED UBSAN, THIS MAY NOT BE WHAT YOU EXPECT!")
+            set(ICHOR_SANITIZE_OPTIONS -fsanitize=address)
+        endif()
+
+        target_compile_options(ichor PUBLIC ${ICHOR_SANITIZE_OPTIONS} -fno-omit-frame-pointer)
+        target_link_options(ichor PUBLIC ${ICHOR_SANITIZE_OPTIONS})
         target_compile_definitions(ichor PUBLIC __SANITIZE_ADDRESS__)
 
         # clang on OSX doesn't accept -no-pie for some reason

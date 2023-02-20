@@ -15,13 +15,13 @@ public:
     }
     ~AsyncUsingTimerService() final = default;
 
-    AsyncGenerator<tl::expected<void, Ichor::StartError>> start() final {
+    Task<tl::expected<void, Ichor::StartError>> start() final {
         fmt::print("start\n");
         _timerManager = getManager().createServiceManager<Timer, ITimer>();
         _timerManager->setChronoInterval(100ms);
         _timerManager->setCallbackAsync(this, [this](DependencyManager &dm) -> AsyncGenerator<IchorBehaviour> {
             fmt::print("timer 1\n");
-            co_await _awaitSvc->await_something().begin();
+            co_await _awaitSvc->await_something();
             fmt::print("timer 2\n");
             _timerManager->stopTimer();
             getManager().pushEvent<QuitEvent>(getServiceId());
@@ -32,7 +32,7 @@ public:
         co_return {};
     }
 
-    AsyncGenerator<void> stop() final {
+    Task<void> stop() final {
         _timerManager = nullptr;
         co_return;
     }

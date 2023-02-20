@@ -1,6 +1,6 @@
 #pragma once
 
-#include <ichor/dependency_management/AdvancedService.h>
+#include <ichor/coroutines/Task.h>
 #include "HttpCommon.h"
 
 namespace Ichor {
@@ -14,13 +14,13 @@ namespace Ichor {
          * @param msg Usually json, ignored for GET requests
          * @return response
          */
-        virtual AsyncGenerator<HttpResponse> sendAsync(HttpMethod method, std::string_view route, std::vector<HttpHeader> &&headers, std::vector<uint8_t>&& msg) = 0;
+        virtual Task<HttpResponse> sendAsync(HttpMethod method, std::string_view route, std::vector<HttpHeader> &&headers, std::vector<uint8_t>&& msg) = 0;
 
         /**
          * Close the connection
          * @return true if closed, false if already closed
          */
-        virtual AsyncGenerator<void> close() = 0;
+        virtual Task<void> close() = 0;
 
         /**
          * Sets priority with which to push incoming network events.

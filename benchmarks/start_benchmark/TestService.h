@@ -21,7 +21,7 @@ public:
     ~TestService() final = default;
 
 private:
-    AsyncGenerator<tl::expected<void, Ichor::StartError>> start() final {
+    Task<tl::expected<void, Ichor::StartError>> start() final {
         auto iteration = Ichor::any_cast<uint64_t>(getProperties()["Iteration"]);
 //        fmt::print("Created {} #{} #{}\n", typeName<TestService>(), iteration, SERVICES_COUNT);
         if(iteration == SERVICES_COUNT - 1) {
@@ -30,7 +30,7 @@ private:
         co_return {};
     }
 
-    AsyncGenerator<void> stop() final {
+    Task<void> stop() final {
         co_return;
     }
 

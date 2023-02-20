@@ -87,7 +87,7 @@ Ichor::HiredisService::HiredisService(DependencyRegister &reg, Properties props,
     reg.registerDependency<ILogger>(this, true);
 }
 
-Ichor::AsyncGenerator<tl::expected<void, Ichor::StartError>> Ichor::HiredisService::start() {
+Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::HiredisService::start() {
     if(getProperties().contains("Priority")) {
         _priority = Ichor::any_cast<uint64_t>(getProperties()["Priority"]);
     }
@@ -109,7 +109,7 @@ Ichor::AsyncGenerator<tl::expected<void, Ichor::StartError>> Ichor::HiredisServi
     co_return {};
 }
 
-Ichor::AsyncGenerator<void> Ichor::HiredisService::stop() {
+Ichor::Task<void> Ichor::HiredisService::stop() {
     redisAsyncDisconnect(_redisContext);
 
     _pollTimer->stopTimer();

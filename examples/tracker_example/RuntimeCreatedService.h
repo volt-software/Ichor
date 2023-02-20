@@ -20,13 +20,13 @@ public:
     ~RuntimeCreatedService() final = default;
 
 private:
-    AsyncGenerator<tl::expected<void, Ichor::StartError>> start() final {
+    Task<tl::expected<void, Ichor::StartError>> start() final {
         auto const& scope = Ichor::any_cast<std::string&>(_properties["scope"]);
         ICHOR_LOG_INFO(_logger, "RuntimeCreatedService started with scope {}", scope);
         co_return {};
     }
 
-    AsyncGenerator<void> stop() final {
+    Task<void> stop() final {
         ICHOR_LOG_INFO(_logger, "RuntimeCreatedService stopped");
         co_return;
     }

@@ -369,7 +369,7 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &&uniqueEvt) 
                     auto it = gen.begin();
 
                     if (!it.get_finished()) {
-                        if constexpr (DO_INTERNAL_DEBUG) {
+                        if constexpr (DO_INTERNAL_DEBUG || DO_INTERNAL_COROUTINE_DEBUG) {
                             if (!it.get_has_suspended()) [[unlikely]] {
                                 std::terminate();
                             }
@@ -381,7 +381,7 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &&uniqueEvt) 
                         break;
                     }
 
-                    if constexpr (DO_INTERNAL_DEBUG) {
+                    if constexpr (DO_INTERNAL_DEBUG || DO_INTERNAL_COROUTINE_DEBUG) {
                         if (it.get_has_suspended()) [[unlikely]] {
                             INTERNAL_DEBUG("{}", it.get_promise_id());
                             std::terminate();
@@ -442,7 +442,7 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &&uniqueEvt) 
                 auto it = gen.begin();
 
                 if (!it.get_finished()) {
-                    if constexpr (DO_INTERNAL_DEBUG) {
+                    if constexpr (DO_INTERNAL_DEBUG || DO_INTERNAL_COROUTINE_DEBUG) {
                         if (!it.get_has_suspended()) [[unlikely]] {
                             std::terminate();
                         }
@@ -454,7 +454,7 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &&uniqueEvt) 
                     break;
                 }
 
-                if constexpr (DO_INTERNAL_DEBUG) {
+                if constexpr (DO_INTERNAL_DEBUG || DO_INTERNAL_COROUTINE_DEBUG) {
                     if (it.get_has_suspended()) [[unlikely]] {
                         INTERNAL_DEBUG("{}", it.get_promise_id());
                         std::terminate();
@@ -558,7 +558,7 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &&uniqueEvt) 
                         INTERNAL_DEBUG("ContinuableEventAsync it {} {} {}", it->get_finished(), it->get_op_state(), it->get_promise_state());
 
                         if (!it->get_finished() && it->get_promise_state() != state::value_not_ready_consumer_active) {
-                            if constexpr (DO_INTERNAL_DEBUG) {
+                            if constexpr (DO_INTERNAL_DEBUG || DO_INTERNAL_COROUTINE_DEBUG) {
                                 if (!it->get_has_suspended()) [[unlikely]] {
                                     INTERNAL_DEBUG("{}", it->get_promise_id());
                                     std::terminate();
@@ -613,7 +613,7 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &&uniqueEvt) 
                         INTERNAL_DEBUG("ContinuableStartEvent it {} {} {}", it->get_finished(), it->get_op_state(), it->get_promise_state());
 
                         if (!it->get_finished()) {
-                            if constexpr (DO_INTERNAL_DEBUG) {
+                            if constexpr (DO_INTERNAL_DEBUG || DO_INTERNAL_COROUTINE_DEBUG) {
                                 if (!it->get_has_suspended()) [[unlikely]] {
                                     INTERNAL_DEBUG("{}", it->get_promise_id());
                                     std::terminate();

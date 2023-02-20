@@ -30,7 +30,7 @@ public:
     ~TestService() final = default;
 
 private:
-    AsyncGenerator<tl::expected<void, Ichor::StartError>> start() final {
+    Task<tl::expected<void, Ichor::StartError>> start() final {
         auto start = std::chrono::steady_clock::now();
         for(uint32_t i = 0; i < EVENT_COUNT; i++) {
             getManager().pushEvent<UselessEvent>(getServiceId());
@@ -41,7 +41,7 @@ private:
         co_return {};
     }
 
-    AsyncGenerator<void> stop() final {
+    Task<void> stop() final {
         co_return;
     }
 

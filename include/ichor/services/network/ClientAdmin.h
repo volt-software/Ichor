@@ -14,14 +14,14 @@ namespace Ichor {
         ~ClientAdmin() override = default;
 
     private:
-        AsyncGenerator<tl::expected<void, Ichor::StartError>> start() final {
+        Task<tl::expected<void, Ichor::StartError>> start() final {
             _trackerRegistration = AdvancedService<ClientAdmin<NetworkType, NetworkInterfaceType>>::getManager().template registerDependencyTracker<NetworkInterfaceType>(this);
             _unrecoverableErrorRegistration = AdvancedService<ClientAdmin<NetworkType, NetworkInterfaceType>>::getManager().template registerEventHandler<UnrecoverableErrorEvent>(this);
 
             co_return {};
         }
 
-        AsyncGenerator<void> stop() final {
+        Task<void> stop() final {
             _trackerRegistration.reset();
             _unrecoverableErrorRegistration.reset();
 

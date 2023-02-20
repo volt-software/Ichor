@@ -64,12 +64,12 @@ namespace Ichor {
 
         [[nodiscard]]
         AsyncGenerator<StartBehaviour> start() final {
-            return _service.internal_start(nullptr);
+            co_return co_await _service.internal_start(nullptr);
         }
 
         [[nodiscard]]
         AsyncGenerator<StartBehaviour> stop() final {
-            return _service.internal_stop();
+            co_return co_await _service.internal_stop();
         }
 
         [[nodiscard]]

@@ -137,7 +137,7 @@ namespace Ichor {
     template<typename INTERFACE_TYPENAME>
     [[nodiscard]] consteval auto typeNameHash() {
         std::string_view name = typeName<INTERFACE_TYPENAME>();
-        return consteval_wyhash(&name[0], name.size(), 0);
+        return consteval_wyhash(name.data(), name.size(), 0);
     }
 }
 

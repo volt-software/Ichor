@@ -12,7 +12,7 @@ public:
     TimerRunsOnceService() = default;
     ~TimerRunsOnceService() final = default;
 
-    AsyncGenerator<tl::expected<void, Ichor::StartError>> start() final {
+    Task<tl::expected<void, Ichor::StartError>> start() final {
         fmt::print("start\n");
         _timerManager = getManager().createServiceManager<Timer, ITimer>();
         _timerManager->setChronoInterval(std::chrono::milliseconds(5));
@@ -24,7 +24,7 @@ public:
         co_return {};
     }
 
-    AsyncGenerator<void> stop() final {
+    Task<void> stop() final {
         _timerManager = nullptr;
         co_return;
     }

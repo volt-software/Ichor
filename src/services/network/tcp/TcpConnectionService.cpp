@@ -13,7 +13,7 @@ Ichor::TcpConnectionService::TcpConnectionService(DependencyRegister &reg, Prope
     reg.registerDependency<ILogger>(this, true);
 }
 
-Ichor::AsyncGenerator<tl::expected<void, Ichor::StartError>> Ichor::TcpConnectionService::start() {
+Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::TcpConnectionService::start() {
     if(getProperties().contains("Priority")) {
         _priority = Ichor::any_cast<uint64_t>(getProperties()["Priority"]);
     }
@@ -91,7 +91,7 @@ Ichor::AsyncGenerator<tl::expected<void, Ichor::StartError>> Ichor::TcpConnectio
     co_return {};
 }
 
-Ichor::AsyncGenerator<void> Ichor::TcpConnectionService::stop() {
+Ichor::Task<void> Ichor::TcpConnectionService::stop() {
     _quit = true;
     _timerManager = nullptr;
 

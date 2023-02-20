@@ -9,13 +9,13 @@ using namespace Ichor;
 struct AddEventHandlerDuringEventHandlingService final : public AdvancedService<AddEventHandlerDuringEventHandlingService> {
     AddEventHandlerDuringEventHandlingService() = default;
 
-    AsyncGenerator<tl::expected<void, Ichor::StartError>> start() final {
+    Task<tl::expected<void, Ichor::StartError>> start() final {
         _reg = getManager().registerEventHandler<TestEvent>(this);
 
         co_return {};
     }
 
-    AsyncGenerator<void> stop() final {
+    Task<void> stop() final {
         _reg.reset();
         _reg2.reset();
 

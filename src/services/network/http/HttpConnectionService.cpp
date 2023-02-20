@@ -11,7 +11,7 @@ Ichor::HttpConnectionService::HttpConnectionService(DependencyRegister &reg, Pro
     reg.registerDependency<IAsioContextService>(this, true);
 }
 
-Ichor::AsyncGenerator<tl::expected<void, Ichor::StartError>> Ichor::HttpConnectionService::start() {
+Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::HttpConnectionService::start() {
     if(!_asioContextService->fibersShouldStop() && !_connecting.load(std::memory_order_acquire) && !_connected.load(std::memory_order_acquire)) {
         _quit.store(false, std::memory_order_release);
         if (getProperties().contains("Priority")) {
@@ -47,11 +47,11 @@ Ichor::AsyncGenerator<tl::expected<void, Ichor::StartError>> Ichor::HttpConnecti
     co_return {};
 }
 
-Ichor::AsyncGenerator<void> Ichor::HttpConnectionService::stop() {
+Ichor::Task<void> Ichor::HttpConnectionService::stop() {
     _quit.store(true, std::memory_order_release);
 //    INTERNAL_DEBUG("----------------------------------------------- STOP");
 
-    co_await close().begin();
+    co_await close();
 
 //    INTERNAL_DEBUG("----------------------------------------------- STOP DONE");
 
@@ -83,7 +83,7 @@ uint64_t Ichor::HttpConnectionService::getPriority() {
     return _priority.load(std::memory_order_acquire);
 }
 
-Ichor::AsyncGenerator<Ichor::HttpResponse> Ichor::HttpConnectionService::sendAsync(Ichor::HttpMethod method, std::string_view route, std::vector<HttpHeader> &&headers, std::vector<uint8_t> &&msg) {
+Ichor::Task<Ichor::HttpResponse> Ichor::HttpConnectionService::sendAsync(Ichor::HttpMethod method, std::string_view route, std::vector<HttpHeader> &&headers, std::vector<uint8_t> &&msg) {
     if(method == HttpMethod::get && !msg.empty()) {
         throw std::runtime_error("GET requests cannot have a body.");
     }
@@ -201,7 +201,7 @@ Ichor::AsyncGenerator<Ichor::HttpResponse> Ichor::HttpConnectionService::sendAsy
     co_return response;
 }
 
-Ichor::AsyncGenerator<void> Ichor::HttpConnectionService::close() {
+Ichor::Task<void> Ichor::HttpConnectionService::close() {
     if(!_httpStream) {
         co_return;
     }

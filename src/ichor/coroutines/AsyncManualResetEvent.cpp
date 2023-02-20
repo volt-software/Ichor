@@ -15,12 +15,12 @@ Ichor::AsyncManualResetEvent::AsyncManualResetEvent(bool initiallySet) noexcept
 Ichor::AsyncManualResetEvent::~AsyncManualResetEvent() {
     // There should be no coroutines still awaiting the event.
     assert(
-            _state.load(std::memory_order_relaxed) == nullptr ||
-            _state.load(std::memory_order_relaxed) == static_cast<void*>(this));
+            _state == nullptr ||
+            _state == static_cast<void*>(this));
 }
 
 bool Ichor::AsyncManualResetEvent::is_set() const noexcept {
-    return _state.load(std::memory_order_acquire) == static_cast<const void*>(this);
+    return _state == static_cast<const void*>(this);
 }
 
 Ichor::AsyncManualResetEventOperation
@@ -36,7 +36,8 @@ void Ichor::AsyncManualResetEvent::set() noexcept {
     // Needs 'acquire' semantics in case there are any waiters so that we see
     // prior writes to the waiting coroutine's state and to the contents of
     // the queued AsyncManualResetEventOperation objects.
-    void* oldState = _state.exchange(setState, std::memory_order_acq_rel);
+    void* oldState = _state;
+    _state = setState;
     if (oldState != setState) {
         auto* current = static_cast<AsyncManualResetEventOperation*>(oldState);
         while (current != nullptr) {
@@ -48,8 +49,9 @@ void Ichor::AsyncManualResetEvent::set() noexcept {
 }
 
 void Ichor::AsyncManualResetEvent::reset() noexcept {
-    void* oldState = static_cast<void*>(this);
-    _state.compare_exchange_strong(oldState, nullptr, std::memory_order_relaxed);
+    if(_state == static_cast<void*>(this)) {
+        _state = nullptr;
+    }
 }
 
 Ichor::AsyncManualResetEventOperation::AsyncManualResetEventOperation(
@@ -67,19 +69,15 @@ bool Ichor::AsyncManualResetEventOperation::await_suspend(std::coroutine_handle<
 
     const void* const setState = static_cast<const void*>(&_event);
 
-    void* oldState = _event._state.load(std::memory_order_acquire);
-    do {
-        if (oldState == setState) {
-            // State is now 'set' no need to suspend.
-            return false;
-        }
+    void* oldState = _event._state;
 
-        _next = static_cast<AsyncManualResetEventOperation*>(oldState);
-    } while (!_event._state.compare_exchange_weak(
-            oldState,
-            static_cast<void*>(this),
-            std::memory_order_release,
-            std::memory_order_acquire));
+    if (oldState == setState) {
+        // State is now 'set' no need to suspend.
+        return false;
+    }
+
+    _next = static_cast<AsyncManualResetEventOperation*>(oldState);
+    _event._state = static_cast<void*>(this);
 
     // Successfully queued this waiter to the list.
     return true;

@@ -9,7 +9,7 @@ Ichor::HttpHostService::HttpHostService(DependencyRegister &reg, Properties prop
     reg.registerDependency<IAsioContextService>(this, true);
 }
 
-Ichor::AsyncGenerator<tl::expected<void, Ichor::StartError>> Ichor::HttpHostService::start() {
+Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::HttpHostService::start() {
     if(getProperties().contains("Priority")) {
         _priority = Ichor::any_cast<uint64_t>(getProperties()["Priority"]);
     }
@@ -37,7 +37,7 @@ Ichor::AsyncGenerator<tl::expected<void, Ichor::StartError>> Ichor::HttpHostServ
     co_return {};
 }
 
-Ichor::AsyncGenerator<void> Ichor::HttpHostService::stop() {
+Ichor::Task<void> Ichor::HttpHostService::stop() {
     INTERNAL_DEBUG("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! HttpHostService::stop()");
     _quit.store(true, std::memory_order_release);
 

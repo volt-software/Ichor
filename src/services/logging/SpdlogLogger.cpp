@@ -58,7 +58,7 @@ Ichor::LogLevel Ichor::SpdlogLogger::getLogLevel() const {
     return _level;
 }
 
-Ichor::AsyncGenerator<tl::expected<void, Ichor::StartError>> Ichor::SpdlogLogger::start() {
+Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::SpdlogLogger::start() {
     auto const &sinks = _sharedService->getSinks();
     _logger = std::make_shared<spdlog::logger>("multi_sink", sinks.begin(), sinks.end());
 
@@ -78,7 +78,7 @@ Ichor::AsyncGenerator<tl::expected<void, Ichor::StartError>> Ichor::SpdlogLogger
     co_return {};
 }
 
-Ichor::AsyncGenerator<void> Ichor::SpdlogLogger::stop() {
+Ichor::Task<void> Ichor::SpdlogLogger::stop() {
     co_return;
 }
 

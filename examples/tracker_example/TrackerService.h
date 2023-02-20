@@ -32,13 +32,13 @@ public:
     ~TrackerService() final = default;
 
 private:
-    AsyncGenerator<tl::expected<void, Ichor::StartError>> start() final {
+    Task<tl::expected<void, Ichor::StartError>> start() final {
         ICHOR_LOG_INFO(_logger, "TrackerService started");
         _trackerRegistration = getManager().registerDependencyTracker<IRuntimeCreatedService>(this);
         co_return {};
     }
 
-    AsyncGenerator<void> stop() final {
+    Task<void> stop() final {
         ICHOR_LOG_INFO(_logger, "TrackerService stopped");
         _trackerRegistration.reset();
         co_return;
