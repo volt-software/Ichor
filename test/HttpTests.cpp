@@ -7,7 +7,7 @@
 #include <ichor/services/network/http/HttpHostService.h>
 #include <ichor/services/network/http/HttpConnectionService.h>
 #include <ichor/services/network/AsioContextService.h>
-#include <ichor/services/network/ClientAdmin.h>
+#include <ichor/services/network/ClientFactory.h>
 #include <ichor/services/serialization/ISerializer.h>
 #include <ichor/services/logging/CoutFrameworkLogger.h>
 #include <ichor/services/logging/CoutLogger.h>
@@ -38,7 +38,7 @@ TEST_CASE("HttpTests") {
             dm.createServiceManager<TestMsgRapidJsonSerializer, ISerializer<TestMsg>>();
             dm.createServiceManager<AsioContextService, IAsioContextService>();
             dm.createServiceManager<HttpHostService, IHttpService>(Properties{{"Address", Ichor::make_any<std::string>("127.0.0.1")}, {"Port", Ichor::make_any<uint16_t>(static_cast<uint16_t>(8001))}});
-            dm.createServiceManager<ClientAdmin<HttpConnectionService, IHttpConnectionService>, IClientAdmin>();
+            dm.createServiceManager<ClientFactory<HttpConnectionService, IHttpConnectionService>>();
             dm.createServiceManager<HttpThreadService>(Properties{{"Address", Ichor::make_any<std::string>("127.0.0.1")}, {"Port", Ichor::make_any<uint16_t>(static_cast<uint16_t>(8001))}});
 
             queue->start(CaptureSigInt);
@@ -74,7 +74,7 @@ TEST_CASE("HttpTests") {
             dm.createServiceManager<TestMsgRapidJsonSerializer, ISerializer<TestMsg>>();
             dm.createServiceManager<AsioContextService, IAsioContextService>(Properties{{"Threads", Ichor::make_any<uint64_t>(4ul)}});
             dm.createServiceManager<HttpHostService, IHttpService>(Properties{{"Address", Ichor::make_any<std::string>("127.0.0.1")}, {"Port", Ichor::make_any<uint16_t>(static_cast<uint16_t>(8001))}});
-            dm.createServiceManager<ClientAdmin<HttpConnectionService, IHttpConnectionService>, IClientAdmin>();
+            dm.createServiceManager<ClientFactory<HttpConnectionService, IHttpConnectionService>>();
             dm.createServiceManager<HttpThreadService>(Properties{{"Address", Ichor::make_any<std::string>("127.0.0.1")}, {"Port", Ichor::make_any<uint16_t>(static_cast<uint16_t>(8001))}});
 
             queue->start(CaptureSigInt);
