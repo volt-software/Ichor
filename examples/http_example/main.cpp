@@ -6,7 +6,7 @@
 #include <ichor/services/logging/LoggerFactory.h>
 #include <ichor/services/network/http/HttpHostService.h>
 #include <ichor/services/network/http/HttpConnectionService.h>
-#include <ichor/services/network/ClientAdmin.h>
+#include <ichor/services/network/ClientFactory.h>
 #include <ichor/services/serialization/ISerializer.h>
 
 #ifdef ICHOR_USE_SPDLOG
@@ -85,7 +85,7 @@ int main(int argc, char *argv[]) {
     dm.createServiceManager<TestMsgRapidJsonSerializer, ISerializer<TestMsg>>();
     dm.createServiceManager<AsioContextService, IAsioContextService>(Properties{{"Threads", Ichor::make_any<uint64_t>(threads)}});
     dm.createServiceManager<HttpHostService, IHttpService>(Properties{{"Address", Ichor::make_any<std::string>(address)}, {"Port", Ichor::make_any<uint16_t>(static_cast<uint16_t>(8001))}});
-    dm.createServiceManager<ClientAdmin<HttpConnectionService, IHttpConnectionService>, IClientAdmin>();
+    dm.createServiceManager<ClientFactory<HttpConnectionService, IHttpConnectionService>>();
     dm.createServiceManager<UsingHttpService>(Properties{{"Address", Ichor::make_any<std::string>(address)}, {"Port", Ichor::make_any<uint16_t>(static_cast<uint16_t>(8001))}});
     queue->start(CaptureSigInt);
     auto end = std::chrono::steady_clock::now();

@@ -1,22 +1,20 @@
 #pragma once
 
-#include <ichor/services/network/IClientAdmin.h>
 #include <ichor/services/network/IConnectionService.h>
 #include <ichor/services/logging/Logger.h>
 #include <thread>
-#include <ichor/DependencyManager.h>
 
 namespace Ichor {
     template <typename NetworkType, typename NetworkInterfaceType = IConnectionService>
-    class ClientAdmin final : public IClientAdmin, public AdvancedService<ClientAdmin<NetworkType, NetworkInterfaceType>> {
+    class ClientFactory final : public AdvancedService<ClientFactory<NetworkType, NetworkInterfaceType>> {
     public:
-        ClientAdmin(Properties properties, DependencyManager *mng) : AdvancedService<ClientAdmin<NetworkType, NetworkInterfaceType>>(std::move(properties), mng), _connections{} {  }
-        ~ClientAdmin() override = default;
+        ClientFactory(Properties properties, DependencyManager *mng) : AdvancedService<ClientFactory<NetworkType, NetworkInterfaceType>>(std::move(properties), mng), _connections{} {  }
+        ~ClientFactory() override = default;
 
     private:
         Task<tl::expected<void, Ichor::StartError>> start() final {
-            _trackerRegistration = AdvancedService<ClientAdmin<NetworkType, NetworkInterfaceType>>::getManager().template registerDependencyTracker<NetworkInterfaceType>(this);
-            _unrecoverableErrorRegistration = AdvancedService<ClientAdmin<NetworkType, NetworkInterfaceType>>::getManager().template registerEventHandler<UnrecoverableErrorEvent>(this);
+            _trackerRegistration = AdvancedService<ClientFactory<NetworkType, NetworkInterfaceType>>::getManager().template registerDependencyTracker<NetworkInterfaceType>(this);
+            _unrecoverableErrorRegistration = AdvancedService<ClientFactory<NetworkType, NetworkInterfaceType>>::getManager().template registerEventHandler<UnrecoverableErrorEvent>(this);
 
             co_return {};
         }
@@ -45,7 +43,7 @@ namespace Ichor {
                 auto newProps = *evt.properties.value();
                 newProps.emplace("Filter", Ichor::make_any<Filter>(ServiceIdFilterEntry{evt.originatingService}));
 
-                _connections.emplace(evt.originatingService, AdvancedService<ClientAdmin<NetworkType, NetworkInterfaceType>>::getManager().template createServiceManager<NetworkType, NetworkInterfaceType>(std::move(newProps)));
+                _connections.emplace(evt.originatingService, AdvancedService<ClientFactory<NetworkType, NetworkInterfaceType>>::getManager().template createServiceManager<NetworkType, NetworkInterfaceType>(std::move(newProps)));
             }
         }
 
@@ -54,9 +52,9 @@ namespace Ichor {
 
             if(connection != end(_connections)) {
                 // TODO: turn into async and await a stop service before calling remove. Current connections already are async, which will lead to the remove service event being ignored.
-                AdvancedService<ClientAdmin<NetworkType, NetworkInterfaceType>>::getManager().template pushEvent<StopServiceEvent>(AdvancedService<ClientAdmin<NetworkType, NetworkInterfaceType>>::getServiceId(), connection->second->getServiceId());
+                AdvancedService<ClientFactory<NetworkType, NetworkInterfaceType>>::getManager().template pushEvent<StopServiceEvent>(AdvancedService<ClientFactory<NetworkType, NetworkInterfaceType>>::getServiceId(), connection->second->getServiceId());
                 // + 11 because the first stop triggers a dep offline event and inserts a new stop with 10 higher priority.
-                AdvancedService<ClientAdmin<NetworkType, NetworkInterfaceType>>::getManager().template pushPrioritisedEvent<RemoveServiceEvent>(AdvancedService<ClientAdmin<NetworkType, NetworkInterfaceType>>::getServiceId(), INTERNAL_EVENT_PRIORITY + 11, connection->second->getServiceId());
+                AdvancedService<ClientFactory<NetworkType, NetworkInterfaceType>>::getManager().template pushPrioritisedEvent<RemoveServiceEvent>(AdvancedService<ClientFactory<NetworkType, NetworkInterfaceType>>::getServiceId(), INTERNAL_EVENT_PRIORITY + 11, connection->second->getServiceId());
                 _connections.erase(connection);
             }
         }
@@ -73,7 +71,7 @@ namespace Ichor {
                 if(port != cend(service->getProperties())) {
                     full_address += ":" + std::to_string(Ichor::any_cast<uint16_t>(port->second));
                 }
-                std::string_view implNameRequestor = AdvancedService<ClientAdmin<NetworkType, NetworkInterfaceType>>::getManager().getImplementationNameFor(evt.originatingService).value();
+                std::string_view implNameRequestor = AdvancedService<ClientFactory<NetworkType, NetworkInterfaceType>>::getManager().getImplementationNameFor(evt.originatingService).value();
                 ICHOR_LOG_ERROR(_logger, "Couldn't start connection of type {} on address {} for service of type {} with id {} because \"{}\"", typeNameHash<NetworkType>(), full_address, implNameRequestor, service->getServiceId(), evt.error);
 
                 break;

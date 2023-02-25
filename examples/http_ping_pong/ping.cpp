@@ -5,7 +5,7 @@
 #include <ichor/services/logging/LoggerFactory.h>
 #include <ichor/services/network/http/HttpConnectionService.h>
 #include <ichor/services/network/AsioContextService.h>
-#include <ichor/services/network/ClientAdmin.h>
+#include <ichor/services/network/ClientFactory.h>
 #include <ichor/services/serialization/ISerializer.h>
 #include <ichor/services/logging/NullLogger.h>
 
@@ -82,7 +82,7 @@ int main(int argc, char *argv[]) {
 
     dm.createServiceManager<PingMsgJsonSerializer, ISerializer<PingMsg>>();
     dm.createServiceManager<AsioContextService, IAsioContextService>();
-    dm.createServiceManager<ClientAdmin<HttpConnectionService, IHttpConnectionService>, IClientAdmin>();
+    dm.createServiceManager<ClientFactory<HttpConnectionService, IHttpConnectionService>>();
     dm.createServiceManager<PingService>(Properties{{"Address", Ichor::make_any<std::string>(address)}, {"Port", Ichor::make_any<uint16_t>(static_cast<uint16_t>(8001))}});
     queue->start(CaptureSigInt);
     auto end = std::chrono::steady_clock::now();
