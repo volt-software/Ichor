@@ -196,3 +196,32 @@ struct fmt::formatter<Ichor::StartBehaviour>
         }
     }
 };
+
+template <>
+struct fmt::formatter<Ichor::LogLevel>
+{
+    constexpr auto parse(format_parse_context& ctx)
+    {
+        return ctx.end();
+    }
+
+    template <typename FormatContext>
+    auto format(const Ichor::LogLevel& change, FormatContext& ctx)
+    {
+        switch(change)
+        {
+            case Ichor::LogLevel::LOG_TRACE:
+                return format_to(ctx.out(), "LOG_TRACE");
+            case Ichor::LogLevel::LOG_DEBUG:
+                return format_to(ctx.out(), "LOG_DEBUG");
+            case Ichor::LogLevel::LOG_INFO:
+                return format_to(ctx.out(), "LOG_INFO");
+            case Ichor::LogLevel::LOG_WARN:
+                return format_to(ctx.out(), "LOG_WARN");
+            case Ichor::LogLevel::LOG_ERROR:
+                return format_to(ctx.out(), "LOG_ERROR");
+            default:
+                return format_to(ctx.out(), "error, please file a bug in Ichor");
+        }
+    }
+};
