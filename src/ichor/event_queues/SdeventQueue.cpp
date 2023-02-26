@@ -218,7 +218,7 @@ namespace Ichor {
                                       if(!q->_otherThreadEventQueue.empty()) [[unlikely]] {
                                           auto node = q->_otherThreadEventQueue.extract(q->_otherThreadEventQueue.begin());
                                           lck.unlock();
-                                          q->pushInternalEvent(node.key(), std::move(node.mapped()));
+                                          q->pushEventInternal(node.key(), std::move(node.mapped()));
                                       } else {
                                           lck.unlock();
                                       }
