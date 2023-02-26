@@ -5,119 +5,69 @@ Setup: AMD 7950X, 6000MHz@CL38 RAM, ubuntu 22.04, gcc 11.3
 
 | Compile<br/>Options           |      coroutines      |                  events |                  start |         start & stop | 
 |-------------------------------|:--------------------:|------------------------:|-----------------------:|---------------------:|
-| std containers<br/>std alloc  | 1,013,137 µs<br/>5MB | 1,797,842 µs<br/>5765MB | 5,389,847 µs<br/>362MB | 2,298,210 µs<br/>5MB |
-| absl containers<br/>std alloc | 1,397,622 µs<br/>5MB | 1,395,031 µs<br/>3725MB | 2,817,231 µs<br/>282MB | 2,410,041 µs<br/>6MB |
-| std containers<br/>mimalloc   |  867,144 µs<br/>7MB  |   818,567 µs<br/>4598MB | 4,404,650 µs<br/>356MB | 1,832,268 µs<br/>7MB |
-| absl containers<br/>mimalloc  | 1,187,087 µs<br/>7MB |   836,063 µs<br/>3352MB | 2,497,607 µs<br/>295MB | 2,091,859 µs<br/>7MB |
+| std containers<br/>std alloc  |  964,542 µs<br/>5MB  | 2,291,967 µs<br/>5760MB | 5,392,778 µs<br/>373MB | 2,270,025 µs<br/>5MB |
+| absl containers<br/>std alloc | 1,308,459 µs<br/>5MB | 1,730,601 µs<br/>3722MB | 2,802,061 µs<br/>303MB | 2,486,035 µs<br/>5MB |
+| std containers<br/>mimalloc   |  858,882 µs<br/>5MB  |   802,964 µs<br/>4383MB | 4,494,822 µs<br/>366MB | 1,704,202 µs<br/>5MB |
+| absl containers<br/>mimalloc  | 1,044,875 µs<br/>5MB |   896,118 µs<br/>3116MB | 2,592,989 µs<br/>312MB | 2,024,756 µs<br/>6MB |
 
 Detailed data:
 ```text
-../std_std/ichor_coroutine_benchmark single threaded ran for 556,739 µs with 2,072,576 peak memory usage 8,980,868 coroutines/s
-../std_std/ichor_coroutine_benchmark multi threaded ran for 1,013,137 µs with 5,328,896 peak memory usage 39,481,333 coroutines/s
-../std_std/ichor_event_benchmark single threaded ran for 1,050,739 µs with 644,476,928 peak memory usage 4,758,555 events/s
-../std_std/ichor_event_benchmark multi threaded ran for 1,797,842 µs with 5,765,300,224 peak memory usage 22,248,896 events/s
-../std_std/ichor_serializer_benchmark single threaded rapidjson ran for 729,540 µs with 4,628,480 peak memory usage 212,462,647 B/s
-../std_std/ichor_serializer_benchmark multi threaded rapidjson ran for 765,606 µs with 5,427,200 peak memory usage 1,619,632,030 B/s
-../std_std/ichor_serializer_benchmark single threaded boost.JSON ran for 1,165,199 µs with 5,427,200 peak memory usage 128,733,375 B/s
-../std_std/ichor_serializer_benchmark multi threaded boost.JSON ran for 1,218,898 µs with 5,517,312 peak memory usage 984,495,831 B/s
-../std_std/ichor_start_benchmark single threaded ran for 2,907,044 µs with 44,441,600 peak memory usage
-../std_std/ichor_start_benchmark multi threaded ran for 5,389,847 µs with 361,631,744 peak memory usage
-../std_std/ichor_start_stop_benchmark single threaded ran for 1,501,918 µs with 2,076,672 peak memory usage 665,815 start & stop /s
-../std_std/ichor_start_stop_benchmark multi threaded ran for 2,298,210 µs with 5,427,200 peak memory usage 3,480,969 start & stop /s
-../std_mimalloc/ichor_coroutine_benchmark single threaded ran for 402,409 µs with 4,440,064 peak memory usage 12,425,169 coroutines/s
-../std_mimalloc/ichor_coroutine_benchmark multi threaded ran for 867,144 µs with 6,684,672 peak memory usage 46,128,440 coroutines/s
-../std_mimalloc/ichor_event_benchmark single threaded ran for 566,218 µs with 566,939,648 peak memory usage 8,830,521 events/s
-../std_mimalloc/ichor_event_benchmark multi threaded ran for 818,567 µs with 4,598,132,736 peak memory usage 48,865,883 events/s
-../std_mimalloc/ichor_serializer_benchmark single threaded rapidjson ran for 580,956 µs with 4,403,200 peak memory usage 266,801,616 B/s
-../std_mimalloc/ichor_serializer_benchmark multi threaded rapidjson ran for 641,717 µs with 7,192,576 peak memory usage 1,932,315,958 B/s
-../std_mimalloc/ichor_serializer_benchmark single threaded boost.JSON ran for 1,020,584 µs with 7,192,576 peak memory usage 146,974,673 B/s
-../std_mimalloc/ichor_serializer_benchmark multi threaded boost.JSON ran for 1,005,983 µs with 7,364,608 peak memory usage 1,192,863,100 B/s
-../std_mimalloc/ichor_start_benchmark single threaded ran for 2,029,792 µs with 43,855,872 peak memory usage
-../std_mimalloc/ichor_start_benchmark multi threaded ran for 4,404,650 µs with 356,323,328 peak memory usage
-../std_mimalloc/ichor_start_stop_benchmark single threaded ran for 1,101,475 µs with 4,358,144 peak memory usage 907,873 start & stop /s
-../std_mimalloc/ichor_start_stop_benchmark multi threaded ran for 1,832,268 µs with 6,909,952 peak memory usage 4,366,173 start & stop /s
-../absl_std/ichor_coroutine_benchmark single threaded ran for 581,070 µs with 2,134,016 peak memory usage 8,604,815 coroutines/s
-../absl_std/ichor_coroutine_benchmark multi threaded ran for 1,397,622 µs with 5,406,720 peak memory usage 28,620,041 coroutines/s
-../absl_std/ichor_event_benchmark single threaded ran for 540,537 µs with 417,771,520 peak memory usage 9,250,060 events/s
-../absl_std/ichor_event_benchmark multi threaded ran for 1,395,031 µs with 3,725,459,456 peak memory usage 28,673,197 events/s
-../absl_std/ichor_serializer_benchmark single threaded rapidjson ran for 733,318 µs with 4,780,032 peak memory usage 211,368,055 B/s
-../absl_std/ichor_serializer_benchmark multi threaded rapidjson ran for 754,645 µs with 5,603,328 peak memory usage 1,643,156,716 B/s
-../absl_std/ichor_serializer_benchmark single threaded boost.JSON ran for 1,053,288 µs with 5,603,328 peak memory usage 142,411,192 B/s
-../absl_std/ichor_serializer_benchmark multi threaded boost.JSON ran for 1,122,450 µs with 5,664,768 peak memory usage 1,069,089,937 B/s
-../absl_std/ichor_start_benchmark single threaded ran for 2,583,465 µs with 36,003,840 peak memory usage
-../absl_std/ichor_start_benchmark multi threaded ran for 2,817,231 µs with 282,361,856 peak memory usage
-../absl_std/ichor_start_stop_benchmark single threaded ran for 1,502,495 µs with 2,142,208 peak memory usage 665,559 start & stop /s
-../absl_std/ichor_start_stop_benchmark multi threaded ran for 2,410,041 µs with 5,509,120 peak memory usage 3,319,445 start & stop /s
-../absl_mimalloc/ichor_coroutine_benchmark single threaded ran for 443,501 µs with 4,358,144 peak memory usage 11,273,931 coroutines/s
-../absl_mimalloc/ichor_coroutine_benchmark multi threaded ran for 1,187,087 µs with 6,836,224 peak memory usage 33,695,929 coroutines/s
-../absl_mimalloc/ichor_event_benchmark single threaded ran for 458,684 µs with 414,511,104 peak memory usage 10,900,750 events/s
-../absl_mimalloc/ichor_event_benchmark multi threaded ran for 836,063 µs with 3,352,096,768 peak memory usage 47,843,284 events/s
-../absl_mimalloc/ichor_serializer_benchmark single threaded rapidjson ran for 574,965 µs with 4,386,816 peak memory usage 269,581,626 B/s
-../absl_mimalloc/ichor_serializer_benchmark multi threaded rapidjson ran for 740,182 µs with 7,217,152 peak memory usage 1,675,263,651 B/s
-../absl_mimalloc/ichor_serializer_benchmark single threaded boost.JSON ran for 1,099,887 µs with 7,217,152 peak memory usage 136,377,646 B/s
-../absl_mimalloc/ichor_serializer_benchmark multi threaded boost.JSON ran for 1,139,676 µs with 7,307,264 peak memory usage 1,052,930,832 B/s
-../absl_mimalloc/ichor_start_benchmark single threaded ran for 2,240,716 µs with 37,253,120 peak memory usage
-../absl_mimalloc/ichor_start_benchmark multi threaded ran for 2,497,607 µs with 295,014,400 peak memory usage
-../absl_mimalloc/ichor_start_stop_benchmark single threaded ran for 1,198,513 µs with 4,382,720 peak memory usage 834,367 start & stop /s
-../absl_mimalloc/ichor_start_stop_benchmark multi threaded ran for 2,091,859 µs with 6,979,584 peak memory usage 3,824,349 start & stop /s
-```
-```text
-../std_std/ichor_coroutine_benchmark single threaded ran for 505,973 µs with 4,194,304 peak memory usage 9,881,950 coroutines/s
-../std_std/ichor_coroutine_benchmark multi threaded ran for 943,674 µs with 4,718,592 peak memory usage 42,387,519 coroutines/s
-../std_std/ichor_event_benchmark single threaded ran for 1,051,677 µs with 644,349,952 peak memory usage 4,754,311 events/s
-../std_std/ichor_event_benchmark multi threaded ran for 2,392,043 µs with 5,761,925,120 peak memory usage 16,722,107 events/s
-../std_std/ichor_serializer_benchmark single threaded rapidjson ran for 654,639 µs with 4,456,448 peak memory usage 236 MB/s
-../std_std/ichor_serializer_benchmark multi threaded rapidjson ran for 698,496 µs with 4,718,592 peak memory usage 1,775 MB/s
-../std_std/ichor_serializer_benchmark single threaded boost.JSON ran for 933,794 µs with 4,718,592 peak memory usage 160 MB/s
-../std_std/ichor_serializer_benchmark multi threaded boost.JSON ran for 989,189 µs with 4,718,592 peak memory usage 1,213 MB/s
-../std_std/ichor_start_benchmark single threaded advanced injection ran for 2,943,817 µs with 45,723,648 peak memory usage
-../std_std/ichor_start_benchmark multi threaded advanced injection ran for 5,409,877 µs with 373,665,792 peak memory usage
-../std_std/ichor_start_benchmark single threaded constructor injection ran for 3,578,904 µs with 373,665,792 peak memory usage
-../std_std/ichor_start_benchmark multi threaded constructor injection ran for 6,102,429 µs with 391,458,816 peak memory usage
-../std_std/ichor_start_stop_benchmark single threaded ran for 1,325,278 µs with 4,456,448 peak memory usage 754,558 start & stop /s
-../std_std/ichor_start_stop_benchmark multi threaded ran for 2,090,002 µs with 4,718,592 peak memory usage 3,827,747 start & stop /s
-../std_mimalloc/ichor_coroutine_benchmark single threaded ran for 369,478 µs with 4,718,592 peak memory usage 13,532,605 coroutines/s
-../std_mimalloc/ichor_coroutine_benchmark multi threaded ran for 810,747 µs with 5,242,880 peak memory usage 49,337,216 coroutines/s
-../std_mimalloc/ichor_event_benchmark single threaded ran for 566,245 µs with 566,231,040 peak memory usage 8,830,100 events/s
-../std_mimalloc/ichor_event_benchmark multi threaded ran for 774,895 µs with 4,569,432,064 peak memory usage 51,619,896 events/s
-../std_mimalloc/ichor_serializer_benchmark single threaded rapidjson ran for 519,016 µs with 4,718,592 peak memory usage 298 MB/s
-../std_mimalloc/ichor_serializer_benchmark multi threaded rapidjson ran for 634,363 µs with 5,242,880 peak memory usage 1,954 MB/s
-../std_mimalloc/ichor_serializer_benchmark single threaded boost.JSON ran for 890,456 µs with 5,242,880 peak memory usage 168 MB/s
-../std_mimalloc/ichor_serializer_benchmark multi threaded boost.JSON ran for 1,014,562 µs with 5,738,496 peak memory usage 1,182 MB/s
-../std_mimalloc/ichor_start_benchmark single threaded advanced injection ran for 1,885,560 µs with 44,802,048 peak memory usage
-../std_mimalloc/ichor_start_benchmark multi threaded advanced injection ran for 4,368,137 µs with 365,637,632 peak memory usage
-../std_mimalloc/ichor_start_benchmark single threaded constructor injection ran for 2,292,992 µs with 367,988,736 peak memory usage
-../std_mimalloc/ichor_start_benchmark multi threaded constructor injection ran for 5,150,925 µs with 385,961,984 peak memory usage
-../std_mimalloc/ichor_start_stop_benchmark single threaded ran for 1,016,435 µs with 4,718,592 peak memory usage 983,830 start & stop /s
-../std_mimalloc/ichor_start_stop_benchmark multi threaded ran for 1,701,475 µs with 4,718,592 peak memory usage 4,701,802 start & stop /s
-../absl_std/ichor_coroutine_benchmark single threaded ran for 584,734 µs with 4,456,448 peak memory usage 8,550,896 coroutines/s
-../absl_std/ichor_coroutine_benchmark multi threaded ran for 1,553,053 µs with 4,718,592 peak memory usage 25,755,721 coroutines/s
-../absl_std/ichor_event_benchmark single threaded ran for 512,882 µs with 417,595,392 peak memory usage 9,748,831 events/s
-../absl_std/ichor_event_benchmark multi threaded ran for 1,794,769 µs with 3,721,134,080 peak memory usage 22,286,990 events/s
-../absl_std/ichor_serializer_benchmark single threaded rapidjson ran for 709,232 µs with 4,456,448 peak memory usage 218 MB/s
-../absl_std/ichor_serializer_benchmark multi threaded rapidjson ran for 741,179 µs with 4,718,592 peak memory usage 1,673 MB/s
-../absl_std/ichor_serializer_benchmark single threaded boost.JSON ran for 967,230 µs with 4,980,736 peak memory usage 155 MB/s
-../absl_std/ichor_serializer_benchmark multi threaded boost.JSON ran for 1,032,642 µs with 4,980,736 peak memory usage 1,162 MB/s
-../absl_std/ichor_start_benchmark single threaded advanced injection ran for 2,510,207 µs with 38,014,976 peak memory usage
-../absl_std/ichor_start_benchmark multi threaded advanced injection ran for 2,741,164 µs with 305,139,712 peak memory usage
-../absl_std/ichor_start_benchmark single threaded constructor injection ran for 3,084,480 µs with 305,139,712 peak memory usage
-../absl_std/ichor_start_benchmark multi threaded constructor injection ran for 2,930,336 µs with 315,953,152 peak memory usage
-../absl_std/ichor_start_stop_benchmark single threaded ran for 1,346,600 µs with 4,456,448 peak memory usage 742,611 start & stop /s
-../absl_std/ichor_start_stop_benchmark multi threaded ran for 2,108,204 µs with 4,718,592 peak memory usage 3,794,699 start & stop /s
-../absl_mimalloc/ichor_coroutine_benchmark single threaded ran for 417,250 µs with 4,718,592 peak memory usage 11,983,223 coroutines/s
-../absl_mimalloc/ichor_coroutine_benchmark multi threaded ran for 996,022 µs with 5,242,880 peak memory usage 40,159,755 coroutines/s
-../absl_mimalloc/ichor_event_benchmark single threaded ran for 464,343 µs with 414,187,520 peak memory usage 10,767,902 events/s
-../absl_mimalloc/ichor_event_benchmark multi threaded ran for 633,516 µs with 3,349,676,032 peak memory usage 63,139,683 events/s
-../absl_mimalloc/ichor_serializer_benchmark single threaded rapidjson ran for 566,135 µs with 4,980,736 peak memory usage 273 MB/s
-../absl_mimalloc/ichor_serializer_benchmark multi threaded rapidjson ran for 606,166 µs with 5,505,024 peak memory usage 2,045 MB/s
-../absl_mimalloc/ichor_serializer_benchmark single threaded boost.JSON ran for 871,676 µs with 5,505,024 peak memory usage 172 MB/s
-../absl_mimalloc/ichor_serializer_benchmark multi threaded boost.JSON ran for 937,612 µs with 5,505,024 peak memory usage 1,279 MB/s
-../absl_mimalloc/ichor_start_benchmark single threaded advanced injection ran for 2,242,223 µs with 39,104,512 peak memory usage
-../absl_mimalloc/ichor_start_benchmark multi threaded advanced injection ran for 2,578,220 µs with 311,287,808 peak memory usage
-../absl_mimalloc/ichor_start_benchmark single threaded constructor injection ran for 2,659,415 µs with 311,922,688 peak memory usage
-../absl_mimalloc/ichor_start_benchmark multi threaded constructor injection ran for 2,889,123 µs with 315,002,880 peak memory usage
-../absl_mimalloc/ichor_start_stop_benchmark single threaded ran for 1,097,475 µs with 4,718,592 peak memory usage 911,182 start & stop /s
-../absl_mimalloc/ichor_start_stop_benchmark multi threaded ran for 1,844,369 µs with 5,242,880 peak memory usage 4,337,526 start & stop /s
+../std_std/ichor_coroutine_benchmark single threaded ran for 519,920 µs with 4,194,304 peak memory usage 9,616,864 coroutines/s
+../std_std/ichor_coroutine_benchmark multi threaded ran for 964,542 µs with 4,718,592 peak memory usage 41,470,459 coroutines/s
+../std_std/ichor_event_benchmark single threaded ran for 1,042,089 µs with 644,349,952 peak memory usage 4,798,054 events/s
+../std_std/ichor_event_benchmark multi threaded ran for 2,291,967 µs with 5,760,876,544 peak memory usage 17,452,258 events/s
+../std_std/ichor_serializer_benchmark single threaded rapidjson ran for 685,394 µs with 4,456,448 peak memory usage 226 MB/s
+../std_std/ichor_serializer_benchmark multi threaded rapidjson ran for 731,981 µs with 4,718,592 peak memory usage 1,694 MB/s
+../std_std/ichor_serializer_benchmark single threaded boost.JSON ran for 1,004,706 µs with 4,718,592 peak memory usage 149 MB/s
+../std_std/ichor_serializer_benchmark multi threaded boost.JSON ran for 1,234,318 µs with 4,718,592 peak memory usage 972 MB/s
+../std_std/ichor_start_benchmark single threaded advanced injection ran for 2,801,849 µs with 45,563,904 peak memory usage
+../std_std/ichor_start_benchmark multi threaded advanced injection ran for 5,392,778 µs with 372,981,760 peak memory usage
+../std_std/ichor_start_benchmark single threaded constructor injection ran for 3,532,298 µs with 372,981,760 peak memory usage
+../std_std/ichor_start_benchmark multi threaded constructor injection ran for 6,355,558 µs with 390,033,408 peak memory usage
+../std_std/ichor_start_stop_benchmark single threaded ran for 1,374,069 µs with 4,194,304 peak memory usage 727,765 start & stop /s
+../std_std/ichor_start_stop_benchmark multi threaded ran for 2,270,025 µs with 4,718,592 peak memory usage 3,524,190 start & stop /s
+../std_mimalloc/ichor_coroutine_benchmark single threaded ran for 396,122 µs with 4,718,592 peak memory usage 12,622,373 coroutines/s
+../std_mimalloc/ichor_coroutine_benchmark multi threaded ran for 858,882 µs with 4,718,592 peak memory usage 46,572,171 coroutines/s
+../std_mimalloc/ichor_event_benchmark single threaded ran for 559,430 µs with 566,755,328 peak memory usage 8,937,668 events/s
+../std_mimalloc/ichor_event_benchmark multi threaded ran for 802,964 µs with 4,383,309,824 peak memory usage 49,815,433 events/s
+../std_mimalloc/ichor_serializer_benchmark single threaded rapidjson ran for 499,905 µs with 4,718,592 peak memory usage 310 MB/s
+../std_mimalloc/ichor_serializer_benchmark multi threaded rapidjson ran for 598,100 µs with 5,242,880 peak memory usage 2,073 MB/s
+../std_mimalloc/ichor_serializer_benchmark single threaded boost.JSON ran for 925,410 µs with 5,242,880 peak memory usage 162 MB/s
+../std_mimalloc/ichor_serializer_benchmark multi threaded boost.JSON ran for 976,667 µs with 5,242,880 peak memory usage 1,228 MB/s
+../std_mimalloc/ichor_start_benchmark single threaded advanced injection ran for 2,087,926 µs with 44,814,336 peak memory usage
+../std_mimalloc/ichor_start_benchmark multi threaded advanced injection ran for 4,494,822 µs with 365,953,024 peak memory usage
+../std_mimalloc/ichor_start_benchmark single threaded constructor injection ran for 2,540,647 µs with 368,238,592 peak memory usage
+../std_mimalloc/ichor_start_benchmark multi threaded constructor injection ran for 5,312,124 µs with 386,310,144 peak memory usage
+../std_mimalloc/ichor_start_stop_benchmark single threaded ran for 1,019,242 µs with 4,718,592 peak memory usage 981,121 start & stop /s
+../std_mimalloc/ichor_start_stop_benchmark multi threaded ran for 1,704,202 µs with 4,718,592 peak memory usage 4,694,279 start & stop /s
+../absl_std/ichor_coroutine_benchmark single threaded ran for 544,185 µs with 4,456,448 peak memory usage 9,188,051 coroutines/s
+../absl_std/ichor_coroutine_benchmark multi threaded ran for 1,308,459 µs with 4,718,592 peak memory usage 30,570,312 coroutines/s
+../absl_std/ichor_event_benchmark single threaded ran for 529,475 µs with 417,595,392 peak memory usage 9,443,316 events/s
+../absl_std/ichor_event_benchmark multi threaded ran for 1,730,601 µs with 3,721,920,512 peak memory usage 23,113,357 events/s
+../absl_std/ichor_serializer_benchmark single threaded rapidjson ran for 837,304 µs with 4,456,448 peak memory usage 185 MB/s
+../absl_std/ichor_serializer_benchmark multi threaded rapidjson ran for 769,968 µs with 4,718,592 peak memory usage 1,610 MB/s
+../absl_std/ichor_serializer_benchmark single threaded boost.JSON ran for 997,978 µs with 4,980,736 peak memory usage 150 MB/s
+../absl_std/ichor_serializer_benchmark multi threaded boost.JSON ran for 1,041,410 µs with 4,980,736 peak memory usage 1,152 MB/s
+../absl_std/ichor_start_benchmark single threaded advanced injection ran for 2,524,460 µs with 37,855,232 peak memory usage
+../absl_std/ichor_start_benchmark multi threaded advanced injection ran for 2,802,061 µs with 302,882,816 peak memory usage
+../absl_std/ichor_start_benchmark single threaded constructor injection ran for 3,118,810 µs with 302,882,816 peak memory usage
+../absl_std/ichor_start_benchmark multi threaded constructor injection ran for 3,109,533 µs with 311,435,264 peak memory usage
+../absl_std/ichor_start_stop_benchmark single threaded ran for 1,413,799 µs with 4,456,448 peak memory usage 707,314 start & stop /s
+../absl_std/ichor_start_stop_benchmark multi threaded ran for 2,486,035 µs with 4,718,592 peak memory usage 3,217,975 start & stop /s
+../absl_mimalloc/ichor_coroutine_benchmark single threaded ran for 417,400 µs with 4,718,592 peak memory usage 11,978,917 coroutines/s
+../absl_mimalloc/ichor_coroutine_benchmark multi threaded ran for 1,044,875 µs with 4,718,592 peak memory usage 38,282,091 coroutines/s
+../absl_mimalloc/ichor_event_benchmark single threaded ran for 458,921 µs with 414,187,520 peak memory usage 10,895,121 events/s
+../absl_mimalloc/ichor_event_benchmark multi threaded ran for 896,118 µs with 3,116,367,872 peak memory usage 44,636,978 events/s
+../absl_mimalloc/ichor_serializer_benchmark single threaded rapidjson ran for 577,368 µs with 4,718,592 peak memory usage 268 MB/s
+../absl_mimalloc/ichor_serializer_benchmark multi threaded rapidjson ran for 613,906 µs with 5,242,880 peak memory usage 2,019 MB/s
+../absl_mimalloc/ichor_serializer_benchmark single threaded boost.JSON ran for 950,804 µs with 5,242,880 peak memory usage 157 MB/s
+../absl_mimalloc/ichor_serializer_benchmark multi threaded boost.JSON ran for 973,536 µs with 5,242,880 peak memory usage 1,232 MB/s
+../absl_mimalloc/ichor_start_benchmark single threaded advanced injection ran for 2,249,762 µs with 39,104,512 peak memory usage
+../absl_mimalloc/ichor_start_benchmark multi threaded advanced injection ran for 2,592,989 µs with 311,881,728 peak memory usage
+../absl_mimalloc/ichor_start_benchmark single threaded constructor injection ran for 2,852,259 µs with 312,254,464 peak memory usage
+../absl_mimalloc/ichor_start_benchmark multi threaded constructor injection ran for 2,803,249 µs with 314,540,032 peak memory usage
+../absl_mimalloc/ichor_start_stop_benchmark single threaded ran for 1,101,855 µs with 4,718,592 peak memory usage 907,560 start & stop /s
+../absl_mimalloc/ichor_start_stop_benchmark multi threaded ran for 2,024,756 µs with 5,505,024 peak memory usage 3,951,093 start & stop /s
 ```
 
 Realtime example on a vanilla linux:

@@ -6,12 +6,14 @@
 #include <ichor/services/network/http/HttpScopeGuards.h>
 #include <ichor/services/network/NetworkEvents.h>
 
-Ichor::HttpConnectionService::HttpConnectionService(DependencyRegister &reg, Properties props, DependencyManager *mng) : AdvancedService(std::move(props), mng) {
+Ichor::HttpConnectionService::HttpConnectionService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {
     reg.registerDependency<ILogger>(this, true);
     reg.registerDependency<IAsioContextService>(this, true);
 }
 
 Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::HttpConnectionService::start() {
+    _queue = &GetThreadLocalEventQueue();
+
     if(!_asioContextService->fibersShouldStop() && !_connecting.load(std::memory_order_acquire) && !_connected.load(std::memory_order_acquire)) {
         _quit.store(false, std::memory_order_release);
         if (getProperties().contains("Priority")) {
@@ -121,7 +123,7 @@ Ichor::Task<Ichor::HttpResponse> Ichor::HttpConnectionService::sendAsync(Ichor::
                 // use service id 0 to ensure event gets run, even if service is stopped. Otherwise, the coroutine will never complete.
                 // Similarly, use priority 0 to ensure these events run before any dependency changes, otherwise the service might be destroyed
                 // before we can finish all the coroutines.
-                getManager().pushPrioritisedEvent<RunFunctionEvent>(0u, 0u, [&event](DependencyManager &) {
+                _queue->pushPrioritisedEvent<RunFunctionEvent>(0u, 0u, [&event](DependencyManager &) {
                     event.set();
                 });
                 lg.lock();
@@ -211,7 +213,7 @@ Ichor::Task<void> Ichor::HttpConnectionService::close() {
             // _httpStream should only be modified from the boost thread
             _httpStream->cancel();
 
-            getManager().pushEvent<RunFunctionEvent>(getServiceId(), [this](DependencyManager &) {
+            _queue->pushEvent<RunFunctionEvent>(getServiceId(), [this](DependencyManager &) {
                 _startStopEvent.set();
             });
         }ASIO_SPAWN_COMPLETION_TOKEN);
@@ -233,7 +235,7 @@ Ichor::Task<void> Ichor::HttpConnectionService::close() {
 
 void Ichor::HttpConnectionService::fail(beast::error_code ec, const char *what) {
     ICHOR_LOG_ERROR_ATOMIC(_logger, "Boost.BEAST fail: {}, {}", what, ec.message());
-    getManager().pushPrioritisedEvent<StopServiceEvent>(getServiceId(), _priority.load(std::memory_order_acquire), getServiceId());
+    _queue->pushPrioritisedEvent<StopServiceEvent>(getServiceId(), _priority.load(std::memory_order_acquire), getServiceId());
 }
 
 void Ichor::HttpConnectionService::connect(tcp::endpoint endpoint, net::yield_context yield) {
@@ -276,7 +278,7 @@ void Ichor::HttpConnectionService::connect(tcp::endpoint endpoint, net::yield_co
     }
 
     // set connected before connecting, or races with the start() function may occur.
-    getManager().pushEvent<RunFunctionEvent>(getServiceId(), [this](DependencyManager &dm) {
+    _queue->pushEvent<RunFunctionEvent>(getServiceId(), [this](DependencyManager &dm) {
         _startStopEvent.set();
     });
     _connected.store(true, std::memory_order_release);

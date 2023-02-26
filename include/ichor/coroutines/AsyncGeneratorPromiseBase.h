@@ -17,6 +17,8 @@ namespace Ichor {
     template<typename T>
     class AsyncGenerator;
 
+    class DependencyManager;
+
     struct Empty;
 }
 
@@ -118,11 +120,13 @@ namespace Ichor::Detail {
         std::exception_ptr _exception;
         std::coroutine_handle<> _consumerCoroutine;
         uint64_t _id;
-        static thread_local uint64_t _idCounter;
 #ifdef ICHOR_USE_HARDENING
         DependencyManager *_dmAtTimeOfCreation{_local_dm};
 #endif
         std::optional<bool> _hasSuspended{};
+
+    private:
+        static thread_local uint64_t _idCounter;
     };
 
 

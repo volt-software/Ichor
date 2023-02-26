@@ -1,13 +1,12 @@
 #pragma once
 
-#include <ichor/DependencyManager.h>
 #include <ichor/services/logging/Logger.h>
 #include <ichor/services/timer/TimerService.h>
 #include <ichor/services/network/NetworkEvents.h>
 #include <ichor/services/network/http/IHttpConnectionService.h>
 #include <ichor/services/network/http/IHttpService.h>
 #include <ichor/dependency_management/AdvancedService.h>
-#include <ichor/dependency_management/ILifecycleManager.h>
+#include <ichor/dependency_management/DependencyRegister.h>
 #include <ichor/services/serialization/ISerializer.h>
 #include "PingMsg.h"
 
@@ -15,7 +14,7 @@ using namespace Ichor;
 
 class PongService final : public AdvancedService<PongService> {
 public:
-    PongService(DependencyRegister &reg, Properties props, DependencyManager *mng) : AdvancedService(std::move(props), mng) {
+    PongService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {
         reg.registerDependency<ILogger>(this, true, Properties{{"LogLevel", Ichor::make_any<LogLevel>(LogLevel::LOG_INFO)}});
         reg.registerDependency<ISerializer<PingMsg>>(this, true);
         reg.registerDependency<IHttpService>(this, true);
@@ -66,7 +65,6 @@ private:
     }
 
     friend DependencyRegister;
-    friend DependencyManager;
 
     ILogger *_logger{nullptr};
     ISerializer<PingMsg> *_serializer{nullptr};

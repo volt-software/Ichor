@@ -15,7 +15,7 @@ namespace spdlog {
 namespace Ichor {
     class SpdlogLogger final : public ILogger, public AdvancedService<SpdlogLogger> {
     public:
-        SpdlogLogger(DependencyRegister &reg, Properties props, DependencyManager *mng);
+        SpdlogLogger(DependencyRegister &reg, Properties props);
 
         void trace(const char *filename_in, int line_in, const char *funcname_in, std::string_view format_str, fmt::format_args args) final;
         void debug(const char *filename_in, int line_in, const char *funcname_in, std::string_view format_str, fmt::format_args args) final;

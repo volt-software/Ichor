@@ -22,7 +22,7 @@ namespace Ichor {
         explicit MultimapQueue(bool spinlock);
         ~MultimapQueue() final;
 
-        void pushEvent(uint64_t priority, std::unique_ptr<Event> &&event) final;
+        void pushEventInternal(uint64_t priority, std::unique_ptr<Event> &&event) final;
 
         [[nodiscard]] bool empty() const noexcept final;
         [[nodiscard]] uint64_t size() const noexcept final;

@@ -8,7 +8,7 @@ namespace Ichor {
     };
 
     struct RedisUsingService final : public IRedisUsingService, public AdvancedService<RedisUsingService> {
-        RedisUsingService(DependencyRegister &reg, Properties props, DependencyManager *mng) : AdvancedService(std::move(props), mng) {
+        RedisUsingService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {
             reg.registerDependency<IRedis>(this, true);
         }
 
@@ -20,7 +20,7 @@ namespace Ichor {
                 throw std::runtime_error("Incorrect value");
             }
 
-            getManager().pushEvent<QuitEvent>(getServiceId());
+            GetThreadLocalEventQueue().pushEvent<QuitEvent>(getServiceId());
 
             co_return {};
         }

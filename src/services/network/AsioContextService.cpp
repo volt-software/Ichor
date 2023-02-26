@@ -7,7 +7,7 @@
 #include <fmt/xchar.h>
 #endif
 
-Ichor::AsioContextService::AsioContextService(DependencyRegister &reg, Properties props, DependencyManager *mng) : AdvancedService(std::move(props), mng) {
+Ichor::AsioContextService::AsioContextService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {
     if(getProperties().contains("Threads")) {
         _threads = Ichor::any_cast<uint64_t>(getProperties()["Threads"]);
         if(_threads == 0) {
@@ -37,9 +37,9 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::AsioContextService::st
 
     ICHOR_LOG_INFO(_logger, "Using boost version {} beast version {}\n", BOOST_VERSION, BOOST_BEAST_VERSION);
 
-    net::spawn(*_context, [this](net::yield_context yield) {
+    net::spawn(*_context, [this, &queue = GetThreadLocalEventQueue()](net::yield_context yield) {
         // notify start()
-        getManager().pushPrioritisedEvent<RunFunctionEvent>(getServiceId(), INTERNAL_COROUTINE_EVENT_PRIORITY, [this](DependencyManager &dm) {
+        queue.pushPrioritisedEvent<RunFunctionEvent>(getServiceId(), INTERNAL_COROUTINE_EVENT_PRIORITY, [this](DependencyManager &dm) {
             _startStopEvent.set();
         });
 
@@ -51,7 +51,7 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::AsioContextService::st
         INTERNAL_DEBUG("+++++++++++++++++++++++++++++++++++++++++++++++ NOTIFY STOP ++++++++++++++++++++++++++++++++");
 
         // notify stop()
-        getManager().pushPrioritisedEvent<RunFunctionEvent>(getServiceId(), INTERNAL_COROUTINE_EVENT_PRIORITY, [this](DependencyManager &dm) {
+        queue.pushPrioritisedEvent<RunFunctionEvent>(getServiceId(), INTERNAL_COROUTINE_EVENT_PRIORITY, [this](DependencyManager &dm) {
             _startStopEvent.set();
         });
     }ASIO_SPAWN_COMPLETION_TOKEN);

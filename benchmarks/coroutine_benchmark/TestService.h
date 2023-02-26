@@ -1,9 +1,8 @@
 #pragma once
 
-#include <ichor/DependencyManager.h>
 #include <ichor/services/logging/Logger.h>
 #include <ichor/dependency_management/AdvancedService.h>
-#include <ichor/dependency_management/ILifecycleManager.h>
+#include <ichor/dependency_management/DependencyRegister.h>
 #include <ichor/events/RunFunctionEvent.h>
 #include <ichor/coroutines/AsyncAutoResetEvent.h>
 
@@ -26,25 +25,25 @@ struct UselessEvent final : public Event {
 
 class TestService final : public AdvancedService<TestService> {
 public:
-    TestService(DependencyRegister &reg, Properties props, DependencyManager *mng) : AdvancedService(std::move(props), mng) {
+    TestService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {
         reg.registerDependency<ILogger>(this, true);
     }
     ~TestService() final = default;
 
 private:
     Task<tl::expected<void, Ichor::StartError>> start() final {
-        getManager().pushEvent<RunFunctionEventAsync>(getServiceId(), [this](DependencyManager &dm) -> AsyncGenerator<IchorBehaviour> {
+        GetThreadLocalEventQueue().pushEvent<RunFunctionEventAsync>(getServiceId(), [this](DependencyManager &dm) -> AsyncGenerator<IchorBehaviour> {
             for(uint32_t i = 0; i < EVENT_COUNT; i++) {
                 co_await _evt;
-                dm.pushEvent<RunFunctionEventAsync>(getServiceId(), [this](DependencyManager &) -> AsyncGenerator<IchorBehaviour> {
+                dm.getEventQueue().pushEvent<RunFunctionEventAsync>(getServiceId(), [this](DependencyManager &) -> AsyncGenerator<IchorBehaviour> {
                     _evt.set();
                     co_return {};
                 });
             }
-            getManager().pushEvent<QuitEvent>(getServiceId());
+            GetThreadLocalEventQueue().pushEvent<QuitEvent>(getServiceId());
             co_return {};
         });
-        getManager().pushEvent<RunFunctionEventAsync>(getServiceId(), [this](DependencyManager &) -> AsyncGenerator<IchorBehaviour> {
+        GetThreadLocalEventQueue().pushEvent<RunFunctionEventAsync>(getServiceId(), [this](DependencyManager &) -> AsyncGenerator<IchorBehaviour> {
             _evt.set();
             co_return {};
         });

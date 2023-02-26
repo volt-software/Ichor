@@ -1,9 +1,8 @@
 #pragma once
 
-#include <ichor/DependencyManager.h>
 #include <ichor/services/logging/Logger.h>
 #include <ichor/dependency_management/AdvancedService.h>
-#include <ichor/dependency_management/ILifecycleManager.h>
+#include <ichor/dependency_management/DependencyRegister.h>
 
 using namespace Ichor;
 
@@ -13,7 +12,7 @@ struct IOptionalService {
 
 class OptionalService final : public IOptionalService, public AdvancedService<OptionalService> {
 public:
-    OptionalService(DependencyRegister &reg, Properties props, DependencyManager *mng) : AdvancedService(std::move(props), mng) {
+    OptionalService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {
         reg.registerDependency<ILogger>(this, true);
     }
 

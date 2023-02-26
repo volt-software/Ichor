@@ -19,7 +19,7 @@ struct MyService final : public IMyService, public Ichor::AdvancedService<MyServ
 struct IMyDependencyService {};
 
 struct MyDependencyService final : public IMyDependencyService, public Ichor::AdvancedService<MyDependencyService> {
-    MyDependencyService(Ichor::DependencyRegister &reg, Ichor::Properties props, Ichor::DependencyManager *mng) : Ichor::AdvancedService<MyDependencyService>(std::move(props), mng) {
+    MyDependencyService(Ichor::DependencyRegister &reg, Ichor::Properties props) : Ichor::AdvancedService<MyDependencyService>(std::move(props)) {
         reg.registerDependency<IMyService>(this, true);
     }
     ~MyDependencyService() final = default;
@@ -37,7 +37,7 @@ struct IMyTimerService {};
 struct MyTimerService final : public IMyTimerService, public Ichor::AdvancedService<MyTimerService> {
     MyTimerService() = default;
     Task<tl::expected<void, Ichor::StartError>> start() final {
-        auto timer = getManager().createServiceManager<Ichor::Timer, Ichor::ITimer>();
+        auto timer = GetThreadLocalManager().createServiceManager<Ichor::Timer, Ichor::ITimer>();
         timer->setChronoInterval(std::chrono::seconds(1));
         timer->setCallback(this, [](DependencyManager &) {
             fmt::print("Timer fired\n");
@@ -71,7 +71,7 @@ struct ServiceWithoutInterface final : public Ichor::AdvancedService<ServiceWith
 
 struct MyInterceptorService final : public Ichor::AdvancedService<MyInterceptorService> {
     Task<tl::expected<void, Ichor::StartError>> start() final {
-        _interceptor = this->getManager().template registerEventInterceptor<Ichor::RunFunctionEventAsync>(this); // Can change TimerEvent to just Event if you want to intercept *all* events
+        _interceptor = GetThreadLocalManager().template registerEventInterceptor<Ichor::RunFunctionEventAsync>(this); // Can change TimerEvent to just Event if you want to intercept *all* events
         co_return {};
     }
 

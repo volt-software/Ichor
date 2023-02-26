@@ -7,8 +7,6 @@
 #include <ichor/Enums.h>
 
 namespace Ichor {
-    class DependencyManager;
-
     class IService {
     public:
         virtual ~IService() = default;
@@ -29,9 +27,9 @@ namespace Ichor {
 
         [[nodiscard]] virtual uint64_t getServicePriority() const noexcept = 0;
 
-        [[nodiscard]] virtual bool isStarted() const noexcept = 0;
+        virtual void setServicePriority(uint64_t priority) noexcept = 0;
 
-        [[nodiscard]] virtual DependencyManager& getManager() const noexcept = 0;
+        [[nodiscard]] virtual bool isStarted() const noexcept = 0;
 
         [[nodiscard]] virtual Properties& getProperties() noexcept = 0;
         [[nodiscard]] virtual const Properties& getProperties() const noexcept = 0;

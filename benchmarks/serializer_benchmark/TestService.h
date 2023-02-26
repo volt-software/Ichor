@@ -4,8 +4,8 @@
 #include <ichor/DependencyManager.h>
 #include <ichor/services/logging/Logger.h>
 #include <ichor/dependency_management/AdvancedService.h>
+#include <ichor/dependency_management/DependencyRegister.h>
 #include <ichor/services/serialization/ISerializer.h>
-#include <ichor/dependency_management/ILifecycleManager.h>
 #include "../../examples/common/TestMsg.h"
 
 #if defined(__SANITIZE_ADDRESS__)
@@ -19,7 +19,7 @@ extern uint64_t sizeof_test;
 
 class TestService final : public AdvancedService<TestService> {
 public:
-    TestService(DependencyRegister &reg, Properties props, DependencyManager *mng) : AdvancedService(std::move(props), mng) {
+    TestService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {
         reg.registerDependency<ILogger>(this, true);
         reg.registerDependency<ISerializer<TestMsg>>(this, true);
     }
@@ -28,8 +28,8 @@ public:
 private:
     Task<tl::expected<void, Ichor::StartError>> start() final {
         ICHOR_LOG_INFO(_logger, "TestService started with dependency");
-        _doWorkRegistration = getManager().registerEventCompletionCallbacks<DoWorkEvent>(this);
-        getManager().pushEvent<DoWorkEvent>(getServiceId());
+        _doWorkRegistration = GetThreadLocalManager().registerEventCompletionCallbacks<DoWorkEvent>(this);
+        GetThreadLocalEventQueue().pushEvent<DoWorkEvent>(getServiceId());
         co_return {};
     }
 
@@ -71,7 +71,7 @@ private:
         }
         auto end = std::chrono::steady_clock::now();
         ICHOR_LOG_ERROR(_logger, "finished in {:L} µs", std::chrono::duration_cast<std::chrono::microseconds>(end-start).count());
-        getManager().pushEvent<QuitEvent>(getServiceId());
+        GetThreadLocalEventQueue().pushEvent<QuitEvent>(getServiceId());
     }
 
     void handleError(DoWorkEvent const &evt) {

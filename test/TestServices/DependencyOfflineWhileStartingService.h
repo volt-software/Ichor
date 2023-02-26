@@ -10,7 +10,7 @@ namespace Ichor {
     };
 
     struct DependencyOfflineWhileStartingService final : public IDependencyOfflineWhileStartingService, public AdvancedService<DependencyOfflineWhileStartingService> {
-        DependencyOfflineWhileStartingService(DependencyRegister &reg, Properties props, DependencyManager *mng) : AdvancedService(std::move(props), mng) {
+        DependencyOfflineWhileStartingService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {
             reg.registerDependency<IUselessService>(this, true);
         }
         ~DependencyOfflineWhileStartingService() final = default;
@@ -26,7 +26,7 @@ namespace Ichor {
         }
 
         void addDependencyInstance(IUselessService *, IService *svc) {
-            getManager().pushEvent<StopServiceEvent>(getServiceId(), svc->getServiceId());
+            GetThreadLocalEventQueue().pushEvent<StopServiceEvent>(getServiceId(), svc->getServiceId());
             if(getServiceState() != ServiceState::INSTALLED) {
                 fmt::print("addDependencyInstance {}\n", getServiceState());
                 std::terminate();

@@ -9,7 +9,7 @@
 namespace Ichor {
     class TcpConnectionService final : public IConnectionService, public AdvancedService<TcpConnectionService> {
     public:
-        TcpConnectionService(DependencyRegister &reg, Properties props, DependencyManager *mng);
+        TcpConnectionService(DependencyRegister &reg, Properties props);
         ~TcpConnectionService() final = default;
 
         tl::expected<uint64_t, SendErrorReason> sendAsync(std::vector<uint8_t>&& msg) final;

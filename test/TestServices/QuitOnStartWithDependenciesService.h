@@ -5,12 +5,12 @@
 using namespace Ichor;
 
 struct QuitOnStartWithDependenciesService final : public AdvancedService<QuitOnStartWithDependenciesService> {
-    QuitOnStartWithDependenciesService(DependencyRegister &reg, Properties props, DependencyManager *mng) : AdvancedService(std::move(props), mng) {
+    QuitOnStartWithDependenciesService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {
         reg.registerDependency<IUselessService>(this, true);
     }
     ~QuitOnStartWithDependenciesService() final = default;
     Task<tl::expected<void, Ichor::StartError>> start() final {
-        getManager().pushEvent<QuitEvent>(getServiceId());
+        GetThreadLocalEventQueue().pushEvent<QuitEvent>(getServiceId());
         co_return {};
     }
 

@@ -4,7 +4,7 @@
 #include <ichor/services/network/http/HttpHostService.h>
 #include <ichor/services/network/http/HttpScopeGuards.h>
 
-Ichor::HttpHostService::HttpHostService(DependencyRegister &reg, Properties props, DependencyManager *mng) : AdvancedService(std::move(props), mng) {
+Ichor::HttpHostService::HttpHostService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {
     reg.registerDependency<ILogger>(this, true);
     reg.registerDependency<IAsioContextService>(this, true);
 }
@@ -26,6 +26,8 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::HttpHostService::start
     if(getProperties().contains("NoDelay")) {
         _tcpNoDelay.store(Ichor::any_cast<bool>(getProperties()["NoDelay"]), std::memory_order_release);
     }
+
+    _queue = &GetThreadLocalEventQueue();
 
     auto address = net::ip::make_address(Ichor::any_cast<std::string&>(getProperties()["Address"]));
     auto port = Ichor::any_cast<uint16_t>(getProperties()["Port"]);
@@ -57,7 +59,7 @@ Ichor::Task<void> Ichor::HttpHostService::stop() {
 
             _httpAcceptor = nullptr;
 
-            getManager().pushEvent<RunFunctionEvent>(getServiceId(), [this](DependencyManager &dm) {
+            _queue->pushEvent<RunFunctionEvent>(getServiceId(), [this](DependencyManager &dm) {
                 _startStopEvent.set();
             });
         }ASIO_SPAWN_COMPLETION_TOKEN);
@@ -134,7 +136,7 @@ void Ichor::HttpHostService::removeRoute(HttpMethod method, std::string_view rou
 void Ichor::HttpHostService::fail(beast::error_code ec, const char *what, bool stopSelf) {
     ICHOR_LOG_ERROR_ATOMIC(_logger, "Boost.BEAST fail: {}, {}", what, ec.message());
     if(stopSelf) {
-        getManager().pushPrioritisedEvent<StopServiceEvent>(getServiceId(), _priority.load(std::memory_order_acquire), getServiceId());
+        _queue->pushPrioritisedEvent<StopServiceEvent>(getServiceId(), _priority.load(std::memory_order_acquire), getServiceId());
     }
 }
 
@@ -188,7 +190,7 @@ void Ichor::HttpHostService::listen(tcp::endpoint endpoint, net::yield_context y
 
     ICHOR_LOG_WARN_ATOMIC(_logger, "finished listen() {} {}", _quit.load(std::memory_order_acquire), _asioContextService->fibersShouldStop());
     if(!_goingToCleanupStream.exchange(true, std::memory_order_acq_rel) && _httpAcceptor) {
-        getManager().pushPrioritisedEvent<StopServiceEvent>(getServiceId(), getPriority(), getServiceId());
+        _queue->pushPrioritisedEvent<StopServiceEvent>(getServiceId(), getPriority(), getServiceId());
     }
 }
 
@@ -249,7 +251,7 @@ void Ichor::HttpHostService::read(tcp::socket socket, net::yield_context yield) 
         }
         HttpRequest httpReq{std::move(req.body()), static_cast<HttpMethod>(req.method()), std::string{req.target()}, addr, std::move(headers)};
 
-        getManager().pushEvent<RunFunctionEventAsync>(getServiceId(), [this, connection, httpReq = std::move(httpReq), version = req.version(), keep_alive = req.keep_alive()](DependencyManager &dm) mutable -> AsyncGenerator<IchorBehaviour> {
+        _queue->pushEvent<RunFunctionEventAsync>(getServiceId(), [this, connection, httpReq = std::move(httpReq), version = req.version(), keep_alive = req.keep_alive()](DependencyManager &dm) mutable -> AsyncGenerator<IchorBehaviour> {
             auto routes = _handlers.find(static_cast<HttpMethod>(httpReq.method));
 
             if(_quit.load(std::memory_order_acquire) || _asioContextService->fibersShouldStop()) {

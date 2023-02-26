@@ -1,9 +1,10 @@
 #pragma once
 
+#include <thread>
 #include <ichor/DependencyManager.h>
 #include <ichor/services/logging/Logger.h>
 #include <ichor/dependency_management/AdvancedService.h>
-#include <ichor/dependency_management/ILifecycleManager.h>
+#include <ichor/dependency_management/DependencyRegister.h>
 #include <ichor/CommunicationChannel.h>
 #include "CustomEvent.h"
 
@@ -11,7 +12,7 @@ using namespace Ichor;
 
 class OneService final : public AdvancedService<OneService> {
 public:
-    OneService(DependencyRegister &reg, Properties props, DependencyManager *mng) : AdvancedService(std::move(props), mng) {
+    OneService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {
         reg.registerDependency<ILogger>(this, true);
     }
     ~OneService() final = default;
@@ -21,7 +22,7 @@ private:
         ICHOR_LOG_INFO(_logger, "OneService started with dependency");
         // this component sometimes starts up before the other thread has started the OtherService
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
-        getManager().getCommunicationChannel()->broadcastEvent<CustomEvent>(getManager(), getServiceId());
+        GetThreadLocalManager().getCommunicationChannel()->broadcastEvent<CustomEvent>(GetThreadLocalManager(), getServiceId());
         co_return {};
     }
 

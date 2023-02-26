@@ -4,11 +4,17 @@
 #include <fmt/xchar.h>
 #endif
 
+Ichor::Timer::Timer() noexcept {
+    stopTimer();
+}
+
 Ichor::Timer::~Timer() noexcept {
     stopTimer();
 }
 
 Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::Timer::start() {
+    _queue = &GetThreadLocalEventQueue();
+
     co_return {};
 }
 
@@ -80,6 +86,11 @@ void Ichor::Timer::insertEventLoop(bool fireImmediately) {
     SetThreadDescription(GetCurrentThread(), fmt::format(L"Tmr #{}", getServiceId()).c_str());
 #endif
 
+
+    while(!_quit.load(std::memory_order_acquire) && _queue == nullptr) {
+        std::this_thread::sleep_for(1ms);
+    }
+
     auto now = std::chrono::steady_clock::now();
     auto next = now;
     if(!fireImmediately) {
@@ -96,9 +107,9 @@ void Ichor::Timer::insertEventLoop(bool fireImmediately) {
         }
         // Make copy of function, in case setCallback() gets called during async stuff.
         if(_fnAsync) {
-            getManager().pushPrioritisedEvent<RunFunctionEventAsync>(_requestingServiceId, getPriority(), _fnAsync);
+            _queue->pushPrioritisedEvent<RunFunctionEventAsync>(_requestingServiceId, getPriority(), _fnAsync);
         } else {
-            getManager().pushPrioritisedEvent<RunFunctionEvent>(_requestingServiceId, getPriority(), _fn);
+            _queue->pushPrioritisedEvent<RunFunctionEvent>(_requestingServiceId, getPriority(), _fn);
         }
 
         next += std::chrono::nanoseconds(_intervalNanosec.load(std::memory_order_acquire));

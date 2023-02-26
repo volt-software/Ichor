@@ -30,7 +30,7 @@ namespace Ichor {
 
     class HttpConnectionService final : public IHttpConnectionService, public AdvancedService<HttpConnectionService> {
     public:
-        HttpConnectionService(DependencyRegister &reg, Properties props, DependencyManager *mng);
+        HttpConnectionService(DependencyRegister &reg, Properties props);
         ~HttpConnectionService() final = default;
 
         Task<HttpResponse> sendAsync(HttpMethod method, std::string_view route, std::vector<HttpHeader> &&headers, std::vector<uint8_t>&& msg) final;
@@ -66,6 +66,7 @@ namespace Ichor {
         boost::circular_buffer<Detail::ConnectionOutboxMessage> _outbox{10};
         RealtimeMutex _outboxMutex{};
         AsyncManualResetEvent _startStopEvent{};
+        IEventQueue *_queue;
     };
 }
 

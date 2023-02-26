@@ -1,9 +1,9 @@
 #pragma once
 
-#include <ichor/DependencyManager.h>
 #include <ichor/services/logging/Logger.h>
 #include <ichor/dependency_management/AdvancedService.h>
-#include <ichor/dependency_management/ILifecycleManager.h>
+#include <ichor/dependency_management/DependencyRegister.h>
+#include <ichor/event_queues/IEventQueue.h>
 
 #if defined(__SANITIZE_ADDRESS__)
 constexpr uint32_t EVENT_COUNT = 500'000;
@@ -24,7 +24,7 @@ struct UselessEvent final : public Event {
 
 class TestService final : public AdvancedService<TestService> {
 public:
-    TestService(DependencyRegister &reg, Properties props, DependencyManager *mng) : AdvancedService(std::move(props), mng) {
+    TestService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {
         reg.registerDependency<ILogger>(this, true);
     }
     ~TestService() final = default;
@@ -33,10 +33,10 @@ private:
     Task<tl::expected<void, Ichor::StartError>> start() final {
         auto start = std::chrono::steady_clock::now();
         for(uint32_t i = 0; i < EVENT_COUNT; i++) {
-            getManager().pushEvent<UselessEvent>(getServiceId());
+            GetThreadLocalEventQueue().pushEvent<UselessEvent>(getServiceId());
         }
         auto end = std::chrono::steady_clock::now();
-        getManager().pushEvent<QuitEvent>(getServiceId());
+        GetThreadLocalEventQueue().pushEvent<QuitEvent>(getServiceId());
         ICHOR_LOG_WARN(_logger, "Inserted events in {:L} µs", std::chrono::duration_cast<std::chrono::microseconds>(end-start).count());
         co_return {};
     }

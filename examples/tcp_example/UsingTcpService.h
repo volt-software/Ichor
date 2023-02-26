@@ -6,7 +6,7 @@
 #include <ichor/services/network/NetworkEvents.h>
 #include <ichor/services/network/IConnectionService.h>
 #include <ichor/dependency_management/AdvancedService.h>
-#include <ichor/dependency_management/ILifecycleManager.h>
+#include <ichor/dependency_management/DependencyRegister.h>
 #include <ichor/services/serialization/ISerializer.h>
 #include "../common/TestMsg.h"
 
@@ -14,7 +14,7 @@ using namespace Ichor;
 
 class UsingTcpService final : public AdvancedService<UsingTcpService> {
 public:
-    UsingTcpService(DependencyRegister &reg, Properties props, DependencyManager *mng) : AdvancedService(std::move(props), mng) {
+    UsingTcpService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {
         reg.registerDependency<ILogger>(this, true);
         reg.registerDependency<ISerializer<TestMsg>>(this, true);
         reg.registerDependency<IConnectionService>(this, true, getProperties());
@@ -24,8 +24,8 @@ public:
 private:
     Task<tl::expected<void, Ichor::StartError>> start() final {
         ICHOR_LOG_INFO(_logger, "UsingTcpService started");
-        _dataEventRegistration = getManager().registerEventHandler<NetworkDataEvent>(this);
-        _failureEventRegistration = getManager().registerEventHandler<FailedSendMessageEvent>(this);
+        _dataEventRegistration = GetThreadLocalManager().registerEventHandler<NetworkDataEvent>(this);
+        _failureEventRegistration = GetThreadLocalManager().registerEventHandler<FailedSendMessageEvent>(this);
         _connectionService->sendAsync(_serializer->serialize(TestMsg{11, "hello"}));
         co_return {};
     }
@@ -67,7 +67,7 @@ private:
     AsyncGenerator<IchorBehaviour> handleEvent(NetworkDataEvent const &evt) {
         auto msg = _serializer->deserialize(std::vector<uint8_t>{evt.getData()});
         ICHOR_LOG_INFO(_logger, "Received TestMsg id {} val {}", msg->id, msg->val);
-        getManager().pushEvent<QuitEvent>(getServiceId());
+        GetThreadLocalEventQueue().pushEvent<QuitEvent>(getServiceId());
 
         co_return {};
     }

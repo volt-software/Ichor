@@ -29,7 +29,7 @@ namespace Ichor {
 
     class WsConnectionService final : public IConnectionService, public AdvancedService<WsConnectionService> {
     public:
-        WsConnectionService(DependencyRegister &reg, Properties props, DependencyManager *mng);
+        WsConnectionService(DependencyRegister &reg, Properties props);
         ~WsConnectionService() final = default;
 
         tl::expected<uint64_t, SendErrorReason> sendAsync(std::vector<uint8_t>&& msg) final;
@@ -68,6 +68,7 @@ namespace Ichor {
         std::atomic<int64_t> _finishedListenAndRead{};
         AsyncManualResetEvent _startStopEvent{};
         boost::circular_buffer<Detail::WsConnectionOutboxMessage> _outbox{10};
+        IEventQueue *_queue;
     };
 }
 

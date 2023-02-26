@@ -1,4 +1,3 @@
-#include <ichor/DependencyManager.h>
 #include <ichor/services/etcd/EtcdService.h>
 #include <ichor/services/etcd/rpc.pb.h>
 #include <ichor/services/etcd/kv.pb.h>
@@ -6,11 +5,11 @@
 #include <grpc++/grpc++.h>
 
 
-Ichor::EtcdService::EtcdService(DependencyRegister &reg, Properties props, DependencyManager *mng) : Service(std::move(props), mng) {
+Ichor::EtcdService::EtcdService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {
     reg.registerDependency<ILogger>(this, true);
 }
 
-Ichor::Task<void> Ichor::EtcdService::start() {
+Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::EtcdService::start() {
     auto const addressProp = getProperties().find("EtcdAddress");
     if(addressProp == cend(getProperties())) {
         throw std::runtime_error("Missing EtcdAddress");
@@ -18,7 +17,7 @@ Ichor::Task<void> Ichor::EtcdService::start() {
 
     _channel = grpc::CreateChannel(Ichor::any_cast<std::string>(addressProp->second), grpc::InsecureChannelCredentials());
     _stub = etcdserverpb::KV::NewStub(_channel);
-    co_return;
+    co_return {};
 }
 
 Ichor::Task<void> Ichor::EtcdService::stop() {

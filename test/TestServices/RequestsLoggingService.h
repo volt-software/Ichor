@@ -8,7 +8,7 @@ namespace Ichor {
     };
 
     struct RequestsLoggingService final : public IRequestsLoggingService, public AdvancedService<RequestsLoggingService> {
-        RequestsLoggingService(DependencyRegister &reg, Properties props, DependencyManager *mng) : AdvancedService(std::move(props), mng) {
+        RequestsLoggingService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {
             reg.registerDependency<ILogger>(this, true);
         }
 

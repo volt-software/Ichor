@@ -6,7 +6,6 @@
 namespace Ichor {
 
     struct DependencyRegister;
-    class DependencyManager;
     class IService;
 
     template <class T, class U, class... Remainder>
@@ -41,13 +40,13 @@ namespace Ichor {
     };
 
     template <class ImplT>
-    concept RequestsDependencies = requires(ImplT impl, DependencyRegister &deps, Properties properties, DependencyManager *mng) {
-        { ImplT(deps, properties, mng) };
+    concept RequestsDependencies = requires(ImplT impl, DependencyRegister &deps, Properties properties) {
+        { ImplT(deps, properties) };
     };
 
     template <class ImplT>
-    concept RequestsProperties = requires(ImplT impl, Properties properties, DependencyManager *mng) {
-        { ImplT(properties, mng) };
+    concept RequestsProperties = requires(ImplT impl, Properties properties) {
+        { ImplT(properties) };
     };
 
     template <class ImplT, class Interface>

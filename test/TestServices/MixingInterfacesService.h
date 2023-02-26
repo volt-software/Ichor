@@ -57,7 +57,7 @@ struct Handle {
 };
 
 struct CheckMixService final : public ICountService, public AdvancedService<CheckMixService> {
-    CheckMixService(DependencyRegister &reg, Properties props, DependencyManager *mng) : AdvancedService<CheckMixService>(std::move(props), mng) {
+    CheckMixService(DependencyRegister &reg, Properties props) : AdvancedService<CheckMixService>(std::move(props)) {
         reg.registerDependency<IMixOne>(this, false);
         reg.registerDependency<IMixTwo>(this, false);
     }
@@ -90,7 +90,7 @@ struct CheckMixService final : public ICountService, public AdvancedService<Chec
         }
 
         if(svcCount == 12) {
-            getManager().pushEvent<QuitEvent>(0);
+            GetThreadLocalEventQueue().pushEvent<QuitEvent>(0);
         }
     }
 
@@ -116,7 +116,7 @@ struct CheckMixService final : public ICountService, public AdvancedService<Chec
         }
 
         if(svcCount == 12) {
-            getManager().pushEvent<QuitEvent>(0);
+            GetThreadLocalEventQueue().pushEvent<QuitEvent>(0);
         }
     }
 

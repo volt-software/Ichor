@@ -22,7 +22,7 @@ void setup_stream(std::shared_ptr<websocket::stream<NextLayer>>& ws)
     ws->auto_fragment(false);
 }
 
-Ichor::WsConnectionService::WsConnectionService(DependencyRegister &reg, Properties props, DependencyManager *mng) : AdvancedService(std::move(props), mng) {
+Ichor::WsConnectionService::WsConnectionService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {
     reg.registerDependency<ILogger>(this, true);
     reg.registerDependency<IAsioContextService>(this, true);
     if(getProperties().contains("WsHostServiceId")) {
@@ -35,6 +35,8 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::WsConnectionService::s
     if(_connected.load(std::memory_order_acquire)) {
         co_return {};
     }
+
+    _queue = &GetThreadLocalEventQueue();
 
     _quit.store(false, std::memory_order_release);
 
@@ -83,7 +85,7 @@ Ichor::Task<void> Ichor::WsConnectionService::stop() {
             if (ec) {
                 ICHOR_LOG_ERROR(_logger, "Boost.BEAST fail: {}", ec.message());
             }
-            getManager().pushPrioritisedEvent<RunFunctionEvent>(getServiceId(), _priority.load(std::memory_order_acquire), [this](DependencyManager &dm) {
+            _queue->pushPrioritisedEvent<RunFunctionEvent>(getServiceId(), _priority.load(std::memory_order_acquire), [this](DependencyManager &dm) {
 //                fmt::print("{}:{} rfe2\n", getServiceId(), getServiceName());
                 _startStopEvent.set();
             });
@@ -171,7 +173,7 @@ tl::expected<uint64_t, Ichor::SendErrorReason> Ichor::WsConnectionService::sendA
 
             if(ec) {
                 ICHOR_LOG_ERROR(_logger, "couldn't send msg for service {}: {}", getServiceId(), ec.message());
-                getManager().pushEvent<FailedSendMessageEvent>(getServiceId(), std::move(next.msg), next.msgId);
+                _queue->pushEvent<FailedSendMessageEvent>(getServiceId(), std::move(next.msg), next.msgId);
             }
         }
     }ASIO_SPAWN_COMPLETION_TOKEN);
@@ -191,11 +193,11 @@ void Ichor::WsConnectionService::fail(beast::error_code ec, const char *what) {
 //    fmt::print("{}:{} fail {}\n", getServiceId(), getServiceName(), ec.message());
     ICHOR_LOG_ERROR(_logger, "Boost.BEAST fail: {}, {}", what, ec.message());
 
-    getManager().pushPrioritisedEvent<RunFunctionEvent>(getServiceId(), _priority.load(std::memory_order_acquire), [this](DependencyManager &dm) {
+    _queue->pushPrioritisedEvent<RunFunctionEvent>(getServiceId(), _priority.load(std::memory_order_acquire), [this](DependencyManager &dm) {
 //        fmt::print("{}:{} rfe\n", getServiceId(), getServiceName());
         _startStopEvent.set();
     });
-    getManager().pushEvent<StopServiceEvent>(getServiceId(), getServiceId());
+    _queue->pushEvent<StopServiceEvent>(getServiceId(), getServiceId());
 }
 
 void Ichor::WsConnectionService::accept(net::yield_context yield) {
@@ -203,7 +205,7 @@ void Ichor::WsConnectionService::accept(net::yield_context yield) {
 
     {
         ScopeGuardFunction const coroutineGuard{[this]() {
-            getManager().pushPrioritisedEvent<RunFunctionEvent>(getServiceId(), _priority.load(std::memory_order_acquire), [this](DependencyManager &dm) {
+            _queue->pushPrioritisedEvent<RunFunctionEvent>(getServiceId(), _priority.load(std::memory_order_acquire), [this](DependencyManager &dm) {
 //                fmt::print("{}:{} rfe accept\n", getServiceId(), getServiceName());
                 _startStopEvent.set();
             });
@@ -270,7 +272,7 @@ void Ichor::WsConnectionService::connect(net::yield_context yield) {
 
     {
         ScopeGuardFunction const coroutineGuard{[this]() {
-            getManager().pushPrioritisedEvent<RunFunctionEvent>(getServiceId(), _priority.load(std::memory_order_acquire), [this](DependencyManager &dm) {
+            _queue->pushPrioritisedEvent<RunFunctionEvent>(getServiceId(), _priority.load(std::memory_order_acquire), [this](DependencyManager &dm) {
 //                fmt::print("{}:{} rfe connect\n", getServiceId(), getServiceName());
                 _startStopEvent.set();
             });
@@ -360,7 +362,7 @@ void Ichor::WsConnectionService::read(net::yield_context &yield) {
 
         if(_ws->got_text()) {
             auto data = buffer.data();
-            getManager().pushPrioritisedEvent<NetworkDataEvent>(getServiceId(), _priority.load(std::memory_order_acquire),  std::vector<uint8_t>{static_cast<char*>(data.data()), static_cast<char*>(data.data()) + data.size()});
+            _queue->pushPrioritisedEvent<NetworkDataEvent>(getServiceId(), _priority.load(std::memory_order_acquire),  std::vector<uint8_t>{static_cast<char*>(data.data()), static_cast<char*>(data.data()) + data.size()});
         }
     }
 

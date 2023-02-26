@@ -2,6 +2,7 @@
 
 #include <ichor/DependencyManager.h>
 #include <ichor/stl/RealtimeReadWriteMutex.h>
+#include <shared_mutex>
 
 #ifdef DEBUG_CHANNEL
 #include <iostream>
@@ -34,7 +35,7 @@ namespace Ichor {
 #ifdef DEBUG_CHANNEL
                 std::cout << "Inserting event " << typeName<EventT>() << " from manager " << originatingManager->getId() << " into manager " << manager->getId() << std::endl;
 #endif
-                manager->template pushEvent<EventT>(std::forward<Args>(args)...);
+                manager->getEventQueue().template pushEvent<EventT>(std::forward<Args>(args)...);
 #ifdef DEBUG_CHANNEL
                 std::cout << "Inserted event " << typeName<EventT>() << " from manager " << originatingManager->getId() << " into manager " << manager->getId() << std::endl;
 #endif
@@ -51,7 +52,7 @@ namespace Ichor {
                 throw std::runtime_error("Couldn't find manager");
             }
 
-            manager->second->pushEvent<EventT>(std::forward<Args>(args)...);
+            manager->second->getEventQueue().pushEvent<EventT>(std::forward<Args>(args)...);
         }
     private:
         unordered_map<uint64_t, DependencyManager*> _managers{};

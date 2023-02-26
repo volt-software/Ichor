@@ -2,11 +2,9 @@
 
 #ifdef ICHOR_USE_BOOST_JSON
 
-#include <ichor/DependencyManager.h>
-#include <ichor/services/logging/Logger.h>
+//#include <ichor/services/logging/Logger.h>
 #include <ichor/dependency_management/AdvancedService.h>
 #include <ichor/services/serialization/ISerializer.h>
-#include <ichor/dependency_management/ILifecycleManager.h>
 #include "TestMsg.h"
 
 #pragma GCC diagnostic push

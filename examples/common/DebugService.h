@@ -8,15 +8,15 @@
 
 using namespace Ichor;
 
-class DebugService final : public Service<DebugService> {
+class DebugService final : public AdvancedService<DebugService> {
 public:
-    DebugService(DependencyRegister &reg, Properties props, DependencyManager *mng) : Service(std::move(props), mng) {
+    DebugService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {
         reg.registerDependency<ILogger>(this, true, Properties{{"LogLevel", Ichor::make_any<LogLevel>(LogLevel::LOG_INFO)}});
     }
     ~DebugService() final = default;
 private:
     Task<tl::expected<void, Ichor::StartError>> start() final {
-        _timer = getManager().createServiceManager<Timer, ITimer>();
+        _timer = GetThreadLocalManager().createServiceManager<Timer, ITimer>();
         _timer->setCallback(this, [this](DependencyManager &dm) {
             auto svcs = dm.getServiceInfo();
             for(auto &[id, svc] : svcs) {
@@ -44,7 +44,6 @@ private:
     }
 
     friend DependencyRegister;
-    friend DependencyManager;
 
     ILogger *_logger{nullptr};
     Timer *_timer{nullptr};

@@ -1,7 +1,7 @@
-#include <ichor/event_queues/MultimapQueue.h>
-#include <shared_mutex>
-#include <ichor/DependencyManager.h>
 #include <csignal>
+#include <shared_mutex>
+#include <ichor/event_queues/MultimapQueue.h>
+#include <ichor/DependencyManager.h>
 
 namespace Ichor::Detail {
     extern std::atomic<bool> sigintQuit;
@@ -24,7 +24,7 @@ namespace Ichor {
         }
     }
 
-    void MultimapQueue::pushEvent(uint64_t priority, std::unique_ptr<Event> &&event) {
+    void MultimapQueue::pushEventInternal(uint64_t priority, std::unique_ptr<Event> &&event) {
         if(!event) [[unlikely]] {
             throw std::runtime_error("Pushing nullptr");
         }
@@ -113,7 +113,7 @@ namespace Ichor {
 
         if(shouldQuit && !_quitEventSent) {
             // assume _eventQueueMutex is locked
-            _eventQueue.emplace(INTERNAL_EVENT_PRIORITY, std::make_unique<QuitEvent>(_dm->getNextEventId(), 0, INTERNAL_EVENT_PRIORITY));
+            _eventQueue.emplace(INTERNAL_EVENT_PRIORITY, std::make_unique<QuitEvent>(getNextEventId(), 0, INTERNAL_EVENT_PRIORITY));
             _quitEventSent = true;
             _whenQuitEventWasSent = std::chrono::steady_clock::now();
         }

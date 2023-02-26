@@ -29,7 +29,7 @@ namespace Ichor {
 
     class HttpHostService final : public IHttpService, public AdvancedService<HttpHostService> {
     public:
-        HttpHostService(DependencyRegister &reg, Properties props, DependencyManager *mng);
+        HttpHostService(DependencyRegister &reg, Properties props);
         ~HttpHostService() final = default;
 
         std::unique_ptr<HttpRouteRegistration> addRoute(HttpMethod method, std::string_view route, std::function<AsyncGenerator<HttpResponse>(HttpRequest&)> handler) final;
@@ -68,6 +68,7 @@ namespace Ichor {
         IAsioContextService *_asioContextService{nullptr};
         unordered_map<HttpMethod, unordered_map<std::string, std::function<AsyncGenerator<HttpResponse>(HttpRequest&)>, string_hash, std::equal_to<>>> _handlers{};
         AsyncManualResetEvent _startStopEvent{};
+        IEventQueue *_queue;
     };
 }
 

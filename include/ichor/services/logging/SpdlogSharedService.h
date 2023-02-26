@@ -3,6 +3,7 @@
 #ifdef ICHOR_USE_SPDLOG
 
 #include <vector>
+#include <memory>
 #include <ichor/dependency_management/AdvancedService.h>
 
 namespace spdlog::sinks {
