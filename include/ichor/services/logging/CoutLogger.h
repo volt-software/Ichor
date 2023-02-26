@@ -8,7 +8,7 @@
 namespace Ichor {
     class CoutLogger final : public ILogger, public AdvancedService<CoutLogger> {
     public:
-        CoutLogger(Properties props, DependencyManager *mng);
+        CoutLogger(Properties props);
 
         void trace(const char *filename_in, int line_in, const char *funcname_in, std::string_view format_str, fmt::format_args args) final;
         void debug(const char *filename_in, int line_in, const char *funcname_in, std::string_view format_str, fmt::format_args args) final;

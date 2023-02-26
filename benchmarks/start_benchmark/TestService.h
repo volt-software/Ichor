@@ -1,9 +1,9 @@
 #pragma once
 
-#include <ichor/DependencyManager.h>
 #include <ichor/services/logging/Logger.h>
 #include <ichor/dependency_management/AdvancedService.h>
-#include <ichor/dependency_management/ILifecycleManager.h>
+#include <ichor/dependency_management/DependencyRegister.h>
+#include <ichor/event_queues/IEventQueue.h>
 
 #if defined(__SANITIZE_ADDRESS__)
 constexpr uint32_t SERVICES_COUNT = 1'000;
@@ -15,7 +15,7 @@ using namespace Ichor;
 
 class TestService final : public AdvancedService<TestService> {
 public:
-    TestService(DependencyRegister &reg, Properties props, DependencyManager *mng) : AdvancedService(std::move(props), mng) {
+    TestService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {
         reg.registerDependency<ILogger>(this, true);
     }
     ~TestService() final = default;
@@ -25,7 +25,7 @@ private:
         auto iteration = Ichor::any_cast<uint64_t>(getProperties()["Iteration"]);
 //        fmt::print("Created {} #{} #{}\n", typeName<TestService>(), iteration, SERVICES_COUNT);
         if(iteration == SERVICES_COUNT - 1) {
-            getManager().pushEvent<QuitEvent>(getServiceId());
+            GetThreadLocalEventQueue().pushEvent<QuitEvent>(getServiceId());
         }
         co_return {};
     }

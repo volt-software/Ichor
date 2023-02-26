@@ -1,16 +1,11 @@
 #pragma once
 
-// used to solve some nasty circular includes
-#define ICHOR_DEPENDENCY_MANAGER 1
-
 #include <vector>
 #include <unordered_map>
 #include <memory>
-#include <thread>
 #include <chrono>
 #include <atomic>
 #include <mutex>
-#include <shared_mutex>
 #include <ichor/interfaces/IFrameworkLogger.h>
 #include <ichor/dependency_management/AdvancedService.h>
 #include <ichor/events/InternalEvents.h>
@@ -134,7 +129,7 @@ namespace Ichor {
             if constexpr(RequestsDependencies<Impl>) {
                 static_assert(!std::is_default_constructible_v<Impl>, "Cannot have a dependencies constructor and a default constructor simultaneously.");
                 static_assert(!RequestsProperties<Impl>, "Cannot have a dependencies constructor and a properties constructor simultaneously.");
-                auto cmpMgr = DependencyLifecycleManager<Impl>::template create<>(std::forward<Properties>(properties), this, InterfacesList<Interfaces...>);
+                auto cmpMgr = DependencyLifecycleManager<Impl>::template create<>(std::forward<Properties>(properties), InterfacesList<Interfaces...>);
 
                 if constexpr (sizeof...(Interfaces) > 0) {
                     static_assert(!ListContainsInterface<IFrameworkLogger, Interfaces...>::value, "IFrameworkLogger cannot have any dependencies");
@@ -166,22 +161,22 @@ namespace Ichor {
                         if(!it.get_finished()) {
                             _scopedGenerators.emplace(it.get_promise_id(), std::make_unique<AsyncGenerator<StartBehaviour>>(std::move(gen)));
                             // create new event that will be inserted upon finish of coroutine in ContinuableStartEvent
-                            _scopedEvents.emplace(it.get_promise_id(), std::make_shared<DependencyOnlineEvent>(getNextEventId(), cmpMgr->serviceId(), INTERNAL_DEPENDENCY_EVENT_PRIORITY));
+                            _scopedEvents.emplace(it.get_promise_id(), std::make_shared<DependencyOnlineEvent>(_eventQueue->getNextEventId(), cmpMgr->serviceId(), INTERNAL_DEPENDENCY_EVENT_PRIORITY));
                         } else if(it.get_value() == StartBehaviour::STARTED) {
-                            pushPrioritisedEvent<DependencyOnlineEvent>(cmpMgr->serviceId(), INTERNAL_DEPENDENCY_EVENT_PRIORITY);
+                            _eventQueue->pushPrioritisedEvent<DependencyOnlineEvent>(cmpMgr->serviceId(), INTERNAL_DEPENDENCY_EVENT_PRIORITY);
                         }
                     }
                 }
 
                 for (auto const &[key, registration] : cmpMgr->getDependencyRegistry()->_registrations) {
                     auto const &props = std::get<std::optional<Properties>>(registration);
-                    pushPrioritisedEvent<DependencyRequestEvent>(cmpMgr->serviceId(), priority, std::get<Dependency>(registration), props.has_value() ? &props.value() : std::optional<Properties const *>{});
+                    _eventQueue->pushPrioritisedEvent<DependencyRequestEvent>(cmpMgr->serviceId(), priority, std::get<Dependency>(registration), props.has_value() ? &props.value() : std::optional<Properties const *>{});
                 }
 
                 auto event_priority = std::min(INTERNAL_DEPENDENCY_EVENT_PRIORITY, priority);
-                pushPrioritisedEvent<StartServiceEvent>(cmpMgr->serviceId(), event_priority, cmpMgr->serviceId());
+                _eventQueue->pushPrioritisedEvent<StartServiceEvent>(cmpMgr->serviceId(), event_priority, cmpMgr->serviceId());
 
-                cmpMgr->getService().injectPriority(priority);
+                cmpMgr->getService().setServicePriority(priority);
 
                 if constexpr (DO_INTERNAL_DEBUG || DO_HARDENING) {
                     if (_services.contains(cmpMgr->serviceId())) [[unlikely]] {
@@ -191,12 +186,12 @@ namespace Ichor {
 
                 Impl* impl = &cmpMgr->getService();
                 // Can't directly emplace mgr into _services as that would result into modifying the container while iterating.
-                pushPrioritisedEvent<InsertServiceEvent>(cmpMgr->serviceId(), INTERNAL_INSERT_SERVICE_EVENT_PRIORITY, std::move(cmpMgr));
+                _eventQueue->pushPrioritisedEvent<InsertServiceEvent>(cmpMgr->serviceId(), INTERNAL_INSERT_SERVICE_EVENT_PRIORITY, std::move(cmpMgr));
 
                 return impl;
             } else {
                 static_assert(!(std::is_default_constructible_v<Impl> && RequestsProperties<Impl>), "Cannot have a properties constructor and a default constructor simultaneously.");
-                auto cmpMgr = LifecycleManager<Impl, Interfaces...>::template create<>(std::forward<Properties>(properties), this, InterfacesList<Interfaces...>);
+                auto cmpMgr = LifecycleManager<Impl, Interfaces...>::template create<>(std::forward<Properties>(properties), InterfacesList<Interfaces...>);
 
                 if constexpr (sizeof...(Interfaces) > 0) {
                     if constexpr (ListContainsInterface<IFrameworkLogger, Interfaces...>::value) {
@@ -205,13 +200,12 @@ namespace Ichor {
                     }
                 }
 
-                cmpMgr->getService().injectDependencyManager(this);
-                cmpMgr->getService().injectPriority(priority);
+                cmpMgr->getService().setServicePriority(priority);
 
                 logAddService<Impl, Interfaces...>(cmpMgr->serviceId());
 
                 auto event_priority = std::min(INTERNAL_DEPENDENCY_EVENT_PRIORITY, priority);
-                pushPrioritisedEvent<StartServiceEvent>(cmpMgr->serviceId(), event_priority, cmpMgr->serviceId());
+                _eventQueue->pushPrioritisedEvent<StartServiceEvent>(cmpMgr->serviceId(), event_priority, cmpMgr->serviceId());
 
                 if constexpr (DO_INTERNAL_DEBUG || DO_HARDENING) {
                     if (_services.contains(cmpMgr->serviceId())) [[unlikely]] {
@@ -220,64 +214,10 @@ namespace Ichor {
                 }
 
                 Impl* impl = &cmpMgr->getService();
-                pushPrioritisedEvent<InsertServiceEvent>(cmpMgr->serviceId(), INTERNAL_INSERT_SERVICE_EVENT_PRIORITY, std::move(cmpMgr));
+                _eventQueue->pushPrioritisedEvent<InsertServiceEvent>(cmpMgr->serviceId(), INTERNAL_INSERT_SERVICE_EVENT_PRIORITY, std::move(cmpMgr));
 
                 return impl;
             }
-        }
-
-        /// Push event into event loop with specified priority
-        /// \tparam EventT Type of event to push, has to derive from Event
-        /// \tparam Args auto-deducible arguments for EventT constructor
-        /// \param originatingServiceId service that is pushing the event
-        /// \param args arguments for EventT constructor
-        /// \return event id (can be used in completion/error handlers)
-        template <typename EventT, typename... Args>
-#if (!defined(WIN32) && !defined(_WIN32) && !defined(__WIN32)) || defined(__CYGWIN__)
-        requires Derived<EventT, Event>
-#endif
-        uint64_t pushPrioritisedEvent(uint64_t originatingServiceId, uint64_t priority, Args&&... args) {
-            static_assert(EventT::TYPE == typeNameHash<EventT>(), "Event typeNameHash wrong");
-            static_assert(EventT::NAME == typeName<EventT>(), "Event typeName wrong");
-
-            // TODO hardening
-//#ifdef ICHOR_USE_HARDENING
-//            if(originatingServiceId != 0 && _services.find(originatingServiceId) == _services.end()) [[unlikely]] {
-//                std::terminate();
-//            }
-//#endif
-
-            uint64_t eventId = getNextEventId();
-            _eventQueue->pushEvent(priority, std::unique_ptr<Event>{new EventT(std::forward<uint64_t>(eventId), std::forward<uint64_t>(originatingServiceId), std::forward<uint64_t>(priority), std::forward<Args>(args)...)});
-//            ICHOR_LOG_TRACE(_logger, "inserted event of type {} into manager {}", typeName<EventT>(), getId());
-            return eventId;
-        }
-
-        /// Push event into event loop with the default priority
-        /// \tparam EventT Type of event to push, has to derive from Event
-        /// \tparam Args auto-deducible arguments for EventT constructor
-        /// \param originatingServiceId service that is pushing the event
-        /// \param args arguments for EventT constructor
-        /// \return event id (can be used in completion/error handlers)
-        template <typename EventT, typename... Args>
-#if (!defined(WIN32) && !defined(_WIN32) && !defined(__WIN32)) || defined(__CYGWIN__)
-        requires Derived<EventT, Event>
-#endif
-        uint64_t pushEvent(uint64_t originatingServiceId, Args&&... args) {
-            static_assert(EventT::TYPE == typeNameHash<EventT>(), "Event typeNameHash wrong");
-            static_assert(EventT::NAME == typeName<EventT>(), "Event typeName wrong");
-
-            // TODO hardening
-//#ifdef ICHOR_USE_HARDENING
-//            if(originatingServiceId != 0 && _services.find(originatingServiceId) == _services.end()) [[unlikely]] {
-//                std::terminate();
-//            }
-//#endif
-
-            uint64_t eventId = getNextEventId();
-            _eventQueue->pushEvent(INTERNAL_EVENT_PRIORITY, std::unique_ptr<Event>{new EventT(std::forward<uint64_t>(eventId), std::forward<uint64_t>(originatingServiceId), INTERNAL_EVENT_PRIORITY, std::forward<Args>(args)...)});
-//            ICHOR_LOG_TRACE(_logger, "inserted event of type {} into manager {}", typeName<EventT>(), getId());
-            return eventId;
         }
 
         /// Push event into event loop with the default priority asynchronously
@@ -327,8 +267,8 @@ namespace Ichor {
                 }
             }
 
-            uint64_t eventId = getNextEventId();
-            _eventQueue->pushEvent(priority, std::unique_ptr<Event>{new EventT(std::forward<uint64_t>(eventId), std::forward<uint64_t>(originatingServiceId), std::forward<uint64_t>(priority), std::forward<Args>(args)...)});
+            uint64_t eventId = _eventQueue->getNextEventId();
+            _eventQueue->pushEventInternal(priority, std::unique_ptr<Event>{new EventT(std::forward<uint64_t>(eventId), std::forward<uint64_t>(originatingServiceId), std::forward<uint64_t>(priority), std::forward<Args>(args)...)});
             auto it = _eventWaiters.emplace(eventId, EventWaiter(originatingServiceId, EventT::TYPE));
             INTERNAL_DEBUG("pushPrioritisedEventAsync {}:{} {} waiting {} {}", eventId, typeName<EventT>(), originatingServiceId, it.first->second.count, it.first->second.events.size());
             co_await *it.first->second.events.begin()->second.get();
@@ -399,7 +339,7 @@ namespace Ichor {
                 undoRequestTrackersForType->second.emplace_back(std::move(undoRequestInfo));
             }
 
-            return DependencyTrackerRegistration(this, impl->getServiceId(), typeNameHash<Interface>(), impl->getServicePriority());
+            return DependencyTrackerRegistration(impl->getServiceId(), typeNameHash<Interface>(), impl->getServicePriority());
         }
 
         template <typename EventT, typename Impl>
@@ -431,7 +371,7 @@ namespace Ichor {
             CallbackKey key{impl->getServiceId(), EventT::TYPE};
             _completionCallbacks.emplace(key, std::function<void(Event const &)>{[impl](Event const &evt){ impl->handleCompletion(static_cast<EventT const &>(evt)); }});
             _errorCallbacks.emplace(key, std::function<void(Event const &)>{[impl](Event const &evt){ impl->handleError(static_cast<EventT const &>(evt)); }});
-            return EventCompletionHandlerRegistration(this, key, impl->getServicePriority());
+            return EventCompletionHandlerRegistration(key, impl->getServicePriority());
         }
 
         template <typename EventT, typename Impl>
@@ -472,7 +412,7 @@ namespace Ichor {
                     }
                 });
             }
-            return EventHandlerRegistration(this, CallbackKey{impl->getServiceId(), EventT::TYPE}, impl->getServicePriority());
+            return EventHandlerRegistration(CallbackKey{impl->getServiceId(), EventT::TYPE}, impl->getServicePriority());
         }
 
         template <typename EventT, typename Impl>
@@ -508,7 +448,7 @@ namespace Ichor {
                                                       std::function<bool(Event const &)>{[impl](Event const &evt){ return impl->preInterceptEvent(static_cast<EventT const &>(evt)); }},
                                                       std::function<void(Event const &, bool)>{[impl](Event const &evt, bool processed){ impl->postInterceptEvent(static_cast<EventT const &>(evt), processed); }}});
             }
-            return EventInterceptorRegistration(this, CallbackKey{impl->getServiceId(), targetEventId}, impl->getServicePriority());
+            return EventInterceptorRegistration(CallbackKey{impl->getServiceId(), targetEventId}, impl->getServicePriority());
         }
 
         /// Get manager id. Thread-safe.
@@ -558,6 +498,7 @@ namespace Ichor {
                 std::terminate();
             }
 #endif
+
             auto svc = _services.find(id);
 
             if(svc == _services.end()) {
@@ -645,10 +586,6 @@ namespace Ichor {
 
         [[nodiscard]] std::optional<std::string_view> getImplementationNameFor(uint64_t serviceId) const noexcept;
 
-        [[nodiscard]] uint64_t getNextEventId() noexcept {
-            return _eventIdCounter.fetch_add(1, std::memory_order_acq_rel);
-        }
-
         [[nodiscard]] IService const * getIServiceForImplementation(void const *ptr) const noexcept {
             for(auto &[k, svc] : _services) {
                 if(svc->getTypedServicePtr() == ptr) {
@@ -662,6 +599,8 @@ namespace Ichor {
         [[nodiscard]] AsyncGenerator<void> waitForStarted(IService *svc) {
             co_await waitForService(svc->getServiceId(), DependencyOnlineEvent::TYPE).begin();
         }
+
+        [[nodiscard]] IEventQueue& getEventQueue() const noexcept;
 
     private:
         template <typename EventT>
@@ -761,10 +700,9 @@ namespace Ichor {
         unordered_map<uint64_t, EventWaiter> _dependencyWaiters{}; // key = event id
         IEventQueue *_eventQueue;
         IFrameworkLogger *_logger{nullptr};
-        std::atomic<uint64_t> _eventIdCounter{0};
         std::atomic<bool> _started{false};
         CommunicationChannel *_communicationChannel{nullptr};
-        uint64_t _id{_managerIdCounter++};
+        uint64_t _id{_managerIdCounter.fetch_add(1, std::memory_order_relaxed)};
         static std::atomic<uint64_t> _managerIdCounter;
 
         friend class IEventQueue;

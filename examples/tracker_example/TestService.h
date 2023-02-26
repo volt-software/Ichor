@@ -1,16 +1,15 @@
 #pragma once
 
-#include <ichor/DependencyManager.h>
 #include <ichor/services/logging/Logger.h>
 #include <ichor/dependency_management/AdvancedService.h>
-#include <ichor/dependency_management/ILifecycleManager.h>
+#include <ichor/event_queues/IEventQueue.h>
 #include "RuntimeCreatedService.h"
 
 using namespace Ichor;
 
 class TestService final : public AdvancedService<TestService> {
 public:
-    TestService(DependencyRegister &reg, Properties props, DependencyManager *mng) : AdvancedService(std::move(props), mng) {
+    TestService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {
         reg.registerDependency<ILogger>(this, true);
         reg.registerDependency<IRuntimeCreatedService>(this, true, getProperties());
     }
@@ -19,7 +18,7 @@ public:
 private:
     Task<tl::expected<void, Ichor::StartError>> start() final {
         ICHOR_LOG_INFO(_logger, "TestService started with dependency");
-        getManager().pushEvent<QuitEvent>(getServiceId());
+        GetThreadLocalEventQueue().pushEvent<QuitEvent>(getServiceId());
         co_return {};
     }
 

@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Dependency.h"
-#include <algorithm>
+#include <vector>
 
 namespace Ichor {
     struct DependencyInfo final {
@@ -15,80 +15,38 @@ namespace Ichor {
         DependencyInfo& operator=(DependencyInfo&&) noexcept = default;
 
         [[nodiscard]]
-        auto begin() {
-            return std::begin(_dependencies);
-        }
+        std::vector<Dependency>::iterator begin();
 
         [[nodiscard]]
-        auto begin() const noexcept {
-            return std::cbegin(_dependencies);
-        }
+        std::vector<Dependency>::const_iterator begin() const noexcept;
 
         [[nodiscard]]
-        auto end() {
-            return std::end(_dependencies);
-        }
+        std::vector<Dependency>::iterator end();
 
         [[nodiscard]]
-        auto end() const noexcept {
-            return std::cend(_dependencies);
-        }
+        std::vector<Dependency>::const_iterator end() const noexcept;
 
-        template<class Interface>
-        void addDependency(bool required = true) {
-            _dependencies.emplace_back(typeNameHash<Interface>(), required, false);
-        }
+        void addDependency(Dependency dependency);
 
-        void addDependency(Dependency dependency) {
-            _dependencies.emplace_back(dependency);
-        }
-
-        template<class Interface>
-        void removeDependency() {
-            std::erase_if(_dependencies, [](auto const& dep) noexcept { return dep.interfaceNameHash == typeNameHash<Interface>(); });
-        }
-
-        void removeDependency(const Dependency &dependency) {
-            std::erase_if(_dependencies, [&dependency](auto const& dep) noexcept { return dep.interfaceNameHash == dependency.interfaceNameHash; });
-        }
-
-        template<class Interface>
-        [[nodiscard]]
-        bool contains() const noexcept {
-            return end() != std::find_if(begin(), end(), [](auto const& dep) noexcept { return dep.interfaceNameHash == typeNameHash<Interface>(); });
-        }
+        void removeDependency(const Dependency &dependency);
 
         [[nodiscard]]
-        bool contains(const Dependency &dependency) const noexcept {
-            return end() != std::find_if(begin(), end(), [&dependency](auto const& dep) noexcept { return dep.interfaceNameHash == dependency.interfaceNameHash; });
-        }
+        bool contains(const Dependency &dependency) const noexcept;
 
         [[nodiscard]]
-        auto find(const Dependency &dependency) const noexcept {
-            return std::find_if(begin(), end(), [&dependency](auto const& dep) noexcept { return dep.interfaceNameHash == dependency.interfaceNameHash; });
-        }
+        std::vector<Dependency>::const_iterator find(const Dependency &dependency) const noexcept;
 
         [[nodiscard]]
-        auto find(const Dependency &dependency) noexcept {
-            return std::find_if(begin(), end(), [&dependency](auto const& dep) noexcept { return dep.interfaceNameHash == dependency.interfaceNameHash; });
-        }
+        std::vector<Dependency>::iterator find(const Dependency &dependency) noexcept;
 
         [[nodiscard]]
-        size_t size() const noexcept {
-            return _dependencies.size();
-        }
+        size_t size() const noexcept;
 
         [[nodiscard]]
-        bool empty() const noexcept {
-            return _dependencies.empty();
-        }
+        bool empty() const noexcept;
 
         [[nodiscard]]
-        bool allSatisfied() const noexcept {
-            return std::all_of(begin(), end(), [](auto const &dep) {
-                return dep.satisfied > 0 || !dep.required;
-            });
-        }
+        bool allSatisfied() const noexcept;
 
         std::vector<Dependency> _dependencies;
     };

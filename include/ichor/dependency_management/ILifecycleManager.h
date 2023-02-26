@@ -36,7 +36,7 @@ namespace Ichor {
         virtual void removeSelfInto(uint64_t keyOfInterfaceToInject, uint64_t serviceIdOfOther, std::function<void(void*, IService*)>&) = 0;
 
     protected:
-        static Ichor::AsyncGenerator<void> waitForService(DependencyManager &dm, uint64_t serviceId, uint64_t eventType) noexcept;
+        static Ichor::AsyncGenerator<void> waitForService(uint64_t serviceId, uint64_t eventType) noexcept;
     };
 }
 

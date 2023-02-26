@@ -19,7 +19,7 @@ namespace Ichor {
 
     class TcpHostService final : public IHostService, public AdvancedService<TcpHostService> {
     public:
-        TcpHostService(DependencyRegister &reg, Properties props, DependencyManager *mng);
+        TcpHostService(DependencyRegister &reg, Properties props);
         ~TcpHostService() final = default;
 
         void setPriority(uint64_t priority) final;

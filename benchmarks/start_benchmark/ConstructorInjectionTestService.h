@@ -11,7 +11,7 @@ public:
         IService const *self = GetThreadLocalManager().getIServiceForImplementation(this);
         auto iteration = Ichor::any_cast<uint64_t>(self->getProperties().find("Iteration")->second);
         if(iteration == SERVICES_COUNT - 1) {
-            GetThreadLocalManager().pushEvent<QuitEvent>(self->getServiceId());
+            GetThreadLocalEventQueue().pushEvent<QuitEvent>(self->getServiceId());
         }
     }
 };

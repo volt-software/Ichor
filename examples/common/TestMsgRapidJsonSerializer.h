@@ -1,10 +1,8 @@
 #pragma once
 
-#include <ichor/DependencyManager.h>
-#include <ichor/services/logging/Logger.h>
+//#include <ichor/services/logging/Logger.h>
 #include <ichor/dependency_management/AdvancedService.h>
 #include <ichor/services/serialization/ISerializer.h>
-#include <ichor/dependency_management/ILifecycleManager.h>
 #include "TestMsg.h"
 #include <rapidjson/document.h>
 #include <rapidjson/writer.h>

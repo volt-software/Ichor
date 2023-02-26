@@ -1,11 +1,9 @@
 #pragma once
 
+#include <utility>
 #include <ichor/DependencyManager.h>
 #include <ichor/services/logging/Logger.h>
-
-#include <utility>
 #include <ichor/dependency_management/AdvancedService.h>
-#include <ichor/dependency_management/ILifecycleManager.h>
 #include "RuntimeCreatedService.h"
 
 using namespace Ichor;
@@ -26,7 +24,7 @@ public:
 
 class TrackerService final : public AdvancedService<TrackerService> {
 public:
-    TrackerService(DependencyRegister &reg, Properties props, DependencyManager *mng) : AdvancedService(std::move(props), mng) {
+    TrackerService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {
         reg.registerDependency<ILogger>(this, true);
     }
     ~TrackerService() final = default;
@@ -34,7 +32,7 @@ public:
 private:
     Task<tl::expected<void, Ichor::StartError>> start() final {
         ICHOR_LOG_INFO(_logger, "TrackerService started");
-        _trackerRegistration = getManager().registerDependencyTracker<IRuntimeCreatedService>(this);
+        _trackerRegistration = GetThreadLocalManager().registerDependencyTracker<IRuntimeCreatedService>(this);
         co_return {};
     }
 
@@ -75,7 +73,7 @@ private:
             auto newProps = *evt.properties.value();
             newProps.emplace("Filter", Ichor::make_any<Filter>(Filter{ScopeFilterEntry{scope}}));
 
-            _scopedRuntimeServices.emplace(scope, getManager().createServiceManager<RuntimeCreatedService, IRuntimeCreatedService>(std::move(newProps)));
+            _scopedRuntimeServices.emplace(scope, GetThreadLocalManager().createServiceManager<RuntimeCreatedService, IRuntimeCreatedService>(std::move(newProps)));
         }
     }
 
@@ -94,8 +92,8 @@ private:
         auto service = _scopedRuntimeServices.find(scope);
         if(service != end(_scopedRuntimeServices)) {
             // TODO: This only works for synchronous start/stop loggers, maybe turn into async and await a stop before removing?
-            getManager().pushEvent<StopServiceEvent>(getServiceId(), service->second->getServiceId());
-            getManager().pushPrioritisedEvent<RemoveServiceEvent>(getServiceId(), INTERNAL_EVENT_PRIORITY + 11, service->second->getServiceId());
+            GetThreadLocalEventQueue().pushEvent<StopServiceEvent>(getServiceId(), service->second->getServiceId());
+            GetThreadLocalEventQueue().pushPrioritisedEvent<RemoveServiceEvent>(getServiceId(), INTERNAL_EVENT_PRIORITY + 11, service->second->getServiceId());
             _scopedRuntimeServices.erase(scope);
         }
     }

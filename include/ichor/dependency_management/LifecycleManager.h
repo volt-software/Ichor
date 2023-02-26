@@ -16,11 +16,11 @@ namespace Ichor {
     class LifecycleManager final : public ILifecycleManager {
     public:
         template <typename U = ServiceType> requires RequestsProperties<U>
-        explicit LifecycleManager(std::vector<Dependency> interfaces, Properties&& properties, DependencyManager *mng) : _interfaces(std::move(interfaces)), _service(std::forward<Properties>(properties), mng) {
+        explicit LifecycleManager(std::vector<Dependency> interfaces, Properties&& properties) : _interfaces(std::move(interfaces)), _service(std::forward<Properties>(properties)) {
         }
 
         template <typename U = ServiceType> requires (!RequestsProperties<U>)
-        explicit LifecycleManager(std::vector<Dependency> interfaces, Properties&& properties, DependencyManager *mng) : _interfaces(std::move(interfaces)), _service() {
+        explicit LifecycleManager(std::vector<Dependency> interfaces, Properties&& properties) : _interfaces(std::move(interfaces)), _service() {
             _service.setProperties(std::forward<Properties>(properties));
         }
 
@@ -28,11 +28,11 @@ namespace Ichor {
 
         template<typename... Interfaces>
         [[nodiscard]]
-        static std::unique_ptr<LifecycleManager<ServiceType, Interfaces...>> create(Properties&& properties, DependencyManager *mng, InterfacesList_t<Interfaces...>) {
+        static std::unique_ptr<LifecycleManager<ServiceType, Interfaces...>> create(Properties&& properties, InterfacesList_t<Interfaces...>) {
             std::vector<Dependency> interfaces{};
             interfaces.reserve(sizeof...(Interfaces));
             (interfaces.emplace_back(typeNameHash<Interfaces>(), false, false),...);
-            return std::make_unique<LifecycleManager<ServiceType, Interfaces...>>(std::move(interfaces), std::forward<Properties>(properties), mng);
+            return std::make_unique<LifecycleManager<ServiceType, Interfaces...>>(std::move(interfaces), std::forward<Properties>(properties));
         }
 
 

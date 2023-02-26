@@ -4,13 +4,13 @@
 #include <ichor/services/logging/Logger.h>
 #include <ichor/services/timer/TimerService.h>
 #include <ichor/dependency_management/AdvancedService.h>
-#include <ichor/dependency_management/ILifecycleManager.h>
+#include <ichor/dependency_management/DependencyRegister.h>
 
 using namespace Ichor;
 
 class UsingStatisticsService final : public AdvancedService<UsingStatisticsService> {
 public:
-    UsingStatisticsService(DependencyRegister &reg, Properties props, DependencyManager *mng) : AdvancedService(std::move(props), mng) {
+    UsingStatisticsService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {
         reg.registerDependency<ILogger>(this, true);
     }
     ~UsingStatisticsService() final = default;
@@ -18,13 +18,13 @@ public:
 private:
     Task<tl::expected<void, Ichor::StartError>> start() final {
         ICHOR_LOG_INFO(_logger, "UsingStatisticsService started");
-        auto quitTimerManager = getManager().createServiceManager<Timer, ITimer>();
-        auto bogusTimerManager = getManager().createServiceManager<Timer, ITimer>();
+        auto quitTimerManager = GetThreadLocalManager().createServiceManager<Timer, ITimer>();
+        auto bogusTimerManager = GetThreadLocalManager().createServiceManager<Timer, ITimer>();
         quitTimerManager->setChronoInterval(15s);
         bogusTimerManager->setChronoInterval(100ms);
 
         quitTimerManager->setCallback(this, [this](DependencyManager &dm) {
-            getManager().pushEvent<QuitEvent>(getServiceId());
+            GetThreadLocalEventQueue().pushEvent<QuitEvent>(getServiceId());
         });
 
         bogusTimerManager->setCallback(this, [this](DependencyManager &dm) {
@@ -50,7 +50,6 @@ private:
     }
 
     friend DependencyRegister;
-    friend DependencyManager;
 
     ILogger *_logger{nullptr};
     std::random_device _rd{};

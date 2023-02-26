@@ -22,7 +22,7 @@ namespace Ichor {
         SdeventQueue();
         ~SdeventQueue() final;
 
-        void pushEvent(uint64_t priority, std::unique_ptr<Event> &&event) final;
+        void pushEventInternal(uint64_t priority, std::unique_ptr<Event> &&event) final;
 
         [[nodiscard]] bool empty() const final;
         [[nodiscard]] uint64_t size() const final;

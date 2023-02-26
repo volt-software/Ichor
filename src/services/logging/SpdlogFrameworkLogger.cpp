@@ -4,7 +4,6 @@
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/sinks/basic_file_sink.h>
 #include <ichor/services/logging/SpdlogFrameworkLogger.h>
-#include <ichor/DependencyManager.h>
 
 
 namespace Ichor {
@@ -36,7 +35,7 @@ namespace Ichor {
     }
 }
 
-Ichor::SpdlogFrameworkLogger::SpdlogFrameworkLogger(Properties props, DependencyManager *mng) : AdvancedService(std::move(props), mng), _level(LogLevel::LOG_WARN) {
+Ichor::SpdlogFrameworkLogger::SpdlogFrameworkLogger(Properties props) : AdvancedService(std::move(props)), _level(LogLevel::LOG_WARN) {
     _setup_spdlog();
 
     while(!_logger_set.load(std::memory_order_acquire)) {

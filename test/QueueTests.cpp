@@ -12,13 +12,13 @@ TEST_CASE("QueueTests") {
         auto queue = std::make_unique<MultimapQueue>();
         auto &dm = queue->createManager();
 
-        REQUIRE_THROWS(queue->pushEvent(0, nullptr));
+        REQUIRE_THROWS(queue->pushEventInternal(0, nullptr));
 
         REQUIRE(queue->empty());
         REQUIRE(queue->size() == 0);
         REQUIRE(!queue->shouldQuit());
 
-        REQUIRE_NOTHROW(queue->pushEvent(10, std::make_unique<TestEvent>(0, 0, 10)));
+        REQUIRE_NOTHROW(queue->pushEventInternal(10, std::make_unique<TestEvent>(0, 0, 10)));
 
         REQUIRE(!queue->empty());
         REQUIRE(queue->size() == 1);
@@ -37,7 +37,7 @@ TEST_CASE("QueueTests") {
 
         Detail::_local_dm = &dm;
 
-        REQUIRE_THROWS(queue->pushEvent(0, nullptr));
+        REQUIRE_THROWS(queue->pushEventInternal(0, nullptr));
         REQUIRE_THROWS(queue->empty());
         REQUIRE_THROWS(queue->size());
 
@@ -78,7 +78,7 @@ TEST_CASE("QueueTests") {
         REQUIRE(dm->isRunning());
 
         try {
-            dm->pushEvent<QuitEvent>(0);
+            dm->getEventQueue().pushEvent<QuitEvent>(0);
         } catch(const std::exception &e) {
             fmt::print("exception: {}\n", e.what());
             throw;

@@ -17,7 +17,7 @@ struct EventHandlerService final : public IEventHandlerService, public AdvancedS
     EventHandlerService() = default;
 
     Task<tl::expected<void, Ichor::StartError>> start() final {
-        _handler = this->getManager().template registerEventHandler<EventT>(this);
+        _handler = GetThreadLocalManager().template registerEventHandler<EventT>(this);
 
         co_return {};
     }

@@ -10,7 +10,7 @@ namespace Ichor {
     // Rather shoddy implementation, setting the interval does not reset the insertEventLoop function and the sleep_for is sketchy at best.
     class Timer final : public ITimer, public AdvancedService<Timer> {
     public:
-        Timer() noexcept = default;
+        Timer() noexcept;
 
         ~Timer() noexcept final;
 
@@ -47,5 +47,6 @@ namespace Ichor {
         std::atomic<bool> _quit{true};
         std::atomic<uint64_t> _priority{INTERNAL_EVENT_PRIORITY};
         uint64_t _requestingServiceId{};
+        IEventQueue *_queue{};
     };
 }

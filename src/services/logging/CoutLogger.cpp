@@ -2,7 +2,7 @@
 #include <iostream>
 #define FMT_INLINE_BUFFER_SIZE 1024
 
-Ichor::CoutLogger::CoutLogger(Properties props, DependencyManager *mng) : AdvancedService(std::move(props), mng) {
+Ichor::CoutLogger::CoutLogger(Properties props) : AdvancedService(std::move(props)) {
     auto logLevelProp = getProperties().find("LogLevel");
     if(logLevelProp != end(getProperties())) {
         setLogLevel(Ichor::any_cast<LogLevel>(logLevelProp->second));

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <ichor/event_queues/IEventQueue.h>
+
 namespace Ichor {
 
     template<class ServiceType, typename... IFaces>
@@ -8,7 +10,7 @@ namespace Ichor {
 #endif
     class DependencyLifecycleManager final : public ILifecycleManager {
     public:
-        explicit DependencyLifecycleManager(std::vector<Dependency> interfaces, Properties&& properties, DependencyManager *mng) : _interfaces(std::move(interfaces)), _registry(), _dependencies(), _service(_registry, std::move(properties), mng) {
+        explicit DependencyLifecycleManager(std::vector<Dependency> interfaces, Properties&& properties) : _interfaces(std::move(interfaces)), _registry(), _dependencies(), _service(_registry, std::move(properties)) {
             for(auto const &reg : _registry._registrations) {
                 _dependencies.addDependency(std::get<0>(reg.second));
             }
@@ -17,18 +19,17 @@ namespace Ichor {
         ~DependencyLifecycleManager() final {
             INTERNAL_DEBUG("destroying {}, id {}", typeName<ServiceType>(), _service.getServiceId());
             for(auto const &dep : _dependencies._dependencies) {
-                // _manager is always injected in DependencyManager::create...Manager functions.
-                _service._manager->template pushPrioritisedEvent<DependencyUndoRequestEvent>(_service.getServiceId(), INTERNAL_DEPENDENCY_EVENT_PRIORITY, Dependency{dep.interfaceNameHash, dep.required, dep.satisfied}, getProperties());
+                GetThreadLocalEventQueue().template pushPrioritisedEvent<DependencyUndoRequestEvent>(_service.getServiceId(), INTERNAL_DEPENDENCY_EVENT_PRIORITY, Dependency{dep.interfaceNameHash, dep.required, dep.satisfied}, getProperties());
             }
         }
 
         template<typename... Interfaces>
         [[nodiscard]]
-        static std::unique_ptr<DependencyLifecycleManager<ServiceType, Interfaces...>> create(Properties&& properties, DependencyManager *mng, InterfacesList_t<Interfaces...>) {
+        static std::unique_ptr<DependencyLifecycleManager<ServiceType, Interfaces...>> create(Properties&& properties, InterfacesList_t<Interfaces...>) {
             std::vector<Dependency> interfaces{};
             interfaces.reserve(sizeof...(Interfaces));
             (interfaces.emplace_back(typeNameHash<Interfaces>(), false, false),...);
-            return std::make_unique<DependencyLifecycleManager<ServiceType, Interfaces...>>(std::move(interfaces), std::move(properties), mng);
+            return std::make_unique<DependencyLifecycleManager<ServiceType, Interfaces...>>(std::move(interfaces), std::move(properties));
         }
 
         std::vector<decltype(std::declval<DependencyInfo>().begin())> interestedInDependency(ILifecycleManager *dependentService, bool online) noexcept final {
@@ -119,14 +120,14 @@ namespace Ichor {
 
                 if(dep->required && dep->satisfied == 0 && (getServiceState() == ServiceState::STARTING || getServiceState() == ServiceState::INJECTING)) {
                     INTERNAL_DEBUG("{}:{}:{} dependencyOffline waitForService {} {} {} {}", serviceId(), _service.getServiceName(), getServiceState(), interested, dep->satisfied, dep->required, getDependees().size());
-                    co_await waitForService(_service.getManager(), serviceId(), DependencyOnlineEvent::TYPE).begin();
+                    co_await waitForService(serviceId(), DependencyOnlineEvent::TYPE).begin();
                 }
 
                 if (dep->required && dep->satisfied == 0 && interested != Detail::DependencyChange::FOUND_AND_STOP_ME && getServiceState() == ServiceState::ACTIVE) {
                     INTERNAL_DEBUG("{}:{}:{} dependencyOffline stopping {}", serviceId(), _service.getServiceName(), getServiceState(), interested);
 
-                    _service._manager->template pushPrioritisedEvent<DependencyOfflineEvent>(serviceId(), INTERNAL_DEPENDENCY_EVENT_PRIORITY - 1);
-                    co_await waitForService(_service.getManager(), serviceId(), DependencyOfflineEvent::TYPE).begin();
+                    GetThreadLocalEventQueue().template pushPrioritisedEvent<DependencyOfflineEvent>(serviceId(), INTERNAL_DEPENDENCY_EVENT_PRIORITY - 1);
+                    co_await waitForService(serviceId(), DependencyOfflineEvent::TYPE).begin();
                     INTERNAL_DEBUG("{}:{}:{} dependencyOffline stopping {} pushPrioritisedEventAsync done", serviceId(), _service.getServiceName(), getServiceState(), interested);
 
 #ifdef ICHOR_USE_HARDENING
@@ -164,7 +165,7 @@ namespace Ichor {
 
                 if(dep->required && dep->satisfied == 0 && (getServiceState() == ServiceState::UNINJECTING || getServiceState() == ServiceState::STOPPING)) {
                     INTERNAL_DEBUG("{}:{}:{} dependencyOffline waitForService {} {} {} {}", serviceId(), _service.getServiceName(), getServiceState(), interested, dep->satisfied, dep->required, getDependees().size());
-                    co_await waitForService(_service.getManager(), serviceId(), StopServiceEvent::TYPE).begin();
+                    co_await waitForService(serviceId(), StopServiceEvent::TYPE).begin();
                 }
 
 #ifdef ICHOR_USE_HARDENING

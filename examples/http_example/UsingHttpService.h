@@ -1,6 +1,5 @@
 #pragma once
 
-#include <ichor/DependencyManager.h>
 #include <ichor/services/logging/Logger.h>
 #include <ichor/services/timer/TimerService.h>
 #include <ichor/services/network/NetworkEvents.h>
@@ -8,7 +7,7 @@
 #include <ichor/services/network/http/IHttpService.h>
 #include <ichor/events/RunFunctionEvent.h>
 #include <ichor/dependency_management/AdvancedService.h>
-#include <ichor/dependency_management/ILifecycleManager.h>
+#include <ichor/dependency_management/DependencyRegister.h>
 #include <ichor/services/serialization/ISerializer.h>
 #include "../common/TestMsg.h"
 
@@ -16,7 +15,7 @@ using namespace Ichor;
 
 class UsingHttpService final : public AdvancedService<UsingHttpService> {
 public:
-    UsingHttpService(DependencyRegister &reg, Properties props, DependencyManager *mng) : AdvancedService(std::move(props), mng) {
+    UsingHttpService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {
         reg.registerDependency<ILogger>(this, true);
         reg.registerDependency<ISerializer<TestMsg>>(this, true);
         reg.registerDependency<IHttpConnectionService>(this, true, getProperties());
@@ -28,7 +27,7 @@ private:
     Task<tl::expected<void, Ichor::StartError>> start() final {
         ICHOR_LOG_INFO(_logger, "UsingHttpService started");
 
-        getManager().pushEvent<RunFunctionEventAsync>(getServiceId(), [this](DependencyManager &dm) -> AsyncGenerator<IchorBehaviour> {
+        GetThreadLocalEventQueue().pushEvent<RunFunctionEventAsync>(getServiceId(), [this](DependencyManager &dm) -> AsyncGenerator<IchorBehaviour> {
             auto toSendMsg = _serializer->serialize(TestMsg{11, "hello"});
 
             co_await sendTestRequest(std::move(toSendMsg)).begin();
@@ -86,7 +85,6 @@ private:
     }
 
     friend DependencyRegister;
-    friend DependencyManager;
 
     AsyncGenerator<void> sendTestRequest(std::vector<uint8_t> &&toSendMsg) {
         ICHOR_LOG_INFO(_logger, "sendTestRequest");
@@ -104,7 +102,7 @@ private:
         } else {
             ICHOR_LOG_ERROR(_logger, "Received status {}", (int)response.status);
         }
-        getManager().pushEvent<QuitEvent>(getServiceId());
+        GetThreadLocalEventQueue().pushEvent<QuitEvent>(getServiceId());
 
         co_return;
     }

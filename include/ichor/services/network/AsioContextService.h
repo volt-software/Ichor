@@ -32,7 +32,7 @@ namespace Ichor {
 
     class AsioContextService final : public IAsioContextService, public AdvancedService<AsioContextService> {
     public:
-        AsioContextService(DependencyRegister &reg, Properties props, DependencyManager *mng);
+        AsioContextService(DependencyRegister &reg, Properties props);
         ~AsioContextService() final;
 
         net::io_context* getContext() noexcept final;

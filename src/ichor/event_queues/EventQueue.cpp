@@ -34,4 +34,8 @@ namespace Ichor {
     void IEventQueue::stopDm() {
         _dm->stop();
     }
+
+    [[nodiscard]] IEventQueue& GetThreadLocalEventQueue() noexcept {
+        return GetThreadLocalManager().getEventQueue();
+    }
 }

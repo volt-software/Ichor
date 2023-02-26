@@ -20,7 +20,7 @@ TEST_CASE("DependencyManager") {
 
         REQUIRE(dm.isRunning());
 
-        dm.pushEvent<QuitEvent>(0);
+        queue->pushEvent<QuitEvent>(0);
 
         t.join();
 
@@ -61,7 +61,7 @@ TEST_CASE("DependencyManager") {
 
         dm.runForOrQueueEmpty();
 
-        dm.pushEvent<RunFunctionEvent>(0, [&](DependencyManager &_dm) {
+        queue->pushEvent<RunFunctionEvent>(0, [&](DependencyManager &_dm) {
             REQUIRE(_dm.getServiceCount() == 3);
 
             auto svc = _dm.getService(uselessSvcId);
@@ -79,7 +79,7 @@ TEST_CASE("DependencyManager") {
             auto startedSvc = _dm.getStartedServices<IUselessService>();
             REQUIRE(startedSvc.size() == 2);
 
-            dm.pushEvent<QuitEvent>(0);
+            queue->pushEvent<QuitEvent>(0);
         });
 
         t.join();
@@ -110,7 +110,7 @@ TEST_CASE("DependencyManager") {
 
         AsyncManualResetEvent evt;
 
-        dm.pushEvent<RunFunctionEventAsync>(0, [&](DependencyManager &_dm) -> AsyncGenerator<IchorBehaviour> {
+        queue->pushEvent<RunFunctionEventAsync>(0, [&](DependencyManager &_dm) -> AsyncGenerator<IchorBehaviour> {
             REQUIRE(Ichor::Detail::_local_dm == &_dm);
             REQUIRE(Ichor::Detail::_local_dm == &dm);
             REQUIRE(testThreadId != std::this_thread::get_id());
@@ -120,7 +120,7 @@ TEST_CASE("DependencyManager") {
             REQUIRE(Ichor::Detail::_local_dm == &dm);
             REQUIRE(testThreadId != std::this_thread::get_id());
             REQUIRE(dmThreadId == std::this_thread::get_id());
-            dm.pushEvent<QuitEvent>(0);
+            queue->pushEvent<QuitEvent>(0);
             co_return {};
         });
 
@@ -128,7 +128,7 @@ TEST_CASE("DependencyManager") {
 
         REQUIRE(Ichor::Detail::_local_dm == nullptr);
 
-        dm.pushEvent<RunFunctionEvent>(0, [&](DependencyManager &_dm) {
+        queue->pushEvent<RunFunctionEvent>(0, [&](DependencyManager &_dm) {
             REQUIRE(Ichor::Detail::_local_dm == &_dm);
             REQUIRE(Ichor::Detail::_local_dm == &dm);
             REQUIRE(testThreadId != std::this_thread::get_id());

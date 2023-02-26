@@ -3,12 +3,13 @@
 #include <ichor/services/etcd/IEtcdService.h>
 #include <ichor/services/etcd/rpc.grpc.pb.h>
 #include <ichor/services/logging/Logger.h>
+#include <ichor/dependency_management/AdvancedService.h>
 #include <thread>
 
 namespace Ichor {
-    class EtcdService final : public IEtcdService, public Service<EtcdService> {
+    class EtcdService final : public IEtcdService, public AdvancedService<EtcdService> {
     public:
-        EtcdService(DependencyRegister &reg, Properties props, DependencyManager *mng);
+        EtcdService(DependencyRegister &reg, Properties props);
         ~EtcdService() final = default;
 
         bool put(std::string&& key, std::string&& value) final;

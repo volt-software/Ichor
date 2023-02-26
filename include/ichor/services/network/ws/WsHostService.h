@@ -20,7 +20,7 @@ using tcp = boost::asio::ip::tcp;       // from <boost/asio/ip/tcp.hpp>
 namespace Ichor {
     class WsHostService final : public IHostService, public AdvancedService<WsHostService> {
     public:
-        WsHostService(DependencyRegister &reg, Properties props, DependencyManager *mng);
+        WsHostService(DependencyRegister &reg, Properties props);
         ~WsHostService() final = default;
 
         void setPriority(uint64_t priority) final;
@@ -54,6 +54,7 @@ namespace Ichor {
         std::vector<WsConnectionService*> _connections{};
         EventHandlerRegistration _eventRegistration{};
         AsyncManualResetEvent _startStopEvent{};
+        IEventQueue *_queue;
     };
 }
 

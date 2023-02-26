@@ -10,18 +10,18 @@ namespace Ichor {
     };
 
     struct DependencyOnlineWhileStoppingService final : public IDependencyOnlineWhileStoppingService, public AdvancedService<DependencyOnlineWhileStoppingService> {
-        DependencyOnlineWhileStoppingService(DependencyRegister &reg, Properties props, DependencyManager *mng) : AdvancedService(std::move(props), mng) {
+        DependencyOnlineWhileStoppingService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {
             reg.registerDependency<IUselessService>(this, true);
         }
         ~DependencyOnlineWhileStoppingService() final = default;
 
         Task<tl::expected<void, Ichor::StartError>> start() final {
-            getManager().pushEvent<StopServiceEvent>(getServiceId(), svcId);
+            GetThreadLocalEventQueue().pushEvent<StopServiceEvent>(getServiceId(), svcId);
             co_return {};
         }
 
         Task<void> stop() final {
-            getManager().pushEvent<StartServiceEvent>(getServiceId(), svcId);
+            GetThreadLocalEventQueue().pushEvent<StartServiceEvent>(getServiceId(), svcId);
             co_await *_evt;
 
             co_return;

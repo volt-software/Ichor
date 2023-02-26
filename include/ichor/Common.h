@@ -5,12 +5,6 @@
 #include <string_view>
 #include <chrono>
 
-#define SPDLOG_ACTIVE_LEVEL SPDLOG_LEVEL_TRACE
-#if __has_include(<spdlog/spdlog.h>)
-#include <spdlog/spdlog.h>
-#endif
-
-
 #ifdef ICHOR_USE_ABSEIL
 #include <absl/container/flat_hash_map.h>
 #include <absl/container/flat_hash_set.h>
@@ -114,8 +108,6 @@ namespace Ichor {
             class Eq = std::equal_to<T>,
             class Allocator = std::allocator<T>>
     using unordered_set = absl::flat_hash_set<T, Hash, Eq, Allocator>;
-    template <class T>
-    using b = std::unordered_set<T>;
 #else
     template <
             class Key,

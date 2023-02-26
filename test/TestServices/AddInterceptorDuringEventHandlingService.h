@@ -10,8 +10,8 @@ struct AddInterceptorDuringEventHandlingService final : public AdvancedService<A
     AddInterceptorDuringEventHandlingService() = default;
 
     Task<tl::expected<void, Ichor::StartError>> start() final {
-        _interceptor = getManager().registerEventInterceptor<TestEvent>(this);
-        _interceptorAll = getManager().registerEventInterceptor<Event>(this);
+        _interceptor = GetThreadLocalManager().registerEventInterceptor<TestEvent>(this);
+        _interceptorAll = GetThreadLocalManager().registerEventInterceptor<Event>(this);
 
         co_return {};
     }
@@ -25,7 +25,7 @@ struct AddInterceptorDuringEventHandlingService final : public AdvancedService<A
 
     bool preInterceptEvent(TestEvent const &evt) {
         if(!_addedPreIntercept) {
-            getManager().createServiceManager<AddInterceptorDuringEventHandlingService>();
+            GetThreadLocalManager().createServiceManager<AddInterceptorDuringEventHandlingService>();
             _addedPreIntercept = true;
         }
 
@@ -34,14 +34,14 @@ struct AddInterceptorDuringEventHandlingService final : public AdvancedService<A
 
     void postInterceptEvent(TestEvent const &evt, bool processed) {
         if(!_addedPostIntercept) {
-            getManager().createServiceManager<AddInterceptorDuringEventHandlingService>();
+            GetThreadLocalManager().createServiceManager<AddInterceptorDuringEventHandlingService>();
             _addedPostIntercept = true;
         }
     }
 
     bool preInterceptEvent(Event const &evt) {
         if(!_addedPreInterceptAll) {
-            getManager().createServiceManager<AddInterceptorDuringEventHandlingService>();
+            GetThreadLocalManager().createServiceManager<AddInterceptorDuringEventHandlingService>();
             _addedPreInterceptAll = true;
         }
 
@@ -50,7 +50,7 @@ struct AddInterceptorDuringEventHandlingService final : public AdvancedService<A
 
     void postInterceptEvent(Event const &evt, bool processed) {
         if(!_addedPostInterceptAll) {
-            getManager().createServiceManager<AddInterceptorDuringEventHandlingService>();
+            GetThreadLocalManager().createServiceManager<AddInterceptorDuringEventHandlingService>();
             _addedPostInterceptAll = true;
         }
     }

@@ -35,7 +35,7 @@ namespace Ichor {
         auto *svc = static_cast<HiredisService*>(c->data);
         ichorReply->reply = static_cast<redisReply *>(reply);
 
-        svc->getManager().pushEvent<RunFunctionEvent>(svc->getServiceId(), [ichorReply](DependencyManager &) {
+        GetThreadLocalManager().getEventQueue().pushEvent<RunFunctionEvent>(svc->getServiceId(), [ichorReply](DependencyManager &) {
             ichorReply->evt.set();
         });
     }
@@ -83,7 +83,7 @@ namespace Ichor {
     }
 }
 
-Ichor::HiredisService::HiredisService(DependencyRegister &reg, Properties props, DependencyManager *mng) : AdvancedService<HiredisService>(std::move(props), mng) {
+Ichor::HiredisService::HiredisService(DependencyRegister &reg, Properties props) : AdvancedService<HiredisService>(std::move(props)) {
     reg.registerDependency<ILogger>(this, true);
 }
 
@@ -97,7 +97,7 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::HiredisService::start(
         co_return tl::unexpected(StartError::FAILED);
     }
 
-    _pollTimer = getManager().createServiceManager<Timer, ITimer>();
+    _pollTimer = GetThreadLocalManager().createServiceManager<Timer, ITimer>();
     _pollTimer->setCallback(this, [this](DependencyManager &) {
         redisPollTick(_redisContext, 0);
     });
@@ -228,7 +228,7 @@ void Ichor::HiredisService::onRedisDisconnect(int status) {
         ICHOR_LOG_WARN(_logger, "Redis disconnected, attempting reconnect, reason: \"{}\"", _redisContext->errstr);
         _redisContext = nullptr;
         if(!connect()) {
-            getManager().pushEvent<StopServiceEvent>(getServiceId(), getServiceId());
+            GetThreadLocalEventQueue().pushEvent<StopServiceEvent>(getServiceId(), getServiceId());
         }
     }
 }

@@ -1,16 +1,16 @@
 #pragma once
 
-#include <ichor/DependencyManager.h>
 #include <ichor/services/logging/Logger.h>
 #include <ichor/services/etcd/IEtcdService.h>
 #include <ichor/dependency_management/AdvancedService.h>
-#include <ichor/dependency_management/ILifecycleManager.h>
+#include <ichor/dependency_management/DependencyRegister.h>
+#include <ichor/event_queues/IEventQueue.h>
 
 using namespace Ichor;
 
-class UsingEtcdService final : public Service<UsingEtcdService> {
+class UsingEtcdService final : public AdvancedService<UsingEtcdService> {
 public:
-    UsingEtcdService(DependencyRegister &reg, Properties props, DependencyManager *mng) : Service(std::move(props), mng) {
+    UsingEtcdService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {
         reg.registerDependency<ILogger>(this, true);
         reg.registerDependency<IEtcdService>(this, true);
     }
@@ -31,7 +31,7 @@ private:
             ICHOR_LOG_ERROR(_logger, "Error putting key/value into etcd");
         }
 
-        getManager().pushEvent<QuitEvent>(getServiceId());
+        GetThreadLocalEventQueue().pushEvent<QuitEvent>(getServiceId());
         co_return {};
     }
 
@@ -57,7 +57,6 @@ private:
     }
 
     friend DependencyRegister;
-    friend DependencyManager;
 
     ILogger *_logger{nullptr};
     IEtcdService *_etcd{nullptr};

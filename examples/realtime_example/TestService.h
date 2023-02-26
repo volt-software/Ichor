@@ -3,7 +3,6 @@
 #include <ichor/DependencyManager.h>
 #include <ichor/services/logging/Logger.h>
 #include <ichor/dependency_management/AdvancedService.h>
-#include <ichor/dependency_management/ILifecycleManager.h>
 #include "OptionalService.h"
 #include "gsm_enc/gsm_enc.h"
 #include <array>
@@ -24,7 +23,7 @@ struct ExecuteTaskEvent final : public Event {
 
 class TestService final : public AdvancedService<TestService> {
 public:
-    TestService(DependencyRegister &reg, Properties props, DependencyManager *mng) : AdvancedService(std::move(props), mng) {
+    TestService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {
         reg.registerDependency<ILogger>(this, true);
         reg.registerDependency<IOptionalService>(this, false);
     }
@@ -34,7 +33,7 @@ private:
     Task<tl::expected<void, Ichor::StartError>> start() final {
         ICHOR_LOG_INFO(_logger, "TestService started with dependency");
         _started = true;
-        _eventHandlerRegistration = getManager().registerEventHandler<ExecuteTaskEvent>(this);
+        _eventHandlerRegistration = GetThreadLocalManager().registerEventHandler<ExecuteTaskEvent>(this);
         if(_injectionCount == 2) {
             enqueueWorkload();
         }
@@ -70,7 +69,7 @@ private:
     }
 
     void enqueueWorkload() {
-        getManager().pushPrioritisedEvent<ExecuteTaskEvent>(getServiceId(), 10u);
+        GetThreadLocalEventQueue().pushPrioritisedEvent<ExecuteTaskEvent>(getServiceId(), 10u);
     }
 
     AsyncGenerator<IchorBehaviour> handleEvent(ExecuteTaskEvent const &evt) {
@@ -84,7 +83,7 @@ private:
         }
 
         if(_finishedWorkloads == ITERATIONS) {
-            getManager().pushEvent<QuitEvent>(getServiceId());
+            GetThreadLocalEventQueue().pushEvent<QuitEvent>(getServiceId());
 
             long min = *std::min_element(begin(_executionTimes), end(_executionTimes), [](long &a, long &b){return a < b; });
             long max = *std::max_element(begin(_executionTimes), end(_executionTimes), [](long &a, long &b){return a < b; });
@@ -92,7 +91,7 @@ private:
 
             fmt::print("duration min/max/avg: {:L}/{:L}/{:L} µs\n", min, max, avg);
         } else {
-            getManager().pushPrioritisedEvent<ExecuteTaskEvent>(getServiceId(), 10u);
+            GetThreadLocalEventQueue().pushPrioritisedEvent<ExecuteTaskEvent>(getServiceId(), 10u);
         }
 
         co_return {};

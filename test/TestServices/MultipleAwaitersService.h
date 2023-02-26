@@ -14,12 +14,12 @@ struct MultipleAwaitService final : public AdvancedService<MultipleAwaitService>
     ~MultipleAwaitService() final = default;
 
     Task<tl::expected<void, Ichor::StartError>> start() final {
-        getManager().pushEvent<RunFunctionEventAsync>(getServiceId(), [this](DependencyManager &dm) -> AsyncGenerator<IchorBehaviour> {
+        GetThreadLocalEventQueue().pushEvent<RunFunctionEventAsync>(getServiceId(), [this](DependencyManager &dm) -> AsyncGenerator<IchorBehaviour> {
             co_await *_autoEvt;
             count++;
             co_return {};
         });
-        getManager().pushEvent<RunFunctionEventAsync>(getServiceId(), [this](DependencyManager &dm) -> AsyncGenerator<IchorBehaviour> {
+        GetThreadLocalEventQueue().pushEvent<RunFunctionEventAsync>(getServiceId(), [this](DependencyManager &dm) -> AsyncGenerator<IchorBehaviour> {
             co_await *_autoEvt;
             count++;
             co_return {};

@@ -10,7 +10,7 @@ struct AddEventHandlerDuringEventHandlingService final : public AdvancedService<
     AddEventHandlerDuringEventHandlingService() = default;
 
     Task<tl::expected<void, Ichor::StartError>> start() final {
-        _reg = getManager().registerEventHandler<TestEvent>(this);
+        _reg = GetThreadLocalManager().registerEventHandler<TestEvent>(this);
 
         co_return {};
     }
@@ -24,8 +24,8 @@ struct AddEventHandlerDuringEventHandlingService final : public AdvancedService<
 
     AsyncGenerator<IchorBehaviour> handleEvent(TestEvent const &evt) {
         if(!_addedReg) {
-            getManager().createServiceManager<AddEventHandlerDuringEventHandlingService>();
-            _reg2 = getManager().registerEventHandler<TestEvent2>(this);
+            GetThreadLocalManager().createServiceManager<AddEventHandlerDuringEventHandlingService>();
+            _reg2 = GetThreadLocalManager().registerEventHandler<TestEvent2>(this);
             _addedReg = true;
         }
         co_return {};

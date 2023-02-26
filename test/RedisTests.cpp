@@ -1,8 +1,6 @@
 #ifdef ICHOR_USE_HIREDIS
 
 #include <ichor/event_queues/MultimapQueue.h>
-#include <ichor/events/RunFunctionEvent.h>
-#include <ichor/dependency_management/ConstructorInjectionService.h>
 #include <ichor/services/logging/LoggerFactory.h>
 #include <ichor/services/logging/CoutFrameworkLogger.h>
 #include <ichor/services/logging/CoutLogger.h>

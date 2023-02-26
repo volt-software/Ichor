@@ -8,11 +8,9 @@
 #include <atomic>
 
 namespace Ichor {
-
-    class DependencyManager;
-
     template <typename T>
     class AdvancedService;
+    class DependencyManager;
 
     template<class ServiceType, typename... IFaces>
 #if (!defined(WIN32) && !defined(_WIN32) && !defined(__WIN32)) || defined(__CYGWIN__)
@@ -31,12 +29,12 @@ namespace Ichor {
     class AdvancedService : public IService {
     public:
         template <typename U = T> requires (!RequestsProperties<U> && !RequestsDependencies<U>)
-        AdvancedService() noexcept : IService(), _serviceId(_serviceIdCounter.fetch_add(1, std::memory_order_acq_rel)), _servicePriority(INTERNAL_EVENT_PRIORITY), _serviceGid(sole::uuid4()), _serviceState(ServiceState::INSTALLED) {
+        AdvancedService() noexcept : IService(), _serviceId(_serviceIdCounter.fetch_add(1, std::memory_order_relaxed)), _servicePriority(INTERNAL_EVENT_PRIORITY), _serviceGid(sole::uuid4()), _serviceState(ServiceState::INSTALLED) {
 
         }
 
         template <typename U = T> requires (RequestsProperties<U> || RequestsDependencies<U>)
-        AdvancedService(Properties&& props, DependencyManager *mng) noexcept : IService(), _properties(std::move(props)), _serviceId(_serviceIdCounter.fetch_add(1, std::memory_order_acq_rel)), _servicePriority(INTERNAL_EVENT_PRIORITY), _serviceGid(sole::uuid4()), _serviceState(ServiceState::INSTALLED), _manager(mng) {
+        AdvancedService(Properties&& props) noexcept : IService(), _properties(std::move(props)), _serviceId(_serviceIdCounter.fetch_add(1, std::memory_order_relaxed)), _servicePriority(INTERNAL_EVENT_PRIORITY), _serviceGid(sole::uuid4()), _serviceState(ServiceState::INSTALLED) {
 
         }
 
@@ -76,12 +74,12 @@ namespace Ichor {
             return _servicePriority;
         }
 
-        [[nodiscard]] bool isStarted() const noexcept final {
-            return _serviceState == ServiceState::ACTIVE;
+        void setServicePriority(uint64_t priority) noexcept final {
+            _servicePriority = priority;
         }
 
-        [[nodiscard]] DependencyManager& getManager() const noexcept final {
-            return *_manager;
+        [[nodiscard]] bool isStarted() const noexcept final {
+            return _serviceState == ServiceState::ACTIVE;
         }
 
         [[nodiscard]] Properties& getProperties() noexcept final {
@@ -177,14 +175,6 @@ namespace Ichor {
             _properties = std::move(properties);
         }
 
-        void injectDependencyManager(DependencyManager *mng) noexcept {
-            _manager = mng;
-        }
-
-        void injectPriority(uint64_t priority) noexcept {
-            _servicePriority = priority;
-        }
-
         [[nodiscard]] T* getImplementation() noexcept {
             return static_cast<T*>(this);
         }
@@ -193,9 +183,6 @@ namespace Ichor {
         uint64_t _servicePriority;
         sole::uuid _serviceGid;
         ServiceState _serviceState;
-        DependencyManager *_manager{nullptr};
-
-        friend class DependencyManager;
 
         template<class ServiceType, typename... IFaces>
 #if (!defined(WIN32) && !defined(_WIN32) && !defined(__WIN32)) || defined(__CYGWIN__)
@@ -209,9 +196,6 @@ namespace Ichor {
 #endif
         friend class DependencyLifecycleManager;
 
+        friend class DependencyManager;
     };
 }
-
-#ifndef ICHOR_DEPENDENCY_MANAGER
-#include <ichor/DependencyManager.h>
-#endif

@@ -5,7 +5,7 @@
 using namespace Ichor;
 
 struct RegistrationCheckerService final : public AdvancedService<RegistrationCheckerService> {
-    RegistrationCheckerService(DependencyRegister &reg, Properties props, DependencyManager *mng) : AdvancedService(std::move(props), mng) {
+    RegistrationCheckerService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {
         bool threwException{};
 
         reg.registerDependency<IUselessService>(this, false);
@@ -41,7 +41,7 @@ struct RegistrationCheckerService final : public AdvancedService<RegistrationChe
             throw std::runtime_error("Should have executed tests");
         }
         if(_depCount == 2) {
-            getManager().pushEvent<QuitEvent>(getServiceId());
+            GetThreadLocalEventQueue().pushEvent<QuitEvent>(getServiceId());
         }
         co_return {};
     }
@@ -50,7 +50,7 @@ struct RegistrationCheckerService final : public AdvancedService<RegistrationChe
         _depCount++;
 
         if(_depCount == 2) {
-            getManager().pushEvent<QuitEvent>(getServiceId());
+            GetThreadLocalEventQueue().pushEvent<QuitEvent>(getServiceId());
         }
     }
 

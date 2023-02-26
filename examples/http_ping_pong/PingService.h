@@ -9,7 +9,7 @@
 #include <ichor/services/timer/TimerService.h>
 #include <ichor/events/RunFunctionEvent.h>
 #include <ichor/dependency_management/AdvancedService.h>
-#include <ichor/dependency_management/ILifecycleManager.h>
+#include <ichor/dependency_management/DependencyRegister.h>
 #include <ichor/services/serialization/ISerializer.h>
 #include "PingMsg.h"
 
@@ -17,7 +17,7 @@ using namespace Ichor;
 
 class PingService final : public AdvancedService<PingService> {
 public:
-    PingService(DependencyRegister &reg, Properties props, DependencyManager *mng) : AdvancedService(std::move(props), mng) {
+    PingService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {
         reg.registerDependency<ILogger>(this, true, Properties{{"LogLevel", Ichor::make_any<LogLevel>(LogLevel::LOG_INFO)}});
         reg.registerDependency<ISerializer<PingMsg>>(this, true);
         reg.registerDependency<IHttpConnectionService>(this, true, getProperties());
@@ -28,7 +28,7 @@ private:
     Task<tl::expected<void, Ichor::StartError>> start() final {
         ICHOR_LOG_INFO(_logger, "PingService started");
 
-        _timer = getManager().createServiceManager<Timer, ITimer>();
+        _timer = GetThreadLocalManager().createServiceManager<Timer, ITimer>();
         _timer->setCallbackAsync(this, [this](DependencyManager &dm) -> AsyncGenerator<IchorBehaviour> {
             auto toSendMsg = _serializer->serialize(PingMsg{_sequence});
 
@@ -93,7 +93,6 @@ private:
     }
 
     friend DependencyRegister;
-    friend DependencyManager;
 
     Task<std::optional<PingMsg>> sendTestRequest(std::vector<uint8_t> &&toSendMsg) {
         std::vector<HttpHeader> headers{HttpHeader{"Content-Type", "application/json"}};

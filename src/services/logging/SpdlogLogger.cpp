@@ -1,12 +1,10 @@
 #ifdef ICHOR_USE_SPDLOG
 
 #include <spdlog/spdlog.h>
-#include <spdlog/sinks/stdout_color_sinks.h>
-#include <spdlog/sinks/basic_file_sink.h>
+#include <ichor/dependency_management/DependencyRegister.h>
 #include <ichor/services/logging/SpdlogLogger.h>
-#include <ichor/DependencyManager.h>
 
-Ichor::SpdlogLogger::SpdlogLogger(DependencyRegister &reg, Properties props, DependencyManager *mng) : AdvancedService(std::move(props), mng) {
+Ichor::SpdlogLogger::SpdlogLogger(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {
     reg.registerDependency<ISpdlogSharedService>(this, true);
 
     auto logLevelProp = getProperties().find("LogLevel");

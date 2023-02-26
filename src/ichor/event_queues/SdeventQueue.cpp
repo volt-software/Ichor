@@ -1,7 +1,6 @@
 #ifdef ICHOR_USE_SDEVENT
 
 #include <ichor/event_queues/SdeventQueue.h>
-#include <shared_mutex>
 #include <ichor/DependencyManager.h>
 #include <sys/eventfd.h>
 
@@ -39,7 +38,7 @@ namespace Ichor {
         }
     }
 
-    void SdeventQueue::pushEvent(uint64_t priority, std::unique_ptr<Event> &&event) {
+    void SdeventQueue::pushEventInternal(uint64_t priority, std::unique_ptr<Event> &&event) {
         if(!_initializedSdevent.load(std::memory_order_acquire)) [[unlikely]] {
             throw std::runtime_error("sdevent not initialized. Call createEventLoop or useEventLoop first.");
         }
@@ -219,7 +218,7 @@ namespace Ichor {
                                       if(!q->_otherThreadEventQueue.empty()) [[unlikely]] {
                                           auto node = q->_otherThreadEventQueue.extract(q->_otherThreadEventQueue.begin());
                                           lck.unlock();
-                                          q->pushEvent(node.key(), std::move(node.mapped()));
+                                          q->pushInternalEvent(node.key(), std::move(node.mapped()));
                                       } else {
                                           lck.unlock();
                                       }

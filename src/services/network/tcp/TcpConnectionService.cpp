@@ -9,7 +9,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 
-Ichor::TcpConnectionService::TcpConnectionService(DependencyRegister &reg, Properties props, DependencyManager *mng) : AdvancedService(std::move(props), mng), _socket(-1), _attempts(), _priority(INTERNAL_EVENT_PRIORITY), _quit() {
+Ichor::TcpConnectionService::TcpConnectionService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)), _socket(-1), _attempts(), _priority(INTERNAL_EVENT_PRIORITY), _quit() {
     reg.registerDependency<ILogger>(this, true);
 }
 
@@ -67,7 +67,7 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::TcpConnectionService::
         ICHOR_LOG_TRACE(_logger, "Starting TCP connection for {}:{}", ip, ::ntohs(address.sin_port));
     }
 
-    _timerManager = getManager().createServiceManager<Timer, ITimer>();
+    _timerManager = GetThreadLocalManager().createServiceManager<Timer, ITimer>();
     _timerManager->setChronoInterval(20ms);
     _timerManager->setCallback(this, [this](DependencyManager &dm) {
         std::array<char, 1024> buf{};
@@ -79,11 +79,11 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::TcpConnectionService::
 
         if(ret < 0) {
             ICHOR_LOG_ERROR(_logger, "Error receiving from socket: {}", errno);
-            getManager().pushEvent<RecoverableErrorEvent>(getServiceId(), 4u, "Error receiving from socket. errno = " + std::to_string(errno));
+            GetThreadLocalEventQueue().pushEvent<RecoverableErrorEvent>(getServiceId(), 4u, "Error receiving from socket. errno = " + std::to_string(errno));
             return;
         }
 
-        getManager().pushPrioritisedEvent<NetworkDataEvent>(getServiceId(), _priority, std::vector<uint8_t>{buf.data(), buf.data() + ret});
+        GetThreadLocalEventQueue().pushPrioritisedEvent<NetworkDataEvent>(getServiceId(), _priority, std::vector<uint8_t>{buf.data(), buf.data() + ret});
         return;
     });
     _timerManager->startTimer();
@@ -119,7 +119,7 @@ tl::expected<uint64_t, Ichor::SendErrorReason> Ichor::TcpConnectionService::send
         auto ret = ::send(_socket, msg.data() + sent_bytes, msg.size() - sent_bytes, 0);
 
         if(ret < 0) {
-            getManager().pushEvent<FailedSendMessageEvent>(getServiceId(), std::move(msg), id);
+            GetThreadLocalEventQueue().pushEvent<FailedSendMessageEvent>(getServiceId(), std::move(msg), id);
             break;
         }
 

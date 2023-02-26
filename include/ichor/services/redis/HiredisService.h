@@ -5,13 +5,12 @@
 #include <ichor/services/redis/IRedis.h>
 #include <ichor/services/logging/Logger.h>
 #include <ichor/services/timer/TimerService.h>
-#include <ichor/DependencyManager.h>
 #include <hiredis/hiredis.h>
 
 namespace Ichor {
     class HiredisService final : public IRedis, public AdvancedService<HiredisService> {
     public:
-        HiredisService(DependencyRegister &reg, Properties props, DependencyManager *mng);
+        HiredisService(DependencyRegister &reg, Properties props);
         ~HiredisService() override = default;
 
         void onRedisConnect(int status);
@@ -38,7 +37,6 @@ namespace Ichor {
         tl::expected<void, Ichor::StartError> connect();
 
         friend DependencyRegister;
-        friend DependencyManager;
 
         ILogger *_logger{nullptr};
         std::atomic<uint64_t> _priority{INTERNAL_EVENT_PRIORITY};

@@ -4,13 +4,13 @@
 #include <ichor/services/logging/Logger.h>
 #include <ichor/services/timer/TimerService.h>
 #include <ichor/dependency_management/AdvancedService.h>
-#include <ichor/dependency_management/ILifecycleManager.h>
+#include <ichor/dependency_management/DependencyRegister.h>
 
 using namespace Ichor;
 
 class UsingTimerService final : public AdvancedService<UsingTimerService> {
 public:
-    UsingTimerService(DependencyRegister &reg, Properties props, DependencyManager *mng) : AdvancedService(std::move(props), mng) {
+    UsingTimerService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {
         reg.registerDependency<ILogger>(this, true);
     }
     ~UsingTimerService() final = default;
@@ -18,7 +18,7 @@ public:
 private:
     Task<tl::expected<void, Ichor::StartError>> start() final {
         ICHOR_LOG_INFO(_logger, "UsingTimerService started");
-        _timerManager = getManager().createServiceManager<Timer, ITimer>();
+        _timerManager = GetThreadLocalManager().createServiceManager<Timer, ITimer>();
         _timerManager->setChronoInterval(std::chrono::milliseconds(50));
         _timerManager->setCallback(this, [this](DependencyManager &dm) {
             handleEvent(dm);
@@ -45,12 +45,11 @@ private:
         _timerTriggerCount++;
         ICHOR_LOG_INFO(_logger, "Timer {} triggered {} times", _timerManager->getServiceId(), _timerTriggerCount);
         if(_timerTriggerCount == 5) {
-            getManager().pushEvent<QuitEvent>(getServiceId());
+            GetThreadLocalEventQueue().pushEvent<QuitEvent>(getServiceId());
         }
     }
 
     friend DependencyRegister;
-    friend DependencyManager;
 
     ILogger *_logger{nullptr};
     uint64_t _timerTriggerCount{0};
