@@ -43,3 +43,4 @@ namespace Ichor {
 // Implementations of ILifecycleManager
 #include <ichor/dependency_management/DependencyLifecycleManager.h>
 #include <ichor/dependency_management/LifecycleManager.h>
+#include <ichor/dependency_management/QueueLifecycleManager.h>

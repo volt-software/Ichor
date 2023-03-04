@@ -10,7 +10,10 @@ struct IConstructorInjectionTestService {
 };
 
 struct ConstructorInjectionTestService final : public IConstructorInjectionTestService {
-    ConstructorInjectionTestService(ILogger *logSvc, ICountService *countSvc) {
+    ConstructorInjectionTestService(IEventQueue *q, ILogger *logSvc, ICountService *countSvc) {
+        if(q == nullptr) {
+            std::terminate();
+        }
         if(logSvc == nullptr) {
             std::terminate();
         }

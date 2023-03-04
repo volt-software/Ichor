@@ -269,7 +269,7 @@ TEST_CASE("CoroutineTests") {
 
             auto svcs = mng.getServiceInfo();
 
-            REQUIRE(svcs.size() == 2);
+            REQUIRE(svcs.size() == 3);
 
             REQUIRE(svcs[svcId]->getServiceState() == Ichor::ServiceState::STARTING);
 
@@ -319,7 +319,7 @@ TEST_CASE("CoroutineTests") {
 
             auto svcs = mng.getServiceInfo();
 
-            REQUIRE(svcs.size() == 2);
+            REQUIRE(svcs.size() == 3);
 
             REQUIRE(svcs[svcId]->getServiceState() == Ichor::ServiceState::STOPPING);
 
@@ -337,7 +337,7 @@ TEST_CASE("CoroutineTests") {
 
             auto svcs = mng.getServiceInfo();
 
-            REQUIRE(svcs.size() == 2);
+            REQUIRE(svcs.size() == 3);
             REQUIRE(svcs[svcId]->getServiceState() == Ichor::ServiceState::INSTALLED);
 
             mng.getEventQueue().pushEvent<QuitEvent>(0);

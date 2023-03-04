@@ -55,7 +55,8 @@ namespace Ichor {
     class DependencyManager final {
     private:
         explicit DependencyManager(IEventQueue *eventQueue) : _eventQueue(eventQueue) {
-
+            auto qlm = std::make_unique<Detail::QueueLifecycleManager>(_eventQueue);
+            _services.emplace(qlm->serviceId(), std::move(qlm));
         }
     public:
         // DANGEROUS COPY, EFFECTIVELY MAKES A NEW MANAGER AND STARTS OVER!!
@@ -129,7 +130,7 @@ namespace Ichor {
             if constexpr(RequestsDependencies<Impl>) {
                 static_assert(!std::is_default_constructible_v<Impl>, "Cannot have a dependencies constructor and a default constructor simultaneously.");
                 static_assert(!RequestsProperties<Impl>, "Cannot have a dependencies constructor and a properties constructor simultaneously.");
-                auto cmpMgr = DependencyLifecycleManager<Impl>::template create<>(std::forward<Properties>(properties), InterfacesList<Interfaces...>);
+                auto cmpMgr = Detail::DependencyLifecycleManager<Impl>::template create<>(std::forward<Properties>(properties), InterfacesList<Interfaces...>);
 
                 if constexpr (sizeof...(Interfaces) > 0) {
                     static_assert(!ListContainsInterface<IFrameworkLogger, Interfaces...>::value, "IFrameworkLogger cannot have any dependencies");
@@ -191,7 +192,7 @@ namespace Ichor {
                 return impl;
             } else {
                 static_assert(!(std::is_default_constructible_v<Impl> && RequestsProperties<Impl>), "Cannot have a properties constructor and a default constructor simultaneously.");
-                auto cmpMgr = LifecycleManager<Impl, Interfaces...>::template create<>(std::forward<Properties>(properties), InterfacesList<Interfaces...>);
+                auto cmpMgr = Detail::LifecycleManager<Impl, Interfaces...>::template create<>(std::forward<Properties>(properties), InterfacesList<Interfaces...>);
 
                 if constexpr (sizeof...(Interfaces) > 0) {
                     if constexpr (ListContainsInterface<IFrameworkLogger, Interfaces...>::value) {
@@ -535,7 +536,6 @@ namespace Ichor {
             }
 #endif
             std::vector<Interface*> ret{};
-            ret.reserve(_services.size());
             std::function<void(void*, IService*)> f{[&ret](void *svc2, IService * /*isvc*/){ ret.push_back(reinterpret_cast<Interface*>(svc2)); }};
             for(auto &[key, svc] : _services) {
                 if(svc->getServiceState() != ServiceState::ACTIVE) {
@@ -552,15 +552,14 @@ namespace Ichor {
         /// Get all services by given template interface type, regardless of state
         /// \tparam Interface interface to search for
         /// \return list of found services
-        [[nodiscard]] std::vector<Interface*> getAllServicesOfType() noexcept {
+        [[nodiscard]] std::vector<std::pair<Interface*, IService*>> getAllServicesOfType() noexcept {
 #ifdef ICHOR_USE_HARDENING
             if(this != Detail::_local_dm) [[unlikely]] { // are we on the right thread?
                 std::terminate();
             }
 #endif
-            std::vector<Interface*> ret{};
-            ret.reserve(_services.size());
-            std::function<void(void*, IService*)> f{[&ret](void *svc2, IService * /*isvc*/){ ret.push_back(reinterpret_cast<Interface*>(svc2)); }};
+            std::vector<std::pair<Interface*, IService*>> ret{};
+            std::function<void(void*, IService*)> f{[&ret](void *svc2, IService * isvc){ ret.emplace_back(reinterpret_cast<Interface*>(svc2), isvc); }};
             for(auto &[key, svc] : _services) {
                 auto intf = std::find_if(svc->getInterfaces().begin(), svc->getInterfaces().end(), [](const Dependency &dep) {
                     return dep.interfaceNameHash == typeNameHash<Interface>();
@@ -718,6 +717,8 @@ namespace Ichor {
         thread_local extern DependencyManager *_local_dm;
     }
 
+    /// Returns thread-local manager. Can only be used after the manager's start() function has been called.
+    /// \return
     [[nodiscard]] DependencyManager& GetThreadLocalManager() noexcept;
 }
 

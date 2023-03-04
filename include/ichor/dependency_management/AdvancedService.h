@@ -12,29 +12,34 @@ namespace Ichor {
     class AdvancedService;
     class DependencyManager;
 
-    template<class ServiceType, typename... IFaces>
+    namespace Detail {
+        template<class ServiceType, typename... IFaces>
 #if (!defined(WIN32) && !defined(_WIN32) && !defined(__WIN32)) || defined(__CYGWIN__)
-    requires DerivedTemplated<ServiceType, AdvancedService> || IsConstructorInjector<ServiceType>
+        requires DerivedTemplated<ServiceType, AdvancedService> || IsConstructorInjector<ServiceType>
 #endif
-    class LifecycleManager;
-    template<class ServiceType, typename... IFaces>
-#if (!defined(WIN32) && !defined(_WIN32) && !defined(__WIN32)) || defined(__CYGWIN__)
-    requires Derived<ServiceType, IService>
-#endif
-    class DependencyLifecycleManager;
+        class LifecycleManager;
 
-    extern std::atomic<uint64_t> _serviceIdCounter;
+        template<class ServiceType, typename... IFaces>
+#if (!defined(WIN32) && !defined(_WIN32) && !defined(__WIN32)) || defined(__CYGWIN__)
+        requires Derived<ServiceType, IService>
+#endif
+        class DependencyLifecycleManager;
+    }
+
+    namespace Detail {
+        extern std::atomic<uint64_t> _serviceIdCounter;
+    }
 
     template <typename T>
     class AdvancedService : public IService {
     public:
         template <typename U = T> requires (!RequestsProperties<U> && !RequestsDependencies<U>)
-        AdvancedService() noexcept : IService(), _serviceId(_serviceIdCounter.fetch_add(1, std::memory_order_relaxed)), _servicePriority(INTERNAL_EVENT_PRIORITY), _serviceGid(sole::uuid4()), _serviceState(ServiceState::INSTALLED) {
+        AdvancedService() noexcept : IService(), _serviceId(Detail::_serviceIdCounter.fetch_add(1, std::memory_order_relaxed)), _servicePriority(INTERNAL_EVENT_PRIORITY), _serviceGid(sole::uuid4()), _serviceState(ServiceState::INSTALLED) {
 
         }
 
         template <typename U = T> requires (RequestsProperties<U> || RequestsDependencies<U>)
-        AdvancedService(Properties&& props) noexcept : IService(), _properties(std::move(props)), _serviceId(_serviceIdCounter.fetch_add(1, std::memory_order_relaxed)), _servicePriority(INTERNAL_EVENT_PRIORITY), _serviceGid(sole::uuid4()), _serviceState(ServiceState::INSTALLED) {
+        AdvancedService(Properties&& props) noexcept : IService(), _properties(std::move(props)), _serviceId(Detail::_serviceIdCounter.fetch_add(1, std::memory_order_relaxed)), _servicePriority(INTERNAL_EVENT_PRIORITY), _serviceGid(sole::uuid4()), _serviceState(ServiceState::INSTALLED) {
 
         }
 
@@ -188,13 +193,13 @@ namespace Ichor {
 #if (!defined(WIN32) && !defined(_WIN32) && !defined(__WIN32)) || defined(__CYGWIN__)
         requires DerivedTemplated<ServiceType, AdvancedService> || IsConstructorInjector<ServiceType>
 #endif
-        friend class LifecycleManager;
+        friend class Detail::LifecycleManager;
 
         template<class ServiceType, typename... IFaces>
 #if (!defined(WIN32) && !defined(_WIN32) && !defined(__WIN32)) || defined(__CYGWIN__)
         requires Derived<ServiceType, IService>
 #endif
-        friend class DependencyLifecycleManager;
+        friend class Detail::DependencyLifecycleManager;
 
         friend class DependencyManager;
     };

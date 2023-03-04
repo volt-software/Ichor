@@ -3,7 +3,6 @@
 #include <ichor/events/Event.h>
 #include <ichor/ConstevalHash.h>
 #include <ichor/DependencyManager.h>
-#include <optional>
 
 namespace Ichor {
     struct RunFunctionEventAsync final : public Event {

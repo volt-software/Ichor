@@ -47,6 +47,14 @@ namespace Ichor {
             throw std::runtime_error("Pushing nullptr");
         }
 
+
+        // TODO hardening
+//#ifdef ICHOR_USE_HARDENING
+//            if(originatingServiceId != 0 && _services.find(originatingServiceId) == _services.end()) [[unlikely]] {
+//                std::terminate();
+//            }
+//#endif
+
         if(std::this_thread::get_id() != _threadId) [[unlikely]] {
             {
                 std::lock_guard const l(_eventQueueMutex);

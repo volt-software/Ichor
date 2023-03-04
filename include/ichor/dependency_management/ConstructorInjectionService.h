@@ -130,7 +130,9 @@ namespace Ichor {
 #endif
     class DependencyLifecycleManager;
 
-    extern std::atomic<uint64_t> _serviceIdCounter;
+    namespace Detail {
+        extern std::atomic<uint64_t> _serviceIdCounter;
+    }
 
     template <class ImplT>
     concept HasConstructorInjectionDependencies = refl::fields_number_ctor<ImplT>(0) > 0;
@@ -144,7 +146,7 @@ namespace Ichor {
     template <HasConstructorInjectionDependencies T>
     class ConstructorInjectionService<T> : public IService {
     public:
-        ConstructorInjectionService(DependencyRegister &reg, Properties props) noexcept : IService(), _properties(std::move(props)), _serviceId(_serviceIdCounter.fetch_add(1, std::memory_order_relaxed)), _servicePriority(INTERNAL_EVENT_PRIORITY), _serviceGid(sole::uuid4()), _serviceState(ServiceState::INSTALLED) {
+        ConstructorInjectionService(DependencyRegister &reg, Properties props) noexcept : IService(), _properties(std::move(props)), _serviceId(Detail::_serviceIdCounter.fetch_add(1, std::memory_order_relaxed)), _servicePriority(INTERNAL_EVENT_PRIORITY), _serviceGid(sole::uuid4()), _serviceState(ServiceState::INSTALLED) {
             registerDependenciesSpecialSauce(reg, std::optional<refl::as_variant<T>>());
         }
 
@@ -214,6 +216,9 @@ namespace Ichor {
         }
 
         [[nodiscard]] void const * getTypedServicePtr() const noexcept {
+            if(_serviceState < ServiceState::INJECTING) {
+                std::terminate();
+            }
             return buf;
         }
 
@@ -299,7 +304,7 @@ namespace Ichor {
 
         [[nodiscard]] T* getImplementation() noexcept {
             if(_serviceState < ServiceState::INJECTING) {
-                std::terminate();
+                return nullptr;
             }
             return reinterpret_cast<T*>(buf);
         }
@@ -318,14 +323,14 @@ namespace Ichor {
 #if (!defined(WIN32) && !defined(_WIN32) && !defined(__WIN32)) || defined(__CYGWIN__)
         requires Derived<ServiceType, IService>
 #endif
-        friend class DependencyLifecycleManager;
+        friend class Detail::DependencyLifecycleManager;
 
     };
 
     template <DoesNotHaveConstructorInjectionDependencies T>
     class ConstructorInjectionService<T> : public IService {
     public:
-        ConstructorInjectionService(Properties props) noexcept : IService(), _properties(std::move(props)), _serviceId(_serviceIdCounter.fetch_add(1, std::memory_order_relaxed)), _servicePriority(INTERNAL_EVENT_PRIORITY), _serviceGid(sole::uuid4()), _serviceState(ServiceState::INSTALLED) {
+        ConstructorInjectionService(Properties props) noexcept : IService(), _properties(std::move(props)), _serviceId(Detail::_serviceIdCounter.fetch_add(1, std::memory_order_relaxed)), _servicePriority(INTERNAL_EVENT_PRIORITY), _serviceGid(sole::uuid4()), _serviceState(ServiceState::INSTALLED) {
         }
 
         ~ConstructorInjectionService() noexcept override {
@@ -381,10 +386,16 @@ namespace Ichor {
         }
 
         [[nodiscard]] void const * getTypedServicePtr() const noexcept {
+            if(_serviceState < ServiceState::INJECTING) {
+                std::terminate();
+            }
             return buf;
         }
 
         [[nodiscard]] T* getImplementation() noexcept {
+            if(_serviceState < ServiceState::INJECTING) {
+                return nullptr;
+            }
             return reinterpret_cast<T*>(buf);
         }
 
@@ -470,7 +481,7 @@ namespace Ichor {
 #if (!defined(WIN32) && !defined(_WIN32) && !defined(__WIN32)) || defined(__CYGWIN__)
         requires DerivedTemplated<ServiceType, AdvancedService> || IsConstructorInjector<ServiceType>
 #endif
-        friend class LifecycleManager;
+        friend class Detail::LifecycleManager;
 
     };
 }

@@ -8,11 +8,11 @@
 #include "TestServices/AddEventHandlerDuringEventHandlingService.h"
 #include "TestServices/RequestsLoggingService.h"
 #include "TestServices/ConstructorInjectionTestService.h"
+#include "TestServices/ConstructorInjectionQuitService.h"
 #include <ichor/event_queues/MultimapQueue.h>
 #include <ichor/events/RunFunctionEvent.h>
 #include <ichor/services/logging/LoggerFactory.h>
 #include <ichor/services/logging/CoutLogger.h>
-#include <ichor/dependency_management/ConstructorInjectionService.h>
 
 bool AddEventHandlerDuringEventHandlingService::_addedReg{};
 
@@ -53,10 +53,10 @@ TEST_CASE("ServicesTests") {
 
             REQUIRE(services.empty());
 
-            std::vector<IFailOnStartService*> svcs = mng.getAllServicesOfType<IFailOnStartService>();
+            auto svcs = mng.getAllServicesOfType<IFailOnStartService>();
 
             REQUIRE(svcs.size() == 1);
-            REQUIRE(svcs[0]->getStartCount() == 1);
+            REQUIRE(svcs[0].first->getStartCount() == 1);
 
             mng.getEventQueue().pushEvent<QuitEvent>(0);
         });
@@ -86,10 +86,10 @@ TEST_CASE("ServicesTests") {
 
             REQUIRE(services.empty());
 
-            std::vector<IFailOnStartService*> svcs = mng.getAllServicesOfType<IFailOnStartService>();
+            auto svcs = mng.getAllServicesOfType<IFailOnStartService>();
 
             REQUIRE(svcs.size() == 1);
-            REQUIRE(svcs[0]->getStartCount() == 1);
+            REQUIRE(svcs[0].first->getStartCount() == 1);
 
             mng.getEventQueue().pushEvent<QuitEvent>(0);
         });
@@ -272,7 +272,7 @@ TEST_CASE("ServicesTests") {
         dm.runForOrQueueEmpty();
 
         queue->pushEvent<RunFunctionEvent>(0, [&](DependencyManager& mng) {
-            REQUIRE(mng.getServiceCount() == 3);
+            REQUIRE(mng.getServiceCount() == 4);
 
             mng.getEventQueue().pushEvent<StopServiceEvent>(0, svcId);
             // + 11 because the first stop triggers a dep offline event and inserts a new stop with 10 higher priority.
@@ -282,7 +282,7 @@ TEST_CASE("ServicesTests") {
         dm.runForOrQueueEmpty();
 
         queue->pushEvent<RunFunctionEvent>(0, [&](DependencyManager& mng) {
-            REQUIRE(mng.getServiceCount() == 1);
+            REQUIRE(mng.getServiceCount() == 2);
 
             mng.getEventQueue().pushEvent<QuitEvent>(0);
         });
@@ -309,10 +309,10 @@ TEST_CASE("ServicesTests") {
         dm.runForOrQueueEmpty();
 
         queue->pushEvent<RunFunctionEvent>(0, [&](DependencyManager& mng) {
-            REQUIRE(mng.getServiceCount() == 4);
+            REQUIRE(mng.getServiceCount() == 5);
             auto svcs = mng.getAllServicesOfType<IConstructorInjectionTestService>();
             REQUIRE(svcs.size() == 1);
-            REQUIRE(svcs[0]->getServiceId() == svcId);
+            REQUIRE(svcs[0].second->getServiceId() == svcId);
 
             mng.getEventQueue().pushEvent<StopServiceEvent>(0, svcId);
             // + 11 because the first stop triggers a dep offline event and inserts a new stop with 10 higher priority.
@@ -322,9 +322,20 @@ TEST_CASE("ServicesTests") {
         dm.runForOrQueueEmpty();
 
         queue->pushEvent<RunFunctionEvent>(0, [&](DependencyManager& mng) {
-            REQUIRE(mng.getServiceCount() == 2);
+            REQUIRE(mng.getServiceCount() == 3);
 
             mng.getEventQueue().pushEvent<QuitEvent>(0);
+        });
+
+        t.join();
+    }
+
+    SECTION("ConstructorInjectionQuitService") {
+        std::thread t([]() {
+            auto queue = std::make_unique<MultimapQueue>();
+            auto &dm = queue->createManager();
+            dm.createServiceManager<ConstructorInjectionQuitService>();
+            queue->start(CaptureSigInt);
         });
 
         t.join();

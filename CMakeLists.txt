@@ -48,7 +48,7 @@ option(ICHOR_ENABLE_INTERNAL_DEBUGGING "Add verbose logging of Ichor internals" 
 option(ICHOR_ENABLE_INTERNAL_COROUTINE_DEBUGGING "Add verbose logging of Ichor coroutine internals" OFF)
 option(ICHOR_BUILD_COVERAGE "Build ichor with coverage" OFF)
 option(ICHOR_USE_SPDLOG "Use spdlog as framework logging implementation" OFF)
-option(ICHOR_USE_ETCD "Add various dependencies to enable pubsub bundle to be built" OFF)
+option(ICHOR_USE_ETCD "Add etcd services (may not work, not used much)" OFF)
 option(ICHOR_USE_BOOST_BEAST "Add boost asio and boost BEAST as dependencies" OFF)
 option(ICHOR_USE_SANITIZERS "Enable sanitizers, catching potential errors but slowing down compilation and execution speed" ON)
 cmake_dependent_option(ICHOR_USE_THREAD_SANITIZER "Enable thread sanitizer, catching potential threading errors but slowing down compilation and execution speed. Cannot be combined with ICHOR_USE_SANITIZERS" OFF "NOT WIN32" OFF)
