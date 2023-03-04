@@ -17,6 +17,10 @@ namespace Ichor {
     }
 
     DependencyManager &IEventQueue::createManager() {
+        if(_dm) [[unlikely]] {
+            std::terminate();
+        }
+
         // std::make_unique doesn't work with friends :)
         auto *dm = new DependencyManager(this);
         _dm = std::unique_ptr<DependencyManager>(dm);

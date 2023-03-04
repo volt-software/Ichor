@@ -1,9 +1,7 @@
 #pragma once
 
-namespace Ichor {
-    namespace Detail {
-        extern unordered_set<uint64_t> emptyDependencies;
-    }
+namespace Ichor::Detail {
+    extern unordered_set<uint64_t> emptyDependencies;
 
     /// This lifecycle manager is created when the underlying service requests 0 dependencies
     /// It contains optimizations for dealing with dependencies.
@@ -54,7 +52,7 @@ namespace Ichor {
 
         [[nodiscard]]
         unordered_set<uint64_t> &getDependencies() noexcept final {
-            return Detail::emptyDependencies;
+            return emptyDependencies;
         }
 
         [[nodiscard]]

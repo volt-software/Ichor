@@ -2,7 +2,7 @@
 
 #include <ichor/event_queues/IEventQueue.h>
 
-namespace Ichor {
+namespace Ichor::Detail {
 
     template<class ServiceType, typename... IFaces>
 #if (!defined(WIN32) && !defined(_WIN32) && !defined(__WIN32)) || defined(__CYGWIN__)
@@ -63,11 +63,11 @@ namespace Ichor {
                 }
             }
 
-            auto interested = Detail::DependencyChange::NOT_FOUND;
+            auto interested = DependencyChange::NOT_FOUND;
 
             for(auto &dep : iterators) {
                 if(dep->satisfied == 0) {
-                    interested = Detail::DependencyChange::FOUND;
+                    interested = DependencyChange::FOUND;
                 }
 
                 _serviceIdsOfInjectedDependencies.insert(dependentService->serviceId());
@@ -75,7 +75,7 @@ namespace Ichor {
                 dep->satisfied++;
             }
 
-            if(interested == Detail::DependencyChange::FOUND && getServiceState() <= ServiceState::INSTALLED && _dependencies.allSatisfied()) {
+            if(interested == DependencyChange::FOUND && getServiceState() <= ServiceState::INSTALLED && _dependencies.allSatisfied()) {
                 StartBehaviour ret = co_await _service.internal_start(nullptr); // we already checked the dependencies, pass in nullptr;
 
                 if(ret == StartBehaviour::STOPPED) {
@@ -95,7 +95,7 @@ namespace Ichor {
 
         AsyncGenerator<StartBehaviour> dependencyOffline(ILifecycleManager* dependentService, std::vector<decltype(std::declval<DependencyInfo>().begin())> iterators) final {
             INTERNAL_DEBUG("dependencyOffline() svc {}:{} {} dependent {}:{}", serviceId(), implementationName(), getServiceState(), dependentService->serviceId(), dependentService->implementationName());
-            auto interested = Detail::DependencyChange::NOT_FOUND;
+            auto interested = DependencyChange::NOT_FOUND;
             StartBehaviour ret = StartBehaviour::DONE;
 
             if constexpr (DO_INTERNAL_DEBUG) {
@@ -123,7 +123,7 @@ namespace Ichor {
                     co_await waitForService(serviceId(), DependencyOnlineEvent::TYPE).begin();
                 }
 
-                if (dep->required && dep->satisfied == 0 && interested != Detail::DependencyChange::FOUND_AND_STOP_ME && getServiceState() == ServiceState::ACTIVE) {
+                if (dep->required && dep->satisfied == 0 && interested != DependencyChange::FOUND_AND_STOP_ME && getServiceState() == ServiceState::ACTIVE) {
                     INTERNAL_DEBUG("{}:{}:{} dependencyOffline stopping {}", serviceId(), _service.getServiceName(), getServiceState(), interested);
 
                     GetThreadLocalEventQueue().template pushPrioritisedEvent<DependencyOfflineEvent>(serviceId(), INTERNAL_DEPENDENCY_EVENT_PRIORITY - 1);
@@ -140,7 +140,7 @@ namespace Ichor {
 #endif
 
                     if(getServiceState() == ServiceState::UNINJECTING) {
-                        interested = Detail::DependencyChange::FOUND_AND_STOP_ME;
+                        interested = DependencyChange::FOUND_AND_STOP_ME;
                         auto gen = stop();
                         auto it = gen.begin();
                         co_await it;
@@ -157,10 +157,10 @@ namespace Ichor {
                         ret = StartBehaviour::STOPPED;
                         INTERNAL_DEBUG("{}:{}:{} dependencyOffline stopped {}", serviceId(), _service.getServiceName(), getServiceState(), interested);
                     } else {
-                        interested = Detail::DependencyChange::FOUND;
+                        interested = DependencyChange::FOUND;
                     }
-                } else if(interested != Detail::DependencyChange::FOUND_AND_STOP_ME) {
-                    interested = Detail::DependencyChange::FOUND;
+                } else if(interested != DependencyChange::FOUND_AND_STOP_ME) {
+                    interested = DependencyChange::FOUND;
                 }
 
                 if(dep->required && dep->satisfied == 0 && (getServiceState() == ServiceState::UNINJECTING || getServiceState() == ServiceState::STOPPING)) {
