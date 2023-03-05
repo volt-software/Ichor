@@ -1,18 +1,17 @@
 #pragma once
 
-#include <ichor/dependency_management/InternalService.h>
-
 namespace Ichor::Detail {
+    // Note: Horrible name :')
     /// This lifecycle manager is only for adding the queue as a service
     /// \tparam ServiceType
     /// \tparam IFaces
-    class QueueLifecycleManager final : public ILifecycleManager {
+    class DependencyManagerLifecycleManager final : public ILifecycleManager {
     public:
-        explicit QueueLifecycleManager(IEventQueue *q) : _q(q) {
-            _interfaces.emplace_back(typeNameHash<IEventQueue>(), false, false);
+        explicit DependencyManagerLifecycleManager(DependencyManager *dm) : _dm(dm) {
+            _interfaces.emplace_back(typeNameHash<DependencyManager>(), false, false);
         }
 
-        ~QueueLifecycleManager() final = default;
+        ~DependencyManagerLifecycleManager() final = default;
 
         std::vector<decltype(std::declval<DependencyInfo>().begin())> interestedInDependency(ILifecycleManager *dependentService, bool online) noexcept final {
             return {};
@@ -63,11 +62,11 @@ namespace Ichor::Detail {
         }
 
         [[nodiscard]] std::string_view implementationName() const noexcept final {
-            return "IEventQueue";
+            return "DependencyManager";
         }
 
         [[nodiscard]] uint64_t type() const noexcept final {
-            return typeNameHash<IEventQueue>();
+            return typeNameHash<DependencyManager>();
         }
 
         [[nodiscard]] uint64_t serviceId() const noexcept final {
@@ -107,12 +106,12 @@ namespace Ichor::Detail {
         /// \param serviceIdOfOther
         /// \param fn
         void insertSelfInto(uint64_t keyOfInterfaceToInject, uint64_t serviceIdOfOther, std::function<void(void*, IService*)> &fn) final {
-            if(keyOfInterfaceToInject != typeNameHash<IEventQueue>()) {
+            if(keyOfInterfaceToInject != typeNameHash<DependencyManager>()) {
                 return;
             }
 
             INTERNAL_DEBUG("insertSelfInto() svc {} telling svc {} to add us", serviceId(), serviceIdOfOther);
-            fn(_q, &_service);
+            fn(_dm, &_service);
             _serviceIdsOfDependees.insert(serviceIdOfOther);
         }
 
@@ -121,17 +120,17 @@ namespace Ichor::Detail {
         /// \param serviceIdOfOther
         /// \param fn
         void removeSelfInto(uint64_t keyOfInterfaceToInject, uint64_t serviceIdOfOther, std::function<void(void*, IService*)> &fn) final {
-            if(keyOfInterfaceToInject != typeNameHash<IEventQueue>()) {
+            if(keyOfInterfaceToInject != typeNameHash<DependencyManager>()) {
                 return;
             }
 
             INTERNAL_DEBUG("removeSelfInto() svc {} removing svc {}", serviceId(), serviceIdOfOther);
-            fn(_q, &_service);
+            fn(_dm, &_service);
             _serviceIdsOfDependees.erase(serviceIdOfOther);
         }
 
     private:
-        IEventQueue *_q;
+        DependencyManager *_dm;
         ServiceState _state{ServiceState::ACTIVE};
         unordered_set<uint64_t> _serviceIdsOfDependees; // services that depend on this service
         std::vector<Dependency> _interfaces;

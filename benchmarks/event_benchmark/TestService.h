@@ -26,6 +26,7 @@ class TestService final : public AdvancedService<TestService> {
 public:
     TestService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {
         reg.registerDependency<ILogger>(this, true);
+        reg.registerDependency<IEventQueue>(this, true);
     }
     ~TestService() final = default;
 
@@ -33,10 +34,10 @@ private:
     Task<tl::expected<void, Ichor::StartError>> start() final {
         auto start = std::chrono::steady_clock::now();
         for(uint32_t i = 0; i < EVENT_COUNT; i++) {
-            GetThreadLocalEventQueue().pushEvent<UselessEvent>(getServiceId());
+            _q->pushEvent<UselessEvent>(getServiceId());
         }
         auto end = std::chrono::steady_clock::now();
-        GetThreadLocalEventQueue().pushEvent<QuitEvent>(getServiceId());
+        _q->pushEvent<QuitEvent>(getServiceId());
         ICHOR_LOG_WARN(_logger, "Inserted events in {:L} µs", std::chrono::duration_cast<std::chrono::microseconds>(end-start).count());
         co_return {};
     }
@@ -53,7 +54,16 @@ private:
         _logger = nullptr;
     }
 
+    void addDependencyInstance(IEventQueue *q, IService *) {
+        _q = q;
+    }
+
+    void removeDependencyInstance(IEventQueue *q, IService *) {
+        _q = nullptr;
+    }
+
     friend DependencyRegister;
 
     ILogger *_logger{nullptr};
+    IEventQueue *_q{nullptr};
 };

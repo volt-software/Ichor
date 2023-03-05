@@ -27,12 +27,13 @@ class TestService final : public AdvancedService<TestService> {
 public:
     TestService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {
         reg.registerDependency<ILogger>(this, true);
+        reg.registerDependency<IEventQueue>(this, true);
     }
     ~TestService() final = default;
 
 private:
     Task<tl::expected<void, Ichor::StartError>> start() final {
-        GetThreadLocalEventQueue().pushEvent<RunFunctionEventAsync>(getServiceId(), [this](DependencyManager &dm) -> AsyncGenerator<IchorBehaviour> {
+        _q->pushEvent<RunFunctionEventAsync>(getServiceId(), [this](DependencyManager &dm) -> AsyncGenerator<IchorBehaviour> {
             for(uint32_t i = 0; i < EVENT_COUNT; i++) {
                 co_await _evt;
                 dm.getEventQueue().pushEvent<RunFunctionEventAsync>(getServiceId(), [this](DependencyManager &) -> AsyncGenerator<IchorBehaviour> {
@@ -40,10 +41,10 @@ private:
                     co_return {};
                 });
             }
-            GetThreadLocalEventQueue().pushEvent<QuitEvent>(getServiceId());
+            _q->pushEvent<QuitEvent>(getServiceId());
             co_return {};
         });
-        GetThreadLocalEventQueue().pushEvent<RunFunctionEventAsync>(getServiceId(), [this](DependencyManager &) -> AsyncGenerator<IchorBehaviour> {
+        _q->pushEvent<RunFunctionEventAsync>(getServiceId(), [this](DependencyManager &) -> AsyncGenerator<IchorBehaviour> {
             _evt.set();
             co_return {};
         });
@@ -62,8 +63,17 @@ private:
         _logger = nullptr;
     }
 
+    void addDependencyInstance(IEventQueue *q, IService *) {
+        _q = q;
+    }
+
+    void removeDependencyInstance(IEventQueue *q, IService *) {
+        _q = nullptr;
+    }
+
     friend DependencyRegister;
 
     ILogger *_logger{nullptr};
+    IEventQueue *_q{nullptr};
     AsyncAutoResetEvent _evt{};
 };

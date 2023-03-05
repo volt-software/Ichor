@@ -62,7 +62,7 @@ TEST_CASE("DependencyManager") {
         dm.runForOrQueueEmpty();
 
         queue->pushEvent<RunFunctionEvent>(0, [&](DependencyManager &_dm) {
-            REQUIRE(_dm.getServiceCount() == 4);
+            REQUIRE(_dm.getServiceCount() == 5);
 
             auto svc = _dm.getService(uselessSvcId);
             REQUIRE(svc.has_value());

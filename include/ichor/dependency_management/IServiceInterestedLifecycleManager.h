@@ -1,93 +1,97 @@
 #pragma once
 
-#include <ichor/dependency_management/InternalService.h>
+#define SELF_SERVICE_ID std::numeric_limits<uint64_t>::max();
 
 namespace Ichor::Detail {
-    /// This lifecycle manager is only for adding the queue as a service
-    /// \tparam ServiceType
-    /// \tparam IFaces
-    class QueueLifecycleManager final : public ILifecycleManager {
+    /// implementation of ILifecycleManager purely to find out if another ILifecycleManager is interested in IService
+    class IServiceInterestedLifecycleManager final : public ILifecycleManager {
     public:
-        explicit QueueLifecycleManager(IEventQueue *q) : _q(q) {
-            _interfaces.emplace_back(typeNameHash<IEventQueue>(), false, false);
+        IServiceInterestedLifecycleManager(IService *self) : _self(self) {
+            _interfaces.emplace_back(typeNameHash<IService>(), false, false);
         }
+        ~IServiceInterestedLifecycleManager() final = default;
 
-        ~QueueLifecycleManager() final = default;
-
-        std::vector<decltype(std::declval<DependencyInfo>().begin())> interestedInDependency(ILifecycleManager *dependentService, bool online) noexcept final {
-            return {};
+        std::vector<decltype(std::declval<DependencyInfo>().begin())> interestedInDependency(ILifecycleManager *, bool) noexcept final {
+            // this function should never be called
+            std::terminate();
         }
 
         AsyncGenerator<StartBehaviour> dependencyOnline(ILifecycleManager* dependentService, std::vector<decltype(std::declval<DependencyInfo>().begin())> iterators) final {
             // this function should never be called
             std::terminate();
-            co_return StartBehaviour::DONE;
         }
 
         AsyncGenerator<StartBehaviour> dependencyOffline(ILifecycleManager* dependentService, std::vector<decltype(std::declval<DependencyInfo>().begin())> iterators) final {
             // this function should never be called
             std::terminate();
-            co_return StartBehaviour::DONE;
         }
 
         [[nodiscard]]
         unordered_set<uint64_t> &getDependencies() noexcept final {
-            return emptyDependencies;
+            // this function should never be called
+            std::terminate();
         }
 
         [[nodiscard]]
         unordered_set<uint64_t> &getDependees() noexcept final {
-            return _serviceIdsOfDependees;
+            // this function should never be called
+            std::terminate();
         }
 
         [[nodiscard]]
         AsyncGenerator<StartBehaviour> start() final {
-            co_return {};
+            // this function should never be called
+            std::terminate();
         }
 
         [[nodiscard]]
         AsyncGenerator<StartBehaviour> stop() final {
-            _state = ServiceState::INSTALLED;
-            co_return {};
+            // this function should never be called
+            std::terminate();
         }
 
         [[nodiscard]]
         bool setInjected() final {
-            return true;
+            // this function should never be called
+            std::terminate();
         }
 
         [[nodiscard]]
         bool setUninjected() final {
-            _state = ServiceState::UNINJECTING;
-            return true;
+            // this function should never be called
+            std::terminate();
         }
 
         [[nodiscard]] std::string_view implementationName() const noexcept final {
-            return "IEventQueue";
+            return typeName<IService>();
         }
 
         [[nodiscard]] uint64_t type() const noexcept final {
-            return typeNameHash<IEventQueue>();
+            return typeNameHash<IService>();
         }
 
         [[nodiscard]] uint64_t serviceId() const noexcept final {
-            return _service.getServiceId();
+            return SELF_SERVICE_ID;
         }
 
         [[nodiscard]] uint64_t getPriority() const noexcept final {
-            return INTERNAL_EVENT_PRIORITY;
+            // this function should never be called
+            std::terminate();
         }
 
         [[nodiscard]] ServiceState getServiceState() const noexcept final {
-            return _state;
+            // this function should never be called
+            std::terminate();
         }
 
         [[nodiscard]] IService * getIService() noexcept final {
-            return &_service;
+            // this function should never be called
+            std::terminate();
         }
 
         [[nodiscard]] IService const * getIService() const noexcept final {
-            return &_service;
+            // this function should never be called
+            std::terminate();
         }
 
         [[nodiscard]] const std::vector<Dependency>& getInterfaces() const noexcept final {
@@ -95,11 +99,13 @@ namespace Ichor::Detail {
         }
 
         [[nodiscard]] Properties const & getProperties() const noexcept final {
-            return _service.getProperties();
+            // this function should never be called
+            std::terminate();
         }
 
         [[nodiscard]] DependencyRegister const * getDependencyRegistry() const noexcept final {
-            return nullptr;
+            // this function should never be called
+            std::terminate();
         }
 
         /// Someone is interested in us, inject ourself into them
@@ -107,13 +113,12 @@ namespace Ichor::Detail {
         /// \param serviceIdOfOther
         /// \param fn
         void insertSelfInto(uint64_t keyOfInterfaceToInject, uint64_t serviceIdOfOther, std::function<void(void*, IService*)> &fn) final {
-            if(keyOfInterfaceToInject != typeNameHash<IEventQueue>()) {
+            if(keyOfInterfaceToInject != typeNameHash<IService>()) {
                 return;
             }
 
             INTERNAL_DEBUG("insertSelfInto() svc {} telling svc {} to add us", serviceId(), serviceIdOfOther);
-            fn(_q, &_service);
-            _serviceIdsOfDependees.insert(serviceIdOfOther);
+            fn(_self, _self);
         }
 
         /// The underlying service got stopped and someone else is asking us to remove ourselves from them.
@@ -121,20 +126,16 @@ namespace Ichor::Detail {
         /// \param serviceIdOfOther
         /// \param fn
         void removeSelfInto(uint64_t keyOfInterfaceToInject, uint64_t serviceIdOfOther, std::function<void(void*, IService*)> &fn) final {
-            if(keyOfInterfaceToInject != typeNameHash<IEventQueue>()) {
+            if(keyOfInterfaceToInject != typeNameHash<IService>()) {
                 return;
             }
 
             INTERNAL_DEBUG("removeSelfInto() svc {} removing svc {}", serviceId(), serviceIdOfOther);
-            fn(_q, &_service);
-            _serviceIdsOfDependees.erase(serviceIdOfOther);
+            fn(_self, _self);
         }
 
     private:
-        IEventQueue *_q;
-        ServiceState _state{ServiceState::ACTIVE};
-        unordered_set<uint64_t> _serviceIdsOfDependees; // services that depend on this service
         std::vector<Dependency> _interfaces;
-        InternalService _service;
+        IService *_self;
     };
 }

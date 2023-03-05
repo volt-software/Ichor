@@ -7,8 +7,7 @@
 #include "TestServices/TimerRunsOnceService.h"
 #include "TestServices/AddEventHandlerDuringEventHandlingService.h"
 #include "TestServices/RequestsLoggingService.h"
-#include "TestServices/ConstructorInjectionTestService.h"
-#include "TestServices/ConstructorInjectionQuitService.h"
+#include "TestServices/ConstructorInjectionTestServices.h"
 #include <ichor/event_queues/MultimapQueue.h>
 #include <ichor/events/RunFunctionEvent.h>
 #include <ichor/services/logging/LoggerFactory.h>
@@ -272,7 +271,7 @@ TEST_CASE("ServicesTests") {
         dm.runForOrQueueEmpty();
 
         queue->pushEvent<RunFunctionEvent>(0, [&](DependencyManager& mng) {
-            REQUIRE(mng.getServiceCount() == 4);
+            REQUIRE(mng.getServiceCount() == 5);
 
             mng.getEventQueue().pushEvent<StopServiceEvent>(0, svcId);
             // + 11 because the first stop triggers a dep offline event and inserts a new stop with 10 higher priority.
@@ -282,7 +281,7 @@ TEST_CASE("ServicesTests") {
         dm.runForOrQueueEmpty();
 
         queue->pushEvent<RunFunctionEvent>(0, [&](DependencyManager& mng) {
-            REQUIRE(mng.getServiceCount() == 2);
+            REQUIRE(mng.getServiceCount() == 3);
 
             mng.getEventQueue().pushEvent<QuitEvent>(0);
         });
@@ -309,7 +308,7 @@ TEST_CASE("ServicesTests") {
         dm.runForOrQueueEmpty();
 
         queue->pushEvent<RunFunctionEvent>(0, [&](DependencyManager& mng) {
-            REQUIRE(mng.getServiceCount() == 5);
+            REQUIRE(mng.getServiceCount() == 6);
             auto svcs = mng.getAllServicesOfType<IConstructorInjectionTestService>();
             REQUIRE(svcs.size() == 1);
             REQUIRE(svcs[0].second->getServiceId() == svcId);
@@ -322,7 +321,7 @@ TEST_CASE("ServicesTests") {
         dm.runForOrQueueEmpty();
 
         queue->pushEvent<RunFunctionEvent>(0, [&](DependencyManager& mng) {
-            REQUIRE(mng.getServiceCount() == 3);
+            REQUIRE(mng.getServiceCount() == 4);
 
             mng.getEventQueue().pushEvent<QuitEvent>(0);
         });
@@ -336,6 +335,49 @@ TEST_CASE("ServicesTests") {
             auto &dm = queue->createManager();
             dm.createServiceManager<ConstructorInjectionQuitService>();
             queue->start(CaptureSigInt);
+        });
+
+        t.join();
+    }
+
+    SECTION("ConstructorInjectionQuitService2") {
+        std::thread t([]() {
+            auto queue = std::make_unique<MultimapQueue>();
+            auto &dm = queue->createManager();
+            dm.createServiceManager<ConstructorInjectionQuitService2>();
+            queue->start(CaptureSigInt);
+        });
+
+        t.join();
+    }
+
+    SECTION("ConstructorInjectionQuitService3") {
+        std::thread t([]() {
+            auto queue = std::make_unique<MultimapQueue>();
+            auto &dm = queue->createManager();
+            dm.createServiceManager<ConstructorInjectionQuitService3>();
+            queue->start(CaptureSigInt);
+        });
+
+        t.join();
+    }
+
+    SECTION("ConstructorInjectionQuitService4") {
+        auto queue = std::make_unique<MultimapQueue>();
+        auto &dm = queue->createManager();
+        std::thread t([&]() {
+            dm.createServiceManager<ConstructorInjectionQuitService4>();
+            queue->start(CaptureSigInt);
+        });
+
+        waitForRunning(dm);
+
+        dm.runForOrQueueEmpty();
+
+        queue->pushEvent<RunFunctionEvent>(0, [&](DependencyManager& mng) {
+            REQUIRE(mng.getServiceCount() == 3);
+
+            mng.getEventQueue().pushEvent<QuitEvent>(0);
         });
 
         t.join();

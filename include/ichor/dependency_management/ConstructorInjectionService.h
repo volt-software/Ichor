@@ -167,7 +167,7 @@ namespace Ichor {
         template <typename... CO_ARGS>
         void createServiceSpecialSauce(std::optional<std::variant<CO_ARGS...>> = {}) {
             try {
-                new(buf) T(std::get<CO_ARGS>(_deps[typeNameHash<std::remove_pointer_t<CO_ARGS>>()])...);
+                new (buf) T(std::get<CO_ARGS>(_deps[typeNameHash<std::remove_pointer_t<CO_ARGS>>()])...);
             } catch (std::exception const &e) {
                 std::terminate();
             }
@@ -213,13 +213,6 @@ namespace Ichor {
 
         [[nodiscard]] const Properties& getProperties() const noexcept final {
             return _properties;
-        }
-
-        [[nodiscard]] void const * getTypedServicePtr() const noexcept {
-            if(_serviceState < ServiceState::INJECTING) {
-                std::terminate();
-            }
-            return buf;
         }
 
         // checked by IsConstructorInjector concept, to help with function overload resolution
@@ -383,13 +376,6 @@ namespace Ichor {
 
         [[nodiscard]] const Properties& getProperties() const noexcept final {
             return _properties;
-        }
-
-        [[nodiscard]] void const * getTypedServicePtr() const noexcept {
-            if(_serviceState < ServiceState::INJECTING) {
-                std::terminate();
-            }
-            return buf;
         }
 
         [[nodiscard]] T* getImplementation() noexcept {

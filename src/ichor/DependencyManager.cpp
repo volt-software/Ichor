@@ -3,6 +3,9 @@
 #include <ichor/CommunicationChannel.h>
 #include <ichor/stl/Any.h>
 #include <ichor/events/RunFunctionEvent.h>
+#include <ichor/dependency_management/QueueLifecycleManager.h>
+#include <ichor/dependency_management/DependencyManagerLifecycleManager.h>
+#include <ichor/dependency_management/IServiceInterestedLifecycleManager.h>
 
 #ifdef ICHOR_USE_SYSTEM_MIMALLOC
 #include <mimalloc-new-delete.h>
@@ -25,6 +28,14 @@ namespace backward {
     backward::SignalHandling sh;
 }
 #endif
+
+
+Ichor::DependencyManager::DependencyManager(IEventQueue *eventQueue) : _eventQueue(eventQueue) {
+    auto qlm = std::make_unique<Detail::QueueLifecycleManager>(_eventQueue);
+    _services.emplace(qlm->serviceId(), std::move(qlm));
+    auto dmlm = std::make_unique<Detail::DependencyManagerLifecycleManager>(this);
+    _services.emplace(dmlm->serviceId(), std::move(dmlm));
+}
 
 void Ichor::DependencyManager::start() {
     ICHOR_LOG_DEBUG(_logger, "starting dm {}", _id);
@@ -111,13 +122,13 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &&uniqueEvt) 
                 }
 
                 for (auto const &[serviceId, possibleDependentLifecycleManager] : _services) {
-                    if (serviceId == depOnlineEvt->originatingService || (filter != nullptr && !filter->compareTo(*possibleDependentLifecycleManager))) {
-                        continue;
-                    }
-
                     auto depIts = possibleDependentLifecycleManager->interestedInDependency(manager.get(), true);
 
                     if(depIts.empty()) {
+                        continue;
+                    }
+
+                    if (serviceId == depOnlineEvt->originatingService || (filter != nullptr && !filter->compareTo(*possibleDependentLifecycleManager))) {
                         continue;
                     }
 
@@ -296,7 +307,58 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &&uniqueEvt) 
                 break;
             case InsertServiceEvent::TYPE: {
                 auto *insertServiceEvt = static_cast<InsertServiceEvent *>(evt.get());
-                _services.emplace(insertServiceEvt->originatingService, std::move(insertServiceEvt->mgr));
+                INTERNAL_DEBUG("InsertServiceEvent {} {} {} {}", evt->id, evt->priority, evt->originatingService, insertServiceEvt->mgr->implementationName());
+                auto svcIt = _services.emplace(insertServiceEvt->originatingService, std::move(insertServiceEvt->mgr));
+                auto &cmpMgr = svcIt.first->second;
+
+                // If a service requests IService, we interpret it to mean a reference to itself, not just all services in existence.
+                Detail::IServiceInterestedLifecycleManager selfMgr{cmpMgr->getIService()};
+                auto selfDepIts = cmpMgr->interestedInDependency(&selfMgr, true);
+
+                if(!selfDepIts.empty()) {
+                    auto gen = cmpMgr->dependencyOnline(&selfMgr, std::move(selfDepIts));
+                    auto it = gen.begin();
+
+                    if(!it.get_finished()) {
+                        _scopedGenerators.emplace(it.get_promise_id(), std::make_unique<AsyncGenerator<StartBehaviour>>(std::move(gen)));
+                        // create new event that will be inserted upon finish of coroutine in ContinuableStartEvent
+                        _scopedEvents.emplace(it.get_promise_id(), std::make_shared<DependencyOnlineEvent>(_eventQueue->getNextEventId(), cmpMgr->serviceId(), INTERNAL_DEPENDENCY_EVENT_PRIORITY));
+                    } else if(it.get_value() == StartBehaviour::STARTED) {
+                        _eventQueue->pushPrioritisedEvent<DependencyOnlineEvent>(cmpMgr->serviceId(), INTERNAL_DEPENDENCY_EVENT_PRIORITY);
+                    }
+                }
+
+                // loop over all services, check if cmpMgr is interested in the active ones and inject them if so
+                for (auto &[key, mgr] : _services) {
+                    if (mgr->getServiceState() == ServiceState::ACTIVE) {
+                        auto depIts = cmpMgr->interestedInDependency(mgr.get(), true);
+
+                        if(depIts.empty()) {
+                            continue;
+                        }
+
+                        auto const filterProp = mgr->getProperties().find("Filter");
+                        const Filter *filter = nullptr;
+                        if (filterProp != cend(mgr->getProperties())) {
+                            filter = Ichor::any_cast<Filter * const>(&filterProp->second);
+                        }
+
+                        if (filter != nullptr && !filter->compareTo(*cmpMgr.get())) {
+                            continue;
+                        }
+
+                        auto gen = cmpMgr->dependencyOnline(mgr.get(), std::move(depIts));
+                        auto it = gen.begin();
+
+                        if(!it.get_finished()) {
+                            _scopedGenerators.emplace(it.get_promise_id(), std::make_unique<AsyncGenerator<StartBehaviour>>(std::move(gen)));
+                            // create new event that will be inserted upon finish of coroutine in ContinuableStartEvent
+                            _scopedEvents.emplace(it.get_promise_id(), std::make_shared<DependencyOnlineEvent>(_eventQueue->getNextEventId(), cmpMgr->serviceId(), INTERNAL_DEPENDENCY_EVENT_PRIORITY));
+                        } else if(it.get_value() == StartBehaviour::STARTED) {
+                            _eventQueue->pushPrioritisedEvent<DependencyOnlineEvent>(cmpMgr->serviceId(), INTERNAL_DEPENDENCY_EVENT_PRIORITY);
+                        }
+                    }
+                }
             }
                 break;
             case StopServiceEvent::TYPE: {
@@ -1068,7 +1130,7 @@ void Ichor::DependencyManager::setCommunicationChannel(Ichor::CommunicationChann
 
 [[nodiscard]] Ichor::DependencyManager& Ichor::GetThreadLocalManager() noexcept {
 #ifdef ICHOR_USE_HARDENING
-    if(Detail::_local_dm == nullptr) { // are we on the right thread? (gets set when the DM is started)
+    if(Detail::_local_dm == nullptr) [[unlikely]] { // are we on the right thread? (gets set when the DM is started)
         std::terminate();
     }
 #endif

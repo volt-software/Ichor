@@ -19,25 +19,26 @@ public:
     StartStopService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {
         reg.registerDependency<ILogger>(this, true);
         reg.registerDependency<ITestService>(this, true);
+        reg.registerDependency<DependencyManager>(this, true);
     }
     ~StartStopService() final = default;
 
 private:
     Task<tl::expected<void, Ichor::StartError>> start() final {
         if(startCount == 0) {
-            _startServiceRegistration = GetThreadLocalManager().registerEventCompletionCallbacks<StartServiceEvent>(this);
-            _stopServiceRegistration = GetThreadLocalManager().registerEventCompletionCallbacks<StopServiceEvent>(this);
+            _startServiceRegistration = _dm->registerEventCompletionCallbacks<StartServiceEvent>(this);
+            _stopServiceRegistration = _dm->registerEventCompletionCallbacks<StopServiceEvent>(this);
 
             _start = std::chrono::steady_clock::now();
-            GetThreadLocalEventQueue().pushPrioritisedEvent<StopServiceEvent>(getServiceId(), INTERNAL_DEPENDENCY_EVENT_PRIORITY, _testServiceId);
+            _dm->getEventQueue().pushPrioritisedEvent<StopServiceEvent>(getServiceId(), INTERNAL_DEPENDENCY_EVENT_PRIORITY, _testServiceId);
         } else if(startCount < START_STOP_COUNT) {
-            GetThreadLocalEventQueue().pushPrioritisedEvent<StopServiceEvent>(getServiceId(), INTERNAL_DEPENDENCY_EVENT_PRIORITY, _testServiceId);
+            _dm->getEventQueue().pushPrioritisedEvent<StopServiceEvent>(getServiceId(), INTERNAL_DEPENDENCY_EVENT_PRIORITY, _testServiceId);
         } else {
             auto end = std::chrono::steady_clock::now();
-            GetThreadLocalEventQueue().pushEvent<QuitEvent>(getServiceId());
+            _dm->getEventQueue().pushEvent<QuitEvent>(getServiceId());
             _startServiceRegistration.reset();
             _stopServiceRegistration.reset();
-            ICHOR_LOG_INFO(_logger, "dm {} finished in {:L} µs", GetThreadLocalManager().getId(), std::chrono::duration_cast<std::chrono::microseconds>(end-_start).count());
+            ICHOR_LOG_INFO(_logger, "dm {} finished in {:L} µs", _dm->getId(), std::chrono::duration_cast<std::chrono::microseconds>(end-_start).count());
         }
         startCount++;
         co_return {};
@@ -45,7 +46,7 @@ private:
 
     Task<void> stop() final {
         if(startCount <= START_STOP_COUNT) {
-            GetThreadLocalEventQueue().pushEvent<StartServiceEvent>(getServiceId(), _testServiceId);
+            _dm->getEventQueue().pushEvent<StartServiceEvent>(getServiceId(), _testServiceId);
         }
         co_return;
     }
@@ -65,6 +66,13 @@ private:
     void removeDependencyInstance(ITestService *, IService *) {
     }
 
+    void addDependencyInstance(DependencyManager *dm, IService *isvc) {
+        _dm = dm;
+    }
+
+    void removeDependencyInstance(DependencyManager *, IService *) {
+    }
+
     void handleCompletion(StartServiceEvent const &evt) {
     }
 
@@ -81,6 +89,7 @@ private:
     friend DependencyManager;
 
     ILogger *_logger{nullptr};
+    DependencyManager *_dm{nullptr};
     uint64_t _testServiceId{0};
     std::chrono::steady_clock::time_point _start{};
     uint64_t startCount{0};

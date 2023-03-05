@@ -4,20 +4,20 @@
 
 namespace Ichor::Detail {
 
-    class QueueService : public IService {
+    class InternalService : public IService {
     public:
-        QueueService() noexcept : IService(), _properties(), _serviceId(Detail::_serviceIdCounter.fetch_add(1, std::memory_order_relaxed)), _servicePriority(INTERNAL_EVENT_PRIORITY), _serviceGid(sole::uuid4()), _serviceState(ServiceState::INSTALLED) {
+        InternalService() noexcept : IService(), _properties(), _serviceId(Detail::_serviceIdCounter.fetch_add(1, std::memory_order_relaxed)), _servicePriority(INTERNAL_EVENT_PRIORITY), _serviceGid(sole::uuid4()), _serviceState(ServiceState::INSTALLED) {
         }
 
-        ~QueueService() noexcept override {
+        ~InternalService() noexcept override {
             _serviceId = 0;
             _serviceState = ServiceState::UNINSTALLED;
         }
 
-        QueueService(const QueueService&) = default;
-        QueueService(QueueService&&) noexcept = default;
-        QueueService& operator=(const QueueService&) = default;
-        QueueService& operator=(QueueService&&) noexcept = default;
+        InternalService(const InternalService&) = default;
+        InternalService(InternalService&&) noexcept = default;
+        InternalService& operator=(const InternalService&) = default;
+        InternalService& operator=(InternalService&&) noexcept = default;
 
         /// Process-local unique service id
         /// \return id
@@ -59,11 +59,6 @@ namespace Ichor::Detail {
 
         [[nodiscard]] const Properties& getProperties() const noexcept final {
             return _properties;
-        }
-
-        [[nodiscard]] void const * getTypedServicePtr() const noexcept {
-            std::terminate();
-            return nullptr;
         }
 
     protected:

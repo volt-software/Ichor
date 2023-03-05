@@ -104,12 +104,12 @@ namespace Ichor::Detail {
             return _service.getState();
         }
 
-        [[nodiscard]] IService const * getIService() const noexcept final {
-            return static_cast<IService const *>(&_service);
+        [[nodiscard]] IService * getIService() noexcept final {
+            return static_cast<IService *>(&_service);
         }
 
-        [[nodiscard]] void const * getTypedServicePtr() const noexcept final {
-            return _service.getTypedServicePtr();
+        [[nodiscard]] IService const * getIService() const noexcept final {
+            return static_cast<IService const *>(&_service);
         }
 
         [[nodiscard]] const std::vector<Dependency>& getInterfaces() const noexcept final {

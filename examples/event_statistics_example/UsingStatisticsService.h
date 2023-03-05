@@ -24,7 +24,7 @@ private:
         bogusTimerManager->setChronoInterval(100ms);
 
         quitTimerManager->setCallback(this, [this](DependencyManager &dm) {
-            GetThreadLocalEventQueue().pushEvent<QuitEvent>(getServiceId());
+            dm.getEventQueue().pushEvent<QuitEvent>(getServiceId());
         });
 
         bogusTimerManager->setCallback(this, [this](DependencyManager &dm) {
