@@ -54,7 +54,7 @@ namespace Ichor {
             _logger = nullptr;
         }
 
-        void handleDependencyRequest(ILogger *, DependencyRequestEvent const &evt) {
+        void handleDependencyRequest(AlwaysNull<ILogger*>, DependencyRequestEvent const &evt) {
             auto logger = _loggers.find(evt.originatingService);
 
             if (logger == end(_loggers)) {
@@ -74,7 +74,7 @@ namespace Ichor {
             }
         }
 
-        void handleDependencyUndoRequest(ILogger *, DependencyUndoRequestEvent const &evt) {
+        void handleDependencyUndoRequest(AlwaysNull<ILogger*>, DependencyUndoRequestEvent const &evt) {
             auto service = _loggers.find(evt.originatingService);
             if(service != end(_loggers)) {
                 GetThreadLocalEventQueue().template pushEvent<StopServiceEvent>(AdvancedService<LoggerFactory<LogT>>::getServiceId(), service->second->getServiceId());

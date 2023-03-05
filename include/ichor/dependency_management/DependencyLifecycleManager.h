@@ -52,7 +52,7 @@ namespace Ichor::Detail {
             return ret;
         }
 
-        AsyncGenerator<StartBehaviour> dependencyOnline(ILifecycleManager* dependentService, std::vector<decltype(std::declval<DependencyInfo>().begin())> iterators) final {
+        AsyncGenerator<StartBehaviour> dependencyOnline(NeverNull<ILifecycleManager*> dependentService, std::vector<decltype(std::declval<DependencyInfo>().begin())> iterators) final {
             INTERNAL_DEBUG("dependencyOnline() svc {}:{} {} dependent {}:{}", serviceId(), implementationName(), getServiceState(), dependentService->serviceId(), dependentService->implementationName());
             if constexpr (DO_INTERNAL_DEBUG) {
                 for (auto id: _serviceIdsOfInjectedDependencies) {
@@ -93,7 +93,7 @@ namespace Ichor::Detail {
             co_return StartBehaviour::DONE;
         }
 
-        AsyncGenerator<StartBehaviour> dependencyOffline(ILifecycleManager* dependentService, std::vector<decltype(std::declval<DependencyInfo>().begin())> iterators) final {
+        AsyncGenerator<StartBehaviour> dependencyOffline(NeverNull<ILifecycleManager*> dependentService, std::vector<decltype(std::declval<DependencyInfo>().begin())> iterators) final {
             INTERNAL_DEBUG("dependencyOffline() svc {}:{} {} dependent {}:{}", serviceId(), implementationName(), getServiceState(), dependentService->serviceId(), dependentService->implementationName());
             auto interested = DependencyChange::NOT_FOUND;
             StartBehaviour ret = StartBehaviour::DONE;
@@ -186,7 +186,7 @@ namespace Ichor::Detail {
         /// We take this roundabout way because we have no way of casting the servicetype embedded in the lifecycle manager to the correct type
         /// \param keyOfInterfaceToInject
         /// \param dependentService
-        void injectIntoSelfDoubleDispatch(uint64_t keyOfInterfaceToInject, ILifecycleManager* dependentService) {
+        void injectIntoSelfDoubleDispatch(uint64_t keyOfInterfaceToInject, NeverNull<ILifecycleManager*> dependentService) {
             INTERNAL_DEBUG("injectIntoSelfDoubleDispatch() svc {} adding dependency {}", serviceId(), dependentService->serviceId());
             auto dep = _registry._registrations.find(keyOfInterfaceToInject);
 
@@ -203,7 +203,7 @@ namespace Ichor::Detail {
         /// \param keyOfInterfaceToInject
         /// \param serviceIdOfOther
         /// \param fn
-        void insertSelfInto(uint64_t keyOfInterfaceToInject, uint64_t serviceIdOfOther, std::function<void(void*, IService*)> &fn) final {
+        void insertSelfInto(uint64_t keyOfInterfaceToInject, uint64_t serviceIdOfOther, std::function<void(NeverNull<void*>, NeverNull<IService*>)> &fn) final {
             INTERNAL_DEBUG("insertSelfInto() svc {} telling svc {} to add us", serviceId(), serviceIdOfOther);
             if constexpr (sizeof...(IFaces) > 0) {
                 insertSelfInto2<sizeof...(IFaces), IFaces...>(keyOfInterfaceToInject, fn);
@@ -218,7 +218,7 @@ namespace Ichor::Detail {
         /// \param keyOfInterfaceToInject
         /// \param fn
         template <int i, typename Iface1, typename... otherIfaces>
-        void insertSelfInto2(uint64_t keyOfInterfaceToInject, std::function<void(void*, IService*)> &fn) {
+        void insertSelfInto2(uint64_t keyOfInterfaceToInject, std::function<void(NeverNull<void*>, NeverNull<IService*>)> &fn) {
             if(typeNameHash<Iface1>() == keyOfInterfaceToInject) {
                 fn(static_cast<Iface1*>(_service.getImplementation()), static_cast<IService*>(&_service));
             } else {
@@ -228,7 +228,7 @@ namespace Ichor::Detail {
             }
         }
 
-        void removeSelfIntoDoubleDispatch(uint64_t keyOfInterfaceToInject, ILifecycleManager* dependentService) {
+        void removeSelfIntoDoubleDispatch(uint64_t keyOfInterfaceToInject, NeverNull<ILifecycleManager*> dependentService) {
             INTERNAL_DEBUG("removeSelfIntoDoubleDispatch() svc {} removing dependency {}", serviceId(), dependentService->serviceId());
             auto dep = _registry._registrations.find(keyOfInterfaceToInject);
 
@@ -245,7 +245,7 @@ namespace Ichor::Detail {
         /// \param keyOfInterfaceToInject
         /// \param serviceIdOfOther
         /// \param fn
-        void removeSelfInto(uint64_t keyOfInterfaceToInject, uint64_t serviceIdOfOther, std::function<void(void*, IService*)> &fn) final {
+        void removeSelfInto(uint64_t keyOfInterfaceToInject, uint64_t serviceIdOfOther, std::function<void(NeverNull<void*>, NeverNull<IService*>)> &fn) final {
             INTERNAL_DEBUG("removeSelfInto() svc {} telling svc {} to remove us", serviceId(), serviceIdOfOther);
             if constexpr (sizeof...(IFaces) > 0) {
                 insertSelfInto2<sizeof...(IFaces), IFaces...>(keyOfInterfaceToInject, fn);
@@ -308,11 +308,11 @@ namespace Ichor::Detail {
             return _service.getState();
         }
 
-        [[nodiscard]] IService * getIService() noexcept final {
+        [[nodiscard]] NeverNull<IService*> getIService() noexcept final {
             return static_cast<IService *>(&_service);
         }
 
-        [[nodiscard]] IService const * getIService() const noexcept final {
+        [[nodiscard]] NeverNull<IService const*> getIService() const noexcept final {
             return static_cast<IService const *>(&_service);
         }
 
