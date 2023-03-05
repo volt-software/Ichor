@@ -57,7 +57,7 @@ private:
         }
 
         if(_timerTriggerCount == 2) {
-            GetThreadLocalEventQueue().pushEvent<QuitEvent>(getServiceId());
+            dm.getEventQueue().pushEvent<QuitEvent>(getServiceId());
         }
 
         ICHOR_LOG_INFO(_logger, "Timer {} completed 'long' task", getServiceId());

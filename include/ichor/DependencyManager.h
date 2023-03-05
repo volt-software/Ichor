@@ -54,10 +54,7 @@ namespace Ichor {
 
     class DependencyManager final {
     private:
-        explicit DependencyManager(IEventQueue *eventQueue) : _eventQueue(eventQueue) {
-            auto qlm = std::make_unique<Detail::QueueLifecycleManager>(_eventQueue);
-            _services.emplace(qlm->serviceId(), std::move(qlm));
-        }
+        explicit DependencyManager(IEventQueue *eventQueue);
     public:
         // DANGEROUS COPY, EFFECTIVELY MAKES A NEW MANAGER AND STARTS OVER!!
         // Only implemented so that the manager can be easily used in STL containers before anything is using it.
@@ -137,37 +134,6 @@ namespace Ichor {
                 }
 
                 logAddService<Impl, Interfaces...>(cmpMgr->serviceId());
-
-                for (auto &[key, mgr] : _services) {
-                    if (mgr->getServiceState() == ServiceState::ACTIVE) {
-                        auto const filterProp = mgr->getProperties().find("Filter");
-                        const Filter *filter = nullptr;
-                        if (filterProp != cend(mgr->getProperties())) {
-                            filter = Ichor::any_cast<Filter * const>(&filterProp->second);
-                        }
-
-                        if (filter != nullptr && !filter->compareTo(*cmpMgr.get())) {
-                            continue;
-                        }
-
-                        auto depIts = cmpMgr->interestedInDependency(mgr.get(), true);
-
-                        if(depIts.empty()) {
-                            continue;
-                        }
-
-                        auto gen = cmpMgr->dependencyOnline(mgr.get(), std::move(depIts));
-                        auto it = gen.begin();
-
-                        if(!it.get_finished()) {
-                            _scopedGenerators.emplace(it.get_promise_id(), std::make_unique<AsyncGenerator<StartBehaviour>>(std::move(gen)));
-                            // create new event that will be inserted upon finish of coroutine in ContinuableStartEvent
-                            _scopedEvents.emplace(it.get_promise_id(), std::make_shared<DependencyOnlineEvent>(_eventQueue->getNextEventId(), cmpMgr->serviceId(), INTERNAL_DEPENDENCY_EVENT_PRIORITY));
-                        } else if(it.get_value() == StartBehaviour::STARTED) {
-                            _eventQueue->pushPrioritisedEvent<DependencyOnlineEvent>(cmpMgr->serviceId(), INTERNAL_DEPENDENCY_EVENT_PRIORITY);
-                        }
-                    }
-                }
 
                 for (auto const &[key, registration] : cmpMgr->getDependencyRegistry()->_registrations) {
                     auto const &props = std::get<std::optional<Properties>>(registration);
@@ -278,7 +244,7 @@ namespace Ichor {
 
         template <typename Interface, typename Impl>
 #if (!defined(WIN32) && !defined(_WIN32) && !defined(__WIN32)) || defined(__CYGWIN__)
-        requires DerivedTemplated<Impl, AdvancedService> && ImplementsTrackingHandlers<Impl, Interface>
+        requires Derived<Impl, IService> && ImplementsTrackingHandlers<Impl, Interface>
 #endif
         [[nodiscard]]
         /// Register handlers for when dependencies get requested/unrequested
@@ -308,6 +274,7 @@ namespace Ichor {
                 auto const *depRegistry = mgr->getDependencyRegistry();
 //                ICHOR_LOG_ERROR(_logger, "register svcId {} dm {}", mgr->serviceId(), _id);
 
+                // only DependencyLifecycleManager has a non-nullptr value. Other Lifecyclemanagers return nullptr because they don't request dependencies.
                 if(depRegistry == nullptr) {
                     continue;
                 }
@@ -584,20 +551,6 @@ namespace Ichor {
         void runForOrQueueEmpty(std::chrono::milliseconds ms = 100ms) const noexcept;
 
         [[nodiscard]] std::optional<std::string_view> getImplementationNameFor(uint64_t serviceId) const noexcept;
-
-        [[nodiscard]] IService const * getIServiceForImplementation(void const *ptr) const noexcept {
-            for(auto &[k, svc] : _services) {
-                if(svc->getTypedServicePtr() == ptr) {
-                    return svc->getIService();
-                }
-            }
-
-            std::terminate();
-        }
-
-        [[nodiscard]] AsyncGenerator<void> waitForStarted(IService *svc) {
-            co_await waitForService(svc->getServiceId(), DependencyOnlineEvent::TYPE).begin();
-        }
 
         [[nodiscard]] IEventQueue& getEventQueue() const noexcept;
 

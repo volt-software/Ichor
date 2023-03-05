@@ -28,7 +28,7 @@ namespace Ichor {
         template<typename Interface, Derived<IService> Impl>
         void registerDependencyConstructor(Impl *svc) {
             static_assert(!std::is_same_v<Interface, Impl>, "Impl and interface need to be separate classes");
-            static_assert(!Derived<Interface, IService>, "Interface needs to be a non-service class.");
+            static_assert(!DerivedTemplated<Interface, AdvancedService>, "Interface needs to be a non-service class.");
 
             if constexpr (DO_INTERNAL_DEBUG || DO_HARDENING) {
                 if (_registrations.contains(typeNameHash<Interface>())) [[unlikely]] {

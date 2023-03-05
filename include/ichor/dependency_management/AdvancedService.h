@@ -95,10 +95,6 @@ namespace Ichor {
             return _properties;
         }
 
-        [[nodiscard]] void const * getTypedServicePtr() const noexcept {
-            return this;
-        }
-
     protected:
         [[nodiscard]] virtual Task<tl::expected<void, StartError>> start() {
             co_return {};

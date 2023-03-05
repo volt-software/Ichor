@@ -24,7 +24,7 @@ private:
             // If sigint has been fired, send a quit to the event loop.
             // This can't be done from within the handler itself, as the mutex surrounding pushEvent might already be locked, resulting in a deadlock!
             if(quit) {
-                GetThreadLocalEventQueue().pushEvent<QuitEvent>(getServiceId());
+                dm.getEventQueue().pushEvent<QuitEvent>(getServiceId());
             }
         });
         timer->startTimer();
