@@ -297,7 +297,7 @@ namespace Ichor {
 
         [[nodiscard]] T* getImplementation() noexcept {
             if(_serviceState < ServiceState::INJECTING) {
-                return nullptr;
+                std::terminate();
             }
             return reinterpret_cast<T*>(buf);
         }
@@ -380,7 +380,7 @@ namespace Ichor {
 
         [[nodiscard]] T* getImplementation() noexcept {
             if(_serviceState < ServiceState::INJECTING) {
-                return nullptr;
+                std::terminate();
             }
             return reinterpret_cast<T*>(buf);
         }

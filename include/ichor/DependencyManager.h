@@ -263,10 +263,10 @@ namespace Ichor {
             auto undoRequestTrackersForType = _dependencyUndoRequestTrackers.find(typeNameHash<Interface>());
 
             DependencyTrackerInfo requestInfo{std::function<void(Event const &)>{[impl](Event const &evt) {
-                impl->handleDependencyRequest(static_cast<Interface*>(nullptr), static_cast<DependencyRequestEvent const &>(evt));
+                impl->handleDependencyRequest(AlwaysNull<Interface*>(), static_cast<DependencyRequestEvent const &>(evt));
             }}};
             DependencyTrackerInfo undoRequestInfo{std::function<void(Event const &)>{[impl](Event const &evt) {
-                impl->handleDependencyUndoRequest(static_cast<Interface*>(nullptr), static_cast<DependencyUndoRequestEvent const &>(evt));
+                impl->handleDependencyUndoRequest(AlwaysNull<Interface*>(), static_cast<DependencyUndoRequestEvent const &>(evt));
             }}};
 
             std::vector<DependencyRequestEvent> requests{};
@@ -503,7 +503,7 @@ namespace Ichor {
             }
 #endif
             std::vector<Interface*> ret{};
-            std::function<void(void*, IService*)> f{[&ret](void *svc2, IService * /*isvc*/){ ret.push_back(reinterpret_cast<Interface*>(svc2)); }};
+            std::function<void(NeverNull<void*>, NeverNull<IService*>)> f{[&ret](void *svc2, IService * /*isvc*/){ ret.push_back(reinterpret_cast<Interface*>(svc2)); }};
             for(auto &[key, svc] : _services) {
                 if(svc->getServiceState() != ServiceState::ACTIVE) {
                     continue;
@@ -526,7 +526,7 @@ namespace Ichor {
             }
 #endif
             std::vector<std::pair<Interface*, IService*>> ret{};
-            std::function<void(void*, IService*)> f{[&ret](void *svc2, IService * isvc){ ret.emplace_back(reinterpret_cast<Interface*>(svc2), isvc); }};
+            std::function<void(NeverNull<void*>, NeverNull<IService*>)> f{[&ret](void *svc2, IService * isvc){ ret.emplace_back(reinterpret_cast<Interface*>(svc2), isvc); }};
             for(auto &[key, svc] : _services) {
                 auto intf = std::find_if(svc->getInterfaces().begin(), svc->getInterfaces().end(), [](const Dependency &dep) {
                     return dep.interfaceNameHash == typeNameHash<Interface>();

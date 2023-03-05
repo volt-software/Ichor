@@ -2,6 +2,7 @@
 
 #include <ichor/Common.h>
 #include <ichor/events/InternalEvents.h>
+#include <ichor/stl/NeverAlwaysNull.h>
 
 namespace Ichor {
 
@@ -50,7 +51,7 @@ namespace Ichor {
     };
 
     template <class ImplT, class Interface>
-    concept ImplementsDependencyInjection = requires(ImplT impl, Interface *svc, IService *isvc) {
+    concept ImplementsDependencyInjection = requires(ImplT impl, Interface* svc, IService* isvc) {
         { impl.addDependencyInstance(svc, isvc) } -> std::same_as<void>;
         { impl.removeDependencyInstance(svc, isvc) } -> std::same_as<void>;
     };
@@ -73,7 +74,7 @@ namespace Ichor {
     };
 
     template <class ImplT, class Interface>
-    concept ImplementsTrackingHandlers = requires(ImplT impl, Interface *svc, DependencyRequestEvent const &reqEvt, DependencyUndoRequestEvent const &reqUndoEvt) {
+    concept ImplementsTrackingHandlers = requires(ImplT impl, AlwaysNull<Interface*> svc, DependencyRequestEvent const &reqEvt, DependencyUndoRequestEvent const &reqUndoEvt) {
         { impl.handleDependencyRequest(svc, reqEvt) } -> std::same_as<void>;
         { impl.handleDependencyUndoRequest(svc, reqUndoEvt) } -> std::same_as<void>;
     };

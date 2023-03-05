@@ -1,6 +1,7 @@
 #include "Common.h"
 #include <ichor/stl/RealtimeMutex.h>
 #include <ichor/stl/RealtimeReadWriteMutex.h>
+#include <ichor/stl/NeverAlwaysNull.h>
 #include "TestServices/UselessService.h"
 
 using namespace Ichor;
@@ -109,5 +110,14 @@ TEST_CASE("STL Tests") {
     SECTION("typeName tests") {
         REQUIRE(typeName<UselessService>() == typeName<Ichor::UselessService>());
         REQUIRE(typeNameHash<UselessService>() == typeNameHash<Ichor::UselessService>());
+    }
+
+    SECTION("NeverNull tests") {
+        NeverNull<int*> p = new int(120);
+        auto f = [](NeverNull<int*> p) { *p += 1; };
+        REQUIRE(*p == 120);
+        f(p);
+        REQUIRE(*p == 121);
+        delete p;
     }
 }

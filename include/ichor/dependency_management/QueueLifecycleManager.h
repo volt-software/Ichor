@@ -18,13 +18,13 @@ namespace Ichor::Detail {
             return {};
         }
 
-        AsyncGenerator<StartBehaviour> dependencyOnline(ILifecycleManager* dependentService, std::vector<decltype(std::declval<DependencyInfo>().begin())> iterators) final {
+        AsyncGenerator<StartBehaviour> dependencyOnline(NeverNull<ILifecycleManager*> dependentService, std::vector<decltype(std::declval<DependencyInfo>().begin())> iterators) final {
             // this function should never be called
             std::terminate();
             co_return StartBehaviour::DONE;
         }
 
-        AsyncGenerator<StartBehaviour> dependencyOffline(ILifecycleManager* dependentService, std::vector<decltype(std::declval<DependencyInfo>().begin())> iterators) final {
+        AsyncGenerator<StartBehaviour> dependencyOffline(NeverNull<ILifecycleManager*> dependentService, std::vector<decltype(std::declval<DependencyInfo>().begin())> iterators) final {
             // this function should never be called
             std::terminate();
             co_return StartBehaviour::DONE;
@@ -82,11 +82,11 @@ namespace Ichor::Detail {
             return _state;
         }
 
-        [[nodiscard]] IService * getIService() noexcept final {
+        [[nodiscard]] NeverNull<IService*> getIService() noexcept final {
             return &_service;
         }
 
-        [[nodiscard]] IService const * getIService() const noexcept final {
+        [[nodiscard]] NeverNull<IService const*> getIService() const noexcept final {
             return &_service;
         }
 
@@ -106,7 +106,7 @@ namespace Ichor::Detail {
         /// \param keyOfInterfaceToInject
         /// \param serviceIdOfOther
         /// \param fn
-        void insertSelfInto(uint64_t keyOfInterfaceToInject, uint64_t serviceIdOfOther, std::function<void(void*, IService*)> &fn) final {
+        void insertSelfInto(uint64_t keyOfInterfaceToInject, uint64_t serviceIdOfOther, std::function<void(NeverNull<void*>, NeverNull<IService*>)> &fn) final {
             if(keyOfInterfaceToInject != typeNameHash<IEventQueue>()) {
                 return;
             }
@@ -120,7 +120,7 @@ namespace Ichor::Detail {
         /// \param keyOfInterfaceToInject
         /// \param serviceIdOfOther
         /// \param fn
-        void removeSelfInto(uint64_t keyOfInterfaceToInject, uint64_t serviceIdOfOther, std::function<void(void*, IService*)> &fn) final {
+        void removeSelfInto(uint64_t keyOfInterfaceToInject, uint64_t serviceIdOfOther, std::function<void(NeverNull<void*>, NeverNull<IService*>)> &fn) final {
             if(keyOfInterfaceToInject != typeNameHash<IEventQueue>()) {
                 return;
             }

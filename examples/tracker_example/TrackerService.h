@@ -50,7 +50,7 @@ private:
         _logger = nullptr;
     }
 
-    void handleDependencyRequest(IRuntimeCreatedService*, DependencyRequestEvent const &evt) {
+    void handleDependencyRequest(AlwaysNull<IRuntimeCreatedService*>, DependencyRequestEvent const &evt) {
         if(!evt.properties.has_value()) {
             ICHOR_LOG_ERROR(_logger, "missing properties");
             return;
@@ -77,7 +77,7 @@ private:
         }
     }
 
-    void handleDependencyUndoRequest(IRuntimeCreatedService*, DependencyUndoRequestEvent const &evt) {
+    void handleDependencyUndoRequest(AlwaysNull<IRuntimeCreatedService*>, DependencyUndoRequestEvent const &evt) {
         auto scopeProp = evt.properties.find("scope");
 
         if(scopeProp == end(evt.properties)) {

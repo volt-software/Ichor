@@ -26,7 +26,7 @@ namespace Ichor {
             co_return;
         }
 
-        void handleDependencyRequest(NetworkInterfaceType*, DependencyRequestEvent const &evt) {
+        void handleDependencyRequest(AlwaysNull<NetworkInterfaceType*>, DependencyRequestEvent const &evt) {
             if(!evt.properties.has_value()) {
                 throw std::runtime_error("Missing properties");
             }
@@ -47,7 +47,7 @@ namespace Ichor {
             }
         }
 
-        void handleDependencyUndoRequest(NetworkInterfaceType*, DependencyUndoRequestEvent const &evt) {
+        void handleDependencyUndoRequest(AlwaysNull<NetworkInterfaceType*>, DependencyUndoRequestEvent const &evt) {
             auto connection = _connections.find(evt.originatingService);
 
             if(connection != end(_connections)) {
