@@ -107,27 +107,27 @@ Ichor::Task<void> Ichor::WsConnectionService::stop() {
     co_return;
 }
 
-void Ichor::WsConnectionService::addDependencyInstance(ILogger *logger, IService *) {
-    _logger = logger;
+void Ichor::WsConnectionService::addDependencyInstance(ILogger &logger, IService &) {
+    _logger = &logger;
 }
 
-void Ichor::WsConnectionService::removeDependencyInstance(ILogger *logger, IService *) {
+void Ichor::WsConnectionService::removeDependencyInstance(ILogger &logger, IService&) {
     _logger = nullptr;
 }
 
-void Ichor::WsConnectionService::addDependencyInstance(IHostService *, IService *) {
+void Ichor::WsConnectionService::addDependencyInstance(IHostService&, IService&) {
 
 }
 
-void Ichor::WsConnectionService::removeDependencyInstance(IHostService *, IService *) {
+void Ichor::WsConnectionService::removeDependencyInstance(IHostService&, IService&) {
 
 }
 
-void Ichor::WsConnectionService::addDependencyInstance(IAsioContextService *AsioContextService, IService *) {
-    _asioContextService = AsioContextService;
+void Ichor::WsConnectionService::addDependencyInstance(IAsioContextService &AsioContextService, IService&) {
+    _asioContextService = &AsioContextService;
 }
 
-void Ichor::WsConnectionService::removeDependencyInstance(IAsioContextService *logger, IService *) {
+void Ichor::WsConnectionService::removeDependencyInstance(IAsioContextService&, IService&) {
 //    fmt::print("{}:{} {} set nullptr\n", getServiceId(), getServiceName(), getServiceState());
     if(getServiceState() != ServiceState::INSTALLED) {
         std::terminate();

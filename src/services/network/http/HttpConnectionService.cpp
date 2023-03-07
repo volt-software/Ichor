@@ -60,20 +60,20 @@ Ichor::Task<void> Ichor::HttpConnectionService::stop() {
     co_return;
 }
 
-void Ichor::HttpConnectionService::addDependencyInstance(ILogger *logger, IService *) {
-    _logger.store(logger, std::memory_order_release);
+void Ichor::HttpConnectionService::addDependencyInstance(ILogger &logger, IService &) {
+    _logger.store(&logger, std::memory_order_release);
 }
 
-void Ichor::HttpConnectionService::removeDependencyInstance(ILogger *logger, IService *) {
+void Ichor::HttpConnectionService::removeDependencyInstance(ILogger &logger, IService&) {
     _logger.store(nullptr, std::memory_order_release);
 }
 
-void Ichor::HttpConnectionService::addDependencyInstance(IAsioContextService *AsioContextService, IService *) {
-    _asioContextService = AsioContextService;
+void Ichor::HttpConnectionService::addDependencyInstance(IAsioContextService &AsioContextService, IService&) {
+    _asioContextService = &AsioContextService;
     ICHOR_LOG_TRACE_ATOMIC(_logger, "Inserted AsioContextService");
 }
 
-void Ichor::HttpConnectionService::removeDependencyInstance(IAsioContextService *AsioContextService, IService *) {
+void Ichor::HttpConnectionService::removeDependencyInstance(IAsioContextService&, IService&) {
     _asioContextService = nullptr;
 }
 

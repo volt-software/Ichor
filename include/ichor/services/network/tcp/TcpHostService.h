@@ -29,8 +29,8 @@ namespace Ichor {
         Task<tl::expected<void, Ichor::StartError>> start() final;
         Task<void> stop() final;
 
-        void addDependencyInstance(ILogger *logger, IService *isvc);
-        void removeDependencyInstance(ILogger *logger, IService *isvc);
+        void addDependencyInstance(ILogger &logger, IService &isvc);
+        void removeDependencyInstance(ILogger &logger, IService &isvc);
 
         AsyncGenerator<IchorBehaviour> handleEvent(NewSocketEvent const &evt);
 

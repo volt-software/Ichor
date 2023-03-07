@@ -1,6 +1,5 @@
 #include "TestService.h"
 #include "ConstructorInjectionTestService.h"
-#include <ichor/dependency_management/ConstructorInjectionService.h>
 #include <ichor/event_queues/MultimapQueue.h>
 #include <ichor/services/logging/LoggerFactory.h>
 #include <ichor/services/logging/NullLogger.h>

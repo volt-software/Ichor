@@ -40,19 +40,19 @@ private:
         co_return;
     }
 
-    void addDependencyInstance(ILogger *logger, IService *) {
-        _logger = logger;
+    void addDependencyInstance(ILogger &logger, IService &) {
+        _logger = &logger;
     }
 
-    void removeDependencyInstance(ILogger *logger, IService *) {
+    void removeDependencyInstance(ILogger&, IService&) {
         _logger = nullptr;
     }
 
-    void addDependencyInstance(IEtcdService *etcd, IService *) {
-        _etcd = etcd;
+    void addDependencyInstance(IEtcdService &etcd, IService&) {
+        _etcd = &etcd;
     }
 
-    void removeDependencyInstance(IEtcdService *etcd, IService *) {
+    void removeDependencyInstance(IEtcdService&, IService&) {
         _etcd = nullptr;
     }
 

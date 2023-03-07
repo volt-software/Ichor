@@ -14,9 +14,9 @@ struct QuitOnStartWithDependenciesService final : public AdvancedService<QuitOnS
         co_return {};
     }
 
-    void addDependencyInstance(IUselessService *, IService *) {
+    void addDependencyInstance(IUselessService&, IService&) {
     }
 
-    void removeDependencyInstance(IUselessService *, IService *) {
+    void removeDependencyInstance(IUselessService&, IService&) {
     }
 };

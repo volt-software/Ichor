@@ -36,11 +36,11 @@ private:
         co_return;
     }
 
-    void addDependencyInstance(ILogger *logger, IService *) {
-        _logger = logger;
+    void addDependencyInstance(ILogger &logger, IService &) {
+        _logger = &logger;
     }
 
-    void removeDependencyInstance(ILogger *logger, IService *) {
+    void removeDependencyInstance(ILogger&, IService&) {
         _logger = nullptr;
     }
 

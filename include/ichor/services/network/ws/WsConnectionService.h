@@ -40,14 +40,14 @@ namespace Ichor {
         Task<tl::expected<void, StartError>> start() final;
         Task<void> stop() final;
 
-        void addDependencyInstance(ILogger *logger, IService *isvc);
-        void removeDependencyInstance(ILogger *logger, IService *isvc);
+        void addDependencyInstance(ILogger &logger, IService &isvc);
+        void removeDependencyInstance(ILogger &logger, IService &isvc);
 
-        void addDependencyInstance(IHostService *, IService *isvc);
-        void removeDependencyInstance(IHostService *, IService *isvc);
+        void addDependencyInstance(IHostService&, IService &isvc);
+        void removeDependencyInstance(IHostService&, IService &isvc);
 
-        void addDependencyInstance(IAsioContextService *logger, IService *);
-        void removeDependencyInstance(IAsioContextService *logger, IService *);
+        void addDependencyInstance(IAsioContextService &logger, IService&);
+        void removeDependencyInstance(IAsioContextService &logger, IService&);
 
         friend DependencyRegister;
         friend DependencyManager;

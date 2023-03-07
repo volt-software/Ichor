@@ -115,11 +115,11 @@ Ichor::Task<void> Ichor::AsioContextService::stop() {
     co_return;
 }
 
-void Ichor::AsioContextService::addDependencyInstance(ILogger *logger, IService *) {
-    _logger = logger;
+void Ichor::AsioContextService::addDependencyInstance(ILogger &logger, IService &) {
+    _logger = &logger;
 }
 
-void Ichor::AsioContextService::removeDependencyInstance(ILogger *logger, IService *) {
+void Ichor::AsioContextService::removeDependencyInstance(ILogger &logger, IService&) {
     _logger = nullptr;
 }
 

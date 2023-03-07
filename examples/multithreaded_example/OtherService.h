@@ -27,17 +27,17 @@ private:
         co_return;
     }
 
-    void addDependencyInstance(ILogger *logger, IService *isvc) {
-        _logger = logger;
+    void addDependencyInstance(ILogger &logger, IService &isvc) {
+        _logger = &logger;
 
-        ICHOR_LOG_INFO(_logger, "Inserted logger svcid {} for svcid {}", isvc->getServiceId(), getServiceId());
+        ICHOR_LOG_INFO(_logger, "Inserted logger svcid {} for svcid {}", isvc.getServiceId(), getServiceId());
     }
 
-    void removeDependencyInstance(ILogger *logger, IService *) {
+    void removeDependencyInstance(ILogger&, IService&) {
         _logger = nullptr;
     }
 
-    AsyncGenerator<IchorBehaviour> handleEvent(CustomEvent const &evt) {
+    AsyncGenerator<IchorBehaviour> handleEvent(CustomEvent const &) {
         ICHOR_LOG_INFO(_logger, "Handling custom event");
         GetThreadLocalEventQueue().pushEvent<QuitEvent>(getServiceId());
         GetThreadLocalManager().getCommunicationChannel()->broadcastEvent<QuitEvent>(GetThreadLocalManager(), getServiceId());

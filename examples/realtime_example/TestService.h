@@ -46,18 +46,18 @@ private:
         co_return;
     }
 
-    void addDependencyInstance(ILogger *logger, IService *isvc) {
-        _logger = logger;
+    void addDependencyInstance(ILogger &logger, IService &isvc) {
+        _logger = &logger;
 
-        ICHOR_LOG_INFO(_logger, "Inserted logger svcid {} for svcid {}", isvc->getServiceId(), getServiceId());
+        ICHOR_LOG_INFO(_logger, "Inserted logger svcid {} for svcid {}", isvc.getServiceId(), getServiceId());
     }
 
-    void removeDependencyInstance(ILogger *logger, IService *) {
+    void removeDependencyInstance(ILogger&, IService&) {
         _logger = nullptr;
     }
 
-    void addDependencyInstance(IOptionalService *svc, IService *isvc) {
-        ICHOR_LOG_INFO(_logger, "Inserted IOptionalService svcid {}", isvc->getServiceId());
+    void addDependencyInstance(IOptionalService&, IService &isvc) {
+        ICHOR_LOG_INFO(_logger, "Inserted IOptionalService svcid {}", isvc.getServiceId());
 
         _injectionCount++;
         if(_started && _injectionCount == 2) {
@@ -65,7 +65,7 @@ private:
         }
     }
 
-    void removeDependencyInstance(IOptionalService *, IService *) {
+    void removeDependencyInstance(IOptionalService&, IService&) {
     }
 
     void enqueueWorkload() {

@@ -24,10 +24,10 @@ struct MyDependencyService final : public IMyDependencyService, public Ichor::Ad
     }
     ~MyDependencyService() final = default;
 
-    void addDependencyInstance(IMyService *, Ichor::IService *) {
+    void addDependencyInstance(IMyService&, Ichor::IService&) {
         std::cout << "Got MyService!" << std::endl;
     }
-    void removeDependencyInstance(IMyService *, Ichor::IService *) {
+    void removeDependencyInstance(IMyService&, Ichor::IService&) {
         std::cout << "Removed MyService!" << std::endl;
     }
 };

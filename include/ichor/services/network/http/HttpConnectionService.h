@@ -44,10 +44,10 @@ namespace Ichor {
         Task<tl::expected<void, Ichor::StartError>> start() final;
         Task<void> stop() final;
 
-        void addDependencyInstance(ILogger *logger, IService *);
-        void removeDependencyInstance(ILogger *logger, IService *);
-        void addDependencyInstance(IAsioContextService *logger, IService *);
-        void removeDependencyInstance(IAsioContextService *logger, IService *);
+        void addDependencyInstance(ILogger &logger, IService &);
+        void removeDependencyInstance(ILogger &logger, IService&);
+        void addDependencyInstance(IAsioContextService &logger, IService&);
+        void removeDependencyInstance(IAsioContextService &logger, IService&);
 
         void fail(beast::error_code, char const* what);
         void connect(tcp::endpoint endpoint, net::yield_context yield);

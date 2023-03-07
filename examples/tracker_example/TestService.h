@@ -27,23 +27,23 @@ private:
         co_return;
     }
 
-    void addDependencyInstance(ILogger *logger, IService *isvc) {
-        _logger = logger;
+    void addDependencyInstance(ILogger &logger, IService &isvc) {
+        _logger = &logger;
 
-        ICHOR_LOG_INFO(_logger, "Inserted logger svcid {} for svcid {}", isvc->getServiceId(), getServiceId());
+        ICHOR_LOG_INFO(_logger, "Inserted logger svcid {} for svcid {}", isvc.getServiceId(), getServiceId());
     }
 
-    void removeDependencyInstance(ILogger *logger, IService *isvc) {
+    void removeDependencyInstance(ILogger&, IService &) {
         _logger = nullptr;
     }
 
-    void addDependencyInstance(IRuntimeCreatedService *svc, IService *isvc) {
+    void addDependencyInstance(IRuntimeCreatedService &svc, IService &isvc) {
         auto const ownScopeProp = getProperties().find("scope");
-        auto const svcScopeProp = isvc->getProperties().find("scope");
-        ICHOR_LOG_INFO(_logger, "Inserted IRuntimeCreatedService svcid {} with scope {} for svcid {} with scope {}", isvc->getServiceId(), Ichor::any_cast<std::string&>(svcScopeProp->second), getServiceId(), Ichor::any_cast<std::string&>(ownScopeProp->second));
+        auto const svcScopeProp = isvc.getProperties().find("scope");
+        ICHOR_LOG_INFO(_logger, "Inserted IRuntimeCreatedService svcid {} with scope {} for svcid {} with scope {}", isvc.getServiceId(), Ichor::any_cast<std::string&>(svcScopeProp->second), getServiceId(), Ichor::any_cast<std::string&>(ownScopeProp->second));
     }
 
-    void removeDependencyInstance(IRuntimeCreatedService *, IService *isvc) {
+    void removeDependencyInstance(IRuntimeCreatedService&, IService&) {
     }
 
     friend DependencyRegister;

@@ -78,20 +78,20 @@ Ichor::Task<void> Ichor::HttpHostService::stop() {
     co_return;
 }
 
-void Ichor::HttpHostService::addDependencyInstance(ILogger *logger, IService *) {
-    _logger.store(logger, std::memory_order_release);
+void Ichor::HttpHostService::addDependencyInstance(ILogger &logger, IService &) {
+    _logger.store(&logger, std::memory_order_release);
 }
 
-void Ichor::HttpHostService::removeDependencyInstance(ILogger *logger, IService *) {
+void Ichor::HttpHostService::removeDependencyInstance(ILogger &logger, IService&) {
     _logger.store(nullptr, std::memory_order_release);
 }
 
-void Ichor::HttpHostService::addDependencyInstance(IAsioContextService *AsioContextService, IService *) {
-    _asioContextService = AsioContextService;
+void Ichor::HttpHostService::addDependencyInstance(IAsioContextService &AsioContextService, IService&) {
+    _asioContextService = &AsioContextService;
     ICHOR_LOG_TRACE_ATOMIC(_logger, "Inserted AsioContextService");
 }
 
-void Ichor::HttpHostService::removeDependencyInstance(IAsioContextService *AsioContextService, IService *) {
+void Ichor::HttpHostService::removeDependencyInstance(IAsioContextService&, IService&) {
     ICHOR_LOG_TRACE_ATOMIC(_logger, "Removing AsioContextService");
     _asioContextService = nullptr;
 }

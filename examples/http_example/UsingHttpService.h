@@ -43,45 +43,45 @@ private:
         co_return;
     }
 
-    void addDependencyInstance(ILogger *logger, IService *) {
-        _logger = logger;
+    void addDependencyInstance(ILogger &logger, IService &) {
+        _logger = &logger;
     }
 
-    void removeDependencyInstance(ILogger *logger, IService *) {
+    void removeDependencyInstance(ILogger&, IService&) {
         _logger = nullptr;
     }
 
-    void addDependencyInstance(ISerializer<TestMsg> *serializer, IService *) {
-        _serializer = serializer;
+    void addDependencyInstance(ISerializer<TestMsg> &serializer, IService&) {
+        _serializer = &serializer;
         ICHOR_LOG_INFO(_logger, "Inserted serializer");
     }
 
-    void removeDependencyInstance(ISerializer<TestMsg> *serializer, IService *) {
+    void removeDependencyInstance(ISerializer<TestMsg>&, IService&) {
         _serializer = nullptr;
         ICHOR_LOG_INFO(_logger, "Removed serializer");
     }
 
-    void addDependencyInstance(IHttpConnectionService *connectionService, IService *) {
-        _connectionService = connectionService;
+    void addDependencyInstance(IHttpConnectionService &connectionService, IService&) {
+        _connectionService = &connectionService;
         ICHOR_LOG_INFO(_logger, "Inserted IHttpConnectionService");
     }
 
-    void addDependencyInstance(IHttpService *svc, IService *) {
+    void removeDependencyInstance(IHttpConnectionService&, IService&) {
+        ICHOR_LOG_INFO(_logger, "Removed IHttpConnectionService");
+    }
+
+    void addDependencyInstance(IHttpService &svc, IService&) {
         ICHOR_LOG_INFO(_logger, "Inserted IHttpService");
-        _routeRegistration = svc->addRoute(HttpMethod::post, "/test", [this](HttpRequest &req) -> AsyncGenerator<HttpResponse> {
+        _routeRegistration = svc.addRoute(HttpMethod::post, "/test", [this](HttpRequest &req) -> AsyncGenerator<HttpResponse> {
             auto msg = _serializer->deserialize(std::move(req.body));
             ICHOR_LOG_WARN(_logger, "received request on route {} {} with testmsg {} - {}", (int)req.method, req.route, msg->id, msg->val);
             co_return HttpResponse{false, HttpStatus::ok, "application/json", _serializer->serialize(TestMsg{11, "hello"}), {}};
         });
     }
 
-    void removeDependencyInstance(IHttpService *, IService *) {
+    void removeDependencyInstance(IHttpService&, IService&) {
         ICHOR_LOG_INFO(_logger, "Removed IHttpService");
         _routeRegistration.reset();
-    }
-
-    void removeDependencyInstance(IHttpConnectionService *connectionService, IService *) {
-        ICHOR_LOG_INFO(_logger, "Removed IHttpConnectionService");
     }
 
     friend DependencyRegister;

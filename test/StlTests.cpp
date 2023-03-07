@@ -114,7 +114,7 @@ TEST_CASE("STL Tests") {
 
     SECTION("NeverNull tests") {
         NeverNull<int*> p = new int(120);
-        auto f = [](NeverNull<int*> p) { *p += 1; };
+        auto f = [](NeverNull<int*> p2) { *p2 += 1; };
         REQUIRE(*p == 120);
         f(p);
         REQUIRE(*p == 121);

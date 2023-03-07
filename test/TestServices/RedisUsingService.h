@@ -25,11 +25,11 @@ namespace Ichor {
             co_return {};
         }
 
-        void addDependencyInstance(IRedis *redis, IService *) {
-            _redis = redis;
+        void addDependencyInstance(IRedis &redis, IService&) {
+            _redis = &redis;
         }
 
-        void removeDependencyInstance(IRedis *, IService *) {
+        void removeDependencyInstance(IRedis&, IService&) {
             _redis = nullptr;
         }
 

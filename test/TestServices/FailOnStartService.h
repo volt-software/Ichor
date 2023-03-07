@@ -45,11 +45,11 @@ namespace Ichor {
             co_return;
         }
 
-        void addDependencyInstance(IUselessService *, IService *) {
+        void addDependencyInstance(IUselessService&, IService&) {
             svcCount++;
         }
 
-        void removeDependencyInstance(IUselessService *, IService *) {
+        void removeDependencyInstance(IUselessService&, IService&) {
             svcCount--;
         }
 

@@ -51,26 +51,26 @@ private:
         co_return;
     }
 
-    void addDependencyInstance(ILogger *logger, IService *) {
-        _logger = logger;
+    void addDependencyInstance(ILogger &logger, IService &) {
+        _logger = &logger;
     }
 
-    void removeDependencyInstance(ILogger *logger, IService *) {
+    void removeDependencyInstance(ILogger &logger, IService&) {
         _logger = nullptr;
     }
 
-    void addDependencyInstance(ITestService *, IService *isvc) {
-        _testServiceId = isvc->getServiceId();
+    void addDependencyInstance(ITestService&, IService &isvc) {
+        _testServiceId = isvc.getServiceId();
     }
 
-    void removeDependencyInstance(ITestService *, IService *) {
+    void removeDependencyInstance(ITestService&, IService&) {
     }
 
-    void addDependencyInstance(DependencyManager *dm, IService *isvc) {
-        _dm = dm;
+    void addDependencyInstance(DependencyManager &dm, IService&) {
+        _dm = &dm;
     }
 
-    void removeDependencyInstance(DependencyManager *, IService *) {
+    void removeDependencyInstance(DependencyManager&, IService&) {
     }
 
     void handleCompletion(StartServiceEvent const &evt) {

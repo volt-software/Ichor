@@ -112,26 +112,26 @@ namespace Ichor::Detail {
         /// \param keyOfInterfaceToInject
         /// \param serviceIdOfOther
         /// \param fn
-        void insertSelfInto(uint64_t keyOfInterfaceToInject, uint64_t serviceIdOfOther, std::function<void(NeverNull<void*>, NeverNull<IService*>)> &fn) final {
+        void insertSelfInto(uint64_t keyOfInterfaceToInject, uint64_t serviceIdOfOther, std::function<void(NeverNull<void*>, IService&)> &fn) final {
             if(keyOfInterfaceToInject != typeNameHash<IService>()) {
                 return;
             }
 
             INTERNAL_DEBUG("insertSelfInto() svc {} telling svc {} to add us", serviceId(), serviceIdOfOther);
-            fn(_self, _self);
+            fn(_self, *_self);
         }
 
         /// The underlying service got stopped and someone else is asking us to remove ourselves from them.
         /// \param keyOfInterfaceToInject
         /// \param serviceIdOfOther
         /// \param fn
-        void removeSelfInto(uint64_t keyOfInterfaceToInject, uint64_t serviceIdOfOther, std::function<void(NeverNull<void*>, NeverNull<IService*>)> &fn) final {
+        void removeSelfInto(uint64_t keyOfInterfaceToInject, uint64_t serviceIdOfOther, std::function<void(NeverNull<void*>, IService&)> &fn) final {
             if(keyOfInterfaceToInject != typeNameHash<IService>()) {
                 return;
             }
 
             INTERNAL_DEBUG("removeSelfInto() svc {} removing svc {}", serviceId(), serviceIdOfOther);
-            fn(_self, _self);
+            fn(_self, *_self);
         }
 
     private:

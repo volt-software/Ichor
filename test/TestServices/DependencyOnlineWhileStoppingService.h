@@ -27,15 +27,15 @@ namespace Ichor {
             co_return;
         }
 
-        void addDependencyInstance(IUselessService *, IService *svc) {
-            svcId = svc->getServiceId();
+        void addDependencyInstance(IUselessService&, IService &svc) {
+            svcId = svc.getServiceId();
             if(getServiceState() != ServiceState::INSTALLED) {
                 fmt::print("addDependencyInstance {}\n", getServiceState());
                 std::terminate();
             }
         }
 
-        void removeDependencyInstance(IUselessService *, IService *) {
+        void removeDependencyInstance(IUselessService&, IService&) {
             if(getServiceState() != ServiceState::INSTALLED) {
                 fmt::print("removeDependencyInstance {}\n", getServiceState());
                 std::terminate();

@@ -59,20 +59,20 @@ private:
         co_return;
     }
 
-    void addDependencyInstance(ISerializer<TestMsg> *serializer, IService *) {
-        _serializer = serializer;
+    void addDependencyInstance(ISerializer<TestMsg> &serializer, IService &) {
+        _serializer = &serializer;
     }
 
-    void removeDependencyInstance(ISerializer<TestMsg> *serializer, IService *) {
+    void removeDependencyInstance(ISerializer<TestMsg> &serializer, IService&) {
         _serializer = nullptr;
     }
 
-    void addDependencyInstance(IHttpConnectionService *connectionService, IService *) {
-        _connectionService = connectionService;
+    void addDependencyInstance(IHttpConnectionService &connectionService, IService&) {
+        _connectionService = &connectionService;
     }
 
-    void addDependencyInstance(IHttpService *svc, IService *) {
-        _routeRegistration = svc->addRoute(HttpMethod::post, "/test", [this](HttpRequest &req) -> AsyncGenerator<HttpResponse> {
+    void addDependencyInstance(IHttpService &svc, IService&) {
+        _routeRegistration = svc.addRoute(HttpMethod::post, "/test", [this](HttpRequest &req) -> AsyncGenerator<HttpResponse> {
             if(dmThreadId != std::this_thread::get_id()) {
                 throw std::runtime_error("dmThreadId id incorrect");
             }
@@ -96,11 +96,11 @@ private:
         });
     }
 
-    void removeDependencyInstance(IHttpService *, IService *) {
+    void removeDependencyInstance(IHttpService&, IService&) {
         _routeRegistration.reset();
     }
 
-    void removeDependencyInstance(IHttpConnectionService *connectionService, IService *) {
+    void removeDependencyInstance(IHttpConnectionService&, IService&) {
     }
 
     friend DependencyRegister;
