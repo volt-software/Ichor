@@ -1,7 +1,7 @@
 #include <exception>
 #include "GlobalRealtimeSettings.h"
 #include <fmt/core.h>
-#if defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)
+#if (defined(WIN32) || defined(_WIN32) || defined(__WIN32)) && !defined(__CYGWIN__)
 //TODO
 #else
 #include <sys/mman.h>
@@ -13,7 +13,7 @@
 #endif
 
 GlobalRealtimeSettings::GlobalRealtimeSettings() {
-#if defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)
+#if (defined(WIN32) || defined(_WIN32) || defined(__WIN32)) && !defined(__CYGWIN__)
     //TODO
 #else
 
@@ -72,7 +72,7 @@ GlobalRealtimeSettings::GlobalRealtimeSettings() {
 }
 
 GlobalRealtimeSettings::~GlobalRealtimeSettings() {
-#if defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)
+#if (defined(WIN32) || defined(_WIN32) || defined(__WIN32)) && !defined(__CYGWIN__)
     //TODO
 #else
     int rc = munlockall();

@@ -12,8 +12,10 @@ namespace Ichor {
         void registerDependency(Impl *svc, bool required, std::optional<Properties> props = {}) {
             static_assert(!std::is_same_v<Interface, Impl>, "Impl and interface need to be separate classes");
             static_assert(!DerivedTemplated<Interface, AdvancedService>, "Interface needs to be a non-service class.");
+            // Some weird bug in MSVC
+#if (!defined(WIN32) && !defined(_WIN32) && !defined(__WIN32)) || defined(__CYGWIN__)
             static_assert(ImplementsDependencyInjection<Impl, Interface>, "Impl needs to implement the ImplementsDependencyInjection concept");
-
+#endif
             if constexpr (DO_INTERNAL_DEBUG || DO_HARDENING) {
                 if (_registrations.contains(typeNameHash<Interface>())) [[unlikely]] {
                     throw std::runtime_error("Already registered interface");
