@@ -26,11 +26,11 @@ Ichor::Task<void> Ichor::EtcdService::stop() {
     co_return;
 }
 
-void Ichor::EtcdService::addDependencyInstance(ILogger *logger, IService *) {
-    _logger = logger;
+void Ichor::EtcdService::addDependencyInstance(ILogger &logger, IService &) {
+    _logger = &logger;
 }
 
-void Ichor::EtcdService::removeDependencyInstance(ILogger *logger, IService *) {
+void Ichor::EtcdService::removeDependencyInstance(ILogger&, IService&) {
     _logger = nullptr;
 }
 

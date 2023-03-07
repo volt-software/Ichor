@@ -23,8 +23,8 @@ namespace Ichor {
         void warn(const char *filename_in, int line_in, const char *funcname_in, std::string_view format_str, fmt::format_args args) final;
         void error(const char *filename_in, int line_in, const char *funcname_in, std::string_view format_str, fmt::format_args args) final;
 
-        void addDependencyInstance(ISpdlogSharedService *shared, IService *isvc) noexcept;
-        void removeDependencyInstance(ISpdlogSharedService *shared, IService *isvc) noexcept;
+        void addDependencyInstance(ISpdlogSharedService &shared, IService &isvc) noexcept;
+        void removeDependencyInstance(ISpdlogSharedService &shared, IService &isvc) noexcept;
 
         void setLogLevel(LogLevel level) final;
         [[nodiscard]] LogLevel getLogLevel() const final;

@@ -103,11 +103,11 @@ Ichor::Task<void> Ichor::TcpConnectionService::stop() {
     co_return;
 }
 
-void Ichor::TcpConnectionService::addDependencyInstance(ILogger *logger, IService *) {
-    _logger = logger;
+void Ichor::TcpConnectionService::addDependencyInstance(ILogger &logger, IService &) {
+    _logger = &logger;
 }
 
-void Ichor::TcpConnectionService::removeDependencyInstance(ILogger *logger, IService *) {
+void Ichor::TcpConnectionService::removeDependencyInstance(ILogger &logger, IService&) {
     _logger = nullptr;
 }
 

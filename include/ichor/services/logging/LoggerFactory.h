@@ -46,11 +46,11 @@ namespace Ichor {
             co_return;
         }
 
-        void addDependencyInstance(IFrameworkLogger *logger, IService *) noexcept {
-            _logger = logger;
+        void addDependencyInstance(IFrameworkLogger &logger, IService&) noexcept {
+            _logger = &logger;
         }
 
-        void removeDependencyInstance(IFrameworkLogger *, IService *) noexcept {
+        void removeDependencyInstance(IFrameworkLogger&, IService&) noexcept {
             _logger = nullptr;
         }
 

@@ -39,20 +39,20 @@ private:
         co_return;
     }
 
-    void addDependencyInstance(ILogger *logger, IService *) {
-        _logger = logger;
+    void addDependencyInstance(ILogger &logger, IService &) {
+        _logger = &logger;
     }
 
-    void removeDependencyInstance(ILogger * /*logger*/, IService *) {
+    void removeDependencyInstance(ILogger&, IService&) {
         _logger = nullptr;
     }
 
-    void addDependencyInstance(ISerializer<TestMsg> *serializer, IService *) {
-        _serializer = serializer;
+    void addDependencyInstance(ISerializer<TestMsg> &serializer, IService&) {
+        _serializer = &serializer;
         ICHOR_LOG_INFO(_logger, "Inserted serializer");
     }
 
-    void removeDependencyInstance(ISerializer<TestMsg> * /*serializer*/, IService *) {
+    void removeDependencyInstance(ISerializer<TestMsg>&, IService&) {
         _serializer = nullptr;
         ICHOR_LOG_INFO(_logger, "Removed serializer");
     }

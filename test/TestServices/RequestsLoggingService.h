@@ -14,10 +14,10 @@ namespace Ichor {
 
         ~RequestsLoggingService() = default;
 
-        void addDependencyInstance(ILogger *, IService *) {
+        void addDependencyInstance(ILogger&, IService&) {
         }
 
-        void removeDependencyInstance(ILogger *, IService *) {
+        void removeDependencyInstance(ILogger&, IService&) {
         }
     };
 }

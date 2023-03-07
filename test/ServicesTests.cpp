@@ -55,7 +55,7 @@ TEST_CASE("ServicesTests") {
             auto svcs = mng.getAllServicesOfType<IFailOnStartService>();
 
             REQUIRE(svcs.size() == 1);
-            REQUIRE(svcs[0].first->getStartCount() == 1);
+            REQUIRE(svcs[0].first.getStartCount() == 1);
 
             mng.getEventQueue().pushEvent<QuitEvent>(0);
         });
@@ -88,7 +88,7 @@ TEST_CASE("ServicesTests") {
             auto svcs = mng.getAllServicesOfType<IFailOnStartService>();
 
             REQUIRE(svcs.size() == 1);
-            REQUIRE(svcs[0].first->getStartCount() == 1);
+            REQUIRE(svcs[0].first.getStartCount() == 1);
 
             mng.getEventQueue().pushEvent<QuitEvent>(0);
         });
@@ -311,7 +311,7 @@ TEST_CASE("ServicesTests") {
             REQUIRE(mng.getServiceCount() == 6);
             auto svcs = mng.getAllServicesOfType<IConstructorInjectionTestService>();
             REQUIRE(svcs.size() == 1);
-            REQUIRE(svcs[0].second->getServiceId() == svcId);
+            REQUIRE(svcs[0].second.getServiceId() == svcId);
 
             mng.getEventQueue().pushEvent<StopServiceEvent>(0, svcId);
             // + 11 because the first stop triggers a dep offline event and inserts a new stop with 10 higher priority.

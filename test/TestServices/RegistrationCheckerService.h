@@ -46,7 +46,7 @@ struct RegistrationCheckerService final : public AdvancedService<RegistrationChe
         co_return {};
     }
 
-    void addDependencyInstance(IUselessService *, IService *) {
+    void addDependencyInstance(IUselessService&, IService&) {
         _depCount++;
 
         if(_depCount == 2) {
@@ -54,7 +54,7 @@ struct RegistrationCheckerService final : public AdvancedService<RegistrationChe
         }
     }
 
-    void removeDependencyInstance(IUselessService *, IService *) {
+    void removeDependencyInstance(IUselessService&, IService&) {
     }
 
     bool _executedTests{};

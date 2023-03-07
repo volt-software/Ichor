@@ -81,19 +81,19 @@ Ichor::Task<void> Ichor::WsHostService::stop() {
     co_return;
 }
 
-void Ichor::WsHostService::addDependencyInstance(ILogger *logger, IService *) {
-    _logger = logger;
+void Ichor::WsHostService::addDependencyInstance(ILogger &logger, IService &) {
+    _logger = &logger;
 }
 
-void Ichor::WsHostService::removeDependencyInstance(ILogger *logger, IService *) {
+void Ichor::WsHostService::removeDependencyInstance(ILogger &logger, IService&) {
     _logger = nullptr;
 }
 
-void Ichor::WsHostService::addDependencyInstance(IAsioContextService *AsioContextService, IService *) {
-    _asioContextService = AsioContextService;
+void Ichor::WsHostService::addDependencyInstance(IAsioContextService &AsioContextService, IService&) {
+    _asioContextService = &AsioContextService;
 }
 
-void Ichor::WsHostService::removeDependencyInstance(IAsioContextService *logger, IService *) {
+void Ichor::WsHostService::removeDependencyInstance(IAsioContextService&, IService&) {
     _asioContextService = nullptr;
 }
 

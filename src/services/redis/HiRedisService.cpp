@@ -119,11 +119,11 @@ Ichor::Task<void> Ichor::HiredisService::stop() {
     co_return;
 }
 
-void Ichor::HiredisService::addDependencyInstance(ILogger *logger, IService *) {
-    _logger = logger;
+void Ichor::HiredisService::addDependencyInstance(ILogger &logger, IService&) {
+    _logger = &logger;
 }
 
-void Ichor::HiredisService::removeDependencyInstance(ILogger *logger, IService *) {
+void Ichor::HiredisService::removeDependencyInstance(ILogger &logger, IService&) {
     _logger = nullptr;
 }
 

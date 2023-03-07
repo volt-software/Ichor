@@ -33,26 +33,26 @@ private:
         co_return;
     }
 
-    void addDependencyInstance(ILogger *logger, IService *) {
-        _logger = logger;
+    void addDependencyInstance(ILogger &logger, IService &) {
+        _logger = &logger;
     }
 
-    void removeDependencyInstance(ILogger *logger, IService *) {
+    void removeDependencyInstance(ILogger&, IService&) {
         _logger = nullptr;
     }
 
-    void addDependencyInstance(ISerializer<PingMsg> *serializer, IService *) {
-        _serializer = serializer;
+    void addDependencyInstance(ISerializer<PingMsg> &serializer, IService&) {
+        _serializer = &serializer;
         ICHOR_LOG_INFO(_logger, "Inserted serializer");
     }
 
-    void removeDependencyInstance(ISerializer<PingMsg> *serializer, IService *) {
+    void removeDependencyInstance(ISerializer<PingMsg>&, IService&) {
         _serializer = nullptr;
         ICHOR_LOG_INFO(_logger, "Removed serializer");
     }
 
-    void addDependencyInstance(IHttpService *svc, IService *) {
-        _routeRegistration = svc->addRoute(HttpMethod::post, "/ping", [this](HttpRequest &req) -> AsyncGenerator<HttpResponse> {
+    void addDependencyInstance(IHttpService &svc, IService&) {
+        _routeRegistration = svc.addRoute(HttpMethod::post, "/ping", [this](HttpRequest &req) -> AsyncGenerator<HttpResponse> {
 //            ICHOR_LOG_WARN(_logger, "received request from {} with body {} ", req.address, std::string_view{reinterpret_cast<char*>(req.body.data()), req.body.size()});
             auto msg = _serializer->deserialize(std::move(req.body));
 //            ICHOR_LOG_WARN(_logger, "received request from {} on route {} {} with PingMsg {}", req.address, (int) req.method, req.route, msg->sequence);
@@ -60,7 +60,7 @@ private:
         });
     }
 
-    void removeDependencyInstance(IHttpService *, IService *) {
+    void removeDependencyInstance(IHttpService&, IService&) {
         _routeRegistration.reset();
     }
 

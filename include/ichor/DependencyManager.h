@@ -496,14 +496,14 @@ namespace Ichor {
         }
 
         template <typename Interface>
-        [[nodiscard]] std::vector<Interface*> getStartedServices() noexcept {
+        [[nodiscard]] std::vector<NeverNull<Interface*>> getStartedServices() noexcept {
 #ifdef ICHOR_USE_HARDENING
             if(this != Detail::_local_dm) [[unlikely]] { // are we on the right thread?
                 std::terminate();
             }
 #endif
-            std::vector<Interface*> ret{};
-            std::function<void(NeverNull<void*>, NeverNull<IService*>)> f{[&ret](void *svc2, IService * /*isvc*/){ ret.push_back(reinterpret_cast<Interface*>(svc2)); }};
+            std::vector<NeverNull<Interface*>> ret{};
+            std::function<void(NeverNull<void*>, IService&)> f{[&ret](NeverNull<void*> svc2, IService& /*isvc*/){ ret.push_back(reinterpret_cast<Interface*>(svc2.get())); }};
             for(auto &[key, svc] : _services) {
                 if(svc->getServiceState() != ServiceState::ACTIVE) {
                     continue;
@@ -519,14 +519,14 @@ namespace Ichor {
         /// Get all services by given template interface type, regardless of state
         /// \tparam Interface interface to search for
         /// \return list of found services
-        [[nodiscard]] std::vector<std::pair<Interface*, IService*>> getAllServicesOfType() noexcept {
+        [[nodiscard]] std::vector<std::pair<Interface&, IService&>> getAllServicesOfType() noexcept {
 #ifdef ICHOR_USE_HARDENING
             if(this != Detail::_local_dm) [[unlikely]] { // are we on the right thread?
                 std::terminate();
             }
 #endif
-            std::vector<std::pair<Interface*, IService*>> ret{};
-            std::function<void(NeverNull<void*>, NeverNull<IService*>)> f{[&ret](void *svc2, IService * isvc){ ret.emplace_back(reinterpret_cast<Interface*>(svc2), isvc); }};
+            std::vector<std::pair<Interface&, IService&>> ret{};
+            std::function<void(NeverNull<void*>, IService&)> f{[&ret](NeverNull<void*> svc2, IService & isvc){ ret.emplace_back(*reinterpret_cast<Interface*>(svc2.get()), isvc); }};
             for(auto &[key, svc] : _services) {
                 auto intf = std::find_if(svc->getInterfaces().begin(), svc->getInterfaces().end(), [](const Dependency &dep) {
                     return dep.interfaceNameHash == typeNameHash<Interface>();

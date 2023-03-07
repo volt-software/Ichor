@@ -35,11 +35,11 @@ public:
         co_return;
     }
 
-    void addDependencyInstance(IAwaitService *svc, IService *) {
-        _awaitSvc = svc;
+    void addDependencyInstance(IAwaitService &svc, IService&) {
+        _awaitSvc = &svc;
     }
 
-    void removeDependencyInstance(IAwaitService *, IService *) {
+    void removeDependencyInstance(IAwaitService&, IService&) {
         _awaitSvc = nullptr;
     }
 

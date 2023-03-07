@@ -29,12 +29,12 @@ private:
         co_return;
     }
 
-    void addDependencyInstance(ILogger *logger, IService *isvc) {
-        _logger = logger;
-        ICHOR_LOG_INFO(_logger, "Inserted logger svcid {} for svcid {}", isvc->getServiceId(), getServiceId());
+    void addDependencyInstance(ILogger &logger, IService &isvc) {
+        _logger = &logger;
+        ICHOR_LOG_INFO(_logger, "Inserted logger svcid {} for svcid {}", isvc.getServiceId(), getServiceId());
     }
 
-    void removeDependencyInstance(ILogger *logger, IService *) {
+    void removeDependencyInstance(ILogger&, IService&) {
         _logger = nullptr;
     }
 

@@ -105,13 +105,13 @@ namespace Ichor::Detail {
         /// \param keyOfInterfaceToInject
         /// \param serviceIdOfOther
         /// \param fn
-        void insertSelfInto(uint64_t keyOfInterfaceToInject, uint64_t serviceIdOfOther, std::function<void(NeverNull<void*>, NeverNull<IService*>)> &fn) final {
+        void insertSelfInto(uint64_t keyOfInterfaceToInject, uint64_t serviceIdOfOther, std::function<void(NeverNull<void*>, IService&)> &fn) final {
             if(keyOfInterfaceToInject != typeNameHash<DependencyManager>()) {
                 return;
             }
 
             INTERNAL_DEBUG("insertSelfInto() svc {} telling svc {} to add us", serviceId(), serviceIdOfOther);
-            fn(_dm, &_service);
+            fn(_dm, _service);
             _serviceIdsOfDependees.insert(serviceIdOfOther);
         }
 
@@ -119,13 +119,13 @@ namespace Ichor::Detail {
         /// \param keyOfInterfaceToInject
         /// \param serviceIdOfOther
         /// \param fn
-        void removeSelfInto(uint64_t keyOfInterfaceToInject, uint64_t serviceIdOfOther, std::function<void(NeverNull<void*>, NeverNull<IService*>)> &fn) final {
+        void removeSelfInto(uint64_t keyOfInterfaceToInject, uint64_t serviceIdOfOther, std::function<void(NeverNull<void*>, IService&)> &fn) final {
             if(keyOfInterfaceToInject != typeNameHash<DependencyManager>()) {
                 return;
             }
 
             INTERNAL_DEBUG("removeSelfInto() svc {} removing svc {}", serviceId(), serviceIdOfOther);
-            fn(_dm, &_service);
+            fn(_dm, _service);
             _serviceIdsOfDependees.erase(serviceIdOfOther);
         }
 

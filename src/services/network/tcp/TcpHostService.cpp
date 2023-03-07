@@ -112,11 +112,11 @@ Ichor::Task<void> Ichor::TcpHostService::stop() {
     co_return;
 }
 
-void Ichor::TcpHostService::addDependencyInstance(ILogger *logger, IService *) {
-    _logger = logger;
+void Ichor::TcpHostService::addDependencyInstance(ILogger &logger, IService &) {
+    _logger = &logger;
 }
 
-void Ichor::TcpHostService::removeDependencyInstance(ILogger *logger, IService *) {
+void Ichor::TcpHostService::removeDependencyInstance(ILogger &logger, IService&) {
     _logger = nullptr;
 }
 

@@ -51,7 +51,7 @@ namespace Ichor {
     };
 
     template <class ImplT, class Interface>
-    concept ImplementsDependencyInjection = requires(ImplT impl, Interface* svc, IService* isvc) {
+    concept ImplementsDependencyInjection = requires(ImplT impl, Interface& svc, IService& isvc) {
         { impl.addDependencyInstance(svc, isvc) } -> std::same_as<void>;
         { impl.removeDependencyInstance(svc, isvc) } -> std::same_as<void>;
     };
