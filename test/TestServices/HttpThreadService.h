@@ -29,7 +29,7 @@ public:
 
 private:
     Task<tl::expected<void, Ichor::StartError>> start() final {
-        GetThreadLocalEventQueue().pushEvent<RunFunctionEventAsync>(getServiceId(), [this](DependencyManager &dm) -> AsyncGenerator<IchorBehaviour> {
+        GetThreadLocalEventQueue().pushEvent<RunFunctionEventAsync>(getServiceId(), [this]() -> AsyncGenerator<IchorBehaviour> {
             auto toSendMsg = _serializer->serialize(TestMsg{11, "hello"});
 
             if(dmThreadId != std::this_thread::get_id()) {

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "UselessService.h"
+#include <ichor/dependency_management/DependencyRegister.h>
 
 using namespace Ichor;
 

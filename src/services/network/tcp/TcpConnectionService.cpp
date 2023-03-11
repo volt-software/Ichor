@@ -69,7 +69,7 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::TcpConnectionService::
 
     auto &timer = _timerFactory->createTimer();
     timer.setChronoInterval(20ms);
-    timer.setCallback([this](DependencyManager &dm) {
+    timer.setCallback([this]() {
         std::array<char, 1024> buf{};
         auto ret = recv(_socket, buf.data(), buf.size(), 0);
 

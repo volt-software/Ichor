@@ -3,6 +3,7 @@
 #include <ichor/services/logging/Logger.h>
 #include <ichor/dependency_management/AdvancedService.h>
 #include <ichor/dependency_management/DependencyRegister.h>
+#include <ichor/event_queues/IEventQueue.h>
 #include <ichor/events/RunFunctionEvent.h>
 #include <ichor/coroutines/AsyncAutoResetEvent.h>
 
@@ -33,10 +34,10 @@ public:
 
 private:
     Task<tl::expected<void, Ichor::StartError>> start() final {
-        _q->pushEvent<RunFunctionEventAsync>(getServiceId(), [this](DependencyManager &dm) -> AsyncGenerator<IchorBehaviour> {
+        _q->pushEvent<RunFunctionEventAsync>(getServiceId(), [this]() -> AsyncGenerator<IchorBehaviour> {
             for(uint32_t i = 0; i < EVENT_COUNT; i++) {
                 co_await _evt;
-                dm.getEventQueue().pushEvent<RunFunctionEventAsync>(getServiceId(), [this](DependencyManager &) -> AsyncGenerator<IchorBehaviour> {
+                GetThreadLocalEventQueue().pushEvent<RunFunctionEventAsync>(getServiceId(), [this]() -> AsyncGenerator<IchorBehaviour> {
                     _evt.set();
                     co_return {};
                 });
@@ -44,7 +45,7 @@ private:
             _q->pushEvent<QuitEvent>(getServiceId());
             co_return {};
         });
-        _q->pushEvent<RunFunctionEventAsync>(getServiceId(), [this](DependencyManager &) -> AsyncGenerator<IchorBehaviour> {
+        _q->pushEvent<RunFunctionEventAsync>(getServiceId(), [this]() -> AsyncGenerator<IchorBehaviour> {
             _evt.set();
             co_return {};
         });
@@ -59,7 +60,7 @@ private:
         _logger = &logger;
     }
 
-    void removeDependencyInstance(ILogger &logger, IService&) {
+    void removeDependencyInstance(ILogger &, IService&) {
         _logger = nullptr;
     }
 
@@ -67,7 +68,7 @@ private:
         _q = &q;
     }
 
-    void removeDependencyInstance(IEventQueue &q, IService&) {
+    void removeDependencyInstance(IEventQueue &, IService&) {
         _q = nullptr;
     }
 

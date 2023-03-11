@@ -2,6 +2,7 @@
 
 #include <ichor/DependencyManager.h>
 #include <ichor/services/network/AsioContextService.h>
+#include <ichor/events/RunFunctionEvent.h>
 #if (defined(WIN32) || defined(_WIN32) || defined(__WIN32)) && !defined(__CYGWIN__)
 #include <processthreadsapi.h>
 #include <fmt/xchar.h>
@@ -39,7 +40,7 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::AsioContextService::st
 
     net::spawn(*_context, [this, &queue = GetThreadLocalEventQueue()](net::yield_context yield) {
         // notify start()
-        queue.pushPrioritisedEvent<RunFunctionEvent>(getServiceId(), INTERNAL_COROUTINE_EVENT_PRIORITY, [this](DependencyManager &dm) {
+        queue.pushPrioritisedEvent<RunFunctionEvent>(getServiceId(), INTERNAL_COROUTINE_EVENT_PRIORITY, [this]() {
             _startStopEvent.set();
         });
 
@@ -51,7 +52,7 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::AsioContextService::st
         INTERNAL_DEBUG("+++++++++++++++++++++++++++++++++++++++++++++++ NOTIFY STOP ++++++++++++++++++++++++++++++++");
 
         // notify stop()
-        queue.pushPrioritisedEvent<RunFunctionEvent>(getServiceId(), INTERNAL_COROUTINE_EVENT_PRIORITY, [this](DependencyManager &dm) {
+        queue.pushPrioritisedEvent<RunFunctionEvent>(getServiceId(), INTERNAL_COROUTINE_EVENT_PRIORITY, [this]() {
             _startStopEvent.set();
         });
     }ASIO_SPAWN_COMPLETION_TOKEN);

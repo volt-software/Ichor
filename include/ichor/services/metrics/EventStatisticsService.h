@@ -2,6 +2,7 @@
 
 #include <unordered_map>
 #include <ichor/dependency_management/AdvancedService.h>
+#include <ichor/dependency_management/DependencyRegistrations.h>
 #include <ichor/services/logging/Logger.h>
 #include <ichor/services/timer/ITimerFactory.h>
 #include <chrono>
@@ -50,7 +51,7 @@ namespace Ichor {
         void addDependencyInstance(ITimerFactory &factory, IService &);
         void removeDependencyInstance(ITimerFactory &factory, IService&);
 
-        AsyncGenerator<IchorBehaviour> handleEvent(DependencyManager &dm);
+        AsyncGenerator<IchorBehaviour> handleEvent();
 
         Task<tl::expected<void, Ichor::StartError>> start() final;
         Task<void> stop() final;

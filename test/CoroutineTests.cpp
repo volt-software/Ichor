@@ -35,8 +35,8 @@ TEST_CASE("CoroutineTests") {
 
         dm.runForOrQueueEmpty();
 
-        queue->pushEvent<RunFunctionEventAsync>(0, [](DependencyManager& mng) -> AsyncGenerator<IchorBehaviour>{
-            auto services = mng.getStartedServices<IGeneratorService>();
+        queue->pushEvent<RunFunctionEventAsync>(0, [&]() -> AsyncGenerator<IchorBehaviour>{
+            auto services = dm.getStartedServices<IGeneratorService>();
 
             REQUIRE(services.size() == 1);
 
@@ -55,7 +55,7 @@ TEST_CASE("CoroutineTests") {
             REQUIRE(*it.await_resume() == 2);
             INTERNAL_DEBUG("resume3");
 
-            mng.getEventQueue().pushEvent<QuitEvent>(0);
+            dm.getEventQueue().pushEvent<QuitEvent>(0);
             INTERNAL_DEBUG("quit");
 
             co_return {};
@@ -80,8 +80,8 @@ TEST_CASE("CoroutineTests") {
 
         dm.runForOrQueueEmpty();
 
-        queue->pushEvent<RunFunctionEventAsync>(0, [](DependencyManager& mng) -> AsyncGenerator<IchorBehaviour> {
-            auto services = mng.getStartedServices<IAwaitService>();
+        queue->pushEvent<RunFunctionEventAsync>(0, [&]() -> AsyncGenerator<IchorBehaviour> {
+            auto services = dm.getStartedServices<IAwaitService>();
 
             REQUIRE(services.size() == 1);
 
@@ -95,7 +95,7 @@ TEST_CASE("CoroutineTests") {
 
             INTERNAL_DEBUG("quit");
 
-            mng.getEventQueue().pushEvent<QuitEvent>(0);
+            dm.getEventQueue().pushEvent<QuitEvent>(0);
 
             INTERNAL_DEBUG("after2");
 
@@ -104,7 +104,7 @@ TEST_CASE("CoroutineTests") {
 
         dm.runForOrQueueEmpty();
 
-        queue->pushEvent<RunFunctionEvent>(0, [](DependencyManager& mng) {
+        queue->pushEvent<RunFunctionEvent>(0, []() {
             INTERNAL_DEBUG("set");
             _evt->set();
         });
@@ -132,7 +132,7 @@ TEST_CASE("CoroutineTests") {
 
         dm.runForOrQueueEmpty();
 
-        queue->pushEvent<RunFunctionEvent>(0, [](DependencyManager& mng) {
+        queue->pushEvent<RunFunctionEvent>(0, []() {
             INTERNAL_DEBUG("set");
             _evt->set();
         });
@@ -158,11 +158,11 @@ TEST_CASE("CoroutineTests") {
 
         dm.runForOrQueueEmpty();
 
-        queue->pushEvent<RunFunctionEvent>(0, [&](DependencyManager& mng) {
+        queue->pushEvent<RunFunctionEvent>(0, [&]() {
             INTERNAL_DEBUG("set");
             _autoEvt->set_all();
             REQUIRE(svc->count == 2);
-            mng.getEventQueue().pushEvent<QuitEvent>(0);
+            dm.getEventQueue().pushEvent<QuitEvent>(0);
         });
 
         t.join();
@@ -187,7 +187,7 @@ TEST_CASE("CoroutineTests") {
 
         dm.runForOrQueueEmpty();
 
-        queue->pushEvent<RunFunctionEvent>(0, [](DependencyManager& mng) {
+        queue->pushEvent<RunFunctionEvent>(0, []() {
             INTERNAL_DEBUG("set");
             _evt->set();
         });
@@ -212,17 +212,17 @@ TEST_CASE("CoroutineTests") {
 
         dm.runForOrQueueEmpty();
 
-        queue->pushEvent<RunFunctionEventAsync>(0, [&](DependencyManager& mng) -> AsyncGenerator<IchorBehaviour> {
+        queue->pushEvent<RunFunctionEventAsync>(0, [&]() -> AsyncGenerator<IchorBehaviour> {
             auto &await = *co_await svc->Await().begin();
             co_return {};
         });
 
         dm.runForOrQueueEmpty();
 
-        queue->pushEvent<RunFunctionEvent>(0, [](DependencyManager& mng) {
+        queue->pushEvent<RunFunctionEvent>(0, [&dm = dm]() {
             INTERNAL_DEBUG("set");
             _evt->set();
-            mng.getEventQueue().pushEvent<QuitEvent>(0);
+            dm.getEventQueue().pushEvent<QuitEvent>(0);
         });
 
         t.join();
@@ -264,12 +264,12 @@ TEST_CASE("CoroutineTests") {
 
         dm.runForOrQueueEmpty();
 
-        queue->pushEvent<RunFunctionEvent>(0, [svcId](DependencyManager& mng) {
-            auto services = mng.getStartedServices<IDependencyOfflineWhileStartingService>();
+        queue->pushEvent<RunFunctionEvent>(0, [&dm = dm, svcId]() {
+            auto services = dm.getStartedServices<IDependencyOfflineWhileStartingService>();
 
             REQUIRE(services.empty());
 
-            auto svcs = mng.getServiceInfo();
+            auto svcs = dm.getServiceInfo();
 
             REQUIRE(svcs.size() == 4);
 
@@ -282,16 +282,16 @@ TEST_CASE("CoroutineTests") {
 
         dm.runForOrQueueEmpty();
 
-        queue->pushEvent<RunFunctionEvent>(0, [svcId](DependencyManager& mng) {
-            auto svcs = mng.getServiceInfo();
+        queue->pushEvent<RunFunctionEvent>(0, [&dm = dm, svcId]() {
+            auto svcs = dm.getServiceInfo();
 
             REQUIRE(svcs[svcId]->getServiceState() == Ichor::ServiceState::INSTALLED);
 
-            auto services = mng.getStartedServices<IDependencyOfflineWhileStartingService>();
+            auto services = dm.getStartedServices<IDependencyOfflineWhileStartingService>();
 
             REQUIRE(services.empty());
 
-            mng.getEventQueue().pushEvent<QuitEvent>(0);
+            dm.getEventQueue().pushEvent<QuitEvent>(0);
         });
 
         t.join();
@@ -314,12 +314,12 @@ TEST_CASE("CoroutineTests") {
 
         dm.runForOrQueueEmpty();
 
-        queue->pushEvent<RunFunctionEvent>(0, [svcId](DependencyManager& mng) {
-            auto services = mng.getStartedServices<IDependencyOnlineWhileStoppingService>();
+        queue->pushEvent<RunFunctionEvent>(0, [&dm = dm, svcId]() {
+            auto services = dm.getStartedServices<IDependencyOnlineWhileStoppingService>();
 
             REQUIRE(services.empty());
 
-            auto svcs = mng.getServiceInfo();
+            auto svcs = dm.getServiceInfo();
 
             REQUIRE(svcs.size() == 4);
 
@@ -332,17 +332,17 @@ TEST_CASE("CoroutineTests") {
 
         dm.runForOrQueueEmpty();
 
-        queue->pushEvent<RunFunctionEvent>(0, [svcId](DependencyManager& mng) {
-            auto services = mng.getStartedServices<IDependencyOnlineWhileStoppingService>();
+        queue->pushEvent<RunFunctionEvent>(0, [&dm = dm, svcId]() {
+            auto services = dm.getStartedServices<IDependencyOnlineWhileStoppingService>();
 
             REQUIRE(services.empty());
 
-            auto svcs = mng.getServiceInfo();
+            auto svcs = dm.getServiceInfo();
 
             REQUIRE(svcs.size() == 4);
             REQUIRE(svcs[svcId]->getServiceState() == Ichor::ServiceState::INSTALLED);
 
-            mng.getEventQueue().pushEvent<QuitEvent>(0);
+            dm.getEventQueue().pushEvent<QuitEvent>(0);
         });
 
         t.join();

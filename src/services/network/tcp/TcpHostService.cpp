@@ -72,7 +72,7 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::TcpHostService::start(
 
     auto &timer = _timerFactory->createTimer();
     timer.setChronoInterval(20ms);
-    timer.setCallback([this](DependencyManager &dm) {
+    timer.setCallback([this]() {
         sockaddr_in client_addr{};
         socklen_t client_addr_size = sizeof(client_addr);
         int newConnection = ::accept(_socket, (sockaddr *) &client_addr, &client_addr_size);

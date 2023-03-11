@@ -1,6 +1,6 @@
 #pragma once
 
-#include <ichor/events/RunFunctionEvent.h>
+#include <ichor/coroutines/AsyncGenerator.h>
 
 namespace Ichor {
     struct ITimer {
@@ -25,11 +25,11 @@ namespace Ichor {
 
         /// Sets coroutine based callback, adds some overhead compared to sync version. Executed when timer expires. Terminates program if timer is running.
         /// \param fn callback
-        virtual void setCallbackAsync(decltype(RunFunctionEventAsync::fun) fn) = 0;
+        virtual void setCallbackAsync(std::function<AsyncGenerator<IchorBehaviour>()> fn) = 0;
 
         /// Set sync callback to execute when timer expires. Terminates program if timer is running.
         /// \param fn callback
-        virtual void setCallback(decltype(RunFunctionEvent::fun) fn) = 0;
+        virtual void setCallback(std::function<void()> fn) = 0;
 
         /// Thread-safe.
         /// \tparam Dur std::chrono type

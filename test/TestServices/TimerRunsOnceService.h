@@ -17,7 +17,7 @@ public:
     TimerRunsOnceService(ITimerFactory *factory) {
         auto &timer = factory->createTimer();
         timer.setChronoInterval(std::chrono::seconds(1));
-        timer.setCallback([this, &timer = timer](DependencyManager &) {
+        timer.setCallback([this, &timer = timer]() {
             count++;
             timer.stopTimer();
         });

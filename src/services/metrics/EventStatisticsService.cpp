@@ -1,4 +1,5 @@
 #include <ichor/services/metrics/EventStatisticsService.h>
+#include <ichor/DependencyManager.h>
 #include <numeric>
 
 Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::EventStatisticsService::start() {
@@ -15,8 +16,8 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::EventStatisticsService
     auto &timer = _timerFactory->createTimer();
     timer.setChronoInterval(std::chrono::milliseconds(_averagingIntervalMs));
 
-    timer.setCallbackAsync([this](DependencyManager &dm) -> AsyncGenerator<IchorBehaviour> {
-        return handleEvent(dm);
+    timer.setCallbackAsync([this]() -> AsyncGenerator<IchorBehaviour> {
+        return handleEvent();
     });
 
     _interceptorRegistration = GetThreadLocalManager().registerEventInterceptor<Event>(this);
@@ -30,7 +31,7 @@ Ichor::Task<void> Ichor::EventStatisticsService::stop() {
 
     if(_showStatisticsOnStop) {
         // handle last bit of stored statistics by emulating a handleEvent call
-        auto gen = handleEvent(GetThreadLocalManager());
+        auto gen = handleEvent();
         auto it = gen.begin();
         while(!gen.done() && !it.get_finished()) {
             it = gen.begin();
@@ -91,7 +92,7 @@ void Ichor::EventStatisticsService::removeDependencyInstance(ITimerFactory &fact
     _timerFactory = nullptr;
 }
 
-Ichor::AsyncGenerator<Ichor::IchorBehaviour> Ichor::EventStatisticsService::handleEvent(DependencyManager &dm) {
+Ichor::AsyncGenerator<Ichor::IchorBehaviour> Ichor::EventStatisticsService::handleEvent() {
     int64_t now = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
     decltype(_recentEventStatistics) newVec{};
     newVec.swap(_recentEventStatistics);

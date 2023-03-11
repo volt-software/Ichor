@@ -18,7 +18,7 @@ public:
 private:
     Task<tl::expected<void, Ichor::StartError>> start() final {
         auto &_timer = _timerFactory->createTimer();
-        _timer.setCallback([this](DependencyManager &dm) {
+        _timer.setCallback([this]() {
             auto svcs = dm.getServiceInfo();
             for(auto &[id, svc] : svcs) {
                 ICHOR_LOG_INFO(_logger, "Svc {}:{} {}", svc->getServiceId(), svc->getServiceName(), svc->getServiceState());

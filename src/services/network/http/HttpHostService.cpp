@@ -3,6 +3,7 @@
 #include <ichor/DependencyManager.h>
 #include <ichor/services/network/http/HttpHostService.h>
 #include <ichor/services/network/http/HttpScopeGuards.h>
+#include <ichor/events/RunFunctionEvent.h>
 
 Ichor::HttpHostService::HttpHostService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {
     reg.registerDependency<ILogger>(this, true);
@@ -59,7 +60,7 @@ Ichor::Task<void> Ichor::HttpHostService::stop() {
 
             _httpAcceptor = nullptr;
 
-            _queue->pushEvent<RunFunctionEvent>(getServiceId(), [this](DependencyManager &dm) {
+            _queue->pushEvent<RunFunctionEvent>(getServiceId(), [this]() {
                 _startStopEvent.set();
             });
         }ASIO_SPAWN_COMPLETION_TOKEN);
@@ -251,7 +252,7 @@ void Ichor::HttpHostService::read(tcp::socket socket, net::yield_context yield) 
         }
         HttpRequest httpReq{std::move(req.body()), static_cast<HttpMethod>(req.method()), std::string{req.target()}, addr, std::move(headers)};
 
-        _queue->pushEvent<RunFunctionEventAsync>(getServiceId(), [this, connection, httpReq = std::move(httpReq), version = req.version(), keep_alive = req.keep_alive()](DependencyManager &dm) mutable -> AsyncGenerator<IchorBehaviour> {
+        _queue->pushEvent<RunFunctionEventAsync>(getServiceId(), [this, connection, httpReq = std::move(httpReq), version = req.version(), keep_alive = req.keep_alive()]() mutable -> AsyncGenerator<IchorBehaviour> {
             auto routes = _handlers.find(static_cast<HttpMethod>(httpReq.method));
 
             if(_quit.load(std::memory_order_acquire) || _asioContextService->fibersShouldStop()) {

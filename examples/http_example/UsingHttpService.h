@@ -6,6 +6,7 @@
 #include <ichor/services/network/http/IHttpConnectionService.h>
 #include <ichor/services/network/http/IHttpService.h>
 #include <ichor/events/RunFunctionEvent.h>
+#include <ichor/event_queues/IEventQueue.h>
 #include <ichor/dependency_management/AdvancedService.h>
 #include <ichor/dependency_management/DependencyRegister.h>
 #include <ichor/services/serialization/ISerializer.h>
@@ -27,7 +28,7 @@ private:
     Task<tl::expected<void, Ichor::StartError>> start() final {
         ICHOR_LOG_INFO(_logger, "UsingHttpService started");
 
-        GetThreadLocalEventQueue().pushEvent<RunFunctionEventAsync>(getServiceId(), [this](DependencyManager &dm) -> AsyncGenerator<IchorBehaviour> {
+        GetThreadLocalEventQueue().pushEvent<RunFunctionEventAsync>(getServiceId(), [this]() -> AsyncGenerator<IchorBehaviour> {
             auto toSendMsg = _serializer->serialize(TestMsg{11, "hello"});
 
             co_await sendTestRequest(std::move(toSendMsg)).begin();

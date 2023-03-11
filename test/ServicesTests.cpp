@@ -48,17 +48,17 @@ TEST_CASE("ServicesTests") {
 
         dm.runForOrQueueEmpty();
 
-        queue->pushEvent<RunFunctionEvent>(0, [](DependencyManager& mng) {
-            auto services = mng.getStartedServices<IFailOnStartService>();
+        queue->pushEvent<RunFunctionEvent>(0, [&]() {
+            auto services = dm.getStartedServices<IFailOnStartService>();
 
             REQUIRE(services.empty());
 
-            auto svcs = mng.getAllServicesOfType<IFailOnStartService>();
+            auto svcs = dm.getAllServicesOfType<IFailOnStartService>();
 
             REQUIRE(svcs.size() == 1);
             REQUIRE(svcs[0].first.getStartCount() == 1);
 
-            mng.getEventQueue().pushEvent<QuitEvent>(0);
+            dm.getEventQueue().pushEvent<QuitEvent>(0);
         });
 
         t.join();
@@ -81,17 +81,17 @@ TEST_CASE("ServicesTests") {
 
         dm.runForOrQueueEmpty();
 
-        queue->pushEvent<RunFunctionEvent>(0, [](DependencyManager& mng) {
-            auto services = mng.getStartedServices<IFailOnStartService>();
+        queue->pushEvent<RunFunctionEvent>(0, [&]() {
+            auto services = dm.getStartedServices<IFailOnStartService>();
 
             REQUIRE(services.empty());
 
-            auto svcs = mng.getAllServicesOfType<IFailOnStartService>();
+            auto svcs = dm.getAllServicesOfType<IFailOnStartService>();
 
             REQUIRE(svcs.size() == 1);
             REQUIRE(svcs[0].first.getStartCount() == 1);
 
-            mng.getEventQueue().pushEvent<QuitEvent>(0);
+            dm.getEventQueue().pushEvent<QuitEvent>(0);
         });
 
         t.join();
@@ -116,26 +116,26 @@ TEST_CASE("ServicesTests") {
 
         dm.runForOrQueueEmpty();
 
-        queue->pushEvent<RunFunctionEvent>(0, [secondUselessServiceId](DependencyManager& mng) {
-            auto services = mng.getStartedServices<ICountService>();
+        queue->pushEvent<RunFunctionEvent>(0, [&]() {
+            auto services = dm.getStartedServices<ICountService>();
 
             REQUIRE(services.size() == 1);
             REQUIRE(services[0]->isRunning());
             REQUIRE(services[0]->getSvcCount() == 2);
 
-            mng.getEventQueue().pushEvent<StopServiceEvent>(0, secondUselessServiceId);
+            dm.getEventQueue().pushEvent<StopServiceEvent>(0, secondUselessServiceId);
         });
 
         dm.runForOrQueueEmpty();
 
-        queue->pushEvent<RunFunctionEvent>(0, [](DependencyManager& mng) {
-            auto services = mng.getStartedServices<ICountService>();
+        queue->pushEvent<RunFunctionEvent>(0, [&]() {
+            auto services = dm.getStartedServices<ICountService>();
 
             REQUIRE(services.size() == 1);
             REQUIRE(services[0]->isRunning());
             REQUIRE(services[0]->getSvcCount() == 1);
 
-            mng.getEventQueue().pushEvent<QuitEvent>(0);
+            dm.getEventQueue().pushEvent<QuitEvent>(0);
         });
 
         t.join();
@@ -160,8 +160,8 @@ TEST_CASE("ServicesTests") {
 
         dm.runForOrQueueEmpty();
 
-        queue->pushEvent<RunFunctionEvent>(0, [](DependencyManager& mng) {
-            auto services = mng.getStartedServices<ICountService>();
+        queue->pushEvent<RunFunctionEvent>(0, [&]() {
+            auto services = dm.getStartedServices<ICountService>();
 
             REQUIRE(services.size() == 1);
 
@@ -174,14 +174,14 @@ TEST_CASE("ServicesTests") {
 
         dm.runForOrQueueEmpty();
 
-        queue->pushEvent<RunFunctionEvent>(0, [](DependencyManager& mng) {
-            auto services = mng.getStartedServices<ICountService>();
+        queue->pushEvent<RunFunctionEvent>(0, [&]() {
+            auto services = dm.getStartedServices<ICountService>();
 
             REQUIRE(services.size() == 1);
 
             REQUIRE(services[0]->getSvcCount() == 1);
 
-            mng.getEventQueue().pushEvent<QuitEvent>(0);
+            dm.getEventQueue().pushEvent<QuitEvent>(0);
         });
 
         t.join();
@@ -224,11 +224,11 @@ TEST_CASE("ServicesTests") {
 
         dm.runForOrQueueEmpty();
 
-        queue->pushEvent<RunFunctionEvent>(0, [&](DependencyManager& mng) {
-            auto ret = mng.getService<ITimerRunsOnceService>(svcId);
+        queue->pushEvent<RunFunctionEvent>(0, [&]() {
+            auto ret = dm.getService<ITimerRunsOnceService>(svcId);
             REQUIRE(ret->first->getCount() == 1);
 
-            mng.getEventQueue().pushEvent<QuitEvent>(svcId);
+            dm.getEventQueue().pushEvent<QuitEvent>(svcId);
         });
 
         t.join();
@@ -273,20 +273,20 @@ TEST_CASE("ServicesTests") {
 
         dm.runForOrQueueEmpty();
 
-        queue->pushEvent<RunFunctionEvent>(0, [&](DependencyManager& mng) {
-            REQUIRE(mng.getServiceCount() == 5);
+        queue->pushEvent<RunFunctionEvent>(0, [&]() {
+            REQUIRE(dm.getServiceCount() == 5);
 
-            mng.getEventQueue().pushEvent<StopServiceEvent>(0, svcId);
+            dm.getEventQueue().pushEvent<StopServiceEvent>(0, svcId);
             // + 11 because the first stop triggers a dep offline event and inserts a new stop with 10 higher priority.
-            mng.getEventQueue().pushPrioritisedEvent<RemoveServiceEvent>(0, INTERNAL_EVENT_PRIORITY + 11, svcId);
+            dm.getEventQueue().pushPrioritisedEvent<RemoveServiceEvent>(0, INTERNAL_EVENT_PRIORITY + 11, svcId);
         });
 
         dm.runForOrQueueEmpty();
 
-        queue->pushEvent<RunFunctionEvent>(0, [&](DependencyManager& mng) {
-            REQUIRE(mng.getServiceCount() == 3);
+        queue->pushEvent<RunFunctionEvent>(0, [&]() {
+            REQUIRE(dm.getServiceCount() == 3);
 
-            mng.getEventQueue().pushEvent<QuitEvent>(0);
+            dm.getEventQueue().pushEvent<QuitEvent>(0);
         });
 
         t.join();
@@ -310,23 +310,23 @@ TEST_CASE("ServicesTests") {
 
         dm.runForOrQueueEmpty();
 
-        queue->pushEvent<RunFunctionEvent>(0, [&](DependencyManager& mng) {
-            REQUIRE(mng.getServiceCount() == 6);
-            auto svcs = mng.getAllServicesOfType<IConstructorInjectionTestService>();
+        queue->pushEvent<RunFunctionEvent>(0, [&]() {
+            REQUIRE(dm.getServiceCount() == 6);
+            auto svcs = dm.getAllServicesOfType<IConstructorInjectionTestService>();
             REQUIRE(svcs.size() == 1);
             REQUIRE(svcs[0].second.getServiceId() == svcId);
 
-            mng.getEventQueue().pushEvent<StopServiceEvent>(0, svcId);
+            dm.getEventQueue().pushEvent<StopServiceEvent>(0, svcId);
             // + 11 because the first stop triggers a dep offline event and inserts a new stop with 10 higher priority.
-            mng.getEventQueue().pushPrioritisedEvent<RemoveServiceEvent>(0, INTERNAL_EVENT_PRIORITY + 11, svcId);
+            dm.getEventQueue().pushPrioritisedEvent<RemoveServiceEvent>(0, INTERNAL_EVENT_PRIORITY + 11, svcId);
         });
 
         dm.runForOrQueueEmpty();
 
-        queue->pushEvent<RunFunctionEvent>(0, [&](DependencyManager& mng) {
-            REQUIRE(mng.getServiceCount() == 4);
+        queue->pushEvent<RunFunctionEvent>(0, [&]() {
+            REQUIRE(dm.getServiceCount() == 4);
 
-            mng.getEventQueue().pushEvent<QuitEvent>(0);
+            dm.getEventQueue().pushEvent<QuitEvent>(0);
         });
 
         t.join();
@@ -377,10 +377,10 @@ TEST_CASE("ServicesTests") {
 
         dm.runForOrQueueEmpty();
 
-        queue->pushEvent<RunFunctionEvent>(0, [&](DependencyManager& mng) {
-            REQUIRE(mng.getServiceCount() == 3);
+        queue->pushEvent<RunFunctionEvent>(0, [&]() {
+            REQUIRE(dm.getServiceCount() == 3);
 
-            mng.getEventQueue().pushEvent<QuitEvent>(0);
+            dm.getEventQueue().pushEvent<QuitEvent>(0);
         });
 
         t.join();

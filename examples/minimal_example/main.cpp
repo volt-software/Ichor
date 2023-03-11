@@ -1,5 +1,6 @@
 #include <ichor/event_queues/MultimapQueue.h>
 #include <ichor/services/timer/TimerFactoryFactory.h>
+#include <ichor/DependencyManager.h>
 #include <csignal>
 
 using namespace Ichor;
@@ -17,11 +18,11 @@ public:
         auto &timer = factory->createTimer();
         timer.setChronoInterval(100ms);
 
-        timer.setCallback([](DependencyManager &dm) {
+        timer.setCallback([]() {
             // If sigint has been fired, send a quit to the event loop.
             // This can't be done from within the handler itself, as the mutex surrounding pushEvent might already be locked, resulting in a deadlock!
             if(quit) {
-                dm.getEventQueue().pushEvent<QuitEvent>(0);
+                GetThreadLocalEventQueue().pushEvent<QuitEvent>(0);
             }
         });
         timer.startTimer();

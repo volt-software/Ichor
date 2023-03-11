@@ -7,6 +7,7 @@
 #include <ichor/services/network/ws/WsEvents.h>
 #include <ichor/services/network/NetworkEvents.h>
 #include <ichor/services/network/http/HttpScopeGuards.h>
+#include <ichor/events/RunFunctionEvent.h>
 
 Ichor::WsHostService::WsHostService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {
     reg.registerDependency<ILogger>(this, true);
@@ -123,7 +124,7 @@ uint64_t Ichor::WsHostService::getPriority() {
 void Ichor::WsHostService::fail(beast::error_code ec, const char *what) {
     ICHOR_LOG_ERROR(_logger, "Boost.BEAST fail: {}, {}", what, ec.message());
     INTERNAL_DEBUG("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! push {}", getServiceId());
-    _queue->pushPrioritisedEvent<RunFunctionEvent>(getServiceId(), 1000, [this](DependencyManager &dm) {
+    _queue->pushPrioritisedEvent<RunFunctionEvent>(getServiceId(), 1000, [this]() {
         INTERNAL_DEBUG("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! _startStopEvent set {}", getServiceId());
         _startStopEvent.set();
     });
@@ -174,7 +175,7 @@ void Ichor::WsHostService::listen(tcp::endpoint endpoint, net::yield_context yie
     }
 
     INTERNAL_DEBUG("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! push2 {}", getServiceId());
-    _queue->pushPrioritisedEvent<RunFunctionEvent>(getServiceId(), 1000, [this](DependencyManager &dm) {
+    _queue->pushPrioritisedEvent<RunFunctionEvent>(getServiceId(), 1000, [this]() {
         INTERNAL_DEBUG("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! _startStopEvent set2 {}", getServiceId());
         _startStopEvent.set();
     });

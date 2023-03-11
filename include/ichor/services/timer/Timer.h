@@ -2,7 +2,7 @@
 
 #include <thread>
 #include <ichor/services/timer/ITimer.h>
-#include <ichor/events/RunFunctionEvent.h>
+#include <ichor/event_queues/IEventQueue.h>
 
 namespace Ichor {
     class TimerFactory;
@@ -24,11 +24,11 @@ namespace Ichor {
 
         /// Sets coroutine based callback, adds some overhead compared to sync version. Executed when timer expires. Terminates program if timer is running.
         /// \param fn callback
-        void setCallbackAsync(decltype(RunFunctionEventAsync::fun) fn) final;
+        void setCallbackAsync(std::function<AsyncGenerator<IchorBehaviour>()> fn) final;
 
         /// Set sync callback to execute when timer expires. Terminates program if timer is running.
         /// \param fn callback
-        void setCallback(decltype(RunFunctionEvent::fun) fn) final;
+        void setCallback(std::function<void()> fn) final;
         /// Thread-safe.
         void setInterval(uint64_t nanoseconds) noexcept final;
 
@@ -53,8 +53,8 @@ namespace Ichor {
         uint64_t _timerId{};
         std::atomic<uint64_t> _intervalNanosec{1'000'000'000};
         std::unique_ptr<std::thread> _eventInsertionThread{};
-        decltype(RunFunctionEventAsync::fun) _fnAsync{};
-        decltype(RunFunctionEvent::fun) _fn{};
+        std::function<AsyncGenerator<IchorBehaviour>()> _fnAsync{};
+        std::function<void()> _fn{};
         std::atomic<bool> _quit{true};
         std::atomic<uint64_t> _priority{INTERNAL_EVENT_PRIORITY};
         uint64_t _requestingServiceId{};
