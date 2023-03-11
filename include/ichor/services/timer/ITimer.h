@@ -1,17 +1,39 @@
 #pragma once
 
-#include <ichor/events/InternalEvents.h>
+#include <ichor/events/RunFunctionEvent.h>
 
 namespace Ichor {
     struct ITimer {
+        /// Thread-safe.
         virtual void startTimer() = 0;
+        /// Thread-safe.
         virtual void startTimer(bool fireImmediately) = 0;
+        /// Thread-safe.
         virtual void stopTimer() = 0;
+        /// Thread-safe.
         [[nodiscard]] virtual bool running() const noexcept = 0;
+        /// Thread-safe.
+        /// \param nanoseconds
         virtual void setInterval(uint64_t nanoseconds) noexcept = 0;
+        /// Thread-safe.
         virtual void setPriority(uint64_t priority) noexcept = 0;
+        /// Thread-safe.
         [[nodiscard]] virtual uint64_t getPriority() const noexcept = 0;
+        /// Thread-safe.
+        [[nodiscard]] virtual uint64_t getTimerId() const noexcept = 0;
 
+
+        /// Sets coroutine based callback, adds some overhead compared to sync version. Executed when timer expires. Terminates program if timer is running.
+        /// \param fn callback
+        virtual void setCallbackAsync(decltype(RunFunctionEventAsync::fun) fn) = 0;
+
+        /// Set sync callback to execute when timer expires. Terminates program if timer is running.
+        /// \param fn callback
+        virtual void setCallback(decltype(RunFunctionEvent::fun) fn) = 0;
+
+        /// Thread-safe.
+        /// \tparam Dur std::chrono type
+        /// \param duration
         template <typename Dur>
         void setChronoInterval(Dur duration) noexcept {
             int64_t val = std::chrono::nanoseconds(duration).count();

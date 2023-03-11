@@ -11,13 +11,13 @@
 
 Ichor::TcpConnectionService::TcpConnectionService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)), _socket(-1), _attempts(), _priority(INTERNAL_EVENT_PRIORITY), _quit() {
     reg.registerDependency<ILogger>(this, true);
+    reg.registerDependency<ITimerFactory>(this, true);
 }
 
 Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::TcpConnectionService::start() {
     if(getProperties().contains("Priority")) {
         _priority = Ichor::any_cast<uint64_t>(getProperties()["Priority"]);
     }
-
 
     if(getProperties().contains("Socket")) {
         _socket = Ichor::any_cast<int>(getProperties()["Socket"]);
@@ -67,9 +67,9 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::TcpConnectionService::
         ICHOR_LOG_TRACE(_logger, "Starting TCP connection for {}:{}", ip, ::ntohs(address.sin_port));
     }
 
-    _timerManager = GetThreadLocalManager().createServiceManager<Timer, ITimer>();
-    _timerManager->setChronoInterval(20ms);
-    _timerManager->setCallback(this, [this](DependencyManager &dm) {
+    auto &timer = _timerFactory->createTimer();
+    timer.setChronoInterval(20ms);
+    timer.setCallback([this](DependencyManager &dm) {
         std::array<char, 1024> buf{};
         auto ret = recv(_socket, buf.data(), buf.size(), 0);
 
@@ -86,14 +86,13 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::TcpConnectionService::
         GetThreadLocalEventQueue().pushPrioritisedEvent<NetworkDataEvent>(getServiceId(), _priority, std::vector<uint8_t>{buf.data(), buf.data() + ret});
         return;
     });
-    _timerManager->startTimer();
+    timer.startTimer();
 
     co_return {};
 }
 
 Ichor::Task<void> Ichor::TcpConnectionService::stop() {
     _quit = true;
-    _timerManager = nullptr;
 
     if(_socket >= 0) {
         ::shutdown(_socket, SHUT_RDWR);
@@ -109,6 +108,14 @@ void Ichor::TcpConnectionService::addDependencyInstance(ILogger &logger, IServic
 
 void Ichor::TcpConnectionService::removeDependencyInstance(ILogger &logger, IService&) {
     _logger = nullptr;
+}
+
+void Ichor::TcpConnectionService::addDependencyInstance(ITimerFactory &factory, IService &) {
+    _timerFactory = &factory;
+}
+
+void Ichor::TcpConnectionService::removeDependencyInstance(ITimerFactory &factory, IService&) {
+    _timerFactory = nullptr;
 }
 
 tl::expected<uint64_t, Ichor::SendErrorReason> Ichor::TcpConnectionService::sendAsync(std::vector<uint8_t> &&msg) {

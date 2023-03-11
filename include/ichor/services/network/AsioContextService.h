@@ -4,10 +4,11 @@
 
 #include <ichor/services/network/http/IHttpService.h>
 #include <ichor/services/logging/Logger.h>
-#include <ichor/services/timer/TimerService.h>
+#include <ichor/services/timer/ITimerFactory.h>
 #include <ichor/coroutines/AsyncManualResetEvent.h>
 #include <boost/beast.hpp>
 #include <boost/asio/spawn.hpp>
+#include <thread>
 
 #if BOOST_VERSION >= 108000
 #define ASIO_SPAWN_COMPLETION_TOKEN , [](std::exception_ptr e) { if (e) std::rethrow_exception(e); }

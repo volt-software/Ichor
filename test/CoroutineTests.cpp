@@ -9,6 +9,7 @@
 #include "TestServices/DependencyOnlineWhileStoppingService.h"
 #include <ichor/event_queues/MultimapQueue.h>
 #include <ichor/events/RunFunctionEvent.h>
+#include <ichor/services/timer/TimerFactoryFactory.h>
 #include <memory>
 
 std::unique_ptr<Ichor::AsyncManualResetEvent> _evt;
@@ -178,6 +179,7 @@ TEST_CASE("CoroutineTests") {
             dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>();
             dm.createServiceManager<AwaitService, IAwaitService>();
             dm.createServiceManager<AsyncUsingTimerService>();
+            dm.createServiceManager<TimerFactoryFactory>();
             queue->start(CaptureSigInt);
         });
 

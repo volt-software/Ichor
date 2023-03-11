@@ -1,26 +1,15 @@
-#include <ichor/services/timer/TimerService.h>
+#include <ichor/services/timer/Timer.h>
 #if (defined(WIN32) || defined(_WIN32) || defined(__WIN32)) && !defined(__CYGWIN__)
 #include <processthreadsapi.h>
 #include <fmt/xchar.h>
 #endif
 
-Ichor::Timer::Timer() noexcept {
+Ichor::Timer::Timer(Ichor::IEventQueue *queue, uint64_t timerId, uint64_t svcId) noexcept : _queue(queue), _timerId(timerId), _requestingServiceId(svcId) {
     stopTimer();
 }
 
 Ichor::Timer::~Timer() noexcept {
     stopTimer();
-}
-
-Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::Timer::start() {
-    _queue = &GetThreadLocalEventQueue();
-
-    co_return {};
-}
-
-Ichor::Task<void> Ichor::Timer::stop() {
-    stopTimer();
-    co_return;
 }
 
 void Ichor::Timer::startTimer() {
@@ -36,7 +25,7 @@ void Ichor::Timer::startTimer(bool fireImmediately) {
     if(_quit.compare_exchange_strong(expected, false, std::memory_order_acq_rel)) {
         _eventInsertionThread = std::make_unique<std::thread>([this, fireImmediately]() { this->insertEventLoop(fireImmediately); });
 #if defined(__linux__) || defined(__CYGWIN__)
-        pthread_setname_np(_eventInsertionThread->native_handle(), fmt::format("Tmr #{}", getServiceId()).c_str());
+        pthread_setname_np(_eventInsertionThread->native_handle(), fmt::format("Tmr #{}", _timerId).c_str());
 #endif
     }
 }
@@ -53,14 +42,20 @@ bool Ichor::Timer::running() const noexcept {
     return !_quit.load(std::memory_order_acquire);
 };
 
-void Ichor::Timer::setCallbackAsync(IService *svc, decltype(RunFunctionEventAsync::fun) fn) {
-    _requestingServiceId = svc->getServiceId();
+void Ichor::Timer::setCallbackAsync(decltype(RunFunctionEventAsync::fun) fn) {
+    if(running()) {
+        std::terminate();
+    }
+
     _fnAsync = std::move(fn);
     _fn = {};
 }
 
-void Ichor::Timer::setCallback(IService *svc, decltype(RunFunctionEvent::fun) fn) {
-    _requestingServiceId = svc->getServiceId();
+void Ichor::Timer::setCallback(decltype(RunFunctionEvent::fun) fn) {
+    if(running()) {
+        std::terminate();
+    }
+
     _fnAsync = {};
     _fn = std::move(fn);
 }
@@ -76,6 +71,10 @@ void Ichor::Timer::setPriority(uint64_t priority) noexcept {
 
 uint64_t Ichor::Timer::getPriority() const noexcept {
     return _priority.load(std::memory_order_acquire);
+}
+
+uint64_t Ichor::Timer::getTimerId() const noexcept {
+    return _timerId;
 }
 
 void Ichor::Timer::insertEventLoop(bool fireImmediately) {

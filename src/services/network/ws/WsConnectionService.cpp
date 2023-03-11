@@ -6,6 +6,7 @@
 #include <ichor/services/network/NetworkEvents.h>
 #include <ichor/services/network/IHostService.h>
 #include <ichor/services/network/http/HttpScopeGuards.h>
+#include <thread>
 
 template<class NextLayer>
 void setup_stream(std::shared_ptr<websocket::stream<NextLayer>>& ws)

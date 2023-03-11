@@ -457,10 +457,10 @@ namespace Ichor {
             return _services.size();
         }
 
-        /// Get service by local ID
+        /// Get IService by local ID
         /// \param id service id
         /// \return optional
-        [[nodiscard]] std::optional<const IService*> getService(uint64_t id) const noexcept {
+        [[nodiscard]] std::optional<const IService*> getIService(uint64_t id) const noexcept {
 #ifdef ICHOR_USE_HARDENING
             if(this != Detail::_local_dm) [[unlikely]] { // are we on the right thread?
                 std::terminate();
@@ -475,10 +475,10 @@ namespace Ichor {
 
             return svc->second->getIService();
         }
-        /// Get service by global ID, much slower than getting by local ID
+        /// Get IService by global ID, much slower than getting by local ID
         /// \param id service uuid
         /// \return optional
-        [[nodiscard]] std::optional<const IService*> getService(sole::uuid id) const noexcept {
+        [[nodiscard]] std::optional<const IService*> getIService(sole::uuid id) const noexcept {
 #ifdef ICHOR_USE_HARDENING
             if(this != Detail::_local_dm) [[unlikely]] { // are we on the right thread?
                 std::terminate();
@@ -493,6 +493,37 @@ namespace Ichor {
             }
 
             return svc->second->getIService();
+        }
+
+
+        template <typename Interface>
+        [[nodiscard]] std::optional<std::pair<Interface*, IService*>> getService(uint64_t id) const noexcept {
+#ifdef ICHOR_USE_HARDENING
+            if(this != Detail::_local_dm) [[unlikely]] { // are we on the right thread?
+                std::terminate();
+            }
+#endif
+
+            auto svc = _services.find(id);
+
+            if(svc == _services.end()) {
+                return {};
+            }
+
+            auto intf = std::find_if(svc->second->getInterfaces().begin(), svc->second->getInterfaces().end(), [](Dependency const &d) {
+                return d.interfaceNameHash == typeNameHash<Interface>();
+            });
+
+            if(intf == svc->second->getInterfaces().end()) {
+                return {};
+            }
+            Interface* ret{};
+            IService* retIsvc{};
+            std::function<void(NeverNull<void*>, IService&)> f{[&ret, &retIsvc](NeverNull<void*> svc2, IService& isvc){ ret = reinterpret_cast<Interface*>(svc2.get()); retIsvc = &isvc; }};
+            svc->second->insertSelfInto(typeNameHash<Interface>(), 0, f);
+            svc->second->getDependees().erase(0);
+
+            return std::pair<Interface*, IService*>(ret, retIsvc);
         }
 
         template <typename Interface>

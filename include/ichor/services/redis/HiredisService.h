@@ -4,7 +4,7 @@
 
 #include <ichor/services/redis/IRedis.h>
 #include <ichor/services/logging/Logger.h>
-#include <ichor/services/timer/TimerService.h>
+#include <ichor/services/timer/ITimerFactory.h>
 #include <hiredis/hiredis.h>
 
 namespace Ichor {
@@ -34,6 +34,9 @@ namespace Ichor {
         void addDependencyInstance(ILogger &logger, IService&);
         void removeDependencyInstance(ILogger &logger, IService&);
 
+        void addDependencyInstance(ITimerFactory &logger, IService&);
+        void removeDependencyInstance(ITimerFactory &logger, IService&);
+
         tl::expected<void, Ichor::StartError> connect();
 
         friend DependencyRegister;
@@ -42,7 +45,7 @@ namespace Ichor {
         std::atomic<uint64_t> _priority{INTERNAL_EVENT_PRIORITY};
         redisAsyncContext *_redisContext{};
         AsyncManualResetEvent _disconnectEvt{};
-        Timer *_pollTimer{};
+        ITimerFactory *_timerFactory{};
     };
 }
 

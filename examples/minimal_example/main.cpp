@@ -1,41 +1,36 @@
 #include <ichor/event_queues/MultimapQueue.h>
-#include <ichor/services/timer/TimerService.h>
+#include <ichor/services/timer/TimerFactoryFactory.h>
 #include <csignal>
 
 using namespace Ichor;
 
 std::atomic<bool> quit{};
 
-void siginthandler(int param) {
+void siginthandler(int) {
     quit = true;
 }
 
-class SigIntService final : public AdvancedService<SigIntService> {
+class SigIntService final {
 public:
-    SigIntService() = default;
-
-private:
-    Task<tl::expected<void, Ichor::StartError>> start() final {
+    SigIntService(ITimerFactory *factory) {
         // Setup a timer that fires every 100 milliseconds
-        auto timer = GetThreadLocalManager().createServiceManager<Timer, ITimer>();
-        timer->setChronoInterval(100ms);
+        auto &timer = factory->createTimer();
+        timer.setChronoInterval(100ms);
 
-        timer->setCallback(this, [this](DependencyManager &dm) {
+        timer.setCallback([](DependencyManager &dm) {
             // If sigint has been fired, send a quit to the event loop.
             // This can't be done from within the handler itself, as the mutex surrounding pushEvent might already be locked, resulting in a deadlock!
             if(quit) {
-                dm.getEventQueue().pushEvent<QuitEvent>(getServiceId());
+                dm.getEventQueue().pushEvent<QuitEvent>(0);
             }
         });
-        timer->startTimer();
+        timer.startTimer();
 
         // Register sigint handler
-        ::signal(SIGINT, siginthandler);
-        co_return {};
-    }
-
-    Task<void> stop() final {
-        co_return;
+        auto r = ::signal(SIGINT, siginthandler);
+        if(r == SIG_ERR) {
+            std::terminate();
+        }
     }
 };
 
@@ -46,6 +41,7 @@ int main(int argc, char *argv[]) {
     auto &dm = queue->createManager();
 
     dm.createServiceManager<SigIntService>();
+    dm.createServiceManager<TimerFactoryFactory>();
 
     // Start manager, consumes current thread.
     queue->start(DoNotCaptureSigInt);

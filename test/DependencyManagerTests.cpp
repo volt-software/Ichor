@@ -64,12 +64,12 @@ TEST_CASE("DependencyManager") {
         queue->pushEvent<RunFunctionEvent>(0, [&](DependencyManager &_dm) {
             REQUIRE(_dm.getServiceCount() == 5);
 
-            auto svc = _dm.getService(uselessSvcId);
+            auto svc = _dm.getIService(uselessSvcId);
             REQUIRE(svc.has_value());
             REQUIRE(svc.value()->getServiceId() == uselessSvcId);
             REQUIRE(svc.value()->getServiceName() == typeName<UselessService>());
 
-            auto loggerSvc = _dm.getService(loggerUuid);
+            auto loggerSvc = _dm.getIService(loggerUuid);
             REQUIRE(loggerSvc.has_value());
             REQUIRE(loggerSvc.value()->getServiceGid() == loggerUuid);
 

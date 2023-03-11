@@ -12,6 +12,7 @@
 #include <ichor/events/RunFunctionEvent.h>
 #include <ichor/services/logging/LoggerFactory.h>
 #include <ichor/services/logging/CoutLogger.h>
+#include <ichor/services/timer/TimerFactoryFactory.h>
 
 bool AddEventHandlerDuringEventHandlingService::_addedReg{};
 
@@ -210,11 +211,12 @@ TEST_CASE("ServicesTests") {
     SECTION("TimerService runs exactly once") {
         auto queue = std::make_unique<MultimapQueue>();
         auto &dm = queue->createManager();
-        TimerRunsOnceService *svc{};
+        uint64_t svcId{};
 
         std::thread t([&]() {
             dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>();
-            svc = dm.createServiceManager<TimerRunsOnceService>();
+            svcId = dm.createServiceManager<TimerRunsOnceService, ITimerRunsOnceService>()->getServiceId();
+            dm.createServiceManager<TimerFactoryFactory>();
             queue->start(CaptureSigInt);
         });
 
@@ -223,9 +225,10 @@ TEST_CASE("ServicesTests") {
         dm.runForOrQueueEmpty();
 
         queue->pushEvent<RunFunctionEvent>(0, [&](DependencyManager& mng) {
-            REQUIRE(svc->count == 1);
+            auto ret = mng.getService<ITimerRunsOnceService>(svcId);
+            REQUIRE(ret->first->getCount() == 1);
 
-            mng.getEventQueue().pushEvent<QuitEvent>(svc->getServiceId());
+            mng.getEventQueue().pushEvent<QuitEvent>(svcId);
         });
 
         t.join();

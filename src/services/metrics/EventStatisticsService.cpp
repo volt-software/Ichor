@@ -12,15 +12,15 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::EventStatisticsService
         _averagingIntervalMs = 500;
     }
 
-    auto timerManager = GetThreadLocalManager().createServiceManager<Timer, ITimer>();
-    timerManager->setChronoInterval(std::chrono::milliseconds(_averagingIntervalMs));
+    auto &timer = _timerFactory->createTimer();
+    timer.setChronoInterval(std::chrono::milliseconds(_averagingIntervalMs));
 
-    timerManager->setCallbackAsync(this, [this](DependencyManager &dm) -> AsyncGenerator<IchorBehaviour> {
+    timer.setCallbackAsync([this](DependencyManager &dm) -> AsyncGenerator<IchorBehaviour> {
         return handleEvent(dm);
     });
 
     _interceptorRegistration = GetThreadLocalManager().registerEventInterceptor<Event>(this);
-    timerManager->startTimer();
+    timer.startTimer();
 
     co_return {};
 }
@@ -81,6 +81,14 @@ void Ichor::EventStatisticsService::postInterceptEvent(Event const &evt, bool pr
                 std::chrono::duration_cast<std::chrono::nanoseconds>(now.time_since_epoch()).count(),
                 std::chrono::duration_cast<std::chrono::nanoseconds>(processingTime).count());
     }
+}
+
+void Ichor::EventStatisticsService::addDependencyInstance(ITimerFactory &factory, IService &) {
+    _timerFactory = &factory;
+}
+
+void Ichor::EventStatisticsService::removeDependencyInstance(ITimerFactory &factory, IService&) {
+    _timerFactory = nullptr;
 }
 
 Ichor::AsyncGenerator<Ichor::IchorBehaviour> Ichor::EventStatisticsService::handleEvent(DependencyManager &dm) {

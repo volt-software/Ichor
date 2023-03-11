@@ -1,6 +1,7 @@
 #include <ichor/event_queues/MultimapQueue.h>
 #include <ichor/services/logging/LoggerFactory.h>
 #include <ichor/services/metrics/EventStatisticsService.h>
+#include <ichor/services/timer/TimerFactoryFactory.h>
 #include "UsingStatisticsService.h"
 
 #ifdef ICHOR_USE_SPDLOG
@@ -29,6 +30,7 @@ int main(int argc, char *argv[]) {
     dm.createServiceManager<LoggerFactory<LOGGER_TYPE>, ILoggerFactory>(Properties{{"DefaultLogLevel", Ichor::make_any<LogLevel>(LogLevel::LOG_INFO)}});
     dm.createServiceManager<EventStatisticsService, IEventStatisticsService>(Properties{{"ShowStatisticsOnStop", make_any<bool>(true)}});
     dm.createServiceManager<UsingStatisticsService>();
+    dm.createServiceManager<TimerFactoryFactory>();
     queue->start(CaptureSigInt);
     auto end = std::chrono::steady_clock::now();
     fmt::print("{} ran for {:L} µs\n", argv[0], std::chrono::duration_cast<std::chrono::microseconds>(end-start).count());

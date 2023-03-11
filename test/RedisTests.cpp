@@ -5,6 +5,7 @@
 #include <ichor/services/logging/CoutFrameworkLogger.h>
 #include <ichor/services/logging/CoutLogger.h>
 #include <ichor/services/redis/HiredisService.h>
+#include <ichor/services/timer/TimerFactoryFactory.h>
 #include "TestServices/RedisUsingService.h"
 #include "Common.h"
 
@@ -20,6 +21,7 @@ TEST_CASE("RedisTests") {
             dm.createServiceManager<LoggerFactory<CoutLogger>, ILoggerFactory>();
             dm.createServiceManager<HiredisService, IRedis>(Properties{{"Address", Ichor::make_any<std::string>("127.0.0.1")}, {"Port", Ichor::make_any<uint16_t>(static_cast<uint16_t>(6379))}});
             dm.createServiceManager<RedisUsingService>();
+            dm.createServiceManager<TimerFactoryFactory>();
 
             queue->start(CaptureSigInt);
         });

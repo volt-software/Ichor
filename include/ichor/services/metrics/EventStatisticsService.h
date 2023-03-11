@@ -3,7 +3,7 @@
 #include <unordered_map>
 #include <ichor/dependency_management/AdvancedService.h>
 #include <ichor/services/logging/Logger.h>
-#include <ichor/services/timer/TimerService.h>
+#include <ichor/services/timer/ITimerFactory.h>
 #include <chrono>
 
 namespace Ichor {
@@ -47,6 +47,9 @@ namespace Ichor {
         bool preInterceptEvent(Event const &evt);
         void postInterceptEvent(Event const &evt, bool processed);
 
+        void addDependencyInstance(ITimerFactory &factory, IService &);
+        void removeDependencyInstance(ITimerFactory &factory, IService&);
+
         AsyncGenerator<IchorBehaviour> handleEvent(DependencyManager &dm);
 
         Task<tl::expected<void, Ichor::StartError>> start() final;
@@ -62,5 +65,6 @@ namespace Ichor {
         bool _showStatisticsOnStop{false};
         uint64_t _averagingIntervalMs{5000};
         EventInterceptorRegistration _interceptorRegistration{};
+        ITimerFactory *_timerFactory{};
     };
 }
