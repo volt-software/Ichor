@@ -808,7 +808,7 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &&uniqueEvt) 
                     }
                 }
 
-                runFunctionEvt->fun(*this);
+                runFunctionEvt->fun();
                 handleEventCompletion(*runFunctionEvt);
             }
                 break;
@@ -826,7 +826,7 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &&uniqueEvt) 
                     }
                 }
 
-                auto gen = runFunctionEvt->fun(*this);
+                auto gen = runFunctionEvt->fun();
                 auto it = gen.begin();
                 INTERNAL_DEBUG("state: {} {} {} {} {}", gen.done(), it.get_finished(), it.get_op_state(), it.get_promise_state(), it.get_promise_id());
 

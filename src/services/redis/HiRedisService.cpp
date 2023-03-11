@@ -35,7 +35,7 @@ namespace Ichor {
         auto *svc = static_cast<HiredisService*>(c->data);
         ichorReply->reply = static_cast<redisReply *>(reply);
 
-        GetThreadLocalManager().getEventQueue().pushEvent<RunFunctionEvent>(svc->getServiceId(), [ichorReply](DependencyManager &) {
+        GetThreadLocalManager().getEventQueue().pushEvent<RunFunctionEvent>(svc->getServiceId(), [ichorReply]() {
             ichorReply->evt.set();
         });
     }
@@ -99,7 +99,7 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::HiredisService::start(
     }
 
     auto &timer = _timerFactory->createTimer();
-    timer.setCallback([this](DependencyManager &) {
+    timer.setCallback([this]() {
         redisPollTick(_redisContext, 0);
     });
     timer.setChronoInterval(1ms);

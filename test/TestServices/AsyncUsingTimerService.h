@@ -18,7 +18,7 @@ public:
         fmt::print("start\n");
         auto &timer = _timerFactory->createTimer();
         timer.setChronoInterval(100ms);
-        timer.setCallbackAsync([this, &timer = timer](DependencyManager &dm) -> AsyncGenerator<IchorBehaviour> {
+        timer.setCallbackAsync([this, &timer = timer]() -> AsyncGenerator<IchorBehaviour> {
             fmt::print("timer 1\n");
             co_await _awaitSvc->await_something();
             fmt::print("timer 2\n");

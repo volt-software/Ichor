@@ -61,22 +61,22 @@ TEST_CASE("DependencyManager") {
 
         dm.runForOrQueueEmpty();
 
-        queue->pushEvent<RunFunctionEvent>(0, [&](DependencyManager &_dm) {
-            REQUIRE(_dm.getServiceCount() == 5);
+        queue->pushEvent<RunFunctionEvent>(0, [&]() {
+            REQUIRE(dm.getServiceCount() == 5);
 
-            auto svc = _dm.getIService(uselessSvcId);
+            auto svc = dm.getIService(uselessSvcId);
             REQUIRE(svc.has_value());
             REQUIRE(svc.value()->getServiceId() == uselessSvcId);
             REQUIRE(svc.value()->getServiceName() == typeName<UselessService>());
 
-            auto loggerSvc = _dm.getIService(loggerUuid);
+            auto loggerSvc = dm.getIService(loggerUuid);
             REQUIRE(loggerSvc.has_value());
             REQUIRE(loggerSvc.value()->getServiceGid() == loggerUuid);
 
-            auto uselessSvcs = _dm.getAllServicesOfType<IUselessService>();
+            auto uselessSvcs = dm.getAllServicesOfType<IUselessService>();
             REQUIRE(uselessSvcs.size() == 2);
 
-            auto startedSvc = _dm.getStartedServices<IUselessService>();
+            auto startedSvc = dm.getStartedServices<IUselessService>();
             REQUIRE(startedSvc.size() == 2);
 
             queue->pushEvent<QuitEvent>(0);
@@ -110,13 +110,11 @@ TEST_CASE("DependencyManager") {
 
         AsyncManualResetEvent evt;
 
-        queue->pushEvent<RunFunctionEventAsync>(0, [&](DependencyManager &_dm) -> AsyncGenerator<IchorBehaviour> {
-            REQUIRE(Ichor::Detail::_local_dm == &_dm);
+        queue->pushEvent<RunFunctionEventAsync>(0, [&]() -> AsyncGenerator<IchorBehaviour> {
             REQUIRE(Ichor::Detail::_local_dm == &dm);
             REQUIRE(testThreadId != std::this_thread::get_id());
             REQUIRE(dmThreadId == std::this_thread::get_id());
             co_await evt;
-            REQUIRE(Ichor::Detail::_local_dm == &_dm);
             REQUIRE(Ichor::Detail::_local_dm == &dm);
             REQUIRE(testThreadId != std::this_thread::get_id());
             REQUIRE(dmThreadId == std::this_thread::get_id());
@@ -128,8 +126,7 @@ TEST_CASE("DependencyManager") {
 
         REQUIRE(Ichor::Detail::_local_dm == nullptr);
 
-        queue->pushEvent<RunFunctionEvent>(0, [&](DependencyManager &_dm) {
-            REQUIRE(Ichor::Detail::_local_dm == &_dm);
+        queue->pushEvent<RunFunctionEvent>(0, [&]() {
             REQUIRE(Ichor::Detail::_local_dm == &dm);
             REQUIRE(testThreadId != std::this_thread::get_id());
             REQUIRE(dmThreadId == std::this_thread::get_id());

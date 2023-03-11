@@ -48,8 +48,7 @@ TEST_CASE("HttpTests") {
             std::this_thread::sleep_for(500us);
         }
 
-        queue->pushEvent<RunFunctionEvent>(0, [&](DependencyManager &_dm) {
-            REQUIRE(Ichor::Detail::_local_dm == &_dm);
+        queue->pushEvent<RunFunctionEvent>(0, [&]() {
             REQUIRE(Ichor::Detail::_local_dm == &dm);
             REQUIRE(testThreadId != std::this_thread::get_id());
             REQUIRE(dmThreadId == std::this_thread::get_id());
@@ -84,8 +83,7 @@ TEST_CASE("HttpTests") {
             std::this_thread::sleep_for(500us);
         }
 
-        queue->pushEvent<RunFunctionEvent>(0, [&](DependencyManager &_dm) {
-            REQUIRE(Ichor::Detail::_local_dm == &_dm);
+        queue->pushEvent<RunFunctionEvent>(0, [&]() {
             REQUIRE(Ichor::Detail::_local_dm == &dm);
             REQUIRE(testThreadId != std::this_thread::get_id());
             REQUIRE(dmThreadId == std::this_thread::get_id());

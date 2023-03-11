@@ -21,8 +21,8 @@ private:
         ICHOR_LOG_INFO(_logger, "UsingTimerService started");
         _timer = &_timerFactory->createTimer();
         _timer->setChronoInterval(std::chrono::milliseconds(50));
-        _timer->setCallback([this](DependencyManager &dm) {
-            handleEvent(dm);
+        _timer->setCallback([this]() {
+            handleEvent();
         });
         _timer->startTimer();
         co_return {};
@@ -49,7 +49,7 @@ private:
         _timerFactory = nullptr;
     }
 
-    void handleEvent(DependencyManager &) {
+    void handleEvent() {
         _timerTriggerCount++;
         ICHOR_LOG_INFO(_logger, "Timer {} triggered {} times", _timer->getTimerId(), _timerTriggerCount);
         if(_timerTriggerCount == 5) {

@@ -25,11 +25,11 @@ private:
         quitTimer.setChronoInterval(15s);
         bogusTimer.setChronoInterval(100ms);
 
-        quitTimer.setCallback([this](DependencyManager &dm) {
-            dm.getEventQueue().pushEvent<QuitEvent>(getServiceId());
+        quitTimer.setCallback([this]() {
+            GetThreadLocalEventQueue().pushEvent<QuitEvent>(getServiceId());
         });
 
-        bogusTimer.setCallback([this](DependencyManager &dm) {
+        bogusTimer.setCallback([this]() {
             std::this_thread::sleep_for(std::chrono::milliseconds(_dist(_mt)));
         });
 

@@ -1,8 +1,11 @@
 #include <ichor/services/timer/Timer.h>
+#include <ichor/events/RunFunctionEvent.h>
 #if (defined(WIN32) || defined(_WIN32) || defined(__WIN32)) && !defined(__CYGWIN__)
 #include <processthreadsapi.h>
 #include <fmt/xchar.h>
 #endif
+
+using namespace std::chrono_literals;
 
 Ichor::Timer::Timer(Ichor::IEventQueue *queue, uint64_t timerId, uint64_t svcId) noexcept : _queue(queue), _timerId(timerId), _requestingServiceId(svcId) {
     stopTimer();
@@ -42,7 +45,7 @@ bool Ichor::Timer::running() const noexcept {
     return !_quit.load(std::memory_order_acquire);
 };
 
-void Ichor::Timer::setCallbackAsync(decltype(RunFunctionEventAsync::fun) fn) {
+void Ichor::Timer::setCallbackAsync(std::function<AsyncGenerator<IchorBehaviour>()> fn) {
     if(running()) {
         std::terminate();
     }
@@ -51,7 +54,7 @@ void Ichor::Timer::setCallbackAsync(decltype(RunFunctionEventAsync::fun) fn) {
     _fn = {};
 }
 
-void Ichor::Timer::setCallback(decltype(RunFunctionEvent::fun) fn) {
+void Ichor::Timer::setCallback(std::function<void()> fn) {
     if(running()) {
         std::terminate();
     }

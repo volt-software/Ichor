@@ -6,6 +6,7 @@
 #include <ichor/CommunicationChannel.h>
 #include <ichor/services/timer/ITimerFactory.h>
 #include <ichor/events/Event.h>
+#include <ichor/events/RunFunctionEvent.h>
 #include <iostream>
 #include <thread>
 
@@ -39,7 +40,7 @@ struct MyTimerService final : public IMyTimerService {
     MyTimerService(ITimerFactory *factory) {
         auto &timer = factory->createTimer();
         timer.setChronoInterval(std::chrono::seconds(1));
-        timer.setCallback([](DependencyManager &) {
+        timer.setCallback([]() {
             fmt::print("Timer fired\n");
         });
         timer.startTimer();

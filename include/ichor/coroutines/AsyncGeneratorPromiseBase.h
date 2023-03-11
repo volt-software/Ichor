@@ -11,7 +11,10 @@
 #include <cassert>
 #include <functional>
 #include <memory>
+#include <optional>
+#include <utility>
 #include <ichor/Enums.h>
+#include <ichor/Common.h>
 
 namespace Ichor {
     template<typename T>

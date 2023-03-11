@@ -123,7 +123,7 @@ Ichor::Task<Ichor::HttpResponse> Ichor::HttpConnectionService::sendAsync(Ichor::
                 // use service id 0 to ensure event gets run, even if service is stopped. Otherwise, the coroutine will never complete.
                 // Similarly, use priority 0 to ensure these events run before any dependency changes, otherwise the service might be destroyed
                 // before we can finish all the coroutines.
-                _queue->pushPrioritisedEvent<RunFunctionEvent>(0u, 0u, [&event](DependencyManager &) {
+                _queue->pushPrioritisedEvent<RunFunctionEvent>(0u, 0u, [&event]() {
                     event.set();
                 });
                 lg.lock();
@@ -213,7 +213,7 @@ Ichor::Task<void> Ichor::HttpConnectionService::close() {
             // _httpStream should only be modified from the boost thread
             _httpStream->cancel();
 
-            _queue->pushEvent<RunFunctionEvent>(getServiceId(), [this](DependencyManager &) {
+            _queue->pushEvent<RunFunctionEvent>(getServiceId(), [this]() {
                 _startStopEvent.set();
             });
         }ASIO_SPAWN_COMPLETION_TOKEN);
@@ -278,7 +278,7 @@ void Ichor::HttpConnectionService::connect(tcp::endpoint endpoint, net::yield_co
     }
 
     // set connected before connecting, or races with the start() function may occur.
-    _queue->pushEvent<RunFunctionEvent>(getServiceId(), [this](DependencyManager &dm) {
+    _queue->pushEvent<RunFunctionEvent>(getServiceId(), [this]() {
         _startStopEvent.set();
     });
     _connected.store(true, std::memory_order_release);

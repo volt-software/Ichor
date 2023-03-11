@@ -25,8 +25,8 @@ private:
         ICHOR_LOG_INFO(_logger, "UsingTimerService started");
         _timer = &_timerFactory->createTimer();
         _timer->setChronoInterval(std::chrono::milliseconds(250));
-        _timer->setCallbackAsync([this](DependencyManager &dm) -> AsyncGenerator<IchorBehaviour> {
-            return handleEvent(dm);
+        _timer->setCallbackAsync([this]() -> AsyncGenerator<IchorBehaviour> {
+            return handleEvent();
         });
         _timer->startTimer();
         co_return {};
@@ -53,7 +53,7 @@ private:
         _timerFactory = nullptr;
     }
 
-    AsyncGenerator<IchorBehaviour> handleEvent(DependencyManager &dm) {
+    AsyncGenerator<IchorBehaviour> handleEvent() {
         ICHOR_LOG_INFO(_logger, "Timer {} starting 'long' task", getServiceId());
 
         _timerTriggerCount++;
@@ -66,7 +66,7 @@ private:
         }
 
         if(_timerTriggerCount == 2) {
-            dm.getEventQueue().pushEvent<QuitEvent>(getServiceId());
+            GetThreadLocalEventQueue().pushEvent<QuitEvent>(getServiceId());
         }
 
         ICHOR_LOG_INFO(_logger, "Timer {} completed 'long' task", getServiceId());

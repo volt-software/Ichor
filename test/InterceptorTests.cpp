@@ -31,8 +31,8 @@ TEST_CASE("Interceptor Tests") {
 
         dm.runForOrQueueEmpty();
 
-        queue->pushEvent<RunFunctionEvent>(0, [](DependencyManager& mng) {
-            auto services = mng.getStartedServices<IInterceptorService>();
+        queue->pushEvent<RunFunctionEvent>(0, [&]() {
+            auto services = dm.getStartedServices<IInterceptorService>();
 
             REQUIRE(services.size() == 1);
 
@@ -46,7 +46,7 @@ TEST_CASE("Interceptor Tests") {
             REQUIRE(un.find(TestEvent::TYPE) != end(un));
             REQUIRE(un.find(TestEvent::TYPE)->second == 1);
 
-            mng.getEventQueue().pushEvent<QuitEvent>(0);
+            dm.getEventQueue().pushEvent<QuitEvent>(0);
         });
 
         t.join();
@@ -71,8 +71,8 @@ TEST_CASE("Interceptor Tests") {
 
         dm.runForOrQueueEmpty();
 
-        queue->pushEvent<RunFunctionEvent>(0, [](DependencyManager& mng) {
-            auto services = mng.getStartedServices<IInterceptorService>();
+        queue->pushEvent<RunFunctionEvent>(0, [&]() {
+            auto services = dm.getStartedServices<IInterceptorService>();
 
             REQUIRE(services.size() == 1);
 
@@ -86,7 +86,7 @@ TEST_CASE("Interceptor Tests") {
             REQUIRE(post.find(TestEvent::TYPE)->second == 1);
             REQUIRE(un.find(TestEvent::TYPE) == end(un));
 
-            mng.getEventQueue().pushEvent<QuitEvent>(0);
+            dm.getEventQueue().pushEvent<QuitEvent>(0);
         });
 
         t.join();
@@ -111,9 +111,9 @@ TEST_CASE("Interceptor Tests") {
 
         dm.runForOrQueueEmpty();
 
-        queue->pushEvent<RunFunctionEvent>(0, [](DependencyManager& mng) {
-            auto interceptorServices = mng.getStartedServices<IInterceptorService>();
-            auto eventHandlerServices = mng.getStartedServices<IEventHandlerService>();
+        queue->pushEvent<RunFunctionEvent>(0, [&]() {
+            auto interceptorServices = dm.getStartedServices<IInterceptorService>();
+            auto eventHandlerServices = dm.getStartedServices<IEventHandlerService>();
 
             REQUIRE(interceptorServices.size() == 1);
             REQUIRE(eventHandlerServices.size() == 1);
@@ -130,7 +130,7 @@ TEST_CASE("Interceptor Tests") {
 
             REQUIRE(eventHandlerServices[0]->getHandledEvents().empty());
 
-            mng.getEventQueue().pushEvent<QuitEvent>(0);
+            dm.getEventQueue().pushEvent<QuitEvent>(0);
         });
 
         t.join();
@@ -152,8 +152,8 @@ TEST_CASE("Interceptor Tests") {
 
         dm.runForOrQueueEmpty();
 
-        queue->pushEvent<RunFunctionEvent>(0, [](DependencyManager& mng) {
-            auto services = mng.getStartedServices<IInterceptorService>();
+        queue->pushEvent<RunFunctionEvent>(0, [&]() {
+            auto services = dm.getStartedServices<IInterceptorService>();
 
             REQUIRE(services.size() == 1);
 
@@ -172,7 +172,7 @@ TEST_CASE("Interceptor Tests") {
             REQUIRE(un.find(DependencyOnlineEvent::TYPE) == end(un));
             REQUIRE(un.find(RunFunctionEvent::TYPE) == end(un));
 
-            mng.getEventQueue().pushEvent<QuitEvent>(0);
+            dm.getEventQueue().pushEvent<QuitEvent>(0);
         });
 
         t.join();
@@ -195,8 +195,8 @@ TEST_CASE("Interceptor Tests") {
 
         dm.runForOrQueueEmpty();
 
-        queue->pushEvent<RunFunctionEvent>(0, [](DependencyManager& mng) {
-            auto services = mng.getStartedServices<IInterceptorService>();
+        queue->pushEvent<RunFunctionEvent>(0, [&]() {
+            auto services = dm.getStartedServices<IInterceptorService>();
 
             REQUIRE(services.size() == 2);
 
@@ -218,7 +218,7 @@ TEST_CASE("Interceptor Tests") {
                 REQUIRE(un.find(RunFunctionEvent::TYPE) == end(un));
             }
 
-            mng.getEventQueue().pushEvent<QuitEvent>(0);
+            dm.getEventQueue().pushEvent<QuitEvent>(0);
         });
 
         t.join();

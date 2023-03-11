@@ -6,6 +6,7 @@
 #include <ichor/services/network/NetworkEvents.h>
 #include <ichor/services/network/IHostService.h>
 #include <ichor/services/network/http/HttpScopeGuards.h>
+#include <ichor/events/RunFunctionEvent.h>
 #include <thread>
 
 template<class NextLayer>
@@ -86,7 +87,7 @@ Ichor::Task<void> Ichor::WsConnectionService::stop() {
             if (ec) {
                 ICHOR_LOG_ERROR(_logger, "Boost.BEAST fail: {}", ec.message());
             }
-            _queue->pushPrioritisedEvent<RunFunctionEvent>(getServiceId(), _priority.load(std::memory_order_acquire), [this](DependencyManager &dm) {
+            _queue->pushPrioritisedEvent<RunFunctionEvent>(getServiceId(), _priority.load(std::memory_order_acquire), [this]() {
 //                fmt::print("{}:{} rfe2\n", getServiceId(), getServiceName());
                 _startStopEvent.set();
             });
@@ -194,7 +195,7 @@ void Ichor::WsConnectionService::fail(beast::error_code ec, const char *what) {
 //    fmt::print("{}:{} fail {}\n", getServiceId(), getServiceName(), ec.message());
     ICHOR_LOG_ERROR(_logger, "Boost.BEAST fail: {}, {}", what, ec.message());
 
-    _queue->pushPrioritisedEvent<RunFunctionEvent>(getServiceId(), _priority.load(std::memory_order_acquire), [this](DependencyManager &dm) {
+    _queue->pushPrioritisedEvent<RunFunctionEvent>(getServiceId(), _priority.load(std::memory_order_acquire), [this]() {
 //        fmt::print("{}:{} rfe\n", getServiceId(), getServiceName());
         _startStopEvent.set();
     });
@@ -206,7 +207,7 @@ void Ichor::WsConnectionService::accept(net::yield_context yield) {
 
     {
         ScopeGuardFunction const coroutineGuard{[this]() {
-            _queue->pushPrioritisedEvent<RunFunctionEvent>(getServiceId(), _priority.load(std::memory_order_acquire), [this](DependencyManager &dm) {
+            _queue->pushPrioritisedEvent<RunFunctionEvent>(getServiceId(), _priority.load(std::memory_order_acquire), [this]() {
 //                fmt::print("{}:{} rfe accept\n", getServiceId(), getServiceName());
                 _startStopEvent.set();
             });
@@ -273,7 +274,7 @@ void Ichor::WsConnectionService::connect(net::yield_context yield) {
 
     {
         ScopeGuardFunction const coroutineGuard{[this]() {
-            _queue->pushPrioritisedEvent<RunFunctionEvent>(getServiceId(), _priority.load(std::memory_order_acquire), [this](DependencyManager &dm) {
+            _queue->pushPrioritisedEvent<RunFunctionEvent>(getServiceId(), _priority.load(std::memory_order_acquire), [this]() {
 //                fmt::print("{}:{} rfe connect\n", getServiceId(), getServiceName());
                 _startStopEvent.set();
             });
