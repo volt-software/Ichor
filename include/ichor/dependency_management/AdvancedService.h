@@ -24,9 +24,7 @@ namespace Ichor {
         requires Derived<ServiceType, IService>
 #endif
         class DependencyLifecycleManager;
-    }
 
-    namespace Detail {
         extern std::atomic<uint64_t> _serviceIdCounter;
     }
 

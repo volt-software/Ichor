@@ -13,6 +13,7 @@
 
 Ichor::TcpHostService::TcpHostService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)), _socket(-1), _bindFd(), _priority(INTERNAL_EVENT_PRIORITY), _quit() {
     reg.registerDependency<ILogger>(this, true);
+    reg.registerDependency<ITimerFactory>(this, true);
 }
 
 Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::TcpHostService::start() {
@@ -69,9 +70,9 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::TcpHostService::start(
         throw std::runtime_error("Couldn't listen on socket: errno = " + std::to_string(errno));
     }
 
-    _timerManager = GetThreadLocalManager().createServiceManager<Timer, ITimer>();
-    _timerManager->setChronoInterval(20ms);
-    _timerManager->setCallback(this, [this](DependencyManager &dm) {
+    auto &timer = _timerFactory->createTimer();
+    timer.setChronoInterval(20ms);
+    timer.setCallback([this](DependencyManager &dm) {
         sockaddr_in client_addr{};
         socklen_t client_addr_size = sizeof(client_addr);
         int newConnection = ::accept(_socket, (sockaddr *) &client_addr, &client_addr_size);
@@ -92,15 +93,13 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::TcpHostService::start(
         GetThreadLocalEventQueue().pushPrioritisedEvent<NewSocketEvent>(getServiceId(), _priority, newConnection);
         return;
     });
-    _timerManager->startTimer();
+    timer.startTimer();
 
     co_return {};
 }
 
 Ichor::Task<void> Ichor::TcpHostService::stop() {
     _quit = true;
-
-    _timerManager = nullptr;
 
     if(_socket >= 0) {
         ::shutdown(_socket, SHUT_RDWR);
@@ -118,6 +117,14 @@ void Ichor::TcpHostService::addDependencyInstance(ILogger &logger, IService &) {
 
 void Ichor::TcpHostService::removeDependencyInstance(ILogger &logger, IService&) {
     _logger = nullptr;
+}
+
+void Ichor::TcpHostService::addDependencyInstance(ITimerFactory &factory, IService &) {
+    _timerFactory = &factory;
+}
+
+void Ichor::TcpHostService::removeDependencyInstance(ITimerFactory &factory, IService&) {
+    _timerFactory = nullptr;
 }
 
 void Ichor::TcpHostService::setPriority(uint64_t priority) {

@@ -4,7 +4,7 @@
 
 #include <ichor/services/network/IConnectionService.h>
 #include <ichor/services/logging/Logger.h>
-#include <ichor/services/timer/TimerService.h>
+#include <ichor/services/timer/ITimerFactory.h>
 
 namespace Ichor {
     class TcpConnectionService final : public IConnectionService, public AdvancedService<TcpConnectionService> {
@@ -23,6 +23,9 @@ namespace Ichor {
         void addDependencyInstance(ILogger &logger, IService &isvc);
         void removeDependencyInstance(ILogger &logger, IService &isvc);
 
+        void addDependencyInstance(ITimerFactory &logger, IService &isvc);
+        void removeDependencyInstance(ITimerFactory &logger, IService &isvc);
+
         friend DependencyRegister;
 
         int _socket;
@@ -31,7 +34,7 @@ namespace Ichor {
         uint64_t _msgIdCounter;
         bool _quit;
         ILogger *_logger{nullptr};
-        Timer* _timerManager{nullptr};
+        ITimerFactory *_timerFactory{nullptr};
     };
 }
 

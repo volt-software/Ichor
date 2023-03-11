@@ -8,6 +8,7 @@
 #include <ichor/services/network/ClientFactory.h>
 #include <ichor/services/serialization/ISerializer.h>
 #include <ichor/services/logging/NullLogger.h>
+#include <ichor/services/timer/TimerFactoryFactory.h>
 
 #ifdef ICHOR_USE_SPDLOG
 #include <ichor/services/logging/SpdlogFrameworkLogger.h>
@@ -84,6 +85,7 @@ int main(int argc, char *argv[]) {
     dm.createServiceManager<AsioContextService, IAsioContextService>();
     dm.createServiceManager<ClientFactory<HttpConnectionService, IHttpConnectionService>>();
     dm.createServiceManager<PingService>(Properties{{"Address", Ichor::make_any<std::string>(address)}, {"Port", Ichor::make_any<uint16_t>(static_cast<uint16_t>(8001))}});
+    dm.createServiceManager<TimerFactoryFactory>();
     queue->start(CaptureSigInt);
     auto end = std::chrono::steady_clock::now();
     fmt::print("{} ran for {:L} µs\n", argv[0], std::chrono::duration_cast<std::chrono::microseconds>(end-start).count());

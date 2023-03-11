@@ -2,9 +2,10 @@
 
 #include <ichor/DependencyManager.h>
 #include <ichor/services/logging/Logger.h>
-#include <ichor/services/timer/TimerService.h>
+#include <ichor/services/timer/ITimerFactory.h>
 #include <ichor/dependency_management/AdvancedService.h>
 #include <ichor/dependency_management/DependencyRegister.h>
+#include <thread>
 
 using namespace Ichor;
 
@@ -12,27 +13,28 @@ class UsingStatisticsService final : public AdvancedService<UsingStatisticsServi
 public:
     UsingStatisticsService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {
         reg.registerDependency<ILogger>(this, true);
+        reg.registerDependency<ITimerFactory>(this, true);
     }
     ~UsingStatisticsService() final = default;
 
 private:
     Task<tl::expected<void, Ichor::StartError>> start() final {
         ICHOR_LOG_INFO(_logger, "UsingStatisticsService started");
-        auto quitTimerManager = GetThreadLocalManager().createServiceManager<Timer, ITimer>();
-        auto bogusTimerManager = GetThreadLocalManager().createServiceManager<Timer, ITimer>();
-        quitTimerManager->setChronoInterval(15s);
-        bogusTimerManager->setChronoInterval(100ms);
+        auto &quitTimer = _timerFactory->createTimer();
+        auto &bogusTimer = _timerFactory->createTimer();
+        quitTimer.setChronoInterval(15s);
+        bogusTimer.setChronoInterval(100ms);
 
-        quitTimerManager->setCallback(this, [this](DependencyManager &dm) {
+        quitTimer.setCallback([this](DependencyManager &dm) {
             dm.getEventQueue().pushEvent<QuitEvent>(getServiceId());
         });
 
-        bogusTimerManager->setCallback(this, [this](DependencyManager &dm) {
+        bogusTimer.setCallback([this](DependencyManager &dm) {
             std::this_thread::sleep_for(std::chrono::milliseconds(_dist(_mt)));
         });
 
-        quitTimerManager->startTimer();
-        bogusTimerManager->startTimer();
+        quitTimer.startTimer();
+        bogusTimer.startTimer();
         co_return {};
     }
 
@@ -49,9 +51,18 @@ private:
         _logger = nullptr;
     }
 
+    void addDependencyInstance(ITimerFactory &factory, IService &) {
+        _timerFactory = &factory;
+    }
+
+    void removeDependencyInstance(ITimerFactory &factory, IService&) {
+        _timerFactory = nullptr;
+    }
+
     friend DependencyRegister;
 
     ILogger *_logger{nullptr};
+    ITimerFactory *_timerFactory{nullptr};
     std::random_device _rd{};
     std::mt19937 _mt{_rd()};
     std::uniform_int_distribution<> _dist{1, 10};

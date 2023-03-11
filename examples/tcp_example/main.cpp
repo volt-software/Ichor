@@ -5,6 +5,7 @@
 #include <ichor/services/network/tcp/TcpHostService.h>
 #include <ichor/services/network/ClientFactory.h>
 #include <ichor/services/serialization/ISerializer.h>
+#include <ichor/services/timer/TimerFactoryFactory.h>
 
 #ifdef ICHOR_USE_SPDLOG
 #include <ichor/services/logging/SpdlogLogger.h>
@@ -32,6 +33,7 @@ int main(int argc, char *argv[]) {
     dm.createServiceManager<TestMsgRapidJsonSerializer, ISerializer<TestMsg>>();
     dm.createServiceManager<TcpHostService, IHostService>(Properties{{"Address", Ichor::make_any<std::string>("127.0.0.1"s)}, {"Port", Ichor::make_any<uint16_t>(static_cast<uint16_t>(8001))}});
     dm.createServiceManager<ClientFactory<TcpConnectionService>>();
+    dm.createServiceManager<TimerFactoryFactory>();
     dm.createServiceManager<UsingTcpService>(Properties{{"Address", Ichor::make_any<std::string>("127.0.0.1"s)}, {"Port", Ichor::make_any<uint16_t>(static_cast<uint16_t>(8001))}});
     queue->start(CaptureSigInt);
     auto end = std::chrono::steady_clock::now();

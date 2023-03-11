@@ -1,6 +1,6 @@
 #pragma once
 
-#include <ichor/services/timer/TimerService.h>
+#include <ichor/services/timer/ITimerFactory.h>
 #include <ichor/dependency_management/AdvancedService.h>
 #include "AwaitService.h"
 
@@ -10,28 +10,28 @@ class AsyncUsingTimerService final : public AdvancedService<AsyncUsingTimerServi
 public:
     AsyncUsingTimerService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {
         reg.registerDependency<IAwaitService>(this, true);
+        reg.registerDependency<ITimerFactory>(this, true);
     }
     ~AsyncUsingTimerService() final = default;
 
     Task<tl::expected<void, Ichor::StartError>> start() final {
         fmt::print("start\n");
-        _timerManager = GetThreadLocalManager().createServiceManager<Timer, ITimer>();
-        _timerManager->setChronoInterval(100ms);
-        _timerManager->setCallbackAsync(this, [this](DependencyManager &dm) -> AsyncGenerator<IchorBehaviour> {
+        auto &timer = _timerFactory->createTimer();
+        timer.setChronoInterval(100ms);
+        timer.setCallbackAsync([this, &timer = timer](DependencyManager &dm) -> AsyncGenerator<IchorBehaviour> {
             fmt::print("timer 1\n");
             co_await _awaitSvc->await_something();
             fmt::print("timer 2\n");
-            _timerManager->stopTimer();
+            timer.stopTimer();
             GetThreadLocalEventQueue().pushEvent<QuitEvent>(getServiceId());
 
             co_return {};
         });
-        _timerManager->startTimer();
+        timer.startTimer();
         co_return {};
     }
 
     Task<void> stop() final {
-        _timerManager = nullptr;
         co_return;
     }
 
@@ -43,9 +43,17 @@ public:
         _awaitSvc = nullptr;
     }
 
+    void addDependencyInstance(ITimerFactory &factory, IService &) {
+        _timerFactory = &factory;
+    }
+
+    void removeDependencyInstance(ITimerFactory &factory, IService&) {
+        _timerFactory = nullptr;
+    }
+
 private:
-    Timer* _timerManager{};
     IAwaitService* _awaitSvc{};
+    ITimerFactory *_timerFactory{};
 
     friend DependencyRegister;
 };

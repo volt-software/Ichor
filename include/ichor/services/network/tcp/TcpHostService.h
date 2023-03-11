@@ -5,7 +5,7 @@
 #include <ichor/services/network/IHostService.h>
 #include <ichor/services/logging/Logger.h>
 #include <ichor/services/network/tcp/TcpConnectionService.h>
-#include <ichor/services/timer/TimerService.h>
+#include <ichor/services/timer/ITimerFactory.h>
 
 namespace Ichor {
     struct NewSocketEvent final : public Ichor::Event {
@@ -32,6 +32,9 @@ namespace Ichor {
         void addDependencyInstance(ILogger &logger, IService &isvc);
         void removeDependencyInstance(ILogger &logger, IService &isvc);
 
+        void addDependencyInstance(ITimerFactory &logger, IService &isvc);
+        void removeDependencyInstance(ITimerFactory &logger, IService &isvc);
+
         AsyncGenerator<IchorBehaviour> handleEvent(NewSocketEvent const &evt);
 
         friend DependencyRegister;
@@ -42,7 +45,7 @@ namespace Ichor {
         uint64_t _priority;
         bool _quit;
         ILogger *_logger{nullptr};
-        Timer* _timerManager{nullptr};
+        ITimerFactory *_timerFactory{nullptr};
         std::vector<TcpConnectionService*> _connections;
         EventHandlerRegistration _newSocketEventHandlerRegistration{};
     };

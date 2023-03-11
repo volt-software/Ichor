@@ -2,11 +2,11 @@
 
 #include <ichor/DependencyManager.h>
 #include <ichor/services/logging/Logger.h>
-#include <ichor/services/timer/TimerService.h>
+#include <ichor/services/timer/ITimerFactory.h>
 #include <ichor/services/network/NetworkEvents.h>
 #include <ichor/services/network/http/IHttpConnectionService.h>
 #include <ichor/services/network/http/IHttpService.h>
-#include <ichor/services/timer/TimerService.h>
+#include <ichor/services/timer/ITimerFactory.h>
 #include <ichor/events/RunFunctionEvent.h>
 #include <ichor/dependency_management/AdvancedService.h>
 #include <ichor/dependency_management/DependencyRegister.h>
@@ -21,6 +21,7 @@ public:
         reg.registerDependency<ILogger>(this, true, Properties{{"LogLevel", Ichor::make_any<LogLevel>(LogLevel::LOG_INFO)}});
         reg.registerDependency<ISerializer<PingMsg>>(this, true);
         reg.registerDependency<IHttpConnectionService>(this, true, getProperties());
+        reg.registerDependency<ITimerFactory>(this, true);
     }
     ~PingService() final = default;
 
@@ -28,8 +29,8 @@ private:
     Task<tl::expected<void, Ichor::StartError>> start() final {
         ICHOR_LOG_INFO(_logger, "PingService started");
 
-        _timer = GetThreadLocalManager().createServiceManager<Timer, ITimer>();
-        _timer->setCallbackAsync(this, [this](DependencyManager &dm) -> AsyncGenerator<IchorBehaviour> {
+        auto &timer = _timerFactory->createTimer();
+        timer.setCallbackAsync([this, &timer = timer](DependencyManager &dm) -> AsyncGenerator<IchorBehaviour> {
             auto toSendMsg = _serializer->serialize(PingMsg{_sequence});
 
             _sequence++;
@@ -48,19 +49,18 @@ private:
             // prevent sending more than we can handle
             if(std::chrono::duration_cast<std::chrono::microseconds>(end - start) > _timerTimeout) {
                 _timerTimeout = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-                _timer->setChronoInterval(_timerTimeout);
+                timer.setChronoInterval(_timerTimeout);
             }
 
             co_return {};
         });
-        _timer->setChronoInterval(_timerTimeout);
-        _timer->startTimer();
+        timer.setChronoInterval(_timerTimeout);
+        timer.startTimer();
 
         co_return {};
     }
 
     Task<void> stop() final {
-        _timer->stopTimer();
         ICHOR_LOG_INFO(_logger, "PingService stopped");
         co_return;
     }
@@ -92,6 +92,14 @@ private:
         ICHOR_LOG_INFO(_logger, "Removed IHttpConnectionService");
     }
 
+    void addDependencyInstance(ITimerFactory &factory, IService &) {
+        _timerFactory = &factory;
+    }
+
+    void removeDependencyInstance(ITimerFactory &factory, IService&) {
+        _timerFactory = nullptr;
+    }
+
     friend DependencyRegister;
 
     Task<std::optional<PingMsg>> sendTestRequest(std::vector<uint8_t> &&toSendMsg) {
@@ -113,7 +121,7 @@ private:
     }
 
     ILogger *_logger{nullptr};
-    Timer *_timer{nullptr};
+    ITimerFactory *_timerFactory{nullptr};
     ISerializer<PingMsg> *_serializer{nullptr};
     IHttpConnectionService *_connectionService{nullptr};
     uint64_t _sequence{};

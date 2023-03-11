@@ -4,9 +4,10 @@
 
 #include <ichor/DependencyManager.h>
 #include <ichor/CommunicationChannel.h>
-#include <ichor/services/timer/TimerService.h>
+#include <ichor/services/timer/ITimerFactory.h>
 #include <ichor/events/Event.h>
 #include <iostream>
+#include <thread>
 
 using namespace Ichor;
 
@@ -34,21 +35,14 @@ struct MyDependencyService final : public IMyDependencyService, public Ichor::Ad
 
 struct IMyTimerService {};
 
-struct MyTimerService final : public IMyTimerService, public Ichor::AdvancedService<MyTimerService> {
-    MyTimerService() = default;
-    Task<tl::expected<void, Ichor::StartError>> start() final {
-        auto timer = GetThreadLocalManager().createServiceManager<Ichor::Timer, Ichor::ITimer>();
-        timer->setChronoInterval(std::chrono::seconds(1));
-        timer->setCallback(this, [](DependencyManager &) {
+struct MyTimerService final : public IMyTimerService {
+    MyTimerService(ITimerFactory *factory) {
+        auto &timer = factory->createTimer();
+        timer.setChronoInterval(std::chrono::seconds(1));
+        timer.setCallback([](DependencyManager &) {
             fmt::print("Timer fired\n");
         });
-        timer->startTimer();
-        co_return {};
-    }
-
-    Task<void> stop() final {
-        _timerEventRegistration.reset();
-        co_return;
+        timer.startTimer();
     }
 
     Ichor::EventHandlerRegistration _timerEventRegistration{};

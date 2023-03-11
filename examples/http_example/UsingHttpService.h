@@ -1,7 +1,7 @@
 #pragma once
 
 #include <ichor/services/logging/Logger.h>
-#include <ichor/services/timer/TimerService.h>
+#include <ichor/services/timer/ITimerFactory.h>
 #include <ichor/services/network/NetworkEvents.h>
 #include <ichor/services/network/http/IHttpConnectionService.h>
 #include <ichor/services/network/http/IHttpService.h>

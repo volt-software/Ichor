@@ -1,34 +1,33 @@
 #pragma once
 
-#include <ichor/services/timer/TimerService.h>
+#include <ichor/services/timer/ITimerFactory.h>
 #include <ichor/dependency_management/AdvancedService.h>
 
 using namespace Ichor;
 
-class TimerRunsOnceService final : public AdvancedService<TimerRunsOnceService> {
+class ITimerRunsOnceService {
 public:
-    TimerRunsOnceService() = default;
-    ~TimerRunsOnceService() final = default;
+    virtual uint64_t getCount() const noexcept = 0;
+protected:
+    ~ITimerRunsOnceService() = default;
+};
 
-    Task<tl::expected<void, Ichor::StartError>> start() final {
-        fmt::print("start\n");
-        _timerManager = GetThreadLocalManager().createServiceManager<Timer, ITimer>();
-        _timerManager->setChronoInterval(std::chrono::milliseconds(5));
-        _timerManager->setCallback(this, [this](DependencyManager &dm) {
+class TimerRunsOnceService final : public ITimerRunsOnceService {
+public:
+    TimerRunsOnceService(ITimerFactory *factory) {
+        auto &timer = factory->createTimer();
+        timer.setChronoInterval(std::chrono::seconds(1));
+        timer.setCallback([this, &timer = timer](DependencyManager &) {
             count++;
-            _timerManager->stopTimer();
+            timer.stopTimer();
         });
-        _timerManager->startTimer(true);
-        co_return {};
+        timer.startTimer(true);
     }
 
-    Task<void> stop() final {
-        _timerManager = nullptr;
-        co_return;
+    uint64_t getCount() const noexcept final {
+        return count;
     }
 
-    uint64_t count{};
 private:
-    Timer* _timerManager{};
-
+    uint64_t count{};
 };

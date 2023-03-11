@@ -85,6 +85,7 @@ namespace Ichor {
 
 Ichor::HiredisService::HiredisService(DependencyRegister &reg, Properties props) : AdvancedService<HiredisService>(std::move(props)) {
     reg.registerDependency<ILogger>(this, true);
+    reg.registerDependency<ITimerFactory>(this, true);
 }
 
 Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::HiredisService::start() {
@@ -97,12 +98,12 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::HiredisService::start(
         co_return tl::unexpected(StartError::FAILED);
     }
 
-    _pollTimer = GetThreadLocalManager().createServiceManager<Timer, ITimer>();
-    _pollTimer->setCallback(this, [this](DependencyManager &) {
+    auto &timer = _timerFactory->createTimer();
+    timer.setCallback([this](DependencyManager &) {
         redisPollTick(_redisContext, 0);
     });
-    _pollTimer->setChronoInterval(1ms);
-    _pollTimer->startTimer();
+    timer.setChronoInterval(1ms);
+    timer.startTimer();
 
     INTERNAL_DEBUG("HiredisService::start() co_return");
 
@@ -111,8 +112,6 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::HiredisService::start(
 
 Ichor::Task<void> Ichor::HiredisService::stop() {
     redisAsyncDisconnect(_redisContext);
-
-    _pollTimer->stopTimer();
 
     INTERNAL_DEBUG("HiredisService::stop() co_return");
 
@@ -123,8 +122,16 @@ void Ichor::HiredisService::addDependencyInstance(ILogger &logger, IService&) {
     _logger = &logger;
 }
 
-void Ichor::HiredisService::removeDependencyInstance(ILogger &logger, IService&) {
+void Ichor::HiredisService::removeDependencyInstance(ILogger &, IService&) {
     _logger = nullptr;
+}
+
+void Ichor::HiredisService::addDependencyInstance(ITimerFactory &factory, IService&) {
+    _timerFactory = &factory;
+}
+
+void Ichor::HiredisService::removeDependencyInstance(ITimerFactory &, IService&) {
+    _timerFactory = nullptr;
 }
 
 void Ichor::HiredisService::setPriority(uint64_t priority) {
