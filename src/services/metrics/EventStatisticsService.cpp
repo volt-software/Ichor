@@ -2,6 +2,11 @@
 #include <ichor/DependencyManager.h>
 #include <numeric>
 
+Ichor::EventStatisticsService::EventStatisticsService(DependencyRegister &reg, Properties props) : AdvancedService<EventStatisticsService>(std::move(props)) {
+    reg.registerDependency<ITimerFactory>(this, true);
+    reg.registerDependency<ILogger>(this, true);
+}
+
 Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::EventStatisticsService::start() {
     if(getProperties().contains("ShowStatisticsOnStop")) {
         _showStatisticsOnStop = Ichor::any_cast<bool>(getProperties()["ShowStatisticsOnStop"]);
@@ -47,7 +52,7 @@ Ichor::Task<void> Ichor::EventStatisticsService::stop() {
             auto avg = std::accumulate(begin(statistics), end(statistics), 0L, [](int64_t i, const AveragedStatisticEntry &entry) -> int64_t { return i + entry.avgProcessingTimeRequired; }) / static_cast<int64_t>(statistics.size());
             auto occ = std::accumulate(begin(statistics), end(statistics), 0L, [](int64_t i, const AveragedStatisticEntry &entry){ return i + entry.occurrences; });
 
-            ICHOR_LOG_ERROR(GetThreadLocalManager().getLogger(), "Dm {:L} Event type {} occurred {:L} times, min/max/avg processing: {:L}/{:L}/{:L} ns", GetThreadLocalManager().getId(), _eventTypeToNameMapper[key], occ, min, max, avg);
+            ICHOR_LOG_ERROR(_logger, "Dm {:L} Event type {} occurred {:L} times, min/max/avg processing: {:L}/{:L}/{:L} ns", GetThreadLocalManager().getId(), _eventTypeToNameMapper[key], occ, min, max, avg);
         }
     }
 
@@ -82,6 +87,14 @@ void Ichor::EventStatisticsService::postInterceptEvent(Event const &evt, bool pr
                 std::chrono::duration_cast<std::chrono::nanoseconds>(now.time_since_epoch()).count(),
                 std::chrono::duration_cast<std::chrono::nanoseconds>(processingTime).count());
     }
+}
+
+void Ichor::EventStatisticsService::addDependencyInstance(ILogger &logger, IService &) {
+    _logger = &logger;
+}
+
+void Ichor::EventStatisticsService::removeDependencyInstance(ILogger &, IService&) {
+    _logger = nullptr;
 }
 
 void Ichor::EventStatisticsService::addDependencyInstance(ITimerFactory &factory, IService &) {

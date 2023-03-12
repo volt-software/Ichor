@@ -33,6 +33,7 @@ run_examples ()
   ../bin/ichor_http_example || exit 1
   ../bin/ichor_multithreaded_example || exit 1
   ../bin/ichor_optional_dependency_example || exit 1
+  ../bin/ichor_event_statistics_example || exit 1
   ../bin/ichor_serializer_example || exit 1
   ../bin/ichor_tcp_example || exit 1
   ../bin/ichor_timer_example || exit 1
