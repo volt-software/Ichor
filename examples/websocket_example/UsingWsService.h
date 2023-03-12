@@ -24,8 +24,8 @@ public:
 private:
     Task<tl::expected<void, Ichor::StartError>> start() final {
         ICHOR_LOG_INFO(_logger, "UsingWsService started");
-        _dataEventRegistration = GetThreadLocalManager().registerEventHandler<NetworkDataEvent>(this);
-        _failureEventRegistration = GetThreadLocalManager().registerEventHandler<FailedSendMessageEvent>(this);
+        _dataEventRegistration = GetThreadLocalManager().registerEventHandler<NetworkDataEvent>(this, this);
+        _failureEventRegistration = GetThreadLocalManager().registerEventHandler<FailedSendMessageEvent>(this, this);
         _connectionService->sendAsync(_serializer->serialize(TestMsg{11, "hello"}));
         co_return {};
     }

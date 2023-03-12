@@ -20,7 +20,7 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::EventStatisticsService
         return handleEvent();
     });
 
-    _interceptorRegistration = GetThreadLocalManager().registerEventInterceptor<Event>(this);
+    _interceptorRegistration = GetThreadLocalManager().registerEventInterceptor<Event>(this, this);
     timer.startTimer();
 
     co_return {};

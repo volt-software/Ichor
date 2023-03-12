@@ -13,8 +13,8 @@ namespace Ichor {
 
     private:
         Task<tl::expected<void, Ichor::StartError>> start() final {
-            _trackerRegistration = GetThreadLocalManager().template registerDependencyTracker<NetworkInterfaceType>(this);
-            _unrecoverableErrorRegistration = GetThreadLocalManager().template registerEventHandler<UnrecoverableErrorEvent>(this);
+            _trackerRegistration = GetThreadLocalManager().template registerDependencyTracker<NetworkInterfaceType>(this, this);
+            _unrecoverableErrorRegistration = GetThreadLocalManager().template registerEventHandler<UnrecoverableErrorEvent>(this, this);
 
             co_return {};
         }

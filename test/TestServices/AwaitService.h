@@ -35,7 +35,7 @@ struct EventAwaitService final : public AdvancedService<EventAwaitService> {
     EventAwaitService() = default;
     ~EventAwaitService() final = default;
     Task<tl::expected<void, Ichor::StartError>> start() final {
-        _handler = GetThreadLocalManager().template registerEventHandler<AwaitEvent>(this);
+        _handler = GetThreadLocalManager().template registerEventHandler<AwaitEvent>(this, this);
 
         co_return {};
     }

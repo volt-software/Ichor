@@ -19,7 +19,7 @@ public:
 private:
     Task<tl::expected<void, Ichor::StartError>> start() final {
         ICHOR_LOG_INFO(_logger, "TestService started with dependency");
-        _doWorkRegistration = GetThreadLocalManager().registerEventCompletionCallbacks<DoWorkEvent>(this);
+        _doWorkRegistration = GetThreadLocalManager().registerEventCompletionCallbacks<DoWorkEvent>(this, this);
         GetThreadLocalEventQueue().pushEvent<DoWorkEvent>(getServiceId());
         co_return {};
     }

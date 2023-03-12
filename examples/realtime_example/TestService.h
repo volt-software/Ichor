@@ -33,7 +33,7 @@ private:
     Task<tl::expected<void, Ichor::StartError>> start() final {
         ICHOR_LOG_INFO(_logger, "TestService started with dependency");
         _started = true;
-        _eventHandlerRegistration = GetThreadLocalManager().registerEventHandler<ExecuteTaskEvent>(this);
+        _eventHandlerRegistration = GetThreadLocalManager().registerEventHandler<ExecuteTaskEvent>(this, this);
         if(_injectionCount == 2) {
             enqueueWorkload();
         }
