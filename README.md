@@ -5,6 +5,8 @@
 
 Ichor, [Greek Mythos for ethereal fluid that is the blood of the gods/immortals](https://en.wikipedia.org/wiki/Ichor), is a C++ framework/middleware for microservices. Ichor allows re-usable services and components to be used in multiple microservices, greatly supporting the workflow for large teams. It also supports reasoning in multithreaded environments, reducing the chances for data races.
 
+TL;DR: Node.js-style event loops with coroutines and dependency injection, except it's C++.
+
 Ichor borrows from the concept of [Fearless Concurrency](https://doc.rust-lang.org/book/ch16-00-concurrency.html) and offers thread confinement.
 
 ### Thread confinement? Fearless Concurrency?
@@ -36,7 +38,7 @@ More examples can be found in the [examples directory](examples).
 ## Supported Compilers
 * Gcc 11.3 or newer (see [this gcc bug](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=95137) for why)
 * Clang 14 or newer
-* MSVC 17.4+ (though some workarounds for compiler bugs are used)
+* MSVC 17.4+ (though some workarounds for [compiler bugs](https://developercommunity.visualstudio.com/t/c20-Friend-definition-of-class-with-re/10197302) are used)
 
 ## Currently Unsupported
 * Baremetal, might change if someone puts in the effort to modify Ichor to work with freestanding implementations of C++20
@@ -44,7 +46,7 @@ More examples can be found in the [examples directory](examples).
 
 ## Building
 
-For build instructions and required dependencies, please see [GettingStarted](docs/GettingStarted.md).
+For build instructions and required dependencies, please see [GettingStarted](docs/01-GettingStarted.md).
 
 ## Documentation
 
@@ -78,6 +80,7 @@ Optional services:
 * TCP communication service
 * JSON serialization services examples
 * Timer service
+* Redis service
 * Partial etcd service (may be broken, unused for a while)
 
 # Roadmap
@@ -117,13 +120,12 @@ Instead, Ichor now recommends usage with [mimalloc](https://github.com/microsoft
 
 > it does not suffer from blowup, has bounded worst-case allocation times (wcat), bounded space overhead (~0.2% meta-data, with low internal fragmentation), and has no internal points of contention using only atomic operations.
 
-### OS X? VxWorks Wind River? Baremetal?
-
-I don't have a machine with OS X to program for (and also don't know if there is much demand for it), so I haven't started on it.
+### FreeRTOS? VxWorks Wind River? Baremetal?
 
 What is necessary to implement before using Ichor on these platforms:
 * Ichor [STL](include/ichor/stl) functionality, namely the RealtimeMutex and ConditionVariable.
 * Compiler support for C++20 may not be adequate yet.
+* Time / effort.
 
 The same goes for Wind River. Freestanding implementations might be necessary for Baremetal support, but that would stray rather far from my expertise.
 

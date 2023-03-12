@@ -82,10 +82,10 @@ uint64_t Ichor::Timer::getTimerId() const noexcept {
 
 void Ichor::Timer::insertEventLoop(bool fireImmediately) {
 #if defined(__APPLE__)
-    pthread_setname_np(fmt::format("Tmr #{}", getServiceId()).c_str());
+    pthread_setname_np(fmt::format("Tmr #{}", _timerId).c_str());
 #endif
 #if (defined(WIN32) || defined(_WIN32) || defined(__WIN32)) && !defined(__CYGWIN__)
-    SetThreadDescription(GetCurrentThread(), fmt::format(L"Tmr #{}", getServiceId()).c_str());
+    SetThreadDescription(GetCurrentThread(), fmt::format(L"Tmr #{}", _timerId).c_str());
 #endif
 
 
