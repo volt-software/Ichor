@@ -39,7 +39,7 @@ namespace Ichor {
 
     class EventStatisticsService final : public IEventStatisticsService, public AdvancedService<EventStatisticsService> {
     public:
-        EventStatisticsService() = default;
+        EventStatisticsService(DependencyRegister &reg, Properties props);
         ~EventStatisticsService() final = default;
 
         const unordered_map<uint64_t, std::vector<StatisticEntry>>& getRecentStatistics() const noexcept final;
@@ -47,6 +47,9 @@ namespace Ichor {
     private:
         bool preInterceptEvent(Event const &evt);
         void postInterceptEvent(Event const &evt, bool processed);
+
+        void addDependencyInstance(ILogger &logger, IService &);
+        void removeDependencyInstance(ILogger &logger, IService&);
 
         void addDependencyInstance(ITimerFactory &factory, IService &);
         void removeDependencyInstance(ITimerFactory &factory, IService&);
@@ -66,6 +69,7 @@ namespace Ichor {
         bool _showStatisticsOnStop{false};
         uint64_t _averagingIntervalMs{5000};
         EventInterceptorRegistration _interceptorRegistration{};
+        ILogger *_logger{};
         ITimerFactory *_timerFactory{};
     };
 }

@@ -22,7 +22,7 @@ private:
         ICHOR_LOG_INFO(_logger, "UsingStatisticsService started");
         auto &quitTimer = _timerFactory->createTimer();
         auto &bogusTimer = _timerFactory->createTimer();
-        quitTimer.setChronoInterval(15s);
+        quitTimer.setChronoInterval(5s);
         bogusTimer.setChronoInterval(100ms);
 
         quitTimer.setCallback([this]() {
