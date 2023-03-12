@@ -32,7 +32,7 @@ public:
 private:
     Task<tl::expected<void, Ichor::StartError>> start() final {
         ICHOR_LOG_INFO(_logger, "TrackerService started");
-        _trackerRegistration = GetThreadLocalManager().registerDependencyTracker<IRuntimeCreatedService>(this);
+        _trackerRegistration = GetThreadLocalManager().registerDependencyTracker<IRuntimeCreatedService>(this, this);
         co_return {};
     }
 

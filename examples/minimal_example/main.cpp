@@ -1,6 +1,6 @@
 #include <ichor/event_queues/MultimapQueue.h>
-#include <ichor/services/timer/TimerFactoryFactory.h>
 #include <ichor/DependencyManager.h>
+#include <ichor/services/timer/TimerFactoryFactory.h>
 #include <csignal>
 
 using namespace Ichor;

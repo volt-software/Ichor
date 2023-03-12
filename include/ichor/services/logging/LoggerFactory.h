@@ -37,7 +37,7 @@ namespace Ichor {
 
     private:
         Task<tl::expected<void, Ichor::StartError>> start() final {
-            _loggerTrackerRegistration = GetThreadLocalManager().template registerDependencyTracker<ILogger>(this);
+            _loggerTrackerRegistration = GetThreadLocalManager().template registerDependencyTracker<ILogger>(this, this);
             co_return {};
         }
 

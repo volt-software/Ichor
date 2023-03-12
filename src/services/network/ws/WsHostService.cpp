@@ -30,7 +30,7 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::WsHostService::start()
 
     _queue = &GetThreadLocalEventQueue();
 
-    _eventRegistration = GetThreadLocalManager().registerEventHandler<NewWsConnectionEvent>(this, getServiceId());
+    _eventRegistration = GetThreadLocalManager().registerEventHandler<NewWsConnectionEvent>(this, this, getServiceId());
 
     auto address = net::ip::make_address(Ichor::any_cast<std::string&>(getProperties()["Address"]));
     auto port = Ichor::any_cast<uint16_t>(getProperties()["Port"]);

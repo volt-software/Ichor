@@ -19,7 +19,7 @@ struct InterceptorService final : public IInterceptorService, public AdvancedSer
     InterceptorService() = default;
 
     Task<tl::expected<void, Ichor::StartError>> start() final {
-        _interceptor = GetThreadLocalManager().template registerEventInterceptor<InterceptorT>(this);
+        _interceptor = GetThreadLocalManager().template registerEventInterceptor<InterceptorT>(this, this);
 
         co_return {};
     }

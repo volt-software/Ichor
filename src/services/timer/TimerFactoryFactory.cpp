@@ -47,7 +47,7 @@ public:
 std::atomic<uint64_t> Ichor::TimerFactory::_timerIdCounter{};
 
 Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::TimerFactoryFactory::start() {
-    _trackerRegistration = GetThreadLocalManager().registerDependencyTracker<ITimerFactory>(this);
+    _trackerRegistration = GetThreadLocalManager().registerDependencyTracker<ITimerFactory>(this, this);
 
     co_return {};
 }

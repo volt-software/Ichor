@@ -17,7 +17,7 @@ public:
 private:
     Task<tl::expected<void, Ichor::StartError>> start() final {
         ICHOR_LOG_INFO(_logger, "OtherService started with dependency");
-        _customEventHandler = GetThreadLocalManager().registerEventHandler<CustomEvent>(this);
+        _customEventHandler = GetThreadLocalManager().registerEventHandler<CustomEvent>(this, this);
         co_return {};
     }
 

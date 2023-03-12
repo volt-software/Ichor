@@ -26,8 +26,8 @@ public:
 private:
     Task<tl::expected<void, Ichor::StartError>> start() final {
         if(startCount == 0) {
-            _startServiceRegistration = _dm->registerEventCompletionCallbacks<StartServiceEvent>(this);
-            _stopServiceRegistration = _dm->registerEventCompletionCallbacks<StopServiceEvent>(this);
+            _startServiceRegistration = _dm->registerEventCompletionCallbacks<StartServiceEvent>(this, this);
+            _stopServiceRegistration = _dm->registerEventCompletionCallbacks<StopServiceEvent>(this, this);
 
             _start = std::chrono::steady_clock::now();
             _dm->getEventQueue().pushPrioritisedEvent<StopServiceEvent>(getServiceId(), INTERNAL_DEPENDENCY_EVENT_PRIORITY, _testServiceId);

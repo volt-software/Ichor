@@ -66,7 +66,7 @@ struct ServiceWithoutInterface final : public Ichor::AdvancedService<ServiceWith
 
 struct MyInterceptorService final : public Ichor::AdvancedService<MyInterceptorService> {
     Task<tl::expected<void, Ichor::StartError>> start() final {
-        _interceptor = GetThreadLocalManager().template registerEventInterceptor<Ichor::RunFunctionEventAsync>(this); // Can change TimerEvent to just Event if you want to intercept *all* events
+        _interceptor = GetThreadLocalManager().template registerEventInterceptor<Ichor::RunFunctionEventAsync>(this, this); // Can change TimerEvent to just Event if you want to intercept *all* events
         co_return {};
     }
 

@@ -10,8 +10,8 @@ struct AddInterceptorDuringEventHandlingService final : public AdvancedService<A
     AddInterceptorDuringEventHandlingService() = default;
 
     Task<tl::expected<void, Ichor::StartError>> start() final {
-        _interceptor = GetThreadLocalManager().registerEventInterceptor<TestEvent>(this);
-        _interceptorAll = GetThreadLocalManager().registerEventInterceptor<Event>(this);
+        _interceptor = GetThreadLocalManager().registerEventInterceptor<TestEvent>(this, this);
+        _interceptorAll = GetThreadLocalManager().registerEventInterceptor<Event>(this, this);
 
         co_return {};
     }

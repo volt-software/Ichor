@@ -21,7 +21,7 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::TcpHostService::start(
         _priority = Ichor::any_cast<uint64_t>(getProperties()["Priority"]);
     }
 
-    _newSocketEventHandlerRegistration = GetThreadLocalManager().registerEventHandler<NewSocketEvent>(this);
+    _newSocketEventHandlerRegistration = GetThreadLocalManager().registerEventHandler<NewSocketEvent>(this, this);
 
     _socket = ::socket(AF_INET, SOCK_STREAM, 0);
     if(_socket == -1) {

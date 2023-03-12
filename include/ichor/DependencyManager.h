@@ -244,7 +244,7 @@ namespace Ichor {
 
         template <typename Interface, typename Impl>
 #if (!defined(WIN32) && !defined(_WIN32) && !defined(__WIN32)) || defined(__CYGWIN__)
-        requires Derived<Impl, IService> && ImplementsTrackingHandlers<Impl, Interface>
+        requires ImplementsTrackingHandlers<Impl, Interface>
 #endif
         [[nodiscard]]
         /// Register handlers for when dependencies get requested/unrequested
@@ -253,7 +253,7 @@ namespace Ichor {
         /// \param serviceId id of service registering handler
         /// \param impl class that is registering handler
         /// \return RAII handler, removes registration upon destruction
-        DependencyTrackerRegistration registerDependencyTracker(Impl *impl) {
+        DependencyTrackerRegistration registerDependencyTracker(Impl *impl, IService *self) {
 #ifdef ICHOR_USE_HARDENING
             if(this != Detail::_local_dm) [[unlikely]] { // are we on the right thread?
                 std::terminate();
@@ -307,7 +307,7 @@ namespace Ichor {
                 undoRequestTrackersForType->second.emplace_back(std::move(undoRequestInfo));
             }
 
-            return DependencyTrackerRegistration(impl->getServiceId(), typeNameHash<Interface>(), impl->getServicePriority());
+            return DependencyTrackerRegistration(self->getServiceId(), typeNameHash<Interface>(), self->getServicePriority());
         }
 
         template <typename EventT, typename Impl>
@@ -321,7 +321,7 @@ namespace Ichor {
         /// \param serviceId id of service registering handler
         /// \param impl class that is registering handler
         /// \return RAII handler, removes registration upon destruction
-        EventCompletionHandlerRegistration registerEventCompletionCallbacks(Impl *impl) {
+        EventCompletionHandlerRegistration registerEventCompletionCallbacks(Impl *impl, IService *self) {
             static_assert(!std::is_same_v<EventT, QuitEvent>, "QuitEvent cannot be used for completion callbacks");
             static_assert(!std::is_same_v<EventT, RemoveCompletionCallbacksEvent>, "RemoveCompletionCallbacksEvent cannot be used for completion callbacks");
             static_assert(!std::is_same_v<EventT, RemoveEventHandlerEvent>, "RemoveEventHandlerEvent cannot be used for completion callbacks");
@@ -336,10 +336,10 @@ namespace Ichor {
                 std::terminate();
             }
 #endif
-            CallbackKey key{impl->getServiceId(), EventT::TYPE};
+            CallbackKey key{self->getServiceId(), EventT::TYPE};
             _completionCallbacks.emplace(key, std::function<void(Event const &)>{[impl](Event const &evt){ impl->handleCompletion(static_cast<EventT const &>(evt)); }});
             _errorCallbacks.emplace(key, std::function<void(Event const &)>{[impl](Event const &evt){ impl->handleError(static_cast<EventT const &>(evt)); }});
-            return EventCompletionHandlerRegistration(key, impl->getServicePriority());
+            return EventCompletionHandlerRegistration(key, self->getServicePriority());
         }
 
         template <typename EventT, typename Impl>
@@ -354,7 +354,7 @@ namespace Ichor {
         /// \param impl class that is registering handler
         /// \param targetServiceId optional service id to filter registering for, if empty, receive all events of type EventT
         /// \return RAII handler, removes registration upon destruction
-        EventHandlerRegistration registerEventHandler(Impl *impl, std::optional<uint64_t> targetServiceId = {}) {
+        EventHandlerRegistration registerEventHandler(Impl *impl, IService *self, std::optional<uint64_t> targetServiceId = {}) {
 #ifdef ICHOR_USE_HARDENING
             if(this != Detail::_local_dm) [[unlikely]] { // are we on the right thread?
                 std::terminate();
@@ -364,7 +364,7 @@ namespace Ichor {
             if(existingHandlers == end(_eventCallbacks)) {
                 std::vector<EventCallbackInfo> v{};
                 v.template emplace_back<>(EventCallbackInfo{
-                        impl->getServiceId(),
+                        self->getServiceId(),
                         targetServiceId,
                         std::function<AsyncGenerator<IchorBehaviour>(Event const &)>{
                             [impl](Event const &evt) { return impl->handleEvent(static_cast<EventT const &>(evt)); }
@@ -373,14 +373,14 @@ namespace Ichor {
                 _eventCallbacks.emplace(EventT::TYPE, std::move(v));
             } else {
                 existingHandlers->second.emplace_back(EventCallbackInfo{
-                    impl->getServiceId(),
+                    self->getServiceId(),
                     targetServiceId,
                     std::function<AsyncGenerator<IchorBehaviour>(Event const &)>{
                         [impl](Event const &evt) { return impl->handleEvent(static_cast<EventT const &>(evt)); }
                     }
                 });
             }
-            return EventHandlerRegistration(CallbackKey{impl->getServiceId(), EventT::TYPE}, impl->getServicePriority());
+            return EventHandlerRegistration(CallbackKey{self->getServiceId(), EventT::TYPE}, self->getServicePriority());
         }
 
         template <typename EventT, typename Impl>
@@ -394,7 +394,7 @@ namespace Ichor {
         /// \param serviceId id of service registering handler
         /// \param impl class that is registering handler
         /// \return RAII handler, removes registration upon destruction
-        EventInterceptorRegistration registerEventInterceptor(Impl *impl) {
+        EventInterceptorRegistration registerEventInterceptor(Impl *impl, IService *self) {
 #ifdef ICHOR_USE_HARDENING
             if(this != Detail::_local_dm) [[unlikely]] { // are we on the right thread?
                 std::terminate();
@@ -407,16 +407,16 @@ namespace Ichor {
             auto existingHandlers = _eventInterceptors.find(targetEventId);
             if(existingHandlers == end(_eventInterceptors)) {
                 std::vector<EventInterceptInfo> v{};
-                v.template emplace_back<>(EventInterceptInfo{impl->getServiceId(), targetEventId,
+                v.template emplace_back<>(EventInterceptInfo{self->getServiceId(), targetEventId,
                                    std::function<bool(Event const &)>{[impl](Event const &evt){ return impl->preInterceptEvent(static_cast<EventT const &>(evt)); }},
                                    std::function<void(Event const &, bool)>{[impl](Event const &evt, bool processed){ impl->postInterceptEvent(static_cast<EventT const &>(evt), processed); }}});
                 _eventInterceptors.emplace(targetEventId, std::move(v));
             } else {
-                existingHandlers->second.template emplace_back<>(EventInterceptInfo{impl->getServiceId(), targetEventId,
+                existingHandlers->second.template emplace_back<>(EventInterceptInfo{self->getServiceId(), targetEventId,
                                                       std::function<bool(Event const &)>{[impl](Event const &evt){ return impl->preInterceptEvent(static_cast<EventT const &>(evt)); }},
                                                       std::function<void(Event const &, bool)>{[impl](Event const &evt, bool processed){ impl->postInterceptEvent(static_cast<EventT const &>(evt), processed); }}});
             }
-            return EventInterceptorRegistration(CallbackKey{impl->getServiceId(), targetEventId}, impl->getServicePriority());
+            return EventInterceptorRegistration(CallbackKey{self->getServiceId(), targetEventId}, self->getServicePriority());
         }
 
         /// Get manager id. Thread-safe.

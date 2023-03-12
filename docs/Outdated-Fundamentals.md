@@ -1,3 +1,4 @@
+# This page is outdated, please read the Getting Started doc until I have the time to update this. 
 # Fundamentals
 
 Ichor is a combination of three components:
