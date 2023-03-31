@@ -44,6 +44,6 @@ public:
     }
 
 private:
-    ILogger *_logger{nullptr};
+    ILogger *_logger{};
     uint64_t _timerTriggerCount{0};
 };

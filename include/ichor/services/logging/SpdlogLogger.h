@@ -35,9 +35,9 @@ namespace Ichor {
 
         friend DependencyRegister;
 
-        std::shared_ptr<spdlog::logger> _logger{nullptr};
+        std::shared_ptr<spdlog::logger> _logger{};
         LogLevel _level{LogLevel::LOG_TRACE};
-        ISpdlogSharedService* _sharedService{nullptr};
+        ISpdlogSharedService* _sharedService{};
     };
 }
 

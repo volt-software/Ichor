@@ -120,10 +120,10 @@ private:
         }
     }
 
-    ILogger *_logger{nullptr};
-    ITimerFactory *_timerFactory{nullptr};
-    ISerializer<PingMsg> *_serializer{nullptr};
-    IHttpConnectionService *_connectionService{nullptr};
+    ILogger *_logger{};
+    ITimerFactory *_timerFactory{};
+    ISerializer<PingMsg> *_serializer{};
+    IHttpConnectionService *_connectionService{};
     uint64_t _sequence{};
     uint64_t _failed{};
     std::chrono::milliseconds _timerTimeout{10ms};

@@ -54,7 +54,7 @@ private:
 
     friend DependencyRegister;
 
-    ILogger *_logger{nullptr};
+    ILogger *_logger{};
     bool _started{false};
     int _injectionCount{0};
 };

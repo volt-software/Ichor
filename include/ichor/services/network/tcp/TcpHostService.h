@@ -44,8 +44,8 @@ namespace Ichor {
         int _bindFd;
         uint64_t _priority;
         bool _quit;
-        ILogger *_logger{nullptr};
-        ITimerFactory *_timerFactory{nullptr};
+        ILogger *_logger{};
+        ITimerFactory *_timerFactory{};
         std::vector<TcpConnectionService*> _connections;
         EventHandlerRegistration _newSocketEventHandlerRegistration{};
     };

@@ -87,7 +87,7 @@ namespace Ichor {
         friend DependencyRegister;
         friend DependencyManager;
 
-        IFrameworkLogger *_logger{nullptr};
+        IFrameworkLogger *_logger{};
         DependencyTrackerRegistration _loggerTrackerRegistration{};
         unordered_map<uint64_t, IService*> _loggers;
         LogLevel _defaultLevel{LogLevel::LOG_ERROR};

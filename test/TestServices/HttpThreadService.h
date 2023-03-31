@@ -124,7 +124,7 @@ private:
         co_return;
     }
 
-    ISerializer<TestMsg> *_serializer{nullptr};
-    IHttpConnectionService *_connectionService{nullptr};
-    std::unique_ptr<HttpRouteRegistration> _routeRegistration{nullptr};
+    ISerializer<TestMsg> *_serializer{};
+    IHttpConnectionService *_connectionService{};
+    std::unique_ptr<HttpRouteRegistration> _routeRegistration{};
 };

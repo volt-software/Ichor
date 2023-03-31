@@ -25,6 +25,6 @@ public:
     }
 
 private:
-    ILogger *_logger{nullptr};
-    std::unique_ptr<HttpRouteRegistration> _routeRegistration{nullptr};
+    ILogger *_logger{};
+    std::unique_ptr<HttpRouteRegistration> _routeRegistration{};
 };

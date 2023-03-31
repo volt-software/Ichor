@@ -682,9 +682,9 @@ namespace Ichor {
         unordered_map<uint64_t, EventWaiter> _eventWaiters{}; // key = event id
         unordered_map<uint64_t, EventWaiter> _dependencyWaiters{}; // key = event id
         IEventQueue *_eventQueue;
-        IFrameworkLogger *_logger{nullptr};
+        IFrameworkLogger *_logger{};
         std::atomic<bool> _started{false};
-        CommunicationChannel *_communicationChannel{nullptr};
+        CommunicationChannel *_communicationChannel{};
         uint64_t _id{_managerIdCounter.fetch_add(1, std::memory_order_relaxed)};
         static std::atomic<uint64_t> _managerIdCounter;
 

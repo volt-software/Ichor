@@ -88,8 +88,8 @@ private:
     friend DependencyRegister;
     friend DependencyManager;
 
-    ILogger *_logger{nullptr};
-    DependencyManager *_dm{nullptr};
+    ILogger *_logger{};
+    DependencyManager *_dm{};
     uint64_t _testServiceId{0};
     std::chrono::steady_clock::time_point _start{};
     uint64_t startCount{0};

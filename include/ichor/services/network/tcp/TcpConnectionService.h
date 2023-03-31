@@ -33,8 +33,8 @@ namespace Ichor {
         uint64_t _priority;
         uint64_t _msgIdCounter;
         bool _quit;
-        ILogger *_logger{nullptr};
-        ITimerFactory *_timerFactory{nullptr};
+        ILogger *_logger{};
+        ITimerFactory *_timerFactory{};
     };
 }
 

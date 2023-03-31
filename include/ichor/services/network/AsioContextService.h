@@ -53,7 +53,7 @@ namespace Ichor {
         std::vector<std::thread> _asioThreads{};
         std::atomic<bool> _quit{};
         uint64_t _threads{1};
-        ILogger *_logger{nullptr};
+        ILogger *_logger{};
         AsyncManualResetEvent _startStopEvent{};
     };
 }

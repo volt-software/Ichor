@@ -100,7 +100,7 @@ private:
     friend DependencyRegister;
     friend DependencyManager;
 
-    ILogger *_logger{nullptr};
+    ILogger *_logger{};
     bool _started{false};
     uint64_t _injectionCount{0};
     uint64_t _finishedWorkloads{0};

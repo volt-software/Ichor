@@ -41,7 +41,7 @@ namespace Ichor {
 
         friend DependencyRegister;
 
-        ILogger *_logger{nullptr};
+        ILogger *_logger{};
         std::atomic<uint64_t> _priority{INTERNAL_EVENT_PRIORITY};
         redisAsyncContext *_redisContext{};
         AsyncManualResetEvent _disconnectEvt{};

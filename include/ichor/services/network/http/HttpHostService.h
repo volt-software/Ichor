@@ -64,8 +64,8 @@ namespace Ichor {
         std::atomic<bool> _tcpNoDelay{};
         uint64_t _streamIdCounter{};
         bool _sendServerHeader{true};
-        std::atomic<ILogger*> _logger{nullptr};
-        IAsioContextService *_asioContextService{nullptr};
+        std::atomic<ILogger*> _logger{};
+        IAsioContextService *_asioContextService{};
         unordered_map<HttpMethod, unordered_map<std::string, std::function<AsyncGenerator<HttpResponse>(HttpRequest&)>, string_hash, std::equal_to<>>> _handlers{};
         AsyncManualResetEvent _startStopEvent{};
         IEventQueue *_queue;

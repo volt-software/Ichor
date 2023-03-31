@@ -49,8 +49,8 @@ namespace Ichor {
         std::atomic<bool> _initializedSdevent{false};
         int _eventfd{};
         std::thread::id _threadId{};
-        sd_event_source *_eventfdSource{nullptr};
-        sd_event_source *_timerSource{nullptr};
+        sd_event_source *_eventfdSource{};
+        sd_event_source *_timerSource{};
     };
 }
 

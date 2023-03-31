@@ -53,7 +53,7 @@ private:
 
     friend DependencyRegister;
 
-    ILogger *_logger{nullptr};
-    ITimerFactory *_timerFactory{nullptr};
+    ILogger *_logger{};
+    ITimerFactory *_timerFactory{};
 
 };

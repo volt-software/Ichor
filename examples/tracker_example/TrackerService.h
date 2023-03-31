@@ -81,8 +81,8 @@ private:
 
     friend DependencyManager;
 
-    IService *_self{nullptr};
-    ILogger *_logger{nullptr};
+    IService *_self{};
+    ILogger *_logger{};
     DependencyTrackerRegistration _trackerRegistration{};
     std::unordered_map<std::string, IService*> _scopedRuntimeServices{};
 };

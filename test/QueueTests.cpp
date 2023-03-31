@@ -53,7 +53,7 @@ TEST_CASE("QueueTests") {
     }
 
     SECTION("SdeventQueue Live") {
-        std::atomic<DependencyManager*> _dm{nullptr};
+        std::atomic<DependencyManager*> _dm{};
         std::thread t([&] {
             auto queue = std::make_unique<SdeventQueue>();
             auto &dm = queue->createManager();

@@ -24,8 +24,8 @@ namespace Ichor {
 
         friend DependencyRegister;
 
-        ILogger *_logger{nullptr};
-        std::shared_ptr<grpc::Channel> _channel{nullptr};
+        ILogger *_logger{};
+        std::shared_ptr<grpc::Channel> _channel{};
         std::unique_ptr<etcdserverpb::KV::Stub> _stub; // cannot use ichor unique_ptr with generated code :(
     };
 }

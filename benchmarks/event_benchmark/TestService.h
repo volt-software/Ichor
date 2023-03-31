@@ -64,6 +64,6 @@ private:
 
     friend DependencyRegister;
 
-    ILogger *_logger{nullptr};
-    IEventQueue *_q{nullptr};
+    ILogger *_logger{};
+    IEventQueue *_q{};
 };

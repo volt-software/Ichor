@@ -82,9 +82,9 @@ private:
     friend DependencyRegister;
     friend DependencyManager;
 
-    ILogger *_logger{nullptr};
-    ISerializer<TestMsg> *_serializer{nullptr};
-    IConnectionService *_connectionService{nullptr};
+    ILogger *_logger{};
+    ISerializer<TestMsg> *_serializer{};
+    IConnectionService *_connectionService{};
     EventHandlerRegistration _dataEventRegistration{};
     EventHandlerRegistration _failureEventRegistration{};
 };

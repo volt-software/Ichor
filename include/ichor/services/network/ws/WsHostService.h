@@ -49,8 +49,8 @@ namespace Ichor {
         std::atomic<bool> _quit{};
         std::atomic<bool> _tcpNoDelay{};
         std::atomic<int64_t> _finishedListenAndRead{};
-        ILogger *_logger{nullptr};
-        IAsioContextService *_asioContextService{nullptr};
+        ILogger *_logger{};
+        IAsioContextService *_asioContextService{};
         std::vector<WsConnectionService*> _connections{};
         EventHandlerRegistration _eventRegistration{};
         AsyncManualResetEvent _startStopEvent{};

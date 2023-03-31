@@ -44,5 +44,5 @@ private:
 
     friend DependencyRegister;
 
-    ILogger *_logger{nullptr};
+    ILogger *_logger{};
 };

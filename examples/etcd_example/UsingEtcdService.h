@@ -29,6 +29,6 @@ public:
     }
 
 private:
-    ILogger *_logger{nullptr};
-    IEtcdService *_etcd{nullptr};
+    ILogger *_logger{};
+    IEtcdService *_etcd{};
 };

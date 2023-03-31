@@ -108,8 +108,8 @@ private:
         co_return;
     }
 
-    ILogger *_logger{nullptr};
-    ISerializer<TestMsg> *_serializer{nullptr};
-    IHttpConnectionService *_connectionService{nullptr};
-    std::unique_ptr<HttpRouteRegistration> _routeRegistration{nullptr};
+    ILogger *_logger{};
+    ISerializer<TestMsg> *_serializer{};
+    IHttpConnectionService *_connectionService{};
+    std::unique_ptr<HttpRouteRegistration> _routeRegistration{};
 };

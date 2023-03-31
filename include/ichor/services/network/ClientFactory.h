@@ -83,7 +83,7 @@ namespace Ichor {
         friend DependencyRegister;
         friend DependencyManager;
 
-        ILogger *_logger{nullptr};
+        ILogger *_logger{};
         unordered_map<uint64_t, IService*> _connections;
         DependencyTrackerRegistration _trackerRegistration{};
         EventHandlerRegistration _unrecoverableErrorRegistration{};

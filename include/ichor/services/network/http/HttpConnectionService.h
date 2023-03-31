@@ -61,8 +61,8 @@ namespace Ichor {
         std::atomic<bool> _connected{};
         std::atomic<bool> _tcpNoDelay{};
         std::atomic<int64_t> _finishedListenAndRead{};
-        std::atomic<ILogger*> _logger{nullptr};
-        IAsioContextService *_asioContextService{nullptr};
+        std::atomic<ILogger*> _logger{};
+        IAsioContextService *_asioContextService{};
         boost::circular_buffer<Detail::ConnectionOutboxMessage> _outbox{10};
         RealtimeMutex _outboxMutex{};
         AsyncManualResetEvent _startStopEvent{};

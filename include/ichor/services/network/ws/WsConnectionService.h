@@ -62,8 +62,8 @@ namespace Ichor {
         std::atomic<uint64_t> _priority{};
         std::atomic<bool> _connected{};
         std::atomic<bool> _quit{};
-        ILogger *_logger{nullptr};
-        IAsioContextService *_asioContextService{nullptr};
+        ILogger *_logger{};
+        IAsioContextService *_asioContextService{};
         std::unique_ptr<net::strand<net::io_context::executor_type>> _strand{};
         std::atomic<int64_t> _finishedListenAndRead{};
         AsyncManualResetEvent _startStopEvent{};
