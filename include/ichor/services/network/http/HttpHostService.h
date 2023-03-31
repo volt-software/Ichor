@@ -2,7 +2,7 @@
 
 #ifdef ICHOR_USE_BOOST_BEAST
 
-#include <ichor/services/network/http/IHttpService.h>
+#include <ichor/services/network/http/IHttpHostService.h>
 #include <ichor/services/network/AsioContextService.h>
 #include <ichor/services/logging/Logger.h>
 #include <ichor/coroutines/AsyncManualResetEvent.h>
@@ -27,7 +27,7 @@ namespace Ichor {
         };
     }
 
-    class HttpHostService final : public IHttpService, public AdvancedService<HttpHostService> {
+    class HttpHostService final : public IHttpHostService, public AdvancedService<HttpHostService> {
     public:
         HttpHostService(DependencyRegister &reg, Properties props);
         ~HttpHostService() final = default;

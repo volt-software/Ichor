@@ -6,7 +6,7 @@
 namespace Ichor {
     class HttpRouteRegistration;
 
-    class IHttpService {
+    class IHttpHostService {
     public:
         virtual std::unique_ptr<HttpRouteRegistration> addRoute(HttpMethod method, std::string_view route, std::function<AsyncGenerator<HttpResponse>(HttpRequest&)> handler) = 0;
         virtual void removeRoute(HttpMethod method, std::string_view route) = 0;
@@ -14,12 +14,12 @@ namespace Ichor {
         virtual uint64_t getPriority() = 0;
 
     protected:
-        ~IHttpService() = default;
+        ~IHttpHostService() = default;
     };
 
     class HttpRouteRegistration final {
     public:
-        HttpRouteRegistration(HttpMethod method, std::string_view route, IHttpService *service) : _method(method), _route(route), _service(service) {}
+        HttpRouteRegistration(HttpMethod method, std::string_view route, IHttpHostService *service) : _method(method), _route(route), _service(service) {}
         HttpRouteRegistration(const HttpRouteRegistration&) = delete;
         HttpRouteRegistration(HttpRouteRegistration&&) = default;
         ~HttpRouteRegistration() {
@@ -32,6 +32,6 @@ namespace Ichor {
     private:
         HttpMethod _method;
         std::string _route;
-        IHttpService *_service;
+        IHttpHostService *_service;
     };
 }

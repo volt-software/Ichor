@@ -5,7 +5,7 @@
 #include <ichor/services/timer/ITimerFactory.h>
 #include <ichor/services/network/NetworkEvents.h>
 #include <ichor/services/network/http/IHttpConnectionService.h>
-#include <ichor/services/network/http/IHttpService.h>
+#include <ichor/services/network/http/IHttpHostService.h>
 #include <ichor/services/timer/ITimerFactory.h>
 #include <ichor/events/RunFunctionEvent.h>
 #include <ichor/dependency_management/AdvancedService.h>
@@ -18,9 +18,9 @@ using namespace Ichor;
 class PingService final : public AdvancedService<PingService> {
 public:
     PingService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {
-        reg.registerDependency<ILogger>(this, true, Properties{{"LogLevel", Ichor::make_any<LogLevel>(LogLevel::LOG_INFO)}});
+        reg.registerDependency<ILogger>(this, true, Properties{{"LogLevel", Ichor::make_any<LogLevel>(LogLevel::LOG_INFO)}}); // using customer properties here prevents us refactoring this class to constructor injection
         reg.registerDependency<ISerializer<PingMsg>>(this, true);
-        reg.registerDependency<IHttpConnectionService>(this, true, getProperties());
+        reg.registerDependency<IHttpConnectionService>(this, true, getProperties()); // using getProperties here prevents us refactoring this class to constructor injection
         reg.registerDependency<ITimerFactory>(this, true);
     }
     ~PingService() final = default;

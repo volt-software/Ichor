@@ -37,7 +37,7 @@ TEST_CASE("HttpTests") {
             dm.createServiceManager<LoggerFactory<CoutLogger>, ILoggerFactory>();
             dm.createServiceManager<TestMsgRapidJsonSerializer, ISerializer<TestMsg>>();
             dm.createServiceManager<AsioContextService, IAsioContextService>();
-            dm.createServiceManager<HttpHostService, IHttpService>(Properties{{"Address", Ichor::make_any<std::string>("127.0.0.1")}, {"Port", Ichor::make_any<uint16_t>(static_cast<uint16_t>(8001))}});
+            dm.createServiceManager<HttpHostService, IHttpHostService>(Properties{{"Address", Ichor::make_any<std::string>("127.0.0.1")}, {"Port", Ichor::make_any<uint16_t>(static_cast<uint16_t>(8001))}});
             dm.createServiceManager<ClientFactory<HttpConnectionService, IHttpConnectionService>>();
             dm.createServiceManager<HttpThreadService>(Properties{{"Address", Ichor::make_any<std::string>("127.0.0.1")}, {"Port", Ichor::make_any<uint16_t>(static_cast<uint16_t>(8001))}});
 
@@ -72,7 +72,7 @@ TEST_CASE("HttpTests") {
             dm.createServiceManager<LoggerFactory<CoutLogger>, ILoggerFactory>();
             dm.createServiceManager<TestMsgRapidJsonSerializer, ISerializer<TestMsg>>();
             dm.createServiceManager<AsioContextService, IAsioContextService>(Properties{{"Threads", Ichor::make_any<uint64_t>(4ul)}});
-            dm.createServiceManager<HttpHostService, IHttpService>(Properties{{"Address", Ichor::make_any<std::string>("127.0.0.1")}, {"Port", Ichor::make_any<uint16_t>(static_cast<uint16_t>(8001))}});
+            dm.createServiceManager<HttpHostService, IHttpHostService>(Properties{{"Address", Ichor::make_any<std::string>("127.0.0.1")}, {"Port", Ichor::make_any<uint16_t>(static_cast<uint16_t>(8001))}});
             dm.createServiceManager<ClientFactory<HttpConnectionService, IHttpConnectionService>>();
             dm.createServiceManager<HttpThreadService>(Properties{{"Address", Ichor::make_any<std::string>("127.0.0.1")}, {"Port", Ichor::make_any<uint16_t>(static_cast<uint16_t>(8001))}});
 

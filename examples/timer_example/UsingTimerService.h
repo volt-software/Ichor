@@ -3,64 +3,36 @@
 #include <ichor/DependencyManager.h>
 #include <ichor/services/logging/Logger.h>
 #include <ichor/services/timer/ITimerFactory.h>
-#include <ichor/dependency_management/AdvancedService.h>
-#include <ichor/dependency_management/DependencyRegister.h>
 
 using namespace Ichor;
 
-class UsingTimerService final : public AdvancedService<UsingTimerService> {
+class UsingTimerService final {
 public:
-    UsingTimerService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {
-        reg.registerDependency<ILogger>(this, true);
-        reg.registerDependency<ITimerFactory>(this, true);
-    }
-    ~UsingTimerService() final = default;
-
-private:
-    Task<tl::expected<void, Ichor::StartError>> start() final {
+    UsingTimerService(DependencyManager *dm, IService *self, ILogger *logger, ITimerFactory *timerFactory) : _dm(dm), _self(self), _logger(logger), _timer(&timerFactory->createTimer()) {
         ICHOR_LOG_INFO(_logger, "UsingTimerService started");
-        _timer = &_timerFactory->createTimer();
         _timer->setChronoInterval(std::chrono::milliseconds(50));
         _timer->setCallback([this]() {
             handleEvent();
         });
         _timer->startTimer();
-        co_return {};
     }
-
-    Task<void> stop() final {
+    ~UsingTimerService() {
         ICHOR_LOG_INFO(_logger, "UsingTimerService stopped");
-        co_return;
     }
 
-    void addDependencyInstance(ILogger &logger, IService &) {
-        _logger = &logger;
-    }
-
-    void removeDependencyInstance(ILogger&, IService&) {
-        _logger = nullptr;
-    }
-
-    void addDependencyInstance(ITimerFactory &factory, IService &) {
-        _timerFactory = &factory;
-    }
-
-    void removeDependencyInstance(ITimerFactory &factory, IService&) {
-        _timerFactory = nullptr;
-    }
-
+private:
     void handleEvent() {
         _timerTriggerCount++;
         ICHOR_LOG_INFO(_logger, "Timer {} triggered {} times", _timer->getTimerId(), _timerTriggerCount);
         if(_timerTriggerCount == 5) {
-            GetThreadLocalEventQueue().pushEvent<QuitEvent>(getServiceId());
+            _dm->getEventQueue().pushEvent<QuitEvent>(_self->getServiceId());
         }
     }
 
-    friend DependencyRegister;
 
-    ILogger *_logger{nullptr};
+    DependencyManager *_dm{};
+    IService *_self{};
+    ILogger *_logger{};
+    ITimer *_timer{};
     uint64_t _timerTriggerCount{0};
-    ITimerFactory *_timerFactory{nullptr};
-    ITimer *_timer{nullptr};
 };

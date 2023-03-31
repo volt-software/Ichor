@@ -2,6 +2,7 @@
 
 #include <ichor/services/logging/Logger.h>
 #include <ichor/dependency_management/AdvancedService.h>
+#include <ichor/dependency_management/DependencyRegister.h>
 #include <ichor/event_queues/IEventQueue.h>
 #include "RuntimeCreatedService.h"
 

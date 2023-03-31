@@ -14,6 +14,7 @@ TSAN=0
 GCC=0
 MIMALLOC=0
 BUILDTYPE="Debug"
+RUN_EXAMPLES=0
 
 while [[ $# -gt 0 ]]; do
   case $1 in
@@ -38,6 +39,10 @@ while [[ $# -gt 0 ]]; do
       MIMALLOC=1
       shift # past value
       ;;
+    --run-examples)
+      RUN_EXAMPLES=1
+      shift # past value
+      ;;
     -*|--*)
       echo "Unknown option $1"
       exit 1
@@ -60,10 +65,26 @@ if [[ "$curr" != "build" ]]; then
 fi
 
 rm -rf ./*
+rm ../bin/*
+
 if [[ $GCC -eq 1 ]]; then
   CC=/opt/gcc/12/bin/gcc CXX=/opt/gcc/12/bin/g++ cmake -DCMAKE_BUILD_TYPE=${BUILDTYPE} -DICHOR_ARCH_OPTIMIZATION=X86_64_AVX2 -DICHOR_USE_MIMALLOC=${MIMALLOC} -DICHOR_USE_BACKWARD=0 -DICHOR_USE_BOOST_BEAST=1 -DICHOR_USE_SANITIZERS=${ASAN} -DICHOR_USE_THREAD_SANITIZER=${TSAN} -GNinja ..
 else
   CC=clang CXX=clang++ cmake -DCMAKE_BUILD_TYPE=${BUILDTYPE} -DICHOR_ARCH_OPTIMIZATION=X86_64_AVX2 -DICHOR_USE_MIMALLOC=${MIMALLOC} -DICHOR_USE_BACKWARD=0 -DICHOR_USE_BOOST_BEAST=1 -DICHOR_USE_SANITIZERS=${ASAN} -DICHOR_USE_THREAD_SANITIZER=${TSAN} -GNinja ..
 fi
 
-ninja
+ninja && ninja test
+
+if [[ $RUN_EXAMPLES -eq 1 ]]; then
+    ../bin/ichor_http_example || exit 1
+    ../bin/ichor_multithreaded_example || exit 1
+    ../bin/ichor_optional_dependency_example || exit 1
+    ../bin/ichor_event_statistics_example || exit 1
+    ../bin/ichor_serializer_example || exit 1
+    ../bin/ichor_tcp_example || exit 1
+    ../bin/ichor_timer_example || exit 1
+    ../bin/ichor_tracker_example || exit 1
+    ../bin/ichor_websocket_example || exit 1
+    ../bin/ichor_websocket_example -t4 || exit 1
+    ../bin/ichor_yielding_timer_example || exit 1
+fi

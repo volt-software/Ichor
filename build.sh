@@ -8,8 +8,8 @@ cleanup ()
 
 trap cleanup SIGINT SIGTERM
 
-ccompilers=("clang-14" "clang-15" "clang" "gcc" "gcc-12")
-cppcompilers=("clang++-14" "clang++-15" "clang++" "g++" "g++-12")
+ccompilers=("clang-14" "clang-16" "gcc" "gcc-12")
+cppcompilers=("clang++-14" "clang++-16" "g++" "g++-12")
 
 if [[ "$1" == "--dev" ]]; then
   ccompilers=("clang" "gcc")

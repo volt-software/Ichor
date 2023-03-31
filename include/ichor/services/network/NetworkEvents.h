@@ -1,6 +1,7 @@
 #pragma once
 
 #include <ichor/events/Event.h>
+#include <vector>
 
 namespace Ichor {
     struct NetworkDataEvent final : public Event {

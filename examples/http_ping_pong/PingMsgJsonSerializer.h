@@ -1,7 +1,5 @@
 #pragma once
 
-#include <ichor/services/logging/Logger.h>
-#include <ichor/dependency_management/AdvancedService.h>
 #include <ichor/services/serialization/ISerializer.h>
 #include "PingMsg.h"
 #include <rapidjson/document.h>
@@ -9,11 +7,8 @@
 
 using namespace Ichor;
 
-class PingMsgJsonSerializer final : public ISerializer<PingMsg>, public AdvancedService<PingMsgJsonSerializer> {
+class PingMsgJsonSerializer final : public ISerializer<PingMsg> {
 public:
-    PingMsgJsonSerializer() = default;
-    ~PingMsgJsonSerializer() final = default;
-
     std::vector<uint8_t> serialize(PingMsg const &msg) final {
         rapidjson::StringBuffer sb;
         rapidjson::Writer<rapidjson::StringBuffer> writer(sb);

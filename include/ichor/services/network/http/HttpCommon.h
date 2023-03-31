@@ -1,6 +1,7 @@
 #pragma once
 
-#include <span>
+#include <optional>
+#include <vector>
 
 namespace Ichor {
     // Copied/modified from Boost.BEAST

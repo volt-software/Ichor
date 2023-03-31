@@ -3,7 +3,6 @@
 #include <utility>
 #include <ichor/DependencyManager.h>
 #include <ichor/services/logging/Logger.h>
-#include <ichor/dependency_management/AdvancedService.h>
 #include "RuntimeCreatedService.h"
 
 using namespace Ichor;
@@ -11,7 +10,6 @@ using namespace Ichor;
 class ScopeFilterEntry final {
 public:
     explicit ScopeFilterEntry(std::string _scope) : scope(std::move(_scope)) {}
-    explicit ScopeFilterEntry(const char *_scope) : scope(_scope) {}
 
     [[nodiscard]] bool matches(ILifecycleManager const &manager) const noexcept {
         auto const scopeProp = manager.getProperties().find("scope");
@@ -19,37 +17,20 @@ public:
         return scopeProp != cend(manager.getProperties()) && Ichor::any_cast<const std::string&>(scopeProp->second) == scope;
     }
 
-    const std::string scope;
+    std::string scope;
 };
 
-class TrackerService final : public AdvancedService<TrackerService> {
+class TrackerService final {
 public:
-    TrackerService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {
-        reg.registerDependency<ILogger>(this, true);
+    TrackerService(DependencyManager *dm, IService *self, ILogger *logger) : _self(self), _logger(logger) {
+        ICHOR_LOG_INFO(_logger, "TrackerService started");
+        _trackerRegistration = dm->registerDependencyTracker<IRuntimeCreatedService>(this, self);
     }
-    ~TrackerService() final = default;
+    ~TrackerService() {
+        ICHOR_LOG_INFO(_logger, "TrackerService stopped");
+    }
 
 private:
-    Task<tl::expected<void, Ichor::StartError>> start() final {
-        ICHOR_LOG_INFO(_logger, "TrackerService started");
-        _trackerRegistration = GetThreadLocalManager().registerDependencyTracker<IRuntimeCreatedService>(this, this);
-        co_return {};
-    }
-
-    Task<void> stop() final {
-        ICHOR_LOG_INFO(_logger, "TrackerService stopped");
-        _trackerRegistration.reset();
-        co_return;
-    }
-
-    void addDependencyInstance(ILogger &logger, IService &) {
-        _logger = &logger;
-    }
-
-    void removeDependencyInstance(ILogger&, IService&) {
-        _logger = nullptr;
-    }
-
     void handleDependencyRequest(AlwaysNull<IRuntimeCreatedService*>, DependencyRequestEvent const &evt) {
         if(!evt.properties.has_value()) {
             ICHOR_LOG_ERROR(_logger, "missing properties");
@@ -92,16 +73,16 @@ private:
         auto service = _scopedRuntimeServices.find(scope);
         if(service != end(_scopedRuntimeServices)) {
             // TODO: This only works for synchronous start/stop loggers, maybe turn into async and await a stop before removing?
-            GetThreadLocalEventQueue().pushEvent<StopServiceEvent>(getServiceId(), service->second->getServiceId());
-            GetThreadLocalEventQueue().pushPrioritisedEvent<RemoveServiceEvent>(getServiceId(), INTERNAL_EVENT_PRIORITY + 11, service->second->getServiceId());
+            GetThreadLocalEventQueue().pushEvent<StopServiceEvent>(_self->getServiceId(), service->second->getServiceId());
+            GetThreadLocalEventQueue().pushPrioritisedEvent<RemoveServiceEvent>(_self->getServiceId(), INTERNAL_EVENT_PRIORITY + 11, service->second->getServiceId());
             _scopedRuntimeServices.erase(scope);
         }
     }
 
-    friend DependencyRegister;
     friend DependencyManager;
 
+    IService *_self{nullptr};
     ILogger *_logger{nullptr};
     DependencyTrackerRegistration _trackerRegistration{};
-    std::unordered_map<std::string, RuntimeCreatedService*> _scopedRuntimeServices{};
+    std::unordered_map<std::string, IService*> _scopedRuntimeServices{};
 };

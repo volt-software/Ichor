@@ -4,7 +4,7 @@
 #include <ichor/services/timer/ITimerFactory.h>
 #include <ichor/services/network/NetworkEvents.h>
 #include <ichor/services/network/http/IHttpConnectionService.h>
-#include <ichor/services/network/http/IHttpService.h>
+#include <ichor/services/network/http/IHttpHostService.h>
 #include <ichor/events/RunFunctionEvent.h>
 #include <ichor/event_queues/IEventQueue.h>
 #include <ichor/dependency_management/AdvancedService.h>
@@ -19,8 +19,8 @@ public:
     UsingHttpService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {
         reg.registerDependency<ILogger>(this, true);
         reg.registerDependency<ISerializer<TestMsg>>(this, true);
-        reg.registerDependency<IHttpConnectionService>(this, true, getProperties());
-        reg.registerDependency<IHttpService>(this, true);
+        reg.registerDependency<IHttpConnectionService>(this, true, getProperties()); // using getProperties here prevents us refactoring this class to constructor injection
+        reg.registerDependency<IHttpHostService>(this, true);
     }
     ~UsingHttpService() final = default;
 
@@ -71,8 +71,8 @@ private:
         ICHOR_LOG_INFO(_logger, "Removed IHttpConnectionService");
     }
 
-    void addDependencyInstance(IHttpService &svc, IService&) {
-        ICHOR_LOG_INFO(_logger, "Inserted IHttpService");
+    void addDependencyInstance(IHttpHostService &svc, IService&) {
+        ICHOR_LOG_INFO(_logger, "Inserted IHttpHostService");
         _routeRegistration = svc.addRoute(HttpMethod::post, "/test", [this](HttpRequest &req) -> AsyncGenerator<HttpResponse> {
             auto msg = _serializer->deserialize(std::move(req.body));
             ICHOR_LOG_WARN(_logger, "received request on route {} {} with testmsg {} - {}", (int)req.method, req.route, msg->id, msg->val);
@@ -80,8 +80,8 @@ private:
         });
     }
 
-    void removeDependencyInstance(IHttpService&, IService&) {
-        ICHOR_LOG_INFO(_logger, "Removed IHttpService");
+    void removeDependencyInstance(IHttpHostService&, IService&) {
+        ICHOR_LOG_INFO(_logger, "Removed IHttpHostService");
         _routeRegistration.reset();
     }
 

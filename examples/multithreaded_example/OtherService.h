@@ -2,51 +2,30 @@
 
 #include <ichor/DependencyManager.h>
 #include <ichor/services/logging/Logger.h>
-#include <ichor/dependency_management/AdvancedService.h>
 #include "CustomEvent.h"
 
 using namespace Ichor;
 
-class OtherService final : public AdvancedService<OtherService> {
+class OtherService final {
 public:
-    OtherService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {
-        reg.registerDependency<ILogger>(this, true);
+    OtherService(DependencyManager *dm, IService *self, ILogger *logger) : _dm(dm), _self(self), _logger(logger) {
+        ICHOR_LOG_INFO(_logger, "OtherService started with dependency");
+        _customEventHandler = dm->registerEventHandler<CustomEvent, OtherService>(this, self);
     }
-    ~OtherService() final = default;
+    ~OtherService() {
+        ICHOR_LOG_INFO(_logger, "OtherService stopped with dependency");
+    }
+
+    AsyncGenerator<IchorBehaviour> handleEvent(CustomEvent const &) const {
+        ICHOR_LOG_INFO(_logger, "Handling custom event");
+        _dm->getEventQueue().pushEvent<QuitEvent>(_self->getServiceId());
+        _dm->getCommunicationChannel()->broadcastEvent<QuitEvent>(GetThreadLocalManager(), _self->getServiceId());
+        co_return {};
+    }
 
 private:
-    Task<tl::expected<void, Ichor::StartError>> start() final {
-        ICHOR_LOG_INFO(_logger, "OtherService started with dependency");
-        _customEventHandler = GetThreadLocalManager().registerEventHandler<CustomEvent>(this, this);
-        co_return {};
-    }
-
-    Task<void> stop() final {
-        ICHOR_LOG_INFO(_logger, "OtherService stopped with dependency");
-        _customEventHandler.reset();
-        co_return;
-    }
-
-    void addDependencyInstance(ILogger &logger, IService &isvc) {
-        _logger = &logger;
-
-        ICHOR_LOG_INFO(_logger, "Inserted logger svcid {} for svcid {}", isvc.getServiceId(), getServiceId());
-    }
-
-    void removeDependencyInstance(ILogger&, IService&) {
-        _logger = nullptr;
-    }
-
-    AsyncGenerator<IchorBehaviour> handleEvent(CustomEvent const &) {
-        ICHOR_LOG_INFO(_logger, "Handling custom event");
-        GetThreadLocalEventQueue().pushEvent<QuitEvent>(getServiceId());
-        GetThreadLocalManager().getCommunicationChannel()->broadcastEvent<QuitEvent>(GetThreadLocalManager(), getServiceId());
-        co_return {};
-    }
-
-    friend DependencyRegister;
-    friend DependencyManager;
-
+    DependencyManager *_dm{};
+    IService *_self{};
     ILogger *_logger{};
     EventHandlerRegistration _customEventHandler{};
 };

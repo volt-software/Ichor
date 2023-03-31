@@ -2,7 +2,7 @@
 
 #ifdef ICHOR_USE_BOOST_BEAST
 
-#include <ichor/services/network/http/IHttpService.h>
+#include <ichor/services/network/http/IHttpHostService.h>
 #include <ichor/services/logging/Logger.h>
 #include <ichor/services/timer/ITimerFactory.h>
 #include <ichor/coroutines/AsyncManualResetEvent.h>

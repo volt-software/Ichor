@@ -1,7 +1,5 @@
 #pragma once
 
-//#include <ichor/services/logging/Logger.h>
-#include <ichor/dependency_management/AdvancedService.h>
 #include <ichor/services/serialization/ISerializer.h>
 #include "TestMsg.h"
 #include <rapidjson/document.h>
@@ -9,11 +7,8 @@
 
 using namespace Ichor;
 
-class TestMsgRapidJsonSerializer final : public ISerializer<TestMsg>, public AdvancedService<TestMsgRapidJsonSerializer> {
+class TestMsgRapidJsonSerializer final : public ISerializer<TestMsg> {
 public:
-    TestMsgRapidJsonSerializer() = default;
-    ~TestMsgRapidJsonSerializer() final = default;
-
     std::vector<uint8_t> serialize(TestMsg const &msg) final {
         rapidjson::StringBuffer sb;
         rapidjson::Writer<rapidjson::StringBuffer> writer(sb);

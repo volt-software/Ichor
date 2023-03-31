@@ -84,7 +84,7 @@ int main(int argc, char *argv[]) {
     }
     dm.createServiceManager<TestMsgRapidJsonSerializer, ISerializer<TestMsg>>();
     dm.createServiceManager<AsioContextService, IAsioContextService>(Properties{{"Threads", Ichor::make_any<uint64_t>(threads)}});
-    dm.createServiceManager<HttpHostService, IHttpService>(Properties{{"Address", Ichor::make_any<std::string>(address)}, {"Port", Ichor::make_any<uint16_t>(static_cast<uint16_t>(8001))}});
+    dm.createServiceManager<HttpHostService, IHttpHostService>(Properties{{"Address", Ichor::make_any<std::string>(address)}, {"Port", Ichor::make_any<uint16_t>(static_cast<uint16_t>(8001))}});
     dm.createServiceManager<ClientFactory<HttpConnectionService, IHttpConnectionService>>();
     dm.createServiceManager<UsingHttpService>(Properties{{"Address", Ichor::make_any<std::string>(address)}, {"Port", Ichor::make_any<uint16_t>(static_cast<uint16_t>(8001))}});
     queue->start(CaptureSigInt);

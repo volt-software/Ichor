@@ -2,22 +2,13 @@
 
 #include <ichor/services/logging/Logger.h>
 #include <ichor/services/etcd/IEtcdService.h>
-#include <ichor/dependency_management/AdvancedService.h>
-#include <ichor/dependency_management/DependencyRegister.h>
 #include <ichor/event_queues/IEventQueue.h>
 
 using namespace Ichor;
 
-class UsingEtcdService final : public AdvancedService<UsingEtcdService> {
+class UsingEtcdService final {
 public:
-    UsingEtcdService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {
-        reg.registerDependency<ILogger>(this, true);
-        reg.registerDependency<IEtcdService>(this, true);
-    }
-    ~UsingEtcdService() final = default;
-
-private:
-    Task<tl::expected<void, Ichor::StartError>> start() final {
+    UsingEtcdService(IService *self, IEventQueue *queue, ILogger *logger, IEtcdService *etcdService) : _logger(logger) {
         ICHOR_LOG_INFO(_logger, "UsingEtcdService started");
         if(_etcd->put("test", "2")) {
             ICHOR_LOG_TRACE(_logger, "Succesfully put key/value into etcd");
@@ -31,33 +22,13 @@ private:
             ICHOR_LOG_ERROR(_logger, "Error putting key/value into etcd");
         }
 
-        GetThreadLocalEventQueue().pushEvent<QuitEvent>(getServiceId());
-        co_return {};
+        queue->pushEvent<QuitEvent>(self->getServiceId());
     }
-
-    Task<void> stop() final {
+    ~UsingEtcdService() {
         ICHOR_LOG_INFO(_logger, "UsingEtcdService stopped");
-        co_return;
     }
 
-    void addDependencyInstance(ILogger &logger, IService &) {
-        _logger = &logger;
-    }
-
-    void removeDependencyInstance(ILogger&, IService&) {
-        _logger = nullptr;
-    }
-
-    void addDependencyInstance(IEtcdService &etcd, IService&) {
-        _etcd = &etcd;
-    }
-
-    void removeDependencyInstance(IEtcdService&, IService&) {
-        _etcd = nullptr;
-    }
-
-    friend DependencyRegister;
-
+private:
     ILogger *_logger{nullptr};
     IEtcdService *_etcd{nullptr};
 };

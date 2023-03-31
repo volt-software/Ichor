@@ -5,7 +5,7 @@
 #include <ichor/services/timer/ITimerFactory.h>
 #include <ichor/services/network/NetworkEvents.h>
 #include <ichor/services/network/http/IHttpConnectionService.h>
-#include <ichor/services/network/http/IHttpService.h>
+#include <ichor/services/network/http/IHttpHostService.h>
 #include <ichor/events/RunFunctionEvent.h>
 #include <ichor/dependency_management/AdvancedService.h>
 #include <ichor/services/serialization/ISerializer.h>
@@ -23,7 +23,7 @@ public:
     HttpThreadService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {
         reg.registerDependency<ISerializer<TestMsg>>(this, true);
         reg.registerDependency<IHttpConnectionService>(this, true, getProperties());
-        reg.registerDependency<IHttpService>(this, true);
+        reg.registerDependency<IHttpHostService>(this, true);
     }
     ~HttpThreadService() final = default;
 
@@ -71,7 +71,7 @@ private:
         _connectionService = &connectionService;
     }
 
-    void addDependencyInstance(IHttpService &svc, IService&) {
+    void addDependencyInstance(IHttpHostService &svc, IService&) {
         _routeRegistration = svc.addRoute(HttpMethod::post, "/test", [this](HttpRequest &req) -> AsyncGenerator<HttpResponse> {
             if(dmThreadId != std::this_thread::get_id()) {
                 throw std::runtime_error("dmThreadId id incorrect");
@@ -96,7 +96,7 @@ private:
         });
     }
 
-    void removeDependencyInstance(IHttpService&, IService&) {
+    void removeDependencyInstance(IHttpHostService&, IService&) {
         _routeRegistration.reset();
     }
 
