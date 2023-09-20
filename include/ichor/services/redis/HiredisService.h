@@ -26,6 +26,12 @@ namespace Ichor {
         void setAndForget(std::string_view key, std::string_view value) final;
         void setAndForget(std::string_view key, std::string_view value, RedisSetOptions const &opts) final;
         AsyncGenerator<RedisGetReply> get(std::string_view key) final;
+        AsyncGenerator<RedisIntegerReply> del(std::string_view keys) final;
+        AsyncGenerator<RedisIntegerReply> incr(std::string_view keys) final;
+        AsyncGenerator<RedisIntegerReply> incrBy(std::string_view keys, int64_t incr) final;
+        AsyncGenerator<RedisIntegerReply> incrByFloat(std::string_view keys, double incr) final;
+        AsyncGenerator<RedisIntegerReply> decr(std::string_view keys) final;
+        AsyncGenerator<RedisIntegerReply> decrBy(std::string_view keys, int64_t decr) final;
 
     private:
         Task<tl::expected<void, Ichor::StartError>> start() final;
@@ -46,6 +52,7 @@ namespace Ichor {
         redisAsyncContext *_redisContext{};
         AsyncManualResetEvent _disconnectEvt{};
         ITimerFactory *_timerFactory{};
+        uint64_t _pollIntervalMs{10};
     };
 }
 

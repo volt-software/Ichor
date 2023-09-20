@@ -19,7 +19,7 @@ TEST_CASE("RedisTests") {
         std::thread t([&]() {
             dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>({}, 10);
             dm.createServiceManager<LoggerFactory<CoutLogger>, ILoggerFactory>();
-            dm.createServiceManager<HiredisService, IRedis>(Properties{{"Address", Ichor::make_any<std::string>("127.0.0.1")}, {"Port", Ichor::make_any<uint16_t>(static_cast<uint16_t>(6379))}});
+            dm.createServiceManager<HiredisService, IRedis>(Properties{{"Address", Ichor::make_any<std::string>("127.0.0.1")}, {"Port", Ichor::make_any<uint16_t>(static_cast<uint16_t>(6379))}, {"PollIntervalMs", Ichor::make_any<uint64_t>(1ul)}});
             dm.createServiceManager<RedisUsingService>();
             dm.createServiceManager<TimerFactoryFactory>();
 

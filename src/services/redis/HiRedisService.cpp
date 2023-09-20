@@ -86,6 +86,10 @@ namespace Ichor {
 Ichor::HiredisService::HiredisService(DependencyRegister &reg, Properties props) : AdvancedService<HiredisService>(std::move(props)) {
     reg.registerDependency<ILogger>(this, true);
     reg.registerDependency<ITimerFactory>(this, true);
+    auto intervalIt = getProperties().find("PollIntervalMs");
+    if(intervalIt != getProperties().end()) {
+        _pollIntervalMs = Ichor::any_cast<uint64_t>(intervalIt->second);
+    }
 }
 
 Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::HiredisService::start() {
@@ -102,7 +106,7 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::HiredisService::start(
     timer.setCallback([this]() {
         redisPollTick(_redisContext, 0);
     });
-    timer.setChronoInterval(1ms);
+    timer.setChronoInterval(std::chrono::milliseconds(_pollIntervalMs));
     timer.startTimer();
 
     INTERNAL_DEBUG("HiredisService::start() co_return");
@@ -218,6 +222,96 @@ Ichor::AsyncGenerator<Ichor::RedisGetReply> Ichor::HiredisService::get(std::stri
     }
 
     co_return RedisGetReply{evt.reply->str};
+}
+
+Ichor::AsyncGenerator<Ichor::RedisIntegerReply> Ichor::HiredisService::del(std::string_view keys) {
+    IchorRedisReply evt{};
+    auto ret = redisAsyncCommand(_redisContext, _onAsyncReply, &evt, "DEL %b", keys.data(), keys.size());
+    if(ret == REDIS_ERR) [[unlikely]] {
+        throw std::runtime_error("couldn't run async command");
+    }
+    co_await evt.evt;
+
+    if(evt.reply == nullptr) [[unlikely]] {
+        co_return RedisIntegerReply{};
+    }
+
+    co_return RedisIntegerReply{evt.reply->integer};
+}
+
+Ichor::AsyncGenerator<Ichor::RedisIntegerReply> Ichor::HiredisService::incr(std::string_view keys) {
+    IchorRedisReply evt{};
+    auto ret = redisAsyncCommand(_redisContext, _onAsyncReply, &evt, "INCR %b", keys.data(), keys.size());
+    if(ret == REDIS_ERR) [[unlikely]] {
+        throw std::runtime_error("couldn't run async command");
+    }
+    co_await evt.evt;
+
+    if(evt.reply == nullptr) [[unlikely]] {
+        co_return RedisIntegerReply{};
+    }
+
+    co_return RedisIntegerReply{evt.reply->integer};
+}
+
+Ichor::AsyncGenerator<Ichor::RedisIntegerReply> Ichor::HiredisService::incrBy(std::string_view keys, int64_t incr) {
+    IchorRedisReply evt{};
+    auto ret = redisAsyncCommand(_redisContext, _onAsyncReply, &evt, "INCRBY %b %i", keys.data(), keys.size(), incr);
+    if(ret == REDIS_ERR) [[unlikely]] {
+        throw std::runtime_error("couldn't run async command");
+    }
+    co_await evt.evt;
+
+    if(evt.reply == nullptr) [[unlikely]] {
+        co_return RedisIntegerReply{};
+    }
+
+    co_return RedisIntegerReply{evt.reply->integer};
+}
+
+Ichor::AsyncGenerator<Ichor::RedisIntegerReply> Ichor::HiredisService::incrByFloat(std::string_view keys, double incr) {
+    IchorRedisReply evt{};
+    auto ret = redisAsyncCommand(_redisContext, _onAsyncReply, &evt, "INCRBYFLOAT %b %f", keys.data(), keys.size(), incr);
+    if(ret == REDIS_ERR) [[unlikely]] {
+        throw std::runtime_error("couldn't run async command");
+    }
+    co_await evt.evt;
+
+    if(evt.reply == nullptr) [[unlikely]] {
+        co_return RedisIntegerReply{};
+    }
+
+    co_return RedisIntegerReply{evt.reply->integer};
+}
+
+Ichor::AsyncGenerator<Ichor::RedisIntegerReply> Ichor::HiredisService::decr(std::string_view keys) {
+    IchorRedisReply evt{};
+    auto ret = redisAsyncCommand(_redisContext, _onAsyncReply, &evt, "DECR %b", keys.data(), keys.size());
+    if(ret == REDIS_ERR) [[unlikely]] {
+        throw std::runtime_error("couldn't run async command");
+    }
+    co_await evt.evt;
+
+    if(evt.reply == nullptr) [[unlikely]] {
+        co_return RedisIntegerReply{};
+    }
+
+    co_return RedisIntegerReply{evt.reply->integer};
+}
+
+Ichor::AsyncGenerator<Ichor::RedisIntegerReply> Ichor::HiredisService::decrBy(std::string_view keys, int64_t decr) {
+    IchorRedisReply evt{};
+    auto ret = redisAsyncCommand(_redisContext, _onAsyncReply, &evt, "DECRBY %b %i", keys.data(), keys.size(), decr);
+    if(ret == REDIS_ERR) [[unlikely]] {
+        throw std::runtime_error("couldn't run async command");
+    }
+    co_await evt.evt;
+
+    if(evt.reply == nullptr) [[unlikely]] {
+        co_return RedisIntegerReply{};
+    }
+
+    co_return RedisIntegerReply{evt.reply->integer};
 }
 
 void Ichor::HiredisService::onRedisConnect(int status) {

@@ -20,7 +20,7 @@ public:
 
         timer.setCallback([]() {
             // If sigint has been fired, send a quit to the event loop.
-            // This can't be done from within the handler itself, as the mutex surrounding pushEvent might already be locked, resulting in a deadlock!
+            // This can't be done from within the siginthandler itself, as the mutex surrounding pushEvent might already be locked, resulting in a deadlock!
             if(quit) {
                 GetThreadLocalEventQueue().pushEvent<QuitEvent>(0);
             }

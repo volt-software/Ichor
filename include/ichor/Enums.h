@@ -97,21 +97,21 @@ struct fmt::formatter<Ichor::ServiceState>
         switch(state)
         {
             case Ichor::ServiceState::UNINSTALLED:
-                return format_to(ctx.out(), "UNINSTALLED");
+                return fmt::format_to(ctx.out(), "UNINSTALLED");
             case Ichor::ServiceState::INSTALLED:
-                return format_to(ctx.out(), "INSTALLED");
+                return fmt::format_to(ctx.out(), "INSTALLED");
             case Ichor::ServiceState::STARTING:
-                return format_to(ctx.out(), "STARTING");
+                return fmt::format_to(ctx.out(), "STARTING");
             case Ichor::ServiceState::STOPPING:
-                return format_to(ctx.out(), "STOPPING");
+                return fmt::format_to(ctx.out(), "STOPPING");
             case Ichor::ServiceState::INJECTING:
-                return format_to(ctx.out(), "INJECTING");
+                return fmt::format_to(ctx.out(), "INJECTING");
             case Ichor::ServiceState::UNINJECTING:
-                return format_to(ctx.out(), "UNINJECTING");
+                return fmt::format_to(ctx.out(), "UNINJECTING");
             case Ichor::ServiceState::ACTIVE:
-                return format_to(ctx.out(), "ACTIVE");
+                return fmt::format_to(ctx.out(), "ACTIVE");
             default:
-                return format_to(ctx.out(), "error, please file a bug in Ichor");
+                return fmt::format_to(ctx.out(), "error, please file a bug in Ichor");
         }
     }
 };
@@ -130,17 +130,17 @@ struct fmt::formatter<Ichor::state>
         switch(state)
         {
             case Ichor::state::value_not_ready_consumer_active:
-                return format_to(ctx.out(), "value_not_ready_consumer_active");
+                return fmt::format_to(ctx.out(), "value_not_ready_consumer_active");
             case Ichor::state::value_not_ready_consumer_suspended:
-                return format_to(ctx.out(), "value_not_ready_consumer_suspended");
+                return fmt::format_to(ctx.out(), "value_not_ready_consumer_suspended");
             case Ichor::state::value_ready_producer_active:
-                return format_to(ctx.out(), "value_ready_producer_active");
+                return fmt::format_to(ctx.out(), "value_ready_producer_active");
             case Ichor::state::value_ready_producer_suspended:
-                return format_to(ctx.out(), "value_ready_producer_suspended");
+                return fmt::format_to(ctx.out(), "value_ready_producer_suspended");
             case Ichor::state::cancelled:
-                return format_to(ctx.out(), "cancelled");
+                return fmt::format_to(ctx.out(), "cancelled");
             default:
-                return format_to(ctx.out(), "error, please file a bug in Ichor");
+                return fmt::format_to(ctx.out(), "error, please file a bug in Ichor");
         }
     }
 };
@@ -159,15 +159,15 @@ struct fmt::formatter<Ichor::Detail::DependencyChange>
         switch(change)
         {
             case Ichor::Detail::DependencyChange::NOT_FOUND:
-                return format_to(ctx.out(), "NOT_FOUND");
+                return fmt::format_to(ctx.out(), "NOT_FOUND");
             case Ichor::Detail::DependencyChange::FOUND:
-                return format_to(ctx.out(), "FOUND");
+                return fmt::format_to(ctx.out(), "FOUND");
             case Ichor::Detail::DependencyChange::FOUND_AND_START_ME:
-                return format_to(ctx.out(), "FOUND_AND_START_ME");
+                return fmt::format_to(ctx.out(), "FOUND_AND_START_ME");
             case Ichor::Detail::DependencyChange::FOUND_AND_STOP_ME:
-                return format_to(ctx.out(), "FOUND_AND_STOP_ME");
+                return fmt::format_to(ctx.out(), "FOUND_AND_STOP_ME");
             default:
-                return format_to(ctx.out(), "error, please file a bug in Ichor");
+                return fmt::format_to(ctx.out(), "error, please file a bug in Ichor");
         }
     }
 };
@@ -186,13 +186,13 @@ struct fmt::formatter<Ichor::StartBehaviour>
         switch(change)
         {
             case Ichor::StartBehaviour::DONE:
-                return format_to(ctx.out(), "DONE");
+                return fmt::format_to(ctx.out(), "DONE");
             case Ichor::StartBehaviour::STARTED:
-                return format_to(ctx.out(), "STARTED");
+                return fmt::format_to(ctx.out(), "STARTED");
             case Ichor::StartBehaviour::STOPPED:
-                return format_to(ctx.out(), "STOPPED");
+                return fmt::format_to(ctx.out(), "STOPPED");
             default:
-                return format_to(ctx.out(), "error, please file a bug in Ichor");
+                return fmt::format_to(ctx.out(), "error, please file a bug in Ichor");
         }
     }
 };
@@ -211,17 +211,17 @@ struct fmt::formatter<Ichor::LogLevel>
         switch(change)
         {
             case Ichor::LogLevel::LOG_TRACE:
-                return format_to(ctx.out(), "LOG_TRACE");
+                return fmt::format_to(ctx.out(), "LOG_TRACE");
             case Ichor::LogLevel::LOG_DEBUG:
-                return format_to(ctx.out(), "LOG_DEBUG");
+                return fmt::format_to(ctx.out(), "LOG_DEBUG");
             case Ichor::LogLevel::LOG_INFO:
-                return format_to(ctx.out(), "LOG_INFO");
+                return fmt::format_to(ctx.out(), "LOG_INFO");
             case Ichor::LogLevel::LOG_WARN:
-                return format_to(ctx.out(), "LOG_WARN");
+                return fmt::format_to(ctx.out(), "LOG_WARN");
             case Ichor::LogLevel::LOG_ERROR:
-                return format_to(ctx.out(), "LOG_ERROR");
+                return fmt::format_to(ctx.out(), "LOG_ERROR");
             default:
-                return format_to(ctx.out(), "error, please file a bug in Ichor");
+                return fmt::format_to(ctx.out(), "error, please file a bug in Ichor");
         }
     }
 };
