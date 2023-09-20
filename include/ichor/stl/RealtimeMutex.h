@@ -24,7 +24,7 @@ namespace Ichor {
             ::pthread_mutexattr_init(&attr);
             ::pthread_mutexattr_setprotocol(&attr, PTHREAD_PRIO_INHERIT);
 
-#ifndef __APPLE__
+#if !defined(__APPLE__) && !defined(ICHOR_MUSL)
             ::pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_ADAPTIVE_NP);
 #endif
 

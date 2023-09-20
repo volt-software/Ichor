@@ -59,14 +59,15 @@ cmake_dependent_option(ICHOR_USE_SDEVENT "Add sd-event based queue/integration" 
 option(ICHOR_USE_ABSEIL "Use abseil provided classes where applicable" OFF)
 option(ICHOR_DISABLE_RTTI "Disable RTTI. Reduces memory usage, disables dynamic_cast<>()" ON)
 option(ICHOR_USE_HARDENING "Uses compiler-specific flags which add stack protection and similar features, as well as adding safety checks in Ichor itself." ON)
-cmake_dependent_option(ICHOR_USE_MIMALLOC "Use mimalloc for significant performance improvements" ON "NOT ICHOR_USE_SANITIZERS" OFF)
-cmake_dependent_option(ICHOR_USE_SYSTEM_MIMALLOC "Use system or vendored mimalloc" OFF "NOT ICHOR_USE_SANITIZERS" OFF)
+cmake_dependent_option(ICHOR_USE_MIMALLOC "Use mimalloc for significant performance improvements" ON "NOT ICHOR_USE_SANITIZERS AND NOT ICHOR_MUSL" OFF)
+cmake_dependent_option(ICHOR_USE_SYSTEM_MIMALLOC "Use system or vendored mimalloc" OFF "NOT ICHOR_USE_SANITIZERS AND NOT ICHOR_MUSL" OFF)
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     option(ICHOR_USE_BACKWARD "Use backward-cpp to print stacktraces on crashes or when the user wants to. Useful for debugging." ON)
 else()
     option(ICHOR_USE_BACKWARD "Use backward-cpp to print stacktraces on crashes or when the user wants to. Useful for debugging." OFF)
 endif()
 option(ICHOR_USE_HIREDIS "Add hiredis dependency" OFF)
+option(ICHOR_MUSL "Use when building for musl instead of glibc" OFF)
 
 set(BUILD_TESTING OFF) #disable Catch 2 testing
 
@@ -141,6 +142,10 @@ endif()
 
 if(ICHOR_USE_BOOST_BEAST)
     target_compile_definitions(ichor PUBLIC ICHOR_USE_BOOST_BEAST)
+endif()
+if(ICHOR_MUSL)
+    target_compile_definitions(ichor PUBLIC ICHOR_MUSL)
+    target_link_options(ichor PUBLIC -static-libgcc -static-libstdc++ -static)
 endif()
 
 if(NOT WIN32)

@@ -27,7 +27,7 @@ RUN tar xf v1.2.0.tar.gz
 RUN mkdir /opt/hiredis-1.2.0/build
 
 WORKDIR /opt/hiredis-1.2.0/build
-RUN cmake -GNinja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_INSTALL_PREFIX=/usr -DENABLE_SSL=1 ..
+RUN cmake -GNinja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DDISABLE_TESTS=1 -DCMAKE_INSTALL_PREFIX=/usr -DENABLE_SSL=1 ..
 RUN ninja && ninja install
 
 RUN mkdir -p /opt/ichor/build

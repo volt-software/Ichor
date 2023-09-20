@@ -8,10 +8,11 @@ The easiest is to build it with the provided Dockerfile:
 
 ```sh
 docker build -f Dockerfile -t ichor . && docker run -v $(pwd):/opt/ichor/src -it ichor # for a release build
+docker build -f Dockerfile-musl -t ichor-musl . && docker run -v $(pwd):/opt/ichor/src -it ichor-musl # for a release + musl build
 docker build -f Dockerfile-asan -t ichor-asan . && docker run -v $(pwd):/opt/ichor/src -it ichor-asan # for a debug build with sanitizers
 ```
 
-The binaries will then be in `$(pwd)/bin`, needing at least glibc 2.35 on the system that's running.  
+The binaries will then be in `$(pwd)/bin`. The musl build statically compiles Ichor and should be able to run on all platforms, otherwise the binaries need at least glibc 2.35 on the system that's running them.  
 
 ### Dependencies
 

@@ -8,8 +8,8 @@ cleanup ()
 
 trap cleanup SIGINT SIGTERM
 
-ccompilers=("clang-14" "clang-16" "gcc" "gcc-12")
-cppcompilers=("clang++-14" "clang++-16" "g++" "g++-12")
+ccompilers=("clang-14" "clang-16" "gcc-11" "gcc-12")
+cppcompilers=("clang++-14" "clang++-16" "g++-11" "g++-12")
 
 if [[ "$1" == "--dev" ]]; then
   ccompilers=("clang" "gcc")
@@ -50,6 +50,22 @@ run_benchmarks ()
   ../bin/ichor_start_benchmark || exit 1
   ../bin/ichor_start_stop_benchmark || exit 1
 }
+
+
+rm -rf ./* ../bin/*
+docker build -f ../Dockerfile -t ichor . || exit 1
+docker run -v $(pwd)/../:/opt/ichor/src -it ichor || exit 1
+run_examples
+
+rm -rf ./* ../bin/*
+docker build -f ../Dockerfile-musl -t ichor-musl . || exit 1
+docker run -v $(pwd)/../:/opt/ichor/src -it ichor-musl || exit 1
+run_examples
+
+rm -rf ./* ../bin/*
+docker build -f ../Dockerfile-asan -t ichor-asan . || exit 1
+docker run -v $(pwd)/../:/opt/ichor/src -it ichor-asan || exit 1
+run_examples
 
 for i in ${!ccompilers[@]}; do
   rm -rf ./* ../bin/*
