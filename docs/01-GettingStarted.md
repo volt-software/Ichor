@@ -4,6 +4,15 @@
 
 Compiling is done through the help of CMake. Ichor requires at least gcc 11.3 (due to [this gcc bug](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=95137)), clang 14 or MSVC 2022, and is tested with gcc 11.3, 12.1, clang 14, clang 15 and clang 16 and MSVC 2022.
 
+The easiest is to build it with the provided Dockerfile:
+
+```sh
+docker build -f Dockerfile -t ichor . && docker run -v $(pwd):/opt/ichor/src -it ichor # for a release build
+docker build -f Dockerfile-asan -t ichor-asan . && docker run -v $(pwd):/opt/ichor/src -it ichor-asan # for a debug build with sanitizers
+```
+
+The binaries will then be in `$(pwd)/bin`, needing at least glibc 2.35 on the system that's running.  
+
 ### Dependencies
 
 #### Ubuntu 20.04:
