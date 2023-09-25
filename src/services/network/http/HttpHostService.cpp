@@ -5,6 +5,8 @@
 #include <ichor/services/network/http/HttpScopeGuards.h>
 #include <ichor/events/RunFunctionEvent.h>
 
+//
+
 Ichor::HttpHostService::HttpHostService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {
     reg.registerDependency<ILogger>(this, true);
     reg.registerDependency<IAsioContextService>(this, true);
@@ -28,12 +30,28 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::HttpHostService::start
         _tcpNoDelay.store(Ichor::any_cast<bool>(getProperties()["NoDelay"]), std::memory_order_release);
     }
 
+    if(getProperties().contains("SslCert")) {
+        _useSsl.store(true, std::memory_order_release);
+    }
+
+    if((_useSsl.load(std::memory_order_acquire) && !getProperties().contains("SslKey")) ||
+        (!_useSsl.load(std::memory_order_acquire) && getProperties().contains("SslKey"))) {
+        ICHOR_LOG_ERROR_ATOMIC(_logger, "Both SslCert and SslKey properties are required when using ssl");
+        co_return tl::unexpected(StartError::FAILED);
+    }
+
     _queue = &GetThreadLocalEventQueue();
 
-    auto address = net::ip::make_address(Ichor::any_cast<std::string&>(getProperties()["Address"]));
+    boost::system::error_code ec;
+    auto address = net::ip::make_address(Ichor::any_cast<std::string &>(getProperties()["Address"]), ec);
     auto port = Ichor::any_cast<uint16_t>(getProperties()["Port"]);
 
-    net::spawn(*_asioContextService->getContext(), [this, address = std::move(address), port](net::yield_context yield){
+    if(ec) {
+        ICHOR_LOG_ERROR_ATOMIC(_logger, "Couldn't parse address \"{}\": {} {}", Ichor::any_cast<std::string &>(getProperties()["Address"]), ec.value(), ec.message());
+        co_return tl::unexpected(StartError::FAILED);
+    }
+
+    net::spawn(*_asioContextService->getContext(), [this, address = std::move(address), port](net::yield_context yield) {
         listen(tcp::endpoint{address, port}, std::move(yield));
     }ASIO_SPAWN_COMPLETION_TOKEN);
 
@@ -45,7 +63,7 @@ Ichor::Task<void> Ichor::HttpHostService::stop() {
     _quit.store(true, std::memory_order_release);
 
     if(!_goingToCleanupStream.exchange(true, std::memory_order_acq_rel) && _httpAcceptor) {
-        if (_httpAcceptor->is_open()) {
+        if(_httpAcceptor->is_open()) {
             _httpAcceptor->close();
         }
         net::spawn(*_asioContextService->getContext(), [this](net::yield_context _yield) {
@@ -53,8 +71,10 @@ Ichor::Task<void> Ichor::HttpHostService::stop() {
             {
                 std::unique_lock lg{_streamsMutex};
                 for (auto &[id, stream]: _httpStreams) {
-//                stream->quit.store(true, std::memory_order_release);
                     stream->socket.cancel();
+                }
+                for (auto &[id, stream]: _sslStreams) {
+                    beast::get_lowest_layer(stream->socket).cancel();
                 }
             }
 
@@ -145,6 +165,29 @@ void Ichor::HttpHostService::listen(tcp::endpoint endpoint, net::yield_context y
     ScopeGuardAtomicCount guard{_finishedListenAndRead};
     beast::error_code ec;
 
+    if(_useSsl.load(std::memory_order_acquire)) {
+        _sslContext = std::make_unique<net::ssl::context>(net::ssl::context::tlsv12);
+
+        if(getProperties().contains("SslPassword")) {
+            _sslContext->set_password_callback(
+                    [password = Ichor::any_cast<std::string>(getProperties()["SslPassword"])](std::size_t, boost::asio::ssl::context_base::password_purpose) {
+                        return password;
+                    });
+        }
+
+        _sslContext->set_options(boost::asio::ssl::context::default_workarounds |
+                                 boost::asio::ssl::context::no_tlsv1 |
+                                 boost::asio::ssl::context::no_tlsv1_1 |
+                                 boost::asio::ssl::context::no_sslv2 |
+                                 boost::asio::ssl::context::no_sslv3);
+
+        //pretty sure that Boost.Beast uses references to the data/size, so we should make sure to keep this in memory until we're done.
+        auto& cert = Ichor::any_cast<std::string&>(getProperties()["SslCert"]);
+        auto& key = Ichor::any_cast<std::string&>(getProperties()["SslKey"]);
+        _sslContext->use_certificate_chain(boost::asio::buffer(cert.data(), cert.size()));
+        _sslContext->use_private_key(boost::asio::buffer(key.data(), key.size()), boost::asio::ssl::context::file_format::pem);
+    }
+
     _httpAcceptor = std::make_unique<tcp::acceptor>(*_asioContextService->getContext());
     _httpAcceptor->open(endpoint.protocol(), ec);
     if(ec) {
@@ -185,7 +228,11 @@ void Ichor::HttpHostService::listen(tcp::endpoint endpoint, net::yield_context y
                 return;
             }
 
-            read(std::move(socket), std::move(_yield));
+            if(_useSsl) {
+                read<beast::ssl_stream<beast::tcp_stream>>(std::move(socket), std::move(_yield));
+            } else {
+                read<beast::tcp_stream>(std::move(socket), std::move(_yield));
+            }
         }ASIO_SPAWN_COMPLETION_TOKEN);
     }
 
@@ -195,16 +242,30 @@ void Ichor::HttpHostService::listen(tcp::endpoint endpoint, net::yield_context y
     }
 }
 
+template <typename SocketT>
 void Ichor::HttpHostService::read(tcp::socket socket, net::yield_context yield) {
     ScopeGuardAtomicCount guard{_finishedListenAndRead};
     beast::error_code ec;
     auto addr = socket.remote_endpoint().address().to_string();
-    std::shared_ptr<Detail::Connection> connection;
+    std::shared_ptr<Detail::Connection<SocketT>> connection;
     uint64_t streamId;
     {
         std::lock_guard lg(_streamsMutex);
         streamId = _streamIdCounter++;
-        connection = _httpStreams.emplace(streamId, std::make_shared<Detail::Connection>(std::move(socket))).first->second;
+        if constexpr (std::is_same_v<SocketT, beast::tcp_stream>) {
+            connection = _httpStreams.emplace(streamId, std::make_shared<Detail::Connection<SocketT>>(std::move(socket))).first->second;
+        } else {
+            connection = _sslStreams.emplace(streamId, std::make_shared<Detail::Connection<SocketT>>(std::move(socket), *_sslContext)).first->second;
+        }
+    }
+
+    if constexpr (!std::is_same_v<SocketT, beast::tcp_stream>) {
+        connection->socket.async_handshake(ssl::stream_base::server, yield[ec]);
+    }
+
+    if(ec) {
+        fail(ec, "HttpHostService::read ssl handshake", false);
+        return;
     }
 
     // This buffer is required to persist across reads
@@ -213,7 +274,11 @@ void Ichor::HttpHostService::read(tcp::socket socket, net::yield_context yield) 
     while(!_quit.load(std::memory_order_acquire) && !_asioContextService->fibersShouldStop())
     {
         // Set the timeout.
-        connection->socket.expires_after(30s);
+        if constexpr (std::is_same_v<SocketT, beast::tcp_stream>) {
+            connection->socket.expires_after(30s);
+        } else {
+            beast::get_lowest_layer(connection->socket).expires_after(30s);
+        }
 
         // Read a request
         http::request<http::vector_body<uint8_t>, http::basic_fields<std::allocator<uint8_t>>> req;
@@ -259,10 +324,10 @@ void Ichor::HttpHostService::read(tcp::socket socket, net::yield_context yield) 
                 co_return {};
             }
 
-            if (routes != std::end(_handlers)) {
+            if(routes != std::end(_handlers)) {
                 auto handler = routes->second.find(httpReq.route);
 
-                if (handler != std::end(routes->second)) {
+                if(handler != std::end(routes->second)) {
 
                     // using reference here leads to heap use after free. Not sure why.
                     HttpResponse httpRes = std::move(*co_await handler->second(httpReq).begin());
@@ -306,14 +371,19 @@ void Ichor::HttpHostService::read(tcp::socket socket, net::yield_context yield) 
 
     {
         std::lock_guard lg(_streamsMutex);
-        _httpStreams.erase(streamId);
+        if constexpr (std::is_same_v<SocketT, beast::tcp_stream>) {
+            _httpStreams.erase(streamId);
+        } else {
+            _sslStreams.erase(streamId);
+        }
     }
 
     // At this point the connection is closed gracefully
     ICHOR_LOG_WARN_ATOMIC(_logger, "finished read() {} {}", _quit.load(std::memory_order_acquire), _asioContextService->fibersShouldStop());
 }
 
-void Ichor::HttpHostService::sendInternal(std::shared_ptr<Detail::Connection> &connection, http::response<http::vector_body<uint8_t>, http::basic_fields<std::allocator<uint8_t>>> &&res) {
+template <typename SocketT>
+void Ichor::HttpHostService::sendInternal(std::shared_ptr<Detail::Connection<SocketT>> &connection, http::response<http::vector_body<uint8_t>, http::basic_fields<std::allocator<uint8_t>>> &&res) {
     static_assert(std::is_move_assignable_v<Detail::HostOutboxMessage>, "HostOutboxMessage should be move assignable");
 
     if(_quit.load(std::memory_order_acquire) || _asioContextService->fibersShouldStop()) {
@@ -339,16 +409,20 @@ void Ichor::HttpHostService::sendInternal(std::shared_ptr<Detail::Connection> &c
             // Move message, should be trivially copyable and prevents iterator invalidation
             auto next = std::move(connection->outbox.front());
             lg.unlock();
-            connection->socket.expires_after(30s);
+            if constexpr (std::is_same_v<SocketT, beast::tcp_stream>) {
+                connection->socket.expires_after(30s);
+            } else {
+                beast::get_lowest_layer(connection->socket).expires_after(30s);
+            }
             beast::error_code ec;
             http::async_write(connection->socket, next, yield[ec]);
-            if (ec == http::error::end_of_stream) {
+            if(ec == http::error::end_of_stream) {
                 fail(ec, "HttpHostService::sendInternal end of stream", false);
-            } else if (ec == net::error::operation_aborted) {
+            } else if(ec == net::error::operation_aborted) {
                 fail(ec, "HttpHostService::sendInternal operation aborted", false);
-            } else if (ec == net::error::bad_descriptor) {
+            } else if(ec == net::error::bad_descriptor) {
                 fail(ec, "HttpHostService::sendInternal bad descriptor", false);
-            } else if (ec) {
+            } else if(ec) {
                 fail(ec, "HttpHostService::sendInternal write", false);
             }
             lg.lock();

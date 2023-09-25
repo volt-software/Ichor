@@ -7,8 +7,9 @@ RUN update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-12 60
 RUN update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-12 60
 RUN update-alternatives --install /usr/bin/cpp cpp /usr/bin/cpp-12 60
 
-ENV CFLAGS="-Og -fsanitize=address,undefined"
-ENV CXXFLAGS="-Og -fsanitize=address,undefined"
+ENV CFLAGS="-Og -fsanitize=thread"
+ENV CXXFLAGS="-Og -fsanitize=thread"
+ENV LDFLAGS="-fsanitize=thread -static-libtsan -static-libgcc -static-libstdc++"
 
 WORKDIR /opt
 
@@ -19,8 +20,8 @@ RUN tar xf boost_1_81_0.tar.bz2
 WORKDIR /opt/boost_1_81_0
 
 RUN ./bootstrap.sh --prefix=/usr
-RUN ./b2 cxxflags="-fsanitize=address,undefined -Og -std=c++17 -DBOOST_USE_ASAN -DBOOST_USE_UCONTEXT"  linkflags="-lasan -lubsan" variant=debug link=static threading=multi context-impl=ucontext
-RUN ./b2 cxxflags="-fsanitize=address,undefined -Og -std=c++17 -DBOOST_USE_ASAN -DBOOST_USE_UCONTEXT"  linkflags="-lasan -lubsan" variant=debug link=static threading=multi context-impl=ucontext install
+RUN ./b2 cxxflags="-fsanitize=thread -Og -std=c++17 -DBOOST_USE_TSAN -DBOOST_USE_UCONTEXT"  linkflags="-ltsan -static-libtsan -static-libgcc -static-libstdc++" variant=debug link=static threading=multi context-impl=ucontext
+RUN ./b2 cxxflags="-fsanitize=thread -Og -std=c++17 -DBOOST_USE_TSAN -DBOOST_USE_UCONTEXT"  linkflags="-ltsan -static-libtsan -static-libgcc -static-libstdc++" variant=debug link=static threading=multi context-impl=ucontext install
 
 WORKDIR /opt
 
@@ -42,4 +43,4 @@ RUN unset CXXFLAGS
 
 ENTRYPOINT ["/bin/bash", "-c"]
 
-CMD ["cd /opt/ichor/build && cmake -GNinja -DCMAKE_BUILD_TYPE=Debug -DICHOR_USE_SANITIZERS=1 -DICHOR_USE_HIREDIS=1 -DICHOR_USE_BOOST_BEAST=1 -DICHOR_USE_SPDLOG=1 /opt/ichor/src && ninja"]
+CMD ["cd /opt/ichor/build && cmake -GNinja -DCMAKE_BUILD_TYPE=Debug -DICHOR_USE_SANITIZERS=0 -DICHOR_USE_THREAD_SANITIZER=1 -DICHOR_USE_HIREDIS=1 -DICHOR_USE_BOOST_BEAST=1 -DICHOR_USE_SPDLOG=1 /opt/ichor/src && ninja"]

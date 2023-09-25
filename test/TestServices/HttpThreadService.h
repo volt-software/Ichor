@@ -116,6 +116,7 @@ private:
 
         if(response.status == HttpStatus::ok) {
             auto msg = _serializer->deserialize(std::move(response.body));
+            fmt::print("Received {}:{}\n", msg->id, msg->val);
         } else {
             throw std::runtime_error("Status not ok");
         }
