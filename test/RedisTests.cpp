@@ -30,5 +30,15 @@ TEST_CASE("RedisTests") {
     }
 }
 
+#else
+
+#include "Common.h"
+
+TEST_CASE("RedisTests") {
+    SECTION("Empty Test so that Catch2 exits with 0") {
+
+    }
+}
+
 #endif
 

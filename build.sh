@@ -67,6 +67,23 @@ docker build -f ../Dockerfile-asan -t ichor-asan . || exit 1
 docker run -v $(pwd)/../:/opt/ichor/src -it ichor-asan || exit 1
 run_examples
 
+rm -rf ./* ../bin/*
+docker run --rm --privileged multiarch/qemu-user-static --reset -p yes || exit 1
+docker build -f ../Dockerfile-musl-aarch64 -t ichor-musl-aarch64 . || exit 1
+docker run -v $(pwd)/../:/opt/ichor/src -it ichor-musl-aarch64 || exit 1
+cat >> ../bin/run_aarch64_examples_and_tests.sh << EOF
+#!/bin/sh
+FILES=/opt/ichor/src/bin/*
+for f in \$FILES; do
+  if [[ "\$f" != *"Redis"* ]] && [[ "\$f" != *"benchmark"* ]] && [[ "\$f" != *"minimal"* ]] && [[ "\$f" != *"ping"* ]] && [[ "\$f" != *"pong"* ]] && [[ "\$f" != *"Started"* ]] && [[ "\$f" != *".sh" ]] && [[ -x "\$f" ]] ; then
+    echo "Running \$f"
+    \$f || echo "Error" && exit 1
+  fi
+done
+EOF
+chmod +x ../bin/run_aarch64_examples_and_tests.sh
+docker run -v $(pwd)/../:/opt/ichor/src --privileged -it ichor-musl-aarch64 "sh -c 'ulimit -r unlimited && /opt/ichor/src/bin/run_aarch64_examples_and_tests.sh'" || exit 1
+
 for i in ${!ccompilers[@]}; do
   rm -rf ./* ../bin/*
   CC=${ccompilers[i]} CXX=${cppcompilers[i]} cmake -GNinja -DCMAKE_BUILD_TYPE=Debug -DICHOR_USE_SANITIZERS=ON -DICHOR_USE_ABSEIL=ON -DICHOR_ENABLE_INTERNAL_DEBUGGING=OFF -DICHOR_USE_MOLD=ON -DICHOR_USE_BOOST_BEAST=ON -DICHOR_USE_HIREDIS=ON .. || exit 1

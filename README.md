@@ -31,7 +31,7 @@ The [realtime example](examples/realtime_example/main.cpp) shows a trivial progr
 More examples can be found in the [examples directory](examples).
 
 ## Supported OSes
-* Linux (including musl-based distros like alpine linux)
+* Linux (including aarch64 and musl-based distros like alpine linux)
 * Windows
 * Partial support for OSX Monterey (using `brew install llvm@15`, ASAN and boost beast don't seem to work)
 
