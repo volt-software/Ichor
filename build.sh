@@ -8,6 +8,26 @@ cleanup ()
 
 trap cleanup SIGINT SIGTERM
 
+POSITIONAL_ARGS=()
+DOCKER=1
+
+while [[ $# -gt 0 ]]; do
+  case $1 in
+    --no-docker)
+      DOCKER=0
+      shift # past value
+      ;;
+    -*|--*)
+      echo "Unknown option $1"
+      exit 1
+      ;;
+    *)
+      POSITIONAL_ARGS+=("$1") # save positional arg
+      shift # past argument
+      ;;
+  esac
+done
+
 ccompilers=("clang-14" "clang-16" "gcc-11" "gcc-12")
 cppcompilers=("clang++-14" "clang++-16" "g++-11" "g++-12")
 
@@ -52,26 +72,29 @@ run_benchmarks ()
 }
 
 
-rm -rf ./* ../bin/*
-docker build -f ../Dockerfile -t ichor . || exit 1
-docker run -v $(pwd)/../:/opt/ichor/src -it ichor || exit 1
-run_examples
+if [[ $DOCKER -eq 1 ]]; then
+  rm -rf ./* ../bin/*
+  docker build -f ../Dockerfile -t ichor . || exit 1
+  docker run -v $(pwd)/../:/opt/ichor/src -it ichor || exit 1
+  run_examples
 
-rm -rf ./* ../bin/*
-docker build -f ../Dockerfile-musl -t ichor-musl . || exit 1
-docker run -v $(pwd)/../:/opt/ichor/src -it ichor-musl || exit 1
-run_examples
+  rm -rf ./* ../bin/*
+  docker build -f ../Dockerfile-musl -t ichor-musl . || exit 1
+  docker run -v $(pwd)/../:/opt/ichor/src -it ichor-musl || exit 1
+  run_examples
 
-rm -rf ./* ../bin/*
-docker build -f ../Dockerfile-asan -t ichor-asan . || exit 1
-docker run -v $(pwd)/../:/opt/ichor/src -it ichor-asan || exit 1
-run_examples
+  rm -rf ./* ../bin/*
+  docker build -f ../Dockerfile-asan -t ichor-asan . || exit 1
+  docker run -v $(pwd)/../:/opt/ichor/src -it ichor-asan || exit 1
+  run_examples
 
-rm -rf ./* ../bin/*
-docker run --rm --privileged multiarch/qemu-user-static --reset -p yes || exit 1
-docker build -f ../Dockerfile-musl-aarch64 -t ichor-musl-aarch64 . || exit 1
-docker run -v $(pwd)/../:/opt/ichor/src -it ichor-musl-aarch64 || exit 1
-cat >> ../bin/run_aarch64_examples_and_tests.sh << EOF
+  # tsan is purposefully not run automatically, because it usually contains false positives.
+
+  rm -rf ./* ../bin/*
+  docker run --rm --privileged multiarch/qemu-user-static --reset -p yes || exit 1
+  docker build -f ../Dockerfile-musl-aarch64 -t ichor-musl-aarch64 . || exit 1
+  docker run -v $(pwd)/../:/opt/ichor/src -it ichor-musl-aarch64 || exit 1
+  cat >> ../bin/run_aarch64_examples_and_tests.sh << EOF
 #!/bin/sh
 FILES=/opt/ichor/src/bin/*
 for f in \$FILES; do
@@ -81,8 +104,9 @@ for f in \$FILES; do
   fi
 done
 EOF
-chmod +x ../bin/run_aarch64_examples_and_tests.sh
-docker run -v $(pwd)/../:/opt/ichor/src --privileged -it ichor-musl-aarch64 "sh -c 'ulimit -r unlimited && /opt/ichor/src/bin/run_aarch64_examples_and_tests.sh'" || exit 1
+  chmod +x ../bin/run_aarch64_examples_and_tests.sh
+  docker run -v $(pwd)/../:/opt/ichor/src --privileged -it ichor-musl-aarch64 "sh -c 'ulimit -r unlimited && /opt/ichor/src/bin/run_aarch64_examples_and_tests.sh'" || exit 1
+fi
 
 for i in ${!ccompilers[@]}; do
   rm -rf ./* ../bin/*

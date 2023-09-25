@@ -8,6 +8,7 @@
 #include <ichor/services/logging/Logger.h>
 #include <ichor/stl/RealtimeMutex.h>
 #include <boost/beast.hpp>
+#include <boost/beast/ssl.hpp>
 #include <boost/asio/spawn.hpp>
 #include <boost/circular_buffer.hpp>
 
@@ -55,11 +56,14 @@ namespace Ichor {
         friend DependencyRegister;
 
         std::unique_ptr<beast::tcp_stream> _httpStream{};
+        std::unique_ptr<beast::ssl_stream<beast::tcp_stream>> _sslStream{};
+        std::unique_ptr<net::ssl::context> _sslContext{};
         std::atomic<uint64_t> _priority{INTERNAL_EVENT_PRIORITY};
         std::atomic<bool> _quit{};
         std::atomic<bool> _connecting{};
         std::atomic<bool> _connected{};
         std::atomic<bool> _tcpNoDelay{};
+        std::atomic<bool> _useSsl{};
         std::atomic<int64_t> _finishedListenAndRead{};
         std::atomic<ILogger*> _logger{};
         IAsioContextService *_asioContextService{};

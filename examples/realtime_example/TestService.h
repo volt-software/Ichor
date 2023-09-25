@@ -11,7 +11,11 @@
 using namespace Ichor;
 
 #define ITERATIONS 20'000
+#ifdef ICHOR_AARCH64
+#define MAXIMUM_DURATION_USEC 1500
+#else
 #define MAXIMUM_DURATION_USEC 500
+#endif
 
 struct ExecuteTaskEvent final : public Event {
     ExecuteTaskEvent(uint64_t _id, uint64_t _originatingService, uint64_t _priority) noexcept : Event(TYPE, NAME, _id, _originatingService, _priority) {}
