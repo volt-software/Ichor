@@ -13,10 +13,5 @@ foreach(filename ${PROJECT_TEST_SOURCES})
     target_link_libraries(${testname} ichor)
     target_link_libraries(${testname} Catch2::Catch2WithMain)
     target_compile_definitions(${testname} PUBLIC CATCH_CONFIG_FAST_COMPILE)
-
-    if(ICHOR_USE_SANITIZERS)
-        target_link_libraries(${testname})
-    endif()
-
     catch_discover_tests(${testname})
 endforeach()

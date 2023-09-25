@@ -94,4 +94,14 @@ TEST_CASE("HttpTests") {
     }
 }
 
+#else
+
+#include "Common.h"
+
+TEST_CASE("HttpTests") {
+    SECTION("Empty Test so that Catch2 exits with 0") {
+        REQUIRE(true);
+    }
+}
+
 #endif

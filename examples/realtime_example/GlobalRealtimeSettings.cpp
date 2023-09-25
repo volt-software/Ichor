@@ -22,10 +22,12 @@ GlobalRealtimeSettings::GlobalRealtimeSettings() {
         int target_latency = 0;
         dma_latency_file = open("/dev/cpu_dma_latency", O_RDWR);
         if(dma_latency_file == -1) {
+            fmt::print("dma_latency_file\n");
             std::terminate();
         }
         auto ret = write(dma_latency_file, &target_latency, 4);
         if(ret == -1) {
+            fmt::print("dma_latency_file write\n");
             std::terminate();
         }
     }
@@ -33,6 +35,7 @@ GlobalRealtimeSettings::GlobalRealtimeSettings() {
     // tell linux not to swap out the memory used by this process
     int rc = mlockall(MCL_CURRENT | MCL_FUTURE);
     if (rc != 0) {
+        fmt::print("mlockall {} {}\n", rc, errno);
         std::terminate();
     }
 
@@ -42,31 +45,40 @@ GlobalRealtimeSettings::GlobalRealtimeSettings() {
         std::array<char, 4> control_read{};
         smt_file = open("/sys/devices/system/cpu/smt/control", O_RDWR);
         if(smt_file == -1) {
-            std::terminate();
+            fmt::print("Could not disable SMT\n");
+            reenable_smt = false;
+            close(smt_file);
+            goto end_smt;
         }
 
         auto size = read(smt_file, control_read.data(), 4);
         if(size == -1) {
+            fmt::print("smt_file read\n");
             std::terminate();
         }
 
         if(lseek(smt_file, 0, SEEK_SET) == -1) {
+            fmt::print("smt_file lseek\n");
             std::terminate();
         }
 
-        if(strncmp(control_read.data(), "off", 3) == 0) {
+        if(strncmp(control_read.data(), "off", 3) == 0 || strncmp(control_read.data(), "notimplemented", 14) == 0) {
             reenable_smt = false;
             close(smt_file);
         } else {
             auto ret = write(smt_file, target_control, 3);
             if (ret == -1) {
+                fmt::print("smt_file write\n");
                 std::terminate();
             }
         }
+    } else {
+        fmt::print("SMT missing\n");
     }
 
+    end_smt:
     if(setpriority(PRIO_PROCESS, 0, -20) != 0) {
-        std::terminate();
+        fmt::print("setpriority failed\n");
     }
 #endif
 }
@@ -77,6 +89,7 @@ GlobalRealtimeSettings::~GlobalRealtimeSettings() {
 #else
     int rc = munlockall();
     if (rc != 0) {
+        fmt::print("munlockall\n");
         std::terminate();
     }
 
@@ -84,6 +97,7 @@ GlobalRealtimeSettings::~GlobalRealtimeSettings() {
         const char *target_control = "on";
         auto ret = write(smt_file, target_control, 3);
         if (ret == -1) {
+            fmt::print("reenable_smt write\n");
             std::terminate();
         }
         close(smt_file);

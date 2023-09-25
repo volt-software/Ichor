@@ -17,7 +17,6 @@
 
 using namespace std::string_literals;
 
-std::atomic<uint64_t> idCounter = 0;
 std::string_view progName;
 
 void* run_example(void*) {
@@ -63,7 +62,8 @@ int main(int argc, char *argv[]) {
     uid_t euid = geteuid();
 
     if (uid !=0 || uid!=euid) {
-        throw std::runtime_error("No permissions to set realtime scheduling. Consider running under sudo/root.");
+        fmt::print("This example requires running under sudo/root.");
+        throw std::runtime_error("This example requires running under sudo/root.");
     }
 #endif
 
@@ -85,7 +85,8 @@ int main(int argc, char *argv[]) {
     auto ret = pthread_create (&thread, &attr, run_example, nullptr);
 
     if(ret == EPERM) {
-        throw std::runtime_error("No permissions to set realtime scheduling. Consider running under sudo/root.");
+        fmt::print("No permissions to set realtime thread scheduling. Consider running under sudo/root.");
+        throw std::runtime_error("No permissions to set realtime thread scheduling. Consider running under sudo/root.");
     }
 
     if(ret == 0) {
@@ -93,5 +94,5 @@ int main(int argc, char *argv[]) {
     }
 #endif
 
-    return 0;
+    return ret == 0 ? 0 : 1;
 }

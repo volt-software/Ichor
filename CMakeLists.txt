@@ -68,6 +68,7 @@ else()
 endif()
 option(ICHOR_USE_HIREDIS "Add hiredis dependency" OFF)
 option(ICHOR_MUSL "Use when building for musl instead of glibc" OFF)
+option(ICHOR_AARCH64 "Use when building for aarch64. Turns off some x86-specific compiler flags." OFF)
 
 set(BUILD_TESTING OFF) #disable Catch 2 testing
 
@@ -278,7 +279,11 @@ if(WIN32 AND ICHOR_USE_HARDENING)
     target_compile_options(ichor PUBLIC /GS /guard:cf)
     target_compile_definitions(ichor PUBLIC ICHOR_USE_HARDENING)
 elseif(ICHOR_USE_HARDENING)
-    target_compile_options(ichor PUBLIC -fstack-protector-strong -fcf-protection)
+    target_compile_options(ichor PUBLIC -fstack-protector-strong)
+
+    if(NOT ICHOR_AARCH64)
+        target_compile_options(ichor PUBLIC -fcf-protection)
+    endif()
 
     # stack clash protection not available on OSX
     if(NOT APPLE)
@@ -424,8 +429,8 @@ if(ICHOR_USE_ETCD)
 endif()
 
 # Detection for backward-cpp, works without external libraries on windows and apple
-# On linux, it still works without these libraries (on gcc at least), but provides less functionality.
-if(ICHOR_USE_BACKWARD)
+# On linux, it still works without these libraries (on gcc + glibc at least), but provides less functionality.
+if(ICHOR_USE_BACKWARD AND NOT ICHOR_MUSL)
     target_compile_definitions(ichor PUBLIC ICHOR_USE_BACKWARD=1)
     if(NOT WIN32 AND NOT APPLE)
         find_package(PkgConfig REQUIRED)
