@@ -14,13 +14,13 @@ Ichor::HttpConnectionService::HttpConnectionService(DependencyRegister &reg, Pro
 Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::HttpConnectionService::start() {
     _queue = &GetThreadLocalEventQueue();
 
-    if(!_asioContextService->fibersShouldStop() && !_connecting.load(std::memory_order_acquire) && !_connected.load(std::memory_order_acquire)) {
+    if (!_asioContextService->fibersShouldStop() && !_connecting.load(std::memory_order_acquire) && !_connected.load(std::memory_order_acquire)) {
         _quit.store(false, std::memory_order_release);
-        if (getProperties().contains("Priority")) {
+        if(getProperties().contains("Priority")) {
             _priority.store(Ichor::any_cast<uint64_t>(getProperties()["Priority"]), std::memory_order_release);
         }
 
-        if (!getProperties().contains("Port") || !getProperties().contains("Address")) {
+        if(!getProperties().contains("Port") || !getProperties().contains("Address")) {
             ICHOR_LOG_ERROR_ATOMIC(_logger, "Missing port or address when starting HttpConnectionService");
             co_return tl::unexpected(StartError::FAILED);
         }
@@ -30,8 +30,18 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::HttpConnectionService:
         }
 //        fmt::print("connecting to {}\n", Ichor::any_cast<std::string&>(getProperties()["Address"]));
 
-        auto address = net::ip::make_address(Ichor::any_cast<std::string &>(getProperties()["Address"]));
+        boost::system::error_code ec;
+        auto address = net::ip::make_address(Ichor::any_cast<std::string &>(getProperties()["Address"]), ec);
         auto port = Ichor::any_cast<uint16_t>(getProperties()["Port"]);
+
+        if(ec) {
+            ICHOR_LOG_ERROR_ATOMIC(_logger, "Couldn't parse address \"{}\": {} {}", Ichor::any_cast<std::string &>(getProperties()["Address"]), ec.value(), ec.message());
+            co_return tl::unexpected(StartError::FAILED);
+        }
+
+        if (getProperties().contains("ConnectOverSsl")) {
+            _useSsl.store(Ichor::any_cast<bool>(getProperties()["ConnectOverSsl"]), std::memory_order_release);
+        }
 
         _connecting.store(true, std::memory_order_release);
         net::spawn(*_asioContextService->getContext(), [this, address = std::move(address), port](net::yield_context yield) {
@@ -39,7 +49,7 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::HttpConnectionService:
         }ASIO_SPAWN_COMPLETION_TOKEN);
     }
 
-    if(_asioContextService->fibersShouldStop()) {
+    if (_asioContextService->fibersShouldStop()) {
         co_return tl::unexpected(StartError::FAILED);
     }
 
@@ -150,11 +160,19 @@ Ichor::Task<Ichor::HttpResponse> Ichor::HttpConnectionService::sendAsync(Ichor::
             req.prepare_payload();
             req.keep_alive();
 
-            // Set the timeout for this operation.
-            // _httpStream should only be modified from the boost thread
-            _httpStream->expires_after(30s);
-            INTERNAL_DEBUG("http::write");
-            http::async_write(*_httpStream, req, yield[ec]);
+            if(_useSsl.load(std::memory_order_acquire)) {
+                // Set the timeout for this operation.
+                // _sslStream should only be modified from the boost thread
+                beast::get_lowest_layer(*_sslStream).expires_after(30s);
+                INTERNAL_DEBUG("http::write");
+                http::async_write(*_sslStream, req, yield[ec]);
+            } else {
+                // Set the timeout for this operation.
+                // _httpStream should only be modified from the boost thread
+                _httpStream->expires_after(30s);
+                INTERNAL_DEBUG("http::write");
+                http::async_write(*_httpStream, req, yield[ec]);
+            }
             if (ec) {
                 fail(ec, "HttpConnectionService::sendAsync write");
                 continue;
@@ -172,8 +190,13 @@ Ichor::Task<Ichor::HttpResponse> Ichor::HttpConnectionService::sendAsync(Ichor::
             http::response<http::vector_body<uint8_t>, http::basic_fields<std::allocator<uint8_t>>> res;
 
             INTERNAL_DEBUG("http::read");
+
             // Receive the HTTP response
-            http::async_read(*_httpStream, b, res, yield[ec]);
+            if(_useSsl.load(std::memory_order_acquire)) {
+                http::async_read(*_sslStream, b, res, yield[ec]);
+            } else {
+                http::async_read(*_httpStream, b, res, yield[ec]);
+            }
             if (ec) {
                 fail(ec, "HttpConnectionService::sendAsync read");
                 continue;
@@ -185,7 +208,11 @@ Ichor::Task<Ichor::HttpResponse> Ichor::HttpConnectionService::sendAsync(Ichor::
 
             INTERNAL_DEBUG("received HTTP response {}", std::string_view(reinterpret_cast<char *>(res.body().data()), res.body().size()));
             // unset the timeout for the next operation.
-            _httpStream->expires_never();
+            if(_useSsl.load(std::memory_order_acquire)) {
+                beast::get_lowest_layer(*_sslStream).expires_never();
+            } else {
+                _httpStream->expires_never();
+            }
 
             next.response->status = (HttpStatus) (int) res.result();
             next.response->headers.reserve(static_cast<unsigned long>(std::distance(std::begin(res), std::end(res))));
@@ -204,14 +231,24 @@ Ichor::Task<Ichor::HttpResponse> Ichor::HttpConnectionService::sendAsync(Ichor::
 }
 
 Ichor::Task<void> Ichor::HttpConnectionService::close() {
-    if(!_httpStream) {
-        co_return;
+    if(_useSsl.load(std::memory_order_acquire)) {
+        if(!_sslStream) {
+            co_return;
+        }
+    } else {
+        if(!_httpStream) {
+            co_return;
+        }
     }
 
     if(!_connecting.exchange(true, std::memory_order_acq_rel)) {
         net::spawn(*_asioContextService->getContext(), [this](net::yield_context) {
-            // _httpStream should only be modified from the boost thread
-            _httpStream->cancel();
+            // _httpStream and _sslStream should only be modified from the boost thread
+            if(_useSsl.load(std::memory_order_acquire)) {
+                beast::get_lowest_layer(*_sslStream).cancel();
+            } else {
+                _httpStream->cancel();
+            }
 
             _queue->pushEvent<RunFunctionEvent>(getServiceId(), [this]() {
                 _startStopEvent.set();
@@ -229,6 +266,7 @@ Ichor::Task<void> Ichor::HttpConnectionService::close() {
     _connected.store(false, std::memory_order_release);
     _connecting.store(false, std::memory_order_release);
     _httpStream = nullptr;
+    _sslStream = nullptr;
 
     co_return;
 }
@@ -243,32 +281,75 @@ void Ichor::HttpConnectionService::connect(tcp::endpoint endpoint, net::yield_co
     beast::error_code ec;
 
     tcp::resolver resolver(*_asioContextService->getContext());
-    // _httpStream should only be modified from the boost thread
-    _httpStream = std::make_unique<beast::tcp_stream>(*_asioContextService->getContext());
 
     auto const results = resolver.resolve(endpoint, ec);
     if(ec) {
         return fail(ec, "HttpConnectionService::connect resolve");
     }
 
-    // Never expire until we actually have an operation.
-    _httpStream->expires_never();
+    if (_useSsl.load(std::memory_order_acquire)) {
+        // _sslContext and _sslStream should only be modified from the boost thread
+        _sslContext = std::make_unique<net::ssl::context>(net::ssl::context::tlsv12);
+        _sslContext->set_verify_mode(net::ssl::verify_peer);
 
-    // Make the connection on the IP address we get from a lookup
-    int attempts{};
-    while(!_quit.load(std::memory_order_acquire) && !_asioContextService->fibersShouldStop() && attempts < 5) {
-        _httpStream->async_connect(results, yield[ec]);
-        if (ec) {
-            attempts++;
-            net::steady_timer t{*_asioContextService->getContext()};
-            t.expires_after(250ms);
-            t.async_wait(yield);
-        } else {
-            break;
+        if(getProperties().contains("RootCA")) {
+            std::string &ca = Ichor::any_cast<std::string&>(getProperties()["RootCA"]);
+            _sslContext->add_certificate_authority(boost::asio::const_buffer(ca.c_str(), ca.size()), ec);
         }
-    }
 
-    _httpStream->socket().set_option(tcp::no_delay(_tcpNoDelay));
+        _sslStream = std::make_unique<beast::ssl_stream<beast::tcp_stream>>(*_asioContextService->getContext(), *_sslContext);
+
+        if(!SSL_set_tlsext_host_name(_sslStream->native_handle(), endpoint.address().to_string().c_str())) {
+            ec.assign(static_cast<int>(::ERR_get_error()), net::error::get_ssl_category());
+            return fail(ec, "HttpConnectionService::connect ssl set host name");
+        }
+
+        // Never expire until we actually have an operation.
+        beast::get_lowest_layer(*_sslStream).expires_never();
+
+        // Make the connection on the IP address we get from a lookup
+        int attempts{};
+        while(!_quit.load(std::memory_order_acquire) && !_asioContextService->fibersShouldStop() && attempts < 5) {
+            beast::get_lowest_layer(*_sslStream).async_connect(results, yield[ec]);
+            if (ec) {
+                attempts++;
+                net::steady_timer t{*_asioContextService->getContext()};
+                t.expires_after(250ms);
+                t.async_wait(yield);
+            } else {
+                break;
+            }
+        }
+
+        beast::get_lowest_layer(*_sslStream).socket().set_option(tcp::no_delay(_tcpNoDelay.load(std::memory_order_acquire)));
+
+        _sslStream->async_handshake(net::ssl::stream_base::client, yield[ec]);
+        if(ec) {
+            return fail(ec, "HttpConnectionService::connect ssl handshake");
+        }
+    } else {
+        // _httpStream should only be modified from the boost thread
+        _httpStream = std::make_unique<beast::tcp_stream>(*_asioContextService->getContext());
+
+        // Never expire until we actually have an operation.
+        _httpStream->expires_never();
+
+        // Make the connection on the IP address we get from a lookup
+        int attempts{};
+        while(!_quit.load(std::memory_order_acquire) && !_asioContextService->fibersShouldStop() && attempts < 5) {
+            _httpStream->async_connect(results, yield[ec]);
+            if (ec) {
+                attempts++;
+                net::steady_timer t{*_asioContextService->getContext()};
+                t.expires_after(250ms);
+                t.async_wait(yield);
+            } else {
+                break;
+            }
+        }
+
+        _httpStream->socket().set_option(tcp::no_delay(_tcpNoDelay.load(std::memory_order_acquire)));
+    }
 
     if(ec) {
         // see below for why _connecting has to be set last
