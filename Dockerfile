@@ -7,10 +7,13 @@ RUN update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-12 60
 RUN update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-12 60
 RUN update-alternatives --install /usr/bin/cpp cpp /usr/bin/cpp-12 60
 
+# Run all downloads first to be able to use Docker's layers as cache and prevent excessive redownloads
+
 WORKDIR /opt
+RUN wget https://boostorg.jfrog.io/artifactory/main/release/1.81.0/source/boost_1_81_0.tar.bz2
+RUN wget https://github.com/redis/hiredis/archive/refs/tags/v1.2.0.tar.gz
 
 #Build a new enough boost, apt only contains 1.74 which is too old.
-RUN wget https://boostorg.jfrog.io/artifactory/main/release/1.81.0/source/boost_1_81_0.tar.bz2
 RUN tar xf boost_1_81_0.tar.bz2
 
 WORKDIR /opt/boost_1_81_0
@@ -22,7 +25,6 @@ RUN ./b2 variant=release link=static threading=multi install
 WORKDIR /opt
 
 #Build latest hiredis containing sdevent support, not available yet in apt
-RUN wget https://github.com/redis/hiredis/archive/refs/tags/v1.2.0.tar.gz
 RUN tar xf v1.2.0.tar.gz
 RUN mkdir /opt/hiredis-1.2.0/build
 

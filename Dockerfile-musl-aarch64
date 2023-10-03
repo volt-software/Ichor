@@ -10,8 +10,6 @@ RUN wget https://boostorg.jfrog.io/artifactory/main/release/1.81.0/source/boost_
 RUN wget https://github.com/redis/hiredis/archive/refs/tags/v1.2.0.tar.gz
 RUN wget https://www.openssl.org/source/openssl-3.0.11.tar.gz
 
-WORKDIR /opt
-
 ENV LDFLAGS="-static-libgcc -static-libstdc++ -static"
 #Build openssl statically, alpine (and probably most distros) only provide shared libraries. Might be a security thing?
 RUN tar xf openssl-3.0.11.tar.gz

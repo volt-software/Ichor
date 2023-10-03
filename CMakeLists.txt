@@ -253,7 +253,7 @@ endif()
 
 if(ICHOR_USE_THREAD_SANITIZER)
     target_compile_options(ichor PUBLIC -fsanitize=thread -fno-omit-frame-pointer)
-    target_link_options(ichor PUBLIC -fsanitize=thread)
+    target_link_options(ichor PUBLIC -fsanitize=thread -static-libtsan)
 
     # clang on OSX doesn't accept -no-pie for some reason
     if(NOT APPLE)
