@@ -2,15 +2,15 @@
 
 ## BUILD_EXAMPLES
 
-Builds the examples in the [examples directory](../examples). Takes some time to compile.
+Turned on by default. Builds the examples in the [examples directory](../examples). Takes some time to compile.
 
 ## BUILD_BENCHMARKS
 
-Builds the benchmarks in the [benchmarks directory](../benchmarks).
+Turned on by default. Builds the benchmarks in the [benchmarks directory](../benchmarks).
 
 ## BUILD_TESTS
 
-Builds the tests in the [test directory](../test).
+Turned on by default. Builds the tests in the [test directory](../test).
 
 ## ICHOR_ENABLE_INTERNAL_DEBUGGING
 
@@ -22,7 +22,7 @@ Enables verbose logging for coroutines in the Ichor framework. Recommended only 
 
 ## ICHOR_USE_SANITIZERS
 
-Compiles everything (including the optionally enabled submodules) with the AddressSanitizer and UndefinedBehaviourSanitizer. Recommended when debugging. Cannot be combined with the ThreadSanitizer
+Turned on by default. Compiles everything (including the optionally enabled submodules) with the AddressSanitizer and UndefinedBehaviourSanitizer. Recommended when debugging. Cannot be combined with the ThreadSanitizer
 
 ## ICHOR_USE_THREAD_SANITIZER
 
@@ -38,7 +38,7 @@ Ichor's logging macros by default adds the current filename and line number to e
 
 ## ICHOR_USE_HARDENING
 
-Uses compiler-specific flags which add stack protection and similar features, as well as adding safety checks in Ichor itself.
+Turned on by default. Uses compiler-specific flags which add stack protection and similar features, as well as adding safety checks in Ichor itself.
 
 ## ICHOR_USE_SPDLOG (optional dependency)
 
@@ -75,7 +75,7 @@ Adds and installs the backward header. Useful for showing backtraces on-demand o
 
 ## ICHOR_DISABLE_RTTI
 
-Disables `dynamic_cast<>()` in most cases as well as `typeid`. Ichor is an opinionated piece of software and we strongly encourage you to disable RTTI. We believe `dynamic_cast<>()` is wrong in almost all instances. Virtual methods and double dispatch should be used instead. If, however, you really want to use RTTI, use this option to re-enable it.
+Turned on by default. Disables `dynamic_cast<>()` in most cases as well as `typeid`. Ichor is an opinionated piece of software and we strongly encourage you to disable RTTI. We believe `dynamic_cast<>()` is wrong in almost all instances. Virtual methods and double dispatch should be used instead. If, however, you really want to use RTTI, use this option to re-enable it.
 
 ## ICHOR_USE_MIMALLOC
 
@@ -84,3 +84,11 @@ If `ICHOR_USE_SANITIZERS` is turned OFF, Ichor by default compiles itself with m
 ## ICHOR_USE_SYSTEM_MIMALLOC
 
 If `ICHOR_USE_MIMALLOC` is turned ON, this option can be used to use the system installed mimalloc instead of the Ichor provided one.
+
+## ICHOR_MUSL
+
+This option results in statically linking libgcc and libstdc++ as well as turning off some glibc-specific pthread usages.
+
+## ICHOR_AARCH64
+
+Control flow protection is not available on Aarch64, enable this to allow (cross-)compiling for that architecture.
