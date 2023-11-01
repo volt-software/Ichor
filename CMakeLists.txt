@@ -384,7 +384,13 @@ if(ICHOR_USE_BOOST_BEAST) #beast
     target_include_directories(ichor PUBLIC ${Boost_INCLUDE_DIRS})
     target_link_directories(ichor PUBLIC ${Boost_LIBRARY_DIRS})
     target_link_libraries(ichor PUBLIC ${Boost_LIBRARIES})
-    target_link_libraries(ichor PUBLIC -lssl -lcrypto)
+    if(WIN32)
+        find_package(OpenSSL REQUIRED)
+        target_include_directories(ichor PUBLIC ${OPENSSL_INCLUDE_DIR})
+        target_link_libraries(ichor PUBLIC ${OPENSSL_LIBRARIES})
+    else()
+        target_link_libraries(ichor PUBLIC -lssl -lcrypto)
+    endif()
     #_SILENCE_ALL_CXX23_DEPRECATION_WARNINGS -> MSVC gives warnings on things like std::aligned_storage, which is still valid in C++20.
     target_compile_definitions(ichor PUBLIC BOOST_ASIO_NO_DEPRECATED _SILENCE_ALL_CXX23_DEPRECATION_WARNINGS)
 
