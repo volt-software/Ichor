@@ -86,6 +86,15 @@ Then add the following [system variables](https://www.alphr.com/set-environment-
 
 To run the examples/tests that use boost, copy the dlls in `C:\SDKs\boost_1_81_0\lib64-msvc-14.3` (or where you installed boost) into the generated `bin` folder.
 
+Something similar goes for openssl. Download the latest [prebuilt binaries here](https://github.com/CristiFati/Prebuilt-Binaries/tree/master/OpenSSL) and unpack it into `C:\SDKs\openssl_3.1.3` so that `C:\SDKs\openssl_3.1.3´\include` exists, skipping a few subdirectories. Then add the following environment variables:
+```
+    OPENSSL_INCLUDE_DIR   C:\SDKs\openssl_3.1.3\include
+    OPENSSL_LIBRARYDIR    C:\SDKs\openssl_3.1.3\lib
+    OPENSSL_ROOT          C:\SDKs\openssl_3.1.3
+```
+
+Don't forget to copy `C:\SDKs\openssl_3.1.3\bin\*.dll` to the Ichor `bin` directory after compiling Ichor.
+
 #### OSX Monterey
 
 Work in progress, initial support available, sanitizers with boost seem to get false positives.
