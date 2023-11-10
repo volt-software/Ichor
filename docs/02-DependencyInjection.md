@@ -115,3 +115,4 @@ private:
 
 [Cody Morterud's blog](https://www.codymorterud.com/design/2018/09/07/dependency-injection-cpp.html)
 
+[C++Now 2019: Kris Jusiak “Dependency Injection - a 25-dollar term for a 5-cent concept”](https://www.youtube.com/watch?v=yVogS4NbL6U)

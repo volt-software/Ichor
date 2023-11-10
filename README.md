@@ -18,7 +18,7 @@ In which case, you're on your own.
 
 ### Dependency Injection?
 
-To support software lifecycles measured in decades, engineers try to encapsulate functionality. Using the [Dependency Injection](https://www.youtube.com/watch?v=yVogS4NbL6U) approach allows engineers to insulate updates to parts of the code.
+To support software lifecycles measured in decades, engineers try to encapsulate functionality. Using the [Dependency Injection](./docs/02-DependencyInjection.md) approach allows engineers to insulate updates to parts of the code.
 
 There exist many Dependency Injection libraries for C++ already, but where those usually only provide Dependency Injection, Ichor also provides service lifecycle management and thread confinement. If a dependency goes away at runtime, e.g. a network client, then all the services depending on it will be cleaned up at that moment. 
 
@@ -33,12 +33,12 @@ More examples can be found in the [examples directory](examples).
 ## Supported OSes
 * Linux (including aarch64 and musl-based distros like alpine linux)
 * Windows
-* Partial support for OSX Monterey (using `brew install llvm@15`, ASAN and boost beast don't seem to work)
+* Partial support for OSX Monterey (using `brew install llvm`, ASAN in combination with boost beast may result in false positives)
 
 ## Supported Compilers
 * Gcc 11.3 or newer (see [this gcc bug](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=95137) for why)
 * Clang 14 or newer
-* MSVC 17.4+ (though some workarounds for [compiler bugs](https://developercommunity.visualstudio.com/t/c20-Friend-definition-of-class-with-re/10197302) are used)
+* MSVC 17.4+ (though some workarounds for [some](https://developercommunity.visualstudio.com/t/C2039:-promise_type:-is-not-a-member-o/10505491) [compiler](https://developercommunity.visualstudio.com/t/c20-Friend-definition-of-class-with-re/10197302) [bugs](https://developercommunity.visualstudio.com/t/certain-coroutines-cause-error-C7587:-/10311276?q=%22task+runner%22+gulp+duration&sort=newest) are used)
 
 ## Currently Unsupported
 * Baremetal, might change if someone puts in the effort to modify Ichor to work with freestanding implementations of C++20
@@ -71,11 +71,11 @@ The framework provides several core features and optional services behind cmake 
 * Event-based message passing
 * Dependency Injection
 * Service lifecycle management (sort of like OSGi-lite services)
-* data race free communication between event loops
+* data race free communication between event loops on multiple threads
 
 Optional services:
 * Websocket service through Boost.BEAST
-* HTTP client and server services through Boost.BEAST
+* HTTP/HTTPS client and server services through Boost.BEAST
 * Spdlog logging service
 * TCP communication service
 * JSON serialization services examples
@@ -92,7 +92,6 @@ Optional services:
 * Shell Commands / REPL
 * Tracing interface
     * Opentracing? Jaeger?
-* Docker integration/compilation
 * "Remote" services, where services are either in a different thread or a different machine
 * Code generator to reduce boilerplate
 * ...
