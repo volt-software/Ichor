@@ -201,6 +201,8 @@ int main() {
 
 ### Requesting Dependencies 
 
+For more information on Dependency Injection, please see the [relevant doc](02-DependencyInjection.md).
+
 In general, the arguments in a constructor are reflected upon on compile-time and are all considered to be requests. That means that there are no custom arguments possible. e.g.
 
 ```c++
