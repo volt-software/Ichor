@@ -167,7 +167,7 @@ namespace Ichor {
         void createServiceSpecialSauce(std::optional<std::variant<CO_ARGS...>> = {}) {
             try {
                 new (buf) T(std::get<CO_ARGS>(_deps[typeNameHash<std::remove_pointer_t<CO_ARGS>>()])...);
-            } catch (std::exception const &e) {
+            } catch (std::exception const &) {
                 std::terminate();
             }
         }

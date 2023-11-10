@@ -139,6 +139,10 @@ namespace Ichor {
         return state == SD_EVENT_INITIAL || state == SD_EVENT_ARMED || state == SD_EVENT_FINISHED ? 0 : 1;
     }
 
+    bool SdeventQueue::is_running() const noexcept {
+        return !_quit.load(std::memory_order_acquire);
+    }
+
     [[nodiscard]] sd_event* SdeventQueue::createEventLoop() {
         auto ret = sd_event_default(&_eventQueue);
 

@@ -54,6 +54,10 @@ namespace Ichor {
         return static_cast<uint64_t>(_eventQueue.size());
     }
 
+    bool MultimapQueue::is_running() const noexcept {
+        return !_quit.load(std::memory_order_acquire);
+    }
+
     void MultimapQueue::start(bool captureSigInt) {
         if(!_dm) [[unlikely]] {
             throw std::runtime_error("Please create a manager first!");

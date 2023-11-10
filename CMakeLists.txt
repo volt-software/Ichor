@@ -46,6 +46,7 @@ option(ICHOR_BUILD_BENCHMARKS "Build benchmarks" ON)
 option(ICHOR_BUILD_TESTING "Build tests" ON)
 option(ICHOR_ENABLE_INTERNAL_DEBUGGING "Add verbose logging of Ichor internals" OFF)
 option(ICHOR_ENABLE_INTERNAL_COROUTINE_DEBUGGING "Add verbose logging of Ichor coroutine internals" OFF)
+option(ICHOR_ENABLE_INTERNAL_IO_DEBUGGING "Add verbose logging of Ichor I/O internals" OFF)
 option(ICHOR_BUILD_COVERAGE "Build ichor with coverage" OFF)
 option(ICHOR_USE_SPDLOG "Use spdlog as framework logging implementation" OFF)
 option(ICHOR_USE_ETCD "Add etcd services (may not work, not used much)" OFF)
@@ -93,10 +94,11 @@ file(GLOB_RECURSE ICHOR_NETWORK_SOURCES ${ICHOR_TOP_DIR}/src/services/network/*.
 file(GLOB_RECURSE ICHOR_METRICS_SOURCES ${ICHOR_TOP_DIR}/src/services/metrics/*.cpp)
 file(GLOB_RECURSE ICHOR_TIMER_SOURCES ${ICHOR_TOP_DIR}/src/services/timer/*.cpp)
 file(GLOB_RECURSE ICHOR_HIREDIS_SOURCES ${ICHOR_TOP_DIR}/src/services/redis/*.cpp)
+file(GLOB_RECURSE ICHOR_IO_SOURCES ${ICHOR_TOP_DIR}/src/services/io/*.cpp)
 
 file(GLOB SPDLOG_SOURCES ${ICHOR_EXTERNAL_DIR}/spdlog/src/*.cpp)
 
-add_library(ichor ${FMT_SOURCES} ${ICHOR_FRAMEWORK_SOURCES} ${ICHOR_LOGGING_SOURCES} ${ICHOR_NETWORK_SOURCES} ${ICHOR_METRICS_SOURCES} ${ICHOR_TIMER_SOURCES} ${ICHOR_HIREDIS_SOURCES})
+add_library(ichor ${FMT_SOURCES} ${ICHOR_FRAMEWORK_SOURCES} ${ICHOR_LOGGING_SOURCES} ${ICHOR_NETWORK_SOURCES} ${ICHOR_METRICS_SOURCES} ${ICHOR_TIMER_SOURCES} ${ICHOR_HIREDIS_SOURCES} ${ICHOR_IO_SOURCES})
 
 if(ICHOR_ENABLE_INTERNAL_DEBUGGING)
     target_compile_definitions(ichor PUBLIC ICHOR_ENABLE_INTERNAL_DEBUGGING)
@@ -104,17 +106,12 @@ endif()
 if(ICHOR_ENABLE_INTERNAL_COROUTINE_DEBUGGING)
     target_compile_definitions(ichor PUBLIC ICHOR_ENABLE_INTERNAL_COROUTINE_DEBUGGING)
 endif()
+if(ICHOR_ENABLE_INTERNAL_IO_DEBUGGING)
+    target_compile_definitions(ichor PUBLIC ICHOR_ENABLE_INTERNAL_IO_DEBUGGING)
+endif()
 
 if(ICHOR_USE_SPDLOG)
     target_compile_definitions(ichor PUBLIC SPDLOG_COMPILED_LIB SPDLOG_NO_EXCEPTIONS SPDLOG_FMT_EXTERNAL SPDLOG_DISABLE_DEFAULT_LOGGER SPDLOG_NO_ATOMIC_LEVELS ICHOR_USE_SPDLOG SPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_TRACE)
-endif()
-
-if(ICHOR_USE_BOOST_BEAST) #json
-    target_compile_definitions(ichor PUBLIC ICHOR_USE_BOOST_JSON BOOST_JSON_STANDALONE)
-    find_package(Boost 1.75.0 REQUIRED COMPONENTS json context)
-    target_include_directories(ichor PUBLIC ${Boost_INCLUDE_DIR})
-    target_link_directories(ichor PUBLIC ${Boost_LIBRARY_DIRS})
-    target_link_libraries(ichor PUBLIC ${Boost_LIBRARIES})
 endif()
 
 if(ICHOR_REMOVE_SOURCE_NAMES)
@@ -384,13 +381,9 @@ if(ICHOR_USE_BOOST_BEAST) #beast
     target_include_directories(ichor PUBLIC ${Boost_INCLUDE_DIRS})
     target_link_directories(ichor PUBLIC ${Boost_LIBRARY_DIRS})
     target_link_libraries(ichor PUBLIC ${Boost_LIBRARIES})
-    if(WIN32)
-        find_package(OpenSSL REQUIRED)
-        target_include_directories(ichor PUBLIC ${OPENSSL_INCLUDE_DIR})
-        target_link_libraries(ichor PUBLIC ${OPENSSL_LIBRARIES})
-    else()
-        target_link_libraries(ichor PUBLIC -lssl -lcrypto)
-    endif()
+    find_package(OpenSSL REQUIRED)
+    target_include_directories(ichor PUBLIC ${OPENSSL_INCLUDE_DIR})
+    target_link_libraries(ichor PUBLIC ${OPENSSL_LIBRARIES})
     #_SILENCE_ALL_CXX23_DEPRECATION_WARNINGS -> MSVC gives warnings on things like std::aligned_storage, which is still valid in C++20.
     target_compile_definitions(ichor PUBLIC BOOST_ASIO_NO_DEPRECATED _SILENCE_ALL_CXX23_DEPRECATION_WARNINGS)
 

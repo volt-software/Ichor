@@ -7,6 +7,7 @@
 #include <ichor/services/network/IHostService.h>
 #include <ichor/services/network/http/HttpScopeGuards.h>
 #include <ichor/events/RunFunctionEvent.h>
+#include <ichor/ScopeGuard.h>
 #include <thread>
 
 template<class NextLayer>
@@ -162,7 +163,7 @@ tl::expected<uint64_t, Ichor::SendErrorReason> Ichor::WsConnectionService::sendA
         while(!_outbox.empty()) {
             auto next = std::move(_outbox.front());
 
-            ScopeGuardFunction const coroutineGuard{[this]() {
+            ScopeGuard const coroutineGuard{[this]() {
                 _outbox.pop_front();
             }};
 
@@ -206,7 +207,7 @@ void Ichor::WsConnectionService::accept(net::yield_context yield) {
     beast::error_code ec;
 
     {
-        ScopeGuardFunction const coroutineGuard{[this]() {
+        ScopeGuard const coroutineGuard{[this]() {
             _queue->pushPrioritisedEvent<RunFunctionEvent>(getServiceId(), _priority.load(std::memory_order_acquire), [this]() {
 //                fmt::print("{}:{} rfe accept\n", getServiceId(), getServiceName());
                 _startStopEvent.set();
@@ -273,7 +274,7 @@ void Ichor::WsConnectionService::connect(net::yield_context yield) {
     _ws = std::make_shared<websocket::stream<beast::tcp_stream>>(*_asioContextService->getContext());
 
     {
-        ScopeGuardFunction const coroutineGuard{[this]() {
+        ScopeGuard const coroutineGuard{[this]() {
             _queue->pushPrioritisedEvent<RunFunctionEvent>(getServiceId(), _priority.load(std::memory_order_acquire), [this]() {
 //                fmt::print("{}:{} rfe connect\n", getServiceId(), getServiceName());
                 _startStopEvent.set();

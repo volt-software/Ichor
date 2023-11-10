@@ -13,20 +13,13 @@ namespace Ichor {
         ~ScopeGuardAtomicCount() noexcept {
             _var.fetch_sub(1, std::memory_order_acq_rel);
         }
+
+        ScopeGuardAtomicCount() = delete;
+        ScopeGuardAtomicCount(const ScopeGuardAtomicCount &) = delete;
+        ScopeGuardAtomicCount(ScopeGuardAtomicCount &&) = delete;
+        ScopeGuardAtomicCount& operator=(const ScopeGuardAtomicCount&) = delete;
+        ScopeGuardAtomicCount& operator=(ScopeGuardAtomicCount&&) = delete;
     private:
         std::atomic<int64_t> &_var;
-    };
-
-    template <typename T>
-    class ScopeGuardFunction final {
-    public:
-        explicit ScopeGuardFunction(T &&fn) noexcept : _fn(std::forward<T>(fn)) {
-        }
-
-        ~ScopeGuardFunction() noexcept {
-            _fn();
-        }
-    private:
-        T _fn;
     };
 }
