@@ -1,5 +1,4 @@
 #include <ichor/stl/AsyncSingleThreadedMutex.h>
-#include "fmt/core.h"
 
 Ichor::AsyncSingleThreadedLockGuard::~AsyncSingleThreadedLockGuard() {
     if(_has_lock) {

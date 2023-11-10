@@ -62,7 +62,7 @@ GlobalRealtimeSettings::GlobalRealtimeSettings() {
             std::terminate();
         }
 
-        if(strncmp(control_read.data(), "off", 3) == 0 || strncmp(control_read.data(), "notimplemented", 14) == 0) {
+        if(strncmp(control_read.data(), "off", 3) == 0 || strncmp(control_read.data(), "noti", 4) == 0) {
             reenable_smt = false;
             close(smt_file);
         } else {

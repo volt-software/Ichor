@@ -52,6 +52,7 @@ TEST_CASE("HttpTests") {
             REQUIRE(Ichor::Detail::_local_dm == &dm);
             REQUIRE(testThreadId != std::this_thread::get_id());
             REQUIRE(dmThreadId == std::this_thread::get_id());
+            fmt::print("1 _evt set\n");
             _evt->set();
         });
 
@@ -138,6 +139,7 @@ TEST_CASE("HttpTests") {
             REQUIRE(Ichor::Detail::_local_dm == &dm);
             REQUIRE(testThreadId != std::this_thread::get_id());
             REQUIRE(dmThreadId == std::this_thread::get_id());
+            fmt::print("2 _evt set\n");
             _evt->set();
         });
 
@@ -173,6 +175,7 @@ TEST_CASE("HttpTests") {
             REQUIRE(Ichor::Detail::_local_dm == &dm);
             REQUIRE(testThreadId != std::this_thread::get_id());
             REQUIRE(dmThreadId == std::this_thread::get_id());
+            fmt::print("3 _evt set\n");
             _evt->set();
         });
 

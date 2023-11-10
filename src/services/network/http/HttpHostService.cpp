@@ -5,8 +5,6 @@
 #include <ichor/services/network/http/HttpScopeGuards.h>
 #include <ichor/events/RunFunctionEvent.h>
 
-//
-
 Ichor::HttpHostService::HttpHostService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {
     reg.registerDependency<ILogger>(this, true);
     reg.registerDependency<IAsioContextService>(this, true);
@@ -244,7 +242,7 @@ void Ichor::HttpHostService::listen(tcp::endpoint endpoint, net::yield_context y
 
 template <typename SocketT>
 void Ichor::HttpHostService::read(tcp::socket socket, net::yield_context yield) {
-    ScopeGuardAtomicCount guard{_finishedListenAndRead};
+    ScopeGuardAtomicCount guard{ _finishedListenAndRead };
     beast::error_code ec;
     auto addr = socket.remote_endpoint().address().to_string();
     std::shared_ptr<Detail::Connection<SocketT>> connection;
@@ -263,15 +261,15 @@ void Ichor::HttpHostService::read(tcp::socket socket, net::yield_context yield) 
         connection->socket.async_handshake(ssl::stream_base::server, yield[ec]);
     }
 
-    if(ec) {
+    if (ec) {
         fail(ec, "HttpHostService::read ssl handshake", false);
         return;
     }
 
     // This buffer is required to persist across reads
-    beast::basic_flat_buffer buffer{std::allocator<uint8_t>{}};
+    beast::basic_flat_buffer buffer{ std::allocator<uint8_t>{} };
 
-    while(!_quit.load(std::memory_order_acquire) && !_asioContextService->fibersShouldStop())
+    while (!_quit.load(std::memory_order_acquire) && !_asioContextService->fibersShouldStop())
     {
         // Set the timeout.
         if constexpr (std::is_same_v<SocketT, beast::tcp_stream>) {
@@ -283,81 +281,89 @@ void Ichor::HttpHostService::read(tcp::socket socket, net::yield_context yield) 
         // Read a request
         http::request<http::vector_body<uint8_t>, http::basic_fields<std::allocator<uint8_t>>> req;
         http::async_read(connection->socket, buffer, req, yield[ec]);
-        if(ec == http::error::end_of_stream) {
+        if (ec == http::error::end_of_stream) {
             fail(ec, "HttpHostService::read end of stream", false);
             break;
         }
-        if(ec == net::error::operation_aborted) {
+        if (ec == net::error::operation_aborted) {
             fail(ec, "HttpHostService::read operation aborted", false);
             break;
         }
-        if(ec == net::error::timed_out) {
+        if (ec == net::error::timed_out) {
             fail(ec, "HttpHostService::read operation timed out", false);
             break;
         }
-        if(ec == net::error::bad_descriptor) {
+        if (ec == net::error::bad_descriptor) {
             fail(ec, "HttpHostService::read bad descriptor", false);
             break;
         }
-        if(ec) {
+        if (ec) {
             fail(ec, "HttpHostService::read read", false);
             continue;
         }
 
-        ICHOR_LOG_TRACE_ATOMIC(_logger, "New request for {} {}", (int) req.method(), req.target());
+        ICHOR_LOG_TRACE_ATOMIC(_logger, "New request for {} {}", (int)req.method(), req.target());
 
         std::vector<HttpHeader> headers{};
         headers.reserve(static_cast<unsigned long>(std::distance(std::begin(req), std::end(req))));
-        for (auto const &field : req) {
+        for (auto const& field : req) {
             headers.emplace_back(field.name_string(), field.value());
         }
         // rapidjson f.e. expects a null terminator
-        if(!req.body().empty() && *req.body().rbegin() != 0) {
+        if (!req.body().empty() && *req.body().rbegin() != 0) {
             req.body().push_back(0);
         }
-        HttpRequest httpReq{std::move(req.body()), static_cast<HttpMethod>(req.method()), std::string{req.target()}, addr, std::move(headers)};
-
+        HttpRequest httpReq{ std::move(req.body()), static_cast<HttpMethod>(req.method()), std::string{req.target()}, addr, std::move(headers) };
+        // Compiler bug prevents using named captures for now: https://www.reddit.com/r/cpp_questions/comments/17lc55f/coroutine_msvc_compiler_bug/
+#if (defined(WIN32) || defined(_WIN32) || defined(__WIN32)) && !defined(__CYGWIN__)
+        auto version = req.version();
+        auto keep_alive = req.keep_alive();
+        _queue->pushEvent<RunFunctionEventAsync>(getServiceId(), [this, connection, httpReq, version, keep_alive]() mutable -> AsyncGenerator<IchorBehaviour> {
+#else
         _queue->pushEvent<RunFunctionEventAsync>(getServiceId(), [this, connection, httpReq = std::move(httpReq), version = req.version(), keep_alive = req.keep_alive()]() mutable -> AsyncGenerator<IchorBehaviour> {
+#endif
             auto routes = _handlers.find(static_cast<HttpMethod>(httpReq.method));
 
-            if(_quit.load(std::memory_order_acquire) || _asioContextService->fibersShouldStop()) {
-                co_return {};
+            if (_quit.load(std::memory_order_acquire) || _asioContextService->fibersShouldStop()) {
+                co_return{};
             }
 
-            if(routes != std::end(_handlers)) {
+            if (routes != std::end(_handlers)) {
                 auto handler = routes->second.find(httpReq.route);
 
-                if(handler != std::end(routes->second)) {
+                if (handler != std::end(routes->second)) {
 
                     // using reference here leads to heap use after free. Not sure why.
-                    HttpResponse httpRes = std::move(*co_await handler->second(httpReq).begin());
-                    http::response<http::vector_body<uint8_t>, http::basic_fields<std::allocator<uint8_t>>> res{static_cast<http::status>(httpRes.status),
-                                                                                                                version};
-                    if(_sendServerHeader) {
+                    auto gen = handler->second(httpReq);
+                    auto it = co_await gen.begin();
+                    HttpResponse httpRes = std::move(*it);
+                    http::response<http::vector_body<uint8_t>, http::basic_fields<std::allocator<uint8_t>>> res{ static_cast<http::status>(httpRes.status),
+                                                                                                                version };
+                    if (_sendServerHeader) {
                         res.set(http::field::server, BOOST_BEAST_VERSION_STRING);
                     }
-                    if(!httpRes.contentType) {
+                    if (!httpRes.contentType) {
                         res.set(http::field::content_type, "text/plain");
                     } else {
                         res.set(http::field::content_type, *httpRes.contentType);
                     }
-                    for (auto const &header: httpRes.headers) {
+                    for (auto const& header : httpRes.headers) {
                         res.set(header.value, header.name);
                     }
                     res.keep_alive(keep_alive);
                     ICHOR_LOG_TRACE_ATOMIC(_logger, "sending http response {} - {}", (int)httpRes.status,
-                                    std::string_view(reinterpret_cast<char *>(httpRes.body.data()), httpRes.body.size()));
+                        std::string_view(reinterpret_cast<char*>(httpRes.body.data()), httpRes.body.size()));
 
                     res.body() = std::move(httpRes.body);
                     res.prepare_payload();
                     sendInternal(connection, std::move(res));
 
-                    co_return {};
+                    co_return{};
                 }
             }
 
-            http::response<http::vector_body<uint8_t>, http::basic_fields<std::allocator<uint8_t>>> res{http::status::not_found, version};
-            if(_sendServerHeader) {
+            http::response<http::vector_body<uint8_t>, http::basic_fields<std::allocator<uint8_t>>> res{ http::status::not_found, version };
+            if (_sendServerHeader) {
                 res.set(http::field::server, BOOST_BEAST_VERSION_STRING);
             }
             res.set(http::field::content_type, "text/plain");
@@ -365,7 +371,7 @@ void Ichor::HttpHostService::read(tcp::socket socket, net::yield_context yield) 
             res.prepare_payload();
             sendInternal(connection, std::move(res));
 
-            co_return {};
+            co_return{};
         });
     }
 
