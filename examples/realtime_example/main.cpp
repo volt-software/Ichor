@@ -72,6 +72,7 @@ int main(int argc, char *argv[]) {
 #if (defined(WIN32) || defined(_WIN32) || defined(__WIN32) || defined(__APPLE__)) && !defined(__CYGWIN__)
     //TODO realtime settings
     run_example(nullptr);
+    int ret = 0;
 #else
     // create a thread with realtime priority to run the program on
     pthread_t thread{};

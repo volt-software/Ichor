@@ -26,6 +26,7 @@ namespace Ichor {
 
         [[nodiscard]] bool empty() const final;
         [[nodiscard]] uint64_t size() const final;
+        [[nodiscard]] bool is_running() const noexcept final;
 
         [[nodiscard]] sd_event* createEventLoop();
         void useEventLoop(sd_event *loop);

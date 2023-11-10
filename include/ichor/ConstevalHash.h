@@ -5,9 +5,12 @@
 
 // Adapted from wyhash v3
 
+
+#if (!defined(WIN32) && !defined(_WIN32) && !defined(__WIN32)) || defined(__CYGWIN__)
 #pragma GCC diagnostic push
 // If SMHasher, BigCrush and practrand are not finding quality issues, then the compiler won't either. So let's disable this warning.
 #pragma GCC diagnostic ignored "-Wconversion"
+#endif
 
 const	uint64_t	_wyp0 = 0xa0761d6478bd642full, _wyp1 = 0xe7037ed1a0b428dbull, _wyp2 = 0x8ebc6af09c88c6e3ull, _wyp3 = 0x589965cc75374cc3ull, _wyp4 = 0x1d8e4e27c47d124full;
 static consteval uint64_t consteval_wyrotr(uint64_t v, unsigned k) { return (v >> k) | (v << (64 - k)); }
@@ -142,4 +145,6 @@ namespace Ichor {
     }
 }
 
+#if (!defined(WIN32) && !defined(_WIN32) && !defined(__WIN32)) || defined(__CYGWIN__)
 #pragma GCC diagnostic pop
+#endif

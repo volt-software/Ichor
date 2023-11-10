@@ -5,6 +5,7 @@
 #include <ichor/services/network/http/HttpConnectionService.h>
 #include <ichor/services/network/http/HttpScopeGuards.h>
 #include <ichor/services/network/NetworkEvents.h>
+#include <ichor/ScopeGuard.h>
 
 Ichor::HttpConnectionService::HttpConnectionService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {
     reg.registerDependency<ILogger>(this, true);
@@ -129,7 +130,7 @@ Ichor::Task<Ichor::HttpResponse> Ichor::HttpConnectionService::sendAsync(Ichor::
             auto next = _outbox.front();
             lg.unlock();
 
-            ScopeGuardFunction const coroutineGuard{[this, &event, &lg]() {
+            ScopeGuard const coroutineGuard{[this, &event, &lg]() {
                 // use service id 0 to ensure event gets run, even if service is stopped. Otherwise, the coroutine will never complete.
                 // Similarly, use priority 0 to ensure these events run before any dependency changes, otherwise the service might be destroyed
                 // before we can finish all the coroutines.

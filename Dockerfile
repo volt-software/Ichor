@@ -10,13 +10,13 @@ RUN update-alternatives --install /usr/bin/cpp cpp /usr/bin/cpp-12 60
 # Run all downloads first to be able to use Docker's layers as cache and prevent excessive redownloads
 
 WORKDIR /opt
-RUN wget https://boostorg.jfrog.io/artifactory/main/release/1.81.0/source/boost_1_81_0.tar.bz2
+RUN wget https://boostorg.jfrog.io/artifactory/main/release/1.83.0/source/boost_1_83_0.tar.bz2
 RUN wget https://github.com/redis/hiredis/archive/refs/tags/v1.2.0.tar.gz
 
 #Build a new enough boost, apt only contains 1.74 which is too old.
-RUN tar xf boost_1_81_0.tar.bz2
+RUN tar xf boost_1_83_0.tar.bz2
 
-WORKDIR /opt/boost_1_81_0
+WORKDIR /opt/boost_1_83_0
 
 RUN ./bootstrap.sh --prefix=/usr
 RUN ./b2 variant=release link=static threading=multi

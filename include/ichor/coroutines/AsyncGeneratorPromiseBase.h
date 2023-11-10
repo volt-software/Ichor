@@ -186,6 +186,7 @@ namespace Ichor::Detail {
         void return_value(value_type &&value) noexcept(std::is_nothrow_constructible_v<T, T&&>);
 
         T& value() noexcept {
+            INTERNAL_COROUTINE_DEBUG("request value {}, {}", _id, _currentValue.has_value());
             return _currentValue.value();
         }
 
