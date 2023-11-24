@@ -3,6 +3,7 @@
 #include <ichor/services/logging/LoggerFactory.h>
 #include <ichor/services/etcd/EtcdService.h>
 
+// Some compile time logic to instantiate a regular cout logger or to use the spdlog logger, if Ichor has been compiled with it.
 #ifdef ICHOR_USE_SPDLOG
 #include <ichor/services/logging/SpdlogLogger.h>
 #define LOGGER_TYPE SpdlogLogger

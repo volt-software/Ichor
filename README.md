@@ -9,7 +9,7 @@ TL;DR: Node.js-style event loops with coroutines and dependency injection, excep
 
 Ichor borrows from the concept of [Fearless Concurrency](https://doc.rust-lang.org/book/ch16-00-concurrency.html) and offers thread confinement.
 
-# Boost supports event loops, dependency injection, networking, can do all of that, and more. Any reason i'd want to use your lib instead?
+### Boost supports event loops, dependency injection, networking, can do all of that, and more. Any reason i'd want to use your lib instead?
 
 Excellent question! Please see [this page](./docs/04-WhyUseIchor.md) to get a more in-depth answer.
 
