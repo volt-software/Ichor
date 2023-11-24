@@ -30,13 +30,15 @@ Here's a short hand comparison between Ichor and various DI libraries:
 ||Ichor|Hypodermic|Boost.DI|Google.Fruit|CppMicroservices|
 |:-|:-|:-|:-|:-|:-|
 |Runtime/compile-time|Runtime|Runtime|Compile time (with some runtime)|Compile time (with some runtime)|Runtime|
-|Constructor Injection|Yes|Yes|Yes|Yes|No|
-|Per-instance resolving|Yes|No|No|No|Yes|
-|Factories|Yes|No?|Partial|Partial|Yes|
-|Coroutines|Yes|No|No|No|No|
-|Optional dependencies|Yes|No|No|No|Yes?|
-|Per-instance lifetime|Yes|No|No|No|Yes|
+|Constructor Injection|✅|✅|✅|✅|❌|
+|Per-instance resolving|✅|❌|❌|❌|✅|
+|Factories|✅|❌?|Partial|Partial|✅|
+|Coroutines|✅|❌|❌|❌|❌|
+|Optional dependencies|✅|❌|❌|❌|✅?|
+|Per-instance lifetime|✅|❌|❌|❌|✅|
 |Minimum c++|20|11|14|11|17|
+
+Question marks denote me being unsure
 
 # But Boost.BEAST also provides https and websockets. Why would I use your lib?
 
