@@ -1,5 +1,5 @@
 #include "UsingWsService.h"
-#include "../common/TestMsgRapidJsonSerializer.h"
+#include "../common/TestMsgGlazeSerializer.h"
 #include "../common/lyra.hpp"
 #include <ichor/services/logging/NullLogger.h>
 #include <ichor/event_queues/MultimapQueue.h>
@@ -82,7 +82,7 @@ int main(int argc, char *argv[]) {
     } else {
         dm.createServiceManager<LoggerFactory<LOGGER_TYPE>, ILoggerFactory>(Properties{{"DefaultLogLevel", Ichor::make_any<LogLevel>(level)}});
     }
-    dm.createServiceManager<TestMsgRapidJsonSerializer, ISerializer<TestMsg>>();
+    dm.createServiceManager<TestMsgGlazeSerializer, ISerializer<TestMsg>>();
     dm.createServiceManager<AsioContextService, IAsioContextService>(Properties{{"Threads", Ichor::make_any<uint64_t>(threads)}});
     dm.createServiceManager<WsHostService, IHostService>(Properties{{"Address", Ichor::make_any<std::string>(address)}, {"Port", Ichor::make_any<uint16_t>(static_cast<uint16_t>(8001))}});
     dm.createServiceManager<ClientFactory<WsConnectionService>>();

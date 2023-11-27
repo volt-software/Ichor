@@ -1,5 +1,5 @@
 #include "UsingHttpService.h"
-#include "../common/TestMsgRapidJsonSerializer.h"
+#include "../common/TestMsgGlazeSerializer.h"
 #include "../common/lyra.hpp"
 #include <ichor/event_queues/MultimapQueue.h>
 #include <ichor/services/logging/NullLogger.h>
@@ -84,7 +84,7 @@ int main(int argc, char *argv[]) {
         dm.createServiceManager<LoggerFactory<LOGGER_TYPE>, ILoggerFactory>(Properties{{"DefaultLogLevel", Ichor::make_any<LogLevel>(level)}});
     }
     // Create the JSON serializer for the TestMsg class
-    dm.createServiceManager<TestMsgRapidJsonSerializer, ISerializer<TestMsg>>();
+    dm.createServiceManager<TestMsgGlazeSerializer, ISerializer<TestMsg>>();
     // Create the Event Thread for Boost.ASIO
     dm.createServiceManager<AsioContextService, IAsioContextService>(Properties{{"Threads", Ichor::make_any<uint64_t>(threads)}});
     // Create the HTTP server binding to the given address

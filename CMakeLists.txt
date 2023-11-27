@@ -423,7 +423,7 @@ if(ICHOR_USE_SPDLOG)
 endif()
 
 target_include_directories(ichor PUBLIC
-        $<BUILD_INTERFACE:${ICHOR_EXTERNAL_DIR}/rapidjson/include>
+        $<BUILD_INTERFACE:${ICHOR_EXTERNAL_DIR}/glaze/include>
         $<INSTALL_INTERFACE:include/ichor/external>)
 
 if(ICHOR_USE_ETCD)
@@ -510,7 +510,7 @@ if(ICHOR_USE_SPDLOG)
             )
 endif()
 
-install(DIRECTORY "${CMAKE_SOURCE_DIR}/external/rapidjson/include/rapidjson" # source directory
+install(DIRECTORY "${CMAKE_SOURCE_DIR}/external/glaze/include/glaze" # source directory
         DESTINATION "include/ichor/external" # target directory
         FILES_MATCHING # install only matched files
         PATTERN "*.h" # select header files

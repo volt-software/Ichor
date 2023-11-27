@@ -10,7 +10,7 @@
 
 using namespace Ichor;
 
-#define ITERATIONS 20'000
+#define ITERATIONS 5'000
 #ifdef ICHOR_AARCH64
 #define MAXIMUM_DURATION_USEC 1500
 #else

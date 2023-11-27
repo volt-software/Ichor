@@ -1,5 +1,5 @@
 #include "TestService.h"
-#include "../common/TestMsgRapidJsonSerializer.h"
+#include "../common/TestMsgGlazeSerializer.h"
 #include <ichor/event_queues/MultimapQueue.h>
 #include <ichor/services/logging/LoggerFactory.h>
 #include <ichor/services/serialization/ISerializer.h>
@@ -26,7 +26,7 @@ int main(int argc, char *argv[]) {
     dm.createServiceManager<SpdlogSharedService, ISpdlogSharedService>();
 #endif
     dm.createServiceManager<LoggerFactory<LOGGER_TYPE>, ILoggerFactory>(Properties{{"DefaultLogLevel", Ichor::make_any<LogLevel>(LogLevel::LOG_INFO)}});
-    dm.createServiceManager<TestMsgRapidJsonSerializer, ISerializer<TestMsg>>();
+    dm.createServiceManager<TestMsgGlazeSerializer, ISerializer<TestMsg>>();
     dm.createServiceManager<TestService>();
     queue->start(CaptureSigInt);
     auto end = std::chrono::steady_clock::now();

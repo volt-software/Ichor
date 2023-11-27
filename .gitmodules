@@ -10,9 +10,9 @@
 	path = external/fmt
 	url = https://github.com/fmtlib/fmt.git
 	branch = 7.1.2
-[submodule "external/rapidjson"]
-	path = external/rapidjson
-	url = https://github.com/Tencent/rapidjson.git
 [submodule "external/mimalloc"]
 	path = external/mimalloc
 	url = https://github.com/microsoft/mimalloc.git
+[submodule "external/glaze"]
+	path = external/glaze
+	url = https://github.com/stephenberry/glaze.git
