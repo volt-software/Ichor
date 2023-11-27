@@ -1,6 +1,14 @@
 #pragma once
 
+// gcc 11 wrongfully thinks that there is a null derefence problem when compiling in release mode
+#if defined( __GNUC__ )
+#    pragma GCC diagnostic push
+#    pragma GCC diagnostic ignored "-Wnull-dereference"
+#endif
 #include <fmt/format.h>
+#if defined( __GNUC__ )
+#    pragma GCC diagnostic pop
+#endif
 #include <ichor/Common.h>
 #include <ichor/Enums.h>
 

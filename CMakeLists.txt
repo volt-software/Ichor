@@ -171,8 +171,9 @@ else()
     target_compile_definitions(ichor PUBLIC NOMINMAX WIN32_LEAN_AND_MEAN )
 endif()
 
-# gcc added support for mold in version 12, but it throws catch off guard when using gcc, mold and sanitizers.
-if(ICHOR_USE_MOLD AND NOT CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+# gcc added support for mold in version 12, before that, the flag is ignored.
+# Note that with older versions of mold and early versions of gcc 12, issues with the tests have been observed. Please upgrade to the latest if you notice any issues.
+if(ICHOR_USE_MOLD)
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fuse-ld=mold ")
 endif()
 
