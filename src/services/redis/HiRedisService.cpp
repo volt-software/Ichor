@@ -179,7 +179,7 @@ void Ichor::HiredisService::removeDependencyInstance(IEventQueue &, IService&) {
     _queue = nullptr;
 }
 
-Ichor::AsyncGenerator<tl::expected<Ichor::RedisAuthReply, Ichor::RedisError>> Ichor::HiredisService::auth(std::string_view user, std::string_view password) {
+Ichor::Task<tl::expected<Ichor::RedisAuthReply, Ichor::RedisError>> Ichor::HiredisService::auth(std::string_view user, std::string_view password) {
     ICHOR_WAIT_IF_NOT_CONNECTED;
 
     IchorRedisReply evt{};
@@ -196,7 +196,7 @@ Ichor::AsyncGenerator<tl::expected<Ichor::RedisAuthReply, Ichor::RedisError>> Ic
     co_return RedisAuthReply{true};
 }
 
-Ichor::AsyncGenerator<tl::expected<Ichor::RedisSetReply, Ichor::RedisError>> Ichor::HiredisService::set(std::string_view key, std::string_view value) {
+Ichor::Task<tl::expected<Ichor::RedisSetReply, Ichor::RedisError>> Ichor::HiredisService::set(std::string_view key, std::string_view value) {
     ICHOR_WAIT_IF_NOT_CONNECTED;
 
     IchorRedisReply evt{};
@@ -213,7 +213,7 @@ Ichor::AsyncGenerator<tl::expected<Ichor::RedisSetReply, Ichor::RedisError>> Ich
     co_return RedisSetReply{true, evt.reply->str};
 }
 
-Ichor::AsyncGenerator<tl::expected<Ichor::RedisSetReply, Ichor::RedisError>> Ichor::HiredisService::set(std::string_view key, std::string_view value, RedisSetOptions const &opts) {
+Ichor::Task<tl::expected<Ichor::RedisSetReply, Ichor::RedisError>> Ichor::HiredisService::set(std::string_view key, std::string_view value, RedisSetOptions const &opts) {
     ICHOR_WAIT_IF_NOT_CONNECTED;
 
     auto buf = _formatSet(key, value, opts);
@@ -232,7 +232,7 @@ Ichor::AsyncGenerator<tl::expected<Ichor::RedisSetReply, Ichor::RedisError>> Ich
     co_return RedisSetReply{true, evt.reply->str};
 }
 
-Ichor::AsyncGenerator<tl::expected<Ichor::RedisGetReply, Ichor::RedisError>> Ichor::HiredisService::get(std::string_view key) {
+Ichor::Task<tl::expected<Ichor::RedisGetReply, Ichor::RedisError>> Ichor::HiredisService::get(std::string_view key) {
     ICHOR_WAIT_IF_NOT_CONNECTED;
 
     IchorRedisReply evt{};
@@ -249,7 +249,7 @@ Ichor::AsyncGenerator<tl::expected<Ichor::RedisGetReply, Ichor::RedisError>> Ich
     co_return RedisGetReply{evt.reply->str};
 }
 
-Ichor::AsyncGenerator<tl::expected<Ichor::RedisIntegerReply, Ichor::RedisError>> Ichor::HiredisService::del(std::string_view keys) {
+Ichor::Task<tl::expected<Ichor::RedisIntegerReply, Ichor::RedisError>> Ichor::HiredisService::del(std::string_view keys) {
     ICHOR_WAIT_IF_NOT_CONNECTED;
 
     IchorRedisReply evt{};
@@ -266,7 +266,7 @@ Ichor::AsyncGenerator<tl::expected<Ichor::RedisIntegerReply, Ichor::RedisError>>
     co_return RedisIntegerReply{evt.reply->integer};
 }
 
-Ichor::AsyncGenerator<tl::expected<Ichor::RedisIntegerReply, Ichor::RedisError>> Ichor::HiredisService::incr(std::string_view keys) {
+Ichor::Task<tl::expected<Ichor::RedisIntegerReply, Ichor::RedisError>> Ichor::HiredisService::incr(std::string_view keys) {
     ICHOR_WAIT_IF_NOT_CONNECTED;
 
     IchorRedisReply evt{};
@@ -283,7 +283,7 @@ Ichor::AsyncGenerator<tl::expected<Ichor::RedisIntegerReply, Ichor::RedisError>>
     co_return RedisIntegerReply{evt.reply->integer};
 }
 
-Ichor::AsyncGenerator<tl::expected<Ichor::RedisIntegerReply, Ichor::RedisError>> Ichor::HiredisService::incrBy(std::string_view keys, int64_t incr) {
+Ichor::Task<tl::expected<Ichor::RedisIntegerReply, Ichor::RedisError>> Ichor::HiredisService::incrBy(std::string_view keys, int64_t incr) {
     ICHOR_WAIT_IF_NOT_CONNECTED;
 
     IchorRedisReply evt{};
@@ -300,7 +300,7 @@ Ichor::AsyncGenerator<tl::expected<Ichor::RedisIntegerReply, Ichor::RedisError>>
     co_return RedisIntegerReply{evt.reply->integer};
 }
 
-Ichor::AsyncGenerator<tl::expected<Ichor::RedisIntegerReply, Ichor::RedisError>> Ichor::HiredisService::incrByFloat(std::string_view keys, double incr) {
+Ichor::Task<tl::expected<Ichor::RedisIntegerReply, Ichor::RedisError>> Ichor::HiredisService::incrByFloat(std::string_view keys, double incr) {
     ICHOR_WAIT_IF_NOT_CONNECTED;
 
     IchorRedisReply evt{};
@@ -317,7 +317,7 @@ Ichor::AsyncGenerator<tl::expected<Ichor::RedisIntegerReply, Ichor::RedisError>>
     co_return RedisIntegerReply{evt.reply->integer};
 }
 
-Ichor::AsyncGenerator<tl::expected<Ichor::RedisIntegerReply, Ichor::RedisError>> Ichor::HiredisService::decr(std::string_view keys) {
+Ichor::Task<tl::expected<Ichor::RedisIntegerReply, Ichor::RedisError>> Ichor::HiredisService::decr(std::string_view keys) {
     ICHOR_WAIT_IF_NOT_CONNECTED;
 
     IchorRedisReply evt{};
@@ -334,7 +334,7 @@ Ichor::AsyncGenerator<tl::expected<Ichor::RedisIntegerReply, Ichor::RedisError>>
     co_return RedisIntegerReply{evt.reply->integer};
 }
 
-Ichor::AsyncGenerator<tl::expected<Ichor::RedisIntegerReply, Ichor::RedisError>> Ichor::HiredisService::decrBy(std::string_view keys, int64_t decr) {
+Ichor::Task<tl::expected<Ichor::RedisIntegerReply, Ichor::RedisError>> Ichor::HiredisService::decrBy(std::string_view keys, int64_t decr) {
     ICHOR_WAIT_IF_NOT_CONNECTED;
 
     IchorRedisReply evt{};

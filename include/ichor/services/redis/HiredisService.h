@@ -25,16 +25,16 @@ namespace Ichor {
         void onRedisDisconnect(int status);
 
         // see IRedis for function descriptions
-        AsyncGenerator<tl::expected<RedisAuthReply, RedisError>> auth(std::string_view user, std::string_view password) final;
-        AsyncGenerator<tl::expected<RedisSetReply, RedisError>> set(std::string_view key, std::string_view value) final;
-        AsyncGenerator<tl::expected<RedisSetReply, RedisError>> set(std::string_view key, std::string_view value, RedisSetOptions const &opts) final;
-        AsyncGenerator<tl::expected<RedisGetReply, RedisError>> get(std::string_view key) final;
-        AsyncGenerator<tl::expected<RedisIntegerReply, RedisError>> del(std::string_view keys) final;
-        AsyncGenerator<tl::expected<RedisIntegerReply, RedisError>> incr(std::string_view keys) final;
-        AsyncGenerator<tl::expected<RedisIntegerReply, RedisError>> incrBy(std::string_view keys, int64_t incr) final;
-        AsyncGenerator<tl::expected<RedisIntegerReply, RedisError>> incrByFloat(std::string_view keys, double incr) final;
-        AsyncGenerator<tl::expected<RedisIntegerReply, RedisError>> decr(std::string_view keys) final;
-        AsyncGenerator<tl::expected<RedisIntegerReply, RedisError>> decrBy(std::string_view keys, int64_t decr) final;
+        Task<tl::expected<RedisAuthReply, RedisError>> auth(std::string_view user, std::string_view password) final;
+        Task<tl::expected<RedisSetReply, RedisError>> set(std::string_view key, std::string_view value) final;
+        Task<tl::expected<RedisSetReply, RedisError>> set(std::string_view key, std::string_view value, RedisSetOptions const &opts) final;
+        Task<tl::expected<RedisGetReply, RedisError>> get(std::string_view key) final;
+        Task<tl::expected<RedisIntegerReply, RedisError>> del(std::string_view keys) final;
+        Task<tl::expected<RedisIntegerReply, RedisError>> incr(std::string_view keys) final;
+        Task<tl::expected<RedisIntegerReply, RedisError>> incrBy(std::string_view keys, int64_t incr) final;
+        Task<tl::expected<RedisIntegerReply, RedisError>> incrByFloat(std::string_view keys, double incr) final;
+        Task<tl::expected<RedisIntegerReply, RedisError>> decr(std::string_view keys) final;
+        Task<tl::expected<RedisIntegerReply, RedisError>> decrBy(std::string_view keys, int64_t decr) final;
 
     private:
         Task<tl::expected<void, Ichor::StartError>> start() final;
