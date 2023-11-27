@@ -98,14 +98,15 @@ if [[ $DOCKER -eq 1 ]]; then
 #!/bin/sh
 FILES=/opt/ichor/src/bin/*
 for f in \$FILES; do
-  if [[ "\$f" != *"Redis"* ]] && [[ "\$f" != *"benchmark"* ]] && [[ "\$f" != *"minimal"* ]] && [[ "\$f" != *"ping"* ]] && [[ "\$f" != *"pong"* ]] && [[ "\$f" != *"Started"* ]] && [[ "\$f" != *".sh" ]] && [[ -x "\$f" ]] ; then
+  if [[ "\$f" != *"Redis"* ]] && [[ "\$f" != *"benchmark"* ]] && [[ "\$f" != *"minimal"* ]] && [[ "\$f" != *"ping"* ]] && [[ "\$f" != *"pong"* ]] && [[ "\$f" != *"Started"* ]] && [[ "\$f" != *".sh" ]] && [[ -x "\$f" ]] && [[ ! -d "\$f" ]] ; then
     echo "Running \$f"
-    \$f || echo "Error" && exit 1
+    \$f || exit 1
   fi
 done
 EOF
   chmod +x ../bin/run_aarch64_examples_and_tests.sh
   docker run -v $(pwd)/../:/opt/ichor/src --privileged -it ichor-musl-aarch64 "sh -c 'ulimit -r unlimited && /opt/ichor/src/bin/run_aarch64_examples_and_tests.sh'" || exit 1
+  docker run -v $(pwd)/../:/opt/ichor/src --privileged -it ichor-musl-aarch64 "rm -rf /opt/ichor/src/bin/* /opt/ichor/src/build/*" || exit 1
 fi
 
 for i in ${!ccompilers[@]}; do
