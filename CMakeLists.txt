@@ -49,7 +49,6 @@ option(ICHOR_ENABLE_INTERNAL_COROUTINE_DEBUGGING "Add verbose logging of Ichor c
 option(ICHOR_ENABLE_INTERNAL_IO_DEBUGGING "Add verbose logging of Ichor I/O internals" OFF)
 option(ICHOR_BUILD_COVERAGE "Build ichor with coverage" OFF)
 option(ICHOR_USE_SPDLOG "Use spdlog as framework logging implementation" OFF)
-option(ICHOR_USE_ETCD "Add etcd services" ON)
 option(ICHOR_USE_BOOST_BEAST "Add boost asio and boost BEAST as dependencies" OFF)
 option(ICHOR_USE_SANITIZERS "Enable sanitizers, catching potential errors but slowing down compilation and execution speed" ON)
 cmake_dependent_option(ICHOR_USE_THREAD_SANITIZER "Enable thread sanitizer, catching potential threading errors but slowing down compilation and execution speed. Cannot be combined with ICHOR_USE_SANITIZERS" OFF "NOT WIN32" OFF)
@@ -122,10 +121,6 @@ if(ICHOR_USE_UGLY_HACK_EXCEPTION_CATCHING)
     target_compile_definitions(ichor PUBLIC ICHOR_USE_UGLY_HACK_EXCEPTION_CATCHING)
 endif()
 
-if(ICHOR_USE_ETCD)
-    target_compile_definitions(ichor PUBLIC ICHOR_USE_ETCD)
-endif()
-
 if(ICHOR_USE_BOOST_BEAST)
     target_compile_definitions(ichor PUBLIC ICHOR_USE_BOOST_BEAST)
 endif()
@@ -140,9 +135,11 @@ endif()
 if(NOT WIN32)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Wshadow -Wnon-virtual-dtor -Wno-unused-variable -Wno-long-long -Wno-unused-parameter -Wnull-dereference -pedantic -Wformat -Wformat-security -Wcast-align -Woverloaded-virtual ")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread -ftemplate-backtrace-limit=0 ")
-    if(ICHOR_USE_HARDENING AND (CMAKE_BUILD_TYPE MATCHES DEBUG OR CMAKE_BUILD_TYPE MATCHES RELWITHDEBINFO))
+    if(ICHOR_USE_HARDENING AND (CMAKE_BUILD_TYPE MATCHES Debug OR CMAKE_BUILD_TYPE MATCHES RelWithDebInfo))
         # Enable runtime iterator debug checks (like checking two different iterators from different containers)
-        target_compile_definitions(ichor PUBLIC _GLIBCXX_CONCEPT_CHECKS _GLIBCXX_ASSERTIONS _GLIBCXX_DEBUG _GLIBCXX_DEBUG_PEDANTIC _GLIBCXX_SANITIZE_VECTOR _ITERATOR_DEBUG_LEVEL=2)
+        target_compile_definitions(ichor PUBLIC _GLIBCXX_ASSERTIONS _GLIBCXX_DEBUG _GLIBCXX_DEBUG_PEDANTIC _ITERATOR_DEBUG_LEVEL=2 _LIBCPP_DEBUG=1 _LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_DEBUG)
+    elseif(ICHOR_USE_HARDENING)
+        target_compile_definitions(ichor PUBLIC _GLIBCXX_ASSERTIONS _LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_FAST)
     endif()
     target_compile_definitions(ichor PUBLIC _FILE_OFFSET_BITS=64 _TIME_BITS=64)
 
@@ -216,7 +213,7 @@ if(ICHOR_USE_SANITIZERS)
 
         target_compile_options(ichor PUBLIC ${ICHOR_SANITIZE_OPTIONS} -fno-omit-frame-pointer)
         target_link_options(ichor PUBLIC ${ICHOR_SANITIZE_OPTIONS})
-        target_compile_definitions(ichor PUBLIC __SANITIZE_ADDRESS__)
+        target_compile_definitions(ichor PUBLIC __SANITIZE_ADDRESS__ _GLIBCXX_SANITIZE_VECTOR)
 
         # clang on OSX doesn't accept -no-pie for some reason
         if(NOT APPLE)
@@ -262,7 +259,7 @@ if(NOT DEFINED ICHOR_USE_SANITIZERS AND NOT DEFINED ICHOR_USE_THREAD_SANITIZER)
 endif()
 
 if(WIN32 AND ICHOR_USE_HARDENING)
-    if(CMAKE_BUILD_TYPE MATCHES DEBUG)
+    if(CMAKE_BUILD_TYPE MATCHES Debug)
         target_compile_options(ichor PUBLIC /RTCsu)
     endif()
     target_compile_options(ichor PUBLIC /GS /guard:cf)
@@ -271,7 +268,9 @@ elseif(ICHOR_USE_HARDENING)
     target_compile_options(ichor PUBLIC -fstack-protector-strong)
 
     if(NOT ICHOR_AARCH64)
-        target_compile_options(ichor PUBLIC -fcf-protection)
+        target_compile_options(ichor PUBLIC -fcf-protection=full)
+    else()
+        target_compile_options(ichor PUBLIC -mbranch-protection=standard)
     endif()
 
     # stack clash protection not available on OSX
@@ -350,10 +349,6 @@ if(ICHOR_USE_SPDLOG)
     target_sources(ichor PRIVATE ${SPDLOG_SOURCES})
 endif()
 
-if(ICHOR_USE_ETCD)
-    target_sources(ichor PRIVATE ${ICHOR_OPTIONAL_ETCD_SOURCES})
-endif()
-
 if(ICHOR_USE_SDEVENT)
     find_package(PkgConfig REQUIRED)
     pkg_check_modules(Systemd IMPORTED_TARGET GLOBAL libsystemd)
@@ -383,6 +378,9 @@ if(ICHOR_USE_BOOST_BEAST) #beast
         target_compile_definitions(ichor PUBLIC BOOST_ASIO_ENABLE_BUFFER_DEBUGGING)
     endif()
 
+    # Etcd implementation requires networking
+    target_sources(ichor PRIVATE ${ICHOR_OPTIONAL_ETCD_SOURCES})
+    target_compile_definitions(ichor PUBLIC ICHOR_USE_ETCD)
 endif()
 
 if(ICHOR_USE_HIREDIS)
