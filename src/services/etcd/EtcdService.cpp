@@ -213,7 +213,7 @@ Ichor::Task<tl::expected<Ichor::EtcdReply, Ichor::EtcdError>> Ichor::EtcdService
     HttpMethod method = in_order ? HttpMethod::post : HttpMethod::put;
     auto http_reply = co_await _conn->sendAsync(method, fmt::format("/v2/keys/{}", key), std::move(headers), std::move(msg_buf));
 
-    if(http_reply.status != HttpStatus::ok && http_reply.status != HttpStatus::created && http_reply.status == HttpStatus::forbidden) {
+    if(http_reply.status != HttpStatus::ok && http_reply.status != HttpStatus::created && http_reply.status != HttpStatus::forbidden) {
         ICHOR_LOG_ERROR(_logger, "Error on route {}, http status {}", fmt::format("/v2/keys/{}", key), (int)http_reply.status);
         co_return tl::unexpected(Ichor::EtcdError::HTTP_RESPONSE_ERROR);
     }
