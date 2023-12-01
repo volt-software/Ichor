@@ -65,7 +65,7 @@ if [[ "$curr" != "build" ]]; then
 fi
 
 rm -rf ./*
-rm ../bin/*
+rm -rf ../bin/*
 
 if [[ $GCC -eq 1 ]]; then
   CC=/opt/gcc/12/bin/gcc CXX=/opt/gcc/12/bin/g++ cmake -DCMAKE_BUILD_TYPE=${BUILDTYPE} -DICHOR_ARCH_OPTIMIZATION=X86_64_AVX2 -DICHOR_USE_MIMALLOC=${MIMALLOC} -DICHOR_USE_BACKWARD=0 -DICHOR_USE_BOOST_BEAST=1 -DICHOR_USE_SANITIZERS=${ASAN} -DICHOR_USE_THREAD_SANITIZER=${TSAN} -GNinja ..
@@ -87,4 +87,5 @@ if [[ $RUN_EXAMPLES -eq 1 ]]; then
     ../bin/ichor_websocket_example || exit 1
     ../bin/ichor_websocket_example -t4 || exit 1
     ../bin/ichor_yielding_timer_example || exit 1
+    ../bin/ichor_etcd_example || exit 1
 fi

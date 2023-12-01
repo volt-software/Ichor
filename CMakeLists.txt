@@ -49,7 +49,7 @@ option(ICHOR_ENABLE_INTERNAL_COROUTINE_DEBUGGING "Add verbose logging of Ichor c
 option(ICHOR_ENABLE_INTERNAL_IO_DEBUGGING "Add verbose logging of Ichor I/O internals" OFF)
 option(ICHOR_BUILD_COVERAGE "Build ichor with coverage" OFF)
 option(ICHOR_USE_SPDLOG "Use spdlog as framework logging implementation" OFF)
-option(ICHOR_USE_ETCD "Add etcd services (may not work, not used much)" OFF)
+option(ICHOR_USE_ETCD "Add etcd services" ON)
 option(ICHOR_USE_BOOST_BEAST "Add boost asio and boost BEAST as dependencies" OFF)
 option(ICHOR_USE_SANITIZERS "Enable sanitizers, catching potential errors but slowing down compilation and execution speed" ON)
 cmake_dependent_option(ICHOR_USE_THREAD_SANITIZER "Enable thread sanitizer, catching potential threading errors but slowing down compilation and execution speed. Cannot be combined with ICHOR_USE_SANITIZERS" OFF "NOT WIN32" OFF)
@@ -88,17 +88,17 @@ endif()
 
 set(FMT_SOURCES ${ICHOR_EXTERNAL_DIR}/fmt/src/format.cc ${ICHOR_EXTERNAL_DIR}/fmt/src/os.cc)
 file(GLOB_RECURSE ICHOR_FRAMEWORK_SOURCES ${ICHOR_TOP_DIR}/src/ichor/*.cpp)
-file(GLOB_RECURSE ICHOR_OPTIONAL_ETCD_SOURCES ${ICHOR_TOP_DIR}/src/services/etcd/*.cpp ${ICHOR_TOP_DIR}/src/services/etcd/*.cc)
+file(GLOB_RECURSE ICHOR_OPTIONAL_ETCD_SOURCES ${ICHOR_TOP_DIR}/src/services/etcd/*.cpp)
 file(GLOB_RECURSE ICHOR_LOGGING_SOURCES ${ICHOR_TOP_DIR}/src/services/logging/*.cpp)
 file(GLOB_RECURSE ICHOR_NETWORK_SOURCES ${ICHOR_TOP_DIR}/src/services/network/*.cpp)
 file(GLOB_RECURSE ICHOR_METRICS_SOURCES ${ICHOR_TOP_DIR}/src/services/metrics/*.cpp)
 file(GLOB_RECURSE ICHOR_TIMER_SOURCES ${ICHOR_TOP_DIR}/src/services/timer/*.cpp)
-file(GLOB_RECURSE ICHOR_HIREDIS_SOURCES ${ICHOR_TOP_DIR}/src/services/redis/*.cpp)
+file(GLOB_RECURSE ICHOR_OPTIONAL_HIREDIS_SOURCES ${ICHOR_TOP_DIR}/src/services/redis/*.cpp)
 file(GLOB_RECURSE ICHOR_IO_SOURCES ${ICHOR_TOP_DIR}/src/services/io/*.cpp)
 
 file(GLOB SPDLOG_SOURCES ${ICHOR_EXTERNAL_DIR}/spdlog/src/*.cpp)
 
-add_library(ichor ${FMT_SOURCES} ${ICHOR_FRAMEWORK_SOURCES} ${ICHOR_LOGGING_SOURCES} ${ICHOR_NETWORK_SOURCES} ${ICHOR_METRICS_SOURCES} ${ICHOR_TIMER_SOURCES} ${ICHOR_HIREDIS_SOURCES} ${ICHOR_IO_SOURCES})
+add_library(ichor ${FMT_SOURCES} ${ICHOR_FRAMEWORK_SOURCES} ${ICHOR_LOGGING_SOURCES} ${ICHOR_NETWORK_SOURCES} ${ICHOR_METRICS_SOURCES} ${ICHOR_TIMER_SOURCES} ${ICHOR_IO_SOURCES})
 
 if(ICHOR_ENABLE_INTERNAL_DEBUGGING)
     target_compile_definitions(ichor PUBLIC ICHOR_ENABLE_INTERNAL_DEBUGGING)
@@ -123,18 +123,6 @@ if(ICHOR_USE_UGLY_HACK_EXCEPTION_CATCHING)
 endif()
 
 if(ICHOR_USE_ETCD)
-    find_package(Protobuf REQUIRED)
-    find_package(gRPC CONFIG)
-
-    if(NOT gRPC_FOUND)
-        find_package(PkgConfig REQUIRED)
-        pkg_search_module(GRPC REQUIRED grpc)
-        pkg_search_module(GRPCPP REQUIRED grpc++>=1.16.0)
-        set(ETCD_TARGET ${GRPC_LIBRARIES} ${GRPCPP_LIBRARIES} ${PROTOBUF_LIBRARIES})
-    else()
-        set(ETCD_TARGET gRPC::grpc++ ${PROTOBUF_LIBRARIES})
-    endif()
-
     target_compile_definitions(ichor PUBLIC ICHOR_USE_ETCD)
 endif()
 
@@ -364,7 +352,6 @@ endif()
 
 if(ICHOR_USE_ETCD)
     target_sources(ichor PRIVATE ${ICHOR_OPTIONAL_ETCD_SOURCES})
-    target_compile_definitions(ichor PUBLIC GOOGLE_PROTOBUF_NO_RTTI)
 endif()
 
 if(ICHOR_USE_SDEVENT)
@@ -402,6 +389,8 @@ if(ICHOR_USE_HIREDIS)
     find_package(hiredis REQUIRED)
     target_link_libraries(ichor PUBLIC hiredis)
     target_compile_definitions(ichor PUBLIC ICHOR_USE_HIREDIS)
+
+    target_sources(ichor PRIVATE ${ICHOR_OPTIONAL_HIREDIS_SOURCES})
 endif()
 
 target_link_libraries(ichor PUBLIC ${CMAKE_THREAD_LIBS_INIT})
@@ -426,11 +415,6 @@ endif()
 target_include_directories(ichor PUBLIC
         $<BUILD_INTERFACE:${ICHOR_EXTERNAL_DIR}/glaze/include>
         $<INSTALL_INTERFACE:include/ichor/external>)
-
-if(ICHOR_USE_ETCD)
-    #necessary to get generator protobuf/grpc code to compile
-    target_include_directories(ichor PUBLIC "${ICHOR_TOP_DIR}/include/ichor/services/etcd")
-endif()
 
 # Detection for backward-cpp, works without external libraries on windows and apple
 # On linux, it still works without these libraries (on gcc + glibc at least), but provides less functionality.

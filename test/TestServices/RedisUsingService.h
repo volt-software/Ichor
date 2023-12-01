@@ -4,10 +4,7 @@
 #include <ichor/services/redis/IRedis.h>
 
 namespace Ichor {
-    struct IRedisUsingService {
-    };
-
-    struct RedisUsingService final : public IRedisUsingService, public AdvancedService<RedisUsingService> {
+    struct RedisUsingService final : public AdvancedService<RedisUsingService> {
         RedisUsingService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {
             reg.registerDependency<IRedis>(this, true);
         }

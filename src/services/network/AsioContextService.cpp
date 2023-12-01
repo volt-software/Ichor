@@ -36,7 +36,7 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::AsioContextService::st
         _context = std::make_unique<net::io_context>();
     }
 
-    ICHOR_LOG_INFO(_logger, "Using boost version {} beast version {}\n", BOOST_VERSION, BOOST_BEAST_VERSION);
+    ICHOR_LOG_INFO(_logger, "Using boost version {} beast version {}", BOOST_VERSION, BOOST_BEAST_VERSION);
 
     net::spawn(*_context, [this, &queue = GetThreadLocalEventQueue()](net::yield_context yield) {
         // notify start()

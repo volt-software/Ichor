@@ -1,5 +1,3 @@
-#ifdef ICHOR_USE_HIREDIS
-
 #include <ichor/DependencyManager.h>
 #include <ichor/services/redis/HiredisService.h>
 #include <hiredis/hiredis.h>
@@ -420,5 +418,3 @@ tl::expected<void, Ichor::StartError> Ichor::HiredisService::connect() {
 
     return {};
 }
-
-#endif

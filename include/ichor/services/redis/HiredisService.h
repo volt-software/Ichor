@@ -12,9 +12,11 @@ namespace Ichor {
      * Service for the redis protocol.
      *
      * Properties:
-     * - "PollIntervalMs" - with which interval in milliseconds to poll hiredis for responses. Lower values reduce latency at the cost of more CPU usage.
-     * - "TryConnectIntervalMs" - with which interval in milliseconds to try (re)connecting
-     * - "TimeoutMs" - with which interval in milliseconds to timeout for (re)connecting, after which the service stops itself
+     * - "Address" - What address to connect to (required)
+     * - "Port" - What port to connect to (required)
+     * - "PollIntervalMs" - with which interval in milliseconds to poll hiredis for responses. Lower values reduce latency at the cost of more CPU usage. (default: 10 ms)
+     * - "TryConnectIntervalMs" - with which interval in milliseconds to try (re)connecting (default: 10 ms)
+     * - "TimeoutMs" - with which interval in milliseconds to timeout for (re)connecting, after which the service stops itself (default: 10'000 ms)
      */
     class HiredisService final : public IRedis, public AdvancedService<HiredisService> {
     public:
