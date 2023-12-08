@@ -28,8 +28,7 @@ namespace Ichor
                 bool await_ready() const noexcept { return false; }
 
                 template<typename PROMISE>
-                void await_suspend(std::coroutine_handle<PROMISE> coroutine) noexcept
-                {
+                void await_suspend(std::coroutine_handle<PROMISE> coroutine) noexcept {
                     coroutine.promise().m_continuation.resume();
                 }
 
@@ -41,18 +40,21 @@ namespace Ichor
             TaskPromiseBase() noexcept
             {}
 
-            auto initial_suspend() noexcept
-            {
+            auto initial_suspend() noexcept {
                 return std::suspend_always{};
             }
 
-            auto final_suspend() noexcept
-            {
+            auto final_suspend() noexcept {
                 return final_awaitable{};
             }
 
-            void set_continuation(std::coroutine_handle<> continuation) noexcept
-            {
+            uint64_t get_id() const noexcept {
+                return _promise_id;
+            };
+
+            template <typename PROMISE>
+            void set_continuation(std::coroutine_handle<PROMISE> continuation) noexcept {
+                _promise_id = continuation.promise().get_id();
                 m_continuation = continuation;
             }
 
@@ -62,6 +64,7 @@ namespace Ichor
 
         private:
             std::coroutine_handle<> m_continuation;
+            uint64_t _promise_id{};
         };
 
         template<typename T>
@@ -71,10 +74,8 @@ namespace Ichor
 
             TaskPromise() noexcept {}
 
-            ~TaskPromise()
-            {
-                switch (m_resultType)
-                {
+            ~TaskPromise() {
+                switch (m_resultType) {
                     case result_type::value:
                         m_value.~T();
                         break;
@@ -88,8 +89,7 @@ namespace Ichor
 
             Task<T> get_return_object() noexcept;
 
-            void unhandled_exception() noexcept
-            {
+            void unhandled_exception() noexcept {
                 ::new (static_cast<void*>(std::addressof(m_exception))) std::exception_ptr(
                         std::current_exception());
                 m_resultType = result_type::exception;
@@ -99,21 +99,18 @@ namespace Ichor
                     typename VALUE,
                     typename = std::enable_if_t<std::is_convertible_v<VALUE&&, T>>>
             void return_value(VALUE&& value)
-            noexcept(std::is_nothrow_constructible_v<T, VALUE&&>)
-            {
+            noexcept(std::is_nothrow_constructible_v<T, VALUE&&>) {
                 ::new (static_cast<void*>(std::addressof(m_value))) T(std::forward<VALUE>(value));
                 m_resultType = result_type::value;
             }
-            void return_value(T&& value) noexcept
-            {
+
+            void return_value(T&& value) noexcept {
                 ::new (static_cast<void*>(std::addressof(m_value))) T(std::forward<T>(value));
                 m_resultType = result_type::value;
             }
 
-            T& result() &
-            {
-                if (m_resultType == result_type::exception)
-                {
+            T& result() & {
+                if (m_resultType == result_type::exception) {
                     std::rethrow_exception(m_exception);
                 }
 
@@ -133,10 +130,8 @@ namespace Ichor
                     T,
                     T&&>;
 
-            rvalue_type result() &&
-            {
-                if (m_resultType == result_type::exception)
-                {
+            rvalue_type result() && {
+                if (m_resultType == result_type::exception) {
                     std::rethrow_exception(m_exception);
                 }
 
@@ -151,8 +146,7 @@ namespace Ichor
 
             result_type m_resultType = result_type::empty;
 
-            union
-            {
+            union {
                 T m_value;
                 std::exception_ptr m_exception;
             };
@@ -160,8 +154,7 @@ namespace Ichor
         };
 
         template<>
-        class TaskPromise<void> : public TaskPromiseBase
-        {
+        class TaskPromise<void> : public TaskPromiseBase {
         public:
 
             TaskPromise() noexcept = default;
@@ -171,15 +164,12 @@ namespace Ichor
             void return_void() noexcept
             {}
 
-            void unhandled_exception() noexcept
-            {
+            void unhandled_exception() noexcept {
                 m_exception = std::current_exception();
             }
 
-            void result()
-            {
-                if (m_exception)
-                {
+            void result() {
+                if (m_exception) {
                     std::rethrow_exception(m_exception);
                 }
             }
@@ -191,28 +181,23 @@ namespace Ichor
         };
 
         template<typename T>
-        class TaskPromise<T&> : public TaskPromiseBase
-        {
+        class TaskPromise<T&> : public TaskPromiseBase {
         public:
 
             TaskPromise() noexcept = default;
 
             Task<T&> get_return_object() noexcept;
 
-            void unhandled_exception() noexcept
-            {
+            void unhandled_exception() noexcept {
                 m_exception = std::current_exception();
             }
 
-            void return_value(T& value) noexcept
-            {
+            void return_value(T& value) noexcept {
                 m_value = std::addressof(value);
             }
 
-            T& result()
-            {
-                if (m_exception)
-                {
+            T& result() {
+                if (m_exception) {
                     std::rethrow_exception(m_exception);
                 }
 
@@ -254,13 +239,12 @@ namespace Ichor
                     : m_coroutine(coroutine)
             {}
 
-            bool await_ready() const noexcept
-            {
+            bool await_ready() const noexcept {
                 return !m_coroutine || m_coroutine.done();
             }
 
-            void await_suspend(std::coroutine_handle<> awaitingCoroutine) noexcept
-            {
+            template <typename PROMISE>
+            void await_suspend(std::coroutine_handle<PROMISE> awaitingCoroutine) noexcept {
                 m_coroutine.promise().set_continuation(awaitingCoroutine);
                 m_coroutine.resume();
             }
@@ -277,8 +261,7 @@ namespace Ichor
         {}
 
         Task(Task&& t) noexcept
-                : m_coroutine(t.m_coroutine)
-        {
+                : m_coroutine(t.m_coroutine) {
             t.m_coroutine = nullptr;
         }
 
@@ -287,20 +270,15 @@ namespace Ichor
         Task& operator=(const Task&) = delete;
 
         /// Frees resources used by this Task.
-        ~Task()
-        {
-            if (m_coroutine)
-            {
+        ~Task() {
+            if (m_coroutine) {
                 m_coroutine.destroy();
             }
         }
 
-        Task& operator=(Task&& other) noexcept
-        {
-            if (std::addressof(other) != this)
-            {
-                if (m_coroutine)
-                {
+        Task& operator=(Task&& other) noexcept {
+            if (std::addressof(other) != this) {
+                if (m_coroutine) {
                     m_coroutine.destroy();
                 }
 
@@ -315,21 +293,16 @@ namespace Ichor
         /// Query if the Task result is complete.
         ///
         /// Awaiting a Task that is ready is guaranteed not to block/suspend.
-        bool is_ready() const noexcept
-        {
+        bool is_ready() const noexcept {
             return m_coroutine && m_coroutine.done();
         }
 
-        auto operator co_await() const & noexcept
-        {
-            struct awaitable : awaitable_base
-            {
+        auto operator co_await() const & noexcept {
+            struct awaitable : awaitable_base {
                 using awaitable_base::awaitable_base;
 
-                decltype(auto) await_resume()
-                {
-                    if (!this->m_coroutine)
-                    {
+                decltype(auto) await_resume() {
+                    if (!this->m_coroutine) {
                         std::terminate();
                     }
 
@@ -340,16 +313,12 @@ namespace Ichor
             return awaitable{ m_coroutine };
         }
 
-        auto operator co_await() const && noexcept
-        {
-            struct awaitable : awaitable_base
-            {
+        auto operator co_await() const && noexcept {
+            struct awaitable : awaitable_base {
                 using awaitable_base::awaitable_base;
 
-                decltype(auto) await_resume()
-                {
-                    if (!this->m_coroutine)
-                    {
+                decltype(auto) await_resume() {
+                    if (!this->m_coroutine) {
                         std::terminate();
                     }
 
@@ -363,10 +332,8 @@ namespace Ichor
         /// \brief
         /// Returns an awaitable that will await completion of the Task without
         /// attempting to retrieve the result.
-        auto when_ready() const noexcept
-        {
-            struct awaitable : awaitable_base
-            {
+        auto when_ready() const noexcept {
+            struct awaitable : awaitable_base {
                 using awaitable_base::awaitable_base;
 
                 void await_resume() const noexcept {}
@@ -376,27 +343,21 @@ namespace Ichor
         }
 
     private:
-
         std::coroutine_handle<promise_type> m_coroutine;
-
     };
 
-    namespace Detail
-    {
+    namespace Detail {
         template<typename T>
-        Task<T> TaskPromise<T>::get_return_object() noexcept
-        {
+        Task<T> TaskPromise<T>::get_return_object() noexcept {
             return Task<T>{ std::coroutine_handle<TaskPromise>::from_promise(*this) };
         }
 
-        inline Task<void> TaskPromise<void>::get_return_object() noexcept
-        {
+        inline Task<void> TaskPromise<void>::get_return_object() noexcept {
             return Task<void>{ std::coroutine_handle<TaskPromise>::from_promise(*this) };
         }
 
         template<typename T>
-        Task<T&> TaskPromise<T&>::get_return_object() noexcept
-        {
+        Task<T&> TaskPromise<T&>::get_return_object() noexcept {
             return Task<T&>{ std::coroutine_handle<TaskPromise>::from_promise(*this) };
         }
     }

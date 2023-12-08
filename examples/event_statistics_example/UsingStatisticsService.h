@@ -13,8 +13,8 @@ public:
         ICHOR_LOG_INFO(_logger, "UsingStatisticsService started");
         auto &quitTimer = timerFactory->createTimer();
         auto &bogusTimer = timerFactory->createTimer();
-        quitTimer.setChronoInterval(2s);
-        bogusTimer.setChronoInterval(100ms);
+        quitTimer.setChronoInterval(1s);
+        bogusTimer.setChronoInterval(50ms);
 
         quitTimer.setCallback([self, queue]() {
             queue->pushEvent<QuitEvent>(self->getServiceId());

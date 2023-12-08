@@ -1,7 +1,7 @@
 #pragma once
 
-#include <ichor/dependency_management/AdvancedService.h>
 #include <tl/expected.h>
+#include <vector>
 
 namespace Ichor {
     enum class SendErrorReason {

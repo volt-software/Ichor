@@ -1,5 +1,6 @@
 // We're doing some naughty stuff where we tell fmt to insert char's into a vector<uint8_t>.
 // Since we have most warnings turned on and -Werror, this turns into compile errors that are actually harmless.
+#include <iterator>
 #if defined( __GNUC__ )
 #    pragma GCC diagnostic push
 #    pragma GCC diagnostic ignored "-Wsign-conversion"
@@ -9,8 +10,10 @@
 #    pragma GCC diagnostic pop
 #endif
 
-#include <ichor/services/etcd/EtcdService.h>
+#include <ichor/services/etcd/EtcdV2Service.h>
 #include <ichor/dependency_management/DependencyRegister.h>
+#include <ichor/events/RunFunctionEvent.h>
+#include <ichor/ScopeGuard.h>
 
 // Glaze uses different conventions than Ichor, ignore them to prevent being spammed by warnings
 #if defined( __GNUC__ )
@@ -158,36 +161,147 @@ struct glz::meta<Ichor::EtcdReply> {
     );
 };
 
-Ichor::EtcdService::EtcdService(DependencyRegister &reg, Properties props) : AdvancedService<EtcdService>(std::move(props)) {
-    reg.registerDependency<ILogger>(this, true);
-    reg.registerDependency<IHttpConnectionService>(this, true, getProperties());
+template <>
+struct glz::meta<Ichor::EtcdLeaderInfoStats> {
+    using T = Ichor::EtcdLeaderInfoStats;
+    static constexpr auto value = object(
+            "leader", &T::leader,
+            "uptime", &T::uptime,
+            "startTime", &T::startTime
+    );
+};
+
+template <>
+struct glz::meta<Ichor::EtcdSelfStats> {
+    using T = Ichor::EtcdSelfStats;
+    static constexpr auto value = object(
+            "name", &T::name,
+            "id", &T::id,
+            "state", &T::state,
+            "startTime", &T::startTime,
+            "leaderInfo", &T::leaderInfo,
+            "recvAppendRequestCnt", &T::recvAppendRequestCnt,
+            "sendAppendRequestCnt", &T::sendAppendRequestCnt
+    );
+};
+
+template <>
+struct glz::meta<Ichor::EtcdStoreStats> {
+    using T = Ichor::EtcdStoreStats;
+    static constexpr auto value = object(
+            "compareAndSwapFail", &T::compareAndSwapFail,
+            "compareAndSwapSuccess", &T::compareAndSwapSuccess,
+            "compareAndDeleteSuccess", &T::compareAndDeleteSuccess,
+            "compareAndDeleteFail", &T::compareAndDeleteFail,
+            "createFail", &T::createFail,
+            "createSuccess", &T::createSuccess,
+            "deleteFail", &T::deleteFail,
+            "deleteSuccess", &T::deleteSuccess,
+            "expireCount", &T::expireCount,
+            "getsFail", &T::getsFail,
+            "getsSuccess", &T::getsSuccess,
+            "setsFail", &T::setsFail,
+            "setsSuccess", &T::setsSuccess,
+            "updateFail", &T::updateFail,
+            "updateSuccess", &T::updateSuccess,
+            "watchers", &T::watchers
+    );
+};
+
+namespace Ichor {
+    struct EtcdHealthReply final {
+        std::string health;
+    };
 }
 
-Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::EtcdService::start() {
+
+template <>
+struct glz::meta<Ichor::EtcdHealthReply> {
+    using T = Ichor::EtcdHealthReply;
+    static constexpr auto value = object(
+            "health", &T::health
+    );
+};
+
+template <>
+struct glz::meta<Ichor::EtcdVersionReply> {
+    using T = Ichor::EtcdVersionReply;
+    static constexpr auto value = object(
+            "etcdserver", &T::etcdserver,
+            "etcdcluster", &T::etcdcluster
+    );
+};
+
+Ichor::EtcdV2Service::EtcdV2Service(DependencyRegister &reg, Properties props) : AdvancedService<EtcdV2Service>(std::move(props)) {
+    reg.registerDependency<ILogger>(this, false, getProperties());
+    reg.registerDependency<IHttpConnectionService>(this, true, getProperties());
+    reg.registerDependency<IClientFactory>(this, true);
+}
+
+Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::EtcdV2Service::start() {
+    ICHOR_LOG_TRACE(_logger, "Started");
     co_return {};
 }
 
-Ichor::Task<void> Ichor::EtcdService::stop() {
+Ichor::Task<void> Ichor::EtcdV2Service::stop() {
+    ICHOR_LOG_TRACE(_logger, "Stopped");
     co_return;
 }
 
-void Ichor::EtcdService::addDependencyInstance(ILogger &logger, IService &) {
+void Ichor::EtcdV2Service::addDependencyInstance(ILogger &logger, IService &) {
     _logger = &logger;
+    ICHOR_LOG_TRACE(_logger, "Added logger");
 }
 
-void Ichor::EtcdService::removeDependencyInstance(ILogger&, IService&) {
+void Ichor::EtcdV2Service::removeDependencyInstance(ILogger&, IService&) {
+    ICHOR_LOG_TRACE(_logger, "Removed logger");
     _logger = nullptr;
 }
 
-void Ichor::EtcdService::addDependencyInstance(IHttpConnectionService &conn, IService &) {
-    _conn = &conn;
+void Ichor::EtcdV2Service::addDependencyInstance(IHttpConnectionService &conn, IService &) {
+    if(_mainConn == nullptr) {
+        ICHOR_LOG_TRACE(_logger, "Added MainCon");
+        _mainConn = &conn;
+        return;
+    }
+
+    // In a condition where we're stopping, e.g. the mainConn is already gone, the existing requests may still get 'added', but we've already cleaned up all requests
+    if(_connRequests.empty()) {
+        return;
+    }
+
+    ICHOR_LOG_TRACE(_logger, "Added conn, triggering coroutine");
+
+    _connRequests.top().conn = &conn;
+    _connRequests.top().event.set();
 }
 
-void Ichor::EtcdService::removeDependencyInstance(IHttpConnectionService&, IService&) {
-    _conn = nullptr;
+void Ichor::EtcdV2Service::removeDependencyInstance(IHttpConnectionService &conn, IService &) {
+    if(_mainConn == &conn) {
+        ICHOR_LOG_TRACE(_logger, "Removing MainCon");
+        _mainConn = nullptr;
+    }
+
+    ICHOR_LOG_TRACE(_logger, "Removing conn {}", getServiceState());
+    if(getServiceState() == ServiceState::STOPPING || getServiceState() == ServiceState::UNINJECTING) {
+        while(!_connRequests.empty()) {
+            _connRequests.top().event.set();
+            _connRequests.pop();
+        }
+    }
 }
 
-Ichor::Task<tl::expected<Ichor::EtcdReply, Ichor::EtcdError>> Ichor::EtcdService::put(std::string_view key, std::string_view value, std::optional<std::string_view> previous_value, std::optional<uint64_t> previous_index, std::optional<bool> previous_exists, std::optional<uint64_t> ttl_second, bool refresh, bool dir, bool in_order) {
+void Ichor::EtcdV2Service::addDependencyInstance(IClientFactory &factory, IService &) {
+    ICHOR_LOG_TRACE(_logger, "Added clientFactory");
+    _clientFactory = &factory;
+}
+
+void Ichor::EtcdV2Service::removeDependencyInstance(IClientFactory&, IService&) {
+    ICHOR_LOG_TRACE(_logger, "Removed clientFactory");
+    _clientFactory = nullptr;
+}
+
+Ichor::Task<tl::expected<Ichor::EtcdReply, Ichor::EtcdError>> Ichor::EtcdV2Service::put(std::string_view key, std::string_view value, std::optional<std::string_view> previous_value, std::optional<uint64_t> previous_index, std::optional<bool> previous_exists, std::optional<uint64_t> ttl_second, bool refresh, bool dir, bool in_order) {
     std::vector<uint8_t> msg_buf;
     fmt::format_to(std::back_inserter(msg_buf), "value={}", value);
     if(ttl_second) {
@@ -208,16 +322,16 @@ Ichor::Task<tl::expected<Ichor::EtcdReply, Ichor::EtcdError>> Ichor::EtcdService
     if(dir) {
         fmt::format_to(std::back_inserter(msg_buf), "&dir=true");
     }
-//    ICHOR_LOG_ERROR(_logger, "put body {}", std::string_view{(char*)msg_buf.data(), msg_buf.size()});
+    ICHOR_LOG_TRACE(_logger, "put body {}", std::string_view{(char*)msg_buf.data(), msg_buf.size()});
     std::vector<HttpHeader> headers{HttpHeader{"Content-Type", "application/x-www-form-urlencoded"}};
     HttpMethod method = in_order ? HttpMethod::post : HttpMethod::put;
-    auto http_reply = co_await _conn->sendAsync(method, fmt::format("/v2/keys/{}", key), std::move(headers), std::move(msg_buf));
+    auto http_reply = co_await _mainConn->sendAsync(method, fmt::format("/v2/keys/{}", key), std::move(headers), std::move(msg_buf));
+    ICHOR_LOG_TRACE(_logger, "put json {}", (char*)http_reply.body.data());
 
-    if(http_reply.status != HttpStatus::ok && http_reply.status != HttpStatus::created && http_reply.status != HttpStatus::forbidden) {
+    if(http_reply.status != HttpStatus::ok && http_reply.status != HttpStatus::created && http_reply.status != HttpStatus::forbidden && http_reply.status != HttpStatus::precondition_failed && http_reply.status != HttpStatus::not_found) {
         ICHOR_LOG_ERROR(_logger, "Error on route {}, http status {}", fmt::format("/v2/keys/{}", key), (int)http_reply.status);
         co_return tl::unexpected(Ichor::EtcdError::HTTP_RESPONSE_ERROR);
     }
-//    ICHOR_LOG_ERROR(_logger, "put json {}", (char*)http_reply.body.data());
 
     EtcdReply etcd_reply;
     auto err = glz::read_json(etcd_reply, http_reply.body);
@@ -249,20 +363,30 @@ Ichor::Task<tl::expected<Ichor::EtcdReply, Ichor::EtcdError>> Ichor::EtcdService
     co_return etcd_reply;
 }
 
-Ichor::Task<tl::expected<Ichor::EtcdReply, Ichor::EtcdError>> Ichor::EtcdService::put(std::string_view key, std::string_view value, std::optional<uint64_t> ttl_second, bool refresh) {
+Ichor::Task<tl::expected<Ichor::EtcdReply, Ichor::EtcdError>> Ichor::EtcdV2Service::put(std::string_view key, std::string_view value, std::optional<uint64_t> ttl_second, bool refresh) {
     return put(key, value, {}, {}, {}, ttl_second, refresh, false, false);
 }
 
-Ichor::Task<tl::expected<Ichor::EtcdReply, Ichor::EtcdError>> Ichor::EtcdService::put(std::string_view key, std::string_view value, std::optional<uint64_t> ttl_second) {
+Ichor::Task<tl::expected<Ichor::EtcdReply, Ichor::EtcdError>> Ichor::EtcdV2Service::put(std::string_view key, std::string_view value, std::optional<uint64_t> ttl_second) {
     return put(key, value, {}, {}, {}, ttl_second, false, false, false);
 }
 
-Ichor::Task<tl::expected<Ichor::EtcdReply, Ichor::EtcdError>> Ichor::EtcdService::put(std::string_view key, std::string_view value) {
+Ichor::Task<tl::expected<Ichor::EtcdReply, Ichor::EtcdError>> Ichor::EtcdV2Service::put(std::string_view key, std::string_view value) {
     return put(key, value, {}, {}, {}, {}, false, false, false);
 }
 
-Ichor::Task<tl::expected<Ichor::EtcdReply, Ichor::EtcdError>> Ichor::EtcdService::get(std::string_view key, bool recursive, bool sorted) {
+Ichor::Task<tl::expected<Ichor::EtcdReply, Ichor::EtcdError>> Ichor::EtcdV2Service::get(std::string_view key, bool recursive, bool sorted, bool watch, std::optional<uint64_t> watchIndex) {
     std::string url{fmt::format("/v2/keys/{}?", key)};
+
+    // using watches blocks the connection and thus blocks every other call
+    // This implementation requests a new HttpConnection specifically for this and cleans it up afterwards
+    IHttpConnectionService *connToUse = _mainConn;
+    std::optional<uint64_t> connIdToClean{};
+    ScopeGuard sg{[this, &connIdToClean]() {
+        if(connIdToClean && _clientFactory != nullptr) {
+            _clientFactory->removeConnection(this, *connIdToClean);
+        }
+    }};
 
     if(recursive) {
         fmt::format_to(std::back_inserter(url), "recursive=true&");
@@ -270,14 +394,40 @@ Ichor::Task<tl::expected<Ichor::EtcdReply, Ichor::EtcdError>> Ichor::EtcdService
     if(sorted) {
         fmt::format_to(std::back_inserter(url), "sorted=true&");
     }
+    if(watch) {
+        fmt::format_to(std::back_inserter(url), "wait=true&");
+    }
+    if(watchIndex) {
+        fmt::format_to(std::back_inserter(url), "waitIndex={}&", *watchIndex);
+    }
 
-    auto http_reply = co_await _conn->sendAsync(HttpMethod::get, url, {}, {});
+    ICHOR_LOG_TRACE(_logger, "get url {}", url);
+
+    // can't combine with above, as that would mean not tracing the request before a potential co_return
+    if(watch) {
+        ConnRequest &request = _connRequests.emplace();
+        connIdToClean = _clientFactory->createNewConnection(this, getProperties());
+        ICHOR_LOG_TRACE(_logger, "connIdToClean {}", *connIdToClean);
+        co_await request.event;
+        ICHOR_LOG_TRACE(_logger, "get url {} - conn {}", url, request.conn == nullptr ? false : true);
+        if(request.conn == nullptr) {
+            co_return tl::unexpected(EtcdError::QUITTING);
+        }
+        connToUse = request.conn;
+    }
+
+    auto http_reply = co_await connToUse->sendAsync(HttpMethod::get, url, {}, {});
 
     if(http_reply.status != HttpStatus::ok && http_reply.status != HttpStatus::not_found) {
         ICHOR_LOG_ERROR(_logger, "Error on route {}, http status {}", url, (int)http_reply.status);
         co_return tl::unexpected(Ichor::EtcdError::HTTP_RESPONSE_ERROR);
     }
-//    ICHOR_LOG_ERROR(_logger, "get json {}", (char*)http_reply.body.data());
+
+    if(http_reply.body.empty() && http_reply.status == HttpStatus::ok) {
+        co_return tl::unexpected(Ichor::EtcdError::CONNECTION_CLOSED_PREMATURELY_TRY_AGAIN);
+    }
+
+    ICHOR_LOG_TRACE(_logger, "get json {}", (char*)http_reply.body.data());
 
     EtcdReply etcd_reply;
     auto err = glz::read_json(etcd_reply, http_reply.body);
@@ -291,12 +441,11 @@ Ichor::Task<tl::expected<Ichor::EtcdReply, Ichor::EtcdError>> Ichor::EtcdService
     co_return etcd_reply;
 }
 
-
-Ichor::Task<tl::expected<Ichor::EtcdReply, Ichor::EtcdError>> Ichor::EtcdService::get(std::string_view key) {
-    return get(key, false, false);
+Ichor::Task<tl::expected<Ichor::EtcdReply, Ichor::EtcdError>> Ichor::EtcdV2Service::get(std::string_view key) {
+    return get(key, false, false, false, {});
 }
 
-Ichor::Task<tl::expected<Ichor::EtcdReply, Ichor::EtcdError>> Ichor::EtcdService::del(std::string_view key, bool recursive, bool dir) {
+Ichor::Task<tl::expected<Ichor::EtcdReply, Ichor::EtcdError>> Ichor::EtcdV2Service::del(std::string_view key, bool recursive, bool dir) {
     std::string url = fmt::format("/v2/keys/{}?", key);
     if(dir) {
         fmt::format_to(std::back_inserter(url), "dir=true&");
@@ -304,12 +453,17 @@ Ichor::Task<tl::expected<Ichor::EtcdReply, Ichor::EtcdError>> Ichor::EtcdService
     if(recursive) {
         fmt::format_to(std::back_inserter(url), "recursive=true&");
     }
-    auto http_reply = co_await _conn->sendAsync(HttpMethod::delete_, url, {}, {});
+
+    ICHOR_LOG_TRACE(_logger, "del url {}", url);
+
+    auto http_reply = co_await _mainConn->sendAsync(HttpMethod::delete_, url, {}, {});
 
     if(http_reply.status != HttpStatus::ok) {
         ICHOR_LOG_ERROR(_logger, "Error on route {}, http status {}", url, (int)http_reply.status);
         co_return tl::unexpected(Ichor::EtcdError::HTTP_RESPONSE_ERROR);
     }
+
+    ICHOR_LOG_TRACE(_logger, "del json {}", (char*)http_reply.body.data());
 
     EtcdReply etcd_reply;
     auto err = glz::read_json(etcd_reply, http_reply.body);
@@ -322,3 +476,95 @@ Ichor::Task<tl::expected<Ichor::EtcdReply, Ichor::EtcdError>> Ichor::EtcdService
 
     co_return etcd_reply;
 }
+
+Ichor::Task<tl::expected<Ichor::EtcdReply, Ichor::EtcdError>> Ichor::EtcdV2Service::leaderStatistics() {
+    std::string url = fmt::format("/v2/stats/leader");
+    auto http_reply = co_await _mainConn->sendAsync(HttpMethod::get, url, {}, {});
+    ICHOR_LOG_ERROR(_logger, "json {}", (char*)http_reply.body.data());
+    co_return tl::unexpected(Ichor::EtcdError::JSON_PARSE_ERROR);
+}
+
+Ichor::Task<tl::expected<Ichor::EtcdSelfStats, Ichor::EtcdError>> Ichor::EtcdV2Service::selfStatistics() {
+    std::string url = fmt::format("/v2/stats/self");
+    auto http_reply = co_await _mainConn->sendAsync(HttpMethod::get, url, {}, {});
+
+    if(http_reply.status != HttpStatus::ok) {
+        ICHOR_LOG_ERROR(_logger, "Error on route {}, http status {}", url, (int)http_reply.status);
+        co_return tl::unexpected(Ichor::EtcdError::HTTP_RESPONSE_ERROR);
+    }
+
+    EtcdSelfStats etcd_reply;
+    auto err = glz::read_json(etcd_reply, http_reply.body);
+
+    if(err) {
+        ICHOR_LOG_ERROR(_logger, "Glaze error {} at {}", err.ec, err.location);
+        ICHOR_LOG_ERROR(_logger, "json {}", (char*)http_reply.body.data());
+        co_return tl::unexpected(Ichor::EtcdError::JSON_PARSE_ERROR);
+    }
+
+    co_return etcd_reply;
+}
+
+Ichor::Task<tl::expected<Ichor::EtcdStoreStats, Ichor::EtcdError>> Ichor::EtcdV2Service::storeStatistics() {
+    std::string url = fmt::format("/v2/stats/store");
+    auto http_reply = co_await _mainConn->sendAsync(HttpMethod::get, url, {}, {});
+
+    if(http_reply.status != HttpStatus::ok) {
+        ICHOR_LOG_ERROR(_logger, "Error on route {}, http status {}", url, (int)http_reply.status);
+        co_return tl::unexpected(Ichor::EtcdError::HTTP_RESPONSE_ERROR);
+    }
+
+    EtcdStoreStats etcd_reply;
+    auto err = glz::read_json(etcd_reply, http_reply.body);
+
+    if(err) {
+        ICHOR_LOG_ERROR(_logger, "Glaze error {} at {}", err.ec, err.location);
+        ICHOR_LOG_ERROR(_logger, "json {}", (char*)http_reply.body.data());
+        co_return tl::unexpected(Ichor::EtcdError::JSON_PARSE_ERROR);
+    }
+
+    co_return etcd_reply;
+}
+
+Ichor::Task<tl::expected<Ichor::EtcdVersionReply, Ichor::EtcdError>> Ichor::EtcdV2Service::version() {
+    std::string url = fmt::format("/version");
+    auto http_reply = co_await _mainConn->sendAsync(HttpMethod::get, url, {}, {});
+
+    if(http_reply.status != HttpStatus::ok) {
+        ICHOR_LOG_ERROR(_logger, "Error on route {}, http status {}", url, (int)http_reply.status);
+        co_return tl::unexpected(Ichor::EtcdError::HTTP_RESPONSE_ERROR);
+    }
+
+    EtcdVersionReply etcd_reply;
+    auto err = glz::read_json(etcd_reply, http_reply.body);
+
+    if(err) {
+        ICHOR_LOG_ERROR(_logger, "Glaze error {} at {}", err.ec, err.location);
+        ICHOR_LOG_ERROR(_logger, "json {}", (char*)http_reply.body.data());
+        co_return tl::unexpected(Ichor::EtcdError::JSON_PARSE_ERROR);
+    }
+
+    co_return etcd_reply;
+}
+
+Ichor::Task<tl::expected<bool, Ichor::EtcdError>> Ichor::EtcdV2Service::health() {
+    std::string url = fmt::format("/health");
+    auto http_reply = co_await _mainConn->sendAsync(HttpMethod::get, url, {}, {});
+
+    if(http_reply.status != HttpStatus::ok) {
+        ICHOR_LOG_ERROR(_logger, "Error on route {}, http status {}", url, (int)http_reply.status);
+        co_return tl::unexpected(Ichor::EtcdError::HTTP_RESPONSE_ERROR);
+    }
+
+    EtcdHealthReply etcd_reply;
+    auto err = glz::read_json(etcd_reply, http_reply.body);
+
+    if(err) {
+        ICHOR_LOG_ERROR(_logger, "Glaze error {} at {}", err.ec, err.location);
+        ICHOR_LOG_ERROR(_logger, "json {}", (char*)http_reply.body.data());
+        co_return tl::unexpected(Ichor::EtcdError::JSON_PARSE_ERROR);
+    }
+
+    co_return etcd_reply.health == "true";
+}
+

@@ -40,6 +40,8 @@ Ichor::DependencyManager::DependencyManager(IEventQueue *eventQueue) : _eventQue
 void Ichor::DependencyManager::start() {
     ICHOR_LOG_DEBUG(_logger, "starting dm {}", _id);
 
+    _quitEventReceived = false;
+
     if(Detail::_local_dm != nullptr) [[unlikely]] {
         throw std::runtime_error("This thread already has a manager");
     }
@@ -261,6 +263,8 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &&uniqueEvt) 
             case QuitEvent::TYPE: {
                 INTERNAL_DEBUG("QuitEvent {} {} {}", evt->id, evt->priority, evt->originatingService);
                 auto *_quitEvt = static_cast<QuitEvent *>(evt.get());
+
+                _quitEventReceived = true;
 
                 bool allServicesStopped{true};
 
@@ -610,15 +614,15 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &&uniqueEvt) 
                 break;
             case ContinuableEvent::TYPE: {
                 auto *continuableEvt = static_cast<ContinuableEvent *>(evt.get());
-                INTERNAL_DEBUG("ContinuableEventAsync {} {} {}", continuableEvt->promiseId, evt->id, evt->priority);
+                INTERNAL_DEBUG("ContinuableEvent {} {} {}", continuableEvt->promiseId, evt->id, evt->priority);
                 auto genIt = _scopedGenerators.find(continuableEvt->promiseId);
 
                 if (genIt != _scopedGenerators.end()) {
-                    INTERNAL_DEBUG("ContinuableEventAsync2 {}", genIt->second->done());
+                    INTERNAL_DEBUG("ContinuableEvent2 {}", genIt->second->done());
 
                     if (!genIt->second->done()) {
                         auto it = genIt->second->begin_interface();
-                        INTERNAL_DEBUG("ContinuableEventAsync it {} {} {}", it->get_finished(), it->get_op_state(), it->get_promise_state());
+                        INTERNAL_DEBUG("ContinuableEvent it {} {} {}", it->get_finished(), it->get_op_state(), it->get_promise_state());
 
                         if (!it->get_finished() && it->get_promise_state() != state::value_not_ready_consumer_active) {
                             if constexpr (DO_INTERNAL_DEBUG || DO_INTERNAL_COROUTINE_DEBUG) {
@@ -627,8 +631,8 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &&uniqueEvt) 
                                     std::terminate();
                                 }
                             }
-                            INTERNAL_DEBUG("ContinuableEventAsync push event {}", continuableEvt->promiseId);
-                            _eventQueue->pushPrioritisedEvent<ContinuableEvent>(continuableEvt->originatingService, evt->priority, continuableEvt->promiseId);
+//                            INTERNAL_DEBUG("ContinuableEvent push event {}", continuableEvt->promiseId);
+//                            _eventQueue->pushPrioritisedEvent<ContinuableEvent>(continuableEvt->originatingService, evt->priority, continuableEvt->promiseId);
                         }
 
                         if (it->get_finished()) {
@@ -827,12 +831,13 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &&uniqueEvt) 
                 }
 
                 auto gen = runFunctionEvt->fun();
+                gen.set_priority(evt->priority);
                 auto it = gen.begin();
                 INTERNAL_DEBUG("state: {} {} {} {} {}", gen.done(), it.get_finished(), it.get_op_state(), it.get_promise_state(), it.get_promise_id());
 
-                if (!it.get_finished() && it.get_promise_state() != state::value_not_ready_consumer_active) {
-                    _eventQueue->pushPrioritisedEvent<ContinuableEvent>(runFunctionEvt->originatingService, evt->priority, it.get_promise_id());
-                }
+//                if (!it.get_finished() && it.get_promise_state() != state::value_not_ready_consumer_active) {
+//                    _eventQueue->pushPrioritisedEvent<ContinuableEvent>(runFunctionEvt->originatingService, evt->priority, it.get_promise_id());
+//                }
 
                 if (!it.get_finished()) {
                     if constexpr (DO_INTERNAL_DEBUG) {
@@ -917,7 +922,7 @@ bool Ichor::DependencyManager::existingCoroutineFor(uint64_t serviceId) const no
     return existingCoroutineEvent != _scopedEvents.end();
 }
 
-Ichor::AsyncGenerator<void> Ichor::DependencyManager::waitForService(uint64_t serviceId, uint64_t eventType) noexcept {
+Ichor::Task<void> Ichor::DependencyManager::waitForService(uint64_t serviceId, uint64_t eventType) noexcept {
     if constexpr (DO_INTERNAL_DEBUG || DO_HARDENING) {
         if (this != Detail::_local_dm) [[unlikely]] { // are we on the right thread?
             std::terminate();
@@ -1059,9 +1064,9 @@ uint64_t Ichor::DependencyManager::broadcastEvent(std::shared_ptr<Event> &evt) {
                 }
             }
 
-            if(!it.get_finished() && it.get_promise_state() != state::value_not_ready_consumer_active) {
-                _eventQueue->pushPrioritisedEvent<ContinuableEvent>(evt->originatingService, evt->priority, it.get_promise_id());
-            }
+//            if(!it.get_finished() && it.get_promise_state() != state::value_not_ready_consumer_active) {
+//                _eventQueue->pushPrioritisedEvent<ContinuableEvent>(evt->originatingService, evt->priority, it.get_promise_id());
+//            }
 
             if constexpr (DO_INTERNAL_DEBUG) {
                 if (it.get_finished() && it.get_has_suspended()) [[unlikely]] {
@@ -1124,8 +1129,34 @@ Ichor::IEventQueue& Ichor::DependencyManager::getEventQueue() const noexcept {
     return *_eventQueue;
 }
 
-void Ichor::DependencyManager::setCommunicationChannel(Ichor::CommunicationChannel *channel) {
+Ichor::Task<tl::expected<void, Ichor::WaitError>> Ichor::DependencyManager::waitForServiceStarted(NeverNull<IService*> svc) {
+    if(_quitEventReceived) {
+        co_return tl::unexpected(Ichor::WaitError::QUITTING);
+    }
+    if(svc->getServiceState() == ServiceState::ACTIVE) {
+        co_return {};
+    }
+    co_await waitForService(svc->getServiceId(), StartServiceEvent::TYPE);
+    co_return {};
+}
+
+Ichor::Task<tl::expected<void, Ichor::WaitError>> Ichor::DependencyManager::waitForServiceStopped(NeverNull<IService*> svc) {
+    if(_quitEventReceived) {
+        co_return tl::unexpected(Ichor::WaitError::QUITTING);
+    }
+    if(svc->getServiceState() == ServiceState::ACTIVE) {
+        co_return {};
+    }
+    co_await waitForService(svc->getServiceId(), StopServiceEvent::TYPE);
+    co_return {};
+}
+
+void Ichor::DependencyManager::setCommunicationChannel(NeverNull<Ichor::CommunicationChannel*> channel) {
     _communicationChannel = channel;
+}
+
+void Ichor::DependencyManager::clearCommunicationChannel() {
+    _communicationChannel = nullptr;
 }
 
 [[nodiscard]] Ichor::DependencyManager& Ichor::GetThreadLocalManager() noexcept {

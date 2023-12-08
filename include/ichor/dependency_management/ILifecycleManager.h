@@ -24,7 +24,7 @@ namespace Ichor {
         [[nodiscard]] virtual bool setUninjected() = 0;
         [[nodiscard]] virtual std::string_view implementationName() const noexcept = 0;
         [[nodiscard]] virtual uint64_t type() const noexcept = 0;
-        [[nodiscard]] virtual uint64_t serviceId() const noexcept = 0;
+        [[nodiscard]] virtual ServiceIdType serviceId() const noexcept = 0;
         [[nodiscard]] virtual uint64_t getPriority() const noexcept = 0;
         [[nodiscard]] virtual ServiceState getServiceState() const noexcept = 0;
         [[nodiscard]] virtual NeverNull<IService*> getIService() noexcept = 0;
@@ -36,7 +36,7 @@ namespace Ichor {
         virtual void removeSelfInto(uint64_t keyOfInterfaceToInject, uint64_t serviceIdOfOther, std::function<void(NeverNull<void*>, IService&)>&) = 0;
 
     protected:
-        static Ichor::AsyncGenerator<void> waitForService(uint64_t serviceId, uint64_t eventType) noexcept;
+        static Task<void> waitForService(uint64_t serviceId, uint64_t eventType) noexcept;
     };
 }
 

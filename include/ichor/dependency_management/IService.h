@@ -7,13 +7,15 @@
 #include <ichor/Enums.h>
 
 namespace Ichor {
+    using ServiceIdType = uint64_t;
+
     class IService {
     public:
         virtual ~IService() = default;
 
         /// Process-local unique service id
         /// \return id
-        [[nodiscard]] virtual uint64_t getServiceId() const noexcept = 0;
+        [[nodiscard]] virtual ServiceIdType getServiceId() const noexcept = 0;
 
         /// Global unique service id
         /// \return gid

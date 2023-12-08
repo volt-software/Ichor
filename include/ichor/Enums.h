@@ -71,6 +71,10 @@ namespace Ichor
         STOPPED
     };
 
+    enum class WaitError {
+        QUITTING
+    };
+
     enum class StartError {
         FAILED
     };

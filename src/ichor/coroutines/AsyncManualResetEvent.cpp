@@ -7,6 +7,7 @@
 
 #include <ichor/coroutines/AsyncManualResetEvent.h>
 #include <cassert>
+#include <fmt/core.h>
 
 Ichor::AsyncManualResetEvent::AsyncManualResetEvent(bool initiallySet) noexcept
         : _state(initiallySet ? static_cast<void*>(this) : nullptr)

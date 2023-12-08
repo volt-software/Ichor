@@ -2,6 +2,7 @@
 
 #include <ichor/dependency_management/AdvancedService.h>
 #include <ichor/services/etcd/IEtcd.h>
+#include <ichor/events/RunFunctionEvent.h>
 
 namespace Ichor {
     struct EtcdUsingService final : public AdvancedService<EtcdUsingService> {
@@ -274,7 +275,7 @@ namespace Ichor {
                     throw std::runtime_error("Incorrect put node value");
                 }
 
-                auto getReply = co_await _etcd->get("test_key_dir", true, false);
+                auto getReply = co_await _etcd->get("test_key_dir", true, false, false, {});
                 if(!getReply) {
                     throw std::runtime_error("");
                 }
@@ -324,7 +325,7 @@ namespace Ichor {
                     throw std::runtime_error("Did not find key two");
                 }
 
-                getReply = co_await _etcd->get("test_key_dir", true, true);
+                getReply = co_await _etcd->get("test_key_dir", true, true, false, {});
                 if(!getReply) {
                     throw std::runtime_error("");
                 }
@@ -388,7 +389,7 @@ namespace Ichor {
                     throw std::runtime_error("Incorrect put node value");
                 }
 
-                auto getReply = co_await _etcd->get("test_key_dir", true, true);
+                auto getReply = co_await _etcd->get("test_key_dir", true, true, false, {});
                 if(!getReply) {
                     throw std::runtime_error("");
                 }
@@ -447,13 +448,81 @@ namespace Ichor {
 
                 std::this_thread::sleep_for(std::chrono::milliseconds(1500));
 
-                auto getReply = co_await _etcd->get("ttl_key", false, false);
+                auto getReply = co_await _etcd->get("ttl_key", false, false, false, {});
                 if(!getReply) {
                     throw std::runtime_error("");
                 }
 
                 if (!getReply.value().errorCode || getReply.value().errorCode != EtcdErrorCodes::KEY_DOES_NOT_EXIST) {
                     throw std::runtime_error("Incorrect ttl node errorCode");
+                }
+            }
+            // Watch test
+            {
+                {
+                    auto putReply = co_await _etcd->put("watch_key", "value", {}, {}, {}, {}, false, false, false);
+                    if (!putReply) {
+                        throw std::runtime_error("");
+                    }
+
+                    if (!putReply.value().node || putReply.value().node->value != "value") {
+                        throw std::runtime_error("Incorrect put dir node value");
+                    }
+                }
+
+                auto start = std::chrono::steady_clock::now();
+                GetThreadLocalEventQueue().pushEvent<RunFunctionEventAsync>(0, [this, start]() -> AsyncGenerator<IchorBehaviour> {
+                    auto now = std::chrono::steady_clock::now();
+                    while(now - start < std::chrono::milliseconds(250)) {
+                        co_yield IchorBehaviour::DONE;
+                        now = std::chrono::steady_clock::now();
+                    }
+
+                    auto putReply = co_await _etcd->put("watch_key", "new_value", {}, {}, {}, {}, false, false, false);
+                    if (!putReply) {
+                        throw std::runtime_error("");
+                    }
+
+                    if (!putReply.value().node || putReply.value().node->value != "new_value") {
+                        throw std::runtime_error("Incorrect put dir node value");
+                    }
+
+                    co_return IchorBehaviour::DONE;
+                });
+
+                auto getReply = co_await _etcd->get("watch_key", false, false, true, {});
+                if(!getReply) {
+                    throw std::runtime_error("");
+                }
+
+                if (!getReply.value().node || getReply.value().node->value != "new_value") {
+                    throw std::runtime_error("Incorrect get node value");
+                }
+            }
+            // Health test
+            {
+                auto healthReply = co_await _etcd->health();
+                if (!healthReply) {
+                    throw std::runtime_error("");
+                }
+
+                if (!healthReply.value()) {
+                    throw std::runtime_error("Incorrect health value");
+                }
+            }
+            // Version test
+            {
+                auto versionReply = co_await _etcd->version();
+                if (!versionReply) {
+                    throw std::runtime_error("");
+                }
+
+                if (versionReply.value().etcdcluster.empty()) {
+                    throw std::runtime_error("Incorrect etcdcluster value");
+                }
+
+                if (versionReply.value().etcdserver.empty()) {
+                    throw std::runtime_error("Incorrect etcdcluster value");
                 }
             }
 

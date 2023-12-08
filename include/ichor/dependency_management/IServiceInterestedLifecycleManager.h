@@ -1,6 +1,6 @@
 #pragma once
 
-#define SELF_SERVICE_ID std::numeric_limits<uint64_t>::max();
+#define SELF_SERVICE_ID std::numeric_limits<ServiceIdType>::max();
 
 namespace Ichor::Detail {
     /// implementation of ILifecycleManager purely to find out if another ILifecycleManager is interested in IService

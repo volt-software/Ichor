@@ -120,14 +120,14 @@ namespace Ichor::Detail {
 
                 if(dep->required && dep->satisfied == 0 && (getServiceState() == ServiceState::STARTING || getServiceState() == ServiceState::INJECTING)) {
                     INTERNAL_DEBUG("{}:{}:{} dependencyOffline waitForService {} {} {} {}", serviceId(), _service.getServiceName(), getServiceState(), interested, dep->satisfied, dep->required, getDependees().size());
-                    co_await waitForService(serviceId(), DependencyOnlineEvent::TYPE).begin();
+                    co_await waitForService(serviceId(), DependencyOnlineEvent::TYPE);
                 }
 
                 if (dep->required && dep->satisfied == 0 && interested != DependencyChange::FOUND_AND_STOP_ME && getServiceState() == ServiceState::ACTIVE) {
                     INTERNAL_DEBUG("{}:{}:{} dependencyOffline stopping {}", serviceId(), _service.getServiceName(), getServiceState(), interested);
 
                     GetThreadLocalEventQueue().template pushPrioritisedEvent<DependencyOfflineEvent>(serviceId(), INTERNAL_DEPENDENCY_EVENT_PRIORITY - 1);
-                    co_await waitForService(serviceId(), DependencyOfflineEvent::TYPE).begin();
+                    co_await waitForService(serviceId(), DependencyOfflineEvent::TYPE);
                     INTERNAL_DEBUG("{}:{}:{} dependencyOffline stopping {} pushPrioritisedEventAsync done", serviceId(), _service.getServiceName(), getServiceState(), interested);
 
 #ifdef ICHOR_USE_HARDENING
@@ -165,7 +165,7 @@ namespace Ichor::Detail {
 
                 if(dep->required && dep->satisfied == 0 && (getServiceState() == ServiceState::UNINJECTING || getServiceState() == ServiceState::STOPPING)) {
                     INTERNAL_DEBUG("{}:{}:{} dependencyOffline waitForService {} {} {} {}", serviceId(), _service.getServiceName(), getServiceState(), interested, dep->satisfied, dep->required, getDependees().size());
-                    co_await waitForService(serviceId(), StopServiceEvent::TYPE).begin();
+                    co_await waitForService(serviceId(), StopServiceEvent::TYPE);
                 }
 
 #ifdef ICHOR_USE_HARDENING

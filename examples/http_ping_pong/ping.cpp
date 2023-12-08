@@ -84,8 +84,8 @@ int main(int argc, char *argv[]) {
 
     dm.createServiceManager<PingMsgJsonSerializer, ISerializer<PingMsg>>();
     dm.createServiceManager<AsioContextService, IAsioContextService>();
-    dm.createServiceManager<ClientFactory<HttpConnectionService, IHttpConnectionService>>();
-    dm.createServiceManager<PingService>(Properties{{"Address", Ichor::make_any<std::string>(address)}, {"Port", Ichor::make_any<uint16_t>(static_cast<uint16_t>(8001))}});
+    dm.createServiceManager<ClientFactory<HttpConnectionService, IHttpConnectionService>, IClientFactory>();
+    dm.createServiceManager<PingService>(Properties{{"Address", Ichor::make_any<std::string>(address)}, {"Port", Ichor::make_any<uint16_t>(static_cast<uint16_t>(8001))}, {"NoDelay", Ichor::make_any<bool>(true)}});
     dm.createServiceManager<TimerFactoryFactory>();
     queue->start(CaptureSigInt);
     auto end = std::chrono::steady_clock::now();

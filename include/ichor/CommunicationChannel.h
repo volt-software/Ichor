@@ -19,7 +19,7 @@ namespace Ichor {
 
         void removeManager(DependencyManager *manager) {
             std::unique_lock l(_mutex);
-            manager->setCommunicationChannel(nullptr);
+            manager->clearCommunicationChannel();
             _managers.erase(manager->getId());
         }
 

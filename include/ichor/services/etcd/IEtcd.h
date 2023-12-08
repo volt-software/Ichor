@@ -11,7 +11,9 @@ namespace Ichor {
     enum class EtcdError : uint64_t {
         HTTP_RESPONSE_ERROR,
         JSON_PARSE_ERROR,
-        TIMEOUT
+        TIMEOUT,
+        CONNECTION_CLOSED_PREMATURELY_TRY_AGAIN,
+        QUITTING
     };
 
     enum class EtcdErrorCodes : uint64_t {
@@ -58,6 +60,46 @@ namespace Ichor {
         std::optional<uint64_t> x_etcd_index;
         std::optional<uint64_t> x_raft_index;
         std::optional<uint64_t> x_raft_term;
+    };
+
+    struct EtcdLeaderInfoStats final {
+        std::string leader;
+        std::string uptime;
+        std::string startTime;
+    };
+
+    struct EtcdSelfStats final {
+        std::string name;
+        std::string id;
+        std::string state;
+        std::string startTime;
+        EtcdLeaderInfoStats leaderInfo;
+        uint64_t recvAppendRequestCnt;
+        uint64_t sendAppendRequestCnt;
+    };
+
+    struct EtcdStoreStats final {
+        uint64_t compareAndSwapFail;
+        uint64_t compareAndSwapSuccess;
+        uint64_t compareAndDeleteSuccess;
+        uint64_t compareAndDeleteFail;
+        uint64_t createFail;
+        uint64_t createSuccess;
+        uint64_t deleteFail;
+        uint64_t deleteSuccess;
+        uint64_t expireCount;
+        uint64_t getsFail;
+        uint64_t getsSuccess;
+        uint64_t setsFail;
+        uint64_t setsSuccess;
+        uint64_t updateFail;
+        uint64_t updateSuccess;
+        uint64_t watchers;
+    };
+
+    struct EtcdVersionReply final {
+        std::string etcdserver;
+        std::string etcdcluster;
     };
 
     class IEtcd {
@@ -113,7 +155,7 @@ namespace Ichor {
          * @param sorted Set to true if
          * @return Either the EtcdReply or an EtcdError
          */
-        virtual Task<tl::expected<EtcdReply, EtcdError>> get(std::string_view key, bool recursive, bool sorted) = 0;
+        virtual Task<tl::expected<EtcdReply, EtcdError>> get(std::string_view key, bool recursive, bool sorted, bool watch, std::optional<uint64_t> watchIndex) = 0;
 
         /**
          * Get value for key operation
@@ -132,6 +174,38 @@ namespace Ichor {
          * @return Either the EtcdReply or an EtcdError
          */
         virtual Task<tl::expected<EtcdReply, EtcdError>> del(std::string_view key, bool recursive, bool dir) = 0;
+
+        /**
+         * Unimplemented
+         * @return
+         */
+        virtual Task<tl::expected<EtcdReply, EtcdError>> leaderStatistics() = 0;
+
+        /**
+         * Get statistics of the etcd server that we're connected to
+         * @return
+         */
+        virtual Task<tl::expected<EtcdSelfStats, EtcdError>> selfStatistics() = 0;
+
+        /**
+         * Get the store statistics of the etcd server that we're connected to
+         * @return
+         */
+        virtual Task<tl::expected<EtcdStoreStats, EtcdError>> storeStatistics() = 0;
+
+        /**
+         * Get the version of the etcd server that we're connected to
+         * @return
+         */
+        virtual Task<tl::expected<EtcdVersionReply, EtcdError>> version() = 0;
+
+        /**
+         * Get the health status of the etcd server that we're connected to
+         * @return
+         */
+        virtual Task<tl::expected<bool, EtcdError>> health() = 0;
+
+
 
     protected:
         ~IEtcd() = default;
