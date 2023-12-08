@@ -131,12 +131,12 @@ Ichor::Task<Ichor::HttpResponse> Ichor::HttpConnectionService::sendAsync(Ichor::
             lg.unlock();
             INTERNAL_DEBUG("Outbox {}", next.route);
 
-            ScopeGuard const coroutineGuard{[this, &event, &lg]() {
+            ScopeGuard const coroutineGuard{[this, event = next.event, &lg]() {
                 // use service id 0 to ensure event gets run, even if service is stopped. Otherwise, the coroutine will never complete.
                 // Similarly, use priority 0 to ensure these events run before any dependency changes, otherwise the service might be destroyed
                 // before we can finish all the coroutines.
-                _queue->pushPrioritisedEvent<RunFunctionEvent>(0u, 0u, [&event]() {
-                    event.set();
+                _queue->pushPrioritisedEvent<RunFunctionEvent>(0u, 0u, [event]() {
+                    event->set();
                 });
                 lg.lock();
                 _outbox.pop_front();
