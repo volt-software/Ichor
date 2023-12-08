@@ -43,11 +43,6 @@ sudo apt install g++ build-essential cmake
 #### Optional Features
 Some features are behind feature flags and have their own dependencies.
 
-If using etcd:
-```
-sudo apt install libgrpc++-dev libprotobuf-dev
-```
-
 If using the Boost.BEAST (recommended boost 1.70 or newer):
 
 Ubuntu 20.04:

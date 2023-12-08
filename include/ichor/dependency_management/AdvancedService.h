@@ -25,7 +25,7 @@ namespace Ichor {
 #endif
         class DependencyLifecycleManager;
 
-        extern std::atomic<uint64_t> _serviceIdCounter;
+        extern std::atomic<ServiceIdType> _serviceIdCounter;
     }
 
     template <typename T>
@@ -53,7 +53,7 @@ namespace Ichor {
 
         /// Process-local unique service id
         /// \return id
-        [[nodiscard]] uint64_t getServiceId() const noexcept final {
+        [[nodiscard]] ServiceIdType getServiceId() const noexcept final {
             return _serviceId;
         }
 
@@ -178,7 +178,7 @@ namespace Ichor {
             return static_cast<T*>(this);
         }
 
-        uint64_t _serviceId;
+        ServiceIdType _serviceId;
         uint64_t _servicePriority;
         sole::uuid _serviceGid;
         ServiceState _serviceState;

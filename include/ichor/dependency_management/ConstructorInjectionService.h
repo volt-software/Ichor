@@ -119,7 +119,7 @@ namespace Ichor {
     }  // namespace refl
 
     namespace Detail {
-        extern std::atomic<uint64_t> _serviceIdCounter;
+        extern std::atomic<ServiceIdType> _serviceIdCounter;
 
         template<class ServiceType, typename... IFaces>
 #if (!defined(WIN32) && !defined(_WIN32) && !defined(__WIN32)) || defined(__CYGWIN__)
@@ -174,7 +174,7 @@ namespace Ichor {
 
         /// Process-local unique service id
         /// \return id
-        [[nodiscard]] uint64_t getServiceId() const noexcept final {
+        [[nodiscard]] ServiceIdType getServiceId() const noexcept final {
             return _serviceId;
         }
 
@@ -302,7 +302,7 @@ namespace Ichor {
         }
 
 
-        uint64_t _serviceId;
+        ServiceIdType _serviceId;
         uint64_t _servicePriority;
         sole::uuid _serviceGid;
         ServiceState _serviceState;
@@ -337,7 +337,7 @@ namespace Ichor {
 
         /// Process-local unique service id
         /// \return id
-        [[nodiscard]] uint64_t getServiceId() const noexcept final {
+        [[nodiscard]] ServiceIdType getServiceId() const noexcept final {
             return _serviceId;
         }
 
@@ -454,7 +454,7 @@ namespace Ichor {
             _properties = std::move(properties);
         }
 
-        uint64_t _serviceId;
+        ServiceIdType _serviceId;
         uint64_t _servicePriority;
         sole::uuid _serviceGid;
         ServiceState _serviceState;

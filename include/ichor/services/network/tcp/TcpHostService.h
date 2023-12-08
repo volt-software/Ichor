@@ -46,7 +46,7 @@ namespace Ichor {
         bool _quit;
         ILogger *_logger{};
         ITimerFactory *_timerFactory{};
-        std::vector<TcpConnectionService*> _connections;
+        std::vector<NeverNull<TcpConnectionService*>> _connections;
         EventHandlerRegistration _newSocketEventHandlerRegistration{};
     };
 }

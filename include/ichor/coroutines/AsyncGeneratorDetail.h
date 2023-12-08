@@ -20,7 +20,7 @@ namespace Ichor::Detail {
         }
 #endif
 
-        Ichor::Detail::_local_dm->getEventQueue().pushPrioritisedEvent<Ichor::ContinuableEvent>(0u, INTERNAL_DEPENDENCY_EVENT_PRIORITY, _id);
+        Ichor::Detail::_local_dm->getEventQueue().pushPrioritisedEvent<Ichor::ContinuableEvent>(0u, _priority, _id);
 
         INTERNAL_COROUTINE_DEBUG("yield_value<{}>(&) {} {}", typeName<T>(), _id, !!_consumerCoroutine);
         _currentValue.emplace(std::move(value));
@@ -39,7 +39,7 @@ namespace Ichor::Detail {
         }
 #endif
 
-        Ichor::Detail::_local_dm->getEventQueue().pushPrioritisedEvent<Ichor::ContinuableEvent>(0u, INTERNAL_DEPENDENCY_EVENT_PRIORITY, _id);
+        Ichor::Detail::_local_dm->getEventQueue().pushPrioritisedEvent<Ichor::ContinuableEvent>(0u, _priority, _id);
 
         INTERNAL_COROUTINE_DEBUG("yield_value<{}>(&&) {} {}", typeName<T>(), _id, !!_consumerCoroutine);
         _currentValue.emplace(std::forward<T>(value));
@@ -59,13 +59,13 @@ namespace Ichor::Detail {
 
         if constexpr(std::is_same_v<T, StartBehaviour>) {
             if(_hasSuspended.has_value() && *_hasSuspended) {
-                auto evtId = Ichor::Detail::_local_dm->getEventQueue().pushPrioritisedEvent<Ichor::ContinuableStartEvent>(0u, INTERNAL_COROUTINE_EVENT_PRIORITY, _id);
+                auto evtId = Ichor::Detail::_local_dm->getEventQueue().pushPrioritisedEvent<Ichor::ContinuableStartEvent>(0u, _priority, _id);
                 INTERNAL_COROUTINE_DEBUG("push continuable {} {}", _id, evtId);
             }
         }
         if constexpr(std::is_same_v<T, IchorBehaviour>) {
             if(_hasSuspended.has_value() && *_hasSuspended) {
-                auto evtId = Ichor::Detail::_local_dm->getEventQueue().pushPrioritisedEvent<Ichor::ContinuableEvent>(0u, INTERNAL_COROUTINE_EVENT_PRIORITY, _id);
+                auto evtId = Ichor::Detail::_local_dm->getEventQueue().pushPrioritisedEvent<Ichor::ContinuableEvent>(0u, _priority, _id);
                 INTERNAL_COROUTINE_DEBUG("push {} {}", _id, evtId);
             }
         }
@@ -87,13 +87,13 @@ namespace Ichor::Detail {
 
         if constexpr(std::is_same_v<T, StartBehaviour>) {
             if(_hasSuspended.has_value() && *_hasSuspended) {
-                auto evtId = Ichor::Detail::_local_dm->getEventQueue().pushPrioritisedEvent<Ichor::ContinuableStartEvent>(0u, INTERNAL_COROUTINE_EVENT_PRIORITY, _id);
+                auto evtId = Ichor::Detail::_local_dm->getEventQueue().pushPrioritisedEvent<Ichor::ContinuableStartEvent>(0u, _priority, _id);
                 INTERNAL_COROUTINE_DEBUG("push continuable {} {}", _id, evtId);
             }
         }
         if constexpr(std::is_same_v<T, IchorBehaviour>) {
             if(_hasSuspended.has_value() && *_hasSuspended) {
-                auto evtId = Ichor::Detail::_local_dm->getEventQueue().pushPrioritisedEvent<Ichor::ContinuableEvent>(0u, INTERNAL_COROUTINE_EVENT_PRIORITY, _id);
+                auto evtId = Ichor::Detail::_local_dm->getEventQueue().pushPrioritisedEvent<Ichor::ContinuableEvent>(0u, _priority, _id);
                 INTERNAL_COROUTINE_DEBUG("push {}", _id, evtId);
             }
         }

@@ -17,8 +17,6 @@
 
 #include "fields_alloc.hpp"
 
-#include <rapidjson/document.h>
-#include <rapidjson/writer.h>
 #include <boost/beast/http.hpp>
 #include <boost/asio.hpp>
 #include <chrono>
@@ -29,10 +27,35 @@
 #include <memory>
 #include <string>
 
+// Glaze uses different conventions than Ichor, ignore them to prevent being spammed by warnings
+#if defined( __GNUC__ )
+#    pragma GCC diagnostic push
+#    pragma GCC diagnostic ignored "-Wsign-conversion"
+#    pragma GCC diagnostic ignored "-Wshadow"
+#    pragma GCC diagnostic ignored "-Wconversion"
+#endif
+#include <glaze/glaze.hpp>
+#if defined( __GNUC__ )
+#    pragma GCC diagnostic pop
+#endif
+
 namespace beast = boost::beast;         // from <boost/beast.hpp>
 namespace http = beast::http;           // from <boost/beast/http.hpp>
 namespace net = boost::asio;            // from <boost/asio.hpp>
 using tcp = boost::asio::ip::tcp;       // from <boost/asio/ip/tcp.hpp>
+
+struct ping_message {
+    uint64_t sequence{};
+};
+template <>
+struct glz::meta<ping_message> {
+    using T = ping_message;
+    static constexpr auto value = object(
+            "sequence", &T::sequence
+    );
+};
+
+
 
 class http_worker
 {
@@ -163,22 +186,16 @@ private:
             std::terminate();
         }
 
-        rapidjson::Document d;
-        d.ParseInsitu(reinterpret_cast<char*>(body.data()));
 
-        if(d.HasParseError() || !d.HasMember("sequence")) {
+        ping_message msg;
+        auto err = glz::read_json(msg, body.data());
+
+        if(err) {
             std::terminate();
         }
 
-        rapidjson::StringBuffer sb;
-        rapidjson::Writer<rapidjson::StringBuffer> writer(sb);
-
-        writer.StartObject();
-
-        writer.String("sequence");
-        writer.Uint64(d["sequence"].GetUint64());
-
-        writer.EndObject();
+        std::string buf;
+        glz::write_json(msg, buf);
 
         string_response_.emplace(
                 std::piecewise_construct,
@@ -189,7 +206,7 @@ private:
         string_response_->keep_alive(true);
         string_response_->set(http::field::server, "Beast");
         string_response_->set(http::field::content_type, "application/json");
-        string_response_->body() = sb.GetString();
+        string_response_->body() = std::move(buf);
         string_response_->prepare_payload();
 
         string_serializer_.emplace(*string_response_);

@@ -85,12 +85,12 @@ Optional services:
 * JSON serialization services examples
 * Timer service
 * Redis service
-* Partial etcd service (may be broken, unused for a while)
+* Etcd v2 service
 
 # Roadmap
 
 * EDF scheduling / WCET measurements
-* expand/re-do etcd support, currently only simply put/get supported
+* Look into Etcd v3 HTTP API
 * Pubsub interfaces
     * Kafka? Pulsar? Ecal?
 * Shell Commands / REPL

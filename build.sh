@@ -28,8 +28,8 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-ccompilers=("clang-14" "clang-16" "gcc-11" "gcc-12")
-cppcompilers=("clang++-14" "clang++-16" "g++-11" "g++-12")
+ccompilers=("clang-14" "clang-18" "gcc-11" "gcc")
+cppcompilers=("clang++-14" "clang++-18" "g++-11" "g++")
 
 if [[ "$1" == "--dev" ]]; then
   ccompilers=("clang" "gcc")
@@ -61,6 +61,7 @@ run_examples ()
   ../bin/ichor_websocket_example || exit 1
   ../bin/ichor_websocket_example -t4 || exit 1
   ../bin/ichor_yielding_timer_example || exit 1
+  ../bin/ichor_etcd_example || exit 1
 }
 run_benchmarks ()
 {
@@ -98,14 +99,15 @@ if [[ $DOCKER -eq 1 ]]; then
 #!/bin/sh
 FILES=/opt/ichor/src/bin/*
 for f in \$FILES; do
-  if [[ "\$f" != *"Redis"* ]] && [[ "\$f" != *"benchmark"* ]] && [[ "\$f" != *"minimal"* ]] && [[ "\$f" != *"ping"* ]] && [[ "\$f" != *"pong"* ]] && [[ "\$f" != *"Started"* ]] && [[ "\$f" != *".sh" ]] && [[ -x "\$f" ]] ; then
+  if [[ "\$f" != *"Redis"* ]] && [[ "\$f" != *"benchmark"* ]] && [[ "\$f" != *"minimal"* ]] && [[ "\$f" != *"ping"* ]] && [[ "\$f" != *"etcd"* ]] && [[ "\$f" != *"Etcd"* ]] && [[ "\$f" != *"pong"* ]] && [[ "\$f" != *"Started"* ]] && [[ "\$f" != *".sh" ]] && [[ -x "\$f" ]] && [[ ! -d "\$f" ]] ; then
     echo "Running \$f"
-    \$f || echo "Error" && exit 1
+    \$f || exit 1
   fi
 done
 EOF
   chmod +x ../bin/run_aarch64_examples_and_tests.sh
   docker run -v $(pwd)/../:/opt/ichor/src --privileged -it ichor-musl-aarch64 "sh -c 'ulimit -r unlimited && /opt/ichor/src/bin/run_aarch64_examples_and_tests.sh'" || exit 1
+  docker run -v $(pwd)/../:/opt/ichor/src --privileged -it ichor-musl-aarch64 "rm -rf /opt/ichor/src/bin/* /opt/ichor/src/build/*" || exit 1
 fi
 
 for i in ${!ccompilers[@]}; do

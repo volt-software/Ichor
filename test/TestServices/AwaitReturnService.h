@@ -37,5 +37,10 @@ struct AwaitReturnService final : public AdvancedService<AwaitReturnService> {
         co_return AwaitNoCopy{};
     }
 
+    Task<AwaitNoCopy> AwaitTask() {
+        co_await *_evt;
+        co_return AwaitNoCopy{};
+    }
+
     uint64_t count{};
 };

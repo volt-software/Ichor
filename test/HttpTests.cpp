@@ -13,7 +13,7 @@
 #include <ichor/services/logging/CoutLogger.h>
 #include "Common.h"
 #include "TestServices/HttpThreadService.h"
-#include "../examples/common/TestMsgRapidJsonSerializer.h"
+#include "../examples/common/TestMsgGlazeSerializer.h"
 
 using namespace Ichor;
 
@@ -35,10 +35,10 @@ TEST_CASE("HttpTests") {
 
             dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>({}, 10);
             dm.createServiceManager<LoggerFactory<CoutLogger>, ILoggerFactory>();
-            dm.createServiceManager<TestMsgRapidJsonSerializer, ISerializer<TestMsg>>();
+            dm.createServiceManager<TestMsgGlazeSerializer, ISerializer<TestMsg>>();
             dm.createServiceManager<AsioContextService, IAsioContextService>();
             dm.createServiceManager<HttpHostService, IHttpHostService>(Properties{{"Address", Ichor::make_any<std::string>("127.0.0.1")}, {"Port", Ichor::make_any<uint16_t>(static_cast<uint16_t>(8001))}});
-            dm.createServiceManager<ClientFactory<HttpConnectionService, IHttpConnectionService>>();
+            dm.createServiceManager<ClientFactory<HttpConnectionService, IHttpConnectionService>, IClientFactory>();
             dm.createServiceManager<HttpThreadService>(Properties{{"Address", Ichor::make_any<std::string>("127.0.0.1")}, {"Port", Ichor::make_any<uint16_t>(static_cast<uint16_t>(8001))}});
 
             queue->start(CaptureSigInt);
@@ -122,10 +122,10 @@ TEST_CASE("HttpTests") {
 
             dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>({}, 10);
             dm.createServiceManager<LoggerFactory<CoutLogger>, ILoggerFactory>();
-            dm.createServiceManager<TestMsgRapidJsonSerializer, ISerializer<TestMsg>>();
+            dm.createServiceManager<TestMsgGlazeSerializer, ISerializer<TestMsg>>();
             dm.createServiceManager<AsioContextService, IAsioContextService>();
             dm.createServiceManager<HttpHostService, IHttpHostService>(Properties{{"Address", Ichor::make_any<std::string>("127.0.0.1")}, {"Port", Ichor::make_any<uint16_t>(static_cast<uint16_t>(8001))}, {"SslKey", Ichor::make_any<std::string>(key)}, {"SslCert", Ichor::make_any<std::string>(cert)}});
-            dm.createServiceManager<ClientFactory<HttpConnectionService, IHttpConnectionService>>();
+            dm.createServiceManager<ClientFactory<HttpConnectionService, IHttpConnectionService>, IClientFactory>();
             dm.createServiceManager<HttpThreadService>(Properties{{"Address", Ichor::make_any<std::string>("127.0.0.1")}, {"Port", Ichor::make_any<uint16_t>(static_cast<uint16_t>(8001))}, {"ConnectOverSsl", Ichor::make_any<bool>(true)}, {"RootCA", Ichor::make_any<std::string>(cert)}});
 
             queue->start(CaptureSigInt);
@@ -158,10 +158,10 @@ TEST_CASE("HttpTests") {
 
             dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>({}, 10);
             dm.createServiceManager<LoggerFactory<CoutLogger>, ILoggerFactory>();
-            dm.createServiceManager<TestMsgRapidJsonSerializer, ISerializer<TestMsg>>();
+            dm.createServiceManager<TestMsgGlazeSerializer, ISerializer<TestMsg>>();
             dm.createServiceManager<AsioContextService, IAsioContextService>(Properties{{"Threads", Ichor::make_any<uint64_t>(4ul)}});
             dm.createServiceManager<HttpHostService, IHttpHostService>(Properties{{"Address", Ichor::make_any<std::string>("127.0.0.1")}, {"Port", Ichor::make_any<uint16_t>(static_cast<uint16_t>(8001))}});
-            dm.createServiceManager<ClientFactory<HttpConnectionService, IHttpConnectionService>>();
+            dm.createServiceManager<ClientFactory<HttpConnectionService, IHttpConnectionService>, IClientFactory>();
             dm.createServiceManager<HttpThreadService>(Properties{{"Address", Ichor::make_any<std::string>("127.0.0.1")}, {"Port", Ichor::make_any<uint16_t>(static_cast<uint16_t>(8001))}});
 
             queue->start(CaptureSigInt);

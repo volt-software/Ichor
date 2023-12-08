@@ -23,6 +23,6 @@ namespace Ichor {
         friend DependencyManager;
 
         DependencyTrackerRegistration _trackerRegistration{};
-        unordered_map<uint64_t, IService*> _factories;
+        unordered_map<ServiceIdType, IService*> _factories;
     };
 }

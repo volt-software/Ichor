@@ -197,10 +197,13 @@ TEST_CASE("CoroutineTests") {
         REQUIRE_FALSE(dm.isRunning());
     }
 
-    SECTION("co_await user defined struct") {
+    SECTION("co_await user defined struct generator") {
         auto queue = std::make_unique<MultimapQueue>();
         auto &dm = queue->createManager();
         AwaitReturnService *svc{};
+        AwaitNoCopy::countConstructed = 0;
+        AwaitNoCopy::countDestructed = 0;
+        AwaitNoCopy::countMoved = 0;
 
         std::thread t([&]() {
             dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>();
@@ -230,6 +233,46 @@ TEST_CASE("CoroutineTests") {
         REQUIRE(AwaitNoCopy::countConstructed == 1);
         REQUIRE(AwaitNoCopy::countDestructed == 2);
         REQUIRE(AwaitNoCopy::countMoved == 1);
+
+        REQUIRE_FALSE(dm.isRunning());
+    }
+
+    SECTION("co_await user defined struct task") {
+        auto queue = std::make_unique<MultimapQueue>();
+        auto &dm = queue->createManager();
+        AwaitReturnService *svc{};
+        AwaitNoCopy::countConstructed = 0;
+        AwaitNoCopy::countDestructed = 0;
+        AwaitNoCopy::countMoved = 0;
+
+        std::thread t([&]() {
+            dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>();
+            svc = dm.createServiceManager<AwaitReturnService>();
+            queue->start(CaptureSigInt);
+        });
+
+        waitForRunning(dm);
+
+        dm.runForOrQueueEmpty();
+
+        queue->pushEvent<RunFunctionEventAsync>(0, [&]() -> AsyncGenerator<IchorBehaviour> {
+            auto await = co_await svc->AwaitTask();
+            co_return {};
+        });
+
+        dm.runForOrQueueEmpty();
+
+        queue->pushEvent<RunFunctionEvent>(0, [&dm = dm]() {
+            INTERNAL_DEBUG("set");
+            _evt->set();
+            dm.getEventQueue().pushEvent<QuitEvent>(0);
+        });
+
+        t.join();
+
+        REQUIRE(AwaitNoCopy::countConstructed == 1);
+        REQUIRE(AwaitNoCopy::countDestructed == 3);
+        REQUIRE(AwaitNoCopy::countMoved == 2);
 
         REQUIRE_FALSE(dm.isRunning());
     }

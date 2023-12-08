@@ -129,6 +129,7 @@ Ichor::Task<Ichor::HttpResponse> Ichor::HttpConnectionService::sendAsync(Ichor::
             // Copy message, should be trivially copyable and prevents iterator invalidation
             auto next = _outbox.front();
             lg.unlock();
+            INTERNAL_DEBUG("Outbox {}", next.route);
 
             ScopeGuard const coroutineGuard{[this, &event, &lg]() {
                 // use service id 0 to ensure event gets run, even if service is stopped. Otherwise, the coroutine will never complete.
@@ -165,7 +166,7 @@ Ichor::Task<Ichor::HttpResponse> Ichor::HttpConnectionService::sendAsync(Ichor::
                 // Set the timeout for this operation.
                 // _sslStream should only be modified from the boost thread
                 beast::get_lowest_layer(*_sslStream).expires_after(30s);
-                INTERNAL_DEBUG("http::write");
+                INTERNAL_DEBUG("https::write");
                 http::async_write(*_sslStream, req, yield[ec]);
             } else {
                 // Set the timeout for this operation.
@@ -173,6 +174,7 @@ Ichor::Task<Ichor::HttpResponse> Ichor::HttpConnectionService::sendAsync(Ichor::
                 _httpStream->expires_after(30s);
                 INTERNAL_DEBUG("http::write");
                 http::async_write(*_httpStream, req, yield[ec]);
+                INTERNAL_DEBUG("http::write done");
             }
             if (ec) {
                 fail(ec, "HttpConnectionService::sendAsync write");
@@ -190,13 +192,14 @@ Ichor::Task<Ichor::HttpResponse> Ichor::HttpConnectionService::sendAsync(Ichor::
             // Declare a container to hold the response
             http::response<http::vector_body<uint8_t>, http::basic_fields<std::allocator<uint8_t>>> res;
 
-            INTERNAL_DEBUG("http::read");
-
             // Receive the HTTP response
             if(_useSsl.load(std::memory_order_acquire)) {
+                INTERNAL_DEBUG("https::read");
                 http::async_read(*_sslStream, b, res, yield[ec]);
             } else {
+                INTERNAL_DEBUG("http::read");
                 http::async_read(*_httpStream, b, res, yield[ec]);
+                INTERNAL_DEBUG("http::read done");
             }
             if (ec) {
                 fail(ec, "HttpConnectionService::sendAsync read");
@@ -322,6 +325,7 @@ void Ichor::HttpConnectionService::connect(tcp::endpoint endpoint, net::yield_co
             }
         }
 
+        fmt::print("--- ssl tcpNoDelay: {} ---\n", _tcpNoDelay.load(std::memory_order_acquire));
         beast::get_lowest_layer(*_sslStream).socket().set_option(tcp::no_delay(_tcpNoDelay.load(std::memory_order_acquire)));
 
         _sslStream->async_handshake(net::ssl::stream_base::client, yield[ec]);

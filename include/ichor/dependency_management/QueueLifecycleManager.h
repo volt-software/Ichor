@@ -70,7 +70,7 @@ namespace Ichor::Detail {
             return typeNameHash<IEventQueue>();
         }
 
-        [[nodiscard]] uint64_t serviceId() const noexcept final {
+        [[nodiscard]] ServiceIdType serviceId() const noexcept final {
             return _service.getServiceId();
         }
 

@@ -7,7 +7,7 @@
 #include <iostream>
 #include <thread>
 #include <array>
-#include "../../examples/common/TestMsgRapidJsonSerializer.h"
+#include "../../examples/common/TestMsgGlazeSerializer.h"
 #include "../../examples/common/lyra.hpp"
 
 uint64_t sizeof_test{};
@@ -38,11 +38,11 @@ int main(int argc, char *argv[]) {
         auto queue = std::make_unique<MultimapQueue>();
         auto &dm = queue->createManager();
         dm.createServiceManager<LoggerFactory<NullLogger>, ILoggerFactory>();
-        dm.createServiceManager<TestMsgRapidJsonSerializer, ISerializer<TestMsg>>();
+        dm.createServiceManager<TestMsgGlazeSerializer, ISerializer<TestMsg>>();
         dm.createServiceManager<TestService>();
         queue->start(CaptureSigInt);
         auto end = std::chrono::steady_clock::now();
-        std::cout << fmt::format("{} single threaded rapidjson ran for {:L} µs with {:L} peak memory usage {:L} MB/s\n", argv[0], std::chrono::duration_cast<std::chrono::microseconds>(end - start).count(), getPeakRSS(),
+        std::cout << fmt::format("{} single threaded glaze ran for {:L} µs with {:L} peak memory usage {:L} MB/s\n", argv[0], std::chrono::duration_cast<std::chrono::microseconds>(end - start).count(), getPeakRSS(),
                                  std::floor(1'000'000. / static_cast<double>(std::chrono::duration_cast<std::chrono::microseconds>(end - start).count()) * SERDE_COUNT * static_cast<double>(sizeof_test) / 1'000'000.));
     }
 
@@ -54,7 +54,7 @@ int main(int argc, char *argv[]) {
             threads[i] = std::thread([&queues, i] {
                 auto &dm = queues[i].createManager();
                 dm.createServiceManager<LoggerFactory<NullLogger>, ILoggerFactory>();
-                dm.createServiceManager<TestMsgRapidJsonSerializer, ISerializer<TestMsg>>();
+                dm.createServiceManager<TestMsgGlazeSerializer, ISerializer<TestMsg>>();
                 dm.createServiceManager<TestService>();
                 queues[i].start(CaptureSigInt);
             });
@@ -63,7 +63,7 @@ int main(int argc, char *argv[]) {
             threads[i].join();
         }
         auto end = std::chrono::steady_clock::now();
-        std::cout << fmt::format("{} multi threaded rapidjson ran for {:L} µs with {:L} peak memory usage {:L} MB/s\n",
+        std::cout << fmt::format("{} multi threaded glaze ran for {:L} µs with {:L} peak memory usage {:L} MB/s\n",
                                  argv[0], std::chrono::duration_cast<std::chrono::microseconds>(end - start).count(), getPeakRSS(),
                                  std::floor(1'000'000. / static_cast<double>(std::chrono::duration_cast<std::chrono::microseconds>(end - start).count()) * SERDE_COUNT * threadCount * static_cast<double>(sizeof_test) / 1'000'000.));
     }

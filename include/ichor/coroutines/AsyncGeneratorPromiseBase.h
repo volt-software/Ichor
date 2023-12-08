@@ -40,6 +40,11 @@ namespace Ichor::Detail {
                 , _exception(nullptr)
                 , _id(_idCounter++)
         {
+            // 0 has a special meaning. Maybe eventually turn this into an optional?
+            // See TaskPromise f.e.
+            if(_idCounter == 0) {
+                _idCounter = 1;
+            }
             // Other variables left intentionally uninitialised as they're
             // only referenced in certain states by which time they should
             // have been initialised.
@@ -110,6 +115,14 @@ namespace Ichor::Detail {
             return _id;
         }
 
+        [[nodiscard]] uint64_t get_priority() const noexcept {
+            return _priority;
+        }
+
+        void set_priority(uint64_t priority) noexcept {
+            _priority = priority;
+        }
+
     protected:
         AsyncGeneratorYieldOperation internal_yield_value() noexcept;
 
@@ -123,6 +136,7 @@ namespace Ichor::Detail {
         std::exception_ptr _exception;
         std::coroutine_handle<> _consumerCoroutine;
         uint64_t _id;
+        uint64_t _priority{100}; // TODO: use INTERNAL_DEPENDENCY_EVENT_PRIORITY by refactoring headers
 #ifdef ICHOR_USE_HARDENING
         DependencyManager *_dmAtTimeOfCreation{_local_dm};
 #endif

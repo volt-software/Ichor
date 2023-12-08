@@ -16,13 +16,16 @@ namespace Ichor {
         ~DependencyOnlineWhileStoppingService() final = default;
 
         Task<tl::expected<void, Ichor::StartError>> start() final {
-            GetThreadLocalEventQueue().pushEvent<StopServiceEvent>(getServiceId(), svcId);
+            if(!cycled) {
+                GetThreadLocalEventQueue().pushPrioritisedEvent<StopServiceEvent>(getServiceId(), INTERNAL_DEPENDENCY_EVENT_PRIORITY, svcId);
+            }
             co_return {};
         }
 
         Task<void> stop() final {
-            GetThreadLocalEventQueue().pushEvent<StartServiceEvent>(getServiceId(), svcId);
+            GetThreadLocalEventQueue().pushPrioritisedEvent<StartServiceEvent>(getServiceId(), INTERNAL_DEPENDENCY_EVENT_PRIORITY, svcId);
             co_await *_evt;
+            cycled = true;
 
             co_return;
         }
@@ -43,5 +46,6 @@ namespace Ichor {
         }
 
         uint64_t svcId{};
+        bool cycled{};
     };
 }

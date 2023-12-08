@@ -1,7 +1,7 @@
 #pragma once
 
 #include <ichor/services/serialization/ISerializer.h>
-#include "PingMsg.h"
+#include "TestMsg.h"
 
 // Glaze uses different conventions than Ichor, ignore them to prevent being spammed by warnings
 #if defined( __GNUC__ )
@@ -18,23 +18,25 @@
 using namespace Ichor;
 
 template <>
-struct glz::meta<PingMsg> {
-    using T = PingMsg;
+struct glz::meta<TestMsg> {
+    using T = TestMsg;
     static constexpr auto value = object(
-            "sequence", &T::sequence
+            "id", &T::id,
+            "val", &T::val
     );
 };
 
-class PingMsgJsonSerializer final : public ISerializer<PingMsg> {
+class TestMsgGlazeSerializer final : public ISerializer<TestMsg> {
 public:
-    std::vector<uint8_t> serialize(PingMsg const &msg) final {
+    std::vector<uint8_t> serialize(TestMsg const &msg) final {
         std::vector<uint8_t> buf;
         glz::write_json(msg, buf);
         buf.push_back('\0');
         return buf;
     }
-    std::optional<PingMsg> deserialize(std::vector<uint8_t> &&stream) final {
-        PingMsg msg;
+
+    std::optional<TestMsg> deserialize(std::vector<uint8_t> &&stream) final {
+        TestMsg msg;
         auto err = glz::read_json(msg, stream);
 
         if(err) {

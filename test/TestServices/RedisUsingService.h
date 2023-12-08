@@ -4,60 +4,93 @@
 #include <ichor/services/redis/IRedis.h>
 
 namespace Ichor {
-    struct IRedisUsingService {
-    };
-
-    struct RedisUsingService final : public IRedisUsingService, public AdvancedService<RedisUsingService> {
+    struct RedisUsingService final : public AdvancedService<RedisUsingService> {
         RedisUsingService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {
             reg.registerDependency<IRedis>(this, true);
         }
 
         Task<tl::expected<void, Ichor::StartError>> start() final {
             {
-                co_await _redis->set("test_key", "test_value").begin();
-                RedisGetReply &reply = *co_await _redis->get("test_key").begin();
+                auto setReply = co_await _redis->set("test_key", "test_value");
+                if(!setReply) {
+                    throw std::runtime_error("");
+                }
+                auto getReply = co_await _redis->get("test_key");
+                if(!getReply) {
+                    throw std::runtime_error("");
+                }
 
-                if (!reply.value || *reply.value != "test_value") {
+                if (!getReply.value().value || *getReply.value().value != "test_value") {
                     throw std::runtime_error("Incorrect value");
                 }
             }
             {
-                co_await _redis->set("delete_key", "delete").begin();
-                RedisIntegerReply &reply = *co_await _redis->del("delete_key").begin();
+                auto setReply = co_await _redis->set("delete_key", "delete");
+                if(!setReply) {
+                    throw std::runtime_error("");
+                }
+                auto delReply= co_await _redis->del("delete_key");
+                if(!delReply) {
+                    throw std::runtime_error("");
+                }
 
-                if (reply.value != 1) {
+                if (delReply.value().value != 1) {
                     throw std::runtime_error("Incorrect value");
                 }
             }
             {
-                co_await _redis->set("integer_key", "10").begin();
-                RedisIntegerReply &reply = *co_await _redis->incr("integer_key").begin();
+                auto setReply = co_await _redis->set("integer_key", "10");
+                if(!setReply) {
+                    throw std::runtime_error("");
+                }
+                auto incrReply= co_await _redis->incr("integer_key");
+                if(!incrReply) {
+                    throw std::runtime_error("");
+                }
 
-                if (reply.value != 11) {
+                if (incrReply.value().value != 11) {
                     throw std::runtime_error("Incorrect value");
                 }
             }
             {
-                co_await _redis->set("integer_key", "10").begin();
-                RedisIntegerReply &reply = *co_await _redis->incrBy("integer_key", 10).begin();
+                auto setReply = co_await _redis->set("integer_key", "10");
+                if(!setReply) {
+                    throw std::runtime_error("");
+                }
+                auto incrByReply= co_await _redis->incrBy("integer_key", 10);
+                if(!incrByReply) {
+                    throw std::runtime_error("");
+                }
 
-                if (reply.value != 20) {
+                if (incrByReply.value().value != 20) {
                     throw std::runtime_error("Incorrect value");
                 }
             }
             {
-                co_await _redis->set("integer_key", "10").begin();
-                RedisIntegerReply &reply = *co_await _redis->decr("integer_key").begin();
+                auto setReply = co_await _redis->set("integer_key", "10");
+                if(!setReply) {
+                    throw std::runtime_error("");
+                }
+                auto decrReply = co_await _redis->decr("integer_key");
+                if(!decrReply) {
+                    throw std::runtime_error("");
+                }
 
-                if (reply.value != 9) {
+                if (decrReply.value().value != 9) {
                     throw std::runtime_error("Incorrect value");
                 }
             }
             {
-                co_await _redis->set("integer_key", "10").begin();
-                RedisIntegerReply &reply = *co_await _redis->decrBy("integer_key", 10).begin();
+                auto setReply = co_await _redis->set("integer_key", "10");
+                if(!setReply) {
+                    throw std::runtime_error("");
+                }
+                auto decrByReply= co_await _redis->decrBy("integer_key", 10);
+                if(!decrByReply) {
+                    throw std::runtime_error("");
+                }
 
-                if (reply.value != 0) {
+                if (decrByReply.value().value != 0) {
                     throw std::runtime_error("Incorrect value");
                 }
             }

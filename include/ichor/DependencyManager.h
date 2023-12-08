@@ -77,7 +77,7 @@ namespace Ichor {
 #if (!defined(WIN32) && !defined(_WIN32) && !defined(__WIN32)) || defined(__CYGWIN__)
         requires ImplementsAll<Impl, Interfaces...>
 #endif
-        Impl* createServiceManager() {
+        NeverNull<Impl*> createServiceManager() {
             return internalCreateServiceManager<Impl, Interfaces...>(Properties{});
         }
 
@@ -86,7 +86,7 @@ namespace Ichor {
 #if (!defined(WIN32) && !defined(_WIN32) && !defined(__WIN32)) || defined(__CYGWIN__)
         requires ImplementsAll<Impl, Interfaces...>
 #endif
-        Impl* createServiceManager(Properties&& properties, uint64_t priority = INTERNAL_EVENT_PRIORITY) {
+        NeverNull<Impl*> createServiceManager(Properties&& properties, uint64_t priority = INTERNAL_EVENT_PRIORITY) {
             return internalCreateServiceManager<Impl, Interfaces...>(std::move(properties), priority);
         }
 
@@ -95,7 +95,7 @@ namespace Ichor {
 #if (!defined(WIN32) && !defined(_WIN32) && !defined(__WIN32)) || defined(__CYGWIN__)
         requires ImplementsAll<Impl, Interfaces...>
 #endif
-        IService* createServiceManager() {
+        NeverNull<IService*> createServiceManager() {
             return createConstructorInjectorServiceManager<Impl, Interfaces...>(Properties{}, INTERNAL_EVENT_PRIORITY);
         }
 
@@ -104,7 +104,7 @@ namespace Ichor {
 #if (!defined(WIN32) && !defined(_WIN32) && !defined(__WIN32)) || defined(__CYGWIN__)
         requires ImplementsAll<Impl, Interfaces...>
 #endif
-        IService* createServiceManager(Properties&& properties, uint64_t priority = INTERNAL_EVENT_PRIORITY) {
+        NeverNull<IService*> createServiceManager(Properties&& properties, uint64_t priority = INTERNAL_EVENT_PRIORITY) {
             return createConstructorInjectorServiceManager<Impl, Interfaces...>(std::move(properties), priority);
         }
 
@@ -113,78 +113,8 @@ namespace Ichor {
 #if (!defined(WIN32) && !defined(_WIN32) && !defined(__WIN32)) || defined(__CYGWIN__)
         requires ImplementsAll<Impl, Interfaces...>
 #endif
-        IService* createConstructorInjectorServiceManager(Properties&& properties, uint64_t priority = INTERNAL_EVENT_PRIORITY) {
+        NeverNull<IService*> createConstructorInjectorServiceManager(Properties&& properties, uint64_t priority = INTERNAL_EVENT_PRIORITY) {
             return internalCreateServiceManager<ConstructorInjectionService<Impl>, Interfaces...>(std::move(properties), priority);
-        }
-
-        template<typename Impl, typename... Interfaces>
-        Impl* internalCreateServiceManager(Properties&& properties, uint64_t priority = INTERNAL_EVENT_PRIORITY) {
-#ifdef ICHOR_USE_HARDENING
-            if(_started.load(std::memory_order_acquire) && this != Detail::_local_dm) [[unlikely]] { // are we on the right thread?
-                std::terminate();
-            }
-#endif
-            if constexpr(RequestsDependencies<Impl>) {
-                static_assert(!std::is_default_constructible_v<Impl>, "Cannot have a dependencies constructor and a default constructor simultaneously.");
-                static_assert(!RequestsProperties<Impl>, "Cannot have a dependencies constructor and a properties constructor simultaneously.");
-                auto cmpMgr = Detail::DependencyLifecycleManager<Impl>::template create<>(std::forward<Properties>(properties), InterfacesList<Interfaces...>);
-
-                if constexpr (sizeof...(Interfaces) > 0) {
-                    static_assert(!ListContainsInterface<IFrameworkLogger, Interfaces...>::value, "IFrameworkLogger cannot have any dependencies");
-                }
-
-                logAddService<Impl, Interfaces...>(cmpMgr->serviceId());
-
-                for (auto const &[key, registration] : cmpMgr->getDependencyRegistry()->_registrations) {
-                    auto const &props = std::get<std::optional<Properties>>(registration);
-                    _eventQueue->pushPrioritisedEvent<DependencyRequestEvent>(cmpMgr->serviceId(), priority, std::get<Dependency>(registration), props.has_value() ? &props.value() : std::optional<Properties const *>{});
-                }
-
-                auto event_priority = std::min(INTERNAL_DEPENDENCY_EVENT_PRIORITY, priority);
-                _eventQueue->pushPrioritisedEvent<StartServiceEvent>(cmpMgr->serviceId(), event_priority, cmpMgr->serviceId());
-
-                cmpMgr->getService().setServicePriority(priority);
-
-                if constexpr (DO_INTERNAL_DEBUG || DO_HARDENING) {
-                    if (_services.contains(cmpMgr->serviceId())) [[unlikely]] {
-                        std::terminate();
-                    }
-                }
-
-                Impl* impl = &cmpMgr->getService();
-                // Can't directly emplace mgr into _services as that would result into modifying the container while iterating.
-                _eventQueue->pushPrioritisedEvent<InsertServiceEvent>(cmpMgr->serviceId(), INTERNAL_INSERT_SERVICE_EVENT_PRIORITY, std::move(cmpMgr));
-
-                return impl;
-            } else {
-                static_assert(!(std::is_default_constructible_v<Impl> && RequestsProperties<Impl>), "Cannot have a properties constructor and a default constructor simultaneously.");
-                auto cmpMgr = Detail::LifecycleManager<Impl, Interfaces...>::template create<>(std::forward<Properties>(properties), InterfacesList<Interfaces...>);
-
-                if constexpr (sizeof...(Interfaces) > 0) {
-                    if constexpr (ListContainsInterface<IFrameworkLogger, Interfaces...>::value) {
-                        static_assert(!IsConstructorInjector<Impl>, "Framework loggers cannot use constructor injection");
-                        _logger = cmpMgr->getService().getImplementation();
-                    }
-                }
-
-                cmpMgr->getService().setServicePriority(priority);
-
-                logAddService<Impl, Interfaces...>(cmpMgr->serviceId());
-
-                auto event_priority = std::min(INTERNAL_DEPENDENCY_EVENT_PRIORITY, priority);
-                _eventQueue->pushPrioritisedEvent<StartServiceEvent>(cmpMgr->serviceId(), event_priority, cmpMgr->serviceId());
-
-                if constexpr (DO_INTERNAL_DEBUG || DO_HARDENING) {
-                    if (_services.contains(cmpMgr->serviceId())) [[unlikely]] {
-                        std::terminate();
-                    }
-                }
-
-                Impl* impl = &cmpMgr->getService();
-                _eventQueue->pushPrioritisedEvent<InsertServiceEvent>(cmpMgr->serviceId(), INTERNAL_INSERT_SERVICE_EVENT_PRIORITY, std::move(cmpMgr));
-
-                return impl;
-            }
         }
 
         /// Push event into event loop with the default priority asynchronously
@@ -581,11 +511,94 @@ namespace Ichor {
         // Mainly useful for tests
         void runForOrQueueEmpty(std::chrono::milliseconds ms = 100ms) const noexcept;
 
+        /// Gets the class name of the implementation for given serviceId
+        /// \param serviceId
+        /// \return nullopt if serviceId does not exist, name of implementation class otherwise
         [[nodiscard]] std::optional<std::string_view> getImplementationNameFor(uint64_t serviceId) const noexcept;
 
         [[nodiscard]] IEventQueue& getEventQueue() const noexcept;
 
+        /// Async method to wait until a service is started
+        /// \param svc
+        /// \return immediately return void if service is already started, await if not, WaitError if quitting
+        [[nodiscard]] Task<tl::expected<void, WaitError>> waitForServiceStarted(NeverNull<IService*> svc);
+
+        /// Async method to wait until a service is stopped
+        /// \param svc
+        /// \return immediately return void if service is already stopped, await if not, WaitError if quitting
+        [[nodiscard]] Task<tl::expected<void, WaitError>> waitForServiceStopped(NeverNull<IService*> svc);
+
     private:
+        template<typename Impl, typename... Interfaces>
+        Impl* internalCreateServiceManager(Properties&& properties, uint64_t priority = INTERNAL_EVENT_PRIORITY) {
+#ifdef ICHOR_USE_HARDENING
+            if(_started.load(std::memory_order_acquire) && this != Detail::_local_dm) [[unlikely]] { // are we on the right thread?
+                std::terminate();
+            }
+#endif
+            if constexpr(RequestsDependencies<Impl>) {
+                static_assert(!std::is_default_constructible_v<Impl>, "Cannot have a dependencies constructor and a default constructor simultaneously.");
+                static_assert(!RequestsProperties<Impl>, "Cannot have a dependencies constructor and a properties constructor simultaneously.");
+                auto cmpMgr = Detail::DependencyLifecycleManager<Impl>::template create<>(std::forward<Properties>(properties), InterfacesList<Interfaces...>);
+
+                if constexpr (sizeof...(Interfaces) > 0) {
+                    static_assert(!ListContainsInterface<IFrameworkLogger, Interfaces...>::value, "IFrameworkLogger cannot have any dependencies");
+                }
+
+                logAddService<Impl, Interfaces...>(cmpMgr->serviceId());
+
+                for (auto const &[key, registration] : cmpMgr->getDependencyRegistry()->_registrations) {
+                    auto const &props = std::get<std::optional<Properties>>(registration);
+                    _eventQueue->pushPrioritisedEvent<DependencyRequestEvent>(cmpMgr->serviceId(), priority, std::get<Dependency>(registration), props.has_value() ? &props.value() : std::optional<Properties const *>{});
+                }
+
+                auto event_priority = std::min(INTERNAL_DEPENDENCY_EVENT_PRIORITY, priority);
+                _eventQueue->pushPrioritisedEvent<StartServiceEvent>(cmpMgr->serviceId(), event_priority, cmpMgr->serviceId());
+
+                cmpMgr->getService().setServicePriority(priority);
+
+                if constexpr (DO_INTERNAL_DEBUG || DO_HARDENING) {
+                    if (_services.contains(cmpMgr->serviceId())) [[unlikely]] {
+                        std::terminate();
+                    }
+                }
+
+                Impl* impl = &cmpMgr->getService();
+                // Can't directly emplace mgr into _services as that would result into modifying the container while iterating.
+                _eventQueue->pushPrioritisedEvent<InsertServiceEvent>(cmpMgr->serviceId(), INTERNAL_INSERT_SERVICE_EVENT_PRIORITY, std::move(cmpMgr));
+
+                return impl;
+            } else {
+                static_assert(!(std::is_default_constructible_v<Impl> && RequestsProperties<Impl>), "Cannot have a properties constructor and a default constructor simultaneously.");
+                auto cmpMgr = Detail::LifecycleManager<Impl, Interfaces...>::template create<>(std::forward<Properties>(properties), InterfacesList<Interfaces...>);
+
+                if constexpr (sizeof...(Interfaces) > 0) {
+                    if constexpr (ListContainsInterface<IFrameworkLogger, Interfaces...>::value) {
+                        static_assert(!IsConstructorInjector<Impl>, "Framework loggers cannot use constructor injection");
+                        _logger = cmpMgr->getService().getImplementation();
+                    }
+                }
+
+                cmpMgr->getService().setServicePriority(priority);
+
+                logAddService<Impl, Interfaces...>(cmpMgr->serviceId());
+
+                auto event_priority = std::min(INTERNAL_DEPENDENCY_EVENT_PRIORITY, priority);
+                _eventQueue->pushPrioritisedEvent<StartServiceEvent>(cmpMgr->serviceId(), event_priority, cmpMgr->serviceId());
+
+                if constexpr (DO_INTERNAL_DEBUG || DO_HARDENING) {
+                    if (_services.contains(cmpMgr->serviceId())) [[unlikely]] {
+                        std::terminate();
+                    }
+                }
+
+                Impl* impl = &cmpMgr->getService();
+                _eventQueue->pushPrioritisedEvent<InsertServiceEvent>(cmpMgr->serviceId(), INTERNAL_INSERT_SERVICE_EVENT_PRIORITY, std::move(cmpMgr));
+
+                return impl;
+            }
+        }
+
         template <typename EventT>
 #if (!defined(WIN32) && !defined(_WIN32) && !defined(__WIN32)) || defined(__CYGWIN__)
         requires Derived<EventT, Event>
@@ -626,6 +639,12 @@ namespace Ichor {
             callback->second(evt);
         }
 
+        /// Convenience function to log adding of services
+        /// \tparam Impl
+        /// \tparam Interface1
+        /// \tparam Interface2
+        /// \tparam Interfaces
+        /// \param id
         template <typename Impl, typename Interface1, typename Interface2, typename... Interfaces>
         void logAddService(uint64_t id) {
             if(_logger != nullptr && _logger->getLogLevel() <= LogLevel::LOG_DEBUG) {
@@ -637,6 +656,10 @@ namespace Ichor {
             }
         }
 
+        /// Convenience function to log adding of services
+        /// \tparam Impl
+        /// \tparam Interface
+        /// \param id
         template <typename Impl, typename Interface>
         void logAddService(uint64_t id) {
             if(_logger != nullptr && _logger->getLogLevel() <= LogLevel::LOG_DEBUG) {
@@ -644,6 +667,9 @@ namespace Ichor {
             }
         }
 
+        /// Convenience function to log adding of services
+        /// \tparam Impl
+        /// \param id
         template <typename Impl>
         void logAddService(uint64_t id) {
             if(_logger != nullptr && _logger->getLogLevel() <= LogLevel::LOG_DEBUG) {
@@ -653,16 +679,26 @@ namespace Ichor {
 
         void handleEventCompletion(Event const &evt);
         [[nodiscard]] uint64_t broadcastEvent(std::shared_ptr<Event> &evt);
-        void setCommunicationChannel(CommunicationChannel *channel);
+        /// Sets the communication channel. Only to be used from inside the CommunicationChannel class itself.
+        /// \param channel
+        void setCommunicationChannel(NeverNull<CommunicationChannel*> channel);
+        /// Unlinks this DM from the communication channel. Only to be used from inside the CommunicationChannel class itself.
+        void clearCommunicationChannel();
+        /// Called from the queue implementation
         void start();
+        /// Called from the queue implementation
         void processEvent(std::unique_ptr<Event> &&evt);
+        /// Called from the queue implementation
         void stop();
+        /// Check if there is a coroutine for the given serviceId that is still waiting on something
+        /// \param serviceId
+        /// \return
         [[nodiscard]] bool existingCoroutineFor(uint64_t serviceId) const noexcept;
         /// Coroutine based method to wait for a service to have finished with either DependencyOfflineEvent or StopServiceEvent
         /// \param serviceId
         /// \param eventType
         /// \return
-        AsyncGenerator<void> waitForService(uint64_t serviceId, uint64_t eventType) noexcept;
+        Task<void> waitForService(uint64_t serviceId, uint64_t eventType) noexcept;
         /// Counterpart for waitForService, runs all waiting coroutines for specified event
         /// \param serviceId
         /// \param eventType
@@ -686,6 +722,7 @@ namespace Ichor {
         std::atomic<bool> _started{false};
         CommunicationChannel *_communicationChannel{};
         uint64_t _id{_managerIdCounter.fetch_add(1, std::memory_order_relaxed)};
+        bool _quitEventReceived{};
         static std::atomic<uint64_t> _managerIdCounter;
 
         friend class IEventQueue;

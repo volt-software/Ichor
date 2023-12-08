@@ -12,6 +12,10 @@ Turned on by default. Builds the benchmarks in the [benchmarks directory](../ben
 
 Turned on by default. Builds the tests in the [test directory](../test).
 
+## ICHOR_BUILD_COVERAGE
+
+Used in the CI pipeline of Ichor itself.
+
 ## ICHOR_ENABLE_INTERNAL_DEBUGGING
 
 Enables verbose logging at various points in the Ichor framework. Recommended only when trying to figure out if you've encountered a bug in Ichor.
@@ -19,6 +23,10 @@ Enables verbose logging at various points in the Ichor framework. Recommended on
 ## ICHOR_ENABLE_INTERNAL_COROUTINE_DEBUGGING
 
 Enables verbose logging for coroutines in the Ichor framework. Recommended only when trying to figure out if you've encountered a bug in Ichor.
+
+## ICHOR_ENABLE_INTERNAL_IO_DEBUGGING
+
+Enables verbose logging for async I/O in the Ichor framework. Recommended only when trying to figure out if you've encountered a bug in Ichor.
 
 ## ICHOR_USE_SANITIZERS
 
@@ -44,18 +52,14 @@ Turned on by default. Uses compiler-specific flags which add stack protection an
 
 Enables the use of the [spdlog submodule](../external/spdlog). If examples or benchmarks are enabled, these then use the spdlog variants of loggers instead of cout.
 
-## ICHOR_USE_ETCD (optional dependency)
-
-Used for the etcd examples and benchmarks. May not work, not used much.
-
 ## ICHOR_USE_BOOST_BEAST (optional dependency)
 
-Requires Boost.BEAST to be installed as a system dependency (version >= 1.70). Used for websocket and http server/client implementations. All examples require `ICHOR_SERIALIZATION_FRAMEWORK` to be set as well.
+Requires Boost.BEAST to be installed as a system dependency (version >= 1.70). Used for websocket and http server/client implementations. Also enables Etcd Implementation
 
 ## ICHOR_USE_MOLD (optional compile-time dependency)
 
 For clang compilers, add the `-fuse-ld=mold` linker flag. This speeds up the linking stage.
-Usage with gcc 12+ is technically possible, but throws off [Catch2 unit test detection](https://github.com/catchorg/Catch2/issues/2507).
+Usage with gcc 12+ is technically possible, but it might throw off [Catch2 unit test detection](https://github.com/catchorg/Catch2/issues/2507).
 
 ## ICHOR_USE_SDEVENT (optional dependency)
 
@@ -87,8 +91,14 @@ If `ICHOR_USE_MIMALLOC` is turned ON, this option can be used to use the system 
 
 ## ICHOR_MUSL
 
-This option results in statically linking libgcc and libstdc++ as well as turning off some glibc-specific pthread usages.
+This option results in statically linking libgcc and libstdc++ as well as turning off some glibc-specific pthread usages. Necessary when linking to musl.
 
 ## ICHOR_AARCH64
 
 Control flow protection is not available on Aarch64, enable this to allow (cross-)compiling for that architecture.
+
+## ICHOR_ARCH_OPTIMIZATION
+
+Compile Ichor with architecture specific optimizations. Allowed settings: `NATIVE`, `X86_64`, `X86_64_SSE4`, `X86_64_AVX2`, `X86_64_AVX512`, `MODERN_ARM_GENERIC`.
+
+`X86_64_AVX2` recommended for a good coverage of supported x86 CPUs and some AVX2 optimizations by the compiler. 

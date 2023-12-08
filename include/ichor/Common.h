@@ -143,4 +143,22 @@ namespace Ichor {
 
     inline constexpr bool PreventOthersHandling = false;
     inline constexpr bool AllowOthersHandling = true;
+
+    // Code from https://stackoverflow.com/a/73078442/1460998
+    // converts a string to an integer with little error checking. Only use if you're very sure that the string is actually a number.
+    static inline int64_t FastAtoiCompare(const char* str)
+    {
+        int64_t val = 0;
+        uint8_t x;
+        while ((x = uint8_t(*str++ - '0')) <= 9) val = val * 10 + x;
+        return val;
+    }
+
+    static inline uint64_t FastAtoiCompareu(const char* str)
+    {
+        uint64_t val = 0;
+        uint8_t  x;
+        while ((x = uint8_t(*str++ - '0')) <= 9) val = val * 10 + x;
+        return val;
+    }
 }

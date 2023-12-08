@@ -21,7 +21,7 @@ namespace Ichor::Detail {
 
         /// Process-local unique service id
         /// \return id
-        [[nodiscard]] uint64_t getServiceId() const noexcept final {
+        [[nodiscard]] ServiceIdType getServiceId() const noexcept final {
             return _serviceId;
         }
 

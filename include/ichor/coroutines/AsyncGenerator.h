@@ -232,6 +232,10 @@ namespace Ichor {
                 return _promise->get_id();
             }
 
+            void set_priority(uint64_t priority) noexcept {
+                _promise->set_priority(priority);
+            }
+
             template <typename U = T> requires (!std::is_same_v<U, void>)
             [[nodiscard]] U& get_value() noexcept {
                 auto prom = std::coroutine_handle<promise_type>::from_promise(*static_cast<promise_type*>(_promise));
@@ -420,6 +424,10 @@ namespace Ichor {
         template <typename U = T> requires (!std::is_same_v<U, void>)
         [[nodiscard]] U& get_value() noexcept {
             return _coroutine.promise().value();
+        }
+
+        void set_priority(uint64_t priority) noexcept {
+            _coroutine.promise().set_priority(priority);
         }
 
     private:

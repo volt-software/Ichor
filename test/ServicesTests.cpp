@@ -300,9 +300,9 @@ TEST_CASE("ServicesTests") {
         std::thread t([&]() {
             dm.createServiceManager<LoggerFactory<CoutLogger>, ILoggerFactory>();
             dm.createServiceManager<DependencyService<false>, ICountService>();
-            auto *service = dm.createServiceManager<ConstructorInjectionTestService, IConstructorInjectionTestService>();
+            auto service = dm.createServiceManager<ConstructorInjectionTestService, IConstructorInjectionTestService>();
             svcId = service->getServiceId();
-            static_assert(std::is_same_v<decltype(service), IService*>, "");
+            static_assert(std::is_same_v<decltype(service), NeverNull<IService*>>, "");
             queue->start(CaptureSigInt);
         });
 
