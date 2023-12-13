@@ -2,7 +2,7 @@
 
 #include <ichor/coroutines/Task.h>
 #include <string_view>
-#include <optional>
+#include <tl/optional.h>
 #include <tl/expected.h>
 
 namespace Ichor {
@@ -11,10 +11,10 @@ namespace Ichor {
     };
 
     struct RedisSetOptions {
-        std::optional<uint32_t> EX;
-        std::optional<uint32_t> PX;
-        std::optional<uint32_t> EXAT;
-        std::optional<uint32_t> PXAT;
+        tl::optional<uint32_t> EX;
+        tl::optional<uint32_t> PX;
+        tl::optional<uint32_t> EXAT;
+        tl::optional<uint32_t> PXAT;
         bool NX{};
         bool XX{};
         bool KEEPTTL{};
@@ -29,7 +29,7 @@ namespace Ichor {
 
     struct RedisGetReply {
         // null if key not found
-        std::optional<std::string> value;
+        tl::optional<std::string> value;
     };
 
     struct RedisIntegerReply {
@@ -99,6 +99,79 @@ namespace Ichor {
         /// \return coroutine with the value of the key after decrement
         virtual Task<tl::expected<RedisIntegerReply, RedisError>> decrBy(std::string_view key, int64_t decr) = 0;
 
+        /// Returns the length of the string
+        /// \param key
+        /// \return coroutine with the length of the value stored for the key
+//        virtual Task<tl::expected<RedisIntegerReply, RedisError>> strlen(std::string_view key, int64_t decr) = 0;
+
+// strlen
+// multi
+// exec
+// discard
+// getrange
+// setrange
+// append (multi?)
+// append (multi?)
+// bgsave
+// bgrewriteaof
+// lastsave
+// client info
+// dbsize
+// acl setuser
+// acl deluser
+// acl users
+// acl whoami
+// acl save
+// acl load
+// acl log
+// acl list
+// acl getuser
+// acl genpass
+// config get
+// config resetstat
+// config rewrite
+// config set
+// exists
+// expire
+// expireat
+// keys
+// lpush
+// lindex
+// lset
+// lrem
+// lrange
+// lpop
+// lpos
+// llen
+// linsert
+// mget
+// mset
+// move
+// persist
+// pexpire
+// rename
+// rpop
+// rpush
+// sort
+// sort_ro
+// select (db)
+// sadd
+// scard
+// sdiff
+// sinter
+// sismember
+// smismember
+// smembers
+// smove
+// spop
+// srem
+// sunioin
+// touch
+// ttl
+// type
+// unlink
+// wait?
+// waitaof
     protected:
         ~IRedis() = default;
     };

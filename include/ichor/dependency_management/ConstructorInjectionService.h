@@ -146,7 +146,7 @@ namespace Ichor {
     class ConstructorInjectionService<T> : public IService {
     public:
         ConstructorInjectionService(DependencyRegister &reg, Properties props) noexcept : IService(), _properties(std::move(props)), _serviceId(Detail::_serviceIdCounter.fetch_add(1, std::memory_order_relaxed)), _servicePriority(INTERNAL_EVENT_PRIORITY), _serviceGid(sole::uuid4()), _serviceState(ServiceState::INSTALLED) {
-            registerDependenciesSpecialSauce(reg, std::optional<refl::as_variant<T>>());
+            registerDependenciesSpecialSauce(reg, tl::optional<refl::as_variant<T>>());
         }
 
         ~ConstructorInjectionService() noexcept override {
@@ -160,11 +160,11 @@ namespace Ichor {
         ConstructorInjectionService& operator=(ConstructorInjectionService&&) noexcept = default;
 
         template <typename... CO_ARGS>
-        void registerDependenciesSpecialSauce(DependencyRegister &reg, std::optional<std::variant<CO_ARGS...>> = {}) {
+        void registerDependenciesSpecialSauce(DependencyRegister &reg, tl::optional<std::variant<CO_ARGS...>> = {}) {
             (reg.registerDependencyConstructor<std::remove_pointer_t<CO_ARGS>>(this), ...);
         }
         template <typename... CO_ARGS>
-        void createServiceSpecialSauce(std::optional<std::variant<CO_ARGS...>> = {}) {
+        void createServiceSpecialSauce(tl::optional<std::variant<CO_ARGS...>> = {}) {
             try {
                 new (buf) T(std::get<CO_ARGS>(_deps[typeNameHash<std::remove_pointer_t<CO_ARGS>>()])...);
             } catch (std::exception const &) {
@@ -230,7 +230,7 @@ namespace Ichor {
 
             INTERNAL_DEBUG("internal_start service {}:{} state {} -> {}", getServiceId(), typeName<T>(), getState(), ServiceState::STARTING);
             _serviceState = ServiceState::STARTING;
-            createServiceSpecialSauce(std::optional<refl::as_variant<T>>());
+            createServiceSpecialSauce(tl::optional<refl::as_variant<T>>());
 
             INTERNAL_DEBUG("internal_start service {}:{} state {} -> {}", getServiceId(), typeName<T>(), getState(), ServiceState::INJECTING);
             _serviceState = ServiceState::INJECTING;

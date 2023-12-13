@@ -211,8 +211,8 @@ namespace Ichor {
 
                 for (auto const &[interfaceHash, registration] : depRegistry->_registrations) {
                     if(interfaceHash == typeNameHash<Interface>()) {
-                        auto const &props = std::get<std::optional<Properties>>(registration);
-                        requests.emplace_back(0, mgr->serviceId(), INTERNAL_EVENT_PRIORITY, std::get<Dependency>(registration), props.has_value() ? &props.value() : std::optional<Properties const *>{});
+                        auto const &props = std::get<tl::optional<Properties>>(registration);
+                        requests.emplace_back(0, mgr->serviceId(), INTERNAL_EVENT_PRIORITY, std::get<Dependency>(registration), props.has_value() ? &props.value() : tl::optional<Properties const *>{});
                     }
                 }
             }
@@ -284,7 +284,7 @@ namespace Ichor {
         /// \param impl class that is registering handler
         /// \param targetServiceId optional service id to filter registering for, if empty, receive all events of type EventT
         /// \return RAII handler, removes registration upon destruction
-        EventHandlerRegistration registerEventHandler(Impl *impl, IService *self, std::optional<uint64_t> targetServiceId = {}) {
+        EventHandlerRegistration registerEventHandler(Impl *impl, IService *self, tl::optional<uint64_t> targetServiceId = {}) {
 #ifdef ICHOR_USE_HARDENING
             if(this != Detail::_local_dm) [[unlikely]] { // are we on the right thread?
                 std::terminate();
@@ -390,7 +390,7 @@ namespace Ichor {
         /// Get IService by local ID
         /// \param id service id
         /// \return optional
-        [[nodiscard]] std::optional<const IService*> getIService(uint64_t id) const noexcept {
+        [[nodiscard]] tl::optional<const IService*> getIService(uint64_t id) const noexcept {
 #ifdef ICHOR_USE_HARDENING
             if(this != Detail::_local_dm) [[unlikely]] { // are we on the right thread?
                 std::terminate();
@@ -408,7 +408,7 @@ namespace Ichor {
         /// Get IService by global ID, much slower than getting by local ID
         /// \param id service uuid
         /// \return optional
-        [[nodiscard]] std::optional<const IService*> getIService(sole::uuid id) const noexcept {
+        [[nodiscard]] tl::optional<const IService*> getIService(sole::uuid id) const noexcept {
 #ifdef ICHOR_USE_HARDENING
             if(this != Detail::_local_dm) [[unlikely]] { // are we on the right thread?
                 std::terminate();
@@ -427,7 +427,7 @@ namespace Ichor {
 
 
         template <typename Interface>
-        [[nodiscard]] std::optional<std::pair<Interface*, IService*>> getService(uint64_t id) const noexcept {
+        [[nodiscard]] tl::optional<std::pair<Interface*, IService*>> getService(uint64_t id) const noexcept {
 #ifdef ICHOR_USE_HARDENING
             if(this != Detail::_local_dm) [[unlikely]] { // are we on the right thread?
                 std::terminate();
@@ -514,7 +514,7 @@ namespace Ichor {
         /// Gets the class name of the implementation for given serviceId
         /// \param serviceId
         /// \return nullopt if serviceId does not exist, name of implementation class otherwise
-        [[nodiscard]] std::optional<std::string_view> getImplementationNameFor(uint64_t serviceId) const noexcept;
+        [[nodiscard]] tl::optional<std::string_view> getImplementationNameFor(uint64_t serviceId) const noexcept;
 
         [[nodiscard]] IEventQueue& getEventQueue() const noexcept;
 
@@ -548,8 +548,8 @@ namespace Ichor {
                 logAddService<Impl, Interfaces...>(cmpMgr->serviceId());
 
                 for (auto const &[key, registration] : cmpMgr->getDependencyRegistry()->_registrations) {
-                    auto const &props = std::get<std::optional<Properties>>(registration);
-                    _eventQueue->pushPrioritisedEvent<DependencyRequestEvent>(cmpMgr->serviceId(), priority, std::get<Dependency>(registration), props.has_value() ? &props.value() : std::optional<Properties const *>{});
+                    auto const &props = std::get<tl::optional<Properties>>(registration);
+                    _eventQueue->pushPrioritisedEvent<DependencyRequestEvent>(cmpMgr->serviceId(), priority, std::get<Dependency>(registration), props.has_value() ? &props.value() : tl::optional<Properties const *>{});
                 }
 
                 auto event_priority = std::min(INTERNAL_DEPENDENCY_EVENT_PRIORITY, priority);

@@ -17,7 +17,7 @@ public:
         return std::vector<uint8_t>{};
     }
 
-    std::optional<MyMsg> deserialize(std::vector<uint8_t> &&stream) final {
+    tl::optional<MyMsg> deserialize(std::vector<uint8_t> &&stream) final {
         // deserialize and return a MyMsg with the right id
         return MyMsg{};
     }

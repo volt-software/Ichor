@@ -11,7 +11,7 @@
 #include <cassert>
 #include <functional>
 #include <memory>
-#include <optional>
+#include <tl/optional.h>
 #include <utility>
 #include <ichor/Enums.h>
 #include <ichor/Common.h>
@@ -140,7 +140,7 @@ namespace Ichor::Detail {
 #ifdef ICHOR_USE_HARDENING
         DependencyManager *_dmAtTimeOfCreation{_local_dm};
 #endif
-        std::optional<bool> _hasSuspended{};
+        tl::optional<bool> _hasSuspended{};
 
     private:
         static thread_local uint64_t _idCounter;
@@ -228,7 +228,7 @@ namespace Ichor::Detail {
             _finished = true;
         }
 
-        std::optional<T> _currentValue{};
+        tl::optional<T> _currentValue{};
         bool _finished{};
         std::shared_ptr<bool> _destroyed;
     };

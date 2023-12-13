@@ -26,7 +26,10 @@ private:
         ICHOR_LOG_INFO(_logger, "UsingTcpService started");
         _dataEventRegistration = GetThreadLocalManager().registerEventHandler<NetworkDataEvent>(this, this);
         _failureEventRegistration = GetThreadLocalManager().registerEventHandler<FailedSendMessageEvent>(this, this);
-        _connectionService->sendAsync(_serializer->serialize(TestMsg{11, "hello"}));
+        auto ret = _connectionService->sendAsync(_serializer->serialize(TestMsg{11, "hello"}));
+        if(!ret) {
+            ICHOR_LOG_ERROR(_logger, "start() send error: {}", (int)ret.error());
+        }
         co_return {};
     }
 
@@ -74,7 +77,10 @@ private:
 
     AsyncGenerator<IchorBehaviour> handleEvent(FailedSendMessageEvent const &evt) {
         ICHOR_LOG_INFO(_logger, "Failed to send message id {}, retrying", evt.msgId);
-        _connectionService->sendAsync(std::move(evt.data));
+        auto ret = _connectionService->sendAsync(std::move(evt.data));
+        if(!ret) {
+            ICHOR_LOG_ERROR(_logger, "handleEvent() send error: {}", (int)ret.error());
+        }
 
         co_return {};
     }

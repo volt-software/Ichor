@@ -1,7 +1,7 @@
 #pragma once
 
 #include <cstdint>
-#include <optional>
+#include <tl/optional.h>
 #include <functional>
 #include <ichor/Enums.h>
 
@@ -13,14 +13,14 @@ namespace Ichor {
     class [[nodiscard]] EventCallbackInfo final {
     public:
         uint64_t listeningServiceId;
-        std::optional<uint64_t> filterServiceId;
+        tl::optional<uint64_t> filterServiceId;
         std::function<AsyncGenerator<IchorBehaviour>(Event const &)> callback;
     };
 
     class [[nodiscard]] EventInterceptInfo final {
     public:
         uint64_t listeningServiceId;
-        std::optional<uint64_t> filterEventId;
+        tl::optional<uint64_t> filterEventId;
         std::function<bool(Event const &)> preIntercept;
         std::function<void(Event const &, bool)> postIntercept;
     };

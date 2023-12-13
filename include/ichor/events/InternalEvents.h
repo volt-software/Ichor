@@ -4,7 +4,7 @@
 #include <ichor/ConstevalHash.h>
 #include <ichor/dependency_management/Dependency.h>
 #include <ichor/Callbacks.h>
-#include <optional>
+#include <tl/optional.h>
 
 namespace Ichor {
     /// When a service has succesfully started, this event gets added to inject it into other services
@@ -29,12 +29,12 @@ namespace Ichor {
 
     /// When a new service gets created that requests dependencies, each dependency it requests adds this event
     struct DependencyRequestEvent final : public Event {
-        explicit DependencyRequestEvent(uint64_t _id, uint64_t _originatingService, uint64_t _priority, Dependency _dependency, std::optional<Properties const *> _properties) noexcept :
+        explicit DependencyRequestEvent(uint64_t _id, uint64_t _originatingService, uint64_t _priority, Dependency _dependency, tl::optional<Properties const *> _properties) noexcept :
                 Event(TYPE, NAME, _id, _originatingService, _priority), dependency(_dependency), properties{_properties} {}
         ~DependencyRequestEvent() final = default;
 
         Dependency dependency;
-        std::optional<Properties const *> properties;
+        tl::optional<Properties const *> properties;
         static constexpr uint64_t TYPE = typeNameHash<DependencyRequestEvent>();
         static constexpr std::string_view NAME = typeName<DependencyRequestEvent>();
     };

@@ -304,10 +304,10 @@ void Ichor::HttpHostService::read(tcp::socket socket, net::yield_context yield) 
 
         ICHOR_LOG_TRACE_ATOMIC(_logger, "New request for {} {}", (int)req.method(), req.target());
 
-        std::vector<HttpHeader> headers{};
+        unordered_map<std::string, std::string> headers{};
         headers.reserve(static_cast<unsigned long>(std::distance(std::begin(req), std::end(req))));
         for (auto const& field : req) {
-            headers.emplace_back(field.name_string(), field.value());
+            headers.emplace(field.name_string(), field.value());
         }
         // rapidjson f.e. expects a null terminator
         if (!req.body().empty() && *req.body().rbegin() != 0) {
@@ -348,7 +348,7 @@ void Ichor::HttpHostService::read(tcp::socket socket, net::yield_context yield) 
                         res.set(http::field::content_type, *httpRes.contentType);
                     }
                     for (auto const& header : httpRes.headers) {
-                        res.set(header.value, header.name);
+                        res.set(header.first, header.second);
                     }
                     res.keep_alive(keep_alive);
                     ICHOR_LOG_TRACE_ATOMIC(_logger, "sending http response {} - {}", (int)httpRes.status,

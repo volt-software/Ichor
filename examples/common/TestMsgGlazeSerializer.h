@@ -2,18 +2,7 @@
 
 #include <ichor/services/serialization/ISerializer.h>
 #include "TestMsg.h"
-
-// Glaze uses different conventions than Ichor, ignore them to prevent being spammed by warnings
-#if defined( __GNUC__ )
-#    pragma GCC diagnostic push
-#    pragma GCC diagnostic ignored "-Wsign-conversion"
-#    pragma GCC diagnostic ignored "-Wshadow"
-#    pragma GCC diagnostic ignored "-Wconversion"
-#endif
-#include <glaze/glaze.hpp>
-#if defined( __GNUC__ )
-#    pragma GCC diagnostic pop
-#endif
+#include <ichor/glaze.h>
 
 using namespace Ichor;
 
@@ -35,14 +24,14 @@ public:
         return buf;
     }
 
-    std::optional<TestMsg> deserialize(std::vector<uint8_t> &&stream) final {
+    tl::optional<TestMsg> deserialize(std::vector<uint8_t> &&stream) final {
         TestMsg msg;
         auto err = glz::read_json(msg, stream);
 
         if(err) {
             fmt::print("Glaze error {} at {}\n", (int)err.ec, err.location);
             fmt::print("json {}\n", (char*)stream.data());
-            return std::nullopt;
+            return tl::nullopt;
         }
 
         return msg;

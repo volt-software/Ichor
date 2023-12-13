@@ -96,7 +96,7 @@ uint64_t Ichor::HttpConnectionService::getPriority() {
     return _priority.load(std::memory_order_acquire);
 }
 
-Ichor::Task<Ichor::HttpResponse> Ichor::HttpConnectionService::sendAsync(Ichor::HttpMethod method, std::string_view route, std::vector<HttpHeader> &&headers, std::vector<uint8_t> &&msg) {
+Ichor::Task<Ichor::HttpResponse> Ichor::HttpConnectionService::sendAsync(Ichor::HttpMethod method, std::string_view route, unordered_map<std::string, std::string> &&headers, std::vector<uint8_t> &&msg) {
     if(method == HttpMethod::get && !msg.empty()) {
         throw std::runtime_error("GET requests cannot have a body.");
     }
@@ -156,7 +156,7 @@ Ichor::Task<Ichor::HttpResponse> Ichor::HttpConnectionService::sendAsync(Ichor::
             };
 
             for (auto const &header : *next.headers) {
-                req.set(header.name, header.value);
+                req.set(header.first, header.second);
             }
             req.set(http::field::host, Ichor::any_cast<std::string &>(getProperties()["Address"]));
             req.prepare_payload();
@@ -221,7 +221,7 @@ Ichor::Task<Ichor::HttpResponse> Ichor::HttpConnectionService::sendAsync(Ichor::
             next.response->status = (HttpStatus) (int) res.result();
             next.response->headers.reserve(static_cast<unsigned long>(std::distance(std::begin(res), std::end(res))));
             for (auto const &header: res) {
-                next.response->headers.emplace_back(header.name_string(), header.value());
+                next.response->headers.emplace(header.name_string(), header.value());
             }
 
             // need to use move iterator instead of std::move directly, to prevent leaks.

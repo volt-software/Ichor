@@ -102,13 +102,13 @@ private:
 
     friend DependencyRegister;
 
-    Task<std::optional<PingMsg>> sendTestRequest(std::vector<uint8_t> &&toSendMsg) {
-        std::vector<HttpHeader> headers{HttpHeader{"Content-Type", "application/json"}};
+    Task<tl::optional<PingMsg>> sendTestRequest(std::vector<uint8_t> &&toSendMsg) {
+        unordered_map<std::string, std::string> headers{{"Content-Type", "application/json"}};
         auto response = co_await _connectionService->sendAsync(HttpMethod::post, "/ping", std::move(headers), std::move(toSendMsg));
 
         if(_serializer == nullptr) {
             // we're stopping, gotta bail.
-            co_return std::optional<PingMsg>{};
+            co_return tl::optional<PingMsg>{};
         }
 
         if(response.status == HttpStatus::ok) {
@@ -116,7 +116,7 @@ private:
             co_return msg;
         } else {
             ICHOR_LOG_ERROR(_logger, "Received status {}", (int)response.status);
-            co_return std::optional<PingMsg>{};
+            co_return tl::optional<PingMsg>{};
         }
     }
 

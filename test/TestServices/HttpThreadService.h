@@ -106,7 +106,7 @@ private:
     friend DependencyRegister;
 
     AsyncGenerator<void> sendTestRequest(std::vector<uint8_t> &&toSendMsg) {
-        std::vector<HttpHeader> headers{HttpHeader("Content-Type", "application/json")};
+        unordered_map<std::string, std::string> headers{{"Content-Type", "application/json"}};
         auto response = co_await _connectionService->sendAsync(HttpMethod::post, "/test", std::move(headers), std::move(toSendMsg));
 
         if(_serializer == nullptr) {

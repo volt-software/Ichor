@@ -1109,7 +1109,7 @@ Ichor::unordered_map<uint64_t, Ichor::IService const *> Ichor::DependencyManager
     return svcs;
 }
 
-std::optional<std::string_view> Ichor::DependencyManager::getImplementationNameFor(uint64_t serviceId) const noexcept {
+tl::optional<std::string_view> Ichor::DependencyManager::getImplementationNameFor(uint64_t serviceId) const noexcept {
     if constexpr (DO_INTERNAL_DEBUG || DO_HARDENING) {
         if (this != Detail::_local_dm) [[unlikely]] { // are we on the right thread?
             std::terminate();

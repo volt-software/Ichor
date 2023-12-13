@@ -32,6 +32,6 @@ namespace Ichor {
         static std::mutex _io_mutex;
         static std::queue<std::shared_ptr<io_operation_submission>> _evts;
         bool _should_stop{};
-        std::optional<std::thread> _io_thread;
+        tl::optional<std::thread> _io_thread;
     };
 }

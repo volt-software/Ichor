@@ -24,7 +24,7 @@ namespace Ichor {
             std::string_view route;
             AsyncManualResetEvent* event;
             HttpResponse* response;
-            std::vector<HttpHeader>* headers;
+            unordered_map<std::string, std::string>* headers;
             std::vector<uint8_t>* body;
         };
     }
@@ -34,7 +34,7 @@ namespace Ichor {
         HttpConnectionService(DependencyRegister &reg, Properties props);
         ~HttpConnectionService() final = default;
 
-        Task<HttpResponse> sendAsync(HttpMethod method, std::string_view route, std::vector<HttpHeader> &&headers, std::vector<uint8_t>&& msg) final;
+        Task<HttpResponse> sendAsync(HttpMethod method, std::string_view route, unordered_map<std::string, std::string> &&headers, std::vector<uint8_t>&& msg) final;
 
         Task<void> close() final;
 

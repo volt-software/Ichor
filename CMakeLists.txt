@@ -94,10 +94,11 @@ file(GLOB_RECURSE ICHOR_METRICS_SOURCES ${ICHOR_TOP_DIR}/src/services/metrics/*.
 file(GLOB_RECURSE ICHOR_TIMER_SOURCES ${ICHOR_TOP_DIR}/src/services/timer/*.cpp)
 file(GLOB_RECURSE ICHOR_OPTIONAL_HIREDIS_SOURCES ${ICHOR_TOP_DIR}/src/services/redis/*.cpp)
 file(GLOB_RECURSE ICHOR_IO_SOURCES ${ICHOR_TOP_DIR}/src/services/io/*.cpp)
+file(GLOB_RECURSE ICHOR_BASE64_SOURCES ${ICHOR_TOP_DIR}/src/base64/*.cpp)
 
 file(GLOB SPDLOG_SOURCES ${ICHOR_EXTERNAL_DIR}/spdlog/src/*.cpp)
 
-add_library(ichor ${FMT_SOURCES} ${ICHOR_FRAMEWORK_SOURCES} ${ICHOR_LOGGING_SOURCES} ${ICHOR_NETWORK_SOURCES} ${ICHOR_METRICS_SOURCES} ${ICHOR_TIMER_SOURCES} ${ICHOR_IO_SOURCES})
+add_library(ichor ${FMT_SOURCES} ${ICHOR_FRAMEWORK_SOURCES} ${ICHOR_LOGGING_SOURCES} ${ICHOR_NETWORK_SOURCES} ${ICHOR_METRICS_SOURCES} ${ICHOR_TIMER_SOURCES} ${ICHOR_IO_SOURCES} ${ICHOR_BASE64_SOURCES})
 
 if(ICHOR_ENABLE_INTERNAL_DEBUGGING)
     target_compile_definitions(ichor PUBLIC ICHOR_ENABLE_INTERNAL_DEBUGGING)
@@ -133,8 +134,8 @@ if(ICHOR_AARCH64)
 endif()
 
 if(NOT WIN32)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Wshadow -Wnon-virtual-dtor -Wno-unused-variable -Wno-long-long -Wno-unused-parameter -Wnull-dereference -pedantic -Wformat -Wformat-security -Wcast-align -Woverloaded-virtual ")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread -ftemplate-backtrace-limit=0 ")
+    target_compile_options(ichor PUBLIC -Wall -Wextra -Wshadow -Wnon-virtual-dtor -Wno-unused-variable -Wno-long-long -Wno-unused-parameter -Wnull-dereference -pedantic -Wformat -Wformat-security -Wcast-align -Woverloaded-virtual)
+    target_compile_options(ichor PUBLIC -pthread -ftemplate-backtrace-limit=0)
     if(ICHOR_USE_HARDENING AND (CMAKE_BUILD_TYPE MATCHES Debug OR CMAKE_BUILD_TYPE MATCHES RelWithDebInfo))
         # Enable runtime iterator debug checks (like checking two different iterators from different containers)
         target_compile_definitions(ichor PUBLIC _GLIBCXX_ASSERTIONS _GLIBCXX_DEBUG _GLIBCXX_DEBUG_PEDANTIC _ITERATOR_DEBUG_LEVEL=2 _LIBCPP_DEBUG=1 _LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_DEBUG)
@@ -158,12 +159,14 @@ endif()
 
 # gcc added support for mold in version 12, before that, the flag is ignored.
 # Note that with older versions of mold and early versions of gcc 12, issues with the tests have been observed. Please upgrade to the latest if you notice any issues.
-if(ICHOR_USE_MOLD)
+if(ICHOR_USE_MOLD AND NOT WIN32)
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fuse-ld=mold ")
+    set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -fuse-ld=mold ")
+    set(CMAKE_MODULE_LINKER_FLAGS "${CMAKE_MODULE_LINKER_FLAGS} -fuse-ld=mold ")
 endif()
 
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wduplicated-cond -Wduplicated-branches -Wlogical-op ")
+    target_compile_options(ichor PUBLIC -Wduplicated-cond -Wduplicated-branches -Wlogical-op)
 endif()
 
 if(WIN32)
@@ -308,7 +311,8 @@ endif()
 # Gcc 12.1 and 12.2 have bugs that prevent compilation with Werror at -O2 and higher:
 # https://gcc.gnu.org/bugzilla/show_bug.cgi?id=107138
 # https://gcc.gnu.org/bugzilla/show_bug.cgi?id=105329
-if((NOT CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_VERSION VERSION_LESS "12") AND NOT WIN32)
+# 12.3 has a bug where [[maybe_unused]] in glaze is somehow ignored.
+if(NOT CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND NOT WIN32)
     target_compile_options(ichor PRIVATE "-Werror") #prevent externally compiled sources to error out on warnings
 endif()
 
@@ -471,7 +475,13 @@ install(DIRECTORY "${CMAKE_SOURCE_DIR}/include/sole" # source directory
         DESTINATION "include/ichor/external" # target directory
         FILES_MATCHING # install only matched files
         PATTERN "*.h" # select header files
-        )
+)
+
+install(DIRECTORY "${CMAKE_SOURCE_DIR}/include/base64" # source directory
+        DESTINATION "include/ichor/external" # target directory
+        FILES_MATCHING # install only matched files
+        PATTERN "*.h" # select header files
+)
 
 install(DIRECTORY "${CMAKE_SOURCE_DIR}/include/tl" # source directory
         DESTINATION "include/ichor/external" # target directory

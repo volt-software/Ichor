@@ -247,7 +247,7 @@ struct is_specialization_of<Primary<Args...>, Primary> : std::true_type
 #	ifdef __has_include
 #		if __has_include(<optional>) && __cplusplus >= 201703L
 #			include <optional>
-#			define LYRA_CONFIG_OPTIONAL_TYPE std::optional
+#			define LYRA_CONFIG_OPTIONAL_TYPE tl::optional
 #		endif
 #	endif
 #endif
