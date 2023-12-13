@@ -50,7 +50,7 @@ namespace Ichor {
         void setAuthentication(std::string_view user, std::string_view pass) final;
         void clearAuthentication() final;
         [[nodiscard]] tl::optional<std::string> getAuthenticationUser() const final;
-        [[nodiscard]] Task<tl::expected<EtcdUserReply, EtcdError>> createUser(std::string_view user, std::string_view pass) final;
+        [[nodiscard]] Task<tl::expected<EtcdUpdateUserReply, EtcdError>> createUser(std::string_view user, std::string_view pass) final;
         [[nodiscard]] Task<tl::expected<EtcdUpdateUserReply, EtcdError>> grantUserRoles(std::string_view user, std::vector<std::string> roles) final;
         [[nodiscard]] Task<tl::expected<EtcdUpdateUserReply, EtcdError>> revokeUserRoles(std::string_view user, std::vector<std::string> roles) final;
         [[nodiscard]] Task<tl::expected<EtcdUpdateUserReply, EtcdError>> updateUserPassword(std::string_view user, std::string_view pass) final;

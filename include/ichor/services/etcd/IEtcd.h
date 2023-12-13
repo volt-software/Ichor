@@ -304,7 +304,7 @@ namespace Ichor {
          * @param pass
          * @return full user details
          */
-        [[nodiscard]] virtual Task<tl::expected<EtcdUserReply, EtcdError>> createUser(std::string_view user, std::string_view pass) = 0;
+        [[nodiscard]] virtual Task<tl::expected<EtcdUpdateUserReply, EtcdError>> createUser(std::string_view user, std::string_view pass) = 0;
 
         /**
          * Grant roles to user

@@ -123,85 +123,86 @@ struct fmt::formatter<glz::error_code> {
     }
 };
 
-//template <>
-//struct glz::meta<Ichor::EtcdReplyNode> {
-//    using T = Ichor::EtcdReplyNode;
-//    static constexpr auto value = object(
-//            "createdIndex", &T::createdIndex,
-//            "modifiedIndex", &T::modifiedIndex,
-//            "key", &T::key,
-//            "value", &T::value,
-//            "ttl", &T::ttl,
-//            "expiration", &T::expiration,
-//            "dir", &T::dir,
-//            "nodes", &T::nodes
-//    );
-//};
-//
-//template <>
-//struct glz::meta<Ichor::EtcdReply> {
-//    using T = Ichor::EtcdReply;
-//    static constexpr auto value = object(
-//            "action", &T::action,
-//            "node", &T::node,
-//            "prevNode", &T::prevNode,
-//            "index", &T::index,
-//            "cause", &T::cause,
-//            "errorCode", &T::errorCode,
-//            "message", &T::message
-//    );
-//};
-//
-//template <>
-//struct glz::meta<Ichor::EtcdLeaderInfoStats> {
-//    using T = Ichor::EtcdLeaderInfoStats;
-//    static constexpr auto value = object(
-//            "leader", &T::leader,
-//            "uptime", &T::uptime,
-//            "startTime", &T::startTime
-//    );
-//};
-//
-//template <>
-//struct glz::meta<Ichor::EtcdSelfStats> {
-//    using T = Ichor::EtcdSelfStats;
-//    static constexpr auto value = object(
-//            "name", &T::name,
-//            "id", &T::id,
-//            "state", &T::state,
-//            "startTime", &T::startTime,
-//            "leaderInfo", &T::leaderInfo,
-//            "recvAppendRequestCnt", &T::recvAppendRequestCnt,
-//            "sendAppendRequestCnt", &T::sendAppendRequestCnt
-//    );
-//};
-//
-//template <>
-//struct glz::meta<Ichor::EtcdStoreStats> {
-//    using T = Ichor::EtcdStoreStats;
-//    static constexpr auto value = object(
-//            "compareAndSwapFail", &T::compareAndSwapFail,
-//            "compareAndSwapSuccess", &T::compareAndSwapSuccess,
-//            "compareAndDeleteSuccess", &T::compareAndDeleteSuccess,
-//            "compareAndDeleteFail", &T::compareAndDeleteFail,
-//            "createFail", &T::createFail,
-//            "createSuccess", &T::createSuccess,
-//            "deleteFail", &T::deleteFail,
-//            "deleteSuccess", &T::deleteSuccess,
-//            "expireCount", &T::expireCount,
-//            "getsFail", &T::getsFail,
-//            "getsSuccess", &T::getsSuccess,
-//            "setsFail", &T::setsFail,
-//            "setsSuccess", &T::setsSuccess,
-//            "updateFail", &T::updateFail,
-//            "updateSuccess", &T::updateSuccess,
-//            "watchers", &T::watchers
-//    );
-//};
+template <>
+struct glz::meta<Ichor::EtcdReplyNode> {
+    using T = Ichor::EtcdReplyNode;
+    static constexpr auto value = object(
+            "createdIndex", &T::createdIndex,
+            "modifiedIndex", &T::modifiedIndex,
+            "key", &T::key,
+            "value", &T::value,
+            "ttl", &T::ttl,
+            "expiration", &T::expiration,
+            "dir", &T::dir,
+            "nodes", &T::nodes
+    );
+};
+
+template <>
+struct glz::meta<Ichor::EtcdReply> {
+    using T = Ichor::EtcdReply;
+    static constexpr auto value = object(
+            "action", &T::action,
+            "node", &T::node,
+            "prevNode", &T::prevNode,
+            "index", &T::index,
+            "cause", &T::cause,
+            "errorCode", &T::errorCode,
+            "message", &T::message
+    );
+};
+
+template <>
+struct glz::meta<Ichor::EtcdLeaderInfoStats> {
+    using T = Ichor::EtcdLeaderInfoStats;
+    static constexpr auto value = object(
+            "leader", &T::leader,
+            "uptime", &T::uptime,
+            "startTime", &T::startTime
+    );
+};
+
+template <>
+struct glz::meta<Ichor::EtcdSelfStats> {
+    using T = Ichor::EtcdSelfStats;
+    static constexpr auto value = object(
+            "name", &T::name,
+            "id", &T::id,
+            "state", &T::state,
+            "startTime", &T::startTime,
+            "leaderInfo", &T::leaderInfo,
+            "recvAppendRequestCnt", &T::recvAppendRequestCnt,
+            "sendAppendRequestCnt", &T::sendAppendRequestCnt
+    );
+};
+
+template <>
+struct glz::meta<Ichor::EtcdStoreStats> {
+    using T = Ichor::EtcdStoreStats;
+    static constexpr auto value = object(
+            "compareAndSwapFail", &T::compareAndSwapFail,
+            "compareAndSwapSuccess", &T::compareAndSwapSuccess,
+            "compareAndDeleteSuccess", &T::compareAndDeleteSuccess,
+            "compareAndDeleteFail", &T::compareAndDeleteFail,
+            "createFail", &T::createFail,
+            "createSuccess", &T::createSuccess,
+            "deleteFail", &T::deleteFail,
+            "deleteSuccess", &T::deleteSuccess,
+            "expireCount", &T::expireCount,
+            "getsFail", &T::getsFail,
+            "getsSuccess", &T::getsSuccess,
+            "setsFail", &T::setsFail,
+            "setsSuccess", &T::setsSuccess,
+            "updateFail", &T::updateFail,
+            "updateSuccess", &T::updateSuccess,
+            "watchers", &T::watchers
+    );
+};
 
 namespace Ichor {
     struct EtcdHealthReply final {
         std::string health;
+        std::optional<std::string> reason;
     };
     struct EtcdEnableAuthReply final {
         bool enabled;
@@ -209,95 +210,96 @@ namespace Ichor {
 }
 
 
-//template <>
-//struct glz::meta<Ichor::EtcdHealthReply> {
-//    using T = Ichor::EtcdHealthReply;
-//    static constexpr auto value = object(
-//            "health", &T::health
-//    );
-//};
-//
-//template <>
-//struct glz::meta<Ichor::EtcdEnableAuthReply> {
-//    using T = Ichor::EtcdEnableAuthReply;
-//    static constexpr auto value = object(
-//            "enabled", &T::enabled
-//    );
-//};
-//
-//template <>
-//struct glz::meta<Ichor::EtcdVersionReply> {
-//    using T = Ichor::EtcdVersionReply;
-//    static constexpr auto value = object(
-//            "etcdserver", &T::etcdserver,
-//            "etcdcluster", &T::etcdcluster
-//    );
-//};
-//
-//template <>
-//struct glz::meta<Ichor::EtcdKvReply> {
-//    using T = Ichor::EtcdKvReply;
-//    static constexpr auto value = object(
-//            "read", &T::read,
-//            "write", &T::write
-//    );
-//};
-//
-//template <>
-//struct glz::meta<Ichor::EtcdPermissionsReply> {
-//    using T = Ichor::EtcdPermissionsReply;
-//    static constexpr auto value = object(
-//            "kv", &T::kv
-//    );
-//};
-//
-//template <>
-//struct glz::meta<Ichor::EtcdRoleReply> {
-//    using T = Ichor::EtcdRoleReply;
-//    static constexpr auto value = object(
-//            "role", &T::role,
-//            "permissions", &T::permissions,
-//            "grant", &T::grant,
-//            "revoke", &T::revoke
-//    );
-//};
-//
-//template <>
-//struct glz::meta<Ichor::EtcdRolesReply> {
-//    using T = Ichor::EtcdRolesReply;
-//    static constexpr auto value = object(
-//            "roles", &T::roles
-//    );
-//};
-//
-//template <>
-//struct glz::meta<Ichor::EtcdUserReply> {
-//    using T = Ichor::EtcdUserReply;
-//    static constexpr auto value = object(
-//            "user", &T::user,
-//            "password", &T::password,
-//            "roles", &T::roles,
-//            "grant", &T::grant,
-//            "revoke", &T::revoke
-//    );
-//};
-//
-//template <>
-//struct glz::meta<Ichor::EtcdUpdateUserReply> {
-//    using T = Ichor::EtcdUpdateUserReply;
-//    static constexpr auto value = object(
-//            "user", &T::user,
-//            "roles", &T::roles
-//    );
-//};
-//
-//template <>
-//struct glz::meta<Ichor::EtcdUsersReply> {
-//    using T = Ichor::EtcdUsersReply;
-//    static constexpr auto value = object(
-//            "users", &T::users
-//    );
-//};
+template <>
+struct glz::meta<Ichor::EtcdHealthReply> {
+    using T = Ichor::EtcdHealthReply;
+    static constexpr auto value = object(
+            "health", &T::health,
+            "reason", &T::reason
+    );
+};
+
+template <>
+struct glz::meta<Ichor::EtcdEnableAuthReply> {
+    using T = Ichor::EtcdEnableAuthReply;
+    static constexpr auto value = object(
+            "enabled", &T::enabled
+    );
+};
+
+template <>
+struct glz::meta<Ichor::EtcdVersionReply> {
+    using T = Ichor::EtcdVersionReply;
+    static constexpr auto value = object(
+            "etcdserver", &T::etcdserver,
+            "etcdcluster", &T::etcdcluster
+    );
+};
+
+template <>
+struct glz::meta<Ichor::EtcdKvReply> {
+    using T = Ichor::EtcdKvReply;
+    static constexpr auto value = object(
+            "read", &T::read,
+            "write", &T::write
+    );
+};
+
+template <>
+struct glz::meta<Ichor::EtcdPermissionsReply> {
+    using T = Ichor::EtcdPermissionsReply;
+    static constexpr auto value = object(
+            "kv", &T::kv
+    );
+};
+
+template <>
+struct glz::meta<Ichor::EtcdRoleReply> {
+    using T = Ichor::EtcdRoleReply;
+    static constexpr auto value = object(
+            "role", &T::role,
+            "permissions", &T::permissions,
+            "grant", &T::grant,
+            "revoke", &T::revoke
+    );
+};
+
+template <>
+struct glz::meta<Ichor::EtcdRolesReply> {
+    using T = Ichor::EtcdRolesReply;
+    static constexpr auto value = object(
+            "roles", &T::roles
+    );
+};
+
+template <>
+struct glz::meta<Ichor::EtcdUserReply> {
+    using T = Ichor::EtcdUserReply;
+    static constexpr auto value = object(
+            "user", &T::user,
+            "password", &T::password,
+            "roles", &T::roles,
+            "grant", &T::grant,
+            "revoke", &T::revoke
+    );
+};
+
+template <>
+struct glz::meta<Ichor::EtcdUpdateUserReply> {
+    using T = Ichor::EtcdUpdateUserReply;
+    static constexpr auto value = object(
+            "user", &T::user,
+            "roles", &T::roles
+    );
+};
+
+template <>
+struct glz::meta<Ichor::EtcdUsersReply> {
+    using T = Ichor::EtcdUsersReply;
+    static constexpr auto value = object(
+            "users", &T::users
+    );
+};
 
 Ichor::EtcdV2Service::EtcdV2Service(DependencyRegister &reg, Properties props) : AdvancedService<EtcdV2Service>(std::move(props)) {
     reg.registerDependency<ILogger>(this, false, getProperties());
@@ -788,7 +790,7 @@ tl::optional<std::string> Ichor::EtcdV2Service::getAuthenticationUser() const {
     return full_str.substr(0, pos);
 }
 
-Ichor::Task<tl::expected<Ichor::EtcdUserReply, Ichor::EtcdError>> Ichor::EtcdV2Service::createUser(std::string_view user, std::string_view pass) {
+Ichor::Task<tl::expected<Ichor::EtcdUpdateUserReply, Ichor::EtcdError>> Ichor::EtcdV2Service::createUser(std::string_view user, std::string_view pass) {
     std::string url = fmt::format("/v2/auth/users/{}", user);
 
     unordered_map<std::string, std::string> headers{};
@@ -812,7 +814,7 @@ Ichor::Task<tl::expected<Ichor::EtcdUserReply, Ichor::EtcdError>> Ichor::EtcdV2S
         co_return tl::unexpected(Ichor::EtcdError::HTTP_RESPONSE_ERROR);
     }
 
-    EtcdUserReply etcd_reply;
+    EtcdUpdateUserReply etcd_reply;
     auto err = glz::read_json(etcd_reply, http_reply.body);
 
     if(err) {
