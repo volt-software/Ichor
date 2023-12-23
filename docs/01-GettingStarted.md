@@ -462,7 +462,7 @@ struct LoggerFactory final {
         Properties props{};
         // Filter is a special property in Ichor, if this is detected, it gets checked before asking another service if they're interested in it.
         // In this case, we apply a filter specifically so that the requesting service id is the only one that will match.
-        props.template emplace<>("Filter", Ichor::make_any<Filter>(Filter{ServiceIdFilterEntry{evt.originatingService}}));
+        props.template emplace<>("Filter", Ichor::make_any<Filter>(ServiceIdFilterEntry{evt.originatingService}));
         auto *newLogger = _dm->createServiceManager<Logger, ILogger>(std::move(props));
         _loggers.emplace(evt.originatingService, newLogger);
     }

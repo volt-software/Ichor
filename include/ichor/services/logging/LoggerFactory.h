@@ -65,7 +65,7 @@ namespace Ichor {
                 }
 
                 Properties props{};
-                props.template emplace<>("Filter", Ichor::make_any<Filter>(Filter{ServiceIdFilterEntry{evt.originatingService}}));
+                props.template emplace<>("Filter", Ichor::make_any<Filter>(ServiceIdFilterEntry{evt.originatingService}));
                 props.template emplace<>("LogLevel", Ichor::make_any<LogLevel>(requestedLevel));
                 auto newLogger = GetThreadLocalManager().template createServiceManager<LogT, ILogger>(std::move(props));
                 _loggers.emplace(evt.originatingService, newLogger);
