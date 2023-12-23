@@ -5,13 +5,14 @@
 #include <string>
 #include <string_view>
 
-// Differs from std::any by not needing RTTI (no typeid())
+// Differs from std::any by not needing RTTI (no typeid()) and still able to compare types
+// e.g my_any_var.type_hash() == Ichor::typeNameHash<int>()
 // Probably doesn't work in some situations where std::any would, as compiler support is missing.
 namespace Ichor {
 
     struct bad_any_cast final : public std::bad_cast
     {
-        bad_any_cast(std::string_view type, std::string_view cast) : _error() {
+        bad_any_cast(std::string_view type, std::string_view cast) {
             _error = "Bad any_cast. Expected ";
             _error += type;
             _error += " but got request to cast to ";
@@ -23,13 +24,11 @@ namespace Ichor {
         std::string _error;
     };
 
-    using createValueFnPtr = void*(*)(void*);
-    using deleteValueFnPtr = void(*)(void*);
+    using createValueFnPtr = void*(*)(void*) noexcept;
+    using deleteValueFnPtr = void(*)(void*) noexcept;
 
     struct any final {
-        any() noexcept {
-
-        }
+        any() noexcept = default;
 
         any(const any& o) : _size(o._size), _ptr(o._createFn(o._ptr)), _typeHash(o._typeHash), _hasValue(o._hasValue), _createFn(o._createFn), _deleteFn(o._deleteFn), _typeName(o._typeName) {
 
@@ -40,7 +39,7 @@ namespace Ichor {
             o._ptr = nullptr;
         }
 
-        any& operator=(const any& o) {
+        any& operator=(const any& o) noexcept {
             if(this == &o) {
                 return *this;
             }
@@ -75,12 +74,17 @@ namespace Ichor {
             return *this;
         }
 
-        ~any() {
+        ~any() noexcept {
             reset();
         }
 
+        bool operator==(const any& other) const noexcept
+        {
+            return _typeHash == other._typeHash && _hasValue && _ptr == other._ptr;
+        }
+
         template <typename T, typename... Args>
-        std::decay<T>& emplace(Args&&... args)
+        std::decay<T>& emplace(Args&&... args) noexcept
         {
             static_assert(std::is_copy_constructible_v<T>, "Template argument must be copy constructible.");
             static_assert(!std::is_pointer_v<T>, "Template argument must not be a pointer");
@@ -91,10 +95,10 @@ namespace Ichor {
             _ptr = new T(std::forward<Args>(args)...);
             _typeHash = typeNameHash<std::remove_cvref_t<T>>();
             _hasValue = true;
-            _createFn = [](void *value) -> void* {
+            _createFn = [](void *value) noexcept -> void* {
                 return new T(*reinterpret_cast<T*>(value));
             };
-            _deleteFn = [](void *value) {
+            _deleteFn = [](void *value) noexcept {
                 delete static_cast<T*>(value);
             };
             _typeName = typeName<std::remove_cvref_t<T>>();
@@ -102,7 +106,7 @@ namespace Ichor {
             return *reinterpret_cast<std::decay<T>*>(_ptr);
         }
 
-        void reset() {
+        void reset() noexcept {
             if(_hasValue) {
                 _deleteFn(_ptr);
                 _hasValue = false;
@@ -182,7 +186,7 @@ namespace Ichor {
     }
 
     template <typename T, typename... Args>
-    any make_any(Args&&... args) {
+    any make_any(Args&&... args) noexcept {
         any a;
         a.template emplace<T, Args...>(std::forward<Args>(args)...);
         return a;
