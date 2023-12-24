@@ -81,3 +81,15 @@ namespace Ichor {
         std::shared_ptr<ITemplatedFilter> _templatedFilter;
     };
 }
+
+template <>
+struct fmt::formatter<Ichor::Filter> {
+    constexpr auto parse(format_parse_context& ctx) {
+        return ctx.end();
+    }
+
+    template <typename FormatContext>
+    auto format(const Ichor::Filter& change, FormatContext& ctx) {
+        return fmt::format_to(ctx.out(), "");
+    }
+};

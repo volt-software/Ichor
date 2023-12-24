@@ -52,8 +52,7 @@ namespace Ichor
     //
     // [C] - Consumer performs this transition
     // [P] - Producer performs this transition
-    enum class state
-    {
+    enum class state {
         value_not_ready_consumer_active,
         value_not_ready_consumer_suspended,
         value_ready_producer_active,
@@ -88,18 +87,14 @@ namespace Ichor
 }
 
 template <>
-struct fmt::formatter<Ichor::ServiceState>
-{
-    constexpr auto parse(format_parse_context& ctx)
-    {
+struct fmt::formatter<Ichor::ServiceState> {
+    constexpr auto parse(format_parse_context& ctx) {
         return ctx.end();
     }
 
     template <typename FormatContext>
-    auto format(const Ichor::ServiceState& state, FormatContext& ctx)
-    {
-        switch(state)
-        {
+    auto format(const Ichor::ServiceState& state, FormatContext& ctx) {
+        switch(state) {
             case Ichor::ServiceState::UNINSTALLED:
                 return fmt::format_to(ctx.out(), "UNINSTALLED");
             case Ichor::ServiceState::INSTALLED:
@@ -121,18 +116,14 @@ struct fmt::formatter<Ichor::ServiceState>
 };
 
 template <>
-struct fmt::formatter<Ichor::state>
-{
-    constexpr auto parse(format_parse_context& ctx)
-    {
+struct fmt::formatter<Ichor::state> {
+    constexpr auto parse(format_parse_context& ctx) {
         return ctx.end();
     }
 
     template <typename FormatContext>
-    auto format(const Ichor::state& state, FormatContext& ctx)
-    {
-        switch(state)
-        {
+    auto format(const Ichor::state& state, FormatContext& ctx) {
+        switch(state) {
             case Ichor::state::value_not_ready_consumer_active:
                 return fmt::format_to(ctx.out(), "value_not_ready_consumer_active");
             case Ichor::state::value_not_ready_consumer_suspended:
@@ -150,18 +141,14 @@ struct fmt::formatter<Ichor::state>
 };
 
 template <>
-struct fmt::formatter<Ichor::Detail::DependencyChange>
-{
-    constexpr auto parse(format_parse_context& ctx)
-    {
+struct fmt::formatter<Ichor::Detail::DependencyChange> {
+    constexpr auto parse(format_parse_context& ctx) {
         return ctx.end();
     }
 
     template <typename FormatContext>
-    auto format(const Ichor::Detail::DependencyChange& change, FormatContext& ctx)
-    {
-        switch(change)
-        {
+    auto format(const Ichor::Detail::DependencyChange& change, FormatContext& ctx) {
+        switch(change) {
             case Ichor::Detail::DependencyChange::NOT_FOUND:
                 return fmt::format_to(ctx.out(), "NOT_FOUND");
             case Ichor::Detail::DependencyChange::FOUND:
@@ -177,18 +164,14 @@ struct fmt::formatter<Ichor::Detail::DependencyChange>
 };
 
 template <>
-struct fmt::formatter<Ichor::StartBehaviour>
-{
-    constexpr auto parse(format_parse_context& ctx)
-    {
+struct fmt::formatter<Ichor::StartBehaviour> {
+    constexpr auto parse(format_parse_context& ctx) {
         return ctx.end();
     }
 
     template <typename FormatContext>
-    auto format(const Ichor::StartBehaviour& change, FormatContext& ctx)
-    {
-        switch(change)
-        {
+    auto format(const Ichor::StartBehaviour& change, FormatContext& ctx) {
+        switch(change) {
             case Ichor::StartBehaviour::DONE:
                 return fmt::format_to(ctx.out(), "DONE");
             case Ichor::StartBehaviour::STARTED:
@@ -202,18 +185,14 @@ struct fmt::formatter<Ichor::StartBehaviour>
 };
 
 template <>
-struct fmt::formatter<Ichor::LogLevel>
-{
-    constexpr auto parse(format_parse_context& ctx)
-    {
+struct fmt::formatter<Ichor::LogLevel> {
+    constexpr auto parse(format_parse_context& ctx) {
         return ctx.end();
     }
 
     template <typename FormatContext>
-    auto format(const Ichor::LogLevel& change, FormatContext& ctx)
-    {
-        switch(change)
-        {
+    auto format(const Ichor::LogLevel& change, FormatContext& ctx) {
+        switch(change) {
             case Ichor::LogLevel::LOG_TRACE:
                 return fmt::format_to(ctx.out(), "LOG_TRACE");
             case Ichor::LogLevel::LOG_DEBUG:

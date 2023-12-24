@@ -129,7 +129,7 @@ Ichor::AsyncGenerator<Ichor::IchorBehaviour> Ichor::WsHostService::handleEvent(I
 
     auto connection = GetThreadLocalManager().createServiceManager<WsConnectionService, IConnectionService>(Properties{
         {"WsHostServiceId", Ichor::make_any<uint64_t>(getServiceId())},
-        {"Socket", Ichor::make_any<decltype(evt._socket)>(evt._socket)},
+        {"Socket", Ichor::make_unformattable_any<decltype(evt._socket)>(evt._socket)},
         {"Filter", Ichor::make_any<Filter>(Filter{ClientConnectionFilter{}})}
     });
     _connections.push_back(connection);
@@ -148,7 +148,7 @@ uint64_t Ichor::WsHostService::getPriority() {
 void Ichor::WsHostService::fail(beast::error_code ec, const char *what) {
     ICHOR_LOG_ERROR(_logger, "Boost.BEAST fail: {}, {}", what, ec.message());
     INTERNAL_DEBUG("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! push {}", getServiceId());
-    _queue->pushPrioritisedEvent<RunFunctionEvent>(getServiceId(), 1000, [this]() {
+    _queue->pushPrioritisedEvent<RunFunctionEvent>(getServiceId(), INTERNAL_EVENT_PRIORITY, [this]() {
         INTERNAL_DEBUG("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! _startStopEvent set {}", getServiceId());
         _startStopEvent.set();
     });

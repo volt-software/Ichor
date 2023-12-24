@@ -4,10 +4,12 @@
 #include <ichor/stl/Any.h>
 #include <string_view>
 #include <chrono>
+#include <fmt/core.h>
 
 #ifdef ICHOR_USE_ABSEIL
 #include <absl/container/flat_hash_map.h>
 #include <absl/container/flat_hash_set.h>
+#include <absl/container/btree_map.h>
 #include <absl/hash/hash.h>
 #else
 #include <unordered_map>
@@ -123,6 +125,13 @@ namespace Ichor {
             class Eq = std::equal_to<T>,
             class Allocator = std::allocator<T>>
     using unordered_set = absl::flat_hash_set<T, Hash, Eq, Allocator>;
+    template <
+            class Key,
+            class T,
+            class Hash = std::hash<Key>,
+            class Eq = std::less<Key>,
+            class Allocator = std::allocator<std::pair<const Key, T>>>
+    using unordered_multimap = absl::btree_multimap<Key, T, Hash, Eq, Allocator>;
 #else
     template <
             class Key,
@@ -137,6 +146,13 @@ namespace Ichor {
             class Eq = std::equal_to<T>,
             class Allocator = std::allocator<T>>
     using unordered_set = std::unordered_set<T, Hash, Eq, Allocator>;
+    template <
+            class Key,
+            class T,
+            class Hash = std::hash<Key>,
+            class Eq = std::equal_to<Key>,
+            class Allocator = std::allocator<std::pair<const Key, T>>>
+    using unordered_multimap = std::unordered_multimap<Key, T, Hash, Eq, Allocator>;
 #endif
 
     using Properties = unordered_map<std::string, Ichor::any, string_hash>;
@@ -144,18 +160,18 @@ namespace Ichor {
     inline constexpr bool PreventOthersHandling = false;
     inline constexpr bool AllowOthersHandling = true;
 
-    // Code from https://stackoverflow.com/a/73078442/1460998
-    // converts a string to an integer with little error checking. Only use if you're very sure that the string is actually a number.
-    static inline int64_t FastAtoiCompare(const char* str)
-    {
+    /// Code from https://stackoverflow.com/a/73078442/1460998
+    /// converts a string to an integer with little error checking. Only use if you're very sure that the string is actually a number.
+    static inline int64_t FastAtoiCompare(const char* str) noexcept {
         int64_t val = 0;
         uint8_t x;
         while ((x = uint8_t(*str++ - '0')) <= 9) val = val * 10 + x;
         return val;
     }
 
-    static inline uint64_t FastAtoiCompareu(const char* str)
-    {
+    /// Code from https://stackoverflow.com/a/73078442/1460998
+    /// converts a string to an unsigned integer with little error checking. Only use if you're very sure that the string is actually a number.
+    static inline uint64_t FastAtoiCompareu(const char* str) noexcept {
         uint64_t val = 0;
         uint8_t  x;
         while ((x = uint8_t(*str++ - '0')) <= 9) val = val * 10 + x;

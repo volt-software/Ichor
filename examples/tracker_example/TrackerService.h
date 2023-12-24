@@ -60,7 +60,7 @@ private:
             auto newProps = *evt.properties.value();
             // `Filter` is a magic keyword that Ichor uses to determine if this service is global or if Ichor should use its filtering logic.
             // In this case, we tell Ichor to only insert this service if the requesting service has a matching scope
-            newProps.emplace("Filter", Ichor::make_any<Filter>(Filter{ScopeFilterEntry{scope}}));
+            newProps.emplace("Filter", Ichor::make_any<Filter>(ScopeFilterEntry{scope}));
 
             _scopedRuntimeServices.emplace(scope, GetThreadLocalManager().createServiceManager<RuntimeCreatedService, IRuntimeCreatedService>(std::move(newProps)));
         }
