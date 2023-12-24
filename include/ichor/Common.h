@@ -9,7 +9,6 @@
 #ifdef ICHOR_USE_ABSEIL
 #include <absl/container/flat_hash_map.h>
 #include <absl/container/flat_hash_set.h>
-#include <absl/container/btree_map.h>
 #include <absl/hash/hash.h>
 #else
 #include <unordered_map>
@@ -125,13 +124,6 @@ namespace Ichor {
             class Eq = std::equal_to<T>,
             class Allocator = std::allocator<T>>
     using unordered_set = absl::flat_hash_set<T, Hash, Eq, Allocator>;
-    template <
-            class Key,
-            class T,
-            class Hash = std::hash<Key>,
-            class Eq = std::less<Key>,
-            class Allocator = std::allocator<std::pair<const Key, T>>>
-    using unordered_multimap = absl::btree_multimap<Key, T, Hash, Eq, Allocator>;
 #else
     template <
             class Key,
@@ -146,13 +138,6 @@ namespace Ichor {
             class Eq = std::equal_to<T>,
             class Allocator = std::allocator<T>>
     using unordered_set = std::unordered_set<T, Hash, Eq, Allocator>;
-    template <
-            class Key,
-            class T,
-            class Hash = std::hash<Key>,
-            class Eq = std::equal_to<Key>,
-            class Allocator = std::allocator<std::pair<const Key, T>>>
-    using unordered_multimap = std::unordered_multimap<Key, T, Hash, Eq, Allocator>;
 #endif
 
     using Properties = unordered_map<std::string, Ichor::any, string_hash>;
