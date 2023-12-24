@@ -84,6 +84,7 @@ if [[ $RUN_EXAMPLES -eq 1 ]]; then
     ../bin/ichor_tcp_example || exit 1
     ../bin/ichor_timer_example || exit 1
     ../bin/ichor_tracker_example || exit 1
+    ../bin/ichor_introspection_example || exit 1
     ../bin/ichor_websocket_example || exit 1
     ../bin/ichor_websocket_example -t4 || exit 1
     ../bin/ichor_yielding_timer_example || exit 1

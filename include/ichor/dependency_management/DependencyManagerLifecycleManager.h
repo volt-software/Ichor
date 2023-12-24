@@ -8,7 +8,7 @@ namespace Ichor::Detail {
     class DependencyManagerLifecycleManager final : public ILifecycleManager {
     public:
         explicit DependencyManagerLifecycleManager(DependencyManager *dm) : _dm(dm) {
-            _interfaces.emplace_back(typeNameHash<DependencyManager>(), false, false);
+            _interfaces.emplace_back(typeNameHash<DependencyManager>(), typeName<DependencyManager>(), false, false);
         }
 
         ~DependencyManagerLifecycleManager() final = default;
@@ -134,6 +134,6 @@ namespace Ichor::Detail {
         ServiceState _state{ServiceState::ACTIVE};
         unordered_set<uint64_t> _serviceIdsOfDependees; // services that depend on this service
         std::vector<Dependency> _interfaces;
-        InternalService _service;
+        InternalService<DependencyManager> _service;
     };
 }

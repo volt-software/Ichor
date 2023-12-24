@@ -166,8 +166,20 @@ namespace Ichor {
         template <typename... CO_ARGS>
         void createServiceSpecialSauce(tl::optional<std::variant<CO_ARGS...>> = {}) {
             try {
-                new (buf) T(std::get<CO_ARGS>(_deps[typeNameHash<std::remove_pointer_t<CO_ARGS>>()])...);
-            } catch (std::exception const &) {
+                new(buf) T(std::get<CO_ARGS>(_deps[typeNameHash<std::remove_pointer_t<CO_ARGS>>()])...);
+            } catch (fmt::format_error const &e) {
+                fmt::print("User error in service {}:{}: \"{}\"\n", getServiceId(), getServiceName(), e.what());
+                std::terminate();
+            } catch (std::exception const &e) {
+                fmt::print("Std exception while starting svc {}:{} : \"{}\".\n\nLikely user error, but printing extra information anyway: Stored dependencies:\n", e.what(), getServiceId(), getServiceName());
+                for(auto &[key, _] : _deps) {
+                    fmt::print("{} ", key);
+                }
+                fmt::print("\n");
+
+                fmt::print("Requested deps:\n");
+                (fmt::print("{}:{} ", typeNameHash<std::remove_pointer_t<CO_ARGS>>(), typeName<std::remove_pointer_t<CO_ARGS>>()), ...);
+                fmt::print("\n");
                 std::terminate();
             }
         }

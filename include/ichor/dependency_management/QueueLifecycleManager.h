@@ -9,7 +9,7 @@ namespace Ichor::Detail {
     class QueueLifecycleManager final : public ILifecycleManager {
     public:
         explicit QueueLifecycleManager(IEventQueue *q) : _q(q) {
-            _interfaces.emplace_back(typeNameHash<IEventQueue>(), false, false);
+            _interfaces.emplace_back(typeNameHash<IEventQueue>(), typeName<IEventQueue>(), false, false);
         }
 
         ~QueueLifecycleManager() final = default;
@@ -135,6 +135,6 @@ namespace Ichor::Detail {
         ServiceState _state{ServiceState::ACTIVE};
         unordered_set<uint64_t> _serviceIdsOfDependees; // services that depend on this service
         std::vector<Dependency> _interfaces;
-        InternalService _service;
+        InternalService<IEventQueue> _service;
     };
 }

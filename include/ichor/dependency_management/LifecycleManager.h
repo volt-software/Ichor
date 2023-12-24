@@ -29,7 +29,7 @@ namespace Ichor::Detail {
         static std::unique_ptr<LifecycleManager<ServiceType, Interfaces...>> create(Properties&& properties, InterfacesList_t<Interfaces...>) {
             std::vector<Dependency> interfaces{};
             interfaces.reserve(sizeof...(Interfaces));
-            (interfaces.emplace_back(typeNameHash<Interfaces>(), false, false),...);
+            (interfaces.emplace_back(typeNameHash<Interfaces>(), typeName<Interfaces>(), false, false),...);
             return std::make_unique<LifecycleManager<ServiceType, Interfaces...>>(std::move(interfaces), std::forward<Properties>(properties));
         }
 

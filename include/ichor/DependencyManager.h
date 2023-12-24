@@ -32,7 +32,7 @@ namespace Ichor {
     // Moved here from InternalEvents.h to prevent circular includes
     /// Used to prevent modifying the _services container while iterating over it through f.e. DependencyOnline()
     struct InsertServiceEvent final : public Event {
-        InsertServiceEvent(uint64_t _id, uint64_t _originatingService, uint64_t _priority, std::unique_ptr<ILifecycleManager> _mgr) noexcept : Event(TYPE, NAME, _id, _originatingService, _priority), mgr(std::move(_mgr)) {}
+        InsertServiceEvent(uint64_t _id, ServiceIdType _originatingService, uint64_t _priority, std::unique_ptr<ILifecycleManager> _mgr) noexcept : Event(TYPE, NAME, _id, _originatingService, _priority), mgr(std::move(_mgr)) {}
         ~InsertServiceEvent() final = default;
 
         std::unique_ptr<ILifecycleManager> mgr;
@@ -41,23 +41,23 @@ namespace Ichor {
     };
 
     struct EventWaiter final {
-        explicit EventWaiter(uint64_t _waitingSvcId, uint64_t _eventType) : waitingSvcId(_waitingSvcId), eventType(_eventType) {
+        explicit EventWaiter(ServiceIdType _waitingSvcId, uint64_t _eventType) : waitingSvcId(_waitingSvcId), eventType(_eventType) {
             events.emplace_back(_eventType, std::make_unique<AsyncManualResetEvent>());
         }
         EventWaiter(const EventWaiter &) = delete;
         EventWaiter(EventWaiter &&o) noexcept = default;
         std::vector<std::pair<uint64_t, std::unique_ptr<AsyncManualResetEvent>>> events{};
-        uint64_t waitingSvcId;
+        ServiceIdType waitingSvcId;
         uint64_t eventType;
         uint32_t count{1}; // default of 1, to be decremented in event completion/error
     };
 
-    class DependencyManager final {
+    class [[nodiscard]] DependencyManager final {
     private:
         explicit DependencyManager(IEventQueue *eventQueue);
     public:
-        // DANGEROUS COPY, EFFECTIVELY MAKES A NEW MANAGER AND STARTS OVER!!
-        // Only implemented so that the manager can be easily used in STL containers before anything is using it.
+        /// DANGEROUS COPY, EFFECTIVELY MAKES A NEW MANAGER AND STARTS OVER!!
+        /// Only implemented so that the manager can be easily used in STL containers before anything is using it.
         [[deprecated("DANGEROUS COPY, EFFECTIVELY MAKES A NEW MANAGER AND STARTS OVER!! The moved-from manager cannot be registered with a CommunicationChannel, or UB occurs.")]]
         DependencyManager(const DependencyManager& other) : _eventQueue(other._eventQueue) {
             if(other._started.load(std::memory_order_acquire)) [[unlikely]] {
@@ -129,7 +129,7 @@ namespace Ichor {
 #if (!defined(WIN32) && !defined(_WIN32) && !defined(__WIN32)) || defined(__CYGWIN__)
         requires Derived<EventT, Event>
 #endif
-        AsyncGenerator<void> pushPrioritisedEventAsync(uint64_t originatingServiceId, uint64_t priority, bool coalesce, Args&&... args) {
+        Task<void> pushPrioritisedEventAsync(ServiceIdType originatingServiceId, uint64_t priority, bool coalesce, Args&&... args) {
 #ifdef ICHOR_USE_HARDENING
             if(this != Detail::_local_dm) [[unlikely]] { // are we on the right thread?
                 std::terminate();
@@ -165,7 +165,7 @@ namespace Ichor {
             }
 
             uint64_t eventId = _eventQueue->getNextEventId();
-            _eventQueue->pushEventInternal(priority, std::unique_ptr<Event>{new EventT(std::forward<uint64_t>(eventId), std::forward<uint64_t>(originatingServiceId), std::forward<uint64_t>(priority), std::forward<Args>(args)...)});
+            _eventQueue->pushEventInternal(priority, std::unique_ptr<Event>{new EventT(std::forward<uint64_t>(eventId), std::forward<ServiceIdType>(originatingServiceId), std::forward<uint64_t>(priority), std::forward<Args>(args)...)});
             auto it = _eventWaiters.emplace(eventId, EventWaiter(originatingServiceId, EventT::TYPE));
             INTERNAL_DEBUG("pushPrioritisedEventAsync {}:{} {} waiting {} {}", eventId, typeName<EventT>(), originatingServiceId, it.first->second.count, it.first->second.events.size());
             co_await *it.first->second.events.begin()->second.get();
@@ -284,7 +284,7 @@ namespace Ichor {
         /// \param impl class that is registering handler
         /// \param targetServiceId optional service id to filter registering for, if empty, receive all events of type EventT
         /// \return RAII handler, removes registration upon destruction
-        EventHandlerRegistration registerEventHandler(Impl *impl, IService *self, tl::optional<uint64_t> targetServiceId = {}) {
+        EventHandlerRegistration registerEventHandler(Impl *impl, IService *self, tl::optional<ServiceIdType> targetServiceId = {}) {
 #ifdef ICHOR_USE_HARDENING
             if(this != Detail::_local_dm) [[unlikely]] { // are we on the right thread?
                 std::terminate();
@@ -390,44 +390,16 @@ namespace Ichor {
         /// Get IService by local ID
         /// \param id service id
         /// \return optional
-        [[nodiscard]] tl::optional<const IService*> getIService(uint64_t id) const noexcept {
-#ifdef ICHOR_USE_HARDENING
-            if(this != Detail::_local_dm) [[unlikely]] { // are we on the right thread?
-                std::terminate();
-            }
-#endif
+        [[nodiscard]] tl::optional<NeverNull<const IService*>> getIService(ServiceIdType id) const noexcept;
 
-            auto svc = _services.find(id);
-
-            if(svc == _services.end()) {
-                return {};
-            }
-
-            return svc->second->getIService();
-        }
         /// Get IService by global ID, much slower than getting by local ID
         /// \param id service uuid
         /// \return optional
-        [[nodiscard]] tl::optional<const IService*> getIService(sole::uuid id) const noexcept {
-#ifdef ICHOR_USE_HARDENING
-            if(this != Detail::_local_dm) [[unlikely]] { // are we on the right thread?
-                std::terminate();
-            }
-#endif
-            auto svc = std::find_if(_services.begin(), _services.end(), [&id](const std::pair<const uint64_t, std::unique_ptr<ILifecycleManager>> &svcPair) {
-                return svcPair.second->getIService()->getServiceGid() == id;
-            });
-
-            if(svc == _services.end()) {
-                return {};
-            }
-
-            return svc->second->getIService();
-        }
+        [[nodiscard]] tl::optional<NeverNull<const IService*>> getIService(sole::uuid id) const noexcept;
 
 
         template <typename Interface>
-        [[nodiscard]] tl::optional<std::pair<Interface*, IService*>> getService(uint64_t id) const noexcept {
+        [[nodiscard]] tl::optional<std::pair<Interface*, IService*>> getService(ServiceIdType id) const noexcept {
 #ifdef ICHOR_USE_HARDENING
             if(this != Detail::_local_dm) [[unlikely]] { // are we on the right thread?
                 std::terminate();
@@ -476,10 +448,12 @@ namespace Ichor {
             return ret;
         }
 
-        template <typename Interface>
         /// Get all services by given template interface type, regardless of state
+        /// Do not use in coroutines or other threads.
+        /// Not thread-safe.
         /// \tparam Interface interface to search for
         /// \return list of found services
+        template <typename Interface>
         [[nodiscard]] std::vector<std::pair<Interface&, IService&>> getAllServicesOfType() noexcept {
 #ifdef ICHOR_USE_HARDENING
             if(this != Detail::_local_dm) [[unlikely]] { // are we on the right thread?
@@ -502,20 +476,25 @@ namespace Ichor {
             return ret;
         }
 
-        /// Returns a list of currently known services and their status.
-        /// Do not use in coroutines or other threads
-        /// NOT thread-safe!!
-        /// \return map of [serviceId, service]
-        [[nodiscard]] unordered_map<uint64_t, IService const *> getServiceInfo() const noexcept;
+        [[nodiscard]] std::vector<Dependency> getDependencyRequestsForService(ServiceIdType svcId) const noexcept;
+        [[nodiscard]] std::vector<NeverNull<IService const *>> getDependentsForService(ServiceIdType svcId) const noexcept;
 
-        // Mainly useful for tests
+        /// Returns a list of currently known services and their status.
+        /// Do not use in coroutines or other threads.
+        /// Not thread-safe.
+        /// \return map of [serviceId, service]
+        [[nodiscard]] unordered_map<ServiceIdType, NeverNull<IService const *>> getAllServices() const noexcept;
+
+        /// Blocks until the queue is empty or the specified timeout has passed.
+        /// Mainly useful for tests
         void runForOrQueueEmpty(std::chrono::milliseconds ms = 100ms) const noexcept;
 
-        /// Gets the class name of the implementation for given serviceId
+        /// Convenience function. Gets the class name of the implementation for given serviceId.
         /// \param serviceId
         /// \return nullopt if serviceId does not exist, name of implementation class otherwise
-        [[nodiscard]] tl::optional<std::string_view> getImplementationNameFor(uint64_t serviceId) const noexcept;
+        [[nodiscard]] tl::optional<std::string_view> getImplementationNameFor(ServiceIdType serviceId) const noexcept;
 
+        /// Gets the associated event queue
         [[nodiscard]] IEventQueue& getEventQueue() const noexcept;
 
         /// Async method to wait until a service is started
@@ -646,7 +625,7 @@ namespace Ichor {
         /// \tparam Interfaces
         /// \param id
         template <typename Impl, typename Interface1, typename Interface2, typename... Interfaces>
-        void logAddService(uint64_t id) {
+        void logAddService(ServiceIdType id) {
             if(_logger != nullptr && _logger->getLogLevel() <= LogLevel::LOG_DEBUG) {
                 fmt::memory_buffer out;
                 fmt::format_to(std::back_inserter(out), "added ServiceManager<{}, {}, ", typeName<Interface1>(), typeName<Interface2>());
@@ -661,7 +640,7 @@ namespace Ichor {
         /// \tparam Interface
         /// \param id
         template <typename Impl, typename Interface>
-        void logAddService(uint64_t id) {
+        void logAddService(ServiceIdType id) {
             if(_logger != nullptr && _logger->getLogLevel() <= LogLevel::LOG_DEBUG) {
                 ICHOR_LOG_DEBUG(_logger, "added ServiceManager<{}, {}> {}", typeName<Interface>(), typeName<Impl>(), id);
             }
@@ -671,7 +650,7 @@ namespace Ichor {
         /// \tparam Impl
         /// \param id
         template <typename Impl>
-        void logAddService(uint64_t id) {
+        void logAddService(ServiceIdType id) {
             if(_logger != nullptr && _logger->getLogLevel() <= LogLevel::LOG_DEBUG) {
                 ICHOR_LOG_DEBUG(_logger, "added ServiceManager<{}> {}", typeName<Impl>(), id);
             }
@@ -693,20 +672,20 @@ namespace Ichor {
         /// Check if there is a coroutine for the given serviceId that is still waiting on something
         /// \param serviceId
         /// \return
-        [[nodiscard]] bool existingCoroutineFor(uint64_t serviceId) const noexcept;
+        [[nodiscard]] bool existingCoroutineFor(ServiceIdType serviceId) const noexcept;
         /// Coroutine based method to wait for a service to have finished with either DependencyOfflineEvent or StopServiceEvent
         /// \param serviceId
         /// \param eventType
         /// \return
-        Task<void> waitForService(uint64_t serviceId, uint64_t eventType) noexcept;
+        Task<void> waitForService(ServiceIdType serviceId, uint64_t eventType) noexcept;
         /// Counterpart for waitForService, runs all waiting coroutines for specified event
         /// \param serviceId
         /// \param eventType
         /// \param eventName
         /// \return
-        bool finishWaitingService(uint64_t serviceId, uint64_t eventType, [[maybe_unused]] std::string_view eventName) noexcept;
+        bool finishWaitingService(ServiceIdType serviceId, uint64_t eventType, [[maybe_unused]] std::string_view eventName) noexcept;
 
-        unordered_map<uint64_t, std::unique_ptr<ILifecycleManager>> _services{}; // key = service id
+        unordered_map<ServiceIdType, std::unique_ptr<ILifecycleManager>> _services{}; // key = service id
         unordered_map<uint64_t, std::vector<DependencyTrackerInfo>> _dependencyRequestTrackers{}; // key = interface name hash
         unordered_map<uint64_t, std::vector<DependencyTrackerInfo>> _dependencyUndoRequestTrackers{}; // key = interface name hash
         unordered_map<CallbackKey, std::function<void(Event const &)>> _completionCallbacks{}; // key = listening service id + event type

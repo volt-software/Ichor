@@ -901,7 +901,7 @@ void Ichor::DependencyManager::stop() {
     Ichor::Detail::_local_dm = nullptr;
 }
 
-bool Ichor::DependencyManager::existingCoroutineFor(uint64_t serviceId) const noexcept {
+bool Ichor::DependencyManager::existingCoroutineFor(ServiceIdType serviceId) const noexcept {
     auto existingCoroutineEvent = std::find_if(_scopedEvents.begin(), _scopedEvents.end(), [serviceId](const std::pair<uint64_t, std::shared_ptr<Event>> &t) {
         if(t.second->type == StartServiceEvent::TYPE) {
             return t.second->originatingService == serviceId || static_cast<StartServiceEvent*>(t.second.get())->serviceId == serviceId;
@@ -922,7 +922,7 @@ bool Ichor::DependencyManager::existingCoroutineFor(uint64_t serviceId) const no
     return existingCoroutineEvent != _scopedEvents.end();
 }
 
-Ichor::Task<void> Ichor::DependencyManager::waitForService(uint64_t serviceId, uint64_t eventType) noexcept {
+Ichor::Task<void> Ichor::DependencyManager::waitForService(ServiceIdType serviceId, uint64_t eventType) noexcept {
     if constexpr (DO_INTERNAL_DEBUG || DO_HARDENING) {
         if (this != Detail::_local_dm) [[unlikely]] { // are we on the right thread?
             std::terminate();
@@ -942,7 +942,7 @@ Ichor::Task<void> Ichor::DependencyManager::waitForService(uint64_t serviceId, u
     co_return;
 }
 
-bool Ichor::DependencyManager::finishWaitingService(uint64_t serviceId, uint64_t eventType, [[maybe_unused]] std::string_view eventName) noexcept {
+bool Ichor::DependencyManager::finishWaitingService(ServiceIdType serviceId, uint64_t eventType, [[maybe_unused]] std::string_view eventName) noexcept {
     bool ret{};
     auto waiter = _dependencyWaiters.find(serviceId);
     std::vector<std::unique_ptr<AsyncManualResetEvent>> evts{};
@@ -1095,21 +1095,116 @@ void Ichor::DependencyManager::runForOrQueueEmpty(std::chrono::milliseconds ms) 
     }
 }
 
-Ichor::unordered_map<uint64_t, Ichor::IService const *> Ichor::DependencyManager::getServiceInfo() const noexcept {
+/// Get IService by local ID
+/// \param id service id
+/// \return optional
+[[nodiscard]] tl::optional<Ichor::NeverNull<const Ichor::IService*>> Ichor::DependencyManager::getIService(uint64_t id) const noexcept {
     if constexpr (DO_INTERNAL_DEBUG || DO_HARDENING) {
         if (this != Detail::_local_dm) [[unlikely]] { // are we on the right thread?
             std::terminate();
         }
     }
 
-    unordered_map<uint64_t, IService const *> svcs{};
-    for(auto &[svcId, svc] : _services) {
+    auto svc = _services.find(id);
+
+    if(svc == _services.end()) {
+        return {};
+    }
+
+    return svc->second->getIService();
+}
+
+tl::optional<Ichor::NeverNull<const Ichor::IService*>> Ichor::DependencyManager::getIService(sole::uuid id) const noexcept {
+    if constexpr (DO_INTERNAL_DEBUG || DO_HARDENING) {
+        if (this != Detail::_local_dm) [[unlikely]] { // are we on the right thread?
+            std::terminate();
+        }
+    }
+
+    auto svc = std::find_if(_services.begin(), _services.end(), [&id](const std::pair<const uint64_t, std::unique_ptr<ILifecycleManager>> &svcPair) {
+        return svcPair.second->getIService()->getServiceGid() == id;
+    });
+
+    if(svc == _services.end()) {
+        return {};
+    }
+
+    return svc->second->getIService();
+}
+
+std::vector<Ichor::Dependency> Ichor::DependencyManager::getDependencyRequestsForService(ServiceIdType svcId) const noexcept {
+    if constexpr (DO_INTERNAL_DEBUG || DO_HARDENING) {
+        if (this != Detail::_local_dm) [[unlikely]] { // are we on the right thread?
+            std::terminate();
+        }
+    }
+
+    auto svc = _services.find(svcId);
+
+    if(svc == _services.end()) {
+        return {};
+    }
+
+    auto reg = svc->second->getDependencyRegistry();
+
+    if(reg == nullptr) {
+        return {};
+    }
+
+    std::vector<Dependency> ret;
+
+    for(auto &r : reg->_registrations) {
+        ret.emplace_back(std::get<Dependency>(r.second));
+    }
+
+    return ret;
+}
+
+std::vector<Ichor::NeverNull<Ichor::IService const *>> Ichor::DependencyManager::getDependentsForService(ServiceIdType svcId) const noexcept {
+    if constexpr (DO_INTERNAL_DEBUG || DO_HARDENING) {
+        if (this != Detail::_local_dm) [[unlikely]] { // are we on the right thread?
+            std::terminate();
+        }
+    }
+
+    auto svc = _services.find(svcId);
+
+    if(svc == _services.end()) {
+        return {};
+    }
+
+    auto deps = svc->second->getDependees();
+
+    std::vector<Ichor::NeverNull<Ichor::IService const *>> ret;
+
+    for(auto &dep : deps) {
+        auto isvc = getIService(dep);
+
+        if(!isvc) {
+            continue;
+        }
+
+        ret.emplace_back(*isvc);
+    }
+
+    return ret;
+}
+
+Ichor::unordered_map<Ichor::ServiceIdType, Ichor::NeverNull<Ichor::IService const *>> Ichor::DependencyManager::getAllServices() const noexcept {
+    if constexpr (DO_INTERNAL_DEBUG || DO_HARDENING) {
+        if (this != Detail::_local_dm) [[unlikely]] { // are we on the right thread?
+            std::terminate();
+        }
+    }
+
+    unordered_map<uint64_t, NeverNull<IService const *>> svcs{};
+    for(auto const &[svcId, svc] : _services) {
         svcs.emplace(svcId, svc->getIService());
     }
     return svcs;
 }
 
-tl::optional<std::string_view> Ichor::DependencyManager::getImplementationNameFor(uint64_t serviceId) const noexcept {
+tl::optional<std::string_view> Ichor::DependencyManager::getImplementationNameFor(ServiceIdType serviceId) const noexcept {
     if constexpr (DO_INTERNAL_DEBUG || DO_HARDENING) {
         if (this != Detail::_local_dm) [[unlikely]] { // are we on the right thread?
             std::terminate();

@@ -8,6 +8,11 @@ add_executable(ichor_minimal_example ${EXAMPLE_SOURCES})
 target_link_libraries(ichor_minimal_example ${CMAKE_THREAD_LIBS_INIT})
 target_link_libraries(ichor_minimal_example ichor)
 
+file(GLOB_RECURSE EXAMPLE_SOURCES ${ICHOR_TOP_DIR}/examples/introspection_example/*.cpp)
+add_executable(ichor_introspection_example ${EXAMPLE_SOURCES})
+target_link_libraries(ichor_introspection_example ${CMAKE_THREAD_LIBS_INIT})
+target_link_libraries(ichor_introspection_example ichor)
+
 file(GLOB_RECURSE EXAMPLE_SOURCES ${ICHOR_TOP_DIR}/examples/tracker_example/*.cpp)
 add_executable(ichor_tracker_example ${EXAMPLE_SOURCES})
 target_link_libraries(ichor_tracker_example ${CMAKE_THREAD_LIBS_INIT})

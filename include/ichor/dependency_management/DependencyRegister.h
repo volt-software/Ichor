@@ -23,7 +23,7 @@ namespace Ichor {
             }
 
             _registrations.emplace(typeNameHash<Interface>(), std::make_tuple(
-                    Dependency{typeNameHash<Interface>(), required, 0},
+                    Dependency{typeNameHash<Interface>(), typeName<Interface>(), required, 0},
                     std::function<void(NeverNull<void*>, IService&)>{[svc](NeverNull<void*> dep, IService& isvc){ svc->addDependencyInstance(*reinterpret_cast<Interface*>(dep.get()), isvc); }},
                     std::function<void(NeverNull<void*>, IService&)>{[svc](NeverNull<void*> dep, IService& isvc){ svc->removeDependencyInstance(*reinterpret_cast<Interface*>(dep.get()), isvc); }},
                     std::move(props)));
@@ -41,7 +41,7 @@ namespace Ichor {
             }
 
             _registrations.emplace(typeNameHash<Interface>(), std::make_tuple(
-                    Dependency{typeNameHash<Interface>(), true, 0},
+                    Dependency{typeNameHash<Interface>(), typeName<Interface>(), true, 0},
                     std::function<void(NeverNull<void*>, IService&)>{[svc](NeverNull<void*> dep, IService& isvc){ svc->template addDependencyInstance<Interface>(reinterpret_cast<Interface*>(dep.get()), &isvc); }},
                     std::function<void(NeverNull<void*>, IService&)>{[svc](NeverNull<void*> dep, IService& isvc){ svc->template removeDependencyInstance<Interface>(reinterpret_cast<Interface*>(dep.get()), &isvc); }},
                     tl::optional<Properties>{}));

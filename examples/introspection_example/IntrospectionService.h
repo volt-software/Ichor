@@ -1,0 +1,50 @@
+#pragma once
+
+#include <ichor/services/logging/Logger.h>
+#include <ichor/services/timer/ITimerFactory.h>
+#include <ichor/event_queues/IEventQueue.h>
+#include <ichor/DependencyManager.h>
+#include <thread>
+
+using namespace Ichor;
+
+class IntrospectionService final {
+public:
+    IntrospectionService(IService *self, IEventQueue *queue, DependencyManager *dm, ILogger *logger, ITimerFactory *) : _logger(logger) {
+        ICHOR_LOG_INFO(_logger, "IntrospectionService started");
+
+        auto svcs = dm->getAllServices();
+
+        for(auto &[svcId, svc] : svcs) {
+            ICHOR_LOG_INFO(_logger, "Service {}:{}, guid {} priority {} state {}", svc->getServiceId(), svc->getServiceName(), svc->getServiceGid(), svc->getServicePriority(), svc->getServiceState());
+
+            ICHOR_LOG_INFO(_logger, "\tProperties:");
+            for(auto &[key, val] : svc->getProperties()) {
+                ICHOR_LOG_INFO(_logger, "\t\tProperty {} value {} size {} type {}", key, val.to_string(), val.get_size(), val.type_name());
+            }
+
+            auto deps = dm->getDependencyRequestsForService(svc->getServiceId());
+            ICHOR_LOG_INFO(_logger, "\tDependencies:");
+            for(auto &dep : deps) {
+                ICHOR_LOG_INFO(_logger, "\t\tDependency {} required {} satisfied {}", dep.interfaceName, dep.required, dep.satisfied);
+            }
+            auto dependants = dm->getDependentsForService(svc->getServiceId());
+            ICHOR_LOG_INFO(_logger, "\tUsed by:");
+            for(auto &dep : dependants) {
+                ICHOR_LOG_INFO(_logger, "\t\tDependant {}:{}", dep->getServiceId(), dep->getServiceName());
+            }
+            ICHOR_LOG_INFO(_logger, "");
+
+        }
+
+        // TODO set logger of other service
+
+        queue->pushEvent<QuitEvent>(self->getServiceId());
+    }
+    ~IntrospectionService() {
+        ICHOR_LOG_INFO(_logger, "IntrospectionService stopped");
+    }
+
+private:
+    ILogger *_logger;
+};

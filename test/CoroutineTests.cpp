@@ -312,23 +312,23 @@ TEST_CASE("CoroutineTests") {
 
             REQUIRE(services.empty());
 
-            auto svcs = dm.getServiceInfo();
+            auto svcs = dm.getAllServices();
 
             REQUIRE(svcs.size() == 4);
 
-            REQUIRE(svcs[svcId]->getServiceState() == Ichor::ServiceState::STARTING);
+            REQUIRE(svcs.find(svcId)->second->getServiceState() == Ichor::ServiceState::STARTING);
 
             _evt->set();
 
-            REQUIRE(svcs[svcId]->getServiceState() == Ichor::ServiceState::INJECTING);
+            REQUIRE(svcs.find(svcId)->second->getServiceState() == Ichor::ServiceState::INJECTING);
         });
 
         dm.runForOrQueueEmpty();
 
         queue->pushEvent<RunFunctionEvent>(0, [&dm = dm, svcId]() {
-            auto svcs = dm.getServiceInfo();
+            auto svcs = dm.getAllServices();
 
-            REQUIRE(svcs[svcId]->getServiceState() == Ichor::ServiceState::INSTALLED);
+            REQUIRE(svcs.find(svcId)->second->getServiceState() == Ichor::ServiceState::INSTALLED);
 
             auto services = dm.getStartedServices<IDependencyOfflineWhileStartingService>();
 
@@ -362,15 +362,15 @@ TEST_CASE("CoroutineTests") {
 
             REQUIRE(services.empty());
 
-            auto svcs = dm.getServiceInfo();
+            auto svcs = dm.getAllServices();
 
             REQUIRE(svcs.size() == 4);
 
-            REQUIRE(svcs[svcId]->getServiceState() == Ichor::ServiceState::STOPPING);
+            REQUIRE(svcs.find(svcId)->second->getServiceState() == Ichor::ServiceState::STOPPING);
 
             _evt->set();
 
-            REQUIRE(svcs[svcId]->getServiceState() == Ichor::ServiceState::INSTALLED);
+            REQUIRE(svcs.find(svcId)->second->getServiceState() == Ichor::ServiceState::INSTALLED);
         });
 
         dm.runForOrQueueEmpty();
@@ -380,10 +380,10 @@ TEST_CASE("CoroutineTests") {
 
             REQUIRE(services.empty());
 
-            auto svcs = dm.getServiceInfo();
+            auto svcs = dm.getAllServices();
 
             REQUIRE(svcs.size() == 4);
-            REQUIRE(svcs[svcId]->getServiceState() == Ichor::ServiceState::INSTALLED);
+            REQUIRE(svcs.find(svcId)->second->getServiceState() == Ichor::ServiceState::INSTALLED);
 
             dm.getEventQueue().pushEvent<QuitEvent>(0);
         });
