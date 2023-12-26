@@ -11,6 +11,7 @@
 #include <boost/beast/ssl.hpp>
 #include <boost/asio/spawn.hpp>
 #include <boost/circular_buffer.hpp>
+#include <memory>
 
 namespace beast = boost::beast;         // from <boost/beast.hpp>
 namespace http = beast::http;           // from <boost/beast/http.hpp>

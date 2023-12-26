@@ -44,7 +44,7 @@ namespace Ichor {
         }
 
         any& operator=(const any& o) noexcept {
-            if(this == &o) {
+            if(this == &o) [[unlikely]] {
                 return *this;
             }
 
@@ -63,6 +63,10 @@ namespace Ichor {
         }
 
         any& operator=(any&& o) noexcept {
+            if(this == &o) [[unlikely]] {
+                return *this;
+            }
+
             reset();
 
             _size = o._size;

@@ -53,6 +53,7 @@ namespace Ichor
     // [C] - Consumer performs this transition
     // [P] - Producer performs this transition
     enum class state {
+        unknown,
         value_not_ready_consumer_active,
         value_not_ready_consumer_suspended,
         value_ready_producer_active,
@@ -124,6 +125,8 @@ struct fmt::formatter<Ichor::state> {
     template <typename FormatContext>
     auto format(const Ichor::state& state, FormatContext& ctx) {
         switch(state) {
+            case Ichor::state::unknown:
+                return fmt::format_to(ctx.out(), "unknown");
             case Ichor::state::value_not_ready_consumer_active:
                 return fmt::format_to(ctx.out(), "value_not_ready_consumer_active");
             case Ichor::state::value_not_ready_consumer_suspended:
@@ -135,7 +138,7 @@ struct fmt::formatter<Ichor::state> {
             case Ichor::state::cancelled:
                 return fmt::format_to(ctx.out(), "cancelled");
             default:
-                return fmt::format_to(ctx.out(), "error, please file a bug in Ichor");
+                return fmt::format_to(ctx.out(), "error, please file a bug in Ichor, val: {}", (int)state);
         }
     }
 };

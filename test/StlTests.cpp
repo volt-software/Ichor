@@ -2,16 +2,26 @@
 #include <ichor/stl/RealtimeMutex.h>
 #include <ichor/stl/RealtimeReadWriteMutex.h>
 #include <ichor/stl/NeverAlwaysNull.h>
+#include <ichor/stl/ReferenceCountedPointer.h>
+#include <memory>
 #include "TestServices/UselessService.h"
 
 using namespace Ichor;
 
-struct nonmoveable {
+struct nonmoveable final {
     nonmoveable() = default;
     nonmoveable(const nonmoveable&) = default;
     nonmoveable(nonmoveable&&) = delete;
     nonmoveable& operator=(const nonmoveable&) = default;
     nonmoveable& operator=(nonmoveable&&) = delete;
+};
+
+struct noncopyable final {
+    noncopyable() = default;
+    noncopyable(const noncopyable&) = delete;
+    noncopyable(noncopyable&&) = default;
+    noncopyable& operator=(const noncopyable&) = delete;
+    noncopyable& operator=(noncopyable&&) = default;
 };
 
 template <>
@@ -24,6 +34,21 @@ struct fmt::formatter<nonmoveable> {
     auto format(const nonmoveable& change, FormatContext& ctx) {
         return fmt::format_to(ctx.out(), "nonmoveable");
     }
+};
+
+struct parent_test_class {
+
+};
+
+struct rc_test_class final : parent_test_class {
+    rc_test_class(int _i, float _f, noncopyable) : i(_i), f(_f) {}
+    rc_test_class(const rc_test_class&) = default;
+    rc_test_class(rc_test_class&&) = delete;
+    rc_test_class& operator=(const rc_test_class&) = default;
+    rc_test_class& operator=(rc_test_class&&) = delete;
+
+    int i;
+    float f;
 };
 
 TEST_CASE("STL Tests") {
@@ -162,5 +187,156 @@ TEST_CASE("STL Tests") {
         f(p);
         REQUIRE(*p == 121);
         delete p;
+    }
+
+    SECTION("ReferenceCountedPointer tests") {
+        {
+            ReferenceCountedPointer<int> i;
+            REQUIRE(i.use_count() == 0);
+            REQUIRE(!i.has_value());
+            i = new int(5);
+            REQUIRE(i.use_count() == 1);
+            REQUIRE(*i == 5);
+            REQUIRE(*i.get() == 5);
+            REQUIRE(i.has_value());
+        }
+        {
+            ReferenceCountedPointer<int> i{new int(6)};
+            REQUIRE(i.use_count() == 1);
+            REQUIRE(i.has_value());
+            i = new int(5);
+            REQUIRE(i.use_count() == 1);
+            REQUIRE(i.has_value());
+            REQUIRE(*i == 5);
+            REQUIRE(*i.get() == 5);
+        }
+        bool deleted{};
+        {
+            auto deleter = [&deleted](int *ptr){ deleted = true; delete ptr; };
+            std::unique_ptr<int, decltype(deleter)> unique(new int(5), deleter);
+            ReferenceCountedPointer<int> tc{std::move(unique)};
+            REQUIRE(tc.use_count() == 1);
+            REQUIRE(*tc == 5);
+            REQUIRE(!unique);
+        }
+        REQUIRE(deleted);
+        deleted = false;
+        {
+            auto deleter = [&deleted](int *ptr){ deleted = true; delete ptr; };
+            std::unique_ptr<int, decltype(deleter)> unique(new int(5), deleter);
+            ReferenceCountedPointer<int> tc;
+            tc = std::move(unique);
+            REQUIRE(tc.use_count() == 1);
+            REQUIRE(*tc == 5);
+            REQUIRE(!unique);
+        }
+        REQUIRE(deleted);
+        {
+            ReferenceCountedPointer<int> tc = std::make_unique<int>(5);
+            REQUIRE(tc.use_count() == 1);
+            REQUIRE(*tc == 5);
+        }
+        {
+            ReferenceCountedPointer<int> tc = Ichor::make_reference_counted<int>(5);
+            REQUIRE(tc.use_count() == 1);
+            REQUIRE(*tc == 5);
+            tc = nullptr;
+            REQUIRE(tc.use_count() == 0);
+            REQUIRE(!tc.has_value());
+        }
+        {
+            ReferenceCountedPointer<int> tc;
+            REQUIRE(tc.use_count() == 0);
+            tc = std::make_unique<int>(5);
+            REQUIRE(tc.use_count() == 1);
+            REQUIRE(*tc == 5);
+        }
+        {
+            ReferenceCountedPointer<rc_test_class> tc = Ichor::make_reference_counted<rc_test_class>(5, 5.0f, noncopyable{});
+            REQUIRE(tc.use_count() == 1);
+            REQUIRE(tc->i == 5);
+            REQUIRE(tc->f == 5.0f);
+            ReferenceCountedPointer<parent_test_class> tc2{tc};
+            REQUIRE(tc.use_count() == 2);
+            REQUIRE(tc2.use_count() == 2);
+            ReferenceCountedPointer<parent_test_class> tc3;
+            REQUIRE(tc3.use_count() == 0);
+            tc3 = tc;
+            REQUIRE(tc.use_count() == 3);
+            REQUIRE(tc2.use_count() == 3);
+            REQUIRE(tc3.use_count() == 3);
+        }
+        {
+            ReferenceCountedPointer<parent_test_class> tc{new rc_test_class(5, 5.0f, noncopyable{})};
+            REQUIRE(tc.use_count() == 1);
+            tc = Ichor::make_reference_counted<rc_test_class>(5, 5.0f, noncopyable{});
+            REQUIRE(tc.use_count() == 1);
+        }
+        {
+            ReferenceCountedPointer<parent_test_class> tc = Ichor::make_reference_counted<rc_test_class>(5, 5.0f, noncopyable{});
+            REQUIRE(tc.use_count() == 1);
+        }
+        {
+            ReferenceCountedPointer<int> i{new int(7)};
+            ReferenceCountedPointer<int> i2{i};
+            REQUIRE(i.use_count() == 2);
+            REQUIRE(i2.use_count() == 2);
+            REQUIRE(*i == 7);
+            REQUIRE(*i2 == 7);
+            i = new int(5);
+            REQUIRE(i.use_count() == 1);
+            REQUIRE(i2.use_count() == 1);
+            REQUIRE(*i == 5);
+            REQUIRE(*i2 == 7);
+        }
+        {
+            ReferenceCountedPointer<int> i{new int(7)};
+            ReferenceCountedPointer<int> i2;
+            REQUIRE(i2.use_count() == 0);
+            i2 = i;
+            REQUIRE(i.use_count() == 2);
+            REQUIRE(i2.use_count() == 2);
+            REQUIRE(*i == 7);
+            REQUIRE(*i2 == 7);
+            i = new int(5);
+            REQUIRE(i.use_count() == 1);
+            REQUIRE(i2.use_count() == 1);
+            REQUIRE(*i == 5);
+            REQUIRE(*i2 == 7);
+        }
+        {
+            ReferenceCountedPointer<int> i{new int(7)};
+            ReferenceCountedPointer<int> i2{std::move(i)};
+            REQUIRE(!i.has_value());
+            REQUIRE(i2.has_value());
+            REQUIRE(i.use_count() == 0);
+            REQUIRE(i2.use_count() == 1);
+            REQUIRE(*i2 == 7);
+            i = new int(5);
+            REQUIRE(i.has_value());
+            REQUIRE(i2.has_value());
+            REQUIRE(i.use_count() == 1);
+            REQUIRE(i2.use_count() == 1);
+            REQUIRE(*i == 5);
+            REQUIRE(*i2 == 7);
+        }
+        {
+            ReferenceCountedPointer<int> i{new int(7)};
+            ReferenceCountedPointer<int> i2{};
+            REQUIRE(i2.use_count() == 0);
+            i2 = std::move(i);
+            REQUIRE(!i.has_value());
+            REQUIRE(i2.has_value());
+            REQUIRE(i.use_count() == 0);
+            REQUIRE(i2.use_count() == 1);
+            REQUIRE(*i2 == 7);
+            i = new int(5);
+            REQUIRE(i.has_value());
+            REQUIRE(i2.has_value());
+            REQUIRE(i.use_count() == 1);
+            REQUIRE(i2.use_count() == 1);
+            REQUIRE(*i == 5);
+            REQUIRE(*i2 == 7);
+        }
     }
 }

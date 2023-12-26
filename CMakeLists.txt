@@ -239,7 +239,7 @@ endif()
 
 if(ICHOR_USE_THREAD_SANITIZER)
     target_compile_options(ichor PUBLIC -fsanitize=thread -fno-omit-frame-pointer)
-    target_link_options(ichor PUBLIC -fsanitize=thread -static-libtsan)
+    target_link_options(ichor PUBLIC -fsanitize=thread)
 
     # clang on OSX doesn't accept -no-pie for some reason
     if(NOT APPLE)
@@ -248,6 +248,9 @@ if(ICHOR_USE_THREAD_SANITIZER)
 
     if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
         target_compile_options(ichor PUBLIC -no-pie)
+        target_link_options(ichor PUBLIC -static-libtsan)
+    else()
+        target_link_options(ichor PUBLIC -static-libsan)
     endif()
 
     if(ICHOR_USE_BOOST_BEAST)

@@ -15,6 +15,7 @@
 #include <utility>
 #include <ichor/Enums.h>
 #include <ichor/Common.h>
+#include <ichor/stl/ReferenceCountedPointer.h>
 
 namespace Ichor {
     template<typename T>
@@ -55,7 +56,7 @@ namespace Ichor::Detail {
         AsyncGeneratorPromiseBase& operator=(const AsyncGeneratorPromiseBase& other) = delete;
 
         std::suspend_always initial_suspend() const noexcept {
-            INTERNAL_COROUTINE_DEBUG("AsyncGeneratorPromiseBase::initial_suspend {}", _id);
+            INTERNAL_COROUTINE_DEBUG("AsyncGeneratorPromiseBase::initial_suspend {} {}", _id, _state);
             return {};
         }
 
@@ -179,9 +180,10 @@ namespace Ichor::Detail {
 
     public:
         AsyncGeneratorPromise() noexcept : _destroyed(new bool(false)) {
-
+            INTERNAL_COROUTINE_DEBUG("AsyncGeneratorPromise<{}>() {}", typeName<T>(), *_destroyed);
         }
         ~AsyncGeneratorPromise() final {
+            INTERNAL_COROUTINE_DEBUG("~AsyncGeneratorPromise<{}>()", typeName<T>());
             *_destroyed = true;
         };
 
@@ -208,7 +210,8 @@ namespace Ichor::Detail {
             return _finished;
         }
 
-        std::shared_ptr<bool>& get_destroyed() noexcept  {
+        ReferenceCountedPointer<bool>& get_destroyed() noexcept  {
+            INTERNAL_COROUTINE_DEBUG("AsyncGeneratorPromise<{}>::get_destroyed {}, {}", typeName<T>(), _id, *_destroyed);
             return _destroyed;
         }
 
@@ -230,7 +233,7 @@ namespace Ichor::Detail {
 
         tl::optional<T> _currentValue{};
         bool _finished{};
-        std::shared_ptr<bool> _destroyed;
+        ReferenceCountedPointer<bool> _destroyed;
     };
 
     template<>
@@ -238,9 +241,10 @@ namespace Ichor::Detail {
     {
     public:
         AsyncGeneratorPromise() noexcept : _destroyed(new bool(false)) {
-
+            INTERNAL_COROUTINE_DEBUG("AsyncGeneratorPromise<>()");
         }
         ~AsyncGeneratorPromise() final {
+            INTERNAL_COROUTINE_DEBUG("~AsyncGeneratorPromise<>()");
             *_destroyed = true;
         };
 
@@ -254,7 +258,7 @@ namespace Ichor::Detail {
             return _finished;
         }
 
-        std::shared_ptr<bool>& get_destroyed() noexcept  {
+        ReferenceCountedPointer<bool>& get_destroyed() noexcept  {
             return _destroyed;
         }
 
@@ -265,7 +269,7 @@ namespace Ichor::Detail {
         }
 
         bool _finished{};
-        std::shared_ptr<bool> _destroyed;
+        ReferenceCountedPointer<bool> _destroyed;
     };
 }
 

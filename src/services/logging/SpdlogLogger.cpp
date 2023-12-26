@@ -58,7 +58,7 @@ Ichor::LogLevel Ichor::SpdlogLogger::getLogLevel() const {
 
 Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::SpdlogLogger::start() {
     auto const &sinks = _sharedService->getSinks();
-    _logger = std::make_shared<spdlog::logger>("multi_sink", sinks.begin(), sinks.end());
+    _logger = make_reference_counted<spdlog::logger>("multi_sink", sinks.begin(), sinks.end());
 
 #ifndef ICHOR_REMOVE_SOURCE_NAMES_FROM_LOGGING
     _logger->set_pattern("[%C-%m-%d %H:%M:%S.%e] [%s:%#] [%L] %v");

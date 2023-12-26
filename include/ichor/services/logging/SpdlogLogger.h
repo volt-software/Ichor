@@ -2,15 +2,12 @@
 
 #ifdef ICHOR_USE_SPDLOG
 
-#include <memory>
 #include <ichor/interfaces/IFrameworkLogger.h>
 #include <ichor/dependency_management/AdvancedService.h>
 #include <ichor/services/logging/Logger.h>
 #include <ichor/services/logging/SpdlogSharedService.h>
-
-namespace spdlog {
-    class logger;
-}
+#include <ichor/stl/ReferenceCountedPointer.h>
+#include <spdlog/spdlog.h>
 
 namespace Ichor {
     class SpdlogLogger final : public ILogger, public AdvancedService<SpdlogLogger> {
@@ -35,7 +32,7 @@ namespace Ichor {
 
         friend DependencyRegister;
 
-        std::shared_ptr<spdlog::logger> _logger{};
+        ReferenceCountedPointer<spdlog::logger> _logger{};
         LogLevel _level{LogLevel::LOG_TRACE};
         ISpdlogSharedService* _sharedService{};
     };

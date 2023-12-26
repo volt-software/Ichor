@@ -18,6 +18,7 @@
 #include <ichor/dependency_management/DependencyRegistrations.h>
 #include <ichor/dependency_management/ConstructorInjectionService.h>
 #include <ichor/event_queues/IEventQueue.h>
+#include <ichor/stl/ReferenceCountedPointer.h>
 
 using namespace std::chrono_literals;
 
@@ -657,7 +658,7 @@ namespace Ichor {
         }
 
         void handleEventCompletion(Event const &evt);
-        [[nodiscard]] uint64_t broadcastEvent(std::shared_ptr<Event> &evt);
+        [[nodiscard]] uint64_t broadcastEvent(ReferenceCountedPointer<Event> &evt);
         /// Sets the communication channel. Only to be used from inside the CommunicationChannel class itself.
         /// \param channel
         void setCommunicationChannel(NeverNull<CommunicationChannel*> channel);
@@ -693,7 +694,7 @@ namespace Ichor {
         unordered_map<uint64_t, std::vector<EventCallbackInfo>> _eventCallbacks{}; // key = event id
         unordered_map<uint64_t, std::vector<EventInterceptInfo>> _eventInterceptors{}; // key = event id
         unordered_map<uint64_t, std::unique_ptr<IGenerator>> _scopedGenerators{}; // key = promise id
-        unordered_map<uint64_t, std::shared_ptr<Event>> _scopedEvents{}; // key = promise id
+        unordered_map<uint64_t, ReferenceCountedPointer<Event>> _scopedEvents{}; // key = promise id
         unordered_map<uint64_t, EventWaiter> _eventWaiters{}; // key = event id
         unordered_map<uint64_t, EventWaiter> _dependencyWaiters{}; // key = event id
         IEventQueue *_eventQueue;

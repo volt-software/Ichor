@@ -323,6 +323,11 @@ TEST_CASE("ServicesTests") {
 
         dm.runForOrQueueEmpty();
 
+        // the qemu setup used in build.sh is not fast enough to have the test pass.
+#ifdef ICHOR_AARCH64
+        std::this_thread::sleep_for(std::chrono::milliseconds(500));
+#endif
+
         queue->pushEvent<RunFunctionEvent>(0, [&]() {
             REQUIRE(dm.getServiceCount() == 4);
 

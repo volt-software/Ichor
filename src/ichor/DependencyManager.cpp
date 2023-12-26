@@ -17,6 +17,9 @@
 #endif
 
 std::atomic<uint64_t> Ichor::DependencyManager::_managerIdCounter = 0;
+#ifdef ICHOR_ENABLE_INTERNAL_DEBUGGING
+std::atomic<uint64_t> Ichor::_rfpCounter = 0;
+#endif
 Ichor::unordered_set<uint64_t> Ichor::Detail::emptyDependencies{};
 
 thread_local Ichor::DependencyManager *Ichor::Detail::_local_dm = nullptr;
@@ -63,7 +66,7 @@ void Ichor::DependencyManager::start() {
 }
 
 void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &&uniqueEvt) {
-    std::shared_ptr<Event> evt{std::move(uniqueEvt)};
+    ReferenceCountedPointer<Event> evt{std::move(uniqueEvt)};
     ICHOR_LOG_TRACE(_logger, "evt id {} type {} has {} prio", evt->id, evt->name, evt->priority);
 
     bool allowProcessing = true;
@@ -147,7 +150,7 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &&uniqueEvt) 
                         }
                         _scopedGenerators.emplace(it.get_promise_id(), std::make_unique<AsyncGenerator<StartBehaviour>>(std::move(gen)));
                         // create new event that will be inserted upon finish of coroutine in ContinuableStartEvent
-                        _scopedEvents.emplace(it.get_promise_id(), std::make_shared<DependencyOnlineEvent>(_eventQueue->getNextEventId(), serviceId, INTERNAL_DEPENDENCY_EVENT_PRIORITY));
+                        _scopedEvents.emplace(it.get_promise_id(), Ichor::make_reference_counted<DependencyOnlineEvent>(_eventQueue->getNextEventId(), serviceId, INTERNAL_DEPENDENCY_EVENT_PRIORITY));
                     } else if(it.get_value() == StartBehaviour::STARTED) {
                         _eventQueue->pushPrioritisedEvent<DependencyOnlineEvent>(serviceId, INTERNAL_DEPENDENCY_EVENT_PRIORITY);
                     }
@@ -205,7 +208,7 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &&uniqueEvt) 
                         allDependeesFinished = false;
                         _scopedGenerators.emplace(it.get_promise_id(), std::make_unique<AsyncGenerator<StartBehaviour>>(std::move(gen)));
                         // create new event that will be inserted upon finish of coroutine in ContinuableStartEvent
-                        _scopedEvents.emplace(it.get_promise_id(), std::make_shared<ContinuableDependencyOfflineEvent>(_eventQueue->getNextEventId(), serviceId, INTERNAL_DEPENDENCY_EVENT_PRIORITY, depOfflineEvt->originatingService));
+                        _scopedEvents.emplace(it.get_promise_id(), Ichor::make_reference_counted<ContinuableDependencyOfflineEvent>(_eventQueue->getNextEventId(), serviceId, INTERNAL_DEPENDENCY_EVENT_PRIORITY, depOfflineEvt->originatingService));
                         continue;
                     }
 
@@ -326,7 +329,7 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &&uniqueEvt) 
                     if(!it.get_finished()) {
                         _scopedGenerators.emplace(it.get_promise_id(), std::make_unique<AsyncGenerator<StartBehaviour>>(std::move(gen)));
                         // create new event that will be inserted upon finish of coroutine in ContinuableStartEvent
-                        _scopedEvents.emplace(it.get_promise_id(), std::make_shared<DependencyOnlineEvent>(_eventQueue->getNextEventId(), cmpMgr->serviceId(), INTERNAL_DEPENDENCY_EVENT_PRIORITY));
+                        _scopedEvents.emplace(it.get_promise_id(), Ichor::make_reference_counted<DependencyOnlineEvent>(_eventQueue->getNextEventId(), cmpMgr->serviceId(), INTERNAL_DEPENDENCY_EVENT_PRIORITY));
                     } else if(it.get_value() == StartBehaviour::STARTED) {
                         _eventQueue->pushPrioritisedEvent<DependencyOnlineEvent>(cmpMgr->serviceId(), INTERNAL_DEPENDENCY_EVENT_PRIORITY);
                     }
@@ -357,7 +360,7 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &&uniqueEvt) 
                         if(!it.get_finished()) {
                             _scopedGenerators.emplace(it.get_promise_id(), std::make_unique<AsyncGenerator<StartBehaviour>>(std::move(gen)));
                             // create new event that will be inserted upon finish of coroutine in ContinuableStartEvent
-                            _scopedEvents.emplace(it.get_promise_id(), std::make_shared<DependencyOnlineEvent>(_eventQueue->getNextEventId(), cmpMgr->serviceId(), INTERNAL_DEPENDENCY_EVENT_PRIORITY));
+                            _scopedEvents.emplace(it.get_promise_id(), Ichor::make_reference_counted<DependencyOnlineEvent>(_eventQueue->getNextEventId(), cmpMgr->serviceId(), INTERNAL_DEPENDENCY_EVENT_PRIORITY));
                         } else if(it.get_value() == StartBehaviour::STARTED) {
                             _eventQueue->pushPrioritisedEvent<DependencyOnlineEvent>(cmpMgr->serviceId(), INTERNAL_DEPENDENCY_EVENT_PRIORITY);
                         }
@@ -902,7 +905,7 @@ void Ichor::DependencyManager::stop() {
 }
 
 bool Ichor::DependencyManager::existingCoroutineFor(ServiceIdType serviceId) const noexcept {
-    auto existingCoroutineEvent = std::find_if(_scopedEvents.begin(), _scopedEvents.end(), [serviceId](const std::pair<uint64_t, std::shared_ptr<Event>> &t) {
+    auto existingCoroutineEvent = std::find_if(_scopedEvents.begin(), _scopedEvents.end(), [serviceId](const std::pair<uint64_t, ReferenceCountedPointer<Event>> &t) {
         if(t.second->type == StartServiceEvent::TYPE) {
             return t.second->originatingService == serviceId || static_cast<StartServiceEvent*>(t.second.get())->serviceId == serviceId;
         }
@@ -1019,7 +1022,7 @@ void Ichor::DependencyManager::handleEventCompletion(Ichor::Event const &evt) {
     callback->second(evt);
 }
 
-uint64_t Ichor::DependencyManager::broadcastEvent(std::shared_ptr<Event> &evt) {
+uint64_t Ichor::DependencyManager::broadcastEvent(Ichor::ReferenceCountedPointer<Event> &evt) {
     auto registeredListeners = _eventCallbacks.find(evt->type);
 
     if(registeredListeners == end(_eventCallbacks)) {

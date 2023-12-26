@@ -1,6 +1,7 @@
 #pragma once
 
 #include <ichor/Common.h>
+#include <ichor/stl/ReferenceCountedPointer.h>
 #include <string>
 
 namespace Ichor {
@@ -78,7 +79,7 @@ namespace Ichor {
             return _templatedFilter->compareTo(manager);
         }
 
-        std::shared_ptr<ITemplatedFilter> _templatedFilter;
+        ReferenceCountedPointer<ITemplatedFilter> _templatedFilter;
     };
 }
 
