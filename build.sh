@@ -79,16 +79,19 @@ if [[ $DOCKER -eq 1 ]]; then
   docker build -f ../Dockerfile -t ichor . || exit 1
   docker run -v $(pwd)/../:/opt/ichor/src -it ichor || exit 1
   run_examples
+  docker run -v $(pwd)/../:/opt/ichor/src -it ichor "rm -rf /opt/ichor/src/bin/* /opt/ichor/src/build/*" || exit 1
 
   rm -rf ./* ../bin/*
   docker build -f ../Dockerfile-musl -t ichor-musl . || exit 1
   docker run -v $(pwd)/../:/opt/ichor/src -it ichor-musl || exit 1
   run_examples
+  docker run -v $(pwd)/../:/opt/ichor/src -it ichor-musl "rm -rf /opt/ichor/src/bin/* /opt/ichor/src/build/*" || exit 1
 
   rm -rf ./* ../bin/*
   docker build -f ../Dockerfile-asan -t ichor-asan . || exit 1
   docker run -v $(pwd)/../:/opt/ichor/src -it ichor-asan || exit 1
   run_examples
+  docker run -v $(pwd)/../:/opt/ichor/src -it ichor-asan "rm -rf /opt/ichor/src/bin/* /opt/ichor/src/build/*" || exit 1
 
   # tsan is purposefully not run automatically, because it usually contains false positives.
 
@@ -101,7 +104,7 @@ if [[ $DOCKER -eq 1 ]]; then
 FILES=/opt/ichor/src/bin/*
 for f in \$FILES; do
   if [[ "\$f" != *"Redis"* ]] && [[ "\$f" != *"benchmark"* ]] && [[ "\$f" != *"minimal"* ]] && [[ "\$f" != *"ping"* ]] && [[ "\$f" != *"etcd"* ]] && [[ "\$f" != *"Etcd"* ]] && [[ "\$f" != *"pong"* ]] && [[ "\$f" != *"Started"* ]] && [[ "\$f" != *".sh" ]] && [[ -x "\$f" ]] && [[ ! -d "\$f" ]] ; then
-    echo "Running \$f"
+    echo "Running \${f}"
     \$f || exit 1
   fi
 done

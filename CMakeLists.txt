@@ -285,6 +285,8 @@ elseif(ICHOR_USE_HARDENING)
     endif()
 
     target_compile_definitions(ichor PUBLIC ICHOR_USE_HARDENING)
+
+    target_link_options(ichor PUBLIC -Wl,-z,nodlopen -Wl,-z,noexecstack -Wl,-z,relro -Wl,-z,now)
 endif()
 
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
