@@ -1,4 +1,5 @@
 #include <ichor/dependency_management/DependencyInfo.h>
+#include <ichor/Common.h>
 #include <algorithm>
 
 namespace Ichor {
@@ -24,7 +25,7 @@ namespace Ichor {
     }
 
     void DependencyInfo::addDependency(Dependency dependency) {
-        _dependencies.emplace_back(dependency);
+        _dependencies.emplace_back(std::move(dependency));
     }
 
     void DependencyInfo::removeDependency(const Dependency &dependency) {
@@ -37,13 +38,21 @@ namespace Ichor {
     }
 
     [[nodiscard]]
-    std::vector<Dependency>::const_iterator DependencyInfo::find(const Dependency &dependency) const noexcept {
-        return std::find_if(begin(), end(), [&dependency](auto const& dep) noexcept { return dep.interfaceNameHash == dependency.interfaceNameHash; });
+    std::vector<Dependency>::const_iterator DependencyInfo::find(const Dependency &dependency, bool satisfied) const noexcept {
+        INTERNAL_DEBUG("const find() size {}", size());
+        return std::find_if(begin(), end(), [&dependency, satisfied](Dependency const& dep) noexcept {
+            INTERNAL_DEBUG("const find() {}:{}, {}:{}", dep.interfaceNameHash, dependency.interfaceNameHash, dep.satisfied, satisfied);
+            return dep.interfaceNameHash == dependency.interfaceNameHash && dep.satisfied == satisfied;
+        });
     }
 
     [[nodiscard]]
-    std::vector<Dependency>::iterator DependencyInfo::find(const Dependency &dependency) noexcept {
-        return std::find_if(begin(), end(), [&dependency](auto const& dep) noexcept { return dep.interfaceNameHash == dependency.interfaceNameHash; });
+    std::vector<Dependency>::iterator DependencyInfo::find(const Dependency &dependency, bool satisfied) noexcept {
+        INTERNAL_DEBUG("find() size {}", size());
+        return std::find_if(begin(), end(), [&dependency, satisfied](Dependency const& dep) noexcept {
+            INTERNAL_DEBUG("find() {}:{}, {}:{}", dep.interfaceNameHash, dependency.interfaceNameHash, dep.satisfied, satisfied);
+            return dep.interfaceNameHash == dependency.interfaceNameHash && dep.satisfied == satisfied;
+        });
     }
 
     [[nodiscard]]

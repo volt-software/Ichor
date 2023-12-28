@@ -253,3 +253,15 @@ namespace Ichor {
         return a;
     }
 }
+
+template <>
+struct fmt::formatter<Ichor::any> {
+    constexpr auto parse(format_parse_context& ctx) {
+        return ctx.end();
+    }
+
+    template <typename FormatContext>
+    auto format(const Ichor::any& change, FormatContext& ctx) {
+        return fmt::format_to(ctx.out(), "{}", change.to_string());
+    }
+};

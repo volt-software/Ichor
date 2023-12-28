@@ -15,7 +15,7 @@ public:
     // that are created for incoming connections. If the "Address" key is present in the dependency registration properties, we skip it.
     // Currently only used for WsHostService
     [[nodiscard]] bool matches(Ichor::ILifecycleManager const &manager) const noexcept {
-        auto *reg = manager.getDependencyRegistry();
+        auto const *reg = manager.getDependencyRegistry();
 
         if(reg == nullptr) {
             return true;
@@ -130,7 +130,7 @@ Ichor::AsyncGenerator<Ichor::IchorBehaviour> Ichor::WsHostService::handleEvent(I
     auto connection = GetThreadLocalManager().createServiceManager<WsConnectionService, IConnectionService>(Properties{
         {"WsHostServiceId", Ichor::make_any<uint64_t>(getServiceId())},
         {"Socket", Ichor::make_unformattable_any<decltype(evt._socket)>(evt._socket)},
-        {"Filter", Ichor::make_any<Filter>(Filter{ClientConnectionFilter{}})}
+        {"Filter", Ichor::make_any<Filter>(ClientConnectionFilter{})}
     });
     _connections.push_back(connection);
 

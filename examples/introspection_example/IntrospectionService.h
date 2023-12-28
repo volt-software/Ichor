@@ -20,7 +20,7 @@ public:
 
             ICHOR_LOG_INFO(_logger, "\tProperties:");
             for(auto &[key, val] : svc->getProperties()) {
-                ICHOR_LOG_INFO(_logger, "\t\tProperty {} value {} size {} type {}", key, val.to_string(), val.get_size(), val.type_name());
+                ICHOR_LOG_INFO(_logger, "\t\tProperty {} value {} size {} type {}", key, val, val.get_size(), val.type_name());
             }
 
             auto deps = dm->getDependencyRequestsForService(svc->getServiceId());

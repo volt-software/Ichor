@@ -34,10 +34,10 @@ namespace Ichor {
         bool contains(const Dependency &dependency) const noexcept;
 
         [[nodiscard]]
-        std::vector<Dependency>::const_iterator find(const Dependency &dependency) const noexcept;
+        std::vector<Dependency>::const_iterator find(const Dependency &dependency, bool satisfied) const noexcept;
 
         [[nodiscard]]
-        std::vector<Dependency>::iterator find(const Dependency &dependency) noexcept;
+        std::vector<Dependency>::iterator find(const Dependency &dependency, bool satisfied) noexcept;
 
         [[nodiscard]]
         size_t size() const noexcept;

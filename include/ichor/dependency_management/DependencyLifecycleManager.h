@@ -40,9 +40,11 @@ namespace Ichor::Detail {
             std::vector<decltype(std::declval<DependencyInfo>().begin())> ret;
 
             for(auto const &interface : dependentService->getInterfaces()) {
-                auto dep = _dependencies.find(interface);
+                auto dep = _dependencies.find(interface, !online);
+                INTERNAL_DEBUG("interestedInDependency() svc {}:{} {} dependent {}:{}", serviceId(), implementationName(), getServiceState(), dependentService->serviceId(), dependentService->implementationName());
 
                 if (dep == _dependencies.end()) {
+                    INTERNAL_DEBUG("interestedInDependency() not found");
                     continue;
                 }
 
@@ -203,7 +205,7 @@ namespace Ichor::Detail {
         /// \param keyOfInterfaceToInject
         /// \param serviceIdOfOther
         /// \param fn
-        void insertSelfInto(uint64_t keyOfInterfaceToInject, uint64_t serviceIdOfOther, std::function<void(NeverNull<void*>, IService&)> &fn) final {
+        void insertSelfInto(uint64_t keyOfInterfaceToInject, ServiceIdType serviceIdOfOther, std::function<void(NeverNull<void*>, IService&)> &fn) final {
             INTERNAL_DEBUG("insertSelfInto() svc {} telling svc {} to add us", serviceId(), serviceIdOfOther);
             if constexpr (sizeof...(IFaces) > 0) {
                 insertSelfInto2<sizeof...(IFaces), IFaces...>(keyOfInterfaceToInject, fn);
@@ -245,7 +247,7 @@ namespace Ichor::Detail {
         /// \param keyOfInterfaceToInject
         /// \param serviceIdOfOther
         /// \param fn
-        void removeSelfInto(uint64_t keyOfInterfaceToInject, uint64_t serviceIdOfOther, std::function<void(NeverNull<void*>, IService&)> &fn) final {
+        void removeSelfInto(uint64_t keyOfInterfaceToInject, ServiceIdType serviceIdOfOther, std::function<void(NeverNull<void*>, IService&)> &fn) final {
             INTERNAL_DEBUG("removeSelfInto() svc {} telling svc {} to remove us", serviceId(), serviceIdOfOther);
             if constexpr (sizeof...(IFaces) > 0) {
                 insertSelfInto2<sizeof...(IFaces), IFaces...>(keyOfInterfaceToInject, fn);
@@ -255,12 +257,12 @@ namespace Ichor::Detail {
         }
 
         [[nodiscard]]
-        unordered_set<uint64_t> &getDependencies() noexcept final {
+        unordered_set<ServiceIdType> &getDependencies() noexcept final {
             return _serviceIdsOfInjectedDependencies;
         }
 
         [[nodiscard]]
-        unordered_set<uint64_t> &getDependees() noexcept final {
+        unordered_set<ServiceIdType> &getDependees() noexcept final {
             return _serviceIdsOfDependees;
         }
 
@@ -292,7 +294,7 @@ namespace Ichor::Detail {
             return typeNameHash<ServiceType>();
         }
 
-        [[nodiscard]] uint64_t serviceId() const noexcept final {
+        [[nodiscard]] ServiceIdType serviceId() const noexcept final {
             return _service.getServiceId();
         }
 
@@ -333,7 +335,7 @@ namespace Ichor::Detail {
         DependencyRegister _registry;
         DependencyInfo _dependencies;
         ServiceType _service;
-        unordered_set<uint64_t> _serviceIdsOfInjectedDependencies; // Services that this service depends on.
-        unordered_set<uint64_t> _serviceIdsOfDependees; // services that depend on this service
+        unordered_set<ServiceIdType> _serviceIdsOfInjectedDependencies; // Services that this service depends on.
+        unordered_set<ServiceIdType> _serviceIdsOfDependees; // services that depend on this service
     };
 }
