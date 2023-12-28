@@ -210,6 +210,68 @@ TEST_CASE("ServicesTests") {
         REQUIRE_FALSE(dm.isRunning());
     }
 
+    SECTION("Multiple required dependencies, service starts on all and stops when everything uninjected") {
+        auto queue = std::make_unique<MultimapQueue>();
+        auto &dm = queue->createManager();
+        uint64_t firstUselessServiceId{};
+        uint64_t secondUselessServiceId{};
+
+        std::thread t([&]() {
+            dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>();
+            firstUselessServiceId = dm.createServiceManager<UselessService, IUselessService>()->getServiceId();
+            dm.createServiceManager<RequiredMultipleService2, ICountService>();
+            queue->start(CaptureSigInt);
+        });
+
+        waitForRunning(dm);
+
+        dm.runForOrQueueEmpty();
+
+        queue->pushEvent<RunFunctionEvent>(0, [&]() {
+            auto services = dm.getStartedServices<ICountService>();
+
+            REQUIRE(services.size() == 0);
+
+            secondUselessServiceId = dm.createServiceManager<UselessService, IUselessService>()->getServiceId();
+        });
+
+        dm.runForOrQueueEmpty();
+
+        queue->pushEvent<RunFunctionEvent>(0, [&]() {
+            auto services = dm.getStartedServices<ICountService>();
+
+            REQUIRE(services.size() == 1);
+            REQUIRE(services[0]->isRunning());
+            REQUIRE(services[0]->getSvcCount() == 2);
+
+            dm.getEventQueue().pushEvent<StopServiceEvent>(0, firstUselessServiceId);
+        });
+
+        dm.runForOrQueueEmpty();
+
+        queue->pushEvent<RunFunctionEvent>(0, [&]() {
+            auto services = dm.getStartedServices<ICountService>();
+
+            REQUIRE(services.size() == 0);
+
+            dm.getEventQueue().pushEvent<StopServiceEvent>(0, secondUselessServiceId);
+        });
+
+        dm.runForOrQueueEmpty();
+
+        queue->pushEvent<RunFunctionEvent>(0, [&]() {
+            auto services = dm.getStartedServices<ICountService>();
+
+            REQUIRE(services.size() == 0);
+
+            dm.getEventQueue().pushEvent<QuitEvent>(0);
+        });
+
+        t.join();
+
+        REQUIRE_FALSE(dm.isRunning());
+    }
+
     SECTION("Optional dependencies") {
         auto queue = std::make_unique<MultimapQueue>();
         auto &dm = queue->createManager();

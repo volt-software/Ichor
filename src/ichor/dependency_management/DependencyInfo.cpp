@@ -63,7 +63,7 @@ namespace Ichor {
 
     [[nodiscard]]
     bool DependencyInfo::allSatisfied() const noexcept {
-        return std::all_of(begin(), end(), [](auto const &dep) {
+        return std::all_of(begin(), end(), [](auto const &dep) noexcept {
             return dep.satisfied > 0 || (dep.flags & DependencyFlags::REQUIRED) == 0;
         });
     }
