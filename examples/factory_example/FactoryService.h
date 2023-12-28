@@ -23,14 +23,14 @@ public:
     std::string scope;
 };
 
-class TrackerService final {
+class FactoryService final {
 public:
-    TrackerService(DependencyManager *dm, IService *self, ILogger *logger) : _self(self), _logger(logger) {
-        ICHOR_LOG_INFO(_logger, "TrackerService started");
+    FactoryService(DependencyManager *dm, IService *self, ILogger *logger) : _self(self), _logger(logger) {
+        ICHOR_LOG_INFO(_logger, "FactoryService started");
         _trackerRegistration = dm->registerDependencyTracker<IRuntimeCreatedService>(this, self);
     }
-    ~TrackerService() {
-        ICHOR_LOG_INFO(_logger, "TrackerService stopped");
+    ~FactoryService() {
+        ICHOR_LOG_INFO(_logger, "FactoryService stopped");
     }
 
 private:

@@ -1,4 +1,4 @@
-# Tracker Example
+# Factory Example
 
 This example shows how to 'track' dependency requests. Specifically, this is most commonly used to create factories. 
 
@@ -9,4 +9,4 @@ When a service is created normally, that dependency is considered a globally ava
 
 This demonstrates the following concepts:
 * Fulfilling a dependency per-request, instead of globally
-* How to use the advanced `filter` feature to create a per-request dependency
+* How to use the `filter` feature to create a per-request dependency
