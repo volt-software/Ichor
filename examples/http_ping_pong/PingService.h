@@ -18,10 +18,10 @@ using namespace Ichor;
 class PingService final : public AdvancedService<PingService> {
 public:
     PingService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {
-        reg.registerDependency<ILogger>(this, true, Properties{{"LogLevel", Ichor::make_any<LogLevel>(LogLevel::LOG_INFO)}}); // using customer properties here prevents us refactoring this class to constructor injection
-        reg.registerDependency<ISerializer<PingMsg>>(this, true);
-        reg.registerDependency<IHttpConnectionService>(this, true, getProperties()); // using getProperties here prevents us refactoring this class to constructor injection
-        reg.registerDependency<ITimerFactory>(this, true);
+        reg.registerDependency<ILogger>(this, DependencyFlags::REQUIRED, Properties{{"LogLevel", Ichor::make_any<LogLevel>(LogLevel::LOG_INFO)}}); // using customer properties here prevents us refactoring this class to constructor injection
+        reg.registerDependency<ISerializer<PingMsg>>(this, DependencyFlags::REQUIRED);
+        reg.registerDependency<IHttpConnectionService>(this, DependencyFlags::REQUIRED, getProperties()); // using getProperties here prevents us refactoring this class to constructor injection
+        reg.registerDependency<ITimerFactory>(this, DependencyFlags::REQUIRED);
     }
     ~PingService() final = default;
 

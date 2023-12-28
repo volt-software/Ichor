@@ -6,7 +6,7 @@
 namespace Ichor {
     struct RedisUsingService final : public AdvancedService<RedisUsingService> {
         RedisUsingService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {
-            reg.registerDependency<IRedis>(this, true);
+            reg.registerDependency<IRedis>(this, DependencyFlags::REQUIRED);
         }
 
         Task<tl::expected<void, Ichor::StartError>> start() final {

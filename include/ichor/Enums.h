@@ -1,11 +1,12 @@
 #pragma once
 
 #include <fmt/core.h>
+#include <cstdint>
 
 namespace Ichor
 {
     namespace Detail {
-        enum class DependencyChange {
+        enum class DependencyChange : uint_fast16_t {
             NOT_FOUND,
             FOUND,
             FOUND_AND_START_ME,
@@ -13,7 +14,7 @@ namespace Ichor
         };
     }
 
-    enum class ServiceState {
+    enum class ServiceState : uint_fast16_t {
         UNINSTALLED,
         INSTALLED,
         INJECTING,
@@ -23,7 +24,7 @@ namespace Ichor
         STOPPING,
     };
 
-    enum class LogLevel {
+    enum class LogLevel : uint_fast16_t {
         LOG_TRACE,
         LOG_DEBUG,
         LOG_INFO,
@@ -52,7 +53,7 @@ namespace Ichor
     //
     // [C] - Consumer performs this transition
     // [P] - Producer performs this transition
-    enum class state {
+    enum class state : uint_fast16_t {
         unknown,
         value_not_ready_consumer_active,
         value_not_ready_consumer_suspended,
@@ -65,23 +66,23 @@ namespace Ichor
     struct Empty{};
     constexpr static Empty empty = {};
 
-    enum class StartBehaviour {
+    enum class StartBehaviour : uint_fast16_t {
         DONE,
         STARTED,
         STOPPED
     };
 
-    enum class WaitError {
+    enum class WaitError : uint_fast16_t {
         QUITTING
     };
 
-    enum class StartError {
+    enum class StartError : uint_fast16_t {
         FAILED
     };
 
     // Necessary to prevent excessive events on the queue.
     // Every async call using this will end up adding an event to the queue on co_return/co_yield.
-    enum class IchorBehaviour {
+    enum class IchorBehaviour : uint_fast16_t {
         DONE
     };
 

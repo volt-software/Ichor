@@ -6,7 +6,7 @@
 class Ichor::TimerFactory final : public Ichor::ITimerFactory, public Ichor::AdvancedService<TimerFactory> {
 public:
     TimerFactory(Ichor::DependencyRegister &reg, Ichor::Properties props) : Ichor::AdvancedService<TimerFactory>(std::move(props)) {
-        reg.registerDependency<Ichor::IEventQueue>(this, true);
+        reg.registerDependency<Ichor::IEventQueue>(this, DependencyFlags::REQUIRED);
         _requestingSvcId = Ichor::any_cast<ServiceIdType>(getProperties()["requestingSvcId"]);
     }
     ~TimerFactory() final = default;

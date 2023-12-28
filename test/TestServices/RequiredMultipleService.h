@@ -5,12 +5,11 @@
 
 using namespace Ichor;
 
-template<DependencyFlags flags>
-struct DependencyService final : public ICountService, public AdvancedService<DependencyService<flags>> {
-    DependencyService(DependencyRegister &reg, Properties props) : AdvancedService<DependencyService<flags>>(std::move(props)) {
-        reg.registerDependency<IUselessService>(this, flags);
+struct RequiredMultipleService final : public ICountService, public AdvancedService<RequiredMultipleService> {
+    RequiredMultipleService(DependencyRegister &reg, Properties props) : AdvancedService<RequiredMultipleService>(std::move(props)) {
+        reg.registerDependency<IUselessService>(this, DependencyFlags(DependencyFlags::REQUIRED | DependencyFlags::ALLOW_MULTIPLE));
     }
-    ~DependencyService() final = default;
+    ~RequiredMultipleService() final = default;
     Task<tl::expected<void, Ichor::StartError>> start() final {
         running = true;
         co_return {};

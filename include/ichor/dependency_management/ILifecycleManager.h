@@ -12,10 +12,10 @@ namespace Ichor {
     class ILifecycleManager {
     public:
         virtual ~ILifecycleManager() = default;
-        virtual std::vector<decltype(std::declval<DependencyInfo>().begin())> interestedInDependency(ILifecycleManager *dependentService, bool online) noexcept = 0;
+        virtual std::vector<Dependency*> interestedInDependency(ILifecycleManager *dependentService, bool online) noexcept = 0;
         // iterators come from interestedInDependency() and have to be moved as using coroutines might end up clearing it.
-        virtual AsyncGenerator<StartBehaviour> dependencyOnline(NeverNull<ILifecycleManager*> dependentService, std::vector<decltype(std::declval<DependencyInfo>().begin())> iterators) = 0;
-        virtual AsyncGenerator<StartBehaviour> dependencyOffline(NeverNull<ILifecycleManager*> dependentService, std::vector<decltype(std::declval<DependencyInfo>().begin())> iterators) = 0;
+        virtual AsyncGenerator<StartBehaviour> dependencyOnline(NeverNull<ILifecycleManager*> dependentService, std::vector<Dependency*> deps) = 0;
+        virtual AsyncGenerator<StartBehaviour> dependencyOffline(NeverNull<ILifecycleManager*> dependentService, std::vector<Dependency*> deps) = 0;
         [[nodiscard]] virtual unordered_set<ServiceIdType> &getDependencies() noexcept = 0;
         [[nodiscard]] virtual unordered_set<ServiceIdType> &getDependees() noexcept = 0;
         [[nodiscard]] virtual AsyncGenerator<StartBehaviour> start() = 0;

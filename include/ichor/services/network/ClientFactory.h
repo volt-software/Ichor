@@ -13,7 +13,7 @@ namespace Ichor {
     class ClientFactory final : public IClientFactory, public AdvancedService<ClientFactory<NetworkType, NetworkInterfaceType>> {
     public:
         ClientFactory(DependencyRegister &reg, Properties properties) : AdvancedService<ClientFactory<NetworkType, NetworkInterfaceType>>(std::move(properties)), _connections{} {
-            reg.registerDependency<ILogger>(this, false, AdvancedService<ClientFactory<NetworkType, NetworkInterfaceType>>::getProperties());
+            reg.registerDependency<ILogger>(this, DependencyFlags::NONE, AdvancedService<ClientFactory<NetworkType, NetworkInterfaceType>>::getProperties());
         }
         ~ClientFactory() final = default;
 

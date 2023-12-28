@@ -13,7 +13,7 @@ struct IOptionalService {
 class OptionalService final : public IOptionalService, public AdvancedService<OptionalService> {
 public:
     OptionalService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {
-        reg.registerDependency<ILogger>(this, true);
+        reg.registerDependency<ILogger>(this, DependencyFlags::REQUIRED);
     }
 
     ~OptionalService() final = default;

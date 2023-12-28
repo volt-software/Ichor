@@ -17,9 +17,9 @@ using namespace Ichor;
 class StartStopService final : public AdvancedService<StartStopService> {
 public:
     StartStopService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {
-        reg.registerDependency<ILogger>(this, true);
-        reg.registerDependency<ITestService>(this, true);
-        reg.registerDependency<DependencyManager>(this, true);
+        reg.registerDependency<ILogger>(this, DependencyFlags::REQUIRED);
+        reg.registerDependency<ITestService>(this, DependencyFlags::REQUIRED);
+        reg.registerDependency<DependencyManager>(this, DependencyFlags::REQUIRED);
     }
     ~StartStopService() final = default;
 

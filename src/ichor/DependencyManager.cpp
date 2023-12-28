@@ -17,7 +17,7 @@
 #endif
 
 std::atomic<uint64_t> Ichor::DependencyManager::_managerIdCounter = 0;
-#ifdef ICHOR_ENABLE_INTERNAL_DEBUGGING
+#ifdef ICHOR_ENABLE_INTERNAL_STL_DEBUGGING
 std::atomic<uint64_t> Ichor::_rfpCounter = 0;
 #endif
 Ichor::unordered_set<uint64_t> Ichor::Detail::emptyDependencies{};

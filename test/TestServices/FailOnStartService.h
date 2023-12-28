@@ -32,7 +32,7 @@ namespace Ichor {
 
     struct FailOnStartWithDependenciesService final : public IFailOnStartService, public AdvancedService<FailOnStartWithDependenciesService> {
         FailOnStartWithDependenciesService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {
-            reg.registerDependency<IUselessService>(this, true);
+            reg.registerDependency<IUselessService>(this, DependencyFlags::REQUIRED);
         }
         ~FailOnStartWithDependenciesService() final = default;
 

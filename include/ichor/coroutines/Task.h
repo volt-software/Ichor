@@ -142,7 +142,7 @@ namespace Ichor
 
         private:
 
-            enum class result_type { empty, value, exception };
+            enum class result_type : uint_fast16_t { empty, value, exception };
 
             result_type m_resultType = result_type::empty;
 

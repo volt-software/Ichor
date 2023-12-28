@@ -11,8 +11,8 @@ using namespace Ichor;
 class DebugService final : public AdvancedService<DebugService> {
 public:
     DebugService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {
-        reg.registerDependency<ILogger>(this, true, Properties{{"LogLevel", Ichor::make_any<LogLevel>(LogLevel::LOG_INFO)}});
-        reg.registerDependency<ITimerFactory>(this, true);
+        reg.registerDependency<ILogger>(this, DependencyFlags::REQUIRED, Properties{{"LogLevel", Ichor::make_any<LogLevel>(LogLevel::LOG_INFO)}});
+        reg.registerDependency<ITimerFactory>(this, DependencyFlags::REQUIRED);
     }
     ~DebugService() final = default;
 private:

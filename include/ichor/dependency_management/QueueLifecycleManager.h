@@ -9,22 +9,22 @@ namespace Ichor::Detail {
     class QueueLifecycleManager final : public ILifecycleManager {
     public:
         explicit QueueLifecycleManager(IEventQueue *q) : _q(q) {
-            _interfaces.emplace_back(typeNameHash<IEventQueue>(), typeName<IEventQueue>(), false, false);
+            _interfaces.emplace_back(typeNameHash<IEventQueue>(), typeName<IEventQueue>(), DependencyFlags::NONE, false);
         }
 
         ~QueueLifecycleManager() final = default;
 
-        std::vector<decltype(std::declval<DependencyInfo>().begin())> interestedInDependency(ILifecycleManager *dependentService, bool online) noexcept final {
+        std::vector<Dependency*> interestedInDependency(ILifecycleManager *dependentService, bool online) noexcept final {
             return {};
         }
 
-        AsyncGenerator<StartBehaviour> dependencyOnline(NeverNull<ILifecycleManager*> dependentService, std::vector<decltype(std::declval<DependencyInfo>().begin())> iterators) final {
+        AsyncGenerator<StartBehaviour> dependencyOnline(NeverNull<ILifecycleManager*> dependentService, std::vector<Dependency*> deps) final {
             // this function should never be called
             std::terminate();
             co_return StartBehaviour::DONE;
         }
 
-        AsyncGenerator<StartBehaviour> dependencyOffline(NeverNull<ILifecycleManager*> dependentService, std::vector<decltype(std::declval<DependencyInfo>().begin())> iterators) final {
+        AsyncGenerator<StartBehaviour> dependencyOffline(NeverNull<ILifecycleManager*> dependentService, std::vector<Dependency*> deps) final {
             // this function should never be called
             std::terminate();
             co_return StartBehaviour::DONE;

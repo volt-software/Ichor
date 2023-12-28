@@ -7,7 +7,7 @@
 namespace Ichor {
     struct EtcdUsingService final : public AdvancedService<EtcdUsingService> {
         EtcdUsingService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {
-            reg.registerDependency<IEtcd>(this, true);
+            reg.registerDependency<IEtcd>(this, DependencyFlags::REQUIRED);
         }
 
         Task<tl::expected<void, Ichor::StartError>> start() final {

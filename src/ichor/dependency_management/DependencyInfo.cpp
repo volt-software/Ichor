@@ -28,10 +28,6 @@ namespace Ichor {
         _dependencies.emplace_back(std::move(dependency));
     }
 
-    void DependencyInfo::removeDependency(const Dependency &dependency) {
-        std::erase_if(_dependencies, [&dependency](auto const& dep) noexcept { return dep.interfaceNameHash == dependency.interfaceNameHash; });
-    }
-
     [[nodiscard]]
     bool DependencyInfo::contains(const Dependency &dependency) const noexcept {
         return end() != std::find_if(begin(), end(), [&dependency](auto const& dep) noexcept { return dep.interfaceNameHash == dependency.interfaceNameHash; });
@@ -42,7 +38,7 @@ namespace Ichor {
         INTERNAL_DEBUG("const find() size {}", size());
         return std::find_if(begin(), end(), [&dependency, satisfied](Dependency const& dep) noexcept {
             INTERNAL_DEBUG("const find() {}:{}, {}:{}", dep.interfaceNameHash, dependency.interfaceNameHash, dep.satisfied, satisfied);
-            return dep.interfaceNameHash == dependency.interfaceNameHash && dep.satisfied == satisfied;
+            return dep.interfaceNameHash == dependency.interfaceNameHash && ((dep.flags & DependencyFlags::ALLOW_MULTIPLE) == DependencyFlags::ALLOW_MULTIPLE || (satisfied && dep.satisfied > 0) || (!satisfied && dep.satisfied == 0));
         });
     }
 
@@ -51,7 +47,7 @@ namespace Ichor {
         INTERNAL_DEBUG("find() size {}", size());
         return std::find_if(begin(), end(), [&dependency, satisfied](Dependency const& dep) noexcept {
             INTERNAL_DEBUG("find() {}:{}, {}:{}", dep.interfaceNameHash, dependency.interfaceNameHash, dep.satisfied, satisfied);
-            return dep.interfaceNameHash == dependency.interfaceNameHash && dep.satisfied == satisfied;
+            return dep.interfaceNameHash == dependency.interfaceNameHash && ((dep.flags & DependencyFlags::ALLOW_MULTIPLE) == DependencyFlags::ALLOW_MULTIPLE || (satisfied && dep.satisfied > 0) || (!satisfied && dep.satisfied == 0));
         });
     }
 
@@ -68,7 +64,7 @@ namespace Ichor {
     [[nodiscard]]
     bool DependencyInfo::allSatisfied() const noexcept {
         return std::all_of(begin(), end(), [](auto const &dep) {
-            return dep.satisfied > 0 || !dep.required;
+            return dep.satisfied > 0 || (dep.flags & DependencyFlags::REQUIRED) == 0;
         });
     }
 }

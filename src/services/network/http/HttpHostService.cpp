@@ -6,8 +6,8 @@
 #include <ichor/events/RunFunctionEvent.h>
 
 Ichor::HttpHostService::HttpHostService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {
-    reg.registerDependency<ILogger>(this, true);
-    reg.registerDependency<IAsioContextService>(this, true);
+    reg.registerDependency<ILogger>(this, DependencyFlags::REQUIRED);
+    reg.registerDependency<IAsioContextService>(this, DependencyFlags::REQUIRED);
 }
 
 Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::HttpHostService::start() {

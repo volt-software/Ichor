@@ -71,8 +71,8 @@ class MyService final : public AdvancedService<TestService> {
 public:
     // Creating instances of a service includes properties, and these need to be stored in the parent class. Be careful to move them each time and don't use the props variable but instead call getProperties(), if you need them.
     MyService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {
-        reg.registerDependency<ILogger>(this, true); // Request ILogger as a required dependency (the start function will only be called if all required dependencies have at least 1 instance available)
-        reg.registerDependency<IOptionalService>(this, false); // Request IOptionalService as an optional dependency. This does not influence the start and stop functions.
+        reg.registerDependency<ILogger>(this, DependencyFlags::REQUIRED); // Request ILogger as a required dependency (the start function will only be called if all required dependencies have at least 1 instance available)
+        reg.registerDependency<IOptionalService>(this, DependencyFlags::NONE); // Request IOptionalService as an optional dependency. This does not influence the start and stop functions.
     }
     ~MyService() final = default;
 
@@ -107,6 +107,32 @@ private:
     // If you prefer, you can make the 6 functions above all public and then this won't be necessary. That's purely a stylistic choice, as the interface that other objects use won't have these functions mentioned at all.
     friend DependencyRegister;
 };
+```
+
+## Multiple Requests Of Same Type
+
+There are two ways to request dependencies of the same type. Note that this requires using the AdvancedService method of requestion dependencies.
+
+The easiest is to specify the `ALLOW_MULTIPLE` flag for the dependency:
+
+```c++
+MyService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {
+    reg.registerDependency<ISomeService>(this, DependencyFlags::ALLOW_MULTIPLE); // optional dependency
+    reg.registerDependency<ISomeService>(this, DependencyFlags(DependencyFlags::REQUIRED | DependencyFlags::ALLOW_MULTIPLE)); // required dependency
+}
+```
+
+This can also be combined with the `REQUIRED` flag, although as soon as one service is injected of the request type, it is considered satisfied and may start the service. Similarly, the service is only stopped once all services of the requested type are removed.
+
+The second way is to duplicate the request for the number of times you want:
+
+```c++
+MyService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {
+    // MyService now needs exactly 3 services before it starts.
+    reg.registerDependency<ISomeService>(this, DependencyFlags::REQUIRE);
+    reg.registerDependency<ISomeService>(this, DependencyFlags::REQUIRE);
+    reg.registerDependency<ISomeService>(this, DependencyFlags::REQUIRE);
+}
 ```
 
 ## Extra Resources

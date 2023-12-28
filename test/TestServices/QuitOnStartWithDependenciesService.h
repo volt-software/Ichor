@@ -6,7 +6,7 @@ using namespace Ichor;
 
 struct QuitOnStartWithDependenciesService final : public AdvancedService<QuitOnStartWithDependenciesService> {
     QuitOnStartWithDependenciesService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {
-        reg.registerDependency<IUselessService>(this, true);
+        reg.registerDependency<IUselessService>(this, DependencyFlags::REQUIRED);
     }
     ~QuitOnStartWithDependenciesService() final = default;
     Task<tl::expected<void, Ichor::StartError>> start() final {

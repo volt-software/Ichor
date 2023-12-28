@@ -10,8 +10,8 @@
 #include <fcntl.h>
 
 Ichor::TcpConnectionService::TcpConnectionService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)), _socket(-1), _attempts(), _priority(INTERNAL_EVENT_PRIORITY), _quit() {
-    reg.registerDependency<ILogger>(this, true);
-    reg.registerDependency<ITimerFactory>(this, true);
+    reg.registerDependency<ILogger>(this, DependencyFlags::REQUIRED);
+    reg.registerDependency<ITimerFactory>(this, DependencyFlags::REQUIRED);
 }
 
 Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::TcpConnectionService::start() {

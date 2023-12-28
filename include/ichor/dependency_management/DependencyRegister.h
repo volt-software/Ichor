@@ -8,7 +8,7 @@
 namespace Ichor {
     struct DependencyRegister final {
         template<typename Interface, DerivedTemplated<AdvancedService> Impl>
-        void registerDependency(Impl *svc, bool required, tl::optional<Properties> props = {}) {
+        void registerDependency(Impl *svc, DependencyFlags flags, tl::optional<Properties> props = {}) {
             static_assert(!std::is_same_v<Interface, Impl>, "Impl and interface need to be separate classes");
             static_assert(!DerivedTemplated<Interface, AdvancedService>, "Interface needs to be a non-service class.");
             // Some weird bug in MSVC
@@ -17,7 +17,7 @@ namespace Ichor {
 #endif
 
             _registrations.emplace(typeNameHash<Interface>(), std::make_tuple(
-                    Dependency{typeNameHash<Interface>(), typeName<Interface>(), required, 0},
+                    Dependency{typeNameHash<Interface>(), typeName<Interface>(), flags, 0},
                     std::function<void(NeverNull<void*>, IService&)>{[svc](NeverNull<void*> dep, IService& isvc){ svc->addDependencyInstance(*reinterpret_cast<Interface*>(dep.get()), isvc); }},
                     std::function<void(NeverNull<void*>, IService&)>{[svc](NeverNull<void*> dep, IService& isvc){ svc->removeDependencyInstance(*reinterpret_cast<Interface*>(dep.get()), isvc); }},
                     std::move(props)));
@@ -29,7 +29,7 @@ namespace Ichor {
             static_assert(!DerivedTemplated<Interface, AdvancedService>, "Interface needs to be a non-service class.");
 
             _registrations.emplace(typeNameHash<Interface>(), std::make_tuple(
-                    Dependency{typeNameHash<Interface>(), typeName<Interface>(), true, 0},
+                    Dependency{typeNameHash<Interface>(), typeName<Interface>(), DependencyFlags::REQUIRED, 0},
                     std::function<void(NeverNull<void*>, IService&)>{[svc](NeverNull<void*> dep, IService& isvc){ svc->template addDependencyInstance<Interface>(reinterpret_cast<Interface*>(dep.get()), &isvc); }},
                     std::function<void(NeverNull<void*>, IService&)>{[svc](NeverNull<void*> dep, IService& isvc){ svc->template removeDependencyInstance<Interface>(reinterpret_cast<Interface*>(dep.get()), &isvc); }},
                     tl::optional<Properties>{}));

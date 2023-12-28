@@ -9,7 +9,7 @@
 #include <fmt/core.h>
 
 namespace Ichor {
-    enum class EtcdError : uint64_t {
+    enum class EtcdError : uint_fast16_t {
         HTTP_RESPONSE_ERROR,
         JSON_PARSE_ERROR,
         TIMEOUT,
@@ -24,7 +24,7 @@ namespace Ichor {
         QUITTING
     };
 
-    enum class EtcdErrorCodes : uint64_t {
+    enum class EtcdErrorCodes : uint_fast16_t {
         KEY_DOES_NOT_EXIST = 100,
         COMPARE_AND_SWAP_FAILED = 101,
         NOT_A_FILE = 102,

@@ -7,7 +7,7 @@
 #include <tl/expected.h>
 
 namespace Ichor {
-    enum class FileIOError {
+    enum class FileIOError : uint_fast16_t {
         FAILED,
         FILE_DOES_NOT_EXIST,
         NO_PERMISSION,

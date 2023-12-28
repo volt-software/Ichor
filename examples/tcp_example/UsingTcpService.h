@@ -15,9 +15,9 @@ using namespace Ichor;
 class UsingTcpService final : public AdvancedService<UsingTcpService> {
 public:
     UsingTcpService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {
-        reg.registerDependency<ILogger>(this, true);
-        reg.registerDependency<ISerializer<TestMsg>>(this, true);
-        reg.registerDependency<IConnectionService>(this, true, getProperties());
+        reg.registerDependency<ILogger>(this, DependencyFlags::REQUIRED);
+        reg.registerDependency<ISerializer<TestMsg>>(this, DependencyFlags::REQUIRED);
+        reg.registerDependency<IConnectionService>(this, DependencyFlags::REQUIRED, getProperties());
     }
     ~UsingTcpService() final = default;
 

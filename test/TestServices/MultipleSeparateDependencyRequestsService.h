@@ -11,9 +11,9 @@ struct INotUsed {
 
 struct MultipleSeparateDependencyRequestsService final : public AdvancedService<MultipleSeparateDependencyRequestsService> {
     MultipleSeparateDependencyRequestsService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {
-        reg.registerDependency<INotUsed>(this, false, Properties{{"scope", Ichor::make_any<std::string>("scope_one")}});
-        reg.registerDependency<IUselessService>(this, true, Properties{{"scope", Ichor::make_any<std::string>("scope_one")}});
-        reg.registerDependency<Ichor::IUselessService>(this, true, Properties{{"scope", Ichor::make_any<std::string>("scope_two")}});
+        reg.registerDependency<INotUsed>(this, DependencyFlags::NONE, Properties{{"scope", Ichor::make_any<std::string>("scope_one")}});
+        reg.registerDependency<IUselessService>(this, DependencyFlags::REQUIRED, Properties{{"scope", Ichor::make_any<std::string>("scope_one")}});
+        reg.registerDependency<Ichor::IUselessService>(this, DependencyFlags::REQUIRED, Properties{{"scope", Ichor::make_any<std::string>("scope_two")}});
     }
     ~MultipleSeparateDependencyRequestsService() final = default;
 

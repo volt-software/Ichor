@@ -26,7 +26,7 @@ public:
             auto deps = dm->getDependencyRequestsForService(svc->getServiceId());
             ICHOR_LOG_INFO(_logger, "\tDependencies:");
             for(auto &dep : deps) {
-                ICHOR_LOG_INFO(_logger, "\t\tDependency {} required {} satisfied {}", dep.interfaceName, dep.required, dep.satisfied);
+                ICHOR_LOG_INFO(_logger, "\t\tDependency {} required {} satisfied {}", dep.interfaceName, dep.flags, dep.satisfied);
             }
             auto dependants = dm->getDependentsForService(svc->getServiceId());
             ICHOR_LOG_INFO(_logger, "\tUsed by:");

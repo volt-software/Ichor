@@ -9,8 +9,8 @@ using namespace Ichor;
 class AsyncUsingTimerService final : public AdvancedService<AsyncUsingTimerService> {
 public:
     AsyncUsingTimerService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {
-        reg.registerDependency<IAwaitService>(this, true);
-        reg.registerDependency<ITimerFactory>(this, true);
+        reg.registerDependency<IAwaitService>(this, DependencyFlags::REQUIRED);
+        reg.registerDependency<ITimerFactory>(this, DependencyFlags::REQUIRED);
     }
     ~AsyncUsingTimerService() final = default;
 

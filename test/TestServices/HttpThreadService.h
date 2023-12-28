@@ -21,9 +21,9 @@ extern std::thread::id dmThreadId;
 class HttpThreadService final : public AdvancedService<HttpThreadService> {
 public:
     HttpThreadService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {
-        reg.registerDependency<ISerializer<TestMsg>>(this, true);
-        reg.registerDependency<IHttpConnectionService>(this, true, getProperties());
-        reg.registerDependency<IHttpHostService>(this, true);
+        reg.registerDependency<ISerializer<TestMsg>>(this, DependencyFlags::REQUIRED);
+        reg.registerDependency<IHttpConnectionService>(this, DependencyFlags::REQUIRED, getProperties());
+        reg.registerDependency<IHttpHostService>(this, DependencyFlags::REQUIRED);
     }
     ~HttpThreadService() final = default;
 

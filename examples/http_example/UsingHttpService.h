@@ -17,10 +17,10 @@ using namespace Ichor;
 class UsingHttpService final : public AdvancedService<UsingHttpService> {
 public:
     UsingHttpService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {
-        reg.registerDependency<ILogger>(this, true);
-        reg.registerDependency<ISerializer<TestMsg>>(this, true);
-        reg.registerDependency<IHttpConnectionService>(this, true, getProperties()); // using getProperties here prevents us refactoring this class to constructor injection
-        reg.registerDependency<IHttpHostService>(this, true);
+        reg.registerDependency<ILogger>(this, DependencyFlags::REQUIRED);
+        reg.registerDependency<ISerializer<TestMsg>>(this, DependencyFlags::REQUIRED);
+        reg.registerDependency<IHttpConnectionService>(this, DependencyFlags::REQUIRED, getProperties()); // using getProperties here prevents us refactoring this class to constructor injection
+        reg.registerDependency<IHttpHostService>(this, DependencyFlags::REQUIRED);
     }
     ~UsingHttpService() final = default;
 

@@ -17,7 +17,7 @@ namespace Ichor {
     class LoggerFactory final : public ILoggerFactory, public AdvancedService<LoggerFactory<LogT>> {
     public:
         LoggerFactory(DependencyRegister &reg, Properties props) : AdvancedService<LoggerFactory<LogT>>(std::move(props)) {
-            reg.registerDependency<IFrameworkLogger>(this, false);
+            reg.registerDependency<IFrameworkLogger>(this, DependencyFlags::NONE);
 
             auto logLevelProp = AdvancedService<LoggerFactory<LogT>>::getProperties().find("DefaultLogLevel");
             if(logLevelProp != end(AdvancedService<LoggerFactory<LogT>>::getProperties())) {

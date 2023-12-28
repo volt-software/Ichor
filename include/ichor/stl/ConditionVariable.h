@@ -12,7 +12,7 @@ namespace Ichor {
 #if (defined(WIN32) || defined(_WIN32) || defined(__WIN32) || defined(__APPLE__) || defined(ICHOR_MUSL)) && !defined(__CYGWIN__)
     using ConditionVariable = std::condition_variable_any;
 #else
-    enum class cv_status { no_timeout, timeout };
+    enum class cv_status : uint_fast16_t { no_timeout, timeout };
 
     struct ConditionVariable final {
         explicit ConditionVariable() noexcept {

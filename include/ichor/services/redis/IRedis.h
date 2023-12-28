@@ -36,7 +36,7 @@ namespace Ichor {
         int64_t value;
     };
 
-    enum class RedisError : uint64_t {
+    enum class RedisError : uint_fast16_t {
         DISCONNECTED
     };
 

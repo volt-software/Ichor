@@ -93,9 +93,9 @@ namespace Ichor {
 }
 
 Ichor::HiredisService::HiredisService(DependencyRegister &reg, Properties props) : AdvancedService<HiredisService>(std::move(props)) {
-    reg.registerDependency<ILogger>(this, true);
-    reg.registerDependency<ITimerFactory>(this, true);
-    reg.registerDependency<IEventQueue>(this, true);
+    reg.registerDependency<ILogger>(this, DependencyFlags::REQUIRED);
+    reg.registerDependency<ITimerFactory>(this, DependencyFlags::REQUIRED);
+    reg.registerDependency<IEventQueue>(this, DependencyFlags::REQUIRED);
 }
 
 Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::HiredisService::start() {

@@ -16,7 +16,7 @@ namespace Ichor {
     concept Constructible = std::is_constructible_v<T, U...>;
 
 
-#ifdef ICHOR_ENABLE_INTERNAL_DEBUGGING
+#ifdef ICHOR_ENABLE_INTERNAL_STL_DEBUGGING
     extern std::atomic<uint64_t> _rfpCounter;
 #define RFP_ID _id,
 #else
@@ -70,7 +70,7 @@ namespace Ichor {
         }
         template <typename U> requires Constructible<T, U>
         ReferenceCountedPointer(const ReferenceCountedPointer<U> &o) noexcept : _ptr(o._ptr) {
-            INTERNAL_DEBUG("ReferenceCountedPointer<{}>(const ReferenceCountedPointer<{}> &o) {} {}", typeName<T>(), typeName<U>(), RFP_ID _ptr == nullptr);
+            INTERNAL_STL_DEBUG("ReferenceCountedPointer<{}>(const ReferenceCountedPointer<{}> &o) {} {}", typeName<T>(), typeName<U>(), RFP_ID _ptr == nullptr);
             _ptr->useCount++;
         }
         ReferenceCountedPointer(ReferenceCountedPointer &&o) noexcept : _ptr(o._ptr) {
@@ -78,35 +78,35 @@ namespace Ichor {
         }
         template <typename U> requires Constructible<T, U>
         ReferenceCountedPointer(ReferenceCountedPointer<U> &&o) noexcept : _ptr(o._ptr) {
-            INTERNAL_DEBUG("ReferenceCountedPointer<{}>(ReferenceCountedPointer<{}> &&o) {} {}", typeName<T>(), typeName<U>(), RFP_ID _ptr == nullptr);
+            INTERNAL_STL_DEBUG("ReferenceCountedPointer<{}>(ReferenceCountedPointer<{}> &&o) {} {}", typeName<T>(), typeName<U>(), RFP_ID _ptr == nullptr);
             o._ptr = nullptr;
         }
 
         explicit ReferenceCountedPointer(T* p) : _ptr(new Detail::ReferenceCountedPointerDeleter(p, [](void *ptr) { delete static_cast<T*>(ptr); })) {
-            INTERNAL_DEBUG("ReferenceCountedPointer<{}>(T* p) {} {}", typeName<T>(), RFP_ID _ptr == nullptr);
+            INTERNAL_STL_DEBUG("ReferenceCountedPointer<{}>(T* p) {} {}", typeName<T>(), RFP_ID _ptr == nullptr);
         }
 
         template <typename U> requires Constructible<T, U>
         explicit ReferenceCountedPointer(U* p) : _ptr(new Detail::ReferenceCountedPointerDeleter(p, [](void *ptr) { delete static_cast<U*>(ptr); })) {
-            INTERNAL_DEBUG("ReferenceCountedPointer<{}>({}* p) {} {}", typeName<T>(), typeName<U>(), RFP_ID _ptr == nullptr);
+            INTERNAL_STL_DEBUG("ReferenceCountedPointer<{}>({}* p) {} {}", typeName<T>(), typeName<U>(), RFP_ID _ptr == nullptr);
         }
         template <typename... U> requires Constructible<T, U...>
         explicit ReferenceCountedPointer(U&&... args) : _ptr(new Detail::ReferenceCountedPointerDeleter(new T(std::forward<U>(args)...), [](void *ptr) { delete static_cast<T*>(ptr); })) {
             if constexpr (std::is_same_v<T, bool>) {
                 static_assert(std::is_same_v<T, U...>);
-                INTERNAL_DEBUG("ReferenceCountedPointer<{}>(U&&... args) {} {} bool! {}", typeName<T>(), RFP_ID _ptr == nullptr, *static_cast<T*>(_ptr->ptr.get()));
+                INTERNAL_STL_DEBUG("ReferenceCountedPointer<{}>(U&&... args) {} {} bool! {}", typeName<T>(), RFP_ID _ptr == nullptr, *static_cast<T*>(_ptr->ptr.get()));
             } else {
-                INTERNAL_DEBUG("ReferenceCountedPointer<{}>(U&&... args) {} {} {}", typeName<T>(), RFP_ID _ptr == nullptr, sizeof(T));
+                INTERNAL_STL_DEBUG("ReferenceCountedPointer<{}>(U&&... args) {} {} {}", typeName<T>(), RFP_ID _ptr == nullptr, sizeof(T));
             }
         }
         template <typename UniqueDeleter>
         ReferenceCountedPointer(std::unique_ptr<T, UniqueDeleter> unique) : _ptr(new Detail::ReferenceCountedPointerDeleter(unique.get(), [deleter = unique.get_deleter()](void *ptr) { deleter(static_cast<T*>(ptr)); })) {
-            INTERNAL_DEBUG("ReferenceCountedPointer<{}>(unique) {} {}", typeName<T>(), RFP_ID _ptr == nullptr);
+            INTERNAL_STL_DEBUG("ReferenceCountedPointer<{}>(unique) {} {}", typeName<T>(), RFP_ID _ptr == nullptr);
             unique.release();
         }
 
         ~ReferenceCountedPointer() noexcept {
-            INTERNAL_DEBUG("~ReferenceCountedPointer<{}>() {} {}", typeName<T>(), RFP_ID _ptr == nullptr);
+            INTERNAL_STL_DEBUG("~ReferenceCountedPointer<{}>() {} {}", typeName<T>(), RFP_ID _ptr == nullptr);
             decrement();
         }
 
@@ -124,7 +124,7 @@ namespace Ichor {
 
         template <typename U> requires Constructible<T, U>
         ReferenceCountedPointer& operator=(const ReferenceCountedPointer<U> &o) noexcept {
-            INTERNAL_DEBUG("ReferenceCountedPointer<{}> operator=(const ReferenceCountedPointer<{}> &o) {} {}", typeName<T>(), typeName<U>(), RFP_ID _ptr == nullptr);
+            INTERNAL_STL_DEBUG("ReferenceCountedPointer<{}> operator=(const ReferenceCountedPointer<{}> &o) {} {}", typeName<T>(), typeName<U>(), RFP_ID _ptr == nullptr);
             decrement();
             _ptr = o._ptr;
             _ptr->useCount++;
@@ -146,7 +146,7 @@ namespace Ichor {
 
         template <typename U> requires Constructible<T, U>
         ReferenceCountedPointer& operator=(ReferenceCountedPointer<U> &&o) noexcept {
-            INTERNAL_DEBUG("ReferenceCountedPointer<{}> operator=(ReferenceCountedPointer<{}> &&o) {} {}", typeName<T>(), typeName<U>(), RFP_ID _ptr == nullptr);
+            INTERNAL_STL_DEBUG("ReferenceCountedPointer<{}> operator=(ReferenceCountedPointer<{}> &&o) {} {}", typeName<T>(), typeName<U>(), RFP_ID _ptr == nullptr);
             decrement();
             _ptr = o._ptr;
             o._ptr = nullptr;
@@ -156,7 +156,7 @@ namespace Ichor {
 
         template <typename U> requires Constructible<T, U>
         ReferenceCountedPointer& operator=(U *p) noexcept {
-            INTERNAL_DEBUG("ReferenceCountedPointer<{}> operator=({}* p) {} {}", typeName<T>(), typeName<U>(), RFP_ID _ptr == nullptr);
+            INTERNAL_STL_DEBUG("ReferenceCountedPointer<{}> operator=({}* p) {} {}", typeName<T>(), typeName<U>(), RFP_ID _ptr == nullptr);
             decrement();
             _ptr = new Detail::ReferenceCountedPointerDeleter(p, [](void *ptr) { delete static_cast<U*>(ptr); });
 
@@ -165,7 +165,7 @@ namespace Ichor {
 
         template <typename UniqueDeleter>
         ReferenceCountedPointer& operator=(std::unique_ptr<T, UniqueDeleter> unique) noexcept {
-            INTERNAL_DEBUG("ReferenceCountedPointer<{}> operator=(unique) {} {}", typeName<T>(), RFP_ID _ptr == nullptr);
+            INTERNAL_STL_DEBUG("ReferenceCountedPointer<{}> operator=(unique) {} {}", typeName<T>(), RFP_ID _ptr == nullptr);
             decrement();
             _ptr = new Detail::ReferenceCountedPointerDeleter(unique.get(), [deleter = unique.get_deleter()](void *ptr) { deleter(static_cast<T*>(ptr)); });
             unique.release();
@@ -174,7 +174,7 @@ namespace Ichor {
         }
 
         ReferenceCountedPointer& operator=(decltype(nullptr)) noexcept {
-            INTERNAL_DEBUG("ReferenceCountedPointer<{}> operator=(nullptr) {} {}", typeName<T>(), RFP_ID _ptr == nullptr);
+            INTERNAL_STL_DEBUG("ReferenceCountedPointer<{}> operator=(nullptr) {} {}", typeName<T>(), RFP_ID _ptr == nullptr);
             decrement();
             _ptr = nullptr;
 
@@ -183,11 +183,11 @@ namespace Ichor {
 
         [[nodiscard]] T& operator*() const noexcept {
             if constexpr (std::is_same_v<T, bool>) {
-                INTERNAL_DEBUG("ReferenceCountedPointer<{}> operator*() {} {} bool! {}", typeName<T>(), RFP_ID _ptr == nullptr, *static_cast<T*>(_ptr->ptr.get()));
+                INTERNAL_STL_DEBUG("ReferenceCountedPointer<{}> operator*() {} {} bool! {}", typeName<T>(), RFP_ID _ptr == nullptr, *static_cast<T*>(_ptr->ptr.get()));
             } else {
-                INTERNAL_DEBUG("ReferenceCountedPointer<{}> operator*() {} {}", typeName<T>(), RFP_ID _ptr == nullptr);
+                INTERNAL_STL_DEBUG("ReferenceCountedPointer<{}> operator*() {} {}", typeName<T>(), RFP_ID _ptr == nullptr);
             }
-            if constexpr (DO_INTERNAL_DEBUG || DO_HARDENING) {
+            if constexpr (DO_INTERNAL_STL_DEBUG || DO_HARDENING) {
                 if (_ptr == nullptr) [[unlikely]] {
                     std::terminate();
                 }
@@ -196,8 +196,8 @@ namespace Ichor {
         }
 
         [[nodiscard]] T* operator->() const noexcept {
-            INTERNAL_DEBUG("ReferenceCountedPointer<{}> operator->() {} {}", typeName<T>(), RFP_ID _ptr == nullptr);
-        if constexpr (DO_INTERNAL_DEBUG || DO_HARDENING) {
+            INTERNAL_STL_DEBUG("ReferenceCountedPointer<{}> operator->() {} {}", typeName<T>(), RFP_ID _ptr == nullptr);
+        if constexpr (DO_INTERNAL_STL_DEBUG || DO_HARDENING) {
             if (_ptr == nullptr) [[unlikely]] {
                 std::terminate();
             }
@@ -209,18 +209,18 @@ namespace Ichor {
         // causing it to construct a new bool from a ReferenceCountedPointer<bool> instead of the underlying bool.
         // Maybe try https://www.artima.com/articles/the-safe-bool-idiom ?
 //        [[nodiscard]] explicit operator bool() const noexcept {
-//            INTERNAL_DEBUG("ReferenceCountedPointer<{}> operator bool() {} {}", typeName<T>(), RFP_ID _ptr == nullptr);
+//            INTERNAL_STL_DEBUG("ReferenceCountedPointer<{}> operator bool() {} {}", typeName<T>(), RFP_ID _ptr == nullptr);
 //            return _ptr != nullptr;
 //        }
 
         [[nodiscard]] bool operator==(decltype(nullptr)) const noexcept {
-            INTERNAL_DEBUG("ReferenceCountedPointer<{}> operator==(nullptr) {} {}", typeName<T>(), RFP_ID _ptr == nullptr);
+            INTERNAL_STL_DEBUG("ReferenceCountedPointer<{}> operator==(nullptr) {} {}", typeName<T>(), RFP_ID _ptr == nullptr);
             return _ptr == nullptr;
         }
 
         template <typename U>
         [[nodiscard]] bool operator==(const ReferenceCountedPointer<U> &o) const noexcept {
-            INTERNAL_DEBUG("ReferenceCountedPointer<{}> operator==(const ReferenceCountedPointer<{}> &) {} {}", typeName<T>(), typeName<U>(), RFP_ID _ptr == nullptr);
+            INTERNAL_STL_DEBUG("ReferenceCountedPointer<{}> operator==(const ReferenceCountedPointer<{}> &) {} {}", typeName<T>(), typeName<U>(), RFP_ID _ptr == nullptr);
             return _ptr == o._ptr;
         }
 
@@ -237,8 +237,8 @@ namespace Ichor {
         }
 
         [[nodiscard]] T* get() const noexcept {
-            INTERNAL_DEBUG("ReferenceCountedPointer<{}> get() {} {}", typeName<T>(), RFP_ID _ptr == nullptr);
-            if constexpr (DO_INTERNAL_DEBUG || DO_HARDENING) {
+            INTERNAL_STL_DEBUG("ReferenceCountedPointer<{}> get() {} {}", typeName<T>(), RFP_ID _ptr == nullptr);
+            if constexpr (DO_INTERNAL_STL_DEBUG || DO_HARDENING) {
                 if (_ptr == nullptr) [[unlikely]] {
                     std::terminate();
                 }
@@ -263,7 +263,7 @@ namespace Ichor {
         }
 
         Detail::ReferenceCountedPointerBase *_ptr{};
-#ifdef ICHOR_ENABLE_INTERNAL_DEBUGGING
+#ifdef ICHOR_ENABLE_INTERNAL_STL_DEBUGGING
         uint64_t _id{_rfpCounter.fetch_add(1, std::memory_order_relaxed)};
 #endif
 

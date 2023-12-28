@@ -4,7 +4,7 @@
 #include <vector>
 
 namespace Ichor {
-    enum class SendErrorReason {
+    enum class SendErrorReason : uint_fast16_t {
         QUITTING
     };
 

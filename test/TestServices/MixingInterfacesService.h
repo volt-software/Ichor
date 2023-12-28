@@ -58,8 +58,8 @@ struct Handle {
 
 struct CheckMixService final : public ICountService, public AdvancedService<CheckMixService> {
     CheckMixService(DependencyRegister &reg, Properties props) : AdvancedService<CheckMixService>(std::move(props)) {
-        reg.registerDependency<IMixOne>(this, false);
-        reg.registerDependency<IMixTwo>(this, false);
+        reg.registerDependency<IMixOne>(this, DependencyFlags::ALLOW_MULTIPLE);
+        reg.registerDependency<IMixTwo>(this, DependencyFlags::ALLOW_MULTIPLE);
     }
 
     static void check(IMixOne &one, IMixTwo &two) {

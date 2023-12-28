@@ -3,8 +3,8 @@
 #include <numeric>
 
 Ichor::EventStatisticsService::EventStatisticsService(DependencyRegister &reg, Properties props) : AdvancedService<EventStatisticsService>(std::move(props)) {
-    reg.registerDependency<ITimerFactory>(this, true);
-    reg.registerDependency<ILogger>(this, true);
+    reg.registerDependency<ITimerFactory>(this, DependencyFlags::REQUIRED);
+    reg.registerDependency<ILogger>(this, DependencyFlags::REQUIRED);
 }
 
 Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::EventStatisticsService::start() {

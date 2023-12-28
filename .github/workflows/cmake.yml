@@ -56,5 +56,5 @@ jobs:
 
     - name: Examples
       working-directory: ${{github.workspace}}/bin
-      run: ../bin/ichor_etcd_example && ../bin/ichor_http_example && ../bin/ichor_multithreaded_example && ../bin/ichor_optional_dependency_example && ../bin/ichor_serializer_example && ../bin/ichor_tcp_example && ../bin/ichor_timer_example && ../bin/ichor_tracker_example && ../bin/ichor_websocket_example && ../bin/ichor_websocket_example -t4 && ../bin/ichor_yielding_timer_example && ../bin/ichor_event_statistics_example && ../bin/ichor_introspection_example
+      run: ../bin/ichor_etcd_example && ../bin/ichor_http_example && ../bin/ichor_multithreaded_example && ../bin/ichor_optional_dependency_example && ../bin/ichor_serializer_example && ../bin/ichor_tcp_example && ../bin/ichor_timer_example && ../bin/ichor_factory_example && ../bin/ichor_websocket_example && ../bin/ichor_websocket_example -t4 && ../bin/ichor_yielding_timer_example && ../bin/ichor_event_statistics_example && ../bin/ichor_introspection_example
 

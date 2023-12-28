@@ -26,10 +26,10 @@ void setup_stream(std::shared_ptr<websocket::stream<NextLayer>>& ws)
 }
 
 Ichor::WsConnectionService::WsConnectionService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {
-    reg.registerDependency<ILogger>(this, true);
-    reg.registerDependency<IAsioContextService>(this, true);
+    reg.registerDependency<ILogger>(this, DependencyFlags::REQUIRED);
+    reg.registerDependency<IAsioContextService>(this, DependencyFlags::REQUIRED);
     if(getProperties().contains("WsHostServiceId")) {
-        reg.registerDependency<IHostService>(this, true,
+        reg.registerDependency<IHostService>(this, DependencyFlags::REQUIRED,
                                              Properties{{"Filter", Ichor::make_any<Filter>(ServiceIdFilterEntry{Ichor::any_cast<uint64_t>(getProperties()["WsHostServiceId"])})}});
     }
 }

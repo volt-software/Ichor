@@ -5,7 +5,7 @@
 #include <ichor/services/logging/SpdlogLogger.h>
 
 Ichor::SpdlogLogger::SpdlogLogger(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {
-    reg.registerDependency<ISpdlogSharedService>(this, true);
+    reg.registerDependency<ISpdlogSharedService>(this, DependencyFlags::REQUIRED);
 
     auto logLevelProp = getProperties().find("LogLevel");
     if(logLevelProp != end(getProperties())) {

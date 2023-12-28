@@ -7,8 +7,8 @@ using namespace Ichor;
 
 struct RegistrationCheckerService final : public AdvancedService<RegistrationCheckerService> {
     RegistrationCheckerService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {
-        reg.registerDependency<IUselessService>(this, false);
-        reg.registerDependency<Ichor::IUselessService>(this, false);
+        reg.registerDependency<IUselessService>(this, DependencyFlags::NONE);
+        reg.registerDependency<Ichor::IUselessService>(this, DependencyFlags::NONE);
     }
     ~RegistrationCheckerService() final = default;
 

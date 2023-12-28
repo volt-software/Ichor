@@ -5,7 +5,7 @@
 
 namespace Ichor {
     // Copied/modified from Boost.BEAST
-    enum class HttpMethod {
+    enum class HttpMethod : uint_fast16_t {
         /** An unknown method.
 
             This value indicates that the request method string is not
@@ -110,8 +110,7 @@ namespace Ichor {
     };
 
     // Copied/modified from Boost.BEAST
-    enum class HttpStatus
-    {
+    enum class HttpStatus : uint_fast16_t {
         continue_                           = 100,
         switching_protocols                 = 101,
 

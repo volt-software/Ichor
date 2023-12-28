@@ -11,7 +11,7 @@ namespace Ichor {
 
     struct DependencyOfflineWhileStartingService final : public IDependencyOfflineWhileStartingService, public AdvancedService<DependencyOfflineWhileStartingService> {
         DependencyOfflineWhileStartingService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {
-            reg.registerDependency<IUselessService>(this, true);
+            reg.registerDependency<IUselessService>(this, DependencyFlags::REQUIRED);
         }
         ~DependencyOfflineWhileStartingService() final = default;
 

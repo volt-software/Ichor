@@ -28,8 +28,8 @@ struct ExecuteTaskEvent final : public Event {
 class TestService final : public AdvancedService<TestService> {
 public:
     TestService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {
-        reg.registerDependency<ILogger>(this, true);
-        reg.registerDependency<IOptionalService>(this, false);
+        reg.registerDependency<ILogger>(this, DependencyFlags::REQUIRED);
+        reg.registerDependency<IOptionalService>(this, DependencyFlags::NONE);
     }
     ~TestService() final = default;
 

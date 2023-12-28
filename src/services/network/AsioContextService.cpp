@@ -16,7 +16,7 @@ Ichor::AsioContextService::AsioContextService(DependencyRegister &reg, Propertie
         }
     }
 
-    reg.registerDependency<ILogger>(this, true);
+    reg.registerDependency<ILogger>(this, DependencyFlags::REQUIRED);
 }
 
 Ichor::AsioContextService::~AsioContextService() {

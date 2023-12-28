@@ -22,7 +22,7 @@ struct IMyDependencyService {};
 
 struct MyDependencyService final : public IMyDependencyService, public Ichor::AdvancedService<MyDependencyService> {
     MyDependencyService(Ichor::DependencyRegister &reg, Ichor::Properties props) : Ichor::AdvancedService<MyDependencyService>(std::move(props)) {
-        reg.registerDependency<IMyService>(this, true);
+        reg.registerDependency<IMyService>(this, DependencyFlags::REQUIRED);
     }
     ~MyDependencyService() final = default;
 
