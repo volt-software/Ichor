@@ -263,9 +263,10 @@ if(ICHOR_USE_THREAD_SANITIZER)
     endif()
 endif()
 
-if(NOT DEFINED ICHOR_USE_SANITIZERS AND NOT DEFINED ICHOR_USE_THREAD_SANITIZER)
+if(NOT WIN32 AND NOT ICHOR_USE_SANITIZERS AND NOT ICHOR_USE_THREAD_SANITIZER)
     # see https://github.com/google/sanitizers/issues/856
-    target_compile_options(ichor PUBLIC -fPIE)
+    target_compile_options(ichor PUBLIC -fpie)
+    target_link_options(ichor PUBLIC -pie)
 endif()
 
 if(WIN32 AND ICHOR_USE_HARDENING)
@@ -565,6 +566,11 @@ if(ICHOR_BUILD_TESTING)
         if(WIN32)
             target_compile_options(Catch2 PUBLIC /fsanitize=address /Zi)
         endif()
+    endif()
+
+    if(NOT WIN32 AND NOT ICHOR_USE_SANITIZERS AND NOT ICHOR_USE_THREAD_SANITIZER)
+        target_compile_options(Catch2 PUBLIC -fpie)
+        target_link_options(Catch2 PUBLIC -pie)
     endif()
 
 endif()
