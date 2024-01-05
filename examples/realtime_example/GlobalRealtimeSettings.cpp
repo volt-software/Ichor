@@ -73,6 +73,7 @@ GlobalRealtimeSettings::GlobalRealtimeSettings() {
             }
         }
     } else {
+        reenable_smt = false;
         fmt::print("SMT missing\n");
     }
 
