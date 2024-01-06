@@ -29,13 +29,13 @@ class TestService final : public AdvancedService<TestService> {
 public:
     TestService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {
         reg.registerDependency<ILogger>(this, DependencyFlags::REQUIRED);
-        reg.registerDependency<IOptionalService>(this, DependencyFlags::NONE);
+        reg.registerDependency<IOptionalService>(this, DependencyFlags::ALLOW_MULTIPLE);
     }
     ~TestService() final = default;
 
 private:
     Task<tl::expected<void, Ichor::StartError>> start() final {
-        ICHOR_LOG_INFO(_logger, "TestService started with dependency");
+        ICHOR_LOG_INFO(_logger, "TestService started with dependency {}", _injectionCount);
         _started = true;
         _eventHandlerRegistration = GetThreadLocalManager().registerEventHandler<ExecuteTaskEvent>(this, this);
         if(_injectionCount == 2) {
@@ -61,7 +61,7 @@ private:
     }
 
     void addDependencyInstance(IOptionalService&, IService &isvc) {
-        ICHOR_LOG_INFO(_logger, "Inserted IOptionalService svcid {}", isvc.getServiceId());
+        ICHOR_LOG_INFO(_logger, "Inserted IOptionalService svcid {} {}", isvc.getServiceId(), _injectionCount);
 
         _injectionCount++;
         if(_started && _injectionCount == 2) {
