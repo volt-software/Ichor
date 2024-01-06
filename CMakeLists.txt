@@ -294,7 +294,7 @@ elseif(ICHOR_USE_HARDENING)
     if(NOT APPLE)
         target_link_options(ichor PUBLIC -Wl,-z,nodlopen -Wl,-z,noexecstack -Wl,-z,relro -Wl,-z,now)
     else()
-        target_link_options(ichor PUBLIC -Wl,-z,nodlopen -Wl,-bind_at_load)
+        target_link_options(ichor PUBLIC -Wl,-bind_at_load)
     endif()
 endif()
 
