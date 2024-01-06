@@ -291,7 +291,11 @@ elseif(ICHOR_USE_HARDENING)
 
     target_compile_definitions(ichor PUBLIC ICHOR_USE_HARDENING)
 
-    target_link_options(ichor PUBLIC -Wl,-z,nodlopen -Wl,-z,noexecstack -Wl,-z,relro -Wl,-z,now)
+    if(NOT APPLE)
+        target_link_options(ichor PUBLIC -Wl,-z,nodlopen -Wl,-z,noexecstack -Wl,-z,relro -Wl,-z,now)
+    else()
+        target_link_options(ichor PUBLIC -Wl,-z,nodlopen -Wl,-bind_at_load)
+    endif()
 endif()
 
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
