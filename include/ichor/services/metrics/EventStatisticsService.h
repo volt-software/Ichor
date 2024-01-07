@@ -54,7 +54,7 @@ namespace Ichor {
         void addDependencyInstance(ITimerFactory &factory, IService &);
         void removeDependencyInstance(ITimerFactory &factory, IService&);
 
-        AsyncGenerator<IchorBehaviour> handleEvent();
+        void calculateAverage();
 
         Task<tl::expected<void, Ichor::StartError>> start() final;
         Task<void> stop() final;
