@@ -3,8 +3,8 @@
 #include <ichor/services/logging/LoggerFactory.h>
 #include <ichor/services/etcd/EtcdV2Service.h>
 #include <ichor/services/timer/TimerFactoryFactory.h>
-#include <ichor/services/network/http/HttpConnectionService.h>
-#include <ichor/services/network/AsioContextService.h>
+#include <ichor/services/network/boost/HttpConnectionService.h>
+#include <ichor/services/network/boost/AsioContextService.h>
 #include <ichor/services/network/ClientFactory.h>
 
 // Some compile time logic to instantiate a regular cout logger or to use the spdlog logger, if Ichor has been compiled with it.

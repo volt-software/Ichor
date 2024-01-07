@@ -1,9 +1,7 @@
-#ifdef ICHOR_USE_BOOST_BEAST
-
 #include <ichor/DependencyManager.h>
 #include <ichor/services/network/IConnectionService.h>
-#include <ichor/services/network/ws/WsHostService.h>
-#include <ichor/services/network/ws/WsConnectionService.h>
+#include <ichor/services/network/boost/WsHostService.h>
+#include <ichor/services/network/boost/WsConnectionService.h>
 #include <ichor/services/network/ws/WsEvents.h>
 #include <ichor/services/network/NetworkEvents.h>
 #include <ichor/services/network/http/HttpScopeGuards.h>
@@ -204,5 +202,3 @@ void Ichor::WsHostService::listen(tcp::endpoint endpoint, net::yield_context yie
         _startStopEvent.set();
     });
 }
-
-#endif

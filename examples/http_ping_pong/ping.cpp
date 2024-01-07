@@ -3,8 +3,8 @@
 #include "../common/lyra.hpp"
 #include <ichor/event_queues/MultimapQueue.h>
 #include <ichor/services/logging/LoggerFactory.h>
-#include <ichor/services/network/http/HttpConnectionService.h>
-#include <ichor/services/network/AsioContextService.h>
+#include <ichor/services/network/boost/HttpConnectionService.h>
+#include <ichor/services/network/boost/AsioContextService.h>
 #include <ichor/services/network/ClientFactory.h>
 #include <ichor/services/serialization/ISerializer.h>
 #include <ichor/services/logging/NullLogger.h>

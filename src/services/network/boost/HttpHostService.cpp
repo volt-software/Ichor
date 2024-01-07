@@ -1,7 +1,5 @@
-#ifdef ICHOR_USE_BOOST_BEAST
-
 #include <ichor/DependencyManager.h>
-#include <ichor/services/network/http/HttpHostService.h>
+#include <ichor/services/network/boost/HttpHostService.h>
 #include <ichor/services/network/http/HttpScopeGuards.h>
 #include <ichor/events/RunFunctionEvent.h>
 
@@ -436,5 +434,3 @@ void Ichor::HttpHostService::sendInternal(std::shared_ptr<Detail::Connection<Soc
         }
     }ASIO_SPAWN_COMPLETION_TOKEN);
 }
-
-#endif

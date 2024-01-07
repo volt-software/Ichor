@@ -4,8 +4,8 @@
 #include <ichor/services/logging/NullLogger.h>
 #include <ichor/event_queues/MultimapQueue.h>
 #include <ichor/services/logging/LoggerFactory.h>
-#include <ichor/services/network/ws/WsHostService.h>
-#include <ichor/services/network/ws/WsConnectionService.h>
+#include <ichor/services/network/boost/WsHostService.h>
+#include <ichor/services/network/boost/WsConnectionService.h>
 #include <ichor/services/network/ClientFactory.h>
 #include <ichor/services/serialization/ISerializer.h>
 

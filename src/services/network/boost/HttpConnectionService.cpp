@@ -1,8 +1,6 @@
-#ifdef ICHOR_USE_BOOST_BEAST
-
 #include <ichor/DependencyManager.h>
 #include <ichor/events/RunFunctionEvent.h>
-#include <ichor/services/network/http/HttpConnectionService.h>
+#include <ichor/services/network/boost/HttpConnectionService.h>
 #include <ichor/services/network/http/HttpScopeGuards.h>
 #include <ichor/services/network/NetworkEvents.h>
 #include <ichor/ScopeGuard.h>
@@ -370,5 +368,3 @@ void Ichor::HttpConnectionService::connect(tcp::endpoint endpoint, net::yield_co
     _connected.store(true, std::memory_order_release);
     _connecting.store(false, std::memory_order_release);
 }
-
-#endif

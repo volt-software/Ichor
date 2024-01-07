@@ -1,12 +1,10 @@
 #pragma once
 
-#ifdef ICHOR_USE_BOOST_BEAST
-
 #include <ichor/services/network/IHostService.h>
 #include <ichor/services/logging/Logger.h>
-#include <ichor/services/network/ws/WsConnectionService.h>
+#include <ichor/services/network/boost//WsConnectionService.h>
+#include <ichor/services/network/boost/AsioContextService.h>
 #include <ichor/services/network/ws/WsEvents.h>
-#include <ichor/services/network/AsioContextService.h>
 #include <ichor/coroutines/AsyncManualResetEvent.h>
 #include <boost/beast.hpp>
 #include <boost/asio/spawn.hpp>
@@ -57,5 +55,3 @@ namespace Ichor {
         IEventQueue *_queue;
     };
 }
-
-#endif

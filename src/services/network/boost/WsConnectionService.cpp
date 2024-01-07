@@ -1,7 +1,5 @@
-#ifdef ICHOR_USE_BOOST_BEAST
-
 #include <ichor/DependencyManager.h>
-#include <ichor/services/network/ws/WsConnectionService.h>
+#include <ichor/services/network/boost/WsConnectionService.h>
 #include <ichor/services/network/ws/WsEvents.h>
 #include <ichor/services/network/NetworkEvents.h>
 #include <ichor/services/network/IHostService.h>
@@ -373,5 +371,3 @@ void Ichor::WsConnectionService::read(net::yield_context &yield) {
     INTERNAL_DEBUG("read stopped WsConnectionService {}", getServiceId());
 //    fmt::print("{}:{} read done\n", getServiceId(), getServiceName());
 }
-
-#endif

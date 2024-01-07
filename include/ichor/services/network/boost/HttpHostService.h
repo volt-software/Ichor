@@ -1,9 +1,7 @@
 #pragma once
 
-#ifdef ICHOR_USE_BOOST_BEAST
-
 #include <ichor/services/network/http/IHttpHostService.h>
-#include <ichor/services/network/AsioContextService.h>
+#include <ichor/services/network/boost/AsioContextService.h>
 #include <ichor/services/logging/Logger.h>
 #include <ichor/coroutines/AsyncManualResetEvent.h>
 #include <ichor/stl/RealtimeMutex.h>
@@ -84,5 +82,3 @@ namespace Ichor {
         IEventQueue *_queue;
     };
 }
-
-#endif

@@ -4,9 +4,9 @@
 #include <ichor/services/logging/LoggerFactory.h>
 #include <ichor/services/etcd/EtcdV2Service.h>
 #include <ichor/services/timer/TimerFactoryFactory.h>
-#include <ichor/services/network/http/HttpConnectionService.h>
+#include <ichor/services/network/boost/HttpConnectionService.h>
+#include <ichor/services/network/boost/AsioContextService.h>
 #include <ichor/services/logging/CoutFrameworkLogger.h>
-#include <ichor/services/network/AsioContextService.h>
 #include <ichor/services/network/ClientFactory.h>
 #include "TestServices/EtcdUsingService.h"
 #include "Common.h"

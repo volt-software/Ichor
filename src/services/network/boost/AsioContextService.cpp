@@ -1,7 +1,5 @@
-#ifdef ICHOR_USE_BOOST_BEAST
-
 #include <ichor/DependencyManager.h>
-#include <ichor/services/network/AsioContextService.h>
+#include <ichor/services/network/boost/AsioContextService.h>
 #include <ichor/events/RunFunctionEvent.h>
 #if (defined(WIN32) || defined(_WIN32) || defined(__WIN32)) && !defined(__CYGWIN__)
 #include <processthreadsapi.h>
@@ -135,5 +133,3 @@ bool Ichor::AsioContextService::fibersShouldStop() const noexcept {
 uint64_t Ichor::AsioContextService::threadCount() const noexcept {
     return _threads;
 }
-
-#endif

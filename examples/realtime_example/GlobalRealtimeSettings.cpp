@@ -81,6 +81,7 @@ GlobalRealtimeSettings::GlobalRealtimeSettings() {
     if(setpriority(PRIO_PROCESS, 0, -20) != 0) {
         fmt::print("setpriority failed\n");
     }
+    fmt::print("finished settings\n");
 #endif
 }
 

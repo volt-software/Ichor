@@ -4,9 +4,9 @@
 #include <ichor/events/RunFunctionEvent.h>
 #include <ichor/coroutines/AsyncManualResetEvent.h>
 #include <ichor/services/logging/LoggerFactory.h>
-#include <ichor/services/network/http/HttpHostService.h>
-#include <ichor/services/network/http/HttpConnectionService.h>
-#include <ichor/services/network/AsioContextService.h>
+#include <ichor/services/network/boost/HttpHostService.h>
+#include <ichor/services/network/boost/HttpConnectionService.h>
+#include <ichor/services/network/boost/AsioContextService.h>
 #include <ichor/services/network/ClientFactory.h>
 #include <ichor/services/serialization/ISerializer.h>
 #include <ichor/services/logging/CoutFrameworkLogger.h>
