@@ -3,7 +3,7 @@
 #include <ichor/services/timer/Timer.h>
 #include <atomic>
 
-class Ichor::TimerFactory final : public Ichor::ITimerFactory, public Ichor::AdvancedService<TimerFactory> {
+class Ichor::TimerFactory final : public Ichor::ITimerFactory, public Detail::InternalTimerFactory, public Ichor::AdvancedService<TimerFactory> {
 public:
     TimerFactory(Ichor::DependencyRegister &reg, Ichor::Properties props) : Ichor::AdvancedService<TimerFactory>(std::move(props)) {
         reg.registerDependency<Ichor::IEventQueue>(this, DependencyFlags::REQUIRED);
@@ -39,6 +39,16 @@ public:
         _queue = nullptr;
     }
 
+    ServiceIdType _getServiceId() const noexcept final {
+        return getServiceId();
+    }
+
+    void stopAllTimers() noexcept final {
+        for(auto& timer : _timers) {
+            timer->stopTimer();
+        }
+    }
+
     static std::atomic<uint64_t> _timerIdCounter;
     std::vector<std::unique_ptr<Ichor::Timer>> _timers;
     Ichor::IEventQueue* _queue{};
@@ -64,7 +74,7 @@ void Ichor::TimerFactoryFactory::handleDependencyRequest(AlwaysNull<ITimerFactor
         return;
     }
 
-    _factories.emplace(evt.originatingService, Ichor::GetThreadLocalManager().createServiceManager<TimerFactory, ITimerFactory>(Properties{{"requestingSvcId", Ichor::make_any<ServiceIdType>(evt.originatingService)}}));
+    _factories.emplace(evt.originatingService, Ichor::GetThreadLocalManager().createServiceManager<TimerFactory, ITimerFactory>(Properties{{"requestingSvcId", Ichor::make_any<ServiceIdType>(evt.originatingService)}}, evt.priority));
 }
 
 void Ichor::TimerFactoryFactory::handleDependencyUndoRequest(AlwaysNull<ITimerFactory *>, const DependencyUndoRequestEvent &evt) {
@@ -74,8 +84,11 @@ void Ichor::TimerFactoryFactory::handleDependencyUndoRequest(AlwaysNull<ITimerFa
         return;
     }
 
-    GetThreadLocalEventQueue().pushEvent<StopServiceEvent>(getServiceId(), factory->second->getServiceId());
+    factory->second->stopAllTimers();
+
+    // because we manually tell the factory to stop all timers, stopping the factory itself isn't a high priority action anymore.
+    GetThreadLocalEventQueue().pushEvent<StopServiceEvent>(getServiceId(), factory->second->_getServiceId());
     // + 11 because the first stop triggers a dep offline event and inserts a new stop with 10 higher priority.
-    GetThreadLocalEventQueue().pushPrioritisedEvent<RemoveServiceEvent>(getServiceId(), INTERNAL_EVENT_PRIORITY + 11, factory->second->getServiceId());
+    GetThreadLocalEventQueue().pushPrioritisedEvent<RemoveServiceEvent>(getServiceId(), INTERNAL_EVENT_PRIORITY + 11, factory->second->_getServiceId());
     _factories.erase(factory);
 }

@@ -12,7 +12,7 @@ namespace Ichor {
     template <typename NetworkType, typename NetworkInterfaceType = IConnectionService>
     class ClientFactory final : public IClientFactory, public AdvancedService<ClientFactory<NetworkType, NetworkInterfaceType>> {
     public:
-        ClientFactory(DependencyRegister &reg, Properties properties) : AdvancedService<ClientFactory<NetworkType, NetworkInterfaceType>>(std::move(properties)), _connections{} {
+        ClientFactory(DependencyRegister &reg, Properties properties) : AdvancedService<ClientFactory<NetworkType, NetworkInterfaceType>>(std::move(properties)) {
             reg.registerDependency<ILogger>(this, DependencyFlags::NONE, AdvancedService<ClientFactory<NetworkType, NetworkInterfaceType>>::getProperties());
         }
         ~ClientFactory() final = default;
@@ -27,12 +27,12 @@ namespace Ichor {
 
             if(existingConnections == _connections.end()) {
                 unordered_map<ConnectionCounterType, IService*> newMap;
-                newMap.emplace(count, GetThreadLocalManager().template createServiceManager<NetworkType, NetworkInterfaceType>(std::move(properties)));
+                newMap.emplace(count, GetThreadLocalManager().template createServiceManager<NetworkType, NetworkInterfaceType>(std::move(properties), requestingSvc->getServicePriority()));
                 _connections.emplace(requestingSvc->getServiceId(), std::move(newMap));
                 return count;
             }
 
-            existingConnections->second.emplace(requestingSvc->getServiceId(), GetThreadLocalManager().template createServiceManager<NetworkType, NetworkInterfaceType>(std::move(properties)));
+            existingConnections->second.emplace(requestingSvc->getServiceId(), GetThreadLocalManager().template createServiceManager<NetworkType, NetworkInterfaceType>(std::move(properties), requestingSvc->getServicePriority()));
             return count;
         }
 
@@ -95,7 +95,7 @@ namespace Ichor {
                 newProps.emplace("Filter", Ichor::make_any<Filter>(ServiceIdFilterEntry{evt.originatingService}));
 
                 unordered_map<ConnectionCounterType, IService*> newMap;
-                newMap.emplace(_connectionCounter++, GetThreadLocalManager().template createServiceManager<NetworkType, NetworkInterfaceType>(std::move(newProps)));
+                newMap.emplace(_connectionCounter++, GetThreadLocalManager().template createServiceManager<NetworkType, NetworkInterfaceType>(std::move(newProps), evt.priority));
                 _connections.emplace(evt.originatingService, std::move(newMap));
             }
         }
@@ -139,11 +139,11 @@ namespace Ichor {
         }
 
 
-        void addDependencyInstance(ILogger &logger, IService &isvc) {
+        void addDependencyInstance(ILogger &logger, IService &) {
             _logger = &logger;
 
         }
-        void removeDependencyInstance(ILogger &logger, IService &isvc) {
+        void removeDependencyInstance(ILogger &, IService &) {
             _logger = nullptr;
         }
 
@@ -152,7 +152,7 @@ namespace Ichor {
 
         ILogger *_logger{};
         uint64_t _connectionCounter{};
-        unordered_map<ServiceIdType, unordered_map<ConnectionCounterType, IService*>> _connections;
+        unordered_map<ServiceIdType, unordered_map<ConnectionCounterType, IService*>> _connections{};
         DependencyTrackerRegistration _trackerRegistration{};
         EventHandlerRegistration _unrecoverableErrorRegistration{};
     };

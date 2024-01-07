@@ -88,7 +88,7 @@ namespace Ichor {
         requires ImplementsAll<Impl, Interfaces...>
 #endif
         NeverNull<Impl*> createServiceManager(Properties&& properties, uint64_t priority = INTERNAL_EVENT_PRIORITY) {
-            return internalCreateServiceManager<Impl, Interfaces...>(std::move(properties), priority);
+            return internalCreateServiceManager<Impl, Interfaces...>(std::forward<Properties>(properties), priority);
         }
 
         template<typename Impl, typename... Interfaces>
@@ -213,7 +213,7 @@ namespace Ichor {
                 for (auto const &[interfaceHash, registration] : depRegistry->_registrations) {
                     if(interfaceHash == typeNameHash<Interface>()) {
                         auto const &props = std::get<tl::optional<Properties>>(registration);
-                        requests.emplace_back(0, mgr->serviceId(), INTERNAL_EVENT_PRIORITY, std::get<Dependency>(registration), props.has_value() ? &props.value() : tl::optional<Properties const *>{});
+                        requests.emplace_back(0, mgr->serviceId(), std::min(mgr->getPriority(), INTERNAL_DEPENDENCY_EVENT_PRIORITY), std::get<Dependency>(registration), props.has_value() ? &props.value() : tl::optional<Properties const *>{});
                     }
                 }
             }
@@ -520,37 +520,39 @@ namespace Ichor {
                 static_assert(!std::is_default_constructible_v<Impl>, "Cannot have a dependencies constructor and a default constructor simultaneously.");
                 static_assert(!RequestsProperties<Impl>, "Cannot have a dependencies constructor and a properties constructor simultaneously.");
                 auto cmpMgr = Detail::DependencyLifecycleManager<Impl>::template create<>(std::forward<Properties>(properties), InterfacesList<Interfaces...>);
+                auto serviceId = cmpMgr->serviceId();
 
                 if constexpr (sizeof...(Interfaces) > 0) {
                     static_assert(!ListContainsInterface<IFrameworkLogger, Interfaces...>::value, "IFrameworkLogger cannot have any dependencies");
                 }
 
-                logAddService<Impl, Interfaces...>(cmpMgr->serviceId());
+                logAddService<Impl, Interfaces...>(serviceId);
+
+                auto event_priority = std::min(INTERNAL_DEPENDENCY_EVENT_PRIORITY, priority);
 
                 for (auto const &[key, registration] : cmpMgr->getDependencyRegistry()->_registrations) {
                     auto const &props = std::get<tl::optional<Properties>>(registration);
-                    _eventQueue->pushPrioritisedEvent<DependencyRequestEvent>(cmpMgr->serviceId(), priority, std::get<Dependency>(registration), props.has_value() ? &props.value() : tl::optional<Properties const *>{});
+                    _eventQueue->pushPrioritisedEvent<DependencyRequestEvent>(serviceId, event_priority, std::get<Dependency>(registration), props.has_value() ? &props.value() : tl::optional<Properties const *>{});
                 }
-
-                auto event_priority = std::min(INTERNAL_DEPENDENCY_EVENT_PRIORITY, priority);
-                _eventQueue->pushPrioritisedEvent<StartServiceEvent>(cmpMgr->serviceId(), event_priority, cmpMgr->serviceId());
 
                 cmpMgr->getService().setServicePriority(priority);
 
                 if constexpr (DO_INTERNAL_DEBUG || DO_HARDENING) {
-                    if (_services.contains(cmpMgr->serviceId())) [[unlikely]] {
+                    if (_services.contains(serviceId)) [[unlikely]] {
                         std::terminate();
                     }
                 }
 
                 Impl* impl = &cmpMgr->getService();
                 // Can't directly emplace mgr into _services as that would result into modifying the container while iterating.
-                _eventQueue->pushPrioritisedEvent<InsertServiceEvent>(cmpMgr->serviceId(), INTERNAL_INSERT_SERVICE_EVENT_PRIORITY, std::move(cmpMgr));
+                _eventQueue->pushPrioritisedEvent<InsertServiceEvent>(serviceId, std::min(INTERNAL_INSERT_SERVICE_EVENT_PRIORITY, priority), std::move(cmpMgr));
+                _eventQueue->pushPrioritisedEvent<StartServiceEvent>(serviceId, event_priority, serviceId);
 
                 return impl;
             } else {
                 static_assert(!(std::is_default_constructible_v<Impl> && RequestsProperties<Impl>), "Cannot have a properties constructor and a default constructor simultaneously.");
                 auto cmpMgr = Detail::LifecycleManager<Impl, Interfaces...>::template create<>(std::forward<Properties>(properties), InterfacesList<Interfaces...>);
+                auto serviceId = cmpMgr->serviceId();
 
                 if constexpr (sizeof...(Interfaces) > 0) {
                     if constexpr (ListContainsInterface<IFrameworkLogger, Interfaces...>::value) {
@@ -561,19 +563,19 @@ namespace Ichor {
 
                 cmpMgr->getService().setServicePriority(priority);
 
-                logAddService<Impl, Interfaces...>(cmpMgr->serviceId());
-
-                auto event_priority = std::min(INTERNAL_DEPENDENCY_EVENT_PRIORITY, priority);
-                _eventQueue->pushPrioritisedEvent<StartServiceEvent>(cmpMgr->serviceId(), event_priority, cmpMgr->serviceId());
+                logAddService<Impl, Interfaces...>(serviceId);
 
                 if constexpr (DO_INTERNAL_DEBUG || DO_HARDENING) {
-                    if (_services.contains(cmpMgr->serviceId())) [[unlikely]] {
+                    if (_services.contains(serviceId)) [[unlikely]] {
                         std::terminate();
                     }
                 }
 
                 Impl* impl = &cmpMgr->getService();
-                _eventQueue->pushPrioritisedEvent<InsertServiceEvent>(cmpMgr->serviceId(), INTERNAL_INSERT_SERVICE_EVENT_PRIORITY, std::move(cmpMgr));
+                _eventQueue->pushPrioritisedEvent<InsertServiceEvent>(serviceId, std::min(INTERNAL_INSERT_SERVICE_EVENT_PRIORITY, priority), std::move(cmpMgr));
+
+                auto event_priority = std::min(INTERNAL_DEPENDENCY_EVENT_PRIORITY, priority);
+                _eventQueue->pushPrioritisedEvent<StartServiceEvent>(serviceId, event_priority, serviceId);
 
                 return impl;
             }

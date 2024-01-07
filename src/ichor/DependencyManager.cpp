@@ -150,9 +150,9 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &&uniqueEvt) 
                         }
                         _scopedGenerators.emplace(it.get_promise_id(), std::make_unique<AsyncGenerator<StartBehaviour>>(std::move(gen)));
                         // create new event that will be inserted upon finish of coroutine in ContinuableStartEvent
-                        _scopedEvents.emplace(it.get_promise_id(), Ichor::make_reference_counted<DependencyOnlineEvent>(_eventQueue->getNextEventId(), serviceId, INTERNAL_DEPENDENCY_EVENT_PRIORITY));
+                        _scopedEvents.emplace(it.get_promise_id(), Ichor::make_reference_counted<DependencyOnlineEvent>(_eventQueue->getNextEventId(), serviceId, std::min(INTERNAL_DEPENDENCY_EVENT_PRIORITY, evt->priority)));
                     } else if(it.get_value() == StartBehaviour::STARTED) {
-                        _eventQueue->pushPrioritisedEvent<DependencyOnlineEvent>(serviceId, INTERNAL_DEPENDENCY_EVENT_PRIORITY);
+                        _eventQueue->pushPrioritisedEvent<DependencyOnlineEvent>(serviceId, std::min(INTERNAL_DEPENDENCY_EVENT_PRIORITY, evt->priority));
                     }
                 }
                 handleEventCompletion(*depOnlineEvt);
@@ -271,17 +271,23 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &&uniqueEvt) 
 
                 bool allServicesStopped{true};
 
+                uint64_t lowest_priority{evt->priority};
+
                 for (auto const &[key, possibleManager]: _services) {
                     if (possibleManager->getServiceState() == ServiceState::ACTIVE) {
                         auto &dependees = possibleManager->getDependees();
 
-                        for(auto &serviceId : dependees) {
-                            _eventQueue->pushPrioritisedEvent<StopServiceEvent>(_quitEvt->originatingService, INTERNAL_DEPENDENCY_EVENT_PRIORITY,
-                                                                serviceId);
+                        auto priority = std::max(possibleManager->getPriority(), INTERNAL_DEPENDENCY_EVENT_PRIORITY);
+
+                        if(priority > lowest_priority) {
+                            lowest_priority = priority;
                         }
 
-                        _eventQueue->pushPrioritisedEvent<StopServiceEvent>(_quitEvt->originatingService, INTERNAL_DEPENDENCY_EVENT_PRIORITY,
-                                                            possibleManager->serviceId());
+                        for(auto const &serviceId : dependees) {
+                            _eventQueue->pushPrioritisedEvent<StopServiceEvent>(_quitEvt->originatingService, priority, serviceId);
+                        }
+
+                        _eventQueue->pushPrioritisedEvent<StopServiceEvent>(_quitEvt->originatingService, priority, possibleManager->serviceId());
                     }
 
                     if(possibleManager->getServiceState() != ServiceState::INSTALLED) {
@@ -307,7 +313,7 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &&uniqueEvt) 
                     _eventQueue->quit();
                 } else {
                     // slowly increase priority every time it fails, as some services rely on custom priorities when stopping
-                    _eventQueue->pushPrioritisedEvent<QuitEvent>(_quitEvt->originatingService, std::max(INTERNAL_EVENT_PRIORITY + 1, evt->priority + 10));
+                    _eventQueue->pushPrioritisedEvent<QuitEvent>(_quitEvt->originatingService, std::max(INTERNAL_EVENT_PRIORITY + 1, lowest_priority + 1));
                 }
                 // quit event cannot be used in async manner, so no need to handle error/completion
             }
@@ -329,41 +335,43 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &&uniqueEvt) 
                     if(!it.get_finished()) {
                         _scopedGenerators.emplace(it.get_promise_id(), std::make_unique<AsyncGenerator<StartBehaviour>>(std::move(gen)));
                         // create new event that will be inserted upon finish of coroutine in ContinuableStartEvent
-                        _scopedEvents.emplace(it.get_promise_id(), Ichor::make_reference_counted<DependencyOnlineEvent>(_eventQueue->getNextEventId(), cmpMgr->serviceId(), INTERNAL_DEPENDENCY_EVENT_PRIORITY));
+                        _scopedEvents.emplace(it.get_promise_id(), Ichor::make_reference_counted<DependencyOnlineEvent>(_eventQueue->getNextEventId(), cmpMgr->serviceId(), std::min(INTERNAL_DEPENDENCY_EVENT_PRIORITY, evt->priority)));
                     } else if(it.get_value() == StartBehaviour::STARTED) {
-                        _eventQueue->pushPrioritisedEvent<DependencyOnlineEvent>(cmpMgr->serviceId(), INTERNAL_DEPENDENCY_EVENT_PRIORITY);
+                        _eventQueue->pushPrioritisedEvent<DependencyOnlineEvent>(cmpMgr->serviceId(), std::min(INTERNAL_DEPENDENCY_EVENT_PRIORITY, evt->priority));
                     }
                 }
 
                 // loop over all services, check if cmpMgr is interested in the active ones and inject them if so
                 for (auto &[key, mgr] : _services) {
-                    if (mgr->getServiceState() == ServiceState::ACTIVE) {
-                        auto depIts = cmpMgr->interestedInDependency(mgr.get(), true);
+                    if (mgr->getServiceState() != ServiceState::ACTIVE) {
+                        continue;
+                    }
 
-                        if(depIts.empty()) {
-                            continue;
-                        }
+                    auto depIts = cmpMgr->interestedInDependency(mgr.get(), true);
 
-                        auto const filterProp = mgr->getProperties().find("Filter");
-                        const Filter *filter = nullptr;
-                        if (filterProp != cend(mgr->getProperties())) {
-                            filter = Ichor::any_cast<Filter * const>(&filterProp->second);
-                        }
+                    if(depIts.empty()) {
+                        continue;
+                    }
 
-                        if (filter != nullptr && !filter->compareTo(*cmpMgr.get())) {
-                            continue;
-                        }
+                    auto const filterProp = mgr->getProperties().find("Filter");
+                    const Filter *filter = nullptr;
+                    if (filterProp != cend(mgr->getProperties())) {
+                        filter = Ichor::any_cast<Filter * const>(&filterProp->second);
+                    }
 
-                        auto gen = cmpMgr->dependencyOnline(mgr.get(), std::move(depIts));
-                        auto it = gen.begin();
+                    if (filter != nullptr && !filter->compareTo(*cmpMgr.get())) {
+                        continue;
+                    }
 
-                        if(!it.get_finished()) {
-                            _scopedGenerators.emplace(it.get_promise_id(), std::make_unique<AsyncGenerator<StartBehaviour>>(std::move(gen)));
-                            // create new event that will be inserted upon finish of coroutine in ContinuableStartEvent
-                            _scopedEvents.emplace(it.get_promise_id(), Ichor::make_reference_counted<DependencyOnlineEvent>(_eventQueue->getNextEventId(), cmpMgr->serviceId(), INTERNAL_DEPENDENCY_EVENT_PRIORITY));
-                        } else if(it.get_value() == StartBehaviour::STARTED) {
-                            _eventQueue->pushPrioritisedEvent<DependencyOnlineEvent>(cmpMgr->serviceId(), INTERNAL_DEPENDENCY_EVENT_PRIORITY);
-                        }
+                    auto gen = cmpMgr->dependencyOnline(mgr.get(), std::move(depIts));
+                    auto it = gen.begin();
+
+                    if(!it.get_finished()) {
+                        _scopedGenerators.emplace(it.get_promise_id(), std::make_unique<AsyncGenerator<StartBehaviour>>(std::move(gen)));
+                        // create new event that will be inserted upon finish of coroutine in ContinuableStartEvent
+                        _scopedEvents.emplace(it.get_promise_id(), Ichor::make_reference_counted<DependencyOnlineEvent>(_eventQueue->getNextEventId(), cmpMgr->serviceId(), std::min(INTERNAL_DEPENDENCY_EVENT_PRIORITY, evt->priority)));
+                    } else if(it.get_value() == StartBehaviour::STARTED) {
+                        _eventQueue->pushPrioritisedEvent<DependencyOnlineEvent>(cmpMgr->serviceId(), std::min(INTERNAL_DEPENDENCY_EVENT_PRIORITY, evt->priority));
                     }
                 }
             }
@@ -539,7 +547,7 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &&uniqueEvt) 
 
                 INTERNAL_DEBUG("StartServiceEvent finished {}:{} {}", toStartService->serviceId(), toStartService->implementationName(), it.get_promise_id());
 
-                _eventQueue->pushPrioritisedEvent<DependencyOnlineEvent>(toStartService->serviceId(), INTERNAL_DEPENDENCY_EVENT_PRIORITY);
+                _eventQueue->pushPrioritisedEvent<DependencyOnlineEvent>(toStartService->serviceId(), std::min(INTERNAL_DEPENDENCY_EVENT_PRIORITY, evt->priority));
                 handleEventCompletion(*startServiceEvt);
             }
                 break;
@@ -711,7 +719,7 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &&uniqueEvt) 
 
                         INTERNAL_DEBUG("Finishing handling StartServiceEvent {} {} {} {}", origEvt->id, origEvt->priority, origEvt->originatingService, origEvt->serviceId);
 
-                        _eventQueue->pushPrioritisedEvent<DependencyOnlineEvent>(origEvt->serviceId, INTERNAL_COROUTINE_EVENT_PRIORITY);
+                        _eventQueue->pushPrioritisedEvent<DependencyOnlineEvent>(origEvt->serviceId, std::min(INTERNAL_COROUTINE_EVENT_PRIORITY, evt->priority));
                         handleEventCompletion(*origEvt);
                     } else if(origEvtIt->second->type == StopServiceEvent::TYPE) {
                         auto origEvt = static_cast<StopServiceEvent *>(origEvtIt->second.get());
@@ -747,7 +755,7 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &&uniqueEvt) 
                             // The dependee went offline during the async handling of the original
                             // DependencyOnlineEvent. Add a proper DependencyOfflineEvent to handle that.
                             // That is, originatingService points to the dependee, not the original service that went offline.
-                            _eventQueue->pushPrioritisedEvent<DependencyOnlineEvent>(origEvt->originatingService, INTERNAL_COROUTINE_EVENT_PRIORITY);
+                            _eventQueue->pushPrioritisedEvent<DependencyOnlineEvent>(origEvt->originatingService, std::min(INTERNAL_COROUTINE_EVENT_PRIORITY, evt->priority));
                         }
                         handleEventCompletion(*origEvt);
                     } else if(origEvtIt->second->type == ContinuableDependencyOfflineEvent::TYPE) {
@@ -762,7 +770,7 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &&uniqueEvt) 
                             }
                             // The dependee of originatingOfflineServiceId went offline during the async handling of the original
                             // DependencyOfflineEvent. Add a proper DependencyOfflineEvent to handle that.
-                            _eventQueue->pushPrioritisedEvent<DependencyOfflineEvent>(origEvt->originatingService, INTERNAL_COROUTINE_EVENT_PRIORITY);
+                            _eventQueue->pushPrioritisedEvent<DependencyOfflineEvent>(origEvt->originatingService, std::min(INTERNAL_COROUTINE_EVENT_PRIORITY, evt->priority));
                             finishWaitingService(origEvt->originatingService, StopServiceEvent::TYPE, StopServiceEvent::NAME);
                         }
 
@@ -786,7 +794,7 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &&uniqueEvt) 
                             INTERNAL_DEBUG("originatingOfflineService found waiting service {} {}", origEvt->originatingOfflineServiceId, serviceIt->second->getServiceState());
 #endif
                             // Service needs to be stopped to complete the sequence
-                            _eventQueue->pushPrioritisedEvent<StopServiceEvent>(origEvt->originatingOfflineServiceId, INTERNAL_COROUTINE_EVENT_PRIORITY, origEvt->originatingOfflineServiceId);
+                            _eventQueue->pushPrioritisedEvent<StopServiceEvent>(origEvt->originatingOfflineServiceId, std::min(INTERNAL_COROUTINE_EVENT_PRIORITY, evt->priority), origEvt->originatingOfflineServiceId);
                         }
 
                         handleEventCompletion(*origEvt);

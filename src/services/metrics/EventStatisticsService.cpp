@@ -44,7 +44,7 @@ Ichor::Task<void> Ichor::EventStatisticsService::stop() {
         std::terminate();
     }
 
-    uint64_t total_occ{};
+    int64_t total_occ{};
 
     if(_showStatisticsOnStop) {
         // handle last bit of stored statistics by emulating a handleEvent call
