@@ -6,76 +6,77 @@ Listed numbers are for the multi-threaded runs where contention is likely.
 
 | Compile<br/>Options                       |      coroutines      |                  events |                   start |         start & stop | 
 |-------------------------------------------|:--------------------:|------------------------:|------------------------:|---------------------:|
-| std containers<br/>std alloc              |  976,216 µs<br/>6MB  | 1,942,373 µs<br/>5765MB | 20,156,161 µs<br/>572MB | 2,563,558 µs<br/>6MB |
-| std containers<br/>mimalloc               |  894,269 µs<br/>7MB  |   833,478 µs<br/>4334MB | 13,795,744 µs<br/>479MB | 1,774,788 µs<br/>7MB |
-| std containers<br/>mimalloc, no hardening |  868,806 µs<br/>7MB  |   802,718 µs<br/>4360MB | 13,731,578 µs<br/>532MB | 1,863,568 µs<br/>7MB |
-| absl containers<br/>std alloc             | 1,425,984 µs<br/>8MB | 1,404,642 µs<br/>3726MB | 11,868,876 µs<br/>466MB | 2,596,978 µs<br/>8MB |
-| absl containers<br/>mimalloc              |  940,348 µs<br/>8MB  |   875,581 µs<br/>3255MB |  7,598,533 µs<br/>509MB | 2,279,161 µs<br/>8MB |
+| std containers<br/>std alloc              | 1,074,712 µs<br/>6MB | 1,770,993 µs<br/>5765MB | 25,772,273 µs<br/>572MB | 2,078,400 µs<br/>6MB |
+| std containers<br/>mimalloc               |  787,779 µs<br/>7MB  |   808,082 µs<br/>4334MB | 23,768,086 µs<br/>479MB | 1,652,661 µs<br/>7MB |
+| std containers<br/>mimalloc, no hardening |  753,784 µs<br/>7MB  |   816,374 µs<br/>4360MB | 23,924,781 µs<br/>532MB | 1,646,869 µs<br/>7MB |
+| absl containers<br/>std alloc             | 1,232,790 µs<br/>8MB | 1,184,407 µs<br/>3726MB | 21,649,222 µs<br/>466MB | 2,333,392 µs<br/>8MB |
+| absl containers<br/>mimalloc              | 1,059,809 µs<br/>8MB |   830,994 µs<br/>3255MB | 21,477,940 µs<br/>509MB | 2,090,964 µs<br/>8MB |
 
 The most interesting observation here is that disabling hardening does not bring any performance gains larger than run-to-run variance.
 
 Detailed data:
 ```text
-../std_std/ichor_coroutine_benchmark single threaded ran for 526,229 µs with 5,767,168 peak memory usage 9,501,566 coroutines/s
-../std_std/ichor_coroutine_benchmark multi threaded ran for 976,216 µs with 6,029,312 peak memory usage 40,974,538 coroutines/s
-../std_std/ichor_event_benchmark single threaded ran for 1,133,371 µs with 646,184,960 peak memory usage 4,411,618 events/s
-../std_std/ichor_event_benchmark multi threaded ran for 1,942,373 µs with 5,764,808,704 peak memory usage 20,593,366 events/s
-../std_std/ichor_serializer_benchmark single threaded glaze ran for 201,452 µs with 6,029,312 peak memory usage 769 MB/s
-../std_std/ichor_serializer_benchmark multi threaded glaze ran for 240,475 µs with 6,291,456 peak memory usage 5,156 MB/s
-../std_std/ichor_start_benchmark single threaded advanced injection ran for 5,116,410 µs with 47,321,088 peak memory usage
-../std_std/ichor_start_benchmark multi threaded advanced injection ran for 12,272,126 µs with 357,158,912 peak memory usage
-../std_std/ichor_start_benchmark single threaded constructor injection ran for 7,323,145 µs with 357,158,912 peak memory usage
-../std_std/ichor_start_benchmark multi threaded constructor injection ran for 20,156,161 µs with 572,489,728 peak memory usage
-../std_std/ichor_start_stop_benchmark single threaded ran for 1,424,174 µs with 5,767,168 peak memory usage 702,161 start & stop /s
-../std_std/ichor_start_stop_benchmark multi threaded ran for 2,563,558 µs with 6,029,312 peak memory usage 3,120,662 start & stop /s
-../std_mimalloc/ichor_coroutine_benchmark single threaded ran for 410,605 µs with 6,815,744 peak memory usage 12,177,153 coroutines/s
-../std_mimalloc/ichor_coroutine_benchmark multi threaded ran for 894,269 µs with 6,815,744 peak memory usage 44,729,270 coroutines/s
-../std_mimalloc/ichor_event_benchmark single threaded ran for 629,212 µs with 568,590,336 peak memory usage 7,946,447 events/s
-../std_mimalloc/ichor_event_benchmark multi threaded ran for 833,478 µs with 4,334,026,752 peak memory usage 47,991,668 events/s
-../std_mimalloc/ichor_serializer_benchmark single threaded glaze ran for 180,443 µs with 6,815,744 peak memory usage 858 MB/s
-../std_mimalloc/ichor_serializer_benchmark multi threaded glaze ran for 212,152 µs with 6,815,744 peak memory usage 5,844 MB/s
-../std_mimalloc/ichor_start_benchmark single threaded advanced injection ran for 3,578,056 µs with 46,907,392 peak memory usage
-../std_mimalloc/ichor_start_benchmark multi threaded advanced injection ran for 8,041,827 µs with 367,214,592 peak memory usage
-../std_mimalloc/ichor_start_benchmark single threaded constructor injection ran for 5,215,533 µs with 367,214,592 peak memory usage
-../std_mimalloc/ichor_start_benchmark multi threaded constructor injection ran for 13,795,744 µs with 478,502,912 peak memory usage
-../std_mimalloc/ichor_start_stop_benchmark single threaded ran for 1,107,564 µs with 6,815,744 peak memory usage 902,882 start & stop /s
-../std_mimalloc/ichor_start_stop_benchmark multi threaded ran for 1,774,788 µs with 6,815,744 peak memory usage 4,507,580 start & stop /s
-../std_no_hardening/ichor_coroutine_benchmark single threaded ran for 388,710 µs with 6,815,744 peak memory usage 12,863,059 coroutines/s
-../std_no_hardening/ichor_coroutine_benchmark multi threaded ran for 868,806 µs with 6,815,744 peak memory usage 46,040,197 coroutines/s
-../std_no_hardening/ichor_event_benchmark single threaded ran for 610,706 µs with 568,328,192 peak memory usage 8,187,245 events/s
-../std_no_hardening/ichor_event_benchmark multi threaded ran for 802,718 µs with 4,360,241,152 peak memory usage 49,830,700 events/s
-../std_no_hardening/ichor_serializer_benchmark single threaded glaze ran for 158,830 µs with 6,553,600 peak memory usage 975 MB/s
-../std_no_hardening/ichor_serializer_benchmark multi threaded glaze ran for 178,391 µs with 6,815,744 peak memory usage 6,951 MB/s
-../std_no_hardening/ichor_start_benchmark single threaded advanced injection ran for 3,850,709 µs with 45,064,192 peak memory usage
-../std_no_hardening/ichor_start_benchmark multi threaded advanced injection ran for 8,232,102 µs with 346,742,784 peak memory usage
-../std_no_hardening/ichor_start_benchmark single threaded constructor injection ran for 5,432,727 µs with 346,742,784 peak memory usage
-../std_no_hardening/ichor_start_benchmark multi threaded constructor injection ran for 13,731,578 µs with 531,845,120 peak memory usage
-../std_no_hardening/ichor_start_stop_benchmark single threaded ran for 1,042,270 µs with 6,553,600 peak memory usage 959,444 start & stop /s
-../std_no_hardening/ichor_start_stop_benchmark multi threaded ran for 1,863,568 µs with 6,815,744 peak memory usage 4,292,840 start & stop /s
-../absl_std/ichor_coroutine_benchmark single threaded ran for 568,563 µs with 7,077,888 peak memory usage 8,794,100 coroutines/s
-../absl_std/ichor_coroutine_benchmark multi threaded ran for 1,425,984 µs with 7,602,176 peak memory usage 28,050,805 coroutines/s
-../absl_std/ichor_event_benchmark single threaded ran for 584,022 µs with 420,478,976 peak memory usage 8,561,321 events/s
-../absl_std/ichor_event_benchmark multi threaded ran for 1,404,642 µs with 3,726,376,960 peak memory usage 28,477,006 events/s
-../absl_std/ichor_serializer_benchmark single threaded glaze ran for 206,556 µs with 7,340,032 peak memory usage 750 MB/s
-../absl_std/ichor_serializer_benchmark multi threaded glaze ran for 213,755 µs with 7,864,320 peak memory usage 5,801 MB/s
-../absl_std/ichor_start_benchmark single threaded advanced injection ran for 5,491,052 µs with 40,632,320 peak memory usage
-../absl_std/ichor_start_benchmark multi threaded advanced injection ran for 7,553,260 µs with 307,494,912 peak memory usage
-../absl_std/ichor_start_benchmark single threaded constructor injection ran for 7,460,216 µs with 307,494,912 peak memory usage
-../absl_std/ichor_start_benchmark multi threaded constructor injection ran for 11,868,876 µs with 466,481,152 peak memory usage
-../absl_std/ichor_start_stop_benchmark single threaded ran for 1,442,448 µs with 7,340,032 peak memory usage 693,265 start & stop /s
-../absl_std/ichor_start_stop_benchmark multi threaded ran for 2,596,978 µs with 7,602,176 peak memory usage 3,080,503 start & stop /s
-../absl_mimalloc/ichor_coroutine_benchmark single threaded ran for 434,036 µs with 7,864,320 peak memory usage 11,519,781 coroutines/s
-../absl_mimalloc/ichor_coroutine_benchmark multi threaded ran for 940,348 µs with 7,864,320 peak memory usage 42,537,443 coroutines/s
-../absl_mimalloc/ichor_event_benchmark single threaded ran for 509,016 µs with 417,333,248 peak memory usage 9,822,873 events/s
-../absl_mimalloc/ichor_event_benchmark multi threaded ran for 875,581 µs with 3,255,042,048 peak memory usage 45,683,951 events/s
-../absl_mimalloc/ichor_serializer_benchmark single threaded glaze ran for 186,982 µs with 7,864,320 peak memory usage 828 MB/s
-../absl_mimalloc/ichor_serializer_benchmark multi threaded glaze ran for 212,994 µs with 7,864,320 peak memory usage 5,821 MB/s
-../absl_mimalloc/ichor_start_benchmark single threaded advanced injection ran for 4,480,755 µs with 42,156,032 peak memory usage
-../absl_mimalloc/ichor_start_benchmark multi threaded advanced injection ran for 5,288,896 µs with 314,568,704 peak memory usage
-../absl_mimalloc/ichor_start_benchmark single threaded constructor injection ran for 6,119,402 µs with 314,568,704 peak memory usage
-../absl_mimalloc/ichor_start_benchmark multi threaded constructor injection ran for 7,598,533 µs with 508,850,176 peak memory usage
-../absl_mimalloc/ichor_start_stop_benchmark single threaded ran for 1,178,222 µs with 7,864,320 peak memory usage 848,736 start & stop /s
-../absl_mimalloc/ichor_start_stop_benchmark multi threaded ran for 2,279,161 µs with 7,864,320 peak memory usage 3,510,063 start & stop /s
+../std_std/ichor_coroutine_benchmark single threaded ran for 529,094 µs with 6,029,312 peak memory usage 9,450,116 coroutines/s
+../std_std/ichor_coroutine_benchmark multi threaded ran for 1,074,712 µs with 6,291,456 peak memory usage 37,219,273 coroutines/s
+../std_std/ichor_event_benchmark single threaded ran for 1,213,448 µs with 645,660,672 peak memory usage 4,120,489 events/s
+../std_std/ichor_event_benchmark multi threaded ran for 1,770,993 µs with 5,765,070,848 peak memory usage 22,586,198 events/s
+../std_std/ichor_serializer_benchmark single threaded glaze ran for 178,634 µs with 6,029,312 peak memory usage 867 MB/s
+../std_std/ichor_serializer_benchmark multi threaded glaze ran for 188,159 µs with 6,291,456 peak memory usage 6,590 MB/s
+../std_std/ichor_start_benchmark single threaded advanced injection ran for 4,692,610 µs with 44,564,480 peak memory usage
+../std_std/ichor_start_benchmark multi threaded advanced injection ran for 24,380,374 µs with 349,761,536 peak memory usage
+../std_std/ichor_start_benchmark single threaded constructor injection ran for 5,466,481 µs with 349,761,536 peak memory usage
+../std_std/ichor_start_benchmark multi threaded constructor injection ran for 25,772,273 µs with 444,768,256 peak memory usage
+../std_std/ichor_start_stop_benchmark single threaded ran for 1,389,655 µs with 6,029,312 peak memory usage 719,603 start & stop /s
+../std_std/ichor_start_stop_benchmark multi threaded ran for 2,078,400 µs with 6,553,600 peak memory usage 3,849,114 start & stop /s
+../std_mimalloc/ichor_coroutine_benchmark single threaded ran for 376,194 µs with 6,815,744 peak memory usage 13,291,014 coroutines/s
+../std_mimalloc/ichor_coroutine_benchmark multi threaded ran for 787,779 µs with 6,815,744 peak memory usage 50,775,661 coroutines/s
+../std_mimalloc/ichor_event_benchmark single threaded ran for 625,455 µs with 568,590,336 peak memory usage 7,994,180 events/s
+../std_mimalloc/ichor_event_benchmark multi threaded ran for 808,082 µs with 4,334,026,752 peak memory usage 49,499,926 events/s
+../std_mimalloc/ichor_serializer_benchmark single threaded glaze ran for 161,354 µs with 6,815,744 peak memory usage 960 MB/s
+../std_mimalloc/ichor_serializer_benchmark multi threaded glaze ran for 175,916 µs with 6,815,744 peak memory usage 7,048 MB/s
+../std_mimalloc/ichor_start_benchmark single threaded advanced injection ran for 3,697,897 µs with 42,467,328 peak memory usage
+../std_mimalloc/ichor_start_benchmark multi threaded advanced injection ran for 22,956,881 µs with 328,323,072 peak memory usage
+../std_mimalloc/ichor_start_benchmark single threaded constructor injection ran for 4,214,905 µs with 340,119,552 peak memory usage
+../std_mimalloc/ichor_start_benchmark multi threaded constructor injection ran for 23,768,086 µs with 432,386,048 peak memory usage
+../std_mimalloc/ichor_start_stop_benchmark single threaded ran for 1,010,664 µs with 6,815,744 peak memory usage 989,448 start & stop /s
+../std_mimalloc/ichor_start_stop_benchmark multi threaded ran for 1,652,661 µs with 6,815,744 peak memory usage 4,840,678 start & stop /s
+../std_no_hardening/ichor_coroutine_benchmark single threaded ran for 365,134 µs with 6,815,744 peak memory usage 13,693,602 coroutines/s
+../std_no_hardening/ichor_coroutine_benchmark multi threaded ran for 753,784 µs with 6,815,744 peak memory usage 53,065,599 coroutines/s
+../std_no_hardening/ichor_event_benchmark single threaded ran for 608,248 µs with 568,590,336 peak memory usage 8,220,331 events/s
+../std_no_hardening/ichor_event_benchmark multi threaded ran for 816,374 µs with 4,334,026,752 peak memory usage 48,997,150 events/s
+../std_no_hardening/ichor_serializer_benchmark single threaded glaze ran for 158,739 µs with 6,815,744 peak memory usage 976 MB/s
+../std_no_hardening/ichor_serializer_benchmark multi threaded glaze ran for 165,208 µs with 6,815,744 peak memory usage 7,505 MB/s
+../std_no_hardening/ichor_start_benchmark single threaded advanced injection ran for 3,688,129 µs with 42,205,184 peak memory usage
+../std_no_hardening/ichor_start_benchmark multi threaded advanced injection ran for 22,908,667 µs with 329,244,672 peak memory usage
+../std_no_hardening/ichor_start_benchmark single threaded constructor injection ran for 4,208,535 µs with 341,041,152 peak memory usage
+../std_no_hardening/ichor_start_benchmark multi threaded constructor injection ran for 23,924,781 µs with 432,885,760 peak memory usage
+../std_no_hardening/ichor_start_stop_benchmark single threaded ran for 955,847 µs with 6,815,744 peak memory usage 1,046,192 start & stop /s
+../std_no_hardening/ichor_start_stop_benchmark multi threaded ran for 1,646,869 µs with 6,815,744 peak memory usage 4,857,702 start & stop /s
+../absl_std/ichor_coroutine_benchmark single threaded ran for 537,344 µs with 7,077,888 peak memory usage 9,305,026 coroutines/s
+../absl_std/ichor_coroutine_benchmark multi threaded ran for 1,232,790 µs with 7,340,032 peak memory usage 32,446,726 coroutines/s
+../absl_std/ichor_event_benchmark single threaded ran for 592,075 µs with 420,478,976 peak memory usage 8,444,876 events/s
+../absl_std/ichor_event_benchmark multi threaded ran for 1,184,407 µs with 3,725,852,672 peak memory usage 33,772,174 events/s
+../absl_std/ichor_serializer_benchmark single threaded glaze ran for 179,488 µs with 7,340,032 peak memory usage 863 MB/s
+../absl_std/ichor_serializer_benchmark multi threaded glaze ran for 191,568 µs with 7,602,176 peak memory usage 6,472 MB/s
+../absl_std/ichor_start_benchmark single threaded advanced injection ran for 4,000,142 µs with 40,632,320 peak memory usage
+../absl_std/ichor_start_benchmark multi threaded advanced injection ran for 21,589,190 µs with 302,379,008 peak memory usage
+../absl_std/ichor_start_benchmark single threaded constructor injection ran for 4,695,022 µs with 302,379,008 peak memory usage
+../absl_std/ichor_start_benchmark multi threaded constructor injection ran for 21,649,222 µs with 372,146,176 peak memory usage
+../absl_std/ichor_start_stop_benchmark single threaded ran for 1,324,208 µs with 7,340,032 peak memory usage 755,168 start & stop /s
+../absl_std/ichor_start_stop_benchmark multi threaded ran for 2,333,392 µs with 7,602,176 peak memory usage 3,428,485 start & stop /s
+../absl_mimalloc/ichor_coroutine_benchmark single threaded ran for 433,608 µs with 7,864,320 peak memory usage 11,531,152 coroutines/s
+../absl_mimalloc/ichor_coroutine_benchmark multi threaded ran for 1,059,809 µs with 8,126,464 peak memory usage 37,742,649 coroutines/s
+../absl_mimalloc/ichor_event_benchmark single threaded ran for 509,442 µs with 417,333,248 peak memory usage 9,814,659 events/s
+../absl_mimalloc/ichor_event_benchmark multi threaded ran for 830,994 µs with 3,203,661,824 peak memory usage 48,135,124 events/s
+../absl_mimalloc/ichor_serializer_benchmark single threaded glaze ran for 174,560 µs with 7,864,320 peak memory usage 887 MB/s
+../absl_mimalloc/ichor_serializer_benchmark multi threaded glaze ran for 232,321 µs with 7,864,320 peak memory usage 5,337 MB/s
+../absl_mimalloc/ichor_start_benchmark single threaded advanced injection ran for 3,921,122 µs with 41,680,896 peak memory usage
+../absl_mimalloc/ichor_start_benchmark multi threaded advanced injection ran for 21,500,235 µs with 313,102,336 peak memory usage
+../absl_mimalloc/ichor_start_benchmark single threaded constructor injection ran for 4,492,021 µs with 323,657,728 peak memory usage
+../absl_mimalloc/ichor_start_benchmark multi threaded constructor injection ran for 21,477,940 µs with 404,377,600 peak memory usage
+../absl_mimalloc/ichor_start_stop_benchmark single threaded ran for 1,066,336 µs with 7,864,320 peak memory usage 937,790 start & stop /s
+../absl_mimalloc/ichor_start_stop_benchmark multi threaded ran for 2,090,964 µs with 8,126,464 peak memory usage 3,825,986 start & stop /s
+
 
 ```
 
