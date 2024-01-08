@@ -122,6 +122,8 @@ static consteval uint64_t consteval_wyhash(const T *key, uint64_t len, uint64_t 
 }
 
 namespace Ichor {
+    using NameHashType = uint64_t;
+
     template<typename INTERFACE_TYPENAME>
     [[nodiscard]] consteval auto typeName() {
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)
@@ -139,7 +141,7 @@ namespace Ichor {
     }
 
     template<typename INTERFACE_TYPENAME>
-    [[nodiscard]] consteval auto typeNameHash() {
+    [[nodiscard]] consteval NameHashType typeNameHash() {
         std::string_view name = typeName<INTERFACE_TYPENAME>();
         return consteval_wyhash(name.data(), name.size(), 0);
     }

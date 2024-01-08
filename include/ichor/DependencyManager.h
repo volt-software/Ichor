@@ -689,8 +689,8 @@ namespace Ichor {
         bool finishWaitingService(ServiceIdType serviceId, uint64_t eventType, [[maybe_unused]] std::string_view eventName) noexcept;
 
         unordered_map<ServiceIdType, std::unique_ptr<ILifecycleManager>> _services{}; // key = service id
-        unordered_map<uint64_t, std::vector<DependencyTrackerInfo>> _dependencyRequestTrackers{}; // key = interface name hash
-        unordered_map<uint64_t, std::vector<DependencyTrackerInfo>> _dependencyUndoRequestTrackers{}; // key = interface name hash
+        unordered_map<NameHashType, std::vector<DependencyTrackerInfo>> _dependencyRequestTrackers{}; // key = interface name hash
+        unordered_map<NameHashType, std::vector<DependencyTrackerInfo>> _dependencyUndoRequestTrackers{}; // key = interface name hash
         unordered_map<CallbackKey, std::function<void(Event const &)>> _completionCallbacks{}; // key = listening service id + event type
         unordered_map<CallbackKey, std::function<void(Event const &)>> _errorCallbacks{}; // key = listening service id + event type
         unordered_map<uint64_t, std::vector<EventCallbackInfo>> _eventCallbacks{}; // key = event id

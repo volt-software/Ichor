@@ -32,19 +32,20 @@ namespace Ichor::Detail {
             return std::make_unique<DependencyLifecycleManager<ServiceType, Interfaces...>>(std::move(interfaces), std::move(properties));
         }
 
-        std::vector<Dependency*> interestedInDependency(ILifecycleManager *dependentService, bool online) noexcept final {
-            if((online && _serviceIdsOfInjectedDependencies.contains(dependentService->serviceId())) || (!online && !_serviceIdsOfInjectedDependencies.contains(dependentService->serviceId()))) {
-                return {};
-            }
-
+        std::vector<Dependency*> interestedInDependencyGoingOffline(ILifecycleManager *dependentService) noexcept final {
             std::vector<Dependency*> ret;
 
-            for(auto const &interface : dependentService->getInterfaces()) {
-                auto dep = _dependencies.find(interface, !online);
-                INTERNAL_DEBUG("interestedInDependency() svc {}:{} {} dependent {}:{}", serviceId(), implementationName(), getServiceState(), dependentService->serviceId(), dependentService->implementationName());
+            if(!_serviceIdsOfInjectedDependencies.contains(dependentService->serviceId())) {
+                fmt::print("interestedInDependencyGoingOffline() svc {}:{} already injected\n", serviceId(), implementationName());
+                return ret;
+            }
 
-                if (dep == _dependencies.end()) {
-                    INTERNAL_DEBUG("interestedInDependency() not found");
+            for(auto const &interface : dependentService->getInterfaces()) {
+                auto dep = _dependencies.find(interface, true);
+                INTERNAL_DEBUG("interestedInDependencyGoingOffline() svc {}:{} {} dependent {}:{}", serviceId(), implementationName(), getServiceState(), dependentService->serviceId(), dependentService->implementationName());
+
+                if(dep == _dependencies.end()) {
+                    INTERNAL_DEBUG("interestedInDependencyGoingOffline() not found");
                     continue;
                 }
 
@@ -54,8 +55,14 @@ namespace Ichor::Detail {
             return ret;
         }
 
-        AsyncGenerator<StartBehaviour> dependencyOnline(NeverNull<ILifecycleManager*> dependentService, std::vector<Dependency*> deps) final {
+        StartBehaviour dependencyOnline(NeverNull<ILifecycleManager*> dependentService) final {
             INTERNAL_DEBUG("dependencyOnline() svc {}:{} {} dependent {}:{}", serviceId(), implementationName(), getServiceState(), dependentService->serviceId(), dependentService->implementationName());
+
+            if(_serviceIdsOfInjectedDependencies.contains(dependentService->serviceId())) {
+                fmt::print("dependencyOnline() svc {}:{} already injected\n", serviceId(), implementationName());
+                return StartBehaviour::DONE;
+            }
+
             if constexpr (DO_INTERNAL_DEBUG) {
                 for (auto id: _serviceIdsOfInjectedDependencies) {
                     INTERNAL_DEBUG("dependency: {}", id);
@@ -67,7 +74,13 @@ namespace Ichor::Detail {
 
             auto interested = DependencyChange::NOT_FOUND;
 
-            for(auto *dep : deps) {
+            for(auto const &interface : dependentService->getInterfaces()) {
+                auto dep = _dependencies.find(interface, false);
+
+                if(dep == _dependencies.end()) {
+                    continue;
+                }
+
                 INTERNAL_DEBUG("dependencyOnline() dep {} {} {}", dep->interfaceName, dep->satisfied, dep->flags);
                 if(dep->satisfied == 0) {
                     interested = DependencyChange::FOUND;
@@ -79,25 +92,20 @@ namespace Ichor::Detail {
             }
 
             if(interested == DependencyChange::FOUND && getServiceState() <= ServiceState::INSTALLED && _dependencies.allSatisfied()) {
-                StartBehaviour ret = co_await _service.internal_start(nullptr); // we already checked the dependencies, pass in nullptr;
-
-                if(ret == StartBehaviour::STOPPED) {
-                    co_return StartBehaviour::STOPPED;
-                }
-
-#ifdef ICHOR_USE_HARDENING
-                if(getServiceState() != ServiceState::INJECTING) [[unlikely]] {
-                    std::terminate();
-                }
-#endif
-                co_return StartBehaviour::STARTED;
+                return StartBehaviour::STARTED;
             }
 
-            co_return StartBehaviour::DONE;
+            return StartBehaviour::DONE;
         }
 
         AsyncGenerator<StartBehaviour> dependencyOffline(NeverNull<ILifecycleManager*> dependentService, std::vector<Dependency*> deps) final {
             INTERNAL_DEBUG("dependencyOffline() svc {}:{} {} dependent {}:{}", serviceId(), implementationName(), getServiceState(), dependentService->serviceId(), dependentService->implementationName());
+
+            if(!_serviceIdsOfInjectedDependencies.contains(dependentService->serviceId())) {
+                fmt::print("dependencyOffline() svc {}:{} not injected\n", serviceId(), implementationName());
+                co_return StartBehaviour::DONE;
+            }
+
             auto interested = DependencyChange::NOT_FOUND;
             StartBehaviour ret = StartBehaviour::DONE;
 
@@ -110,7 +118,7 @@ namespace Ichor::Detail {
                 }
             }
 
-            for(auto &dep : deps) {
+            for(auto *dep : deps) {
                 // dependency should not be marked as unsatisfied if there is at least one other of the same type present
                 dep->satisfied--;
                 _serviceIdsOfInjectedDependencies.erase(dependentService->serviceId());
@@ -265,6 +273,17 @@ namespace Ichor::Detail {
         [[nodiscard]]
         unordered_set<ServiceIdType> &getDependees() noexcept final {
             return _serviceIdsOfDependees;
+        }
+
+        [[nodiscard]]
+        AsyncGenerator<StartBehaviour> startAfterDependencyOnline() final {
+            auto startBehaviour = co_await _service.internal_start(nullptr);
+
+            if(startBehaviour == StartBehaviour::DONE) {
+                co_return StartBehaviour::STARTED;
+            }
+
+            co_return startBehaviour;
         }
 
         [[nodiscard]]

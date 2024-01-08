@@ -13,20 +13,17 @@ namespace Ichor::Detail {
 
         ~DependencyManagerLifecycleManager() final = default;
 
-        std::vector<Dependency*> interestedInDependency(ILifecycleManager *dependentService, bool online) noexcept final {
+        std::vector<Dependency*> interestedInDependencyGoingOffline(ILifecycleManager *dependentService) noexcept final {
             return {};
         }
 
-        AsyncGenerator<StartBehaviour> dependencyOnline(NeverNull<ILifecycleManager*> dependentService, std::vector<Dependency*> deps) final {
-            // this function should never be called
-            std::terminate();
-            co_return StartBehaviour::DONE;
+        StartBehaviour dependencyOnline(NeverNull<ILifecycleManager*> dependentService) final {
+            return StartBehaviour::DONE;
         }
 
         AsyncGenerator<StartBehaviour> dependencyOffline(NeverNull<ILifecycleManager*> dependentService, std::vector<Dependency*> deps) final {
             // this function should never be called
             std::terminate();
-            co_return StartBehaviour::DONE;
         }
 
         [[nodiscard]]
@@ -37,6 +34,12 @@ namespace Ichor::Detail {
         [[nodiscard]]
         unordered_set<uint64_t> &getDependees() noexcept final {
             return _serviceIdsOfDependees;
+        }
+
+        [[nodiscard]]
+        AsyncGenerator<StartBehaviour> startAfterDependencyOnline() final {
+            // this function should never be called
+            std::terminate();
         }
 
         [[nodiscard]]
