@@ -11,6 +11,11 @@ public:
     explicit ScopeFilter(std::string _scope) : scope(std::move(_scope)) {}
 
     [[nodiscard]] bool matches(ILifecycleManager const &manager) const noexcept {
+        if(manager.getDependencyRegistry() == nullptr) {
+            fmt::print("ScopeFilter does not match, missing registry {}:{}\n", manager.serviceId(), manager.implementationName());
+            return false;
+        }
+
         for(auto const &[interfaceHash, depTuple] : manager.getDependencyRegistry()->_registrations) {
             if(interfaceHash != typeNameHash<IUselessService>()) {
                 continue;
