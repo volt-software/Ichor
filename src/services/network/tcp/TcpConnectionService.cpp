@@ -63,7 +63,7 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::TcpConnectionService::
             }
         }
 
-        auto ip = ::inet_ntoa(address.sin_addr);
+        auto *ip = ::inet_ntoa(address.sin_addr);
         ICHOR_LOG_TRACE(_logger, "Starting TCP connection for {}:{}", ip, ::ntohs(address.sin_port));
     }
 
