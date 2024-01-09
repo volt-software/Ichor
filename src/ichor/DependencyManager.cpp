@@ -921,14 +921,14 @@ void Ichor::DependencyManager::stop() {
 
 bool Ichor::DependencyManager::existingCoroutineFor(ServiceIdType serviceId) const noexcept {
     auto existingCoroutineEvent = std::find_if(_scopedEvents.begin(), _scopedEvents.end(), [serviceId](const std::pair<uint64_t, ReferenceCountedPointer<Event>> &t) {
-        if(t.second->type == StartServiceEvent::TYPE) {
-            return t.second->originatingService == serviceId || static_cast<StartServiceEvent*>(t.second.get())->serviceId == serviceId;
+        switch(t.second->type) {
+            case StartServiceEvent::TYPE:
+                return t.second->originatingService == serviceId || static_cast<StartServiceEvent*>(t.second.get())->serviceId == serviceId;
+            case ContinuableDependencyOfflineEvent::TYPE:
+                return static_cast<ContinuableDependencyOfflineEvent*>(t.second.get())->originatingOfflineServiceId == serviceId;
+            default:
+                return t.second->originatingService == serviceId && t.second->type != DependencyOfflineEvent::TYPE && t.second->type != StopServiceEvent::TYPE;
         }
-        if(t.second->type == ContinuableDependencyOfflineEvent::TYPE) {
-            return static_cast<ContinuableDependencyOfflineEvent*>(t.second.get())->originatingOfflineServiceId == serviceId;
-        }
-
-        return t.second->originatingService == serviceId && t.second->type != DependencyOfflineEvent::TYPE && t.second->type != StopServiceEvent::TYPE;
     });
 
     if constexpr (DO_INTERNAL_DEBUG) {
@@ -1139,7 +1139,7 @@ tl::optional<Ichor::NeverNull<const Ichor::IService*>> Ichor::DependencyManager:
         }
     }
 
-    auto svc = std::find_if(_services.begin(), _services.end(), [&id](const std::pair<const uint64_t, std::unique_ptr<ILifecycleManager>> &svcPair) {
+    auto svc = std::find_if(_services.begin(), _services.end(), [&id](const auto &svcPair) {
         return svcPair.second->getIService()->getServiceGid() == id;
     });
 

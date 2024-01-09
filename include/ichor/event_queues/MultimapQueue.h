@@ -5,11 +5,7 @@
 #include <ichor/event_queues/IEventQueue.h>
 #include <atomic>
 
-#ifdef ICHOR_USE_ABSEIL
-#include <absl/container/btree_map.h>
-#else
 #include <map>
-#endif
 
 namespace Ichor {
     class DependencyManager;
@@ -35,11 +31,7 @@ namespace Ichor {
     private:
         void shouldAddQuitEvent();
 
-#ifdef ICHOR_USE_ABSEIL
-        absl::btree_multimap<uint64_t, std::unique_ptr<Event>> _eventQueue{};
-#else
         std::multimap<uint64_t, std::unique_ptr<Event>> _eventQueue{};
-#endif
         mutable Ichor::RealtimeReadWriteMutex _eventQueueMutex{};
         ConditionVariableAny<RealtimeReadWriteMutex> _wakeup{};
         std::atomic<bool> _quit{false};

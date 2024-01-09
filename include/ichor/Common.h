@@ -6,14 +6,7 @@
 #include <chrono>
 #include <fmt/core.h>
 
-#ifdef ICHOR_USE_ABSEIL
-#include <absl/container/flat_hash_map.h>
-#include <absl/container/flat_hash_set.h>
-#include <absl/hash/hash.h>
-#else
-#include <unordered_map>
-#include <unordered_set>
-#endif
+#include <ankerl/unordered_dense.h>
 
 #ifdef ICHOR_ENABLE_INTERNAL_DEBUGGING
 static constexpr bool DO_INTERNAL_DEBUG = true;
@@ -109,51 +102,30 @@ namespace Ichor {
 
 
     struct string_hash {
+        using is_avalanching = void;
         using is_transparent = void;  // Pred to use
         using key_equal = std::equal_to<>;  // Pred to use
-#ifdef ICHOR_USE_ABSEIL
-        using hash_type = absl::Hash<std::string_view>;  // just a helper local type
-#else
-        using hash_type = std::hash<std::string_view>;  // just a helper local type
-#endif
+        using hash_type = ankerl::unordered_dense::hash<std::string_view>;  // just a helper local type
+
         size_t operator()(std::string_view txt) const   { return hash_type{}(txt); }
         size_t operator()(const std::string& txt) const { return hash_type{}(txt); }
         size_t operator()(const char* txt) const        { return hash_type{}(txt); }
     };
 
+    template <
+            class Key,
+            class T,
+            class Hash = ankerl::unordered_dense::hash<Key>,
+            class KeyEqual = std::equal_to<Key>,
+            class Allocator = std::allocator<std::pair<Key, T>>>
+    using unordered_map = ankerl::unordered_dense::map<Key, T, Hash, KeyEqual, Allocator>;
 
-#ifdef ICHOR_USE_ABSEIL
-    // We use std::hash instead of absl::hash because a lot of Ichor uses various ints as keys
-    // and absl::hash opts to hash those instead of using an identity function. This gives better
-    // avalanching, at the cost of performance. Ichor doesn't need avalanching in its use-cases.
-    template <
-            class Key,
-            class T,
-            class Hash = std::hash<Key>,
-            class KeyEqual = std::equal_to<Key>,
-            class Allocator = std::allocator<std::pair<const Key, T>>>
-    using unordered_map = absl::flat_hash_map<Key, T, Hash, KeyEqual, Allocator>;
     template <
             class T,
-            class Hash = std::hash<T>,
+            class Hash = ankerl::unordered_dense::hash<T>,
             class Eq = std::equal_to<T>,
             class Allocator = std::allocator<T>>
-    using unordered_set = absl::flat_hash_set<T, Hash, Eq, Allocator>;
-#else
-    template <
-            class Key,
-            class T,
-            class Hash = std::hash<Key>,
-            class KeyEqual = std::equal_to<Key>,
-            class Allocator = std::allocator<std::pair<const Key, T>>>
-    using unordered_map = std::unordered_map<Key, T, Hash, KeyEqual, Allocator>;
-    template <
-            class T,
-            class Hash = std::hash<T>,
-            class Eq = std::equal_to<T>,
-            class Allocator = std::allocator<T>>
-    using unordered_set = std::unordered_set<T, Hash, Eq, Allocator>;
-#endif
+    using unordered_set = ankerl::unordered_dense::set<T, Hash, Eq, Allocator>;
 
     using Properties = unordered_map<std::string, Ichor::any, string_hash>;
 

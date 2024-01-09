@@ -47,6 +47,9 @@ namespace Ichor {
         }
         EventWaiter(const EventWaiter &) = delete;
         EventWaiter(EventWaiter &&o) noexcept = default;
+        EventWaiter& operator=(EventWaiter const &) = delete;
+        EventWaiter& operator=(EventWaiter&&) = default;
+
         std::vector<std::pair<uint64_t, std::unique_ptr<AsyncManualResetEvent>>> events{};
         ServiceIdType waitingSvcId;
         uint64_t eventType;
@@ -154,7 +157,7 @@ namespace Ichor {
 
             if(coalesce) {
                 auto waitingIt = std::find_if(_eventWaiters.begin(), _eventWaiters.end(),
-                                              [originatingServiceId](const std::pair<const uint64_t, EventWaiter> &waiter) {
+                                              [originatingServiceId](const auto &waiter) {
                                                   return waiter.second.waitingSvcId == originatingServiceId && waiter.second.eventType == EventT::TYPE;
                                               });
 

@@ -55,15 +55,6 @@ Ubuntu 22.04:
 sudo apt install libboost1.74-all-dev libssl-dev
 ```
 
-If using abseil:
-Ubuntu 20.04:
-Not available on apt. Please compile manually.
-
-Ubuntu 22.04:
-```
-sudo apt install libabsl-dev
-```
-
 #### Windows
 
 Install MSVC 17.4 or newer. Open Ichor in MSVC and configure CMake according to your wishes. Build and install and you should find an `out` directory in Ichor's top level directory.

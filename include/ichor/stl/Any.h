@@ -13,11 +13,7 @@
 namespace Ichor {
 
     struct bad_any_cast final : public std::bad_cast {
-        bad_any_cast(std::string_view type, std::string_view cast) {
-            _error = "Bad any_cast. Expected ";
-            _error += type;
-            _error += " but got request to cast to ";
-            _error += cast;
+        bad_any_cast(std::string_view type, std::string_view cast) : _error(fmt::format("Bad any_cast. Expected {} but got request to cast to {}", type, cast)) {
         }
 
         [[nodiscard]] const char* what() const noexcept final { return _error.c_str(); }

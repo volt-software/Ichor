@@ -57,7 +57,6 @@ option(ICHOR_USE_UGLY_HACK_EXCEPTION_CATCHING "Enable an ugly hack on gcc to ena
 option(ICHOR_REMOVE_SOURCE_NAMES "Remove compiling source file names and line numbers when logging." OFF)
 cmake_dependent_option(ICHOR_USE_MOLD "Use mold when linking, recommended to use with gcc 12+ or clang" OFF "NOT WIN32" OFF)
 cmake_dependent_option(ICHOR_USE_SDEVENT "Add sd-event based queue/integration" OFF "NOT WIN32" OFF)
-option(ICHOR_USE_ABSEIL "Use abseil provided classes where applicable" OFF)
 option(ICHOR_DISABLE_RTTI "Disable RTTI. Reduces memory usage, disables dynamic_cast<>()" ON)
 option(ICHOR_USE_HARDENING "Uses compiler-specific flags which add stack protection and similar features, as well as adding safety checks in Ichor itself." ON)
 cmake_dependent_option(ICHOR_USE_MIMALLOC "Use mimalloc for significant performance improvements" ON "NOT ICHOR_USE_SANITIZERS AND NOT ICHOR_MUSL" OFF)
@@ -80,7 +79,7 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
 endif()
 
 set(ICHOR_ARCH_OPTIMIZATION OFF CACHE STRING "Tell compiler to optimize for target")
-set_property(CACHE ICHOR_ARCH_OPTIMIZATION PROPERTY STRINGS OFF NATIVE X86_64 X86_64_SSE4 X86_64_AVX2 X86_64_AVX512 MODERN_ARM_GENERIC)
+set_property(CACHE ICHOR_ARCH_OPTIMIZATION PROPERTY STRINGS OFF NATIVE X86_64 X86_64_SSE4 X86_64_AVX2 X86_64_AVX512 MODERN_ARM_GENERIC RASPBERRY_PI_ONE RASPBERRY_PI_TWO RASPBERRY_PI_THREE RASPBERRY_PI_FOUR RASPBERRY_PI_FIVE)
 
 if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND ICHOR_RUN_CLANG_TIDY)
     set(CMAKE_CXX_CLANG_TIDY "clang-tidy;-checks=*,-llvmlibc-*,-readability-function-cognitive-complexity,-altera-*,-modernize-use-trailing-return-type,-concurrency-mt-unsafe,-fuchsia-default-arguments-calls,-android-*,-readability-identifier-length,-clang-analyzer-optin.cplusplus.UninitializedObject")
@@ -194,7 +193,37 @@ else()
     elseif(ICHOR_ARCH_OPTIMIZATION STREQUAL "X86_64_AVX512")
         target_compile_options(ichor PUBLIC -march=x86-64-v4)
     elseif(ICHOR_ARCH_OPTIMIZATION STREQUAL "MODERN_ARM_GENERIC")
-        target_compile_options(ichor PUBLIC -march=armv8-a+simd)
+        target_compile_options(ichor PUBLIC -march=armv8-a)
+    elseif(ICHOR_ARCH_OPTIMIZATION STREQUAL "RASPBERRY_PI_ONE")
+        if(ICHOR_AARCH64)
+            target_compile_options(ichor PUBLIC -march=armv6zk -mcpu=arm1176jzf-s)
+        else()
+            target_compile_options(ichor PUBLIC -march=armv6zk -mcpu=arm1176jzf-s -mfpu=vfp)
+        endif()
+    elseif(ICHOR_ARCH_OPTIMIZATION STREQUAL "RASPBERRY_PI_TWO")
+        if(ICHOR_AARCH64)
+            target_compile_options(ichor PUBLIC -march=armv7-a -mcpu=cortex-a7)
+        else()
+            target_compile_options(ichor PUBLIC -march=armv7-a -mcpu=cortex-a7 -mfpu=neon-vfpv4)
+        endif()
+    elseif(ICHOR_ARCH_OPTIMIZATION STREQUAL "RASPBERRY_PI_THREE")
+        if(ICHOR_AARCH64)
+            target_compile_options(ichor PUBLIC -march=armv8-a+crc -mcpu=cortex-a53)
+        else()
+            target_compile_options(ichor PUBLIC -march=armv8-a+crc -mcpu=cortex-a53 -mfpu=crypto-neon-fp-armv8)
+        endif()
+    elseif(ICHOR_ARCH_OPTIMIZATION STREQUAL "RASPBERRY_PI_FOUR")
+        if(ICHOR_AARCH64)
+            target_compile_options(ichor PUBLIC -march=armv8-a+crc -mcpu=cortex-a72)
+        else()
+            target_compile_options(ichor PUBLIC -march=armv8-a+crc -mcpu=cortex-a72 -mfpu=crypto-neon-fp-armv8)
+        endif()
+    elseif(ICHOR_ARCH_OPTIMIZATION STREQUAL "RASPBERRY_PI_FIVE")
+        if(ICHOR_AARCH64)
+            target_compile_options(ichor PUBLIC -march=armv8-a+crc+crypto -mcpu=cortex-a76)
+        else()
+            target_compile_options(ichor PUBLIC -march=armv8-a+crc+crypto -mcpu=cortex-a76 -mfpu=crypto-neon-fp-armv8)
+        endif()
     endif()
 endif()
 
@@ -267,7 +296,11 @@ endif()
 if(NOT WIN32 AND NOT ICHOR_USE_SANITIZERS AND NOT ICHOR_USE_THREAD_SANITIZER)
     # see https://github.com/google/sanitizers/issues/856
     target_compile_options(ichor PUBLIC -fpie)
-    target_link_options(ichor PUBLIC -pie)
+    if(ICHOR_MUSL)
+        target_link_options(ichor PUBLIC -static-pie -static)
+    else()
+        target_link_options(ichor PUBLIC -pie)
+    endif()
 endif()
 
 if(WIN32 AND ICHOR_USE_HARDENING)
@@ -358,12 +391,6 @@ if(ICHOR_USE_MIMALLOC)
     endif()
 endif()
 
-if(ICHOR_USE_ABSEIL)
-    find_package(absl REQUIRED)
-    target_link_libraries(ichor PUBLIC absl::flat_hash_map absl::flat_hash_set absl::btree absl::hash)
-    target_compile_definitions(ichor PUBLIC ICHOR_USE_ABSEIL)
-endif()
-
 if(ICHOR_USE_SPDLOG)
     target_sources(ichor PRIVATE ${SPDLOG_SOURCES})
 endif()
@@ -419,12 +446,12 @@ if(NOT WIN32 AND NOT APPLE)
 endif()
 
 target_include_directories(ichor PUBLIC
-        $<BUILD_INTERFACE:${ICHOR_EXTERNAL_DIR}/fmt/include>
-        $<INSTALL_INTERFACE:include/ichor/external>)
-
-target_include_directories(ichor PUBLIC
         $<BUILD_INTERFACE:${ICHOR_TOP_DIR}/include>
         $<INSTALL_INTERFACE:include>)
+
+target_include_directories(ichor PUBLIC
+        $<BUILD_INTERFACE:${ICHOR_EXTERNAL_DIR}/fmt/include>
+        $<INSTALL_INTERFACE:include/ichor/external>)
 
 if(ICHOR_USE_SPDLOG)
     target_include_directories(ichor PUBLIC
@@ -501,11 +528,17 @@ install(DIRECTORY "${CMAKE_SOURCE_DIR}/include/base64" # source directory
         PATTERN "*.h" # select header files
 )
 
+install(DIRECTORY "${CMAKE_SOURCE_DIR}/include/ankerl" # source directory
+        DESTINATION "include/ichor/external" # target directory
+        FILES_MATCHING # install only matched files
+        PATTERN "*.h" # select header files
+)
+
 install(DIRECTORY "${CMAKE_SOURCE_DIR}/include/tl" # source directory
         DESTINATION "include/ichor/external" # target directory
         FILES_MATCHING # install only matched files
         PATTERN "*.h" # select header files
-        )
+)
 
 install(DIRECTORY "${CMAKE_SOURCE_DIR}/include/backward" # source directory
         DESTINATION "include/ichor/external" # target directory

@@ -32,13 +32,6 @@ namespace Ichor {
         bool operator==(const CallbackKey &other) const noexcept {
             return id == other.id && type == other.type;
         }
-
-#ifdef ICHOR_USE_ABSEIL
-        template <typename H>
-        friend H AbslHashValue(H h, const CallbackKey& c) {
-            return H::combine(std::move(h), c.id, c.type);
-        }
-#endif
     };
 }
 

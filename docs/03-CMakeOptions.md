@@ -65,10 +65,6 @@ Usage with gcc 12+ is technically possible, but it might throw off [Catch2 unit 
 
 Enables the use of the [sdevent event queue](../include/ichor/event_queues/SdeventQueue.h). Requires having sdevent headers and libraries installed on your system to compile.
 
-## ICHOR_USE_ABSEIL (optional dependency)
-
-Enables the use of the abseil containers in Ichor. Requires having abseil headers and libraries installed on your system to compile.
-
 ## ICHOR_USE_HIREDIS (optional dependency)
 
 Enables the use of the Hiredis library and exposes the Redis service. Requires having Hiredis libraries and headers installed on your system to compile.

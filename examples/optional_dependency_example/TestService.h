@@ -17,7 +17,7 @@ public:
 
 private:
     Task<tl::expected<void, Ichor::StartError>> start() final {
-        ICHOR_LOG_INFO(_logger, "TestService started with dependency");
+        ICHOR_LOG_INFO(_logger, "TestService {} started with dependency", getServiceId());
         _started = true;
         if(_injectionCount == 2) {
             GetThreadLocalEventQueue().pushEvent<QuitEvent>(getServiceId());
