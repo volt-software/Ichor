@@ -71,27 +71,29 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &&uniqueEvt) 
 
     bool allowProcessing = true;
     uint64_t handlerAmount = 1; // for the non-default case below, the DepMan handles the event
-    auto interceptorsForAllEvents = _eventInterceptors.find(0);
-    auto interceptorsForEvent = _eventInterceptors.find(evt->type);
     std::vector<EventInterceptInfo> allEventInterceptorsCopy{};
     std::vector<EventInterceptInfo> eventInterceptorsCopy{};
+    {
+        auto interceptorsForAllEvents = _eventInterceptors.find(0);
+        auto interceptorsForEvent = _eventInterceptors.find(evt->type);
 
-    if (interceptorsForAllEvents != end(_eventInterceptors)) {
-        // Make copy because the vector can be modified in the preIntercept() call.
-        allEventInterceptorsCopy = interceptorsForAllEvents->second;
-        for (EventInterceptInfo const &info : allEventInterceptorsCopy) {
-            if (!info.preIntercept(*evt)) {
-                allowProcessing = false;
+        if (interceptorsForAllEvents != end(_eventInterceptors)) {
+            // Make copy because the vector can be modified in the preIntercept() call.
+            allEventInterceptorsCopy = interceptorsForAllEvents->second;
+            for (EventInterceptInfo const &info: allEventInterceptorsCopy) {
+                if (!info.preIntercept(*evt)) {
+                    allowProcessing = false;
+                }
             }
         }
-    }
 
-    if (interceptorsForEvent != end(_eventInterceptors)) {
-        // Make copy because the vector can be modified in the preIntercept() call.
-        eventInterceptorsCopy = interceptorsForEvent->second;
-        for (EventInterceptInfo const &info : eventInterceptorsCopy) {
-            if (!info.preIntercept(*evt)) {
-                allowProcessing = false;
+        if (interceptorsForEvent != end(_eventInterceptors)) {
+            // Make copy because the vector can be modified in the preIntercept() call.
+            eventInterceptorsCopy = interceptorsForEvent->second;
+            for (EventInterceptInfo const &info: eventInterceptorsCopy) {
+                if (!info.preIntercept(*evt)) {
+                    allowProcessing = false;
+                }
             }
         }
     }
@@ -886,16 +888,12 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &&uniqueEvt) 
         }
     }
 
-    if (interceptorsForAllEvents != end(_eventInterceptors)) {
-        for (EventInterceptInfo const &info : allEventInterceptorsCopy) {
-            info.postIntercept(*evt, allowProcessing && handlerAmount > 0);
-        }
+    for (EventInterceptInfo const &info : allEventInterceptorsCopy) {
+        info.postIntercept(*evt, allowProcessing && handlerAmount > 0);
     }
 
-    if (interceptorsForEvent != end(_eventInterceptors)) {
-        for (EventInterceptInfo const &info : eventInterceptorsCopy) {
-            info.postIntercept(*evt, allowProcessing && handlerAmount > 0);
-        }
+    for (EventInterceptInfo const &info : eventInterceptorsCopy) {
+        info.postIntercept(*evt, allowProcessing && handlerAmount > 0);
     }
 
 }
