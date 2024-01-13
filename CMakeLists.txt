@@ -296,11 +296,7 @@ endif()
 if(NOT WIN32 AND NOT ICHOR_USE_SANITIZERS AND NOT ICHOR_USE_THREAD_SANITIZER)
     # see https://github.com/google/sanitizers/issues/856
     target_compile_options(ichor PUBLIC -fpie)
-    if(ICHOR_MUSL)
-        target_link_options(ichor PUBLIC -static-pie -static)
-    else()
-        target_link_options(ichor PUBLIC -pie)
-    endif()
+    target_link_options(ichor PUBLIC -pie)
 endif()
 
 if(WIN32 AND ICHOR_USE_HARDENING)
