@@ -25,7 +25,7 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::EventStatisticsService
 
     timer.setCallbackAsync([this]() -> AsyncGenerator<IchorBehaviour> {
         calculateAverage();
-        co_return IchorBehaviour::DONE;
+        co_return {};
     });
 
     _interceptorRegistration = GetThreadLocalManager().registerEventInterceptor<Event>(this, this);

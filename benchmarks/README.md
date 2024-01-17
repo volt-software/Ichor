@@ -59,7 +59,7 @@ Detailed data 7950X:
 ../std_no_hardening/ichor_start_stop_benchmark multi threaded ran for 1,522,690 µs with 6,815,744 peak memory usage 5,253,859 start & stop /s
 ```
 
-Detailed data Raspberry Pi 4B:
+Detailed data Raspberry Pi 4B w/ glibc:
 ```text
 ../bin/ichor_coroutine_benchmark single threaded ran for 5,260,358 µs with 3,641,344 peak memory usage 950,505 coroutines/s
 ../bin/ichor_coroutine_benchmark multi threaded ran for 11,166,479 µs with 5,623,808 peak memory usage 3,582,149 coroutines/s

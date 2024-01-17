@@ -37,7 +37,8 @@ namespace Ichor {
         ~HttpHostService() final = default;
 
         std::unique_ptr<HttpRouteRegistration> addRoute(HttpMethod method, std::string_view route, std::function<AsyncGenerator<HttpResponse>(HttpRequest&)> handler) final;
-        void removeRoute(HttpMethod method, std::string_view route) final;
+        std::unique_ptr<HttpRouteRegistration> addRoute(HttpMethod method, std::unique_ptr<RouteMatcher> matcher, std::function<AsyncGenerator<HttpResponse>(HttpRequest&)> handler) final;
+        void removeRoute(HttpMethod method, RouteIdType id) final;
 
         void setPriority(uint64_t priority) final;
         uint64_t getPriority() final;
@@ -74,10 +75,11 @@ namespace Ichor {
         std::atomic<bool> _tcpNoDelay{};
         std::atomic<bool> _useSsl{};
         uint64_t _streamIdCounter{};
+        uint64_t _matchersIdCounter{};
         bool _sendServerHeader{true};
         std::atomic<ILogger*> _logger{};
         IAsioContextService *_asioContextService{};
-        unordered_map<HttpMethod, unordered_map<std::string, std::function<AsyncGenerator<HttpResponse>(HttpRequest&)>, string_hash, std::equal_to<>>> _handlers{};
+        unordered_map<HttpMethod, unordered_map<std::unique_ptr<RouteMatcher>, std::function<AsyncGenerator<HttpResponse>(HttpRequest&)>>> _handlers{};
         AsyncManualResetEvent _startStopEvent{};
         IEventQueue *_queue;
     };

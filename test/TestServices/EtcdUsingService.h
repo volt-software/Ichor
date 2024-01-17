@@ -487,7 +487,7 @@ namespace Ichor {
                         throw std::runtime_error("Incorrect put dir node value");
                     }
 
-                    co_return IchorBehaviour::DONE;
+                    co_return {};
                 });
 
                 auto getReply = co_await _etcd->get("watch_key", false, false, true, {});

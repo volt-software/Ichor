@@ -28,7 +28,7 @@ public:
                 ICHOR_LOG_ERROR(logger, "Error putting key/value into etcd: {}", ret.error());
             }
 
-            co_return IchorBehaviour::DONE;
+            co_return {};
         });
 
         // wait for update and set
@@ -52,7 +52,7 @@ public:
                     std::terminate();
                 }
 
-                co_return IchorBehaviour::DONE;
+                co_return {};
             });
 
             // wait for a reply, this blocks this async event (hence why we need to update the key in another async event).
@@ -69,7 +69,7 @@ public:
 
             queue->pushEvent<QuitEvent>(self->getServiceId());
 
-            co_return IchorBehaviour::DONE;
+            co_return {};
         });
     }
 };

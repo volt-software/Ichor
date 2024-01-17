@@ -1,31 +1,215 @@
 #include <fmt/format.h>
 #include <iostream>
 #include <chrono>
+#include <regex>
 #include <ichor/services/metrics/MemoryUsageFunctions.h>
+#include <ichor/services/network/http/IHttpHostService.h>
+#include "../../examples/common/lyra.hpp"
+
+
+#ifdef ICHOR_USE_RE2
+#include <re2/re2.h>
+#endif
+
+template<size_t N>
+struct StringLiteral {
+    constexpr StringLiteral(const char (&str)[N]) {
+        std::copy_n(str, N, value);
+    }
+
+    char value[N];
+};
+
+template <StringLiteral REGEX, decltype(std::regex::ECMAScript) flags>
+struct StdRegexRouteMatch final : public Ichor::RouteMatcher {
+    ~StdRegexRouteMatch() noexcept final = default;
+
+    bool matches(std::string_view route) noexcept final {
+        std::match_results<typename decltype(route)::const_iterator> matches;
+        auto result = std::regex_match(route.cbegin(), route.cend(), matches, _r);
+
+        if(!result) {
+            return false;
+        }
+
+        _params.reserve(matches.size() - 1);
+
+        for(decltype(matches.size()) i = 1; i < matches.size(); i++) {
+            _params.emplace_back(matches[i].str());
+        }
+
+        return true;
+    }
+
+    std::vector<std::string> route_params() noexcept final {
+        return std::move(_params);
+    }
+
+private:
+    std::vector<std::string> _params{};
+    std::regex _r{REGEX.value, flags};
+};
+
+#ifdef ICHOR_USE_RE2
+template <StringLiteral REGEX>
+struct Re2RegexRouteMatch final : public Ichor::RouteMatcher {
+    Re2RegexRouteMatch() : _r(REGEX.value, RE2::CannedOptions::Latin1) {
+        if(!_r.ok()) {
+            fmt::print("Couldn't compile RE2 {}\n", REGEX.value);
+            std::terminate();
+        }
+    }
+    ~Re2RegexRouteMatch() noexcept final = default;
+
+    bool matches(std::string_view route) noexcept final {
+        std::size_t args_count = static_cast<size_t>(_r.NumberOfCapturingGroups());
+        _params.resize(static_cast<unsigned long>(args_count));
+        std::vector<RE2::Arg> args{args_count};
+        std::vector<RE2::Arg*> arg_ptrs{args_count};
+        for (std::size_t i = 0; i < args_count; ++i) {
+            args[i] = &_params[i];
+            arg_ptrs[i] = &args[i];
+        }
+
+        return RE2::FullMatchN(route, _r, arg_ptrs.data(), static_cast<int>(args_count));
+    }
+
+    std::vector<std::string> route_params() noexcept final {
+        return std::move(_params);
+    }
+
+private:
+    std::vector<std::string> _params{};
+    RE2 _r;
+};
+#endif
 
 #define FMT_INLINE_BUFFER_SIZE 1024
-const uint64_t ITERATION_COUNT = 1'000'000;
+const uint64_t ITERATION_COUNT = 500'000;
+
+template <StringLiteral REGEX, int EXPECTED_MATCHES>
+void run_regex_bench(char *argv) {
+    Ichor::RegexRouteMatch<REGEX.value> ctreMatcher{};
+    StdRegexRouteMatch<REGEX, std::regex::ECMAScript> stdMatcher{};
+#ifdef ICHOR_USE_RE2
+    Re2RegexRouteMatch<REGEX> re2Matcher{};
+#endif
+
+    if(!ctreMatcher.matches("/some/http/10/11/12/test?one=two&three=four")) {
+        fmt::print("ctre matcher error\n");
+        std::terminate();
+    }
+    auto route_params_size = ctreMatcher.route_params().size();
+    if(route_params_size != EXPECTED_MATCHES) {
+        fmt::print("ctre matcher size error expected {} got {}\n", EXPECTED_MATCHES, route_params_size);
+        std::terminate();
+    }
+    if(!stdMatcher.matches("/some/http/10/11/12/test?one=two&three=four")) {
+        fmt::print("std matcher error\n");
+        std::terminate();
+    }
+    route_params_size = stdMatcher.route_params().size();
+    if(route_params_size != EXPECTED_MATCHES) {
+        fmt::print("std matcher size error expected {} got {}\n", EXPECTED_MATCHES, route_params_size);
+        std::terminate();
+    }
+#ifdef ICHOR_USE_RE2
+    if(!re2Matcher.matches("/some/http/10/11/12/test?one=two&three=four")) {
+        fmt::print("re matcher error\n");
+        std::terminate();
+    }
+    route_params_size = re2Matcher.route_params().size();
+    if(route_params_size != EXPECTED_MATCHES) {
+        fmt::print("re matcher size error expected {} got {}\n", EXPECTED_MATCHES, route_params_size);
+        std::terminate();
+    }
+#endif
+
+    auto startCtre = std::chrono::steady_clock::now();
+    for(uint64_t j = 0; j < ITERATION_COUNT; j++) {
+        static_cast<void>(ctreMatcher.matches("/some/http/10/11/12/test?one=two&three=four"));
+        static_cast<void>(ctreMatcher.route_params());
+    }
+    auto endCtr = std::chrono::steady_clock::now();
+
+    auto startStd = std::chrono::steady_clock::now();
+    for(uint64_t j = 0; j < ITERATION_COUNT; j++) {
+        stdMatcher.matches("/some/http/10/11/12/test?one=two&three=four");
+        stdMatcher.route_params();
+    }
+    auto endStd = std::chrono::steady_clock::now();
+
+#ifdef ICHOR_USE_RE2
+    auto startRe2 = std::chrono::steady_clock::now();
+    for(uint64_t j = 0; j < ITERATION_COUNT; j++) {
+        re2Matcher.matches("/some/http/10/11/12/test?one=two&three=four");
+        re2Matcher.route_params();
+    }
+    auto endRe2 = std::chrono::steady_clock::now();
+#endif
+
+    fmt::print("{} ctreMatcher {} ran for {:L} µs with {:L} peak memory usage {:L} matches/s\n", argv, REGEX.value, std::chrono::duration_cast<std::chrono::microseconds>(endCtr - startCtre).count(), getPeakRSS(),
+               std::floor(1'000'000. / static_cast<double>(std::chrono::duration_cast<std::chrono::microseconds>(endCtr - startCtre).count()) * ITERATION_COUNT));
+    fmt::print("{} stdMatcher ran {} for {:L} µs with {:L} peak memory usage {:L} matches/s\n", argv, REGEX.value, std::chrono::duration_cast<std::chrono::microseconds>(endStd - startStd).count(), getPeakRSS(),
+               std::floor(1'000'000. / static_cast<double>(std::chrono::duration_cast<std::chrono::microseconds>(endStd - startStd).count()) * ITERATION_COUNT));
+#ifdef ICHOR_USE_RE2
+    fmt::print("{} re2Matcher {} ran for {:L} µs with {:L} peak memory usage {:L} matches/s\n", argv, REGEX.value, std::chrono::duration_cast<std::chrono::microseconds>(endRe2 - startRe2).count(), getPeakRSS(),
+               std::floor(1'000'000. / static_cast<double>(std::chrono::duration_cast<std::chrono::microseconds>(endRe2 - startRe2).count()) * ITERATION_COUNT));
+#endif
+}
 
 int main(int argc, char *argv[]) {
     std::locale::global(std::locale("en_US.UTF-8"));
-    int i = 1'234'567;
-    double d = 1.234567;
-    std::string s{"some arbitrary string"};
 
-    auto startFmt = std::chrono::steady_clock::now();
-    for(uint64_t j = 0; j < ITERATION_COUNT; j++) {
-        fmt::print("This is a test! {} {} {}", i, d, s);
+    bool onlyPrint{};
+    bool onlyRegex{};
+    bool showHelp{};
+
+    auto cli = lyra::help(showHelp)
+               | lyra::opt(onlyPrint)["-p"]["--print"]("Only run print benchmark")
+               | lyra::opt(onlyRegex)["-r"]["--regex"]("Only run regex benchmark");
+
+    auto result = cli.parse( { argc, argv } );
+    if (!result) {
+        fmt::print("Error in command line: {}\n", result.message());
+        return 1;
     }
-    auto endFmt = std::chrono::steady_clock::now();
-    auto startCout = std::chrono::steady_clock::now();
-    for(uint64_t j = 0; j < ITERATION_COUNT; j++) {
-        fmt::basic_memory_buffer<char, FMT_INLINE_BUFFER_SIZE> buf{};
-        fmt::format_to(std::back_inserter(buf), "This is a test! {} {} {}", i, d, s);
-        std::cout.write(buf.data(), static_cast<int64_t>(buf.size()));
+
+    if (showHelp) {
+        std::cout << cli << "\n";
+        return 0;
     }
-    auto endCout = std::chrono::steady_clock::now();
-    fmt::print("\n\n{} fmt::print ran for {:L} µs with {:L} peak memory usage {:L} prints/s\n", argv[0],  std::chrono::duration_cast<std::chrono::microseconds>(endFmt - startFmt).count(), getPeakRSS(),
-                             std::floor(1'000'000. / static_cast<double>(std::chrono::duration_cast<std::chrono::microseconds>(endFmt - startFmt).count()) * ITERATION_COUNT));
-    fmt::print("{} std::cout with fmt::format_to ran for {:L} µs with {:L} peak memory usage {:L} prints/s\n", argv[0],  std::chrono::duration_cast<std::chrono::microseconds>(endCout - startCout).count(), getPeakRSS(),
-                             std::floor(1'000'000. / static_cast<double>(std::chrono::duration_cast<std::chrono::microseconds>(endCout - startCout).count()) * ITERATION_COUNT));
+
+    if(onlyPrint || (!onlyPrint && !onlyRegex)) {
+        int i = 1'234'567;
+        double d = 1.234567;
+        std::string s{"some arbitrary string"};
+
+        auto startFmt = std::chrono::steady_clock::now();
+        for(uint64_t j = 0; j < ITERATION_COUNT; j++) {
+            fmt::print("This is a test! {} {} {}", i, d, s);
+        }
+        auto endFmt = std::chrono::steady_clock::now();
+        auto startCout = std::chrono::steady_clock::now();
+        for(uint64_t j = 0; j < ITERATION_COUNT; j++) {
+            fmt::basic_memory_buffer<char, FMT_INLINE_BUFFER_SIZE> buf{};
+            fmt::format_to(std::back_inserter(buf), "This is a test! {} {} {}", i, d, s);
+            std::cout.write(buf.data(), static_cast<int64_t>(buf.size()));
+        }
+        auto endCout = std::chrono::steady_clock::now();
+        fmt::print("\n\n{} fmt::print ran for {:L} µs with {:L} peak memory usage {:L} prints/s\n", argv[0], std::chrono::duration_cast<std::chrono::microseconds>(endFmt - startFmt).count(), getPeakRSS(),
+                                 std::floor(1'000'000. / static_cast<double>(std::chrono::duration_cast<std::chrono::microseconds>(endFmt - startFmt).count()) * ITERATION_COUNT));
+        fmt::print("{} std::cout with fmt::format_to ran for {:L} µs with {:L} peak memory usage {:L} prints/s\n", argv[0], std::chrono::duration_cast<std::chrono::microseconds>(endCout - startCout).count(), getPeakRSS(),
+                                 std::floor(1'000'000. / static_cast<double>(std::chrono::duration_cast<std::chrono::microseconds>(endCout - startCout).count()) * ITERATION_COUNT));
+    }
+
+
+    if(onlyRegex || (!onlyPrint && !onlyRegex)) {
+        run_regex_bench<R"(\/some\/http\/10\/11\/12\/test\?one=two&three=four)", 0>(argv[0]);
+        run_regex_bench<R"(\/some\/http\/(\d{1,2})\/(\d{1,2})\/(\d{1,2})\/test\?*.*)", 3>(argv[0]);
+        run_regex_bench<R"(\/some\/http\/(\d{1,2})\/(\d{1,2})\/(\d{1,2})\/test\?one=([a-zA-Z0-9]+)&three=([a-zA-Z0-9]+))", 5>(argv[0]);
+        run_regex_bench<R"(\/some\/http\/(\d{1,2})\/(\d{1,2})\/(\d{1,2})\/test\?*(.*))", 4>(argv[0]);
+        run_regex_bench<R"(\/some\/http\/(\d{1,2})\/(\d{1,2})\/(\d{1,2})\/test\?*([a-zA-Z0-9]+=[a-zA-Z0-9]+)*&*([a-zA-Z0-9]+=[a-zA-Z0-9]+)*)", 5>(argv[0]);
+    }
+
 }

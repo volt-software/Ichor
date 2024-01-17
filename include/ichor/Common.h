@@ -132,13 +132,18 @@ namespace Ichor {
     inline constexpr bool PreventOthersHandling = false;
     inline constexpr bool AllowOthersHandling = true;
 
-    /// Code from https://stackoverflow.com/a/73078442/1460998
+    /// Code modified from https://stackoverflow.com/a/73078442/1460998
     /// converts a string to an integer with little error checking. Only use if you're very sure that the string is actually a number.
     static inline int64_t FastAtoiCompare(const char* str) noexcept {
         int64_t val = 0;
         uint8_t x;
+        bool neg{};
+        if(str[0] == '-') {
+            str++;
+            neg = true;
+        }
         while ((x = uint8_t(*str++ - '0')) <= 9) val = val * 10 + x;
-        return val;
+        return neg ? -val : val;
     }
 
     /// Code from https://stackoverflow.com/a/73078442/1460998
@@ -148,5 +153,14 @@ namespace Ichor {
         uint8_t  x;
         while ((x = uint8_t(*str++ - '0')) <= 9) val = val * 10 + x;
         return val;
+    }
+
+    // Code from https://artificial-mind.net/blog/2020/10/31/constexpr-for
+    template <auto Start, auto End, auto Inc, class F>
+    constexpr void constexpr_for(F&& f) {
+        if constexpr (Start < End) {
+            f(std::integral_constant<decltype(Start), Start>());
+            constexpr_for<Start + Inc, End, Inc>(f);
+        }
     }
 }

@@ -63,9 +63,9 @@ Ichor::Task<void> Ichor::HttpHostService::stop() {
             _httpAcceptor->close();
         }
         net::spawn(*_asioContextService->getContext(), [this](net::yield_context _yield) {
-            ScopeGuardAtomicCount guard{_finishedListenAndRead};
+            ScopeGuardAtomicCount const guard{_finishedListenAndRead};
             {
-                std::unique_lock lg{_streamsMutex};
+                std::unique_lock const lg{_streamsMutex};
                 for (auto &[id, stream]: _httpStreams) {
                     stream->socket.cancel();
                 }
@@ -122,32 +122,35 @@ uint64_t Ichor::HttpHostService::getPriority() {
 }
 
 std::unique_ptr<Ichor::HttpRouteRegistration> Ichor::HttpHostService::addRoute(HttpMethod method, std::string_view route, std::function<AsyncGenerator<HttpResponse>(HttpRequest&)> handler) {
-    auto &routes = _handlers[method];
-
-    auto existingHandler = routes.find(route);
-
-    if(existingHandler != std::end(routes)) {
-        throw std::runtime_error("Route already present in handlers");
-    }
-
-    routes.emplace(route, handler);
-
-    return std::make_unique<HttpRouteRegistration>(method, route, this);
+    return addRoute(method, std::make_unique<StringRouteMatcher>(route), std::move(handler));
 }
 
-void Ichor::HttpHostService::removeRoute(HttpMethod method, std::string_view route) {
+std::unique_ptr<Ichor::HttpRouteRegistration> Ichor::HttpHostService::addRoute(HttpMethod method, std::unique_ptr<RouteMatcher> newMatcher, std::function<AsyncGenerator<HttpResponse>(HttpRequest&)> handler) {
+    auto routes = _handlers.find(method);
+
+    newMatcher->set_id(_matchersIdCounter);
+
+    if(routes == _handlers.end()) {
+        unordered_map<std::unique_ptr<RouteMatcher>, std::function<AsyncGenerator<HttpResponse>(HttpRequest&)>> newSubMap{};
+        newSubMap.emplace(std::move(newMatcher), std::move(handler));
+        _handlers.emplace(method, std::move(newSubMap));
+    } else {
+        routes->second.emplace(std::move(newMatcher), std::move(handler));
+    }
+
+    return std::make_unique<HttpRouteRegistration>(method, _matchersIdCounter++, this);
+}
+
+void Ichor::HttpHostService::removeRoute(HttpMethod method, RouteIdType id) {
     auto routes = _handlers.find(method);
 
     if(routes == std::end(_handlers)) {
         return;
     }
 
-    auto it = routes->second.find(route);
-
-    if(it != std::end(routes->second)) {
-        routes->second.erase(it);
-    }
-
+    std::erase_if(routes->second, [id](auto const &item) {
+       return item.first->get_id() == id;
+    });
 }
 
 void Ichor::HttpHostService::fail(beast::error_code ec, const char *what, bool stopSelf) {
@@ -240,13 +243,13 @@ void Ichor::HttpHostService::listen(tcp::endpoint endpoint, net::yield_context y
 
 template <typename SocketT>
 void Ichor::HttpHostService::read(tcp::socket socket, net::yield_context yield) {
-    ScopeGuardAtomicCount guard{ _finishedListenAndRead };
+    ScopeGuardAtomicCount const guard{ _finishedListenAndRead };
     beast::error_code ec;
     auto addr = socket.remote_endpoint().address().to_string();
     std::shared_ptr<Detail::Connection<SocketT>> connection;
     uint64_t streamId;
     {
-        std::lock_guard lg(_streamsMutex);
+        std::lock_guard const lg(_streamsMutex);
         streamId = _streamIdCounter++;
         if constexpr (std::is_same_v<SocketT, beast::tcp_stream>) {
             connection = _httpStreams.emplace(streamId, std::make_shared<Detail::Connection<SocketT>>(std::move(socket))).first->second;
@@ -311,7 +314,7 @@ void Ichor::HttpHostService::read(tcp::socket socket, net::yield_context yield) 
         if (!req.body().empty() && *req.body().rbegin() != 0) {
             req.body().push_back(0);
         }
-        HttpRequest httpReq{ std::move(req.body()), static_cast<HttpMethod>(req.method()), std::string{req.target()}, addr, std::move(headers) };
+        HttpRequest httpReq{ std::move(req.body()), static_cast<HttpMethod>(req.method()), std::string{req.target()}, {}, addr, std::move(headers) };
         // Compiler bug prevents using named captures for now: https://www.reddit.com/r/cpp_questions/comments/17lc55f/coroutine_msvc_compiler_bug/
 #if (defined(WIN32) || defined(_WIN32) || defined(__WIN32)) && !defined(__CYGWIN__)
         auto version = req.version();
@@ -327,16 +330,20 @@ void Ichor::HttpHostService::read(tcp::socket socket, net::yield_context yield) 
             }
 
             if (routes != std::end(_handlers)) {
-                auto handler = routes->second.find(httpReq.route);
+                std::function<AsyncGenerator<HttpResponse>(HttpRequest&)> const *f{};
+                for(auto const &[matcher, handler] : routes->second) {
+                    if(matcher->matches(httpReq.route)) {
+                        httpReq.regex_params = matcher->route_params();
+                        f = &handler;
+                        break;
+                    }
+                }
 
-                if (handler != std::end(routes->second)) {
-
-                    // using reference here leads to heap use after free. Not sure why.
-                    auto gen = handler->second(httpReq);
+                if (f != nullptr) {
+                    auto gen = (*f)(httpReq);
                     auto it = co_await gen.begin();
                     HttpResponse httpRes = std::move(*it);
-                    http::response<http::vector_body<uint8_t>, http::basic_fields<std::allocator<uint8_t>>> res{ static_cast<http::status>(httpRes.status),
-                                                                                                                version };
+                    http::response<http::vector_body<uint8_t>, http::basic_fields<std::allocator<uint8_t>>> res{ static_cast<http::status>(httpRes.status), version };
                     if (_sendServerHeader) {
                         res.set(http::field::server, BOOST_BEAST_VERSION_STRING);
                     }

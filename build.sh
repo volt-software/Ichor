@@ -71,6 +71,7 @@ run_benchmarks ()
   ../bin/ichor_serializer_benchmark || exit 1
   ../bin/ichor_start_benchmark || exit 1
   ../bin/ichor_start_stop_benchmark || exit 1
+  ../bin/ichor_utils_benchmark -r || exit 1
 }
 
 
@@ -93,7 +94,7 @@ if [[ $DOCKER -eq 1 ]]; then
   run_examples
   docker run -v $(pwd)/../:/opt/ichor/src -it ichor-asan "rm -rf /opt/ichor/src/bin/* /opt/ichor/src/build/*" || exit 1
 
-  # tsan is purposefully not run automatically, because it usually contains false positives.
+#   tsan is purposefully not run automatically, because it usually contains false positives.
 
   rm -rf ./* ../bin/*
   docker run --rm --privileged multiarch/qemu-user-static --reset -p yes || exit 1
@@ -112,6 +113,16 @@ EOF
   chmod +x ../bin/run_aarch64_examples_and_tests.sh
   docker run -v $(pwd)/../:/opt/ichor/src --privileged -it ichor-musl-aarch64 "sh -c 'ulimit -r unlimited && /opt/ichor/src/bin/run_aarch64_examples_and_tests.sh'" || exit 1
   docker run -v $(pwd)/../:/opt/ichor/src --privileged -it ichor-musl-aarch64 "rm -rf /opt/ichor/src/bin/* /opt/ichor/src/build/*" || exit 1
+
+  rm -rf ./* ../bin/*
+  docker run --rm --privileged multiarch/qemu-user-static --reset -p yes || exit 1
+  docker build -f ../Dockerfile-musl-aarch64-bench -t ichor-musl-aarch64-bench . || exit 1
+  docker run -v $(pwd)/../:/opt/ichor/src -it ichor-musl-aarch64-bench || exit 1
+  mkdir -p ../arm_bench
+  mv -f ../bin/* ../arm_bench
+  docker run -v $(pwd)/../:/opt/ichor/src --privileged -it ichor-musl-aarch64 "rm -rf /opt/ichor/src/bin/* /opt/ichor/src/build/*" || exit 1
+
+#  exit 0
 fi
 
 for i in ${!ccompilers[@]}; do

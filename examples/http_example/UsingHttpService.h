@@ -31,7 +31,9 @@ private:
         GetThreadLocalEventQueue().pushEvent<RunFunctionEventAsync>(getServiceId(), [this]() -> AsyncGenerator<IchorBehaviour> {
             auto toSendMsg = _serializer->serialize(TestMsg{11, "hello"});
 
-            co_await sendTestRequest(std::move(toSendMsg)).begin();
+            co_await sendTestRequest(std::move(toSendMsg));
+            co_await sendRegexRequest();
+            GetThreadLocalEventQueue().pushEvent<QuitEvent>(getServiceId());
             co_return {};
         });
 
@@ -39,7 +41,7 @@ private:
     }
 
     Task<void> stop() final {
-        _routeRegistration.reset();
+        _routeRegistrations.clear();
         ICHOR_LOG_INFO(_logger, "UsingHttpService stopped");
         co_return;
     }
@@ -73,21 +75,28 @@ private:
 
     void addDependencyInstance(IHttpHostService &svc, IService&) {
         ICHOR_LOG_INFO(_logger, "Inserted IHttpHostService");
-        _routeRegistration = svc.addRoute(HttpMethod::post, "/test", [this](HttpRequest &req) -> AsyncGenerator<HttpResponse> {
+        _routeRegistrations.emplace_back(svc.addRoute(HttpMethod::post, "/test", [this](HttpRequest &req) -> AsyncGenerator<HttpResponse> {
             auto msg = _serializer->deserialize(std::move(req.body));
             ICHOR_LOG_WARN(_logger, "received request on route {} {} with testmsg {} - {}", (int)req.method, req.route, msg->id, msg->val);
             co_return HttpResponse{false, HttpStatus::ok, "application/json", _serializer->serialize(TestMsg{11, "hello"}), {}};
-        });
+        }));
+        _routeRegistrations.emplace_back(svc.addRoute(HttpMethod::get, std::make_unique<RegexRouteMatch<R"(\/regex_test\/([a-zA-Z0-9]*)\?*([a-zA-Z0-9]+=[a-zA-Z0-9]+)*&*([a-zA-Z0-9]+=[a-zA-Z0-9]+)*)">>(), [this](HttpRequest &req) -> AsyncGenerator<HttpResponse> {
+            ICHOR_LOG_WARN(_logger, "received request on route {} {} with params:", (int)req.method, req.route);
+            for(auto const &param : req.regex_params) {
+                ICHOR_LOG_WARN(_logger, "{}", param);
+            }
+            co_return HttpResponse{false, HttpStatus::ok, "text/plain", {}, {}};
+        }));
     }
 
     void removeDependencyInstance(IHttpHostService&, IService&) {
         ICHOR_LOG_INFO(_logger, "Removed IHttpHostService");
-        _routeRegistration.reset();
+        _routeRegistrations.clear();
     }
 
     friend DependencyRegister;
 
-    AsyncGenerator<void> sendTestRequest(std::vector<uint8_t> &&toSendMsg) {
+    Task<void> sendTestRequest(std::vector<uint8_t> &&toSendMsg) {
         ICHOR_LOG_INFO(_logger, "sendTestRequest");
         unordered_map<std::string, std::string> headers{{"Content-Type", "application/json"}};
         auto response = co_await _connectionService->sendAsync(HttpMethod::post, "/test", std::move(headers), std::move(toSendMsg));
@@ -103,7 +112,14 @@ private:
         } else {
             ICHOR_LOG_ERROR(_logger, "Received status {}", (int)response.status);
         }
-        GetThreadLocalEventQueue().pushEvent<QuitEvent>(getServiceId());
+
+        co_return;
+    }
+
+    Task<void> sendRegexRequest() {
+        ICHOR_LOG_INFO(_logger, "sendRegexRequest");
+        auto response = co_await _connectionService->sendAsync(HttpMethod::get, "/regex_test/one?param=123", {}, {});
+        ICHOR_LOG_ERROR(_logger, "Received status {}", (int)response.status);
 
         co_return;
     }
@@ -111,5 +127,5 @@ private:
     ILogger *_logger{};
     ISerializer<TestMsg> *_serializer{};
     IHttpConnectionService *_connectionService{};
-    std::unique_ptr<HttpRouteRegistration> _routeRegistration{};
+    std::vector<std::unique_ptr<HttpRouteRegistration>> _routeRegistrations{};
 };

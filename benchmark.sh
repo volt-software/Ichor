@@ -44,11 +44,13 @@ run_benchmarks ()
   serializer="$1"/ichor_serializer_benchmark
   start="$1"/ichor_start_benchmark
   start_stop="$1"/ichor_start_stop_benchmark
+  utils="$1"/ichor_utils_benchmark
   eval $coroutine || exit 1
   eval $event || exit 1
   eval $serializer || exit 1
   eval $start || exit 1
   eval $start_stop || exit 1
+  eval $utils -r || exit 1
 }
 
 if [ $REBUILD -eq 1 ]; then

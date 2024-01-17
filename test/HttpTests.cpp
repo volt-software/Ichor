@@ -14,6 +14,7 @@
 #include "Common.h"
 #include "TestServices/HttpThreadService.h"
 #include "../examples/common/TestMsgGlazeSerializer.h"
+#include "serialization/RegexJsonMsgSerializer.h"
 
 using namespace Ichor;
 
@@ -36,6 +37,7 @@ TEST_CASE("HttpTests") {
             dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>({}, 10);
             dm.createServiceManager<LoggerFactory<CoutLogger>, ILoggerFactory>();
             dm.createServiceManager<TestMsgGlazeSerializer, ISerializer<TestMsg>>();
+            dm.createServiceManager<RegexJsonMsgSerializer, ISerializer<RegexJsonMsg>>();
             dm.createServiceManager<AsioContextService, IAsioContextService>();
             dm.createServiceManager<HttpHostService, IHttpHostService>(Properties{{"Address", Ichor::make_any<std::string>("127.0.0.1")}, {"Port", Ichor::make_any<uint16_t>(static_cast<uint16_t>(8001))}});
             dm.createServiceManager<ClientFactory<HttpConnectionService, IHttpConnectionService>, IClientFactory>();
@@ -123,6 +125,7 @@ TEST_CASE("HttpTests") {
             dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>({}, 10);
             dm.createServiceManager<LoggerFactory<CoutLogger>, ILoggerFactory>();
             dm.createServiceManager<TestMsgGlazeSerializer, ISerializer<TestMsg>>();
+            dm.createServiceManager<RegexJsonMsgSerializer, ISerializer<RegexJsonMsg>>();
             dm.createServiceManager<AsioContextService, IAsioContextService>();
             dm.createServiceManager<HttpHostService, IHttpHostService>(Properties{{"Address", Ichor::make_any<std::string>("127.0.0.1")}, {"Port", Ichor::make_any<uint16_t>(static_cast<uint16_t>(8001))}, {"SslKey", Ichor::make_any<std::string>(key)}, {"SslCert", Ichor::make_any<std::string>(cert)}});
             dm.createServiceManager<ClientFactory<HttpConnectionService, IHttpConnectionService>, IClientFactory>();
@@ -159,6 +162,7 @@ TEST_CASE("HttpTests") {
             dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>({}, 10);
             dm.createServiceManager<LoggerFactory<CoutLogger>, ILoggerFactory>();
             dm.createServiceManager<TestMsgGlazeSerializer, ISerializer<TestMsg>>();
+            dm.createServiceManager<RegexJsonMsgSerializer, ISerializer<RegexJsonMsg>>();
             dm.createServiceManager<AsioContextService, IAsioContextService>(Properties{{"Threads", Ichor::make_any<uint64_t>(4ul)}});
             dm.createServiceManager<HttpHostService, IHttpHostService>(Properties{{"Address", Ichor::make_any<std::string>("127.0.0.1")}, {"Port", Ichor::make_any<uint16_t>(static_cast<uint16_t>(8001))}});
             dm.createServiceManager<ClientFactory<HttpConnectionService, IHttpConnectionService>, IClientFactory>();
