@@ -31,12 +31,13 @@ struct InterceptorService final : public IInterceptorService, public AdvancedSer
     }
 
     bool preInterceptEvent(InterceptorT const &evt) {
-        auto counter = preinterceptedCounters.find(evt.type);
+        auto evtType = evt.get_type();
+        auto counter = preinterceptedCounters.find(evtType);
 
-        INTERNAL_DEBUG("---------------------------- pre intercepted {}:{}", evt.id, evt.name);
+        INTERNAL_DEBUG("---------------------------- pre intercepted {}:{}", evt.id, evt.get_name());
 
         if(counter == end(preinterceptedCounters)) {
-            preinterceptedCounters.template emplace<>(evt.type, 1);
+            preinterceptedCounters.template emplace<>(evtType, 1);
         } else {
             counter->second++;
         }
@@ -45,23 +46,24 @@ struct InterceptorService final : public IInterceptorService, public AdvancedSer
     }
 
     void postInterceptEvent(InterceptorT const &evt, bool processed) {
+        auto evtType = evt.get_type();
         if(processed) {
-            INTERNAL_DEBUG("---------------------------- post intercepted {}:{}", evt.id, evt.name);
+            INTERNAL_DEBUG("---------------------------- post intercepted {}:{}", evt.id, evt.get_name());
 
-            auto counter = postinterceptedCounters.find(evt.type);
+            auto counter = postinterceptedCounters.find(evtType);
 
             if (counter == end(postinterceptedCounters)) {
-                postinterceptedCounters.template emplace<>(evt.type, 1);
+                postinterceptedCounters.template emplace<>(evtType, 1);
             } else {
                 counter->second++;
             }
         } else {
-            INTERNAL_DEBUG("---------------------------- unproc intercepted {}:{}", evt.id, evt.name);
+            INTERNAL_DEBUG("---------------------------- unproc intercepted {}:{}", evt.id, evt.get_name());
 
-            auto counter = unprocessedInterceptedCounters.find(evt.type);
+            auto counter = unprocessedInterceptedCounters.find(evtType);
 
             if(counter == end(unprocessedInterceptedCounters)) {
-                unprocessedInterceptedCounters.template emplace<>(evt.type, 1);
+                unprocessedInterceptedCounters.template emplace<>(evtType, 1);
             } else {
                 counter->second++;
             }

@@ -523,8 +523,15 @@ Your events can then be inserted, intercepted or handled as you would e.g. a `Qu
 
 ```c++
 struct MyEvent final : public Event {
-    MyEvent(uint64_t _id, uint64_t _originatingService, uint64_t _priority, uint64_t _someData) noexcept : Event(TYPE, NAME, _id, _originatingService, _priority), someData(_someData) {}
+    MyEvent(uint64_t _id, uint64_t _originatingService, uint64_t _priority, uint64_t _someData) noexcept : Event(_id, _originatingService, _priority), someData(_someData) {}
     ~MyEvent() final = default;
+
+    [[nodiscard]] std::string_view get_name() const noexcept final {
+        return NAME;
+    }
+    [[nodiscard]] uint64_t get_type() const noexcept final {
+        return TYPE;
+    }
 
     uint64_t someData;
     static constexpr uint64_t TYPE = typeNameHash<MyEvent>();

@@ -72,8 +72,9 @@ Ichor::Task<void> Ichor::EventStatisticsService::stop() {
 bool Ichor::EventStatisticsService::preInterceptEvent(Event const &evt) {
     _startProcessingTimestamp = std::chrono::steady_clock::now();
 
-    if(!_eventTypeToNameMapper.contains(evt.type)) {
-        _eventTypeToNameMapper.emplace(evt.type, evt.name);
+    auto evtType = evt.get_type();
+    if(!_eventTypeToNameMapper.contains(evtType)) {
+        _eventTypeToNameMapper.emplace(evtType, evt.get_name());
     }
 
     return (bool)AllowOthersHandling;
@@ -86,10 +87,11 @@ void Ichor::EventStatisticsService::postInterceptEvent(Event const &evt, bool pr
 
     auto now = std::chrono::steady_clock::now();
     auto processingTime = now - _startProcessingTimestamp;
-    auto statistics = _recentEventStatistics.find(evt.type);
+    auto evtType = evt.get_type();
+    auto statistics = _recentEventStatistics.find(evtType);
 
     if(statistics == end(_recentEventStatistics)) {
-        _recentEventStatistics.emplace(evt.type, std::vector<StatisticEntry>{{StatisticEntry{
+        _recentEventStatistics.emplace(evtType, std::vector<StatisticEntry>{{StatisticEntry{
             std::chrono::duration_cast<std::chrono::nanoseconds>(now.time_since_epoch()).count(),
             std::chrono::duration_cast<std::chrono::nanoseconds>(processingTime).count()}}});
     } else {

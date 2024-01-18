@@ -33,8 +33,15 @@ namespace Ichor {
     // Moved here from InternalEvents.h to prevent circular includes
     /// Used to prevent modifying the _services container while iterating over it through f.e. DependencyOnline()
     struct InsertServiceEvent final : public Event {
-        InsertServiceEvent(uint64_t _id, ServiceIdType _originatingService, uint64_t _priority, std::unique_ptr<ILifecycleManager> _mgr) noexcept : Event(TYPE, NAME, _id, _originatingService, _priority), mgr(std::move(_mgr)) {}
+        InsertServiceEvent(uint64_t _id, ServiceIdType _originatingService, uint64_t _priority, std::unique_ptr<ILifecycleManager> _mgr) noexcept : Event(_id, _originatingService, _priority), mgr(std::move(_mgr)) {}
         ~InsertServiceEvent() final = default;
+
+        [[nodiscard]] std::string_view get_name() const noexcept final {
+            return NAME;
+        }
+        [[nodiscard]] uint64_t get_type() const noexcept final {
+            return TYPE;
+        }
 
         std::unique_ptr<ILifecycleManager> mgr;
         static constexpr uint64_t TYPE = typeNameHash<InsertServiceEvent>();
@@ -592,7 +599,7 @@ namespace Ichor {
             auto waitingIt = _eventWaiters.find(evt.id);
             if(waitingIt != end(_eventWaiters)) {
                 waitingIt->second.count--;
-                INTERNAL_DEBUG("handleEventError {}:{} {} waiting {} {}", evt.id, evt.name, evt.originatingService, waitingIt->second.count, waitingIt->second.events.size());
+                INTERNAL_DEBUG("handleEventError {}:{} {} waiting {} {}", evt.id, evt.get_name(), evt.originatingService, waitingIt->second.count, waitingIt->second.events.size());
 #ifdef ICHOR_USE_HARDENING
                 if(waitingIt->second.count == std::numeric_limits<decltype(waitingIt->second.count)>::max()) [[unlikely]] {
                     std::terminate();

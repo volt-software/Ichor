@@ -6,8 +6,15 @@
 namespace Ichor {
     struct NetworkDataEvent final : public Event {
         explicit NetworkDataEvent(uint64_t _id, uint64_t _originatingService, uint64_t _priority, std::vector<uint8_t>&& data) noexcept :
-                Event(TYPE, NAME, _id, _originatingService, _priority), _data(std::move(data)), _movedFrom(false) {}
+                Event(_id, _originatingService, _priority), _data(std::move(data)), _movedFrom(false) {}
         ~NetworkDataEvent() final = default;
+
+        [[nodiscard]] std::string_view get_name() const noexcept final {
+            return NAME;
+        }
+        [[nodiscard]] uint64_t get_type() const noexcept final {
+            return TYPE;
+        }
 
         static constexpr uint64_t TYPE = typeNameHash<NetworkDataEvent>();
         static constexpr std::string_view NAME = typeName<NetworkDataEvent>();
@@ -35,8 +42,15 @@ namespace Ichor {
 
     struct FailedSendMessageEvent final : public Event {
         explicit FailedSendMessageEvent(uint64_t _id, uint64_t _originatingService, uint64_t _priority, std::vector<uint8_t>&& _data, uint64_t _msgId) noexcept :
-        Event(TYPE, NAME, _id, _originatingService, _priority), data(std::move(_data)), msgId(_msgId) {}
+        Event(_id, _originatingService, _priority), data(std::move(_data)), msgId(_msgId) {}
         ~FailedSendMessageEvent() final = default;
+
+        [[nodiscard]] std::string_view get_name() const noexcept final {
+            return NAME;
+        }
+        [[nodiscard]] uint64_t get_type() const noexcept final {
+            return TYPE;
+        }
 
         static constexpr uint64_t TYPE = typeNameHash<FailedSendMessageEvent>();
         static constexpr std::string_view NAME = typeName<FailedSendMessageEvent>();

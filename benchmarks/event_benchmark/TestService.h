@@ -15,8 +15,15 @@ using namespace Ichor;
 
 struct UselessEvent final : public Event {
     explicit UselessEvent(uint64_t _id, uint64_t _originatingService, uint64_t _priority) noexcept :
-            Event(TYPE, NAME, _id, _originatingService, _priority) {}
+            Event(_id, _originatingService, _priority) {}
     ~UselessEvent() final = default;
+
+    [[nodiscard]] std::string_view get_name() const noexcept final {
+        return NAME;
+    }
+    [[nodiscard]] uint64_t get_type() const noexcept final {
+        return TYPE;
+    }
 
     static constexpr uint64_t TYPE = typeNameHash<UselessEvent>();
     static constexpr std::string_view NAME = typeName<UselessEvent>();

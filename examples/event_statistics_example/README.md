@@ -28,7 +28,7 @@ public:
     void postInterceptEvent(Event const &evt, bool processed) {
         auto now = std::chrono::steady_clock::now();
         auto processingTime = now - _startProcessingTimestamp;
-        fmt::print("Processing of event type {} took {} ns", evt.name, std::chrono::duration_cast<std::chrono::nanoseconds>(processingTime).count());
+        fmt::print("Processing of event type {} took {} ns", evt.get_name(), std::chrono::duration_cast<std::chrono::nanoseconds>(processingTime).count());
     }
     
 private:

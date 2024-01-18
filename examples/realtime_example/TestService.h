@@ -18,8 +18,15 @@ using namespace Ichor;
 #endif
 
 struct ExecuteTaskEvent final : public Event {
-    ExecuteTaskEvent(uint64_t _id, uint64_t _originatingService, uint64_t _priority) noexcept : Event(TYPE, NAME, _id, _originatingService, _priority) {}
+    ExecuteTaskEvent(uint64_t _id, uint64_t _originatingService, uint64_t _priority) noexcept : Event(_id, _originatingService, _priority) {}
     ~ExecuteTaskEvent() final = default;
+
+    [[nodiscard]] std::string_view get_name() const noexcept final {
+        return NAME;
+    }
+    [[nodiscard]] uint64_t get_type() const noexcept final {
+        return TYPE;
+    }
 
     static constexpr uint64_t TYPE = typeNameHash<ExecuteTaskEvent>();
     static constexpr std::string_view NAME = typeName<ExecuteTaskEvent>();
