@@ -16,6 +16,16 @@ struct nonmoveable final {
     nonmoveable& operator=(nonmoveable&&) = delete;
 };
 
+struct nonmoveable_sbo_buster final {
+    nonmoveable_sbo_buster() = default;
+    nonmoveable_sbo_buster(const nonmoveable_sbo_buster&) = default;
+    nonmoveable_sbo_buster(nonmoveable_sbo_buster&&) = delete;
+    nonmoveable_sbo_buster& operator=(const nonmoveable_sbo_buster&) = default;
+    nonmoveable_sbo_buster& operator=(nonmoveable_sbo_buster&&) = delete;
+
+    std::array<std::byte, 32> buf;
+};
+
 struct noncopyable final {
     noncopyable() = default;
     noncopyable(const noncopyable&) = delete;
@@ -133,6 +143,19 @@ TEST_CASE("STL Tests") {
         REQUIRE(movedNoneAny.to_string() == "Unprintable value");
         REQUIRE(noneAny.to_string() == "Unprintable value");
 
+
+        const auto someNonmoveableSboBuster = make_unformattable_any<nonmoveable_sbo_buster>();
+        REQUIRE_NOTHROW(any_cast<nonmoveable_sbo_buster>(someNonmoveableSboBuster));
+        auto someMovedNonmoveableSboBuster = std::move(someNonmoveableSboBuster);
+        auto someMoveConstructedNonmoveableSboBuster = Ichor::any(std::move(someNonmoveableSboBuster));
+
+        auto emptyAny = Ichor::any();
+        auto copyAssignedEmptyAny = emptyAny;
+        auto copyConstructedEmptyAny = Ichor::any(emptyAny);
+        auto moveAssignedEmptyAny = std::move(emptyAny);
+        auto moveConstructedEmptyAny = Ichor::any(std::move(moveAssignedEmptyAny));
+
+        someCopiedFromConstInt = std::move(someMovedNonMoveable);
     }
 
     SECTION("RealTimeMutex basics") {
