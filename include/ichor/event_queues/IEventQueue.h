@@ -77,7 +77,7 @@ namespace Ichor {
         virtual void quit() = 0;
         virtual void pushEventInternal(uint64_t priority, std::unique_ptr<Event> &&event) = 0;
         void startDm();
-        void processEvent(std::unique_ptr<Event> &&evt);
+        void processEvent(std::unique_ptr<Event> &evt);
         void stopDm();
 
         std::unique_ptr<DependencyManager> _dm;

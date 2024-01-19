@@ -31,8 +31,8 @@ namespace Ichor {
         _dm->start();
     }
 
-    void IEventQueue::processEvent(std::unique_ptr<Event> &&evt) {
-        _dm->processEvent(std::move(evt));
+    void IEventQueue::processEvent(std::unique_ptr<Event> &evt) {
+        _dm->processEvent(evt);
     }
 
     void IEventQueue::stopDm() {

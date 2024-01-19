@@ -120,6 +120,7 @@ EOF
   docker run -v $(pwd)/../:/opt/ichor/src -it ichor-musl-aarch64-bench || exit 1
   mkdir -p ../arm_bench
   mv -f ../bin/* ../arm_bench
+  rm ../arm_bench/libichor.a
   docker run -v $(pwd)/../:/opt/ichor/src --privileged -it ichor-musl-aarch64 "rm -rf /opt/ichor/src/bin/* /opt/ichor/src/build/*" || exit 1
 
 #  exit 0

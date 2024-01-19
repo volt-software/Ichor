@@ -18,7 +18,6 @@
 #include <ichor/dependency_management/DependencyRegistrations.h>
 #include <ichor/dependency_management/ConstructorInjectionService.h>
 #include <ichor/event_queues/IEventQueue.h>
-#include <ichor/stl/ReferenceCountedPointer.h>
 
 using namespace std::chrono_literals;
 
@@ -670,7 +669,10 @@ namespace Ichor {
         }
 
         void handleEventCompletion(Event const &evt);
-        [[nodiscard]] uint64_t broadcastEvent(ReferenceCountedPointer<Event> &evt);
+        ///
+        /// \param evt
+        /// \return number of event handlers broadcasted to and a pointer to a potentially moved evt due to coroutines.
+        [[nodiscard]] uint64_t broadcastEvent(std::unique_ptr<Event> const &evt);
         /// Sets the communication channel. Only to be used from inside the CommunicationChannel class itself.
         /// \param channel
         void setCommunicationChannel(NeverNull<CommunicationChannel*> channel);
@@ -679,7 +681,7 @@ namespace Ichor {
         /// Called from the queue implementation
         void start();
         /// Called from the queue implementation
-        void processEvent(std::unique_ptr<Event> &&evt);
+        void processEvent(std::unique_ptr<Event> &evt);
         /// Called from the queue implementation
         void stop();
         /// Check if there is a coroutine for the given serviceId that is still waiting on something
@@ -706,7 +708,7 @@ namespace Ichor {
         unordered_map<uint64_t, std::vector<EventCallbackInfo>> _eventCallbacks{}; // key = event id
         unordered_map<uint64_t, std::vector<EventInterceptInfo>> _eventInterceptors{}; // key = event id
         unordered_map<uint64_t, std::unique_ptr<IGenerator>> _scopedGenerators{}; // key = promise id
-        unordered_map<uint64_t, ReferenceCountedPointer<Event>> _scopedEvents{}; // key = promise id
+        unordered_map<uint64_t, std::unique_ptr<Event>> _scopedEvents{}; // key = promise id
         unordered_map<uint64_t, EventWaiter> _eventWaiters{}; // key = event id
         unordered_map<uint64_t, EventWaiter> _dependencyWaiters{}; // key = event id
         IEventQueue *_eventQueue;
