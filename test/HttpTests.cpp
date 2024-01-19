@@ -1,6 +1,6 @@
 #ifdef ICHOR_USE_BOOST_BEAST
 
-#include <ichor/event_queues/MultimapQueue.h>
+#include <ichor/event_queues/PriorityQueue.h>
 #include <ichor/events/RunFunctionEvent.h>
 #include <ichor/coroutines/AsyncManualResetEvent.h>
 #include <ichor/services/logging/LoggerFactory.h>
@@ -27,7 +27,7 @@ TEST_CASE("HttpTests") {
     SECTION("Http events on same thread") {
         testThreadId = std::this_thread::get_id();
         _evt = std::make_unique<Ichor::AsyncManualResetEvent>();
-        auto queue = std::make_unique<MultimapQueue>(true);
+        auto queue = std::make_unique<PriorityQueue>(true);
         auto &dm = queue->createManager();
         evtGate = false;
 
@@ -64,7 +64,7 @@ TEST_CASE("HttpTests") {
     SECTION("Https events on same thread") {
         testThreadId = std::this_thread::get_id();
         _evt = std::make_unique<Ichor::AsyncManualResetEvent>();
-        auto queue = std::make_unique<MultimapQueue>(true);
+        auto queue = std::make_unique<PriorityQueue>(true);
         auto &dm = queue->createManager();
         evtGate = false;
 
@@ -152,7 +152,7 @@ TEST_CASE("HttpTests") {
     SECTION("Http events on 4 threads") {
         testThreadId = std::this_thread::get_id();
         _evt = std::make_unique<Ichor::AsyncManualResetEvent>();
-        auto queue = std::make_unique<MultimapQueue>(true);
+        auto queue = std::make_unique<PriorityQueue>(true);
         auto &dm = queue->createManager();
         evtGate = false;
 

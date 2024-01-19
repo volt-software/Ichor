@@ -2,7 +2,7 @@
 #include "../common/TestMsgGlazeSerializer.h"
 #include "../common/lyra.hpp"
 #include <ichor/services/logging/NullLogger.h>
-#include <ichor/event_queues/MultimapQueue.h>
+#include <ichor/event_queues/PriorityQueue.h>
 #include <ichor/services/logging/LoggerFactory.h>
 #include <ichor/services/network/boost/WsHostService.h>
 #include <ichor/services/network/boost/WsConnectionService.h>
@@ -67,7 +67,7 @@ int main(int argc, char *argv[]) {
     }
 
     auto start = std::chrono::steady_clock::now();
-    auto queue = std::make_unique<MultimapQueue>(spinlock);
+    auto queue = std::make_unique<PriorityQueue>(spinlock);
     auto &dm = queue->createManager();
 #ifdef ICHOR_USE_SPDLOG
     dm.createServiceManager<SpdlogSharedService, ISpdlogSharedService>();

@@ -3,7 +3,7 @@
 #include "TestServices/EventHandlerService.h"
 #include "TestServices/AddInterceptorDuringEventHandlingService.h"
 #include "TestEvents.h"
-#include <ichor/event_queues/MultimapQueue.h>
+#include <ichor/event_queues/PriorityQueue.h>
 #include <ichor/events/RunFunctionEvent.h>
 
 using namespace Ichor;
@@ -16,7 +16,7 @@ bool AddInterceptorDuringEventHandlingService::_addedPostInterceptAll{};
 TEST_CASE("Interceptor Tests") {
 
     SECTION("Intercept TestEvent unprocessed") {
-        auto queue = std::make_unique<MultimapQueue>();
+        auto queue = std::make_unique<PriorityQueue>();
         auto &dm = queue->createManager();
 
         std::thread t([&]() {
@@ -55,7 +55,7 @@ TEST_CASE("Interceptor Tests") {
     }
 
     SECTION("Intercept TestEvent processed") {
-        auto queue = std::make_unique<MultimapQueue>();
+        auto queue = std::make_unique<PriorityQueue>();
         auto &dm = queue->createManager();
 
         std::thread t([&]() {
@@ -95,7 +95,7 @@ TEST_CASE("Interceptor Tests") {
     }
 
     SECTION("Intercept prevent handling") {
-        auto queue = std::make_unique<MultimapQueue>();
+        auto queue = std::make_unique<PriorityQueue>();
         auto &dm = queue->createManager();
 
         std::thread t([&]() {
@@ -139,7 +139,7 @@ TEST_CASE("Interceptor Tests") {
     }
 
     SECTION("Intercept all Events") {
-        auto queue = std::make_unique<MultimapQueue>();
+        auto queue = std::make_unique<PriorityQueue>();
         auto &dm = queue->createManager();
 
         std::thread t([&]() {
@@ -181,7 +181,7 @@ TEST_CASE("Interceptor Tests") {
     }
 
     SECTION("Multiple interceptors") {
-        auto queue = std::make_unique<MultimapQueue>();
+        auto queue = std::make_unique<PriorityQueue>();
         auto &dm = queue->createManager();
 
         std::thread t([&]() {
@@ -227,7 +227,7 @@ TEST_CASE("Interceptor Tests") {
     }
 
     SECTION("Add interceptors during intercept") {
-        auto queue = std::make_unique<MultimapQueue>();
+        auto queue = std::make_unique<PriorityQueue>();
         auto &dm = queue->createManager();
 
         std::thread t([&]() {

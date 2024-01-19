@@ -9,7 +9,7 @@
 #include "TestServices/RequestsLoggingService.h"
 #include "TestServices/ConstructorInjectionTestServices.h"
 #include "TestServices/RequiredMultipleService.h"
-#include <ichor/event_queues/MultimapQueue.h>
+#include <ichor/event_queues/PriorityQueue.h>
 #include <ichor/events/RunFunctionEvent.h>
 #include <ichor/services/logging/LoggerFactory.h>
 #include <ichor/services/logging/CoutLogger.h>
@@ -20,7 +20,7 @@ bool AddEventHandlerDuringEventHandlingService::_addedReg{};
 TEST_CASE("ServicesTests") {
 
     SECTION("QuitOnQuitEvent") {
-        auto queue = std::make_unique<MultimapQueue>();
+        auto queue = std::make_unique<PriorityQueue>();
         auto &dm = queue->createManager();
 
         std::thread t([&]() {
@@ -36,7 +36,7 @@ TEST_CASE("ServicesTests") {
     }
 
     SECTION("FailOnStartService") {
-        auto queue = std::make_unique<MultimapQueue>();
+        auto queue = std::make_unique<PriorityQueue>();
         auto &dm = queue->createManager();
 
         std::thread t([&]() {
@@ -68,7 +68,7 @@ TEST_CASE("ServicesTests") {
     }
 
     SECTION("FailOnStartWithDependenciesService") {
-        auto queue = std::make_unique<MultimapQueue>();
+        auto queue = std::make_unique<PriorityQueue>();
         auto &dm = queue->createManager();
 
         std::thread t([&]() {
@@ -101,7 +101,7 @@ TEST_CASE("ServicesTests") {
     }
 
     SECTION("Required dependencies") {
-        auto queue = std::make_unique<MultimapQueue>();
+        auto queue = std::make_unique<PriorityQueue>();
         auto &dm = queue->createManager();
         uint64_t secondUselessServiceId{};
 
@@ -145,7 +145,7 @@ TEST_CASE("ServicesTests") {
     }
 
     SECTION("Multiple required dependencies, service starts on first and stops when everything uninjected") {
-        auto queue = std::make_unique<MultimapQueue>();
+        auto queue = std::make_unique<PriorityQueue>();
         auto &dm = queue->createManager();
         uint64_t firstUselessServiceId{};
         uint64_t secondUselessServiceId{};
@@ -211,7 +211,7 @@ TEST_CASE("ServicesTests") {
     }
 
     SECTION("Multiple required dependencies, service starts on all and stops when everything uninjected") {
-        auto queue = std::make_unique<MultimapQueue>();
+        auto queue = std::make_unique<PriorityQueue>();
         auto &dm = queue->createManager();
         uint64_t firstUselessServiceId{};
         uint64_t secondUselessServiceId{};
@@ -273,7 +273,7 @@ TEST_CASE("ServicesTests") {
     }
 
     SECTION("Optional dependencies") {
-        auto queue = std::make_unique<MultimapQueue>();
+        auto queue = std::make_unique<PriorityQueue>();
         auto &dm = queue->createManager();
         uint64_t secondUselessServiceId{};
 
@@ -319,7 +319,7 @@ TEST_CASE("ServicesTests") {
     }
 
     SECTION("Mixing services should not cause UB") {
-        auto queue = std::make_unique<MultimapQueue>();
+        auto queue = std::make_unique<PriorityQueue>();
         auto &dm = queue->createManager();
 
         std::thread t([&]() {
@@ -338,7 +338,7 @@ TEST_CASE("ServicesTests") {
     }
 
     SECTION("TimerService runs exactly once") {
-        auto queue = std::make_unique<MultimapQueue>();
+        auto queue = std::make_unique<PriorityQueue>();
         auto &dm = queue->createManager();
         uint64_t svcId{};
 
@@ -364,7 +364,7 @@ TEST_CASE("ServicesTests") {
     }
 
     SECTION("Add event handler during event handling") {
-        auto queue = std::make_unique<MultimapQueue>();
+        auto queue = std::make_unique<PriorityQueue>();
         auto &dm = queue->createManager();
 
         std::thread t([&]() {
@@ -388,7 +388,7 @@ TEST_CASE("ServicesTests") {
     }
 
     SECTION("LoggerAdmin removes logger when service is gone") {
-        auto queue = std::make_unique<MultimapQueue>();
+        auto queue = std::make_unique<PriorityQueue>();
         auto &dm = queue->createManager();
         uint64_t svcId{};
 
@@ -422,7 +422,7 @@ TEST_CASE("ServicesTests") {
     }
 
     SECTION("ConstructorInjectionService basic test") {
-        auto queue = std::make_unique<MultimapQueue>();
+        auto queue = std::make_unique<PriorityQueue>();
         auto &dm = queue->createManager();
         uint64_t svcId{};
 
@@ -468,7 +468,7 @@ TEST_CASE("ServicesTests") {
 
     SECTION("ConstructorInjectionQuitService") {
         std::thread t([]() {
-            auto queue = std::make_unique<MultimapQueue>();
+            auto queue = std::make_unique<PriorityQueue>();
             auto &dm = queue->createManager();
             dm.createServiceManager<ConstructorInjectionQuitService>();
             queue->start(CaptureSigInt);
@@ -479,7 +479,7 @@ TEST_CASE("ServicesTests") {
 
     SECTION("ConstructorInjectionQuitService2") {
         std::thread t([]() {
-            auto queue = std::make_unique<MultimapQueue>();
+            auto queue = std::make_unique<PriorityQueue>();
             auto &dm = queue->createManager();
             dm.createServiceManager<ConstructorInjectionQuitService2>();
             queue->start(CaptureSigInt);
@@ -490,7 +490,7 @@ TEST_CASE("ServicesTests") {
 
     SECTION("ConstructorInjectionQuitService3") {
         std::thread t([]() {
-            auto queue = std::make_unique<MultimapQueue>();
+            auto queue = std::make_unique<PriorityQueue>();
             auto &dm = queue->createManager();
             dm.createServiceManager<ConstructorInjectionQuitService3>();
             queue->start(CaptureSigInt);
@@ -500,7 +500,7 @@ TEST_CASE("ServicesTests") {
     }
 
     SECTION("ConstructorInjectionQuitService4") {
-        auto queue = std::make_unique<MultimapQueue>();
+        auto queue = std::make_unique<PriorityQueue>();
         auto &dm = queue->createManager();
         std::thread t([&]() {
             dm.createServiceManager<ConstructorInjectionQuitService4>();

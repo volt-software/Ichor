@@ -1,6 +1,6 @@
 #include "Common.h"
 #include <ichor/stl/AsyncSingleThreadedMutex.h>
-#include <ichor/event_queues/MultimapQueue.h>
+#include <ichor/event_queues/PriorityQueue.h>
 #include <ichor/events/RunFunctionEvent.h>
 
 
@@ -9,7 +9,7 @@ TEST_CASE("AsyncSingleThreadedMutexTests") {
     AsyncSingleThreadedLockGuard *lg{};
 
     SECTION("Lock/unlock") {
-        auto queue = std::make_unique<MultimapQueue>();
+        auto queue = std::make_unique<PriorityQueue>();
         auto &dm = queue->createManager();
         bool started_async_func{};
         bool unlocked{};

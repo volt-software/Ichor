@@ -6,7 +6,7 @@ This demonstrates the following concepts:
 * Defining and using serializers
 * How to set up an HTTP server
 * How to set up an HTTP client using the `ClientFactory`
-* Using the advanced parameter `Spinlock` in the `MultimapQueue`.
+* Using the advanced parameter `Spinlock` in the `PriorityQueue`.
 
 ## Command Line Arguments
 

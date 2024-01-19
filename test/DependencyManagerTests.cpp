@@ -1,4 +1,4 @@
-#include <ichor/event_queues/MultimapQueue.h>
+#include <ichor/event_queues/PriorityQueue.h>
 #include <ichor/events/RunFunctionEvent.h>
 #include <ichor/coroutines/AsyncManualResetEvent.h>
 #include "TestServices/UselessService.h"
@@ -44,7 +44,7 @@ public:
 
 TEST_CASE("DependencyManager") {
     SECTION("DependencyManager", "QuitOnQuitEvent") {
-        auto queue = std::make_unique<MultimapQueue>();
+        auto queue = std::make_unique<PriorityQueue>();
         auto &dm = queue->createManager();
 
         std::thread t([&]() {
@@ -65,7 +65,7 @@ TEST_CASE("DependencyManager") {
     }
 
     SECTION("DependencyManager", "Check Registrations") {
-        auto queue = std::make_unique<MultimapQueue>();
+        auto queue = std::make_unique<PriorityQueue>();
         auto &dm = queue->createManager();
 
         std::thread t([&]() {
@@ -82,7 +82,7 @@ TEST_CASE("DependencyManager") {
     }
 
     SECTION("DependencyManager", "Check Multiple Registrations Different Properties") {
-        auto queue = std::make_unique<MultimapQueue>();
+        auto queue = std::make_unique<PriorityQueue>();
         auto &dm = queue->createManager();
 
         dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>();
@@ -96,7 +96,7 @@ TEST_CASE("DependencyManager") {
     }
 
     SECTION("DependencyManager", "Get services functions") {
-        auto queue = std::make_unique<MultimapQueue>();
+        auto queue = std::make_unique<PriorityQueue>();
         auto &dm = queue->createManager();
         uint64_t uselessSvcId{};
         sole::uuid loggerUuid{};
@@ -139,7 +139,7 @@ TEST_CASE("DependencyManager") {
     }
 
     SECTION("DependencyManager", "RunFunctionEventAsync thread") {
-        auto queue = std::make_unique<MultimapQueue>();
+        auto queue = std::make_unique<PriorityQueue>();
         auto &dm = queue->createManager();
         std::thread::id testThreadId = std::this_thread::get_id();
         std::thread::id dmThreadId;

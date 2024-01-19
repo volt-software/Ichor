@@ -1,6 +1,6 @@
 #ifdef ICHOR_USE_ETCD
 
-#include <ichor/event_queues/MultimapQueue.h>
+#include <ichor/event_queues/PriorityQueue.h>
 #include <ichor/services/logging/LoggerFactory.h>
 #include <ichor/services/etcd/EtcdV2Service.h>
 #include <ichor/services/timer/TimerFactoryFactory.h>
@@ -23,7 +23,7 @@ using namespace Ichor;
 
 TEST_CASE("EtcdTests") {
     SECTION("Set/get") {
-        auto queue = std::make_unique<MultimapQueue>();
+        auto queue = std::make_unique<PriorityQueue>();
         auto &dm = queue->createManager();
 
         std::thread t([&]() {

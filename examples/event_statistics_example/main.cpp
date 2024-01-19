@@ -1,4 +1,4 @@
-#include <ichor/event_queues/MultimapQueue.h>
+#include <ichor/event_queues/PriorityQueue.h>
 #include <ichor/services/logging/LoggerFactory.h>
 #include <ichor/services/metrics/EventStatisticsService.h>
 #include <ichor/services/timer/TimerFactoryFactory.h>
@@ -23,7 +23,7 @@ int main(int argc, char *argv[]) {
     std::locale::global(std::locale("en_US.UTF-8"));
 
     auto start = std::chrono::steady_clock::now();
-    auto queue = std::make_unique<MultimapQueue>();
+    auto queue = std::make_unique<PriorityQueue>();
     auto &dm = queue->createManager();
 
     uint64_t priorityToEnsureStartingFirst = 51;

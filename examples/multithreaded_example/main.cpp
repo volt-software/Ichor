@@ -1,6 +1,6 @@
 #include "OneService.h"
 #include "OtherService.h"
-#include <ichor/event_queues/MultimapQueue.h>
+#include <ichor/event_queues/PriorityQueue.h>
 #include <ichor/services/logging/LoggerFactory.h>
 
 // Some compile time logic to instantiate a regular cout logger or to use the spdlog logger, if Ichor has been compiled with it.
@@ -23,9 +23,9 @@ int main(int argc, char *argv[]) {
     auto start = std::chrono::steady_clock::now();
 
     CommunicationChannel channel{};
-    auto queueOne = std::make_unique<MultimapQueue>();
+    auto queueOne = std::make_unique<PriorityQueue>();
     auto &dmOne = queueOne->createManager();
-    auto queueTwo = std::make_unique<MultimapQueue>();
+    auto queueTwo = std::make_unique<PriorityQueue>();
     auto &dmTwo = queueTwo->createManager();
     channel.addManager(&dmOne);
     channel.addManager(&dmTwo);

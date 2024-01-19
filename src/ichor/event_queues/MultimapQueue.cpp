@@ -1,6 +1,6 @@
 #include <csignal>
 #include <shared_mutex>
-#include <ichor/event_queues/MultimapQueue.h>
+#include <ichor/event_queues/PriorityQueue.h>
 #include <ichor/DependencyManager.h>
 
 namespace Ichor::Detail {
@@ -10,11 +10,14 @@ namespace Ichor::Detail {
 }
 
 namespace Ichor {
-    MultimapQueue::MultimapQueue() = default;
-    MultimapQueue::MultimapQueue(bool spinlock) : _spinlock(spinlock) {
+    template <typename COMPARE>
+    TemplatePriorityQueue<COMPARE>::TemplatePriorityQueue() = default;
+    template <typename COMPARE>
+    TemplatePriorityQueue<COMPARE>::TemplatePriorityQueue(bool spinlock) : _spinlock(spinlock) {
     }
 
-    MultimapQueue::~MultimapQueue() {
+    template <typename COMPARE>
+    TemplatePriorityQueue<COMPARE>::~TemplatePriorityQueue() {
         stopDm();
 
         if(Detail::registeredSignalHandler) {
@@ -24,7 +27,8 @@ namespace Ichor {
         }
     }
 
-    void MultimapQueue::pushEventInternal(uint64_t priority, std::unique_ptr<Event> &&event) {
+    template <typename COMPARE>
+    void TemplatePriorityQueue<COMPARE>::pushEventInternal(uint64_t priority, std::unique_ptr<Event> &&event) {
         if(!event) [[unlikely]] {
             throw std::runtime_error("Pushing nullptr");
         }
@@ -39,26 +43,30 @@ namespace Ichor {
 
         {
             std::lock_guard const l(_eventQueueMutex);
-            _eventQueue.emplace(priority, std::move(event));
+            _eventQueue.push(std::move(event));
         }
         _wakeup.notify_all();
     }
 
-    bool MultimapQueue::empty() const noexcept {
+    template <typename COMPARE>
+    bool TemplatePriorityQueue<COMPARE>::empty() const noexcept {
         std::shared_lock const l(_eventQueueMutex);
         return _eventQueue.empty();
     }
 
-    uint64_t MultimapQueue::size() const noexcept {
+    template <typename COMPARE>
+    uint64_t TemplatePriorityQueue<COMPARE>::size() const noexcept {
         std::shared_lock const l(_eventQueueMutex);
         return static_cast<uint64_t>(_eventQueue.size());
     }
 
-    bool MultimapQueue::is_running() const noexcept {
+    template <typename COMPARE>
+    bool TemplatePriorityQueue<COMPARE>::is_running() const noexcept {
         return !_quit.load(std::memory_order_acquire);
     }
 
-    void MultimapQueue::start(bool captureSigInt) {
+    template <typename COMPARE>
+    void TemplatePriorityQueue<COMPARE>::start(bool captureSigInt) {
         if(!_dm) [[unlikely]] {
             throw std::runtime_error("Please create a manager first!");
         }
@@ -101,15 +109,17 @@ namespace Ichor {
                 break;
             }
 
-            auto node = _eventQueue.extract(_eventQueue.begin());
+            auto evt = std::move(const_cast<std::unique_ptr<Event>&>(_eventQueue.top()));
+            _eventQueue.pop();
             l.unlock();
-            processEvent(std::move(node.mapped()));
+            processEvent(std::move(evt));
         }
 
         stopDm();
     }
 
-    bool MultimapQueue::shouldQuit() {
+    template <typename COMPARE>
+    bool TemplatePriorityQueue<COMPARE>::shouldQuit() {
         bool const shouldQuit = Detail::sigintQuit.load(std::memory_order_acquire);
 
 //        INTERNAL_DEBUG("shouldQuit() {} {:L}", shouldQuit, (std::chrono::steady_clock::now() - _whenQuitEventWasSent).count());
@@ -120,18 +130,23 @@ namespace Ichor {
         return _quit.load(std::memory_order_acquire);
     }
 
-    void MultimapQueue::shouldAddQuitEvent() {
+    template <typename COMPARE>
+    void TemplatePriorityQueue<COMPARE>::shouldAddQuitEvent() {
         bool const shouldQuit = Detail::sigintQuit.load(std::memory_order_acquire);
 
         if(shouldQuit && !_quitEventSent) {
             // assume _eventQueueMutex is locked
-            _eventQueue.emplace(INTERNAL_EVENT_PRIORITY, std::make_unique<QuitEvent>(getNextEventId(), 0, INTERNAL_EVENT_PRIORITY));
+            _eventQueue.push(std::make_unique<QuitEvent>(getNextEventId(), 0, INTERNAL_EVENT_PRIORITY));
             _quitEventSent = true;
             _whenQuitEventWasSent = std::chrono::steady_clock::now();
         }
     }
 
-    void MultimapQueue::quit() {
+    template <typename COMPARE>
+    void TemplatePriorityQueue<COMPARE>::quit() {
         _quit.store(true, std::memory_order_release);
     }
 }
+
+template class Ichor::TemplatePriorityQueue<Ichor::PriorityQueueCompare>;
+template class Ichor::TemplatePriorityQueue<Ichor::OrderedPriorityQueueCompare>;

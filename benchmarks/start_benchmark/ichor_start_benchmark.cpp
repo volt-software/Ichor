@@ -1,6 +1,6 @@
 #include "TestService.h"
 #include "ConstructorInjectionTestService.h"
-#include <ichor/event_queues/MultimapQueue.h>
+#include <ichor/event_queues/PriorityQueue.h>
 #include <ichor/services/logging/LoggerFactory.h>
 #include <ichor/services/logging/NullLogger.h>
 #include <ichor/services/metrics/MemoryUsageFunctions.h>
@@ -31,7 +31,7 @@ int main(int argc, char *argv[]) {
 
     {
         auto start = std::chrono::steady_clock::now();
-        auto queue = std::make_unique<MultimapQueue>();
+        auto queue = std::make_unique<PriorityQueue>();
         auto &dm = queue->createManager();
         dm.createServiceManager<LoggerFactory<NullLogger>, ILoggerFactory>();
         for (uint64_t i = 0; i < SERVICES_COUNT; i++) {
@@ -46,7 +46,7 @@ int main(int argc, char *argv[]) {
     if(!singleOnly) {
         auto start = std::chrono::steady_clock::now();
         std::array<std::thread, 8> threads{};
-        std::array<MultimapQueue, 8> queues{};
+        std::array<PriorityQueue, 8> queues{};
         for (uint_fast32_t i = 0, j = 0; i < 8; i++, j += 2) {
             threads[i] = std::thread([&queues, i] {
                 auto &dm = queues[i].createManager();
@@ -67,7 +67,7 @@ int main(int argc, char *argv[]) {
 
     {
         auto start = std::chrono::steady_clock::now();
-        auto queue = std::make_unique<MultimapQueue>();
+        auto queue = std::make_unique<PriorityQueue>();
         auto &dm = queue->createManager();
         dm.createServiceManager<LoggerFactory<NullLogger>, ILoggerFactory>();
         for (uint64_t i = 0; i < SERVICES_COUNT; i++) {
@@ -82,7 +82,7 @@ int main(int argc, char *argv[]) {
     if(!singleOnly) {
         auto start = std::chrono::steady_clock::now();
         std::array<std::thread, 8> threads{};
-        std::array<MultimapQueue, 8> queues{};
+        std::array<PriorityQueue, 8> queues{};
         for (uint_fast32_t i = 0, j = 0; i < 8; i++, j += 2) {
             threads[i] = std::thread([&queues, i] {
                 auto &dm = queues[i].createManager();

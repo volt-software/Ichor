@@ -1,5 +1,5 @@
 #include "TestService.h"
-#include <ichor/event_queues/MultimapQueue.h>
+#include <ichor/event_queues/PriorityQueue.h>
 #include <ichor/services/logging/LoggerFactory.h>
 #include <ichor/services/serialization/ISerializer.h>
 #include <ichor/services/logging/NullLogger.h>
@@ -35,7 +35,7 @@ int main(int argc, char *argv[]) {
 
     {
         auto start = std::chrono::steady_clock::now();
-        auto queue = std::make_unique<MultimapQueue>();
+        auto queue = std::make_unique<PriorityQueue>();
         auto &dm = queue->createManager();
         dm.createServiceManager<LoggerFactory<NullLogger>, ILoggerFactory>();
         dm.createServiceManager<TestMsgGlazeSerializer, ISerializer<TestMsg>>();
@@ -49,7 +49,7 @@ int main(int argc, char *argv[]) {
     if(!singleOnly) {
         auto start = std::chrono::steady_clock::now();
         std::array<std::thread, threadCount> threads{};
-        std::array<MultimapQueue, threadCount> queues{};
+        std::array<PriorityQueue, threadCount> queues{};
         for (uint_fast32_t i = 0, j = 0; i < threadCount; i++, j += 2) {
             threads[i] = std::thread([&queues, i] {
                 auto &dm = queues[i].createManager();

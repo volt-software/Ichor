@@ -122,10 +122,10 @@ Starting a dependency manager is quite easy. Instantiate it, tell it which servi
 ```c++
 // main.cpp
 #include <ichor/DependencyManager.h>
-#include <ichor/event_queues/MultimapQueue.h>
+#include <ichor/event_queues/PriorityQueue.h>
 
 int main() {
-    auto queue = std::make_unique<MultimapQueue>(); // use a priority queue based on Multimap
+    auto queue = std::make_unique<PriorityQueue>(); // use a priority queue based on Multimap
     auto &dm = queue->createManager(); // create the dependency manager
     dm.start(CaptureSigInt);
     
@@ -170,12 +170,12 @@ struct MyService final { // Don't need an interface here, nothing has a dependen
 ```c++
 // main.cpp
 #include <ichor/DependencyManager.h>
-#include <ichor/event_queues/MultimapQueue.h>
+#include <ichor/event_queues/PriorityQueue.h>
 #include "SomeDependency.h"
 #include "MyService.h"
 
 int main() {
-    auto queue = std::make_unique<MultimapQueue>();
+    auto queue = std::make_unique<PriorityQueue>();
     auto &dm = queue->createManager();
     dm.createServiceManager<SomeDependency, ISomeDependency>(); // register SomeDependency as providing an ISomeDependency
     dm.createServiceManager<MyService>(); // register MyService (requested dependencies get registered automatically)
@@ -246,11 +246,11 @@ struct EventManipulationService final { // Don't need an interface here, nothing
 ```c++
 // main.cpp
 #include <ichor/DependencyManager.h>
-#include <ichor/event_queues/MultimapQueue.h>
+#include <ichor/event_queues/PriorityQueue.h>
 #include "EventManipulationService.h"
 
 int main() {
-    auto queue = std::make_unique<MultimapQueue>();
+    auto queue = std::make_unique<PriorityQueue>();
     auto &dm = queue->createManager();
     dm.createServiceManager<EventManipulationService>();
     dm.start(CaptureSigInt);
@@ -284,14 +284,14 @@ struct MyTimerService final {
 ```c++
 // main.cpp
 #include <ichor/DependencyManager.h>
-#include <ichor/event_queues/MultimapQueue.h>
+#include <ichor/event_queues/PriorityQueue.h>
 #include <ichor/services/timer/TimerFactoryFactory.h> // Add this
 #include "MyService.h"
 #include "MyDependencyService.h"
 #include "MyTimerService.h" // Add this
 
 int main() {
-    auto queue = std::make_unique<MultimapQueue>();
+    auto queue = std::make_unique<PriorityQueue>();
     auto &dm = queue->createManager();
     dm.createServiceManager<MyService, IMyService>();
     dm.createServiceManager<MyDependencyService, IMyDependencyService>();
@@ -375,13 +375,13 @@ struct MyCoroutineTimerService final {
 ```c++
 // main.cpp
 #include <ichor/DependencyManager.h>
-#include <ichor/event_queues/MultimapQueue.h>
+#include <ichor/event_queues/PriorityQueue.h>
 #include <ichor/services/timer/TimerFactoryFactory.h>
 #include "AwaitService.h"
 #include "MyCoroutineTimerService.h"
 
 int main() {
-    auto queue = std::make_unique<MultimapQueue>();
+    auto queue = std::make_unique<PriorityQueue>();
     auto &dm = queue->createManager();
     dm.createServiceManager<AwaitService, IAwaitService>();
     dm.createServiceManager<MyCoroutineTimerService>();
@@ -480,7 +480,7 @@ struct SomeServiceUsingLogger final {
 };
 
 int main() {
-    auto queue = std::make_unique<MultimapQueue>();
+    auto queue = std::make_unique<PriorityQueue>();
     auto &dm = queue->createManager();
     dm.createServiceManager<LoggerFactory>(); // LoggerFactory will end up resolving the ILogger request from SomeServiceUsingLogger
     dm.createServiceManager<SomeServiceUsingLogger>();
@@ -580,14 +580,14 @@ Starting up two manager is easy, but allowing services to communicate to service
 ```c++
 // main.cpp
 #include <ichor/DependencyManager.h>
-#include <ichor/event_queues/MultimapQueue.h>
+#include <ichor/event_queues/PriorityQueue.h>
 #include <ichor/CommunicationChannel.h>
 
 int main() {
     Ichor::CommunicationChannel channel{};
-    auto queueOne = std::make_unique<MultimapQueue>();
+    auto queueOne = std::make_unique<PriorityQueue>();
     auto &dmOne = queue->createManager(); // ID = 0
-    auto queueTwo = std::make_unique<MultimapQueue>();
+    auto queueTwo = std::make_unique<PriorityQueue>();
     auto &dmTwo = queue->createManager(); // ID = 1
     
     // Register the manager to the channel
