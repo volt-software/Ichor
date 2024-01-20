@@ -24,7 +24,7 @@ namespace Ichor {
 
     enum class any_op {
         CLONE,
-        DELETE,
+        DELETE_, // windows header annoyingly defines DELETE as a macro.
         MOVE
     };
     constexpr std::size_t bufferTypeSize = 16;
@@ -126,7 +126,7 @@ namespace Ichor {
                 if constexpr (sizeof(T) <= bufferTypeSize && std::is_nothrow_move_constructible_v<T>) {
                     if(op == any_op::CLONE) {
                         return new(buffer.data()) T(*reinterpret_cast<T *>(value));
-                    } else if(op == any_op::DELETE) {
+                    } else if(op == any_op::DELETE_) {
                         if constexpr (!std::is_trivial_v<T>) {
                             static_cast<T *>(value)->~T();
                         }
@@ -143,7 +143,7 @@ namespace Ichor {
                 } else {
                     if(op == any_op::CLONE) {
                         return new T(*reinterpret_cast<T *>(value));
-                    } else if(op == any_op::DELETE) {
+                    } else if(op == any_op::DELETE_) {
                         delete static_cast<T*>(value);
                         return nullptr;
                     } else if(op == any_op::MOVE) {
@@ -169,7 +169,7 @@ namespace Ichor {
 
         void reset() noexcept {
             if(_ptr != nullptr) {
-                _opFn(any_op::DELETE, _buffer, _ptr);
+                _opFn(any_op::DELETE_, _buffer, _ptr);
                 _ptr = nullptr;
             }
             _size = 0;
