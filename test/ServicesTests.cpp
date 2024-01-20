@@ -36,7 +36,7 @@ TEST_CASE("ServicesTests") {
     }
 
     SECTION("FailOnStartService") {
-        auto queue = std::make_unique<PriorityQueue>();
+        auto queue = std::make_unique<OrderedPriorityQueue>();
         auto &dm = queue->createManager();
 
         std::thread t([&]() {
@@ -68,7 +68,7 @@ TEST_CASE("ServicesTests") {
     }
 
     SECTION("FailOnStartWithDependenciesService") {
-        auto queue = std::make_unique<PriorityQueue>();
+        auto queue = std::make_unique<OrderedPriorityQueue>();
         auto &dm = queue->createManager();
 
         std::thread t([&]() {
