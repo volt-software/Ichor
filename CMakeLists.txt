@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 3.12) #might need 3.13 due to https://gitlab.kitware.com/cmake/cmake/-/issues/14444
 cmake_policy(SET CMP0048 NEW)
+cmake_policy(SET CMP0127 NEW) # requires cmake 3.22
 project(ichor VERSION 0.1.0 DESCRIPTION "C++20 dependency injection framework" HOMEPAGE_URL https://github.com/volt-software/Ichor LANGUAGES CXX)
 if(NOT WIN32)
     # we set this flag manually later on to enable the experimental C++20 stuff
@@ -59,6 +60,7 @@ cmake_dependent_option(ICHOR_USE_MOLD "Use mold when linking, recommended to use
 cmake_dependent_option(ICHOR_USE_SDEVENT "Add sd-event based queue/integration" OFF "NOT WIN32" OFF)
 option(ICHOR_DISABLE_RTTI "Disable RTTI. Reduces memory usage, disables dynamic_cast<>()" ON)
 option(ICHOR_USE_HARDENING "Uses compiler-specific flags which add stack protection and similar features, as well as adding safety checks in Ichor itself." ON)
+cmake_dependent_option(ICHOR_USE_LIBCPP "Uses clang's libc++ stdlib if compiling with clang" ON "CMAKE_CXX_COMPILER_ID STREQUAL \"Clang\"" OFF)
 cmake_dependent_option(ICHOR_USE_MIMALLOC "Use mimalloc for significant performance improvements" ON "NOT ICHOR_USE_SANITIZERS AND NOT ICHOR_MUSL" OFF)
 cmake_dependent_option(ICHOR_USE_SYSTEM_MIMALLOC "Use system or vendored mimalloc" OFF "NOT ICHOR_USE_SANITIZERS AND NOT ICHOR_MUSL" OFF)
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
@@ -138,7 +140,7 @@ if(ICHOR_AARCH64)
 endif()
 
 if(NOT WIN32)
-    target_compile_options(ichor PUBLIC -Wall -Wextra -Wshadow -Wnon-virtual-dtor -Wno-unused-variable -Wno-long-long -Wno-unused-parameter -Wnull-dereference -pedantic -Wformat -Wformat-security -Wcast-align -Woverloaded-virtual)
+    target_compile_options(ichor PUBLIC -Wall -Wextra -Wshadow -Wno-non-virtual-dtor -Wno-unused-variable -Wno-long-long -Wno-unused-parameter -Wnull-dereference -pedantic -Wformat -Wformat-security -Wcast-align -Woverloaded-virtual -Wdelete-non-virtual-dtor)
     target_compile_options(ichor PUBLIC -pthread -ftemplate-backtrace-limit=0)
     if(ICHOR_USE_HARDENING AND (CMAKE_BUILD_TYPE MATCHES Debug))
         # Enable runtime iterator debug checks (like checking two different iterators from different containers)
@@ -159,6 +161,12 @@ else()
     target_compile_options(ichor PUBLIC /nologo /DWIN32 /D_WINDOWS /EHsc /TP /await:strict /std:c++latest /wd4100 /permissive- /Zc:throwingNew /Zc:__cplusplus /Zc:preprocessor /volatile:iso /Zc:inline /Zc:referenceBinding /Zc:strictStrings /Zc:templateScope /utf-8 /vd0)
     target_compile_options(ichor PUBLIC /bigobj) #some files, like WsConnectionService with sanitizers enabled, need more addressable sections
     target_compile_definitions(ichor PUBLIC NOMINMAX WIN32_LEAN_AND_MEAN )
+endif()
+
+if(ICHOR_USE_LIBCPP)
+    target_compile_options(ichor PUBLIC -stdlib=libc++)
+    target_compile_definitions(ichor PUBLIC ICHOR_USE_LIBCPP)
+    target_link_options(ichor PUBLIC -stdlib=libc++)
 endif()
 
 # gcc added support for mold in version 12, before that, the flag is ignored.
@@ -616,4 +624,8 @@ if(ICHOR_BUILD_TESTING)
         target_link_options(Catch2 PUBLIC -pie)
     endif()
 
+    if(ICHOR_USE_LIBCPP)
+        target_compile_options(Catch2 PUBLIC -stdlib=libc++)
+        target_link_options(Catch2 PUBLIC -stdlib=libc++)
+    endif()
 endif()

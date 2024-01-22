@@ -94,6 +94,12 @@ if [[ $DOCKER -eq 1 ]]; then
   run_examples
   docker run -v $(pwd)/../:/opt/ichor/src -it ichor-asan "rm -rf /opt/ichor/src/bin/* /opt/ichor/src/build/*" || exit 1
 
+  rm -rf ./* ../bin/*
+  docker build -f ../Dockerfile-asan-clang -t ichor-asan-clang . || exit 1
+  docker run -v $(pwd)/../:/opt/ichor/src -it ichor-asan-clang || exit 1
+  run_examples
+  docker run -v $(pwd)/../:/opt/ichor/src -it ichor-asan-clang "rm -rf /opt/ichor/src/bin/* /opt/ichor/src/build/*" || exit 1
+
 #   tsan is purposefully not run automatically, because it usually contains false positives.
 
   rm -rf ./* ../bin/*
@@ -104,7 +110,7 @@ if [[ $DOCKER -eq 1 ]]; then
 #!/bin/sh
 FILES=/opt/ichor/src/bin/*
 for f in \$FILES; do
-  if [[ "\$f" != *"Redis"* ]] && [[ "\$f" != *"benchmark"* ]] && [[ "\$f" != *"minimal"* ]] && [[ "\$f" != *"tcp"* ]] && [[ "\$f" != *"ping"* ]] && [[ "\$f" != *"etcd"* ]] && [[ "\$f" != *"Etcd"* ]] && [[ "\$f" != *"pong"* ]] && [[ "\$f" != *"Started"* ]] && [[ "\$f" != *".sh" ]] && [[ -x "\$f" ]] && [[ ! -d "\$f" ]] ; then
+  if [[ "\$f" != *"Tests" ]] && [[ "\$f" != *"benchmark"* ]] && [[ "\$f" != *"minimal"* ]] && [[ "\$f" != *"tcp"* ]] && [[ "\$f" != *"ping"* ]] && [[ "\$f" != *"etcd"* ]] && [[ "\$f" != *"pong"* ]] && [[ "\$f" != *".sh" ]] && [[ -x "\$f" ]] && [[ ! -d "\$f" ]] ; then
     echo "Running \${f}"
     \$f || exit 1
   fi
@@ -120,7 +126,7 @@ EOF
   docker run -v $(pwd)/../:/opt/ichor/src -it ichor-musl-aarch64-bench || exit 1
   mkdir -p ../arm_bench
   mv -f ../bin/* ../arm_bench
-  rm ../arm_bench/libichor.a
+  rm -f ../arm_bench/libichor.a
   docker run -v $(pwd)/../:/opt/ichor/src --privileged -it ichor-musl-aarch64 "rm -rf /opt/ichor/src/bin/* /opt/ichor/src/build/*" || exit 1
 
 #  exit 0
@@ -128,19 +134,19 @@ fi
 
 for i in ${!ccompilers[@]}; do
   rm -rf ./* ../bin/*
-  CC=${ccompilers[i]} CXX=${cppcompilers[i]} cmake -GNinja -DCMAKE_BUILD_TYPE=Debug -DICHOR_USE_SANITIZERS=ON -DICHOR_ENABLE_INTERNAL_DEBUGGING=OFF -DICHOR_USE_MOLD=ON -DICHOR_USE_BOOST_BEAST=ON -DICHOR_USE_HIREDIS=ON .. || exit 1
+  CC=${ccompilers[i]} CXX=${cppcompilers[i]} cmake -GNinja -DCMAKE_BUILD_TYPE=Debug -DICHOR_USE_SANITIZERS=ON -DICHOR_ENABLE_INTERNAL_DEBUGGING=OFF -DICHOR_USE_MOLD=ON -DICHOR_USE_BOOST_BEAST=ON -DICHOR_USE_LIBCPP=OFF -DICHOR_USE_HIREDIS=ON .. || exit 1
   ninja || exit 1
   ninja test || exit 1
   run_examples
 
   rm -rf ./* ../bin/*
-  CC=${ccompilers[i]} CXX=${cppcompilers[i]} cmake -GNinja -DCMAKE_BUILD_TYPE=Debug -DICHOR_USE_SANITIZERS=ON -DICHOR_ENABLE_INTERNAL_DEBUGGING=ON -DICHOR_USE_MOLD=ON -DICHOR_USE_BOOST_BEAST=ON -DICHOR_USE_SPDLOG=ON -DICHOR_USE_HIREDIS=ON .. || exit 1
+  CC=${ccompilers[i]} CXX=${cppcompilers[i]} cmake -GNinja -DCMAKE_BUILD_TYPE=Debug -DICHOR_USE_SANITIZERS=ON -DICHOR_ENABLE_INTERNAL_DEBUGGING=ON -DICHOR_USE_MOLD=ON -DICHOR_USE_BOOST_BEAST=ON -DICHOR_USE_LIBCPP=OFF -DICHOR_USE_SPDLOG=ON -DICHOR_USE_HIREDIS=ON .. || exit 1
   ninja || exit 1
   ninja test || exit 1
   run_examples
 
   rm -rf ./* ../bin/*
-  CC=${ccompilers[i]} CXX=${cppcompilers[i]} cmake -GNinja -DCMAKE_BUILD_TYPE=Release -DICHOR_USE_SANITIZERS=OFF -DICHOR_ENABLE_INTERNAL_DEBUGGING=OFF -DICHOR_USE_MOLD=ON -DICHOR_USE_BOOST_BEAST=ON -DICHOR_USE_HIREDIS=ON .. || exit 1
+  CC=${ccompilers[i]} CXX=${cppcompilers[i]} cmake -GNinja -DCMAKE_BUILD_TYPE=Release -DICHOR_USE_SANITIZERS=OFF -DICHOR_ENABLE_INTERNAL_DEBUGGING=OFF -DICHOR_USE_MOLD=ON -DICHOR_USE_BOOST_BEAST=ON -DICHOR_USE_LIBCPP=OFF -DICHOR_USE_HIREDIS=ON .. || exit 1
   ninja || exit 1
   ninja test || exit 1
   run_examples

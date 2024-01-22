@@ -93,6 +93,10 @@ This option results in statically linking libgcc and libstdc++ as well as turnin
 
 Control flow protection is not available on Aarch64, enable this to allow (cross-)compiling for that architecture.
 
+## ICHOR_USE_LIBCPP
+
+Tells ichor to add the `-stdlib=libc++` compiler and linker flags. Requires compiling with clang, as gcc and msvc do not support libc++.
+
 ## ICHOR_ARCH_OPTIMIZATION
 
 Compile Ichor with architecture specific optimizations. Allowed settings: `NATIVE`, `X86_64`, `X86_64_SSE4`, `X86_64_AVX2`, `X86_64_AVX512`, `MODERN_ARM_GENERIC`.

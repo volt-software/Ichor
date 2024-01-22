@@ -1,17 +1,20 @@
 FROM ubuntu:jammy
 
-RUN apt update
-RUN apt install -y g++-12 gcc-12 build-essential cmake libssl-dev pkg-config git wget ninja-build nano libzip-dev
-
-RUN update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-12 60
-RUN update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-12 60
-RUN update-alternatives --install /usr/bin/cpp cpp /usr/bin/cpp-12 60
+RUN apt update && apt-get install -y wget lsb-release software-properties-common gnupg
+RUN wget https://apt.llvm.org/llvm.sh && chmod +x llvm.sh && ./llvm.sh 18 all
+RUN apt install -y cmake libssl-dev pkg-config git ninja-build nano libzip-dev clang-18
 
 # Run all downloads first to be able to use Docker's layers as cache and prevent excessive redownloads
 
 WORKDIR /opt
 RUN wget https://boostorg.jfrog.io/artifactory/main/release/1.83.0/source/boost_1_83_0.tar.bz2
 RUN wget https://github.com/redis/hiredis/archive/refs/tags/v1.2.0.tar.gz
+
+ENV CC="clang"
+ENV CXX="clang++"
+ENV PATH="${PATH}:/usr/lib/llvm-18/bin"
+# false positive in QueueTests, see https://github.com/llvm/llvm-project/issues/59432
+ENV ASAN_OPTIONS="alloc_dealloc_mismatch=0"
 
 #Build a new enough boost, apt only contains 1.74 which is too old.
 RUN tar xf boost_1_83_0.tar.bz2
