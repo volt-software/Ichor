@@ -18,6 +18,11 @@ public:
         for(auto &[svcId, svc] : svcs) {
             ICHOR_LOG_INFO(_logger, "Service {}:{}, guid {} priority {} state {}", svc->getServiceId(), svc->getServiceName(), svc->getServiceGid(), svc->getServicePriority(), svc->getServiceState());
 
+            ICHOR_LOG_INFO(_logger, "\tInterfaces:");
+            for(auto &iface : dm->getProvidedInterfacesForService(svc->getServiceId())) {
+                ICHOR_LOG_INFO(_logger, "\t\tInterface {} hash {}", iface.interfaceName, iface.interfaceNameHash);
+            }
+
             ICHOR_LOG_INFO(_logger, "\tProperties:");
             for(auto &[key, val] : svc->getProperties()) {
                 ICHOR_LOG_INFO(_logger, "\t\tProperty {} value {} size {} type {}", key, val, val.get_size(), val.type_name());

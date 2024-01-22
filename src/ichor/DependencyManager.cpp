@@ -1187,7 +1187,7 @@ std::vector<Ichor::Dependency> Ichor::DependencyManager::getDependencyRequestsFo
 
     std::vector<Dependency> ret;
 
-    for(auto &r : reg->_registrations) {
+    for(auto const &r : reg->_registrations) {
         ret.emplace_back(std::get<Dependency>(r.second));
     }
 
@@ -1222,6 +1222,22 @@ std::vector<Ichor::NeverNull<Ichor::IService const *>> Ichor::DependencyManager:
     }
 
     return ret;
+}
+
+std::vector<Ichor::Dependency> Ichor::DependencyManager::getProvidedInterfacesForService(ServiceIdType svcId) const noexcept {
+    if constexpr (DO_INTERNAL_DEBUG || DO_HARDENING) {
+        if (this != Detail::_local_dm) [[unlikely]] { // are we on the right thread?
+            std::terminate();
+        }
+    }
+
+    auto svc = _services.find(svcId);
+
+    if(svc == _services.end()) {
+        return {};
+    }
+
+    return svc->second->getInterfaces();
 }
 
 Ichor::unordered_map<Ichor::ServiceIdType, Ichor::NeverNull<Ichor::IService const *>> Ichor::DependencyManager::getAllServices() const noexcept {

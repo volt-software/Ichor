@@ -488,6 +488,7 @@ namespace Ichor {
 
         [[nodiscard]] std::vector<Dependency> getDependencyRequestsForService(ServiceIdType svcId) const noexcept;
         [[nodiscard]] std::vector<NeverNull<IService const *>> getDependentsForService(ServiceIdType svcId) const noexcept;
+        [[nodiscard]] std::vector<Dependency> getProvidedInterfacesForService(ServiceIdType svcId) const noexcept;
 
         /// Returns a list of currently known services and their status.
         /// Do not use in coroutines or other threads.
