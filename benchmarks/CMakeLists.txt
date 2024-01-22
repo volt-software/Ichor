@@ -1,7 +1,7 @@
 file(GLOB_RECURSE PROJECT_BENCHMARK_SOURCES ${ICHOR_TOP_DIR}/benchmarks/*.cpp)
 
 find_package(PkgConfig)
-if(PkgConfig_FOUND AND NOT ICHOR_USE_LIBCPP)
+if(PkgConfig_FOUND AND NOT ICHOR_USE_LIBCPP) # Most platforms have compiled RE2 with libstdc++ and mixing that with libc++ fails
     pkg_check_modules(RE2 re2)
     if(RE2_FOUND)
         set(USE_RE2 ON)

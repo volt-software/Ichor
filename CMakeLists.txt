@@ -1,7 +1,10 @@
-cmake_minimum_required(VERSION 3.12) #might need 3.13 due to https://gitlab.kitware.com/cmake/cmake/-/issues/14444
+cmake_minimum_required(VERSION 3.22)
+set(CMAKE_POLICY_DEFAULT_CMP0077 NEW)
 cmake_policy(SET CMP0048 NEW)
-cmake_policy(SET CMP0127 NEW) # requires cmake 3.22
-project(ichor VERSION 0.1.0 DESCRIPTION "C++20 dependency injection framework" HOMEPAGE_URL https://github.com/volt-software/Ichor LANGUAGES CXX)
+cmake_policy(SET CMP0077 NEW)
+cmake_policy(SET CMP0110 NEW)
+cmake_policy(SET CMP0127 NEW)
+project(ichor VERSION 0.4.0 DESCRIPTION "C++20 dependency injection framework" HOMEPAGE_URL https://github.com/volt-software/Ichor LANGUAGES CXX)
 if(NOT WIN32)
     # we set this flag manually later on to enable the experimental C++20 stuff
     set(CMAKE_CXX_STANDARD 20)
@@ -9,20 +12,14 @@ endif()
 set(CMAKE CXX STANDARD REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_VERBOSE_MAKEFILE ON)
-if(${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.19.0")
-    cmake_policy(SET CMP0110 NEW)
-endif()
-set(CMAKE_POLICY_DEFAULT_CMP0077 NEW)
-cmake_policy(SET CMP0077 NEW)
 include(CMakeDependentOption)
 include(CMakePackageConfigHelpers)
-
 
 if(NOT CMAKE_BUILD_TYPE)
     SET(CMAKE_BUILD_TYPE Debug CACHE STRING
             "Choose the type of build, options are: None Debug Release RelWithDebInfo MinSizeRel."
             FORCE)
-endif(NOT CMAKE_BUILD_TYPE)
+endif()
 
 get_directory_property(hasParent PARENT_DIRECTORY)
 if(NOT hasParent)
