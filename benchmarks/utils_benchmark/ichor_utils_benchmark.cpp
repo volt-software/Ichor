@@ -150,10 +150,10 @@ void run_regex_bench(char *argv) {
 
     fmt::print("{} ctreMatcher {} ran for {:L} µs with {:L} peak memory usage {:L} matches/s\n", argv, REGEX.value, std::chrono::duration_cast<std::chrono::microseconds>(endCtr - startCtre).count(), getPeakRSS(),
                std::floor(1'000'000. / static_cast<double>(std::chrono::duration_cast<std::chrono::microseconds>(endCtr - startCtre).count()) * ITERATION_COUNT));
-    fmt::print("{} stdMatcher ran {} for {:L} µs with {:L} peak memory usage {:L} matches/s\n", argv, REGEX.value, std::chrono::duration_cast<std::chrono::microseconds>(endStd - startStd).count(), getPeakRSS(),
+    fmt::print("{} stdMatcher  {} ran for {:L} µs with {:L} peak memory usage {:L} matches/s\n", argv, REGEX.value, std::chrono::duration_cast<std::chrono::microseconds>(endStd - startStd).count(), getPeakRSS(),
                std::floor(1'000'000. / static_cast<double>(std::chrono::duration_cast<std::chrono::microseconds>(endStd - startStd).count()) * ITERATION_COUNT));
 #ifdef ICHOR_USE_RE2
-    fmt::print("{} re2Matcher {} ran for {:L} µs with {:L} peak memory usage {:L} matches/s\n", argv, REGEX.value, std::chrono::duration_cast<std::chrono::microseconds>(endRe2 - startRe2).count(), getPeakRSS(),
+    fmt::print("{} re2Matcher  {} ran for {:L} µs with {:L} peak memory usage {:L} matches/s\n", argv, REGEX.value, std::chrono::duration_cast<std::chrono::microseconds>(endRe2 - startRe2).count(), getPeakRSS(),
                std::floor(1'000'000. / static_cast<double>(std::chrono::duration_cast<std::chrono::microseconds>(endRe2 - startRe2).count()) * ITERATION_COUNT));
 #endif
 }

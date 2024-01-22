@@ -48,7 +48,8 @@ run_benchmarks ()
   eval $coroutine || exit 1
   eval $event || exit 1
   eval $serializer || exit 1
-  eval $start || exit 1
+  eval $start -a || exit 1
+  eval $start -c || exit 1
   eval $start_stop || exit 1
   eval $utils -r || exit 1
 }
