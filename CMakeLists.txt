@@ -142,10 +142,16 @@ if(NOT WIN32)
     target_compile_options(ichor PUBLIC -Wall -Wextra -Wshadow -Wno-non-virtual-dtor -Wno-unused-variable -Wno-long-long -Wno-unused-parameter -Wnull-dereference -pedantic -Wformat -Wformat-security -Wcast-align -Woverloaded-virtual -Wdelete-non-virtual-dtor)
     target_compile_options(ichor PUBLIC -pthread -ftemplate-backtrace-limit=0)
     if(ICHOR_USE_HARDENING AND (CMAKE_BUILD_TYPE MATCHES Debug))
-        # Enable runtime iterator debug checks (like checking two different iterators from different containers)
-        target_compile_definitions(ichor PUBLIC _GLIBCXX_ASSERTIONS _GLIBCXX_DEBUG _GLIBCXX_DEBUG_PEDANTIC _ITERATOR_DEBUG_LEVEL=2 _LIBCPP_DEBUG=1 _LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_DEBUG -D_FORTIFY_SOURCE=3)
+        # target_compile_definitions annoyingly adds "-D" in front of "-U" and target_compile_options goes after target_compile_definitions. Argh.
+        target_compile_options(ichor PUBLIC -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=3)
+
+        # Enable runtime iterator debug checks (like checking two different iterators from different container
+        target_compile_definitions(ichor PUBLIC _GLIBCXX_ASSERTIONS _GLIBCXX_DEBUG _GLIBCXX_DEBUG_PEDANTIC _ITERATOR_DEBUG_LEVEL=2 _LIBCPP_DEBUG=1 _LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_DEBUG)
     elseif(ICHOR_USE_HARDENING)
-        target_compile_definitions(ichor PUBLIC _GLIBCXX_ASSERTIONS _LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_FAST -D_FORTIFY_SOURCE=3)
+        # target_compile_definitions annoyingly adds "-D" in front of "-U" and target_compile_options goes after target_compile_definitions. Argh.
+        target_compile_options(ichor PUBLIC -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=3)
+
+        target_compile_definitions(ichor PUBLIC _GLIBCXX_ASSERTIONS _LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_FAST)
     endif()
     target_compile_definitions(ichor PUBLIC _FILE_OFFSET_BITS=64 _TIME_BITS=64)
 
