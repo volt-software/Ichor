@@ -141,6 +141,8 @@ endif()
 if(NOT WIN32)
     target_compile_options(ichor PUBLIC -Wall -Wextra -Wshadow -Wno-non-virtual-dtor -Wno-unused-variable -Wno-long-long -Wno-unused-parameter -Wnull-dereference -pedantic -Wformat -Wformat-security -Wcast-align -Woverloaded-virtual -Wdelete-non-virtual-dtor)
     target_compile_options(ichor PUBLIC -pthread -ftemplate-backtrace-limit=0)
+
+    # TODO Would love to refactor this to a function, but functions don't seem to be able to reach variables not yet defined when the function is defined.
     if(ICHOR_USE_HARDENING AND (CMAKE_BUILD_TYPE MATCHES Debug))
         # target_compile_definitions annoyingly adds "-D" in front of "-U" and target_compile_options goes after target_compile_definitions. Argh.
         target_compile_options(ichor PUBLIC -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=3)
@@ -627,6 +629,18 @@ if(ICHOR_BUILD_TESTING)
     if(NOT WIN32 AND NOT ICHOR_USE_SANITIZERS AND NOT ICHOR_USE_THREAD_SANITIZER)
         target_compile_options(Catch2 PUBLIC -fpie)
         target_link_options(Catch2 PUBLIC -pie)
+    endif()
+
+    # TODO Would love to refactor this to a function, but functions don't seem to be able to reach variables not yet defined when the function is defined.
+    if(NOT WIN32 AND ICHOR_USE_HARDENING AND (CMAKE_BUILD_TYPE MATCHES Debug))
+        # target_compile_definitions annoyingly adds "-D" in front of "-U" and target_compile_options goes after target_compile_definitions. Argh.
+        target_compile_options(Catch2 PUBLIC -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=3)
+        # Enable runtime iterator debug checks (like checking two different iterators from different container
+        target_compile_definitions(Catch2 PUBLIC _GLIBCXX_ASSERTIONS _GLIBCXX_DEBUG _GLIBCXX_DEBUG_PEDANTIC _ITERATOR_DEBUG_LEVEL=2 _LIBCPP_DEBUG=1 _LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_DEBUG)
+    elseif(NOT WIN32 AND ICHOR_USE_HARDENING)
+        # target_compile_definitions annoyingly adds "-D" in front of "-U" and target_compile_options goes after target_compile_definitions. Argh.
+        target_compile_options(Catch2 PUBLIC -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=3)
+        target_compile_definitions(Catch2 PUBLIC _GLIBCXX_ASSERTIONS _LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_FAST)
     endif()
 
     if(ICHOR_USE_LIBCPP)
