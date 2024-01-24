@@ -16,11 +16,11 @@ namespace Ichor {
         [[nodiscard]] std::string_view get_name() const noexcept final {
             return NAME;
         }
-        [[nodiscard]] uint64_t get_type() const noexcept final {
+        [[nodiscard]] NameHashType get_type() const noexcept final {
             return TYPE;
         }
 
-        static constexpr uint64_t TYPE = typeNameHash<DependencyOnlineEvent>();
+        static constexpr NameHashType TYPE = typeNameHash<DependencyOnlineEvent>();
         static constexpr std::string_view NAME = typeName<DependencyOnlineEvent>();
     };
 
@@ -33,11 +33,11 @@ namespace Ichor {
         [[nodiscard]] std::string_view get_name() const noexcept final {
             return NAME;
         }
-        [[nodiscard]] uint64_t get_type() const noexcept final {
+        [[nodiscard]] NameHashType get_type() const noexcept final {
             return TYPE;
         }
 
-        static constexpr uint64_t TYPE = typeNameHash<DependencyOfflineEvent>();
+        static constexpr NameHashType TYPE = typeNameHash<DependencyOfflineEvent>();
         static constexpr std::string_view NAME = typeName<DependencyOfflineEvent>();
     };
 
@@ -50,13 +50,13 @@ namespace Ichor {
         [[nodiscard]] std::string_view get_name() const noexcept final {
             return NAME;
         }
-        [[nodiscard]] uint64_t get_type() const noexcept final {
+        [[nodiscard]] NameHashType get_type() const noexcept final {
             return TYPE;
         }
 
         Dependency dependency;
         tl::optional<Properties const *> properties;
-        static constexpr uint64_t TYPE = typeNameHash<DependencyRequestEvent>();
+        static constexpr NameHashType TYPE = typeNameHash<DependencyRequestEvent>();
         static constexpr std::string_view NAME = typeName<DependencyRequestEvent>();
     };
 
@@ -70,13 +70,13 @@ namespace Ichor {
         [[nodiscard]] std::string_view get_name() const noexcept final {
             return NAME;
         }
-        [[nodiscard]] uint64_t get_type() const noexcept final {
+        [[nodiscard]] NameHashType get_type() const noexcept final {
             return TYPE;
         }
 
         Dependency dependency;
         Properties properties;
-        static constexpr uint64_t TYPE = typeNameHash<DependencyUndoRequestEvent>();
+        static constexpr NameHashType TYPE = typeNameHash<DependencyUndoRequestEvent>();
         static constexpr std::string_view NAME = typeName<DependencyUndoRequestEvent>();
     };
 
@@ -87,11 +87,11 @@ namespace Ichor {
         [[nodiscard]] std::string_view get_name() const noexcept final {
             return NAME;
         }
-        [[nodiscard]] uint64_t get_type() const noexcept final {
+        [[nodiscard]] NameHashType get_type() const noexcept final {
             return TYPE;
         }
 
-        static constexpr uint64_t TYPE = typeNameHash<QuitEvent>();
+        static constexpr NameHashType TYPE = typeNameHash<QuitEvent>();
         static constexpr std::string_view NAME = typeName<QuitEvent>();
     };
 
@@ -102,12 +102,12 @@ namespace Ichor {
         [[nodiscard]] std::string_view get_name() const noexcept final {
             return NAME;
         }
-        [[nodiscard]] uint64_t get_type() const noexcept final {
+        [[nodiscard]] NameHashType get_type() const noexcept final {
             return TYPE;
         }
 
         uint64_t serviceId;
-        static constexpr uint64_t TYPE = typeNameHash<StopServiceEvent>();
+        static constexpr NameHashType TYPE = typeNameHash<StopServiceEvent>();
         static constexpr std::string_view NAME = typeName<StopServiceEvent>();
     };
 
@@ -118,12 +118,12 @@ namespace Ichor {
         [[nodiscard]] std::string_view get_name() const noexcept final {
             return NAME;
         }
-        [[nodiscard]] uint64_t get_type() const noexcept final {
+        [[nodiscard]] NameHashType get_type() const noexcept final {
             return TYPE;
         }
 
         uint64_t serviceId;
-        static constexpr uint64_t TYPE = typeNameHash<StartServiceEvent>();
+        static constexpr NameHashType TYPE = typeNameHash<StartServiceEvent>();
         static constexpr std::string_view NAME = typeName<StartServiceEvent>();
     };
 
@@ -134,12 +134,12 @@ namespace Ichor {
         [[nodiscard]] std::string_view get_name() const noexcept final {
             return NAME;
         }
-        [[nodiscard]] uint64_t get_type() const noexcept final {
+        [[nodiscard]] NameHashType get_type() const noexcept final {
             return TYPE;
         }
 
         uint64_t serviceId;
-        static constexpr uint64_t TYPE = typeNameHash<RemoveServiceEvent>();
+        static constexpr NameHashType TYPE = typeNameHash<RemoveServiceEvent>();
         static constexpr std::string_view NAME = typeName<RemoveServiceEvent>();
     };
 
@@ -150,11 +150,11 @@ namespace Ichor {
         [[nodiscard]] std::string_view get_name() const noexcept final {
             return NAME;
         }
-        [[nodiscard]] uint64_t get_type() const noexcept final {
+        [[nodiscard]] NameHashType get_type() const noexcept final {
             return TYPE;
         }
 
-        static constexpr uint64_t TYPE = typeNameHash<DoWorkEvent>();
+        static constexpr NameHashType TYPE = typeNameHash<DoWorkEvent>();
         static constexpr std::string_view NAME = typeName<DoWorkEvent>();
     };
 
@@ -165,12 +165,12 @@ namespace Ichor {
         [[nodiscard]] std::string_view get_name() const noexcept final {
             return NAME;
         }
-        [[nodiscard]] uint64_t get_type() const noexcept final {
+        [[nodiscard]] NameHashType get_type() const noexcept final {
             return TYPE;
         }
 
         CallbackKey key;
-        static constexpr uint64_t TYPE = typeNameHash<RemoveCompletionCallbacksEvent>();
+        static constexpr NameHashType TYPE = typeNameHash<RemoveCompletionCallbacksEvent>();
         static constexpr std::string_view NAME = typeName<RemoveCompletionCallbacksEvent>();
     };
 
@@ -181,12 +181,12 @@ namespace Ichor {
         [[nodiscard]] std::string_view get_name() const noexcept final {
             return NAME;
         }
-        [[nodiscard]] uint64_t get_type() const noexcept final {
+        [[nodiscard]] NameHashType get_type() const noexcept final {
             return TYPE;
         }
 
         CallbackKey key;
-        static constexpr uint64_t TYPE = typeNameHash<RemoveEventHandlerEvent>();
+        static constexpr NameHashType TYPE = typeNameHash<RemoveEventHandlerEvent>();
         static constexpr std::string_view NAME = typeName<RemoveEventHandlerEvent>();
     };
 
@@ -197,12 +197,12 @@ namespace Ichor {
         [[nodiscard]] std::string_view get_name() const noexcept final {
             return NAME;
         }
-        [[nodiscard]] uint64_t get_type() const noexcept final {
+        [[nodiscard]] NameHashType get_type() const noexcept final {
             return TYPE;
         }
 
         CallbackKey key;
-        static constexpr uint64_t TYPE = typeNameHash<RemoveEventInterceptorEvent>();
+        static constexpr NameHashType TYPE = typeNameHash<RemoveEventInterceptorEvent>();
         static constexpr std::string_view NAME = typeName<RemoveEventInterceptorEvent>();
     };
 
@@ -213,12 +213,12 @@ namespace Ichor {
         [[nodiscard]] std::string_view get_name() const noexcept final {
             return NAME;
         }
-        [[nodiscard]] uint64_t get_type() const noexcept final {
+        [[nodiscard]] NameHashType get_type() const noexcept final {
             return TYPE;
         }
 
         uint64_t interfaceNameHash;
-        static constexpr uint64_t TYPE = typeNameHash<RemoveTrackerEvent>();
+        static constexpr NameHashType TYPE = typeNameHash<RemoveTrackerEvent>();
         static constexpr std::string_view NAME = typeName<RemoveTrackerEvent>();
     };
 
@@ -229,13 +229,13 @@ namespace Ichor {
         [[nodiscard]] std::string_view get_name() const noexcept final {
             return NAME;
         }
-        [[nodiscard]] uint64_t get_type() const noexcept final {
+        [[nodiscard]] NameHashType get_type() const noexcept final {
             return TYPE;
         }
 
         uint64_t errorType;
         std::string error;
-        static constexpr uint64_t TYPE = typeNameHash<UnrecoverableErrorEvent>();
+        static constexpr NameHashType TYPE = typeNameHash<UnrecoverableErrorEvent>();
         static constexpr std::string_view NAME = typeName<UnrecoverableErrorEvent>();
     };
 
@@ -246,13 +246,13 @@ namespace Ichor {
         [[nodiscard]] std::string_view get_name() const noexcept final {
             return NAME;
         }
-        [[nodiscard]] uint64_t get_type() const noexcept final {
+        [[nodiscard]] NameHashType get_type() const noexcept final {
             return TYPE;
         }
 
         uint64_t errorType;
         std::string error;
-        static constexpr uint64_t TYPE = typeNameHash<RecoverableErrorEvent>();
+        static constexpr NameHashType TYPE = typeNameHash<RecoverableErrorEvent>();
         static constexpr std::string_view NAME = typeName<RecoverableErrorEvent>();
     };
 
@@ -263,11 +263,11 @@ namespace Ichor {
         [[nodiscard]] std::string_view get_name() const noexcept final {
             return NAME;
         }
-        [[nodiscard]] uint64_t get_type() const noexcept final {
+        [[nodiscard]] NameHashType get_type() const noexcept final {
             return TYPE;
         }
 
-        static constexpr uint64_t TYPE = typeNameHash<ContinueCoroutineBroadcastEvent>();
+        static constexpr NameHashType TYPE = typeNameHash<ContinueCoroutineBroadcastEvent>();
         static constexpr std::string_view NAME = typeName<ContinueCoroutineBroadcastEvent>();
     };
 }

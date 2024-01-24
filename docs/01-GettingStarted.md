@@ -125,7 +125,7 @@ Starting a dependency manager is quite easy. Instantiate it, tell it which servi
 #include <ichor/event_queues/PriorityQueue.h>
 
 int main() {
-    auto queue = std::make_unique<PriorityQueue>(); // use a priority queue based on Multimap
+    auto queue = std::make_unique<PriorityQueue>(); // use a priority queue based on std::priority_queue
     auto &dm = queue->createManager(); // create the dependency manager
     dm.start(CaptureSigInt);
     
@@ -529,12 +529,12 @@ struct MyEvent final : public Event {
     [[nodiscard]] std::string_view get_name() const noexcept final {
         return NAME;
     }
-    [[nodiscard]] uint64_t get_type() const noexcept final {
+    [[nodiscard]] NameHashType get_type() const noexcept final {
         return TYPE;
     }
 
     uint64_t someData;
-    static constexpr uint64_t TYPE = typeNameHash<MyEvent>();
+    static constexpr NameHashType TYPE = typeNameHash<MyEvent>();
     static constexpr std::string_view NAME = typeName<MyEvent>();
 };
 

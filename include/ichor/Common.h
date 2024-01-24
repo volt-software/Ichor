@@ -127,7 +127,7 @@ namespace Ichor {
             class Allocator = std::allocator<T>>
     using unordered_set = ankerl::unordered_dense::set<T, Hash, Eq, Allocator>;
 
-    using Properties = unordered_map<std::string, Ichor::any, string_hash>;
+    using Properties = unordered_map<std::string, Ichor::any, string_hash, std::equal_to<>>;
 
     inline constexpr bool PreventOthersHandling = false;
     inline constexpr bool AllowOthersHandling = true;

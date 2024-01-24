@@ -31,13 +31,21 @@ public:
             auto deps = dm->getDependencyRequestsForService(svc->getServiceId());
             ICHOR_LOG_INFO(_logger, "\tDependencies:");
             for(auto &dep : deps) {
-                ICHOR_LOG_INFO(_logger, "\t\tDependency {} required {} satisfied {}", dep.interfaceName, dep.flags, dep.satisfied);
+                ICHOR_LOG_INFO(_logger, "\t\tDependency {} flags {} satisfied {}", dep.interfaceName, dep.flags, dep.satisfied);
             }
+
             auto dependants = dm->getDependentsForService(svc->getServiceId());
             ICHOR_LOG_INFO(_logger, "\tUsed by:");
             for(auto &dep : dependants) {
                 ICHOR_LOG_INFO(_logger, "\t\tDependant {}:{}", dep->getServiceId(), dep->getServiceName());
             }
+
+            auto trackers = dm->getTrackersForService(svc->getServiceId());
+            ICHOR_LOG_INFO(_logger, "\tTrackers:");
+            for(auto &tracker : trackers) {
+                ICHOR_LOG_INFO(_logger, "\t\tTracker for interface {} hash {}", tracker.interfaceName, tracker.interfaceNameHash);
+            }
+
             ICHOR_LOG_INFO(_logger, "");
 
         }

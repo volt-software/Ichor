@@ -39,7 +39,7 @@ namespace Ichor {
     template <typename COMPARE = PriorityQueueCompare>
     class TemplatePriorityQueue final : public IEventQueue {
     public:
-        /// Construct a multimap based queue, supporting priorities
+        /// Construct a std::priority_queue based queue, supporting priorities
         /// \param spinlock Spinlock 10ms before going to sleep, improves latency in high workload cases at the expense of CPU usage
         TemplatePriorityQueue();
         explicit TemplatePriorityQueue(bool spinlock);

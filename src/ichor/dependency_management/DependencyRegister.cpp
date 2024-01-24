@@ -55,6 +55,26 @@ namespace Ichor {
     }
 
     [[nodiscard]]
+    auto DependencyRegister::find(NameHashType hash, bool satisfied) const noexcept -> typename decltype(_registrations)::const_iterator  {
+        INTERNAL_DEBUG("const find() size {}", size());
+        return std::find_if(begin(), end(), [hash, satisfied](PairType const& node) noexcept {
+            auto const &dep = std::get<Dependency>(node.second);
+            INTERNAL_DEBUG("const find() {}:{}, {}:{}", dep.interfaceNameHash, hash, dep.satisfied, satisfied);
+            return dep.interfaceNameHash == hash && ((dep.flags & DependencyFlags::ALLOW_MULTIPLE) == DependencyFlags::ALLOW_MULTIPLE || (satisfied && dep.satisfied > 0) || (!satisfied && dep.satisfied == 0));
+        });
+    }
+
+    [[nodiscard]]
+    auto DependencyRegister::find(NameHashType hash, bool satisfied) noexcept -> typename decltype(_registrations)::iterator  {
+        INTERNAL_DEBUG("find() size {}", size());
+        return std::find_if(begin(), end(), [hash, satisfied](PairType const& node) noexcept {
+            auto const &dep = std::get<Dependency>(node.second);
+            INTERNAL_DEBUG("find() {}:{}, {}:{}", dep.interfaceNameHash, hash, dep.satisfied, satisfied);
+            return dep.interfaceNameHash == hash && ((dep.flags & DependencyFlags::ALLOW_MULTIPLE) == DependencyFlags::ALLOW_MULTIPLE || (satisfied && dep.satisfied > 0) || (!satisfied && dep.satisfied == 0));
+        });
+    }
+
+    [[nodiscard]]
     size_t DependencyRegister::size() const noexcept {
         return _registrations.size();
     }

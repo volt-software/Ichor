@@ -17,17 +17,13 @@
 #include <ichor/Filter.h>
 #include <ichor/dependency_management/DependencyRegistrations.h>
 #include <ichor/dependency_management/ConstructorInjectionService.h>
+#include <ichor/dependency_management/DependencyTrackers.h>
 #include <ichor/event_queues/IEventQueue.h>
 
 using namespace std::chrono_literals;
 
 namespace Ichor {
     class CommunicationChannel;
-
-    struct DependencyTrackerInfo final {
-        explicit DependencyTrackerInfo(std::function<void(Event const &)> _trackFunc) noexcept : trackFunc(std::move(_trackFunc)) {}
-        std::function<void(Event const &)> trackFunc;
-    };
 
     // Moved here from InternalEvents.h to prevent circular includes
     /// Used to prevent modifying the _services container while iterating over it through f.e. DependencyOnline()
@@ -38,12 +34,12 @@ namespace Ichor {
         [[nodiscard]] std::string_view get_name() const noexcept final {
             return NAME;
         }
-        [[nodiscard]] uint64_t get_type() const noexcept final {
+        [[nodiscard]] NameHashType get_type() const noexcept final {
             return TYPE;
         }
 
         std::unique_ptr<ILifecycleManager> mgr;
-        static constexpr uint64_t TYPE = typeNameHash<InsertServiceEvent>();
+        static constexpr NameHashType TYPE = typeNameHash<InsertServiceEvent>();
         static constexpr std::string_view NAME = typeName<InsertServiceEvent>();
     };
 
@@ -200,12 +196,10 @@ namespace Ichor {
             }
 #endif
             auto requestTrackersForType = _dependencyRequestTrackers.find(typeNameHash<Interface>());
-            auto undoRequestTrackersForType = _dependencyUndoRequestTrackers.find(typeNameHash<Interface>());
 
-            DependencyTrackerInfo requestInfo{std::function<void(Event const &)>{[impl](Event const &evt) {
+            DependencyTrackerInfo requestInfo{self->getServiceId(), std::function<void(Event const &)>{[impl](Event const &evt) {
                 impl->handleDependencyRequest(AlwaysNull<Interface*>(), static_cast<DependencyRequestEvent const &>(evt));
-            }}};
-            DependencyTrackerInfo undoRequestInfo{std::function<void(Event const &)>{[impl](Event const &evt) {
+            }}, std::function<void(Event const &)>{[impl](Event const &evt) {
                 impl->handleDependencyUndoRequest(AlwaysNull<Interface*>(), static_cast<DependencyUndoRequestEvent const &>(evt));
             }}};
 
@@ -234,17 +228,9 @@ namespace Ichor {
             if(requestTrackersForType == end(_dependencyRequestTrackers)) {
                 std::vector<DependencyTrackerInfo> v{};
                 v.emplace_back(std::move(requestInfo));
-                _dependencyRequestTrackers.emplace(typeNameHash<Interface>(), std::move(v));
+                _dependencyRequestTrackers.emplace(DependencyTrackerKey{typeName<Interface>(), typeNameHash<Interface>()}, std::move(v));
             } else {
                 requestTrackersForType->second.emplace_back(std::move(requestInfo));
-            }
-
-            if(undoRequestTrackersForType == end(_dependencyUndoRequestTrackers)) {
-                std::vector<DependencyTrackerInfo> v{};
-                v.emplace_back(std::move(undoRequestInfo));
-                _dependencyUndoRequestTrackers.emplace(typeNameHash<Interface>(), std::move(v));
-            } else {
-                undoRequestTrackersForType->second.emplace_back(std::move(undoRequestInfo));
             }
 
             return DependencyTrackerRegistration(self->getServiceId(), typeNameHash<Interface>(), self->getServicePriority());
@@ -489,6 +475,7 @@ namespace Ichor {
         [[nodiscard]] std::vector<Dependency> getDependencyRequestsForService(ServiceIdType svcId) const noexcept;
         [[nodiscard]] std::vector<NeverNull<IService const *>> getDependentsForService(ServiceIdType svcId) const noexcept;
         [[nodiscard]] std::vector<Dependency> getProvidedInterfacesForService(ServiceIdType svcId) const noexcept;
+        [[nodiscard]] std::vector<DependencyTrackerKey> getTrackersForService(ServiceIdType svcId) const noexcept;
 
         /// Returns a list of currently known services and their status.
         /// Do not use in coroutines or other threads.
@@ -702,8 +689,7 @@ namespace Ichor {
         bool finishWaitingService(ServiceIdType serviceId, uint64_t eventType, [[maybe_unused]] std::string_view eventName) noexcept;
 
         unordered_map<ServiceIdType, std::unique_ptr<ILifecycleManager>> _services{}; // key = service id
-        unordered_map<NameHashType, std::vector<DependencyTrackerInfo>> _dependencyRequestTrackers{}; // key = interface name hash
-        unordered_map<NameHashType, std::vector<DependencyTrackerInfo>> _dependencyUndoRequestTrackers{}; // key = interface name hash
+        unordered_map<DependencyTrackerKey, std::vector<DependencyTrackerInfo>, DependencyTrackerKeyHash, std::equal_to<>> _dependencyRequestTrackers{}; // key = interface name hash
         unordered_map<CallbackKey, std::function<void(Event const &)>> _completionCallbacks{}; // key = listening service id + event type
         unordered_map<CallbackKey, std::function<void(Event const &)>> _errorCallbacks{}; // key = listening service id + event type
         unordered_map<uint64_t, std::vector<EventCallbackInfo>> _eventCallbacks{}; // key = event id

@@ -12,12 +12,12 @@ namespace Ichor {
         [[nodiscard]] std::string_view get_name() const noexcept final {
             return NAME;
         }
-        [[nodiscard]] uint64_t get_type() const noexcept final {
+        [[nodiscard]] NameHashType get_type() const noexcept final {
             return TYPE;
         }
 
         std::function<AsyncGenerator<IchorBehaviour>()> fun;
-        static constexpr uint64_t TYPE = typeNameHash<RunFunctionEventAsync>();
+        static constexpr NameHashType TYPE = typeNameHash<RunFunctionEventAsync>();
         static constexpr std::string_view NAME = typeName<RunFunctionEventAsync>();
     };
 
@@ -28,12 +28,12 @@ namespace Ichor {
         [[nodiscard]] std::string_view get_name() const noexcept final {
             return NAME;
         }
-        [[nodiscard]] uint64_t get_type() const noexcept final {
+        [[nodiscard]] NameHashType get_type() const noexcept final {
             return TYPE;
         }
 
         std::function<void()> fun;
-        static constexpr uint64_t TYPE = typeNameHash<RunFunctionEvent>();
+        static constexpr NameHashType TYPE = typeNameHash<RunFunctionEvent>();
         static constexpr std::string_view NAME = typeName<RunFunctionEvent>();
     };
 }

@@ -5,7 +5,7 @@
 #include <ichor/dependency_management/DependencyRegister.h>
 #include <ichor/event_queues/IEventQueue.h>
 
-#if defined(__SANITIZE_ADDRESS__)
+#if defined(__SANITIZE_ADDRESS__) //|| !defined(ICHOR_USE_LIBCPP)
 constexpr uint32_t SERVICES_COUNT = 1'000;
 #else
 constexpr uint32_t SERVICES_COUNT = 10'000;

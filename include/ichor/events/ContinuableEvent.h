@@ -12,12 +12,12 @@ namespace Ichor {
         [[nodiscard]] std::string_view get_name() const noexcept final {
             return NAME;
         }
-        [[nodiscard]] uint64_t get_type() const noexcept final {
+        [[nodiscard]] NameHashType get_type() const noexcept final {
             return TYPE;
         }
 
         uint64_t promiseId;
-        static constexpr uint64_t TYPE = typeNameHash<ContinuableEvent>();
+        static constexpr NameHashType TYPE = typeNameHash<ContinuableEvent>();
         static constexpr std::string_view NAME = typeName<ContinuableEvent>();
     };
 
@@ -28,12 +28,12 @@ namespace Ichor {
         [[nodiscard]] std::string_view get_name() const noexcept final {
             return NAME;
         }
-        [[nodiscard]] uint64_t get_type() const noexcept final {
+        [[nodiscard]] NameHashType get_type() const noexcept final {
             return TYPE;
         }
 
         uint64_t promiseId;
-        static constexpr uint64_t TYPE = typeNameHash<ContinuableStartEvent>();
+        static constexpr NameHashType TYPE = typeNameHash<ContinuableStartEvent>();
         static constexpr std::string_view NAME = typeName<ContinuableStartEvent>();
     };
 
@@ -45,12 +45,12 @@ namespace Ichor {
         [[nodiscard]] std::string_view get_name() const noexcept final {
             return NAME;
         }
-        [[nodiscard]] uint64_t get_type() const noexcept final {
+        [[nodiscard]] NameHashType get_type() const noexcept final {
             return TYPE;
         }
 
         uint64_t originatingOfflineServiceId;
-        static constexpr uint64_t TYPE = typeNameHash<ContinuableDependencyOfflineEvent>();
+        static constexpr NameHashType TYPE = typeNameHash<ContinuableDependencyOfflineEvent>();
         static constexpr std::string_view NAME = typeName<ContinuableDependencyOfflineEvent>();
     };
 }

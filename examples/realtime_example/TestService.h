@@ -24,11 +24,11 @@ struct ExecuteTaskEvent final : public Event {
     [[nodiscard]] std::string_view get_name() const noexcept final {
         return NAME;
     }
-    [[nodiscard]] uint64_t get_type() const noexcept final {
+    [[nodiscard]] NameHashType get_type() const noexcept final {
         return TYPE;
     }
 
-    static constexpr uint64_t TYPE = typeNameHash<ExecuteTaskEvent>();
+    static constexpr NameHashType TYPE = typeNameHash<ExecuteTaskEvent>();
     static constexpr std::string_view NAME = typeName<ExecuteTaskEvent>();
 };
 

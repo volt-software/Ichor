@@ -15,12 +15,12 @@ namespace Ichor {
         [[nodiscard]] std::string_view get_name() const noexcept final {
             return NAME;
         }
-        [[nodiscard]] uint64_t get_type() const noexcept final {
+        [[nodiscard]] NameHashType get_type() const noexcept final {
             return TYPE;
         }
 
         int socket;
-        static constexpr uint64_t TYPE = Ichor::typeNameHash<NewSocketEvent>();
+        static constexpr NameHashType TYPE = Ichor::typeNameHash<NewSocketEvent>();
         static constexpr std::string_view NAME = Ichor::typeName<NewSocketEvent>();
     };
 

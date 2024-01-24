@@ -12,11 +12,11 @@ struct TestEvent final : public Event {
     [[nodiscard]] std::string_view get_name() const noexcept final {
         return NAME;
     }
-    [[nodiscard]] uint64_t get_type() const noexcept final {
+    [[nodiscard]] NameHashType get_type() const noexcept final {
         return TYPE;
     }
 
-    static constexpr uint64_t TYPE = typeNameHash<TestEvent>();
+    static constexpr NameHashType TYPE = typeNameHash<TestEvent>();
     static constexpr std::string_view NAME = typeName<TestEvent>();
 };
 
@@ -28,10 +28,10 @@ struct TestEvent2 final : public Event {
     [[nodiscard]] std::string_view get_name() const noexcept final {
         return NAME;
     }
-    [[nodiscard]] uint64_t get_type() const noexcept final {
+    [[nodiscard]] NameHashType get_type() const noexcept final {
         return TYPE;
     }
 
-    static constexpr uint64_t TYPE = typeNameHash<TestEvent>();
+    static constexpr NameHashType TYPE = typeNameHash<TestEvent>();
     static constexpr std::string_view NAME = typeName<TestEvent>();
 };

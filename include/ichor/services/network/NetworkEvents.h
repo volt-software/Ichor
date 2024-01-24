@@ -12,11 +12,11 @@ namespace Ichor {
         [[nodiscard]] std::string_view get_name() const noexcept final {
             return NAME;
         }
-        [[nodiscard]] uint64_t get_type() const noexcept final {
+        [[nodiscard]] NameHashType get_type() const noexcept final {
             return TYPE;
         }
 
-        static constexpr uint64_t TYPE = typeNameHash<NetworkDataEvent>();
+        static constexpr NameHashType TYPE = typeNameHash<NetworkDataEvent>();
         static constexpr std::string_view NAME = typeName<NetworkDataEvent>();
 
         std::vector<uint8_t>& getData() const {
@@ -48,11 +48,11 @@ namespace Ichor {
         [[nodiscard]] std::string_view get_name() const noexcept final {
             return NAME;
         }
-        [[nodiscard]] uint64_t get_type() const noexcept final {
+        [[nodiscard]] NameHashType get_type() const noexcept final {
             return TYPE;
         }
 
-        static constexpr uint64_t TYPE = typeNameHash<FailedSendMessageEvent>();
+        static constexpr NameHashType TYPE = typeNameHash<FailedSendMessageEvent>();
         static constexpr std::string_view NAME = typeName<FailedSendMessageEvent>();
 
         mutable std::vector<uint8_t> data;

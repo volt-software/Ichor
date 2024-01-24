@@ -268,14 +268,14 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &uniqueEvt) {
                 auto *depUndoReqEvt = static_cast<DependencyUndoRequestEvent *>(evt);
                 INTERNAL_DEBUG("DependencyUndoRequestEvent {} {} {}", evt->id, evt->priority, evt->originatingService);
 
-                auto trackers = _dependencyUndoRequestTrackers.find(depUndoReqEvt->dependency.interfaceNameHash);
-                if (trackers == end(_dependencyUndoRequestTrackers)) {
+                auto trackers = _dependencyRequestTrackers.find(depUndoReqEvt->dependency.interfaceNameHash);
+                if (trackers == end(_dependencyRequestTrackers)) {
                     handleEventCompletion(*depUndoReqEvt);
                     break;
                 }
 
                 for (DependencyTrackerInfo const &info : trackers->second) {
-                    info.trackFunc(*depUndoReqEvt);
+                    info.untrackFunc(*depUndoReqEvt);
                 }
                 handleEventCompletion(*depUndoReqEvt);
             }
@@ -641,7 +641,6 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &uniqueEvt) {
                 auto *removeTrackerEvt = static_cast<RemoveTrackerEvent *>(evt);
 
                 _dependencyRequestTrackers.erase(removeTrackerEvt->interfaceNameHash);
-                _dependencyUndoRequestTrackers.erase(removeTrackerEvt->interfaceNameHash);
             }
                 break;
             case ContinuableEvent::TYPE: {
@@ -1238,6 +1237,27 @@ std::vector<Ichor::Dependency> Ichor::DependencyManager::getProvidedInterfacesFo
     }
 
     return svc->second->getInterfaces();
+}
+
+std::vector<Ichor::DependencyTrackerKey> Ichor::DependencyManager::getTrackersForService(ServiceIdType svcId) const noexcept {
+    if constexpr (DO_INTERNAL_DEBUG || DO_HARDENING) {
+        if (this != Detail::_local_dm) [[unlikely]] { // are we on the right thread?
+            std::terminate();
+        }
+    }
+
+    std::vector<Ichor::DependencyTrackerKey> trackers{};
+
+    for(auto const &[dtk, trackerList] : _dependencyRequestTrackers) {
+        for(auto const &dti : trackerList) {
+            if(dti.svcId == svcId) {
+                trackers.emplace_back(dtk);
+                break;
+            }
+        }
+    }
+
+    return trackers;
 }
 
 Ichor::unordered_map<Ichor::ServiceIdType, Ichor::NeverNull<Ichor::IService const *>> Ichor::DependencyManager::getAllServices() const noexcept {
