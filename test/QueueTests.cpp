@@ -52,6 +52,13 @@ TEST_CASE("QueueTests") {
         REQUIRE(queue->shouldQuit());
     }
 
+    SECTION("Delete of uninitialized queues") {
+        auto f = []() {
+            std::array<PriorityQueue, 8> queues{};
+        };
+        REQUIRE_NOTHROW(f());
+    }
+
 #ifdef ICHOR_USE_SDEVENT
     SECTION("SdeventQueue") {
         auto queue = std::make_unique<SdeventQueue>();

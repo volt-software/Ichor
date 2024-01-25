@@ -18,7 +18,9 @@ namespace Ichor {
 
     template <typename COMPARE>
     TemplatePriorityQueue<COMPARE>::~TemplatePriorityQueue() {
-        stopDm();
+        if(_dm) {
+            stopDm();
+        }
 
         if(Detail::registeredSignalHandler) {
             if (::signal(SIGINT, SIG_DFL) == SIG_ERR) {

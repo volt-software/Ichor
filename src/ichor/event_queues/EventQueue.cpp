@@ -28,6 +28,10 @@ namespace Ichor {
     }
 
     void IEventQueue::startDm() {
+        if(!_dm) [[unlikely]] {
+            throw std::runtime_error("Please create a manager first!");
+        }
+
         _dm->start();
     }
 
@@ -36,6 +40,10 @@ namespace Ichor {
     }
 
     void IEventQueue::stopDm() {
+        if(!_dm) [[unlikely]] {
+            throw std::runtime_error("Please create a manager first!");
+        }
+
         _dm->stop();
     }
 
