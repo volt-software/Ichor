@@ -10,7 +10,9 @@ RUN wget https://boostorg.jfrog.io/artifactory/main/release/1.81.0/source/boost_
 RUN wget https://github.com/redis/hiredis/archive/refs/tags/v1.2.0.tar.gz
 RUN wget https://www.openssl.org/source/openssl-3.0.11.tar.gz
 
-ENV LDFLAGS="-static-libgcc -static-libstdc++ -static"
+ENV CFLAGS="-O2 -static -fstack-protector-strong -fcf-protection -fstack-clash-protection -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=3"
+ENV CXXFLAGS="-O2 -std=c++20 -static -fstack-protector-strong -fcf-protection -fstack-clash-protection -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=3 -D_GLIBCXX_ASSERTIONS -D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_FAST"
+ENV LDFLAGS="-static-libgcc -static-libstdc++ -static -Wl,-z,nodlopen -Wl,-z,noexecstack -Wl,-z,relro -Wl,-z,now"
 #Build openssl statically, alpine (and probably most distros) only provide shared libraries. Might be a security thing?
 RUN tar xf openssl-3.0.11.tar.gz
 WORKDIR /opt/openssl-3.0.11
@@ -26,8 +28,8 @@ RUN tar xf boost_1_81_0.tar.bz2
 WORKDIR /opt/boost_1_81_0
 
 RUN ./bootstrap.sh --prefix=/usr
-RUN ./b2 variant=release link=static threading=multi cxxflags="-O2 -std=c++17 -static -fstack-protector-strong -fcf-protection -fstack-clash-protection" linkflags="-static-libgcc -static-libstdc++ -static"
-RUN ./b2 variant=release link=static threading=multi cxxflags="-O2 -std=c++17 -static -fstack-protector-strong -fcf-protection -fstack-clash-protection" linkflags="-static-libgcc -static-libstdc++ -static" install
+RUN ./b2 variant=release link=static threading=multi cxxflags="-O2 -std=c++20 -static -fstack-protector-strong -fcf-protection -fstack-clash-protection -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=3 -D_GLIBCXX_ASSERTIONS -D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_FAST" linkflags="-static-libgcc -static-libstdc++ -static -Wl,-z,nodlopen -Wl,-z,noexecstack -Wl,-z,relro -Wl,-z,now"
+RUN ./b2 variant=release link=static threading=multi cxxflags="-O2 -std=c++20 -static -fstack-protector-strong -fcf-protection -fstack-clash-protection -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=3 -D_GLIBCXX_ASSERTIONS -D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_FAST" linkflags="-static-libgcc -static-libstdc++ -static -Wl,-z,nodlopen -Wl,-z,noexecstack -Wl,-z,relro -Wl,-z,now" install
 
 WORKDIR /opt
 
@@ -41,6 +43,10 @@ RUN make -j && make install
 RUN mkdir -p /opt/ichor/build
 
 WORKDIR /opt/ichor/build
+
+RUN unset CFLAGS
+RUN unset CXXFLAGS
+RUN unset LDFLAGS
 
 ENTRYPOINT ["/bin/sh", "-c"]
 

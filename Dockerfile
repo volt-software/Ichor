@@ -13,14 +13,17 @@ WORKDIR /opt
 RUN wget https://boostorg.jfrog.io/artifactory/main/release/1.83.0/source/boost_1_83_0.tar.bz2
 RUN wget https://github.com/redis/hiredis/archive/refs/tags/v1.2.0.tar.gz
 
+ENV CFLAGS="-O2 -fstack-protector-strong -fcf-protection -fstack-clash-protection -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=3"
+ENV CXXFLAGS="-O2 -std=c++20 -fstack-protector-strong -fcf-protection -fstack-clash-protection -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=3 -D_GLIBCXX_ASSERTIONS -D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_FAST"
+ENV LDFLAGS="-Wl,-z,nodlopen -Wl,-z,noexecstack -Wl,-z,relro -Wl,-z,now"
 #Build a new enough boost, apt only contains 1.74 which is too old.
 RUN tar xf boost_1_83_0.tar.bz2
 
 WORKDIR /opt/boost_1_83_0
 
 RUN ./bootstrap.sh --prefix=/usr
-RUN ./b2 variant=release link=static threading=multi
-RUN ./b2 variant=release link=static threading=multi install
+RUN ./b2 variant=release link=static threading=multi cxxflags="-O2 -std=c++20 -fstack-protector-strong -fcf-protection -fstack-clash-protection -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=3 -D_GLIBCXX_ASSERTIONS -D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_FAST" linkflags="-Wl,-z,nodlopen -Wl,-z,noexecstack -Wl,-z,relro -Wl,-z,now"
+RUN ./b2 variant=release link=static threading=multi cxxflags="-O2 -std=c++20 -fstack-protector-strong -fcf-protection -fstack-clash-protection -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=3 -D_GLIBCXX_ASSERTIONS -D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_FAST" linkflags="-Wl,-z,nodlopen -Wl,-z,noexecstack -Wl,-z,relro -Wl,-z,now" install
 
 WORKDIR /opt
 
@@ -35,6 +38,10 @@ RUN ninja && ninja install
 RUN mkdir -p /opt/ichor/build
 
 WORKDIR /opt/ichor/build
+
+RUN unset CFLAGS
+RUN unset CXXFLAGS
+RUN unset LDFLAGS
 
 ENTRYPOINT ["/bin/bash", "-c"]
 

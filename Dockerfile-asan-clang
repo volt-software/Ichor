@@ -44,6 +44,7 @@ WORKDIR /opt/ichor/build
 
 RUN unset CFLAGS
 RUN unset CXXFLAGS
+RUN unset LDFLAGS
 
 ENTRYPOINT ["/bin/bash", "-c"]
 
