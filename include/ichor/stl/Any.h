@@ -30,7 +30,7 @@ namespace Ichor {
     constexpr std::size_t bufferTypeSize = 16;
     using bufferType = std::array<std::byte, bufferTypeSize>;
     using opFnPtr = void*(*)(any_op, bufferType &, void*) noexcept;
-    using formatValueFnPt = std::string(*)(void*) noexcept;
+    using formatValueFnPtr = std::string(*)(void*) noexcept;
 
     /// Type-safe container for single values for any copy constructible type. Differs from std::any by not requiring RTTI for any operation, as well as supplying things like size, type_name and to_string() functions.
     /// By default, requires the type to have an existing fmt::formatter. Use Ichor::make_unformattable_any if it is not feasible to implement one.
@@ -239,7 +239,7 @@ namespace Ichor {
         void* _ptr{};
         uint64_t _typeHash{};
         opFnPtr _opFn{};
-        formatValueFnPt _formatFn{};
+        formatValueFnPtr _formatFn{};
         std::string_view _typeName{};
         alignas(bufferTypeSize) bufferType _buffer;
     };
