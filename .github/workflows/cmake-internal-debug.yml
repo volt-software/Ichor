@@ -20,15 +20,14 @@ jobs:
       with:
         submodules: recursive
 
-    - name: "Configure CMake (spdlog:${{matrix.spdlog}}, asan)"
-      if: ${{matrix.sanitizer == 'asan'}}
+    - name: "Configure CMake"
       # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
       # See https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html?highlight=cmake_build_type
       run: CXX=clang++ cmake -GNinja -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=Debug -DICHOR_USE_BOOST_BEAST=ON -DICHOR_USE_SDEVENT=ON -DICHOR_USE_MOLD=OFF -DICHOR_ENABLE_INTERNAL_DEBUGGING=ON -DICHOR_ENABLE_INTERNAL_COROUTINE_DEBUGGING=ON -DICHOR_ENABLE_INTERNAL_IO_DEBUGGING=ON -DICHOR_ENABLE_INTERNAL_STL_DEBUGGING=ON
 
     - name: Build
       # Build your program with the given configuration
-      run: cmake --build ${{github.workspace}}/build --config ${{matrix.opts}}
+      run: cmake --build ${{github.workspace}}/build --config Debug
 
     - name: Test
       working-directory: ${{github.workspace}}/build
