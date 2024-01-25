@@ -1,7 +1,7 @@
 #pragma once
 
 namespace Ichor::Detail {
-    extern unordered_set<uint64_t> emptyDependencies;
+    extern thread_local unordered_set<uint64_t> emptyDependencies;
 
     /// This lifecycle manager is created when the underlying service requests 0 dependencies
     /// It contains optimizations for dealing with dependencies.

@@ -20,7 +20,7 @@ std::atomic<uint64_t> Ichor::DependencyManager::_managerIdCounter = 0;
 #ifdef ICHOR_ENABLE_INTERNAL_STL_DEBUGGING
 std::atomic<uint64_t> Ichor::_rfpCounter = 0;
 #endif
-Ichor::unordered_set<uint64_t> Ichor::Detail::emptyDependencies{};
+thread_local Ichor::unordered_set<uint64_t> Ichor::Detail::emptyDependencies{};
 
 thread_local Ichor::DependencyManager *Ichor::Detail::_local_dm = nullptr;
 
@@ -495,7 +495,7 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &uniqueEvt) {
                     for (auto serviceId : dependencies) {
                         auto depIt = _services.find(serviceId);
 
-                        if(depIt == _services.end()) {
+                        if (depIt == _services.end()) {
                             continue;
                         }
 
