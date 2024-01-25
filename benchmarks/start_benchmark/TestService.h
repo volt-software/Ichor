@@ -4,8 +4,9 @@
 #include <ichor/dependency_management/AdvancedService.h>
 #include <ichor/dependency_management/DependencyRegister.h>
 #include <ichor/event_queues/IEventQueue.h>
-
-#if defined(__SANITIZE_ADDRESS__) //|| !defined(ICHOR_USE_LIBCPP)
+#if defined(ICHOR_ENABLE_INTERNAL_DEBUGGING)
+constexpr uint32_t SERVICES_COUNT = 10;
+#elif defined(__SANITIZE_ADDRESS__)
 constexpr uint32_t SERVICES_COUNT = 1'000;
 #else
 constexpr uint32_t SERVICES_COUNT = 10'000;

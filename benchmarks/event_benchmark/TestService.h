@@ -5,7 +5,9 @@
 #include <ichor/dependency_management/DependencyRegister.h>
 #include <ichor/event_queues/IEventQueue.h>
 
-#if defined(__SANITIZE_ADDRESS__)
+#if defined(ICHOR_ENABLE_INTERNAL_DEBUGGING)
+constexpr uint32_t EVENT_COUNT = 10;
+#elif defined(__SANITIZE_ADDRESS__)
 constexpr uint32_t EVENT_COUNT = 500'000;
 #else
 constexpr uint32_t EVENT_COUNT = 5'000'000;

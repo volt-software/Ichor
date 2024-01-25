@@ -85,7 +85,12 @@ private:
 #endif
 
 #define FMT_INLINE_BUFFER_SIZE 1024
+
+#if defined(__SANITIZE_ADDRESS__) || defined(ICHOR_ENABLE_INTERNAL_DEBUGGING)
+const uint64_t ITERATION_COUNT = 5'000;
+#else
 const uint64_t ITERATION_COUNT = 500'000;
+#endif
 
 template <StringLiteral REGEX, int EXPECTED_MATCHES>
 void run_regex_bench(char *argv) {
