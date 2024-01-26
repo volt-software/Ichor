@@ -158,7 +158,7 @@ Ichor::Task<tl::expected<void, Ichor::FileIOError>> Ichor::SharedOverThreadsAsyn
         }
 #else
         struct stat stat;
-        off64_t len, ret;
+        off_t len, ret;
         int fd_in = open(from.c_str(), O_RDONLY | O_CLOEXEC);
         if (fd_in == -1) {
             INTERNAL_IO_DEBUG("open from errno {}", errno);

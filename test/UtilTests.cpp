@@ -28,7 +28,7 @@ TEST_CASE("Util Tests") {
         auto result = ctre::match<"\\/some\\/http\\/(\\d{1,2})\\/(\\d{1,2})\\/(\\d{1,2})\\/test">(input);
         REQUIRE(result);
         constexpr_for<(size_t)0, result.count(), (size_t)1>([&result](auto i) {
-            fmt::print("ctre match {}\n", result.get<i>());
+            fmt::print("ctre match {}\n", result.get<i>().to_view());
             if constexpr (i == 1) {
                 REQUIRE(result.get<i>() == "10");
             }

@@ -303,7 +303,8 @@ void Ichor::HttpHostService::read(tcp::socket socket, net::yield_context yield) 
             continue;
         }
 
-        ICHOR_LOG_TRACE_ATOMIC(_logger, "New request for {} {}", (int)req.method(), req.target());
+        auto target = std::string{req.target()};
+        ICHOR_LOG_TRACE_ATOMIC(_logger, "New request for {} {}", (int)req.method(), target);
 
         unordered_map<std::string, std::string> headers{};
         headers.reserve(static_cast<unsigned long>(std::distance(std::begin(req), std::end(req))));
@@ -314,7 +315,7 @@ void Ichor::HttpHostService::read(tcp::socket socket, net::yield_context yield) 
         if (!req.body().empty() && *req.body().rbegin() != 0) {
             req.body().push_back(0);
         }
-        HttpRequest httpReq{ std::move(req.body()), static_cast<HttpMethod>(req.method()), std::string{req.target()}, {}, addr, std::move(headers) };
+        HttpRequest httpReq{ std::move(req.body()), static_cast<HttpMethod>(req.method()), std::move(target), {}, addr, std::move(headers) };
         // Compiler bug prevents using named captures for now: https://www.reddit.com/r/cpp_questions/comments/17lc55f/coroutine_msvc_compiler_bug/
 #if (defined(WIN32) || defined(_WIN32) || defined(__WIN32)) && !defined(__CYGWIN__)
         auto version = req.version();

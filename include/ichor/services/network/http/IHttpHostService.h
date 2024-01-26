@@ -77,11 +77,11 @@ namespace Ichor {
             _params.reserve(result.count() - 1);
             constexpr_for<(size_t)1, result.count(), (size_t)1>([this, &result](auto i) {
                 if(!result.template get<i>()) {
-                    ICHOR_REGEX_DEBUG("not matched {}\n", i);
+                    ICHOR_REGEX_DEBUG("not matched {}\n", (size_t)i);
                     return;
                 }
 
-                ICHOR_REGEX_DEBUG("param {} {}\n", i, result.template get<i>());
+                ICHOR_REGEX_DEBUG("param {} {}\n", (size_t)i, result.template get<i>().to_view());
                 _params.emplace_back(result.template get<i>());
             });
 
