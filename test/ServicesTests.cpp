@@ -410,7 +410,12 @@ TEST_CASE("ServicesTests") {
             dm.getEventQueue().pushPrioritisedEvent<RemoveServiceEvent>(0, INTERNAL_EVENT_PRIORITY + 11, svcId);
         });
 
+#ifdef ICHOR_MUSL
+        std::this_thread::sleep_for(50ms);
+        dm.runForOrQueueEmpty(1'000ms);
+#else
         dm.runForOrQueueEmpty();
+#endif
 
         queue->pushEvent<RunFunctionEvent>(0, [&]() {
             REQUIRE(dm.getServiceCount() == 3);
