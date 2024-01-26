@@ -132,13 +132,7 @@ namespace Ichor {
                         }
                         return nullptr;
                     } else if(op == any_op::MOVE) {
-                        if constexpr (std::is_nothrow_move_constructible_v<T>) {
-                            return new(buffer.data()) T(std::move(*reinterpret_cast<T *>(value)));
-                        } else {
-                            std::terminate();
-                        }
-                    } else {
-                        std::terminate();
+                        return new(buffer.data()) T(std::move(*reinterpret_cast<T *>(value)));
                     }
                 } else {
                     if(op == any_op::CLONE) {
@@ -149,13 +143,10 @@ namespace Ichor {
                     } else if(op == any_op::MOVE) {
                         if constexpr (std::is_nothrow_move_constructible_v<T>) {
                             return new T(std::move(*reinterpret_cast<T *>(value)));
-                        } else {
-                            std::terminate();
                         }
-                    } else {
-                        std::terminate();
                     }
                 }
+                std::terminate();
             };
             if constexpr (FORMATTABLE) {
                 _formatFn = [](void *value) noexcept {
