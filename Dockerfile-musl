@@ -1,4 +1,4 @@
-FROM alpine:3.17
+FROM alpine:3.19
 
 RUN apk update
 RUN apk add gcc g++ build-base cmake git wget make nano sed linux-headers perl
