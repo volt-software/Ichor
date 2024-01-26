@@ -12,7 +12,7 @@
 	branch = 7.1.2
 [submodule "external/mimalloc"]
 	path = external/mimalloc
-	url = https://github.com/microsoft/mimalloc.git
+	url = https://github.com/volt-software/mimalloc-static.git
 [submodule "external/glaze"]
 	path = external/glaze
 	url = https://github.com/stephenberry/glaze.git

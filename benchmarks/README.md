@@ -14,10 +14,10 @@ Listed numbers are for the multi-threaded runs where contention is likely.
 Raspberry Pi Model 4B, Debian 12 Bookworm, gcc 12.2.
 Listed numbers are for the multi-threaded runs where contention is likely. Note that the benchmarks use 8 threads and the Pi Model 4B only has 4 cores.
 
-| Compile Options |       coroutines       |                   events |                    start |           start & stop | 
-|-----------------|:----------------------:|-------------------------:|-------------------------:|-----------------------:|
-| musl std alloc  | 162,698,371 µs<br/>3MB | 57,358,697 µs<br/>2446MB | 208,312,797 µs<br/>302MB | 397,851,054 µs<br/>3MB |
-| glibc mimalloc  |  9,905,923 µs<br/>6MB  | 13,427,431 µs<br/>1737MB | 172,781,402 µs<br/>290MB |  28,564,714 µs<br/>6MB |
+| Compile Options |      coroutines       |                   events |                    start |          start & stop | 
+|-----------------|:---------------------:|-------------------------:|-------------------------:|----------------------:|
+| musl mimalloc   | 13,033,707 µs<br/>5MB | 16,088,087 µs<br/>2230MB | 173,023,823 µs<br/>308MB | 37,307,513 µs<br/>7MB |
+| glibc mimalloc  | 9,905,923 µs<br/>6MB  | 13,427,431 µs<br/>1737MB | 172,781,402 µs<br/>290MB | 28,564,714 µs<br/>6MB |
 
 The most interesting observation here is that disabling hardening does not bring any performance gains larger than run-to-run variance.
 
@@ -73,20 +73,20 @@ Detailed data 7950X:
 ../clang_libcpp_mimalloc/ichor_start_stop_benchmark multi threaded ran for 1,784,807 µs with 5,767,168 peak memory usage 4,482,277 start & stop /s
 ```
 
-Detailed data Raspberry Pi 4B w/ glibc:
-```text
-/home/oipo/musl-bin/ichor_coroutine_benchmark single threaded ran for 6947733 µs with 2527232 peak memory usage 719659 coroutines/s
-/home/oipo/musl-bin/ichor_coroutine_benchmark multi threaded ran for 162698371 µs with 2527232 peak memory usage 245853 coroutines/s
-/home/oipo/musl-bin/ichor_event_benchmark single threaded ran for 7234352 µs with 308228096 peak memory usage 691146 events/s
-/home/oipo/musl-bin/ichor_event_benchmark multi threaded ran for 57358697 µs with 2446192640 peak memory usage 697365 events/s
-/home/oipo/musl-bin/ichor_serializer_benchmark single threaded glaze ran for 2437754 µs with 2527232 peak memory usage 63 MB/s
-/home/oipo/musl-bin/ichor_serializer_benchmark multi threaded glaze ran for 45431598 µs with 2527232 peak memory usage 27 MB/s
-/home/oipo/musl-bin/ichor_start_benchmark single threaded advanced injection ran for 33775831 µs with 32985088 peak memory usage
-/home/oipo/musl-bin/ichor_start_benchmark multi threaded advanced injection ran for 245549171 µs with 249716736 peak memory usage
-/home/oipo/musl-bin/ichor_start_benchmark single threaded constructor injection ran for 34490983 µs with 39739392 peak memory usage
-/home/oipo/musl-bin/ichor_start_benchmark multi threaded constructor injection ran for 208312797 µs with 302424064 peak memory usage
-/home/oipo/musl-bin/ichor_start_stop_benchmark single threaded ran for 17518639 µs with 2527232 peak memory usage 57082 start & stop /s
-/home/oipo/musl-bin/ichor_start_stop_benchmark multi threaded ran for 397851054 µs with 2527232 peak memory usage 20108 start & stop /s
+Detailed data Raspberry Pi 4B w/ mimalloc:
+```text 
+/home/oipo/musl-bin/ichor_coroutine_benchmark single threaded ran for 6174549 µs with 2379776 peak memory usage 809775 coroutines/s
+/home/oipo/musl-bin/ichor_coroutine_benchmark multi threaded ran for 13033707 µs with 4517888 peak memory usage 3068965 coroutines/s
+/home/oipo/musl-bin/ichor_event_benchmark single threaded ran for 6975412 µs with 282796032 peak memory usage 716803 events/s
+/home/oipo/musl-bin/ichor_event_benchmark multi threaded ran for 16088087 µs with 2230222848 peak memory usage 2486311 events/s
+/home/oipo/musl-bin/ichor_serializer_benchmark single threaded glaze ran for 2262301 µs with 2379776 peak memory usage 68 MB/s
+/home/oipo/musl-bin/ichor_serializer_benchmark multi threaded glaze ran for 4411332 µs with 3526656 peak memory usage 281 MB/s
+/home/oipo/musl-bin/ichor_start_benchmark single threaded advanced injection ran for 29877611 µs with 31186944 peak memory usage
+/home/oipo/musl-bin/ichor_start_benchmark multi threaded advanced injection ran for 203874601 µs with 261873664 peak memory usage
+/home/oipo/musl-bin/ichor_start_benchmark single threaded constructor injection ran for 27568047 µs with 36519936 peak memory usage
+/home/oipo/musl-bin/ichor_start_benchmark multi threaded constructor injection ran for 173023823 µs with 308469760 peak memory usage
+/home/oipo/musl-bin/ichor_start_stop_benchmark single threaded ran for 16361657 µs with 2379776 peak memory usage 61118 start & stop /s
+/home/oipo/musl-bin/ichor_start_stop_benchmark multi threaded ran for 37307513 µs with 7036928 peak memory usage 214434 start & stop /s
 /home/oipo/glibc-bin/ichor_coroutine_benchmark single threaded ran for 4,725,725 µs with 2,527,232 peak memory usage 1,058,038 coroutines/s
 /home/oipo/glibc-bin/ichor_coroutine_benchmark multi threaded ran for 9,905,923 µs with 5,570,560 peak memory usage 4,037,988 coroutines/s
 /home/oipo/glibc-bin/ichor_event_benchmark single threaded ran for 6,399,888 µs with 212,250,624 peak memory usage 781,263 events/s
