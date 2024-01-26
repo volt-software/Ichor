@@ -471,10 +471,11 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &uniqueEvt) {
                                 std::terminate();
                             }
                         }
-                        INTERNAL_DEBUG("StopServiceEvent contains {} {} {}", it.get_promise_id(), _scopedGenerators.contains(it.get_promise_id()),
+                        auto prom_id = it.get_promise_id();
+                        INTERNAL_DEBUG("StopServiceEvent contains {} {} {}", prom_id, _scopedGenerators.contains(prom_id),
                                        _scopedGenerators.size() + 1);
-                        _scopedGenerators.emplace(it.get_promise_id(), std::make_unique<AsyncGenerator<StartBehaviour>>(std::move(gen)));
-                        auto scopedIt = _scopedEvents.emplace(it.get_promise_id(), std::move(uniqueEvt));
+                        _scopedGenerators.emplace(prom_id, std::make_unique<AsyncGenerator<StartBehaviour>>(std::move(gen)));
+                        auto scopedIt = _scopedEvents.emplace(prom_id, std::move(uniqueEvt));
                         evt = scopedIt.first->second.get();
                         break;
                     }
@@ -787,7 +788,7 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &uniqueEvt) {
 
                         if(it_ret == StartBehaviour::STOPPED) {
                             if constexpr (DO_INTERNAL_DEBUG) {
-                                auto serviceIt = _services.find(origEvt->originatingService);
+                                [[maybe_unused]] auto serviceIt = _services.find(origEvt->originatingService);
                                 INTERNAL_DEBUG("it_ret stopped {} {}", origEvt->originatingService, serviceIt->second->getServiceState());
                             }
                             // The dependee of originatingOfflineServiceId went offline during the async handling of the original
