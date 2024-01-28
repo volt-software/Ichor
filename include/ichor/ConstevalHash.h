@@ -134,16 +134,16 @@ template <typename T>
 {
 #if defined(__clang__)
     constexpr auto prefix   = std::string_view{"[T = "};
-        constexpr auto suffix   = std::string_view{"]"};
-        constexpr auto function = std::string_view{__PRETTY_FUNCTION__};
+    constexpr auto suffix   = std::string_view{"]"};
+    constexpr auto function = std::string_view{__PRETTY_FUNCTION__};
 #elif defined(__GNUC__)
     constexpr auto prefix   = std::string_view{"with T = "};
     constexpr auto suffix   = std::string_view{"]"};
     constexpr auto function = std::string_view{__PRETTY_FUNCTION__};
 #elif defined(_MSC_VER)
     constexpr auto prefix   = std::string_view{"type_name_array<"};
-        constexpr auto suffix   = std::string_view{">(void)"};
-        constexpr auto function = std::string_view{__FUNCSIG__};
+    constexpr auto suffix   = std::string_view{">(void)"};
+    constexpr auto function = std::string_view{__FUNCSIG__};
 #else
 # error Unsupported compiler
 #endif
@@ -152,8 +152,22 @@ template <typename T>
     constexpr auto end = function.rfind(suffix);
 
     static_assert(start < end);
+    static_assert(start != std::string_view::npos);
+    static_assert(end != std::string_view::npos);
 
+#if defined(_MSC_VER)
+    constexpr auto structFind = function.substr(start, (end - start)).starts_with("struct ");
+    constexpr auto structPos = (structFind == std::string_view::npos || structFind == 0) ? 0Ui64 : 7Ui64;
+    constexpr auto clasFind = function.substr(start, (end - start)).starts_with("class ");
+    constexpr auto clasPos = (clasFind == std::string_view::npos || clasFind == 0) ? 0Ui64 : 6Ui64;
+
+    static_assert(start + structPos + clasPos < end);
+
+    constexpr auto name = function.substr(start + structPos + clasPos, (end - start - structPos - clasPos));
+#else
     constexpr auto name = function.substr(start, (end - start));
+#endif
+
     return ichor_internal_substring_as_array(name, std::make_index_sequence<name.size()>{});
 }
 
