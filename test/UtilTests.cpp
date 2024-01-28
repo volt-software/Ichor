@@ -3,31 +3,34 @@
 #include <ctre/ctre.hpp>
 #include <regex>
 
-using namespace Ichor;
+namespace Ichor {
+    struct SomeClass {
 
+    };
+}
 
 TEST_CASE("Util Tests") {
 
     SECTION("FastAtoiCompare(u) tests") {
-        REQUIRE(FastAtoiCompareu("10") == 10);
-        REQUIRE(FastAtoiCompareu("0") == 0);
-        REQUIRE(FastAtoiCompareu("u10") == 0);
-        REQUIRE(FastAtoiCompareu("10u") == 10);
-        REQUIRE(FastAtoiCompareu(std::to_string(std::numeric_limits<uint64_t>::max()).c_str()) == std::numeric_limits<uint64_t>::max());
-        REQUIRE(FastAtoiCompare("10") == 10);
-        REQUIRE(FastAtoiCompare("0") == 0);
-        REQUIRE(FastAtoiCompare("u10") == 0);
-        REQUIRE(FastAtoiCompare("10u") == 10);
-        REQUIRE(FastAtoiCompare("-10") == -10);
-        REQUIRE(FastAtoiCompare(std::to_string(std::numeric_limits<int64_t>::max()).c_str()) == std::numeric_limits<int64_t>::max());
-        REQUIRE(FastAtoiCompare(std::to_string(std::numeric_limits<int64_t>::min()).c_str()) == std::numeric_limits<int64_t>::min());
+        REQUIRE(Ichor::FastAtoiCompareu("10") == 10);
+        REQUIRE(Ichor::FastAtoiCompareu("0") == 0);
+        REQUIRE(Ichor::FastAtoiCompareu("u10") == 0);
+        REQUIRE(Ichor::FastAtoiCompareu("10u") == 10);
+        REQUIRE(Ichor::FastAtoiCompareu(std::to_string(std::numeric_limits<uint64_t>::max()).c_str()) == std::numeric_limits<uint64_t>::max());
+        REQUIRE(Ichor::FastAtoiCompare("10") == 10);
+        REQUIRE(Ichor::FastAtoiCompare("0") == 0);
+        REQUIRE(Ichor::FastAtoiCompare("u10") == 0);
+        REQUIRE(Ichor::FastAtoiCompare("10u") == 10);
+        REQUIRE(Ichor::FastAtoiCompare("-10") == -10);
+        REQUIRE(Ichor::FastAtoiCompare(std::to_string(std::numeric_limits<int64_t>::max()).c_str()) == std::numeric_limits<int64_t>::max());
+        REQUIRE(Ichor::FastAtoiCompare(std::to_string(std::numeric_limits<int64_t>::min()).c_str()) == std::numeric_limits<int64_t>::min());
     }
 
     SECTION("CTRE tests") {
         std::string_view input = "/some/http/10/11/12/test";
         auto result = ctre::match<"\\/some\\/http\\/(\\d{1,2})\\/(\\d{1,2})\\/(\\d{1,2})\\/test">(input);
         REQUIRE(result);
-        constexpr_for<(size_t)0, result.count(), (size_t)1>([&result](auto i) {
+        Ichor::constexpr_for<(size_t)0, result.count(), (size_t)1>([&result](auto i) {
             fmt::print("ctre match {}\n", result.get<i>().to_view());
             if constexpr (i == 1) {
                 REQUIRE(result.get<i>() == "10");
@@ -50,5 +53,19 @@ TEST_CASE("Util Tests") {
         for(auto &match : matches) {
             fmt::print("std match {}\n", match.str());
         }
+    }
+
+    SECTION("Typename tests") {
+        REQUIRE(Ichor::typeName<int>() == "int");
+        REQUIRE(Ichor::typeName<Ichor::SomeClass>() == "Ichor::SomeClass");
+    }
+
+    SECTION("TypenameHash tests") {
+        constexpr std::string_view intName = "int";
+        constexpr std::string_view someClassName = "Ichor::SomeClass";
+        REQUIRE(Ichor::typeNameHash<int>() == consteval_wyhash(intName.data(), intName.size(), 0));
+        REQUIRE(Ichor::typeNameHash<Ichor::SomeClass>() == consteval_wyhash(someClassName.data(), someClassName.size(), 0));
+        REQUIRE(Ichor::typeNameHash<int>() == 8938001142359040884UL);
+        REQUIRE(Ichor::typeNameHash<Ichor::SomeClass>() == 10344807212141480755UL);
     }
 }
