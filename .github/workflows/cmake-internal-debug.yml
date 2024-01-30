@@ -23,7 +23,7 @@ jobs:
     - name: "Configure CMake"
       # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
       # See https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html?highlight=cmake_build_type
-      run: CC=clang-18 CXX=clang++-18 cmake -GNinja -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=Debug -DICHOR_USE_SANITIZERS=OFF -DICHOR_USE_BOOST_BEAST=ON -DICHOR_USE_SDEVENT=ON -DICHOR_USE_MOLD=OFF -DICHOR_ENABLE_INTERNAL_DEBUGGING=ON -DICHOR_ENABLE_INTERNAL_COROUTINE_DEBUGGING=ON -DICHOR_ENABLE_INTERNAL_IO_DEBUGGING=ON -DICHOR_ENABLE_INTERNAL_STL_DEBUGGING=ON ICHOR_USE_LIBCPP=OFF
+      run: CC=clang-18 CXX=clang++-18 cmake -GNinja -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=Debug -DICHOR_USE_SANITIZERS=OFF -DICHOR_USE_BOOST_BEAST=ON -DICHOR_USE_SDEVENT=ON -DICHOR_USE_MOLD=ON -DICHOR_ENABLE_INTERNAL_DEBUGGING=ON -DICHOR_ENABLE_INTERNAL_COROUTINE_DEBUGGING=ON -DICHOR_ENABLE_INTERNAL_IO_DEBUGGING=ON -DICHOR_ENABLE_INTERNAL_STL_DEBUGGING=ON ICHOR_USE_LIBCPP=OFF
 
     - name: Build
       # Build your program with the given configuration
