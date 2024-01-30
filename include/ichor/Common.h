@@ -154,7 +154,7 @@ namespace Ichor {
 
     /// Code modified from https://stackoverflow.com/a/73078442/1460998
     /// converts a string to an integer with little error checking. Only use if you're very sure that the string is actually a number.
-    static inline int64_t FastAtoiCompare(const char* str) noexcept {
+    static constexpr inline int64_t FastAtoi(const char* str) noexcept {
         int64_t val = 0;
         uint8_t x;
         bool neg{};
@@ -168,7 +168,7 @@ namespace Ichor {
 
     /// Code from https://stackoverflow.com/a/73078442/1460998
     /// converts a string to an unsigned integer with little error checking. Only use if you're very sure that the string is actually a number.
-    static inline uint64_t FastAtoiCompareu(const char* str) noexcept {
+    static constexpr inline uint64_t FastAtoiu(const char* str) noexcept {
         uint64_t val = 0;
         uint8_t  x;
         while ((x = uint8_t(*str++ - '0')) <= 9) val = val * 10 + x;

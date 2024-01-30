@@ -319,13 +319,13 @@ Ichor::Task<tl::expected<Ichor::EtcdReply, Ichor::EtcdError>> Ichor::EtcdV2Servi
         etcd_reply.x_etcd_cluster_id = cluster_id->second;
     }
     if(etcd_index != end(http_reply.headers)) {
-        etcd_reply.x_etcd_index = Ichor::FastAtoiCompareu(etcd_index->second.c_str());
+        etcd_reply.x_etcd_index = Ichor::FastAtoiu(etcd_index->second.c_str());
     }
     if(raft_index != end(http_reply.headers)) {
-        etcd_reply.x_raft_index = Ichor::FastAtoiCompareu(raft_index->second.c_str());
+        etcd_reply.x_raft_index = Ichor::FastAtoiu(raft_index->second.c_str());
     }
     if(raft_term != end(http_reply.headers)) {
-        etcd_reply.x_raft_term = Ichor::FastAtoiCompareu(raft_term->second.c_str());
+        etcd_reply.x_raft_term = Ichor::FastAtoiu(raft_term->second.c_str());
     }
 
     co_return etcd_reply;
