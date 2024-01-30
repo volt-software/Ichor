@@ -162,3 +162,10 @@ for i in ${!ccompilers[@]}; do
   run_examples
   run_benchmarks
 done
+
+rm -rf ./* ../bin/*
+CC=clang-18 CXX=clang++-18 cmake -GNinja -DCMAKE_BUILD_TYPE=Release -DICHOR_USE_SANITIZERS=OFF -DICHOR_USE_MOLD=ON -DICHOR_USE_BOOST_BEAST=ON -DICHOR_USE_HIREDIS=ON .. || exit 1
+ninja || exit 1
+ninja test || exit 1
+run_examples
+run_benchmarks
