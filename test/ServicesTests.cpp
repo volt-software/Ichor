@@ -109,7 +109,7 @@ TEST_CASE("ServicesTests") {
             dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>();
             dm.createServiceManager<UselessService, IUselessService>();
             secondUselessServiceId = dm.createServiceManager<UselessService, IUselessService>()->getServiceId();
-            dm.createServiceManager<DependencyService<DependencyFlags(DependencyFlags::REQUIRED | DependencyFlags::ALLOW_MULTIPLE)>, ICountService>();
+            dm.createServiceManager<DependencyService<DependencyFlags::REQUIRED | DependencyFlags::ALLOW_MULTIPLE>, ICountService>();
             queue->start(CaptureSigInt);
         });
 

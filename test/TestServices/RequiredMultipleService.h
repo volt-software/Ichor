@@ -7,7 +7,7 @@ using namespace Ichor;
 
 struct RequiredMultipleService final : public ICountService, public AdvancedService<RequiredMultipleService> {
     RequiredMultipleService(DependencyRegister &reg, Properties props) : AdvancedService<RequiredMultipleService>(std::move(props)) {
-        reg.registerDependency<IUselessService>(this, DependencyFlags(DependencyFlags::REQUIRED | DependencyFlags::ALLOW_MULTIPLE));
+        reg.registerDependency<IUselessService>(this, DependencyFlags::REQUIRED | DependencyFlags::ALLOW_MULTIPLE);
     }
     ~RequiredMultipleService() final = default;
     Task<tl::expected<void, Ichor::StartError>> start() final {

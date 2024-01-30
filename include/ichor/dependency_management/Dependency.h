@@ -4,11 +4,19 @@
 
 namespace Ichor {
 
-    enum DependencyFlags : uint_fast16_t {
+    enum class DependencyFlags : uint_fast16_t {
         NONE = 0,
         REQUIRED = 1,
         ALLOW_MULTIPLE = 2
     };
+
+    static constexpr inline DependencyFlags operator|(DependencyFlags lhs, DependencyFlags rhs) noexcept {
+        return static_cast<DependencyFlags>(static_cast<uint_fast16_t>(lhs) | static_cast<uint_fast16_t>(rhs));
+    }
+
+    static constexpr inline DependencyFlags operator&(DependencyFlags lhs, DependencyFlags rhs) noexcept {
+        return static_cast<DependencyFlags>(static_cast<uint_fast16_t>(lhs) & static_cast<uint_fast16_t>(rhs));
+    }
 
     struct Dependency {
         Dependency(uint64_t _interfaceNameHash, std::string_view _interfaceName, DependencyFlags _flags, uint64_t _satisfied) noexcept : interfaceNameHash(_interfaceNameHash), interfaceName(_interfaceName), flags(_flags), satisfied(_satisfied) {}

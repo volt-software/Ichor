@@ -118,7 +118,7 @@ The easiest is to specify the `ALLOW_MULTIPLE` flag for the dependency:
 ```c++
 MyService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {
     reg.registerDependency<ISomeService>(this, DependencyFlags::ALLOW_MULTIPLE); // optional dependency
-    reg.registerDependency<ISomeService>(this, DependencyFlags(DependencyFlags::REQUIRED | DependencyFlags::ALLOW_MULTIPLE)); // required dependency
+    reg.registerDependency<ISomeService>(this, DependencyFlags::REQUIRED | DependencyFlags::ALLOW_MULTIPLE); // required dependency
 }
 ```
 

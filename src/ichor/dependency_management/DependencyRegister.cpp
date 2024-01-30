@@ -88,7 +88,7 @@ namespace Ichor {
     bool DependencyRegister::allSatisfied() const noexcept {
         return std::all_of(begin(), end(), [](PairType const &node) noexcept {
             auto const &dep = std::get<Dependency>(node.second);
-            return dep.satisfied > 0 || (dep.flags & DependencyFlags::REQUIRED) == 0;
+            return dep.satisfied > 0 || (dep.flags & DependencyFlags::REQUIRED) == DependencyFlags::NONE;
         });
     }
 }

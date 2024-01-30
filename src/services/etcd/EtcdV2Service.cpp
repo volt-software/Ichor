@@ -198,7 +198,7 @@ struct glz::meta<Ichor::EtcdUsersReply> {
 
 Ichor::EtcdV2Service::EtcdV2Service(DependencyRegister &reg, Properties props) : AdvancedService<EtcdV2Service>(std::move(props)) {
     reg.registerDependency<ILogger>(this, DependencyFlags::NONE, getProperties());
-    reg.registerDependency<IHttpConnectionService>(this, DependencyFlags(DependencyFlags::REQUIRED | DependencyFlags::ALLOW_MULTIPLE), getProperties());
+    reg.registerDependency<IHttpConnectionService>(this, DependencyFlags::REQUIRED | DependencyFlags::ALLOW_MULTIPLE, getProperties());
     reg.registerDependency<IClientFactory>(this, DependencyFlags::REQUIRED);
 }
 
