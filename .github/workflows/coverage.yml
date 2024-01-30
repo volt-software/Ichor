@@ -20,11 +20,8 @@ jobs:
       with:
         submodules: recursive
 
-    - name: "Set Path"
-      run: echo "/opt/gcc-11.3/bin" >> $GITHUB_PATH
-
     - name: "Configure CMake"
-      run: cmake -GNinja -B ${{github.workspace}}/build-coverage -DCMAKE_BUILD_TYPE=Debug -DICHOR_USE_BOOST_BEAST=ON -DICHOR_BUILD_COVERAGE=ON -DICHOR_USE_HIREDIS=ON -DICHOR_USE_SANITIZERS=OFF -DICHOR_BUILD_BENCHMARKS=OFF -DICHOR_USE_LIBCPP=OFF
+      run: CC=clang-18 CXX=clang++-18 cmake -GNinja -B ${{github.workspace}}/build-coverage -DCMAKE_BUILD_TYPE=Debug -DICHOR_USE_BOOST_BEAST=ON -DICHOR_BUILD_COVERAGE=ON -DICHOR_USE_HIREDIS=ON -DICHOR_USE_SANITIZERS=OFF -DICHOR_BUILD_BENCHMARKS=OFF -DICHOR_USE_LIBCPP=ON -DICHOR_USE_MOLD=ON
 
     - name: Build
       run: cmake --build ${{github.workspace}}/build-coverage --config Debug
@@ -35,7 +32,7 @@ jobs:
 
     - name: Examples
       working-directory: ${{github.workspace}}/bin
-      run: ../bin/ichor_etcd_example && ../bin/ichor_http_example && ../bin/ichor_multithreaded_example && ../bin/ichor_optional_dependency_example && ../bin/ichor_serializer_example && ../bin/ichor_tcp_example && ../bin/ichor_timer_example && ../bin/ichor_factory_example && ../bin/ichor_websocket_example && ../bin/ichor_yielding_timer_example && ../bin/ichor_event_statistics_example && ../bin/ichor_introspection_example
+      run: ../bin/ichor_etcd_example && ../bin/ichor_http_example && ../bin/ichor_multithreaded_example && ../bin/ichor_optional_dependency_example && ../bin/ichor_serializer_example && ../bin/ichor_tcp_example && ../bin/ichor_timer_example && ../bin/ichor_factory_example && ../bin/ichor_websocket_example && ../bin/ichor_yielding_timer_example && ../bin/ichor_event_statistics_example && ../bin/ichor_introspection_example && ../bin/ichor_coroutine_benchmark && ../bin/ichor_event_benchmark && ../bin/ichor_serializer_benchmark && ../bin/ichor_start_benchmark && ../bin/ichor_start_stop_benchmark && ../bin/ichor_utils_benchmark -r
 
     - name: coverage
       run: lcov --directory . --capture --output-file coverage.info && lcov --remove coverage.info '/usr/*' '/opt/*' '${{github.workspace}}/external/*' --output-file coverage.info && lcov --list coverage.info && codecov -f coverage.info
