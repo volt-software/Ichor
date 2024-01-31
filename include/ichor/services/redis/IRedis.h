@@ -1,6 +1,7 @@
 #pragma once
 
 #include <ichor/coroutines/Task.h>
+#include <ichor/stl/StringUtils.h>
 #include <string_view>
 #include <tl/optional.h>
 #include <tl/expected.h>
@@ -37,7 +38,11 @@ namespace Ichor {
     };
 
     enum class RedisError : uint_fast16_t {
-        DISCONNECTED
+        UNKNOWN,
+        DISCONNECTED,
+        FUNCTION_NOT_AVAILABLE_IN_SERVER, // probably redis-server version too low
+        TRANSACTION_NOT_STARTED, // probably forgot to execute a multi command
+        QUEUED, // Queued for transaction, use exec() to get the result
     };
 
     class IRedis {
@@ -65,6 +70,11 @@ namespace Ichor {
         /// \param key
         /// \return coroutine with the reply from Redis
         virtual Task<tl::expected<RedisGetReply, RedisError>> get(std::string_view key) = 0;
+
+        /// Get key and delete the key
+        /// \param key
+        /// \return coroutine with the reply from Redis
+        virtual Task<tl::expected<RedisGetReply, RedisError>> getdel(std::string_view key) = 0;
 
         /// Deletes a key in redis
         /// \param keys space-seperated list of keys to delete
@@ -102,12 +112,26 @@ namespace Ichor {
         /// Returns the length of the string
         /// \param key
         /// \return coroutine with the length of the value stored for the key
-//        virtual Task<tl::expected<RedisIntegerReply, RedisError>> strlen(std::string_view key, int64_t decr) = 0;
+        virtual Task<tl::expected<RedisIntegerReply, RedisError>> strlen(std::string_view key) = 0;
 
-// strlen
-// multi
-// exec
-// discard
+        /// Start a transaction
+        /// \return coroutine with a possible error
+        virtual Task<tl::expected<void, RedisError>> multi() = 0;
+
+        /// Execute all commands in a transaction
+        /// \return coroutine with a possible error
+        virtual Task<tl::expected<std::vector<std::variant<RedisGetReply, RedisSetReply, RedisAuthReply, RedisIntegerReply>>, RedisError>> exec() = 0;
+
+        /// Abort a transaction
+        /// \return coroutine with a possible error
+        virtual Task<tl::expected<void, RedisError>> discard() = 0;
+
+        /// Returns information and statistics about the server
+        /// \return coroutine with the length of the value stored for the key
+        virtual Task<tl::expected<std::unordered_map<std::string, std::string>, RedisError>> info() = 0;
+
+        virtual Task<tl::expected<Version, RedisError>> getServerVersion() = 0;
+
 // getrange
 // setrange
 // append (multi?)

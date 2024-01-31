@@ -15,21 +15,6 @@ namespace Ichor {
 
 TEST_CASE("Util Tests") {
 
-    SECTION("FastAtoi(u) tests") {
-        REQUIRE(Ichor::FastAtoiu("10") == 10);
-        REQUIRE(Ichor::FastAtoiu("0") == 0);
-        REQUIRE(Ichor::FastAtoiu("u10") == 0);
-        REQUIRE(Ichor::FastAtoiu("10u") == 10);
-        REQUIRE(Ichor::FastAtoiu(std::to_string(std::numeric_limits<uint64_t>::max()).c_str()) == std::numeric_limits<uint64_t>::max());
-        REQUIRE(Ichor::FastAtoi("10") == 10);
-        REQUIRE(Ichor::FastAtoi("0") == 0);
-        REQUIRE(Ichor::FastAtoi("u10") == 0);
-        REQUIRE(Ichor::FastAtoi("10u") == 10);
-        REQUIRE(Ichor::FastAtoi("-10") == -10);
-        REQUIRE(Ichor::FastAtoi(std::to_string(std::numeric_limits<int64_t>::max()).c_str()) == std::numeric_limits<int64_t>::max());
-        REQUIRE(Ichor::FastAtoi(std::to_string(std::numeric_limits<int64_t>::min()).c_str()) == std::numeric_limits<int64_t>::min());
-    }
-
     SECTION("CTRE tests") {
         std::string_view input = "/some/http/10/11/12/test";
         auto result = ctre::match<"\\/some\\/http\\/(\\d{1,2})\\/(\\d{1,2})\\/(\\d{1,2})\\/test">(input);

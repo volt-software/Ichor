@@ -3,6 +3,7 @@
 #include <ichor/stl/RealtimeReadWriteMutex.h>
 #include <ichor/stl/NeverAlwaysNull.h>
 #include <ichor/stl/ReferenceCountedPointer.h>
+#include <ichor/stl/StringUtils.h>
 #include <memory>
 #include "TestServices/UselessService.h"
 
@@ -361,5 +362,74 @@ TEST_CASE("STL Tests") {
             REQUIRE(*i == 5);
             REQUIRE(*i2 == 7);
         }
+    }
+
+    SECTION("FastAtoi(u) tests") {
+        REQUIRE(Ichor::FastAtoiu("10") == 10);
+        REQUIRE(Ichor::FastAtoiu("0") == 0);
+        REQUIRE(Ichor::FastAtoiu("u10") == 0);
+        REQUIRE(Ichor::FastAtoiu("10u") == 10);
+        REQUIRE(Ichor::FastAtoiu(std::to_string(std::numeric_limits<uint64_t>::max()).c_str()) == std::numeric_limits<uint64_t>::max());
+        REQUIRE(Ichor::FastAtoi("10") == 10);
+        REQUIRE(Ichor::FastAtoi("0") == 0);
+        REQUIRE(Ichor::FastAtoi("u10") == 0);
+        REQUIRE(Ichor::FastAtoi("10u") == 10);
+        REQUIRE(Ichor::FastAtoi("-10") == -10);
+        REQUIRE(Ichor::FastAtoi(std::to_string(std::numeric_limits<int64_t>::max()).c_str()) == std::numeric_limits<int64_t>::max());
+        REQUIRE(Ichor::FastAtoi(std::to_string(std::numeric_limits<int64_t>::min()).c_str()) == std::numeric_limits<int64_t>::min());
+    }
+
+    SECTION("string_view split tests") {
+        std::string_view s{"this\nis\na\nstring"};
+        auto ret = split(s, "\n");
+        REQUIRE(ret.size() == 4);
+        ret = split(s, " ");
+        REQUIRE(ret.size() == 1);
+    }
+
+    SECTION("Version parse tests") {
+        REQUIRE(!parseStringAsVersion("").has_value());
+        REQUIRE(!parseStringAsVersion("0").has_value());
+        REQUIRE(!parseStringAsVersion("0.0").has_value());
+        REQUIRE(!parseStringAsVersion("-1.2.3").has_value());
+        REQUIRE(!parseStringAsVersion("a.b.c").has_value());
+        REQUIRE(!parseStringAsVersion("1.2.3.4").has_value());
+        REQUIRE(!parseStringAsVersion("1.2.3.").has_value());
+
+        auto v = parseStringAsVersion("0.0.0");
+        REQUIRE(v.has_value());
+        REQUIRE((*v).major == 0);
+        REQUIRE((*v).minor == 0);
+        REQUIRE((*v).patch == 0);
+
+        v = parseStringAsVersion("27398.128937618973.123123");
+        REQUIRE(v.has_value());
+        REQUIRE((*v).major == 27398);
+        REQUIRE((*v).minor == 128937618973);
+        REQUIRE((*v).patch == 123123);
+    }
+
+    SECTION("Version compare tests") {
+        Version v1{1, 2, 3};
+        REQUIRE(Version{1, 2, 4} > v1);
+        REQUIRE(Version{1, 3, 3} > v1);
+        REQUIRE(Version{2, 2, 3} > v1);
+        REQUIRE(Version{2, 0, 0} > v1);
+        REQUIRE(Version{1, 3, 0} > v1);
+        REQUIRE(!(Version{1, 2, 3} > v1));
+        REQUIRE(Version{1, 2, 3} >= v1);
+        REQUIRE(!(Version{1, 2, 2} >= v1));
+        REQUIRE(v1 > Version{1, 2, 2});
+        REQUIRE(!(v1 > Version{1, 2, 3}));
+        REQUIRE(v1 >= Version{1, 2, 3});
+        REQUIRE(!(v1 >= Version{1, 2, 4}));
+        REQUIRE(v1 < Version{1, 2, 4});
+        REQUIRE(!(v1 < Version{1, 2, 3}));
+        REQUIRE(v1 <= Version{1, 2, 3});
+        REQUIRE(!(v1 <= Version{1, 2, 2}));
+        REQUIRE(v1 == Version{1, 2, 3});
+        REQUIRE(v1 != Version{2, 2, 3});
+        REQUIRE(v1 != Version{1, 3, 3});
+        REQUIRE(v1 != Version{1, 2, 4});
     }
 }

@@ -14,6 +14,7 @@
 #include <ichor/dependency_management/DependencyRegister.h>
 #include <ichor/events/RunFunctionEvent.h>
 #include <ichor/ScopeGuard.h>
+#include <ichor/stl/StringUtils.h>
 #include <base64/base64.h>
 #include <ichor/glaze.h>
 #include <glaze/util/type_traits.hpp>
