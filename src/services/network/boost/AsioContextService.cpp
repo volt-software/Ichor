@@ -58,10 +58,10 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::AsioContextService::st
     for(uint64_t i = 0; i < _threads; i++) {
         [[maybe_unused]] auto &thread = _asioThreads.emplace_back([this, i]() {
 #if defined(__APPLE__)
-            pthread_setname_np(fmt::format("Asio #{}-{}", getServiceId(), i).c_str());
+            pthread_setname_np(fmt::format("Asio#{}-{}", getServiceId(), i).c_str());
 #endif
 #if (defined(WIN32) || defined(_WIN32) || defined(__WIN32)) && !defined(__CYGWIN__)
-            SetThreadDescription(GetCurrentThread(), fmt::format(L"Asio #{}-{}", getServiceId(), i).c_str());
+            SetThreadDescription(GetCurrentThread(), fmt::format(L"Asio#{}-{}", getServiceId(), i).c_str());
 #endif
             INTERNAL_DEBUG("AsioContext started");
             while (!_context->stopped()) {
@@ -78,7 +78,7 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::AsioContextService::st
         });
 
 #if defined(__linux__) || defined(__CYGWIN__)
-        pthread_setname_np(thread.native_handle(), fmt::format("Asio #{}-{}", getServiceId(), i).c_str());
+        pthread_setname_np(thread.native_handle(), fmt::format("Asio#{}-{}", getServiceId(), i).c_str());
 #endif
     }
 

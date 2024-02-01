@@ -55,13 +55,13 @@ void Ichor::DependencyManager::start() {
     ICHOR_LOG_TRACE(_logger, "depman {} has {} events", _id, _eventQueue->size());
 
 #if defined(__APPLE__)
-    pthread_setname_np(fmt::format("DepMan #{}", _id).c_str());
+    pthread_setname_np(fmt::format("DepMan#{}", _id).c_str());
 #endif
 #if (defined(WIN32) || defined(_WIN32) || defined(__WIN32)) && !defined(__CYGWIN__)
-    SetThreadDescription(GetCurrentThread(), fmt::format(L"DepMan #{}", _id).c_str());
+    SetThreadDescription(GetCurrentThread(), fmt::format(L"DepMan#{}", _id).c_str());
 #endif
 #if defined(__linux__) || defined(__CYGWIN__)
-    pthread_setname_np(pthread_self(), fmt::format("DepMan #{}", _id).c_str());
+    pthread_setname_np(pthread_self(), fmt::format("DepMan#{}", _id).c_str());
 #endif
 }
 
