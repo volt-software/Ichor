@@ -31,7 +31,7 @@ namespace Ichor {
         static std::atomic<bool> _initialized;
         static std::mutex _io_mutex;
         static std::queue<std::shared_ptr<io_operation_submission>> _evts;
-        bool _should_stop{};
+        std::atomic<bool> _should_stop{};
         tl::optional<std::thread> _io_thread;
     };
 }

@@ -305,7 +305,7 @@ if(ICHOR_USE_THREAD_SANITIZER)
     endif()
 
     if(ICHOR_USE_BOOST_BEAST)
-        target_compile_definitions(ichor PUBLIC BOOST_USE_UCONTEXT)
+        target_compile_definitions(ichor PUBLIC BOOST_USE_TSAN BOOST_USE_UCONTEXT)
         message(WARNING "Sanitizers seem to have issues with stack switches. Need to compile boost library specifically to deal with this, and then still thread sanitizer seems to have issues. Please see https://www.boost.org/doc/libs/master/libs/context/doc/html/context/stack/sanitizers.html and https://github.com/boostorg/beast/issues/2615")
     endif()
 endif()

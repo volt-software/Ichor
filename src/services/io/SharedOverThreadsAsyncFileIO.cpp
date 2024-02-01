@@ -36,7 +36,7 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::SharedOverThreadsAsync
 
         _io_thread = std::thread([this, &queue = queue]() {
             INTERNAL_IO_DEBUG("io_thread");
-            while(!_should_stop) {
+            while(!_should_stop.load(std::memory_order_acquire)) {
                 INTERNAL_IO_DEBUG("checking");
                 {
                     std::unique_lock lg{_io_mutex};
@@ -49,6 +49,7 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::SharedOverThreadsAsync
                         queue.pushEvent<Ichor::RunFunctionEvent>(0, [submission = std::move(submission)]() mutable {
                             submission->evt.set();
                         });
+                        lg.lock();
                     }
                 }
                 std::this_thread::sleep_for(10ms);
@@ -62,7 +63,7 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::SharedOverThreadsAsync
 
 Ichor::Task<void> Ichor::SharedOverThreadsAsyncFileIO::stop() {
     if(_io_thread && _io_thread->joinable()) {
-        _should_stop = true;
+        _should_stop.store(true, std::memory_order_release);
         _io_thread->join();
         _initialized.store(false, std::memory_order_release);
     }
