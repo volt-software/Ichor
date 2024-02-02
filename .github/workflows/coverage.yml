@@ -21,7 +21,7 @@ jobs:
         submodules: recursive
 
     - name: "Configure CMake"
-      run: CC=clang-18 CXX=clang++-18 cmake -GNinja -B ${{github.workspace}}/build-coverage -DCMAKE_BUILD_TYPE=Debug -DICHOR_USE_BOOST_BEAST=ON -DICHOR_BUILD_COVERAGE=ON -DICHOR_USE_HIREDIS=ON -DICHOR_USE_SANITIZERS=OFF -DICHOR_BUILD_BENCHMARKS=OFF -DICHOR_USE_LIBCPP=OFF -DICHOR_USE_MOLD=ON
+      run: CC=clang-18 CXX=clang++-18 cmake -GNinja -B ${{github.workspace}}/build-coverage -DCMAKE_BUILD_TYPE=Debug -DICHOR_USE_BOOST_BEAST=ON -DICHOR_BUILD_COVERAGE=ON -DICHOR_USE_HIREDIS=ON -DICHOR_USE_SANITIZERS=OFF -DICHOR_USE_LIBCPP=OFF -DICHOR_USE_MOLD=ON
 
     - name: Build
       run: cmake --build ${{github.workspace}}/build-coverage --config Debug
