@@ -335,8 +335,8 @@ elseif(ICHOR_USE_HARDENING)
         target_compile_options(ichor PUBLIC -mbranch-protection=standard)
     endif()
 
-    # stack clash protection not available on OSX
-    if(NOT APPLE)
+    # stack clash protection not available on OSX nor on AARCH64
+    if(NOT APPLE AND NOT ICHOR_AARCH64)
         target_compile_options(ichor PUBLIC -fstack-clash-protection)
     endif()
 
