@@ -153,6 +153,7 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &uniqueEvt) {
                         }
 
                         auto gen = possibleDependentLifecycleManager->startAfterDependencyOnline();
+                        gen.set_priority(std::min(possibleDependentLifecycleManager->getPriority(), INTERNAL_DEPENDENCY_EVENT_PRIORITY));
                         auto it = gen.begin();
 
                         INTERNAL_DEBUG("DependencyOnlineEvent {} interested service is {} {} {}", evt->id, serviceId, it.get_promise_id(), it.get_finished());
@@ -213,6 +214,7 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &uniqueEvt) {
                     }
 
                     auto gen = depIt->second->dependencyOffline(manager.get(), std::move(depIts));
+                    gen.set_priority(std::min(depIt->second->getPriority(), INTERNAL_DEPENDENCY_EVENT_PRIORITY));
                     auto it = gen.begin();
 
                     if(!it.get_finished()) {
@@ -348,6 +350,7 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &uniqueEvt) {
 
                     if(startBehaviour == StartBehaviour::STARTED) {
                         auto gen = cmpMgr->startAfterDependencyOnline();
+                        gen.set_priority(std::min(cmpMgr->getPriority(), INTERNAL_DEPENDENCY_EVENT_PRIORITY));
                         auto it = gen.begin();
 
                         if(!it.get_finished()) {
@@ -383,6 +386,7 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &uniqueEvt) {
                     }
 
                     auto gen = cmpMgr->startAfterDependencyOnline();
+                    gen.set_priority(std::min(cmpMgr->getPriority(), INTERNAL_DEPENDENCY_EVENT_PRIORITY));
                     auto it = gen.begin();
 
                     if(!it.get_finished()) {
@@ -463,6 +467,7 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &uniqueEvt) {
                 // If all services depending on this one have removed this one and we've had a DependencyOfflineEvent
                 if (dependees.empty() && toStopService->getServiceState() == ServiceState::UNINJECTING) {
                     auto gen = toStopService->stop();
+                    gen.set_priority(std::min(toStopService->getPriority(), INTERNAL_DEPENDENCY_EVENT_PRIORITY));
                     auto it = gen.begin();
 
                     if (!it.get_finished()) {
@@ -538,6 +543,7 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &uniqueEvt) {
 
                 INTERNAL_DEBUG("StartServiceEvent service {} {} {}:{}", evt->id, evt->priority, toStartService->serviceId(), toStartService->implementationName());
                 auto gen = toStartService->start();
+                gen.set_priority(std::min(toStartService->getPriority(), INTERNAL_DEPENDENCY_EVENT_PRIORITY));
                 auto it = gen.begin();
 
                 if (!it.get_finished()) {
@@ -1076,6 +1082,7 @@ uint64_t Ichor::DependencyManager::broadcastEvent(std::unique_ptr<Event> const &
         }
 
         auto gen = callbackInfo.callback(*evt);
+        gen.set_priority(service->second->getPriority());
 
         if (!gen.done()) {
             auto it = gen.begin();
