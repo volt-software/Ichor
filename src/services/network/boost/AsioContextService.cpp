@@ -7,8 +7,8 @@
 #endif
 
 Ichor::AsioContextService::AsioContextService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {
-    if(getProperties().contains("Threads")) {
-        _threads = Ichor::any_cast<uint64_t>(getProperties()["Threads"]);
+    if(auto propIt = getProperties().find("Threads"); propIt != getProperties().end()) {
+        _threads = Ichor::any_cast<uint64_t>(propIt->second);
         if(_threads == 0) {
             _threads = std::thread::hardware_concurrency();
         }

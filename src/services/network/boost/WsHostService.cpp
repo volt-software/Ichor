@@ -37,25 +37,31 @@ Ichor::WsHostService::WsHostService(DependencyRegister &reg, Properties props) :
 }
 
 Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::WsHostService::start() {
-    if(getProperties().contains("Priority")) {
-        _priority = Ichor::any_cast<uint64_t>(getProperties()["Priority"]);
-    }
+    auto addrIt = getProperties().find("Address");
+    auto portIt = getProperties().find("Port");
 
-    if(!getProperties().contains("Port") || !getProperties().contains("Address")) {
-        ICHOR_LOG_ERROR(_logger, "Missing port or address when starting WsHostService");
+    if(addrIt == getProperties().end()) {
+        ICHOR_LOG_ERROR(_logger, "Missing address");
+        co_return tl::unexpected(StartError::FAILED);
+    }
+    if(portIt == getProperties().end()) {
+        ICHOR_LOG_ERROR(_logger, "Missing port");
         co_return tl::unexpected(StartError::FAILED);
     }
 
-    if(getProperties().contains("NoDelay")) {
-        _tcpNoDelay = Ichor::any_cast<bool>(getProperties()["NoDelay"]);
+    if(auto propIt = getProperties().find("Priority"); propIt != getProperties().end()) {
+        _priority = Ichor::any_cast<uint64_t>(propIt->second);
+    }
+    if(auto propIt = getProperties().find("NoDelay"); propIt != getProperties().end()) {
+        _tcpNoDelay.store(Ichor::any_cast<bool>(propIt->second), std::memory_order_release);
     }
 
     _queue = &GetThreadLocalEventQueue();
 
     _eventRegistration = GetThreadLocalManager().registerEventHandler<NewWsConnectionEvent>(this, this, getServiceId());
 
-    auto address = net::ip::make_address(Ichor::any_cast<std::string&>(getProperties()["Address"]));
-    auto port = Ichor::any_cast<uint16_t>(getProperties()["Port"]);
+    auto address = net::ip::make_address(Ichor::any_cast<std::string&>(addrIt->second));
+    auto port = Ichor::any_cast<uint16_t>(portIt->second);
     _strand = std::make_unique<net::strand<net::io_context::executor_type>>(_asioContextService->getContext()->get_executor());
 
     net::spawn(*_strand, [this, address = std::move(address), port](net::yield_context yield) {

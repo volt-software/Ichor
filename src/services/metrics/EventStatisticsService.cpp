@@ -8,14 +8,11 @@ Ichor::EventStatisticsService::EventStatisticsService(DependencyRegister &reg, P
 }
 
 Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::EventStatisticsService::start() {
-    if(getProperties().contains("ShowStatisticsOnStop")) {
-        _showStatisticsOnStop = Ichor::any_cast<bool>(getProperties()["ShowStatisticsOnStop"]);
+    if(auto propIt = getProperties().find("ShowStatisticsOnStop"); propIt != getProperties().end()) {
+        _showStatisticsOnStop = Ichor::any_cast<bool>(propIt->second);
     }
-
-    if(getProperties().contains("AveragingIntervalMs")) {
-        _averagingIntervalMs = Ichor::any_cast<uint64_t>(getProperties()["AveragingIntervalMs"]);
-    } else {
-        _averagingIntervalMs = 500;
+    if(auto propIt = getProperties().find("AveragingIntervalMs"); propIt != getProperties().end()) {
+        _averagingIntervalMs = Ichor::any_cast<uint64_t>(propIt->second);
     }
 
 //    fmt::print("evt stats {}:{} {} {}\n", getServiceId(), getServiceName(), _showStatisticsOnStop, _averagingIntervalMs);

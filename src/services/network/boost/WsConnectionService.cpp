@@ -26,9 +26,9 @@ void setup_stream(std::shared_ptr<websocket::stream<NextLayer>>& ws)
 Ichor::WsConnectionService::WsConnectionService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {
     reg.registerDependency<ILogger>(this, DependencyFlags::REQUIRED);
     reg.registerDependency<IAsioContextService>(this, DependencyFlags::REQUIRED);
-    if(getProperties().contains("WsHostServiceId")) {
+    if(auto propIt = getProperties().find("WsHostServiceId"); propIt != getProperties().end()) {
         reg.registerDependency<IHostService>(this, DependencyFlags::REQUIRED,
-                                             Properties{{"Filter", Ichor::make_any<Filter>(ServiceIdFilterEntry{Ichor::any_cast<uint64_t>(getProperties()["WsHostServiceId"])})}});
+                                             Properties{{"Filter", Ichor::make_any<Filter>(ServiceIdFilterEntry{Ichor::any_cast<uint64_t>(propIt->second)})}});
     }
 }
 
@@ -41,8 +41,8 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::WsConnectionService::s
 
     _quit.store(false, std::memory_order_release);
 
-    if (getProperties().contains("Priority")) {
-        _priority = Ichor::any_cast<uint64_t>(getProperties()["Priority"]);
+    if(auto propIt = getProperties().find("Priority"); propIt != getProperties().end()) {
+        _priority = Ichor::any_cast<uint64_t>(propIt->second);
     }
 
     _strand = std::make_unique<net::strand<net::io_context::executor_type>>(_asioContextService->getContext()->get_executor());

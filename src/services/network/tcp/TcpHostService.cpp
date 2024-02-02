@@ -17,8 +17,8 @@ Ichor::TcpHostService::TcpHostService(DependencyRegister &reg, Properties props)
 }
 
 Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::TcpHostService::start() {
-    if(getProperties().contains("Priority")) {
-        _priority = Ichor::any_cast<uint64_t>(getProperties()["Priority"]);
+    if(auto propIt = getProperties().find("Priority"); propIt != getProperties().end()) {
+        _priority = Ichor::any_cast<uint64_t>(propIt->second);
     }
 
     _newSocketEventHandlerRegistration = GetThreadLocalManager().registerEventHandler<NewSocketEvent>(this, this);

@@ -309,8 +309,8 @@ void Ichor::HttpConnectionService::connect(tcp::endpoint endpoint, net::yield_co
         _sslContext = std::make_unique<net::ssl::context>(net::ssl::context::tlsv12);
         _sslContext->set_verify_mode(net::ssl::verify_peer);
 
-        if(getProperties().contains("RootCA")) {
-            std::string &ca = Ichor::any_cast<std::string&>(getProperties()["RootCA"]);
+        if(auto propIt = getProperties().find("RootCA"); propIt != getProperties().end()) {
+            std::string &ca = Ichor::any_cast<std::string&>(propIt->second);
             _sslContext->add_certificate_authority(boost::asio::const_buffer(ca.c_str(), ca.size()), ec);
         }
 

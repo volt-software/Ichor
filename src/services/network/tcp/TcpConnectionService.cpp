@@ -15,21 +15,26 @@ Ichor::TcpConnectionService::TcpConnectionService(DependencyRegister &reg, Prope
 }
 
 Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::TcpConnectionService::start() {
-    if(getProperties().contains("Priority")) {
-        _priority = Ichor::any_cast<uint64_t>(getProperties()["Priority"]);
+    if(auto propIt = getProperties().find("Priority"); propIt != getProperties().end()) {
+        _priority = Ichor::any_cast<uint64_t>(propIt->second);
     }
 
     if(getProperties().contains("Socket")) {
-        _socket = Ichor::any_cast<int>(getProperties()["Socket"]);
-
+        if(auto propIt = getProperties().find("Socket"); propIt != getProperties().end()) {
+            _socket = Ichor::any_cast<int>(propIt->second);
+        }
         ICHOR_LOG_TRACE(_logger, "Starting TCP connection for existing socket");
     } else {
-        if(!getProperties().contains("Address")) {
-            throw std::runtime_error("Missing \"Address\" in properties");
-        }
+        auto addrIt = getProperties().find("Address");
+        auto portIt = getProperties().find("Port");
 
-        if(!getProperties().contains("Port")) {
-            throw std::runtime_error("Missing \"Port\" in properties");
+        if(addrIt == getProperties().end()) {
+            ICHOR_LOG_ERROR(_logger, "Missing address");
+            co_return tl::unexpected(StartError::FAILED);
+        }
+        if(portIt == getProperties().end()) {
+            ICHOR_LOG_ERROR(_logger, "Missing port");
+            co_return tl::unexpected(StartError::FAILED);
         }
 
         // The start function possibly gets called multiple times due to trying to recover from not being able to connect
@@ -47,9 +52,9 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::TcpConnectionService::
 
         sockaddr_in address{};
         address.sin_family = AF_INET;
-        address.sin_port = htons(Ichor::any_cast<uint16_t>((getProperties())["Port"]));
+        address.sin_port = htons(Ichor::any_cast<uint16_t>(portIt->second));
 
-        int ret = inet_pton(AF_INET, Ichor::any_cast<std::string&>((getProperties())["Address"]).c_str(), &address.sin_addr);
+        int ret = inet_pton(AF_INET, Ichor::any_cast<std::string&>(addrIt->second).c_str(), &address.sin_addr);
         if(ret == 0)
         {
             throw std::runtime_error("inet_pton invalid address for given address family (has to be ipv4-valid address)");
