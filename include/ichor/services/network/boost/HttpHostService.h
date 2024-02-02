@@ -31,6 +31,20 @@ namespace Ichor {
         };
     }
 
+    /**
+     * Service for creating an HTTP/1.1 server using boost. Requires an IAsioContextService and a logger.
+     *
+     * Properties:
+     * - "Address" std::string - What address to bind to (required)
+     * - "Port" uint16_t - What port to bind to (required)
+     * - "Priority" uint64_t - What priority to insert events with (e.g. when getting a response from the client)
+     * - "NoDelay" bool - whether to enable TCP nodelay, a.k.a. disabling Nagle's algorithm, for reduced latency at the expense of throughput. (default: false)
+     * - "ConnectOverSsl" bool - Set to true to connect over HTTPS instead of HTTP (default: false)
+     * - "RootCA" std::string - If ConnectOverSsl is true and this property is set, trust the given RootCA (default: not set)
+     * - "TryConnectIntervalMs" uint64_t - with which interval in milliseconds to try (re)connecting (default: 100 ms)
+     * - "TimeoutMs" uint64_t - with which interval in milliseconds to timeout for (re)connecting, after which the service stops itself (default: 10'000 ms)
+     * - "Debug" bool - Enable verbose logging of requests and responses (default: false)
+     */
     class HttpHostService final : public IHttpHostService, public AdvancedService<HttpHostService> {
     public:
         HttpHostService(DependencyRegister &reg, Properties props);
@@ -77,6 +91,7 @@ namespace Ichor {
         uint64_t _streamIdCounter{};
         uint64_t _matchersIdCounter{};
         bool _sendServerHeader{true};
+        bool _debug{};
         std::atomic<ILogger*> _logger{};
         IAsioContextService *_asioContextService{};
         unordered_map<HttpMethod, unordered_map<std::unique_ptr<RouteMatcher>, std::function<AsyncGenerator<HttpResponse>(HttpRequest&)>>> _handlers{};

@@ -59,7 +59,7 @@ namespace Ichor {
     }
 
     static inline tl::optional<Version> parseStringAsVersion(std::string_view str) {
-        if(str.empty()) {
+        if(str.length() < 5) {
             return {};
         }
 

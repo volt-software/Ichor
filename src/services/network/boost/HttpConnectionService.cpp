@@ -13,33 +13,49 @@ Ichor::HttpConnectionService::HttpConnectionService(DependencyRegister &reg, Pro
 Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::HttpConnectionService::start() {
     _queue = &GetThreadLocalEventQueue();
 
-    if (!_asioContextService->fibersShouldStop() && !_connecting.load(std::memory_order_acquire) && !_connected.load(std::memory_order_acquire)) {
+    if (!_asioContextService->fibersShouldStop()) {
         _quit.store(false, std::memory_order_release);
-        if(getProperties().contains("Priority")) {
-            _priority.store(Ichor::any_cast<uint64_t>(getProperties()["Priority"]), std::memory_order_release);
-        }
+        auto addrIt = getProperties().find("Address");
+        auto portIt = getProperties().find("Port");
 
-        if(!getProperties().contains("Port") || !getProperties().contains("Address")) {
-            ICHOR_LOG_ERROR_ATOMIC(_logger, "Missing port or address when starting HttpConnectionService");
+        if(addrIt == getProperties().end()) {
+            ICHOR_LOG_ERROR_ATOMIC(_logger, "Missing address");
+            co_return tl::unexpected(StartError::FAILED);
+        }
+        if(portIt == getProperties().end()) {
+            ICHOR_LOG_ERROR_ATOMIC(_logger, "Missing port");
             co_return tl::unexpected(StartError::FAILED);
         }
 
-        if(getProperties().contains("NoDelay")) {
-            _tcpNoDelay.store(Ichor::any_cast<bool>(getProperties()["NoDelay"]), std::memory_order_release);
+        if(auto propIt = getProperties().find("TimeoutMs"); propIt != getProperties().end()) {
+            _timeoutMs = Ichor::any_cast<uint64_t>(propIt->second);
         }
-//        fmt::print("connecting to {}\n", Ichor::any_cast<std::string&>(getProperties()["Address"]));
+        if(auto propIt = getProperties().find("TryConnectIntervalMs"); propIt != getProperties().end()) {
+            _tryConnectIntervalMs = Ichor::any_cast<uint64_t>(propIt->second);
+        }
+        if(auto propIt = getProperties().find("Priority"); propIt != getProperties().end()) {
+            _priority.store(Ichor::any_cast<uint64_t>(propIt->second), std::memory_order_release);
+        }
+        if(auto propIt = getProperties().find("Debug"); propIt != getProperties().end()) {
+            _debug = Ichor::any_cast<bool>(propIt->second);
+        }
+        if(auto propIt = getProperties().find("NoDelay"); propIt != getProperties().end()) {
+            _tcpNoDelay.store(Ichor::any_cast<bool>(propIt->second), std::memory_order_release);
+        }
+        if(auto propIt = getProperties().find("ConnectOverSsl"); propIt != getProperties().end()) {
+            _useSsl.store(Ichor::any_cast<bool>(propIt->second), std::memory_order_release);
+        }
+        if(_debug) {
+            ICHOR_LOG_DEBUG_ATOMIC(_logger, "connecting to {}:{}\n", Ichor::any_cast<std::string&>(addrIt->second), Ichor::any_cast<uint16_t>(portIt->second));
+        }
 
         boost::system::error_code ec;
-        auto address = net::ip::make_address(Ichor::any_cast<std::string &>(getProperties()["Address"]), ec);
-        auto port = Ichor::any_cast<uint16_t>(getProperties()["Port"]);
+        auto address = net::ip::make_address(Ichor::any_cast<std::string &>(addrIt->second), ec);
+        auto port = Ichor::any_cast<uint16_t>(portIt->second);
 
         if(ec) {
-            ICHOR_LOG_ERROR_ATOMIC(_logger, "Couldn't parse address \"{}\": {} {}", Ichor::any_cast<std::string &>(getProperties()["Address"]), ec.value(), ec.message());
+            ICHOR_LOG_ERROR_ATOMIC(_logger, "Couldn't parse address \"{}\": {} {}", Ichor::any_cast<std::string &>(addrIt->second), ec.value(), ec.message());
             co_return tl::unexpected(StartError::FAILED);
-        }
-
-        if (getProperties().contains("ConnectOverSsl")) {
-            _useSsl.store(Ichor::any_cast<bool>(getProperties()["ConnectOverSsl"]), std::memory_order_release);
         }
 
         _connecting.store(true, std::memory_order_release);
@@ -309,20 +325,27 @@ void Ichor::HttpConnectionService::connect(tcp::endpoint endpoint, net::yield_co
         beast::get_lowest_layer(*_sslStream).expires_never();
 
         // Make the connection on the IP address we get from a lookup
-        int attempts{};
-        while(!_quit.load(std::memory_order_acquire) && !_asioContextService->fibersShouldStop() && attempts < 5) {
+        bool connected{};
+        auto timeoutAt = std::chrono::steady_clock::now() + std::chrono::milliseconds(_timeoutMs);
+        while(!_quit.load(std::memory_order_acquire) && !_asioContextService->fibersShouldStop() && std::chrono::steady_clock::now() < timeoutAt) {
             beast::get_lowest_layer(*_sslStream).async_connect(results, yield[ec]);
             if (ec) {
-                attempts++;
                 net::steady_timer t{*_asioContextService->getContext()};
-                t.expires_after(250ms);
+                t.expires_after(std::chrono::milliseconds(_tryConnectIntervalMs));
                 t.async_wait(yield);
             } else {
+                connected = true;
                 break;
             }
         }
 
-        fmt::print("--- ssl tcpNoDelay: {} ---\n", _tcpNoDelay.load(std::memory_order_acquire));
+        if(!connected) {
+            return fail(ec, fmt::format("HttpConnectionService::connect ssl couldn't connect within {:L} ms", _timeoutMs).c_str());
+        }
+
+        if(_debug) {
+            fmt::print("--- ssl tcpNoDelay: {} ---\n", _tcpNoDelay.load(std::memory_order_acquire));
+        }
         beast::get_lowest_layer(*_sslStream).socket().set_option(tcp::no_delay(_tcpNoDelay.load(std::memory_order_acquire)));
 
         _sslStream->async_handshake(net::ssl::stream_base::client, yield[ec]);
@@ -337,17 +360,22 @@ void Ichor::HttpConnectionService::connect(tcp::endpoint endpoint, net::yield_co
         _httpStream->expires_never();
 
         // Make the connection on the IP address we get from a lookup
-        int attempts{};
-        while(!_quit.load(std::memory_order_acquire) && !_asioContextService->fibersShouldStop() && attempts < 5) {
+        bool connected{};
+        auto timeoutAt = std::chrono::steady_clock::now() + std::chrono::milliseconds(_timeoutMs);
+        while(!_quit.load(std::memory_order_acquire) && !_asioContextService->fibersShouldStop() && std::chrono::steady_clock::now() < timeoutAt) {
             _httpStream->async_connect(results, yield[ec]);
             if (ec) {
-                attempts++;
                 net::steady_timer t{*_asioContextService->getContext()};
-                t.expires_after(250ms);
+                t.expires_after(std::chrono::milliseconds(_tryConnectIntervalMs));
                 t.async_wait(yield);
             } else {
+                connected = true;
                 break;
             }
+        }
+
+        if(!connected) {
+            return fail(ec, fmt::format("HttpConnectionService::connect ssl couldn't connect within {:L} ms", _timeoutMs).c_str());
         }
 
         _httpStream->socket().set_option(tcp::no_delay(_tcpNoDelay.load(std::memory_order_acquire)));

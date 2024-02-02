@@ -9,29 +9,38 @@ Ichor::HttpHostService::HttpHostService(DependencyRegister &reg, Properties prop
 }
 
 Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::HttpHostService::start() {
-    if(getProperties().contains("Priority")) {
-        _priority = Ichor::any_cast<uint64_t>(getProperties()["Priority"]);
-    }
+    auto addrIt = getProperties().find("Address");
+    auto portIt = getProperties().find("Port");
 
-    if(getProperties().contains("SendServerHeader")) {
-        _sendServerHeader = Ichor::any_cast<bool>(getProperties()["SendServerHeader"]);
+    if(addrIt == getProperties().end()) {
+        ICHOR_LOG_ERROR_ATOMIC(_logger, "Missing address");
+        co_return tl::unexpected(StartError::FAILED);
     }
-
-    if(!getProperties().contains("Port") || !getProperties().contains("Address")) {
-        ICHOR_LOG_ERROR_ATOMIC(_logger, "Missing port or address when starting HttpHostService");
+    if(portIt == getProperties().end()) {
+        ICHOR_LOG_ERROR_ATOMIC(_logger, "Missing port");
         co_return tl::unexpected(StartError::FAILED);
     }
 
-    if(getProperties().contains("NoDelay")) {
-        _tcpNoDelay.store(Ichor::any_cast<bool>(getProperties()["NoDelay"]), std::memory_order_release);
+    if(auto propIt = getProperties().find("Priority"); propIt != getProperties().end()) {
+        _priority.store(Ichor::any_cast<uint64_t>(propIt->second), std::memory_order_release);
+    }
+    if(auto propIt = getProperties().find("Debug"); propIt != getProperties().end()) {
+        _debug = Ichor::any_cast<bool>(propIt->second);
+    }
+    if(auto propIt = getProperties().find("SendServerHeader"); propIt != getProperties().end()) {
+        _sendServerHeader = Ichor::any_cast<bool>(propIt->second);
+    }
+    if(auto propIt = getProperties().find("NoDelay"); propIt != getProperties().end()) {
+        _tcpNoDelay.store(Ichor::any_cast<bool>(propIt->second), std::memory_order_release);
+    }
+    if(auto propIt = getProperties().find("SslCert"); propIt != getProperties().end()) {
+        _useSsl.store(Ichor::any_cast<bool>(propIt->second), std::memory_order_release);
     }
 
-    if(getProperties().contains("SslCert")) {
-        _useSsl.store(true, std::memory_order_release);
-    }
+    auto sslKeyIt = getProperties().find("SslKey");
 
-    if((_useSsl.load(std::memory_order_acquire) && !getProperties().contains("SslKey")) ||
-        (!_useSsl.load(std::memory_order_acquire) && getProperties().contains("SslKey"))) {
+    if((_useSsl.load(std::memory_order_acquire) && sslKeyIt == getProperties().end()) ||
+        (!_useSsl.load(std::memory_order_acquire) && sslKeyIt != getProperties().end())) {
         ICHOR_LOG_ERROR_ATOMIC(_logger, "Both SslCert and SslKey properties are required when using ssl");
         co_return tl::unexpected(StartError::FAILED);
     }
@@ -39,11 +48,11 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::HttpHostService::start
     _queue = &GetThreadLocalEventQueue();
 
     boost::system::error_code ec;
-    auto address = net::ip::make_address(Ichor::any_cast<std::string &>(getProperties()["Address"]), ec);
-    auto port = Ichor::any_cast<uint16_t>(getProperties()["Port"]);
+    auto address = net::ip::make_address(Ichor::any_cast<std::string &>(addrIt->second), ec);
+    auto port = Ichor::any_cast<uint16_t>(portIt->second);
 
     if(ec) {
-        ICHOR_LOG_ERROR_ATOMIC(_logger, "Couldn't parse address \"{}\": {} {}", Ichor::any_cast<std::string &>(getProperties()["Address"]), ec.value(), ec.message());
+        ICHOR_LOG_ERROR_ATOMIC(_logger, "Couldn't parse address \"{}\": {} {}", Ichor::any_cast<std::string &>(addrIt->second), ec.value(), ec.message());
         co_return tl::unexpected(StartError::FAILED);
     }
 
@@ -167,9 +176,9 @@ void Ichor::HttpHostService::listen(tcp::endpoint endpoint, net::yield_context y
     if(_useSsl.load(std::memory_order_acquire)) {
         _sslContext = std::make_unique<net::ssl::context>(net::ssl::context::tlsv12);
 
-        if(getProperties().contains("SslPassword")) {
+        if(auto propIt = getProperties().find("SslPassword"); propIt != getProperties().end()) {
             _sslContext->set_password_callback(
-                    [password = Ichor::any_cast<std::string>(getProperties()["SslPassword"])](std::size_t, boost::asio::ssl::context_base::password_purpose) {
+                    [password = Ichor::any_cast<std::string>(propIt->second)](std::size_t, boost::asio::ssl::context_base::password_purpose) {
                         return password;
                     });
         }

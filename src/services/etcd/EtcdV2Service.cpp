@@ -204,6 +204,17 @@ Ichor::EtcdV2Service::EtcdV2Service(DependencyRegister &reg, Properties props) :
 }
 
 Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::EtcdV2Service::start() {
+    auto addrIt = getProperties().find("Address");
+    auto portIt = getProperties().find("Port");
+
+    if(addrIt == getProperties().end()) [[unlikely]] {
+        ICHOR_LOG_ERROR(_logger, "Missing address");
+        co_return tl::unexpected(StartError::FAILED);
+    }
+    if(portIt == getProperties().end()) [[unlikely]] {
+        ICHOR_LOG_ERROR(_logger, "Missing port");
+        co_return tl::unexpected(StartError::FAILED);
+    }
     ICHOR_LOG_TRACE(_logger, "Started");
     co_return {};
 }

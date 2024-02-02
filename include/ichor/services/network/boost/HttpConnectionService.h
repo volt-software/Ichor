@@ -27,6 +27,20 @@ namespace Ichor {
         };
     }
 
+    /**
+     * Service for connecting to an HTTP/1.1 server using boost. Requires an IAsioContextService and a logger.
+     *
+     * Properties:
+     * - "Address" std::string - What address to connect to (required)
+     * - "Port" uint16_t - What port to connect to (required)
+     * - "Priority" uint64_t - What priority to insert events with (e.g. when getting a response from the server)
+     * - "NoDelay" bool - whether to enable TCP nodelay, a.k.a. disabling Nagle's algorithm, for reduced latency at the expense of throughput. (default: false)
+     * - "ConnectOverSsl" bool - Set to true to connect over HTTPS instead of HTTP (default: false)
+     * - "RootCA" std::string - If ConnectOverSsl is true and this property is set, trust the given RootCA (default: not set)
+     * - "TryConnectIntervalMs" uint64_t - with which interval in milliseconds to try (re)connecting (default: 100 ms)
+     * - "TimeoutMs" uint64_t - with which interval in milliseconds to timeout for (re)connecting, after which the service stops itself (default: 10'000 ms)
+     * - "Debug" bool - Enable verbose logging of requests and responses (default: false)
+     */
     class HttpConnectionService final : public IHttpConnectionService, public AdvancedService<HttpConnectionService> {
     public:
         HttpConnectionService(DependencyRegister &reg, Properties props);
@@ -69,5 +83,9 @@ namespace Ichor {
         RealtimeMutex _outboxMutex{};
         AsyncManualResetEvent _startStopEvent{};
         IEventQueue *_queue;
+        bool _debug{};
+        uint64_t _tryConnectIntervalMs{100};
+        uint64_t _timeoutMs{10'000};
+        uint64_t _timeWhenDisconnected{};
     };
 }

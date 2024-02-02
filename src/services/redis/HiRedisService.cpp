@@ -146,27 +146,24 @@ Ichor::HiredisService::HiredisService(DependencyRegister &reg, Properties props)
 }
 
 Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::HiredisService::start() {
-    auto addrIt = getProperties().find("Address");
-    auto portIt = getProperties().find("Port");
-
-    if(addrIt == getProperties().end()) [[unlikely]] {
+    if(auto propIt = getProperties().find("Address"); propIt == getProperties().end()) [[unlikely]] {
         throw std::runtime_error("Missing address when starting HiredisService");
     }
-    if(portIt == getProperties().end()) [[unlikely]] {
+    if(auto propIt = getProperties().find("Port"); propIt == getProperties().end()) [[unlikely]] {
         throw std::runtime_error("Missing port when starting HiredisService");
     }
 
-    if(getProperties().contains("PollIntervalMs")) {
-        _pollIntervalMs = Ichor::any_cast<uint64_t>(getProperties()["PollIntervalMs"]);
+    if(auto propIt = getProperties().find("TimeoutMs"); propIt != getProperties().end()) {
+        _timeoutMs = Ichor::any_cast<uint64_t>(propIt->second);
     }
-    if(getProperties().contains("TimeoutMs")) {
-        _timeoutMs = Ichor::any_cast<uint64_t>(getProperties()["TimeoutMs"]);
+    if(auto propIt = getProperties().find("PollIntervalMs"); propIt != getProperties().end()) {
+        _pollIntervalMs = Ichor::any_cast<uint64_t>(propIt->second);
     }
-    if(getProperties().contains("TryConnectIntervalMs")) {
-        _tryConnectIntervalMs = Ichor::any_cast<uint64_t>(getProperties()["TryConnectIntervalMs"]);
+    if(auto propIt = getProperties().find("TryConnectIntervalMs"); propIt != getProperties().end()) {
+        _tryConnectIntervalMs = Ichor::any_cast<uint64_t>(propIt->second);
     }
-    if(getProperties().contains("Debug")) {
-        _debug = Ichor::any_cast<bool>(getProperties()["Debug"]);
+    if(auto propIt = getProperties().find("Debug"); propIt != getProperties().end()) {
+        _debug = Ichor::any_cast<bool>(propIt->second);
     }
 
     _timeWhenDisconnected = static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count());
