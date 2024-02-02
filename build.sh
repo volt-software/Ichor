@@ -92,15 +92,22 @@ if [[ $DOCKER -eq 1 ]]; then
   docker build -f ../Dockerfile-asan -t ichor-asan . || exit 1
   docker run -v $(pwd)/../:/opt/ichor/src -v $(pwd)/../build:/opt/ichor/build --rm -it ichor-asan || exit 1
   run_examples
+  run_benchmarks
   docker run -v $(pwd)/../:/opt/ichor/src -v $(pwd)/../build:/opt/ichor/build --rm -it ichor-asan "rm -rf /opt/ichor/src/bin/* /opt/ichor/src/build/*" || exit 1
 
   rm -rf ./* ../bin/*
   docker build -f ../Dockerfile-asan-clang -t ichor-asan-clang . || exit 1
   docker run -v $(pwd)/../:/opt/ichor/src -v $(pwd)/../build:/opt/ichor/build --rm -it ichor-asan-clang || exit 1
   run_examples
+  run_benchmarks
   docker run -v $(pwd)/../:/opt/ichor/src -v $(pwd)/../build:/opt/ichor/build --rm -it ichor-asan-clang "rm -rf /opt/ichor/src/bin/* /opt/ichor/src/build/*" || exit 1
 
-#   tsan is purposefully not run automatically, because it usually contains false positives.
+  rm -rf ./* ../bin/*
+  docker build -f ../Dockerfile-tsan -t ichor-tsan . || exit 1
+  docker run -v $(pwd)/../:/opt/ichor/src -v $(pwd)/../build:/opt/ichor/build --rm -it ichor-tsan || exit 1
+  run_examples
+  run_benchmarks
+  docker run -v $(pwd)/../:/opt/ichor/src -v $(pwd)/../build:/opt/ichor/build --rm -it ichor-tsan "rm -rf /opt/ichor/src/bin/* /opt/ichor/src/build/*" || exit 1
 
   rm -rf ./* ../bin/*
   docker run --rm --privileged multiarch/qemu-user-static --reset -p yes || exit 1
@@ -129,8 +136,6 @@ EOF
   mv -f ../bin/* ../arm_bench
   rm -f ../arm_bench/*.a
   docker run -v $(pwd)/../:/opt/ichor/src -v $(pwd)/../build:/opt/ichor/build --rm --privileged -it ichor-musl-aarch64 "rm -rf /opt/ichor/src/bin/* /opt/ichor/src/build/*" || exit 1
-
-#  exit 0
 fi
 
 # Quick libcpp compile check

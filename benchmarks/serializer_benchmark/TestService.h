@@ -8,7 +8,9 @@
 #include <ichor/services/serialization/ISerializer.h>
 #include "../../examples/common/TestMsg.h"
 
-#if defined(__SANITIZE_ADDRESS__)
+#if defined(ICHOR_ENABLE_INTERNAL_DEBUGGING) || (defined(ICHOR_BUILDING_DEBUG) && (defined(__SANITIZE_ADDRESS__) || defined(__SANITIZE_THREAD__)))
+constexpr uint32_t SERDE_COUNT = 1'000;
+#elif defined(__SANITIZE_ADDRESS__) || defined(__SANITIZE_THREAD__)
 constexpr uint32_t SERDE_COUNT = 100'000;
 #else
 constexpr uint32_t SERDE_COUNT = 5'000'000;

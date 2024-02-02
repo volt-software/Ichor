@@ -139,6 +139,9 @@ endif()
 if(ICHOR_AARCH64)
     target_compile_definitions(ichor PUBLIC ICHOR_AARCH64)
 endif()
+if(ICHOR_BUILDING_DEBUG)
+    target_compile_definitions(ichor PUBLIC ICHOR_BUILDING_DEBUG)
+endif()
 
 if(NOT WIN32)
     target_compile_options(ichor PUBLIC -Wall -Wextra -Wshadow -Wno-non-virtual-dtor -Wno-unused-variable -Wno-long-long -Wno-unused-parameter -Wnull-dereference -pedantic -Wformat -Wformat-security -Wcast-align -Woverloaded-virtual -Wdelete-non-virtual-dtor)
@@ -291,6 +294,7 @@ endif()
 if(ICHOR_USE_THREAD_SANITIZER)
     target_compile_options(ichor PUBLIC -fsanitize=thread -fno-omit-frame-pointer)
     target_link_options(ichor PUBLIC -fsanitize=thread)
+    target_compile_definitions(ichor PUBLIC __SANITIZE_THREAD__)
 
     # clang on OSX doesn't accept -no-pie for some reason
     if(NOT APPLE)
