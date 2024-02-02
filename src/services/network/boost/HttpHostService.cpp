@@ -34,7 +34,7 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::HttpHostService::start
         _tcpNoDelay.store(Ichor::any_cast<bool>(propIt->second), std::memory_order_release);
     }
     if(auto propIt = getProperties().find("SslCert"); propIt != getProperties().end()) {
-        _useSsl.store(Ichor::any_cast<bool>(propIt->second), std::memory_order_release);
+        _useSsl.store(true, std::memory_order_release);
     }
 
     auto sslKeyIt = getProperties().find("SslKey");
