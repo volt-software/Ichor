@@ -78,14 +78,14 @@ private:
         _routeRegistrations.emplace_back(svc.addRoute(HttpMethod::post, "/test", [this](HttpRequest &req) -> AsyncGenerator<HttpResponse> {
             auto msg = _serializer->deserialize(std::move(req.body));
             ICHOR_LOG_WARN(_logger, "received request on route {} {} with testmsg {} - {}", (int)req.method, req.route, msg->id, msg->val);
-            co_return HttpResponse{false, HttpStatus::ok, "application/json", _serializer->serialize(TestMsg{11, "hello"}), {}};
+            co_return HttpResponse{HttpStatus::ok, "application/json", _serializer->serialize(TestMsg{11, "hello"}), {}};
         }));
         _routeRegistrations.emplace_back(svc.addRoute(HttpMethod::get, std::make_unique<RegexRouteMatch<R"(\/regex_test\/([a-zA-Z0-9]*)\?*([a-zA-Z0-9]+=[a-zA-Z0-9]+)*&*([a-zA-Z0-9]+=[a-zA-Z0-9]+)*)">>(), [this](HttpRequest &req) -> AsyncGenerator<HttpResponse> {
             ICHOR_LOG_WARN(_logger, "received request on route {} {} with params:", (int)req.method, req.route);
             for(auto const &param : req.regex_params) {
                 ICHOR_LOG_WARN(_logger, "{}", param);
             }
-            co_return HttpResponse{false, HttpStatus::ok, "text/plain", {}, {}};
+            co_return HttpResponse{HttpStatus::ok, "text/plain", {}, {}};
         }));
     }
 

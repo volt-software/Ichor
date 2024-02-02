@@ -190,7 +190,6 @@ namespace Ichor {
     };
 
     struct HttpResponse {
-        bool error;
         HttpStatus status;
         tl::optional<std::string> contentType;
         std::vector<uint8_t> body;

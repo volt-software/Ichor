@@ -102,7 +102,6 @@ Ichor::Task<Ichor::HttpResponse> Ichor::HttpConnectionService::sendAsync(Ichor::
     ICHOR_LOG_DEBUG_ATOMIC(_logger, "sending to {}", route);
 
     HttpResponse response{};
-    response.error = true;
 
     if(_quit.load(std::memory_order_acquire) || _asioContextService->fibersShouldStop()) {
         co_return response;

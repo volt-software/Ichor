@@ -103,7 +103,7 @@ private:
                 throw std::runtime_error("testThreadId id incorrect");
             }
 
-            co_return HttpResponse{false, HttpStatus::ok, "application/json", _testSerializer->serialize(TestMsg{11, "hello"}), {}};
+            co_return HttpResponse{HttpStatus::ok, "application/json", _testSerializer->serialize(TestMsg{11, "hello"}), {}};
         });
         _regexRouteRegistration = svc.addRoute(HttpMethod::get, std::make_unique<RegexRouteMatch<R"(\/regex_test\/([a-zA-Z0-9]*)\?*([a-zA-Z0-9]+=[a-zA-Z0-9]+)*&*([a-zA-Z0-9]+=[a-zA-Z0-9]+)*)">>(), [this](HttpRequest &req) -> AsyncGenerator<HttpResponse> {
             if(dmThreadId != std::this_thread::get_id()) {
@@ -113,7 +113,7 @@ private:
                 throw std::runtime_error("testThreadId id incorrect");
             }
 
-            co_return HttpResponse{false, HttpStatus::ok, "application/json", _regexSerializer->serialize(RegexJsonMsg{std::move(req.regex_params)}), {}};
+            co_return HttpResponse{HttpStatus::ok, "application/json", _regexSerializer->serialize(RegexJsonMsg{std::move(req.regex_params)}), {}};
         });
     }
 

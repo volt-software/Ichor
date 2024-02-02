@@ -39,7 +39,7 @@ class BasicService final {
 public:
     BasicService(IHttpHostService *hostService) {
         _routeRegistration = hostService->addRoute(HttpMethod::get, "/basic", [this, serializer](HttpRequest &req) -> AsyncGenerator<HttpResponse> {
-            co_return HttpResponse{false, HttpStatus::ok, "application/text, "<html><body>This is my basic webpage</body></html>", {}};
+            co_return HttpResponse{HttpStatus::ok, "application/text, "<html><body>This is my basic webpage</body></html>", {}};
         });
     }
 
