@@ -83,6 +83,21 @@ namespace Ichor {
 
         return Version{FastAtoiu(splitStr[0].data()), FastAtoiu(splitStr[1].data()), FastAtoiu(splitStr[2].data())};
     }
+
+    // Copied and modified from spdlog
+    static inline const char *basename(const char *filename) {
+#ifdef _WIN32
+        const std::reverse_iterator<const char *> begin(filename + std::strlen(filename));
+        const std::reverse_iterator<const char *> end(filename);
+
+        const auto it = std::find_first_of(begin, end, std::begin("\\/"),
+                                           std::end("\\/") - 1);
+        return it != end ? it.base() : filename;
+#else
+        const char *rv = std::strrchr(filename, '/');
+        return rv != nullptr ? rv + 1 : filename;
+#endif
+    }
 }
 
 

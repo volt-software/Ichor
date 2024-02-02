@@ -10,6 +10,7 @@
 #include <fmt/core.h>
 #include <thread>
 #include <fmt/std.h>
+#include <ichor/stl/StringUtils.h>
 #endif
 
 #ifdef ICHOR_ENABLE_INTERNAL_DEBUGGING
@@ -19,7 +20,8 @@ static constexpr bool DO_INTERNAL_DEBUG = true;
     if constexpr(DO_INTERNAL_DEBUG) { \
         std::thread::id this_id = std::this_thread::get_id();                         \
         fmt::print("[{:L}] [{}] ", std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now().time_since_epoch()).count(), this_id);    \
-        fmt::print("[{}:{}] ", __FILE__, __LINE__);    \
+        const char *base = Ichor::basename(__FILE__); \
+        fmt::print("[{}:{}] ", base, __LINE__);    \
         fmt::print(__VA_ARGS__);    \
         fmt::print("\n");    \
     }                                 \
@@ -38,7 +40,8 @@ static constexpr bool DO_INTERNAL_COROUTINE_DEBUG = true;
     if constexpr(DO_INTERNAL_COROUTINE_DEBUG) { \
         std::thread::id this_id = std::this_thread::get_id();                         \
         fmt::print("[{:L}] [{}] ", std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now().time_since_epoch()).count(), this_id);    \
-        fmt::print("[{}:{}] ", __FILE__, __LINE__);    \
+        const char *base = Ichor::basename(__FILE__); \
+        fmt::print("[{}:{}] ", base, __LINE__);    \
         fmt::print(__VA_ARGS__);    \
         fmt::print("\n");    \
     }                                 \
@@ -57,7 +60,8 @@ static constexpr bool DO_INTERNAL_IO_DEBUG = true;
     if constexpr(DO_INTERNAL_IO_DEBUG) { \
         std::thread::id this_id = std::this_thread::get_id();                         \
         fmt::print("[{:L}] [{}] ", std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now().time_since_epoch()).count(), this_id);    \
-        fmt::print("[{}:{}] ", __FILE__, __LINE__);    \
+        const char *base = Ichor::basename(__FILE__); \
+        fmt::print("[{}:{}] ", base, __LINE__);    \
         fmt::print(__VA_ARGS__);    \
         fmt::print("\n");    \
     }                                 \
@@ -76,7 +80,8 @@ static constexpr bool DO_INTERNAL_STL_DEBUG = true;
     if constexpr(DO_INTERNAL_STL_DEBUG) { \
         std::thread::id this_id = std::this_thread::get_id();                         \
         fmt::print("[{:L}] [{}] ", std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now().time_since_epoch()).count(), this_id);    \
-        fmt::print("[{}:{}] ", __FILE__, __LINE__);    \
+        const char *base = Ichor::basename(__FILE__); \
+        fmt::print("[{}:{}] ", base, __LINE__);    \
         fmt::print(__VA_ARGS__);    \
         fmt::print("\n");    \
     }                                 \

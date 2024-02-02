@@ -5,9 +5,11 @@
 #include <ichor/stl/ReferenceCountedPointer.h>
 #include <ichor/stl/StringUtils.h>
 #include <memory>
+#include <string_view>
 #include "TestServices/UselessService.h"
 
 using namespace Ichor;
+using namespace std::literals;
 
 struct nonmoveable final {
     nonmoveable() = default;
@@ -431,5 +433,11 @@ TEST_CASE("STL Tests") {
         REQUIRE(v1 != Version{2, 2, 3});
         REQUIRE(v1 != Version{1, 3, 3});
         REQUIRE(v1 != Version{1, 2, 4});
+    }
+
+    SECTION("Basename tests") {
+        REQUIRE(Ichor::basename("file.cpp") == "file.cpp"sv);
+        REQUIRE(Ichor::basename("path/file.cpp") == "file.cpp"sv);
+        REQUIRE(Ichor::basename("more/path/file.cpp") == "file.cpp"sv);
     }
 }
