@@ -89,9 +89,9 @@ namespace Ichor {
 #ifdef _WIN32
         const std::reverse_iterator<const char *> begin(filename + std::strlen(filename));
         const std::reverse_iterator<const char *> end(filename);
+        const std::string_view seperator{"\\/"};
 
-        const auto it = std::find_first_of(begin, end, std::begin("\\/"),
-                                           std::end("\\/") - 1);
+        const auto it = std::find_first_of(begin, end, std::begin(seperator), std::end(seperator));
         return it != end ? it.base() : filename;
 #else
         const char *rv = std::strrchr(filename, '/');

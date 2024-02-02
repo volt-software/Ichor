@@ -436,8 +436,13 @@ TEST_CASE("STL Tests") {
     }
 
     SECTION("Basename tests") {
+        REQUIRE(Ichor::basename("") == ""sv);
         REQUIRE(Ichor::basename("file.cpp") == "file.cpp"sv);
+#ifdef _WIN32
+        REQUIRE(Ichor::basename("path\\file.cpp") == "file.cpp"sv);
+#else
         REQUIRE(Ichor::basename("path/file.cpp") == "file.cpp"sv);
         REQUIRE(Ichor::basename("more/path/file.cpp") == "file.cpp"sv);
+#endif
     }
 }
