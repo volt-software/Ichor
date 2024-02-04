@@ -19,7 +19,7 @@ namespace Ichor
 
     namespace Detail
     {
-        class TaskPromiseBase
+        class [[nodiscard]] TaskPromiseBase
         {
             friend struct final_awaitable;
 
@@ -68,7 +68,7 @@ namespace Ichor
         };
 
         template<typename T>
-        class TaskPromise final : public TaskPromiseBase
+        class [[nodiscard]] TaskPromise final : public TaskPromiseBase
         {
         public:
 
@@ -87,7 +87,7 @@ namespace Ichor
                 }
             }
 
-            Task<T> get_return_object() noexcept;
+            [[nodiscard]] Task<T> get_return_object() noexcept;
 
             void unhandled_exception() noexcept {
                 ::new (static_cast<void*>(std::addressof(m_exception))) std::exception_ptr(
@@ -109,7 +109,7 @@ namespace Ichor
                 m_resultType = result_type::value;
             }
 
-            T& result() & {
+            [[nodiscard]] T& result() & {
                 if (m_resultType == result_type::exception) {
                     std::rethrow_exception(m_exception);
                 }
@@ -130,7 +130,7 @@ namespace Ichor
                     T,
                     T&&>;
 
-            rvalue_type result() && {
+            [[nodiscard]] rvalue_type result() && {
                 if (m_resultType == result_type::exception) {
                     std::rethrow_exception(m_exception);
                 }
@@ -142,7 +142,7 @@ namespace Ichor
 
         private:
 
-            enum class result_type { empty, value, exception };
+            enum class result_type : uint_fast16_t { empty, value, exception };
 
             result_type m_resultType = result_type::empty;
 
@@ -154,12 +154,12 @@ namespace Ichor
         };
 
         template<>
-        class TaskPromise<void> : public TaskPromiseBase {
+        class [[nodiscard]] TaskPromise<void> : public TaskPromiseBase {
         public:
 
             TaskPromise() noexcept = default;
 
-            Task<void> get_return_object() noexcept;
+            [[nodiscard]] Task<void> get_return_object() noexcept;
 
             void return_void() noexcept
             {}
@@ -181,12 +181,12 @@ namespace Ichor
         };
 
         template<typename T>
-        class TaskPromise<T&> : public TaskPromiseBase {
+        class [[nodiscard]] TaskPromise<T&> : public TaskPromiseBase {
         public:
 
             TaskPromise() noexcept = default;
 
-            Task<T&> get_return_object() noexcept;
+            [[nodiscard]] Task<T&> get_return_object() noexcept;
 
             void unhandled_exception() noexcept {
                 m_exception = std::current_exception();
@@ -196,7 +196,7 @@ namespace Ichor
                 m_value = std::addressof(value);
             }
 
-            T& result() {
+            [[nodiscard]] T& result() {
                 if (m_exception) {
                     std::rethrow_exception(m_exception);
                 }
@@ -297,7 +297,7 @@ namespace Ichor
             return m_coroutine && m_coroutine.done();
         }
 
-        auto operator co_await() const & noexcept {
+        [[nodiscard]] auto operator co_await() const & noexcept {
             struct awaitable : awaitable_base {
                 using awaitable_base::awaitable_base;
 
@@ -313,7 +313,7 @@ namespace Ichor
             return awaitable{ m_coroutine };
         }
 
-        auto operator co_await() const && noexcept {
+        [[nodiscard]] auto operator co_await() const && noexcept {
             struct awaitable : awaitable_base {
                 using awaitable_base::awaitable_base;
 
@@ -348,16 +348,16 @@ namespace Ichor
 
     namespace Detail {
         template<typename T>
-        Task<T> TaskPromise<T>::get_return_object() noexcept {
+        [[nodiscard]] Task<T> TaskPromise<T>::get_return_object() noexcept {
             return Task<T>{ std::coroutine_handle<TaskPromise>::from_promise(*this) };
         }
 
-        inline Task<void> TaskPromise<void>::get_return_object() noexcept {
+        [[nodiscard]] inline Task<void> TaskPromise<void>::get_return_object() noexcept {
             return Task<void>{ std::coroutine_handle<TaskPromise>::from_promise(*this) };
         }
 
         template<typename T>
-        Task<T&> TaskPromise<T&>::get_return_object() noexcept {
+        [[nodiscard]] Task<T&> TaskPromise<T&>::get_return_object() noexcept {
             return Task<T&>{ std::coroutine_handle<TaskPromise>::from_promise(*this) };
         }
     }

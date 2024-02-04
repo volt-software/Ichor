@@ -13,7 +13,7 @@ struct ITestService {
 class TestService final : public ITestService, public AdvancedService<TestService> {
 public:
     TestService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {
-        reg.registerDependency<ILogger>(this, true);
+        reg.registerDependency<ILogger>(this, DependencyFlags::REQUIRED);
     }
     ~TestService() final = default;
 

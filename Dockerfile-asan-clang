@@ -1,0 +1,55 @@
+FROM ubuntu:jammy
+
+RUN apt update && apt-get install -y wget lsb-release software-properties-common gnupg
+RUN wget https://apt.llvm.org/llvm.sh && chmod +x llvm.sh && ./llvm.sh 18 all
+RUN apt install -y cmake pkg-config git ninja-build nano libzip-dev clang-18
+
+# Run all downloads first to be able to use Docker's layers as cache and prevent excessive redownloads
+
+WORKDIR /opt
+RUN wget https://github.com/redis/hiredis/archive/refs/tags/v1.2.0.tar.gz
+RUN wget https://boostorg.jfrog.io/artifactory/main/release/1.83.0/source/boost_1_83_0.tar.bz2
+RUN wget https://www.openssl.org/source/openssl-3.0.11.tar.gz
+
+ENV CC="clang"
+ENV CXX="clang++"
+ENV CFLAGS="-Og -fsanitize=address,undefined -stdlib=libc++"
+ENV CXXFLAGS="-Og -fsanitize=address,undefined -stdlib=libc++"
+ENV LDFLAGS="-stdlib=libc++ -static-libstdc++ -l:libc++abi.a -static-libsan -static-libgcc"
+ENV PATH="${PATH}:/usr/lib/llvm-18/bin"
+# false positive in QueueTests, see https://github.com/llvm/llvm-project/issues/59432
+ENV ASAN_OPTIONS="alloc_dealloc_mismatch=0"
+
+RUN tar xf openssl-3.0.11.tar.gz
+WORKDIR /opt/openssl-3.0.11
+RUN ./Configure --prefix=/usr --openssldir=/etc/ssl --libdir=lib no-shared
+RUN make -j
+RUN make -j install
+
+WORKDIR /opt
+#Build boost with support for asan
+RUN tar xf boost_1_83_0.tar.bz2
+
+WORKDIR /opt/boost_1_83_0
+
+RUN ./bootstrap.sh --prefix=/usr --with-toolset=clang
+RUN ./b2 cxxflags="-fsanitize=address,undefined -Og -std=c++17 -stdlib=libc++ -DBOOST_USE_ASAN -DBOOST_USE_UCONTEXT"  linkflags="-stdlib=libc++ -static-libstdc++ -l:libc++abi.a -static-libsan -lubsan" variant=debug link=static threading=multi context-impl=ucontext
+RUN ./b2 cxxflags="-fsanitize=address,undefined -Og -std=c++17 -stdlib=libc++ -DBOOST_USE_ASAN -DBOOST_USE_UCONTEXT"  linkflags="-stdlib=libc++ -static-libstdc++ -l:libc++abi.a -static-libsan -lubsan" variant=debug link=static threading=multi context-impl=ucontext install
+
+WORKDIR /opt
+
+#Build latest hiredis containing sdevent support, not available yet in apt
+RUN tar xf v1.2.0.tar.gz
+RUN mkdir /opt/hiredis-1.2.0/build
+
+WORKDIR /opt/hiredis-1.2.0/build
+RUN cmake -GNinja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DDISABLE_TESTS=1 -DCMAKE_INSTALL_PREFIX=/usr -DBUILD_SHARED_LIBS=OFF -DENABLE_SSL=1 ..
+RUN ninja && ninja install
+
+RUN mkdir -p /opt/ichor/build
+
+WORKDIR /opt/ichor/build
+
+ENTRYPOINT ["/bin/bash", "-c"]
+
+CMD ["unset CFLAGS CXXFLAGS && cd /opt/ichor/build && cmake -GNinja -DCMAKE_BUILD_TYPE=Debug -DICHOR_USE_SANITIZERS=1 -DICHOR_USE_HIREDIS=1 -DICHOR_USE_BOOST_BEAST=1 -DICHOR_USE_SPDLOG=1 -DICHOR_SKIP_EXTERNAL_TESTS=1 /opt/ichor/src && ninja && ninja test"]

@@ -19,7 +19,6 @@ jobs:
       matrix:
         compiler: [/opt/gcc-11.3/bin/g++, clang++]
         spdlog: [ON, OFF]
-        absl: [ON, OFF]
         opts: [Debug, Release]
         sanitizer: [asan] #tsan not yet supported due to missing sanitizer implementation in GCC 10, 11. As well as false positives. See:
                       # - https://gcc.gnu.org/git/?p=gcc.git;a=commit;h=80b4ce1a5190ebe764b1009afae57dcef45f92c2
@@ -36,13 +35,13 @@ jobs:
       if: ${{matrix.sanitizer == 'asan'}}
       # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
       # See https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html?highlight=cmake_build_type
-      run: CXX=${{matrix.compiler}} cmake -GNinja -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{matrix.opts}} -DICHOR_USE_SPDLOG=${{matrix.spdlog}} -DICHOR_USE_ABSEIL=${{matrix.absl}} -DICHOR_USE_BOOST_BEAST=ON -DICHOR_USE_SDEVENT=ON -DICHOR_USE_MOLD=OFF
+      run: CXX=${{matrix.compiler}} cmake -GNinja -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{matrix.opts}} -DICHOR_USE_SPDLOG=${{matrix.spdlog}} -DICHOR_USE_BOOST_BEAST=ON -DICHOR_USE_SDEVENT=ON -DICHOR_USE_MOLD=OFF -DICHOR_USE_LIBCPP=OFF
 
     - name: "Configure CMake (spdlog:${{matrix.spdlog}}, tsan)"
       if: ${{matrix.sanitizer == 'tsan'}}
       # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
       # See https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html?highlight=cmake_build_type
-      run: CXX=${{matrix.compiler}} cmake -GNinja -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{matrix.opts}} -DICHOR_USE_SPDLOG=${{matrix.spdlog}} -DICHOR_USE_ABSEIL=${{matrix.absl}} -DICHOR_USE_BOOST_BEAST=ON -DICHOR_USE_SDEVENT=ON -DICHOR_USE_SANITIZERS=OFF -DICHOR_USE_THREAD_SANITIZER=ON -DICHOR_USE_MOLD=OFF
+      run: CXX=${{matrix.compiler}} cmake -GNinja -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{matrix.opts}} -DICHOR_USE_SPDLOG=${{matrix.spdlog}} -DICHOR_USE_BOOST_BEAST=ON -DICHOR_USE_SDEVENT=ON -DICHOR_USE_SANITIZERS=OFF -DICHOR_USE_THREAD_SANITIZER=ON -DICHOR_USE_MOLD=OFF -DICHOR_USE_LIBCPP=OFF
 
     - name: Build
       # Build your program with the given configuration
@@ -56,5 +55,5 @@ jobs:
 
     - name: Examples
       working-directory: ${{github.workspace}}/bin
-      run: ../bin/ichor_etcd_example && ../bin/ichor_http_example && ../bin/ichor_multithreaded_example && ../bin/ichor_optional_dependency_example && ../bin/ichor_serializer_example && ../bin/ichor_tcp_example && ../bin/ichor_timer_example && ../bin/ichor_tracker_example && ../bin/ichor_websocket_example && ../bin/ichor_websocket_example -t4 && ../bin/ichor_yielding_timer_example && ../bin/ichor_event_statistics_example
+      run: ../bin/ichor_etcd_example && ../bin/ichor_http_example && ../bin/ichor_multithreaded_example && ../bin/ichor_optional_dependency_example && ../bin/ichor_serializer_example && ../bin/ichor_tcp_example && ../bin/ichor_timer_example && ../bin/ichor_factory_example && ../bin/ichor_websocket_example && ../bin/ichor_websocket_example -t4 && ../bin/ichor_yielding_timer_example && ../bin/ichor_event_statistics_example && ../bin/ichor_introspection_example
 

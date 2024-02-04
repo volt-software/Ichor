@@ -1,4 +1,4 @@
-FROM arm64v8/alpine:3.17
+FROM arm64v8/alpine:3.19
 
 RUN apk update
 RUN apk add gcc g++ build-base cmake git wget make nano sed linux-headers perl
@@ -10,7 +10,9 @@ RUN wget https://boostorg.jfrog.io/artifactory/main/release/1.81.0/source/boost_
 RUN wget https://github.com/redis/hiredis/archive/refs/tags/v1.2.0.tar.gz
 RUN wget https://www.openssl.org/source/openssl-3.0.11.tar.gz
 
-ENV LDFLAGS="-static-libgcc -static-libstdc++ -static"
+ENV CFLAGS="-O2 -fstack-protector-strong -mbranch-protection=standard -fstack-clash-protection -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=3"
+ENV CXXFLAGS="-O2 -std=c++20 -fstack-protector-strong -mbranch-protection=standard -fstack-clash-protection -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=3 -D_GLIBCXX_ASSERTIONS -D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_FAST"
+ENV LDFLAGS="-static-libgcc -static-libstdc++ -static -Wl,-z,nodlopen -Wl,-z,noexecstack -Wl,-z,relro -Wl,-z,now"
 #Build openssl statically, alpine (and probably most distros) only provide shared libraries. Might be a security thing?
 RUN tar xf openssl-3.0.11.tar.gz
 WORKDIR /opt/openssl-3.0.11
@@ -26,8 +28,8 @@ RUN tar xf boost_1_81_0.tar.bz2
 WORKDIR /opt/boost_1_81_0
 
 RUN ./bootstrap.sh --prefix=/usr
-RUN ./b2 variant=release link=static threading=multi cxxflags="-O2 -std=c++17 -static -fstack-protector-strong -fstack-clash-protection" linkflags="-static-libgcc -static-libstdc++ -static"
-RUN ./b2 variant=release link=static threading=multi cxxflags="-O2 -std=c++17 -static -fstack-protector-strong -fstack-clash-protection" linkflags="-static-libgcc -static-libstdc++ -static" install
+RUN ./b2 variant=release link=static threading=multi cxxflags="-O2 -std=c++20 -static -fstack-protector-strong -mbranch-protection=standard -fstack-clash-protection -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=3 -D_GLIBCXX_ASSERTIONS -D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_FAST" linkflags="-static-libgcc -static-libstdc++ -static -Wl,-z,nodlopen -Wl,-z,noexecstack -Wl,-z,relro -Wl,-z,now"
+RUN ./b2 variant=release link=static threading=multi cxxflags="-O2 -std=c++20 -static -fstack-protector-strong -mbranch-protection=standard -fstack-clash-protection -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=3 -D_GLIBCXX_ASSERTIONS -D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_FAST" linkflags="-static-libgcc -static-libstdc++ -static -Wl,-z,nodlopen -Wl,-z,noexecstack -Wl,-z,relro -Wl,-z,now" install
 
 WORKDIR /opt
 
@@ -44,4 +46,4 @@ WORKDIR /opt/ichor/build
 
 ENTRYPOINT ["/bin/sh", "-c"]
 
-CMD ["cd /opt/ichor/build && cmake -DCMAKE_BUILD_TYPE=Debug -DICHOR_USE_SANITIZERS=0 -DICHOR_USE_HIREDIS=1 -DICHOR_USE_BOOST_BEAST=1 -DICHOR_USE_SPDLOG=1 -DICHOR_MUSL=1 -DICHOR_AARCH64=1 /opt/ichor/src && make -j$(nproc)"]
+CMD ["unset CFLAGS CXXFLAGS LDFLAGS && cd /opt/ichor/build && cmake -DCMAKE_BUILD_TYPE=Debug -DICHOR_USE_HIREDIS=1 -DICHOR_USE_BOOST_BEAST=1 -DICHOR_USE_SPDLOG=1 -DICHOR_MUSL=1 -DICHOR_AARCH64=1 -DICHOR_ARCH_OPTIMIZATION=MODERN_ARM_GENERIC -DICHOR_SKIP_EXTERNAL_TESTS=1 /opt/ichor/src && make -j$(nproc) && make test"]

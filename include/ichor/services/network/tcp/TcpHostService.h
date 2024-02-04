@@ -9,11 +9,18 @@
 
 namespace Ichor {
     struct NewSocketEvent final : public Ichor::Event {
-        NewSocketEvent(uint64_t _id, uint64_t _originatingService, uint64_t _priority, int _socket) noexcept : Event(TYPE, NAME, _id, _originatingService, _priority), socket(_socket) {}
+        NewSocketEvent(uint64_t _id, uint64_t _originatingService, uint64_t _priority, int _socket) noexcept : Event(_id, _originatingService, _priority), socket(_socket) {}
         ~NewSocketEvent() final = default;
 
+        [[nodiscard]] std::string_view get_name() const noexcept final {
+            return NAME;
+        }
+        [[nodiscard]] NameHashType get_type() const noexcept final {
+            return TYPE;
+        }
+
         int socket;
-        static constexpr uint64_t TYPE = Ichor::typeNameHash<NewSocketEvent>();
+        static constexpr NameHashType TYPE = Ichor::typeNameHash<NewSocketEvent>();
         static constexpr std::string_view NAME = Ichor::typeName<NewSocketEvent>();
     };
 

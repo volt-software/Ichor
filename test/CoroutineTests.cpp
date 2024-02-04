@@ -7,7 +7,7 @@
 #include "TestServices/StopsInAsyncStartService.h"
 #include "TestServices/DependencyOfflineWhileStartingService.h"
 #include "TestServices/DependencyOnlineWhileStoppingService.h"
-#include <ichor/event_queues/MultimapQueue.h>
+#include <ichor/event_queues/PriorityQueue.h>
 #include <ichor/events/RunFunctionEvent.h>
 #include <ichor/services/timer/TimerFactoryFactory.h>
 #include <memory>
@@ -22,7 +22,7 @@ TEST_CASE("CoroutineTests") {
     _evt = std::make_unique<Ichor::AsyncManualResetEvent>();
 
     SECTION("Required dependencies") {
-        auto queue = std::make_unique<MultimapQueue>();
+        auto queue = std::make_unique<PriorityQueue>();
         auto &dm = queue->createManager();
 
         std::thread t([&]() {
@@ -67,7 +67,7 @@ TEST_CASE("CoroutineTests") {
     }
 
     SECTION("co_await in function") {
-        auto queue = std::make_unique<MultimapQueue>();
+        auto queue = std::make_unique<PriorityQueue>();
         auto &dm = queue->createManager();
 
         std::thread t([&]() {
@@ -115,7 +115,7 @@ TEST_CASE("CoroutineTests") {
     }
 
     SECTION("co_await in event handler") {
-        auto queue = std::make_unique<MultimapQueue>();
+        auto queue = std::make_unique<PriorityQueue>();
         auto &dm = queue->createManager();
 
         std::thread t([&]() {
@@ -143,7 +143,7 @@ TEST_CASE("CoroutineTests") {
     }
 
     SECTION("multiple awaiters in event handler") {
-        auto queue = std::make_unique<MultimapQueue>();
+        auto queue = std::make_unique<PriorityQueue>();
         auto &dm = queue->createManager();
         _autoEvt = std::make_unique<Ichor::AsyncAutoResetEvent>();
         MultipleAwaitService *svc{};
@@ -172,7 +172,7 @@ TEST_CASE("CoroutineTests") {
 
     SECTION("co_await in timer service") {
         fmt::print("co_await in timer service\n");
-        auto queue = std::make_unique<MultimapQueue>();
+        auto queue = std::make_unique<PriorityQueue>();
         auto &dm = queue->createManager();
 
         std::thread t([&]() {
@@ -198,7 +198,7 @@ TEST_CASE("CoroutineTests") {
     }
 
     SECTION("co_await user defined struct generator") {
-        auto queue = std::make_unique<MultimapQueue>();
+        auto queue = std::make_unique<PriorityQueue>();
         auto &dm = queue->createManager();
         AwaitReturnService *svc{};
         AwaitNoCopy::countConstructed = 0;
@@ -238,7 +238,7 @@ TEST_CASE("CoroutineTests") {
     }
 
     SECTION("co_await user defined struct task") {
-        auto queue = std::make_unique<MultimapQueue>();
+        auto queue = std::make_unique<PriorityQueue>();
         auto &dm = queue->createManager();
         AwaitReturnService *svc{};
         AwaitNoCopy::countConstructed = 0;
@@ -278,7 +278,7 @@ TEST_CASE("CoroutineTests") {
     }
 
     SECTION("stop in async start") {
-        auto queue = std::make_unique<MultimapQueue>();
+        auto queue = std::make_unique<PriorityQueue>();
         auto &dm = queue->createManager();
 
         std::thread t([&]() {
@@ -293,7 +293,7 @@ TEST_CASE("CoroutineTests") {
     }
 
     SECTION("Dependency offline while starting service") {
-        auto queue = std::make_unique<MultimapQueue>();
+        auto queue = std::make_unique<PriorityQueue>();
         auto &dm = queue->createManager();
         uint64_t svcId{};
 
@@ -312,23 +312,23 @@ TEST_CASE("CoroutineTests") {
 
             REQUIRE(services.empty());
 
-            auto svcs = dm.getServiceInfo();
+            auto svcs = dm.getAllServices();
 
             REQUIRE(svcs.size() == 4);
 
-            REQUIRE(svcs[svcId]->getServiceState() == Ichor::ServiceState::STARTING);
+            REQUIRE(svcs.find(svcId)->second->getServiceState() == Ichor::ServiceState::STARTING);
 
             _evt->set();
 
-            REQUIRE(svcs[svcId]->getServiceState() == Ichor::ServiceState::INJECTING);
+            REQUIRE(svcs.find(svcId)->second->getServiceState() == Ichor::ServiceState::INJECTING);
         });
 
         dm.runForOrQueueEmpty();
 
         queue->pushEvent<RunFunctionEvent>(0, [&dm = dm, svcId]() {
-            auto svcs = dm.getServiceInfo();
+            auto svcs = dm.getAllServices();
 
-            REQUIRE(svcs[svcId]->getServiceState() == Ichor::ServiceState::INSTALLED);
+            REQUIRE(svcs.find(svcId)->second->getServiceState() == Ichor::ServiceState::INSTALLED);
 
             auto services = dm.getStartedServices<IDependencyOfflineWhileStartingService>();
 
@@ -343,7 +343,7 @@ TEST_CASE("CoroutineTests") {
     }
 
     SECTION("Dependency online while stopping service") {
-        auto queue = std::make_unique<MultimapQueue>();
+        auto queue = std::make_unique<PriorityQueue>();
         auto &dm = queue->createManager();
         uint64_t svcId{};
 
@@ -362,15 +362,15 @@ TEST_CASE("CoroutineTests") {
 
             REQUIRE(services.empty());
 
-            auto svcs = dm.getServiceInfo();
+            auto svcs = dm.getAllServices();
 
             REQUIRE(svcs.size() == 4);
 
-            REQUIRE(svcs[svcId]->getServiceState() == Ichor::ServiceState::STOPPING);
+            REQUIRE(svcs.find(svcId)->second->getServiceState() == Ichor::ServiceState::STOPPING);
 
             _evt->set();
 
-            REQUIRE(svcs[svcId]->getServiceState() == Ichor::ServiceState::INSTALLED);
+            REQUIRE(svcs.find(svcId)->second->getServiceState() == Ichor::ServiceState::INSTALLED);
         });
 
         dm.runForOrQueueEmpty();
@@ -380,10 +380,10 @@ TEST_CASE("CoroutineTests") {
 
             REQUIRE(services.empty());
 
-            auto svcs = dm.getServiceInfo();
+            auto svcs = dm.getAllServices();
 
             REQUIRE(svcs.size() == 4);
-            REQUIRE(svcs[svcId]->getServiceState() == Ichor::ServiceState::INSTALLED);
+            REQUIRE(svcs.find(svcId)->second->getServiceState() == Ichor::ServiceState::INSTALLED);
 
             dm.getEventQueue().pushEvent<QuitEvent>(0);
         });

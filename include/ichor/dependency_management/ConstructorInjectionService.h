@@ -2,7 +2,6 @@
 
 #include <ichor/Concepts.h>
 #include <ichor/coroutines/Task.h>
-#include <ichor/dependency_management/DependencyInfo.h>
 #include <ichor/dependency_management/DependencyRegister.h>
 #include <ichor/dependency_management/IService.h>
 #include <utility>
@@ -146,7 +145,7 @@ namespace Ichor {
     class ConstructorInjectionService<T> : public IService {
     public:
         ConstructorInjectionService(DependencyRegister &reg, Properties props) noexcept : IService(), _properties(std::move(props)), _serviceId(Detail::_serviceIdCounter.fetch_add(1, std::memory_order_relaxed)), _servicePriority(INTERNAL_EVENT_PRIORITY), _serviceGid(sole::uuid4()), _serviceState(ServiceState::INSTALLED) {
-            registerDependenciesSpecialSauce(reg, std::optional<refl::as_variant<T>>());
+            registerDependenciesSpecialSauce(reg, tl::optional<refl::as_variant<T>>());
         }
 
         ~ConstructorInjectionService() noexcept override {
@@ -160,14 +159,26 @@ namespace Ichor {
         ConstructorInjectionService& operator=(ConstructorInjectionService&&) noexcept = default;
 
         template <typename... CO_ARGS>
-        void registerDependenciesSpecialSauce(DependencyRegister &reg, std::optional<std::variant<CO_ARGS...>> = {}) {
+        void registerDependenciesSpecialSauce(DependencyRegister &reg, tl::optional<std::variant<CO_ARGS...>> = {}) {
             (reg.registerDependencyConstructor<std::remove_pointer_t<CO_ARGS>>(this), ...);
         }
         template <typename... CO_ARGS>
-        void createServiceSpecialSauce(std::optional<std::variant<CO_ARGS...>> = {}) {
+        void createServiceSpecialSauce(tl::optional<std::variant<CO_ARGS...>> = {}) {
             try {
-                new (buf) T(std::get<CO_ARGS>(_deps[typeNameHash<std::remove_pointer_t<CO_ARGS>>()])...);
-            } catch (std::exception const &) {
+                new(buf) T(std::get<CO_ARGS>(_deps[typeNameHash<std::remove_pointer_t<CO_ARGS>>()])...);
+            } catch (fmt::format_error const &e) {
+                fmt::print("User error in service {}:{}: \"{}\"\n", getServiceId(), getServiceName(), e.what());
+                std::terminate();
+            } catch (std::exception const &e) {
+                fmt::print("Std exception while starting svc {}:{} : \"{}\".\n\nLikely user error, but printing extra information anyway: Stored dependencies:\n", e.what(), getServiceId(), getServiceName());
+                for(auto &[key, _] : _deps) {
+                    fmt::print("{} ", key);
+                }
+                fmt::print("\n");
+
+                fmt::print("Requested deps:\n");
+                (fmt::print("{}:{} ", typeNameHash<std::remove_pointer_t<CO_ARGS>>(), typeName<std::remove_pointer_t<CO_ARGS>>()), ...);
+                fmt::print("\n");
                 std::terminate();
             }
         }
@@ -222,7 +233,7 @@ namespace Ichor {
     private:
         ///
         /// \return true if started
-        [[nodiscard]] Task<StartBehaviour> internal_start(DependencyInfo *_dependencies) {
+        [[nodiscard]] Task<StartBehaviour> internal_start(DependencyRegister const *_dependencies) {
             if(_serviceState != ServiceState::INSTALLED || (_dependencies != nullptr && !_dependencies->allSatisfied())) {
                 INTERNAL_DEBUG("internal_start service {}:{} state {} dependencies {} {}", getServiceId(), typeName<T>(), getState(), _dependencies->size(), _dependencies->allSatisfied());
                 co_return {};
@@ -230,7 +241,7 @@ namespace Ichor {
 
             INTERNAL_DEBUG("internal_start service {}:{} state {} -> {}", getServiceId(), typeName<T>(), getState(), ServiceState::STARTING);
             _serviceState = ServiceState::STARTING;
-            createServiceSpecialSauce(std::optional<refl::as_variant<T>>());
+            createServiceSpecialSauce(tl::optional<refl::as_variant<T>>());
 
             INTERNAL_DEBUG("internal_start service {}:{} state {} -> {}", getServiceId(), typeName<T>(), getState(), ServiceState::INJECTING);
             _serviceState = ServiceState::INJECTING;
@@ -392,7 +403,7 @@ namespace Ichor {
     private:
         ///
         /// \return true if started
-        [[nodiscard]] Task<StartBehaviour> internal_start(DependencyInfo *_dependencies) {
+        [[nodiscard]] Task<StartBehaviour> internal_start(DependencyRegister const *_dependencies) {
             if(_serviceState != ServiceState::INSTALLED || (_dependencies != nullptr && !_dependencies->allSatisfied())) {
                 INTERNAL_DEBUG("internal_start service {}:{} state {} dependencies {} {}", getServiceId(), typeName<T>(), getState(), _dependencies->size(), _dependencies->allSatisfied());
                 co_return {};

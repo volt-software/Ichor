@@ -1,8 +1,26 @@
 file(GLOB_RECURSE PROJECT_BENCHMARK_SOURCES ${ICHOR_TOP_DIR}/benchmarks/*.cpp)
 
+find_package(PkgConfig)
+if(PkgConfig_FOUND AND NOT ICHOR_USE_LIBCPP) # Most platforms have compiled RE2 with libstdc++ and mixing that with libc++ fails
+    pkg_check_modules(RE2 re2)
+    if(RE2_FOUND)
+        set(USE_RE2 ON)
+    else()
+        set(USE_RE2 OFF)
+    endif()
+else()
+    set(USE_RE2 OFF)
+endif()
+
 foreach(filename ${PROJECT_BENCHMARK_SOURCES})
     get_filename_component(benchname ${filename} NAME_WE)
     add_executable(${benchname} ${filename})
     target_link_libraries(${benchname} ${CMAKE_THREAD_LIBS_INIT})
     target_link_libraries(${benchname} ichor)
+
+    if(USE_RE2)
+        target_include_directories(${benchname} PUBLIC ${RE2_INCLUDE_DIRS})
+        target_link_libraries(${benchname} ${RE2_LIBRARIES})
+        target_compile_definitions(${benchname} PUBLIC ICHOR_USE_RE2)
+    endif()
 endforeach()

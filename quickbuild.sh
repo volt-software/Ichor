@@ -12,7 +12,6 @@ POSITIONAL_ARGS=()
 ASAN=1
 TSAN=0
 GCC=0
-MIMALLOC=0
 BUILDTYPE="Debug"
 RUN_EXAMPLES=0
 
@@ -36,7 +35,6 @@ while [[ $# -gt 0 ]]; do
       ASAN=0
       TSAN=0
       BUILDTYPE="Release"
-      MIMALLOC=1
       shift # past value
       ;;
     --run-examples)
@@ -68,9 +66,9 @@ rm -rf ./*
 rm -rf ../bin/*
 
 if [[ $GCC -eq 1 ]]; then
-  CC=/opt/gcc/12/bin/gcc CXX=/opt/gcc/12/bin/g++ cmake -DCMAKE_BUILD_TYPE=${BUILDTYPE} -DICHOR_ARCH_OPTIMIZATION=X86_64_AVX2 -DICHOR_USE_MIMALLOC=${MIMALLOC} -DICHOR_USE_BACKWARD=0 -DICHOR_USE_BOOST_BEAST=1 -DICHOR_USE_SANITIZERS=${ASAN} -DICHOR_USE_THREAD_SANITIZER=${TSAN} -DICHOR_USE_MOLD=1 -GNinja ..
+  CC=/opt/gcc/12/bin/gcc CXX=/opt/gcc/12/bin/g++ cmake -DCMAKE_BUILD_TYPE=${BUILDTYPE} -DICHOR_ARCH_OPTIMIZATION=X86_64_AVX2 -DICHOR_USE_BACKWARD=0 -DICHOR_USE_BOOST_BEAST=1 -DICHOR_USE_HIREDIS=1 -DICHOR_USE_SANITIZERS=${ASAN} -DICHOR_USE_THREAD_SANITIZER=${TSAN} -DICHOR_USE_MOLD=1 -GNinja ..
 else
-  CC=clang CXX=clang++ cmake -DCMAKE_BUILD_TYPE=${BUILDTYPE} -DICHOR_ARCH_OPTIMIZATION=X86_64_AVX2 -DICHOR_USE_MIMALLOC=${MIMALLOC} -DICHOR_USE_BACKWARD=0 -DICHOR_USE_BOOST_BEAST=1 -DICHOR_USE_SANITIZERS=${ASAN} -DICHOR_USE_THREAD_SANITIZER=${TSAN} -DICHOR_USE_MOLD=1 -GNinja ..
+  CC=clang CXX=clang++ cmake -DCMAKE_BUILD_TYPE=${BUILDTYPE} -DICHOR_ARCH_OPTIMIZATION=X86_64_AVX2 -DICHOR_USE_BACKWARD=0 -DICHOR_USE_BOOST_BEAST=1 -DICHOR_USE_HIREDIS=1 -DICHOR_USE_LIBCPP=0 -DICHOR_USE_SANITIZERS=${ASAN} -DICHOR_USE_THREAD_SANITIZER=${TSAN} -DICHOR_USE_MOLD=1 -GNinja ..
 fi
 
 ninja && ninja test
@@ -83,7 +81,8 @@ if [[ $RUN_EXAMPLES -eq 1 ]]; then
     ../bin/ichor_serializer_example || exit 1
     ../bin/ichor_tcp_example || exit 1
     ../bin/ichor_timer_example || exit 1
-    ../bin/ichor_tracker_example || exit 1
+    ../bin/ichor_factory_example || exit 1
+    ../bin/ichor_introspection_example || exit 1
     ../bin/ichor_websocket_example || exit 1
     ../bin/ichor_websocket_example -t4 || exit 1
     ../bin/ichor_yielding_timer_example || exit 1

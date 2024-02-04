@@ -28,14 +28,22 @@ namespace Ichor {
     }
 
     void IEventQueue::startDm() {
+        if(!_dm) [[unlikely]] {
+            throw std::runtime_error("Please create a manager first!");
+        }
+
         _dm->start();
     }
 
-    void IEventQueue::processEvent(std::unique_ptr<Event> &&evt) {
-        _dm->processEvent(std::move(evt));
+    void IEventQueue::processEvent(std::unique_ptr<Event> &evt) {
+        _dm->processEvent(evt);
     }
 
     void IEventQueue::stopDm() {
+        if(!_dm) [[unlikely]] {
+            throw std::runtime_error("Please create a manager first!");
+        }
+
         _dm->stop();
     }
 

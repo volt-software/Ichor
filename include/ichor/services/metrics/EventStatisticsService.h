@@ -54,7 +54,7 @@ namespace Ichor {
         void addDependencyInstance(ITimerFactory &factory, IService &);
         void removeDependencyInstance(ITimerFactory &factory, IService&);
 
-        AsyncGenerator<IchorBehaviour> handleEvent();
+        void calculateAverage();
 
         Task<tl::expected<void, Ichor::StartError>> start() final;
         Task<void> stop() final;
@@ -67,7 +67,7 @@ namespace Ichor {
         unordered_map<uint64_t, std::string_view> _eventTypeToNameMapper;
         std::chrono::time_point<std::chrono::steady_clock> _startProcessingTimestamp{};
         bool _showStatisticsOnStop{false};
-        uint64_t _averagingIntervalMs{5000};
+        uint64_t _averagingIntervalMs{500};
         EventInterceptorRegistration _interceptorRegistration{};
         ILogger *_logger{};
         ITimerFactory *_timerFactory{};

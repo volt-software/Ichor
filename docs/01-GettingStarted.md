@@ -55,15 +55,6 @@ Ubuntu 22.04:
 sudo apt install libboost1.74-all-dev libssl-dev
 ```
 
-If using abseil:
-Ubuntu 20.04:
-Not available on apt. Please compile manually.
-
-Ubuntu 22.04:
-```
-sudo apt install libabsl-dev
-```
-
 #### Windows
 
 Install MSVC 17.4 or newer. Open Ichor in MSVC and configure CMake according to your wishes. Build and install and you should find an `out` directory in Ichor's top level directory.
@@ -131,10 +122,10 @@ Starting a dependency manager is quite easy. Instantiate it, tell it which servi
 ```c++
 // main.cpp
 #include <ichor/DependencyManager.h>
-#include <ichor/event_queues/MultimapQueue.h>
+#include <ichor/event_queues/PriorityQueue.h>
 
 int main() {
-    auto queue = std::make_unique<MultimapQueue>(); // use a priority queue based on Multimap
+    auto queue = std::make_unique<PriorityQueue>(); // use a priority queue based on std::priority_queue
     auto &dm = queue->createManager(); // create the dependency manager
     dm.start(CaptureSigInt);
     
@@ -179,12 +170,12 @@ struct MyService final { // Don't need an interface here, nothing has a dependen
 ```c++
 // main.cpp
 #include <ichor/DependencyManager.h>
-#include <ichor/event_queues/MultimapQueue.h>
+#include <ichor/event_queues/PriorityQueue.h>
 #include "SomeDependency.h"
 #include "MyService.h"
 
 int main() {
-    auto queue = std::make_unique<MultimapQueue>();
+    auto queue = std::make_unique<PriorityQueue>();
     auto &dm = queue->createManager();
     dm.createServiceManager<SomeDependency, ISomeDependency>(); // register SomeDependency as providing an ISomeDependency
     dm.createServiceManager<MyService>(); // register MyService (requested dependencies get registered automatically)
@@ -255,11 +246,11 @@ struct EventManipulationService final { // Don't need an interface here, nothing
 ```c++
 // main.cpp
 #include <ichor/DependencyManager.h>
-#include <ichor/event_queues/MultimapQueue.h>
+#include <ichor/event_queues/PriorityQueue.h>
 #include "EventManipulationService.h"
 
 int main() {
-    auto queue = std::make_unique<MultimapQueue>();
+    auto queue = std::make_unique<PriorityQueue>();
     auto &dm = queue->createManager();
     dm.createServiceManager<EventManipulationService>();
     dm.start(CaptureSigInt);
@@ -293,14 +284,14 @@ struct MyTimerService final {
 ```c++
 // main.cpp
 #include <ichor/DependencyManager.h>
-#include <ichor/event_queues/MultimapQueue.h>
+#include <ichor/event_queues/PriorityQueue.h>
 #include <ichor/services/timer/TimerFactoryFactory.h> // Add this
 #include "MyService.h"
 #include "MyDependencyService.h"
 #include "MyTimerService.h" // Add this
 
 int main() {
-    auto queue = std::make_unique<MultimapQueue>();
+    auto queue = std::make_unique<PriorityQueue>();
     auto &dm = queue->createManager();
     dm.createServiceManager<MyService, IMyService>();
     dm.createServiceManager<MyDependencyService, IMyDependencyService>();
@@ -384,13 +375,13 @@ struct MyCoroutineTimerService final {
 ```c++
 // main.cpp
 #include <ichor/DependencyManager.h>
-#include <ichor/event_queues/MultimapQueue.h>
+#include <ichor/event_queues/PriorityQueue.h>
 #include <ichor/services/timer/TimerFactoryFactory.h>
 #include "AwaitService.h"
 #include "MyCoroutineTimerService.h"
 
 int main() {
-    auto queue = std::make_unique<MultimapQueue>();
+    auto queue = std::make_unique<PriorityQueue>();
     auto &dm = queue->createManager();
     dm.createServiceManager<AwaitService, IAwaitService>();
     dm.createServiceManager<MyCoroutineTimerService>();
@@ -462,7 +453,7 @@ struct LoggerFactory final {
         Properties props{};
         // Filter is a special property in Ichor, if this is detected, it gets checked before asking another service if they're interested in it.
         // In this case, we apply a filter specifically so that the requesting service id is the only one that will match.
-        props.template emplace<>("Filter", Ichor::make_any<Filter>(Filter{ServiceIdFilterEntry{evt.originatingService}}));
+        props.template emplace<>("Filter", Ichor::make_any<Filter>(ServiceIdFilterEntry{evt.originatingService}));
         auto *newLogger = _dm->createServiceManager<Logger, ILogger>(std::move(props));
         _loggers.emplace(evt.originatingService, newLogger);
     }
@@ -489,7 +480,7 @@ struct SomeServiceUsingLogger final {
 };
 
 int main() {
-    auto queue = std::make_unique<MultimapQueue>();
+    auto queue = std::make_unique<PriorityQueue>();
     auto &dm = queue->createManager();
     dm.createServiceManager<LoggerFactory>(); // LoggerFactory will end up resolving the ILogger request from SomeServiceUsingLogger
     dm.createServiceManager<SomeServiceUsingLogger>();
@@ -532,11 +523,18 @@ Your events can then be inserted, intercepted or handled as you would e.g. a `Qu
 
 ```c++
 struct MyEvent final : public Event {
-    MyEvent(uint64_t _id, uint64_t _originatingService, uint64_t _priority, uint64_t _someData) noexcept : Event(TYPE, NAME, _id, _originatingService, _priority), someData(_someData) {}
+    MyEvent(uint64_t _id, uint64_t _originatingService, uint64_t _priority, uint64_t _someData) noexcept : Event(_id, _originatingService, _priority), someData(_someData) {}
     ~MyEvent() final = default;
 
+    [[nodiscard]] std::string_view get_name() const noexcept final {
+        return NAME;
+    }
+    [[nodiscard]] NameHashType get_type() const noexcept final {
+        return TYPE;
+    }
+
     uint64_t someData;
-    static constexpr uint64_t TYPE = typeNameHash<MyEvent>();
+    static constexpr NameHashType TYPE = typeNameHash<MyEvent>();
     static constexpr std::string_view NAME = typeName<MyEvent>();
 };
 
@@ -582,14 +580,14 @@ Starting up two manager is easy, but allowing services to communicate to service
 ```c++
 // main.cpp
 #include <ichor/DependencyManager.h>
-#include <ichor/event_queues/MultimapQueue.h>
+#include <ichor/event_queues/PriorityQueue.h>
 #include <ichor/CommunicationChannel.h>
 
 int main() {
     Ichor::CommunicationChannel channel{};
-    auto queueOne = std::make_unique<MultimapQueue>();
+    auto queueOne = std::make_unique<PriorityQueue>();
     auto &dmOne = queue->createManager(); // ID = 0
-    auto queueTwo = std::make_unique<MultimapQueue>();
+    auto queueTwo = std::make_unique<PriorityQueue>();
     auto &dmTwo = queue->createManager(); // ID = 1
     
     // Register the manager to the channel

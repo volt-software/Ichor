@@ -66,7 +66,7 @@ pFbool/8ZDecmB4ZSa03aw==
 Now we need to get these into the code. We can do this by reading a file using standard C++, but for convenience, this doc will just copy and paste them into code:
 
 ```c++
-auto queue = std::make_unique<MultimapQueue>();
+auto queue = std::make_unique<PriorityQueue>();
 auto &dm = queue->createManager();
 
 std::string key = "-----BEGIN PRIVATE KEY-----\n"
@@ -137,7 +137,7 @@ dm.createServiceManager<HttpHostService, IHttpHostService>(Properties{{"Address"
 Connecting to a Https webserver is somewhat similar. Using the same certificate from above, we need to tell the client to trust it:
 
 ```c++
-auto queue = std::make_unique<MultimapQueue>();
+auto queue = std::make_unique<PriorityQueue>();
 auto &dm = queue->createManager();
 
 std::string cert = "-----BEGIN CERTIFICATE-----\n"

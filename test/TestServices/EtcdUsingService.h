@@ -7,7 +7,7 @@
 namespace Ichor {
     struct EtcdUsingService final : public AdvancedService<EtcdUsingService> {
         EtcdUsingService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {
-            reg.registerDependency<IEtcd>(this, true);
+            reg.registerDependency<IEtcd>(this, DependencyFlags::REQUIRED);
         }
 
         Task<tl::expected<void, Ichor::StartError>> start() final {
@@ -433,7 +433,7 @@ namespace Ichor {
             }
             // TTL test
             {
-                auto putReply = co_await _etcd->put("ttl_key", "value", {}, {}, {}, 1, false, false, false);
+                auto putReply = co_await _etcd->put("ttl_key", "value", {}, {}, {}, 1u, false, false, false);
                 if (!putReply) {
                     throw std::runtime_error("");
                 }
@@ -487,7 +487,7 @@ namespace Ichor {
                         throw std::runtime_error("Incorrect put dir node value");
                     }
 
-                    co_return IchorBehaviour::DONE;
+                    co_return {};
                 });
 
                 auto getReply = co_await _etcd->get("watch_key", false, false, true, {});
@@ -523,6 +523,194 @@ namespace Ichor {
 
                 if (versionReply.value().etcdserver.empty()) {
                     throw std::runtime_error("Incorrect etcdcluster value");
+                }
+            }
+            // Authentication test
+            {
+                auto authReply = co_await _etcd->authStatus();
+                if (!authReply) {
+                    throw std::runtime_error("missing authReply");
+                }
+
+                if(authReply.value()) {
+                    _etcd->setAuthentication("root", "root");
+
+                    auto disableAuthReply = co_await _etcd->disableAuth();
+                    if (!disableAuthReply || !disableAuthReply.value()) {
+                        throw std::runtime_error("These tests require that auth is disabled before starting the tests, or that the tests can disable it automatically using root:root");
+                    }
+
+                }
+
+                auto usersReply = co_await _etcd->getUsers();
+                if (!usersReply) {
+                    throw std::runtime_error("missing usersReply");
+                }
+
+                if(!usersReply.value().users || std::find_if(usersReply.value().users->begin(), usersReply.value().users->end(), [](EtcdUserReply const &r) {
+                    return r.user == "root";
+                }) == usersReply.value().users->end()) {
+                    auto createUserReply = co_await _etcd->createUser("root", "root");
+                    if (!createUserReply) {
+                        throw std::runtime_error("missing createUserReply");
+                    }
+                }
+
+                _etcd->setAuthentication("root", "root");
+                if(_etcd->getAuthenticationUser() != "root") {
+                    throw std::runtime_error("Incorrect auth user");
+                }
+
+                auto enableAuthReply = co_await _etcd->enableAuth();
+                if (!enableAuthReply) {
+                    throw std::runtime_error("missing enableAuthReply");
+                }
+
+                if(!enableAuthReply.value()) {
+                    throw std::runtime_error("Could not enable auth");
+                }
+
+                authReply = co_await _etcd->authStatus();
+                if (!authReply) {
+                    throw std::runtime_error("missing authReply");
+                }
+
+                if(!authReply.value()) {
+                    throw std::runtime_error("Expected Auth enabled");
+                }
+
+                auto disableAuthReply = co_await _etcd->disableAuth();
+                if (!disableAuthReply) {
+                    throw std::runtime_error("missing disableAuthReply");
+                }
+
+                if(!disableAuthReply.value()) {
+                    throw std::runtime_error("Could not disable auth");
+                }
+            }
+            // Create / delete user tests
+            {
+                auto usersReply = co_await _etcd->getUsers();
+                if (!usersReply) {
+                    throw std::runtime_error("missing usersReply");
+                }
+
+                if(!usersReply.value().users || std::find_if(usersReply.value().users->begin(), usersReply.value().users->end(), [](EtcdUserReply const &r) {
+                    return r.user == "test_user";
+                }) != usersReply.value().users->end()) {
+                    throw std::runtime_error("test_user already exists");
+                }
+
+                auto createUserReply = co_await _etcd->createUser("test_user", "test_user");
+                if (!createUserReply) {
+                    throw std::runtime_error("missing createUserReply");
+                }
+
+                usersReply = co_await _etcd->getUsers();
+                if (!usersReply) {
+                    throw std::runtime_error("missing usersReply");
+                }
+
+                if(!usersReply.value().users || std::find_if(usersReply.value().users->begin(), usersReply.value().users->end(), [](EtcdUserReply const &r) {
+                    return r.user == "test_user";
+                }) == usersReply.value().users->end()) {
+                    throw std::runtime_error("test_user not created successfully");
+                }
+
+                // forced to declare as a variable due to internal compiler errors in gcc <= 12.3.0
+                std::vector<std::string> roles{"test_role"};
+                auto grantUserReply = co_await _etcd->grantUserRoles("test_user", roles);
+                if (!grantUserReply) {
+                    throw std::runtime_error("missing grantUserReply");
+                }
+
+                auto revokeUserReply = co_await _etcd->revokeUserRoles("test_user", roles);
+                if (!revokeUserReply) {
+                    throw std::runtime_error("missing revokeUserReply");
+                }
+
+                auto updatePassReply = co_await _etcd->updateUserPassword("test_user", "test_role2");
+                if (!updatePassReply) {
+                    throw std::runtime_error("missing updatePassReply");
+                }
+
+                auto deleteUserReply = co_await _etcd->deleteUser("test_user");
+                if (!deleteUserReply) {
+                    throw std::runtime_error("missing deleteUserReply");
+                }
+
+                usersReply = co_await _etcd->getUsers();
+                if (!usersReply) {
+                    throw std::runtime_error("missing usersReply");
+                }
+
+                if(!usersReply.value().users || std::find_if(usersReply.value().users->begin(), usersReply.value().users->end(), [](EtcdUserReply const &r) {
+                    return r.user == "test_user";
+                }) != usersReply.value().users->end()) {
+                    throw std::runtime_error("test_user not deleted successfully");
+                }
+            }
+            // Create / delete role tests
+            {
+                auto rolesReply = co_await _etcd->getRoles();
+                if (!rolesReply) {
+                    throw std::runtime_error("missing rolesReply");
+                }
+
+                if(std::find_if(rolesReply.value().roles.begin(), rolesReply.value().roles.end(), [](EtcdRoleReply const &r) {
+                    return r.role == "test_role";
+                }) != rolesReply.value().roles.end()) {
+                    throw std::runtime_error("test_role already exists");
+                }
+
+                // forced to declare as a variable due to internal compiler errors in gcc <= 12.3.0
+                std::vector<std::string> read_permissions{"read_perm"};
+                std::vector<std::string> write_permissions{"write_perm"};
+                auto createRoleReply = co_await _etcd->createRole("test_role", read_permissions, write_permissions);
+                if (!createRoleReply) {
+                    fmt::print("missing createRoleReply {}\n", createRoleReply.error());
+                    throw std::runtime_error("missing createRoleReply");
+                }
+
+                rolesReply = co_await _etcd->getRoles();
+                if (!rolesReply) {
+                    throw std::runtime_error("missing rolesReply");
+                }
+
+                if(std::find_if(rolesReply.value().roles.begin(), rolesReply.value().roles.end(), [](EtcdRoleReply const &r) {
+                    return r.role == "test_role";
+                }) == rolesReply.value().roles.end()) {
+                    throw std::runtime_error("test_role not created successfully");
+                }
+
+                read_permissions.clear();
+                read_permissions.push_back("read_perm2");
+                auto grantRoleReply = co_await _etcd->grantRolePermissions("test_role", read_permissions, {});
+                if (!grantRoleReply) {
+                    fmt::print("missing grantRoleReply {}\n", grantRoleReply.error());
+                    throw std::runtime_error("missing grantRoleReply");
+                }
+
+                auto revokeRoleReply = co_await _etcd->revokeRolePermissions("test_role", read_permissions, {});
+                if (!revokeRoleReply) {
+                    fmt::print("missing revokeRoleReply {}\n", revokeRoleReply.error());
+                    throw std::runtime_error("missing revokeRoleReply");
+                }
+
+                auto deleteRoleReply = co_await _etcd->deleteRole("test_role");
+                if (!deleteRoleReply) {
+                    throw std::runtime_error("missing deleteRoleReply");
+                }
+
+                rolesReply = co_await _etcd->getRoles();
+                if (!rolesReply) {
+                    throw std::runtime_error("missing rolesReply");
+                }
+
+                if(std::find_if(rolesReply.value().roles.begin(), rolesReply.value().roles.end(), [](EtcdRoleReply const &r) {
+                    return r.role == "test_role";
+                }) != rolesReply.value().roles.end()) {
+                    throw std::runtime_error("test_role not deleted successfully");
                 }
             }
 

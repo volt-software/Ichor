@@ -13,10 +13,17 @@ namespace net = boost::asio;            // from <boost/asio/executor.hpp>
 namespace Ichor {
     struct NewWsConnectionEvent final : public Event {
         explicit NewWsConnectionEvent(uint64_t _id, uint64_t _originatingService, uint64_t _priority, std::shared_ptr<websocket::stream<beast::tcp_stream>> &&socket) noexcept :
-                Event(TYPE, NAME, _id, _originatingService, _priority), _socket(std::move(socket)) {}
+                Event(_id, _originatingService, _priority), _socket(std::move(socket)) {}
         ~NewWsConnectionEvent() final = default;
 
-        static constexpr uint64_t TYPE = typeNameHash<NewWsConnectionEvent>();
+        [[nodiscard]] std::string_view get_name() const noexcept final {
+            return NAME;
+        }
+        [[nodiscard]] NameHashType get_type() const noexcept final {
+            return TYPE;
+        }
+
+        static constexpr NameHashType TYPE = typeNameHash<NewWsConnectionEvent>();
         static constexpr std::string_view NAME = typeName<NewWsConnectionEvent>();
 
         std::shared_ptr<websocket::stream<beast::tcp_stream>> _socket;

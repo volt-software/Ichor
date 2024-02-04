@@ -25,8 +25,8 @@ struct ISomeDependency{};
 struct ISomeOptionalDependency{};
 struct DependencyService final : public Service<DependencyService> {
     DependencyService(DependencyRegister &reg, Properties props, DependencyManager *) : Service(std::move(props), mng) {
-        reg.registerDependency<ISomeDependency>(this, true /* required dependency */);
-        reg.registerDependency<ISomeOptionalDependency>(this, false /* optional dependency */);
+        reg.registerDependency<ISomeDependency>(this, DependencyFlags::REQUIRED /* required dependency */);
+        reg.registerDependency<ISomeOptionalDependency>(this, DependencyFlags::NONE /* optional dependency */);
     }
     ~DependencyService() final = default;
 

@@ -79,7 +79,7 @@ namespace Ichor {
                 }
 
                 try {
-                    e->queue->processEvent(std::move(e->event));
+                    e->queue->processEvent(e->event);
                 } catch(const std::exception &ex) {
                     fmt::print("Encountered exception: \"{}\", quitting\n", ex.what());
                     e->queue->quit();

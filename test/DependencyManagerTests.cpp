@@ -1,13 +1,50 @@
-#include <ichor/event_queues/MultimapQueue.h>
+#include <ichor/event_queues/PriorityQueue.h>
 #include <ichor/events/RunFunctionEvent.h>
 #include <ichor/coroutines/AsyncManualResetEvent.h>
 #include "TestServices/UselessService.h"
 #include "TestServices/RegistrationCheckerService.h"
+#include "TestServices/MultipleSeparateDependencyRequestsService.h"
 #include "Common.h"
+
+class ScopeFilter final {
+public:
+    explicit ScopeFilter(std::string _scope) : scope(std::move(_scope)) {}
+
+    [[nodiscard]] bool matches(ILifecycleManager const &manager) const noexcept {
+        if(manager.getDependencyRegistry() == nullptr) {
+            fmt::print("ScopeFilter does not match, missing registry {}:{}\n", manager.serviceId(), manager.implementationName());
+            return false;
+        }
+
+        for(auto const &[interfaceHash, depTuple] : manager.getDependencyRegistry()->_registrations) {
+            if(interfaceHash != typeNameHash<IUselessService>()) {
+                continue;
+            }
+
+            auto &props = std::get<tl::optional<Properties>>(depTuple);
+
+            if(props) {
+                for (auto const &[key, prop] : *props) {
+                    fmt::print("depprop {} {}\n", key, prop);
+
+                    if(key == "scope" && Ichor::any_cast<const std::string&>(prop) == scope) {
+                        fmt::print("ScopeFilter matches {}:{}\n", manager.serviceId(), manager.implementationName());
+                        return true;
+                    }
+                }
+            }
+        }
+
+        fmt::print("ScopeFilter does not match {}:{}\n", manager.serviceId(), manager.implementationName());
+        return false;
+    }
+
+    std::string scope;
+};
 
 TEST_CASE("DependencyManager") {
     SECTION("DependencyManager", "QuitOnQuitEvent") {
-        auto queue = std::make_unique<MultimapQueue>();
+        auto queue = std::make_unique<PriorityQueue>();
         auto &dm = queue->createManager();
 
         std::thread t([&]() {
@@ -28,7 +65,7 @@ TEST_CASE("DependencyManager") {
     }
 
     SECTION("DependencyManager", "Check Registrations") {
-        auto queue = std::make_unique<MultimapQueue>();
+        auto queue = std::make_unique<PriorityQueue>();
         auto &dm = queue->createManager();
 
         std::thread t([&]() {
@@ -44,8 +81,22 @@ TEST_CASE("DependencyManager") {
         REQUIRE_FALSE(dm.isRunning());
     }
 
+    SECTION("DependencyManager", "Check Multiple Registrations Different Properties") {
+        auto queue = std::make_unique<PriorityQueue>();
+        auto &dm = queue->createManager();
+
+        dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>();
+        dm.createServiceManager<MultipleSeparateDependencyRequestsService>();
+        dm.createServiceManager<UselessService, IUselessService>(Properties{{"Filter", Ichor::make_any<Filter>(ScopeFilter{"scope_one"})}});
+        dm.createServiceManager<UselessService, IUselessService>(Properties{{"Filter", Ichor::make_any<Filter>(ScopeFilter{"scope_two"})}});
+        dm.createServiceManager<UselessService, IUselessService>(Properties{{"Filter", Ichor::make_any<Filter>(ScopeFilter{"scope_three"})}});
+        queue->start(CaptureSigInt);
+
+        REQUIRE_FALSE(dm.isRunning());
+    }
+
     SECTION("DependencyManager", "Get services functions") {
-        auto queue = std::make_unique<MultimapQueue>();
+        auto queue = std::make_unique<PriorityQueue>();
         auto &dm = queue->createManager();
         uint64_t uselessSvcId{};
         sole::uuid loggerUuid{};
@@ -88,7 +139,7 @@ TEST_CASE("DependencyManager") {
     }
 
     SECTION("DependencyManager", "RunFunctionEventAsync thread") {
-        auto queue = std::make_unique<MultimapQueue>();
+        auto queue = std::make_unique<PriorityQueue>();
         auto &dm = queue->createManager();
         std::thread::id testThreadId = std::this_thread::get_id();
         std::thread::id dmThreadId;

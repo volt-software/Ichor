@@ -5,7 +5,9 @@
 #include <ichor/dependency_management/DependencyRegister.h>
 #include <ichor/event_queues/IEventQueue.h>
 
-#if defined(__SANITIZE_ADDRESS__)
+#if defined(ICHOR_ENABLE_INTERNAL_DEBUGGING) || (defined(ICHOR_BUILDING_DEBUG) && (defined(__SANITIZE_ADDRESS__) || defined(__SANITIZE_THREAD__)))
+constexpr uint32_t EVENT_COUNT = 100;
+#elif defined(__SANITIZE_ADDRESS__) || defined(__SANITIZE_THREAD__)
 constexpr uint32_t EVENT_COUNT = 500'000;
 #else
 constexpr uint32_t EVENT_COUNT = 5'000'000;
@@ -15,18 +17,25 @@ using namespace Ichor;
 
 struct UselessEvent final : public Event {
     explicit UselessEvent(uint64_t _id, uint64_t _originatingService, uint64_t _priority) noexcept :
-            Event(TYPE, NAME, _id, _originatingService, _priority) {}
+            Event(_id, _originatingService, _priority) {}
     ~UselessEvent() final = default;
 
-    static constexpr uint64_t TYPE = typeNameHash<UselessEvent>();
+    [[nodiscard]] std::string_view get_name() const noexcept final {
+        return NAME;
+    }
+    [[nodiscard]] NameHashType get_type() const noexcept final {
+        return TYPE;
+    }
+
+    static constexpr NameHashType TYPE = typeNameHash<UselessEvent>();
     static constexpr std::string_view NAME = typeName<UselessEvent>();
 };
 
 class TestService final : public AdvancedService<TestService> {
 public:
     TestService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {
-        reg.registerDependency<ILogger>(this, true);
-        reg.registerDependency<IEventQueue>(this, true);
+        reg.registerDependency<ILogger>(this, DependencyFlags::REQUIRED);
+        reg.registerDependency<IEventQueue>(this, DependencyFlags::REQUIRED);
     }
     ~TestService() final = default;
 

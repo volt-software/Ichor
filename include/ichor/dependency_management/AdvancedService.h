@@ -2,7 +2,7 @@
 
 #include <ichor/Concepts.h>
 #include <ichor/coroutines/Task.h>
-#include <ichor/dependency_management/DependencyInfo.h>
+#include <ichor/dependency_management/DependencyRegister.h>
 #include <ichor/dependency_management/IService.h>
 #include <tl/expected.h>
 #include <atomic>
@@ -106,7 +106,7 @@ namespace Ichor {
     private:
         ///
         /// \return true if started
-        [[nodiscard]] Task<StartBehaviour> internal_start(DependencyInfo *_dependencies) {
+        [[nodiscard]] Task<StartBehaviour> internal_start(DependencyRegister const *_dependencies) {
             if(_serviceState != ServiceState::INSTALLED || (_dependencies != nullptr && !_dependencies->allSatisfied())) {
                 INTERNAL_DEBUG("internal_start service {}:{} state {} dependencies {} {}", getServiceId(), typeName<T>(), getState(), _dependencies != nullptr ? _dependencies->size() : (size_t)-1, _dependencies != nullptr ? _dependencies->allSatisfied() : false);
                 co_return {};

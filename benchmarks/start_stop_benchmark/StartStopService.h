@@ -6,7 +6,9 @@
 #include <ichor/dependency_management/AdvancedService.h>
 #include <ichor/dependency_management/DependencyRegister.h>
 
-#if defined(__SANITIZE_ADDRESS__)
+#if defined(ICHOR_ENABLE_INTERNAL_DEBUGGING) || (defined(ICHOR_BUILDING_DEBUG) && (defined(__SANITIZE_ADDRESS__) || defined(__SANITIZE_THREAD__)))
+constexpr uint32_t START_STOP_COUNT = 100;
+#elif defined(__SANITIZE_ADDRESS__) || defined(__SANITIZE_THREAD__)
 constexpr uint32_t START_STOP_COUNT = 100'000;
 #else
 constexpr uint32_t START_STOP_COUNT = 1'000'000;
@@ -17,9 +19,9 @@ using namespace Ichor;
 class StartStopService final : public AdvancedService<StartStopService> {
 public:
     StartStopService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {
-        reg.registerDependency<ILogger>(this, true);
-        reg.registerDependency<ITestService>(this, true);
-        reg.registerDependency<DependencyManager>(this, true);
+        reg.registerDependency<ILogger>(this, DependencyFlags::REQUIRED);
+        reg.registerDependency<ITestService>(this, DependencyFlags::REQUIRED);
+        reg.registerDependency<DependencyManager>(this, DependencyFlags::REQUIRED);
     }
     ~StartStopService() final = default;
 

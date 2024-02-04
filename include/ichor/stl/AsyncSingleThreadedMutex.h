@@ -4,7 +4,7 @@
 #include <ichor/coroutines/AsyncManualResetEvent.h>
 #include <queue>
 #include <memory>
-#include <optional>
+#include <tl/optional.h>
 #include <thread>
 
 // Mutex that prevents access between coroutines on the same thread
@@ -56,7 +56,7 @@ namespace Ichor {
             co_return AsyncSingleThreadedLockGuard{*this};
         }
 
-        std::optional<AsyncSingleThreadedLockGuard> non_blocking_lock() {
+        tl::optional<AsyncSingleThreadedLockGuard> non_blocking_lock() {
 #if defined(ICHOR_USE_HARDENING) || defined(ICHOR_ENABLE_INTERNAL_DEBUGGING)
             if(!_thread_id) {
                 _thread_id = std::this_thread::get_id();
@@ -66,7 +66,7 @@ namespace Ichor {
 #endif
 
             if(_locked) {
-                return std::nullopt;
+                return tl::nullopt;
             }
 
             _locked = true;
@@ -92,7 +92,7 @@ namespace Ichor {
         bool _locked{};
         std::queue<std::unique_ptr<AsyncManualResetEvent>> _evts{};
 #if defined(ICHOR_USE_HARDENING) || defined(ICHOR_ENABLE_INTERNAL_DEBUGGING)
-        std::optional<std::thread::id> _thread_id;
+        tl::optional<std::thread::id> _thread_id;
 #endif
     };
 }

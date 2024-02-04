@@ -1,6 +1,7 @@
 #pragma once
 
 #include <ichor/Common.h>
+#include <ichor/stl/ReferenceCountedPointer.h>
 #include <string>
 
 namespace Ichor {
@@ -48,7 +49,7 @@ namespace Ichor {
     template <typename T>
     class TemplatedFilter final : public ITemplatedFilter {
     public:
-        TemplatedFilter(T&& _entries) noexcept : entries(std::forward<T>(_entries)) {}
+        TemplatedFilter(T&& _entries) noexcept : entry(std::forward<T>(_entries)) {}
         ~TemplatedFilter() noexcept final = default;
 
         TemplatedFilter(const TemplatedFilter&) = default;
@@ -57,16 +58,17 @@ namespace Ichor {
         TemplatedFilter& operator=(TemplatedFilter&&) noexcept = default;
 
         [[nodiscard]] bool compareTo(ILifecycleManager const &manager) const noexcept final {
-            return entries.matches(manager);
+            return entry.matches(manager);
         }
 
-        T entries;
+    private:
+        T entry;
     };
 
     class Filter final {
     public:
-        template <typename... T>
-        Filter(T&&... entries) noexcept : _templatedFilter(new TemplatedFilter<T...>(std::forward<T>(entries)...)) {}
+        template <typename T>
+        Filter(T&& entries) noexcept : _templatedFilter(new TemplatedFilter<T>(std::forward<T>(entries))) {}
 
         Filter(Filter&) = default;
         Filter(const Filter&) = default;
@@ -78,6 +80,18 @@ namespace Ichor {
             return _templatedFilter->compareTo(manager);
         }
 
-        std::shared_ptr<ITemplatedFilter> _templatedFilter;
+        ReferenceCountedPointer<ITemplatedFilter> _templatedFilter;
     };
 }
+
+template <>
+struct fmt::formatter<Ichor::Filter> {
+    constexpr auto parse(format_parse_context& ctx) {
+        return ctx.end();
+    }
+
+    template <typename FormatContext>
+    auto format(const Ichor::Filter&, FormatContext& ctx) {
+        return fmt::format_to(ctx.out(), "");
+    }
+};

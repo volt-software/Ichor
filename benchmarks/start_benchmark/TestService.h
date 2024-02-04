@@ -4,8 +4,9 @@
 #include <ichor/dependency_management/AdvancedService.h>
 #include <ichor/dependency_management/DependencyRegister.h>
 #include <ichor/event_queues/IEventQueue.h>
-
-#if defined(__SANITIZE_ADDRESS__)
+#if defined(ICHOR_ENABLE_INTERNAL_DEBUGGING) || (defined(ICHOR_BUILDING_DEBUG) && (defined(__SANITIZE_ADDRESS__) || defined(__SANITIZE_THREAD__)))
+constexpr uint32_t SERVICES_COUNT = 100;
+#elif defined(__SANITIZE_ADDRESS__) || defined(__SANITIZE_THREAD__)
 constexpr uint32_t SERVICES_COUNT = 1'000;
 #else
 constexpr uint32_t SERVICES_COUNT = 10'000;
@@ -16,7 +17,7 @@ using namespace Ichor;
 class TestService final : public AdvancedService<TestService> {
 public:
     TestService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {
-        reg.registerDependency<ILogger>(this, true);
+        reg.registerDependency<ILogger>(this, DependencyFlags::REQUIRED);
     }
     ~TestService() final = default;
 

@@ -11,7 +11,7 @@ namespace Ichor {
         ~StopsInAsyncStartService() final = default;
 
         Task<tl::expected<void, Ichor::StartError>> start() final {
-            co_await GetThreadLocalManager().pushPrioritisedEventAsync<StopServiceEvent>(getServiceId(), 50, false, getServiceId()).begin();
+            co_await GetThreadLocalManager().pushPrioritisedEventAsync<StopServiceEvent>(getServiceId(), 50, false, getServiceId());
             GetThreadLocalEventQueue().pushEvent<QuitEvent>(getServiceId());
 
             co_return {};

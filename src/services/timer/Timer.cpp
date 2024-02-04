@@ -29,7 +29,7 @@ void Ichor::Timer::startTimer(bool fireImmediately) {
     if(_quit.compare_exchange_strong(expected, false, std::memory_order_acq_rel)) {
         _eventInsertionThread = std::make_unique<std::thread>([this, fireImmediately]() { this->insertEventLoop(fireImmediately); });
 #if defined(__linux__) || defined(__CYGWIN__)
-        pthread_setname_np(_eventInsertionThread->native_handle(), fmt::format("Tmr #{}", _timerId).c_str());
+        pthread_setname_np(_eventInsertionThread->native_handle(), fmt::format("Tmr#{}", _timerId).c_str());
 #endif
     }
 }
@@ -83,10 +83,10 @@ uint64_t Ichor::Timer::getTimerId() const noexcept {
 
 void Ichor::Timer::insertEventLoop(bool fireImmediately) {
 #if defined(__APPLE__)
-    pthread_setname_np(fmt::format("Tmr #{}", _timerId).c_str());
+    pthread_setname_np(fmt::format("Tmr#{}", _timerId).c_str());
 #endif
 #if (defined(WIN32) || defined(_WIN32) || defined(__WIN32)) && !defined(__CYGWIN__)
-    SetThreadDescription(GetCurrentThread(), fmt::format(L"Tmr #{}", _timerId).c_str());
+    SetThreadDescription(GetCurrentThread(), fmt::format(L"Tmr#{}", _timerId).c_str());
 #endif
 
 

@@ -1,6 +1,6 @@
-# ASIO supports io_uring, can do all of that, and more. Any reason i'd want to use your lib instead?
+# ASIO supports io_uring, can do all of that, and more. Any reason I'd want to use your lib instead?
 
-Ichor is a combination of things: Event Loops, Dependency Injection, as well as pre-made implementations for HTTP(s) servers/clients, websocket servers/clients, redis client and more.
+Ichor is a combination of things: Event Loops, Dependency Injection, as well as pre-made implementations for HTTP(s) servers/clients, websocket servers/clients, redis client, etcd client and more.
 
 Ichor is intended to be integrated on top of an existing event loop (e.g. [systemd](https://github.com/volt-software/Ichor/blob/main/src/ichor/event_queues/SdeventQueue.cpp) ). But if you have none, Ichor provides a simple implementation. Integrating Ichor into an existing boost.ASIO loop is possible, but not implemented today.
 
@@ -10,14 +10,14 @@ Ichor forces one thread per 'executor', which reduces, but doesn't completely el
 
 Here's a short hand comparison between boost.ASIO and Ichor when it comes to event loops:
 
-||Ichor|Boost.ASIO|
-|:-|:-|:-|
-|Integrate multiple event loops|✅|❌|
-|Async File IO|Kinda, missing directory operations|Kinda, only on Windows (with I/O completion ports) and Linux (if using io_uring) and missing functionality such as deleting files and directory operations|
-|io_uring|❌|✅ since Boost 1.78|
-|Thread Pool|❌|✅|
-|Threading|One thread per executor|one or more threads per executor|
-|Cognitive Load Thread Safety|Low|Medium|
+|                                |Ichor|Boost.ASIO|
+|:-------------------------------|:-|:-|
+| Integrate multiple event loops |✅|❌|
+| Async File IO                  |Kinda, missing directory operations|Kinda, only on Windows (with I/O completion ports) and Linux (if using io_uring) and missing functionality such as deleting files and directory operations|
+| io_uring                       |❌|✅ since Boost 1.78|
+| Thread Pool                    |❌|✅|
+| Threading                      |One thread per executor|one or more threads per executor|
+| Cognitive Load Thread Safety   |Low|Medium|
 
 # But Boost.DI also provides DI. Why would I use your lib?
 
@@ -27,16 +27,16 @@ The best example here would be creating a new logger for each instance that is r
 
 Here's a short hand comparison between Ichor and various DI libraries:
 
-||Ichor|Hypodermic|Boost.DI|Google.Fruit|CppMicroservices|
-|:-|:-|:-|:-|:-|:-|
-|Runtime/compile-time|Runtime|Runtime|Compile time (with some runtime)|Compile time (with some runtime)|Runtime|
-|Constructor Injection|✅|✅|✅|✅|❌|
-|Per-instance resolving|✅|❌|❌|❌|✅|
-|Factories|✅|❌?|Partial|Partial|✅|
-|Coroutines|✅|❌|❌|❌|❌|
-|Optional dependencies|✅|❌|❌|❌|✅?|
-|Per-instance lifetime|✅|❌|❌|❌|✅|
-|Minimum c++|20|11|14|11|17|
+|                        |Ichor|Hypodermic|Boost.DI|Google.Fruit|CppMicroservices|
+|:-----------------------|:-|:-|:-|:-|:-|
+| Runtime/compile-time   |Runtime|Runtime|Compile time (with some runtime)|Compile time (with some runtime)|Runtime|
+| Constructor Injection  |✅|✅|✅|✅|❌|
+| Per-instance resolving |✅|❌|❌|❌|✅|
+| Factories              |✅|❌?|Partial|Partial|✅|
+| Coroutines             |✅|❌|❌|❌|❌|
+| Optional dependencies  |✅|❌|❌|❌|✅?|
+| Per-instance lifetime  |✅|❌|❌|❌|✅|
+| Minimum c++            |20|11|14|11|17|
 
 Question marks denote me being unsure
 
@@ -44,15 +44,15 @@ Question marks denote me being unsure
 
 If you need all the bells and whistles that Boost.BEAST provides, then by all means, use that. If you need performance, the techempowered benchmarks will probably tell you to use Drogon or something similar. Ichor has a gap here.
 
-||Ichor|Boost.BEAST|
-|:-|:-|:-|
-|Basic HTTP|✅|✅|
-|Basic HTTPS|✅|✅|
-|Basic Websocket|✅|✅|
-|Basic ssl Websocket|❌|✅|
-|Thread Pool|❌|✅|
-|Threading|One thread per executor|one or more threads per executor|
-|Cognitive Load Thread Safety|Low|Medium|
+|                              |Ichor|Boost.BEAST|
+|:-----------------------------|:-|:-|
+| Basic HTTP                   |✅|✅|
+| Basic HTTPS                  |✅|✅|
+| Basic Websocket              |✅|✅|
+| Basic ssl Websocket          |❌|✅|
+| Thread Pool                  |❌|✅|
+| Threading                    |One thread per executor|one or more threads per executor|
+| Cognitive Load Thread Safety |Low|Medium|
 
 # Stop avoiding me and please answer the question, why would I use your lib?
 

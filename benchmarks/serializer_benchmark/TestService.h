@@ -8,7 +8,9 @@
 #include <ichor/services/serialization/ISerializer.h>
 #include "../../examples/common/TestMsg.h"
 
-#if defined(__SANITIZE_ADDRESS__)
+#if defined(ICHOR_ENABLE_INTERNAL_DEBUGGING) || (defined(ICHOR_BUILDING_DEBUG) && (defined(__SANITIZE_ADDRESS__) || defined(__SANITIZE_THREAD__)))
+constexpr uint32_t SERDE_COUNT = 1'000;
+#elif defined(__SANITIZE_ADDRESS__) || defined(__SANITIZE_THREAD__)
 constexpr uint32_t SERDE_COUNT = 100'000;
 #else
 constexpr uint32_t SERDE_COUNT = 5'000'000;
@@ -20,8 +22,8 @@ extern uint64_t sizeof_test;
 class TestService final : public AdvancedService<TestService> {
 public:
     TestService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {
-        reg.registerDependency<ILogger>(this, true);
-        reg.registerDependency<ISerializer<TestMsg>>(this, true);
+        reg.registerDependency<ILogger>(this, DependencyFlags::REQUIRED);
+        reg.registerDependency<ISerializer<TestMsg>>(this, DependencyFlags::REQUIRED);
     }
     ~TestService() final = default;
 

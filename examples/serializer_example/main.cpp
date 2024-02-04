@@ -1,6 +1,6 @@
 #include "TestService.h"
 #include "../common/TestMsgGlazeSerializer.h"
-#include <ichor/event_queues/MultimapQueue.h>
+#include <ichor/event_queues/PriorityQueue.h>
 #include <ichor/services/logging/LoggerFactory.h>
 #include <ichor/services/serialization/ISerializer.h>
 
@@ -20,7 +20,7 @@ int main(int argc, char *argv[]) {
     std::locale::global(std::locale("en_US.UTF-8"));
 
     auto start = std::chrono::steady_clock::now();
-    auto queue = std::make_unique<MultimapQueue>();
+    auto queue = std::make_unique<PriorityQueue>();
     auto &dm = queue->createManager();
 #ifdef ICHOR_USE_SPDLOG
     dm.createServiceManager<SpdlogSharedService, ISpdlogSharedService>();

@@ -1,4 +1,5 @@
 #include <ichor/services/logging/CoutLogger.h>
+#include <ichor/stl/StringUtils.h>
 #include <iostream>
 #define FMT_INLINE_BUFFER_SIZE 1024
 
@@ -13,6 +14,12 @@ void Ichor::CoutLogger::trace(const char *filename_in, int line_in, const char *
                                          std::string_view format_str, fmt::format_args args) {
     if(_level <= LogLevel::LOG_TRACE) {
         fmt::basic_memory_buffer<char, FMT_INLINE_BUFFER_SIZE> buf{};
+#ifndef ICHOR_REMOVE_SOURCE_NAMES_FROM_LOGGING
+        if(filename_in != nullptr) {
+            const char *base = Ichor::basename(filename_in);
+            fmt::vformat_to(std::back_inserter(buf), "[{}:{}] ", fmt::make_format_args(base, line_in));
+        }
+#endif
         fmt::vformat_to(std::back_inserter(buf), format_str, args);
         std::cout.write(buf.data(), static_cast<int64_t>(buf.size())) << "\n";
     }
@@ -22,6 +29,12 @@ void Ichor::CoutLogger::debug(const char *filename_in, int line_in, const char *
                                          std::string_view format_str, fmt::format_args args) {
     if(_level <= LogLevel::LOG_DEBUG) {
         fmt::basic_memory_buffer<char, FMT_INLINE_BUFFER_SIZE> buf{};
+#ifndef ICHOR_REMOVE_SOURCE_NAMES_FROM_LOGGING
+        if(filename_in != nullptr) {
+            const char *base = Ichor::basename(filename_in);
+            fmt::vformat_to(std::back_inserter(buf), "[{}:{}] ", fmt::make_format_args(base, line_in));
+        }
+#endif
         fmt::vformat_to(std::back_inserter(buf), format_str, args);
         std::cout.write(buf.data(), static_cast<int64_t>(buf.size())) << "\n";
     }
@@ -31,6 +44,12 @@ void Ichor::CoutLogger::info(const char *filename_in, int line_in, const char *f
                                         std::string_view format_str, fmt::format_args args) {
     if(_level <= LogLevel::LOG_INFO) {
         fmt::basic_memory_buffer<char, FMT_INLINE_BUFFER_SIZE> buf{};
+#ifndef ICHOR_REMOVE_SOURCE_NAMES_FROM_LOGGING
+        if(filename_in != nullptr) {
+            const char *base = Ichor::basename(filename_in);
+            fmt::vformat_to(std::back_inserter(buf), "[{}:{}] ", fmt::make_format_args(base, line_in));
+        }
+#endif
         fmt::vformat_to(std::back_inserter(buf), format_str, args);
         std::cout.write(buf.data(), static_cast<int64_t>(buf.size())) << "\n";
     }
@@ -40,6 +59,12 @@ void Ichor::CoutLogger::warn(const char *filename_in, int line_in, const char *f
                                         std::string_view format_str, fmt::format_args args) {
     if(_level <= LogLevel::LOG_WARN) {
         fmt::basic_memory_buffer<char, FMT_INLINE_BUFFER_SIZE> buf{};
+#ifndef ICHOR_REMOVE_SOURCE_NAMES_FROM_LOGGING
+        if(filename_in != nullptr) {
+            const char *base = Ichor::basename(filename_in);
+            fmt::vformat_to(std::back_inserter(buf), "[{}:{}] ", fmt::make_format_args(base, line_in));
+        }
+#endif
         fmt::vformat_to(std::back_inserter(buf), format_str, args);
         std::cout.write(buf.data(), static_cast<int64_t>(buf.size())) << "\n";
     }
@@ -49,6 +74,12 @@ void Ichor::CoutLogger::error(const char *filename_in, int line_in, const char *
                                          std::string_view format_str, fmt::format_args args) {
     if(_level <= LogLevel::LOG_ERROR) {
         fmt::basic_memory_buffer<char, FMT_INLINE_BUFFER_SIZE> buf{};
+#ifndef ICHOR_REMOVE_SOURCE_NAMES_FROM_LOGGING
+        if(filename_in != nullptr) {
+            const char *base = Ichor::basename(filename_in);
+            fmt::vformat_to(std::back_inserter(buf), "[{}:{}] ", fmt::make_format_args(base, line_in));
+        }
+#endif
         fmt::vformat_to(std::back_inserter(buf), format_str, args);
         std::cout.write(buf.data(), static_cast<int64_t>(buf.size())) << "\n";
     }

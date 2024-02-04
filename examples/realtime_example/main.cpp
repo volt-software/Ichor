@@ -1,6 +1,6 @@
 #include "TestService.h"
 #include "OptionalService.h"
-#include <ichor/event_queues/MultimapQueue.h>
+#include <ichor/event_queues/PriorityQueue.h>
 #include <ichor/services/logging/LoggerFactory.h>
 #include "GlobalRealtimeSettings.h"
 
@@ -34,7 +34,7 @@ void* run_example(void*) {
 #endif
 
     {
-        auto queue = std::make_unique<MultimapQueue>();
+        auto queue = std::make_unique<PriorityQueue>();
         auto &dm = queue->createManager();
         dm.createServiceManager<LoggerFactory<LOGGER_TYPE>, ILoggerFactory>(Properties{{"DefaultLogLevel", Ichor::make_any<LogLevel>(LogLevel::LOG_INFO)}});
         dm.createServiceManager<OptionalService, IOptionalService>();

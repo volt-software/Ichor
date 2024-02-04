@@ -1,5 +1,5 @@
 #include "Common.h"
-#include <ichor/event_queues/MultimapQueue.h>
+#include <ichor/event_queues/PriorityQueue.h>
 #include <ichor/events/RunFunctionEvent.h>
 #include <ichor/services/io/SharedOverThreadsAsyncFileIO.h>
 #include <fstream>
@@ -10,7 +10,7 @@ TEST_CASE("AsyncFileIOTests") {
 
     SECTION("Reading non-existent file should error") {
         fmt::print("section 1\n");
-        auto queue = std::make_unique<MultimapQueue>();
+        auto queue = std::make_unique<PriorityQueue>();
         auto &dm = queue->createManager();
         uint64_t ioSvcId{};
 
@@ -36,7 +36,7 @@ TEST_CASE("AsyncFileIOTests") {
 
     SECTION("Read whole file") {
         fmt::print("section 2\n");
-        auto queue = std::make_unique<MultimapQueue>();
+        auto queue = std::make_unique<PriorityQueue>();
         auto &dm = queue->createManager();
         uint64_t ioSvcId{};
 
@@ -68,7 +68,7 @@ TEST_CASE("AsyncFileIOTests") {
 
     SECTION("Copying non-existent file should error") {
         fmt::print("section 3\n");
-        auto queue = std::make_unique<MultimapQueue>();
+        auto queue = std::make_unique<PriorityQueue>();
         auto &dm = queue->createManager();
         uint64_t ioSvcId{};
 
@@ -95,7 +95,7 @@ TEST_CASE("AsyncFileIOTests") {
 
     SECTION("Copying file") {
         fmt::print("section 4\n");
-        auto queue = std::make_unique<MultimapQueue>();
+        auto queue = std::make_unique<PriorityQueue>();
         auto &dm = queue->createManager();
         uint64_t ioSvcId{};
 
@@ -133,7 +133,7 @@ TEST_CASE("AsyncFileIOTests") {
 
     SECTION("Removing non-existing file should error") {
         fmt::print("section 5\n");
-        auto queue = std::make_unique<MultimapQueue>();
+        auto queue = std::make_unique<PriorityQueue>();
         auto &dm = queue->createManager();
         uint64_t ioSvcId{};
 
@@ -159,7 +159,7 @@ TEST_CASE("AsyncFileIOTests") {
 
     SECTION("Removing file") {
         fmt::print("section 6\n");
-        auto queue = std::make_unique<MultimapQueue>();
+        auto queue = std::make_unique<PriorityQueue>();
         auto &dm = queue->createManager();
         uint64_t ioSvcId{};
 
@@ -196,7 +196,7 @@ TEST_CASE("AsyncFileIOTests") {
 
     SECTION("Writing file") {
         fmt::print("section 7\n");
-        auto queue = std::make_unique<MultimapQueue>();
+        auto queue = std::make_unique<PriorityQueue>();
         auto &dm = queue->createManager();
         uint64_t ioSvcId{};
 
@@ -231,7 +231,7 @@ TEST_CASE("AsyncFileIOTests") {
 
     SECTION("Writing file - overwrite") {
         fmt::print("section 8\n");
-        auto queue = std::make_unique<MultimapQueue>();
+        auto queue = std::make_unique<PriorityQueue>();
         auto &dm = queue->createManager();
         uint64_t ioSvcId{};
 

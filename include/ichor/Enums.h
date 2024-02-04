@@ -1,11 +1,12 @@
 #pragma once
 
 #include <fmt/core.h>
+#include <cstdint>
 
 namespace Ichor
 {
     namespace Detail {
-        enum class DependencyChange {
+        enum class DependencyChange : uint_fast16_t {
             NOT_FOUND,
             FOUND,
             FOUND_AND_START_ME,
@@ -13,7 +14,7 @@ namespace Ichor
         };
     }
 
-    enum class ServiceState {
+    enum class ServiceState : uint_fast16_t {
         UNINSTALLED,
         INSTALLED,
         INJECTING,
@@ -23,7 +24,7 @@ namespace Ichor
         STOPPING,
     };
 
-    enum class LogLevel {
+    enum class LogLevel : uint_fast16_t {
         LOG_TRACE,
         LOG_DEBUG,
         LOG_INFO,
@@ -52,8 +53,8 @@ namespace Ichor
     //
     // [C] - Consumer performs this transition
     // [P] - Producer performs this transition
-    enum class state
-    {
+    enum class state : uint_fast16_t {
+        unknown,
         value_not_ready_consumer_active,
         value_not_ready_consumer_suspended,
         value_ready_producer_active,
@@ -65,41 +66,37 @@ namespace Ichor
     struct Empty{};
     constexpr static Empty empty = {};
 
-    enum class StartBehaviour {
+    enum class StartBehaviour : uint_fast16_t {
         DONE,
         STARTED,
         STOPPED
     };
 
-    enum class WaitError {
+    enum class WaitError : uint_fast16_t {
         QUITTING
     };
 
-    enum class StartError {
+    enum class StartError : uint_fast16_t {
         FAILED
     };
 
     // Necessary to prevent excessive events on the queue.
     // Every async call using this will end up adding an event to the queue on co_return/co_yield.
-    enum class IchorBehaviour {
+    enum class IchorBehaviour : uint_fast16_t {
         DONE
     };
 
 }
 
 template <>
-struct fmt::formatter<Ichor::ServiceState>
-{
-    constexpr auto parse(format_parse_context& ctx)
-    {
+struct fmt::formatter<Ichor::ServiceState> {
+    constexpr auto parse(format_parse_context& ctx) {
         return ctx.end();
     }
 
     template <typename FormatContext>
-    auto format(const Ichor::ServiceState& state, FormatContext& ctx)
-    {
-        switch(state)
-        {
+    auto format(const Ichor::ServiceState& state, FormatContext& ctx) {
+        switch(state) {
             case Ichor::ServiceState::UNINSTALLED:
                 return fmt::format_to(ctx.out(), "UNINSTALLED");
             case Ichor::ServiceState::INSTALLED:
@@ -121,18 +118,16 @@ struct fmt::formatter<Ichor::ServiceState>
 };
 
 template <>
-struct fmt::formatter<Ichor::state>
-{
-    constexpr auto parse(format_parse_context& ctx)
-    {
+struct fmt::formatter<Ichor::state> {
+    constexpr auto parse(format_parse_context& ctx) {
         return ctx.end();
     }
 
     template <typename FormatContext>
-    auto format(const Ichor::state& state, FormatContext& ctx)
-    {
-        switch(state)
-        {
+    auto format(const Ichor::state& state, FormatContext& ctx) {
+        switch(state) {
+            case Ichor::state::unknown:
+                return fmt::format_to(ctx.out(), "unknown");
             case Ichor::state::value_not_ready_consumer_active:
                 return fmt::format_to(ctx.out(), "value_not_ready_consumer_active");
             case Ichor::state::value_not_ready_consumer_suspended:
@@ -144,24 +139,20 @@ struct fmt::formatter<Ichor::state>
             case Ichor::state::cancelled:
                 return fmt::format_to(ctx.out(), "cancelled");
             default:
-                return fmt::format_to(ctx.out(), "error, please file a bug in Ichor");
+                return fmt::format_to(ctx.out(), "error, please file a bug in Ichor, val: {}", (int)state);
         }
     }
 };
 
 template <>
-struct fmt::formatter<Ichor::Detail::DependencyChange>
-{
-    constexpr auto parse(format_parse_context& ctx)
-    {
+struct fmt::formatter<Ichor::Detail::DependencyChange> {
+    constexpr auto parse(format_parse_context& ctx) {
         return ctx.end();
     }
 
     template <typename FormatContext>
-    auto format(const Ichor::Detail::DependencyChange& change, FormatContext& ctx)
-    {
-        switch(change)
-        {
+    auto format(const Ichor::Detail::DependencyChange& change, FormatContext& ctx) {
+        switch(change) {
             case Ichor::Detail::DependencyChange::NOT_FOUND:
                 return fmt::format_to(ctx.out(), "NOT_FOUND");
             case Ichor::Detail::DependencyChange::FOUND:
@@ -177,18 +168,14 @@ struct fmt::formatter<Ichor::Detail::DependencyChange>
 };
 
 template <>
-struct fmt::formatter<Ichor::StartBehaviour>
-{
-    constexpr auto parse(format_parse_context& ctx)
-    {
+struct fmt::formatter<Ichor::StartBehaviour> {
+    constexpr auto parse(format_parse_context& ctx) {
         return ctx.end();
     }
 
     template <typename FormatContext>
-    auto format(const Ichor::StartBehaviour& change, FormatContext& ctx)
-    {
-        switch(change)
-        {
+    auto format(const Ichor::StartBehaviour& change, FormatContext& ctx) {
+        switch(change) {
             case Ichor::StartBehaviour::DONE:
                 return fmt::format_to(ctx.out(), "DONE");
             case Ichor::StartBehaviour::STARTED:
@@ -202,18 +189,14 @@ struct fmt::formatter<Ichor::StartBehaviour>
 };
 
 template <>
-struct fmt::formatter<Ichor::LogLevel>
-{
-    constexpr auto parse(format_parse_context& ctx)
-    {
+struct fmt::formatter<Ichor::LogLevel> {
+    constexpr auto parse(format_parse_context& ctx) {
         return ctx.end();
     }
 
     template <typename FormatContext>
-    auto format(const Ichor::LogLevel& change, FormatContext& ctx)
-    {
-        switch(change)
-        {
+    auto format(const Ichor::LogLevel& change, FormatContext& ctx) {
+        switch(change) {
             case Ichor::LogLevel::LOG_TRACE:
                 return fmt::format_to(ctx.out(), "LOG_TRACE");
             case Ichor::LogLevel::LOG_DEBUG:

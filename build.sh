@@ -57,7 +57,8 @@ run_examples ()
   ../bin/ichor_serializer_example || exit 1
   ../bin/ichor_tcp_example || exit 1
   ../bin/ichor_timer_example || exit 1
-  ../bin/ichor_tracker_example || exit 1
+  ../bin/ichor_factory_example || exit 1
+  ../bin/ichor_introspection_example || exit 1
   ../bin/ichor_websocket_example || exit 1
   ../bin/ichor_websocket_example -t4 || exit 1
   ../bin/ichor_yielding_timer_example || exit 1
@@ -70,63 +71,106 @@ run_benchmarks ()
   ../bin/ichor_serializer_benchmark || exit 1
   ../bin/ichor_start_benchmark || exit 1
   ../bin/ichor_start_stop_benchmark || exit 1
+  ../bin/ichor_utils_benchmark -r || exit 1
 }
 
 
 if [[ $DOCKER -eq 1 ]]; then
   rm -rf ./* ../bin/*
   docker build -f ../Dockerfile -t ichor . || exit 1
-  docker run -v $(pwd)/../:/opt/ichor/src -it ichor || exit 1
+  docker run -v $(pwd)/../:/opt/ichor/src -v $(pwd)/../build:/opt/ichor/build --rm -it ichor || exit 1
   run_examples
+  docker run -v $(pwd)/../:/opt/ichor/src -v $(pwd)/../build:/opt/ichor/build --rm -it ichor "rm -rf /opt/ichor/src/bin/* /opt/ichor/src/build/*" || exit 1
 
   rm -rf ./* ../bin/*
   docker build -f ../Dockerfile-musl -t ichor-musl . || exit 1
-  docker run -v $(pwd)/../:/opt/ichor/src -it ichor-musl || exit 1
+  docker run -v $(pwd)/../:/opt/ichor/src -v $(pwd)/../build:/opt/ichor/build --rm -it ichor-musl || exit 1
   run_examples
+  docker run -v $(pwd)/../:/opt/ichor/src -v $(pwd)/../build:/opt/ichor/build --rm -it ichor-musl "rm -rf /opt/ichor/src/bin/* /opt/ichor/src/build/*" || exit 1
 
   rm -rf ./* ../bin/*
   docker build -f ../Dockerfile-asan -t ichor-asan . || exit 1
-  docker run -v $(pwd)/../:/opt/ichor/src -it ichor-asan || exit 1
+  docker run -v $(pwd)/../:/opt/ichor/src -v $(pwd)/../build:/opt/ichor/build --rm -it ichor-asan || exit 1
   run_examples
+  run_benchmarks
+  docker run -v $(pwd)/../:/opt/ichor/src -v $(pwd)/../build:/opt/ichor/build --rm -it ichor-asan "rm -rf /opt/ichor/src/bin/* /opt/ichor/src/build/*" || exit 1
 
-  # tsan is purposefully not run automatically, because it usually contains false positives.
+  rm -rf ./* ../bin/*
+  docker build -f ../Dockerfile-asan-clang -t ichor-asan-clang . || exit 1
+  docker run -v $(pwd)/../:/opt/ichor/src -v $(pwd)/../build:/opt/ichor/build --rm -it ichor-asan-clang || exit 1
+  run_examples
+  run_benchmarks
+  docker run -v $(pwd)/../:/opt/ichor/src -v $(pwd)/../build:/opt/ichor/build --rm -it ichor-asan-clang "rm -rf /opt/ichor/src/bin/* /opt/ichor/src/build/*" || exit 1
+
+  rm -rf ./* ../bin/*
+  docker build -f ../Dockerfile-tsan -t ichor-tsan . || exit 1
+  docker run -v $(pwd)/../:/opt/ichor/src -v $(pwd)/../build:/opt/ichor/build --rm -it ichor-tsan || exit 1
+  run_examples
+  run_benchmarks
+  docker run -v $(pwd)/../:/opt/ichor/src -v $(pwd)/../build:/opt/ichor/build --rm -it ichor-tsan "rm -rf /opt/ichor/src/bin/* /opt/ichor/src/build/*" || exit 1
 
   rm -rf ./* ../bin/*
   docker run --rm --privileged multiarch/qemu-user-static --reset -p yes || exit 1
   docker build -f ../Dockerfile-musl-aarch64 -t ichor-musl-aarch64 . || exit 1
-  docker run -v $(pwd)/../:/opt/ichor/src -it ichor-musl-aarch64 || exit 1
+  docker run -v $(pwd)/../:/opt/ichor/src -v $(pwd)/../build:/opt/ichor/build --rm -it ichor-musl-aarch64 || exit 1
+  rm -f ../bin/run_aarch64_examples_and_tests.sh
   cat >> ../bin/run_aarch64_examples_and_tests.sh << EOF
 #!/bin/sh
 FILES=/opt/ichor/src/bin/*
 for f in \$FILES; do
-  if [[ "\$f" != *"Redis"* ]] && [[ "\$f" != *"benchmark"* ]] && [[ "\$f" != *"minimal"* ]] && [[ "\$f" != *"ping"* ]] && [[ "\$f" != *"etcd"* ]] && [[ "\$f" != *"Etcd"* ]] && [[ "\$f" != *"pong"* ]] && [[ "\$f" != *"Started"* ]] && [[ "\$f" != *".sh" ]] && [[ -x "\$f" ]] && [[ ! -d "\$f" ]] ; then
-    echo "Running \$f"
+  if [[ "\$f" != *"Tests" ]] && [[ "\$f" != *"benchmark" ]] && [[ "\$f" != *"minimal"* ]] && [[ "\$f" != *"tcp"* ]] && [[ "\$f" != *"ping"* ]] && [[ "\$f" != *"etcd"* ]] && [[ "\$f" != *"pong"* ]] && [[ "\$f" != *".sh" ]] && [[ -x "\$f" ]] && [[ ! -d "\$f" ]] ; then
+    echo "Running \${f}"
     \$f || exit 1
   fi
 done
 EOF
   chmod +x ../bin/run_aarch64_examples_and_tests.sh
-  docker run -v $(pwd)/../:/opt/ichor/src --privileged -it ichor-musl-aarch64 "sh -c 'ulimit -r unlimited && /opt/ichor/src/bin/run_aarch64_examples_and_tests.sh'" || exit 1
-  docker run -v $(pwd)/../:/opt/ichor/src --privileged -it ichor-musl-aarch64 "rm -rf /opt/ichor/src/bin/* /opt/ichor/src/build/*" || exit 1
+  docker run -v $(pwd)/../:/opt/ichor/src -v $(pwd)/../build:/opt/ichor/build --rm --privileged -it ichor-musl-aarch64 "sh -c 'ulimit -r unlimited && /opt/ichor/src/bin/run_aarch64_examples_and_tests.sh'" || exit 1
+  docker run -v $(pwd)/../:/opt/ichor/src -v $(pwd)/../build:/opt/ichor/build --rm --privileged -it ichor-musl-aarch64 "rm -rf /opt/ichor/src/bin/* /opt/ichor/src/build/*" || exit 1
+
+  rm -rf ./* ../bin/*
+  docker run --rm --privileged multiarch/qemu-user-static --reset -p yes || exit 1
+  docker build -f ../Dockerfile-musl-aarch64-bench -t ichor-musl-aarch64-bench . || exit 1
+  docker run -v $(pwd)/../:/opt/ichor/src -v $(pwd)/../build:/opt/ichor/build --rm -it ichor-musl-aarch64-bench || exit 1
+  mkdir -p ../arm_bench
+  mv -f ../bin/* ../arm_bench
+  rm -f ../arm_bench/*.a
+  docker run -v $(pwd)/../:/opt/ichor/src -v $(pwd)/../build:/opt/ichor/build --rm --privileged -it ichor-musl-aarch64 "rm -rf /opt/ichor/src/bin/* /opt/ichor/src/build/*" || exit 1
 fi
+
+# Quick libcpp compile check
+rm -rf ./* ../bin/*
+CC=clang-18 CXX=clang++-18 cmake -GNinja -DCMAKE_BUILD_TYPE=Debug -DICHOR_USE_SANITIZERS=OFF -DICHOR_ENABLE_INTERNAL_DEBUGGING=OFF -DICHOR_USE_MOLD=ON -DICHOR_USE_BOOST_BEAST=ON -DICHOR_USE_SPDLOG=ON -DICHOR_USE_HIREDIS=ON .. || exit 1
+ninja || exit 1
+ninja test || exit 1
+run_examples
 
 for i in ${!ccompilers[@]}; do
   rm -rf ./* ../bin/*
-  CC=${ccompilers[i]} CXX=${cppcompilers[i]} cmake -GNinja -DCMAKE_BUILD_TYPE=Debug -DICHOR_USE_SANITIZERS=ON -DICHOR_USE_ABSEIL=ON -DICHOR_ENABLE_INTERNAL_DEBUGGING=OFF -DICHOR_USE_MOLD=ON -DICHOR_USE_BOOST_BEAST=ON -DICHOR_USE_HIREDIS=ON .. || exit 1
+  CC=${ccompilers[i]} CXX=${cppcompilers[i]} cmake -GNinja -DCMAKE_BUILD_TYPE=Debug -DICHOR_USE_SANITIZERS=ON -DICHOR_ENABLE_INTERNAL_DEBUGGING=ON -DICHOR_USE_MOLD=ON -DICHOR_USE_BOOST_BEAST=ON -DICHOR_USE_LIBCPP=OFF -DICHOR_USE_HIREDIS=ON .. || exit 1
   ninja || exit 1
   ninja test || exit 1
   run_examples
+  run_benchmarks
 
   rm -rf ./* ../bin/*
-  CC=${ccompilers[i]} CXX=${cppcompilers[i]} cmake -GNinja -DCMAKE_BUILD_TYPE=Debug -DICHOR_USE_SANITIZERS=ON -DICHOR_USE_ABSEIL=OFF -DICHOR_ENABLE_INTERNAL_DEBUGGING=ON -DICHOR_USE_MOLD=ON -DICHOR_USE_BOOST_BEAST=ON -DICHOR_USE_SPDLOG=ON -DICHOR_USE_HIREDIS=ON .. || exit 1
+  CC=${ccompilers[i]} CXX=${cppcompilers[i]} cmake -GNinja -DCMAKE_BUILD_TYPE=Debug -DICHOR_USE_SANITIZERS=ON -DICHOR_ENABLE_INTERNAL_DEBUGGING=ON -DICHOR_USE_MOLD=ON -DICHOR_USE_BOOST_BEAST=ON -DICHOR_USE_LIBCPP=OFF -DICHOR_USE_SPDLOG=ON -DICHOR_USE_HIREDIS=ON .. || exit 1
   ninja || exit 1
   ninja test || exit 1
   run_examples
+  run_benchmarks
 
   rm -rf ./* ../bin/*
-  CC=${ccompilers[i]} CXX=${cppcompilers[i]} cmake -GNinja -DCMAKE_BUILD_TYPE=Release -DICHOR_USE_SANITIZERS=OFF -DICHOR_USE_ABSEIL=ON -DICHOR_ENABLE_INTERNAL_DEBUGGING=OFF -DICHOR_USE_MOLD=ON -DICHOR_USE_BOOST_BEAST=ON -DICHOR_USE_HIREDIS=ON .. || exit 1
+  CC=${ccompilers[i]} CXX=${cppcompilers[i]} cmake -GNinja -DCMAKE_BUILD_TYPE=Release -DICHOR_USE_SANITIZERS=OFF -DICHOR_ENABLE_INTERNAL_DEBUGGING=ON -DICHOR_USE_MOLD=ON -DICHOR_USE_BOOST_BEAST=ON -DICHOR_USE_LIBCPP=OFF -DICHOR_USE_HIREDIS=ON .. || exit 1
   ninja || exit 1
   ninja test || exit 1
   run_examples
   run_benchmarks
 done
+
+rm -rf ./* ../bin/*
+CC=clang-18 CXX=clang++-18 cmake -GNinja -DCMAKE_BUILD_TYPE=Release -DICHOR_USE_SANITIZERS=OFF -DICHOR_USE_MOLD=ON -DICHOR_USE_BOOST_BEAST=ON -DICHOR_USE_HIREDIS=ON .. || exit 1
+ninja || exit 1
+ninja test || exit 1
+run_examples
+run_benchmarks

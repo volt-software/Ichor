@@ -14,7 +14,7 @@ namespace Ichor {
          * @param msg Usually json, ignored for GET requests
          * @return response
          */
-        virtual Task<HttpResponse> sendAsync(HttpMethod method, std::string_view route, std::vector<HttpHeader> &&headers, std::vector<uint8_t>&& msg) = 0;
+        virtual Task<HttpResponse> sendAsync(HttpMethod method, std::string_view route, unordered_map<std::string, std::string> &&headers, std::vector<uint8_t>&& msg) = 0;
 
         /**
          * Close the connection

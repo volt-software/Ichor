@@ -7,21 +7,19 @@ namespace Ichor::Detail {
     class IServiceInterestedLifecycleManager final : public ILifecycleManager {
     public:
         IServiceInterestedLifecycleManager(IService *self) : _self(self) {
-            _interfaces.emplace_back(typeNameHash<IService>(), false, false);
+            _interfaces.emplace_back(typeNameHash<IService>(), typeName<IService>(), DependencyFlags::NONE, false);
         }
         ~IServiceInterestedLifecycleManager() final = default;
 
-        std::vector<decltype(std::declval<DependencyInfo>().begin())> interestedInDependency(ILifecycleManager *, bool) noexcept final {
-            // this function should never be called
-            std::terminate();
+        std::vector<Dependency*> interestedInDependencyGoingOffline(ILifecycleManager *dependentService) noexcept final {
+            return {};
         }
 
-        AsyncGenerator<StartBehaviour> dependencyOnline(NeverNull<ILifecycleManager*> dependentService, std::vector<decltype(std::declval<DependencyInfo>().begin())> iterators) final {
-            // this function should never be called
-            std::terminate();
+        StartBehaviour dependencyOnline(NeverNull<ILifecycleManager*> dependentService) final {
+            return StartBehaviour::DONE;
         }
 
-        AsyncGenerator<StartBehaviour> dependencyOffline(NeverNull<ILifecycleManager*> dependentService, std::vector<decltype(std::declval<DependencyInfo>().begin())> iterators) final {
+        AsyncGenerator<StartBehaviour> dependencyOffline(NeverNull<ILifecycleManager*> dependentService, std::vector<Dependency*> deps) final {
             // this function should never be called
             std::terminate();
         }
@@ -34,6 +32,12 @@ namespace Ichor::Detail {
 
         [[nodiscard]]
         unordered_set<uint64_t> &getDependees() noexcept final {
+            // this function should never be called
+            std::terminate();
+        }
+
+        [[nodiscard]]
+        AsyncGenerator<StartBehaviour> startAfterDependencyOnline() final {
             // this function should never be called
             std::terminate();
         }

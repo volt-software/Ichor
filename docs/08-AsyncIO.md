@@ -15,7 +15,7 @@ The abstraction Ichor provides allows you to queue up file I/O on another thread
 Here's an example showcasing reading and writing a file:
 
 ```c++
-auto queue = std::make_unique<MultimapQueue>();
+auto queue = std::make_unique<PriorityQueue>();
 auto &dm = queue->createManager();
 uint64_t ioSvcId{};
 

@@ -1,0 +1,11 @@
+FROM arm64v8/alpine:3.19
+
+RUN apk update
+RUN apk add gcc g++ build-base cmake git wget make nano sed linux-headers perl
+RUN mkdir -p /opt/ichor/build
+
+WORKDIR /opt/ichor/build
+
+ENTRYPOINT ["/bin/sh", "-c"]
+
+CMD ["cd /opt/ichor/build && cmake -DCMAKE_BUILD_TYPE=Release -DICHOR_BUILD_EXAMPLES=OFF -DICHOR_BUILD_TESTING=OFF -DICHOR_MUSL=1 -DICHOR_AARCH64=1 -DICHOR_ARCH_OPTIMIZATION=RASPBERRY_PI_FOUR /opt/ichor/src && make -j$(nproc)"]

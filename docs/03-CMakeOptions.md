@@ -65,10 +65,6 @@ Usage with gcc 12+ is technically possible, but it might throw off [Catch2 unit 
 
 Enables the use of the [sdevent event queue](../include/ichor/event_queues/SdeventQueue.h). Requires having sdevent headers and libraries installed on your system to compile.
 
-## ICHOR_USE_ABSEIL (optional dependency)
-
-Enables the use of the abseil containers in Ichor. Requires having abseil headers and libraries installed on your system to compile.
-
 ## ICHOR_USE_HIREDIS (optional dependency)
 
 Enables the use of the Hiredis library and exposes the Redis service. Requires having Hiredis libraries and headers installed on your system to compile.
@@ -96,6 +92,10 @@ This option results in statically linking libgcc and libstdc++ as well as turnin
 ## ICHOR_AARCH64
 
 Control flow protection is not available on Aarch64, enable this to allow (cross-)compiling for that architecture.
+
+## ICHOR_USE_LIBCPP
+
+Tells ichor to add the `-stdlib=libc++` compiler and linker flags. Requires compiling with clang, as gcc and msvc do not support libc++.
 
 ## ICHOR_ARCH_OPTIMIZATION
 

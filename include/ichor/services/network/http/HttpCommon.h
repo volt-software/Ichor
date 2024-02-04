@@ -1,11 +1,11 @@
 #pragma once
 
-#include <optional>
+#include <tl/optional.h>
 #include <vector>
 
 namespace Ichor {
     // Copied/modified from Boost.BEAST
-    enum class HttpMethod {
+    enum class HttpMethod : uint_fast16_t {
         /** An unknown method.
 
             This value indicates that the request method string is not
@@ -110,8 +110,7 @@ namespace Ichor {
     };
 
     // Copied/modified from Boost.BEAST
-    enum class HttpStatus
-    {
+    enum class HttpStatus : uint_fast16_t {
         continue_                           = 100,
         switching_protocols                 = 101,
 
@@ -181,27 +180,19 @@ namespace Ichor {
         network_connect_timeout_error       = 599
     };
 
-    struct HttpHeader {
-        std::string name{};
-        std::string value{};
-
-        HttpHeader() noexcept = default;
-        HttpHeader(std::string_view _name, std::string_view _value) noexcept : name(_name), value(_value) {}
-    };
-
     struct HttpRequest {
         std::vector<uint8_t> body;
         HttpMethod method;
         std::string route;
+        std::vector<std::string> regex_params;
         std::string_view address;
-        std::vector<HttpHeader> headers;
+        unordered_map<std::string, std::string> headers;
     };
 
     struct HttpResponse {
-        bool error;
         HttpStatus status;
-        std::optional<std::string> contentType;
+        tl::optional<std::string> contentType;
         std::vector<uint8_t> body;
-        std::vector<HttpHeader> headers;
+        unordered_map<std::string, std::string> headers;
     };
 }

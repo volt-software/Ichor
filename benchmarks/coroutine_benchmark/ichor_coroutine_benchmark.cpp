@@ -1,5 +1,5 @@
 #include "TestService.h"
-#include <ichor/event_queues/MultimapQueue.h>
+#include <ichor/event_queues/PriorityQueue.h>
 #include <ichor/services/logging/LoggerFactory.h>
 #include <ichor/services/logging/NullLogger.h>
 #include <ichor/services/metrics/MemoryUsageFunctions.h>
@@ -7,6 +7,7 @@
 #include <thread>
 #include <array>
 #include "../../examples/common/lyra.hpp"
+
 
 int main(int argc, char *argv[]) {
     std::locale::global(std::locale("en_US.UTF-8"));
@@ -30,7 +31,7 @@ int main(int argc, char *argv[]) {
 
     {
         auto start = std::chrono::steady_clock::now();
-        auto queue = std::make_unique<MultimapQueue>();
+        auto queue = std::make_unique<PriorityQueue>();
         auto &dm = queue->createManager();
         dm.createServiceManager<LoggerFactory<NullLogger>, ILoggerFactory>();
         dm.createServiceManager<TestService>(Properties{{"LogLevel", Ichor::make_any<LogLevel>(LogLevel::LOG_WARN)}});
@@ -43,8 +44,8 @@ int main(int argc, char *argv[]) {
     if(!singleOnly) {
         auto start = std::chrono::steady_clock::now();
         std::array<std::thread, 8> threads{};
-        std::array<MultimapQueue, 8> queues{};
-        for (uint_fast32_t i = 0, j = 0; i < 8; i++, j += 2) {
+        std::array<PriorityQueue, threads.size()> queues{};
+        for (uint_fast32_t i = 0, j = 0; i < queues.size(); i++, j += 2) {
             threads[i] = std::thread([&queues, i] {
                 auto &dm = queues[i].createManager();
                 dm.createServiceManager<LoggerFactory<NullLogger>, ILoggerFactory>();
@@ -52,7 +53,7 @@ int main(int argc, char *argv[]) {
                 queues[i].start(CaptureSigInt);
             });
         }
-        for (uint_fast32_t i = 0; i < 8; i++) {
+        for (uint_fast32_t i = 0; i < queues.size(); i++) {
             threads[i].join();
         }
         auto end = std::chrono::steady_clock::now();

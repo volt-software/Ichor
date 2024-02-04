@@ -1,10 +1,10 @@
 #include "PongService.h"
 #include "PingMsgJsonSerializer.h"
 #include "../common/lyra.hpp"
-#include <ichor/event_queues/MultimapQueue.h>
+#include <ichor/event_queues/PriorityQueue.h>
 #include <ichor/services/logging/LoggerFactory.h>
-#include <ichor/services/network/http/HttpHostService.h>
-#include <ichor/services/network/AsioContextService.h>
+#include <ichor/services/network/boost/HttpHostService.h>
+#include <ichor/services/network/boost/AsioContextService.h>
 #include <ichor/services/serialization/ISerializer.h>
 #include <ichor/services/logging/NullLogger.h>
 
@@ -67,7 +67,7 @@ int main(int argc, char *argv[]) {
     }
 
     auto start = std::chrono::steady_clock::now();
-    auto queue = std::make_unique<MultimapQueue>(spinlock);
+    auto queue = std::make_unique<PriorityQueue>(spinlock);
     auto &dm = queue->createManager();
 
 #ifdef ICHOR_USE_SPDLOG

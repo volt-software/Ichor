@@ -11,7 +11,7 @@ namespace Ichor {
 
     struct DependencyOnlineWhileStoppingService final : public IDependencyOnlineWhileStoppingService, public AdvancedService<DependencyOnlineWhileStoppingService> {
         DependencyOnlineWhileStoppingService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {
-            reg.registerDependency<IUselessService>(this, true);
+            reg.registerDependency<IUselessService>(this, DependencyFlags::REQUIRED);
         }
         ~DependencyOnlineWhileStoppingService() final = default;
 

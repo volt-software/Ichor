@@ -12,13 +12,13 @@
 #include <fcntl.h>
 
 Ichor::TcpHostService::TcpHostService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)), _socket(-1), _bindFd(), _priority(INTERNAL_EVENT_PRIORITY), _quit() {
-    reg.registerDependency<ILogger>(this, true);
-    reg.registerDependency<ITimerFactory>(this, true);
+    reg.registerDependency<ILogger>(this, DependencyFlags::REQUIRED);
+    reg.registerDependency<ITimerFactory>(this, DependencyFlags::REQUIRED);
 }
 
 Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::TcpHostService::start() {
-    if(getProperties().contains("Priority")) {
-        _priority = Ichor::any_cast<uint64_t>(getProperties()["Priority"]);
+    if(auto propIt = getProperties().find("Priority"); propIt != getProperties().end()) {
+        _priority = Ichor::any_cast<uint64_t>(propIt->second);
     }
 
     _newSocketEventHandlerRegistration = GetThreadLocalManager().registerEventHandler<NewSocketEvent>(this, this);

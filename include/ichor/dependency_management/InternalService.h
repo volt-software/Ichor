@@ -4,6 +4,7 @@
 
 namespace Ichor::Detail {
 
+    template <typename OriginalType>
     class InternalService : public IService {
     public:
         InternalService() noexcept : IService(), _properties(), _serviceId(Detail::_serviceIdCounter.fetch_add(1, std::memory_order_relaxed)), _servicePriority(INTERNAL_EVENT_PRIORITY), _serviceGid(sole::uuid4()), _serviceState(ServiceState::INSTALLED) {
@@ -34,7 +35,7 @@ namespace Ichor::Detail {
         /// Name of the user-specified service (e.g. CoutFrameworkLogger)
         /// \return
         [[nodiscard]] std::string_view getServiceName() const noexcept final {
-            return typeName<IEventQueue>();
+            return typeName<OriginalType>();
         }
 
         [[nodiscard]] ServiceState getServiceState() const noexcept final {
@@ -66,13 +67,13 @@ namespace Ichor::Detail {
     private:
         ///
         /// \return true if started
-        [[nodiscard]] Task<StartBehaviour> internal_start(DependencyInfo *_dependencies) {
+        [[nodiscard]] Task<StartBehaviour> internal_start(DependencyRegister const *_dependencies) {
             if(_serviceState != ServiceState::INSTALLED || (_dependencies != nullptr && !_dependencies->allSatisfied())) {
-                INTERNAL_DEBUG("internal_start service {}:{} state {} dependencies {} {}", getServiceId(), typeName<IEventQueue>(), getState(), _dependencies->size(), _dependencies->allSatisfied());
+                INTERNAL_DEBUG("internal_start service {}:{} state {} dependencies {} {}", getServiceId(), typeName<OriginalType>(), getState(), _dependencies->size(), _dependencies->allSatisfied());
                 co_return {};
             }
 
-            INTERNAL_DEBUG("internal_start service {}:{} state {} -> {}", getServiceId(), typeName<IEventQueue>(), getState(), ServiceState::INJECTING);
+            INTERNAL_DEBUG("internal_start service {}:{} state {} -> {}", getServiceId(), typeName<OriginalType>(), getState(), ServiceState::INJECTING);
             _serviceState = ServiceState::INJECTING;
 
             co_return {};
@@ -86,7 +87,7 @@ namespace Ichor::Detail {
             }
 #endif
 
-            INTERNAL_DEBUG("internal_stop service {}:{} state {} -> {}", getServiceId(), typeName<IEventQueue>(), getState(), ServiceState::INSTALLED);
+            INTERNAL_DEBUG("internal_stop service {}:{} state {} -> {}", getServiceId(), typeName<OriginalType>(), getState(), ServiceState::INSTALLED);
             _serviceState = ServiceState::INSTALLED;
 
             co_return {};
@@ -97,7 +98,7 @@ namespace Ichor::Detail {
                 return false;
             }
 
-            INTERNAL_DEBUG("internalSetInjected service {}:{} state {} -> {}", getServiceId(), typeName<IEventQueue>(), getState(), ServiceState::ACTIVE);
+            INTERNAL_DEBUG("internalSetInjected service {}:{} state {} -> {}", getServiceId(), typeName<OriginalType>(), getState(), ServiceState::ACTIVE);
             _serviceState = ServiceState::ACTIVE;
             return true;
         }
@@ -107,7 +108,7 @@ namespace Ichor::Detail {
                 return false;
             }
 
-            INTERNAL_DEBUG("internalSetUninjected service {}:{} state {} -> {}", getServiceId(), typeName<IEventQueue>(), getState(), ServiceState::UNINJECTING);
+            INTERNAL_DEBUG("internalSetUninjected service {}:{} state {} -> {}", getServiceId(), typeName<OriginalType>(), getState(), ServiceState::UNINJECTING);
             _serviceState = ServiceState::UNINJECTING;
             return true;
         }

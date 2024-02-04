@@ -29,10 +29,11 @@ struct EventHandlerService final : public IEventHandlerService, public AdvancedS
     }
 
     AsyncGenerator<IchorBehaviour> handleEvent(EventT const &evt) {
-        auto counter = handledEvents.find(evt.type);
+        auto evtType = evt.get_type();
+        auto counter = handledEvents.find(evtType);
 
         if(counter == end(handledEvents)) {
-            handledEvents.template emplace<>(evt.type, 1);
+            handledEvents.template emplace<>(evtType, 1);
         } else {
             counter->second++;
         }

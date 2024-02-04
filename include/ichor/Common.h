@@ -2,34 +2,95 @@
 
 #include <ichor/ConstevalHash.h>
 #include <ichor/stl/Any.h>
+#include <ankerl/unordered_dense.h>
 #include <string_view>
-#include <chrono>
 
-#ifdef ICHOR_USE_ABSEIL
-#include <absl/container/flat_hash_map.h>
-#include <absl/container/flat_hash_set.h>
-#include <absl/hash/hash.h>
-#else
-#include <unordered_map>
-#include <unordered_set>
+#if defined(ICHOR_ENABLE_INTERNAL_DEBUGGING) || defined(ICHOR_ENABLE_INTERNAL_COROUTINE_DEBUGGING) || defined(ICHOR_ENABLE_INTERNAL_IO_DEBUGGING) || defined(ICHOR_ENABLE_INTERNAL_STL_DEBUGGING)
+#include <chrono>
+#include <fmt/core.h>
+#include <thread>
+#include <fmt/std.h>
+#include <ichor/stl/StringUtils.h>
 #endif
 
 #ifdef ICHOR_ENABLE_INTERNAL_DEBUGGING
 static constexpr bool DO_INTERNAL_DEBUG = true;
+
+#define INTERNAL_DEBUG(...)      \
+    if constexpr(DO_INTERNAL_DEBUG) { \
+        std::thread::id this_id = std::this_thread::get_id();                         \
+        fmt::print("[{:L}] [{}] ", std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now().time_since_epoch()).count(), this_id);    \
+        const char *base = Ichor::basename(__FILE__); \
+        fmt::print("[{}:{}] ", base, __LINE__);    \
+        fmt::print(__VA_ARGS__);    \
+        fmt::print("\n");    \
+    }                                 \
+static_assert(true, "")
 #else
 static constexpr bool DO_INTERNAL_DEBUG = false;
+
+#define INTERNAL_DEBUG(...)      \
+static_assert(true, "")
 #endif
 
 #ifdef ICHOR_ENABLE_INTERNAL_COROUTINE_DEBUGGING
 static constexpr bool DO_INTERNAL_COROUTINE_DEBUG = true;
+
+#define INTERNAL_COROUTINE_DEBUG(...)      \
+    if constexpr(DO_INTERNAL_COROUTINE_DEBUG) { \
+        std::thread::id this_id = std::this_thread::get_id();                         \
+        fmt::print("[{:L}] [{}] ", std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now().time_since_epoch()).count(), this_id);    \
+        const char *base = Ichor::basename(__FILE__); \
+        fmt::print("[{}:{}] ", base, __LINE__);    \
+        fmt::print(__VA_ARGS__);    \
+        fmt::print("\n");    \
+    }                                 \
+static_assert(true, "")
 #else
 static constexpr bool DO_INTERNAL_COROUTINE_DEBUG = false;
+
+#define INTERNAL_COROUTINE_DEBUG(...)      \
+static_assert(true, "")
 #endif
 
 #ifdef ICHOR_ENABLE_INTERNAL_IO_DEBUGGING
 static constexpr bool DO_INTERNAL_IO_DEBUG = true;
+
+#define INTERNAL_IO_DEBUG(...)      \
+    if constexpr(DO_INTERNAL_IO_DEBUG) { \
+        std::thread::id this_id = std::this_thread::get_id();                         \
+        fmt::print("[{:L}] [{}] ", std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now().time_since_epoch()).count(), this_id);    \
+        const char *base = Ichor::basename(__FILE__); \
+        fmt::print("[{}:{}] ", base, __LINE__);    \
+        fmt::print(__VA_ARGS__);    \
+        fmt::print("\n");    \
+    }                                 \
+static_assert(true, "")
 #else
 static constexpr bool DO_INTERNAL_IO_DEBUG = false;
+
+#define INTERNAL_IO_DEBUG(...)      \
+static_assert(true, "")
+#endif
+
+#ifdef ICHOR_ENABLE_INTERNAL_STL_DEBUGGING
+static constexpr bool DO_INTERNAL_STL_DEBUG = true;
+
+#define INTERNAL_STL_DEBUG(...)      \
+    if constexpr(DO_INTERNAL_STL_DEBUG) { \
+        std::thread::id this_id = std::this_thread::get_id();                         \
+        fmt::print("[{:L}] [{}] ", std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now().time_since_epoch()).count(), this_id);    \
+        const char *base = Ichor::basename(__FILE__); \
+        fmt::print("[{}:{}] ", base, __LINE__);    \
+        fmt::print(__VA_ARGS__);    \
+        fmt::print("\n");    \
+    }                                 \
+static_assert(true, "")
+#else
+static constexpr bool DO_INTERNAL_STL_DEBUG = false;
+
+#define INTERNAL_STL_DEBUG(...)      \
+static_assert(true, "")
 #endif
 
 #ifdef ICHOR_USE_HARDENING
@@ -37,33 +98,6 @@ static constexpr bool DO_HARDENING = true;
 #else
 static constexpr bool DO_HARDENING = false;
 #endif
-
-#define INTERNAL_DEBUG(...)      \
-    if constexpr(DO_INTERNAL_DEBUG) { \
-        fmt::print("[{:L}] ", std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now().time_since_epoch()).count());    \
-        fmt::print("[{}:{}] ", __FILE__, __LINE__);    \
-        fmt::print(__VA_ARGS__);    \
-        fmt::print("\n");    \
-    }                                 \
-static_assert(true, "")
-
-#define INTERNAL_COROUTINE_DEBUG(...)      \
-    if constexpr(DO_INTERNAL_COROUTINE_DEBUG) { \
-        fmt::print("[{:L}] ", std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now().time_since_epoch()).count());    \
-        fmt::print("[{}:{}] ", __FILE__, __LINE__);    \
-        fmt::print(__VA_ARGS__);    \
-        fmt::print("\n");    \
-    }                                 \
-static_assert(true, "")
-
-#define INTERNAL_IO_DEBUG(...)      \
-    if constexpr(DO_INTERNAL_IO_DEBUG) { \
-        fmt::print("[{:L}] ", std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now().time_since_epoch()).count());    \
-        fmt::print("[{}:{}] ", __FILE__, __LINE__);    \
-        fmt::print(__VA_ARGS__);    \
-        fmt::print("\n");    \
-    }                                 \
-static_assert(true, "")
 
 // GNU C Library contains defines in sys/sysmacros.h. However, for compatibility reasons, this header is included in sys/types.h. Which is used by std.
 #undef major
@@ -93,72 +127,42 @@ namespace Ichor {
 
 
     struct string_hash {
+        using is_avalanching = void;
         using is_transparent = void;  // Pred to use
         using key_equal = std::equal_to<>;  // Pred to use
-#ifdef ICHOR_USE_ABSEIL
-        using hash_type = absl::Hash<std::string_view>;  // just a helper local type
-#else
-        using hash_type = std::hash<std::string_view>;  // just a helper local type
-#endif
+        using hash_type = ankerl::unordered_dense::hash<std::string_view>;  // just a helper local type
+
         size_t operator()(std::string_view txt) const   { return hash_type{}(txt); }
         size_t operator()(const std::string& txt) const { return hash_type{}(txt); }
         size_t operator()(const char* txt) const        { return hash_type{}(txt); }
     };
 
-
-#ifdef ICHOR_USE_ABSEIL
-    // We use std::hash instead of absl::hash because a lot of Ichor uses various ints as keys
-    // and absl::hash opts to hash those instead of using an identity function. This gives better
-    // avalanching, at the cost of performance. Ichor doesn't need avalanching in its use-cases.
     template <
             class Key,
             class T,
-            class Hash = std::hash<Key>,
+            class Hash = ankerl::unordered_dense::hash<Key>,
             class KeyEqual = std::equal_to<Key>,
-            class Allocator = std::allocator<std::pair<const Key, T>>>
-    using unordered_map = absl::flat_hash_map<Key, T, Hash, KeyEqual, Allocator>;
-    template <
-            class T,
-            class Hash = std::hash<T>,
-            class Eq = std::equal_to<T>,
-            class Allocator = std::allocator<T>>
-    using unordered_set = absl::flat_hash_set<T, Hash, Eq, Allocator>;
-#else
-    template <
-            class Key,
-            class T,
-            class Hash = std::hash<Key>,
-            class KeyEqual = std::equal_to<Key>,
-            class Allocator = std::allocator<std::pair<const Key, T>>>
-    using unordered_map = std::unordered_map<Key, T, Hash, KeyEqual, Allocator>;
-    template <
-            class T,
-            class Hash = std::hash<T>,
-            class Eq = std::equal_to<T>,
-            class Allocator = std::allocator<T>>
-    using unordered_set = std::unordered_set<T, Hash, Eq, Allocator>;
-#endif
+            class Allocator = std::allocator<std::pair<Key, T>>>
+    using unordered_map = ankerl::unordered_dense::map<Key, T, Hash, KeyEqual, Allocator>;
 
-    using Properties = unordered_map<std::string, Ichor::any, string_hash>;
+    template <
+            class T,
+            class Hash = ankerl::unordered_dense::hash<T>,
+            class Eq = std::equal_to<T>,
+            class Allocator = std::allocator<T>>
+    using unordered_set = ankerl::unordered_dense::set<T, Hash, Eq, Allocator>;
+
+    using Properties = unordered_map<std::string, Ichor::any, string_hash, std::equal_to<>>;
 
     inline constexpr bool PreventOthersHandling = false;
     inline constexpr bool AllowOthersHandling = true;
 
-    // Code from https://stackoverflow.com/a/73078442/1460998
-    // converts a string to an integer with little error checking. Only use if you're very sure that the string is actually a number.
-    static inline int64_t FastAtoiCompare(const char* str)
-    {
-        int64_t val = 0;
-        uint8_t x;
-        while ((x = uint8_t(*str++ - '0')) <= 9) val = val * 10 + x;
-        return val;
-    }
-
-    static inline uint64_t FastAtoiCompareu(const char* str)
-    {
-        uint64_t val = 0;
-        uint8_t  x;
-        while ((x = uint8_t(*str++ - '0')) <= 9) val = val * 10 + x;
-        return val;
+    // Code from https://artificial-mind.net/blog/2020/10/31/constexpr-for
+    template <auto Start, auto End, auto Inc, class F>
+    constexpr void constexpr_for(F&& f) {
+        if constexpr (Start < End) {
+            f(std::integral_constant<decltype(Start), Start>());
+            constexpr_for<Start + Inc, End, Inc>(f);
+        }
     }
 }

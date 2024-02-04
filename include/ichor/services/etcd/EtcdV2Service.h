@@ -27,21 +27,40 @@ namespace Ichor {
         EtcdV2Service(DependencyRegister &reg, Properties props);
         ~EtcdV2Service() final = default;
 
-        Task<tl::expected<EtcdReply, EtcdError>> put(std::string_view key, std::string_view value, std::optional<std::string_view> previous_value, std::optional<uint64_t> previous_index, std::optional<bool> previous_exists, std::optional<uint64_t> ttl_second, bool refresh, bool dir, bool in_order) final;
-        Task<tl::expected<EtcdReply, EtcdError>> put(std::string_view key, std::string_view value, std::optional<uint64_t> ttl_second, bool refresh) final;
-        Task<tl::expected<EtcdReply, EtcdError>> put(std::string_view key, std::string_view value, std::optional<uint64_t> ttl_second) final;
-        Task<tl::expected<EtcdReply, EtcdError>> put(std::string_view key, std::string_view value) final;
+        [[nodiscard]] Task<tl::expected<EtcdReply, EtcdError>> put(std::string_view key, std::string_view value, tl::optional<std::string_view> previous_value, tl::optional<uint64_t> previous_index, tl::optional<bool> previous_exists, tl::optional<uint64_t> ttl_second, bool refresh, bool dir, bool in_order) final;
+        [[nodiscard]] Task<tl::expected<EtcdReply, EtcdError>> put(std::string_view key, std::string_view value, tl::optional<uint64_t> ttl_second, bool refresh) final;
+        [[nodiscard]] Task<tl::expected<EtcdReply, EtcdError>> put(std::string_view key, std::string_view value, tl::optional<uint64_t> ttl_second) final;
+        [[nodiscard]] Task<tl::expected<EtcdReply, EtcdError>> put(std::string_view key, std::string_view value) final;
 
-        Task<tl::expected<EtcdReply, EtcdError>> get(std::string_view key, bool recursive, bool sorted, bool watch, std::optional<uint64_t> watchIndex) final;
-        Task<tl::expected<EtcdReply, EtcdError>> get(std::string_view key) final;
-        Task<tl::expected<EtcdReply, EtcdError>> del(std::string_view key, bool recursive, bool dir) final;
+        [[nodiscard]] Task<tl::expected<EtcdReply, EtcdError>> get(std::string_view key, bool recursive, bool sorted, bool watch, tl::optional<uint64_t> watchIndex) final;
+        [[nodiscard]] Task<tl::expected<EtcdReply, EtcdError>> get(std::string_view key) final;
+        [[nodiscard]] Task<tl::expected<EtcdReply, EtcdError>> del(std::string_view key, bool recursive, bool dir) final;
         /// Not implemented, the leader statistics have variable key names in the response which is harder to decode with glaze.
         /// \return Always returns EtcdError::JSON_PARSE_ERROR
-        Task<tl::expected<EtcdReply, EtcdError>> leaderStatistics() final;
-        Task<tl::expected<EtcdSelfStats, EtcdError>> selfStatistics() final;
-        Task<tl::expected<EtcdStoreStats, EtcdError>> storeStatistics() final;
-        Task<tl::expected<EtcdVersionReply, EtcdError>> version() final;
-        Task<tl::expected<bool, EtcdError>> health() final;
+        [[nodiscard]] Task<tl::expected<EtcdReply, EtcdError>> leaderStatistics() final;
+        [[nodiscard]] Task<tl::expected<EtcdSelfStats, EtcdError>> selfStatistics() final;
+        [[nodiscard]] Task<tl::expected<EtcdStoreStats, EtcdError>> storeStatistics() final;
+        [[nodiscard]] Task<tl::expected<EtcdVersionReply, EtcdError>> version() final;
+        [[nodiscard]] Task<tl::expected<bool, EtcdError>> health() final;
+        [[nodiscard]] Task<tl::expected<bool, EtcdError>> authStatus() final;
+        [[nodiscard]] Task<tl::expected<bool, EtcdError>> enableAuth() final;
+        [[nodiscard]] Task<tl::expected<bool, EtcdError>> disableAuth() final;
+        [[nodiscard]] Task<tl::expected<EtcdUsersReply, EtcdError>> getUsers() final;
+        [[nodiscard]] Task<tl::expected<EtcdUserReply, EtcdError>> getUserDetails(std::string_view user) final;
+        void setAuthentication(std::string_view user, std::string_view pass) final;
+        void clearAuthentication() final;
+        [[nodiscard]] tl::optional<std::string> getAuthenticationUser() const final;
+        [[nodiscard]] Task<tl::expected<EtcdUpdateUserReply, EtcdError>> createUser(std::string_view user, std::string_view pass) final;
+        [[nodiscard]] Task<tl::expected<EtcdUpdateUserReply, EtcdError>> grantUserRoles(std::string_view user, std::vector<std::string> roles) final;
+        [[nodiscard]] Task<tl::expected<EtcdUpdateUserReply, EtcdError>> revokeUserRoles(std::string_view user, std::vector<std::string> roles) final;
+        [[nodiscard]] Task<tl::expected<EtcdUpdateUserReply, EtcdError>> updateUserPassword(std::string_view user, std::string_view pass) final;
+        [[nodiscard]] Task<tl::expected<void, EtcdError>> deleteUser(std::string_view user) final;
+        [[nodiscard]] Task<tl::expected<EtcdRolesReply, EtcdError>> getRoles() final;
+        [[nodiscard]] Task<tl::expected<EtcdRoleReply, EtcdError>> getRole(std::string_view role) final;
+        [[nodiscard]] Task<tl::expected<EtcdRoleReply, EtcdError>> createRole(std::string_view role, std::vector<std::string> read_permissions, std::vector<std::string> write_permissions) final;
+        [[nodiscard]] Task<tl::expected<EtcdRoleReply, EtcdError>> grantRolePermissions(std::string_view role, std::vector<std::string> read_permissions, std::vector<std::string> write_permissions) final;
+        [[nodiscard]] Task<tl::expected<EtcdRoleReply, EtcdError>> revokeRolePermissions(std::string_view role, std::vector<std::string> read_permissions, std::vector<std::string> write_permissions) final;
+        [[nodiscard]] Task<tl::expected<void, EtcdError>> deleteRole(std::string_view role) final;
 
     private:
         Task<tl::expected<void, Ichor::StartError>> start() final;
@@ -62,5 +81,6 @@ namespace Ichor {
         IHttpConnectionService* _mainConn{};
         IClientFactory *_clientFactory{};
         std::stack<ConnRequest> _connRequests{};
+        tl::optional<std::string> _auth;
     };
 }

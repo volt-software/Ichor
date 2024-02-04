@@ -1,6 +1,6 @@
 #include "UsingTcpService.h"
 #include "../common/TestMsgGlazeSerializer.h"
-#include <ichor/event_queues/MultimapQueue.h>
+#include <ichor/event_queues/PriorityQueue.h>
 #include <ichor/services/logging/LoggerFactory.h>
 #include <ichor/services/network/tcp/TcpHostService.h>
 #include <ichor/services/network/ClientFactory.h>
@@ -25,16 +25,19 @@ int main(int argc, char *argv[]) {
     std::locale::global(std::locale("en_US.UTF-8"));
 
     auto start = std::chrono::steady_clock::now();
-    auto queue = std::make_unique<MultimapQueue>();
+    auto queue = std::make_unique<PriorityQueue>();
     auto &dm = queue->createManager();
+
+    uint64_t priorityToEnsureHostStartingFirst = 51;
+
 #ifdef ICHOR_USE_SPDLOG
-    dm.createServiceManager<SpdlogSharedService, ISpdlogSharedService>();
+    dm.createServiceManager<SpdlogSharedService, ISpdlogSharedService>(Properties{}, priorityToEnsureHostStartingFirst);
 #endif
-    dm.createServiceManager<LoggerFactory<LOGGER_TYPE>, ILoggerFactory>(Properties{{"DefaultLogLevel", Ichor::make_any<LogLevel>(LogLevel::LOG_INFO)}});
+    dm.createServiceManager<LoggerFactory<LOGGER_TYPE>, ILoggerFactory>(Properties{{"DefaultLogLevel", Ichor::make_any<LogLevel>(LogLevel::LOG_INFO)}}, priorityToEnsureHostStartingFirst);
     dm.createServiceManager<TestMsgGlazeSerializer, ISerializer<TestMsg>>();
-    dm.createServiceManager<TcpHostService, IHostService>(Properties{{"Address", Ichor::make_any<std::string>("127.0.0.1"s)}, {"Port", Ichor::make_any<uint16_t>(static_cast<uint16_t>(8001))}});
+    dm.createServiceManager<TcpHostService, IHostService>(Properties{{"Address", Ichor::make_any<std::string>("127.0.0.1"s)}, {"Port", Ichor::make_any<uint16_t>(static_cast<uint16_t>(8001))}}, priorityToEnsureHostStartingFirst);
     dm.createServiceManager<ClientFactory<TcpConnectionService>, IClientFactory>();
-    dm.createServiceManager<TimerFactoryFactory>();
+    dm.createServiceManager<TimerFactoryFactory>(Properties{}, priorityToEnsureHostStartingFirst);
     dm.createServiceManager<UsingTcpService>(Properties{{"Address", Ichor::make_any<std::string>("127.0.0.1"s)}, {"Port", Ichor::make_any<uint16_t>(static_cast<uint16_t>(8001))}});
     queue->start(CaptureSigInt);
     auto end = std::chrono::steady_clock::now();

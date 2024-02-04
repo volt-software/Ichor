@@ -43,6 +43,8 @@
  * - rlyeh ~~ listening to Hedon Cries / Until The Sun Goes up
  */
 
+// Note: modified to fit Ichor's warning flags (except sign conversion) and added fmt::formatter.
+
 //////////////////////////////////////////////////////////////////////////////////////
 
 #pragma once
@@ -52,16 +54,26 @@
 #include <functional>
 #include <string>
 
+#if (!defined(WIN32) && !defined(_WIN32) && !defined(__WIN32)) || defined(__CYGWIN__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wsign-conversion"
+#pragma GCC diagnostic ignored "-Wconversion"
+#endif
+
 // public API
 
-#define SOLE_VERSION "1.0.1" /* (2017/05/16): Improve UUID4 and base62 performance; fix warnings
+#define SOLE_VERSION "1.0.5" /* (2022/07/15): Fix #42 (clang: __thread vs threadlocal)
+#define SOLE_VERSION "1.0.4" // (2022/04/09): Fix potential threaded issues (fix #18, PR #39) and a socket leak (fix #38)
+#define SOLE_VERSION "1.0.3" // (2022/01/17): Merge fixes by @jasonwinterpixel(emscripten) + @jj-tetraquark(get_any_mac)
+#define SOLE_VERSION "1.0.2" // (2021/03/16): Merge speed improvements by @vihangm
+#define SOLE_VERSION "1.0.1" // (2017/05/16): Improve UUID4 and base62 performance; fix warnings
 #define SOLE_VERSION "1.0.0" // (2016/02/03): Initial semver adherence; Switch to header-only; Remove warnings */
 
 namespace sole
 {
     // 128-bit basic UUID type that allows comparison and sorting.
     // Use .str() for printing and .pretty() for pretty printing.
-    // Also, ostream friendly.  
+    // Also, ostream friendly.
     struct uuid
     {
         uint64_t ab;
@@ -71,9 +83,9 @@ namespace sole
         bool operator!=( const uuid &other ) const;
         bool operator <( const uuid &other ) const;
 
-        [[nodiscard]] std::string pretty() const;
-        [[nodiscard]] std::string base62() const;
-        [[nodiscard]] std::string str() const;
+        std::string pretty() const;
+        std::string base62() const;
+        std::string str() const;
 
         template<typename ostream>
         inline friend ostream &operator<<( ostream &os, const uuid &self ) {
@@ -84,9 +96,9 @@ namespace sole
     // Generators
     uuid uuid0(); // UUID v0, pro: unique; cons: MAC revealed, pid revealed, predictable.
     uuid uuid1(); // UUID v1, pro: unique; cons: MAC revealed, predictable.
-    uuid uuid4(); // UUID v4, pros: anonymous, fast; con: uuids "can cla.h>
+    uuid uuid4(); // UUID v4, pros: anonymous, fast; con: uuids "can clash"
 
-    // Rebuilders
+    // Rebuilders a.k.a. From String
     uuid rebuild( uint64_t ab, uint64_t cd );
     uuid rebuild( const std::string &uustr );
 }
@@ -132,7 +144,7 @@ namespace std {
 #include <string>
 #include <vector>
 
-#if defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)
+#if (defined(WIN32) || defined(_WIN32) || defined(__WIN32)) && !defined(__CYGWIN__)
 #   include <winsock2.h>
 #   include <process.h>
 #   include <iphlpapi.h>
@@ -161,6 +173,7 @@ namespace std {
 #   define _osx _yes
 #elif defined(__linux__)
 #   include <arpa/inet.h>
+#   include <ifaddrs.h>
 #   include <net/if.h>
 #   include <netinet/in.h>
 #   include <sys/ioctl.h>
@@ -169,6 +182,9 @@ namespace std {
 #   include <unistd.h>
 #   define _linux _yes
 #else //elif defined(__unix__)
+#	if defined(__EMSCRIPTEN__)
+#		define _emscripten _yes
+#	endif
 #   if defined(__VMS)
 #      include <ioctl.h>
 #      include <inet.h>
@@ -250,6 +266,12 @@ namespace std
 #define _melse   _yes
 #endif
 
+#ifdef _emscripten
+#define _emselse	_no
+#else
+#define _emselse	_yes
+#endif
+
 #define _yes(...) __VA_ARGS__
 #define _no(...)
 
@@ -273,7 +295,7 @@ namespace sole {
         try {
             // Taken from parameter
             //std::string locale; // = "es-ES", "Chinese_China.936", "en_US.UTF8", etc...
-            std::time_t t = static_cast<int64_t>(timestamp_secs);
+            std::time_t t = timestamp_secs;
             std::tm tm;
             _msvc(
                     localtime_s( &tm, &t );
@@ -306,7 +328,7 @@ namespace sole {
         uint64_t c = (cd >> 32);
         uint64_t d = (cd & 0xFFFFFFFF);
 
-        int version = static_cast<int>(b & 0xF000) >> 12;
+        int version = (b & 0xF000) >> 12;
         uint64_t timestamp = ((b & 0x0FFF) << 48 ) | (( b >> 16 ) << 32) | a; // in 100ns units
 
         ss << "version=" << (version) << ',';
@@ -327,26 +349,32 @@ namespace sole {
     }
 
     inline std::string uuid::str() const {
-        std::stringstream ss;
-        ss << std::hex << std::nouppercase << std::setfill('0');
+        char uustr[] = "00000000-0000-0000-0000-000000000000";
+        constexpr char encode[] = "0123456789abcdef";
 
-        auto a = static_cast<uint32_t>(ab >> 32);
-        auto b = static_cast<uint32_t>(ab & 0xFFFFFFFF);
-        auto c = static_cast<uint32_t>(cd >> 32);
-        auto d = static_cast<uint32_t>(cd & 0xFFFFFFFF);
+        size_t bit = 15;
+        for( size_t i = 0; i < 18; i++ ) {
+            if( i == 8 || i == 13 ) {
+                continue;
+            }
+            uustr[i] = encode[ab>>4*bit&0x0f];
+            bit--;
+        }
 
-        ss << std::setw(8) << (a) << '-';
-        ss << std::setw(4) << (b >> 16) << '-';
-        ss << std::setw(4) << (b & 0xFFFF) << '-';
-        ss << std::setw(4) << (c >> 16 ) << '-';
-        ss << std::setw(4) << (c & 0xFFFF);
-        ss << std::setw(8) << d;
+        bit = 15;
+        for( size_t i = 18; i < 36; i++ ) {
+            if( i == 18 || i == 23 ) {
+                continue;
+            }
+            uustr[i] = encode[cd>>4*bit&0x0f];
+            bit--;
+        }
 
-        return ss.str();
+        return std::string(uustr);
     }
 
     inline std::string uuid::base62() const {
-        uint64_t base62len = 10 + 26 + 26;
+        int base62len = 10 + 26 + 26;
         const char base62[] =
                 "0123456789"
                 "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
@@ -432,7 +460,7 @@ namespace sole {
                 return 0;
             }
     )
-    _lelse( _belse( // if not linux, if not bsd... valid for apple/win32
+    _lelse( _belse( _emselse ( // if not linux, if not bsd, if not emscripten... valid for apple/win32
                     inline int clock_gettime( int /*clk_id*/, struct timespec* t ) {
                         struct timeval now;
                         int rv = gettimeofday(&now, NULL);
@@ -441,7 +469,7 @@ namespace sole {
                         t->tv_nsec = now.tv_usec * 1000;
                         return 0;
                     }
-            ))
+            )))
 
     //////////////////////////////////////////////////////////////////////////////////////
     // Timestamp and MAC interfaces
@@ -453,16 +481,17 @@ namespace sole {
 
         // Convert to 100-nanosecond intervals
         uint64_t uuid_time;
-        uuid_time = static_cast<uint64_t>(tp.tv_sec * 10000000);
-        uuid_time = uuid_time + static_cast<uint64_t>(tp.tv_nsec / 100);
-        uuid_time = uuid_time + offset;
+        uuid_time = tp.tv_sec * 10000000;
+        uuid_time = uuid_time + (tp.tv_nsec / 100);
 
         // If the clock looks like it went backwards, or is the same, increment it.
         static uint64_t last_uuid_time = 0;
-        if( last_uuid_time > uuid_time )
-            last_uuid_time = uuid_time;
+        if( last_uuid_time >= uuid_time )
+            uuid_time = ++last_uuid_time;
         else
-            last_uuid_time = ++uuid_time;
+            last_uuid_time = uuid_time;
+
+        uuid_time = uuid_time + offset;
 
         return uuid_time;
     }
@@ -559,7 +588,7 @@ namespace sole {
                          int alen = sdl->sdl_alen;
                          if (ap && alen > 0)
                          {
-                             _node.resize( static_cast<uint64_t>(alen) );
+                             _node.resize( alen );
                              std::memcpy(_node.data(), ap, _node.size() );
                              foundAdapter = true;
                              break;
@@ -572,19 +601,32 @@ namespace sole {
              })
 
         _linux({
-                   struct ifreq ifr;
+                   struct ifaddrs* ifaphead;
+                   if (getifaddrs(&ifaphead) == -1) return _no("cannot get network adapter list") false;
 
-                   int s = socket(PF_INET, SOCK_DGRAM, 0);
-                   if (s == -1) return _no("cannot open socket") false;
+                   bool foundAdapter = false;
+                   for (struct ifaddrs* ifap = ifaphead; ifap; ifap = ifap->ifa_next)
+                   {
+                       struct ifreq ifr;
+                       int s = socket(PF_INET, SOCK_DGRAM, 0);
+                       if (s == -1) continue;
 
-                   std::strcpy(ifr.ifr_name, "eth0");
-                   int rc = ioctl(s, SIOCGIFHWADDR, &ifr);
-                   close(s);
-                   if (rc < 0) return _no("cannot get MAC address") false;
-                   struct sockaddr* sa = reinterpret_cast<struct sockaddr*>(&ifr.ifr_addr);
-                   _node.resize( sizeof(sa->sa_data) );
-                   std::memcpy(_node.data(), sa->sa_data, _node.size() );
+                       if (std::strcmp("lo", ifap->ifa_name) == 0) { close(s); continue;}  // loopback address is zero
+
+                       std::strcpy(ifr.ifr_name, ifap->ifa_name);
+                       int rc = ioctl(s, SIOCGIFHWADDR, &ifr);
+                       close(s);
+                       if (rc < 0) continue;
+                       struct sockaddr* sa = reinterpret_cast<struct sockaddr*>(&ifr.ifr_addr);
+                       _node.resize( sizeof(sa->sa_data) );
+                       std::memcpy(_node.data(), sa->sa_data, _node.size() );
+                       foundAdapter = true;
+                       break;
+                   }
+                   freeifaddrs(ifaphead);
+                   if (!foundAdapter) return _no("cannot determine MAC address (no suitable network adapter found)") false;
                    return true;
+
                })
 
         _unix({
@@ -633,13 +675,12 @@ namespace sole {
 
     inline uuid uuid4() {
         static thread_local std::random_device rd;
-        static thread_local std::mt19937 rng(rd());
-        static thread_local std::uniform_int_distribution<uint64_t> dist(0, std::numeric_limits<uint64_t>::max());
+        static thread_local std::uniform_int_distribution<uint64_t> dist(0, (uint64_t)(~0));
 
         uuid my;
 
-        my.ab = dist(rng);
-        my.cd = dist(rng);
+        my.ab = dist(rd);
+        my.cd = dist(rd);
 
         my.ab = (my.ab & 0xFFFFFFFFFFFF0FFFULL) | 0x0000000000004000ULL;
         my.cd = (my.cd & 0x3FFFFFFFFFFFFFFFULL) | 0x8000000000000000ULL;
@@ -656,7 +697,7 @@ namespace sole {
         uint32_t time_low = ns100_intervals & 0xffffffff;
         uint16_t time_mid = (ns100_intervals >> 32) & 0xffff;
         uint16_t time_hi_version = (ns100_intervals >> 48) & 0xfff;
-        uint8_t clock_seq_low = static_cast<uint8_t>(clock_seq & 0xff);
+        uint8_t clock_seq_low = clock_seq & 0xff;
         uint8_t clock_seq_hi_variant = (clock_seq >> 8) & 0x3f;
 
         uuid u;
@@ -678,7 +719,7 @@ namespace sole {
 
         // Set the version number.
         enum { version = 1 };
-        upper_ &= ~0xf000u;
+        upper_ &= ~0xf000;
         upper_ |= version << 12;
 
         return u;
@@ -687,15 +728,15 @@ namespace sole {
     inline uuid uuid0() {
         // Number of 100-ns intervals since Unix epoch time
         uint64_t ns100_intervals = get_time( 0 );
-        uint64_t pid = _windows( _getpid() ) _welse( static_cast<uint64_t>(getpid()) );
+        uint64_t pid = _windows( _getpid() ) _welse( getpid() );
         uint16_t pid16 = (uint16_t)( pid & 0xffff ); // 16-bits max
         uint64_t mac = get_any_mac48();              // 48-bits max
 
         uint32_t time_low = ns100_intervals & 0xffffffff;
         uint16_t time_mid = (ns100_intervals >> 32) & 0xffff;
         uint16_t time_hi_version = (ns100_intervals >> 48) & 0xfff;
-        uint8_t pid_low = static_cast<uint8_t>(pid16 & 0xff);
-        uint8_t pid_hi = static_cast<uint8_t>((pid16 >> 8) & 0xff);
+        uint8_t pid_low = pid16 & 0xff;
+        uint8_t pid_hi = (pid16 >> 8) & 0xff;
 
         uuid u;
         uint64_t &upper_ = u.ab;
@@ -712,7 +753,7 @@ namespace sole {
 
         // Set the version number.
         enum { version = 0 };
-        upper_ &= ~0xf000u;
+        upper_ &= ~0xf000;
         upper_ |= version << 12;
 
         return u;
@@ -725,19 +766,17 @@ namespace sole {
     }
 
     inline uuid rebuild( const std::string &uustr ) {
-        char sep;
-        uint64_t a,b,c,d,e;
         uuid u = { 0, 0 };
         auto idx = uustr.find_first_of("-");
         if( idx != std::string::npos ) {
             // single separator, base62 notation
             if( uustr.find_first_of("-",idx+1) == std::string::npos ) {
                 auto rebase62 = [&]( const char *input, size_t limit ) -> uint64_t {
-                    uint64_t base62len = 10 + 26 + 26;
+                    int base62len = 10 + 26 + 26;
                     auto strpos = []( char ch ) -> size_t {
-                        if( ch >= 'a' ) return static_cast<uint64_t>(ch - 'a' + 10 + 26);
-                        if( ch >= 'A' ) return static_cast<uint64_t>(ch - 'A' + 10);
-                        return static_cast<uint64_t>(ch - '0');
+                        if( ch >= 'a' ) return ch - 'a' + 10 + 26;
+                        if( ch >= 'A' ) return ch - 'A' + 10;
+                        return ch - '0';
                     };
                     uint64_t res = strpos( input[0] );
                     for( size_t i = 1; i < limit; ++i )
@@ -749,11 +788,24 @@ namespace sole {
             }
                 // else classic hex notation
             else {
-                std::stringstream ss( uustr );
-                if( ss >> std::hex >> a >> sep >> b >> sep >> c >> sep >> d >> sep >> e ) {
-                    if( ss.eof() ) {
-                        u.ab = (a << 32) | (b << 16) | c;
-                        u.cd = (d << 48) | e;
+                if (uustr[8] == '-' || uustr[13] == '-' || uustr[18] == '-' || uustr[23] == '-') {
+                    auto decode = []( char ch ) -> size_t {
+                        if( 'f' >= ch && ch >= 'a' ) return ch - 'a' + 10;
+                        if( 'F' >= ch && ch >= 'A' ) return ch - 'A' + 10;
+                        if( '9' >= ch && ch >= '0' ) return ch - '0';
+                        return 0;
+                    };
+                    for( size_t i = 0; i < 18; i++ ) {
+                        if( i == 8 || i == 13 ) {
+                            continue;
+                        }
+                        u.ab = u.ab<<4 | decode(uustr[i]);
+                    }
+                    for( size_t i = 19; i < 36; i++ ) {
+                        if( i == 23 ) {
+                            continue;
+                        }
+                        u.cd = u.cd<<4 | decode(uustr[i]);
                     }
                 }
             }
@@ -890,6 +942,12 @@ int main() {
     run::benchmark(uuid1, "v1");
     run::benchmark(uuid4, "v4");
 
+    auto uustr = uuid4().str();
+    run::benchmark([=]() { sole::rebuild( uustr ); }, "rebuild");
+
+    auto uuid = uuid4();
+    run::benchmark([=]() { uuid.str(); }, "str");
+
     run::verify(uuid4);             // use fastest implementation
 
 //  run::tests(uuid0);              // not applicable
@@ -898,3 +956,22 @@ int main() {
 }
 
 #endif
+
+
+#if (!defined(WIN32) && !defined(_WIN32) && !defined(__WIN32)) || defined(__CYGWIN__)
+#pragma GCC diagnostic pop
+#endif
+
+#include <fmt/core.h>
+
+template <>
+struct fmt::formatter<sole::uuid> {
+    constexpr auto parse(format_parse_context& ctx) {
+        return ctx.end();
+    }
+
+    template <typename FormatContext>
+    auto format(const sole::uuid& change, FormatContext& ctx) {
+        return fmt::format_to(ctx.out(), "{}", change.str());
+    }
+};

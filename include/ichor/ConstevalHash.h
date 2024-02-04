@@ -2,6 +2,7 @@
 
 #include <string_view>
 #include <cstdint>
+#include <array>
 
 // Adapted from wyhash v3
 
@@ -121,25 +122,78 @@ static consteval uint64_t consteval_wyhash(const T *key, uint64_t len, uint64_t 
     return consteval_wymum(seed ^ see1, len ^ _wyp4);
 }
 
+// Taken from https://bitwizeshift.github.io/posts/2021/03/09/getting-an-unmangled-type-name-at-compile-time/
+template <std::size_t...Idxs>
+[[nodiscard]] constexpr auto ichor_internal_substring_as_array(std::string_view str, std::index_sequence<Idxs...>)
+{
+    return std::array{str[Idxs]...};
+}
+
+template <typename T>
+[[nodiscard]] constexpr auto ichor_internal_type_name_array()
+{
+#if defined(__clang__)
+    constexpr auto prefix   = std::string_view{"[T = "};
+    constexpr auto suffix   = std::string_view{"]"};
+    constexpr auto function = std::string_view{__PRETTY_FUNCTION__};
+#elif defined(__GNUC__)
+    constexpr auto prefix   = std::string_view{"with T = "};
+    constexpr auto suffix   = std::string_view{"]"};
+    constexpr auto function = std::string_view{__PRETTY_FUNCTION__};
+#elif defined(_MSC_VER)
+    constexpr auto prefix   = std::string_view{"type_name_array<"};
+    constexpr auto suffix   = std::string_view{">(void)"};
+    constexpr auto function = std::string_view{__FUNCSIG__};
+#else
+# error Unsupported compiler
+#endif
+
+    constexpr auto start = function.find(prefix) + prefix.size();
+    constexpr auto end = function.rfind(suffix);
+
+    static_assert(start < end);
+    static_assert(start != std::string_view::npos);
+    static_assert(end != std::string_view::npos);
+
+#if defined(_MSC_VER)
+    constexpr auto structFind = function.substr(start, (end - start)).starts_with("struct ");
+    constexpr auto structPos = (structFind == std::string_view::npos || structFind == 0) ? 0Ui64 : 7Ui64;
+    constexpr auto clasFind = function.substr(start, (end - start)).starts_with("class ");
+    constexpr auto clasPos = (clasFind == std::string_view::npos || clasFind == 0) ? 0Ui64 : 6Ui64;
+
+    static_assert(start + structPos + clasPos < end);
+
+    constexpr auto name = function.substr(start + structPos + clasPos, (end - start - structPos - clasPos));
+#else
+    constexpr auto name = function.substr(start, (end - start));
+#endif
+
+    return ichor_internal_substring_as_array(name, std::make_index_sequence<name.size()>{});
+}
+
+template <typename T>
+struct ichor_internal_type_name_holder {
+    static inline constexpr auto value = ichor_internal_type_name_array<T>();
+};
+
+// Do not define this inside a namespace, as gcc then removes the namespace part from the __PRETTY_FUNCTION__
+template <typename T>
+[[nodiscard]] constexpr auto ichor_internal_type_name() -> std::string_view
+{
+    constexpr auto& value = ichor_internal_type_name_holder<T>::value;
+    return std::string_view{value.data(), value.size()};
+}
+
 namespace Ichor {
+    using NameHashType = uint64_t;
+
     template<typename INTERFACE_TYPENAME>
     [[nodiscard]] consteval auto typeName() {
-#if defined(WIN32) || defined(_WIN32) || defined(__WIN32) && !defined(__CYGWIN__)
-        constexpr std::string_view result = __FUNCSIG__;
-        constexpr std::string_view templateStr = "auto __cdecl Ichor::typeName<";
-
-        return result.substr(templateStr.size(), result.size() - templateStr.size() - 7);
-#else
-        constexpr std::string_view result = __PRETTY_FUNCTION__;
-        constexpr std::string_view templateStr = "INTERFACE_TYPENAME = ";
-
-        constexpr std::size_t bpos = result.find(templateStr) + templateStr.size(); //find begin pos after INTERFACE_TYPENAME = entry
-        return result.substr(bpos, result.size() - bpos - 1);
-#endif
+        return ichor_internal_type_name<INTERFACE_TYPENAME>();
     }
 
     template<typename INTERFACE_TYPENAME>
-    [[nodiscard]] consteval auto typeNameHash() {
+    [[nodiscard]] consteval NameHashType typeNameHash() {
         std::string_view name = typeName<INTERFACE_TYPENAME>();
         return consteval_wyhash(name.data(), name.size(), 0);
     }

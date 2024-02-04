@@ -1,7 +1,7 @@
 #pragma once
 
 namespace Ichor::Detail {
-    extern unordered_set<uint64_t> emptyDependencies;
+    extern thread_local unordered_set<uint64_t> emptyDependencies;
 
     /// This lifecycle manager is created when the underlying service requests 0 dependencies
     /// It contains optimizations for dealing with dependencies.
@@ -29,25 +29,21 @@ namespace Ichor::Detail {
         static std::unique_ptr<LifecycleManager<ServiceType, Interfaces...>> create(Properties&& properties, InterfacesList_t<Interfaces...>) {
             std::vector<Dependency> interfaces{};
             interfaces.reserve(sizeof...(Interfaces));
-            (interfaces.emplace_back(typeNameHash<Interfaces>(), false, false),...);
+            (interfaces.emplace_back(typeNameHash<Interfaces>(), typeName<Interfaces>(), DependencyFlags::NONE, false),...);
             return std::make_unique<LifecycleManager<ServiceType, Interfaces...>>(std::move(interfaces), std::forward<Properties>(properties));
         }
 
-
-        std::vector<decltype(std::declval<DependencyInfo>().begin())> interestedInDependency(ILifecycleManager *dependentService, bool online) noexcept final {
+        std::vector<Dependency*> interestedInDependencyGoingOffline(ILifecycleManager *dependentService) noexcept final {
             return {};
         }
 
-        AsyncGenerator<StartBehaviour> dependencyOnline(NeverNull<ILifecycleManager*> dependentService, std::vector<decltype(std::declval<DependencyInfo>().begin())> iterators) final {
-            // this function should never be called
-            std::terminate();
-            co_return StartBehaviour::DONE;
+        StartBehaviour dependencyOnline(NeverNull<ILifecycleManager*> dependentService) final {
+            return StartBehaviour::DONE;
         }
 
-        AsyncGenerator<StartBehaviour> dependencyOffline(NeverNull<ILifecycleManager*> dependentService, std::vector<decltype(std::declval<DependencyInfo>().begin())> iterators) final {
+        AsyncGenerator<StartBehaviour> dependencyOffline(NeverNull<ILifecycleManager*> dependentService, std::vector<Dependency*> deps) final {
             // this function should never be called
             std::terminate();
-            co_return StartBehaviour::DONE;
         }
 
         [[nodiscard]]
@@ -58,6 +54,17 @@ namespace Ichor::Detail {
         [[nodiscard]]
         unordered_set<uint64_t> &getDependees() noexcept final {
             return _serviceIdsOfDependees;
+        }
+
+        [[nodiscard]]
+        AsyncGenerator<StartBehaviour> startAfterDependencyOnline() final {
+            auto startBehaviour = co_await _service.internal_start(nullptr);
+
+            if(startBehaviour == StartBehaviour::DONE) {
+                co_return StartBehaviour::STARTED;
+            }
+
+            co_return startBehaviour;
         }
 
         [[nodiscard]]

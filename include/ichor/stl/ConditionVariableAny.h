@@ -54,7 +54,10 @@ namespace Ichor {
         template<typename LockT, typename DurationT>
         cv_status wait_until(LockT& lock, const std::chrono::time_point<std::chrono::steady_clock, DurationT>& atime)
         {
+#ifndef ICHOR_USE_LIBCPP
+            // libc++ does not implement is_clock_v (p0355r7)
             static_assert(std::chrono::is_clock_v<std::chrono::steady_clock>);
+#endif
             const typename std::chrono::steady_clock::time_point _c_entry = std::chrono::steady_clock::now();
             const std::chrono::steady_clock::time_point _s_entry = _c_entry;
             const auto _delta = atime - _c_entry;

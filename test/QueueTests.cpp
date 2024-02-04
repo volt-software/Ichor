@@ -1,15 +1,15 @@
 #include "Common.h"
 #include "TestEvents.h"
 #include "TestServices/UselessService.h"
-#include <ichor/event_queues/MultimapQueue.h>
+#include <ichor/event_queues/PriorityQueue.h>
 #ifdef ICHOR_USE_SDEVENT
 #include <ichor/event_queues/SdeventQueue.h>
 #endif
 
 TEST_CASE("QueueTests") {
 
-    SECTION("MultimapQueue") {
-        auto queue = std::make_unique<MultimapQueue>();
+    SECTION("PriorityQueue") {
+        auto queue = std::make_unique<PriorityQueue>();
         auto &dm = queue->createManager();
 
         REQUIRE_THROWS(queue->pushEventInternal(0, nullptr));
@@ -28,6 +28,35 @@ TEST_CASE("QueueTests") {
         REQUIRE(!queue->empty());
         REQUIRE(queue->size() == 1);
         REQUIRE(queue->shouldQuit());
+    }
+
+    SECTION("OrderedPriorityQueue") {
+        auto queue = std::make_unique<OrderedPriorityQueue>();
+        auto &dm = queue->createManager();
+
+        REQUIRE_THROWS(queue->pushEventInternal(0, nullptr));
+
+        REQUIRE(queue->empty());
+        REQUIRE(queue->size() == 0);
+        REQUIRE(!queue->shouldQuit());
+
+        REQUIRE_NOTHROW(queue->pushEventInternal(10, std::make_unique<TestEvent>(0, 0, 10)));
+
+        REQUIRE(!queue->empty());
+        REQUIRE(queue->size() == 1);
+
+        queue->quit();
+
+        REQUIRE(!queue->empty());
+        REQUIRE(queue->size() == 1);
+        REQUIRE(queue->shouldQuit());
+    }
+
+    SECTION("Delete of uninitialized queues") {
+        auto f = []() {
+            std::array<PriorityQueue, 8> queues{};
+        };
+        REQUIRE_NOTHROW(f());
     }
 
 #ifdef ICHOR_USE_SDEVENT

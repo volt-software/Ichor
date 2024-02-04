@@ -1,5 +1,5 @@
 #include <catch2/catch_test_macros.hpp>
-#include <ichor/event_queues/MultimapQueue.h>
+#include <ichor/event_queues/PriorityQueue.h>
 #include "TestServices/UselessService.h"
 
 #include <ichor/DependencyManager.h>
@@ -22,7 +22,7 @@ struct IMyDependencyService {};
 
 struct MyDependencyService final : public IMyDependencyService, public Ichor::AdvancedService<MyDependencyService> {
     MyDependencyService(Ichor::DependencyRegister &reg, Ichor::Properties props) : Ichor::AdvancedService<MyDependencyService>(std::move(props)) {
-        reg.registerDependency<IMyService>(this, true);
+        reg.registerDependency<IMyService>(this, DependencyFlags::REQUIRED);
     }
     ~MyDependencyService() final = default;
 
@@ -50,7 +50,7 @@ struct MyTimerService final : public IMyTimerService {
 };
 
 int example() {
-    auto queue = std::make_unique<MultimapQueue>();
+    auto queue = std::make_unique<PriorityQueue>();
     auto &dm = queue->createManager();
     dm.createServiceManager<MyService, IMyService>();
     dm.createServiceManager<MyDependencyService, IMyDependencyService>();
@@ -88,9 +88,9 @@ struct MyInterceptorService final : public Ichor::AdvancedService<MyInterceptorS
 
 int communication() {
     Ichor::CommunicationChannel channel{};
-    auto queueOne = std::make_unique<MultimapQueue>();
+    auto queueOne = std::make_unique<PriorityQueue>();
     auto &dmOne = queueOne->createManager(); // ID = 0
-    auto queueTwo = std::make_unique<MultimapQueue>();
+    auto queueTwo = std::make_unique<PriorityQueue>();
     auto &dmTwo = queueTwo->createManager(); // ID = 1
 
     // Register the manager to the channel

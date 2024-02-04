@@ -1,20 +1,14 @@
 #pragma once
 
 #include "UselessService.h"
+#include "ICountService.h"
 
 using namespace Ichor;
 
-struct ICountService {
-    [[nodiscard]] virtual uint64_t getSvcCount() const noexcept = 0;
-    [[nodiscard]] virtual bool isRunning() const noexcept = 0;
-protected:
-    ~ICountService() = default;
-};
-
-template<bool required>
-struct DependencyService final : public ICountService, public AdvancedService<DependencyService<required>> {
-    DependencyService(DependencyRegister &reg, Properties props) : AdvancedService<DependencyService<required>>(std::move(props)) {
-        reg.registerDependency<IUselessService>(this, required);
+template<DependencyFlags flags>
+struct DependencyService final : public ICountService, public AdvancedService<DependencyService<flags>> {
+    DependencyService(DependencyRegister &reg, Properties props) : AdvancedService<DependencyService<flags>>(std::move(props)) {
+        reg.registerDependency<IUselessService>(this, flags);
     }
     ~DependencyService() final = default;
     Task<tl::expected<void, Ichor::StartError>> start() final {

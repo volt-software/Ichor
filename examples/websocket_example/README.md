@@ -6,7 +6,7 @@ This demonstrates the following concepts:
 * Defining and using serializers
 * How to set up a websocket server
 * How to set up a websocket client using the `ClientFactory`
-* Using the advanced parameter `Spinlock` in the `MultimapQueue`.
+* Using the advanced parameter `Spinlock` in the `PriorityQueue`.
 
 ## Command Line Arguments
 
