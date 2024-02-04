@@ -1,7 +1,7 @@
 FROM alpine:3.19
 
 RUN apk update
-RUN apk add gcc g++ build-base cmake git wget make nano sed linux-headers perl
+RUN apk add gcc g++ build-base cmake git wget ninja-build ninja-is-really-ninja nano sed linux-headers perl mold
 
 # Run all downloads first to be able to use Docker's layers as cache and prevent excessive redownloads
 
@@ -46,4 +46,4 @@ WORKDIR /opt/ichor/build
 
 ENTRYPOINT ["/bin/sh", "-c"]
 
-CMD ["unset CFLAGS CXXFLAGS LDFLAGS && cd /opt/ichor/build && cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo -DICHOR_USE_SANITIZERS=0 -DICHOR_USE_HIREDIS=1 -DICHOR_USE_BOOST_BEAST=1 -DICHOR_USE_SPDLOG=1 -DICHOR_MUSL=1 -DICHOR_SKIP_EXTERNAL_TESTS=1 /opt/ichor/src && make -j$(nproc) && make test"]
+CMD ["unset CFLAGS CXXFLAGS LDFLAGS && cd /opt/ichor/build && cmake -GNinja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DICHOR_USE_SANITIZERS=0 -DICHOR_USE_HIREDIS=1 -DICHOR_USE_BOOST_BEAST=1 -DICHOR_USE_SPDLOG=1 -DICHOR_MUSL=1 -DICHOR_SKIP_EXTERNAL_TESTS=1 -DICHOR_USE_MOLD=1 /opt/ichor/src && ninja && ninja test"]

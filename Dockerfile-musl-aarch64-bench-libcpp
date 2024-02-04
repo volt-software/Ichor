@@ -1,10 +1,14 @@
 FROM arm64v8/alpine:3.19
 
 RUN apk update
-RUN apk add gcc g++ build-base cmake git wget ninja-build ninja-is-really-ninja nano sed linux-headers perl mold
+RUN apk add clang17 llvm17 libc++-static libc++-dev build-base cmake git wget ninja-build ninja-is-really-ninja nano sed linux-headers perl mold
 RUN mkdir -p /opt/ichor/build
 
 WORKDIR /opt/ichor/build
+ENV CC="clang"
+ENV CXX="clang++"
+ENV PATH="${PATH}:/usr/lib/llvm-17/bin"
+ENV LDFLAGS="-stdlib=libc++ -static-libstdc++ -l:libc++abi.a -static-libsan -static-libgcc"
 
 ENTRYPOINT ["/bin/sh", "-c"]
 
