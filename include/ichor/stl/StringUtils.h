@@ -31,12 +31,16 @@ namespace Ichor {
         return val;
     }
 
-    struct Version {
+    struct Version final {
         uint64_t major;
         uint64_t minor;
         uint64_t patch;
 
         auto operator<=>(Version const &v) const = default;
+
+        [[nodiscard]] std::string toString() const {
+            return fmt::format("{}.{}.{}", major, minor, patch);
+        }
     };
 
     // Taken from https://www.cppstories.com/2018/07/string-view-perf-followup/

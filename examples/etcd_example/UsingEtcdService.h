@@ -1,12 +1,13 @@
 #pragma once
 
 #include <ichor/services/logging/Logger.h>
-#include <ichor/services/etcd/IEtcd.h>
+#include <ichor/services/etcd/IEtcdV2.h>
 #include <ichor/dependency_management/IService.h>
 #include <ichor/event_queues/IEventQueue.h>
 #include <ichor/events/RunFunctionEvent.h>
 
 using namespace Ichor;
+using namespace Ichor::Etcd::v2;
 
 class UsingEtcdV2Service final {
 public:

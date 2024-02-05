@@ -1,13 +1,13 @@
 #pragma once
 
 #include <ichor/dependency_management/AdvancedService.h>
-#include <ichor/services/etcd/IEtcd.h>
+#include <ichor/services/etcd/IEtcdV2.h>
 #include <ichor/events/RunFunctionEvent.h>
 
 namespace Ichor {
-    struct EtcdUsingService final : public AdvancedService<EtcdUsingService> {
-        EtcdUsingService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {
-            reg.registerDependency<IEtcd>(this, DependencyFlags::REQUIRED);
+    struct Etcdv2UsingService final : public AdvancedService<Etcdv2UsingService> {
+        Etcdv2UsingService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {
+            reg.registerDependency<Etcd::v2::IEtcd>(this, DependencyFlags::REQUIRED);
         }
 
         Task<tl::expected<void, Ichor::StartError>> start() final {
@@ -78,7 +78,7 @@ namespace Ichor {
                 }
 
                 auto getReply = co_await _etcd->get("test_key");
-                if(!getReply || getReply->errorCode != EtcdErrorCodes::KEY_DOES_NOT_EXIST) {
+                if(!getReply || getReply->errorCode != Etcd::v2::EtcdErrorCodes::KEY_DOES_NOT_EXIST) {
                     throw std::runtime_error("Incorrect get errorCode");
                 }
             }
@@ -98,7 +98,7 @@ namespace Ichor {
                     throw std::runtime_error("");
                 }
 
-                if (!putWrongCasReply.value().errorCode || putWrongCasReply.value().errorCode != EtcdErrorCodes::COMPARE_AND_SWAP_FAILED) {
+                if (!putWrongCasReply.value().errorCode || putWrongCasReply.value().errorCode != Etcd::v2::EtcdErrorCodes::COMPARE_AND_SWAP_FAILED) {
                     throw std::runtime_error("Incorrect put wrong cas node errorCode");
                 }
 
@@ -146,7 +146,7 @@ namespace Ichor {
                     throw std::runtime_error("");
                 }
 
-                if (!putWrongCasReply.value().errorCode || putWrongCasReply.value().errorCode != EtcdErrorCodes::COMPARE_AND_SWAP_FAILED) {
+                if (!putWrongCasReply.value().errorCode || putWrongCasReply.value().errorCode != Etcd::v2::EtcdErrorCodes::COMPARE_AND_SWAP_FAILED) {
                     throw std::runtime_error("Incorrect put wrong cas node errorCode");
                 }
 
@@ -184,7 +184,7 @@ namespace Ichor {
                     throw std::runtime_error("");
                 }
 
-                if (!putWrongCasReply.value().errorCode || putWrongCasReply.value().errorCode != EtcdErrorCodes::KEY_DOES_NOT_EXIST) {
+                if (!putWrongCasReply.value().errorCode || putWrongCasReply.value().errorCode != Etcd::v2::EtcdErrorCodes::KEY_DOES_NOT_EXIST) {
                     throw std::runtime_error("Incorrect put wrong cas node errorCode");
                 }
 
@@ -202,7 +202,7 @@ namespace Ichor {
                     throw std::runtime_error("");
                 }
 
-                if (!putWrongCasReply.value().errorCode || putWrongCasReply.value().errorCode != EtcdErrorCodes::KEY_ALREADY_EXISTS) {
+                if (!putWrongCasReply.value().errorCode || putWrongCasReply.value().errorCode != Etcd::v2::EtcdErrorCodes::KEY_ALREADY_EXISTS) {
                     throw std::runtime_error("Incorrect put wrong cas node errorCode");
                 }
 
@@ -453,7 +453,7 @@ namespace Ichor {
                     throw std::runtime_error("");
                 }
 
-                if (!getReply.value().errorCode || getReply.value().errorCode != EtcdErrorCodes::KEY_DOES_NOT_EXIST) {
+                if (!getReply.value().errorCode || getReply.value().errorCode != Etcd::v2::EtcdErrorCodes::KEY_DOES_NOT_EXIST) {
                     throw std::runtime_error("Incorrect ttl node errorCode");
                 }
             }
@@ -547,7 +547,7 @@ namespace Ichor {
                     throw std::runtime_error("missing usersReply");
                 }
 
-                if(!usersReply.value().users || std::find_if(usersReply.value().users->begin(), usersReply.value().users->end(), [](EtcdUserReply const &r) {
+                if(!usersReply.value().users || std::find_if(usersReply.value().users->begin(), usersReply.value().users->end(), [](Etcd::v2::EtcdUserReply const &r) {
                     return r.user == "root";
                 }) == usersReply.value().users->end()) {
                     auto createUserReply = co_await _etcd->createUser("root", "root");
@@ -595,7 +595,7 @@ namespace Ichor {
                     throw std::runtime_error("missing usersReply");
                 }
 
-                if(!usersReply.value().users || std::find_if(usersReply.value().users->begin(), usersReply.value().users->end(), [](EtcdUserReply const &r) {
+                if(!usersReply.value().users || std::find_if(usersReply.value().users->begin(), usersReply.value().users->end(), [](Etcd::v2::EtcdUserReply const &r) {
                     return r.user == "test_user";
                 }) != usersReply.value().users->end()) {
                     throw std::runtime_error("test_user already exists");
@@ -611,7 +611,7 @@ namespace Ichor {
                     throw std::runtime_error("missing usersReply");
                 }
 
-                if(!usersReply.value().users || std::find_if(usersReply.value().users->begin(), usersReply.value().users->end(), [](EtcdUserReply const &r) {
+                if(!usersReply.value().users || std::find_if(usersReply.value().users->begin(), usersReply.value().users->end(), [](Etcd::v2::EtcdUserReply const &r) {
                     return r.user == "test_user";
                 }) == usersReply.value().users->end()) {
                     throw std::runtime_error("test_user not created successfully");
@@ -644,7 +644,7 @@ namespace Ichor {
                     throw std::runtime_error("missing usersReply");
                 }
 
-                if(!usersReply.value().users || std::find_if(usersReply.value().users->begin(), usersReply.value().users->end(), [](EtcdUserReply const &r) {
+                if(!usersReply.value().users || std::find_if(usersReply.value().users->begin(), usersReply.value().users->end(), [](Etcd::v2::EtcdUserReply const &r) {
                     return r.user == "test_user";
                 }) != usersReply.value().users->end()) {
                     throw std::runtime_error("test_user not deleted successfully");
@@ -657,7 +657,7 @@ namespace Ichor {
                     throw std::runtime_error("missing rolesReply");
                 }
 
-                if(std::find_if(rolesReply.value().roles.begin(), rolesReply.value().roles.end(), [](EtcdRoleReply const &r) {
+                if(std::find_if(rolesReply.value().roles.begin(), rolesReply.value().roles.end(), [](Etcd::v2::EtcdRoleReply const &r) {
                     return r.role == "test_role";
                 }) != rolesReply.value().roles.end()) {
                     throw std::runtime_error("test_role already exists");
@@ -677,7 +677,7 @@ namespace Ichor {
                     throw std::runtime_error("missing rolesReply");
                 }
 
-                if(std::find_if(rolesReply.value().roles.begin(), rolesReply.value().roles.end(), [](EtcdRoleReply const &r) {
+                if(std::find_if(rolesReply.value().roles.begin(), rolesReply.value().roles.end(), [](Etcd::v2::EtcdRoleReply const &r) {
                     return r.role == "test_role";
                 }) == rolesReply.value().roles.end()) {
                     throw std::runtime_error("test_role not created successfully");
@@ -707,7 +707,7 @@ namespace Ichor {
                     throw std::runtime_error("missing rolesReply");
                 }
 
-                if(std::find_if(rolesReply.value().roles.begin(), rolesReply.value().roles.end(), [](EtcdRoleReply const &r) {
+                if(std::find_if(rolesReply.value().roles.begin(), rolesReply.value().roles.end(), [](Etcd::v2::EtcdRoleReply const &r) {
                     return r.role == "test_role";
                 }) != rolesReply.value().roles.end()) {
                     throw std::runtime_error("test_role not deleted successfully");
@@ -719,14 +719,14 @@ namespace Ichor {
             co_return {};
         }
 
-        void addDependencyInstance(IEtcd &Etcd, IService&) {
+        void addDependencyInstance(Etcd::v2::IEtcd &Etcd, IService&) {
             _etcd = &Etcd;
         }
 
-        void removeDependencyInstance(IEtcd&, IService&) {
+        void removeDependencyInstance(Etcd::v2::IEtcd&, IService&) {
             _etcd = nullptr;
         }
 
-        IEtcd *_etcd;
+        Etcd::v2::IEtcd *_etcd;
     };
 }
