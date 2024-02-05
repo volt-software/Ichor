@@ -411,8 +411,9 @@ TEST_CASE("STL Tests") {
         REQUIRE((*v).patch == 123123);
     }
 
-    SECTION("Version compare tests") {
+    SECTION("Version tests") {
         Version v1{1, 2, 3};
+        Version emptyV{};
         REQUIRE(Version{1, 2, 4} > v1);
         REQUIRE(Version{1, 3, 3} > v1);
         REQUIRE(Version{2, 2, 3} > v1);
@@ -433,6 +434,13 @@ TEST_CASE("STL Tests") {
         REQUIRE(v1 != Version{2, 2, 3});
         REQUIRE(v1 != Version{1, 3, 3});
         REQUIRE(v1 != Version{1, 2, 4});
+        REQUIRE(emptyV != Version{1, 2, 4});
+        REQUIRE(emptyV < Version{1, 2, 4});
+        REQUIRE(emptyV <= Version{1, 2, 4});
+        REQUIRE(!(emptyV > Version{1, 2, 4}));
+        REQUIRE(!(emptyV >= Version{1, 2, 4}));
+
+        REQUIRE(v1.toString() == "1.2.3");
     }
 
     SECTION("Basename tests") {

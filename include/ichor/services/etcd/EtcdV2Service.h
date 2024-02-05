@@ -1,6 +1,6 @@
 #pragma once
 
-#include <ichor/services/etcd/IEtcd.h>
+#include <ichor/services/etcd/IEtcdV2.h>
 #include <ichor/services/logging/Logger.h>
 #include <ichor/coroutines/AsyncManualResetEvent.h>
 #include <ichor/dependency_management/AdvancedService.h>
@@ -8,7 +8,7 @@
 #include <ichor/services/network/IClientFactory.h>
 #include <stack>
 
-namespace Ichor {
+namespace Ichor::Etcd::v2 {
 
     struct ConnRequest final {
         IHttpConnectionService *conn{};
@@ -16,16 +16,16 @@ namespace Ichor {
     };
 
     /**
-     * Service for the redis protocol using the v2 REST API. Requires an IHttpConnectionService factory and a logger. See https://etcd.io/docs/v2.3/api/ for a detailed look at the etcd v2 API.
+     * Service for the etcd protocol using the v2 REST API. Requires an IHttpConnectionService factory and a logger. See https://etcd.io/docs/v2.3/api/ for a detailed look at the etcd v2 API.
      *
      * Properties:
      * - "Address" - What address to connect to (required)
      * - "Port" - What port to connect to (required)
      */
-    class EtcdV2Service final : public IEtcd, public AdvancedService<EtcdV2Service> {
+    class EtcdService final : public IEtcd, public AdvancedService<EtcdService> {
     public:
-        EtcdV2Service(DependencyRegister &reg, Properties props);
-        ~EtcdV2Service() final = default;
+        EtcdService(DependencyRegister &reg, Properties props);
+        ~EtcdService() final = default;
 
         [[nodiscard]] Task<tl::expected<EtcdReply, EtcdError>> put(std::string_view key, std::string_view value, tl::optional<std::string_view> previous_value, tl::optional<uint64_t> previous_index, tl::optional<bool> previous_exists, tl::optional<uint64_t> ttl_second, bool refresh, bool dir, bool in_order) final;
         [[nodiscard]] Task<tl::expected<EtcdReply, EtcdError>> put(std::string_view key, std::string_view value, tl::optional<uint64_t> ttl_second, bool refresh) final;
