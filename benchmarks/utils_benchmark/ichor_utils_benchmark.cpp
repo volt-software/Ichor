@@ -2,6 +2,7 @@
 #include <iostream>
 #include <chrono>
 #include <regex>
+#include <ichor/stl/StringUtils.h>
 #include <ichor/services/metrics/MemoryUsageFunctions.h>
 #include <ichor/services/network/http/IHttpHostService.h>
 #include "../../examples/common/lyra.hpp"
@@ -170,11 +171,13 @@ int main(int argc, char *argv[]) {
 
     bool onlyPrint{};
     bool onlyRegex{};
+    bool onlyAtoi{};
     bool showHelp{};
 
     auto cli = lyra::help(showHelp)
-               | lyra::opt(onlyPrint)["-p"]["--print"]("Only run print benchmark")
-               | lyra::opt(onlyRegex)["-r"]["--regex"]("Only run regex benchmark");
+               | lyra::opt(onlyPrint)["-p"]["--print"]("Only run print and other explicitly selected benchmarks")
+               | lyra::opt(onlyRegex)["-r"]["--regex"]("Only run regex and other explicitly selected benchmarks")
+               | lyra::opt(onlyAtoi)["-a"]["--atoi"]("Only run atoi and other explicitly selected benchmarks");
 
     auto result = cli.parse( { argc, argv } );
     if (!result) {
@@ -187,7 +190,13 @@ int main(int argc, char *argv[]) {
         return 0;
     }
 
-    if(onlyPrint || (!onlyPrint && !onlyRegex)) {
+    if(!onlyPrint && !onlyRegex && !onlyAtoi) {
+        onlyPrint = true;
+        onlyRegex = true;
+        onlyAtoi = true;
+    }
+
+    if(onlyPrint) {
         int i = 1'234'567;
         double d = 1.234567;
         std::string s{"some arbitrary string"};
@@ -211,12 +220,53 @@ int main(int argc, char *argv[]) {
     }
 
 
-    if(onlyRegex || (!onlyPrint && !onlyRegex)) {
+    if(onlyRegex) {
         run_regex_bench<R"(\/some\/http\/10\/11\/12\/test\?one=two&three=four)", 0>(argv[0]);
         run_regex_bench<R"(\/some\/http\/(\d{1,2})\/(\d{1,2})\/(\d{1,2})\/test\?*.*)", 3>(argv[0]);
         run_regex_bench<R"(\/some\/http\/(\d{1,2})\/(\d{1,2})\/(\d{1,2})\/test\?one=([a-zA-Z0-9]+)&three=([a-zA-Z0-9]+))", 5>(argv[0]);
         run_regex_bench<R"(\/some\/http\/(\d{1,2})\/(\d{1,2})\/(\d{1,2})\/test\?*(.*))", 4>(argv[0]);
         run_regex_bench<R"(\/some\/http\/(\d{1,2})\/(\d{1,2})\/(\d{1,2})\/test\?*([a-zA-Z0-9]+=[a-zA-Z0-9]+)*&*([a-zA-Z0-9]+=[a-zA-Z0-9]+)*)", 5>(argv[0]);
+    }
+
+    if(onlyAtoi) {
+        std::string small = "1";
+        std::string large = "1234567891011";
+        auto startSmallStd = std::chrono::steady_clock::now();
+        for(uint64_t j = 0; j < ITERATION_COUNT * 10; j++) {
+            if(std::stoll(small) != 1ll) {
+                std::terminate();
+            }
+        }
+        auto endSmallStd = std::chrono::steady_clock::now();
+        auto startLargeStd = std::chrono::steady_clock::now();
+        for(uint64_t j = 0; j < ITERATION_COUNT * 10; j++) {
+            if(std::stoll(large) != 1234567891011ll) {
+                std::terminate();
+            }
+        }
+        auto endLargeStd = std::chrono::steady_clock::now();
+        auto startSmallIchor = std::chrono::steady_clock::now();
+        for(uint64_t j = 0; j < ITERATION_COUNT * 10; j++) {
+            if(Ichor::FastAtoi(small.c_str()) != 1ll) {
+                std::terminate();
+            }
+        }
+        auto endSmallIchor = std::chrono::steady_clock::now();
+        auto startLargeIchor = std::chrono::steady_clock::now();
+        for(uint64_t j = 0; j < ITERATION_COUNT * 10; j++) {
+            if(Ichor::FastAtoi(large.c_str()) != 1234567891011ll) {
+                std::terminate();
+            }
+        }
+        auto endLargeIchor = std::chrono::steady_clock::now();
+        fmt::print("{} small std   ran for {:L} µs with {:L} peak memory usage {:L} converts/s\n", argv[0], std::chrono::duration_cast<std::chrono::microseconds>(endSmallStd - startSmallStd).count(), getPeakRSS(),
+                   std::floor(1'000'000. / static_cast<double>(std::chrono::duration_cast<std::chrono::microseconds>(endSmallStd - startSmallStd).count()) * ITERATION_COUNT * 10));
+        fmt::print("{} large std   ran for {:L} µs with {:L} peak memory usage {:L} converts/s\n", argv[0], std::chrono::duration_cast<std::chrono::microseconds>(endLargeStd - startLargeStd).count(), getPeakRSS(),
+                   std::floor(1'000'000. / static_cast<double>(std::chrono::duration_cast<std::chrono::microseconds>(endLargeStd - startLargeStd).count()) * ITERATION_COUNT * 10));
+        fmt::print("{} small ichor ran for {:L} µs with {:L} peak memory usage {:L} converts/s\n", argv[0], std::chrono::duration_cast<std::chrono::microseconds>(endSmallIchor - startSmallIchor).count(), getPeakRSS(),
+                   std::floor(1'000'000. / static_cast<double>(std::chrono::duration_cast<std::chrono::microseconds>(endSmallIchor - startSmallIchor).count()) * ITERATION_COUNT * 10));
+        fmt::print("{} large ichor ran for {:L} µs with {:L} peak memory usage {:L} converts/s\n", argv[0], std::chrono::duration_cast<std::chrono::microseconds>(endLargeIchor - startLargeIchor).count(), getPeakRSS(),
+                   std::floor(1'000'000. / static_cast<double>(std::chrono::duration_cast<std::chrono::microseconds>(endLargeIchor - startLargeIchor).count()) * ITERATION_COUNT * 10));
     }
 
 }

@@ -52,6 +52,7 @@ run_benchmarks ()
   eval $start -c || exit 1
   eval $start_stop || exit 1
   eval $utils -r || exit 1
+  eval $utils -a || exit 1
 }
 
 if [ $REBUILD -eq 1 ]; then
