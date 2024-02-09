@@ -27,7 +27,7 @@ namespace Ichor {
 }
 
 namespace Ichor::Detail {
-    thread_local extern DependencyManager *_local_dm;
+    constinit thread_local extern DependencyManager *_local_dm;
 
     template<typename T>
     class AsyncGeneratorIterator;
@@ -144,7 +144,7 @@ namespace Ichor::Detail {
         tl::optional<bool> _hasSuspended{};
 
     private:
-        static thread_local uint64_t _idCounter;
+        static constinit thread_local uint64_t _idCounter;
     };
 
 
