@@ -135,6 +135,10 @@ if(ICHOR_MUSL)
     target_compile_definitions(ichor PUBLIC ICHOR_MUSL)
     target_compile_options(ichor PUBLIC -static)
     target_link_options(ichor PUBLIC -static-libgcc -static-libstdc++ -static)
+    # reduce filesize of produced binaries greatly
+    # does not work with glibc, as that relies on magic sections
+    target_compile_options(ichor PUBLIC -ffunction-sections -fdata-sections)
+    target_link_options(ichor PUBLIC -Wl,--gc-sections)
 endif()
 if(ICHOR_AARCH64)
     target_compile_definitions(ichor PUBLIC ICHOR_AARCH64)
