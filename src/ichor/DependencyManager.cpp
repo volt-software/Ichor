@@ -22,7 +22,7 @@ std::atomic<uint64_t> Ichor::_rfpCounter = 0;
 #endif
 thread_local Ichor::unordered_set<uint64_t> Ichor::Detail::emptyDependencies{};
 
-thread_local Ichor::DependencyManager *Ichor::Detail::_local_dm = nullptr;
+constinit thread_local Ichor::DependencyManager *Ichor::Detail::_local_dm = nullptr;
 
 #ifdef ICHOR_USE_BACKWARD
 #include <backward/backward.h>

@@ -716,7 +716,7 @@ namespace Ichor {
     namespace Detail {
         // Used internally to insert events where passing around the DM isn't feasible
         // Only use if you know for sure you're on the correct thread.
-        thread_local extern DependencyManager *_local_dm;
+        constinit thread_local extern DependencyManager *_local_dm;
     }
 
     /// Returns thread-local manager. Can only be used after the manager's start() function has been called.
