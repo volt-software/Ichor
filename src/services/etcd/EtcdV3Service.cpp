@@ -21,7 +21,7 @@
 
 using namespace Ichor::Etcd::v3;
 
-namespace Ichor {
+namespace {
     struct EtcdInternalVersionReply final {
         std::string etcdserver;
         std::string etcdcluster;
@@ -37,37 +37,12 @@ namespace Ichor {
 
 template <>
 struct glz::meta<EtcdResponseHeader> {
-    static constexpr auto read_cluster_id = [](EtcdResponseHeader &req, std::string const &s) {
-        req.cluster_id = Ichor::FastAtoiu(s.data());
-    };
-    static constexpr auto write_cluster_id = [](EtcdResponseHeader const &req) -> std::string {
-        return fmt::format("{}", req.cluster_id);
-    };
-    static constexpr auto read_member_id = [](EtcdResponseHeader &req, std::string const &s) {
-        req.member_id = Ichor::FastAtoiu(s.data());
-    };
-    static constexpr auto write_member_id = [](EtcdResponseHeader const &req) -> std::string {
-        return fmt::format("{}", req.member_id);
-    };
-    static constexpr auto read_revision = [](EtcdResponseHeader &req, std::string const &s) {
-        req.revision = Ichor::FastAtoi(s.data());
-    };
-    static constexpr auto write_revision = [](EtcdResponseHeader const &req) -> std::string {
-        return fmt::format("{}", req.revision);
-    };
-    static constexpr auto read_raft_term = [](EtcdResponseHeader &req, std::string const &s) {
-        req.raft_term = Ichor::FastAtoiu(s.data());
-    };
-    static constexpr auto write_raft_term = [](EtcdResponseHeader const &req) -> std::string {
-        return fmt::format("{}", req.raft_term);
-    };
-
     using T = EtcdResponseHeader;
     static constexpr auto value = object(
-            "cluster_id", custom<read_cluster_id, write_cluster_id>,
-            "member_id", custom<read_member_id, write_member_id>,
-            "revision", custom<read_revision, write_revision>,
-            "raft_term", custom<read_raft_term, write_raft_term>
+        "cluster_id", quoted_num<&T::cluster_id>,
+        "member_id", quoted_num<&T::member_id>,
+        "revision", quoted_num<&T::revision>,
+        "raft_term", quoted_num<&T::raft_term>
     );
 };
 
@@ -85,21 +60,15 @@ struct glz::meta<EtcdPutRequest> {
     static constexpr auto write_value = [](EtcdPutRequest const &req) -> std::string {
         return base64_encode(reinterpret_cast<unsigned char const *>(req.value.c_str()), req.value.size());
     };
-    static constexpr auto read_lease = [](EtcdPutRequest &req, std::string const &s) {
-        req.lease = Ichor::FastAtoi(s.data());
-    };
-    static constexpr auto write_lease = [](EtcdPutRequest const &req) -> std::string {
-        return fmt::format("{}", req.lease);
-    };
 
     using T = EtcdPutRequest;
     static constexpr auto value = object(
-            "key", custom<read_key, write_key>,
-            "value", custom<read_value, write_value>,
-            "lease", custom<read_lease, write_lease>,
-            "prev_kv", &T::prev_kv,
-            "ignore_value", &T::ignore_value,
-            "ignore_lease", &T::ignore_lease
+        "key", custom<read_key, write_key>,
+        "value", custom<read_value, write_value>,
+        "lease", quoted_num<&T::lease>,
+        "prev_kv", &T::prev_kv,
+        "ignore_value", &T::ignore_value,
+        "ignore_lease", &T::ignore_lease
     );
 };
 
@@ -107,8 +76,8 @@ template <>
 struct glz::meta<EtcdPutResponse> {
     using T = EtcdPutResponse;
     static constexpr auto value = object(
-            "header", &T::header,
-            "prev_kv", &T::prev_kv
+        "header", &T::header,
+        "prev_kv", &T::prev_kv
     );
 };
 
@@ -131,96 +100,33 @@ struct glz::meta<EtcdRangeRequest> {
         }
         return base64_encode(reinterpret_cast<unsigned char const *>(req.range_end->c_str()), req.range_end->size());
     };
-    static constexpr auto read_limit = [](EtcdRangeRequest &req, std::string const &s) {
-        req.limit = Ichor::FastAtoi(s.data());
-    };
-    static constexpr auto write_limit = [](EtcdRangeRequest const &req) -> std::string {
-        return fmt::format("{}", req.limit);
-    };
-    static constexpr auto read_revision = [](EtcdRangeRequest &req, std::string const &s) {
-        req.revision = Ichor::FastAtoi(s.data());
-    };
-    static constexpr auto write_revision = [](EtcdRangeRequest const &req) -> std::string {
-        return fmt::format("{}", req.revision);
-    };
-    static constexpr auto read_min_mod_revision = [](EtcdRangeRequest &req, std::optional<std::string> const &s) {
-        if(s) {
-            req.min_mod_revision = Ichor::FastAtoi((*s).c_str());
-        }
-    };
-    static constexpr auto write_min_mod_revision = [](EtcdRangeRequest const &req) -> std::optional<std::string> {
-        if(!req.range_end) {
-            return std::nullopt;
-        }
-        return fmt::format("{}", *req.min_mod_revision);
-    };
-    static constexpr auto read_max_mod_revision = [](EtcdRangeRequest &req, std::optional<std::string> const &s) {
-        if(s) {
-            req.max_mod_revision = Ichor::FastAtoi((*s).c_str());
-        }
-    };
-    static constexpr auto write_max_mod_revision = [](EtcdRangeRequest const &req) -> std::optional<std::string> {
-        if(!req.range_end) {
-            return std::nullopt;
-        }
-        return fmt::format("{}", *req.max_mod_revision);
-    };
-    static constexpr auto read_min_create_revision = [](EtcdRangeRequest &req, std::optional<std::string> const &s) {
-        if(s) {
-            req.min_create_revision = Ichor::FastAtoi((*s).c_str());
-        }
-    };
-    static constexpr auto write_min_create_revision = [](EtcdRangeRequest const &req) -> std::optional<std::string> {
-        if(!req.range_end) {
-            return std::nullopt;
-        }
-        return fmt::format("{}", *req.min_create_revision);
-    };
-    static constexpr auto read_max_create_revision = [](EtcdRangeRequest &req, std::optional<std::string> const &s) {
-        if(s) {
-            req.max_create_revision = Ichor::FastAtoi((*s).c_str());
-        }
-    };
-    static constexpr auto write_max_create_revision = [](EtcdRangeRequest const &req) -> std::optional<std::string> {
-        if(!req.range_end) {
-            return std::nullopt;
-        }
-        return fmt::format("{}", *req.max_create_revision);
-    };
 
     using T = EtcdRangeRequest;
     static constexpr auto value = object(
-            "key", custom<read_key, write_key>,
-            "range_end", custom<read_range_end, write_range_end>,
-            "limit", custom<read_limit, write_limit>,
-            "revision", custom<read_revision, write_revision>,
-            "sort_order", &T::sort_order,
-            "sort_target", &T::sort_target,
-            "serializable", &T::serializable,
-            "keys_only", &T::keys_only,
-            "count_only", &T::count_only,
-            "min_mod_revision", custom<read_min_mod_revision, write_min_mod_revision>,
-            "max_mod_revision", custom<read_max_mod_revision, write_max_mod_revision>,
-            "min_create_revision", custom<read_min_create_revision, write_min_create_revision>,
-            "max_create_revision", custom<read_max_create_revision, write_max_create_revision>
+        "key", custom<read_key, write_key>,
+        "range_end", custom<read_range_end, write_range_end>,
+        "limit", quoted_num<&T::limit>,
+        "revision", quoted_num<&T::revision>,
+        "sort_order", &T::sort_order,
+        "sort_target", &T::sort_target,
+        "serializable", &T::serializable,
+        "keys_only", &T::keys_only,
+        "count_only", &T::count_only,
+        "min_mod_revision", quoted_num<&T::min_mod_revision>,
+        "max_mod_revision", quoted_num<&T::max_mod_revision>,
+        "min_create_revision", quoted_num<&T::min_create_revision>,
+        "max_create_revision", quoted_num<&T::max_create_revision>
     );
 };
 
 template <>
 struct glz::meta<EtcdRangeResponse> {
-    static constexpr auto read_count = [](EtcdRangeResponse &req, std::string const &s) {
-        req.count = Ichor::FastAtoi(s.data());
-    };
-    static constexpr auto write_count = [](EtcdRangeResponse const &req) -> std::string {
-        return fmt::format("{}", req.count);
-    };
-
     using T = EtcdRangeResponse;
     static constexpr auto value = object(
-            "header", &T::header,
-            "kvs", &T::kvs,
-            "count", custom<read_count, write_count>,
-            "more", &T::more
+        "header", &T::header,
+        "kvs", &T::kvs,
+        "count", quoted_num<&T::count>,
+        "more", &T::more
     );
 };
 
@@ -246,9 +152,9 @@ struct glz::meta<EtcdDeleteRangeRequest> {
 
     using T = EtcdDeleteRangeRequest;
     static constexpr auto value = object(
-            "key", custom<read_key, write_key>,
-            "range_end", custom<read_range_end, write_range_end>,
-            "prev_kv", &T::prev_kv
+        "key", custom<read_key, write_key>,
+        "range_end", custom<read_range_end, write_range_end>,
+        "prev_kv", &T::prev_kv
     );
 };
 
@@ -263,9 +169,9 @@ struct glz::meta<EtcdDeleteRangeResponse> {
 
     using T = EtcdDeleteRangeResponse;
     static constexpr auto value = object(
-            "header", &T::header,
-            "deleted", custom<read_deleted, write_deleted>,
-            "prev_kv", &T::prev_kvs
+        "header", &T::header,
+        "deleted", custom<read_deleted, write_deleted>,
+        "prev_kv", &T::prev_kvs
     );
 };
 
@@ -283,66 +189,129 @@ struct glz::meta<EtcdKeyValue> {
     static constexpr auto write_value = [](EtcdKeyValue const &req) -> std::string {
         return base64_encode(reinterpret_cast<unsigned char const *>(req.value.c_str()), req.value.size());
     };
-    static constexpr auto read_create_revision = [](EtcdKeyValue &req, std::string const &s) {
-        req.create_revision = Ichor::FastAtoi(s.data());
-    };
-    static constexpr auto write_create_revision = [](EtcdKeyValue const &req) -> std::string {
-        return fmt::format("{}", req.create_revision);
-    };
-    static constexpr auto read_mod_revision = [](EtcdKeyValue &req, std::string const &s) {
-        req.mod_revision = Ichor::FastAtoi(s.data());
-    };
-    static constexpr auto write_mod_revision = [](EtcdKeyValue const &req) -> std::string {
-        return fmt::format("{}", req.mod_revision);
-    };
-    static constexpr auto read_version = [](EtcdKeyValue &req, std::string const &s) {
-        req.version = Ichor::FastAtoi(s.data());
-    };
-    static constexpr auto write_version = [](EtcdKeyValue const &req) -> std::string {
-        return fmt::format("{}", req.version);
-    };
-    static constexpr auto read_lease = [](EtcdKeyValue &req, std::string const &s) {
-        req.lease = Ichor::FastAtoi(s.data());
-    };
-    static constexpr auto write_lease = [](EtcdKeyValue const &req) -> std::string {
-        return fmt::format("{}", req.lease);
-    };
 
     using T = EtcdKeyValue;
     static constexpr auto value = object(
-            "key", custom<read_key, write_key>,
-            "value", custom<read_value, write_value>,
-            "create_revision", custom<read_create_revision, write_create_revision>,
-            "mod_revision", custom<read_mod_revision, write_mod_revision>,
-            "version", custom<read_version, write_version>,
-            "lease", custom<read_lease, write_lease>
+        "key", custom<read_key, write_key>,
+        "value", custom<read_value, write_value>,
+        "create_revision", quoted_num<&T::create_revision>,
+        "mod_revision", quoted_num<&T::mod_revision>,
+        "version", quoted_num<&T::version>,
+        "lease", quoted_num<&T::lease>
+    );
+};
+
+template <>
+struct glz::meta<EtcdCompare> {
+    static constexpr auto read_key = [](EtcdCompare &req, std::string const &s) {
+        req.key = base64_decode(s);
+    };
+    static constexpr auto write_key = [](EtcdCompare const &req) -> std::string {
+        return base64_encode(reinterpret_cast<unsigned char const *>(req.key.c_str()), req.key.size());
+    };
+    static constexpr auto read_range_end = [](EtcdCompare &req, std::optional<std::string> const &s) {
+        if(s) {
+            req.range_end = base64_decode(*s);
+        }
+    };
+    static constexpr auto write_range_end = [](EtcdCompare const &req) -> std::optional<std::string> {
+        if(!req.range_end) {
+            return std::nullopt;
+        }
+        return base64_encode(reinterpret_cast<unsigned char const *>(req.range_end->c_str()), req.range_end->size());
+    };
+    static constexpr auto read_value = [](EtcdCompare &req, std::optional<std::string> const &s) {
+        if(s) {
+            req.value = base64_decode(*s);
+        }
+    };
+    static constexpr auto write_value = [](EtcdCompare const &req) -> std::optional<std::string> {
+        if(!req.value) {
+            return std::nullopt;
+        }
+        return base64_encode(reinterpret_cast<unsigned char const *>(req.value->c_str()), req.value->size());
+    };
+
+    using T = EtcdCompare;
+    static constexpr auto value = object(
+        "result", &T::result,
+        "target", &T::target,
+        "key", custom<read_key, write_key>,
+        "range_end", custom<read_range_end, write_range_end>,
+        "version", quoted_num<&T::version>,
+        "create_revision", quoted_num<&T::create_revision>,
+        "mod_revision", quoted_num<&T::mod_revision>,
+        "value", custom<read_value, write_value>,
+        "lease", quoted_num<&T::lease>
+    );
+};
+
+template <>
+struct glz::meta<EtcdRequestOp> {
+    using T = EtcdRequestOp;
+    static constexpr auto value = object(
+        "request_range", &T::request_range,
+        "request_put", &T::request_put,
+        "request_delete", &T::request_delete,
+        "request_txn", &T::request_txn
+    );
+};
+
+template <>
+struct glz::meta<EtcdResponseOp> {
+    using T = EtcdResponseOp;
+    static constexpr auto value = object(
+        "response_range", &T::response_range,
+        "response_put", &T::response_put,
+        "response_delete_range", &T::response_delete_range,
+        "response_txn", &T::response_txn
+    );
+};
+
+template <>
+struct glz::meta<EtcdTxnRequest> {
+    using T = EtcdTxnRequest;
+    static constexpr auto value = object(
+        "compare", &T::compare,
+        "success", &T::success,
+        "failure", &T::failure
+    );
+};
+
+template <>
+struct glz::meta<EtcdTxnResponse> {
+    using T = EtcdTxnResponse;
+    static constexpr auto value = object(
+        "header", &T::header,
+        "succeeded", &T::succeeded,
+        "responses", &T::responses
     );
 };
 
 
 template <>
-struct glz::meta<Ichor::EtcdHealthReply> {
-    using T = Ichor::EtcdHealthReply;
+struct glz::meta<EtcdHealthReply> {
+    using T = EtcdHealthReply;
     static constexpr auto value = object(
-            "health", &T::health,
-            "reason", &T::reason
+        "health", &T::health,
+        "reason", &T::reason
     );
 };
 
 template <>
-struct glz::meta<Ichor::EtcdEnableAuthReply> {
-    using T = Ichor::EtcdEnableAuthReply;
+struct glz::meta<EtcdEnableAuthReply> {
+    using T = EtcdEnableAuthReply;
     static constexpr auto value = object(
-            "enabled", &T::enabled
+        "enabled", &T::enabled
     );
 };
 
 template <>
-struct glz::meta<Ichor::EtcdInternalVersionReply> {
-    using T = Ichor::EtcdInternalVersionReply;
+struct glz::meta<EtcdInternalVersionReply> {
+    using T = EtcdInternalVersionReply;
     static constexpr auto value = object(
-            "etcdserver", &T::etcdserver,
-            "etcdcluster", &T::etcdcluster
+        "etcdserver", &T::etcdserver,
+        "etcdcluster", &T::etcdcluster
     );
 };
 
@@ -450,7 +419,7 @@ static Ichor::Task<tl::expected<RespT, EtcdError>> execute_request(std::string u
     }
 
     std::vector<uint8_t> msg_buf;
-    glz::template write_json<const ReqT&, std::vector<uint8_t>&>(req, msg_buf);
+    glz::template write<glz::opts{.skip_null_members = true, .error_on_const_read = true}, const ReqT&, std::vector<uint8_t>&>(req, msg_buf);
     msg_buf.push_back('\0');
     ICHOR_LOG_TRACE(logger, "{} {}", url, reinterpret_cast<char *>(msg_buf.data()));
 
@@ -463,7 +432,7 @@ static Ichor::Task<tl::expected<RespT, EtcdError>> execute_request(std::string u
     }
 
     RespT etcd_reply;
-    auto err = glz::template read_json(etcd_reply, http_reply.body);
+    auto err = glz::template read<glz::opts{.error_on_const_read = true}>(etcd_reply, http_reply.body);
 
     if(err) {
         ICHOR_LOG_ERROR(logger, "Glaze error {} at {}", err.ec, err.location);
@@ -519,6 +488,41 @@ Ichor::Task<tl::expected<EtcdDeleteRangeResponse, EtcdError>> EtcdService::delet
     }
 
     co_return co_await execute_request<EtcdDeleteRangeRequest, EtcdDeleteRangeResponse>(fmt::format("{}/kv/deleterange", _versionSpecificUrl), _auth, _logger, _mainConn, req);
+}
+
+Ichor::Task<tl::expected<EtcdTxnResponse, EtcdError>> EtcdService::txn(EtcdTxnRequest const &req) {
+    for(auto const &comp : req.compare) {
+        if(comp.result == EtcdCompareResult::NOT_EQUAL && _detectedVersion < Version{3, 1, 0}) {
+            ICHOR_LOG_ERROR(_logger, "Cannot request EtcdCompareResult::NOT_EQUAL for etcd server {}, minimum 3.1.0 required", _detectedVersion);
+            co_return tl::unexpected(EtcdError::ETCD_SERVER_DOES_NOT_SUPPORT);
+        }
+        if(comp.target == EtcdCompareTarget::LEASE && _detectedVersion < Version{3, 3, 0}) {
+            ICHOR_LOG_ERROR(_logger, "Cannot request EtcdCompareTarget::LEASE for etcd server {}, minimum 3.3.0 required", _detectedVersion);
+            co_return tl::unexpected(EtcdError::ETCD_SERVER_DOES_NOT_SUPPORT);
+        }
+        if(comp.lease && _detectedVersion < Version{3, 3, 0}) {
+            ICHOR_LOG_ERROR(_logger, "Cannot request lease for etcd server {}, minimum 3.3.0 required", _detectedVersion);
+            co_return tl::unexpected(EtcdError::ETCD_SERVER_DOES_NOT_SUPPORT);
+        }
+        if(comp.range_end && _detectedVersion < Version{3, 3, 0}) {
+            ICHOR_LOG_ERROR(_logger, "Cannot request range_end for etcd server {}, minimum 3.3.0 required", _detectedVersion);
+            co_return tl::unexpected(EtcdError::ETCD_SERVER_DOES_NOT_SUPPORT);
+        }
+    }
+    for(auto const &op : req.success) {
+        if(op.request_txn && _detectedVersion < Version{3, 3, 0}) {
+            ICHOR_LOG_ERROR(_logger, "Cannot request request_txn for etcd server {}, minimum 3.3.0 required", _detectedVersion);
+            co_return tl::unexpected(EtcdError::ETCD_SERVER_DOES_NOT_SUPPORT);
+        }
+    }
+    for(auto const &op : req.failure) {
+        if(op.request_txn && _detectedVersion < Version{3, 3, 0}) {
+            ICHOR_LOG_ERROR(_logger, "Cannot request request_txn for etcd server {}, minimum 3.3.0 required", _detectedVersion);
+            co_return tl::unexpected(EtcdError::ETCD_SERVER_DOES_NOT_SUPPORT);
+        }
+    }
+
+    co_return co_await execute_request<EtcdTxnRequest, EtcdTxnResponse>(fmt::format("{}/kv/txn", _versionSpecificUrl), _auth, _logger, _mainConn, req);
 }
 
 Ichor::Task<tl::expected<EtcdVersionReply, EtcdError>> EtcdService::version() {
