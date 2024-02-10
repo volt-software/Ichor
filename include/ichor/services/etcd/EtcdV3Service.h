@@ -30,6 +30,7 @@ namespace Ichor::Etcd::v3 {
         [[nodiscard]] Task<tl::expected<EtcdPutResponse, EtcdError>> put(EtcdPutRequest const &req) final;
         [[nodiscard]] Task<tl::expected<EtcdRangeResponse, EtcdError>> range(EtcdRangeRequest const &req) final;
         [[nodiscard]] Task<tl::expected<EtcdDeleteRangeResponse, EtcdError>> deleteRange(EtcdDeleteRangeRequest const &req) final;
+        [[nodiscard]] Task<tl::expected<EtcdTxnResponse, EtcdError>> txn(EtcdTxnRequest const &req) final;
         [[nodiscard]] Task<tl::expected<EtcdVersionReply, EtcdError>> version() final;
         [[nodiscard]] Version getDetectedVersion() const final;
         [[nodiscard]] Task<tl::expected<bool, EtcdError>> health() final;

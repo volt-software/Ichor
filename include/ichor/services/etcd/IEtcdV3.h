@@ -46,6 +46,21 @@ namespace Ichor::Etcd::v3 {
         VALUE = 4
     };
 
+    enum class EtcdCompareResult : uint_fast16_t {
+        EQUAL = 0,
+        GREATER = 1,
+        LESS = 2,
+        NOT_EQUAL = 3
+    };
+
+    enum class EtcdCompareTarget : uint_fast16_t {
+        VERSION = 0,
+        CREATE = 1,
+        MOD = 2,
+        VALUE = 3,
+        LEASE = 4
+    };
+
     struct EtcdKeyValue final {
         std::string key;
         std::string value;
@@ -73,8 +88,8 @@ namespace Ichor::Etcd::v3 {
         std::optional<std::string> range_end;
         int64_t limit{};
         int64_t revision{};
-        EtcdSortOrder sort_order;
-        EtcdSortTarget sort_target;
+        EtcdSortOrder sort_order{};
+        EtcdSortTarget sort_target{};
         bool serializable{};
         bool keys_only{};
         bool count_only{};
@@ -120,12 +135,54 @@ namespace Ichor::Etcd::v3 {
 
     };
 
-    struct EtcdTnxRequest final {
-
+    struct EtcdCompare final {
+        EtcdCompareResult result{};
+        EtcdCompareTarget target{};
+        std::string key;
+        std::optional<std::string> range_end;
+        // one of:
+        // {
+        std::optional<int64_t> version;
+        std::optional<int64_t> create_revision;
+        std::optional<int64_t> mod_revision;
+        std::optional<std::string> value;
+        std::optional<int64_t> lease;
+        // }
     };
 
-    struct EtcdTnxResponse final {
+    struct EtcdRequestOp;
+    struct EtcdResponseOp;
 
+    struct EtcdTxnRequest final {
+        std::vector<EtcdCompare> compare;
+        std::vector<EtcdRequestOp> success;
+        std::vector<EtcdRequestOp> failure;
+    };
+
+    struct EtcdTxnResponse final {
+        EtcdResponseHeader header;
+        bool succeeded;
+        std::vector<EtcdResponseOp> responses;
+    };
+
+    struct EtcdRequestOp final {
+        // one of:
+        // {
+        std::optional<EtcdRangeRequest> request_range;
+        std::optional<EtcdPutRequest> request_put;
+        std::optional<EtcdDeleteRangeRequest> request_delete;
+        std::optional<EtcdTxnRequest> request_txn;
+        // }
+    };
+
+    struct EtcdResponseOp final {
+        // one of:
+        // {
+        std::optional<EtcdRangeResponse> response_range;
+        std::optional<EtcdPutResponse> response_put;
+        std::optional<EtcdDeleteRangeResponse> response_delete_range;
+        std::optional<EtcdTxnResponse> response_txn;
+        // }
     };
 
     struct EtcdCompactionRequest final {
@@ -176,6 +233,14 @@ namespace Ichor::Etcd::v3 {
         [[nodiscard]] virtual Task<tl::expected<EtcdDeleteRangeResponse, EtcdError>> deleteRange(EtcdDeleteRangeRequest const &req) = 0;
 
         /**
+         * Delete (multiple) key(s)
+         *
+         * @param req
+         * @return Either the EtcdRangeResponse or an EtcdError
+         */
+        [[nodiscard]] virtual Task<tl::expected<EtcdTxnResponse, EtcdError>> txn(EtcdTxnRequest const &req) = 0;
+
+        /**
          * Get the version of the etcd server that we're connected to
          * @return
          */
@@ -217,18 +282,14 @@ namespace Ichor::Etcd::v3 {
 }
 
 template <>
-struct fmt::formatter<Ichor::Etcd::v3::EtcdError>
-{
-    constexpr auto parse(format_parse_context& ctx)
-    {
+struct fmt::formatter<Ichor::Etcd::v3::EtcdError> {
+    constexpr auto parse(format_parse_context& ctx) {
         return ctx.end();
     }
 
     template <typename FormatContext>
-    auto format(const Ichor::Etcd::v3::EtcdError& state, FormatContext& ctx)
-    {
-        switch(state)
-        {
+    auto format(const Ichor::Etcd::v3::EtcdError& state, FormatContext& ctx) {
+        switch(state) {
             case Ichor::Etcd::v3::EtcdError::HTTP_RESPONSE_ERROR:
                 return fmt::format_to(ctx.out(), "HTTP_RESPONSE_ERROR");
             case Ichor::Etcd::v3::EtcdError::JSON_PARSE_ERROR:
@@ -257,6 +318,119 @@ struct fmt::formatter<Ichor::Etcd::v3::EtcdError>
                 return fmt::format_to(ctx.out(), "QUITTING");
             case Ichor::Etcd::v3::EtcdError::ETCD_SERVER_DOES_NOT_SUPPORT:
                 return fmt::format_to(ctx.out(), "ETCD_SERVER_DOES_NOT_SUPPORT");
+            default:
+                return fmt::format_to(ctx.out(), "error, please file a bug in Ichor");
+        }
+    }
+};
+
+template <>
+struct fmt::formatter<Ichor::Etcd::v3::EtcdEventType> {
+    constexpr auto parse(format_parse_context& ctx) {
+        return ctx.end();
+    }
+
+    template <typename FormatContext>
+    auto format(const Ichor::Etcd::v3::EtcdEventType& state, FormatContext& ctx) {
+        switch(state) {
+            case Ichor::Etcd::v3::EtcdEventType::PUT:
+                return fmt::format_to(ctx.out(), "PUT");
+            case Ichor::Etcd::v3::EtcdEventType::DELETE_:
+                return fmt::format_to(ctx.out(), "DELETE");
+            default:
+                return fmt::format_to(ctx.out(), "error, please file a bug in Ichor");
+        }
+    }
+};
+
+template <>
+struct fmt::formatter<Ichor::Etcd::v3::EtcdSortOrder> {
+    constexpr auto parse(format_parse_context& ctx) {
+        return ctx.end();
+    }
+
+    template <typename FormatContext>
+    auto format(const Ichor::Etcd::v3::EtcdSortOrder& state, FormatContext& ctx) {
+        switch(state) {
+            case Ichor::Etcd::v3::EtcdSortOrder::NONE:
+                return fmt::format_to(ctx.out(), "NONE");
+            case Ichor::Etcd::v3::EtcdSortOrder::ASCEND:
+                return fmt::format_to(ctx.out(), "ASCEND");
+            case Ichor::Etcd::v3::EtcdSortOrder::DESCEND:
+                return fmt::format_to(ctx.out(), "DESCEND");
+            default:
+                return fmt::format_to(ctx.out(), "error, please file a bug in Ichor");
+        }
+    }
+};
+
+template <>
+struct fmt::formatter<Ichor::Etcd::v3::EtcdSortTarget> {
+    constexpr auto parse(format_parse_context& ctx) {
+        return ctx.end();
+    }
+
+    template <typename FormatContext>
+    auto format(const Ichor::Etcd::v3::EtcdSortTarget& state, FormatContext& ctx) {
+        switch(state) {
+            case Ichor::Etcd::v3::EtcdSortTarget::KEY:
+                return fmt::format_to(ctx.out(), "KEY");
+            case Ichor::Etcd::v3::EtcdSortTarget::VERSION:
+                return fmt::format_to(ctx.out(), "VERSION");
+            case Ichor::Etcd::v3::EtcdSortTarget::CREATE:
+                return fmt::format_to(ctx.out(), "CREATE");
+            case Ichor::Etcd::v3::EtcdSortTarget::MOD:
+                return fmt::format_to(ctx.out(), "MOD");
+            case Ichor::Etcd::v3::EtcdSortTarget::VALUE:
+                return fmt::format_to(ctx.out(), "VALUE");
+            default:
+                return fmt::format_to(ctx.out(), "error, please file a bug in Ichor");
+        }
+    }
+};
+
+template <>
+struct fmt::formatter<Ichor::Etcd::v3::EtcdCompareResult> {
+    constexpr auto parse(format_parse_context& ctx) {
+        return ctx.end();
+    }
+
+    template <typename FormatContext>
+    auto format(const Ichor::Etcd::v3::EtcdCompareResult& state, FormatContext& ctx) {
+        switch(state) {
+            case Ichor::Etcd::v3::EtcdCompareResult::EQUAL:
+                return fmt::format_to(ctx.out(), "EQUAL");
+            case Ichor::Etcd::v3::EtcdCompareResult::GREATER:
+                return fmt::format_to(ctx.out(), "GREATER");
+            case Ichor::Etcd::v3::EtcdCompareResult::LESS:
+                return fmt::format_to(ctx.out(), "LESS");
+            case Ichor::Etcd::v3::EtcdCompareResult::NOT_EQUAL:
+                return fmt::format_to(ctx.out(), "NOT_EQUAL");
+            default:
+                return fmt::format_to(ctx.out(), "error, please file a bug in Ichor");
+        }
+    }
+};
+
+template <>
+struct fmt::formatter<Ichor::Etcd::v3::EtcdCompareTarget> {
+    constexpr auto parse(format_parse_context& ctx) {
+        return ctx.end();
+    }
+
+    template <typename FormatContext>
+    auto format(const Ichor::Etcd::v3::EtcdCompareTarget& state, FormatContext& ctx) {
+        switch(state) {
+            case Ichor::Etcd::v3::EtcdCompareTarget::VERSION:
+                return fmt::format_to(ctx.out(), "VERSION");
+            case Ichor::Etcd::v3::EtcdCompareTarget::CREATE:
+                return fmt::format_to(ctx.out(), "CREATE");
+            case Ichor::Etcd::v3::EtcdCompareTarget::MOD:
+                return fmt::format_to(ctx.out(), "MOD");
+            case Ichor::Etcd::v3::EtcdCompareTarget::VALUE:
+                return fmt::format_to(ctx.out(), "VALUE");
+            case Ichor::Etcd::v3::EtcdCompareTarget::LEASE:
+                return fmt::format_to(ctx.out(), "LEASE");
             default:
                 return fmt::format_to(ctx.out(), "error, please file a bug in Ichor");
         }

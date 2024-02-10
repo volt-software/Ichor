@@ -25,14 +25,14 @@ template <>
 struct glz::meta<EtcdReplyNode> {
     using T = EtcdReplyNode;
     static constexpr auto value = object(
-            "createdIndex", &T::createdIndex,
-            "modifiedIndex", &T::modifiedIndex,
-            "key", &T::key,
-            "value", &T::value,
-            "ttl", &T::ttl,
-            "expiration", &T::expiration,
-            "dir", &T::dir,
-            "nodes", &T::nodes
+        "createdIndex", &T::createdIndex,
+        "modifiedIndex", &T::modifiedIndex,
+        "key", &T::key,
+        "value", &T::value,
+        "ttl", &T::ttl,
+        "expiration", &T::expiration,
+        "dir", &T::dir,
+        "nodes", &T::nodes
     );
 };
 
@@ -40,13 +40,13 @@ template <>
 struct glz::meta<EtcdReply> {
     using T = EtcdReply;
     static constexpr auto value = object(
-            "action", &T::action,
-            "node", &T::node,
-            "prevNode", &T::prevNode,
-            "index", &T::index,
-            "cause", &T::cause,
-            "errorCode", &T::errorCode,
-            "message", &T::message
+        "action", &T::action,
+        "node", &T::node,
+        "prevNode", &T::prevNode,
+        "index", &T::index,
+        "cause", &T::cause,
+        "errorCode", &T::errorCode,
+        "message", &T::message
     );
 };
 
@@ -54,9 +54,9 @@ template <>
 struct glz::meta<EtcdLeaderInfoStats> {
     using T = EtcdLeaderInfoStats;
     static constexpr auto value = object(
-            "leader", &T::leader,
-            "uptime", &T::uptime,
-            "startTime", &T::startTime
+        "leader", &T::leader,
+        "uptime", &T::uptime,
+        "startTime", &T::startTime
     );
 };
 
@@ -64,13 +64,13 @@ template <>
 struct glz::meta<EtcdSelfStats> {
     using T = EtcdSelfStats;
     static constexpr auto value = object(
-            "name", &T::name,
-            "id", &T::id,
-            "state", &T::state,
-            "startTime", &T::startTime,
-            "leaderInfo", &T::leaderInfo,
-            "recvAppendRequestCnt", &T::recvAppendRequestCnt,
-            "sendAppendRequestCnt", &T::sendAppendRequestCnt
+        "name", &T::name,
+        "id", &T::id,
+        "state", &T::state,
+        "startTime", &T::startTime,
+        "leaderInfo", &T::leaderInfo,
+        "recvAppendRequestCnt", &T::recvAppendRequestCnt,
+        "sendAppendRequestCnt", &T::sendAppendRequestCnt
     );
 };
 
@@ -78,22 +78,22 @@ template <>
 struct glz::meta<EtcdStoreStats> {
     using T = EtcdStoreStats;
     static constexpr auto value = object(
-            "compareAndSwapFail", &T::compareAndSwapFail,
-            "compareAndSwapSuccess", &T::compareAndSwapSuccess,
-            "compareAndDeleteSuccess", &T::compareAndDeleteSuccess,
-            "compareAndDeleteFail", &T::compareAndDeleteFail,
-            "createFail", &T::createFail,
-            "createSuccess", &T::createSuccess,
-            "deleteFail", &T::deleteFail,
-            "deleteSuccess", &T::deleteSuccess,
-            "expireCount", &T::expireCount,
-            "getsFail", &T::getsFail,
-            "getsSuccess", &T::getsSuccess,
-            "setsFail", &T::setsFail,
-            "setsSuccess", &T::setsSuccess,
-            "updateFail", &T::updateFail,
-            "updateSuccess", &T::updateSuccess,
-            "watchers", &T::watchers
+        "compareAndSwapFail", &T::compareAndSwapFail,
+        "compareAndSwapSuccess", &T::compareAndSwapSuccess,
+        "compareAndDeleteSuccess", &T::compareAndDeleteSuccess,
+        "compareAndDeleteFail", &T::compareAndDeleteFail,
+        "createFail", &T::createFail,
+        "createSuccess", &T::createSuccess,
+        "deleteFail", &T::deleteFail,
+        "deleteSuccess", &T::deleteSuccess,
+        "expireCount", &T::expireCount,
+        "getsFail", &T::getsFail,
+        "getsSuccess", &T::getsSuccess,
+        "setsFail", &T::setsFail,
+        "setsSuccess", &T::setsSuccess,
+        "updateFail", &T::updateFail,
+        "updateSuccess", &T::updateSuccess,
+        "watchers", &T::watchers
     );
 };
 
@@ -112,8 +112,8 @@ template <>
 struct glz::meta<EtcdHealthReply> {
     using T = EtcdHealthReply;
     static constexpr auto value = object(
-            "health", &T::health,
-            "reason", &T::reason
+        "health", &T::health,
+        "reason", &T::reason
     );
 };
 
@@ -121,7 +121,7 @@ template <>
 struct glz::meta<EtcdEnableAuthReply> {
     using T = EtcdEnableAuthReply;
     static constexpr auto value = object(
-            "enabled", &T::enabled
+        "enabled", &T::enabled
     );
 };
 
@@ -129,8 +129,8 @@ template <>
 struct glz::meta<EtcdVersionReply> {
     using T = EtcdVersionReply;
     static constexpr auto value = object(
-            "etcdserver", &T::etcdserver,
-            "etcdcluster", &T::etcdcluster
+        "etcdserver", &T::etcdserver,
+        "etcdcluster", &T::etcdcluster
     );
 };
 
@@ -138,8 +138,8 @@ template <>
 struct glz::meta<EtcdKvReply> {
     using T = EtcdKvReply;
     static constexpr auto value = object(
-            "read", &T::read,
-            "write", &T::write
+        "read", &T::read,
+        "write", &T::write
     );
 };
 
@@ -147,7 +147,7 @@ template <>
 struct glz::meta<EtcdPermissionsReply> {
     using T = EtcdPermissionsReply;
     static constexpr auto value = object(
-            "kv", &T::kv
+        "kv", &T::kv
     );
 };
 
@@ -155,10 +155,10 @@ template <>
 struct glz::meta<EtcdRoleReply> {
     using T = EtcdRoleReply;
     static constexpr auto value = object(
-            "role", &T::role,
-            "permissions", &T::permissions,
-            "grant", &T::grant,
-            "revoke", &T::revoke
+        "role", &T::role,
+        "permissions", &T::permissions,
+        "grant", &T::grant,
+        "revoke", &T::revoke
     );
 };
 
@@ -166,7 +166,7 @@ template <>
 struct glz::meta<EtcdRolesReply> {
     using T = EtcdRolesReply;
     static constexpr auto value = object(
-            "roles", &T::roles
+        "roles", &T::roles
     );
 };
 
@@ -174,11 +174,11 @@ template <>
 struct glz::meta<EtcdUserReply> {
     using T = EtcdUserReply;
     static constexpr auto value = object(
-            "user", &T::user,
-            "password", &T::password,
-            "roles", &T::roles,
-            "grant", &T::grant,
-            "revoke", &T::revoke
+        "user", &T::user,
+        "password", &T::password,
+        "roles", &T::roles,
+        "grant", &T::grant,
+        "revoke", &T::revoke
     );
 };
 
@@ -186,8 +186,8 @@ template <>
 struct glz::meta<EtcdUpdateUserReply> {
     using T = EtcdUpdateUserReply;
     static constexpr auto value = object(
-            "user", &T::user,
-            "roles", &T::roles
+        "user", &T::user,
+        "roles", &T::roles
     );
 };
 
@@ -195,7 +195,7 @@ template <>
 struct glz::meta<EtcdUsersReply> {
     using T = EtcdUsersReply;
     static constexpr auto value = object(
-            "users", &T::users
+        "users", &T::users
     );
 };
 
