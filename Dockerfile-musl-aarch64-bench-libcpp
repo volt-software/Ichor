@@ -8,7 +8,7 @@ WORKDIR /opt/ichor/build
 ENV CC="clang"
 ENV CXX="clang++"
 ENV PATH="${PATH}:/usr/lib/llvm-17/bin"
-ENV LDFLAGS="-stdlib=libc++ -static-libstdc++ -l:libc++abi.a -static-libsan -static-libgcc"
+ENV LDFLAGS="-stdlib=libc++ -static-libstdc++ -l:libc++abi.a -static-libgcc"
 
 ENTRYPOINT ["/bin/sh", "-c"]
 

@@ -4,14 +4,15 @@ cmake_policy(SET CMP0048 NEW)
 cmake_policy(SET CMP0077 NEW)
 cmake_policy(SET CMP0110 NEW)
 cmake_policy(SET CMP0127 NEW)
-project(ichor VERSION 0.4.0 DESCRIPTION "C++20 dependency injection framework" HOMEPAGE_URL https://github.com/volt-software/Ichor LANGUAGES CXX)
+project(ichor VERSION 0.5.0 DESCRIPTION "C++20 dependency injection framework" HOMEPAGE_URL https://github.com/volt-software/Ichor LANGUAGES C CXX)
 if(NOT WIN32)
     # we set this flag manually later on to enable the experimental C++20 stuff
     set(CMAKE_CXX_STANDARD 20)
+    set(CMAKE_C_STANDARD 17)
 endif()
 set(CMAKE CXX STANDARD REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
-set(CMAKE_VERBOSE_MAKEFILE ON)
+set(CMAKE_C_EXTENSIONS OFF)
 include(CMakeDependentOption)
 include(CMakePackageConfigHelpers)
 
@@ -66,6 +67,7 @@ option(ICHOR_USE_HARDENING "Uses compiler-specific flags which add stack protect
 cmake_dependent_option(ICHOR_USE_LIBCPP "Uses clang's libc++ stdlib if compiling with clang" ON "CMAKE_CXX_COMPILER_ID STREQUAL \"Clang\"" OFF)
 cmake_dependent_option(ICHOR_USE_MIMALLOC "Use mimalloc for significant performance improvements" ON "(CMAKE_CXX_COMPILER_ID STREQUAL \"Clang\" AND ICHOR_USE_SANITIZERS) OR NOT ICHOR_USE_SANITIZERS" OFF)
 cmake_dependent_option(ICHOR_USE_SYSTEM_MIMALLOC "Use system or vendored mimalloc" OFF "(CMAKE_CXX_COMPILER_ID STREQUAL \"Clang\" AND ICHOR_USE_SANITIZERS) OR NOT ICHOR_USE_SANITIZERS" OFF)
+cmake_dependent_option(ICHOR_USE_LIBURING "Add liburing based queue/integration" ON "NOT WIN32 AND NOT APPLE" OFF)
 
 option(ICHOR_USE_BACKWARD "Use backward-cpp to print stacktraces on crashes or when the user wants to. Useful for debugging." $ICHOR_BUILDING_DEBUG)
 option(ICHOR_USE_HIREDIS "Add hiredis dependency" OFF)
@@ -381,7 +383,8 @@ endif()
 # https://gcc.gnu.org/bugzilla/show_bug.cgi?id=107138
 # https://gcc.gnu.org/bugzilla/show_bug.cgi?id=105329
 # 12.3 has a bug where [[maybe_unused]] in glaze is somehow ignored.
-if(NOT CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND NOT WIN32)
+# liburing does not use pedantic errors
+if(NOT CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND NOT WIN32 AND NOT ICHOR_USE_LIBURING)
     target_compile_options(ichor PRIVATE "-Werror") #prevent externally compiled sources to error out on warnings
 endif()
 
@@ -420,6 +423,28 @@ if(ICHOR_USE_MIMALLOC)
         ichor_add_mimalloc()
         set(MIMALLOC_TARGET mimalloc-static)
     endif()
+endif()
+
+if(ICHOR_USE_LIBURING)
+    execute_process(COMMAND "./configure" WORKING_DIRECTORY ${ICHOR_EXTERNAL_DIR}/liburing/ RESULT_VARIABLE LIBURING_RESULT)
+
+    if(NOT LIBURING_RESULT EQUAL 0)
+        message(FATAL_ERROR "Liburing configure not successful")
+    endif()
+
+    set(LIBURING_SOURCES ${ICHOR_EXTERNAL_DIR}/liburing/src/nolibc.c ${ICHOR_EXTERNAL_DIR}/liburing/src/queue.c ${ICHOR_EXTERNAL_DIR}/liburing/src/register.c ${ICHOR_EXTERNAL_DIR}/liburing/src/setup.c ${ICHOR_EXTERNAL_DIR}/liburing/src/syscall.c ${ICHOR_EXTERNAL_DIR}/liburing/src/version.c)
+    target_sources(ichor PRIVATE ${LIBURING_SOURCES})
+    target_compile_options(ichor PRIVATE -include "${ICHOR_EXTERNAL_DIR}liburing/config-host.h")
+    target_compile_definitions(ichor PUBLIC _GNU_SOURCE ICHOR_USE_LIBURING)
+
+
+    target_include_directories(ichor PUBLIC
+            $<BUILD_INTERFACE:${ICHOR_EXTERNAL_DIR}/liburing/src/arch>
+            $<INSTALL_INTERFACE:include/ichor/external>)
+
+    target_include_directories(ichor PUBLIC
+            $<BUILD_INTERFACE:${ICHOR_EXTERNAL_DIR}/liburing/src/include>
+            $<INSTALL_INTERFACE:include/ichor/external>)
 endif()
 
 if(ICHOR_USE_SPDLOG)

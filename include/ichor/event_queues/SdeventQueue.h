@@ -2,7 +2,6 @@
 
 #ifdef ICHOR_USE_SDEVENT
 
-#include <map>
 #include <ichor/stl/RealtimeReadWriteMutex.h>
 #include <ichor/stl/ConditionVariableAny.h>
 #include <ichor/event_queues/IEventQueue.h>

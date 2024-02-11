@@ -1,7 +1,6 @@
 [submodule "external/spdlog"]
 	path = external/spdlog
 	url = https://github.com/gabime/spdlog.git
-	branch = v1.8.1
 [submodule "external/Catch2"]
 	path = external/Catch2
 	url = https://github.com/catchorg/Catch2.git
@@ -9,10 +8,12 @@
 [submodule "external/fmt"]
 	path = external/fmt
 	url = https://github.com/fmtlib/fmt.git
-	branch = 7.1.2
 [submodule "external/mimalloc"]
 	path = external/mimalloc
 	url = https://github.com/volt-software/mimalloc-static.git
 [submodule "external/glaze"]
 	path = external/glaze
 	url = https://github.com/stephenberry/glaze.git
+[submodule "external/liburing"]
+	path = external/liburing
+	url = https://github.com/axboe/liburing.git

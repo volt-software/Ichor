@@ -13,8 +13,15 @@ namespace Ichor {
     public:
         virtual ~IEventQueue();
 
+        /// Thread-safe
+        /// \return
         [[nodiscard]] virtual bool empty() const = 0;
+
+        /// Thread-safe
+        /// \return
         [[nodiscard]] virtual uint64_t size() const = 0;
+
+        /// Thread-safe
         [[nodiscard]] virtual bool is_running() const noexcept = 0;
 
         /// Starts the event loop, consumes the current thread until a QuitEvent occurs
