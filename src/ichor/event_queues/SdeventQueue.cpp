@@ -109,13 +109,6 @@ namespace Ichor {
     }
 
     bool SdeventQueue::empty() const {
-        // probably a race condition... this crashes QueueTests, disabling for now. Don't think it can hurt that much...right? :(
-//#ifdef ICHOR_USE_HARDENING
-//        if(_dm.get() != Detail::_local_dm) [[unlikely]] { // are we on the right thread?
-//            std::terminate();
-//        }
-//#endif
-
         if(!_initializedSdevent.load(std::memory_order_acquire)) [[unlikely]] {
             throw std::runtime_error("sdevent not initialized. Call createEventLoop or useEventLoop first.");
         }
@@ -125,12 +118,6 @@ namespace Ichor {
     }
 
     uint64_t SdeventQueue::size() const {
-#ifdef ICHOR_USE_HARDENING
-        if(_dm.get() != Detail::_local_dm) [[unlikely]] { // are we on the right thread?
-            std::terminate();
-        }
-#endif
-
         if(!_initializedSdevent.load(std::memory_order_acquire)) [[unlikely]] {
             throw std::runtime_error("sdevent not initialized. Call createEventLoop or useEventLoop first.");
         }
@@ -140,6 +127,7 @@ namespace Ichor {
     }
 
     bool SdeventQueue::is_running() const noexcept {
+        // TODO
         return !_quit.load(std::memory_order_acquire);
     }
 

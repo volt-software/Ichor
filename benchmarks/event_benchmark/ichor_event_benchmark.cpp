@@ -1,5 +1,6 @@
 #include "TestService.h"
 #include <ichor/event_queues/PriorityQueue.h>
+#include <ichor/event_queues/IOUringQueue.h>
 #include <ichor/services/logging/LoggerFactory.h>
 #include <ichor/services/logging/NullLogger.h>
 #include <ichor/services/metrics/MemoryUsageFunctions.h>
@@ -7,14 +8,23 @@
 #include <thread>
 #include <array>
 #include "../../examples/common/lyra.hpp"
+//#include <spdlog/spdlog.h>
+//#include <spdlog/sinks/stdout_color_sinks.h>
 
 int main(int argc, char *argv[]) {
     std::locale::global(std::locale("en_US.UTF-8"));
+//    auto new_logger = spdlog::stdout_color_mt("default_logger");
+//    new_logger->set_pattern("[%H:%M:%S.%f] [%t] [%l] %v");
+//    spdlog::set_default_logger(new_logger);
 
     bool showHelp{};
     bool singleOnly{};
+    bool liburing{};
 
     auto cli = lyra::help(showHelp)
+#ifdef ICHOR_USE_LIBURING
+               | lyra::opt(liburing)["-u"]["--liburing"]("Use io_uring as a queue")
+#endif
                | lyra::opt(singleOnly)["-s"]["--single"]("Single core only");
 
     auto result = cli.parse( { argc, argv } );
@@ -30,7 +40,17 @@ int main(int argc, char *argv[]) {
 
     {
         auto start = std::chrono::steady_clock::now();
-        auto queue = std::make_unique<PriorityQueue>();
+        std::unique_ptr<IEventQueue> queue;
+        if(liburing) {
+#ifdef ICHOR_USE_LIBURING
+            auto q = std::make_unique<IOUringQueue>(10, 10'000);
+            q->createEventLoop();
+            queue = std::move(q);
+#endif
+        } else {
+            queue = std::make_unique<PriorityQueue>();
+        }
+//        spdlog::info("start");
         auto &dm = queue->createManager();
         dm.createServiceManager<LoggerFactory<NullLogger>, ILoggerFactory>();
         dm.createServiceManager<TestService>(Properties{{"LogLevel", Ichor::make_any<LogLevel>(LogLevel::LOG_WARN)}});
@@ -43,13 +63,23 @@ int main(int argc, char *argv[]) {
     if(!singleOnly) {
         auto start = std::chrono::steady_clock::now();
         std::array<std::thread, 8> threads{};
-        std::array<PriorityQueue, 8> queues{};
         for (uint_fast32_t i = 0, j = 0; i < 8; i++, j += 2) {
-            threads[i] = std::thread([&queues, i] {
-                auto &dm = queues[i].createManager();
+            threads[i] = std::thread([liburing] {
+//                spdlog::info("start");
+                std::unique_ptr<IEventQueue> queue;
+                if(liburing) {
+#ifdef ICHOR_USE_LIBURING
+                    auto q = std::make_unique<IOUringQueue>(10, 10'000);
+                    q->createEventLoop();
+                    queue = std::move(q);
+#endif
+                } else {
+                    queue = std::make_unique<PriorityQueue>();
+                }
+                auto &dm = queue->createManager();
                 dm.createServiceManager<LoggerFactory<NullLogger>, ILoggerFactory>();
                 dm.createServiceManager<TestService>(Properties{{"LogLevel", Ichor::make_any<LogLevel>(LogLevel::LOG_WARN)}});
-                queues[i].start(CaptureSigInt);
+                queue->start(CaptureSigInt);
             });
         }
         for (uint_fast32_t i = 0; i < 8; i++) {
