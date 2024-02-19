@@ -10,11 +10,15 @@ namespace Ichor {
         ~EventCompletionHandlerRegistration();
 
         EventCompletionHandlerRegistration(const EventCompletionHandlerRegistration&) = delete;
-        EventCompletionHandlerRegistration(EventCompletionHandlerRegistration&& o) noexcept : _key(o._key), _priority(o._priority) {
+        EventCompletionHandlerRegistration(EventCompletionHandlerRegistration&& o) noexcept {
+            reset();
+            _key = o._key;
+            _priority = o._priority;
             o._key.type = 0;
         }
         EventCompletionHandlerRegistration& operator=(const EventCompletionHandlerRegistration&) = delete;
         EventCompletionHandlerRegistration& operator=(EventCompletionHandlerRegistration&& o) noexcept {
+            reset();
             _key = o._key;
             _priority = o._priority;
             o._key.type = 0;
@@ -34,11 +38,15 @@ namespace Ichor {
         ~EventHandlerRegistration();
 
         EventHandlerRegistration(const EventHandlerRegistration&) = delete;
-        EventHandlerRegistration(EventHandlerRegistration&& o) noexcept : _key(o._key), _priority(o._priority) {
+        EventHandlerRegistration(EventHandlerRegistration&& o) noexcept {
+            reset();
+            _key = o._key;
+            _priority = o._priority;
             o._key.type = 0;
         }
         EventHandlerRegistration& operator=(const EventHandlerRegistration&) = delete;
         EventHandlerRegistration& operator=(EventHandlerRegistration&& o) noexcept {
+            reset();
             _key = o._key;
             _priority = o._priority;
             o._key.type = 0;
@@ -58,11 +66,15 @@ namespace Ichor {
         ~EventInterceptorRegistration();
 
         EventInterceptorRegistration(const EventInterceptorRegistration&) = delete;
-        EventInterceptorRegistration(EventInterceptorRegistration&& o) noexcept : _key(o._key), _priority(o._priority) {
+        EventInterceptorRegistration(EventInterceptorRegistration&& o) noexcept {
+            reset();
+            _key = o._key;
+            _priority = o._priority;
             o._key.type = 0;
         }
         EventInterceptorRegistration& operator=(const EventInterceptorRegistration&) = delete;
         EventInterceptorRegistration& operator=(EventInterceptorRegistration&& o) noexcept {
+            reset();
             _key = o._key;
             _priority = o._priority;
             o._key.type = 0;
@@ -84,11 +96,16 @@ namespace Ichor {
         ~DependencyTrackerRegistration();
 
         DependencyTrackerRegistration(const DependencyTrackerRegistration&) = delete;
-        DependencyTrackerRegistration(DependencyTrackerRegistration&& o) noexcept : _serviceId(o._serviceId), _interfaceNameHash(o._interfaceNameHash), _priority(o._priority) {
+        DependencyTrackerRegistration(DependencyTrackerRegistration&& o) noexcept {
+            reset();
+            _serviceId = o._serviceId;
+            _interfaceNameHash = o._interfaceNameHash;
+            _priority = o._priority;
             o._interfaceNameHash = 0;
         }
         DependencyTrackerRegistration& operator=(const DependencyTrackerRegistration&) = delete;
         DependencyTrackerRegistration& operator=(DependencyTrackerRegistration&& o) noexcept {
+            reset();
             _serviceId = o._serviceId;
             _interfaceNameHash = o._interfaceNameHash;
             _priority = o._priority;
