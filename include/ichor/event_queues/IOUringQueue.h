@@ -22,7 +22,7 @@ namespace Ichor {
         [[nodiscard]] uint64_t size() const final;
         [[nodiscard]] bool is_running() const noexcept final;
 
-        io_uring* createEventLoop();
+        io_uring* createEventLoop(unsigned entriesCount = 2048);
         void useEventLoop(io_uring *loop);
 
         void start(bool captureSigInt) final;
