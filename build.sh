@@ -68,9 +68,18 @@ run_benchmarks ()
 {
   ../bin/ichor_coroutine_benchmark || exit 1
   ../bin/ichor_event_benchmark || exit 1
+  ../bin/ichor_event_benchmark -u || exit 1
   ../bin/ichor_serializer_benchmark || exit 1
   ../bin/ichor_start_benchmark || exit 1
   ../bin/ichor_start_stop_benchmark || exit 1
+  ../bin/ichor_utils_benchmark -r || exit 1
+}
+run_fast_benchmarks ()
+{
+  ../bin/ichor_coroutine_benchmark || exit 1
+  ../bin/ichor_event_benchmark || exit 1
+  ../bin/ichor_event_benchmark -u || exit 1
+  ../bin/ichor_serializer_benchmark || exit 1
   ../bin/ichor_utils_benchmark -r || exit 1
 }
 
@@ -78,33 +87,35 @@ run_benchmarks ()
 if [[ $DOCKER -eq 1 ]]; then
   rm -rf ./* ../bin/*
   docker build -f ../Dockerfile -t ichor . || exit 1
-  docker run -v $(pwd)/../:/opt/ichor/src -v $(pwd)/../build:/opt/ichor/build --rm -it ichor || exit 1
+  docker run -v $(pwd)/../:/opt/ichor/src -v $(pwd)/../build:/opt/ichor/build --rm --privileged -it ichor || exit 1
   run_examples
+  run_fast_benchmarks
   docker run -v $(pwd)/../:/opt/ichor/src -v $(pwd)/../build:/opt/ichor/build --rm -it ichor "rm -rf /opt/ichor/src/bin/* /opt/ichor/src/build/*" || exit 1
 
   rm -rf ./* ../bin/*
   docker build -f ../Dockerfile-musl -t ichor-musl . || exit 1
-  docker run -v $(pwd)/../:/opt/ichor/src -v $(pwd)/../build:/opt/ichor/build --rm -it ichor-musl || exit 1
+  docker run -v $(pwd)/../:/opt/ichor/src -v $(pwd)/../build:/opt/ichor/build --rm --privileged -it ichor-musl || exit 1
   run_examples
+  run_fast_benchmarks
   docker run -v $(pwd)/../:/opt/ichor/src -v $(pwd)/../build:/opt/ichor/build --rm -it ichor-musl "rm -rf /opt/ichor/src/bin/* /opt/ichor/src/build/*" || exit 1
 
   rm -rf ./* ../bin/*
   docker build -f ../Dockerfile-asan -t ichor-asan . || exit 1
-  docker run -v $(pwd)/../:/opt/ichor/src -v $(pwd)/../build:/opt/ichor/build --rm -it ichor-asan || exit 1
+  docker run -v $(pwd)/../:/opt/ichor/src -v $(pwd)/../build:/opt/ichor/build --rm --privileged -it ichor-asan || exit 1
   run_examples
   run_benchmarks
   docker run -v $(pwd)/../:/opt/ichor/src -v $(pwd)/../build:/opt/ichor/build --rm -it ichor-asan "rm -rf /opt/ichor/src/bin/* /opt/ichor/src/build/*" || exit 1
 
   rm -rf ./* ../bin/*
   docker build -f ../Dockerfile-asan-clang -t ichor-asan-clang . || exit 1
-  docker run -v $(pwd)/../:/opt/ichor/src -v $(pwd)/../build:/opt/ichor/build --rm -it ichor-asan-clang || exit 1
+  docker run -v $(pwd)/../:/opt/ichor/src -v $(pwd)/../build:/opt/ichor/build --rm --privileged -it ichor-asan-clang || exit 1
   run_examples
   run_benchmarks
   docker run -v $(pwd)/../:/opt/ichor/src -v $(pwd)/../build:/opt/ichor/build --rm -it ichor-asan-clang "rm -rf /opt/ichor/src/bin/* /opt/ichor/src/build/*" || exit 1
 
   rm -rf ./* ../bin/*
   docker build -f ../Dockerfile-tsan -t ichor-tsan . || exit 1
-  docker run -v $(pwd)/../:/opt/ichor/src -v $(pwd)/../build:/opt/ichor/build --rm -it ichor-tsan || exit 1
+  docker run -v $(pwd)/../:/opt/ichor/src -v $(pwd)/../build:/opt/ichor/build --rm --privileged -it ichor-tsan || exit 1
   run_examples
   run_benchmarks
   docker run -v $(pwd)/../:/opt/ichor/src -v $(pwd)/../build:/opt/ichor/build --rm -it ichor-tsan "rm -rf /opt/ichor/src/bin/* /opt/ichor/src/build/*" || exit 1
@@ -113,19 +124,18 @@ if [[ $DOCKER -eq 1 ]]; then
   docker run --rm --privileged multiarch/qemu-user-static --reset -p yes || exit 1
   docker build -f ../Dockerfile-musl-aarch64 -t ichor-musl-aarch64 . || exit 1
   docker run -v $(pwd)/../:/opt/ichor/src -v $(pwd)/../build:/opt/ichor/build --rm -it ichor-musl-aarch64 || exit 1
-  rm -f ../bin/run_aarch64_examples_and_tests.sh
-  cat >> ../bin/run_aarch64_examples_and_tests.sh << EOF
-#!/bin/sh
-FILES=/opt/ichor/src/bin/*
-for f in \$FILES; do
-  if [[ "\$f" != *"Tests" ]] && [[ "\$f" != *"benchmark" ]] && [[ "\$f" != *"minimal"* ]] && [[ "\$f" != *"tcp"* ]] && [[ "\$f" != *"ping"* ]] && [[ "\$f" != *"etcd"* ]] && [[ "\$f" != *"pong"* ]] && [[ "\$f" != *".sh" ]] && [[ -x "\$f" ]] && [[ ! -d "\$f" ]] ; then
-    echo "Running \${f}"
-    \$f || exit 1
-  fi
-done
-EOF
-  chmod +x ../bin/run_aarch64_examples_and_tests.sh
-  docker run -v $(pwd)/../:/opt/ichor/src -v $(pwd)/../build:/opt/ichor/build --rm --privileged -it ichor-musl-aarch64 "sh -c 'ulimit -r unlimited && /opt/ichor/src/bin/run_aarch64_examples_and_tests.sh'" || exit 1
+
+  # use the following to enable incremental builds for debugging (and don't forget to remove the two rm -rf's)
+#  rm -f ../bin/run_aarch64_examples_and_tests.sh
+#  cat >> ../bin/run_aarch64_examples_and_tests.sh << EOF
+##!/bin/sh
+#cd /opt/ichor/src/build
+#ninja
+#EOF
+#  chmod +x ../bin/run_aarch64_examples_and_tests.sh
+#  docker run -v $(pwd)/../:/opt/ichor/src -v $(pwd)/../build:/opt/ichor/build --rm --privileged -it ichor-musl-aarch64 "sh -c 'ulimit -r unlimited && /opt/ichor/src/bin/run_aarch64_examples_and_tests.sh'" || exit 1
+  run_examples
+  # run_fast_benchmarks # this is still too slow, need to refactor benchmarks to specify iterations on command line
   docker run -v $(pwd)/../:/opt/ichor/src -v $(pwd)/../build:/opt/ichor/build --rm --privileged -it ichor-musl-aarch64 "rm -rf /opt/ichor/src/bin/* /opt/ichor/src/build/*" || exit 1
 
   rm -rf ./* ../bin/*

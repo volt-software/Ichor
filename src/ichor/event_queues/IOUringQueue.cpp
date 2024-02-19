@@ -86,9 +86,12 @@ namespace Ichor {
         if(std::this_thread::get_id() != _threadId) [[unlikely]] {
             TSAN_ANNOTATE_HAPPENS_BEFORE(procEvent);
             io_uring tempQueue{};
-            auto ret = io_uring_queue_init(1024, &tempQueue, IORING_SETUP_DEFER_TASKRUN | IORING_SETUP_COOP_TASKRUN | IORING_SETUP_SINGLE_ISSUER);
+            io_uring_params p{};
+            p.flags = IORING_SETUP_DEFER_TASKRUN | IORING_SETUP_COOP_TASKRUN | IORING_SETUP_SINGLE_ISSUER | IORING_SETUP_ATTACH_WQ;
+            p.wq_fd = _eventQueuePtr->ring_fd;
+            auto ret = io_uring_queue_init_params(8, &tempQueue, &p);
             if(ret < 0) [[unlikely]] {
-                throw std::system_error(-ret, std::generic_category(), "io_uring_queue_init() failed");
+                throw std::system_error(-ret, std::generic_category(), "io_uring_queue_init_params() failed");
             }
             ScopeGuard sg{[&tempQueue]() {
                 io_uring_queue_exit(&tempQueue);
@@ -100,7 +103,7 @@ namespace Ichor {
             ret = io_uring_submit_and_wait(&tempQueue, 1);
             if(ret != 1) [[unlikely]] {
 //                spdlog::info("io_uring_submit {}", ret);
-                throw std::runtime_error("submit wrong amount");
+                throw std::runtime_error("submit wrong amount, would have resulted in dropping event");
             }
         } else {
             auto *sqe = io_uring_get_sqe(_eventQueuePtr);
@@ -137,12 +140,18 @@ namespace Ichor {
         return !_quit.load(std::memory_order_acquire);
     }
 
-    io_uring* IOUringQueue::createEventLoop() {
+    io_uring* IOUringQueue::createEventLoop(unsigned entriesCount) {
         _eventQueue = std::make_unique<io_uring>();
         _eventQueuePtr = _eventQueue.get();
-        auto ret = io_uring_queue_init(1024, _eventQueuePtr, IORING_SETUP_COOP_TASKRUN | IORING_SETUP_SINGLE_ISSUER);
+        io_uring_params p{};
+        p.flags = IORING_SETUP_DEFER_TASKRUN | IORING_SETUP_COOP_TASKRUN | IORING_SETUP_SINGLE_ISSUER;
+        p.sq_thread_idle = 50;
+        auto ret = io_uring_queue_init_params(entriesCount, _eventQueuePtr, &p);
         if(ret < 0) [[unlikely]] {
-            throw std::system_error(-ret, std::generic_category(), "io_uring_queue_init() failed");
+            throw std::system_error(-ret, std::generic_category(), "io_uring_queue_init_params() failed");
+        }
+        if (!(p.features & IORING_FEAT_FAST_POLL)) {
+            fmt::print("IORING_FEAT_FAST_POLL not supported, expect reduced performance\n");
         }
         ret = io_uring_register_ring_fd(_eventQueuePtr);
         if(ret < 0) [[unlikely]] {

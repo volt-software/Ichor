@@ -122,7 +122,8 @@ TEST_CASE("QueueTests") {
     }
 #endif
 
-#ifdef ICHOR_USE_LIBURING
+// running this inside docker for aarch64 may cause problems, but we still want to test compilation on those setups
+#if defined(ICHOR_USE_LIBURING) && !(defined(ICHOR_SKIP_EXTERNAL_TESTS) && defined(ICHOR_AARCH64))
     SECTION("IOUringQueue") {
         auto queue = std::make_unique<IOUringQueue>();
         auto &dm = queue->createManager();
