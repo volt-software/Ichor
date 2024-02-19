@@ -8,12 +8,15 @@
 
 using namespace std::chrono_literals;
 
-Ichor::Timer::Timer(Ichor::IEventQueue *queue, uint64_t timerId, uint64_t svcId) noexcept : _queue(queue), _timerId(timerId), _requestingServiceId(svcId) {
+Ichor::Timer::Timer(NeverNull<IEventQueue*> queue, uint64_t timerId, uint64_t svcId) noexcept : _queue(queue), _timerId(timerId), _requestingServiceId(svcId) {
     stopTimer();
 }
 
 Ichor::Timer::~Timer() noexcept {
     stopTimer();
+    if(_eventInsertionThread && _eventInsertionThread->joinable()) {
+        _eventInsertionThread->join();
+    }
 }
 
 void Ichor::Timer::startTimer() {
@@ -27,6 +30,9 @@ void Ichor::Timer::startTimer(bool fireImmediately) {
 
     bool expected = true;
     if(_quit.compare_exchange_strong(expected, false, std::memory_order_acq_rel)) {
+        if(_eventInsertionThread && _eventInsertionThread->joinable()) {
+            _eventInsertionThread->join();
+        }
         _eventInsertionThread = std::make_unique<std::thread>([this, fireImmediately]() { this->insertEventLoop(fireImmediately); });
 #if defined(__linux__) || defined(__CYGWIN__)
         pthread_setname_np(_eventInsertionThread->native_handle(), fmt::format("Tmr#{}", _timerId).c_str());
@@ -37,7 +43,9 @@ void Ichor::Timer::startTimer(bool fireImmediately) {
 void Ichor::Timer::stopTimer() {
     bool expected = false;
     if(_quit.compare_exchange_strong(expected, true, std::memory_order_acq_rel)) {
-        _eventInsertionThread->join();
+        if(_eventInsertionThread->joinable()) {
+            _eventInsertionThread->join();
+        }
         _eventInsertionThread = nullptr;
     }
 }
@@ -77,6 +85,14 @@ uint64_t Ichor::Timer::getPriority() const noexcept {
     return _priority.load(std::memory_order_acquire);
 }
 
+void Ichor::Timer::setFireOnce(bool fireOnce) noexcept {
+    _fireOnce.store(fireOnce, std::memory_order_release);
+}
+
+bool Ichor::Timer::getFireOnce() const noexcept {
+    return _fireOnce.load(std::memory_order_acquire);
+}
+
 uint64_t Ichor::Timer::getTimerId() const noexcept {
     return _timerId;
 }
@@ -88,11 +104,6 @@ void Ichor::Timer::insertEventLoop(bool fireImmediately) {
 #if (defined(WIN32) || defined(_WIN32) || defined(__WIN32)) && !defined(__CYGWIN__)
     SetThreadDescription(GetCurrentThread(), fmt::format(L"Tmr#{}", _timerId).c_str());
 #endif
-
-
-    while(!_quit.load(std::memory_order_acquire) && _queue == nullptr) {
-        std::this_thread::sleep_for(1ms);
-    }
 
     auto now = std::chrono::steady_clock::now();
     auto next = now;
@@ -113,6 +124,12 @@ void Ichor::Timer::insertEventLoop(bool fireImmediately) {
             _queue->pushPrioritisedEvent<RunFunctionEventAsync>(_requestingServiceId, getPriority(), _fnAsync);
         } else {
             _queue->pushPrioritisedEvent<RunFunctionEvent>(_requestingServiceId, getPriority(), _fn);
+        }
+
+        if(_fireOnce.load(std::memory_order_acquire)) {
+            bool expected = false;
+            _quit.compare_exchange_strong(expected, true, std::memory_order_acq_rel);
+            break;
         }
 
         next += std::chrono::nanoseconds(_intervalNanosec.load(std::memory_order_acquire));

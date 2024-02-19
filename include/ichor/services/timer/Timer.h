@@ -37,20 +37,25 @@ namespace Ichor {
         /// Thread-safe.
         [[nodiscard]] uint64_t getPriority() const noexcept final;
         /// Thread-safe.
+        void setFireOnce(bool fireOnce) noexcept final;
+        /// Thread-safe.
+        [[nodiscard]] bool getFireOnce() const noexcept final;
+        /// Thread-safe.
         [[nodiscard]] uint64_t getTimerId() const noexcept final;
 
     private:
         ///
         /// \param timerId unique identifier for timer
         /// \param svcId unique identifier for svc using this timer
-        Timer(IEventQueue *queue, uint64_t timerId, uint64_t svcId) noexcept;
+        Timer(NeverNull<IEventQueue*> queue, uint64_t timerId, uint64_t svcId) noexcept;
 
         void insertEventLoop(bool fireImmediately);
 
         friend class TimerFactory;
 
-        IEventQueue *_queue{};
+        NeverNull<IEventQueue*> _queue;
         uint64_t _timerId{};
+        std::atomic<bool> _fireOnce{};
         std::atomic<uint64_t> _intervalNanosec{1'000'000'000};
         std::unique_ptr<std::thread> _eventInsertionThread{};
         std::function<AsyncGenerator<IchorBehaviour>()> _fnAsync{};
