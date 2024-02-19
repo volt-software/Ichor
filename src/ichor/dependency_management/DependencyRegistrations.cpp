@@ -2,10 +2,7 @@
 #include <ichor/event_queues/IEventQueue.h>
 
 Ichor::EventCompletionHandlerRegistration::~EventCompletionHandlerRegistration() {
-    if(_key.type != 0) {
-        Ichor::GetThreadLocalEventQueue().pushPrioritisedEvent<RemoveCompletionCallbacksEvent>(_key.id, _priority, _key);
-        _key.type = 0;
-    }
+    reset();
 }
 
 void Ichor::EventCompletionHandlerRegistration::reset() {
@@ -16,10 +13,7 @@ void Ichor::EventCompletionHandlerRegistration::reset() {
 }
 
 Ichor::EventHandlerRegistration::~EventHandlerRegistration() {
-    if(_key.type != 0) {
-        Ichor::GetThreadLocalEventQueue().pushPrioritisedEvent<RemoveEventHandlerEvent>(_key.id, _priority, _key);
-        _key.type = 0;
-    }
+    reset();
 }
 
 void Ichor::EventHandlerRegistration::reset() {
@@ -30,9 +24,7 @@ void Ichor::EventHandlerRegistration::reset() {
 }
 
 Ichor::EventInterceptorRegistration::~EventInterceptorRegistration() {
-    if(_key.type != 0) {
-        Ichor::GetThreadLocalEventQueue().pushPrioritisedEvent<RemoveEventInterceptorEvent>(_key.id, _priority, _key);
-    }
+    reset();
 }
 
 void Ichor::EventInterceptorRegistration::reset() {
@@ -43,10 +35,7 @@ void Ichor::EventInterceptorRegistration::reset() {
 }
 
 Ichor::DependencyTrackerRegistration::~DependencyTrackerRegistration() {
-    if(_interfaceNameHash != 0) {
-        Ichor::GetThreadLocalEventQueue().pushPrioritisedEvent<RemoveTrackerEvent>(_serviceId, _priority, _interfaceNameHash);
-        _interfaceNameHash = 0;
-    }
+    reset();
 }
 
 void Ichor::DependencyTrackerRegistration::reset() {
