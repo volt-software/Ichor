@@ -19,8 +19,8 @@ namespace Ichor::Etcd::v2 {
      * Service for the etcd protocol using the v2 REST API. Requires an IHttpConnectionService factory and a logger. See https://etcd.io/docs/v2.3/api/ for a detailed look at the etcd v2 API.
      *
      * Properties:
-     * - "Address" - What address to connect to (required)
-     * - "Port" - What port to connect to (required)
+     * - "Address" std::string - What address to connect to (required)
+     * - "Port" uint6_t - What port to connect to (required)
      */
     class EtcdService final : public IEtcd, public AdvancedService<EtcdService> {
     public:
