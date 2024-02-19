@@ -14,7 +14,7 @@ REBUILD=1
 while [[ $# -gt 0 ]]; do
   case $1 in
     --norebuild)
-      GCC=1
+      REBUILD=0
       shift # past value
       ;;
     -*|--*)
@@ -47,6 +47,7 @@ run_benchmarks ()
   utils="$1"/ichor_utils_benchmark
   eval $coroutine || exit 1
   eval $event || exit 1
+  eval $event -u || exit 1
   eval $serializer || exit 1
   eval $start -a || exit 1
   eval $start -c || exit 1
