@@ -130,24 +130,31 @@ uint64_t Ichor::HttpHostService::getPriority() {
     return _priority.load(std::memory_order_acquire);
 }
 
-std::unique_ptr<Ichor::HttpRouteRegistration> Ichor::HttpHostService::addRoute(HttpMethod method, std::string_view route, std::function<AsyncGenerator<HttpResponse>(HttpRequest&)> handler) {
+Ichor::HttpRouteRegistration Ichor::HttpHostService::addRoute(HttpMethod method, std::string_view route, std::function<AsyncGenerator<HttpResponse>(HttpRequest&)> handler) {
+    fmt::print("HttpHostService addRoute1\n");
     return addRoute(method, std::make_unique<StringRouteMatcher>(route), std::move(handler));
 }
 
-std::unique_ptr<Ichor::HttpRouteRegistration> Ichor::HttpHostService::addRoute(HttpMethod method, std::unique_ptr<RouteMatcher> newMatcher, std::function<AsyncGenerator<HttpResponse>(HttpRequest&)> handler) {
+Ichor::HttpRouteRegistration Ichor::HttpHostService::addRoute(HttpMethod method, std::unique_ptr<RouteMatcher> newMatcher, std::function<AsyncGenerator<HttpResponse>(HttpRequest&)> handler) {
+    fmt::print("HttpHostService addRoute2\n");
     auto routes = _handlers.find(method);
 
+    fmt::print("HttpHostService addRoute3\n");
     newMatcher->set_id(_matchersIdCounter);
 
+    fmt::print("HttpHostService addRoute4\n");
     if(routes == _handlers.end()) {
+        fmt::print("HttpHostService addRoute5\n");
         unordered_map<std::unique_ptr<RouteMatcher>, std::function<AsyncGenerator<HttpResponse>(HttpRequest&)>> newSubMap{};
         newSubMap.emplace(std::move(newMatcher), std::move(handler));
         _handlers.emplace(method, std::move(newSubMap));
     } else {
+        fmt::print("HttpHostService addRoute6\n");
         routes->second.emplace(std::move(newMatcher), std::move(handler));
     }
+    fmt::print("HttpHostService addRoute7\n");
 
-    return std::make_unique<HttpRouteRegistration>(method, _matchersIdCounter++, this);
+    return {method, _matchersIdCounter++, this};
 }
 
 void Ichor::HttpHostService::removeRoute(HttpMethod method, RouteIdType id) {

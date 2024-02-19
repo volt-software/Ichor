@@ -34,7 +34,7 @@ class UsingHttpService final {
             co_return HttpResponse{HttpStatus::ok, "application/text", "<html><body>This is my basic webpage</body></html>", {}};
         }));
     }
-    std::vector<std::unique_ptr<HttpRouteRegistration>> _routeRegistrations{};
+    std::vector<HttpRouteRegistration> _routeRegistrations{};
 };
 ```
 
@@ -55,7 +55,7 @@ class UsingHttpService final {
             co_return HttpResponse{HttpStatus::ok, "text/plain", {}, {}};
         }));
     }
-    std::vector<std::unique_ptr<HttpRouteRegistration>> _routeRegistrations{};
+    std::vector<HttpRouteRegistration> _routeRegistrations{};
 };
 ```
 

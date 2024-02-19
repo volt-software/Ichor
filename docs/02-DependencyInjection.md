@@ -44,7 +44,7 @@ public:
     }
 
 private:
-    std::unique_ptr<HttpRouteRegistration> _routeRegistration{};
+    HttpRouteRegistration _routeRegistration{};
 };
 ```
 

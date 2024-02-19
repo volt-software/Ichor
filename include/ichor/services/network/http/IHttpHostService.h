@@ -98,8 +98,8 @@ namespace Ichor {
 
     class IHttpHostService {
     public:
-        virtual std::unique_ptr<HttpRouteRegistration> addRoute(HttpMethod method, std::string_view route, std::function<AsyncGenerator<HttpResponse>(HttpRequest&)> handler) = 0;
-        virtual std::unique_ptr<HttpRouteRegistration> addRoute(HttpMethod method, std::unique_ptr<RouteMatcher> matcher, std::function<AsyncGenerator<HttpResponse>(HttpRequest&)> handler) = 0;
+        virtual HttpRouteRegistration addRoute(HttpMethod method, std::string_view route, std::function<AsyncGenerator<HttpResponse>(HttpRequest&)> handler) = 0;
+        virtual HttpRouteRegistration addRoute(HttpMethod method, std::unique_ptr<RouteMatcher> matcher, std::function<AsyncGenerator<HttpResponse>(HttpRequest&)> handler) = 0;
         virtual void setPriority(uint64_t priority) = 0;
         virtual uint64_t getPriority() = 0;
 
@@ -112,19 +112,47 @@ namespace Ichor {
 
     class HttpRouteRegistration final {
     public:
+        HttpRouteRegistration() = default;
         HttpRouteRegistration(HttpMethod method, RouteIdType id, IHttpHostService *service) : _method(method), _id(id), _service(service) {}
         HttpRouteRegistration(const HttpRouteRegistration&) = delete;
-        HttpRouteRegistration(HttpRouteRegistration&&) = default;
+        HttpRouteRegistration(HttpRouteRegistration&& o) noexcept {
+            fmt::print("HttpRouteRegistration1\n");
+            reset();
+            fmt::print("HttpRouteRegistration2\n");
+            _method = o._method;
+            _id = o._id;
+            _service = o._service;
+            o._service = nullptr;
+        }
+
         ~HttpRouteRegistration() {
-            _service->removeRoute(_method, _id);
+            fmt::print("HttpRouteRegistration3\n");
+            reset();
+            fmt::print("HttpRouteRegistration4\n");
         }
 
         HttpRouteRegistration& operator=(const HttpRouteRegistration&) = delete;
-        HttpRouteRegistration& operator=(HttpRouteRegistration&&) noexcept = default;
+        HttpRouteRegistration& operator=(HttpRouteRegistration&& o) noexcept {
+            fmt::print("HttpRouteRegistration5\n");
+            reset();
+            fmt::print("HttpRouteRegistration6\n");
+            _method = o._method;
+            _id = o._id;
+            _service = o._service;
+            o._service = nullptr;
 
+            return *this;
+        }
+
+        void reset() {
+            fmt::print("HttpRouteRegistration reset {}\n", (void*)_service);
+            if(_service != nullptr) {
+                _service->removeRoute(_method, _id);
+            }
+        }
     private:
-        HttpMethod _method;
-        RouteIdType _id;
-        IHttpHostService *_service;
+        HttpMethod _method{};
+        RouteIdType _id{};
+        IHttpHostService *_service{};
     };
 }

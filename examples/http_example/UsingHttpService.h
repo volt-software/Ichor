@@ -127,5 +127,5 @@ private:
     ILogger *_logger{};
     ISerializer<TestMsg> *_serializer{};
     IHttpConnectionService *_connectionService{};
-    std::vector<std::unique_ptr<HttpRouteRegistration>> _routeRegistrations{};
+    std::vector<HttpRouteRegistration> _routeRegistrations{};
 };
