@@ -50,8 +50,8 @@ namespace Ichor {
         HttpHostService(DependencyRegister &reg, Properties props);
         ~HttpHostService() final = default;
 
-        std::unique_ptr<HttpRouteRegistration> addRoute(HttpMethod method, std::string_view route, std::function<AsyncGenerator<HttpResponse>(HttpRequest&)> handler) final;
-        std::unique_ptr<HttpRouteRegistration> addRoute(HttpMethod method, std::unique_ptr<RouteMatcher> matcher, std::function<AsyncGenerator<HttpResponse>(HttpRequest&)> handler) final;
+        HttpRouteRegistration addRoute(HttpMethod method, std::string_view route, std::function<AsyncGenerator<HttpResponse>(HttpRequest&)> handler) final;
+        HttpRouteRegistration addRoute(HttpMethod method, std::unique_ptr<RouteMatcher> matcher, std::function<AsyncGenerator<HttpResponse>(HttpRequest&)> handler) final;
         void removeRoute(HttpMethod method, RouteIdType id) final;
 
         void setPriority(uint64_t priority) final;

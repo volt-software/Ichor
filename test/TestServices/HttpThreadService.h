@@ -57,8 +57,8 @@ private:
     }
 
     Task<void> stop() final {
-        _routeRegistration.reset();
-        _regexRouteRegistration.reset();
+        _routeRegistration = {};
+        _regexRouteRegistration = {};
         co_return;
     }
 
@@ -119,6 +119,7 @@ private:
 
     void removeDependencyInstance(IHttpHostService&, IService&) {
         _routeRegistration.reset();
+        _regexRouteRegistration.reset();
     }
 
     void removeDependencyInstance(IHttpConnectionService&, IService&) {
@@ -272,6 +273,6 @@ private:
     ISerializer<TestMsg> *_testSerializer{};
     ISerializer<RegexJsonMsg> *_regexSerializer{};
     IHttpConnectionService *_connectionService{};
-    std::unique_ptr<HttpRouteRegistration> _routeRegistration{};
-    std::unique_ptr<HttpRouteRegistration> _regexRouteRegistration{};
+    HttpRouteRegistration _routeRegistration{};
+    HttpRouteRegistration _regexRouteRegistration{};
 };
