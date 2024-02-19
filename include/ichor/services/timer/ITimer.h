@@ -20,6 +20,11 @@ namespace Ichor {
         /// Thread-safe.
         [[nodiscard]] virtual uint64_t getPriority() const noexcept = 0;
         /// Thread-safe.
+        /// \param fireOnce
+        virtual void setFireOnce(bool fireOnce) noexcept = 0;
+        /// Thread-safe.
+        [[nodiscard]] virtual bool getFireOnce() const noexcept = 0;
+        /// Thread-safe.
         [[nodiscard]] virtual uint64_t getTimerId() const noexcept = 0;
 
 

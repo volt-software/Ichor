@@ -24,6 +24,16 @@ namespace Ichor {
         static constexpr std::string_view NAME = Ichor::typeName<NewSocketEvent>();
     };
 
+    /**
+     * Service for creating a TCP host
+     *
+     * Properties:
+     * - "Address" std::string - What address to bind to (default INADDR_ANY)
+     * - "Port" uint16_t - What port to bind to (required)
+     * - "Priority" uint64_t - Which priority to use for inserted events (default INTERNAL_EVENT_PRIORITY)
+     * - "TimeoutSendUs" int64_t - Timeout in microseconds for send calls (default 250'000)
+     * - "TimeoutRecvUs" int64_t - Timeout in microseconds for recv calls (default 250'000)
+     */
     class TcpHostService final : public IHostService, public AdvancedService<TcpHostService> {
     public:
         TcpHostService(DependencyRegister &reg, Properties props);
@@ -43,6 +53,7 @@ namespace Ichor {
         void removeDependencyInstance(ITimerFactory &logger, IService &isvc);
 
         AsyncGenerator<IchorBehaviour> handleEvent(NewSocketEvent const &evt);
+        void acceptHandler();
 
         friend DependencyRegister;
         friend DependencyManager;
@@ -50,9 +61,12 @@ namespace Ichor {
         int _socket;
         int _bindFd;
         uint64_t _priority;
+        int64_t _sendTimeout{250'000};
+        int64_t _recvTimeout{250'000};
         bool _quit;
         ILogger *_logger{};
         ITimerFactory *_timerFactory{};
+        ITimer *_timer{};
         std::vector<NeverNull<TcpConnectionService*>> _connections;
         EventHandlerRegistration _newSocketEventHandlerRegistration{};
     };

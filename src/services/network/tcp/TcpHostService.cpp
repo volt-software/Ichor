@@ -4,6 +4,8 @@
 #include <ichor/services/network/IConnectionService.h>
 #include <ichor/services/network/tcp/TcpHostService.h>
 #include <ichor/services/network/tcp/TcpConnectionService.h>
+#include <ichor/events/RunFunctionEvent.h>
+#include <ichor/ScopeGuard.h>
 #include <arpa/inet.h>
 #include <sys/socket.h>
 #include <netinet/tcp.h>
@@ -70,30 +72,13 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::TcpHostService::start(
         throw std::runtime_error("Couldn't listen on socket: errno = " + std::to_string(errno));
     }
 
-    auto &timer = _timerFactory->createTimer();
-    timer.setChronoInterval(20ms);
-    timer.setCallback([this]() {
-        sockaddr_in client_addr{};
-        socklen_t client_addr_size = sizeof(client_addr);
-        int newConnection = ::accept(_socket, (sockaddr *) &client_addr, &client_addr_size);
-
-        if (newConnection == -1) {
-            ICHOR_LOG_ERROR(_logger, "New connection but accept() returned {} errno {}", newConnection, errno);
-            if(errno == EINVAL) {
-                GetThreadLocalEventQueue().pushEvent<UnrecoverableErrorEvent>(getServiceId(), 4u, "Accept() generated error. errno = " + std::to_string(errno));
-                return;
-            }
-            GetThreadLocalEventQueue().pushEvent<RecoverableErrorEvent>(getServiceId(), 4u, "Accept() generated error. errno = " + std::to_string(errno));
-            return;
-        }
-
-        auto *ip = ::inet_ntoa(client_addr.sin_addr);
-        ICHOR_LOG_TRACE(_logger, "new connection from {}:{}", ip, ::ntohs(client_addr.sin_port));
-
-        GetThreadLocalEventQueue().pushPrioritisedEvent<NewSocketEvent>(getServiceId(), _priority, newConnection);
-        return;
+    _timer = &_timerFactory->createTimer();
+    _timer->setFireOnce(true);
+    _timer->setChronoInterval(20ms);
+    _timer->setCallback([this]() {
+        acceptHandler();
     });
-    timer.startTimer();
+    _timer->startTimer(true);
 
     co_return {};
 }
@@ -115,15 +100,15 @@ void Ichor::TcpHostService::addDependencyInstance(ILogger &logger, IService &) {
     _logger = &logger;
 }
 
-void Ichor::TcpHostService::removeDependencyInstance(ILogger &logger, IService&) {
+void Ichor::TcpHostService::removeDependencyInstance(ILogger &, IService&) {
     _logger = nullptr;
 }
 
-void Ichor::TcpHostService::addDependencyInstance(ITimerFactory &factory, IService &) {
-    _timerFactory = &factory;
+void Ichor::TcpHostService::addDependencyInstance(ITimerFactory &timerFactory, IService &) {
+    _timerFactory = &timerFactory;
 }
 
-void Ichor::TcpHostService::removeDependencyInstance(ITimerFactory &factory, IService&) {
+void Ichor::TcpHostService::removeDependencyInstance(ITimerFactory &, IService&) {
     _timerFactory = nullptr;
 }
 
@@ -139,9 +124,44 @@ Ichor::AsyncGenerator<Ichor::IchorBehaviour> Ichor::TcpHostService::handleEvent(
     Properties props{};
     props.emplace("Priority", Ichor::make_any<uint64_t>(_priority));
     props.emplace("Socket", Ichor::make_any<int>(evt.socket));
+    props.emplace("TimeoutSendUs", Ichor::make_any<int64_t>(_sendTimeout));
+    props.emplace("TimeoutRecvUs", Ichor::make_any<int64_t>(_recvTimeout));
     _connections.emplace_back(GetThreadLocalManager().template createServiceManager<TcpConnectionService, IConnectionService>(std::move(props)));
 
     co_return {};
+}
+
+void Ichor::TcpHostService::acceptHandler() {
+    sockaddr_in client_addr{};
+    socklen_t client_addr_size = sizeof(client_addr);
+    ScopeGuard sg{[this]() {
+        if(!_quit) {
+            _timer->startTimer();
+        } else {
+            ICHOR_LOG_TRACE(_logger, "quitting, no push");
+        }
+    }};
+    int newConnection = ::accept(_socket, (sockaddr *) &client_addr, &client_addr_size);
+
+    if(_quit) {
+        ICHOR_LOG_TRACE(_logger, "quitting");
+        return;
+    }
+
+    if (newConnection == -1) {
+        ICHOR_LOG_ERROR(_logger, "New connection but accept() returned {} errno {}", newConnection, errno);
+        if(errno == EINVAL) {
+            GetThreadLocalEventQueue().pushEvent<UnrecoverableErrorEvent>(getServiceId(), 4u, "Accept() generated error. errno = " + std::to_string(errno));
+            return;
+        }
+        GetThreadLocalEventQueue().pushEvent<RecoverableErrorEvent>(getServiceId(), 4u, "Accept() generated error. errno = " + std::to_string(errno));
+        return;
+    }
+
+    auto *ip = ::inet_ntoa(client_addr.sin_addr);
+    ICHOR_LOG_TRACE(_logger, "new connection from {}:{}", ip, ::ntohs(client_addr.sin_port));
+
+    GetThreadLocalEventQueue().pushPrioritisedEvent<NewSocketEvent>(getServiceId(), _priority, newConnection);
 }
 
 #endif
