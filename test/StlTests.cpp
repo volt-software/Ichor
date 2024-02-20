@@ -4,6 +4,7 @@
 #include <ichor/stl/NeverAlwaysNull.h>
 #include <ichor/stl/ReferenceCountedPointer.h>
 #include <ichor/stl/StringUtils.h>
+#include <ichor/stl/StaticVector.h>
 #include <memory>
 #include <string_view>
 #include "TestServices/UselessService.h"
@@ -35,6 +36,20 @@ struct noncopyable final {
     noncopyable(noncopyable&&) = default;
     noncopyable& operator=(const noncopyable&) = delete;
     noncopyable& operator=(noncopyable&&) = default;
+};
+
+struct sufficiently_non_trival {
+    sufficiently_non_trival() = default;
+    explicit sufficiently_non_trival(int _i) : i(_i) {}
+    ~sufficiently_non_trival() {}
+    sufficiently_non_trival(const sufficiently_non_trival&) = default;
+    sufficiently_non_trival(sufficiently_non_trival&&) = default;
+    sufficiently_non_trival& operator=(const sufficiently_non_trival&) = default;
+    sufficiently_non_trival& operator=(sufficiently_non_trival&&) = default;
+
+    [[nodiscard]] constexpr bool operator==(int _i) const noexcept { return _i == i; }
+
+    int i{};
 };
 
 template <>
@@ -452,5 +467,386 @@ TEST_CASE("STL Tests") {
         REQUIRE(Ichor::basename("path/file.cpp") == "file.cpp"sv);
         REQUIRE(Ichor::basename("more/path/file.cpp") == "file.cpp"sv);
 #endif
+    }
+
+    SECTION("StaticVector tests") {
+        auto const check_iteration_count = []<typename T, size_t N>(StaticVector<T, N> &_sv, int expected) {
+            int iteratedCount{};
+            for(auto i : _sv) {
+                ++iteratedCount;
+            }
+            REQUIRE(iteratedCount == expected);
+            iteratedCount = 0;
+            for(auto &i : _sv) {
+                ++iteratedCount;
+            }
+            REQUIRE(iteratedCount == expected);
+        };
+        auto const const_check_iteration_count = []<typename T, size_t N>(StaticVector<T, N> const &_sv, int expected) {
+            int iteratedCount{};
+            for(auto const i : _sv) {
+                ++iteratedCount;
+            }
+            REQUIRE(iteratedCount == expected);
+            iteratedCount = 0;
+            for(auto const &i : _sv) {
+                ++iteratedCount;
+            }
+            REQUIRE(iteratedCount == expected);
+        };
+
+        StaticVector<int, 10> sv;
+        REQUIRE(sv.empty());
+        REQUIRE(sv.size() == 0);
+        REQUIRE(sv.max_size() == 10);
+        REQUIRE(sv.capacity() == 10);
+        REQUIRE(sv.begin() == sv.end());
+        sv.clear();
+        REQUIRE(sv.size() == 0);
+        check_iteration_count(sv, 0);
+        const_check_iteration_count(sv, 0);
+
+        sv.push_back(123);
+        REQUIRE(!sv.empty());
+        REQUIRE(sv.size() == 1);
+        REQUIRE(sv.front() == 123);
+        REQUIRE(sv.back() == 123);
+        REQUIRE(*sv.begin() == 123);
+        check_iteration_count(sv, 1);
+        const_check_iteration_count(sv, 1);
+
+        sv.push_back(234);
+        REQUIRE(!sv.empty());
+        REQUIRE(sv.size() == 2);
+        REQUIRE(sv.front() == 123);
+        REQUIRE(sv.back() == 234);
+        REQUIRE(*sv.begin() == 123);
+        check_iteration_count(sv, 2);
+        const_check_iteration_count(sv, 2);
+
+        sv.push_back(345);
+        sv.push_back(456);
+        sv.push_back(567);
+        sv.push_back(678);
+        sv.push_back(789);
+        sv.push_back(891);
+        sv.push_back(912);
+        sv.push_back(1234);
+        REQUIRE(!sv.empty());
+        REQUIRE(sv.size() == 10);
+        REQUIRE(sv.front() == 123);
+        REQUIRE(sv.back() == 1234);
+        REQUIRE(*sv.begin() == 123);
+        check_iteration_count(sv, 10);
+        const_check_iteration_count(sv, 10);
+
+        REQUIRE(sv[0] == 123);
+        REQUIRE(sv[1] == 234);
+        REQUIRE(sv[2] == 345);
+        REQUIRE(sv[3] == 456);
+        REQUIRE(sv[4] == 567);
+        REQUIRE(sv[5] == 678);
+        REQUIRE(sv[6] == 789);
+        REQUIRE(sv[7] == 891);
+        REQUIRE(sv[8] == 912);
+        REQUIRE(sv[9] == 1234);
+
+        StaticVector<int, 10> copySv{sv};
+        REQUIRE(!copySv.empty());
+        REQUIRE(copySv.size() == 10);
+        REQUIRE(copySv.front() == 123);
+        REQUIRE(copySv.back() == 1234);
+        REQUIRE(*copySv.begin() == 123);
+        check_iteration_count(sv, 10);
+        check_iteration_count(copySv, 10);
+        const_check_iteration_count(sv, 10);
+        const_check_iteration_count(copySv, 10);
+
+        for(std::size_t i = 0; i < sv.size(); ++i) {
+            REQUIRE(sv[i] == copySv[i]);
+        }
+
+        copySv = sv;
+        REQUIRE(!copySv.empty());
+        REQUIRE(copySv.size() == 10);
+        REQUIRE(copySv.front() == 123);
+        REQUIRE(copySv.back() == 1234);
+        REQUIRE(*copySv.begin() == 123);
+        check_iteration_count(sv, 10);
+        check_iteration_count(copySv, 10);
+        const_check_iteration_count(sv, 10);
+        const_check_iteration_count(copySv, 10);
+
+        for(std::size_t i = 0; i < sv.size(); ++i) {
+            REQUIRE(sv[i] == copySv[i]);
+        }
+
+        [](StaticVector<int, 10> &_sv) {
+            auto begin = _sv.begin();
+            REQUIRE(*begin == 123); begin++;
+            REQUIRE(*begin == 234); begin++;
+            REQUIRE(*begin == 345); begin++;
+            REQUIRE(*begin == 456); begin++;
+            REQUIRE(*begin == 567); begin++;
+            REQUIRE(*begin == 678); begin++;
+            REQUIRE(*begin == 789); begin++;
+            REQUIRE(*begin == 891); begin++;
+            REQUIRE(*begin == 912); begin++;
+            REQUIRE(*begin == 1234); begin++;
+            REQUIRE(begin == _sv.end());
+        }(sv);
+        [](StaticVector<int, 10> const &_sv) {
+            auto begin = _sv.begin();
+            REQUIRE(*begin == 123); begin++;
+            REQUIRE(*begin == 234); begin++;
+            REQUIRE(*begin == 345); begin++;
+            REQUIRE(*begin == 456); begin++;
+            REQUIRE(*begin == 567); begin++;
+            REQUIRE(*begin == 678); begin++;
+            REQUIRE(*begin == 789); begin++;
+            REQUIRE(*begin == 891); begin++;
+            REQUIRE(*begin == 912); begin++;
+            REQUIRE(*begin == 1234); begin++;
+            REQUIRE(begin == _sv.end());
+        }(sv);
+        [](StaticVector<int, 10> &_sv) {
+            auto begin = _sv.rbegin();
+            REQUIRE(*begin == 1234); begin++;
+            REQUIRE(*begin == 912); begin++;
+            REQUIRE(*begin == 891); begin++;
+            REQUIRE(*begin == 789); begin++;
+            REQUIRE(*begin == 678); begin++;
+            REQUIRE(*begin == 567); begin++;
+            REQUIRE(*begin == 456); begin++;
+            REQUIRE(*begin == 345); begin++;
+            REQUIRE(*begin == 234); begin++;
+            REQUIRE(*begin == 123); begin++;
+            REQUIRE(begin == _sv.rend());
+        }(sv);
+        [](StaticVector<int, 10> const &_sv) {
+            auto begin = _sv.rbegin();
+            REQUIRE(*begin == 1234); begin++;
+            REQUIRE(*begin == 912); begin++;
+            REQUIRE(*begin == 891); begin++;
+            REQUIRE(*begin == 789); begin++;
+            REQUIRE(*begin == 678); begin++;
+            REQUIRE(*begin == 567); begin++;
+            REQUIRE(*begin == 456); begin++;
+            REQUIRE(*begin == 345); begin++;
+            REQUIRE(*begin == 234); begin++;
+            REQUIRE(*begin == 123); begin++;
+            REQUIRE(begin == _sv.rend());
+        }(sv);
+        [](StaticVector<int, 10> &_sv) {
+            auto begin = _sv.cbegin();
+            REQUIRE(*begin == 123); begin++;
+            REQUIRE(*begin == 234); begin++;
+            REQUIRE(*begin == 345); begin++;
+            REQUIRE(*begin == 456); begin++;
+            REQUIRE(*begin == 567); begin++;
+            REQUIRE(*begin == 678); begin++;
+            REQUIRE(*begin == 789); begin++;
+            REQUIRE(*begin == 891); begin++;
+            REQUIRE(*begin == 912); begin++;
+            REQUIRE(*begin == 1234); begin++;
+            REQUIRE(begin == _sv.cend());
+        }(sv);
+        [](StaticVector<int, 10> const &_sv) {
+            auto begin = _sv.crbegin();
+            REQUIRE(*begin == 1234); begin++;
+            REQUIRE(*begin == 912); begin++;
+            REQUIRE(*begin == 891); begin++;
+            REQUIRE(*begin == 789); begin++;
+            REQUIRE(*begin == 678); begin++;
+            REQUIRE(*begin == 567); begin++;
+            REQUIRE(*begin == 456); begin++;
+            REQUIRE(*begin == 345); begin++;
+            REQUIRE(*begin == 234); begin++;
+            REQUIRE(*begin == 123); begin++;
+            REQUIRE(begin == _sv.crend());
+        }(sv);
+
+        sv.resize(5);
+        REQUIRE(!sv.empty());
+        REQUIRE(sv.size() == 5);
+        REQUIRE(sv.max_size() == 10);
+        REQUIRE(sv.capacity() == 10);
+        check_iteration_count(sv, 5);
+        const_check_iteration_count(sv, 5);
+
+        sv.clear();
+        REQUIRE(sv.empty());
+        REQUIRE(sv.size() == 0);
+        REQUIRE(sv.max_size() == 10);
+        REQUIRE(sv.capacity() == 10);
+        REQUIRE(sv.begin() == sv.end());
+        REQUIRE(sv.cbegin() == sv.cend());
+        check_iteration_count(sv, 0);
+        const_check_iteration_count(sv, 0);
+
+        sv.resize(5);
+        REQUIRE(!sv.empty());
+        REQUIRE(sv.size() == 5);
+        REQUIRE(sv.max_size() == 10);
+        REQUIRE(sv.capacity() == 10);
+        check_iteration_count(sv, 5);
+        const_check_iteration_count(sv, 5);
+
+        for(int const &i : sv) {
+            REQUIRE(i == 0);
+        }
+
+        sv.clear();
+        sv.resize(5, 5);
+        REQUIRE(!sv.empty());
+        REQUIRE(sv.size() == 5);
+        REQUIRE(sv.max_size() == 10);
+        REQUIRE(sv.capacity() == 10);
+        check_iteration_count(sv, 5);
+        const_check_iteration_count(sv, 5);
+
+        for(int const &i : sv) {
+            REQUIRE(i == 5);
+        }
+
+        StaticVector<int, 10> moveSv{std::move(copySv)};
+        REQUIRE(copySv.empty());
+        REQUIRE(!moveSv.empty());
+        REQUIRE(moveSv.size() == 10);
+        REQUIRE(moveSv.front() == 123);
+        REQUIRE(moveSv.back() == 1234);
+        REQUIRE(*moveSv.begin() == 123);
+        check_iteration_count(copySv, 0);
+        check_iteration_count(moveSv, 10);
+        const_check_iteration_count(copySv, 0);
+        const_check_iteration_count(moveSv, 10);
+
+        REQUIRE(moveSv[0] == 123);
+        REQUIRE(moveSv[1] == 234);
+        REQUIRE(moveSv[2] == 345);
+        REQUIRE(moveSv[3] == 456);
+        REQUIRE(moveSv[4] == 567);
+        REQUIRE(moveSv[5] == 678);
+        REQUIRE(moveSv[6] == 789);
+        REQUIRE(moveSv[7] == 891);
+        REQUIRE(moveSv[8] == 912);
+        REQUIRE(moveSv[9] == 1234);
+
+
+        StaticVector<int, 10> tempCopySv{moveSv};
+        moveSv = std::move(copySv);
+        REQUIRE(copySv.empty());
+        REQUIRE(moveSv.empty());
+        REQUIRE(moveSv.size() == 0);
+        check_iteration_count(copySv, 0);
+        check_iteration_count(moveSv, 0);
+        const_check_iteration_count(copySv, 0);
+        const_check_iteration_count(moveSv, 0);
+
+        moveSv = std::move(tempCopySv);
+        REQUIRE(copySv.empty());
+        REQUIRE(!moveSv.empty());
+        REQUIRE(moveSv.size() == 10);
+        REQUIRE(moveSv.front() == 123);
+        REQUIRE(moveSv.back() == 1234);
+        REQUIRE(*moveSv.begin() == 123);
+        check_iteration_count(copySv, 0);
+        check_iteration_count(moveSv, 10);
+        const_check_iteration_count(copySv, 0);
+        const_check_iteration_count(moveSv, 10);
+
+        REQUIRE(moveSv[0] == 123);
+        REQUIRE(moveSv[1] == 234);
+        REQUIRE(moveSv[2] == 345);
+        REQUIRE(moveSv[3] == 456);
+        REQUIRE(moveSv[4] == 567);
+        REQUIRE(moveSv[5] == 678);
+        REQUIRE(moveSv[6] == 789);
+        REQUIRE(moveSv[7] == 891);
+        REQUIRE(moveSv[8] == 912);
+        REQUIRE(moveSv[9] == 1234);
+
+        static_assert(sizeof(typename Detail::SizeType<255>::type) == 1, "SizeType wrong");
+        static_assert(sizeof(typename Detail::SizeType<256>::type) == 2, "SizeType wrong");
+        static_assert(sizeof(typename Detail::SizeType<65535>::type) == 2, "SizeType wrong");
+        static_assert(sizeof(typename Detail::SizeType<65536>::type) == 4, "SizeType wrong");
+        static_assert(sizeof(typename Detail::SizeType<4294967295>::type) == 4, "SizeType wrong");
+        static_assert(sizeof(typename Detail::SizeType<4294967296>::type) == 8, "SizeType wrong");
+        static_assert(sizeof(Detail::UninitializedArray<int, 0>) == 1, "SizeType wrong");
+        static_assert(sizeof(Detail::UninitializedArray<int, 1>) == 4, "SizeType wrong");
+        static_assert(sizeof(Detail::AlignedByteArray<int, 0>) == 1, "SizeType wrong");
+        static_assert(sizeof(Detail::AlignedByteArray<int, 1>) == 4, "SizeType wrong");
+        static_assert(sizeof(StaticVector<int, 0>) == 16, "sizeof static vector wrong");
+        static_assert(sizeof(StaticVector<int, 1>) == 16, "sizeof static vector wrong");
+        static_assert(sizeof(StaticVector<int, 2>) == 24, "sizeof static vector wrong");
+        static_assert(Detail::UninitializedArray<int, 10>::is_sufficiently_trivial, "type not sufficiently trivial");
+        static_assert(Detail::UninitializedArray<noncopyable, 10>::is_sufficiently_trivial, "type not sufficiently trivial");
+        static_assert(!Detail::UninitializedArray<sufficiently_non_trival, 10>::is_sufficiently_trivial, "type not sufficiently non-trivial");
+
+        auto const check_nontrivial_iteration_count = []<typename T, size_t N>(StaticVector<T, N> &_sv, int expected) {
+            int iteratedCount{};
+            iteratedCount = 0;
+            for(auto &i : _sv) {
+                ++iteratedCount;
+            }
+            REQUIRE(iteratedCount == expected);
+        };
+
+        StaticVector<sufficiently_non_trival, 10> nontrivial_sv;
+        REQUIRE(nontrivial_sv.empty());
+        REQUIRE(nontrivial_sv.size() == 0);
+        REQUIRE(nontrivial_sv.max_size() == 10);
+        REQUIRE(nontrivial_sv.capacity() == 10);
+        REQUIRE(nontrivial_sv.begin() == nontrivial_sv.end());
+        nontrivial_sv.clear();
+        REQUIRE(nontrivial_sv.size() == 0);
+        check_nontrivial_iteration_count(nontrivial_sv, 0);
+
+        nontrivial_sv.emplace_back(123);
+        REQUIRE(!nontrivial_sv.empty());
+        REQUIRE(nontrivial_sv.size() == 1);
+        REQUIRE(nontrivial_sv.front() == 123);
+        REQUIRE(nontrivial_sv.back() == 123);
+        REQUIRE(*nontrivial_sv.begin() == 123);
+        check_nontrivial_iteration_count(nontrivial_sv, 1);
+
+        nontrivial_sv.emplace_back(234);
+        REQUIRE(!nontrivial_sv.empty());
+        REQUIRE(nontrivial_sv.size() == 2);
+        REQUIRE(nontrivial_sv.front() == 123);
+        REQUIRE(nontrivial_sv.back() == 234);
+        REQUIRE(*nontrivial_sv.begin() == 123);
+        check_nontrivial_iteration_count(nontrivial_sv, 2);
+
+        nontrivial_sv.clear();
+        REQUIRE(nontrivial_sv.empty());
+        REQUIRE(nontrivial_sv.size() == 0);
+        REQUIRE(nontrivial_sv.max_size() == 10);
+        REQUIRE(nontrivial_sv.capacity() == 10);
+        REQUIRE(nontrivial_sv.begin() == nontrivial_sv.end());
+        check_nontrivial_iteration_count(nontrivial_sv, 0);
+
+        nontrivial_sv.resize(5);
+        REQUIRE(!nontrivial_sv.empty());
+        REQUIRE(nontrivial_sv.size() == 5);
+        REQUIRE(nontrivial_sv.max_size() == 10);
+        REQUIRE(nontrivial_sv.capacity() == 10);
+        check_nontrivial_iteration_count(nontrivial_sv, 5);
+
+        for(auto const &i : nontrivial_sv) {
+            REQUIRE(i == 0);
+        }
+
+        nontrivial_sv.clear();
+        nontrivial_sv.resize(5, sufficiently_non_trival{234});
+        REQUIRE(!nontrivial_sv.empty());
+        REQUIRE(nontrivial_sv.size() == 5);
+        REQUIRE(nontrivial_sv.max_size() == 10);
+        REQUIRE(nontrivial_sv.capacity() == 10);
+        check_nontrivial_iteration_count(nontrivial_sv, 5);
+
+        for(auto const &i : nontrivial_sv) {
+            REQUIRE(i == 234);
+        }
     }
 }

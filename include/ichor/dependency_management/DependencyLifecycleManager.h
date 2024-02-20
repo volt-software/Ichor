@@ -10,7 +10,8 @@ namespace Ichor::Detail {
 #endif
     class DependencyLifecycleManager final : public ILifecycleManager {
     public:
-        explicit DependencyLifecycleManager(std::vector<Dependency> interfaces, Properties&& properties) : _interfaces(std::move(interfaces)), _registry(), _service(_registry, std::move(properties)) {
+        explicit DependencyLifecycleManager(Properties&& properties) : _interfaces(), _registry(), _service(_registry, std::move(properties)) {
+            (_interfaces.emplace_back(typeNameHash<IFaces>(), typeName<IFaces>(), DependencyFlags::NONE, false),...);
         }
 
         ~DependencyLifecycleManager() final {
@@ -23,10 +24,7 @@ namespace Ichor::Detail {
         template<typename... Interfaces>
         [[nodiscard]]
         static std::unique_ptr<DependencyLifecycleManager<ServiceType, Interfaces...>> create(Properties&& properties, InterfacesList_t<Interfaces...>) {
-            std::vector<Dependency> interfaces{};
-            interfaces.reserve(sizeof...(Interfaces));
-            (interfaces.emplace_back(typeNameHash<Interfaces>(), typeName<Interfaces>(), DependencyFlags::NONE, false),...);
-            return std::make_unique<DependencyLifecycleManager<ServiceType, Interfaces...>>(std::move(interfaces), std::move(properties));
+            return std::make_unique<DependencyLifecycleManager<ServiceType, Interfaces...>>(std::move(properties));
         }
 
         std::vector<Dependency*> interestedInDependencyGoingOffline(ILifecycleManager *dependentService) noexcept final {
@@ -337,7 +335,7 @@ namespace Ichor::Detail {
             return static_cast<IService const *>(&_service);
         }
 
-        [[nodiscard]] const std::vector<Dependency>& getInterfaces() const noexcept final {
+        [[nodiscard]] const IStaticVector<Dependency>& getInterfaces() const noexcept final {
             return _interfaces;
         }
 
@@ -350,7 +348,7 @@ namespace Ichor::Detail {
         }
 
     private:
-        std::vector<Dependency> _interfaces;
+        StaticVector<Dependency, sizeof...(IFaces)> _interfaces;
         DependencyRegister _registry;
         ServiceType _service;
         unordered_set<ServiceIdType> _serviceIdsOfInjectedDependencies; // Services that this service depends on.

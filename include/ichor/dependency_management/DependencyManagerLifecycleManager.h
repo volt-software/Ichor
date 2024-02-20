@@ -92,7 +92,7 @@ namespace Ichor::Detail {
             return &_service;
         }
 
-        [[nodiscard]] const std::vector<Dependency>& getInterfaces() const noexcept final {
+        [[nodiscard]] const IStaticVector<Dependency>& getInterfaces() const noexcept final {
             return _interfaces;
         }
 
@@ -136,7 +136,7 @@ namespace Ichor::Detail {
         DependencyManager *_dm;
         ServiceState _state{ServiceState::ACTIVE};
         unordered_set<uint64_t> _serviceIdsOfDependees; // services that depend on this service
-        std::vector<Dependency> _interfaces;
+        StaticVector<Dependency, 1> _interfaces;
         InternalService<DependencyManager> _service;
     };
 }

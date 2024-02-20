@@ -474,7 +474,7 @@ namespace Ichor {
 
         [[nodiscard]] std::vector<Dependency> getDependencyRequestsForService(ServiceIdType svcId) const noexcept;
         [[nodiscard]] std::vector<NeverNull<IService const *>> getDependentsForService(ServiceIdType svcId) const noexcept;
-        [[nodiscard]] std::vector<Dependency> getProvidedInterfacesForService(ServiceIdType svcId) const noexcept;
+        [[nodiscard]] IStaticVector<Dependency> const & getProvidedInterfacesForService(ServiceIdType svcId) const noexcept;
         [[nodiscard]] std::vector<DependencyTrackerKey> getTrackersForService(ServiceIdType svcId) const noexcept;
 
         /// Returns a list of currently known services and their status.
@@ -698,6 +698,7 @@ namespace Ichor {
         unordered_map<uint64_t, std::unique_ptr<Event>> _scopedEvents{}; // key = promise id
         unordered_map<uint64_t, EventWaiter> _eventWaiters{}; // key = event id
         unordered_map<uint64_t, EventWaiter> _dependencyWaiters{}; // key = event id
+        StaticVector<Ichor::Dependency, 0> _emptyInterfaces{};
         IEventQueue *_eventQueue;
         IFrameworkLogger *_logger{};
         std::atomic<bool> _started{false};
