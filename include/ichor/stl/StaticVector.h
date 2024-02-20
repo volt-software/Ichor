@@ -7,7 +7,7 @@
 #include <limits>
 #include <memory>
 
-// A close-to-c++23 implementation of the StaticVector proposal: https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2023/p0843r6.html
+// An implementation that is close to the StaticVector proposal: https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2023/p0843r6.html
 // Difference being that this implementation also supports type-erasure
 // Shoutout to David Stone, more info at https://www.youtube.com/watch?v=I8QJLGI0GOE
 namespace Ichor {
