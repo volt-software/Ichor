@@ -32,6 +32,7 @@ namespace backward {
 }
 #endif
 
+static_assert(!Ichor::Detail::UninitializedArray<Ichor::Dependency, 10>::is_sufficiently_trivial, "Ichor::Dependency not sufficiently non-trivial");
 
 Ichor::DependencyManager::DependencyManager(IEventQueue *eventQueue) : _eventQueue(eventQueue) {
     auto qlm = std::make_unique<Detail::QueueLifecycleManager>(_eventQueue);
@@ -1231,7 +1232,7 @@ std::vector<Ichor::NeverNull<Ichor::IService const *>> Ichor::DependencyManager:
     return ret;
 }
 
-std::vector<Ichor::Dependency> Ichor::DependencyManager::getProvidedInterfacesForService(ServiceIdType svcId) const noexcept {
+Ichor::IStaticVector<Ichor::Dependency> const & Ichor::DependencyManager::getProvidedInterfacesForService(ServiceIdType svcId) const noexcept {
     if constexpr (DO_INTERNAL_DEBUG || DO_HARDENING) {
         if (this != Detail::_local_dm) [[unlikely]] { // are we on the right thread?
             std::terminate();
@@ -1241,7 +1242,7 @@ std::vector<Ichor::Dependency> Ichor::DependencyManager::getProvidedInterfacesFo
     auto svc = _services.find(svcId);
 
     if(svc == _services.end()) {
-        return {};
+        return _emptyInterfaces;
     }
 
     return svc->second->getInterfaces();

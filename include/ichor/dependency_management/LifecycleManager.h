@@ -14,11 +14,13 @@ namespace Ichor::Detail {
     class LifecycleManager final : public ILifecycleManager {
     public:
         template <typename U = ServiceType> requires RequestsProperties<U>
-        explicit LifecycleManager(std::vector<Dependency> interfaces, Properties&& properties) : _interfaces(std::move(interfaces)), _service(std::forward<Properties>(properties)) {
+        explicit LifecycleManager(Properties&& properties) : _interfaces(), _service(std::forward<Properties>(properties)) {
+            (_interfaces.emplace_back(typeNameHash<IFaces>(), typeName<IFaces>(), DependencyFlags::NONE, false),...);
         }
 
         template <typename U = ServiceType> requires (!RequestsProperties<U>)
-        explicit LifecycleManager(std::vector<Dependency> interfaces, Properties&& properties) : _interfaces(std::move(interfaces)), _service() {
+        explicit LifecycleManager(Properties&& properties) : _interfaces(), _service() {
+            (_interfaces.emplace_back(typeNameHash<IFaces>(), typeName<IFaces>(), DependencyFlags::NONE, false),...);
             _service.setProperties(std::forward<Properties>(properties));
         }
 
@@ -27,10 +29,7 @@ namespace Ichor::Detail {
         template<typename... Interfaces>
         [[nodiscard]]
         static std::unique_ptr<LifecycleManager<ServiceType, Interfaces...>> create(Properties&& properties, InterfacesList_t<Interfaces...>) {
-            std::vector<Dependency> interfaces{};
-            interfaces.reserve(sizeof...(Interfaces));
-            (interfaces.emplace_back(typeNameHash<Interfaces>(), typeName<Interfaces>(), DependencyFlags::NONE, false),...);
-            return std::make_unique<LifecycleManager<ServiceType, Interfaces...>>(std::move(interfaces), std::forward<Properties>(properties));
+            return std::make_unique<LifecycleManager<ServiceType, Interfaces...>>(std::forward<Properties>(properties));
         }
 
         std::vector<Dependency*> interestedInDependencyGoingOffline(ILifecycleManager *dependentService) noexcept final {
@@ -119,7 +118,7 @@ namespace Ichor::Detail {
             return static_cast<IService const *>(&_service);
         }
 
-        [[nodiscard]] const std::vector<Dependency>& getInterfaces() const noexcept final {
+        [[nodiscard]] const IStaticVector<Dependency>& getInterfaces() const noexcept final {
             return _interfaces;
         }
 
@@ -171,7 +170,7 @@ namespace Ichor::Detail {
         }
 
     private:
-        std::vector<Dependency> _interfaces;
+        StaticVector<Dependency, sizeof...(IFaces)> _interfaces;
         ServiceType _service;
         unordered_set<uint64_t> _serviceIdsOfDependees; // services that depend on this service
     };
