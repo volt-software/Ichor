@@ -3,7 +3,27 @@
 #include <ichor/event_queues/IOUringQueue.h>
 #include <ichor/ScopeGuard.h>
 #include <ichor/DependencyManager.h>
+
+// liburing uses different conventions than Ichor, ignore them to prevent being spammed by warnings
+#if defined( __GNUC__ )
+#    pragma GCC diagnostic push
+#    pragma GCC diagnostic ignored "-Wsign-conversion"
+#    pragma GCC diagnostic ignored "-Wshadow"
+#    pragma GCC diagnostic ignored "-Wconversion"
+#    pragma GCC diagnostic ignored "-Wgnu-pointer-arith"
+#    pragma GCC diagnostic ignored "-Wgnu-anonymous-struct"
+#    pragma GCC diagnostic ignored "-Wgnu-statement-expression-from-macro-expansion"
+#    pragma GCC diagnostic ignored "-Wimplicit-int-conversion"
+#    pragma GCC diagnostic ignored "-Wnested-anon-types"
+#    pragma GCC diagnostic ignored "-Wzero-length-array"
+#    pragma GCC diagnostic ignored "-Wcast-align"
+#    pragma GCC diagnostic ignored "-Wc99-extensions"
+#endif
 #include "liburing.h"
+#if defined( __GNUC__ )
+#    pragma GCC diagnostic pop
+#endif
+
 //#include <spdlog/spdlog.h>
 
 #if defined(__SANITIZE_THREAD__)
@@ -88,7 +108,7 @@ namespace Ichor {
             io_uring tempQueue{};
             io_uring_params p{};
             p.flags = IORING_SETUP_DEFER_TASKRUN | IORING_SETUP_COOP_TASKRUN | IORING_SETUP_SINGLE_ISSUER | IORING_SETUP_ATTACH_WQ;
-            p.wq_fd = _eventQueuePtr->ring_fd;
+            p.wq_fd = static_cast<__u32>(_eventQueuePtr->ring_fd);
             auto ret = io_uring_queue_init_params(8, &tempQueue, &p);
             if(ret < 0) [[unlikely]] {
                 throw std::system_error(-ret, std::generic_category(), "io_uring_queue_init_params() failed");

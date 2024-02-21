@@ -2,6 +2,7 @@
 
 #include <string_view>
 #include <memory>
+#include <span>
 #include "AdvancedService.h"
 #include <ichor/Common.h>
 #include <ichor/stl/StaticVector.h>
@@ -31,7 +32,7 @@ namespace Ichor {
         [[nodiscard]] virtual ServiceState getServiceState() const noexcept = 0;
         [[nodiscard]] virtual NeverNull<IService*> getIService() noexcept = 0;
         [[nodiscard]] virtual NeverNull<IService const*> getIService() const noexcept = 0;
-        [[nodiscard]] virtual const IStaticVector<Dependency>& getInterfaces() const noexcept = 0;
+        [[nodiscard]] virtual std::span<Dependency const> getInterfaces() const noexcept = 0;
         [[nodiscard]] virtual Properties const & getProperties() const noexcept = 0;
         [[nodiscard]] virtual DependencyRegister const * getDependencyRegistry() const noexcept = 0;
         virtual void insertSelfInto(uint64_t keyOfInterfaceToInject, ServiceIdType serviceIdOfOther, std::function<void(NeverNull<void*>, IService&)>&) = 0;

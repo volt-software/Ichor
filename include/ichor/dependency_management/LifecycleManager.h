@@ -118,8 +118,8 @@ namespace Ichor::Detail {
             return static_cast<IService const *>(&_service);
         }
 
-        [[nodiscard]] const IStaticVector<Dependency>& getInterfaces() const noexcept final {
-            return _interfaces;
+        [[nodiscard]] std::span<Dependency const> getInterfaces() const noexcept final {
+            return std::span<Dependency const>{_interfaces.begin(), _interfaces.size()};
         }
 
         [[nodiscard]] Properties const & getProperties() const noexcept final {

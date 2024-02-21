@@ -40,8 +40,8 @@ struct noncopyable final {
 
 struct sufficiently_non_trival {
     sufficiently_non_trival() = default;
-    explicit sufficiently_non_trival(int _i) : i(_i) {}
-    ~sufficiently_non_trival() {}
+    sufficiently_non_trival(int _i) : i(_i) {}
+    ~sufficiently_non_trival() { destructed = true; }
     sufficiently_non_trival(const sufficiently_non_trival&) = default;
     sufficiently_non_trival(sufficiently_non_trival&&) = default;
     sufficiently_non_trival& operator=(const sufficiently_non_trival&) = default;
@@ -50,6 +50,7 @@ struct sufficiently_non_trival {
     [[nodiscard]] constexpr bool operator==(int _i) const noexcept { return _i == i; }
 
     int i{};
+    bool destructed{};
 };
 
 template <>
@@ -709,6 +710,8 @@ TEST_CASE("STL Tests") {
             REQUIRE(i == 5);
         }
 
+        StaticVector<int, 5> defaultInitSv{5};
+
         StaticVector<int, 10> moveSv{std::move(copySv)};
         REQUIRE(copySv.empty());
         REQUIRE(!moveSv.empty());
@@ -779,9 +782,15 @@ TEST_CASE("STL Tests") {
         static_assert(sizeof(StaticVector<int, 0>) == 16, "sizeof static vector wrong");
         static_assert(sizeof(StaticVector<int, 1>) == 16, "sizeof static vector wrong");
         static_assert(sizeof(StaticVector<int, 2>) == 24, "sizeof static vector wrong");
-        static_assert(Detail::UninitializedArray<int, 10>::is_sufficiently_trivial, "type not sufficiently trivial");
-        static_assert(Detail::UninitializedArray<noncopyable, 10>::is_sufficiently_trivial, "type not sufficiently trivial");
-        static_assert(!Detail::UninitializedArray<sufficiently_non_trival, 10>::is_sufficiently_trivial, "type not sufficiently non-trivial");
+        static_assert(Detail::is_sufficiently_trivial<int>, "type not sufficiently trivial");
+        static_assert(Detail::is_sufficiently_trivial<noncopyable>, "type not sufficiently trivial");
+        static_assert(!Detail::is_sufficiently_trivial<sufficiently_non_trival>, "type not sufficiently non-trivial");
+        static_assert(std::contiguous_iterator<SVIterator<int, false>>, "iterator not contiguous");
+        static_assert(std::contiguous_iterator<SVIterator<int, true>>, "iterator not contiguous");
+        static_assert(std::contiguous_iterator<SVIterator<sufficiently_non_trival, false>>, "iterator not contiguous");
+        static_assert(std::contiguous_iterator<SVIterator<sufficiently_non_trival, true>>, "iterator not contiguous");
+        static_assert(std::is_trivially_destructible_v<StaticVector<int, 1>>, "No trivial destructor for trivial type");
+        static_assert(!std::is_trivially_destructible_v<StaticVector<sufficiently_non_trival, 1>>, "trivial destructor for non-trivial type");
 
         auto const check_nontrivial_iteration_count = []<typename T, size_t N>(StaticVector<T, N> &_sv, int expected) {
             int iteratedCount{};
@@ -847,6 +856,86 @@ TEST_CASE("STL Tests") {
 
         for(auto const &i : nontrivial_sv) {
             REQUIRE(i == 234);
+        }
+
+        {
+            StaticVector<int, 4> eraseSv{1, 2, 3, 4};
+            REQUIRE(!eraseSv.empty());
+            REQUIRE(eraseSv.size() == 4);
+            REQUIRE(eraseSv[0] == 1);
+            REQUIRE(eraseSv[1] == 2);
+            REQUIRE(eraseSv[2] == 3);
+            REQUIRE(eraseSv[3] == 4);
+            REQUIRE(eraseSv.size() == 4);
+
+            auto erasePos = eraseSv.erase(eraseSv.cbegin() + 1, eraseSv.cbegin() + 3);
+            REQUIRE(eraseSv.size() == 2);
+            REQUIRE(eraseSv[0] == 1);
+            REQUIRE(eraseSv[1] == 4);
+            REQUIRE(erasePos == eraseSv.begin() + 1);
+
+            erasePos = eraseSv.erase(eraseSv.cbegin());
+            REQUIRE(eraseSv.size() == 1);
+            REQUIRE(eraseSv[0] == 4);
+            REQUIRE(erasePos == eraseSv.begin());
+
+            eraseSv.pop_back();
+            REQUIRE(eraseSv.empty());
+
+            eraseSv.assign((std::size_t)3, 3);
+            REQUIRE(eraseSv.size() == 3);
+            REQUIRE(eraseSv[0] == 3);
+            REQUIRE(eraseSv[1] == 3);
+            REQUIRE(eraseSv[2] == 3);
+        }
+
+        {
+            StaticVector<sufficiently_non_trival, 4> eraseNTSv{1, 2, 3, 4};
+            REQUIRE(!eraseNTSv.empty());
+            REQUIRE(eraseNTSv.size() == 4);
+            REQUIRE(eraseNTSv[0] == 1);
+            REQUIRE(eraseNTSv[1] == 2);
+            REQUIRE(eraseNTSv[2] == 3);
+            REQUIRE(eraseNTSv[3] == 4);
+            REQUIRE(eraseNTSv.size() == 4);
+
+            auto erasePos = eraseNTSv.erase(eraseNTSv.cbegin() + 1, eraseNTSv.cbegin() + 3);
+            REQUIRE(eraseNTSv.size() == 2);
+            REQUIRE(eraseNTSv[0] == 1);
+            REQUIRE(eraseNTSv[1] == 4);
+            REQUIRE(erasePos == eraseNTSv.begin() + 1);
+
+            erasePos = eraseNTSv.erase(eraseNTSv.cbegin());
+            REQUIRE(eraseNTSv.size() == 1);
+            REQUIRE(eraseNTSv[0] == 4);
+            REQUIRE(erasePos == eraseNTSv.begin());
+
+            sufficiently_non_trival *ptr = eraseNTSv.data();
+            REQUIRE(!ptr++->destructed);
+            REQUIRE(ptr++->destructed);
+            REQUIRE(ptr++->destructed);
+            REQUIRE(ptr->destructed);
+
+            eraseNTSv.pop_back();
+            REQUIRE(eraseNTSv.empty());
+
+            eraseNTSv.assign((std::size_t)3, 3);
+            REQUIRE(eraseNTSv.size() == 3);
+            REQUIRE(eraseNTSv[0] == 3);
+            REQUIRE(eraseNTSv[1] == 3);
+            REQUIRE(eraseNTSv[2] == 3);
+        }
+
+        {
+            StaticVector<int, 6> sv_from{1, 2, 3, 4};
+            StaticVector<int, 8> sv_to{};
+
+            sv_to.assign(sv_from.begin(), sv_from.end());
+            REQUIRE(sv_to.size() == 4);
+            REQUIRE(sv_to[0] == 1);
+            REQUIRE(sv_to[1] == 2);
+            REQUIRE(sv_to[2] == 3);
+            REQUIRE(sv_to[3] == 4);
         }
     }
 }
