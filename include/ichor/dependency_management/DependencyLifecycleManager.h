@@ -11,7 +11,7 @@ namespace Ichor::Detail {
     class DependencyLifecycleManager final : public ILifecycleManager {
     public:
         explicit DependencyLifecycleManager(Properties&& properties) : _interfaces(), _registry(), _service(_registry, std::move(properties)) {
-            (_interfaces.emplace_back(typeNameHash<IFaces>(), typeName<IFaces>(), DependencyFlags::NONE, false),...);
+            (_interfaces.emplace_back(typeNameHash<IFaces>(), typeName<IFaces>().data(), DependencyFlags::NONE, false),...);
         }
 
         ~DependencyLifecycleManager() final {

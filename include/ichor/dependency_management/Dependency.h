@@ -19,7 +19,8 @@ namespace Ichor {
     }
 
     struct Dependency {
-        Dependency(uint64_t _interfaceNameHash, std::string_view _interfaceName, DependencyFlags _flags, uint64_t _satisfied) noexcept : interfaceNameHash(_interfaceNameHash), interfaceName(_interfaceName), flags(_flags), satisfied(_satisfied) {}
+        Dependency() noexcept = default;
+        Dependency(uint64_t _interfaceNameHash, char const *_interfaceName, DependencyFlags _flags, uint64_t _satisfied) noexcept : interfaceNameHash(_interfaceNameHash), interfaceName(_interfaceName), flags(_flags), satisfied(_satisfied) {}
         Dependency(const Dependency &other) noexcept = default;
         Dependency(Dependency &&other) noexcept = default;
         Dependency& operator=(const Dependency &other) noexcept = default;
@@ -29,10 +30,13 @@ namespace Ichor {
         }
 
         uint64_t interfaceNameHash;
-        std::string_view interfaceName;
+        char const *interfaceName;
         DependencyFlags flags;
         uint64_t satisfied;
     };
+
+    static_assert(std::is_trivially_default_constructible_v<Dependency>, "Dependency is required to be trivially default constructible");
+    static_assert(std::is_trivially_destructible_v<Dependency>, "Dependency is required to be trivially destructible");
 }
 
 

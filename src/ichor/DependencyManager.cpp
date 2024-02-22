@@ -32,8 +32,6 @@ namespace backward {
 }
 #endif
 
-static_assert(!Ichor::Detail::is_sufficiently_trivial<Ichor::Dependency>, "Ichor::Dependency not sufficiently non-trivial");
-
 Ichor::DependencyManager::DependencyManager(IEventQueue *eventQueue) : _eventQueue(eventQueue) {
     auto qlm = std::make_unique<Detail::QueueLifecycleManager>(_eventQueue);
     _services.emplace(qlm->serviceId(), std::move(qlm));
