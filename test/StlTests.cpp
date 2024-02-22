@@ -40,30 +40,55 @@ struct noncopyable final {
 
 uint64_t destructed{};
 
-struct sufficiently_non_trival {
-    sufficiently_non_trival() = default;
-    sufficiently_non_trival(int _i) : i(_i) { }
-    ~sufficiently_non_trival() { ++destructed; }
-    sufficiently_non_trival(const sufficiently_non_trival& o) = default;
-    sufficiently_non_trival(sufficiently_non_trival&& o) noexcept = default;
-    sufficiently_non_trival& operator=(const sufficiently_non_trival& o) = default;
-    sufficiently_non_trival& operator=(sufficiently_non_trival&& o) noexcept = default;
+struct sufficiently_non_trivial {
+    sufficiently_non_trivial() = default;
+    sufficiently_non_trivial(int _i) : i(_i) { }
+    ~sufficiently_non_trivial() { ++destructed; }
+    sufficiently_non_trivial(const sufficiently_non_trivial& o) = default;
+    sufficiently_non_trivial(sufficiently_non_trivial&& o) noexcept = default;
+    sufficiently_non_trivial& operator=(const sufficiently_non_trivial& o) = default;
+    sufficiently_non_trivial& operator=(sufficiently_non_trivial&& o) noexcept = default;
 
     [[nodiscard]] constexpr bool operator==(int _i) const noexcept { return _i == i; }
+    [[nodiscard]] friend constexpr bool operator==(sufficiently_non_trivial const &a, sufficiently_non_trivial const &b) noexcept { return a.i == b.i; }
+    [[nodiscard]] friend constexpr bool operator!=(sufficiently_non_trivial const &a, sufficiently_non_trivial const &b) noexcept { return a.i != b.i; }
+    [[nodiscard]] friend constexpr bool operator< (sufficiently_non_trivial const &a, sufficiently_non_trivial const &b) noexcept { return a.i <  b.i; }
+    [[nodiscard]] friend constexpr bool operator<=(sufficiently_non_trivial const &a, sufficiently_non_trivial const &b) noexcept { return a.i <= b.i; }
+    [[nodiscard]] friend constexpr bool operator> (sufficiently_non_trivial const &a, sufficiently_non_trivial const &b) noexcept { return a.i >  b.i; }
+    [[nodiscard]] friend constexpr bool operator>=(sufficiently_non_trivial const &a, sufficiently_non_trivial const &b) noexcept { return a.i >= b.i; }
+    friend std::ostream& operator<<(std::ostream& os, const sufficiently_non_trivial& a) {
+        os << a.i;
+        return os;
+    }
 
     int i{};
 };
 
-struct sufficiently_non_trival_non_moveable {
-    sufficiently_non_trival_non_moveable() = default;
-    sufficiently_non_trival_non_moveable(int _i) : i(_i) { }
-    ~sufficiently_non_trival_non_moveable() { ++destructed; }
-    sufficiently_non_trival_non_moveable(const sufficiently_non_trival_non_moveable& o) = default;
-    sufficiently_non_trival_non_moveable(sufficiently_non_trival_non_moveable&& o) noexcept = delete;
-    sufficiently_non_trival_non_moveable& operator=(const sufficiently_non_trival_non_moveable& o) = default;
-    sufficiently_non_trival_non_moveable& operator=(sufficiently_non_trival_non_moveable&& o) noexcept = delete;
+struct sufficiently_non_trivial_non_moveable {
+    sufficiently_non_trivial_non_moveable() = default;
+    sufficiently_non_trivial_non_moveable(int _i) : i(_i) { }
+    ~sufficiently_non_trivial_non_moveable() { ++destructed; }
+    sufficiently_non_trivial_non_moveable(const sufficiently_non_trivial_non_moveable& o) = default;
+    sufficiently_non_trivial_non_moveable(sufficiently_non_trivial_non_moveable&& o) noexcept = delete;
+    sufficiently_non_trivial_non_moveable& operator=(const sufficiently_non_trivial_non_moveable& o) = default;
+    sufficiently_non_trivial_non_moveable& operator=(sufficiently_non_trivial_non_moveable&& o) noexcept = delete;
 
     [[nodiscard]] constexpr bool operator==(int _i) const noexcept { return _i == i; }
+    [[nodiscard]] friend constexpr bool operator==(sufficiently_non_trivial_non_moveable const &a, sufficiently_non_trivial_non_moveable const &b) noexcept { return a.i == b.i; }
+    [[nodiscard]] friend constexpr bool operator!=(sufficiently_non_trivial_non_moveable const &a, sufficiently_non_trivial_non_moveable const &b) noexcept { return a.i != b.i; }
+    [[nodiscard]] friend constexpr bool operator< (sufficiently_non_trivial_non_moveable const &a, sufficiently_non_trivial_non_moveable const &b) noexcept { return a.i <  b.i; }
+    [[nodiscard]] friend constexpr bool operator<=(sufficiently_non_trivial_non_moveable const &a, sufficiently_non_trivial_non_moveable const &b) noexcept { return a.i <= b.i; }
+    [[nodiscard]] friend constexpr bool operator> (sufficiently_non_trivial_non_moveable const &a, sufficiently_non_trivial_non_moveable const &b) noexcept { return a.i >  b.i; }
+    [[nodiscard]] friend constexpr bool operator>=(sufficiently_non_trivial_non_moveable const &a, sufficiently_non_trivial_non_moveable const &b) noexcept { return a.i >= b.i; }
+    friend std::ostream& operator<<(std::ostream& os, const sufficiently_non_trivial_non_moveable& a) {
+        os << a.i;
+        return os;
+    }
+
+    friend void swap(sufficiently_non_trivial_non_moveable& x, sufficiently_non_trivial_non_moveable& y) {
+        using std::swap;
+        std::swap(x.i, y.i);
+    }
 
     int i{};
 };
@@ -799,13 +824,13 @@ TEST_CASE("STL Tests") {
         static_assert(sizeof(StaticVector<int, 2>) == 24, "sizeof static vector wrong");
         static_assert(Detail::is_sufficiently_trivial<int>, "type not sufficiently trivial");
         static_assert(Detail::is_sufficiently_trivial<noncopyable>, "type not sufficiently trivial");
-        static_assert(!Detail::is_sufficiently_trivial<sufficiently_non_trival>, "type not sufficiently non-trivial");
+        static_assert(!Detail::is_sufficiently_trivial<sufficiently_non_trivial>, "type not sufficiently non-trivial");
         static_assert(std::contiguous_iterator<SVIterator<int, false>>, "iterator not contiguous");
         static_assert(std::contiguous_iterator<SVIterator<int, true>>, "iterator not contiguous");
-        static_assert(std::contiguous_iterator<SVIterator<sufficiently_non_trival, false>>, "iterator not contiguous");
-        static_assert(std::contiguous_iterator<SVIterator<sufficiently_non_trival, true>>, "iterator not contiguous");
+        static_assert(std::contiguous_iterator<SVIterator<sufficiently_non_trivial, false>>, "iterator not contiguous");
+        static_assert(std::contiguous_iterator<SVIterator<sufficiently_non_trivial, true>>, "iterator not contiguous");
         static_assert(std::is_trivially_destructible_v<StaticVector<int, 1>>, "No trivial destructor for trivial type");
-        static_assert(!std::is_trivially_destructible_v<StaticVector<sufficiently_non_trival, 1>>, "trivial destructor for non-trivial type");
+        static_assert(!std::is_trivially_destructible_v<StaticVector<sufficiently_non_trivial, 1>>, "trivial destructor for non-trivial type");
 
         auto const check_nontrivial_iteration_count = []<typename T, size_t N>(StaticVector<T, N> &_sv, int expected) {
             int iteratedCount{};
@@ -816,7 +841,7 @@ TEST_CASE("STL Tests") {
             REQUIRE(iteratedCount == expected);
         };
 
-        StaticVector<sufficiently_non_trival, 10> nontrivial_sv;
+        StaticVector<sufficiently_non_trivial, 10> nontrivial_sv;
         REQUIRE(nontrivial_sv.empty());
         REQUIRE(nontrivial_sv.size() == 0);
         REQUIRE(nontrivial_sv.max_size() == 10);
@@ -862,7 +887,7 @@ TEST_CASE("STL Tests") {
         }
 
         nontrivial_sv.clear();
-        nontrivial_sv.resize(5, sufficiently_non_trival{234});
+        nontrivial_sv.resize(5, sufficiently_non_trivial{234});
         REQUIRE(!nontrivial_sv.empty());
         REQUIRE(nontrivial_sv.size() == 5);
         REQUIRE(nontrivial_sv.max_size() == 10);
@@ -905,7 +930,7 @@ TEST_CASE("STL Tests") {
         }
 
         {
-            StaticVector<sufficiently_non_trival, 4> eraseNTSv{1, 2, 3, 4};
+            StaticVector<sufficiently_non_trivial, 4> eraseNTSv{1, 2, 3, 4};
             REQUIRE(!eraseNTSv.empty());
             REQUIRE(eraseNTSv.size() == 4);
             REQUIRE(eraseNTSv[0] == 1);
@@ -940,7 +965,7 @@ TEST_CASE("STL Tests") {
         }
 
         {
-            StaticVector<sufficiently_non_trival_non_moveable, 4> eraseNTSv{1, 2, 3, 4};
+            StaticVector<sufficiently_non_trivial_non_moveable, 4> eraseNTSv{1, 2, 3, 4};
             REQUIRE(!eraseNTSv.empty());
             REQUIRE(eraseNTSv.size() == 4);
             REQUIRE(eraseNTSv[0] == 1);
@@ -973,8 +998,8 @@ TEST_CASE("STL Tests") {
             REQUIRE(eraseNTSv[1] == 3);
             REQUIRE(eraseNTSv[2] == 3);
 
-            StaticVector<sufficiently_non_trival_non_moveable, 4> eraseNTSv2{eraseNTSv};
-            StaticVector<sufficiently_non_trival_non_moveable, 4> eraseNTSv3;
+            StaticVector<sufficiently_non_trivial_non_moveable, 4> eraseNTSv2{eraseNTSv};
+            StaticVector<sufficiently_non_trivial_non_moveable, 4> eraseNTSv3;
             eraseNTSv3 = eraseNTSv2;
             REQUIRE(eraseNTSv2.size() == 3);
             REQUIRE(eraseNTSv3.size() == 3);
@@ -990,6 +1015,246 @@ TEST_CASE("STL Tests") {
             REQUIRE(sv_to[1] == 2);
             REQUIRE(sv_to[2] == 3);
             REQUIRE(sv_to[3] == 4);
+
+            int const x = 5;
+            int y = 15;
+            sv_to.insert(sv_to.cbegin() + 1, x);
+            sv_to.insert(sv_to.cbegin() + 3, y);
+            REQUIRE(sv_to.size() == 6);
+            REQUIRE(sv_to[0] == 1);
+            REQUIRE(sv_to[1] == 5);
+            REQUIRE(sv_to[2] == 2);
+            REQUIRE(sv_to[3] == 15);
+            REQUIRE(sv_to[4] == 3);
+            REQUIRE(sv_to[5] == 4);
+
+            sv_to.emplace(sv_to.cbegin(), 25);
+            REQUIRE(sv_to.size() == 7);
+            REQUIRE(sv_to[0] == 25);
+            REQUIRE(sv_to[1] == 1);
+            REQUIRE(sv_to[2] == 5);
+            REQUIRE(sv_to[3] == 2);
+            REQUIRE(sv_to[4] == 15);
+            REQUIRE(sv_to[5] == 3);
+            REQUIRE(sv_to[6] == 4);
+
+            sv_to.emplace(sv_to.cend(), 35);
+            REQUIRE(sv_to.size() == 8);
+            REQUIRE(sv_to[0] == 25);
+            REQUIRE(sv_to[1] == 1);
+            REQUIRE(sv_to[2] == 5);
+            REQUIRE(sv_to[3] == 2);
+            REQUIRE(sv_to[4] == 15);
+            REQUIRE(sv_to[5] == 3);
+            REQUIRE(sv_to[6] == 4);
+            REQUIRE(sv_to[7] == 35);
+        }
+
+        {
+            StaticVector<sufficiently_non_trivial, 6> sv_from{1, 2, 3, 4};
+            StaticVector<sufficiently_non_trivial, 8> sv_to{};
+
+            sv_to.assign(sv_from.begin(), sv_from.end());
+            REQUIRE(sv_to.size() == 4);
+            REQUIRE(sv_to[0] == 1);
+            REQUIRE(sv_to[1] == 2);
+            REQUIRE(sv_to[2] == 3);
+            REQUIRE(sv_to[3] == 4);
+
+            sufficiently_non_trivial const x = 5;
+            sufficiently_non_trivial y = 15;
+            sv_to.insert(sv_to.cbegin() + 1, x);
+            sv_to.insert(sv_to.cbegin() + 3, std::move(y));
+            REQUIRE(sv_to.size() == 6);
+            REQUIRE(sv_to[0] == 1);
+            REQUIRE(sv_to[1] == 5);
+            REQUIRE(sv_to[2] == 2);
+            REQUIRE(sv_to[3] == 15);
+            REQUIRE(sv_to[4] == 3);
+            REQUIRE(sv_to[5] == 4);
+
+            sv_to.emplace(sv_to.cbegin(), 25);
+            REQUIRE(sv_to.size() == 7);
+            REQUIRE(sv_to[0] == 25);
+            REQUIRE(sv_to[1] == 1);
+            REQUIRE(sv_to[2] == 5);
+            REQUIRE(sv_to[3] == 2);
+            REQUIRE(sv_to[4] == 15);
+            REQUIRE(sv_to[5] == 3);
+            REQUIRE(sv_to[6] == 4);
+
+            sv_to.emplace(sv_to.cend(), 35);
+            REQUIRE(sv_to.size() == 8);
+            REQUIRE(sv_to[0] == 25);
+            REQUIRE(sv_to[1] == 1);
+            REQUIRE(sv_to[2] == 5);
+            REQUIRE(sv_to[3] == 2);
+            REQUIRE(sv_to[4] == 15);
+            REQUIRE(sv_to[5] == 3);
+            REQUIRE(sv_to[6] == 4);
+            REQUIRE(sv_to[7] == 35);
+
+            sv_to.clear();
+            sufficiently_non_trivial const z = 25;
+            sv_to.emplace_back(5);
+            sv_to.emplace_back(15);
+            sv_to.insert(sv_to.cbegin() + 1, 3, z);
+            REQUIRE(sv_to.size() == 5);
+            REQUIRE(sv_to[0] == 5);
+            REQUIRE(sv_to[1] == 25);
+            REQUIRE(sv_to[2] == 25);
+            REQUIRE(sv_to[3] == 25);
+            REQUIRE(sv_to[4] == 15);
+
+            sv_to.insert(sv_to.cbegin() + 1, sv_from.begin() + 1, sv_from.begin() + 3);
+            REQUIRE(sv_to.size() == 7);
+            REQUIRE(sv_to[0] == 5);
+            REQUIRE(sv_to[1] == 2);
+            REQUIRE(sv_to[2] == 3);
+            REQUIRE(sv_to[3] == 25);
+            REQUIRE(sv_to[4] == 25);
+            REQUIRE(sv_to[5] == 25);
+            REQUIRE(sv_to[6] == 15);
+        }
+
+        {
+            StaticVector<sufficiently_non_trivial_non_moveable, 6> sv_from{1, 2, 3, 4};
+            StaticVector<sufficiently_non_trivial_non_moveable, 8> sv_to{};
+
+            sv_to.assign(sv_from.begin(), sv_from.end());
+            REQUIRE(sv_to.size() == 4);
+            REQUIRE(sv_to[0] == 1);
+            REQUIRE(sv_to[1] == 2);
+            REQUIRE(sv_to[2] == 3);
+            REQUIRE(sv_to[3] == 4);
+
+            sufficiently_non_trivial_non_moveable const x = 5;
+            sv_to.insert(sv_to.cbegin() + 1, x);
+            REQUIRE(sv_to.size() == 5);
+            REQUIRE(sv_to[0] == 1);
+            REQUIRE(sv_to[1] == 5);
+            REQUIRE(sv_to[2] == 2);
+            REQUIRE(sv_to[3] == 3);
+            REQUIRE(sv_to[4] == 4);
+
+            sv_to.emplace(sv_to.cbegin(), 25);
+            REQUIRE(sv_to.size() == 6);
+            REQUIRE(sv_to[0] == 25);
+            REQUIRE(sv_to[1] == 1);
+            REQUIRE(sv_to[2] == 5);
+            REQUIRE(sv_to[3] == 2);
+            REQUIRE(sv_to[4] == 3);
+            REQUIRE(sv_to[5] == 4);
+
+            sv_to.emplace(sv_to.cend(), 35);
+            REQUIRE(sv_to.size() == 7);
+            REQUIRE(sv_to[0] == 25);
+            REQUIRE(sv_to[1] == 1);
+            REQUIRE(sv_to[2] == 5);
+            REQUIRE(sv_to[3] == 2);
+            REQUIRE(sv_to[4] == 3);
+            REQUIRE(sv_to[5] == 4);
+            REQUIRE(sv_to[6] == 35);
+
+            sv_to.clear();
+            sufficiently_non_trivial_non_moveable const z = 25;
+            sv_to.emplace_back(5);
+            sv_to.emplace_back(15);
+            sv_to.insert(sv_to.cbegin() + 1, 3, z);
+            REQUIRE(sv_to.size() == 5);
+            REQUIRE(sv_to[0] == 5);
+            REQUIRE(sv_to[1] == 25);
+            REQUIRE(sv_to[2] == 25);
+            REQUIRE(sv_to[3] == 25);
+            REQUIRE(sv_to[4] == 15);
+
+            sv_to.insert(sv_to.cbegin() + 1, sv_from.begin() + 1, sv_from.begin() + 3);
+            REQUIRE(sv_to.size() == 7);
+            REQUIRE(sv_to[0] == 5);
+            REQUIRE(sv_to[1] == 2);
+            REQUIRE(sv_to[2] == 3);
+            REQUIRE(sv_to[3] == 25);
+            REQUIRE(sv_to[4] == 25);
+            REQUIRE(sv_to[5] == 25);
+            REQUIRE(sv_to[6] == 15);
+        }
+
+        {
+            StaticVector<int, 8> sv_from{1, 2, 3, 4};
+            StaticVector<int, 8> sv_to{6, 7};
+
+            sv_to.swap(sv_from);
+            REQUIRE(sv_to.size() == 4);
+            REQUIRE(sv_to[0] == 1);
+            REQUIRE(sv_to[1] == 2);
+            REQUIRE(sv_to[2] == 3);
+            REQUIRE(sv_to[3] == 4);
+            REQUIRE(sv_from.size() == 2);
+            REQUIRE(sv_from[0] == 6);
+            REQUIRE(sv_from[1] == 7);
+        }
+
+        {
+            StaticVector<sufficiently_non_trivial, 8> sv_from{1, 2, 3, 4};
+            StaticVector<sufficiently_non_trivial, 8> sv_to{6, 7};
+
+            sv_to.swap(sv_from);
+            REQUIRE(sv_to.size() == 4);
+            REQUIRE(sv_to[0] == 1);
+            REQUIRE(sv_to[1] == 2);
+            REQUIRE(sv_to[2] == 3);
+            REQUIRE(sv_to[3] == 4);
+            REQUIRE(sv_from.size() == 2);
+            REQUIRE(sv_from[0] == 6);
+            REQUIRE(sv_from[1] == 7);
+        }
+
+        {
+            StaticVector<sufficiently_non_trivial_non_moveable, 8> sv_from{1, 2, 3, 4};
+            StaticVector<sufficiently_non_trivial_non_moveable, 8> sv_to{6, 7};
+
+            sv_to.swap(sv_from);
+            REQUIRE(sv_to.size() == 4);
+            REQUIRE(sv_to[0] == 1);
+            REQUIRE(sv_to[1] == 2);
+            REQUIRE(sv_to[2] == 3);
+            REQUIRE(sv_to[3] == 4);
+            REQUIRE(sv_from.size() == 2);
+            REQUIRE(sv_from[0] == 6);
+            REQUIRE(sv_from[1] == 7);
+            REQUIRE(sv_from != sv_to);
+        }
+
+        {
+            StaticVector<sufficiently_non_trivial, 8> sv_from{1, 2, 3, 4};
+            StaticVector<sufficiently_non_trivial, 8> sv_to{1, 2, 3, 4};
+            REQUIRE(sv_from == sv_to);
+        }
+
+        {
+            StaticVector<sufficiently_non_trivial, 8> sv_from{1, 2, 3};
+            StaticVector<sufficiently_non_trivial, 8> sv_to{1, 2, 3, 4};
+            REQUIRE(sv_from != sv_to);
+            REQUIRE(sv_from <= sv_to);
+            REQUIRE(sv_from < sv_to);
+            REQUIRE(sv_to >= sv_from);
+            REQUIRE(sv_to > sv_from);
+        }
+
+        {
+            StaticVector<sufficiently_non_trivial_non_moveable, 8> sv_from{1, 2, 3, 4};
+            StaticVector<sufficiently_non_trivial_non_moveable, 8> sv_to{1, 2, 3, 4};
+            REQUIRE(sv_from == sv_to);
+        }
+
+        {
+            StaticVector<sufficiently_non_trivial_non_moveable, 8> sv_from{1, 2, 3};
+            StaticVector<sufficiently_non_trivial_non_moveable, 8> sv_to{1, 2, 3, 4};
+            REQUIRE(sv_from != sv_to);
+            REQUIRE(sv_from <= sv_to);
+            REQUIRE(sv_from < sv_to);
+            REQUIRE(sv_to >= sv_from);
+            REQUIRE(sv_to > sv_from);
         }
     }
 }
