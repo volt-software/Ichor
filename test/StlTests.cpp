@@ -38,19 +38,34 @@ struct noncopyable final {
     noncopyable& operator=(noncopyable&&) = default;
 };
 
+uint64_t destructed{};
+
 struct sufficiently_non_trival {
     sufficiently_non_trival() = default;
-    sufficiently_non_trival(int _i) : i(_i) {}
-    ~sufficiently_non_trival() { destructed = true; }
-    sufficiently_non_trival(const sufficiently_non_trival&) = default;
-    sufficiently_non_trival(sufficiently_non_trival&&) = default;
-    sufficiently_non_trival& operator=(const sufficiently_non_trival&) = default;
-    sufficiently_non_trival& operator=(sufficiently_non_trival&&) = default;
+    sufficiently_non_trival(int _i) : i(_i) { }
+    ~sufficiently_non_trival() { ++destructed; }
+    sufficiently_non_trival(const sufficiently_non_trival& o) = default;
+    sufficiently_non_trival(sufficiently_non_trival&& o) noexcept = default;
+    sufficiently_non_trival& operator=(const sufficiently_non_trival& o) = default;
+    sufficiently_non_trival& operator=(sufficiently_non_trival&& o) noexcept = default;
 
     [[nodiscard]] constexpr bool operator==(int _i) const noexcept { return _i == i; }
 
     int i{};
-    bool destructed{};
+};
+
+struct sufficiently_non_trival_non_moveable {
+    sufficiently_non_trival_non_moveable() = default;
+    sufficiently_non_trival_non_moveable(int _i) : i(_i) { }
+    ~sufficiently_non_trival_non_moveable() { ++destructed; }
+    sufficiently_non_trival_non_moveable(const sufficiently_non_trival_non_moveable& o) = default;
+    sufficiently_non_trival_non_moveable(sufficiently_non_trival_non_moveable&& o) noexcept = delete;
+    sufficiently_non_trival_non_moveable& operator=(const sufficiently_non_trival_non_moveable& o) = default;
+    sufficiently_non_trival_non_moveable& operator=(sufficiently_non_trival_non_moveable&& o) noexcept = delete;
+
+    [[nodiscard]] constexpr bool operator==(int _i) const noexcept { return _i == i; }
+
+    int i{};
 };
 
 template <>
@@ -899,31 +914,70 @@ TEST_CASE("STL Tests") {
             REQUIRE(eraseNTSv[3] == 4);
             REQUIRE(eraseNTSv.size() == 4);
 
+            destructed = 0;
             auto erasePos = eraseNTSv.erase(eraseNTSv.cbegin() + 1, eraseNTSv.cbegin() + 3);
             REQUIRE(eraseNTSv.size() == 2);
             REQUIRE(eraseNTSv[0] == 1);
             REQUIRE(eraseNTSv[1] == 4);
             REQUIRE(erasePos == eraseNTSv.begin() + 1);
+            REQUIRE(destructed == 2);
 
             erasePos = eraseNTSv.erase(eraseNTSv.cbegin());
             REQUIRE(eraseNTSv.size() == 1);
             REQUIRE(eraseNTSv[0] == 4);
             REQUIRE(erasePos == eraseNTSv.begin());
-
-            sufficiently_non_trival *ptr = eraseNTSv.data();
-            REQUIRE(!ptr++->destructed);
-            REQUIRE(ptr++->destructed);
-            REQUIRE(ptr++->destructed);
-            REQUIRE(ptr->destructed);
+            REQUIRE(destructed == 3);
 
             eraseNTSv.pop_back();
             REQUIRE(eraseNTSv.empty());
+            REQUIRE(destructed == 4);
 
             eraseNTSv.assign((std::size_t)3, 3);
             REQUIRE(eraseNTSv.size() == 3);
             REQUIRE(eraseNTSv[0] == 3);
             REQUIRE(eraseNTSv[1] == 3);
             REQUIRE(eraseNTSv[2] == 3);
+        }
+
+        {
+            StaticVector<sufficiently_non_trival_non_moveable, 4> eraseNTSv{1, 2, 3, 4};
+            REQUIRE(!eraseNTSv.empty());
+            REQUIRE(eraseNTSv.size() == 4);
+            REQUIRE(eraseNTSv[0] == 1);
+            REQUIRE(eraseNTSv[1] == 2);
+            REQUIRE(eraseNTSv[2] == 3);
+            REQUIRE(eraseNTSv[3] == 4);
+            REQUIRE(eraseNTSv.size() == 4);
+
+            destructed = 0;
+            auto erasePos = eraseNTSv.erase(eraseNTSv.cbegin() + 1, eraseNTSv.cbegin() + 3);
+            REQUIRE(eraseNTSv.size() == 2);
+            REQUIRE(eraseNTSv[0] == 1);
+            REQUIRE(eraseNTSv[1] == 4);
+            REQUIRE(erasePos == eraseNTSv.begin() + 1);
+            REQUIRE(destructed == 2);
+
+            erasePos = eraseNTSv.erase(eraseNTSv.cbegin());
+            REQUIRE(eraseNTSv.size() == 1);
+            REQUIRE(eraseNTSv[0] == 4);
+            REQUIRE(erasePos == eraseNTSv.begin());
+            REQUIRE(destructed == 3);
+
+            eraseNTSv.pop_back();
+            REQUIRE(eraseNTSv.empty());
+            REQUIRE(destructed == 4);
+
+            eraseNTSv.assign((std::size_t)3, 3);
+            REQUIRE(eraseNTSv.size() == 3);
+            REQUIRE(eraseNTSv[0] == 3);
+            REQUIRE(eraseNTSv[1] == 3);
+            REQUIRE(eraseNTSv[2] == 3);
+
+            StaticVector<sufficiently_non_trival_non_moveable, 4> eraseNTSv2{eraseNTSv};
+            StaticVector<sufficiently_non_trival_non_moveable, 4> eraseNTSv3;
+            eraseNTSv3 = eraseNTSv2;
+            REQUIRE(eraseNTSv2.size() == 3);
+            REQUIRE(eraseNTSv3.size() == 3);
         }
 
         {

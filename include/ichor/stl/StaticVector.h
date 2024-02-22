@@ -201,16 +201,16 @@ namespace Ichor {
                 emplace_back();
             }
         }
-        constexpr StaticVector(storage_size_type n, value_type const & value) {
+        constexpr StaticVector(storage_size_type n, const_reference value) {
             assert(n <= N);
             for(storage_size_type i = 0; i < n; ++i) {
-                emplace_back(value);
+                push_back(value);
             }
         }
         template <class InputIterator>
         constexpr StaticVector(InputIterator first, InputIterator last) {
             while(first != last) {
-                emplace_back(*first);
+                push_back(*first);
                 first++;
             }
         }
@@ -222,7 +222,11 @@ namespace Ichor {
             } else {
                 auto pos = list.begin();
                 while (pos != list.end()) {
-                    emplace_back(*pos);
+                    if constexpr (std::is_move_constructible_v<T>) {
+                        emplace_back(std::move(*pos));
+                    } else {
+                        push_back(*pos);
+                    }
                     pos++;
                 }
             }
@@ -230,7 +234,7 @@ namespace Ichor {
         constexpr StaticVector(StaticVector const & other) noexcept(std::is_nothrow_copy_constructible_v<value_type>) {
             assert(other._size <= N);
             for(auto const &t : other) {
-                emplace_back(t);
+                push_back(t);
             }
         }
         constexpr StaticVector(StaticVector&& other) noexcept(std::is_nothrow_move_constructible_v<value_type>) {
@@ -245,7 +249,7 @@ namespace Ichor {
             assert(other._size <= N);
             clear();
             for(auto const &t : other) {
-                emplace_back(t);
+                push_back(t);
             }
             return *this;
         }
@@ -339,13 +343,21 @@ namespace Ichor {
             if constexpr (Detail::is_sufficiently_trivial<T>) {
                 if(sz > _size) {
                     for(storage_size_type i = _size; i < sz; ++i) {
-                        emplace_back(c);
+                        if constexpr (std::is_move_constructible_v<T>) {
+                            emplace_back(c);
+                        } else {
+                            push_back(c);
+                        }
                     }
                 }
             } else {
                 if(sz > _size) {
                     for(storage_size_type i = _size; i < sz; ++i) {
-                        emplace_back(c);
+                        if constexpr (std::is_move_constructible_v<T>) {
+                            emplace_back(c);
+                        } else {
+                            push_back(c);
+                        }
                     }
                 } else if(sz < _size) {
                     for(storage_size_type i = static_cast<storage_size_type>(sz); i < _size; ++i) {
@@ -392,8 +404,9 @@ namespace Ichor {
         template <class... Args>
         constexpr iterator emplace(const_iterator position, Args&&... args);
         template <class... Args>
-        constexpr reference emplace_back(Args&&... args) {
+        constexpr reference emplace_back(Args&&... args) noexcept(Detail::is_sufficiently_trivial<T>) {
             assert(_size < N);
+            //fmt::print("emplace_back {} {}\n", _size, (void*)(data() + size()));
             std::construct_at(data() + size(), T{std::forward<Args>(args)...});
             ++_size;
             return back();
@@ -405,13 +418,18 @@ namespace Ichor {
         }
         constexpr void push_back(value_type&& x) final {
             assert(_size < N);
-            std::construct_at(data() + size(), std::forward<T>(x));
+            if constexpr (std::is_move_constructible_v<T>) {
+                std::construct_at(data() + size(), std::forward<T>(x));
+            } else {
+                std::terminate(); // should never be called because value_type&& is impossible for non-moveable types
+            }
             ++_size;
         }
 
         constexpr void pop_back() final {
             assert(_size > 0);
             if constexpr (!Detail::is_sufficiently_trivial<T>) {
+                //fmt::print("pop_back destroy_at {} {}\n", (void*)begin().operator->(), (void*)&back());
                 std::destroy_at(std::addressof(back()));
             }
             --_size;
@@ -419,8 +437,13 @@ namespace Ichor {
         constexpr iterator erase(const_iterator const_position) final {
             auto position = iterator{const_cast<pointer>(const_position.operator->())};
             if(position + 1 != end()) {
-                std::move(position + 1, end(), position);
+                if constexpr (std::is_move_constructible_v<T>) {
+                    std::move(position + 1, end(), position);
+                } else {
+                    std::copy(position + 1, end(), position);
+                }
             }
+            //fmt::print("erase pop_back {} {}\n", (void*)begin().operator->(), (void*)position.operator->());
             pop_back();
             return position;
         }
@@ -428,14 +451,21 @@ namespace Ichor {
             auto first = iterator{const_cast<pointer>(const_first.operator->())};
             if(const_first != const_last) {
                 auto last = iterator{const_cast<pointer>(const_last.operator->())};
-                auto position = std::move(last, end(), first);
+                SVIterator<T, false> position;
+
+                if constexpr (std::is_move_constructible_v<T>) {
+                    position = std::move(last, end(), first);
+                } else {
+                    position = std::copy(last, end(), first);
+                }
+
                 if constexpr (!Detail::is_sufficiently_trivial<T>) {
                     while(position != end()) {
                         std::destroy_at(position.operator->());
                         position++;
                     }
                 }
-                _size -= std::distance(first, last);
+                _size -= static_cast<storage_size_type>(std::distance(first, last));
             }
 
             return first;

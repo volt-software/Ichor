@@ -10,6 +10,7 @@
 #    pragma GCC diagnostic ignored "-Wsign-conversion"
 #    pragma GCC diagnostic ignored "-Wshadow"
 #    pragma GCC diagnostic ignored "-Wconversion"
+#    pragma GCC diagnostic ignored "-Wpedantic"
 #    pragma GCC diagnostic ignored "-Wgnu-pointer-arith"
 #    pragma GCC diagnostic ignored "-Wgnu-anonymous-struct"
 #    pragma GCC diagnostic ignored "-Wgnu-statement-expression-from-macro-expansion"
