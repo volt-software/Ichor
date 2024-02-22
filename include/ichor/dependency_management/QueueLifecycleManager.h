@@ -9,7 +9,7 @@ namespace Ichor::Detail {
     class QueueLifecycleManager final : public ILifecycleManager {
     public:
         explicit QueueLifecycleManager(IEventQueue *q) : _q(q) {
-            _interfaces.emplace_back(typeNameHash<IEventQueue>(), typeName<IEventQueue>(), DependencyFlags::NONE, false);
+            _interfaces.emplace_back(typeNameHash<IEventQueue>(), typeName<IEventQueue>().data(), DependencyFlags::NONE, false);
         }
 
         ~QueueLifecycleManager() final = default;

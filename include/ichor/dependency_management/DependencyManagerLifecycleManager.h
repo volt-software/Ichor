@@ -8,7 +8,7 @@ namespace Ichor::Detail {
     class DependencyManagerLifecycleManager final : public ILifecycleManager {
     public:
         explicit DependencyManagerLifecycleManager(DependencyManager *dm) : _dm(dm) {
-            _interfaces.emplace_back(typeNameHash<DependencyManager>(), typeName<DependencyManager>(), DependencyFlags::NONE, false);
+            _interfaces.emplace_back(typeNameHash<DependencyManager>(), typeName<DependencyManager>().data(), DependencyFlags::NONE, false);
         }
 
         ~DependencyManagerLifecycleManager() final = default;

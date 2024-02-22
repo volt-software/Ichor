@@ -7,7 +7,7 @@ namespace Ichor::Detail {
     class IServiceInterestedLifecycleManager final : public ILifecycleManager {
     public:
         IServiceInterestedLifecycleManager(IService *self) : _self(self) {
-            _interfaces.emplace_back(typeNameHash<IService>(), typeName<IService>(), DependencyFlags::NONE, false);
+            _interfaces.emplace_back(typeNameHash<IService>(), typeName<IService>().data(), DependencyFlags::NONE, false);
         }
         ~IServiceInterestedLifecycleManager() final = default;
 
