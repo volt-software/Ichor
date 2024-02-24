@@ -5,7 +5,6 @@
 #include <memory>
 #include <chrono>
 #include <atomic>
-#include <mutex>
 #include <span>
 #include <ichor/interfaces/IFrameworkLogger.h>
 #include <ichor/dependency_management/AdvancedService.h>

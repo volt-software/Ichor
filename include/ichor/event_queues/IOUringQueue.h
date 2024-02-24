@@ -23,7 +23,7 @@ namespace Ichor {
         [[nodiscard]] bool is_running() const noexcept final;
 
         io_uring* createEventLoop(unsigned entriesCount = 2048);
-        void useEventLoop(io_uring *loop);
+        void useEventLoop(io_uring *loop, unsigned entriesCount);
 
         void start(bool captureSigInt) final;
         [[nodiscard]] bool shouldQuit() final;
@@ -38,6 +38,7 @@ namespace Ichor {
         std::atomic<bool> _initializedQueue{false};
         std::thread::id _threadId{};
         uint64_t _quitTimeoutMs;
+        int _entriesCount;
         long long _pollTimeoutNs;
         std::chrono::steady_clock::time_point _whenQuitEventWasSent{};
         std::atomic<bool> _quitEventSent{false};
