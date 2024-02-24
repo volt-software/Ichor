@@ -225,36 +225,39 @@ namespace Ichor {
             __kernel_timespec ts{};
             ts.tv_nsec = _pollTimeoutNs;
 
-            auto ret = io_uring_wait_cqe_timeout(_eventQueuePtr, &cqe, &ts);
+            auto ret = io_uring_wait_cqes(_eventQueuePtr, &cqe, 1, &ts, nullptr);
 //            spdlog::info("io_uring_wait_cqe_timeout {} {}", ret, reinterpret_cast<void*>(cqe));
             if(ret < 0 && ret != -ETIME) [[unlikely]] {
                 throw std::system_error(-ret, std::generic_category(), "io_uring_wait_cqe_timeout() failed");
             }
 
+            unsigned int handled{};
+            unsigned int head{};
             if(ret != -ETIME) {
+                io_uring_for_each_cqe(_eventQueuePtr, head, cqe) {
 //                spdlog::info("ret != -ETIME {} {} {}", cqe->flags, cqe->res, io_uring_cqe_get_data(cqe));
-                TSAN_ANNOTATE_HAPPENS_AFTER(cqe->user_data);
-                auto *evt = reinterpret_cast<Event*>(io_uring_cqe_get_data(cqe));
-                if(evt != nullptr) {
-                    //spdlog::info("processing {}", evt->get_name());
-                    std::unique_ptr<Event> uniqueEvt{evt};
-                    processEvent(uniqueEvt);
+                    TSAN_ANNOTATE_HAPPENS_AFTER(cqe->user_data);
+                    auto *evt = reinterpret_cast<Event *>(io_uring_cqe_get_data(cqe));
+                    if (evt != nullptr) {
+                        //spdlog::info("processing {}", evt->get_name());
+                        std::unique_ptr<Event> uniqueEvt{evt};
+                        processEvent(uniqueEvt);
+                    }
+                    handled++;
+                }
 
-                    {
-                        auto space = io_uring_sq_space_left(_eventQueuePtr);
-                        if(space < _entriesCount) {
-                            ret = io_uring_submit(_eventQueuePtr);
-                            if (ret != _entriesCount - space) [[unlikely]] {
+                io_uring_cq_advance(_eventQueuePtr, handled);
+
+                {
+                    auto space = io_uring_sq_space_left(_eventQueuePtr);
+                    if (space < _entriesCount) {
+                        ret = io_uring_submit(_eventQueuePtr);
+                        if (ret != _entriesCount - space) [[unlikely]] {
 //                          spdlog::info("io_uring_submit {}", ret);
-                                throw std::runtime_error("submit wrong amount");
-                            }
+                            throw std::runtime_error("submit wrong amount");
                         }
                     }
                 }
-            }
-
-            if(_eventQueuePtr != nullptr) {
-                io_uring_cqe_seen(_eventQueuePtr, cqe);
             }
 
             shouldAddQuitEvent();
