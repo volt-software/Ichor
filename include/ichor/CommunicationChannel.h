@@ -3,6 +3,7 @@
 #include <ichor/DependencyManager.h>
 #include <ichor/stl/RealtimeReadWriteMutex.h>
 #include <shared_mutex>
+#include <mutex>
 
 #ifdef DEBUG_CHANNEL
 #include <iostream>

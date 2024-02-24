@@ -131,10 +131,13 @@ namespace Ichor {
             io_uring_sqe_set_data(sqe, procEvent);
             io_uring_prep_nop(sqe);
 
-            auto ret = io_uring_submit(_eventQueuePtr);
-            if(ret != 1) [[unlikely]] {
+            auto space = io_uring_sq_space_left(_eventQueuePtr);
+            if(space == 0) {
+                auto ret = io_uring_submit(_eventQueuePtr);
+                if (ret != _entriesCount) [[unlikely]] {
 //                spdlog::info("io_uring_submit {}", ret);
-                throw std::runtime_error("submit wrong amount");
+                    throw std::runtime_error("submit wrong amount");
+                }
             }
         }
     }
@@ -164,6 +167,7 @@ namespace Ichor {
     io_uring* IOUringQueue::createEventLoop(unsigned entriesCount) {
         _eventQueue = std::make_unique<io_uring>();
         _eventQueuePtr = _eventQueue.get();
+        _entriesCount = entriesCount;
         io_uring_params p{};
         p.flags = IORING_SETUP_DEFER_TASKRUN | IORING_SETUP_COOP_TASKRUN | IORING_SETUP_SINGLE_ISSUER;
         p.sq_thread_idle = 50;
@@ -183,8 +187,9 @@ namespace Ichor {
         return _eventQueuePtr;
     }
 
-    void IOUringQueue::useEventLoop(io_uring *event) {
+    void IOUringQueue::useEventLoop(io_uring *event, unsigned entriesCount) {
         _eventQueuePtr = event;
+        _entriesCount = entriesCount;
         _initializedQueue.store(true, std::memory_order_release);
     }
 
@@ -206,6 +211,15 @@ namespace Ichor {
 
         startDm();
 
+        {
+            auto space = io_uring_sq_space_left(_eventQueuePtr);
+            auto ret = io_uring_submit(_eventQueuePtr);
+            if (ret != _entriesCount - space) [[unlikely]] {
+//                spdlog::info("io_uring_submit {}", ret);
+                throw std::runtime_error("submit wrong amount");
+            }
+        }
+
         while(!shouldQuit()) [[likely]] {
             io_uring_cqe *cqe{};
             __kernel_timespec ts{};
@@ -225,6 +239,17 @@ namespace Ichor {
                     //spdlog::info("processing {}", evt->get_name());
                     std::unique_ptr<Event> uniqueEvt{evt};
                     processEvent(uniqueEvt);
+
+                    {
+                        auto space = io_uring_sq_space_left(_eventQueuePtr);
+                        if(space < _entriesCount) {
+                            ret = io_uring_submit(_eventQueuePtr);
+                            if (ret != _entriesCount - space) [[unlikely]] {
+//                          spdlog::info("io_uring_submit {}", ret);
+                                throw std::runtime_error("submit wrong amount");
+                            }
+                        }
+                    }
                 }
             }
 
