@@ -65,6 +65,9 @@ namespace Ichor {
             case REDIS_REPLY_STATUS:
                 fmt::print("{}Status reply from redis {}\n", indent, r->str);
                 break;
+            case REDIS_REPLY_NIL:
+                fmt::print("{}Nil reply from redis\n", indent);
+                break;
             case REDIS_REPLY_ARRAY:
                 fmt::print("{}Array reply from redis\n", indent);
                 for(size_t i = 0; i < r->elements; i++) {

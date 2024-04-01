@@ -111,8 +111,8 @@ namespace Ichor {
                 if (!delReply.value().value || *delReply.value().value != "get_delete") {
                     throw std::runtime_error("Incorrect value get_delete");
                 }
-                auto getReply = co_await _redis->get("test_key");
-                if(getReply) {
+                auto getReply = co_await _redis->get("get_delete_key");
+                if(getReply && getReply->value.has_value()) {
                     throw std::runtime_error("get");
                 }
             } else {
