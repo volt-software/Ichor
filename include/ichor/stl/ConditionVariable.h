@@ -57,9 +57,7 @@ namespace Ichor {
             const auto _delta = atime - _c_entry;
             const auto _s_atime = _s_entry + _delta;
 
-            if (_wait_until_impl(lock, _s_atime) == cv_status::no_timeout)
-                return cv_status::no_timeout;
-            return cv_status::timeout;
+            return _wait_until_impl(lock, _s_atime);
         }
 
         template<typename LockT, typename RepT, typename PeriodT, typename PredicateT>
