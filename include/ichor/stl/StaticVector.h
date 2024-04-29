@@ -285,7 +285,6 @@ namespace Ichor {
             }
         }
         constexpr void assign(size_type n, const_reference u) final {
-            assert(n >= 0);
             assert(n <= N);
             _size = std::max(_size, static_cast<storage_size_type>(n));
             for(size_type i = 0; i < n; ++i) {
@@ -350,7 +349,6 @@ namespace Ichor {
         }
 
         constexpr void resize(size_type sz, const_reference c) final {
-            assert(sz >= 0);
             assert(sz <= std::numeric_limits<storage_size_type>::max());
             assert(sz <= N);
             if constexpr (Detail::is_sufficiently_trivial<T>) {
@@ -382,12 +380,10 @@ namespace Ichor {
         }
 
         constexpr reference       operator[](size_type n) final {
-            assert(n >= 0);
             assert(n < _size);
             return *(_data.data() + n);
         }
         constexpr const_reference operator[](size_type n) const final {
-            assert(n >= 0);
             assert(n < _size);
             return *(_data.data() + n);
         }
@@ -443,10 +439,9 @@ namespace Ichor {
         }
 
         constexpr iterator insert(const_iterator const_position, size_type n, const_reference x) final {
-            assert(n >= 0);
             assert(_size + n <= N);
             auto position = iterator{const_cast<pointer>(const_position.operator->())};
-            _size += n;
+            _size += static_cast<storage_size_type>(n);
             if constexpr (std::is_move_constructible_v<T>) {
                 std::move_backward(position, end() - static_cast<difference_type>(n), end());
             } else {
