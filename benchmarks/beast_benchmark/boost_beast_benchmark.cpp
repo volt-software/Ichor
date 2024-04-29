@@ -26,18 +26,8 @@
 #include <list>
 #include <memory>
 #include <string>
-
-// Glaze uses different conventions than Ichor, ignore them to prevent being spammed by warnings
-#if defined( __GNUC__ )
-#    pragma GCC diagnostic push
-#    pragma GCC diagnostic ignored "-Wsign-conversion"
-#    pragma GCC diagnostic ignored "-Wshadow"
-#    pragma GCC diagnostic ignored "-Wconversion"
-#endif
-#include <glaze/glaze.hpp>
-#if defined( __GNUC__ )
-#    pragma GCC diagnostic pop
-#endif
+#include <fmt/format.h>
+#include <ichor/glaze.h>
 
 namespace beast = boost::beast;         // from <boost/beast.hpp>
 namespace http = beast::http;           // from <boost/beast/http.hpp>

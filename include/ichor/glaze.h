@@ -6,6 +6,7 @@
 #    pragma GCC diagnostic ignored "-Wsign-conversion"
 #    pragma GCC diagnostic ignored "-Wshadow"
 #    pragma GCC diagnostic ignored "-Wconversion"
+#    pragma GCC diagnostic ignored "-Wmissing-braces"
 #endif
 #include <glaze/glaze.hpp>
 #if defined( __GNUC__ )
