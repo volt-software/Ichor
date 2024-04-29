@@ -3,7 +3,6 @@
 #include <ichor/coroutines/Task.h>
 #include <ichor/stl/StringUtils.h>
 #include <string_view>
-#include <optional> // Glaze does not support tl::optional
 #include <tl/optional.h>
 #include <string>
 #include <tl/expected.h>
@@ -85,46 +84,45 @@ namespace Ichor::Etcd::v3 {
 
     struct EtcdRangeRequest final {
         std::string key;
-        std::optional<std::string> range_end;
-        int64_t limit{};
-        int64_t revision{};
-        EtcdSortOrder sort_order{};
-        EtcdSortTarget sort_target{};
-        bool serializable{};
-        bool keys_only{};
-        bool count_only{};
-        std::optional<int64_t> min_mod_revision;
-        std::optional<int64_t> max_mod_revision;
-        std::optional<int64_t> min_create_revision;
-        std::optional<int64_t> max_create_revision;
+        tl::optional<std::string> range_end;
+        tl::optional<int64_t> limit{};
+        tl::optional<int64_t> revision{};
+        tl::optional<EtcdSortOrder> sort_order{};
+        tl::optional<EtcdSortTarget> sort_target{};
+        tl::optional<bool> serializable{};
+        tl::optional<bool> keys_only{};
+        tl::optional<bool> count_only{};
+        tl::optional<int64_t> min_mod_revision;
+        tl::optional<int64_t> max_mod_revision;
+        tl::optional<int64_t> min_create_revision;
+        tl::optional<int64_t> max_create_revision;
     };
 
     struct EtcdRangeResponse final {
         EtcdResponseHeader header;
         std::vector<EtcdKeyValue> kvs;
         int64_t count{};
-        bool more{};
+        tl::optional<bool> more{};
     };
 
     struct EtcdPutRequest final {
         std::string key;
         std::string value;
         int64_t lease{};
-        std::optional<bool> prev_kv;
-        std::optional<bool> ignore_value;
-        std::optional<bool> ignore_lease;
+        tl::optional<bool> prev_kv;
+        tl::optional<bool> ignore_value;
+        tl::optional<bool> ignore_lease;
     };
 
     struct EtcdPutResponse final {
         EtcdResponseHeader header;
-        std::optional<EtcdKeyValue> prev_kv;
-
+        tl::optional<EtcdKeyValue> prev_kv;
     };
 
     struct EtcdDeleteRangeRequest final {
         std::string key;
-        std::optional<std::string> range_end;
-        std::optional<bool> prev_kv;
+        tl::optional<std::string> range_end;
+        tl::optional<bool> prev_kv;
 
     };
 
@@ -139,14 +137,14 @@ namespace Ichor::Etcd::v3 {
         EtcdCompareResult result{};
         EtcdCompareTarget target{};
         std::string key;
-        std::optional<std::string> range_end;
+        tl::optional<std::string> range_end;
         // one of:
         // {
-        std::optional<int64_t> version;
-        std::optional<int64_t> create_revision;
-        std::optional<int64_t> mod_revision;
-        std::optional<std::string> value;
-        std::optional<int64_t> lease;
+        tl::optional<int64_t> version;
+        tl::optional<int64_t> create_revision;
+        tl::optional<int64_t> mod_revision;
+        tl::optional<std::string> value;
+        tl::optional<int64_t> lease;
         // }
     };
 
@@ -168,20 +166,20 @@ namespace Ichor::Etcd::v3 {
     struct EtcdRequestOp final {
         // one of:
         // {
-        std::optional<EtcdRangeRequest> request_range;
-        std::optional<EtcdPutRequest> request_put;
-        std::optional<EtcdDeleteRangeRequest> request_delete;
-        std::optional<EtcdTxnRequest> request_txn;
+        tl::optional<EtcdRangeRequest> request_range;
+        tl::optional<EtcdPutRequest> request_put;
+        tl::optional<EtcdDeleteRangeRequest> request_delete;
+        tl::optional<EtcdTxnRequest> request_txn;
         // }
     };
 
     struct EtcdResponseOp final {
         // one of:
         // {
-        std::optional<EtcdRangeResponse> response_range;
-        std::optional<EtcdPutResponse> response_put;
-        std::optional<EtcdDeleteRangeResponse> response_delete_range;
-        std::optional<EtcdTxnResponse> response_txn;
+        tl::optional<EtcdRangeResponse> response_range;
+        tl::optional<EtcdPutResponse> response_put;
+        tl::optional<EtcdDeleteRangeResponse> response_delete_range;
+        tl::optional<EtcdTxnResponse> response_txn;
         // }
     };
 
