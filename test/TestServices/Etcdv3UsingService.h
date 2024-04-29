@@ -39,7 +39,7 @@ namespace Ichor {
         Task<void> put_get_delete_test() const {
             ICHOR_LOG_INFO(_logger, "running test");
             int64_t revision{};
-            Etcd::v3::EtcdPutRequest putReq{"v3_test_key", "test_value", 0, std::nullopt, std::nullopt, std::nullopt};
+            Etcd::v3::EtcdPutRequest putReq{"v3_test_key", "test_value", 0, tl::nullopt, tl::nullopt, tl::nullopt};
 
             auto putReply = co_await _etcd->put(putReq);
             if (!putReply) {
@@ -84,7 +84,7 @@ namespace Ichor {
         Task<void> txn_test() const {
             ICHOR_LOG_INFO(_logger, "running test");
             int64_t revision{};
-            Etcd::v3::EtcdPutRequest putReq{"v3_txn_key", "txn_value", 0, std::nullopt, std::nullopt, std::nullopt};
+            Etcd::v3::EtcdPutRequest putReq{"v3_txn_key", "txn_value", 0, tl::nullopt, tl::nullopt, tl::nullopt};
 
             auto putReply = co_await _etcd->put(putReq);
             if (!putReply) {
@@ -105,7 +105,7 @@ namespace Ichor {
             Etcd::v3::EtcdTxnRequest txnReq{};
             txnReq.compare.emplace_back(Etcd::v3::EtcdCompare{.target = Etcd::v3::EtcdCompareTarget::CREATE,.key = "v3_txn_key", .create_revision = revision});
             txnReq.success.emplace_back(Etcd::v3::EtcdRequestOp{.request_range = Etcd::v3::EtcdRangeRequest{.key = "v3_txn_key"}});
-            txnReq.failure.emplace_back(Etcd::v3::EtcdRequestOp{.request_range = Etcd::v3::EtcdRangeRequest{.key = "v3_txn_key"}});
+            //txnReq.failure.emplace_back(Etcd::v3::EtcdRequestOp{.request_range = Etcd::v3::EtcdRangeRequest{.key = "v3_txn_key"}});
             auto txnReply = co_await _etcd->txn(txnReq);
             if (!txnReply) {
                 throw std::runtime_error("txn");

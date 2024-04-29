@@ -33,7 +33,137 @@ namespace {
     struct EtcdEnableAuthReply final {
         bool enabled;
     };
+
+    // treat a value as base64
+    template <class T>
+    struct Base64StringType final {
+        static constexpr bool glaze_wrapper = true;
+        using value_type = T;
+        T& val;
+    };
+
+    // treat a value as an optional base64
+    template <class T>
+    struct OptionalBase64StringType final {
+        static constexpr bool glaze_wrapper = true;
+        using value_type = T;
+        T& val;
+    };
 }
+
+namespace glz::detail {
+    template <>
+    struct from_json<tl::optional<bool>> {
+        template <auto Opts>
+        static void op(tl::optional<bool>& value, auto&&... args) {
+            bool val;
+            read<json>::op<Opts>(val, args...);
+            value = val;
+        }
+    };
+
+    template <>
+    struct to_json<tl::optional<bool>> {
+        template <auto Opts>
+        static void op(tl::optional<bool> const & value, auto&&... args) noexcept {
+            if(value) {
+                write<json>::op<Opts>(*value, args...);
+            }
+        }
+    };
+
+    template <>
+    struct from_json<tl::optional<int64_t>> {
+        template <auto Opts>
+        static void op(tl::optional<int64_t>& value, auto&&... args) {
+            int64_t val;
+            read<json>::op<Opts>(val, args...);
+            value = val;
+        }
+    };
+
+    template <>
+    struct to_json<tl::optional<int64_t>> {
+        template <auto Opts>
+        static void op(tl::optional<int64_t> const & value, auto&&... args) noexcept {
+            if(value) {
+                write<json>::op<Opts>(*value, args...);
+            }
+        }
+    };
+
+    template <>
+    struct from_json<tl::optional<std::string>> {
+        template <auto Opts>
+        static void op(tl::optional<std::string>& value, auto&&... args) {
+            std::string val;
+            read<json>::op<Opts>(val, args...);
+            value = val;
+        }
+    };
+
+    template <>
+    struct to_json<tl::optional<std::string>> {
+        template <auto Opts>
+        static void op(tl::optional<std::string> const & value, auto&&... args) noexcept {
+            if(value) {
+                write<json>::op<Opts>(*value, args...);
+            }
+        }
+    };
+
+    template <class T>
+    struct from_json<Base64StringType<T>> {
+        template <auto Opts>
+        static void op(auto&& value, auto&&... args) {
+            read<json>::op<Opts>(value.val, args...);
+            value.val = base64_decode(value.val);
+        }
+    };
+
+    template <class T>
+    struct to_json<Base64StringType<T>> {
+        template <auto Opts>
+        static void op(Base64StringType<T> const & value, auto&&... args) noexcept {
+            write<json>::op<Opts>(base64_encode(reinterpret_cast<unsigned char const *>(value.val.c_str()), value.val.size()), args...);
+        }
+    };
+
+    template <class T>
+    struct from_json<OptionalBase64StringType<T>> {
+        template <auto Opts>
+        static void op(OptionalBase64StringType<T>& value, auto&&... args) {
+            read<json>::op<Opts>(*value.val, args...);
+            value.val = base64_decode(*value.val);
+        }
+    };
+
+    template <class T>
+    struct to_json<OptionalBase64StringType<T>> {
+        template <auto Opts>
+        static void op(OptionalBase64StringType<T> const & value, auto&&... args) noexcept {
+            if(value.val) {
+                write<json>::op<Opts>(base64_encode(reinterpret_cast<unsigned char const *>(value.val->c_str()), value.val->size()), args...);
+            }
+        }
+    };
+
+    template <auto MemPtr>
+    inline constexpr decltype(auto) Base64StringImpl() noexcept {
+        return [](auto&& val) { return Base64StringType<std::remove_reference_t<decltype(val.*MemPtr)>>{val.*MemPtr}; };
+    }
+
+    template <auto MemPtr>
+    inline constexpr decltype(auto) OptionalBase64StringImpl() noexcept {
+        return [](auto&& val) { return OptionalBase64StringType<std::remove_reference_t<decltype(val.*MemPtr)>>{val.*MemPtr}; };
+    }
+}
+
+template <auto MemPtr>
+constexpr auto Base64String = glz::detail::Base64StringImpl<MemPtr>();
+
+template <auto MemPtr>
+constexpr auto OptionalBase64String = glz::detail::OptionalBase64StringImpl<MemPtr>();
 
 template <>
 struct glz::meta<EtcdResponseHeader> {
@@ -48,23 +178,10 @@ struct glz::meta<EtcdResponseHeader> {
 
 template <>
 struct glz::meta<EtcdPutRequest> {
-    static constexpr auto read_key = [](EtcdPutRequest &req, std::string const &s) {
-        req.key = base64_decode(s);
-    };
-    static constexpr auto write_key = [](EtcdPutRequest const &req) -> std::string {
-        return base64_encode(reinterpret_cast<unsigned char const *>(req.key.c_str()), req.key.size());
-    };
-    static constexpr auto read_value = [](EtcdPutRequest &req, std::string const &s) {
-        req.value = base64_decode(s);
-    };
-    static constexpr auto write_value = [](EtcdPutRequest const &req) -> std::string {
-        return base64_encode(reinterpret_cast<unsigned char const *>(req.value.c_str()), req.value.size());
-    };
-
     using T = EtcdPutRequest;
     static constexpr auto value = object(
-        "key", custom<read_key, write_key>,
-        "value", custom<read_value, write_value>,
+        "key", Base64String<&T::key>,
+        "value", Base64String<&T::value>,
         "lease", quoted_num<&T::lease>,
         "prev_kv", &T::prev_kv,
         "ignore_value", &T::ignore_value,
@@ -83,28 +200,10 @@ struct glz::meta<EtcdPutResponse> {
 
 template <>
 struct glz::meta<EtcdRangeRequest> {
-    static constexpr auto read_key = [](EtcdRangeRequest &req, std::string const &s) {
-        req.key = base64_decode(s);
-    };
-    static constexpr auto write_key = [](EtcdRangeRequest const &req) -> std::string {
-        return base64_encode(reinterpret_cast<unsigned char const *>(req.key.c_str()), req.key.size());
-    };
-    static constexpr auto read_range_end = [](EtcdRangeRequest &req, std::optional<std::string> const &s) {
-        if(s) {
-            req.range_end = base64_decode(*s);
-        }
-    };
-    static constexpr auto write_range_end = [](EtcdRangeRequest const &req) -> std::optional<std::string> {
-        if(!req.range_end) {
-            return std::nullopt;
-        }
-        return base64_encode(reinterpret_cast<unsigned char const *>(req.range_end->c_str()), req.range_end->size());
-    };
-
     using T = EtcdRangeRequest;
     static constexpr auto value = object(
-        "key", custom<read_key, write_key>,
-        "range_end", custom<read_range_end, write_range_end>,
+        "key", Base64String<&T::key>,
+        "range_end", OptionalBase64String<&T::range_end>,
         "limit", quoted_num<&T::limit>,
         "revision", quoted_num<&T::revision>,
         "sort_order", &T::sort_order,
@@ -132,28 +231,10 @@ struct glz::meta<EtcdRangeResponse> {
 
 template <>
 struct glz::meta<EtcdDeleteRangeRequest> {
-    static constexpr auto read_key = [](EtcdDeleteRangeRequest &req, std::string const &s) {
-        req.key = base64_decode(s);
-    };
-    static constexpr auto write_key = [](EtcdDeleteRangeRequest const &req) -> std::string {
-        return base64_encode(reinterpret_cast<unsigned char const *>(req.key.c_str()), req.key.size());
-    };
-    static constexpr auto read_range_end = [](EtcdDeleteRangeRequest &req, std::optional<std::string> const &s) {
-        if(s) {
-            req.range_end = base64_decode(*s);
-        }
-    };
-    static constexpr auto write_range_end = [](EtcdDeleteRangeRequest const &req) -> std::optional<std::string> {
-        if(!req.range_end) {
-            return std::nullopt;
-        }
-        return base64_encode(reinterpret_cast<unsigned char const *>(req.range_end->c_str()), req.range_end->size());
-    };
-
     using T = EtcdDeleteRangeRequest;
     static constexpr auto value = object(
-        "key", custom<read_key, write_key>,
-        "range_end", custom<read_range_end, write_range_end>,
+        "key", Base64String<&T::key>,
+        "range_end", OptionalBase64String<&T::range_end>,
         "prev_kv", &T::prev_kv
     );
 };
@@ -177,23 +258,10 @@ struct glz::meta<EtcdDeleteRangeResponse> {
 
 template <>
 struct glz::meta<EtcdKeyValue> {
-    static constexpr auto read_key = [](EtcdKeyValue &req, std::string const &s) {
-        req.key = base64_decode(s);
-    };
-    static constexpr auto write_key = [](EtcdKeyValue const &req) -> std::string {
-        return base64_encode(reinterpret_cast<unsigned char const *>(req.key.c_str()), req.key.size());
-    };
-    static constexpr auto read_value = [](EtcdKeyValue &req, std::string const &s) {
-        req.value = base64_decode(s);
-    };
-    static constexpr auto write_value = [](EtcdKeyValue const &req) -> std::string {
-        return base64_encode(reinterpret_cast<unsigned char const *>(req.value.c_str()), req.value.size());
-    };
-
     using T = EtcdKeyValue;
     static constexpr auto value = object(
-        "key", custom<read_key, write_key>,
-        "value", custom<read_value, write_value>,
+        "key", Base64String<&T::key>,
+        "value", Base64String<&T::value>,
         "create_revision", quoted_num<&T::create_revision>,
         "mod_revision", quoted_num<&T::mod_revision>,
         "version", quoted_num<&T::version>,
@@ -203,45 +271,16 @@ struct glz::meta<EtcdKeyValue> {
 
 template <>
 struct glz::meta<EtcdCompare> {
-    static constexpr auto read_key = [](EtcdCompare &req, std::string const &s) {
-        req.key = base64_decode(s);
-    };
-    static constexpr auto write_key = [](EtcdCompare const &req) -> std::string {
-        return base64_encode(reinterpret_cast<unsigned char const *>(req.key.c_str()), req.key.size());
-    };
-    static constexpr auto read_range_end = [](EtcdCompare &req, std::optional<std::string> const &s) {
-        if(s) {
-            req.range_end = base64_decode(*s);
-        }
-    };
-    static constexpr auto write_range_end = [](EtcdCompare const &req) -> std::optional<std::string> {
-        if(!req.range_end) {
-            return std::nullopt;
-        }
-        return base64_encode(reinterpret_cast<unsigned char const *>(req.range_end->c_str()), req.range_end->size());
-    };
-    static constexpr auto read_value = [](EtcdCompare &req, std::optional<std::string> const &s) {
-        if(s) {
-            req.value = base64_decode(*s);
-        }
-    };
-    static constexpr auto write_value = [](EtcdCompare const &req) -> std::optional<std::string> {
-        if(!req.value) {
-            return std::nullopt;
-        }
-        return base64_encode(reinterpret_cast<unsigned char const *>(req.value->c_str()), req.value->size());
-    };
-
     using T = EtcdCompare;
     static constexpr auto value = object(
         "result", &T::result,
         "target", &T::target,
-        "key", custom<read_key, write_key>,
-        "range_end", custom<read_range_end, write_range_end>,
+        "key", Base64String<&T::key>,
+        "range_end", OptionalBase64String<&T::range_end>,
         "version", quoted_num<&T::version>,
         "create_revision", quoted_num<&T::create_revision>,
         "mod_revision", quoted_num<&T::mod_revision>,
-        "value", custom<read_value, write_value>,
+        "value", OptionalBase64String<&T::value>,
         "lease", quoted_num<&T::lease>
     );
 };
@@ -314,6 +353,110 @@ struct glz::meta<EtcdInternalVersionReply> {
         "etcdcluster", &T::etcdcluster
     );
 };
+
+namespace glz::detail {
+    template <>
+    struct from_json<tl::optional<EtcdKeyValue>> {
+        template <auto Opts>
+        static void op(tl::optional<EtcdKeyValue>& value, auto&&... args) {
+            EtcdKeyValue val;
+            read<json>::op<Opts>(val, args...);
+            value = val;
+        }
+    };
+
+    template <>
+    struct to_json<tl::optional<EtcdKeyValue>> {
+        template <auto Opts>
+        static void op(tl::optional<EtcdKeyValue> const & value, auto&&... args) noexcept {
+            if(value) {
+                write<json>::op<Opts>(*value, args...);
+            }
+        }
+    };
+
+    template <>
+    struct from_json<tl::optional<EtcdRangeResponse>> {
+        template <auto Opts>
+        static void op(tl::optional<EtcdRangeResponse>& value, auto&&... args) {
+            fmt::print("EtcdRangeResponse read\n");
+            EtcdRangeResponse val;
+            read<json>::op<Opts>(val, args...);
+            value = val;
+        }
+    };
+
+    template <>
+    struct to_json<tl::optional<EtcdRangeResponse>> {
+        template <auto Opts>
+        static void op(tl::optional<EtcdRangeResponse> const & value, auto&&... args) noexcept {
+            fmt::print("EtcdRangeResponse write\n");
+            if(value) {
+                write<json>::op<Opts>(*value, args...);
+            }
+        }
+    };
+
+    template <>
+    struct from_json<tl::optional<EtcdPutResponse>> {
+        template <auto Opts>
+        static void op(tl::optional<EtcdPutResponse>& value, auto&&... args) {
+            EtcdPutResponse val;
+            read<json>::op<Opts>(val, args...);
+            value = val;
+        }
+    };
+
+    template <>
+    struct to_json<tl::optional<EtcdPutResponse>> {
+        template <auto Opts>
+        static void op(tl::optional<EtcdPutResponse> const & value, auto&&... args) noexcept {
+            if(value) {
+                write<json>::op<Opts>(*value, args...);
+            }
+        }
+    };
+
+    template <>
+    struct from_json<tl::optional<EtcdDeleteRangeResponse>> {
+        template <auto Opts>
+        static void op(tl::optional<EtcdDeleteRangeResponse>& value, auto&&... args) {
+            EtcdDeleteRangeResponse val;
+            read<json>::op<Opts>(val, args...);
+            value = val;
+        }
+    };
+
+    template <>
+    struct to_json<tl::optional<EtcdDeleteRangeResponse>> {
+        template <auto Opts>
+        static void op(tl::optional<EtcdDeleteRangeResponse> const & value, auto&&... args) noexcept {
+            if(value) {
+                write<json>::op<Opts>(*value, args...);
+            }
+        }
+    };
+
+    template <>
+    struct from_json<tl::optional<EtcdTxnResponse>> {
+        template <auto Opts>
+        static void op(tl::optional<EtcdTxnResponse>& value, auto&&... args) {
+            EtcdTxnResponse val;
+            read<json>::op<Opts>(val, args...);
+            value = val;
+        }
+    };
+
+    template <>
+    struct to_json<tl::optional<EtcdTxnResponse>> {
+        template <auto Opts>
+        static void op(tl::optional<EtcdTxnResponse> const & value, auto&&... args) noexcept {
+            if(value) {
+                write<json>::op<Opts>(*value, args...);
+            }
+        }
+    };
+}
 
 EtcdService::EtcdService(DependencyRegister &reg, Properties props) : AdvancedService<EtcdService>(std::move(props)) {
     reg.registerDependency<ILogger>(this, DependencyFlags::NONE, getProperties());
