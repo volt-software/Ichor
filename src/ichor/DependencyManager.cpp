@@ -945,8 +945,11 @@ bool Ichor::DependencyManager::existingCoroutineFor(ServiceIdType serviceId) con
                 return t.second->originatingService == serviceId || static_cast<StartServiceEvent*>(t.second.get())->serviceId == serviceId;
             case ContinuableDependencyOfflineEvent::TYPE:
                 return static_cast<ContinuableDependencyOfflineEvent*>(t.second.get())->originatingOfflineServiceId == serviceId;
+            case DependencyOfflineEvent::TYPE:
+            case StopServiceEvent::TYPE:
+                return false;
             default:
-                return t.second->originatingService == serviceId && evtType != DependencyOfflineEvent::TYPE && evtType != StopServiceEvent::TYPE;
+                return t.second->originatingService == serviceId;
         }
     });
 
