@@ -12,6 +12,7 @@ namespace Ichor {
         }
 
         Task<tl::expected<void, Ichor::StartError>> start() final {
+            _v = _etcd->getDetectedVersion();
             co_await put_get_delete_test();
             co_await txn_test();
             co_await leases_test();
@@ -169,16 +170,18 @@ namespace Ichor {
                 throw std::runtime_error("ttl keys[0] != v3_lease_key");
             }
 
-            Etcd::v3::LeaseLeasesRequest leasesReq{};
-            auto leasesReply = co_await _etcd->leaseLeases(leasesReq);
-            if(!leasesReply) {
-                throw std::runtime_error("leases");
-            }
-            if(leasesReply->leases.size() != 1) {
-                throw std::runtime_error("leases leases.size() != 1");
-            }
-            if(leasesReply->leases[0].id != 101) {
-                throw std::runtime_error("leases leases[0].id != 101");
+            if(_v >= Version{3, 3, 0}) {
+                Etcd::v3::LeaseLeasesRequest leasesReq{};
+                auto leasesReply = co_await _etcd->leaseLeases(leasesReq);
+                if (!leasesReply) {
+                    throw std::runtime_error("leases");
+                }
+                if (leasesReply->leases.size() != 1) {
+                    throw std::runtime_error("leases leases.size() != 1");
+                }
+                if (leasesReply->leases[0].id != 101) {
+                    throw std::runtime_error("leases leases[0].id != 101");
+                }
             }
 
             Etcd::v3::LeaseRevokeRequest revokeReq{101};
