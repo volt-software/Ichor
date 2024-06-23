@@ -12,14 +12,14 @@ RUN update-alternatives --install /usr/bin/cpp cpp /usr/bin/cpp-12 60
 WORKDIR /opt
 RUN wget https://github.com/redis/hiredis/archive/refs/tags/v1.2.0.tar.gz
 RUN wget https://boostorg.jfrog.io/artifactory/main/release/1.83.0/source/boost_1_83_0.tar.bz2
-RUN wget https://www.openssl.org/source/openssl-3.0.11.tar.gz
+RUN wget https://www.openssl.org/source/openssl-3.0.14.tar.gz
 
 ENV CFLAGS="-O2 -fstack-protector-strong -fcf-protection -fstack-clash-protection -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=3"
 ENV CXXFLAGS="-O2 -std=c++20 -fstack-protector-strong -fcf-protection -fstack-clash-protection -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=3 -D_GLIBCXX_ASSERTIONS -D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_FAST"
 ENV LDFLAGS="-Wl,-z,nodlopen -Wl,-z,noexecstack -Wl,-z,relro -Wl,-z,now"
 
-RUN tar xf openssl-3.0.11.tar.gz
-WORKDIR /opt/openssl-3.0.11
+RUN tar xf openssl-3.0.14.tar.gz
+WORKDIR /opt/openssl-3.0.14
 RUN ./Configure --prefix=/usr --openssldir=/etc/ssl --libdir=lib no-shared
 RUN make -j
 RUN make -j install
