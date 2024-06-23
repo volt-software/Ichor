@@ -60,6 +60,12 @@ namespace Ichor::Etcd::v3 {
         LEASE = 4
     };
 
+    enum class EtcdAuthPermissionType : uint_fast16_t {
+        READ = 0,
+        WRITE = 1,
+        READWRITE = 2
+    };
+
     struct EtcdKeyValue final {
         std::string key;
         std::string value;
@@ -108,7 +114,7 @@ namespace Ichor::Etcd::v3 {
     struct EtcdPutRequest final {
         std::string key;
         std::string value;
-        int64_t lease{};
+        tl::optional<int64_t> lease{};
         tl::optional<bool> prev_kv;
         tl::optional<bool> ignore_value;
         tl::optional<bool> ignore_lease;
@@ -184,11 +190,235 @@ namespace Ichor::Etcd::v3 {
     };
 
     struct EtcdCompactionRequest final {
-
+        int64_t revision;
+        tl::optional<bool> physical;
     };
 
     struct EtcdCompactionResponse final {
+        EtcdResponseHeader header;
+    };
 
+    struct LeaseGrantRequest final {
+        int64_t ttl_in_seconds;
+        int64_t id;
+    };
+
+    struct LeaseGrantResponse final {
+        EtcdResponseHeader header;
+        int64_t id;
+        int64_t ttl_in_seconds;
+        tl::optional<std::string> error;
+    };
+
+    struct LeaseRevokeRequest final {
+        int64_t id;
+    };
+
+    struct LeaseRevokeResponse final {
+        EtcdResponseHeader header;
+    };
+
+    struct LeaseKeepAliveRequest final {
+        int64_t id;
+    };
+
+    struct LeaseKeepAliveWrapper final {
+        EtcdResponseHeader header;
+        int64_t id;
+        int64_t ttl_in_seconds;
+    };
+
+    struct LeaseKeepAliveResponse final {
+        LeaseKeepAliveWrapper result;
+    };
+
+    struct LeaseTimeToLiveRequest final {
+        int64_t id;
+        bool keys;
+    };
+
+    struct LeaseTimeToLiveResponse final {
+        EtcdResponseHeader header;
+        int64_t id;
+        int64_t ttl_in_seconds;
+        int64_t granted_ttl;
+        std::vector<std::string> keys;
+    };
+
+    struct LeaseLeasesRequest final {
+    };
+
+    struct LeaseStatus final {
+        int64_t id;
+    };
+
+    struct LeaseLeasesResponse final {
+        EtcdResponseHeader header;
+        std::vector<LeaseStatus> leases;
+    };
+
+    struct AuthEnableRequest final {
+    };
+
+    struct AuthEnableResponse final {
+        EtcdResponseHeader header;
+    };
+
+    struct AuthDisableRequest final {
+    };
+
+    struct AuthDisableResponse final {
+        EtcdResponseHeader header;
+    };
+
+    struct AuthStatusRequest final {
+    };
+
+    struct AuthStatusResponse final {
+        EtcdResponseHeader header;
+        bool enabled;
+        uint64_t authRevision;
+    };
+
+    struct AuthenticateRequest final {
+        std::string name;
+        std::string password;
+    };
+
+    struct AuthenticateResponse final {
+        EtcdResponseHeader header;
+        std::string token;
+    };
+
+    struct AuthUserAddOptions final {
+        bool no_password;
+    };
+
+    struct AuthPermission final {
+        EtcdAuthPermissionType permType;
+        std::string key;
+        std::string range_end;
+    };
+
+    struct AuthRole final {
+        std::string name;
+        std::vector<AuthPermission> keyPermission;
+    };
+
+    struct AuthUserAddRequest final {
+        std::string name;
+        std::string password;
+        AuthUserAddOptions options;
+        std::string hashedPassword;
+    };
+
+    struct AuthUserAddResponse final {
+        EtcdResponseHeader header;
+    };
+
+    struct AuthUserGetRequest final {
+        std::string name;
+    };
+
+    struct AuthUserGetResponse final {
+        EtcdResponseHeader header;
+        std::vector<std::string> roles;
+    };
+
+    struct AuthUserListRequest final {
+    };
+
+    struct AuthUserListResponse final {
+        EtcdResponseHeader header;
+        std::vector<std::string> users;
+    };
+
+    struct AuthUserDeleteRequest final {
+        std::string name;
+    };
+
+    struct AuthUserDeleteResponse final {
+        EtcdResponseHeader header;
+    };
+
+    struct AuthUserChangePasswordRequest final {
+        std::string name;
+        std::string password;
+        std::string hashedPassword;
+    };
+
+    struct AuthUserChangePasswordResponse final {
+        EtcdResponseHeader header;
+    };
+
+    struct AuthUserGrantRoleRequest final {
+        std::string name;
+        std::string role;
+    };
+
+    struct AuthUserGrantRoleResponse final {
+        EtcdResponseHeader header;
+    };
+
+    struct AuthUserRevokeRoleRequest final {
+        std::string name;
+        std::string role;
+    };
+
+    struct AuthUserRevokeRoleResponse final {
+        EtcdResponseHeader header;
+    };
+
+    struct AuthRoleAddRequest final {
+        std::string name;
+    };
+
+    struct AuthRoleAddResponse final {
+        EtcdResponseHeader header;
+    };
+
+    struct AuthRoleGetRequest final {
+        std::string role;
+    };
+
+    struct AuthRoleGetResponse final {
+        EtcdResponseHeader header;
+        std::vector<AuthPermission> perm;
+    };
+
+    struct AuthRoleListRequest final {
+    };
+
+    struct AuthRoleListResponse final {
+        EtcdResponseHeader header;
+        std::vector<std::string> roles;
+    };
+
+    struct AuthRoleDeleteRequest final {
+        std::string role;
+    };
+
+    struct AuthRoleDeleteResponse final {
+        EtcdResponseHeader header;
+    };
+
+    struct AuthRoleGrantPermissionRequest final {
+        std::string name;
+        AuthPermission perm;
+    };
+
+    struct AuthRoleGrantPermissionResponse final {
+        EtcdResponseHeader header;
+    };
+
+    struct AuthRoleRevokePermissionRequest final {
+        std::string name;
+        std::string key;
+        std::string range_end;
+    };
+
+    struct AuthRoleRevokePermissionResponse final {
+        EtcdResponseHeader header;
     };
 
     struct EtcdWatchRequest final {
@@ -196,7 +426,7 @@ namespace Ichor::Etcd::v3 {
     };
 
     struct EtcdWatchResponse final {
-
+        EtcdResponseHeader header;
     };
 
     struct EtcdVersionReply final {
@@ -231,12 +461,196 @@ namespace Ichor::Etcd::v3 {
         [[nodiscard]] virtual Task<tl::expected<EtcdDeleteRangeResponse, EtcdError>> deleteRange(EtcdDeleteRangeRequest const &req) = 0;
 
         /**
-         * Delete (multiple) key(s)
+         * Execute one or more multiple operations as one atomic operation.
          *
          * @param req
-         * @return Either the EtcdRangeResponse or an EtcdError
+         * @return Either the EtcdTxnResponse or an EtcdError
          */
         [[nodiscard]] virtual Task<tl::expected<EtcdTxnResponse, EtcdError>> txn(EtcdTxnRequest const &req) = 0;
+
+        /**
+         * Compact the Etcd history.
+         *
+         * @param req
+         * @return Either the EtcdCompactionResponse or an EtcdError
+         */
+        [[nodiscard]] virtual Task<tl::expected<EtcdCompactionResponse, EtcdError>> compact(EtcdCompactionRequest const &req) = 0;
+
+        /**
+         * Request a lease
+         *
+         * @param req
+         * @return Either the LeaseGrantResponse or an EtcdError
+         */
+        [[nodiscard]] virtual Task<tl::expected<LeaseGrantResponse, EtcdError>> leaseGrant(LeaseGrantRequest const &req) = 0;
+
+        /**
+         * Revoke a lease
+         *
+         * @param req
+         * @return Either the LeaseRevokeResponse or an EtcdError
+         */
+        [[nodiscard]] virtual Task<tl::expected<LeaseRevokeResponse, EtcdError>> leaseRevoke(LeaseRevokeRequest const &req) = 0;
+
+        /**
+         * Keep an existing lease alive
+         *
+         * @param req
+         * @return Either the LeaseKeepAliveResponse or an EtcdError
+         */
+        [[nodiscard]] virtual Task<tl::expected<LeaseKeepAliveResponse, EtcdError>> leaseKeepAlive(LeaseKeepAliveRequest const &req) = 0;
+
+        /**
+         * Get information on an existing lease
+         *
+         * @param req
+         * @return Either the LeaseTimeToLiveResponse or an EtcdError
+         */
+        [[nodiscard]] virtual Task<tl::expected<LeaseTimeToLiveResponse, EtcdError>> leaseTimeToLive(LeaseTimeToLiveRequest const &req) = 0;
+
+        /**
+         * Get a list of existing leases
+         *
+         * @param req
+         * @return Either the LeaseLeasesResponse or an EtcdError
+         */
+        [[nodiscard]] virtual Task<tl::expected<LeaseLeasesResponse, EtcdError>> leaseLeases(LeaseLeasesRequest const &req) = 0;
+
+        /**
+         * Get a list of existing leases
+         *
+         * @param req
+         * @return Either the AuthEnableResponse or an EtcdError
+         */
+        [[nodiscard]] virtual Task<tl::expected<AuthEnableResponse, EtcdError>> authEnable(AuthEnableRequest const &req) = 0;
+
+        /**
+         * Get a list of existing leases
+         *
+         * @param req
+         * @return Either the AuthDisableResponse or an EtcdError
+         */
+        [[nodiscard]] virtual Task<tl::expected<AuthDisableResponse, EtcdError>> authDisable(AuthDisableRequest const &req) = 0;
+
+        /**
+         * Get a list of existing leases
+         *
+         * @param req
+         * @return Either the AuthStatusResponse or an EtcdError
+         */
+        [[nodiscard]] virtual Task<tl::expected<AuthStatusResponse, EtcdError>> authStatus(AuthStatusRequest const &req) = 0;
+
+        /**
+         * Get a list of existing leases
+         *
+         * @param req
+         * @return Either the AuthenticateResponse or an EtcdError
+         */
+        [[nodiscard]] virtual Task<tl::expected<AuthenticateResponse, EtcdError>> authenticate(AuthenticateRequest const &req) = 0;
+
+        /**
+         * Get a list of existing leases
+         *
+         * @param req
+         * @return Either the AuthUserAddResponse or an EtcdError
+         */
+        [[nodiscard]] virtual Task<tl::expected<AuthUserAddResponse, EtcdError>> userAdd(AuthUserAddRequest const &req) = 0;
+
+        /**
+         * Get a list of existing leases
+         *
+         * @param req
+         * @return Either the AuthUserGetResponse or an EtcdError
+         */
+        [[nodiscard]] virtual Task<tl::expected<AuthUserGetResponse, EtcdError>> userGet(AuthUserGetRequest const &req) = 0;
+
+        /**
+         * Get a list of existing leases
+         *
+         * @param req
+         * @return Either the AuthUserListResponse or an EtcdError
+         */
+        [[nodiscard]] virtual Task<tl::expected<AuthUserListResponse, EtcdError>> userList(AuthUserListRequest const &req) = 0;
+
+        /**
+         * Get a list of existing leases
+         *
+         * @param req
+         * @return Either the AuthUserDeleteResponse or an EtcdError
+         */
+        [[nodiscard]] virtual Task<tl::expected<AuthUserDeleteResponse, EtcdError>> userDelete(AuthUserDeleteRequest const &req) = 0;
+
+        /**
+         * Get a list of existing leases
+         *
+         * @param req
+         * @return Either the AuthUserChangePasswordResponse or an EtcdError
+         */
+        [[nodiscard]] virtual Task<tl::expected<AuthUserChangePasswordResponse, EtcdError>> userChangePassword(AuthUserChangePasswordRequest const &req) = 0;
+
+        /**
+         * Get a list of existing leases
+         *
+         * @param req
+         * @return Either the AuthUserGrantRoleResponse or an EtcdError
+         */
+        [[nodiscard]] virtual Task<tl::expected<AuthUserGrantRoleResponse, EtcdError>> userGrantRole(AuthUserGrantRoleRequest const &req) = 0;
+
+        /**
+         * Get a list of existing leases
+         *
+         * @param req
+         * @return Either the AuthUserRevokeRoleResponse or an EtcdError
+         */
+        [[nodiscard]] virtual Task<tl::expected<AuthUserRevokeRoleResponse, EtcdError>> userRevokeRole(AuthUserRevokeRoleRequest const &req) = 0;
+
+        /**
+         * Get a list of existing leases
+         *
+         * @param req
+         * @return Either the AuthRoleAddResponse or an EtcdError
+         */
+        [[nodiscard]] virtual Task<tl::expected<AuthRoleAddResponse, EtcdError>> roleAdd(AuthRoleAddRequest const &req) = 0;
+
+        /**
+         * Get a list of existing leases
+         *
+         * @param req
+         * @return Either the LeaseLeasesResponse or an EtcdError
+         */
+        [[nodiscard]] virtual Task<tl::expected<AuthRoleGetResponse, EtcdError>> roleGet(AuthRoleGetRequest const &req) = 0;
+
+        /**
+         * Get a list of existing leases
+         *
+         * @param req
+         * @return Either the AuthRoleListResponse or an EtcdError
+         */
+        [[nodiscard]] virtual Task<tl::expected<AuthRoleListResponse, EtcdError>> roleList(AuthRoleListRequest const &req) = 0;
+
+        /**
+         * Get a list of existing leases
+         *
+         * @param req
+         * @return Either the AuthRoleDeleteResponse or an EtcdError
+         */
+        [[nodiscard]] virtual Task<tl::expected<AuthRoleDeleteResponse, EtcdError>> roleDelete(AuthRoleDeleteRequest const &req) = 0;
+
+        /**
+         * Get a list of existing leases
+         *
+         * @param req
+         * @return Either the AuthRoleGrantPermissionResponse or an EtcdError
+         */
+        [[nodiscard]] virtual Task<tl::expected<AuthRoleGrantPermissionResponse, EtcdError>> roleGrantPermission(AuthRoleGrantPermissionRequest const &req) = 0;
+
+        /**
+         * Get a list of existing leases
+         *
+         * @param req
+         * @return Either the AuthRoleRevokePermissionResponse or an EtcdError
+         */
+        [[nodiscard]] virtual Task<tl::expected<AuthRoleRevokePermissionResponse, EtcdError>> roleRevokePermission(AuthRoleRevokePermissionRequest const &req) = 0;
 
         /**
          * Get the version of the etcd server that we're connected to

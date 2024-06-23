@@ -20,7 +20,7 @@ namespace Ichor::Etcd::v3 {
      *
      * Properties:
      * - "Address" std::string - What address to connect to (required)
-     * - "Port" uint6_t - What port to connect to (required)
+     * - "Port" uint16_t - What port to connect to (required)
      */
     class EtcdService final : public IEtcd, public AdvancedService<EtcdService> {
     public:
@@ -31,6 +31,29 @@ namespace Ichor::Etcd::v3 {
         [[nodiscard]] Task<tl::expected<EtcdRangeResponse, EtcdError>> range(EtcdRangeRequest const &req) final;
         [[nodiscard]] Task<tl::expected<EtcdDeleteRangeResponse, EtcdError>> deleteRange(EtcdDeleteRangeRequest const &req) final;
         [[nodiscard]] Task<tl::expected<EtcdTxnResponse, EtcdError>> txn(EtcdTxnRequest const &req) final;
+        [[nodiscard]] Task<tl::expected<EtcdCompactionResponse, EtcdError>> compact(EtcdCompactionRequest const &req) final;
+        [[nodiscard]] Task<tl::expected<LeaseGrantResponse, EtcdError>> leaseGrant(LeaseGrantRequest const &req) final;
+        [[nodiscard]] Task<tl::expected<LeaseRevokeResponse, EtcdError>> leaseRevoke(LeaseRevokeRequest const &req) final;
+        [[nodiscard]] Task<tl::expected<LeaseKeepAliveResponse, EtcdError>> leaseKeepAlive(LeaseKeepAliveRequest const &req) final;
+        [[nodiscard]] Task<tl::expected<LeaseTimeToLiveResponse, EtcdError>> leaseTimeToLive(LeaseTimeToLiveRequest const &req) final;
+        [[nodiscard]] Task<tl::expected<LeaseLeasesResponse, EtcdError>> leaseLeases(LeaseLeasesRequest const &req) final;
+        [[nodiscard]] Task<tl::expected<AuthEnableResponse, EtcdError>> authEnable(AuthEnableRequest const &req) final;
+        [[nodiscard]] Task<tl::expected<AuthDisableResponse, EtcdError>> authDisable(AuthDisableRequest const &req) final;
+        [[nodiscard]] Task<tl::expected<AuthStatusResponse, EtcdError>> authStatus(AuthStatusRequest const &req) final;
+        [[nodiscard]] Task<tl::expected<AuthenticateResponse, EtcdError>> authenticate(AuthenticateRequest const &req) final;
+        [[nodiscard]] Task<tl::expected<AuthUserAddResponse, EtcdError>> userAdd(AuthUserAddRequest const &req) final;
+        [[nodiscard]] Task<tl::expected<AuthUserGetResponse, EtcdError>> userGet(AuthUserGetRequest const &req) final;
+        [[nodiscard]] Task<tl::expected<AuthUserListResponse, EtcdError>> userList(AuthUserListRequest const &req) final;
+        [[nodiscard]] Task<tl::expected<AuthUserDeleteResponse, EtcdError>> userDelete(AuthUserDeleteRequest const &req) final;
+        [[nodiscard]] Task<tl::expected<AuthUserChangePasswordResponse, EtcdError>> userChangePassword(AuthUserChangePasswordRequest const &req) final;
+        [[nodiscard]] Task<tl::expected<AuthUserGrantRoleResponse, EtcdError>> userGrantRole(AuthUserGrantRoleRequest const &req) final;
+        [[nodiscard]] Task<tl::expected<AuthUserRevokeRoleResponse, EtcdError>> userRevokeRole(AuthUserRevokeRoleRequest const &req) final;
+        [[nodiscard]] Task<tl::expected<AuthRoleAddResponse, EtcdError>> roleAdd(AuthRoleAddRequest const &req) final;
+        [[nodiscard]] Task<tl::expected<AuthRoleGetResponse, EtcdError>> roleGet(AuthRoleGetRequest const &req) final;
+        [[nodiscard]] Task<tl::expected<AuthRoleListResponse, EtcdError>> roleList(AuthRoleListRequest const &req) final;
+        [[nodiscard]] Task<tl::expected<AuthRoleDeleteResponse, EtcdError>> roleDelete(AuthRoleDeleteRequest const &req) final;
+        [[nodiscard]] Task<tl::expected<AuthRoleGrantPermissionResponse, EtcdError>> roleGrantPermission(AuthRoleGrantPermissionRequest const &req) final;
+        [[nodiscard]] Task<tl::expected<AuthRoleRevokePermissionResponse, EtcdError>> roleRevokePermission(AuthRoleRevokePermissionRequest const &req) final;
         [[nodiscard]] Task<tl::expected<EtcdVersionReply, EtcdError>> version() final;
         [[nodiscard]] Version getDetectedVersion() const final;
         [[nodiscard]] Task<tl::expected<bool, EtcdError>> health() final;

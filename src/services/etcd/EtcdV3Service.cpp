@@ -49,6 +49,14 @@ namespace {
         using value_type = T;
         T& val;
     };
+
+    // treat a value as an optional base64
+    template <class T>
+    struct VectorBase64StringType final {
+        static constexpr bool glaze_wrapper = true;
+        using value_type = T;
+        T& val;
+    };
 }
 
 namespace glz::detail {
@@ -132,7 +140,7 @@ namespace glz::detail {
     template <class T>
     struct from_json<OptionalBase64StringType<T>> {
         template <auto Opts>
-        static void op(OptionalBase64StringType<T>& value, auto&&... args) {
+        static void op(OptionalBase64StringType<T>&& value, auto&&... args) {
             read<json>::op<Opts>(*value.val, args...);
             value.val = base64_decode(*value.val);
         }
@@ -148,6 +156,27 @@ namespace glz::detail {
         }
     };
 
+    template <class T>
+    struct from_json<VectorBase64StringType<T>> {
+        template <auto Opts>
+        static void op(VectorBase64StringType<T>&& value, auto&&... args) {
+            read<json>::op<Opts>(value.val, args...);
+            for(auto &val : value.val) {
+                val = base64_decode(val);
+            }
+        }
+    };
+
+    template <class T>
+    struct to_json<VectorBase64StringType<T>> {
+        template <auto Opts>
+        static void op(VectorBase64StringType<T> const & value, auto&&... args) noexcept {
+            for(auto &val : value.val) {
+                write<json>::op<Opts>(base64_encode(reinterpret_cast<unsigned char const *>(val.c_str()), val.size()), args...);
+            }
+        }
+    };
+
     template <auto MemPtr>
     inline constexpr decltype(auto) Base64StringImpl() noexcept {
         return [](auto&& val) { return Base64StringType<std::remove_reference_t<decltype(val.*MemPtr)>>{val.*MemPtr}; };
@@ -157,6 +186,11 @@ namespace glz::detail {
     inline constexpr decltype(auto) OptionalBase64StringImpl() noexcept {
         return [](auto&& val) { return OptionalBase64StringType<std::remove_reference_t<decltype(val.*MemPtr)>>{val.*MemPtr}; };
     }
+
+    template <auto MemPtr>
+    inline constexpr decltype(auto) VectorBase64StringImpl() noexcept {
+        return [](auto&& val) { return VectorBase64StringType<std::remove_reference_t<decltype(val.*MemPtr)>>{val.*MemPtr}; };
+    }
 }
 
 template <auto MemPtr>
@@ -164,6 +198,9 @@ constexpr auto Base64String = glz::detail::Base64StringImpl<MemPtr>();
 
 template <auto MemPtr>
 constexpr auto OptionalBase64String = glz::detail::OptionalBase64StringImpl<MemPtr>();
+
+template <auto MemPtr>
+constexpr auto VectorBase64String = glz::detail::VectorBase64StringImpl<MemPtr>();
 
 template <>
 struct glz::meta<EtcdResponseHeader> {
@@ -241,17 +278,10 @@ struct glz::meta<EtcdDeleteRangeRequest> {
 
 template <>
 struct glz::meta<EtcdDeleteRangeResponse> {
-    static constexpr auto read_deleted = [](EtcdDeleteRangeResponse &req, std::string const &s) {
-        req.deleted = Ichor::FastAtoi(s.data());
-    };
-    static constexpr auto write_deleted = [](EtcdDeleteRangeResponse const &req) -> std::string {
-        return fmt::format("{}", req.deleted);
-    };
-
     using T = EtcdDeleteRangeResponse;
     static constexpr auto value = object(
         "header", &T::header,
-        "deleted", custom<read_deleted, write_deleted>,
+        "deleted", quoted_num<&T::deleted>,
         "prev_kv", &T::prev_kvs
     );
 };
@@ -324,6 +354,195 @@ struct glz::meta<EtcdTxnResponse> {
         "header", &T::header,
         "succeeded", &T::succeeded,
         "responses", &T::responses
+    );
+};
+
+template <>
+struct glz::meta<EtcdCompactionRequest> {
+    using T = EtcdCompactionRequest;
+    static constexpr auto value = object(
+        "revision", quoted_num<&T::revision>,
+        "physical", &T::physical
+    );
+};
+
+template <>
+struct glz::meta<EtcdCompactionResponse> {
+    using T = EtcdCompactionResponse;
+    static constexpr auto value = object(
+        "header", &T::header
+    );
+};
+
+template <>
+struct glz::meta<LeaseGrantRequest> {
+    using T = LeaseGrantRequest;
+    static constexpr auto value = object(
+        "TTL", quoted_num<&T::ttl_in_seconds>,
+        "ID", quoted_num<&T::id>
+    );
+};
+
+template <>
+struct glz::meta<LeaseGrantResponse> {
+    using T = LeaseGrantResponse;
+    static constexpr auto value = object(
+        "header", &T::header,
+        "TTL", quoted_num<&T::ttl_in_seconds>,
+        "ID", quoted_num<&T::id>,
+        "error", OptionalBase64String<&T::error>
+    );
+};
+
+template <>
+struct glz::meta<LeaseRevokeRequest> {
+    using T = LeaseRevokeRequest;
+    static constexpr auto value = object(
+        "ID", quoted_num<&T::id>
+    );
+};
+
+template <>
+struct glz::meta<LeaseRevokeResponse> {
+    using T = LeaseRevokeResponse;
+    static constexpr auto value = object(
+        "header", &T::header
+    );
+};
+
+template <>
+struct glz::meta<LeaseKeepAliveRequest> {
+    using T = LeaseKeepAliveRequest;
+    static constexpr auto value = object(
+        "ID", quoted_num<&T::id>
+    );
+};
+
+template <>
+struct glz::meta<LeaseKeepAliveWrapper> {
+    using T = LeaseKeepAliveWrapper;
+    static constexpr auto value = object(
+        "header", &T::header,
+        "TTL", quoted_num<&T::ttl_in_seconds>,
+        "ID", quoted_num<&T::id>
+    );
+};
+
+template <>
+struct glz::meta<LeaseKeepAliveResponse> {
+    using T = LeaseKeepAliveResponse;
+    static constexpr auto value = object(
+        "result", &T::result
+    );
+};
+
+template <>
+struct glz::meta<LeaseTimeToLiveRequest> {
+    using T = LeaseTimeToLiveRequest;
+    static constexpr auto value = object(
+        "ID", quoted_num<&T::id>,
+        "keys", &T::keys
+    );
+};
+
+template <>
+struct glz::meta<LeaseTimeToLiveResponse> {
+    using T = LeaseTimeToLiveResponse;
+    static constexpr auto value = object(
+        "header", &T::header,
+        "TTL", quoted_num<&T::ttl_in_seconds>,
+        "ID", quoted_num<&T::id>,
+        "grantedTTL", quoted_num<&T::granted_ttl>,
+        "keys", VectorBase64String<&T::keys>
+    );
+};
+
+template <>
+struct glz::meta<LeaseLeasesRequest> {
+    using T = LeaseLeasesRequest;
+    static constexpr auto value = object(
+    );
+};
+
+template <>
+struct glz::meta<LeaseStatus> {
+    using T = LeaseStatus;
+    static constexpr auto value = object(
+            "ID", quoted_num<&T::id>
+    );
+};
+
+template <>
+struct glz::meta<LeaseLeasesResponse> {
+    using T = LeaseLeasesResponse;
+    static constexpr auto value = object(
+            "header", &T::header,
+            "leases", &T::leases
+    );
+};
+
+template <>
+struct glz::meta<AuthEnableRequest> {
+    using T = AuthEnableRequest;
+    static constexpr auto value = object(
+    );
+};
+
+template <>
+struct glz::meta<AuthEnableResponse> {
+    using T = AuthEnableResponse;
+    static constexpr auto value = object(
+            "header", &T::header
+    );
+};
+
+template <>
+struct glz::meta<AuthDisableRequest> {
+    using T = AuthDisableRequest;
+    static constexpr auto value = object(
+    );
+};
+
+template <>
+struct glz::meta<AuthDisableResponse> {
+    using T = AuthDisableResponse;
+    static constexpr auto value = object(
+            "header", &T::header
+    );
+};
+
+template <>
+struct glz::meta<AuthStatusRequest> {
+    using T = AuthStatusRequest;
+    static constexpr auto value = object(
+    );
+};
+
+template <>
+struct glz::meta<AuthStatusResponse> {
+    using T = AuthStatusResponse;
+    static constexpr auto value = object(
+            "header", &T::header,
+            "enabled", &T::enabled,
+            "authRevision", quoted_num<&T::authRevision>
+    );
+};
+
+template <>
+struct glz::meta<AuthenticateRequest> {
+    using T = AuthenticateRequest;
+    static constexpr auto value = object(
+            "name", &T::name,
+            "password", &T::password
+    );
+};
+
+template <>
+struct glz::meta<AuthenticateResponse> {
+    using T = AuthenticateResponse;
+    static constexpr auto value = object(
+            "header", &T::header,
+            "token", &T::token
     );
 };
 
@@ -575,7 +794,7 @@ static Ichor::Task<tl::expected<RespT, EtcdError>> execute_request(std::string u
     }
 
     RespT etcd_reply;
-    auto err = glz::template read<glz::opts{.error_on_const_read = true}>(etcd_reply, http_reply.body);
+    auto err = glz::template read<glz::opts{.error_on_const_read = true}, RespT>(etcd_reply, http_reply.body);
 
     if(err) {
         ICHOR_LOG_ERROR(logger, "Glaze error {} at {}", err.ec, err.location);
@@ -666,6 +885,118 @@ Ichor::Task<tl::expected<EtcdTxnResponse, EtcdError>> EtcdService::txn(EtcdTxnRe
     }
 
     co_return co_await execute_request<EtcdTxnRequest, EtcdTxnResponse>(fmt::format("{}/kv/txn", _versionSpecificUrl), _auth, _logger, _mainConn, req);
+}
+
+Ichor::Task<tl::expected<EtcdCompactionResponse, EtcdError>> EtcdService::compact(EtcdCompactionRequest const &req) {
+    co_return co_await execute_request<EtcdCompactionRequest, EtcdCompactionResponse>(fmt::format("{}/kv/compaction", _versionSpecificUrl), _auth, _logger, _mainConn, req);
+}
+
+Ichor::Task<tl::expected<LeaseGrantResponse, EtcdError>> EtcdService::leaseGrant(LeaseGrantRequest const &req) {
+    co_return co_await execute_request<LeaseGrantRequest, LeaseGrantResponse>(fmt::format("{}/lease/grant", _versionSpecificUrl), _auth, _logger, _mainConn, req);
+}
+
+Ichor::Task<tl::expected<LeaseRevokeResponse, EtcdError>> EtcdService::leaseRevoke(LeaseRevokeRequest const &req) {
+    co_return co_await execute_request<LeaseRevokeRequest, LeaseRevokeResponse>(fmt::format("{}/lease/revoke", _versionSpecificUrl), _auth, _logger, _mainConn, req);
+}
+
+Ichor::Task<tl::expected<LeaseKeepAliveResponse, EtcdError>> EtcdService::leaseKeepAlive(LeaseKeepAliveRequest const &req) {
+    if(_detectedVersion < Version{3, 1, 0}) {
+        ICHOR_LOG_ERROR(_logger, "Cannot use leaseKeepAlive {}, minimum 3.1.0 required", _detectedVersion);
+        co_return tl::unexpected(EtcdError::ETCD_SERVER_DOES_NOT_SUPPORT);
+    }
+
+    co_return co_await execute_request<LeaseKeepAliveRequest, LeaseKeepAliveResponse>(fmt::format("{}/lease/keepalive", _versionSpecificUrl), _auth, _logger, _mainConn, req);
+}
+
+Ichor::Task<tl::expected<LeaseTimeToLiveResponse, EtcdError>> EtcdService::leaseTimeToLive(LeaseTimeToLiveRequest const &req) {
+    if(_detectedVersion < Version{3, 1, 0}) {
+        ICHOR_LOG_ERROR(_logger, "Cannot use leaseTimeToLive {}, minimum 3.1.0 required", _detectedVersion);
+        co_return tl::unexpected(EtcdError::ETCD_SERVER_DOES_NOT_SUPPORT);
+    }
+
+    co_return co_await execute_request<LeaseTimeToLiveRequest, LeaseTimeToLiveResponse>(fmt::format("{}/lease/timetolive", _versionSpecificUrl), _auth, _logger, _mainConn, req);
+}
+
+Ichor::Task<tl::expected<LeaseLeasesResponse, EtcdError>> EtcdService::leaseLeases(LeaseLeasesRequest const &req) {
+    if(_detectedVersion < Version{3, 3, 0}) {
+        ICHOR_LOG_ERROR(_logger, "Cannot use leaseLeases {}, minimum 3.3.0 required", _detectedVersion);
+        co_return tl::unexpected(EtcdError::ETCD_SERVER_DOES_NOT_SUPPORT);
+    }
+
+    co_return co_await execute_request<LeaseLeasesRequest, LeaseLeasesResponse>(fmt::format("{}/lease/leases", _versionSpecificUrl), _auth, _logger, _mainConn, req);
+}
+
+Ichor::Task<tl::expected<AuthEnableResponse, EtcdError>> EtcdService::authEnable(AuthEnableRequest const &req) {
+    co_return co_await execute_request<AuthEnableRequest, AuthEnableResponse>(fmt::format("{}/auth/enable", _versionSpecificUrl), _auth, _logger, _mainConn, req);
+}
+
+Ichor::Task<tl::expected<AuthDisableResponse, EtcdError>> EtcdService::authDisable(AuthDisableRequest const &req) {
+    co_return co_await execute_request<AuthDisableRequest, AuthDisableResponse>(fmt::format("{}/auth/disable", _versionSpecificUrl), _auth, _logger, _mainConn, req);
+}
+
+Ichor::Task<tl::expected<AuthStatusResponse, EtcdError>> EtcdService::authStatus(AuthStatusRequest const &req) {
+    if(_detectedVersion < Version{3, 5, 0}) {
+        ICHOR_LOG_ERROR(_logger, "Cannot use AuthStatus {}, minimum 3.5.0 required", _detectedVersion);
+        co_return tl::unexpected(EtcdError::ETCD_SERVER_DOES_NOT_SUPPORT);
+    }
+
+    co_return co_await execute_request<AuthStatusRequest, AuthStatusResponse>(fmt::format("{}/auth/status", _versionSpecificUrl), _auth, _logger, _mainConn, req);
+}
+
+Ichor::Task<tl::expected<AuthenticateResponse, EtcdError>> EtcdService::authenticate(AuthenticateRequest const &req) {
+    co_return co_await execute_request<AuthenticateRequest, AuthenticateResponse>(fmt::format("{}/auth/authenticate", _versionSpecificUrl), _auth, _logger, _mainConn, req);
+}
+
+Ichor::Task<tl::expected<AuthUserAddResponse, EtcdError>> EtcdService::userAdd(AuthUserAddRequest const &req) {
+    co_return co_await execute_request<AuthUserAddRequest, AuthUserAddResponse>(fmt::format("{}/auth/user/add", _versionSpecificUrl), _auth, _logger, _mainConn, req);
+}
+
+Ichor::Task<tl::expected<AuthUserGetResponse, EtcdError>> EtcdService::userGet(AuthUserGetRequest const &req) {
+    co_return co_await execute_request<AuthUserGetRequest, AuthUserGetResponse>(fmt::format("{}/auth/user/get", _versionSpecificUrl), _auth, _logger, _mainConn, req);
+}
+
+Ichor::Task<tl::expected<AuthUserListResponse, EtcdError>> EtcdService::userList(AuthUserListRequest const &req) {
+    co_return co_await execute_request<AuthUserListRequest, AuthUserListResponse>(fmt::format("{}/auth/user/list", _versionSpecificUrl), _auth, _logger, _mainConn, req);
+}
+
+Ichor::Task<tl::expected<AuthUserDeleteResponse, EtcdError>> EtcdService::userDelete(AuthUserDeleteRequest const &req) {
+    co_return co_await execute_request<AuthUserDeleteRequest, AuthUserDeleteResponse>(fmt::format("{}/auth/user/delete", _versionSpecificUrl), _auth, _logger, _mainConn, req);
+}
+
+Ichor::Task<tl::expected<AuthUserChangePasswordResponse, EtcdError>> EtcdService::userChangePassword(AuthUserChangePasswordRequest const &req) {
+    co_return co_await execute_request<AuthUserChangePasswordRequest, AuthUserChangePasswordResponse>(fmt::format("{}/auth/user/changepw", _versionSpecificUrl), _auth, _logger, _mainConn, req);
+}
+
+Ichor::Task<tl::expected<AuthUserGrantRoleResponse, EtcdError>> EtcdService::userGrantRole(AuthUserGrantRoleRequest const &req) {
+    co_return co_await execute_request<AuthUserGrantRoleRequest, AuthUserGrantRoleResponse>(fmt::format("{}/auth/user/grant", _versionSpecificUrl), _auth, _logger, _mainConn, req);
+}
+
+Ichor::Task<tl::expected<AuthUserRevokeRoleResponse, EtcdError>> EtcdService::userRevokeRole(AuthUserRevokeRoleRequest const &req) {
+    co_return co_await execute_request<AuthUserRevokeRoleRequest, AuthUserRevokeRoleResponse>(fmt::format("{}/auth/user/revoke", _versionSpecificUrl), _auth, _logger, _mainConn, req);
+}
+
+Ichor::Task<tl::expected<AuthRoleAddResponse, EtcdError>> EtcdService::roleAdd(AuthRoleAddRequest const &req) {
+    co_return co_await execute_request<AuthRoleAddRequest, AuthRoleAddResponse>(fmt::format("{}/auth/role/add", _versionSpecificUrl), _auth, _logger, _mainConn, req);
+}
+
+Ichor::Task<tl::expected<AuthRoleGetResponse, EtcdError>> EtcdService::roleGet(AuthRoleGetRequest const &req) {
+    co_return co_await execute_request<AuthRoleGetRequest, AuthRoleGetResponse>(fmt::format("{}/auth/role/get", _versionSpecificUrl), _auth, _logger, _mainConn, req);
+}
+
+Ichor::Task<tl::expected<AuthRoleListResponse, EtcdError>> EtcdService::roleList(AuthRoleListRequest const &req) {
+    co_return co_await execute_request<AuthRoleListRequest, AuthRoleListResponse>(fmt::format("{}/auth/role/list", _versionSpecificUrl), _auth, _logger, _mainConn, req);
+}
+
+Ichor::Task<tl::expected<AuthRoleDeleteResponse, EtcdError>> EtcdService::roleDelete(AuthRoleDeleteRequest const &req) {
+    co_return co_await execute_request<AuthRoleDeleteRequest, AuthRoleDeleteResponse>(fmt::format("{}/auth/role/delete", _versionSpecificUrl), _auth, _logger, _mainConn, req);
+}
+
+Ichor::Task<tl::expected<AuthRoleGrantPermissionResponse, EtcdError>> EtcdService::roleGrantPermission(AuthRoleGrantPermissionRequest const &req) {
+    co_return co_await execute_request<AuthRoleGrantPermissionRequest, AuthRoleGrantPermissionResponse>(fmt::format("{}/auth/role/grant", _versionSpecificUrl), _auth, _logger, _mainConn, req);
+}
+
+Ichor::Task<tl::expected<AuthRoleRevokePermissionResponse, EtcdError>> EtcdService::roleRevokePermission(AuthRoleRevokePermissionRequest const &req) {
+    co_return co_await execute_request<AuthRoleRevokePermissionRequest, AuthRoleRevokePermissionResponse>(fmt::format("{}/auth/role/revoke", _versionSpecificUrl), _auth, _logger, _mainConn, req);
 }
 
 Ichor::Task<tl::expected<EtcdVersionReply, EtcdError>> EtcdService::version() {

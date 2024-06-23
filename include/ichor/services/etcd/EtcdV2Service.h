@@ -20,7 +20,7 @@ namespace Ichor::Etcd::v2 {
      *
      * Properties:
      * - "Address" std::string - What address to connect to (required)
-     * - "Port" uint6_t - What port to connect to (required)
+     * - "Port" uint16_t - What port to connect to (required)
      */
     class EtcdService final : public IEtcd, public AdvancedService<EtcdService> {
     public:
