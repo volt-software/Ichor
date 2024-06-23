@@ -892,11 +892,13 @@ Ichor::Task<tl::expected<EtcdCompactionResponse, EtcdError>> EtcdService::compac
 }
 
 Ichor::Task<tl::expected<LeaseGrantResponse, EtcdError>> EtcdService::leaseGrant(LeaseGrantRequest const &req) {
+    // for some reason this one that doesn't need kv/lease/...
     co_return co_await execute_request<LeaseGrantRequest, LeaseGrantResponse>(fmt::format("{}/lease/grant", _versionSpecificUrl), _auth, _logger, _mainConn, req);
 }
 
 Ichor::Task<tl::expected<LeaseRevokeResponse, EtcdError>> EtcdService::leaseRevoke(LeaseRevokeRequest const &req) {
-    co_return co_await execute_request<LeaseRevokeRequest, LeaseRevokeResponse>(fmt::format("{}/lease/revoke", _versionSpecificUrl), _auth, _logger, _mainConn, req);
+    // older versions use kv/lease/..., newer versions support this but default to /lease/.... Something to watch out for.
+    co_return co_await execute_request<LeaseRevokeRequest, LeaseRevokeResponse>(fmt::format("{}/kv/lease/revoke", _versionSpecificUrl), _auth, _logger, _mainConn, req);
 }
 
 Ichor::Task<tl::expected<LeaseKeepAliveResponse, EtcdError>> EtcdService::leaseKeepAlive(LeaseKeepAliveRequest const &req) {
@@ -905,6 +907,7 @@ Ichor::Task<tl::expected<LeaseKeepAliveResponse, EtcdError>> EtcdService::leaseK
         co_return tl::unexpected(EtcdError::ETCD_SERVER_DOES_NOT_SUPPORT);
     }
 
+    // for some reason this one that doesn't need kv/lease/...
     co_return co_await execute_request<LeaseKeepAliveRequest, LeaseKeepAliveResponse>(fmt::format("{}/lease/keepalive", _versionSpecificUrl), _auth, _logger, _mainConn, req);
 }
 
@@ -914,7 +917,8 @@ Ichor::Task<tl::expected<LeaseTimeToLiveResponse, EtcdError>> EtcdService::lease
         co_return tl::unexpected(EtcdError::ETCD_SERVER_DOES_NOT_SUPPORT);
     }
 
-    co_return co_await execute_request<LeaseTimeToLiveRequest, LeaseTimeToLiveResponse>(fmt::format("{}/lease/timetolive", _versionSpecificUrl), _auth, _logger, _mainConn, req);
+    // older versions use kv/lease/..., newer versions support this but default to /lease/.... Something to watch out for.
+    co_return co_await execute_request<LeaseTimeToLiveRequest, LeaseTimeToLiveResponse>(fmt::format("{}/kv/lease/timetolive", _versionSpecificUrl), _auth, _logger, _mainConn, req);
 }
 
 Ichor::Task<tl::expected<LeaseLeasesResponse, EtcdError>> EtcdService::leaseLeases(LeaseLeasesRequest const &req) {
@@ -923,7 +927,8 @@ Ichor::Task<tl::expected<LeaseLeasesResponse, EtcdError>> EtcdService::leaseLeas
         co_return tl::unexpected(EtcdError::ETCD_SERVER_DOES_NOT_SUPPORT);
     }
 
-    co_return co_await execute_request<LeaseLeasesRequest, LeaseLeasesResponse>(fmt::format("{}/lease/leases", _versionSpecificUrl), _auth, _logger, _mainConn, req);
+    // older versions use kv/lease/..., newer versions support this but default to /lease/.... Something to watch out for.
+    co_return co_await execute_request<LeaseLeasesRequest, LeaseLeasesResponse>(fmt::format("{}/kv/lease/leases", _versionSpecificUrl), _auth, _logger, _mainConn, req);
 }
 
 Ichor::Task<tl::expected<AuthEnableResponse, EtcdError>> EtcdService::authEnable(AuthEnableRequest const &req) {
