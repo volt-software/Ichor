@@ -106,12 +106,13 @@ if [[ $DOCKER -eq 1 ]]; then
   run_benchmarks
   docker run -v $(pwd)/../:/opt/ichor/src -v $(pwd)/../build:/opt/ichor/build --rm -it ichor-asan "rm -rf /opt/ichor/src/bin/* /opt/ichor/src/build/*" || exit 1
 
-  rm -rf ./* ../bin/*
-  docker build -f ../Dockerfile-asan-clang -t ichor-asan-clang . || exit 1
-  docker run -v $(pwd)/../:/opt/ichor/src -v $(pwd)/../build:/opt/ichor/build --rm --privileged -it ichor-asan-clang || exit 1
-  run_examples
-  run_benchmarks
-  docker run -v $(pwd)/../:/opt/ichor/src -v $(pwd)/../build:/opt/ichor/build --rm -it ichor-asan-clang "rm -rf /opt/ichor/src/bin/* /opt/ichor/src/build/*" || exit 1
+# Disabled because of https://github.com/llvm/llvm-project/issues/96210
+#  rm -rf ./* ../bin/*
+#  docker build -f ../Dockerfile-asan-clang -t ichor-asan-clang --progress=plain --no-cache . || exit 1
+#  docker run -v $(pwd)/../:/opt/ichor/src -v $(pwd)/../build:/opt/ichor/build --rm --privileged -it ichor-asan-clang || exit 1
+#  run_examples
+#  run_benchmarks
+#  docker run -v $(pwd)/../:/opt/ichor/src -v $(pwd)/../build:/opt/ichor/build --rm -it ichor-asan-clang "rm -rf /opt/ichor/src/bin/* /opt/ichor/src/build/*" || exit 1
 
   rm -rf ./* ../bin/*
   docker build -f ../Dockerfile-tsan -t ichor-tsan . || exit 1
