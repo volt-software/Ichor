@@ -280,6 +280,11 @@ if(ICHOR_USE_SANITIZERS)
         if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
             target_compile_options(ichor PUBLIC -no-pie)
         endif()
+
+        if(ICHOR_DISABLE_RTTI)
+            # vptr UB checks not compatible with no-rtti
+            target_compile_options(ichor PUBLIC -fno-sanitize=vptr)
+        endif()
     endif()
 
     if(ICHOR_USE_BOOST_BEAST)
