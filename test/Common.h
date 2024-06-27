@@ -15,10 +15,8 @@ void waitForRunning(DependencyManager &dm) {
 }
 
 class ExceptionMatcher final : public Catch::Matchers::MatcherBase<std::exception> {
-    std::string m_message;
 public:
-
-    ExceptionMatcher() {}
+    ExceptionMatcher() = default;
 
     bool match(std::exception const& ex) const final {
         return true;
