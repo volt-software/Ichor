@@ -19,6 +19,7 @@ TEST_CASE("Util Tests") {
         std::string_view input = "/some/http/10/11/12/test";
         auto result = ctre::match<"\\/some\\/http\\/(\\d{1,2})\\/(\\d{1,2})\\/(\\d{1,2})\\/test">(input);
         REQUIRE(result);
+        REQUIRE(result.count() == 4);
         Ichor::constexpr_for<(size_t)0, result.count(), (size_t)1>([&result](auto i) {
             fmt::print("ctre match {}\n", result.get<i>().to_view());
             if constexpr (i == 1) {
