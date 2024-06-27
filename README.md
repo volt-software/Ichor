@@ -40,8 +40,8 @@ More examples can be found in the [examples directory](examples).
 * Partial support for OSX Monterey (using `brew install llvm`, ASAN in combination with boost beast may result in false positives)
 
 ## Supported Compilers
-* Gcc 11.3 or newer (see [this gcc bug](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=95137) for why)
-* Clang 14 or newer
+* Gcc 12 or newer
+* Clang 15 or newer
 * MSVC 17.4+ (though some workarounds for [some](https://developercommunity.visualstudio.com/t/C2039:-promise_type:-is-not-a-member-o/10505491) [compiler](https://developercommunity.visualstudio.com/t/c20-Friend-definition-of-class-with-re/10197302) [bugs](https://developercommunity.visualstudio.com/t/certain-coroutines-cause-error-C7587:-/10311276?q=%22task+runner%22+gulp+duration&sort=newest) are used)
 
 ## Currently Unsupported
