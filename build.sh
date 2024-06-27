@@ -28,8 +28,8 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-ccompilers=("clang-15" "clang-18" "gcc-11" "gcc")
-cppcompilers=("clang++-15" "clang++-18" "g++-11" "g++")
+ccompilers=("clang-15" "clang-18" "gcc-12" "gcc")
+cppcompilers=("clang++-15" "clang++-18" "g++-12" "g++")
 
 if [[ "$1" == "--dev" ]]; then
   ccompilers=("clang" "gcc")

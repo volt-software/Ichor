@@ -2,7 +2,7 @@
 
 ## Compiling Ichor
 
-Compiling is done through the help of CMake. Ichor requires at least gcc 11.3 (due to [this gcc bug](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=95137)), clang 15 or MSVC 2022, and is tested with gcc 11.3, 12.1, clang 15, clang 18 and MSVC 2022.
+Compiling is done through the help of CMake. Ichor requires at least gcc 12, clang 15 or MSVC 2022, and is tested with gcc 12.4, clang 15, clang 18 and MSVC 2022.
 
 The easiest is to build it with the provided Dockerfile:
 
@@ -20,18 +20,18 @@ The binaries will then be in `$(pwd)/bin`. The musl build statically compiles Ic
 
 ```
 sudo apt install libisl-dev libmpfrc++-dev libmpc-dev libgmp-dev build-essential cmake g++
-wget http://mirror.koddos.net/gcc/releases/gcc-11.3.0/gcc-11.3.0.tar.xz
-tar xf gcc-11.3.0.tar.xz
+wget http://mirror.koddos.net/gcc/releases/gcc-12.4.0/gcc-12.4.0.tar.xz
+tar xf gcc-12.4.0.tar.xz
 mkdir gcc-build
 cd gcc-build
-../gcc-11.3.0/configure --prefix=/opt/gcc-11.3 --enable-languages=c,c++ --disable-multilib
+../gcc-12.4.0/configure --prefix=/opt/gcc-12.4 --enable-languages=c,c++ --disable-multilib --with-system-zlib --enable-default-pie --enable-default-ssp --enable-host-pie
 make -j$(nproc)
 sudo make install
 ```
 
 Then with cmake, use
 ```
-CXX=/opt/gcc-11.3.0/bin/g++ cmake $PATH_TO_ICHOR_SOURCE
+CXX=/opt/gcc-12.4.0/bin/g++ cmake $PATH_TO_ICHOR_SOURCE
 ```
 
 #### Ubuntu 22.04:
