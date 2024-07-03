@@ -674,6 +674,12 @@ if(ICHOR_BUILD_TESTING)
             target_compile_options(Catch2WithMain PUBLIC -fsanitize=address,undefined -fno-omit-frame-pointer)
             target_compile_definitions(Catch2 PUBLIC __SANITIZE_ADDRESS__ _GLIBCXX_SANITIZE_VECTOR)
             target_compile_definitions(Catch2WithMain PUBLIC __SANITIZE_ADDRESS__ _GLIBCXX_SANITIZE_VECTOR)
+
+            if(ICHOR_DISABLE_RTTI)
+                # vptr UB checks not compatible with no-rtti
+                target_compile_options(Catch2 PUBLIC -fno-sanitize=vptr)
+                target_compile_options(Catch2WithMain PUBLIC -fno-sanitize=vptr)
+            endif()
         endif()
     endif()
 
