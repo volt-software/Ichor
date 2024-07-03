@@ -300,16 +300,11 @@ namespace Ichor::Etcd::v3 {
         std::string range_end;
     };
 
-    struct AuthRole final {
-        std::string name;
-        std::vector<AuthPermission> keyPermission;
-    };
-
     struct AuthUserAddRequest final {
         std::string name;
         std::string password;
-        AuthUserAddOptions options;
-        std::string hashedPassword;
+        tl::optional<AuthUserAddOptions> options;
+        tl::optional<std::string> hashedPassword;
     };
 
     struct AuthUserAddResponse final {
@@ -344,7 +339,7 @@ namespace Ichor::Etcd::v3 {
     struct AuthUserChangePasswordRequest final {
         std::string name;
         std::string password;
-        std::string hashedPassword;
+        tl::optional<std::string> hashedPassword;
     };
 
     struct AuthUserChangePasswordResponse final {
@@ -352,7 +347,7 @@ namespace Ichor::Etcd::v3 {
     };
 
     struct AuthUserGrantRoleRequest final {
-        std::string name;
+        std::string user;
         std::string role;
     };
 
@@ -412,9 +407,9 @@ namespace Ichor::Etcd::v3 {
     };
 
     struct AuthRoleRevokePermissionRequest final {
-        std::string name;
+        std::string role;
         std::string key;
-        std::string range_end;
+        tl::optional<std::string> range_end;
     };
 
     struct AuthRoleRevokePermissionResponse final {
@@ -432,6 +427,7 @@ namespace Ichor::Etcd::v3 {
     struct EtcdVersionReply final {
         Version etcdserver;
         Version etcdcluster;
+        tl::optional<Version> storage;
     };
 
     class IEtcd {
@@ -517,7 +513,7 @@ namespace Ichor::Etcd::v3 {
         [[nodiscard]] virtual Task<tl::expected<LeaseLeasesResponse, EtcdError>> leaseLeases(LeaseLeasesRequest const &req) = 0;
 
         /**
-         * Get a list of existing leases
+         * Enable authorisation on etcd server
          *
          * @param req
          * @return Either the AuthEnableResponse or an EtcdError
@@ -525,7 +521,7 @@ namespace Ichor::Etcd::v3 {
         [[nodiscard]] virtual Task<tl::expected<AuthEnableResponse, EtcdError>> authEnable(AuthEnableRequest const &req) = 0;
 
         /**
-         * Get a list of existing leases
+         * Disable authorisation on etcd server
          *
          * @param req
          * @return Either the AuthDisableResponse or an EtcdError
@@ -533,7 +529,7 @@ namespace Ichor::Etcd::v3 {
         [[nodiscard]] virtual Task<tl::expected<AuthDisableResponse, EtcdError>> authDisable(AuthDisableRequest const &req) = 0;
 
         /**
-         * Get a list of existing leases
+         * Get current authorisation status of etcd server
          *
          * @param req
          * @return Either the AuthStatusResponse or an EtcdError
@@ -541,7 +537,7 @@ namespace Ichor::Etcd::v3 {
         [[nodiscard]] virtual Task<tl::expected<AuthStatusResponse, EtcdError>> authStatus(AuthStatusRequest const &req) = 0;
 
         /**
-         * Get a list of existing leases
+         * Authenticate as a specific user for subsequent calls
          *
          * @param req
          * @return Either the AuthenticateResponse or an EtcdError
@@ -549,7 +545,7 @@ namespace Ichor::Etcd::v3 {
         [[nodiscard]] virtual Task<tl::expected<AuthenticateResponse, EtcdError>> authenticate(AuthenticateRequest const &req) = 0;
 
         /**
-         * Get a list of existing leases
+         * Add a user to etcd
          *
          * @param req
          * @return Either the AuthUserAddResponse or an EtcdError
@@ -557,7 +553,7 @@ namespace Ichor::Etcd::v3 {
         [[nodiscard]] virtual Task<tl::expected<AuthUserAddResponse, EtcdError>> userAdd(AuthUserAddRequest const &req) = 0;
 
         /**
-         * Get a list of existing leases
+         * Get user info
          *
          * @param req
          * @return Either the AuthUserGetResponse or an EtcdError
@@ -565,7 +561,7 @@ namespace Ichor::Etcd::v3 {
         [[nodiscard]] virtual Task<tl::expected<AuthUserGetResponse, EtcdError>> userGet(AuthUserGetRequest const &req) = 0;
 
         /**
-         * Get a list of existing leases
+         * Get list of all users names
          *
          * @param req
          * @return Either the AuthUserListResponse or an EtcdError
@@ -573,7 +569,7 @@ namespace Ichor::Etcd::v3 {
         [[nodiscard]] virtual Task<tl::expected<AuthUserListResponse, EtcdError>> userList(AuthUserListRequest const &req) = 0;
 
         /**
-         * Get a list of existing leases
+         * Delete a given user
          *
          * @param req
          * @return Either the AuthUserDeleteResponse or an EtcdError
@@ -581,7 +577,7 @@ namespace Ichor::Etcd::v3 {
         [[nodiscard]] virtual Task<tl::expected<AuthUserDeleteResponse, EtcdError>> userDelete(AuthUserDeleteRequest const &req) = 0;
 
         /**
-         * Get a list of existing leases
+         * Change password for a given user
          *
          * @param req
          * @return Either the AuthUserChangePasswordResponse or an EtcdError
@@ -589,7 +585,7 @@ namespace Ichor::Etcd::v3 {
         [[nodiscard]] virtual Task<tl::expected<AuthUserChangePasswordResponse, EtcdError>> userChangePassword(AuthUserChangePasswordRequest const &req) = 0;
 
         /**
-         * Get a list of existing leases
+         * Grant a role to a user
          *
          * @param req
          * @return Either the AuthUserGrantRoleResponse or an EtcdError
@@ -597,7 +593,7 @@ namespace Ichor::Etcd::v3 {
         [[nodiscard]] virtual Task<tl::expected<AuthUserGrantRoleResponse, EtcdError>> userGrantRole(AuthUserGrantRoleRequest const &req) = 0;
 
         /**
-         * Get a list of existing leases
+         * Revoke a role from a ruser
          *
          * @param req
          * @return Either the AuthUserRevokeRoleResponse or an EtcdError
@@ -605,7 +601,7 @@ namespace Ichor::Etcd::v3 {
         [[nodiscard]] virtual Task<tl::expected<AuthUserRevokeRoleResponse, EtcdError>> userRevokeRole(AuthUserRevokeRoleRequest const &req) = 0;
 
         /**
-         * Get a list of existing leases
+         * Add a role to the etcd server
          *
          * @param req
          * @return Either the AuthRoleAddResponse or an EtcdError
@@ -613,7 +609,7 @@ namespace Ichor::Etcd::v3 {
         [[nodiscard]] virtual Task<tl::expected<AuthRoleAddResponse, EtcdError>> roleAdd(AuthRoleAddRequest const &req) = 0;
 
         /**
-         * Get a list of existing leases
+         * Get role info
          *
          * @param req
          * @return Either the LeaseLeasesResponse or an EtcdError
@@ -621,7 +617,7 @@ namespace Ichor::Etcd::v3 {
         [[nodiscard]] virtual Task<tl::expected<AuthRoleGetResponse, EtcdError>> roleGet(AuthRoleGetRequest const &req) = 0;
 
         /**
-         * Get a list of existing leases
+         * List all available roles on the etcd server
          *
          * @param req
          * @return Either the AuthRoleListResponse or an EtcdError
@@ -629,7 +625,7 @@ namespace Ichor::Etcd::v3 {
         [[nodiscard]] virtual Task<tl::expected<AuthRoleListResponse, EtcdError>> roleList(AuthRoleListRequest const &req) = 0;
 
         /**
-         * Get a list of existing leases
+         * Delete a role from etcd
          *
          * @param req
          * @return Either the AuthRoleDeleteResponse or an EtcdError
@@ -637,7 +633,7 @@ namespace Ichor::Etcd::v3 {
         [[nodiscard]] virtual Task<tl::expected<AuthRoleDeleteResponse, EtcdError>> roleDelete(AuthRoleDeleteRequest const &req) = 0;
 
         /**
-         * Get a list of existing leases
+         * Grant a permission to a role
          *
          * @param req
          * @return Either the AuthRoleGrantPermissionResponse or an EtcdError
@@ -645,7 +641,7 @@ namespace Ichor::Etcd::v3 {
         [[nodiscard]] virtual Task<tl::expected<AuthRoleGrantPermissionResponse, EtcdError>> roleGrantPermission(AuthRoleGrantPermissionRequest const &req) = 0;
 
         /**
-         * Get a list of existing leases
+         * Revoke a permission from a role
          *
          * @param req
          * @return Either the AuthRoleRevokePermissionResponse or an EtcdError
@@ -672,21 +668,9 @@ namespace Ichor::Etcd::v3 {
         [[nodiscard]] virtual Task<tl::expected<bool, EtcdError>> health() = 0;
 
         /**
-         * Sets the authentication to use for each request. Caution: might store password in memory.
-         * @param user
-         * @param password
-         */
-        virtual void setAuthentication(std::string_view user, std::string_view password) = 0;
-
-        /**
-         * Clears used authentication
-         */
-        virtual void clearAuthentication() = 0;
-
-        /**
          * Gets the user used with the current authentication
          */
-        [[nodiscard]] virtual tl::optional<std::string> getAuthenticationUser() const = 0;
+        [[nodiscard]] virtual tl::optional<std::string> const &getAuthenticationUser() const = 0;
 
     protected:
         ~IEtcd() = default;
@@ -843,6 +827,27 @@ struct fmt::formatter<Ichor::Etcd::v3::EtcdCompareTarget> {
                 return fmt::format_to(ctx.out(), "VALUE");
             case Ichor::Etcd::v3::EtcdCompareTarget::LEASE:
                 return fmt::format_to(ctx.out(), "LEASE");
+            default:
+                return fmt::format_to(ctx.out(), "error, please file a bug in Ichor");
+        }
+    }
+};
+
+template <>
+struct fmt::formatter<Ichor::Etcd::v3::EtcdAuthPermissionType> {
+    constexpr auto parse(format_parse_context& ctx) {
+        return ctx.end();
+    }
+
+    template <typename FormatContext>
+    auto format(const Ichor::Etcd::v3::EtcdAuthPermissionType& state, FormatContext& ctx) {
+        switch(state) {
+            case Ichor::Etcd::v3::EtcdAuthPermissionType::READ:
+                return fmt::format_to(ctx.out(), "READ");
+            case Ichor::Etcd::v3::EtcdAuthPermissionType::WRITE:
+                return fmt::format_to(ctx.out(), "WRITE");
+            case Ichor::Etcd::v3::EtcdAuthPermissionType::READWRITE:
+                return fmt::format_to(ctx.out(), "READWRITE");
             default:
                 return fmt::format_to(ctx.out(), "error, please file a bug in Ichor");
         }
