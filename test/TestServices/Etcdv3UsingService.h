@@ -16,6 +16,8 @@ namespace Ichor {
             co_await put_get_delete_test();
             co_await txn_test();
             co_await leases_test();
+            co_await users_test();
+            co_await roles_test();
             co_await compact_test();
 
             GetThreadLocalEventQueue().pushEvent<QuitEvent>(getServiceId());
@@ -188,6 +190,140 @@ namespace Ichor {
             auto revokeReply = co_await _etcd->leaseRevoke(revokeReq);
             if(!revokeReply) {
                 throw std::runtime_error("revoke");
+            }
+        }
+
+        Task<void> users_test() const {
+            ICHOR_LOG_INFO(_logger, "running test");
+
+            Etcd::v3::AuthUserGetRequest userGetReq{"v3_test_user"};
+            auto userGetReply = co_await _etcd->userGet(userGetReq);
+            if(userGetReply) {
+                Etcd::v3::AuthUserDeleteRequest userDelReq{"v3_test_user"};
+                auto userDelReply = co_await _etcd->userDelete(userDelReq);
+                if(!userDelReply) {
+                    throw std::runtime_error("userDel at init");
+                }
+            }
+
+            Etcd::v3::AuthUserAddRequest userAddReq{"v3_test_user", "v3_test_password", {}, {}};
+            auto userAddReply = co_await _etcd->userAdd(userAddReq);
+            if (!userAddReply) {
+                throw std::runtime_error("userAdd");
+            }
+
+            Etcd::v3::AuthUserListRequest userListReq{};
+            auto userListReply = co_await _etcd->userList(userListReq);
+            if (!userListReply) {
+                throw std::runtime_error("userList");
+            }
+            if(std::find(userListReply->users.begin(), userListReply->users.end(), "v3_test_user") == userListReply->users.end()) {
+                throw std::runtime_error("v3_test_user not in list user");
+            }
+
+            Etcd::v3::AuthUserGrantRoleRequest userGrantRoleReq{"v3_test_user", "root"};
+            auto userGrantRoleReply = co_await _etcd->userGrantRole(userGrantRoleReq);
+            if(!userGrantRoleReply) {
+                throw std::runtime_error("grant role");
+            }
+
+            userGetReply = co_await _etcd->userGet(userGetReq);
+            if(!userGetReply) {
+                throw std::runtime_error("userGetReply");
+            }
+
+            if(std::find(userGetReply->roles.begin(), userGetReply->roles.end(), "root") == userGetReply->roles.end()) {
+                throw std::runtime_error("root not in user's role list");
+            }
+
+            Etcd::v3::AuthUserRevokeRoleRequest userRevokeRoleReq{"v3_test_user", "root"};
+            auto userRevokeRoleReply = co_await _etcd->userRevokeRole(userRevokeRoleReq);
+            if(!userRevokeRoleReply) {
+                throw std::runtime_error("revoke role");
+            }
+
+            userGetReply = co_await _etcd->userGet(userGetReq);
+            if(!userGetReply) {
+                throw std::runtime_error("userGetReply");
+            }
+
+            if(std::find(userGetReply->roles.begin(), userGetReply->roles.end(), "root") != userGetReply->roles.end()) {
+                throw std::runtime_error("root still in user's role list");
+            }
+
+            Etcd::v3::AuthUserDeleteRequest userDelReq{"v3_test_user"};
+            auto userDelReply = co_await _etcd->userDelete(userDelReq);
+            if(!userDelReply) {
+                throw std::runtime_error("userDel");
+            }
+        }
+
+        Task<void> roles_test() const {
+            ICHOR_LOG_INFO(_logger, "running test");
+
+            Etcd::v3::AuthRoleGetRequest roleGetReq{"v3_test_role"};
+            auto roleGetReply = co_await _etcd->roleGet(roleGetReq);
+            if(roleGetReply) {
+                Etcd::v3::AuthRoleDeleteRequest roleDelReq{"v3_test_role"};
+                auto roleDelReply = co_await _etcd->roleDelete(roleDelReq);
+                if(!roleDelReply) {
+                    throw std::runtime_error("roleDel at init");
+                }
+            }
+
+            Etcd::v3::AuthRoleAddRequest roleAddReq{"v3_test_role"};
+            auto roleAddReply = co_await _etcd->roleAdd(roleAddReq);
+            if (!roleAddReply) {
+                throw std::runtime_error("roleAdd");
+            }
+
+            Etcd::v3::AuthRoleListRequest roleListReq{};
+            auto roleListReply = co_await _etcd->roleList(roleListReq);
+            if (!roleListReply) {
+                throw std::runtime_error("roleList");
+            }
+            if(std::find(roleListReply->roles.begin(), roleListReply->roles.end(), "v3_test_role") == roleListReply->roles.end()) {
+                throw std::runtime_error("v3_test_role not in list role");
+            }
+
+            Etcd::v3::AuthRoleGrantPermissionRequest roleGrantPermissionReq{"v3_test_role", Etcd::v3::AuthPermission{Etcd::v3::EtcdAuthPermissionType::WRITE, "v3_test_role_permission"}};
+            auto roleGrantPermissionReply = co_await _etcd->roleGrantPermission(roleGrantPermissionReq);
+            if(!roleGrantPermissionReply) {
+                throw std::runtime_error("role grant permission");
+            }
+
+            roleGetReply = co_await _etcd->roleGet(roleGetReq);
+            if(!roleGetReply) {
+                throw std::runtime_error("roleGetReply1");
+            }
+
+            if(std::find_if(roleGetReply->perm.begin(), roleGetReply->perm.end(), [](Etcd::v3::AuthPermission const &permission){
+                return permission.key == "v3_test_role_permission" && permission.permType == Etcd::v3::EtcdAuthPermissionType::WRITE;
+            }) == roleGetReply->perm.end()) {
+                throw std::runtime_error("permission not in role's permission list");
+            }
+
+            Etcd::v3::AuthRoleRevokePermissionRequest roleRevokePermissionReq{"v3_test_role", "v3_test_role_permission"};
+            auto roleRevokeRoleReply = co_await _etcd->roleRevokePermission(roleRevokePermissionReq);
+            if(!roleRevokeRoleReply) {
+                throw std::runtime_error("role revoke permission");
+            }
+
+            roleGetReply = co_await _etcd->roleGet(roleGetReq);
+            if(!roleGetReply) {
+                throw std::runtime_error("roleGetReply2");
+            }
+
+            if(std::find_if(roleGetReply->perm.begin(), roleGetReply->perm.end(), [](Etcd::v3::AuthPermission const &permission){
+                return permission.key == "v3_test_role_permission" && permission.permType == Etcd::v3::EtcdAuthPermissionType::WRITE;
+            }) != roleGetReply->perm.end()) {
+                throw std::runtime_error("permission still in role's permission list");
+            }
+
+            Etcd::v3::AuthRoleDeleteRequest roleDelReq{"v3_test_role"};
+            auto roleDelReply = co_await _etcd->roleDelete(roleDelReq);
+            if(!roleDelReply) {
+                throw std::runtime_error("roleDel");
             }
         }
 

@@ -57,9 +57,7 @@ namespace Ichor::Etcd::v3 {
         [[nodiscard]] Task<tl::expected<EtcdVersionReply, EtcdError>> version() final;
         [[nodiscard]] Version getDetectedVersion() const final;
         [[nodiscard]] Task<tl::expected<bool, EtcdError>> health() final;
-        void setAuthentication(std::string_view user, std::string_view pass) final;
-        void clearAuthentication() final;
-        [[nodiscard]] tl::optional<std::string> getAuthenticationUser() const final;
+        [[nodiscard]] tl::optional<std::string> const &getAuthenticationUser() const final;
 
     private:
         Task<tl::expected<void, Ichor::StartError>> start() final;
@@ -81,6 +79,7 @@ namespace Ichor::Etcd::v3 {
         IClientFactory *_clientFactory{};
         std::stack<ConnRequest> _connRequests{};
         tl::optional<std::string> _auth;
+        tl::optional<std::string> _authUser;
         Version _detectedVersion{};
         std::string_view _versionSpecificUrl{"/v3"};
     };

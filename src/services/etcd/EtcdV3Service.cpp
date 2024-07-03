@@ -25,6 +25,7 @@ namespace {
     struct EtcdInternalVersionReply final {
         std::string etcdserver;
         std::string etcdcluster;
+        std::optional<std::string> storage;
     };
     struct EtcdHealthReply final {
         std::string health;
@@ -34,9 +35,34 @@ namespace {
         bool enabled;
     };
 
+    // Etcd version 3.3.X and lower contain a bug regarding parsing Key/RangeEnd. See https://github.com/etcd-io/etcd/issues/9424 for more information.
+    struct AuthRoleRevokePermissionRequestBugWorkaround final {
+        AuthRoleRevokePermissionRequestBugWorkaround() = delete;
+        explicit AuthRoleRevokePermissionRequestBugWorkaround(AuthRoleRevokePermissionRequest const &r) : role(r.role), key(r.key), range_end(r.range_end) {}
+        std::string role;
+        std::string key;
+        tl::optional<std::string> range_end;
+    };
+
     // treat a value as base64
     template <class T>
     struct Base64StringType final {
+        static constexpr bool glaze_wrapper = true;
+        using value_type = T;
+        T& val;
+    };
+
+    // treat a value as an optional
+    template <class T>
+    struct OptionalType final {
+        static constexpr bool glaze_wrapper = true;
+        using value_type = T;
+        T& val;
+    };
+
+    // treat a value as a stringed enum (string to parse, underlying value as serialize)
+    template <class T>
+    struct StringEnumType final {
         static constexpr bool glaze_wrapper = true;
         using value_type = T;
         T& val;
@@ -50,7 +76,7 @@ namespace {
         T& val;
     };
 
-    // treat a value as an optional base64
+    // treat a value as vector of base64 strings
     template <class T>
     struct VectorBase64StringType final {
         static constexpr bool glaze_wrapper = true;
@@ -138,6 +164,56 @@ namespace glz::detail {
     };
 
     template <class T>
+    struct from_json<OptionalType<T>> {
+        template <auto Opts>
+        static void op(OptionalType<T>&& value, auto&&... args) {
+            read<json>::op<Opts>(*value.val, args...);
+        }
+    };
+
+    template <class T>
+    struct to_json<OptionalType<T>> {
+        template <auto Opts>
+        static void op(OptionalType<T> const & value, auto&&... args) noexcept {
+            if(value.val) {
+                write<json>::op<Opts>(*value.val, args...);
+            }
+        }
+    };
+
+    template <class T>
+    struct from_json<StringEnumType<T>>;
+
+    template <class T>
+    struct to_json<StringEnumType<T>>;
+
+    template <>
+    struct from_json<StringEnumType<EtcdAuthPermissionType>> {
+        template <auto Opts>
+        static void op(StringEnumType<EtcdAuthPermissionType>&& value, auto&&... args) {
+            std::string val;
+            read<json>::op<Opts>(val, args...);
+            if(val == "READ") {
+                value.val = EtcdAuthPermissionType::READ;
+            } else if(val == "WRITE") {
+                value.val = EtcdAuthPermissionType::WRITE;
+            } else if(val == "READWRITE") {
+                value.val = EtcdAuthPermissionType::READWRITE;
+            } else {
+                fmt::print("Unknown value for EtcdAuthPermissionType\n");
+            }
+        }
+    };
+
+    template <>
+    struct to_json<StringEnumType<EtcdAuthPermissionType const>> {
+        template <auto Opts>
+        static void op(StringEnumType<EtcdAuthPermissionType const> const & value, auto&&... args) noexcept {
+            write<json>::op<Opts>(value.val, args...);
+        }
+    };
+
+    template <class T>
     struct from_json<OptionalBase64StringType<T>> {
         template <auto Opts>
         static void op(OptionalBase64StringType<T>&& value, auto&&... args) {
@@ -183,6 +259,16 @@ namespace glz::detail {
     }
 
     template <auto MemPtr>
+    inline constexpr decltype(auto) OptionalImpl() noexcept {
+        return [](auto&& val) { return OptionalType<std::remove_reference_t<decltype(val.*MemPtr)>>{val.*MemPtr}; };
+    }
+
+    template <auto MemPtr>
+    inline constexpr decltype(auto) StringEnumImpl() noexcept {
+        return [](auto&& val) { return StringEnumType<std::remove_reference_t<decltype(val.*MemPtr)>>{val.*MemPtr}; };
+    }
+
+    template <auto MemPtr>
     inline constexpr decltype(auto) OptionalBase64StringImpl() noexcept {
         return [](auto&& val) { return OptionalBase64StringType<std::remove_reference_t<decltype(val.*MemPtr)>>{val.*MemPtr}; };
     }
@@ -195,6 +281,12 @@ namespace glz::detail {
 
 template <auto MemPtr>
 constexpr auto Base64String = glz::detail::Base64StringImpl<MemPtr>();
+
+template <auto MemPtr>
+constexpr auto Optional = glz::detail::OptionalImpl<MemPtr>();
+
+template <auto MemPtr>
+constexpr auto StringEnum = glz::detail::StringEnumImpl<MemPtr>();
 
 template <auto MemPtr>
 constexpr auto OptionalBase64String = glz::detail::OptionalBase64StringImpl<MemPtr>();
@@ -546,6 +638,254 @@ struct glz::meta<AuthenticateResponse> {
     );
 };
 
+template <>
+struct glz::meta<AuthUserAddOptions> {
+    using T = AuthUserAddOptions;
+    static constexpr auto value = object(
+            "no_password", &T::no_password
+    );
+};
+
+template <>
+struct glz::meta<AuthPermission> {
+    using T = AuthPermission;
+    static constexpr auto value = object(
+            "permType", StringEnum<&T::permType>,
+            "key", Base64String<&T::key>,
+            "range_end", Base64String<&T::range_end>
+    );
+};
+
+template <>
+struct glz::meta<AuthUserAddRequest> {
+    using T = AuthUserAddRequest;
+    static constexpr auto value = object(
+            "name", &T::name,
+            "password", &T::password,
+            "options", Optional<&T::options>,
+            "hashedPassword", Optional<&T::hashedPassword>
+    );
+};
+
+template <>
+struct glz::meta<AuthUserAddResponse> {
+    using T = AuthUserAddResponse;
+    static constexpr auto value = object(
+            "header", &T::header
+    );
+};
+
+template <>
+struct glz::meta<AuthUserGetRequest> {
+    using T = AuthUserGetRequest;
+    static constexpr auto value = object(
+            "name", &T::name
+    );
+};
+
+template <>
+struct glz::meta<AuthUserGetResponse> {
+    using T = AuthUserGetResponse;
+    static constexpr auto value = object(
+            "header", &T::header,
+            "roles", &T::roles
+    );
+};
+
+template <>
+struct glz::meta<AuthUserListRequest> {
+    using T = AuthUserListRequest;
+    static constexpr auto value = object(
+    );
+};
+
+template <>
+struct glz::meta<AuthUserListResponse> {
+    using T = AuthUserListResponse;
+    static constexpr auto value = object(
+            "header", &T::header,
+            "users", &T::users
+    );
+};
+
+template <>
+struct glz::meta<AuthUserDeleteRequest> {
+    using T = AuthUserDeleteRequest;
+    static constexpr auto value = object(
+            "name", &T::name
+    );
+};
+
+template <>
+struct glz::meta<AuthUserDeleteResponse> {
+    using T = AuthUserDeleteResponse;
+    static constexpr auto value = object(
+            "header", &T::header
+    );
+};
+
+template <>
+struct glz::meta<AuthUserChangePasswordRequest> {
+    using T = AuthUserChangePasswordRequest;
+    static constexpr auto value = object(
+            "name", &T::name,
+            "password", &T::password,
+            "hashedPassword", Optional<&T::hashedPassword>
+    );
+};
+
+template <>
+struct glz::meta<AuthUserChangePasswordResponse> {
+    using T = AuthUserChangePasswordResponse;
+    static constexpr auto value = object(
+            "header", &T::header
+    );
+};
+
+template <>
+struct glz::meta<AuthUserGrantRoleRequest> {
+    using T = AuthUserGrantRoleRequest;
+    static constexpr auto value = object(
+            "user", &T::user,
+            "role", &T::role
+    );
+};
+
+template <>
+struct glz::meta<AuthUserGrantRoleResponse> {
+    using T = AuthUserGrantRoleResponse;
+    static constexpr auto value = object(
+            "header", &T::header
+    );
+};
+
+template <>
+struct glz::meta<AuthUserRevokeRoleRequest> {
+    using T = AuthUserRevokeRoleRequest;
+    static constexpr auto value = object(
+            "name", &T::name,
+            "role", &T::role
+    );
+};
+
+template <>
+struct glz::meta<AuthUserRevokeRoleResponse> {
+    using T = AuthUserRevokeRoleResponse;
+    static constexpr auto value = object(
+            "header", &T::header
+    );
+};
+
+template <>
+struct glz::meta<AuthRoleAddRequest> {
+    using T = AuthRoleAddRequest;
+    static constexpr auto value = object(
+            "name", &T::name
+    );
+};
+
+template <>
+struct glz::meta<AuthRoleAddResponse> {
+    using T = AuthRoleAddResponse;
+    static constexpr auto value = object(
+            "header", &T::header
+    );
+};
+
+template <>
+struct glz::meta<AuthRoleGetRequest> {
+    using T = AuthRoleGetRequest;
+    static constexpr auto value = object(
+            "role", &T::role
+    );
+};
+
+template <>
+struct glz::meta<AuthRoleGetResponse> {
+    using T = AuthRoleGetResponse;
+    static constexpr auto value = object(
+            "header", &T::header,
+            "perm", &T::perm
+    );
+};
+
+template <>
+struct glz::meta<AuthRoleListRequest> {
+    using T = AuthRoleListRequest;
+    static constexpr auto value = object(
+    );
+};
+
+template <>
+struct glz::meta<AuthRoleListResponse> {
+    using T = AuthRoleListResponse;
+    static constexpr auto value = object(
+            "header", &T::header,
+            "roles", &T::roles
+    );
+};
+
+template <>
+struct glz::meta<AuthRoleDeleteRequest> {
+    using T = AuthRoleDeleteRequest;
+    static constexpr auto value = object(
+            "role", &T::role
+    );
+};
+
+template <>
+struct glz::meta<AuthRoleDeleteResponse> {
+    using T = AuthRoleDeleteResponse;
+    static constexpr auto value = object(
+            "header", &T::header
+    );
+};
+
+template <>
+struct glz::meta<AuthRoleGrantPermissionRequest> {
+    using T = AuthRoleGrantPermissionRequest;
+    static constexpr auto value = object(
+            "name", &T::name,
+            "perm", &T::perm
+    );
+};
+
+template <>
+struct glz::meta<AuthRoleGrantPermissionResponse> {
+    using T = AuthRoleGrantPermissionResponse;
+    static constexpr auto value = object(
+            "header", &T::header
+    );
+};
+
+template <>
+struct glz::meta<AuthRoleRevokePermissionRequest> {
+    using T = AuthRoleRevokePermissionRequest;
+    static constexpr auto value = object(
+            "role", &T::role,
+            "key", Base64String<&T::key>,
+            "range_end", OptionalBase64String<&T::range_end>
+    );
+};
+
+template <>
+struct glz::meta<AuthRoleRevokePermissionRequestBugWorkaround> {
+    using T = AuthRoleRevokePermissionRequestBugWorkaround;
+    static constexpr auto value = object(
+            "role", &T::role,
+            "key", &T::key,
+            "range_end", Optional<&T::range_end>
+    );
+};
+
+template <>
+struct glz::meta<AuthRoleRevokePermissionResponse> {
+    using T = AuthRoleRevokePermissionResponse;
+    static constexpr auto value = object(
+            "header", &T::header
+    );
+};
+
 
 template <>
 struct glz::meta<EtcdHealthReply> {
@@ -569,7 +909,8 @@ struct glz::meta<EtcdInternalVersionReply> {
     using T = EtcdInternalVersionReply;
     static constexpr auto value = object(
         "etcdserver", &T::etcdserver,
-        "etcdcluster", &T::etcdcluster
+        "etcdcluster", &T::etcdcluster,
+        "storage", &T::storage
     );
 };
 
@@ -709,7 +1050,7 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> EtcdService::start() {
     }
     _detectedVersion = (*ver).etcdserver;
 
-    ICHOR_LOG_TRACE(_logger, "Started, detected version {}", (*ver).etcdserver);
+    ICHOR_LOG_TRACE(_logger, "Started, detected server version {}", (*ver).etcdserver);
     co_return {};
 }
 
@@ -953,6 +1294,15 @@ Ichor::Task<tl::expected<AuthenticateResponse, EtcdError>> EtcdService::authenti
 }
 
 Ichor::Task<tl::expected<AuthUserAddResponse, EtcdError>> EtcdService::userAdd(AuthUserAddRequest const &req) {
+    if(req.options && _detectedVersion < Version{3, 4, 0}) {
+        ICHOR_LOG_ERROR(_logger, "Cannot request options for etcd server {}, minimum 3.4.0 required", _detectedVersion);
+        co_return tl::unexpected(EtcdError::ETCD_SERVER_DOES_NOT_SUPPORT);
+    }
+    if(req.hashedPassword && _detectedVersion < Version{3, 5, 0}) {
+        ICHOR_LOG_ERROR(_logger, "Cannot request hashedPassword for etcd server {}, minimum 3.5.0 required", _detectedVersion);
+        co_return tl::unexpected(EtcdError::ETCD_SERVER_DOES_NOT_SUPPORT);
+    }
+
     co_return co_await execute_request<AuthUserAddRequest, AuthUserAddResponse>(fmt::format("{}/auth/user/add", _versionSpecificUrl), _auth, _logger, _mainConn, req);
 }
 
@@ -969,6 +1319,11 @@ Ichor::Task<tl::expected<AuthUserDeleteResponse, EtcdError>> EtcdService::userDe
 }
 
 Ichor::Task<tl::expected<AuthUserChangePasswordResponse, EtcdError>> EtcdService::userChangePassword(AuthUserChangePasswordRequest const &req) {
+    if(req.hashedPassword && _detectedVersion < Version{3, 5, 0}) {
+        ICHOR_LOG_ERROR(_logger, "Cannot request hashedPassword for etcd server {}, minimum 3.5.0 required", _detectedVersion);
+        co_return tl::unexpected(EtcdError::ETCD_SERVER_DOES_NOT_SUPPORT);
+    }
+
     co_return co_await execute_request<AuthUserChangePasswordRequest, AuthUserChangePasswordResponse>(fmt::format("{}/auth/user/changepw", _versionSpecificUrl), _auth, _logger, _mainConn, req);
 }
 
@@ -1001,7 +1356,12 @@ Ichor::Task<tl::expected<AuthRoleGrantPermissionResponse, EtcdError>> EtcdServic
 }
 
 Ichor::Task<tl::expected<AuthRoleRevokePermissionResponse, EtcdError>> EtcdService::roleRevokePermission(AuthRoleRevokePermissionRequest const &req) {
-    co_return co_await execute_request<AuthRoleRevokePermissionRequest, AuthRoleRevokePermissionResponse>(fmt::format("{}/auth/role/revoke", _versionSpecificUrl), _auth, _logger, _mainConn, req);
+    if(_detectedVersion < Version{3, 4, 0}) {
+        ICHOR_LOG_WARN(_logger, "Etcd version 3.3.X and lower contain a bug regarding parsing Key/RangeEnd. Results might not be what you expect due to not supporting UTF-8 nor binary. See https://github.com/etcd-io/etcd/issues/9424 for more information.");
+        co_return co_await execute_request<AuthRoleRevokePermissionRequestBugWorkaround, AuthRoleRevokePermissionResponse>(fmt::format("{}/auth/role/revoke", _versionSpecificUrl), _auth, _logger, _mainConn, AuthRoleRevokePermissionRequestBugWorkaround{req});
+    } else {
+        co_return co_await execute_request<AuthRoleRevokePermissionRequest, AuthRoleRevokePermissionResponse>(fmt::format("{}/auth/role/revoke", _versionSpecificUrl), _auth, _logger, _mainConn, req);
+    }
 }
 
 Ichor::Task<tl::expected<EtcdVersionReply, EtcdError>> EtcdService::version() {
@@ -1023,7 +1383,12 @@ Ichor::Task<tl::expected<EtcdVersionReply, EtcdError>> EtcdService::version() {
         co_return tl::unexpected(EtcdError::JSON_PARSE_ERROR);
     }
 
-    auto etcdserverver = parseStringAsVersion(etcd_reply.etcdserver);
+    std::string_view etcdserver_version = etcd_reply.etcdserver;
+    if(auto loc = etcdserver_version.find('-'); loc != std::string_view::npos) {
+        etcdserver_version = etcdserver_version.substr(0, loc);
+    }
+
+    auto etcdserverver = parseStringAsVersion(etcdserver_version);
 
     if(!etcdserverver) {
         ICHOR_LOG_ERROR(_logger, "Error parsing etcd server version \"{}\"", etcd_reply.etcdserver);
@@ -1037,7 +1402,17 @@ Ichor::Task<tl::expected<EtcdVersionReply, EtcdError>> EtcdService::version() {
         co_return tl::unexpected(EtcdError::VERSION_PARSE_ERROR);
     }
 
-    co_return EtcdVersionReply{*etcdserverver, *etcdclusterver};
+    tl::optional<Version> etcdstoragever;
+    if(etcd_reply.storage) {
+        etcdstoragever = parseStringAsVersion(*etcd_reply.storage);
+
+        if(!etcdstoragever) {
+            ICHOR_LOG_ERROR(_logger, "Error parsing etcd server version \"{}\"", *etcd_reply.storage);
+            co_return tl::unexpected(EtcdError::VERSION_PARSE_ERROR);
+        }
+    }
+
+    co_return EtcdVersionReply{*etcdserverver, *etcdclusterver, etcdstoragever};
 }
 
 Ichor::Version EtcdService::getDetectedVersion() const {
@@ -1069,22 +1444,6 @@ Ichor::Task<tl::expected<bool, EtcdError>> EtcdService::health() {
     co_return etcd_reply.health == "true";
 }
 
-void EtcdService::setAuthentication(std::string_view user, std::string_view pass) {
-    _auth = fmt::format("{}:{}", user, pass);
-    _auth = base64_encode(reinterpret_cast<unsigned const char*>(_auth->c_str()), _auth->length());
-    _auth = fmt::format("Basic {}", *_auth);
-}
-
-void EtcdService::clearAuthentication() {
-    _auth.reset();
-}
-
-tl::optional<std::string> EtcdService::getAuthenticationUser() const {
-    if(!_auth) {
-        return {};
-    }
-
-    auto full_str = base64_decode((*_auth).substr(6));
-    auto pos = full_str.find(':');
-    return full_str.substr(0, pos);
+tl::optional<std::string> const &EtcdService::getAuthenticationUser() const {
+    return _authUser;
 }
