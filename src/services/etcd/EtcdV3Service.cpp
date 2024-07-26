@@ -886,6 +886,28 @@ struct glz::meta<AuthRoleRevokePermissionResponse> {
     );
 };
 
+template <>
+struct glz::meta<EtcdWatchCreateRequest> {
+    using T = EtcdWatchCreateRequest;
+    static constexpr auto value = object(
+            "key", Base64String<&T::key>,
+            "range_end", OptionalBase64String<&T::range_end>,
+            "start_revision", quoted_num<&T::start_revision>,
+            "progress_notify", &T::progress_notify,
+            "prev_kv", &T::prev_kv,
+            "watch_id", quoted_num<&T::watch_id>,
+            "fragment", &T::fragment
+    );
+};
+
+template <>
+struct glz::meta<EtcdWatchResponse> {
+    using T = EtcdWatchResponse;
+    static constexpr auto value = object(
+            "header", &T::header
+    );
+};
+
 
 template <>
 struct glz::meta<EtcdHealthReply> {
@@ -1127,10 +1149,10 @@ static Ichor::Task<tl::expected<RespT, EtcdError>> execute_request(std::string u
     ICHOR_LOG_TRACE(logger, "{} {}", url, reinterpret_cast<char *>(msg_buf.data()));
 
     auto http_reply = co_await conn->sendAsync(HttpMethod::post, url, std::move(headers), std::move(msg_buf));
-    ICHOR_LOG_TRACE(logger, "{} status: {}, body: {}", url, (int)http_reply.status, http_reply.body.empty() ? "" : http_reply.body.empty() ? "" : (char*)http_reply.body.data());
+    ICHOR_LOG_TRACE(logger, "{} status: {}, body: {}", url, (int)http_reply.status, http_reply.body.empty() ? "" : (char*)http_reply.body.data());
 
     if(http_reply.status != HttpStatus::ok) {
-        ICHOR_LOG_ERROR(logger, "Error on route {}, http status {}", url, (int)http_reply.status);
+        ICHOR_LOG_ERROR(logger, "Error on route {}, http status {}, body {}", url, (int)http_reply.status, http_reply.body.empty() ? "" : (char*)http_reply.body.data());
         co_return tl::unexpected(EtcdError::HTTP_RESPONSE_ERROR);
     }
 
@@ -1277,7 +1299,12 @@ Ichor::Task<tl::expected<AuthEnableResponse, EtcdError>> EtcdService::authEnable
 }
 
 Ichor::Task<tl::expected<AuthDisableResponse, EtcdError>> EtcdService::authDisable(AuthDisableRequest const &req) {
-    co_return co_await execute_request<AuthDisableRequest, AuthDisableResponse>(fmt::format("{}/auth/disable", _versionSpecificUrl), _auth, _logger, _mainConn, req);
+    auto resp = co_await execute_request<AuthDisableRequest, AuthDisableResponse>(fmt::format("{}/auth/disable", _versionSpecificUrl), _auth, _logger, _mainConn, req);
+    if(resp) {
+        _auth.reset();
+        _authUser.reset();
+    }
+    co_return resp;
 }
 
 Ichor::Task<tl::expected<AuthStatusResponse, EtcdError>> EtcdService::authStatus(AuthStatusRequest const &req) {
@@ -1290,7 +1317,12 @@ Ichor::Task<tl::expected<AuthStatusResponse, EtcdError>> EtcdService::authStatus
 }
 
 Ichor::Task<tl::expected<AuthenticateResponse, EtcdError>> EtcdService::authenticate(AuthenticateRequest const &req) {
-    co_return co_await execute_request<AuthenticateRequest, AuthenticateResponse>(fmt::format("{}/auth/authenticate", _versionSpecificUrl), _auth, _logger, _mainConn, req);
+    tl::expected<AuthenticateResponse, EtcdError> resp = co_await execute_request<AuthenticateRequest, AuthenticateResponse>(fmt::format("{}/auth/authenticate", _versionSpecificUrl), _auth, _logger, _mainConn, req);
+    if(resp) {
+        _auth = resp->token;
+        _authUser = req.name;
+    }
+    co_return resp;
 }
 
 Ichor::Task<tl::expected<AuthUserAddResponse, EtcdError>> EtcdService::userAdd(AuthUserAddRequest const &req) {

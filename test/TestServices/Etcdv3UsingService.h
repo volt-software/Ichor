@@ -220,6 +220,20 @@ namespace Ichor {
             if(std::find(userListReply->users.begin(), userListReply->users.end(), "v3_test_user") == userListReply->users.end()) {
                 throw std::runtime_error("v3_test_user not in list user");
             }
+            if(std::find(userListReply->users.begin(), userListReply->users.end(), "root") == userListReply->users.end()) {
+                userAddReq.name = "root";
+                userAddReq.password = "root";
+                userAddReply = co_await _etcd->userAdd(userAddReq);
+                if (!userAddReply) {
+                    throw std::runtime_error("userAdd root");
+                }
+
+                Etcd::v3::AuthUserGrantRoleRequest userGrantRoleReq{"root", "root"};
+                auto userGrantRoleReply = co_await _etcd->userGrantRole(userGrantRoleReq);
+                if(!userGrantRoleReply) {
+                    throw std::runtime_error("grant role root");
+                }
+            }
 
             Etcd::v3::AuthUserGrantRoleRequest userGrantRoleReq{"v3_test_user", "root"};
             auto userGrantRoleReply = co_await _etcd->userGrantRole(userGrantRoleReq);
@@ -235,6 +249,54 @@ namespace Ichor {
             if(std::find(userGetReply->roles.begin(), userGetReply->roles.end(), "root") == userGetReply->roles.end()) {
                 throw std::runtime_error("root not in user's role list");
             }
+
+            Etcd::v3::AuthEnableRequest authEnableReq{};
+            auto authEnableReply = co_await _etcd->authEnable(authEnableReq);
+            if(!authEnableReply) {
+                throw std::runtime_error("auth enable");
+            }
+
+            Etcd::v3::AuthenticateRequest userAuthReq{"v3_test_user", "v3_test_password"};
+            auto userAuthReply = co_await _etcd->authenticate(userAuthReq);
+            if(!userAuthReply) {
+                throw std::runtime_error("authenticate");
+            }
+            if(_etcd->getAuthenticationUser() != "v3_test_user") {
+                throw std::runtime_error("authenticate user");
+            }
+
+            Etcd::v3::AuthDisableRequest authDisableReq{};
+            auto authDisableReply = co_await _etcd->authDisable(authDisableReq);
+            if(!authDisableReply) {
+                throw std::runtime_error("auth disable");
+            }
+
+            Etcd::v3::AuthUserChangePasswordRequest authChangePassReq{"v3_test_user", "v3_test_password2"};
+            auto authChangePassReply = co_await _etcd->userChangePassword(authChangePassReq);
+            if(!authChangePassReply) {
+                throw std::runtime_error("auth change pass");
+            }
+
+            authEnableReply = co_await _etcd->authEnable(authEnableReq);
+            if(!authEnableReply) {
+                throw std::runtime_error("auth enable2");
+            }
+
+            userAuthReq.password = "v3_test_password2";
+            userAuthReply = co_await _etcd->authenticate(userAuthReq);
+            if(!userAuthReply) {
+                throw std::runtime_error("authenticate2");
+            }
+            if(_etcd->getAuthenticationUser() != "v3_test_user") {
+                throw std::runtime_error("authenticate user2");
+            }
+
+            authDisableReply = co_await _etcd->authDisable(authDisableReq);
+            if(!authDisableReply) {
+                throw std::runtime_error("auth disable2");
+            }
+
+
 
             Etcd::v3::AuthUserRevokeRoleRequest userRevokeRoleReq{"v3_test_user", "root"};
             auto userRevokeRoleReply = co_await _etcd->userRevokeRole(userRevokeRoleReq);

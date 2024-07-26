@@ -66,6 +66,11 @@ namespace Ichor::Etcd::v3 {
         READWRITE = 2
     };
 
+    enum class EtcdFilterType : uint_fast16_t {
+        NOPUT = 0,
+        NODELETE = 1
+    };
+
     struct EtcdKeyValue final {
         std::string key;
         std::string value;
@@ -416,12 +421,42 @@ namespace Ichor::Etcd::v3 {
         EtcdResponseHeader header;
     };
 
-    struct EtcdWatchRequest final {
 
+
+    struct EtcdWatchCreateRequest final {
+        std::string key;
+        tl::optional<std::string> range_end;
+        tl::optional<int64_t> start_revision;
+        tl::optional<bool> progress_notify;
+        std::vector<EtcdFilterType> filters;
+        tl::optional<bool> prev_kv;
+        tl::optional<int64_t> watch_id;
+        tl::optional<bool> fragment;
+    };
+
+    struct EtcdWatchCancelRequest final {
+        int64_t watch_id;
+    };
+
+    struct EtcdWatchProgressRequest final {
+    };
+
+    struct EtcdWatchRequest final {
+        // only one of these is allowed simultaneously.
+        tl::optional<EtcdWatchCreateRequest> create_request;
+        tl::optional<EtcdWatchCancelRequest> cancel_request;
+        tl::optional<EtcdWatchProgressRequest> progress_request;
     };
 
     struct EtcdWatchResponse final {
         EtcdResponseHeader header;
+        int64_t watch_id;
+        bool created;
+        bool canceled;
+        int64_t compact_revision;
+        tl::optional<std::string> cancel_reason;
+        tl::optional<bool> fragment;
+        std::vector<EtcdEvent> events;
     };
 
     struct EtcdVersionReply final {
@@ -521,7 +556,7 @@ namespace Ichor::Etcd::v3 {
         [[nodiscard]] virtual Task<tl::expected<AuthEnableResponse, EtcdError>> authEnable(AuthEnableRequest const &req) = 0;
 
         /**
-         * Disable authorisation on etcd server
+         * Disable authorisation on etcd server. Clears authentication user/token on success.
          *
          * @param req
          * @return Either the AuthDisableResponse or an EtcdError
