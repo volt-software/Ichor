@@ -1,4 +1,4 @@
-FROM arm64v8/alpine:3.19.1
+FROM arm64v8/alpine:3.20
 
 RUN apk update
 RUN apk add clang17 llvm17 libc++-static libc++-dev build-base cmake git wget ninja-build ninja-is-really-ninja nano sed linux-headers perl mold
