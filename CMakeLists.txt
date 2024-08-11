@@ -6,11 +6,11 @@ cmake_policy(SET CMP0110 NEW)
 cmake_policy(SET CMP0127 NEW)
 project(ichor VERSION 0.5.0 DESCRIPTION "C++20 dependency injection framework" HOMEPAGE_URL https://github.com/volt-software/Ichor LANGUAGES C CXX)
 if(NOT WIN32)
-    # we set this flag manually later on to enable the experimental C++20 stuff
-    set(CMAKE_CXX_STANDARD 20)
+    # For windows we set this flag manually later on to enable the experimental C++20 stuff
+    set(CMAKE_CXX_STANDARD 23)
     set(CMAKE_C_STANDARD 17)
 endif()
-set(CMAKE CXX STANDARD REQUIRED ON)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_C_EXTENSIONS OFF)
 include(CMakeDependentOption)
@@ -30,11 +30,11 @@ if(NOT hasParent)
 endif()
 
 
-if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS_EQUAL "11.2")
-    message(FATAL_ERROR "Gcc 11.2 and below not supported. See https://gcc.gnu.org/bugzilla/show_bug.cgi?id=95137")
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS "12")
+    message(FATAL_ERROR "Gcc below version 12 not supported.")
 endif()
 if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS "15")
-    message(FATAL_ERROR "Clang below version 15 does not implement enough of C++20 to use Ichor.")
+    message(FATAL_ERROR "Clang below version 15 not supported.")
 endif()
 
 set(ICHOR_TOP_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
@@ -119,7 +119,7 @@ if(ICHOR_ENABLE_INTERNAL_STL_DEBUGGING)
 endif()
 
 if(ICHOR_USE_SPDLOG)
-    target_compile_definitions(ichor PUBLIC SPDLOG_COMPILED_LIB SPDLOG_NO_EXCEPTIONS SPDLOG_FMT_EXTERNAL SPDLOG_DISABLE_DEFAULT_LOGGER SPDLOG_NO_ATOMIC_LEVELS ICHOR_USE_SPDLOG SPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_TRACE)
+    target_compile_definitions(ichor PUBLIC SPDLOG_COMPILED_LIB SPDLOG_NO_EXCEPTIONS SPDLOG_FMT_EXTERNAL SPDLOG_NO_ATOMIC_LEVELS ICHOR_USE_SPDLOG SPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_TRACE)
 endif()
 
 if(ICHOR_REMOVE_SOURCE_NAMES)
@@ -150,8 +150,24 @@ if(ICHOR_BUILDING_DEBUG)
 endif()
 
 if(NOT WIN32)
-    target_compile_options(ichor PUBLIC -Wall -Wextra -Wshadow -Wno-non-virtual-dtor -Wno-unused-variable -Wno-long-long -Wno-unused-parameter -Wnull-dereference -pedantic -Wformat -Wformat-security -Wcast-align -Woverloaded-virtual -Wdelete-non-virtual-dtor)
-    target_compile_options(ichor PUBLIC -pthread -ftemplate-backtrace-limit=0)
+    # Everything is c++ specific so that the liburing source files, which don't meet Ichor's standards, spam warnings all over.
+    target_compile_options(ichor PUBLIC
+            -Wall
+            -Wextra
+            -Wshadow
+            $<$<COMPILE_LANGUAGE:CXX>:-Wno-non-virtual-dtor>
+            -Wno-unused-variable
+            -Wno-long-long
+            -Wno-unused-parameter
+            -Wnull-dereference
+            $<$<COMPILE_LANGUAGE:CXX>:-pedantic>
+            -Wformat
+            -Wformat-security
+            $<$<COMPILE_LANGUAGE:CXX>:-Wcast-align>
+            $<$<COMPILE_LANGUAGE:CXX>:-Woverloaded-virtual>
+            $<$<COMPILE_LANGUAGE:CXX>:-Wdelete-non-virtual-dtor>
+            $<$<COMPILE_LANGUAGE:CXX>:-Wconversion>)
+    target_compile_options(ichor PUBLIC -pthread $<$<COMPILE_LANGUAGE:CXX>:-ftemplate-backtrace-limit=0>)
 
     # TODO Would love to refactor this to a function, but functions don't seem to be able to reach variables not yet defined when the function is defined.
     if(ICHOR_USE_HARDENING AND CMAKE_BUILD_TYPE MATCHES Debug)
@@ -168,8 +184,6 @@ if(NOT WIN32)
     endif()
     target_compile_definitions(ichor PUBLIC _FILE_OFFSET_BITS=64 _TIME_BITS=64)
 
-    # Don't want to enable this for external source code
-    target_compile_options(ichor PUBLIC -Wconversion)
     # don't optimize away overflows
     target_compile_options(ichor PUBLIC -fwrapv)
 else()
@@ -193,7 +207,7 @@ if(ICHOR_USE_MOLD AND NOT WIN32)
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fuse-ld=mold ")
     set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -fuse-ld=mold ")
     set(CMAKE_MODULE_LINKER_FLAGS "${CMAKE_MODULE_LINKER_FLAGS} -fuse-ld=mold ")
-    target_link_options(ichor PUBLIC -Wl,--separate-debug-file)
+    #target_link_options(ichor PUBLIC -Wl,--separate-debug-file) # TODO test version first, available since 2.33.0
 endif()
 
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
@@ -261,7 +275,7 @@ if(ICHOR_DISABLE_RTTI)
     if(WIN32)
         target_compile_options(ichor PUBLIC /GR-)
     else()
-        target_compile_options(ichor PUBLIC -fno-rtti)
+        target_compile_options(ichor PUBLIC $<$<COMPILE_LANGUAGE:CXX>:-fno-rtti>)
     endif()
 endif()
 
@@ -367,7 +381,7 @@ endif()
 
 if(NOT WIN32 AND NOT ICHOR_BUILD_COVERAGE)
     # gcc uses gdwarf-4 by default, which messes up using the coz profiler, add "-gdwarf-3" if using coz
-    set(CMAKE_CXX_FLAGS_DEBUG "-ggdb3")
+    set(CMAKE_CXX_FLAGS_DEBUG "-ggdb")
     set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG")
     set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-ggdb -O3 -DNDEBUG")
     set(CMAKE_CXX_FLAGS_MINSIZEREL "-Os -DNDEBUG")
@@ -386,10 +400,10 @@ endif()
 # https://gcc.gnu.org/bugzilla/show_bug.cgi?id=107138
 # https://gcc.gnu.org/bugzilla/show_bug.cgi?id=105329
 # 12.3 has a bug where [[maybe_unused]] in glaze is somehow ignored.
-# liburing does not use pedantic errors
-if(NOT CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND NOT WIN32 AND NOT ICHOR_USE_LIBURING)
-    target_compile_options(ichor PRIVATE "-Werror") #prevent externally compiled sources to error out on warnings
-endif()
+# boost still uses std::aligned_storage, so we can't use this until we find replacements for boost
+#if(NOT CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND NOT WIN32)
+#    target_compile_options(ichor PRIVATE "-Werror") #prevent externally compiled sources to error out on warnings
+#endif()
 
 # By default, we build a bundled mimalloc and statically-link it to
 # Ichor. If you want to dynamically link to the system's
