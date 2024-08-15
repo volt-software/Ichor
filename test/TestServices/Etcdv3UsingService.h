@@ -252,13 +252,19 @@ namespace Ichor {
 
             Etcd::v3::AuthEnableRequest authEnableReq{};
             auto authEnableReply = co_await _etcd->authEnable(authEnableReq);
-            if(!authEnableReply) {
+            if(_v < Version{3, 3, 0} && authEnableReply) {
+                throw std::runtime_error("auth enable");
+            }
+            if(_v >= Version{3, 3, 0} && !authEnableReply) {
                 throw std::runtime_error("auth enable");
             }
 
             Etcd::v3::AuthenticateRequest userAuthReq{"v3_test_user", "v3_test_password"};
             auto userAuthReply = co_await _etcd->authenticate(userAuthReq);
-            if(!userAuthReply) {
+            if(_v < Version{3, 3, 0} && userAuthReply) {
+                throw std::runtime_error("authenticate");
+            }
+            if(_v >= Version{3, 3, 0} && !userAuthReply) {
                 throw std::runtime_error("authenticate");
             }
             if(_etcd->getAuthenticationUser() != "v3_test_user") {
@@ -267,7 +273,10 @@ namespace Ichor {
 
             Etcd::v3::AuthDisableRequest authDisableReq{};
             auto authDisableReply = co_await _etcd->authDisable(authDisableReq);
-            if(!authDisableReply) {
+            if(_v < Version{3, 3, 0} && authDisableReply) {
+                throw std::runtime_error("auth disable");
+            }
+            if(_v >= Version{3, 3, 0} && !authDisableReply) {
                 throw std::runtime_error("auth disable");
             }
 
@@ -278,7 +287,10 @@ namespace Ichor {
             }
 
             authEnableReply = co_await _etcd->authEnable(authEnableReq);
-            if(!authEnableReply) {
+            if(_v < Version{3, 3, 0} && authEnableReply) {
+                throw std::runtime_error("auth enable2");
+            }
+            if(_v >= Version{3, 3, 0} && !authEnableReply) {
                 throw std::runtime_error("auth enable2");
             }
 
@@ -292,7 +304,10 @@ namespace Ichor {
             }
 
             authDisableReply = co_await _etcd->authDisable(authDisableReq);
-            if(!authDisableReply) {
+            if(_v < Version{3, 3, 0} && authDisableReply) {
+                throw std::runtime_error("auth disable2");
+            }
+            if(_v >= Version{3, 3, 0} && !authDisableReply) {
                 throw std::runtime_error("auth disable2");
             }
 
