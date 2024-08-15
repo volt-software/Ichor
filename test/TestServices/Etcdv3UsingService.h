@@ -267,7 +267,7 @@ namespace Ichor {
             if(_v >= Version{3, 3, 0} && !userAuthReply) {
                 throw std::runtime_error("authenticate");
             }
-            if(_etcd->getAuthenticationUser() != "v3_test_user") {
+            if(_v >= Version{3, 3, 0} && _etcd->getAuthenticationUser() != "v3_test_user") {
                 throw std::runtime_error("authenticate user");
             }
 
@@ -296,10 +296,13 @@ namespace Ichor {
 
             userAuthReq.password = "v3_test_password2";
             userAuthReply = co_await _etcd->authenticate(userAuthReq);
-            if(!userAuthReply) {
+            if(_v < Version{3, 3, 0} && userAuthReply) {
                 throw std::runtime_error("authenticate2");
             }
-            if(_etcd->getAuthenticationUser() != "v3_test_user") {
+            if(_v >= Version{3, 3, 0} && !userAuthReply) {
+                throw std::runtime_error("authenticate2");
+            }
+            if(_v >= Version{3, 3, 0} && _etcd->getAuthenticationUser() != "v3_test_user") {
                 throw std::runtime_error("authenticate user2");
             }
 
