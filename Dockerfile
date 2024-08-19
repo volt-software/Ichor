@@ -1,5 +1,8 @@
 FROM ubuntu:jammy
 
+ARG CONTAINER_OWNER_GID=1000
+ARG CONTAINER_OWNER_ID=1000
+
 RUN apt update
 RUN apt install -y g++-12 gcc-12 build-essential cmake pkg-config git wget ninja-build nano libzip-dev
 
@@ -46,8 +49,12 @@ RUN ninja && ninja install
 
 RUN mkdir -p /opt/ichor/build
 
+RUN groupadd -g ${CONTAINER_OWNER_GID} buildgroup && useradd -m -u ${CONTAINER_OWNER_ID} -g buildgroup builduser
+RUN chown builduser:buildgroup /opt/ichor/build
+USER builduser
+
 WORKDIR /opt/ichor/build
 
 ENTRYPOINT ["/bin/bash", "-c"]
 
-CMD ["unset CFLAGS CXXFLAGS LDFLAGS && cd /opt/ichor/build && cmake -GNinja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DICHOR_ENABLE_INTERNAL_IO_DEBUGGING=1 -DICHOR_USE_SANITIZERS=0 -DICHOR_USE_HIREDIS=1 -DICHOR_USE_BOOST_BEAST=1 -DICHOR_USE_SPDLOG=1 -DICHOR_SKIP_EXTERNAL_TESTS=1 /opt/ichor/src && ninja && ninja test"]
+CMD ["unset CFLAGS CXXFLAGS LDFLAGS && cd /opt/ichor/build && cmake -GNinja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DICHOR_USE_SANITIZERS=0 -DICHOR_USE_HIREDIS=1 -DICHOR_USE_BOOST_BEAST=1 -DICHOR_USE_SPDLOG=1 -DICHOR_SKIP_EXTERNAL_TESTS=1 /opt/ichor/src && ninja && /opt/ichor/src/bin/AsyncFileIOTests && ninja test"]

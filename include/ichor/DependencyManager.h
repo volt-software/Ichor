@@ -12,6 +12,8 @@
 #include <ichor/coroutines/IGenerator.h>
 #include <ichor/coroutines/AsyncGenerator.h>
 #include <ichor/dependency_management/ILifecycleManager.h>
+#include <ichor/dependency_management/DependencyLifecycleManager.h>
+#include <ichor/dependency_management/LifecycleManager.h>
 #include <ichor/coroutines/AsyncManualResetEvent.h>
 #include <ichor/Callbacks.h>
 #include <ichor/Filter.h>
@@ -672,6 +674,8 @@ namespace Ichor {
         void processEvent(std::unique_ptr<Event> &evt);
         /// Called from the queue implementation
         void stop();
+        /// Called from the queue implementation
+        void addInternalServiceManager(std::unique_ptr<ILifecycleManager> svc);
         /// Check if there is a coroutine for the given serviceId that is still waiting on something
         /// \param serviceId
         /// \return

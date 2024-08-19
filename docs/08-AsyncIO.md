@@ -39,7 +39,7 @@ queue->pushEvent<RunFunctionEventAsync>(0, [&]() -> AsyncGenerator<IchorBehaviou
 
     // enqueue reading the file on another thread and co_await its result
     // not using auto to show the type in example. Using auto would be a lot easier here.
-    tl::expected<std::string, Ichor::FileIOError> ret = co_await async_io_svc->first->read_whole_file("AsyncFileIO.txt");
+    tl::expected<std::string, Ichor::FileIOError> ret = co_await async_io_svc->first->readWholeFile("AsyncFileIO.txt");
 
     if(!ret || ret != "This is a test") {
         fmt::print("Couldn't read file\n");
@@ -47,14 +47,14 @@ queue->pushEvent<RunFunctionEventAsync>(0, [&]() -> AsyncGenerator<IchorBehaviou
     }
 
     // enqueue writing to file (automatically overwrites if already exists)
-    tl::expected<void, Ichor::FileIOError> ret2 = co_await async_io_svc->first->write_file("AsyncFileIO.txt", "Overwrite");
+    tl::expected<void, Ichor::FileIOError> ret2 = co_await async_io_svc->first->writeFile("AsyncFileIO.txt", "Overwrite");
 
     if(!ret2) {
         fmt::print("Couldn't write file\n");
         co_return {};
     }
 
-    ret = co_await async_io_svc->first->read_whole_file("AsyncFileIO.txt");
+    ret = co_await async_io_svc->first->readWholeFile("AsyncFileIO.txt");
 
     if(!ret || ret != "Overwrite") {
         fmt::print("Couldn't read file\n");
@@ -71,4 +71,4 @@ t.join();
 
 ## Possible different implementations
 
-Ichor currently provides only one type of implementation due to time constraints: one I/O thread shared over all Ichor threads. Obviously, this won't fit all use cases. Creating a new implementation is possible that, for example, uses multiple I/O threads and schedules requests round robin. As long as the implementation adheres to the `IAsyncFileIO` interface, it is possible to swap.
+Ichor currently provides only two types of implementation due to time constraints: one I/O thread shared over all Ichor threads and a linux-only io_uring implementation. Obviously, this won't fit all use cases. Creating a new implementation is possible that, for example, uses multiple I/O threads and schedules requests round robin. As long as the implementation adheres to the `IAsyncFileIO` interface, it is possible to swap.

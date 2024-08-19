@@ -19,10 +19,11 @@ namespace Ichor {
     public:
         SharedOverThreadsAsyncFileIO(Properties props);
 
-        Task<tl::expected<std::string, FileIOError>> read_whole_file(std::filesystem::path const &file) final;
-        Task<tl::expected<void, FileIOError>> copy_file(std::filesystem::path const &from, std::filesystem::path const &to) final;
-        Task<tl::expected<void, FileIOError>> remove_file(std::filesystem::path const &file) final;
-        Task<tl::expected<void, FileIOError>> write_file(std::filesystem::path const &file, std::string_view contents) final;
+        Task<tl::expected<std::string, FileIOError>> readWholeFile(std::filesystem::path const &file) final;
+        Task<tl::expected<void, FileIOError>> copyFile(std::filesystem::path const &from, std::filesystem::path const &to) final;
+        Task<tl::expected<void, FileIOError>> removeFile(std::filesystem::path const &file) final;
+        Task<tl::expected<void, FileIOError>> writeFile(std::filesystem::path const &file, std::string_view contents) final;
+        Task<tl::expected<void, FileIOError>> appendFile(std::filesystem::path const &file, std::string_view contents) final;
 
     private:
         Task<tl::expected<void, Ichor::StartError>> start() final;

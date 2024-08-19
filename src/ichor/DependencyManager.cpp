@@ -3,8 +3,8 @@
 #include <ichor/CommunicationChannel.h>
 #include <ichor/stl/Any.h>
 #include <ichor/events/RunFunctionEvent.h>
-#include <ichor/dependency_management/QueueLifecycleManager.h>
-#include <ichor/dependency_management/DependencyManagerLifecycleManager.h>
+#include <ichor/dependency_management/InternalService.h>
+#include <ichor/dependency_management/InternalServiceLifecycleManager.h>
 #include <ichor/dependency_management/IServiceInterestedLifecycleManager.h>
 
 #ifdef ICHOR_USE_SYSTEM_MIMALLOC
@@ -33,9 +33,7 @@ namespace backward {
 #endif
 
 Ichor::DependencyManager::DependencyManager(IEventQueue *eventQueue) : _eventQueue(eventQueue) {
-    auto qlm = std::make_unique<Detail::QueueLifecycleManager>(_eventQueue);
-    _services.emplace(qlm->serviceId(), std::move(qlm));
-    auto dmlm = std::make_unique<Detail::DependencyManagerLifecycleManager>(this);
+    auto dmlm = std::make_unique<Detail::InternalServiceLifecycleManager<DependencyManager>>(this);
     _services.emplace(dmlm->serviceId(), std::move(dmlm));
 }
 
@@ -328,7 +326,29 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &uniqueEvt) {
                 }
 
                 if (allServicesStopped) [[unlikely]] {
+                    if constexpr (DO_INTERNAL_DEBUG || DO_HARDENING) {
+                        if (!_eventWaiters.empty()) {
+                            fmt::print("Bug in Ichor, please submit a bug report.");
+                            std::terminate();
+                        }
+                        if (!_dependencyWaiters.empty()) {
+                            fmt::print("Bug in Ichor, please submit a bug report.");
+                            std::terminate();
+                        }
+                        if (!_scopedEvents.empty()) {
+                            fmt::print("Bug in Ichor, please submit a bug report.");
+                            std::terminate();
+                        }
+                        if (!_scopedGenerators.empty()) {
+                            fmt::print("Bug in Ichor, please submit a bug report.");
+                            std::terminate();
+                        }
+                    }
+
                     _eventQueue->quit();
+                    _services.clear(); // destructing DependencyLifecycleManagers result in getting events pushed, so we force it here rather than when a queue is destructing and may not accept new events.
+                    allEventInterceptorsCopy.clear();
+                    eventInterceptorsCopy.clear();
                 } else {
                     // slowly increase priority every time it fails, as some services rely on custom priorities when stopping
                     _eventQueue->pushPrioritisedEvent<QuitEvent>(_quitEvt->originatingService, std::max(INTERNAL_EVENT_PRIORITY + 1, lowest_priority + 1));
@@ -935,6 +955,10 @@ void Ichor::DependencyManager::stop() {
 
     _started.store(false, std::memory_order_release);
     Ichor::Detail::_local_dm = nullptr;
+}
+
+void Ichor::DependencyManager::addInternalServiceManager(std::unique_ptr<ILifecycleManager> svc) {
+    _services.emplace(svc->serviceId(), std::move(svc));
 }
 
 bool Ichor::DependencyManager::existingCoroutineFor(ServiceIdType serviceId) const noexcept {

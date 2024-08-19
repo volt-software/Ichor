@@ -153,23 +153,28 @@ namespace Ichor {
         _initializedSdevent.store(true, std::memory_order_release);
     }
 
-    void SdeventQueue::start(bool captureSigInt) {
+    bool SdeventQueue::start(bool captureSigInt) {
         if(!_initializedSdevent.load(std::memory_order_acquire)) [[unlikely]] {
-            throw std::runtime_error("sdevent not initialized. Call createEventLoop or useEventLoop first.");
+            fmt::println("IOUringQueue not initialized. Call createEventLoop or useEventLoop first.");
+            return false;
         }
 
         if(!_dm) [[unlikely]] {
-            throw std::runtime_error("Please create a manager first!");
+            fmt::println("Please create a manager first!");
+            return false;
         }
 
         // this capture currently has no way to wake all queues. Multimap f.e. polls sigintQuit, but with sdevent the
         if(captureSigInt && !Ichor::Detail::registeredSignalHandler.exchange(true)) {
             if (::signal(SIGINT, Ichor::Detail::on_sigint) == SIG_ERR) {
-                throw std::runtime_error("Couldn't set signal");
+                fmt::println("Couldn't set signal");
+                return false;
             }
         }
 
         startDm();
+
+        return true;
     }
 
     bool SdeventQueue::shouldQuit() {

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <ichor/stl/StaticVector.h>
+
 namespace Ichor::Detail {
     extern thread_local unordered_set<uint64_t> emptyDependencies;
 

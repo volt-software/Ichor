@@ -6,6 +6,7 @@
 #include <string>
 #include <string_view>
 #include <fmt/core.h>
+#include <exception>
 
 // Differs from std::any by not needing RTTI (no typeid()) and still able to compare types
 // e.g my_any_var.type_hash() == Ichor::typeNameHash<int>()

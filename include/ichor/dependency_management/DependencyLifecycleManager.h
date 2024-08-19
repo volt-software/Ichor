@@ -1,6 +1,7 @@
 #pragma once
 
 #include <ichor/event_queues/IEventQueue.h>
+#include <ichor/stl/StaticVector.h>
 
 namespace Ichor::Detail {
 

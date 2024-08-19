@@ -1,5 +1,8 @@
 FROM ubuntu:jammy
 
+ARG CONTAINER_OWNER_GID=1000
+ARG CONTAINER_OWNER_ID=1000
+
 RUN apt update && apt-get install -y wget lsb-release software-properties-common gnupg
 RUN wget https://apt.llvm.org/llvm.sh && chmod +x llvm.sh && ./llvm.sh 18 all
 RUN apt install -y cmake libssl-dev pkg-config git ninja-build nano libzip-dev clang-18
@@ -39,6 +42,10 @@ RUN cmake -GNinja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DDISABLE_TESTS=1 -DCMAKE_IN
 RUN ninja && ninja install
 
 RUN mkdir -p /opt/ichor/build
+
+RUN groupadd -g ${CONTAINER_OWNER_GID} buildgroup && useradd -m -u ${CONTAINER_OWNER_ID} -g buildgroup builduser
+RUN chown builduser:buildgroup /opt/ichor/build
+USER builduser
 
 WORKDIR /opt/ichor/build
 

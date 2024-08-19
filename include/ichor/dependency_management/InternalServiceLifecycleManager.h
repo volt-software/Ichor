@@ -1,17 +1,23 @@
 #pragma once
 
+#include <ichor/dependency_management/InternalService.h>
+#include <ichor/stl/StaticVector.h>
+
 namespace Ichor::Detail {
-    // Note: Horrible name :')
-    /// This lifecycle manager is only for adding the queue as a service
+    extern thread_local unordered_set<uint64_t> emptyDependencies;
+
+    /// InternalServiceLifecycleManager is meant to be used for Ichor internal services. This service does not actually own a service like the regular (Dependency)LifecycleManager, but "pretends" to be a LifecycleManager.
+    /// This is especially useful for queues and the DM itself, as they are created outside of the regular dependency mechanism, but we still want services to request these as dependencies.
     /// \tparam ServiceType
     /// \tparam IFaces
-    class DependencyManagerLifecycleManager final : public ILifecycleManager {
+    template<class ServiceType>
+    class InternalServiceLifecycleManager final : public ILifecycleManager {
     public:
-        explicit DependencyManagerLifecycleManager(DependencyManager *dm) : _dm(dm) {
-            _interfaces.emplace_back(typeNameHash<DependencyManager>(), typeName<DependencyManager>().data(), DependencyFlags::NONE, false);
+        explicit InternalServiceLifecycleManager(ServiceType *q) : _q(q) {
+            _interfaces.emplace_back(typeNameHash<ServiceType>(), typeName<ServiceType>().data(), DependencyFlags::NONE, false);
         }
 
-        ~DependencyManagerLifecycleManager() final = default;
+        ~InternalServiceLifecycleManager() final = default;
 
         std::vector<Dependency*> interestedInDependencyGoingOffline(ILifecycleManager *dependentService) noexcept final {
             return {};
@@ -65,14 +71,14 @@ namespace Ichor::Detail {
         }
 
         [[nodiscard]] std::string_view implementationName() const noexcept final {
-            return "DependencyManager";
+            return "ServiceType";
         }
 
         [[nodiscard]] uint64_t type() const noexcept final {
-            return typeNameHash<DependencyManager>();
+            return typeNameHash<ServiceType>();
         }
 
-        [[nodiscard]] uint64_t serviceId() const noexcept final {
+        [[nodiscard]] ServiceIdType serviceId() const noexcept final {
             return _service.getServiceId();
         }
 
@@ -109,12 +115,12 @@ namespace Ichor::Detail {
         /// \param serviceIdOfOther
         /// \param fn
         void insertSelfInto(uint64_t keyOfInterfaceToInject, uint64_t serviceIdOfOther, std::function<void(NeverNull<void*>, IService&)> &fn) final {
-            if(keyOfInterfaceToInject != typeNameHash<DependencyManager>()) {
+            if(keyOfInterfaceToInject != typeNameHash<ServiceType>()) {
                 return;
             }
 
             INTERNAL_DEBUG("insertSelfInto() svc {} telling svc {} to add us", serviceId(), serviceIdOfOther);
-            fn(_dm, _service);
+            fn(_q, _service);
             _serviceIdsOfDependees.insert(serviceIdOfOther);
         }
 
@@ -123,20 +129,20 @@ namespace Ichor::Detail {
         /// \param serviceIdOfOther
         /// \param fn
         void removeSelfInto(uint64_t keyOfInterfaceToInject, uint64_t serviceIdOfOther, std::function<void(NeverNull<void*>, IService&)> &fn) final {
-            if(keyOfInterfaceToInject != typeNameHash<DependencyManager>()) {
+            if(keyOfInterfaceToInject != typeNameHash<ServiceType>()) {
                 return;
             }
 
             INTERNAL_DEBUG("removeSelfInto() svc {} removing svc {}", serviceId(), serviceIdOfOther);
-            fn(_dm, _service);
+            fn(_q, _service);
             _serviceIdsOfDependees.erase(serviceIdOfOther);
         }
 
     private:
-        DependencyManager *_dm;
+        ServiceType *_q;
         ServiceState _state{ServiceState::ACTIVE};
         unordered_set<uint64_t> _serviceIdsOfDependees; // services that depend on this service
         StaticVector<Dependency, 1> _interfaces;
-        InternalService<DependencyManager> _service;
+        InternalService<ServiceType> _service;
     };
 }

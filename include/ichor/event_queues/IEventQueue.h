@@ -5,6 +5,7 @@
 #include <atomic>
 #include <ichor/events/Event.h>
 #include <ichor/Concepts.h>
+#include <ichor/dependency_management/ILifecycleManager.h>
 
 namespace Ichor {
     class DependencyManager;
@@ -26,7 +27,8 @@ namespace Ichor {
 
         /// Starts the event loop, consumes the current thread until a QuitEvent occurs
         /// \param captureSigInt If true, exit on CTRL+C/SigInt
-        virtual void start(bool captureSigInt) = 0;
+        /// \return true if started, false if there was a problem
+        virtual bool start(bool captureSigInt) = 0;
 
         /// Create manager associated with this queue. Terminates the program if called twice.
         /// \return
@@ -74,7 +76,7 @@ namespace Ichor {
 
         /// Thread-safe. Get the next event ID for this queue (not a global counter)
         /// \return next event id
-        [[nodiscard]] uint64_t getNextEventId() noexcept {
+            [[nodiscard]] uint64_t getNextEventId() noexcept {
             return _eventIdCounter.fetch_add(1, std::memory_order_relaxed);
         }
 
@@ -86,6 +88,7 @@ namespace Ichor {
         void startDm();
         void processEvent(std::unique_ptr<Event> &evt);
         void stopDm();
+        void addInternalServiceManager(std::unique_ptr<ILifecycleManager> svc);
 
         std::unique_ptr<DependencyManager> _dm;
         std::atomic<uint64_t> _eventIdCounter{0};

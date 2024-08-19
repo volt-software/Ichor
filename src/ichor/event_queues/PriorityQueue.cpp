@@ -68,14 +68,16 @@ namespace Ichor {
     }
 
     template <typename COMPARE>
-    void TemplatePriorityQueue<COMPARE>::start(bool captureSigInt) {
+    bool TemplatePriorityQueue<COMPARE>::start(bool captureSigInt) {
         if(!_dm) [[unlikely]] {
-            throw std::runtime_error("Please create a manager first!");
+            fmt::println("Please create a manager first!");
+            return false;
         }
 
         if(captureSigInt && !Ichor::Detail::registeredSignalHandler.exchange(true)) {
             if (::signal(SIGINT, Ichor::Detail::on_sigint) == SIG_ERR) {
-                throw std::runtime_error("Couldn't set signal");
+                fmt::println("Couldn't set signal");
+                return false;
             }
         }
 
@@ -118,6 +120,8 @@ namespace Ichor {
         }
 
         stopDm();
+
+        return true;
     }
 
     template <typename COMPARE>

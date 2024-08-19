@@ -165,4 +165,6 @@ namespace Ichor {
             constexpr_for<Start + Inc, End, Inc>(f);
         }
     }
+
+    using ServiceIdType = uint64_t;
 }

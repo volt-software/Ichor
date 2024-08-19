@@ -1,5 +1,6 @@
 #include <ichor/event_queues/IEventQueue.h>
 #include <ichor/DependencyManager.h>
+#include <ichor/dependency_management/InternalServiceLifecycleManager.h>
 #include <atomic>
 
 namespace Ichor::Detail {
@@ -24,6 +25,7 @@ namespace Ichor {
         // std::make_unique doesn't work with friends :)
         auto *dm = new DependencyManager(this);
         _dm = std::unique_ptr<DependencyManager>(dm);
+        _dm->addInternalServiceManager(std::make_unique<Detail::InternalServiceLifecycleManager<IEventQueue>>(this));
         return *_dm;
     }
 
@@ -45,6 +47,10 @@ namespace Ichor {
         }
 
         _dm->stop();
+    }
+
+    void IEventQueue::addInternalServiceManager(std::unique_ptr<ILifecycleManager> svc) {
+        _dm->addInternalServiceManager(std::move(svc));
     }
 
     [[nodiscard]] IEventQueue& GetThreadLocalEventQueue() noexcept {

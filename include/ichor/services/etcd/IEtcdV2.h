@@ -430,9 +430,8 @@ struct fmt::formatter<Ichor::Etcd::v2::EtcdError>
                 return fmt::format_to(ctx.out(), "CANNOT_DELETE_ROOT_WHILE_AUTH_IS_ENABLED");
             case Ichor::Etcd::v2::EtcdError::QUITTING:
                 return fmt::format_to(ctx.out(), "QUITTING");
-            default:
-                return fmt::format_to(ctx.out(), "error, please file a bug in Ichor");
         }
+        return fmt::format_to(ctx.out(), "error, please file a bug in Ichor");
     }
 };
 
@@ -481,8 +480,7 @@ struct fmt::formatter<Ichor::Etcd::v2::EtcdErrorCodes>
                 return fmt::format_to(ctx.out(), "WATCHER_CLEARED_DUE_TO_RECOVERY");
             case Ichor::Etcd::v2::EtcdErrorCodes::EVENT_INDEX_OUTDATED_AND_CLEARED:
                 return fmt::format_to(ctx.out(), "EVENT_INDEX_OUTDATED_AND_CLEARED");
-            default:
-                return fmt::format_to(ctx.out(), "error, please file a bug in Ichor");
         }
+        return fmt::format_to(ctx.out(), "error, please file a bug in Ichor");
     }
 };
