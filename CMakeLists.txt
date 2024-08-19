@@ -98,8 +98,12 @@ file(GLOB_RECURSE ICHOR_BOOST_BEAST_SOURCES ${ICHOR_TOP_DIR}/src/services/networ
 file(GLOB_RECURSE ICHOR_METRICS_SOURCES ${ICHOR_TOP_DIR}/src/services/metrics/*.cpp)
 file(GLOB_RECURSE ICHOR_TIMER_SOURCES ${ICHOR_TOP_DIR}/src/services/timer/*.cpp)
 file(GLOB_RECURSE ICHOR_OPTIONAL_HIREDIS_SOURCES ${ICHOR_TOP_DIR}/src/services/redis/*.cpp)
-file(GLOB_RECURSE ICHOR_IO_SOURCES ${ICHOR_TOP_DIR}/src/services/io/*.cpp)
 file(GLOB_RECURSE ICHOR_BASE64_SOURCES ${ICHOR_TOP_DIR}/src/base64/*.cpp)
+
+set(ICHOR_IO_SOURCES ${ICHOR_TOP_DIR}/src/services/io/IAsyncFileIO.cpp ${ICHOR_TOP_DIR}/src/services/io/SharedOverThreadsAsyncFileIO.cpp)
+if(ICHOR_USE_LIBURING)
+    set(ICHOR_IO_SOURCES ${ICHOR_IO_SOURCES} ${ICHOR_TOP_DIR}/src/services/io/IOUringAsyncFileIO.cpp)
+endif()
 
 file(GLOB SPDLOG_SOURCES ${ICHOR_EXTERNAL_DIR}/spdlog/src/*.cpp)
 

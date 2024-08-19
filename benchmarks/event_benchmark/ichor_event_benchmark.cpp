@@ -1,6 +1,8 @@
 #include "TestService.h"
 #include <ichor/event_queues/PriorityQueue.h>
+#ifdef ICHOR_USE_LIBURING
 #include <ichor/event_queues/IOUringQueue.h>
+#endif
 #include <ichor/services/logging/LoggerFactory.h>
 #include <ichor/services/logging/NullLogger.h>
 #include <ichor/services/metrics/MemoryUsageFunctions.h>
