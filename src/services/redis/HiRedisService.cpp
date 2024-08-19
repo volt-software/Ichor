@@ -74,9 +74,8 @@ namespace Ichor {
                     _printReply(r->element[i], "\t");
                 }
                 break;
-            default:
-                fmt::print("{}Unknown reply from redis type {}\n", indent, r->type);
         }
+        fmt::print("{}Unknown reply from redis type {}\n", indent, r->type);
     }
 
     // this function assumes it is being called from the correct ichor thread.

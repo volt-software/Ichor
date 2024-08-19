@@ -1,8 +1,15 @@
 FROM arm64v8/alpine:3.20
 
+ARG CONTAINER_OWNER_GID=1000
+ARG CONTAINER_OWNER_ID=1000
+
 RUN apk update
 RUN apk add gcc g++ build-base cmake git wget ninja-build ninja-is-really-ninja nano sed linux-headers perl mold
 RUN mkdir -p /opt/ichor/build
+
+RUN addgroup -g ${CONTAINER_OWNER_GID} buildgroup && adduser -H -D -u ${CONTAINER_OWNER_ID} -G buildgroup builduser
+RUN chown builduser:buildgroup /opt/ichor/build
+USER builduser
 
 WORKDIR /opt/ichor/build
 

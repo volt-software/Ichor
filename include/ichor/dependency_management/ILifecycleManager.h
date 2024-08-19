@@ -1,11 +1,9 @@
 #pragma once
 
 #include <string_view>
-#include <memory>
 #include <span>
-#include "AdvancedService.h"
 #include <ichor/Common.h>
-#include <ichor/stl/StaticVector.h>
+#include <ichor/coroutines/Task.h>
 #include "Dependency.h"
 #include "DependencyRegister.h"
 
@@ -42,7 +40,3 @@ namespace Ichor {
         static Task<void> waitForService(ServiceIdType serviceId, uint64_t eventType) noexcept;
     };
 }
-
-// Implementations of ILifecycleManager
-#include <ichor/dependency_management/DependencyLifecycleManager.h>
-#include <ichor/dependency_management/LifecycleManager.h>

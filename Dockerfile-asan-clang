@@ -1,5 +1,8 @@
 FROM ubuntu:jammy
 
+ARG CONTAINER_OWNER_GID=1000
+ARG CONTAINER_OWNER_ID=1000
+
 RUN apt update && apt-get install -y wget lsb-release software-properties-common gnupg
 RUN wget https://apt.llvm.org/llvm.sh && chmod +x llvm.sh && ./llvm.sh 18 all
 RUN apt install -y cmake pkg-config git ninja-build nano libzip-dev clang-18 libc++-18-dev libc++abi-18-dev libclang-rt-18-dev
@@ -13,8 +16,8 @@ RUN wget https://www.openssl.org/source/openssl-3.0.14.tar.gz
 
 ENV CC="clang"
 ENV CXX="clang++"
-ENV CFLAGS="-Og -fsanitize=address,undefined -stdlib=libc++"
-ENV CXXFLAGS="-Og -fsanitize=address,undefined -stdlib=libc++"
+ENV CFLAGS="-Og -fsanitize=address,undefined -fno-sanitize=vptr -stdlib=libc++"
+ENV CXXFLAGS="-Og -fsanitize=address,undefined -fno-sanitize=vptr -stdlib=libc++"
 ENV LDFLAGS="-stdlib=libc++ -static-libstdc++ -l:libc++abi.a -static-libsan -static-libgcc"
 ENV PATH="${PATH}:/usr/lib/llvm-18/bin"
 # false positive in QueueTests, see https://github.com/llvm/llvm-project/issues/59432
@@ -35,8 +38,8 @@ WORKDIR /opt/boost_1_83_0
 RUN ./bootstrap.sh --prefix=/usr --with-toolset=clang
 RUN clang++ --version
 RUN find /usr/lib -name "*-linux*"
-RUN ./b2 cxxflags="-fsanitize=address,undefined -Og -std=c++17 -stdlib=libc++ -DBOOST_USE_ASAN -DBOOST_USE_UCONTEXT"  linkflags="-stdlib=libc++ -static-libstdc++ -l:libc++abi.a -static-libsan -lubsan" variant=debug link=static threading=multi context-impl=ucontext
-RUN ./b2 cxxflags="-fsanitize=address,undefined -Og -std=c++17 -stdlib=libc++ -DBOOST_USE_ASAN -DBOOST_USE_UCONTEXT"  linkflags="-stdlib=libc++ -static-libstdc++ -l:libc++abi.a -static-libsan -lubsan" variant=debug link=static threading=multi context-impl=ucontext install
+RUN ./b2 cxxflags="-fsanitize=address,undefined -fno-sanitize=vptr -Og -std=c++17 -stdlib=libc++ -DBOOST_USE_ASAN -DBOOST_USE_UCONTEXT"  linkflags="-stdlib=libc++ -static-libstdc++ -l:libc++abi.a -static-libsan -lubsan" variant=debug link=static threading=multi context-impl=ucontext
+RUN ./b2 cxxflags="-fsanitize=address,undefined -fno-sanitize=vptr -Og -std=c++17 -stdlib=libc++ -DBOOST_USE_ASAN -DBOOST_USE_UCONTEXT"  linkflags="-stdlib=libc++ -static-libstdc++ -l:libc++abi.a -static-libsan -lubsan" variant=debug link=static threading=multi context-impl=ucontext install
 
 WORKDIR /opt
 
@@ -49,6 +52,10 @@ RUN cmake -GNinja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DDISABLE_TESTS=1 -DCMAKE_IN
 RUN ninja && ninja install
 
 RUN mkdir -p /opt/ichor/build
+
+RUN groupadd -g ${CONTAINER_OWNER_GID} buildgroup && useradd -m -u ${CONTAINER_OWNER_ID} -g buildgroup builduser
+RUN chown builduser:buildgroup /opt/ichor/build
+USER builduser
 
 WORKDIR /opt/ichor/build
 

@@ -111,9 +111,8 @@ struct fmt::formatter<Ichor::ServiceState> {
                 return fmt::format_to(ctx.out(), "UNINJECTING");
             case Ichor::ServiceState::ACTIVE:
                 return fmt::format_to(ctx.out(), "ACTIVE");
-            default:
-                return fmt::format_to(ctx.out(), "error, please file a bug in Ichor");
         }
+        return fmt::format_to(ctx.out(), "error, please file a bug in Ichor");
     }
 };
 
@@ -138,9 +137,8 @@ struct fmt::formatter<Ichor::state> {
                 return fmt::format_to(ctx.out(), "value_ready_producer_suspended");
             case Ichor::state::cancelled:
                 return fmt::format_to(ctx.out(), "cancelled");
-            default:
-                return fmt::format_to(ctx.out(), "error, please file a bug in Ichor, val: {}", (int)state);
         }
+        return fmt::format_to(ctx.out(), "error, please file a bug in Ichor, val: {}", (int)state);
     }
 };
 
@@ -161,9 +159,8 @@ struct fmt::formatter<Ichor::Detail::DependencyChange> {
                 return fmt::format_to(ctx.out(), "FOUND_AND_START_ME");
             case Ichor::Detail::DependencyChange::FOUND_AND_STOP_ME:
                 return fmt::format_to(ctx.out(), "FOUND_AND_STOP_ME");
-            default:
-                return fmt::format_to(ctx.out(), "error, please file a bug in Ichor");
         }
+        return fmt::format_to(ctx.out(), "error, please file a bug in Ichor");
     }
 };
 
@@ -182,9 +179,8 @@ struct fmt::formatter<Ichor::StartBehaviour> {
                 return fmt::format_to(ctx.out(), "STARTED");
             case Ichor::StartBehaviour::STOPPED:
                 return fmt::format_to(ctx.out(), "STOPPED");
-            default:
-                return fmt::format_to(ctx.out(), "error, please file a bug in Ichor");
         }
+        return fmt::format_to(ctx.out(), "error, please file a bug in Ichor");
     }
 };
 
@@ -207,8 +203,7 @@ struct fmt::formatter<Ichor::LogLevel> {
                 return fmt::format_to(ctx.out(), "LOG_WARN");
             case Ichor::LogLevel::LOG_ERROR:
                 return fmt::format_to(ctx.out(), "LOG_ERROR");
-            default:
-                return fmt::format_to(ctx.out(), "error, please file a bug in Ichor");
         }
+        return fmt::format_to(ctx.out(), "error, please file a bug in Ichor");
     }
 };

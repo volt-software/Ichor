@@ -4,6 +4,9 @@
 
 namespace Ichor::Detail {
 
+    /// InternalService is meant to be used for Ichor internal services. This service does not actually own a service like the regular AdvancedService/ConstructorInjectionService, but "pretends" to be a service.
+    /// This is especially useful for queues and the DM itself, as they are created outside of the regular dependency mechanism, but we still want services to request these as dependencies.
+    /// \tparam OriginalType
     template <typename OriginalType>
     class InternalService : public IService {
     public:

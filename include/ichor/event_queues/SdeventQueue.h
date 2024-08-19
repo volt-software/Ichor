@@ -1,6 +1,8 @@
 #pragma once
 
-#ifdef ICHOR_USE_SDEVENT
+#ifndef ICHOR_USE_SDEVENT
+#error "Ichor has not been compiled with sdevent support"
+#endif
 
 #include <ichor/stl/RealtimeReadWriteMutex.h>
 #include <ichor/stl/ConditionVariableAny.h>
@@ -26,7 +28,7 @@ namespace Ichor {
         [[nodiscard]] sd_event* createEventLoop();
         void useEventLoop(sd_event *loop);
 
-        void start(bool captureSigInt) final;
+        bool start(bool captureSigInt) final;
         [[nodiscard]] bool shouldQuit() final;
         void quit() final;
 
@@ -45,5 +47,3 @@ namespace Ichor {
         sd_event_source *_timerSource{};
     };
 }
-
-#endif

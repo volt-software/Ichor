@@ -1,5 +1,8 @@
 FROM ubuntu:jammy
 
+ARG CONTAINER_OWNER_GID=1000
+ARG CONTAINER_OWNER_ID=1000
+
 RUN apt update
 RUN apt install -y g++-12 gcc-12 build-essential cmake pkg-config git wget ninja-build nano libzip-dev
 
@@ -14,8 +17,8 @@ RUN wget https://github.com/redis/hiredis/archive/refs/tags/v1.2.0.tar.gz
 RUN wget https://boostorg.jfrog.io/artifactory/main/release/1.83.0/source/boost_1_83_0.tar.bz2
 RUN wget https://www.openssl.org/source/openssl-3.0.14.tar.gz
 
-ENV CFLAGS="-Og -fsanitize=address,undefined"
-ENV CXXFLAGS="-Og -fsanitize=address,undefined"
+ENV CFLAGS="-Og -fsanitize=address,undefined -fno-sanitize=vptr"
+ENV CXXFLAGS="-Og -fsanitize=address,undefined -fno-sanitize=vptr"
 ENV LDFLAGS="-fsanitize=address,undefined -static-libasan -static-libgcc -static-libstdc++"
 
 RUN tar xf openssl-3.0.14.tar.gz
@@ -31,8 +34,8 @@ RUN tar xf boost_1_83_0.tar.bz2
 WORKDIR /opt/boost_1_83_0
 
 RUN ./bootstrap.sh --prefix=/usr
-RUN ./b2 cxxflags="-fsanitize=address,undefined -Og -std=c++20 -DBOOST_USE_ASAN -DBOOST_USE_UCONTEXT"  linkflags="-static-libasan -static-libgcc -static-libstdc++ -lubsan" variant=debug link=static threading=multi context-impl=ucontext
-RUN ./b2 cxxflags="-fsanitize=address,undefined -Og -std=c++20 -DBOOST_USE_ASAN -DBOOST_USE_UCONTEXT"  linkflags="-static-libasan -static-libgcc -static-libstdc++ -lubsan" variant=debug link=static threading=multi context-impl=ucontext install
+RUN ./b2 cxxflags="-fsanitize=address,undefined -fno-sanitize=vptr -Og -std=c++20 -DBOOST_USE_ASAN -DBOOST_USE_UCONTEXT"  linkflags="-static-libasan -static-libgcc -static-libstdc++ -lubsan" variant=debug link=static threading=multi context-impl=ucontext
+RUN ./b2 cxxflags="-fsanitize=address,undefined -fno-sanitize=vptr -Og -std=c++20 -DBOOST_USE_ASAN -DBOOST_USE_UCONTEXT"  linkflags="-static-libasan -static-libgcc -static-libstdc++ -lubsan" variant=debug link=static threading=multi context-impl=ucontext install
 
 WORKDIR /opt
 
@@ -45,6 +48,10 @@ RUN cmake -GNinja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DDISABLE_TESTS=1 -DCMAKE_IN
 RUN ninja && ninja install
 
 RUN mkdir -p /opt/ichor/build
+
+RUN groupadd -g ${CONTAINER_OWNER_GID} buildgroup && useradd -m -u ${CONTAINER_OWNER_ID} -g buildgroup builduser
+RUN chown builduser:buildgroup /opt/ichor/build
+USER builduser
 
 WORKDIR /opt/ichor/build
 

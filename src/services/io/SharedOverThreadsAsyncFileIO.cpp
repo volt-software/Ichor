@@ -29,6 +29,7 @@ Ichor::SharedOverThreadsAsyncFileIO::SharedOverThreadsAsyncFileIO(Ichor::Propert
 
 }
 
+
 Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::SharedOverThreadsAsyncFileIO::start() {
     INTERNAL_IO_DEBUG("setup_thread");
     if (!_initialized.exchange(true, std::memory_order_acq_rel)) {
@@ -70,8 +71,8 @@ Ichor::Task<void> Ichor::SharedOverThreadsAsyncFileIO::stop() {
     co_return;
 }
 
-Ichor::Task<tl::expected<std::string, Ichor::FileIOError>> Ichor::SharedOverThreadsAsyncFileIO::read_whole_file(std::filesystem::path const &file_path) {
-    INTERNAL_IO_DEBUG("read_whole_file()");
+Ichor::Task<tl::expected<std::string, Ichor::FileIOError>> Ichor::SharedOverThreadsAsyncFileIO::readWholeFile(std::filesystem::path const &file_path) {
+    INTERNAL_IO_DEBUG("readWholeFile()");
 
     auto submission = std::make_shared<io_operation_submission>();
     std::string contents;
@@ -80,16 +81,18 @@ Ichor::Task<tl::expected<std::string, Ichor::FileIOError>> Ichor::SharedOverThre
         std::ifstream file(file_path);
 
         if(!file) {
-            if(!std::filesystem::exists(file_path)) {
-                res = tl::unexpected(FileIOError::FILE_DOES_NOT_EXIST);
-                return;
-            }
-            INTERNAL_IO_DEBUG("!file");
-            res = tl::unexpected(FileIOError::FAILED);
+            INTERNAL_IO_DEBUG("!file {} {}", errno, strerror(errno));
+            res = tl::unexpected(mapErrnoToError(errno));
             return;
         }
 
         file.seekg(0, std::ios::end);
+
+        if((unsigned long)file.tellg() > contents.max_size()) {
+            res = tl::unexpected(FileIOError::FILE_SIZE_TOO_BIG);
+            return;
+        }
+
         contents.resize(static_cast<unsigned long>(file.tellg()));
         file.seekg(0, std::ios::beg);
         file.read(contents.data(), static_cast<long>(contents.size()));
@@ -113,8 +116,8 @@ Ichor::Task<tl::expected<std::string, Ichor::FileIOError>> Ichor::SharedOverThre
     co_return contents;
 }
 
-Ichor::Task<tl::expected<void, Ichor::FileIOError>> Ichor::SharedOverThreadsAsyncFileIO::copy_file(const std::filesystem::path &from, const std::filesystem::path &to) {
-    INTERNAL_IO_DEBUG("copy_file()");
+Ichor::Task<tl::expected<void, Ichor::FileIOError>> Ichor::SharedOverThreadsAsyncFileIO::copyFile(const std::filesystem::path &from, const std::filesystem::path &to) {
+    INTERNAL_IO_DEBUG("copyFile()");
 
     auto submission = std::make_shared<io_operation_submission>();
     submission->fn = [&from, &to](decltype(io_operation_submission::result) &res) {
@@ -142,19 +145,7 @@ Ichor::Task<tl::expected<void, Ichor::FileIOError>> Ichor::SharedOverThreadsAsyn
         auto err = errno;
         if(ret < 0) {
             INTERNAL_IO_DEBUG("copyfile ret: {}, errno: {}", ret, err);
-            if(err == EPERM) {
-                res = tl::unexpected(FileIOError::NO_PERMISSION);
-                return;
-            }
-            if(err == EISDIR) {
-                res = tl::unexpected(FileIOError::IS_DIR_SHOULD_BE_FILE);
-                return;
-            }
-            if(err == ENOENT) {
-                res = tl::unexpected(FileIOError::FILE_DOES_NOT_EXIST);
-                return;
-            }
-            res = tl::unexpected(FileIOError::FAILED);
+            res = tl::unexpected(mapErrnoToError(errno));
             return;
         }
 #else
@@ -162,8 +153,8 @@ Ichor::Task<tl::expected<void, Ichor::FileIOError>> Ichor::SharedOverThreadsAsyn
         off_t len, ret;
         int fd_in = open(from.c_str(), O_RDONLY | O_CLOEXEC);
         if (fd_in == -1) {
-            INTERNAL_IO_DEBUG("open from errno {}", errno);
-            res = tl::unexpected(FileIOError::FILE_DOES_NOT_EXIST);
+            INTERNAL_IO_DEBUG("open from errno {} {}", errno, strerror(errno));
+            res = tl::unexpected(mapErrnoToError(errno));
             return;
         }
         ScopeGuard sg_fd_in{[fd_in]() {
@@ -171,8 +162,8 @@ Ichor::Task<tl::expected<void, Ichor::FileIOError>> Ichor::SharedOverThreadsAsyn
         }};
 
         if (fstat(fd_in, &stat) == -1) {
-            INTERNAL_IO_DEBUG("fstat from errno {}", errno);
-            res = tl::unexpected(FileIOError::FILE_DOES_NOT_EXIST);
+            INTERNAL_IO_DEBUG("fstat from errno {} {}", errno, strerror(errno));
+            res = tl::unexpected(mapErrnoToError(errno));
             return;
         }
 
@@ -180,8 +171,8 @@ Ichor::Task<tl::expected<void, Ichor::FileIOError>> Ichor::SharedOverThreadsAsyn
 
         int fd_out = open(to.c_str(), O_CREAT | O_WRONLY | O_TRUNC | O_CLOEXEC, 0644);
         if (fd_out == -1) {
-            INTERNAL_IO_DEBUG("open to errno {}", errno);
-            res = tl::unexpected(FileIOError::FAILED);
+            INTERNAL_IO_DEBUG("open to errno {} {}", errno, strerror(errno));
+            res = tl::unexpected(mapErrnoToError(errno));
             return;
         }
         ScopeGuard sg_fd_out{[fd_out]() {
@@ -191,17 +182,8 @@ Ichor::Task<tl::expected<void, Ichor::FileIOError>> Ichor::SharedOverThreadsAsyn
         do {
             ret = copy_file_range(fd_in, nullptr, fd_out, nullptr, static_cast<size_t>(len), 0);
             if (ret == -1) {
-                int err = errno;
-                INTERNAL_IO_DEBUG("copy_file_range failed: {}", err);
-                if(err == EPERM) {
-                    res = tl::unexpected(FileIOError::NO_PERMISSION);
-                    return;
-                }
-                if(err == EISDIR) {
-                    res = tl::unexpected(FileIOError::IS_DIR_SHOULD_BE_FILE);
-                    return;
-                }
-                res = tl::unexpected(FileIOError::FAILED);
+                INTERNAL_IO_DEBUG("copy_file_range failed: {} {}", errno, strerror(errno));
+                res = tl::unexpected(mapErrnoToError(errno));
                 return;
             }
 
@@ -226,8 +208,8 @@ Ichor::Task<tl::expected<void, Ichor::FileIOError>> Ichor::SharedOverThreadsAsyn
     co_return {};
 }
 
-Ichor::Task<tl::expected<void, Ichor::FileIOError>> Ichor::SharedOverThreadsAsyncFileIO::remove_file(const std::filesystem::path &file) {
-    INTERNAL_IO_DEBUG("remove_file()");
+Ichor::Task<tl::expected<void, Ichor::FileIOError>> Ichor::SharedOverThreadsAsyncFileIO::removeFile(const std::filesystem::path &file) {
+    INTERNAL_IO_DEBUG("removeFile()");
 
     auto submission = std::make_shared<io_operation_submission>();
     submission->fn = [&file](decltype(io_operation_submission::result) &res) {
@@ -252,20 +234,8 @@ Ichor::Task<tl::expected<void, Ichor::FileIOError>> Ichor::SharedOverThreadsAsyn
 
         if(ret != 0) {
             int err = errno;
-            INTERNAL_IO_DEBUG("unlink failed: {}", err);
-            if(err == EACCES || err == EPERM) {
-                res = tl::unexpected(FileIOError::NO_PERMISSION);
-                return;
-            }
-            if(err == ENOENT) {
-                res = tl::unexpected(FileIOError::FILE_DOES_NOT_EXIST);
-                return;
-            }
-            if(err == EISDIR) {
-                res = tl::unexpected(FileIOError::IS_DIR_SHOULD_BE_FILE);
-                return;
-            }
-            res = tl::unexpected(FileIOError::FAILED);
+            INTERNAL_IO_DEBUG("unlink failed: {} {}", errno, strerror(errno));
+            res = tl::unexpected(mapErrnoToError(errno));
         }
 #endif
     };
@@ -284,9 +254,9 @@ Ichor::Task<tl::expected<void, Ichor::FileIOError>> Ichor::SharedOverThreadsAsyn
     co_return {};
 }
 
-Ichor::Task<tl::expected<void, Ichor::FileIOError>> Ichor::SharedOverThreadsAsyncFileIO::write_file(const std::filesystem::path &file, std::string_view contents) {
+Ichor::Task<tl::expected<void, Ichor::FileIOError>> Ichor::SharedOverThreadsAsyncFileIO::writeFile(const std::filesystem::path &file, std::string_view contents) {
 
-    INTERNAL_IO_DEBUG("write_file()");
+    INTERNAL_IO_DEBUG("writeFile()");
 
     auto submission = std::make_shared<io_operation_submission>();
     submission->fn = [&file, contents](decltype(io_operation_submission::result) &res) {
@@ -294,21 +264,40 @@ Ichor::Task<tl::expected<void, Ichor::FileIOError>> Ichor::SharedOverThreadsAsyn
             auto out = fmt::output_file(file.string());
             out.print("{}", contents);
         } catch (const std::system_error &e) {
-            INTERNAL_IO_DEBUG("write_file failed: {} {}", e.code().value(), e.code().message());
+            INTERNAL_IO_DEBUG("writeFile failed: {} {}", e.code().value(), e.code().message());
             int err = e.code().value();
-            if(err == EACCES || err == EPERM) {
-                res = tl::unexpected(FileIOError::NO_PERMISSION);
-                return;
-            }
-            if(err == ENOENT) {
-                res = tl::unexpected(FileIOError::FILE_DOES_NOT_EXIST);
-                return;
-            }
-            if(err == EISDIR) {
-                res = tl::unexpected(FileIOError::IS_DIR_SHOULD_BE_FILE);
-                return;
-            }
-            res = tl::unexpected(FileIOError::FAILED);
+            res = tl::unexpected(mapErrnoToError(err));
+        }
+    };
+    {
+        std::unique_lock lg{_io_mutex};
+        _evts.push(submission);
+    }
+    INTERNAL_IO_DEBUG("co_await");
+    co_await submission->evt;
+
+    if(!submission->result) {
+        INTERNAL_IO_DEBUG("!result");
+        co_return tl::unexpected(submission->result.error());
+    }
+
+    co_return {};
+}
+
+Ichor::Task<tl::expected<void, Ichor::FileIOError>> Ichor::SharedOverThreadsAsyncFileIO::appendFile(const std::filesystem::path &file, std::string_view contents) {
+
+    INTERNAL_IO_DEBUG("appendFile()");
+
+    auto submission = std::make_shared<io_operation_submission>();
+    submission->fn = [&file, contents](decltype(io_operation_submission::result) &res) {
+        try {
+            // TODO fmt default permissions are S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH. Maybe make it consistent accross AsyncFileIO impl?
+            auto out = fmt::output_file(file.string(), fmt::file::WRONLY | fmt::file::CREATE | fmt::file::APPEND);
+            out.print("{}", contents);
+        } catch (const std::system_error &e) {
+            INTERNAL_IO_DEBUG("appendFile failed: {} {}", e.code().value(), e.code().message());
+            int err = e.code().value();
+            res = tl::unexpected(mapErrnoToError(err));
         }
     };
     {

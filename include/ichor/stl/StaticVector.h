@@ -458,7 +458,7 @@ namespace Ichor {
         constexpr iterator insert(const_iterator const_position, InputIterator first, InputIterator last) {
             difference_type n = std::distance(first, last);
             assert(n >= 0);
-            assert(_size + n <= N);
+            assert(_size + (std::size_t)n <= N);
             auto position = iterator{const_cast<pointer>(const_position.operator->())};
             _size += n;
             if constexpr (std::is_move_constructible_v<T>) {

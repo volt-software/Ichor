@@ -14,6 +14,8 @@ docker build -f Dockerfile-asan -t ichor-asan . && docker run -v $(pwd):/opt/ich
 
 The binaries will then be in `$(pwd)/bin`. The musl build statically compiles Ichor and should be able to run on all platforms, otherwise the binaries need at least glibc 2.35 on the system that's running them.  
 
+To cross-compile, install the latest qemu-user-static package for your distribution and binfmt_support. Then reboot and you should have qemu binaries doing emulation. With that, use one of the dockerfiles as an example to create your own builds.
+
 ### Dependencies
 
 #### Ubuntu 20.04:

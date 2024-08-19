@@ -3,30 +3,11 @@
 #include <ichor/event_queues/IOUringQueue.h>
 #include <ichor/ScopeGuard.h>
 #include <ichor/DependencyManager.h>
+#include <ichor/dependency_management/InternalServiceLifecycleManager.h>
+#include <ichor/ichor_liburing.h>
 
-// liburing uses different conventions than Ichor, ignore them to prevent being spammed by warnings
-#if defined( __GNUC__ )
-#    pragma GCC diagnostic push
-#    pragma GCC diagnostic ignored "-Wsign-conversion"
-#    pragma GCC diagnostic ignored "-Wshadow"
-#    pragma GCC diagnostic ignored "-Wconversion"
-#    pragma GCC diagnostic ignored "-Wpedantic"
-#    pragma GCC diagnostic ignored "-Wgnu-pointer-arith"
-#    pragma GCC diagnostic ignored "-Wgnu-anonymous-struct"
-#    pragma GCC diagnostic ignored "-Wgnu-statement-expression-from-macro-expansion"
-#    pragma GCC diagnostic ignored "-Wimplicit-int-conversion"
-#    pragma GCC diagnostic ignored "-Wnested-anon-types"
-#    pragma GCC diagnostic ignored "-Wzero-length-array"
-#    pragma GCC diagnostic ignored "-Wcast-align"
-#    pragma GCC diagnostic ignored "-Wc99-extensions"
-#endif
-#include "liburing.h"
-#if defined( __GNUC__ )
-#    pragma GCC diagnostic pop
-#endif
-
-//#include <spdlog/spdlog.h>
-
+#include <fmt/core.h>
+#include <unistd.h>
 #if defined(__SANITIZE_THREAD__)
 #define TSAN_ENABLED
 #elif defined(__has_feature)
@@ -56,17 +37,18 @@ namespace Ichor::Detail {
 
 namespace Ichor {
     IOUringQueue::IOUringQueue(uint64_t quitTimeoutMs, long long pollTimeoutNs) : _quitTimeoutMs(quitTimeoutMs), _pollTimeoutNs(pollTimeoutNs) {
-        _threadId = std::this_thread::get_id();
-
-        if(!io_uring_check_version(2, 5)) {
-//            spdlog::info("io_uring version is not 2,5. Ichor is not compiled correctly.");
+        if(io_uring_major_version() != 2 || io_uring_minor_version() != 6) {
+            fmt::println("io_uring version is {}.{}, but expected 2.6. Ichor is not compiled correctly.", io_uring_major_version(), io_uring_minor_version());
             std::terminate();
         }
+        _threadId = std::this_thread::get_id(); // re-set in functions below, because adding events when the queue isn't running yet cannot be done from another thread.
     }
 
     IOUringQueue::~IOUringQueue() {
         if(_initializedQueue.load(std::memory_order_acquire)) {
-            stopDm();
+            if(_dm) {
+                stopDm();
+            }
             TSAN_ANNOTATE_HAPPENS_AFTER(_eventQueuePtr);
             if(_eventQueue) {
                 io_uring_queue_exit(_eventQueue.get());
@@ -75,22 +57,24 @@ namespace Ichor {
 
         if(Detail::registeredSignalHandler) {
             if (::signal(SIGINT, SIG_DFL) == SIG_ERR) {
-//                spdlog::info("Couldn't unset signal handler");
+//                fmt::println("Couldn't unset signal handler");
             }
         }
     }
 
     void IOUringQueue::pushEventInternal(uint64_t priority, std::unique_ptr<Event> &&event) {
         if(!_initializedQueue.load(std::memory_order_acquire)) [[unlikely]] {
-            throw std::runtime_error("sdevent not initialized. Call createEventLoop or useEventLoop first.");
+            fmt::println("IOUringQueue not initialized. Call createEventLoop or useEventLoop first.");
+            std::terminate();
         }
 
         if(!event) [[unlikely]] {
-            throw std::runtime_error("Pushing nullptr");
+            fmt::println("Pushing nullptr");
+            std::terminate();
         }
 
         if(shouldQuit()) {
-//            spdlog::info("pushEventInternal, should quit! not inserting {}", event->get_name());
+            //fmt::println("pushEventInternal, should quit! not inserting {}", event->get_name());
             return;
         }
 
@@ -103,7 +87,7 @@ namespace Ichor {
 
 
         Event *procEvent = event.release();
-        //spdlog::info("pushEventInternal {} {}", procEvent->get_name(), reinterpret_cast<void*>(procEvent));
+//        fmt::println("pushEventInternal {} {}", procEvent->get_name(), reinterpret_cast<void*>(procEvent));
         if(std::this_thread::get_id() != _threadId) [[unlikely]] {
             TSAN_ANNOTATE_HAPPENS_BEFORE(procEvent);
             io_uring tempQueue{};
@@ -111,8 +95,17 @@ namespace Ichor {
             p.flags = IORING_SETUP_DEFER_TASKRUN | IORING_SETUP_COOP_TASKRUN | IORING_SETUP_SINGLE_ISSUER | IORING_SETUP_ATTACH_WQ;
             p.wq_fd = static_cast<__u32>(_eventQueuePtr->ring_fd);
             auto ret = io_uring_queue_init_params(8, &tempQueue, &p);
+            if(ret == -ENOSYS) [[unlikely]] {
+                // TODO replace all throws with prints + terminates
+                throw std::system_error(-ret, std::generic_category(), "io_uring_queue_init_params() with WQ failed, probably not enabled in the kernel.");
+            }
             if(ret < 0) [[unlikely]] {
-                throw std::system_error(-ret, std::generic_category(), "io_uring_queue_init_params() failed");
+                p.flags = IORING_SETUP_ATTACH_WQ;
+                fmt::println("Couldn't set queue params IORING_SETUP_DEFER_TASKRUN | IORING_SETUP_COOP_TASKRUN | IORING_SETUP_SINGLE_ISSUER, retrying without. Expect reduced performance.");
+                ret = io_uring_queue_init_params(8, &tempQueue, &p);
+                if(ret < 0) [[unlikely]] {
+                    throw std::system_error(-ret, std::generic_category(), "io_uring_queue_init_params() for tempQueue failed");
+                }
             }
             ScopeGuard sg{[&tempQueue]() {
                 io_uring_queue_exit(&tempQueue);
@@ -123,41 +116,59 @@ namespace Ichor {
             TSAN_ANNOTATE_HAPPENS_BEFORE(_eventQueuePtr);
             ret = io_uring_submit_and_wait(&tempQueue, 1);
             if(ret != 1) [[unlikely]] {
-//                spdlog::info("io_uring_submit {}", ret);
-                throw std::runtime_error("submit wrong amount, would have resulted in dropping event");
+                fmt::println("io_uring_submit_and_wait {}", ret);
+                fmt::println("submit wrong amount, would have resulted in dropping event");
+                std::terminate();
             }
+
+//            fmt::println("pushEventInternal() {} {}", std::hash<std::thread::id>{}(std::this_thread::get_id()), std::hash<std::thread::id>{}(_threadId));
+
+//            std::terminate();
         } else {
             auto *sqe = io_uring_get_sqe(_eventQueuePtr);
+
+            if(sqe == nullptr) {
+                auto ret = io_uring_submit_and_wait(_eventQueuePtr, 2);
+
+                if(ret < 0) {
+                    auto space = io_uring_sq_space_left(_eventQueuePtr);
+                    fmt::println("pushEventInternal() error waiting for available slots in ring {} {} {}", ret, _entriesCount, space);
+                    throw std::system_error(-ret, std::generic_category(), "io_uring_submit_and_wait() failed.");
+                }
+
+                sqe = io_uring_get_sqe(_eventQueuePtr);
+                if(sqe == nullptr) {
+                    auto space = io_uring_sq_space_left(_eventQueuePtr);
+                    fmt::println("pushEventInternal() couldn't wait for available slots in ring {} {}", _entriesCount, space);
+                    std::terminate();
+                }
+            }
+
             io_uring_sqe_set_data(sqe, procEvent);
             io_uring_prep_nop(sqe);
 
-            auto space = io_uring_sq_space_left(_eventQueuePtr);
-            if(space == 0) {
-                auto ret = io_uring_submit(_eventQueuePtr);
-                if (ret != _entriesCount) [[unlikely]] {
-//                spdlog::info("io_uring_submit {}", ret);
-                    throw std::runtime_error("submit wrong amount");
-                }
-            }
+            submitIfNeeded();
         }
     }
 
     bool IOUringQueue::empty() const {
         if(!_initializedQueue.load(std::memory_order_acquire)) [[unlikely]] {
-            throw std::runtime_error("sdevent not initialized. Call createEventLoop or useEventLoop first.");
+            fmt::println("IOUringQueue not initialized. Call createEventLoop or useEventLoop first.");
+            std::terminate();
         }
 
         // TODO
-        return !_dm->isRunning();
+        return !_dm || !_dm->isRunning();
     }
 
     uint64_t IOUringQueue::size() const {
         if(!_initializedQueue.load(std::memory_order_acquire)) [[unlikely]] {
-            throw std::runtime_error("sdevent not initialized. Call createEventLoop or useEventLoop first.");
+            fmt::println("IOUringQueue not initialized. Call createEventLoop or useEventLoop first.");
+            std::terminate();
         }
 
         // TODO
-        return _dm->isRunning() ? 1 : 0;
+        return (_dm && _dm->isRunning()) ? 1 : 0;
     }
 
     bool IOUringQueue::is_running() const noexcept {
@@ -172,51 +183,79 @@ namespace Ichor {
         p.flags = IORING_SETUP_DEFER_TASKRUN | IORING_SETUP_COOP_TASKRUN | IORING_SETUP_SINGLE_ISSUER;
         p.sq_thread_idle = 50;
         auto ret = io_uring_queue_init_params(entriesCount, _eventQueuePtr, &p);
-        if(ret < 0) [[unlikely]] {
-            throw std::system_error(-ret, std::generic_category(), "io_uring_queue_init_params() failed");
+        if(ret == -ENOSYS) [[unlikely]] {
+            throw std::system_error(-ret, std::generic_category(), "io_uring_queue_init_params() failed, probably not enabled in the kernel.");
         }
-        if (!(p.features & IORING_FEAT_FAST_POLL)) {
-            fmt::print("IORING_FEAT_FAST_POLL not supported, expect reduced performance\n");
+        if(ret < 0) [[unlikely]] {
+            p.flags = 0;
+            fmt::println("Couldn't set queue params IORING_SETUP_DEFER_TASKRUN | IORING_SETUP_COOP_TASKRUN | IORING_SETUP_SINGLE_ISSUER, retrying without. Expect reduced performance.");
+            ret = io_uring_queue_init_params(entriesCount, _eventQueuePtr, &p);
+            if(ret < 0) [[unlikely]] {
+                throw std::system_error(-ret, std::generic_category(), "io_uring_queue_init_params() failed");
+            }
+        }
+        if (!checkRingFlags(_eventQueuePtr)) {
+            return nullptr; // TODO change return type to std::expected with nevernull.
         }
         ret = io_uring_register_ring_fd(_eventQueuePtr);
         if(ret < 0) [[unlikely]] {
             throw std::system_error(-ret, std::generic_category(), "io_uring_register_ring_fd() failed");
         }
 
+        _threadId = std::this_thread::get_id();
         _initializedQueue.store(true, std::memory_order_release);
         return _eventQueuePtr;
     }
 
-    void IOUringQueue::useEventLoop(io_uring *event, unsigned entriesCount) {
+    bool IOUringQueue::useEventLoop(io_uring *event, unsigned entriesCount) {
+        if (!checkRingFlags(event)) {
+            return false;
+        }
+        _threadId = std::this_thread::get_id();
         _eventQueuePtr = event;
         _entriesCount = entriesCount;
         _initializedQueue.store(true, std::memory_order_release);
+        return true;
     }
 
-    void IOUringQueue::start(bool captureSigInt) {
+    bool IOUringQueue::start(bool captureSigInt) {
         if(!_initializedQueue.load(std::memory_order_acquire)) [[unlikely]] {
-            throw std::runtime_error("sdevent not initialized. Call createEventLoop or useEventLoop first.");
+            fmt::println("IOUringQueue not initialized. Call createEventLoop or useEventLoop first.");
+            return false;
         }
 
         if(!_dm) [[unlikely]] {
-            throw std::runtime_error("Please create a manager first!");
+            fmt::println("Please create a manager first!");
+            return false;
         }
 
-        // this capture currently has no way to wake all queues. Multimap f.e. polls sigintQuit, but with sdevent the
+        if(std::this_thread::get_id() != _threadId) [[unlikely]] {
+            fmt::print("Creation of ring and start() have to be on the same thread.");
+            std::terminate();
+        }
+//        fmt::println("start() {} {}", std::hash<std::thread::id>{}(std::this_thread::get_id()), std::hash<std::thread::id>{}(_threadId));
+
         if(captureSigInt && !Ichor::Detail::registeredSignalHandler.exchange(true)) {
             if (::signal(SIGINT, Ichor::Detail::on_sigint) == SIG_ERR) {
-                throw std::runtime_error("Couldn't set signal");
+                fmt::println("Couldn't set signal");
+                return false;
             }
         }
+
+        addInternalServiceManager(std::make_unique<Detail::InternalServiceLifecycleManager<IIOUringQueue>>(this));
 
         startDm();
 
         {
             auto space = io_uring_sq_space_left(_eventQueuePtr);
             auto ret = io_uring_submit(_eventQueuePtr);
-            if (ret != _entriesCount - space) [[unlikely]] {
-//                spdlog::info("io_uring_submit {}", ret);
-                throw std::runtime_error("submit wrong amount");
+            if(ret < 0) [[unlikely]] {
+                throw std::system_error(-ret, std::generic_category(), "io_uring_submit() failed.");
+            }
+            if ((unsigned)ret != _entriesCount - space) [[unlikely]] {
+//                fmt::println("io_uring_submit {}", ret);
+                fmt::println("submit wrong amount");
+                std::terminate();
             }
         }
 
@@ -226,42 +265,87 @@ namespace Ichor {
             ts.tv_nsec = _pollTimeoutNs;
 
             auto ret = io_uring_wait_cqes(_eventQueuePtr, &cqe, 1, &ts, nullptr);
-//            spdlog::info("io_uring_wait_cqe_timeout {} {}", ret, reinterpret_cast<void*>(cqe));
+//            fmt::println("io_uring_wait_cqe_timeout {} {}", ret, reinterpret_cast<void*>(cqe));
             if(ret < 0 && ret != -ETIME) [[unlikely]] {
-                throw std::system_error(-ret, std::generic_category(), "io_uring_wait_cqe_timeout() failed");
+                if(ret == -EBADF) {
+                    throw std::system_error(-ret, std::generic_category(), "io_uring_wait_cqes() failed. Did you create the event loop on the same thread as you started the queue?");
+                } else {
+                    throw std::system_error(-ret, std::generic_category(), "io_uring_wait_cqes() failed");
+                }
             }
 
             unsigned int handled{};
             unsigned int head{};
             if(ret != -ETIME) {
                 io_uring_for_each_cqe(_eventQueuePtr, head, cqe) {
-//                spdlog::info("ret != -ETIME {} {} {}", cqe->flags, cqe->res, io_uring_cqe_get_data(cqe));
+//                    fmt::println("ret != -ETIME {} {} {}", cqe->flags, cqe->res, io_uring_cqe_get_data(cqe));
                     TSAN_ANNOTATE_HAPPENS_AFTER(cqe->user_data);
                     auto *evt = reinterpret_cast<Event *>(io_uring_cqe_get_data(cqe));
                     if (evt != nullptr) {
-                        //spdlog::info("processing {}", evt->get_name());
+//                        fmt::println("processing {}", evt->get_name());
                         std::unique_ptr<Event> uniqueEvt{evt};
-                        processEvent(uniqueEvt);
+                        if(uniqueEvt->get_type() == UringResponseEvent::TYPE) {
+                            auto *resEvt = reinterpret_cast<UringResponseEvent*>(uniqueEvt.get());
+                            resEvt->fun(cqe->res);
+                        } else {
+                            processEvent(uniqueEvt);
+                        }
+//                        fmt::println("Done processing {}", evt->get_name());
                     }
                     handled++;
                 }
 
                 io_uring_cq_advance(_eventQueuePtr, handled);
-
                 {
                     auto space = io_uring_sq_space_left(_eventQueuePtr);
-                    if (space < _entriesCount) {
+                    auto ready = io_uring_cq_ready(_eventQueuePtr);
+                    if (space < _entriesCount && ready == 0u) {
+                        //fmt::println("submit end of loop");
                         ret = io_uring_submit(_eventQueuePtr);
-                        if (ret != _entriesCount - space) [[unlikely]] {
-//                          spdlog::info("io_uring_submit {}", ret);
-                            throw std::runtime_error("submit wrong amount");
+                        if(ret < 0) [[unlikely]] {
+                            throw std::system_error(-ret, std::generic_category(), "io_uring_submit() failed.");
+                        }
+                        if ((unsigned int)ret != _entriesCount - space) [[unlikely]] {
+                            fmt::println("submit wrong amount");
+                            std::terminate();
                         }
                     }
                 }
+
             }
 
             shouldAddQuitEvent();
         }
+
+        // one last loop to de-allocate any potentially unhandled events
+//        fmt::println("One last loop");
+        bool somethingHandled{true};
+        while(somethingHandled) {
+            io_uring_cqe *cqe{};
+            __kernel_timespec ts{};
+            ts.tv_nsec = 500'000;
+            unsigned int handled{};
+            unsigned int head{};
+
+            auto ret = io_uring_wait_cqes(_eventQueuePtr, &cqe, 1, &ts, nullptr);
+            if(ret < 0 && ret != -ETIME) [[unlikely]] {
+                throw std::system_error(-ret, std::generic_category(), "io_uring_wait_cqes() failed.");
+            }
+            io_uring_for_each_cqe(_eventQueuePtr, head, cqe) {
+                TSAN_ANNOTATE_HAPPENS_AFTER(cqe->user_data);
+                auto *evt = reinterpret_cast<Event *>(io_uring_cqe_get_data(cqe));
+                std::unique_ptr<Event> uniqueEvt{evt};
+//                fmt::println("last loop processing {}", evt->get_name());
+                handled++;
+            }
+
+            if(handled == 0) {
+                somethingHandled = false;
+            }
+            io_uring_cq_advance(_eventQueuePtr, handled);
+        }
+
+        return true;
     }
 
     bool IOUringQueue::shouldQuit() {
@@ -271,21 +355,92 @@ namespace Ichor {
 
         return _quit.load(std::memory_order_acquire);
     }
+
+    void IOUringQueue::quit() {
+        _quit.store(true, std::memory_order_release);
+    }
+
+    NeverNull<io_uring*> IOUringQueue::getRing() {
+        return _eventQueuePtr;
+    }
+
+    unsigned int IOUringQueue::getMaxEntriesCount() {
+        return _entriesCount;
+    }
+
+    uint64_t IOUringQueue::getNextEventIdFromIchor() {
+        return this->IEventQueue::getNextEventId();
+    }
+
+    uint32_t IOUringQueue::sqeSpaceLeft() {
+        return io_uring_sq_space_left(_eventQueuePtr);
+    }
+
+    io_uring_sqe *IOUringQueue::getSqe() {
+        auto sqe = io_uring_get_sqe(_eventQueuePtr);
+        if(sqe == nullptr) {
+            submitIfNeeded();
+            sqe = io_uring_get_sqe(_eventQueuePtr);
+            if(sqe == nullptr) {
+                fmt::println("Couldn't get sqe from ring after submit.");
+                std::terminate();
+            }
+        }
+        return sqe;
+    }
+
+    void IOUringQueue::submitIfNeeded() {
+        auto space = io_uring_sq_space_left(_eventQueuePtr);
+        if(space == 0) {
+            auto ret = io_uring_submit(_eventQueuePtr);
+            //fmt::println("submit");
+            if(ret < 0) [[unlikely]] {
+                throw std::system_error(-ret, std::generic_category(), "io_uring_submit() failed.");
+            }
+            if ((unsigned int)ret != _entriesCount) [[unlikely]] {
+                fmt::println("submit wrong amount");
+                std::terminate();
+            }
+        }
+    }
+
+    void IOUringQueue::submitAndWait(uint32_t waitNr) {
+        auto toSubmit = io_uring_sq_ready(_eventQueuePtr);
+        auto ret = io_uring_submit_and_wait(_eventQueuePtr, waitNr);
+
+        if(ret < 0) [[unlikely]] {
+            fmt::println("pushEventInternal() error waiting for available slots in ring {} {} {}", ret, _entriesCount, toSubmit);
+            throw std::system_error(-ret, std::generic_category(), "io_uring_submit_and_wait() failed");
+        }
+
+        if ((unsigned int)ret != toSubmit) [[unlikely]] {
+            fmt::println("submit wrong amount");
+            std::terminate();
+        }
+    }
+
+    bool IOUringQueue::checkRingFlags(io_uring *ring) {
+        if (!(ring->features & IORING_FEAT_FAST_POLL)) {
+            fmt::println("IORING_FEAT_FAST_POLL not supported, expect reduced performance.");
+        }
+        if (!(ring->features & IORING_FEAT_NODROP)) {
+            fmt::println("IORING_FEAT_NODROP not supported, cqe overflow will lead to dropped packets!");
+        }
+        if (!(ring->features & IORING_FEAT_EXT_ARG)) {
+            fmt::println("IORING_FEAT_EXT_ARG (a.k.a. IORING_ENTER_EXT_ARG) not supported, expect reduced performance.");
+        }
+        // it seems all code in Ichor so far keeps state stable until completion, so this shouldn't be necessary.
+//        if (!(ring->features & IORING_FEAT_SUBMIT_STABLE)) {
+//            fmt::println("IORING_FEAT_SUBMIT_STABLE not supported, kernel too old to use Ichor's io_uring implementation.");
+//            return false;
+//        }
+        return true;
+    }
+
     void IOUringQueue::shouldAddQuitEvent() {
         bool const shouldQuit = Detail::sigintQuit.load(std::memory_order_acquire);
 
         if(shouldQuit && !_quitEventSent.load(std::memory_order_acquire)) {
-            // assume _eventQueueMutex is locked
-            pushEventInternal(INTERNAL_EVENT_PRIORITY, std::make_unique<QuitEvent>(getNextEventId(), 0, INTERNAL_EVENT_PRIORITY));
-            _quitEventSent.store(true, std::memory_order_release);
-            _whenQuitEventWasSent = std::chrono::steady_clock::now();
-        }
-    }
-
-    void IOUringQueue::quit() {
-//        spdlog::info("quit()");
-        if(!_quitEventSent.load(std::memory_order_acquire)) {
-            // assume _eventQueueMutex is locked
             pushEventInternal(INTERNAL_EVENT_PRIORITY, std::make_unique<QuitEvent>(getNextEventId(), 0, INTERNAL_EVENT_PRIORITY));
             _quitEventSent.store(true, std::memory_order_release);
             _whenQuitEventWasSent = std::chrono::steady_clock::now();

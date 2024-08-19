@@ -749,9 +749,8 @@ struct fmt::formatter<Ichor::Etcd::v3::EtcdError> {
                 return fmt::format_to(ctx.out(), "QUITTING");
             case Ichor::Etcd::v3::EtcdError::ETCD_SERVER_DOES_NOT_SUPPORT:
                 return fmt::format_to(ctx.out(), "ETCD_SERVER_DOES_NOT_SUPPORT");
-            default:
-                return fmt::format_to(ctx.out(), "error, please file a bug in Ichor");
         }
+        return fmt::format_to(ctx.out(), "error, please file a bug in Ichor");
     }
 };
 
@@ -768,9 +767,8 @@ struct fmt::formatter<Ichor::Etcd::v3::EtcdEventType> {
                 return fmt::format_to(ctx.out(), "PUT");
             case Ichor::Etcd::v3::EtcdEventType::DELETE_:
                 return fmt::format_to(ctx.out(), "DELETE");
-            default:
-                return fmt::format_to(ctx.out(), "error, please file a bug in Ichor");
         }
+        return fmt::format_to(ctx.out(), "error, please file a bug in Ichor");
     }
 };
 
@@ -789,9 +787,8 @@ struct fmt::formatter<Ichor::Etcd::v3::EtcdSortOrder> {
                 return fmt::format_to(ctx.out(), "ASCEND");
             case Ichor::Etcd::v3::EtcdSortOrder::DESCEND:
                 return fmt::format_to(ctx.out(), "DESCEND");
-            default:
-                return fmt::format_to(ctx.out(), "error, please file a bug in Ichor");
         }
+        return fmt::format_to(ctx.out(), "error, please file a bug in Ichor");
     }
 };
 
@@ -814,9 +811,8 @@ struct fmt::formatter<Ichor::Etcd::v3::EtcdSortTarget> {
                 return fmt::format_to(ctx.out(), "MOD");
             case Ichor::Etcd::v3::EtcdSortTarget::VALUE:
                 return fmt::format_to(ctx.out(), "VALUE");
-            default:
-                return fmt::format_to(ctx.out(), "error, please file a bug in Ichor");
         }
+        return fmt::format_to(ctx.out(), "error, please file a bug in Ichor");
     }
 };
 
@@ -837,9 +833,8 @@ struct fmt::formatter<Ichor::Etcd::v3::EtcdCompareResult> {
                 return fmt::format_to(ctx.out(), "LESS");
             case Ichor::Etcd::v3::EtcdCompareResult::NOT_EQUAL:
                 return fmt::format_to(ctx.out(), "NOT_EQUAL");
-            default:
-                return fmt::format_to(ctx.out(), "error, please file a bug in Ichor");
         }
+        return fmt::format_to(ctx.out(), "error, please file a bug in Ichor");
     }
 };
 
@@ -862,9 +857,8 @@ struct fmt::formatter<Ichor::Etcd::v3::EtcdCompareTarget> {
                 return fmt::format_to(ctx.out(), "VALUE");
             case Ichor::Etcd::v3::EtcdCompareTarget::LEASE:
                 return fmt::format_to(ctx.out(), "LEASE");
-            default:
-                return fmt::format_to(ctx.out(), "error, please file a bug in Ichor");
         }
+        return fmt::format_to(ctx.out(), "error, please file a bug in Ichor");
     }
 };
 
@@ -883,8 +877,7 @@ struct fmt::formatter<Ichor::Etcd::v3::EtcdAuthPermissionType> {
                 return fmt::format_to(ctx.out(), "WRITE");
             case Ichor::Etcd::v3::EtcdAuthPermissionType::READWRITE:
                 return fmt::format_to(ctx.out(), "READWRITE");
-            default:
-                return fmt::format_to(ctx.out(), "error, please file a bug in Ichor");
         }
+        return fmt::format_to(ctx.out(), "error, please file a bug in Ichor");
     }
 };

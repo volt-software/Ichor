@@ -51,7 +51,7 @@ namespace Ichor {
         [[nodiscard]] uint64_t size() const noexcept final;
         [[nodiscard]] bool is_running() const noexcept final;
 
-        void start(bool captureSigInt) final;
+        bool start(bool captureSigInt) final;
         [[nodiscard]] bool shouldQuit() final;
         void quit() final;
 

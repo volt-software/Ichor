@@ -7,8 +7,6 @@
 #include <ichor/Enums.h>
 
 namespace Ichor {
-    using ServiceIdType = uint64_t;
-
     class IService {
     public:
         virtual ~IService() = default;

@@ -28,8 +28,8 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-ccompilers=("clang-15" "clang-18" "gcc-12" "gcc")
-cppcompilers=("clang++-15" "clang++-18" "g++-12" "g++")
+ccompilers=("clang-15" "clang-19" "gcc-12" "gcc")
+cppcompilers=("clang++-15" "clang++-19" "g++-12" "g++")
 
 if [[ "$1" == "--dev" ]]; then
   ccompilers=("clang" "gcc")
@@ -85,73 +85,65 @@ run_fast_benchmarks ()
 
 
 if [[ $DOCKER -eq 1 ]]; then
+  chmod a+w ../build
   rm -rf ./* ../bin/*
-  docker build -f ../Dockerfile -t ichor . || exit 1
+  docker build -f ../Dockerfile  -t ichor --build-arg CONTAINER_OWNER_GID=$(id -g) --build-arg CONTAINER_OWNER_ID=$(id -u) . || exit 1
   docker run -v $(pwd)/../:/opt/ichor/src -v $(pwd)/../build:/opt/ichor/build --rm --privileged -it ichor || exit 1
   run_examples
   run_fast_benchmarks
-  docker run -v $(pwd)/../:/opt/ichor/src -v $(pwd)/../build:/opt/ichor/build --rm -it ichor "rm -rf /opt/ichor/src/bin/* /opt/ichor/src/build/*" || exit 1
 
   rm -rf ./* ../bin/*
-  docker build -f ../Dockerfile-musl -t ichor-musl . || exit 1
+  docker build -f ../Dockerfile-musl -t ichor-musl --build-arg CONTAINER_OWNER_GID=$(id -g) --build-arg CONTAINER_OWNER_ID=$(id -u) . || exit 1
   docker run -v $(pwd)/../:/opt/ichor/src -v $(pwd)/../build:/opt/ichor/build --rm --privileged -it ichor-musl || exit 1
   run_examples
   run_fast_benchmarks
-  docker run -v $(pwd)/../:/opt/ichor/src -v $(pwd)/../build:/opt/ichor/build --rm -it ichor-musl "rm -rf /opt/ichor/src/bin/* /opt/ichor/src/build/*" || exit 1
 
   rm -rf ./* ../bin/*
-  docker build -f ../Dockerfile-asan -t ichor-asan . || exit 1
+  docker build -f ../Dockerfile-asan -t ichor-asan --build-arg CONTAINER_OWNER_GID=$(id -g) --build-arg CONTAINER_OWNER_ID=$(id -u) . || exit 1
   docker run -v $(pwd)/../:/opt/ichor/src -v $(pwd)/../build:/opt/ichor/build --rm --privileged -it ichor-asan || exit 1
   run_examples
   run_benchmarks
-  docker run -v $(pwd)/../:/opt/ichor/src -v $(pwd)/../build:/opt/ichor/build --rm -it ichor-asan "rm -rf /opt/ichor/src/bin/* /opt/ichor/src/build/*" || exit 1
 
 # Disabled because of https://github.com/llvm/llvm-project/issues/96210
-#  rm -rf ./* ../bin/*
-#  docker build -f ../Dockerfile-asan-clang -t ichor-asan-clang --progress=plain --no-cache . || exit 1
-#  docker run -v $(pwd)/../:/opt/ichor/src -v $(pwd)/../build:/opt/ichor/build --rm --privileged -it ichor-asan-clang || exit 1
-#  run_examples
-#  run_benchmarks
-#  docker run -v $(pwd)/../:/opt/ichor/src -v $(pwd)/../build:/opt/ichor/build --rm -it ichor-asan-clang "rm -rf /opt/ichor/src/bin/* /opt/ichor/src/build/*" || exit 1
+  rm -rf ./* ../bin/*
+  docker build -f ../Dockerfile-asan-clang -t ichor-asan-clang --build-arg CONTAINER_OWNER_GID=$(id -g) --build-arg CONTAINER_OWNER_ID=$(id -u) . || exit 1
+  docker run -v $(pwd)/../:/opt/ichor/src -v $(pwd)/../build:/opt/ichor/build --rm --privileged -it ichor-asan-clang || exit 1
+  run_examples
+  run_benchmarks
 
   rm -rf ./* ../bin/*
-  docker build -f ../Dockerfile-tsan -t ichor-tsan . || exit 1
+  docker build -f ../Dockerfile-tsan -t ichor-tsan --build-arg CONTAINER_OWNER_GID=$(id -g) --build-arg CONTAINER_OWNER_ID=$(id -u) . || exit 1
   docker run -v $(pwd)/../:/opt/ichor/src -v $(pwd)/../build:/opt/ichor/build --rm --privileged -it ichor-tsan || exit 1
   run_examples
   run_benchmarks
-  docker run -v $(pwd)/../:/opt/ichor/src -v $(pwd)/../build:/opt/ichor/build --rm -it ichor-tsan "rm -rf /opt/ichor/src/bin/* /opt/ichor/src/build/*" || exit 1
 
   rm -rf ./* ../bin/*
-  docker run --rm --privileged multiarch/qemu-user-static --reset -p yes || exit 1
-  docker build -f ../Dockerfile-musl-aarch64 -t ichor-musl-aarch64 . || exit 1
-  docker run -v $(pwd)/../:/opt/ichor/src -v $(pwd)/../build:/opt/ichor/build --rm -it ichor-musl-aarch64 || exit 1
-
+  docker --debug build -f ../Dockerfile-musl-aarch64 -t ichor-musl-aarch64 --build-arg CONTAINER_OWNER_GID=$(id -g) --build-arg CONTAINER_OWNER_ID=$(id -u) . --platform=linux/arm64 || exit 1
+  docker --debug run -v $(pwd)/../:/opt/ichor/src -v $(pwd)/../build:/opt/ichor/build --rm --security-opt seccomp=unconfined -it ichor-musl-aarch64 || exit 1
   # use the following to enable incremental builds for debugging (and don't forget to remove the two rm -rf's)
 #  rm -f ../bin/run_aarch64_examples_and_tests.sh
 #  cat >> ../bin/run_aarch64_examples_and_tests.sh << EOF
-##!/bin/sh
+#!/bin/sh
 #cd /opt/ichor/src/build
-#ninja
+#ninja && ../bin/AsyncFileIOTests
 #EOF
 #  chmod +x ../bin/run_aarch64_examples_and_tests.sh
-#  docker run -v $(pwd)/../:/opt/ichor/src -v $(pwd)/../build:/opt/ichor/build --rm --privileged -it ichor-musl-aarch64 "sh -c 'ulimit -r unlimited && /opt/ichor/src/bin/run_aarch64_examples_and_tests.sh'" || exit 1
+#  docker run -v $(pwd)/../:/opt/ichor/src -v $(pwd)/../build:/opt/ichor/build --rm --privileged --security-opt seccomp=unconfined  -it ichor-musl-aarch64 "sh -c 'ulimit -r unlimited && /opt/ichor/src/bin/run_aarch64_examples_and_tests.sh'" || exit 1
   run_examples
   # run_fast_benchmarks # this is still too slow, need to refactor benchmarks to specify iterations on command line
-  docker run -v $(pwd)/../:/opt/ichor/src -v $(pwd)/../build:/opt/ichor/build --rm --privileged -it ichor-musl-aarch64 "rm -rf /opt/ichor/src/bin/* /opt/ichor/src/build/*" || exit 1
 
   rm -rf ./* ../bin/*
-  docker run --rm --privileged multiarch/qemu-user-static --reset -p yes || exit 1
-  docker build -f ../Dockerfile-musl-aarch64-bench -t ichor-musl-aarch64-bench . || exit 1
+  docker build -f ../Dockerfile-musl-aarch64-bench -t ichor-musl-aarch64-bench --build-arg CONTAINER_OWNER_GID=$(id -g) --build-arg CONTAINER_OWNER_ID=$(id -u) . || exit 1
   docker run -v $(pwd)/../:/opt/ichor/src -v $(pwd)/../build:/opt/ichor/build --rm -it ichor-musl-aarch64-bench || exit 1
+  rm -rf ../arm_bench
   mkdir -p ../arm_bench
   mv -f ../bin/* ../arm_bench
   rm -f ../arm_bench/*.a
-  docker run -v $(pwd)/../:/opt/ichor/src -v $(pwd)/../build:/opt/ichor/build --rm --privileged -it ichor-musl-aarch64 "rm -rf /opt/ichor/src/bin/* /opt/ichor/src/build/*" || exit 1
 fi
 
 # Quick libcpp compile check
 rm -rf ./* ../bin/*
-CC=clang-18 CXX=clang++-18 cmake -GNinja -DCMAKE_BUILD_TYPE=Debug -DICHOR_USE_SANITIZERS=OFF -DICHOR_ENABLE_INTERNAL_DEBUGGING=OFF -DICHOR_USE_MOLD=ON -DICHOR_USE_BOOST_BEAST=ON -DICHOR_USE_SPDLOG=ON -DICHOR_USE_HIREDIS=ON .. || exit 1
+CC=clang-19 CXX=clang++-19 cmake -GNinja -DCMAKE_BUILD_TYPE=Debug -DICHOR_USE_SANITIZERS=OFF -DICHOR_ENABLE_INTERNAL_DEBUGGING=OFF -DICHOR_USE_MOLD=ON -DICHOR_USE_BOOST_BEAST=ON -DICHOR_USE_SPDLOG=ON -DICHOR_USE_HIREDIS=ON .. || exit 1
 ninja || exit 1
 ninja test || exit 1
 run_examples
@@ -180,7 +172,7 @@ for i in ${!ccompilers[@]}; do
 done
 
 rm -rf ./* ../bin/*
-CC=clang-18 CXX=clang++-18 cmake -GNinja -DCMAKE_BUILD_TYPE=Release -DICHOR_USE_SANITIZERS=OFF -DICHOR_USE_MOLD=ON -DICHOR_USE_BOOST_BEAST=ON -DICHOR_USE_HIREDIS=ON .. || exit 1
+CC=clang-19 CXX=clang++-19 cmake -GNinja -DCMAKE_BUILD_TYPE=Release -DICHOR_USE_SANITIZERS=OFF -DICHOR_USE_MOLD=ON -DICHOR_USE_BOOST_BEAST=ON -DICHOR_USE_HIREDIS=ON .. || exit 1
 ninja || exit 1
 ninja test || exit 1
 run_examples
