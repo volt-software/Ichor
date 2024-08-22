@@ -63,6 +63,9 @@ void Ichor::DependencyManager::start() {
 }
 
 void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &uniqueEvt) {
+    if(_quitDone) [[unlikely]] {
+        return;
+    }
     // when this event needs to be stored in _scopedEvents, we move uniqueEvt and then re-assign evt.
     Event *evt = uniqueEvt.get();
     ICHOR_LOG_TRACE(_logger, "evt id {} type {} has {} prio", evt->id, evt->get_name(), evt->priority);
@@ -349,6 +352,7 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &uniqueEvt) {
                     _services.clear(); // destructing DependencyLifecycleManagers result in getting events pushed, so we force it here rather than when a queue is destructing and may not accept new events.
                     allEventInterceptorsCopy.clear();
                     eventInterceptorsCopy.clear();
+                    _quitDone = true;
                 } else {
                     // slowly increase priority every time it fails, as some services rely on custom priorities when stopping
                     _eventQueue->pushPrioritisedEvent<QuitEvent>(_quitEvt->originatingService, std::max(INTERNAL_EVENT_PRIORITY + 1, lowest_priority + 1));
@@ -485,6 +489,7 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &uniqueEvt) {
 
                 // If all services depending on this one have removed this one and we've had a DependencyOfflineEvent
                 if (dependees.empty() && toStopService->getServiceState() == ServiceState::UNINJECTING) {
+
                     auto gen = toStopService->stop();
                     gen.set_priority(std::min(toStopService->getPriority(), INTERNAL_DEPENDENCY_EVENT_PRIORITY));
                     auto it = gen.begin();
@@ -544,6 +549,12 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &uniqueEvt) {
 
                 if (toStartServiceIt == end(_services)) [[unlikely]] {
                     INTERNAL_DEBUG( "Couldn't start service {}, missing from known services", startServiceEvt->serviceId);
+
+                    if constexpr (DO_INTERNAL_DEBUG) {
+                        for(auto const &[svcId, svc] : _services) {
+                            INTERNAL_DEBUG( "service {}:{}", svcId, svc->implementationName());
+                        }
+                    }
                     handleEventError(*startServiceEvt);
                     break;
                 }
