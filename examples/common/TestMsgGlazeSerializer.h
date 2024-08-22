@@ -19,7 +19,11 @@ class TestMsgGlazeSerializer final : public ISerializer<TestMsg> {
 public:
     std::vector<uint8_t> serialize(TestMsg const &msg) final {
         std::vector<uint8_t> buf;
-        glz::write_json(msg, buf);
+        auto err = glz::write_json(msg, buf);
+        if(err) {
+            fmt::println("couldn't serialize {}", glz::nameof(err.ec));
+            return {};
+        }
         buf.push_back('\0');
         return buf;
     }
