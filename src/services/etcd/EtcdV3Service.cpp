@@ -1144,7 +1144,11 @@ static Ichor::Task<tl::expected<RespT, EtcdError>> execute_request(std::string u
     }
 
     std::vector<uint8_t> msg_buf;
-    glz::template write<glz::opts{.skip_null_members = true, .error_on_const_read = true}, const ReqT&, std::vector<uint8_t>&>(req, msg_buf);
+    auto err = glz::template write<glz::opts{.skip_null_members = true, .error_on_const_read = true}, const ReqT&, std::vector<uint8_t>&>(req, msg_buf);
+    if(err) {
+        ICHOR_LOG_ERROR(logger, "Error on route {}, couldn't serialize {}", url, glz::nameof(err.ec));
+        co_return tl::unexpected(EtcdError::JSON_PARSE_ERROR);
+    }
     msg_buf.push_back('\0');
     ICHOR_LOG_TRACE(logger, "{} {}", url, reinterpret_cast<char *>(msg_buf.data()));
 
@@ -1157,7 +1161,7 @@ static Ichor::Task<tl::expected<RespT, EtcdError>> execute_request(std::string u
     }
 
     RespT etcd_reply;
-    auto err = glz::template read<glz::opts{.error_on_const_read = true}, RespT>(etcd_reply, http_reply.body);
+    err = glz::template read<glz::opts{.error_on_const_read = true}, RespT>(etcd_reply, http_reply.body);
 
     if(err) {
         ICHOR_LOG_ERROR(logger, "Glaze error {} at {}", err.ec, err.location);

@@ -712,7 +712,11 @@ Ichor::Task<tl::expected<EtcdUpdateUserReply, EtcdError>> EtcdService::createUse
     user_create.password = pass;
 
     std::vector<uint8_t> buf;
-    glz::write_json(user_create, buf);
+    auto err = glz::write_json(user_create, buf);
+    if(err) {
+        ICHOR_LOG_ERROR(_logger, "Error on route {}, couldn't serialize {}", url, glz::nameof(err.ec));
+        co_return tl::unexpected(EtcdError::JSON_PARSE_ERROR);
+    }
     buf.push_back('\0');
 
     auto http_reply = co_await _mainConn->sendAsync(HttpMethod::put, url, std::move(headers), std::move(buf));
@@ -724,7 +728,7 @@ Ichor::Task<tl::expected<EtcdUpdateUserReply, EtcdError>> EtcdService::createUse
     }
 
     EtcdUpdateUserReply etcd_reply;
-    auto err = glz::read_json(etcd_reply, http_reply.body);
+    err = glz::read_json(etcd_reply, http_reply.body);
 
     if(err) {
         ICHOR_LOG_ERROR(_logger, "Glaze error {} at {}", err.ec, err.location);
@@ -748,7 +752,11 @@ Ichor::Task<tl::expected<EtcdUpdateUserReply, EtcdError>> EtcdService::grantUser
     user_create.grant = std::move(roles);
 
     std::vector<uint8_t> buf;
-    glz::write_json(user_create, buf);
+    auto err = glz::write_json(user_create, buf);
+    if(err) {
+        ICHOR_LOG_ERROR(_logger, "Error on route {}, couldn't serialize {}", url, glz::nameof(err.ec));
+        co_return tl::unexpected(EtcdError::JSON_PARSE_ERROR);
+    }
     buf.push_back('\0');
 
     auto http_reply = co_await _mainConn->sendAsync(HttpMethod::put, url, std::move(headers), std::move(buf));
@@ -760,7 +768,7 @@ Ichor::Task<tl::expected<EtcdUpdateUserReply, EtcdError>> EtcdService::grantUser
     }
 
     EtcdUpdateUserReply etcd_reply;
-    auto err = glz::read_json(etcd_reply, http_reply.body);
+    err = glz::read_json(etcd_reply, http_reply.body);
 
     if(err) {
         ICHOR_LOG_ERROR(_logger, "Glaze error {} at {}", err.ec, err.location);
@@ -784,7 +792,11 @@ Ichor::Task<tl::expected<EtcdUpdateUserReply, EtcdError>> EtcdService::revokeUse
     user_create.revoke = std::move(roles);
 
     std::vector<uint8_t> buf;
-    glz::write_json(user_create, buf);
+    auto err = glz::write_json(user_create, buf);
+    if(err) {
+        ICHOR_LOG_ERROR(_logger, "Error on route {}, couldn't serialize {}", url, glz::nameof(err.ec));
+        co_return tl::unexpected(EtcdError::JSON_PARSE_ERROR);
+    }
     buf.push_back('\0');
 
     auto http_reply = co_await _mainConn->sendAsync(HttpMethod::put, url, std::move(headers), std::move(buf));
@@ -796,7 +808,7 @@ Ichor::Task<tl::expected<EtcdUpdateUserReply, EtcdError>> EtcdService::revokeUse
     }
 
     EtcdUpdateUserReply etcd_reply;
-    auto err = glz::read_json(etcd_reply, http_reply.body);
+    err = glz::read_json(etcd_reply, http_reply.body);
 
     if(err) {
         ICHOR_LOG_ERROR(_logger, "Glaze error {} at {}", err.ec, err.location);
@@ -820,7 +832,11 @@ Ichor::Task<tl::expected<EtcdUpdateUserReply, EtcdError>> EtcdService::updateUse
     user_create.password = pass;
 
     std::vector<uint8_t> buf;
-    glz::write_json(user_create, buf);
+    auto err = glz::write_json(user_create, buf);
+    if(err) {
+        ICHOR_LOG_ERROR(_logger, "Error on route {}, couldn't serialize {}", url, glz::nameof(err.ec));
+        co_return tl::unexpected(EtcdError::JSON_PARSE_ERROR);
+    }
     buf.push_back('\0');
 
     auto http_reply = co_await _mainConn->sendAsync(HttpMethod::put, url, std::move(headers), std::move(buf));
@@ -832,7 +848,7 @@ Ichor::Task<tl::expected<EtcdUpdateUserReply, EtcdError>> EtcdService::updateUse
     }
 
     EtcdUpdateUserReply etcd_reply;
-    auto err = glz::read_json(etcd_reply, http_reply.body);
+    err = glz::read_json(etcd_reply, http_reply.body);
 
     if(err) {
         ICHOR_LOG_ERROR(_logger, "Glaze error {} at {}", err.ec, err.location);
@@ -953,7 +969,11 @@ Ichor::Task<tl::expected<EtcdRoleReply, EtcdError>> EtcdService::createRole(std:
     role_create.permissions.kv.write = std::move(write_permissions);
 
     std::vector<uint8_t> buf;
-    glz::write_json(role_create, buf);
+    auto err = glz::write_json(role_create, buf);
+    if(err) {
+        ICHOR_LOG_ERROR(_logger, "Error on route {}, couldn't serialize {}", url, glz::nameof(err.ec));
+        co_return tl::unexpected(EtcdError::JSON_PARSE_ERROR);
+    }
     buf.push_back('\0');
 
     auto http_reply = co_await _mainConn->sendAsync(HttpMethod::put, url, std::move(headers), std::move(buf));
@@ -975,7 +995,7 @@ Ichor::Task<tl::expected<EtcdRoleReply, EtcdError>> EtcdService::createRole(std:
     }
 
     EtcdRoleReply etcd_reply;
-    auto err = glz::read_json(etcd_reply, http_reply.body);
+    err = glz::read_json(etcd_reply, http_reply.body);
 
     if(err) {
         ICHOR_LOG_ERROR(_logger, "Glaze error {} at {}", err.ec, err.location);
@@ -1002,7 +1022,11 @@ Ichor::Task<tl::expected<EtcdRoleReply, EtcdError>> EtcdService::grantRolePermis
     role_create.grant = std::move(granted);
 
     std::vector<uint8_t> buf;
-    glz::write_json(role_create, buf);
+    auto err = glz::write_json(role_create, buf);
+    if(err) {
+        ICHOR_LOG_ERROR(_logger, "Error on route {}, couldn't serialize {}", url, glz::nameof(err.ec));
+        co_return tl::unexpected(EtcdError::JSON_PARSE_ERROR);
+    }
     buf.push_back('\0');
 
     auto http_reply = co_await _mainConn->sendAsync(HttpMethod::put, url, std::move(headers), std::move(buf));
@@ -1024,7 +1048,7 @@ Ichor::Task<tl::expected<EtcdRoleReply, EtcdError>> EtcdService::grantRolePermis
     }
 
     EtcdRoleReply etcd_reply;
-    auto err = glz::read_json(etcd_reply, http_reply.body);
+    err = glz::read_json(etcd_reply, http_reply.body);
 
     if(err) {
         ICHOR_LOG_ERROR(_logger, "Glaze error {} at {}", err.ec, err.location);
@@ -1051,7 +1075,11 @@ Ichor::Task<tl::expected<EtcdRoleReply, EtcdError>> EtcdService::revokeRolePermi
     role_create.revoke = std::move(revoked);
 
     std::vector<uint8_t> buf;
-    glz::write_json(role_create, buf);
+    auto err = glz::write_json(role_create, buf);
+    if(err) {
+        ICHOR_LOG_ERROR(_logger, "Error on route {}, couldn't serialize {}", url, glz::nameof(err.ec));
+        co_return tl::unexpected(EtcdError::JSON_PARSE_ERROR);
+    }
     buf.push_back('\0');
 
     auto http_reply = co_await _mainConn->sendAsync(HttpMethod::put, url, std::move(headers), std::move(buf));
@@ -1073,7 +1101,7 @@ Ichor::Task<tl::expected<EtcdRoleReply, EtcdError>> EtcdService::revokeRolePermi
     }
 
     EtcdRoleReply etcd_reply;
-    auto err = glz::read_json(etcd_reply, http_reply.body);
+    err = glz::read_json(etcd_reply, http_reply.body);
 
     if(err) {
         ICHOR_LOG_ERROR(_logger, "Glaze error {} at {}", err.ec, err.location);
