@@ -398,22 +398,19 @@ std::function<void(int32_t)> Ichor::IOUringAsyncFileIO::createNewEventHandlerRea
     return [this, &evt, &res, &contents, &sizeLeft, fileSize, fd, buf, offset, isLastInBatch, maxSubmissions](int32_t _res) {
         std::unique_ptr<char[]> uniqueBuf{buf};
         INTERNAL_IO_DEBUG("read response {} {} {} {} {} {}", _res, _res < 0 ? strerror(-_res) : "", _shouldStop, evt.is_set(), contents.size(), fileSize);
-        if(_shouldStop) {
-            if(!evt.is_set()) {
+        if(_shouldStop || res < 0) {
+            if(isLastInBatch && !evt.is_set()) {
                 evt.set();
             }
-            return;
-        }
-
-        if(evt.is_set()) {
-            ICHOR_LOG_ERROR(_logger, "read evt is already set with result {} res {}", _res, res);
             return;
         }
 
         if(_res < 0) {
             ICHOR_LOG_ERROR(_logger, "read failed with result {} res {}", _res, res);
             res = _res;
-            evt.set();
+            if(isLastInBatch) {
+                evt.set();
+            }
             return;
         }
 
@@ -422,13 +419,20 @@ std::function<void(int32_t)> Ichor::IOUringAsyncFileIO::createNewEventHandlerRea
         if(contents.size() >= fileSize) {
             ICHOR_LOG_ERROR(_logger, "read contents already filled? with result {} res {} contents size {} statx size {}", _res, res, contents.size(), fileSize);
             res = -2;
-            evt.set();
+            if(isLastInBatch) {
+                evt.set();
+            }
             return;
         }
 
         contents.append(buf, readBytes);
 
         if(contents.size() == fileSize) {
+            if constexpr (DO_INTERNAL_DEBUG || DO_HARDENING) {
+                if (!isLastInBatch) {
+                    std::terminate();
+                }
+            }
             evt.set();
             return;
         }
@@ -472,43 +476,43 @@ void Ichor::IOUringAsyncFileIO::recursiveSubmitCopyFile(AsyncManualResetEvent &e
     }
 }
 
+static uint64_t tempId{};
+
 std::function<void(int32_t)> Ichor::IOUringAsyncFileIO::createNewEventHandlerCopyFileReadPart(Ichor::AsyncManualResetEvent &evt, int &res, uint64_t &sizeLeft, uint64_t fileSize, int fromFd, int toFd, uint32_t maxSubmissions, uint64_t offset, char *buf, bool isLastInBatch) {
-    return [this, &evt, &res, &sizeLeft, fileSize, fromFd, toFd, buf, offset, isLastInBatch, maxSubmissions](int32_t _res) {
+    return [this, &evt, &res, &sizeLeft, fileSize, fromFd, toFd, buf, offset, isLastInBatch, maxSubmissions, id = tempId++](int32_t _res) {
+        fmt::println("createNewEventHandlerCopyFileReadPart id {}", id);
         std::unique_ptr<char[]> uniqueBuf{buf};
         INTERNAL_IO_DEBUG("read response {} {} {} {} {}", _res, _res < 0 ? strerror(-_res) : "", _shouldStop, evt.is_set(), fileSize);
-        if(_shouldStop) {
-            if(!evt.is_set()) {
+        if(_shouldStop || res < 0) {
+            if(isLastInBatch && !evt.is_set()) {
                 evt.set();
             }
-            return;
-        }
-
-        if(evt.is_set()) {
-            ICHOR_LOG_ERROR(_logger, "read evt is already set with result {} res {}", _res, res);
             return;
         }
 
         if(_res < 0) {
             ICHOR_LOG_ERROR(_logger, "read failed with result {} res {}", _res, res);
             res = _res;
-            evt.set();
+            if(isLastInBatch) {
+                evt.set();
+            }
             return;
         }
 
         auto readBytes = static_cast<uint32_t>(_res);
-        bool isLast = offset + readBytes == fileSize;
+        bool isLastInWriteBatch = offset + readBytes == fileSize;
 
         {
             // buf will be deleted in write handler
             uniqueBuf.release();
             auto *sqe = _q->getSqe();
-            io_uring_sqe_set_data(sqe, new UringResponseEvent{_q->getNextEventIdFromIchor(), getServiceId(), INTERNAL_EVENT_PRIORITY, createNewEventHandlerCopyFileWritePart(evt, res, buf, isLast)});
+            io_uring_sqe_set_data(sqe, new UringResponseEvent{_q->getNextEventIdFromIchor(), getServiceId(), INTERNAL_EVENT_PRIORITY, createNewEventHandlerCopyFileWritePart(evt, res, buf, isLastInWriteBatch)});
             io_uring_prep_write(sqe, toFd, buf, readBytes, std::numeric_limits<__u64>::max());
             INTERNAL_IO_DEBUG("add write");
             _q->submitIfNeeded();
         }
 
-        if(!isLast && readBytes < _bufferSize) {
+        if(!isLastInWriteBatch && readBytes < _bufferSize) {
             char *newBuf = new char[_bufferSize];
             auto *sqe = _q->getSqe();
             io_uring_sqe_set_data(sqe, new UringResponseEvent{_q->getNextEventIdFromIchor(), getServiceId(), INTERNAL_EVENT_PRIORITY, createNewEventHandlerCopyFileReadPart(evt, res, sizeLeft, fileSize, fromFd, toFd, maxSubmissions, offset + readBytes, newBuf, isLastInBatch)});
@@ -518,36 +522,34 @@ std::function<void(int32_t)> Ichor::IOUringAsyncFileIO::createNewEventHandlerCop
         }
 
         // contents.size() indicates we're not done but we're the last in the batch. Submit a new batch.
-        if(!isLast && isLastInBatch) {
+        if(!isLastInWriteBatch && isLastInBatch) {
             recursiveSubmitCopyFile(evt, res, sizeLeft, offset + readBytes, fileSize, fromFd, toFd, maxSubmissions);
         }
     };
 }
 
-std::function<void(int32_t)> Ichor::IOUringAsyncFileIO::createNewEventHandlerCopyFileWritePart(Ichor::AsyncManualResetEvent &evt, int &res, char *buf, bool isLast) {
-    return [this, &evt, &res, buf, isLast](int32_t _res) {
+std::function<void(int32_t)> Ichor::IOUringAsyncFileIO::createNewEventHandlerCopyFileWritePart(Ichor::AsyncManualResetEvent &evt, int &res, char *buf, bool isLastInBatch) {
+    return [this, &evt, &res, buf, isLastInBatch, id = tempId++](int32_t _res) {
+        fmt::println("createNewEventHandlerCopyFileWritePart id {}", id);
         std::unique_ptr<char[]> uniqueBuf{buf};
         INTERNAL_IO_DEBUG("write response {} {} {} {}", _res, _res < 0 ? strerror(-_res) : "", _shouldStop, evt.is_set());
-        if(_shouldStop) {
-            if(!evt.is_set()) {
+        if(_shouldStop || res < 0) {
+            if(isLastInBatch && !evt.is_set()) {
                 evt.set();
             }
-            return;
-        }
-
-        if(evt.is_set()) {
-            ICHOR_LOG_ERROR(_logger, "write evt is already set with result {} res {}", _res, res);
             return;
         }
 
         if(_res < 0) {
             ICHOR_LOG_ERROR(_logger, "write failed with result {} res {}", _res, res);
             res = _res;
-            evt.set();
+            if(isLastInBatch) {
+                evt.set();
+            }
             return;
         }
 
-        if(isLast) {
+        if(isLastInBatch) {
             evt.set();
         }
     };
