@@ -1,6 +1,7 @@
 #include <exception>
 #include "GlobalRealtimeSettings.h"
 #include <fmt/core.h>
+#include <cerrno>
 #if (defined(WIN32) || defined(_WIN32) || defined(__WIN32)) && !defined(__CYGWIN__)
 //TODO
 #else
