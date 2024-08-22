@@ -529,11 +529,6 @@ namespace Ichor {
 
                 auto event_priority = std::min(INTERNAL_DEPENDENCY_EVENT_PRIORITY, priority);
 
-                for (auto const &[key, registration] : cmpMgr->getDependencyRegistry()->_registrations) {
-                    auto const &props = std::get<tl::optional<Properties>>(registration);
-                    _eventQueue->pushPrioritisedEvent<DependencyRequestEvent>(serviceId, event_priority, std::get<Dependency>(registration), props.has_value() ? &props.value() : tl::optional<Properties const *>{});
-                }
-
                 cmpMgr->getService().setServicePriority(priority);
 
                 if constexpr (DO_INTERNAL_DEBUG || DO_HARDENING) {
@@ -543,8 +538,15 @@ namespace Ichor {
                 }
 
                 Impl* impl = &cmpMgr->getService();
+                DependencyRegister const *reg = cmpMgr->getDependencyRegistry();
                 // Can't directly emplace mgr into _services as that would result into modifying the container while iterating.
                 _eventQueue->pushPrioritisedEvent<InsertServiceEvent>(serviceId, std::min(INTERNAL_INSERT_SERVICE_EVENT_PRIORITY, priority), std::move(cmpMgr));
+
+                for (auto const &[key, registration] : reg->_registrations) {
+                    auto const &props = std::get<tl::optional<Properties>>(registration);
+                    _eventQueue->pushPrioritisedEvent<DependencyRequestEvent>(serviceId, event_priority, std::get<Dependency>(registration), props.has_value() ? &props.value() : tl::optional<Properties const *>{});
+                }
+
                 _eventQueue->pushPrioritisedEvent<StartServiceEvent>(serviceId, event_priority, serviceId);
 
                 return impl;
@@ -708,6 +710,7 @@ namespace Ichor {
         CommunicationChannel *_communicationChannel{};
         uint64_t _id{_managerIdCounter.fetch_add(1, std::memory_order_relaxed)};
         bool _quitEventReceived{};
+        bool _quitDone{};
         static std::atomic<uint64_t> _managerIdCounter;
 
         friend class IEventQueue;
