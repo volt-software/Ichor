@@ -71,7 +71,7 @@ namespace Ichor::Detail {
         }
 
         [[nodiscard]] std::string_view implementationName() const noexcept final {
-            return "ServiceType";
+            return typeName<ServiceType>();
         }
 
         [[nodiscard]] uint64_t type() const noexcept final {
