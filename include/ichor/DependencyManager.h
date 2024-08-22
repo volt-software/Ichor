@@ -542,12 +542,18 @@ namespace Ichor {
                 // Can't directly emplace mgr into _services as that would result into modifying the container while iterating.
                 _eventQueue->pushPrioritisedEvent<InsertServiceEvent>(serviceId, std::min(INTERNAL_INSERT_SERVICE_EVENT_PRIORITY, priority), std::move(cmpMgr));
 
+                bool startImmediately = true;
                 for (auto const &[key, registration] : reg->_registrations) {
                     auto const &props = std::get<tl::optional<Properties>>(registration);
+                    if((std::get<Dependency>(registration).flags & DependencyFlags::REQUIRED) == DependencyFlags::REQUIRED) {
+                        startImmediately = false;
+                    }
                     _eventQueue->pushPrioritisedEvent<DependencyRequestEvent>(serviceId, event_priority, std::get<Dependency>(registration), props.has_value() ? &props.value() : tl::optional<Properties const *>{});
                 }
 
-                _eventQueue->pushPrioritisedEvent<StartServiceEvent>(serviceId, event_priority, serviceId);
+                if(startImmediately) {
+                    _eventQueue->pushPrioritisedEvent<StartServiceEvent>(serviceId, event_priority, serviceId);
+                }
 
                 return impl;
             } else {
