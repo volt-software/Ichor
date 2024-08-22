@@ -113,8 +113,7 @@ namespace Ichor {
                 break;
             }
 
-            auto evt = std::move(const_cast<std::unique_ptr<Event>&>(_eventQueue.top()));
-            _eventQueue.pop();
+            auto evt = _eventQueue.pop();
             l.unlock();
             processEvent(evt);
         }

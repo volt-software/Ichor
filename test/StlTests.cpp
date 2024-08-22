@@ -5,6 +5,7 @@
 #include <ichor/stl/ReferenceCountedPointer.h>
 #include <ichor/stl/StringUtils.h>
 #include <ichor/stl/StaticVector.h>
+#include <ichor/stl/SectionalPriorityQueue.h>
 #include <memory>
 #include <string_view>
 #include "TestServices/UselessService.h"
@@ -118,6 +119,13 @@ struct rc_test_class final : parent_test_class {
 
     int i;
     float f;
+};
+
+template <typename T, bool flip>
+struct SectionalPriorityQueueCompare final {
+    bool operator()( const T& lhs, const T& rhs ) const {
+        return flip ? lhs < rhs : lhs > rhs;
+    }
 };
 
 TEST_CASE("STL Tests") {
@@ -1255,6 +1263,35 @@ TEST_CASE("STL Tests") {
             REQUIRE(sv_from < sv_to);
             REQUIRE(sv_to >= sv_from);
             REQUIRE(sv_to > sv_from);
+        }
+    }
+
+    SECTION("SectionalPriorityQueue basics") {
+        {
+            SectionalPriorityQueue<int, SectionalPriorityQueueCompare<int, false>> q{};
+            q.push(100);
+            q.push(50);
+            q.push(101);
+            q.push(51);
+            q.push(102);
+            REQUIRE(q.pop() == 50);
+            REQUIRE(q.pop() == 51);
+            REQUIRE(q.pop() == 100);
+            REQUIRE(q.pop() == 101);
+            REQUIRE(q.pop() == 102);
+        }
+        {
+            SectionalPriorityQueue<int, SectionalPriorityQueueCompare<int, true>> q{};
+            q.push(100);
+            q.push(50);
+            q.push(101);
+            q.push(51);
+            q.push(102);
+            REQUIRE(q.pop() == 102);
+            REQUIRE(q.pop() == 101);
+            REQUIRE(q.pop() == 100);
+            REQUIRE(q.pop() == 51);
+            REQUIRE(q.pop() == 50);
         }
     }
 }

@@ -2,32 +2,24 @@
 
 #include <ichor/stl/RealtimeReadWriteMutex.h>
 #include <ichor/stl/ConditionVariableAny.h>
+#include <ichor/stl/SectionalPriorityQueue.h>
 #include <ichor/event_queues/IEventQueue.h>
 #include <ichor/Common.h>
 #include <atomic>
-#include <queue>
 
 namespace Ichor {
     class DependencyManager;
 
     // Most of the time, insertion order is not important, priority is. Not guaranteeing insertion order improves performance and somehow reduces the amount of memory used in benchmarks.
     struct PriorityQueueCompare final {
-        bool operator()( const std::unique_ptr<Event>& lhs, const std::unique_ptr<Event>& rhs ) const {
-            if(!lhs || !rhs) {
-                return false;
-            }
-
+        [[nodiscard]] bool operator()( const std::unique_ptr<Event>& lhs, const std::unique_ptr<Event>& rhs ) const noexcept {
             return lhs->priority > rhs->priority;
         }
     };
 
     // When determinism is necessary, use this.
     struct OrderedPriorityQueueCompare final {
-        bool operator()( const std::unique_ptr<Event>& lhs, const std::unique_ptr<Event>& rhs ) const {
-            if(!lhs || !rhs) {
-                return false;
-            }
-
+        [[nodiscard]] bool operator()( const std::unique_ptr<Event>& lhs, const std::unique_ptr<Event>& rhs ) const noexcept {
             if(lhs->priority == rhs->priority) {
                 return lhs->id > rhs->id;
             }
@@ -58,7 +50,7 @@ namespace Ichor {
     private:
         void shouldAddQuitEvent();
 
-        std::priority_queue<std::unique_ptr<Event>, std::vector<std::unique_ptr<Event>>, COMPARE> _eventQueue{};
+        SectionalPriorityQueue<std::unique_ptr<Event>, COMPARE> _eventQueue{};
         mutable Ichor::RealtimeReadWriteMutex _eventQueueMutex{};
         ConditionVariableAny<RealtimeReadWriteMutex> _wakeup{};
         std::atomic<bool> _quit{false};
