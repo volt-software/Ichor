@@ -1,5 +1,9 @@
 #pragma once
 
+#ifndef ICHOR_USE_LIBURING
+#error "Ichor has not been compiled with io_uring support"
+#endif
+
 #include <ichor/services/io/IAsyncFileIO.h>
 #include <ichor/dependency_management/AdvancedService.h>
 #include <ichor/services/logging/Logger.h>

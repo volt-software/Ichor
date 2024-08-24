@@ -53,11 +53,10 @@ Ichor::Task<tl::expected<std::string, Ichor::FileIOError>> Ichor::IOUringAsyncFi
         evt.set();
     }});
     if(file_path.is_absolute()) {
-        io_uring_prep_openat(sqe, 0, file_path.c_str(), O_RDONLY, 0);
+        io_uring_prep_openat(sqe, 0, file_path.c_str(), O_RDONLY | O_CLOEXEC, 0);
     } else {
-        io_uring_prep_openat(sqe, AT_FDCWD, file_path.c_str(), O_RDONLY, 0);
+        io_uring_prep_openat(sqe, AT_FDCWD, file_path.c_str(), O_RDONLY | O_CLOEXEC, 0);
     }
-    _q->submitIfNeeded();
     co_await evt;
     INTERNAL_IO_DEBUG("readWholeFile({}) 1", file_path);
 
@@ -80,7 +79,6 @@ Ichor::Task<tl::expected<std::string, Ichor::FileIOError>> Ichor::IOUringAsyncFi
         evt.set();
     }});
     io_uring_prep_statx(sqe, fd, "", AT_EMPTY_PATH, STATX_SIZE, &x);
-    _q->submitIfNeeded();
     co_await evt;
     INTERNAL_IO_DEBUG("readWholeFile({}) statx res: {} {}", file_path, res, x.stx_size);
 
@@ -145,9 +143,9 @@ Ichor::Task<tl::expected<void, Ichor::FileIOError>> Ichor::IOUringAsyncFileIO::c
         }
     }});
     if(from.is_absolute()) {
-        io_uring_prep_openat(sqe, 0, from.c_str(), O_RDONLY, 0);
+        io_uring_prep_openat(sqe, 0, from.c_str(), O_RDONLY | O_CLOEXEC, 0);
     } else {
-        io_uring_prep_openat(sqe, AT_FDCWD, from.c_str(), O_RDONLY, 0);
+        io_uring_prep_openat(sqe, AT_FDCWD, from.c_str(), O_RDONLY | O_CLOEXEC, 0);
     }
     sqe = _q->getSqe();
     io_uring_sqe_set_data(sqe, new UringResponseEvent{_q->getNextEventIdFromIchor(), getServiceId(), INTERNAL_EVENT_PRIORITY, [&evt, &toFd](int32_t _res) {
@@ -165,7 +163,6 @@ Ichor::Task<tl::expected<void, Ichor::FileIOError>> Ichor::IOUringAsyncFileIO::c
     } else {
         io_uring_prep_openat(sqe, AT_FDCWD, to.c_str(), O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH);
     }
-    _q->submitIfNeeded();
     co_await evt;
     INTERNAL_IO_DEBUG("copyFile({}, {}) 1", from, to);
 
@@ -191,7 +188,6 @@ Ichor::Task<tl::expected<void, Ichor::FileIOError>> Ichor::IOUringAsyncFileIO::c
         evt.set();
     }});
     io_uring_prep_statx(sqe, fromFd, "", AT_EMPTY_PATH, STATX_SIZE, &x);
-    _q->submitIfNeeded();
     co_await evt;
     INTERNAL_IO_DEBUG("copyFile({}, {}) statx res: {} {}", from, to, res, x.stx_size);
 
@@ -249,7 +245,6 @@ Ichor::Task<tl::expected<void, Ichor::FileIOError>> Ichor::IOUringAsyncFileIO::r
     } else {
         io_uring_prep_unlinkat(sqe, AT_FDCWD, file.c_str(), 0);
     }
-    _q->submitIfNeeded();
     co_await evt;
     INTERNAL_IO_DEBUG("removeFile({}) 1", file);
 
@@ -281,11 +276,10 @@ Ichor::Task<tl::expected<void, Ichor::FileIOError>> Ichor::IOUringAsyncFileIO::w
         evt.set();
     }});
     if(file_path.is_absolute()) {
-        io_uring_prep_openat(sqe, 0, file_path.c_str(), O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH);
+        io_uring_prep_openat(sqe, 0, file_path.c_str(), O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH);
     } else {
-        io_uring_prep_openat(sqe, AT_FDCWD, file_path.c_str(), O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH);
+        io_uring_prep_openat(sqe, AT_FDCWD, file_path.c_str(), O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH);
     }
-    _q->submitIfNeeded();
     co_await evt;
     INTERNAL_IO_DEBUG("writeFile({}) 1", file_path);
 
@@ -335,11 +329,10 @@ Ichor::Task<tl::expected<void, Ichor::FileIOError>> Ichor::IOUringAsyncFileIO::a
         evt.set();
     }});
     if(file_path.is_absolute()) {
-        io_uring_prep_openat(sqe, 0, file_path.c_str(), O_WRONLY | O_CREAT | O_APPEND, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH);
+        io_uring_prep_openat(sqe, 0, file_path.c_str(), O_WRONLY | O_CREAT | O_APPEND | O_CLOEXEC, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH);
     } else {
-        io_uring_prep_openat(sqe, AT_FDCWD, file_path.c_str(), O_WRONLY | O_CREAT | O_APPEND, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH);
+        io_uring_prep_openat(sqe, AT_FDCWD, file_path.c_str(), O_WRONLY | O_CREAT | O_APPEND | O_CLOEXEC, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH);
     }
-    _q->submitIfNeeded();
     co_await evt;
     INTERNAL_IO_DEBUG("appendFile({}) 1", file_path);
 
@@ -381,7 +374,6 @@ void Ichor::IOUringAsyncFileIO::recursiveSubmitReadWholeFile(AsyncManualResetEve
         io_uring_sqe_set_data(sqe, new UringResponseEvent{_q->getNextEventIdFromIchor(), getServiceId(), INTERNAL_EVENT_PRIORITY, createNewEventHandlerReadWholeFile(evt, res, contents, sizeLeft, fileSize, fd, maxSubmissions, offset, buf, isLastInBatch)});
         io_uring_prep_read(sqe, fd, buf, _bufferSize, offset);
         INTERNAL_IO_DEBUG("add read");
-        _q->submitIfNeeded();
 
         offset += _bufferSize;
         if(sizeLeft > _bufferSize) {
@@ -443,7 +435,6 @@ std::function<void(int32_t)> Ichor::IOUringAsyncFileIO::createNewEventHandlerRea
             io_uring_sqe_set_data(sqe, new UringResponseEvent{_q->getNextEventIdFromIchor(), getServiceId(), INTERNAL_EVENT_PRIORITY, createNewEventHandlerReadWholeFile(evt, res, contents, sizeLeft, fileSize, fd, maxSubmissions, offset + readBytes, buf, isLastInBatch)});
             io_uring_prep_read(sqe, fd, buf, _bufferSize -  readBytes, offset + readBytes);
             INTERNAL_IO_DEBUG("add read");
-            _q->submitIfNeeded();
         }
 
         // contents.size() indicates we're not done but we're the last in the batch. Submit a new batch.
@@ -463,7 +454,6 @@ void Ichor::IOUringAsyncFileIO::recursiveSubmitCopyFile(AsyncManualResetEvent &e
         io_uring_sqe_set_data(sqe, new UringResponseEvent{_q->getNextEventIdFromIchor(), getServiceId(), INTERNAL_EVENT_PRIORITY, createNewEventHandlerCopyFileReadPart(evt, res, sizeLeft, fileSize, fromFd, toFd, maxSubmissions, offset, buf, isLastInBatch)});
         io_uring_prep_read(sqe, fromFd, buf, _bufferSize, offset);
         INTERNAL_IO_DEBUG("add read");
-        _q->submitIfNeeded();
 
         offset += _bufferSize;
         if(sizeLeft > _bufferSize) {
@@ -476,11 +466,8 @@ void Ichor::IOUringAsyncFileIO::recursiveSubmitCopyFile(AsyncManualResetEvent &e
     }
 }
 
-static uint64_t tempId{};
-
 std::function<void(int32_t)> Ichor::IOUringAsyncFileIO::createNewEventHandlerCopyFileReadPart(Ichor::AsyncManualResetEvent &evt, int &res, uint64_t &sizeLeft, uint64_t fileSize, int fromFd, int toFd, uint32_t maxSubmissions, uint64_t offset, char *buf, bool isLastInBatch) {
-    return [this, &evt, &res, &sizeLeft, fileSize, fromFd, toFd, buf, offset, isLastInBatch, maxSubmissions, id = tempId++](int32_t _res) {
-        fmt::println("createNewEventHandlerCopyFileReadPart id {}", id);
+    return [this, &evt, &res, &sizeLeft, fileSize, fromFd, toFd, buf, offset, isLastInBatch, maxSubmissions](int32_t _res) {
         std::unique_ptr<char[]> uniqueBuf{buf};
         INTERNAL_IO_DEBUG("read response {} {} {} {} {}", _res, _res < 0 ? strerror(-_res) : "", _shouldStop, evt.is_set(), fileSize);
         if(_shouldStop || res < 0) {
@@ -509,7 +496,6 @@ std::function<void(int32_t)> Ichor::IOUringAsyncFileIO::createNewEventHandlerCop
             io_uring_sqe_set_data(sqe, new UringResponseEvent{_q->getNextEventIdFromIchor(), getServiceId(), INTERNAL_EVENT_PRIORITY, createNewEventHandlerCopyFileWritePart(evt, res, buf, isLastInWriteBatch)});
             io_uring_prep_write(sqe, toFd, buf, readBytes, std::numeric_limits<__u64>::max());
             INTERNAL_IO_DEBUG("add write");
-            _q->submitIfNeeded();
         }
 
         if(!isLastInWriteBatch && readBytes < _bufferSize) {
@@ -518,7 +504,6 @@ std::function<void(int32_t)> Ichor::IOUringAsyncFileIO::createNewEventHandlerCop
             io_uring_sqe_set_data(sqe, new UringResponseEvent{_q->getNextEventIdFromIchor(), getServiceId(), INTERNAL_EVENT_PRIORITY, createNewEventHandlerCopyFileReadPart(evt, res, sizeLeft, fileSize, fromFd, toFd, maxSubmissions, offset + readBytes, newBuf, isLastInBatch)});
             io_uring_prep_read(sqe, fromFd, newBuf, _bufferSize -  readBytes, offset + readBytes);
             INTERNAL_IO_DEBUG("add read");
-            _q->submitIfNeeded();
         }
 
         // contents.size() indicates we're not done but we're the last in the batch. Submit a new batch.
@@ -529,8 +514,7 @@ std::function<void(int32_t)> Ichor::IOUringAsyncFileIO::createNewEventHandlerCop
 }
 
 std::function<void(int32_t)> Ichor::IOUringAsyncFileIO::createNewEventHandlerCopyFileWritePart(Ichor::AsyncManualResetEvent &evt, int &res, char *buf, bool isLastInBatch) {
-    return [this, &evt, &res, buf, isLastInBatch, id = tempId++](int32_t _res) {
-        fmt::println("createNewEventHandlerCopyFileWritePart id {}", id);
+    return [this, &evt, &res, buf, isLastInBatch](int32_t _res) {
         std::unique_ptr<char[]> uniqueBuf{buf};
         INTERNAL_IO_DEBUG("write response {} {} {} {}", _res, _res < 0 ? strerror(-_res) : "", _shouldStop, evt.is_set());
         if(_shouldStop || res < 0) {

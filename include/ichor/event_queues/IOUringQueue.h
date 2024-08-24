@@ -6,12 +6,14 @@
 
 #include <ichor/event_queues/IEventQueue.h>
 #include <ichor/event_queues/IIOUringQueue.h>
+#include <ichor/event_queues/PriorityQueue.h>
+#include <ichor/stl/SectionalPriorityQueue.h>
 #include <atomic>
 #include <thread>
 #include <chrono>
 
 namespace Ichor {
-    /// Provides an io_uring based queue, expects the running OS to have at least kernel 6.1
+    /// Provides an io_uring based queue, expects the running OS to have at least kernel 5.4
     class IOUringQueue final : public IEventQueue, public IIOUringQueue {
     public:
         IOUringQueue(uint64_t quitTimeoutMs = 5'000, long long pollTimeoutNs = 100'000'000);
@@ -26,32 +28,35 @@ namespace Ichor {
         /// Creates an io_uring event loop with a standard flagset.
         /// \param entriesCount
         /// \return
-        io_uring* createEventLoop(unsigned entriesCount = 2048);
+        [[nodiscard]] tl::optional<NeverNull<io_uring*>> createEventLoop(unsigned entriesCount = 2048);
         /// Use given ring.
         /// \param loop
         /// \param entriesCount entries count used when creating ring
         /// \return false if ring doesn't support features required by Ichor, true otherwise
-        bool useEventLoop(io_uring *loop, unsigned entriesCount);
+        bool useEventLoop(NeverNull<io_uring*> loop, unsigned entriesCount);
 
         bool start(bool captureSigInt) final;
         [[nodiscard]] bool shouldQuit() final;
         void quit() final;
 
-        NeverNull<io_uring*> getRing() final;
-        unsigned int getMaxEntriesCount() final;
+        [[nodiscard]] NeverNull<io_uring*> getRing() noexcept final;
+        unsigned int getMaxEntriesCount() const noexcept final;
 
-        uint64_t getNextEventIdFromIchor() final;
-        uint32_t sqeSpaceLeft() final;
-        io_uring_sqe *getSqe() final;
+        [[nodiscard]] uint64_t getNextEventIdFromIchor() noexcept final;
+        uint32_t sqeSpaceLeft() const noexcept final;
+        [[nodiscard]] io_uring_sqe *getSqe() noexcept final;
 
         void submitIfNeeded() final;
         void submitAndWait(uint32_t waitNr) final;
+
+        [[nodiscard]] Version getKernelVersion() const noexcept final;
 
     private:
         bool checkRingFlags(io_uring* ring);
         void shouldAddQuitEvent();
 
         std::unique_ptr<io_uring> _eventQueue{};
+        SectionalPriorityQueue<std::unique_ptr<Event>, OrderedPriorityQueueCompare> _priorityQueue{};
         io_uring *_eventQueuePtr{};
         std::atomic<bool> _quit{false};
         std::atomic<bool> _initializedQueue{false};
@@ -61,5 +66,6 @@ namespace Ichor {
         long long _pollTimeoutNs;
         std::chrono::steady_clock::time_point _whenQuitEventWasSent{};
         std::atomic<bool> _quitEventSent{false};
+        Version _kernelVersion{};
     };
 }
