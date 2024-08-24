@@ -460,7 +460,7 @@ namespace Ichor {
             assert(n >= 0);
             assert(_size + (std::size_t)n <= N);
             auto position = iterator{const_cast<pointer>(const_position.operator->())};
-            _size += n;
+            _size += static_cast<decltype(_size)>(n);
             if constexpr (std::is_move_constructible_v<T>) {
                 std::move_backward(position, end() - n, end());
             } else {
