@@ -8,16 +8,16 @@
 
 namespace Ichor {
     template <typename T, typename Compare>
-    struct SectionalPriorityQueue {
+    struct SectionalPriorityQueue final {
         [[nodiscard]] bool empty() const noexcept {
             return c.empty();
         }
 
-        [[nodiscard]] std::vector<T>::size_type size() const noexcept {
+        [[nodiscard]] typename std::vector<T>::size_type size() const noexcept {
             return c.size();
         }
 
-        [[nodiscard]] std::vector<T>::size_type maxSize() const noexcept {
+        [[nodiscard]] typename std::vector<T>::size_type maxSize() const noexcept {
             return c.max_size();
         }
 
@@ -48,7 +48,7 @@ namespace Ichor {
             return t;
         }
 
-        void reserve(std::vector<T>::size_type size) {
+        void reserve(typename std::vector<T>::size_type size) {
             c.reserve(size);
         }
 

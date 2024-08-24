@@ -25,6 +25,10 @@ namespace Ichor {
             return Ichor::any_cast<T&>(propVal->second) == val;
         }
 
+        [[nodiscard]] std::string getDescription() const noexcept {
+            return fmt::format("PropertiesFilterEntry {}:{}", key, val);
+        }
+
         std::string key;
         T val;
     };
@@ -37,6 +41,10 @@ namespace Ichor {
             return manager.serviceId() == id;
         }
 
+        [[nodiscard]] std::string getDescription() const noexcept {
+            return fmt::format("ServiceIdFilterEntry {}", id);
+        }
+
         uint64_t id;
     };
 
@@ -44,6 +52,7 @@ namespace Ichor {
     public:
         virtual ~ITemplatedFilter() noexcept = default;
         [[nodiscard]] virtual bool compareTo(ILifecycleManager const &manager) const noexcept = 0;
+        [[nodiscard]] virtual std::string getDescription() const noexcept = 0;
     };
 
     template <typename T>
@@ -59,6 +68,10 @@ namespace Ichor {
 
         [[nodiscard]] bool compareTo(ILifecycleManager const &manager) const noexcept final {
             return entry.matches(manager);
+        }
+
+        [[nodiscard]] virtual std::string getDescription() const noexcept {
+            return entry.getDescription();
         }
 
     private:
@@ -80,6 +93,10 @@ namespace Ichor {
             return _templatedFilter->compareTo(manager);
         }
 
+        [[nodiscard]] std::string getDescription() const noexcept {
+            return _templatedFilter->getDescription();
+        }
+
         ReferenceCountedPointer<ITemplatedFilter> _templatedFilter;
     };
 }
@@ -91,7 +108,7 @@ struct fmt::formatter<Ichor::Filter> {
     }
 
     template <typename FormatContext>
-    auto format(const Ichor::Filter&, FormatContext& ctx) {
-        return fmt::format_to(ctx.out(), "");
+    auto format(const Ichor::Filter& f, FormatContext& ctx) {
+        return fmt::format_to(ctx.out(), "{}", f.getDescription());
     }
 };

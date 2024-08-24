@@ -2,7 +2,6 @@
 
 #include <variant>
 #include <ichor/dependency_management/AdvancedService.h>
-#include "DependencyService.h"
 
 using namespace Ichor;
 

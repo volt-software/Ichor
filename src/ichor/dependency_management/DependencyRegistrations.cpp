@@ -1,17 +1,6 @@
 #include <ichor/dependency_management/DependencyRegistrations.h>
 #include <ichor/event_queues/IEventQueue.h>
 
-Ichor::EventCompletionHandlerRegistration::~EventCompletionHandlerRegistration() {
-    reset();
-}
-
-void Ichor::EventCompletionHandlerRegistration::reset() {
-    if(_key.type != 0) {
-        Ichor::GetThreadLocalEventQueue().pushPrioritisedEvent<RemoveCompletionCallbacksEvent>(_key.id, _priority, _key);
-        _key.type = 0;
-    }
-}
-
 Ichor::EventHandlerRegistration::~EventHandlerRegistration() {
     reset();
 }

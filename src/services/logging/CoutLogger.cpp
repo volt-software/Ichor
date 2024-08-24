@@ -85,10 +85,10 @@ void Ichor::CoutLogger::error(const char *filename_in, int line_in, const char *
     }
 }
 
-void Ichor::CoutLogger::setLogLevel(Ichor::LogLevel level) {
+void Ichor::CoutLogger::setLogLevel(Ichor::LogLevel level) noexcept {
     _level = level;
 }
 
-Ichor::LogLevel Ichor::CoutLogger::getLogLevel() const {
+Ichor::LogLevel Ichor::CoutLogger::getLogLevel() const noexcept {
     return _level;
 }

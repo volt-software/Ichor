@@ -120,8 +120,7 @@ void Ichor::WsConnectionService::addDependencyInstance(IHostService&, IService&)
 
 }
 
-void Ichor::WsConnectionService::removeDependencyInstance(IHostService&, IService&) {
-
+void Ichor::WsConnectionService::removeDependencyInstance(IHostService& host, IService&) {
 }
 
 void Ichor::WsConnectionService::addDependencyInstance(IAsioContextService &AsioContextService, IService&) {

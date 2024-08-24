@@ -134,40 +134,31 @@ TEST_CASE("QueueTests") {
 //        REQUIRE_THROWS(queue->empty());
 //        REQUIRE_THROWS(queue->size());
 
-        auto loop = queue->createEventLoop();
-
+        REQUIRE(queue->createEventLoop());
         REQUIRE(queue->empty());
         REQUIRE(queue->size() == 0);
         REQUIRE(!queue->shouldQuit());
     }
 
     SECTION("IOUringQueue Live") {
-//        auto new_logger = spdlog::stdout_color_st("default_logger");
-//        spdlog::set_default_logger(new_logger);
         std::atomic<DependencyManager*> _dm{};
         std::thread t([&] {
             auto queue = std::make_unique<IOUringQueue>(10, 10'000);
             auto &dm = queue->createManager();
             _dm.store(&dm, std::memory_order_release);
 
-            queue->createEventLoop();
+            REQUIRE(queue->createEventLoop());
             dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>();
             dm.createServiceManager<UselessService>();
             queue->start(DoNotCaptureSigInt);
         });
-
-//        spdlog::info("1");
 
         while(_dm.load(std::memory_order_acquire) == nullptr) {
             std::this_thread::sleep_for(1ms);
         }
         auto *dm = _dm.load(std::memory_order_acquire);
 
-//        spdlog::info("2");
-
         dm->runForOrQueueEmpty();
-
-//        spdlog::info("3");
 
         REQUIRE(dm->isRunning());
 
@@ -178,11 +169,7 @@ TEST_CASE("QueueTests") {
             throw;
         }
 
-//        spdlog::info("4");
-
         t.join();
-
-//        spdlog::info("5");
     }
 #endif
 }

@@ -126,7 +126,7 @@ Ichor::AsyncGenerator<Ichor::IchorBehaviour> Ichor::TcpHostService::handleEvent(
     props.emplace("Socket", Ichor::make_any<int>(evt.socket));
     props.emplace("TimeoutSendUs", Ichor::make_any<int64_t>(_sendTimeout));
     props.emplace("TimeoutRecvUs", Ichor::make_any<int64_t>(_recvTimeout));
-    _connections.emplace_back(GetThreadLocalManager().template createServiceManager<TcpConnectionService, IConnectionService>(std::move(props)));
+    _connections.emplace_back(GetThreadLocalManager().template createServiceManager<TcpConnectionService, IConnectionService>(std::move(props))->getServiceId());
 
     co_return {};
 }

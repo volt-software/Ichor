@@ -22,7 +22,7 @@ Ichor::Task<void> Ichor::SpdlogSharedService::stop() {
     co_return;
 }
 
-std::vector<std::shared_ptr<spdlog::sinks::sink>> const& Ichor::SpdlogSharedService::getSinks() noexcept {
+std::vector<std::shared_ptr<spdlog::sinks::sink>> const& Ichor::SpdlogSharedService::getSinks() const noexcept {
     return _sinks;
 }
 

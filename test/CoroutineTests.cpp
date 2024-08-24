@@ -146,11 +146,11 @@ TEST_CASE("CoroutineTests") {
         auto queue = std::make_unique<PriorityQueue>();
         auto &dm = queue->createManager();
         _autoEvt = std::make_unique<Ichor::AsyncAutoResetEvent>();
-        MultipleAwaitService *svc{};
+        ServiceIdType svcId{};
 
         std::thread t([&]() {
             dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>();
-            svc = dm.createServiceManager<MultipleAwaitService>();
+            svcId = dm.createServiceManager<MultipleAwaitService, IMultipleAwaitService>()->getServiceId();
             queue->start(CaptureSigInt);
         });
 
@@ -160,8 +160,10 @@ TEST_CASE("CoroutineTests") {
 
         queue->pushEvent<RunFunctionEvent>(0, [&]() {
             INTERNAL_DEBUG("set");
+            auto svc = dm.getService<IMultipleAwaitService>(svcId);
+            REQUIRE(svc);
             _autoEvt->set_all();
-            REQUIRE(svc->count == 2);
+            REQUIRE((*svc).first->getCount() == 2);
             dm.getEventQueue().pushEvent<QuitEvent>(0);
         });
 
@@ -200,14 +202,14 @@ TEST_CASE("CoroutineTests") {
     SECTION("co_await user defined struct generator") {
         auto queue = std::make_unique<PriorityQueue>();
         auto &dm = queue->createManager();
-        AwaitReturnService *svc{};
+        ServiceIdType svcId{};
         AwaitNoCopy::countConstructed = 0;
         AwaitNoCopy::countDestructed = 0;
         AwaitNoCopy::countMoved = 0;
 
         std::thread t([&]() {
             dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>();
-            svc = dm.createServiceManager<AwaitReturnService>();
+            svcId = dm.createServiceManager<AwaitReturnService, IAwaitReturnService>()->getServiceId();
             queue->start(CaptureSigInt);
         });
 
@@ -216,7 +218,9 @@ TEST_CASE("CoroutineTests") {
         dm.runForOrQueueEmpty();
 
         queue->pushEvent<RunFunctionEventAsync>(0, [&]() -> AsyncGenerator<IchorBehaviour> {
-            auto &await = *co_await svc->Await().begin();
+            auto svc = dm.getService<IAwaitReturnService>(svcId);
+            REQUIRE(svc);
+            auto &await = *co_await (*svc).first->Await().begin();
             co_return {};
         });
 
@@ -240,14 +244,14 @@ TEST_CASE("CoroutineTests") {
     SECTION("co_await user defined struct task") {
         auto queue = std::make_unique<PriorityQueue>();
         auto &dm = queue->createManager();
-        AwaitReturnService *svc{};
+        ServiceIdType svcId{};
         AwaitNoCopy::countConstructed = 0;
         AwaitNoCopy::countDestructed = 0;
         AwaitNoCopy::countMoved = 0;
 
         std::thread t([&]() {
             dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>();
-            svc = dm.createServiceManager<AwaitReturnService>();
+            svcId = dm.createServiceManager<AwaitReturnService, IAwaitReturnService>()->getServiceId();
             queue->start(CaptureSigInt);
         });
 
@@ -256,7 +260,9 @@ TEST_CASE("CoroutineTests") {
         dm.runForOrQueueEmpty();
 
         queue->pushEvent<RunFunctionEventAsync>(0, [&]() -> AsyncGenerator<IchorBehaviour> {
-            auto await = co_await svc->AwaitTask();
+            auto svc = dm.getService<IAwaitReturnService>(svcId);
+            REQUIRE(svc);
+            auto await = co_await (*svc).first->AwaitTask();
             co_return {};
         });
 

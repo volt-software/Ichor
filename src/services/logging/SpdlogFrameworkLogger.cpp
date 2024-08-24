@@ -95,12 +95,16 @@ Ichor::Task<void> Ichor::SpdlogFrameworkLogger::stop() {
     co_return;
 }
 
-void Ichor::SpdlogFrameworkLogger::setLogLevel(Ichor::LogLevel level) {
+void Ichor::SpdlogFrameworkLogger::setLogLevel(Ichor::LogLevel level) noexcept {
     _level = level;
 }
 
-Ichor::LogLevel Ichor::SpdlogFrameworkLogger::getLogLevel() const {
+Ichor::LogLevel Ichor::SpdlogFrameworkLogger::getLogLevel() const noexcept {
     return _level;
+}
+
+Ichor::ServiceIdType Ichor::SpdlogFrameworkLogger::getFrameworkServiceId() const noexcept {
+    return getServiceId();
 }
 
 

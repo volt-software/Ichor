@@ -35,6 +35,7 @@ namespace Ichor {
             throw std::runtime_error("Pushing nullptr");
         }
 
+//        INTERNAL_DEBUG("inserted event of type {} priority {} into manager {}", event->get_name(), event->priority, _dm->getId());
 
         // TODO hardening
 //#ifdef ICHOR_USE_HARDENING

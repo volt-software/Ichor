@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <ichor/Common.h>
 
 namespace Ichor {
     class IHostService {

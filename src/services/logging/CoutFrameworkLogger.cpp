@@ -100,10 +100,14 @@ Ichor::Task<void> Ichor::CoutFrameworkLogger::stop() {
     co_return;
 }
 
-void Ichor::CoutFrameworkLogger::setLogLevel(Ichor::LogLevel level) {
+void Ichor::CoutFrameworkLogger::setLogLevel(Ichor::LogLevel level) noexcept {
     _level = level;
 }
 
-Ichor::LogLevel Ichor::CoutFrameworkLogger::getLogLevel() const {
+Ichor::LogLevel Ichor::CoutFrameworkLogger::getLogLevel() const noexcept {
     return _level;
+}
+
+Ichor::ServiceIdType Ichor::CoutFrameworkLogger::getFrameworkServiceId() const noexcept {
+    return getServiceId();
 }

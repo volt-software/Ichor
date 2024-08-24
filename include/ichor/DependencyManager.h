@@ -21,6 +21,7 @@
 #include <ichor/dependency_management/ConstructorInjectionService.h>
 #include <ichor/dependency_management/DependencyTrackers.h>
 #include <ichor/event_queues/IEventQueue.h>
+#include <ichor/stl/ServiceProtectedPointer.h>
 
 using namespace std::chrono_literals;
 
@@ -85,8 +86,8 @@ namespace Ichor {
 #if (!defined(WIN32) && !defined(_WIN32) && !defined(__WIN32)) || defined(__CYGWIN__)
         requires ImplementsAll<Impl, Interfaces...>
 #endif
-        NeverNull<Impl*> createServiceManager() {
-            return internalCreateServiceManager<Impl, Interfaces...>(Properties{});
+        ServiceProtectedPointer<Impl> createServiceManager() {
+            return internalCreateServiceManager<Impl, Impl, Interfaces...>(Properties{});
         }
 
         template<DerivedTemplated<AdvancedService> Impl, typename... Interfaces>
@@ -94,8 +95,8 @@ namespace Ichor {
 #if (!defined(WIN32) && !defined(_WIN32) && !defined(__WIN32)) || defined(__CYGWIN__)
         requires ImplementsAll<Impl, Interfaces...>
 #endif
-        NeverNull<Impl*> createServiceManager(Properties&& properties, uint64_t priority = INTERNAL_EVENT_PRIORITY) {
-            return internalCreateServiceManager<Impl, Interfaces...>(std::forward<Properties>(properties), priority);
+        ServiceProtectedPointer<Impl> createServiceManager(Properties&& properties, uint64_t priority = INTERNAL_EVENT_PRIORITY) {
+            return internalCreateServiceManager<Impl, Impl, Interfaces...>(std::forward<Properties>(properties), priority);
         }
 
         template<typename Impl, typename... Interfaces>
@@ -103,7 +104,7 @@ namespace Ichor {
 #if (!defined(WIN32) && !defined(_WIN32) && !defined(__WIN32)) || defined(__CYGWIN__)
         requires ImplementsAll<Impl, Interfaces...>
 #endif
-        NeverNull<IService*> createServiceManager() {
+        ServiceProtectedPointer<IService> createServiceManager() {
             return createConstructorInjectorServiceManager<Impl, Interfaces...>(Properties{}, INTERNAL_EVENT_PRIORITY);
         }
 
@@ -112,7 +113,7 @@ namespace Ichor {
 #if (!defined(WIN32) && !defined(_WIN32) && !defined(__WIN32)) || defined(__CYGWIN__)
         requires ImplementsAll<Impl, Interfaces...>
 #endif
-        NeverNull<IService*> createServiceManager(Properties&& properties, uint64_t priority = INTERNAL_EVENT_PRIORITY) {
+        ServiceProtectedPointer<IService> createServiceManager(Properties&& properties, uint64_t priority = INTERNAL_EVENT_PRIORITY) {
             return createConstructorInjectorServiceManager<Impl, Interfaces...>(std::move(properties), priority);
         }
 
@@ -121,8 +122,8 @@ namespace Ichor {
 #if (!defined(WIN32) && !defined(_WIN32) && !defined(__WIN32)) || defined(__CYGWIN__)
         requires ImplementsAll<Impl, Interfaces...>
 #endif
-        NeverNull<IService*> createConstructorInjectorServiceManager(Properties&& properties, uint64_t priority = INTERNAL_EVENT_PRIORITY) {
-            return internalCreateServiceManager<ConstructorInjectionService<Impl>, Interfaces...>(std::move(properties), priority);
+        ServiceProtectedPointer<IService> createConstructorInjectorServiceManager(Properties&& properties, uint64_t priority = INTERNAL_EVENT_PRIORITY) {
+            return internalCreateServiceManager<ConstructorInjectionService<Impl>, IService, Interfaces...>(std::move(properties), priority);
         }
 
         /// Push event into event loop with the default priority asynchronously
@@ -138,26 +139,28 @@ namespace Ichor {
         requires Derived<EventT, Event>
 #endif
         Task<void> pushPrioritisedEventAsync(ServiceIdType originatingServiceId, uint64_t priority, bool coalesce, Args&&... args) {
-#ifdef ICHOR_USE_HARDENING
-            if(this != Detail::_local_dm) [[unlikely]] { // are we on the right thread?
-                std::terminate();
+            if constexpr (DO_INTERNAL_DEBUG || DO_HARDENING) {
+                if (this != Detail::_local_dm) [[unlikely]] {
+                    ICHOR_EMERGENCY_LOG1(_logger, "Function called from wrong thread.");
+                    std::terminate();
+                }
             }
-#endif
             static_assert(EventT::TYPE == typeNameHash<EventT>(), "Event typeNameHash wrong");
             static_assert(EventT::NAME == typeName<EventT>(), "Event typeName wrong");
             static_assert(!std::is_same_v<EventT, QuitEvent>, "QuitEvent cannot be used in an async manner");
-            static_assert(!std::is_same_v<EventT, RemoveCompletionCallbacksEvent>, "RemoveCompletionCallbacksEvent cannot be used in an async manner");
             static_assert(!std::is_same_v<EventT, RemoveEventHandlerEvent>, "RemoveEventHandlerEvent cannot be used in an async manner");
             static_assert(!std::is_same_v<EventT, RemoveEventInterceptorEvent>, "RemoveEventInterceptorEvent cannot be used in an async manner");
             static_assert(!std::is_same_v<EventT, RemoveTrackerEvent>, "RemoveTrackerEvent cannot be used in an async manner");
             static_assert(!std::is_same_v<EventT, ContinuableEvent>, "ContinuableEvent cannot be used in an async manner");
             static_assert(!std::is_same_v<EventT, ContinuableStartEvent>, "ContinuableStartEvent cannot be used in an async manner");
+            static_assert(!std::is_same_v<EventT, DependencyUndoRequestEvent>, "DependencyUndoRequestEvent cannot be used in an async manner");
 
-#ifdef ICHOR_USE_HARDENING
-            if(originatingServiceId != 0 && _services.find(originatingServiceId) == _services.end()) [[unlikely]] {
-                std::terminate();
+            if constexpr (DO_INTERNAL_DEBUG || DO_HARDENING) {
+                if (originatingServiceId != 0 && _services.find(originatingServiceId) == _services.end()) [[unlikely]] {
+                    ICHOR_EMERGENCY_LOG2(_logger, "Trying to push event with unknown service id {}.", originatingServiceId);
+                    std::terminate();
+                }
             }
-#endif
 
             if(coalesce) {
                 auto waitingIt = std::find_if(_eventWaiters.begin(), _eventWaiters.end(),
@@ -187,16 +190,22 @@ namespace Ichor {
         [[nodiscard]]
         /// Register handlers for when dependencies get requested/unrequested
         /// \tparam Interface type of interface where dependency is requested for (has to derive from Event)
-        /// \tparam Impl type of class registering handler (auto-deducib)
+        /// \tparam Impl type of class registering handler (auto-deducible)
         /// \param serviceId id of service registering handler
         /// \param impl class that is registering handler
         /// \return RAII handler, removes registration upon destruction
         DependencyTrackerRegistration registerDependencyTracker(Impl *impl, IService *self) {
-#ifdef ICHOR_USE_HARDENING
-            if(this != Detail::_local_dm) [[unlikely]] { // are we on the right thread?
-                std::terminate();
+            if constexpr (DO_INTERNAL_DEBUG || DO_HARDENING) {
+                if (this != Detail::_local_dm) [[unlikely]] {
+                    ICHOR_EMERGENCY_LOG1(_logger, "Function called from wrong thread.");
+                    std::terminate();
+                }
+
+                if(self->getServiceState() < ServiceState::STARTING || self->getServiceState() > ServiceState::ACTIVE) {
+                    ICHOR_EMERGENCY_LOG1(_logger, "Cannot register tracker unless service is starting/started. Did you start it in an AdvancedService constructor?");
+                    std::terminate();
+                }
             }
-#endif
             auto requestTrackersForType = _dependencyRequestTrackers.find(typeNameHash<Interface>());
 
             DependencyTrackerInfo requestInfo{self->getServiceId(), std::function<void(Event const &)>{[impl](Event const &evt) {
@@ -240,38 +249,6 @@ namespace Ichor {
 
         template <typename EventT, typename Impl>
 #if (!defined(WIN32) && !defined(_WIN32) && !defined(__WIN32)) || defined(__CYGWIN__)
-        requires Derived<EventT, Event> && ImplementsEventCompletionHandlers<Impl, EventT>
-#endif
-        [[nodiscard]]
-        /// Register event error/completion handlers
-        /// \tparam EventT type of event (has to derive from Event)
-        /// \tparam Impl type of class registering handler (auto-deducible)
-        /// \param serviceId id of service registering handler
-        /// \param impl class that is registering handler
-        /// \return RAII handler, removes registration upon destruction
-        EventCompletionHandlerRegistration registerEventCompletionCallbacks(Impl *impl, IService *self) {
-            static_assert(!std::is_same_v<EventT, QuitEvent>, "QuitEvent cannot be used for completion callbacks");
-            static_assert(!std::is_same_v<EventT, RemoveCompletionCallbacksEvent>, "RemoveCompletionCallbacksEvent cannot be used for completion callbacks");
-            static_assert(!std::is_same_v<EventT, RemoveEventHandlerEvent>, "RemoveEventHandlerEvent cannot be used for completion callbacks");
-            static_assert(!std::is_same_v<EventT, RemoveEventInterceptorEvent>, "RemoveEventInterceptorEvent cannot be used for completion callbacks");
-            static_assert(!std::is_same_v<EventT, RemoveTrackerEvent>, "RemoveTrackerEvent cannot be used for completion callbacks");
-            static_assert(!std::is_same_v<EventT, ContinuableEvent>, "ContinuableEvent cannot be used for completion callbacks");
-            static_assert(!std::is_same_v<EventT, ContinuableStartEvent>, "ContinuableStartEvent cannot be used for completion callbacks");
-            static_assert(!std::is_same_v<EventT, InsertServiceEvent>, "InsertServiceEvent cannot be used for completion callbacks");
-
-#ifdef ICHOR_USE_HARDENING
-            if(this != Detail::_local_dm) [[unlikely]] { // are we on the right thread?
-                std::terminate();
-            }
-#endif
-            CallbackKey key{self->getServiceId(), EventT::TYPE};
-            _completionCallbacks.emplace(key, std::function<void(Event const &)>{[impl](Event const &evt){ impl->handleCompletion(static_cast<EventT const &>(evt)); }});
-            _errorCallbacks.emplace(key, std::function<void(Event const &)>{[impl](Event const &evt){ impl->handleError(static_cast<EventT const &>(evt)); }});
-            return EventCompletionHandlerRegistration(key, self->getServicePriority());
-        }
-
-        template <typename EventT, typename Impl>
-#if (!defined(WIN32) && !defined(_WIN32) && !defined(__WIN32)) || defined(__CYGWIN__)
         requires Derived<EventT, Event> && ImplementsEventHandlers<Impl, EventT>
 #endif
         [[nodiscard]]
@@ -283,11 +260,13 @@ namespace Ichor {
         /// \param targetServiceId optional service id to filter registering for, if empty, receive all events of type EventT
         /// \return RAII handler, removes registration upon destruction
         EventHandlerRegistration registerEventHandler(Impl *impl, IService *self, tl::optional<ServiceIdType> targetServiceId = {}) {
-#ifdef ICHOR_USE_HARDENING
-            if(this != Detail::_local_dm) [[unlikely]] { // are we on the right thread?
-                std::terminate();
+            if constexpr (DO_INTERNAL_DEBUG || DO_HARDENING) {
+                if (this != Detail::_local_dm) [[unlikely]] {
+                    ICHOR_EMERGENCY_LOG1(_logger, "Function called from wrong thread.");
+                    std::terminate();
+                }
             }
-#endif
+
             auto existingHandlers = _eventCallbacks.find(EventT::TYPE);
             if(existingHandlers == end(_eventCallbacks)) {
                 std::vector<EventCallbackInfo> v{};
@@ -323,11 +302,13 @@ namespace Ichor {
         /// \param impl class that is registering handler
         /// \return RAII handler, removes registration upon destruction
         EventInterceptorRegistration registerEventInterceptor(Impl *impl, IService *self) {
-#ifdef ICHOR_USE_HARDENING
-            if(this != Detail::_local_dm) [[unlikely]] { // are we on the right thread?
-                std::terminate();
+            if constexpr (DO_INTERNAL_DEBUG || DO_HARDENING) {
+                if (this != Detail::_local_dm) [[unlikely]] {
+                    ICHOR_EMERGENCY_LOG1(_logger, "Function called from wrong thread.");
+                    std::terminate();
+                }
             }
-#endif
+
             uint64_t targetEventId = 0;
             if constexpr (!std::is_same_v<EventT, Event>) {
                 targetEventId = EventT::TYPE;
@@ -362,11 +343,12 @@ namespace Ichor {
         /// Get framework logger
         /// \return Potentially nullptr
         [[nodiscard]] IFrameworkLogger* getLogger() const noexcept {
-#ifdef ICHOR_USE_HARDENING
-            if(this != Detail::_local_dm) [[unlikely]] { // are we on the right thread?
-                std::terminate();
+            if constexpr (DO_INTERNAL_DEBUG || DO_HARDENING) {
+                if (this != Detail::_local_dm) [[unlikely]] {
+                    ICHOR_EMERGENCY_LOG1(_logger, "Function called from wrong thread.");
+                    std::terminate();
+                }
             }
-#endif
             return _logger;
         }
 
@@ -377,11 +359,12 @@ namespace Ichor {
         /// Get number of services known to this dependency mananger
         /// \return number
         [[nodiscard]] uint64_t getServiceCount() const noexcept {
-#ifdef ICHOR_USE_HARDENING
-            if(this != Detail::_local_dm) [[unlikely]] { // are we on the right thread?
-                std::terminate();
+            if constexpr (DO_INTERNAL_DEBUG || DO_HARDENING) {
+                if (this != Detail::_local_dm) [[unlikely]] {
+                    ICHOR_EMERGENCY_LOG1(_logger, "Function called from wrong thread.");
+                    std::terminate();
+                }
             }
-#endif
             return _services.size();
         }
 
@@ -398,11 +381,12 @@ namespace Ichor {
 
         template <typename Interface>
         [[nodiscard]] tl::optional<std::pair<Interface*, IService*>> getService(ServiceIdType id) const noexcept {
-#ifdef ICHOR_USE_HARDENING
-            if(this != Detail::_local_dm) [[unlikely]] { // are we on the right thread?
-                std::terminate();
+            if constexpr (DO_INTERNAL_DEBUG || DO_HARDENING) {
+                if (this != Detail::_local_dm) [[unlikely]] {
+                    ICHOR_EMERGENCY_LOG1(_logger, "Function called from wrong thread.");
+                    std::terminate();
+                }
             }
-#endif
 
             auto svc = _services.find(id);
 
@@ -428,11 +412,12 @@ namespace Ichor {
 
         template <typename Interface>
         [[nodiscard]] std::vector<NeverNull<Interface*>> getStartedServices() noexcept {
-#ifdef ICHOR_USE_HARDENING
-            if(this != Detail::_local_dm) [[unlikely]] { // are we on the right thread?
-                std::terminate();
+            if constexpr (DO_INTERNAL_DEBUG || DO_HARDENING) {
+                if (this != Detail::_local_dm) [[unlikely]] {
+                    ICHOR_EMERGENCY_LOG1(_logger, "Function called from wrong thread.");
+                    std::terminate();
+                }
             }
-#endif
             std::vector<NeverNull<Interface*>> ret{};
             std::function<void(NeverNull<void*>, IService&)> f{[&ret](NeverNull<void*> svc2, IService& /*isvc*/){ ret.push_back(reinterpret_cast<Interface*>(svc2.get())); }};
             for(auto &[key, svc] : _services) {
@@ -453,11 +438,12 @@ namespace Ichor {
         /// \return list of found services
         template <typename Interface>
         [[nodiscard]] std::vector<std::pair<Interface&, IService&>> getAllServicesOfType() noexcept {
-#ifdef ICHOR_USE_HARDENING
-            if(this != Detail::_local_dm) [[unlikely]] { // are we on the right thread?
-                std::terminate();
+            if constexpr (DO_INTERNAL_DEBUG || DO_HARDENING) {
+                if (this != Detail::_local_dm) [[unlikely]] {
+                    ICHOR_EMERGENCY_LOG1(_logger, "Function called from wrong thread.");
+                    std::terminate();
+                }
             }
-#endif
             std::vector<std::pair<Interface&, IService&>> ret{};
             std::function<void(NeverNull<void*>, IService&)> f{[&ret](NeverNull<void*> svc2, IService & isvc){ ret.emplace_back(*reinterpret_cast<Interface*>(svc2.get()), isvc); }};
             for(auto &[key, svc] : _services) {
@@ -508,13 +494,14 @@ namespace Ichor {
         [[nodiscard]] Task<tl::expected<void, WaitError>> waitForServiceStopped(NeverNull<IService*> svc);
 
     private:
-        template<typename Impl, typename... Interfaces>
-        Impl* internalCreateServiceManager(Properties&& properties, uint64_t priority = INTERNAL_EVENT_PRIORITY) {
-#ifdef ICHOR_USE_HARDENING
-            if(_started.load(std::memory_order_acquire) && this != Detail::_local_dm) [[unlikely]] { // are we on the right thread?
-                std::terminate();
+        template<typename Impl, typename ReturnImpl, typename... Interfaces>
+        ServiceProtectedPointer<ReturnImpl> internalCreateServiceManager(Properties&& properties, uint64_t priority = INTERNAL_EVENT_PRIORITY) {
+            if constexpr (DO_INTERNAL_DEBUG || DO_HARDENING) {
+                if (_started.load(std::memory_order_acquire) && this != Detail::_local_dm) [[unlikely]] {
+                    ICHOR_EMERGENCY_LOG1(_logger, "Function called from wrong thread.");
+                    std::terminate();
+                }
             }
-#endif
             if constexpr(RequestsDependencies<Impl>) {
                 static_assert(!std::is_default_constructible_v<Impl>, "Cannot have a dependencies constructor and a default constructor simultaneously.");
                 static_assert(!RequestsProperties<Impl>, "Cannot have a dependencies constructor and a properties constructor simultaneously.");
@@ -533,6 +520,7 @@ namespace Ichor {
 
                 if constexpr (DO_INTERNAL_DEBUG || DO_HARDENING) {
                     if (_services.contains(serviceId)) [[unlikely]] {
+                        ICHOR_EMERGENCY_LOG1(_logger, "Service id already exists. Bug in Ichor?");
                         std::terminate();
                     }
                 }
@@ -555,7 +543,11 @@ namespace Ichor {
                     _eventQueue->pushPrioritisedEvent<StartServiceEvent>(serviceId, event_priority, serviceId);
                 }
 
-                return impl;
+                if constexpr(IsConstructorInjector<Impl>) {
+                    return ServiceProtectedPointer{static_cast<IService*>(impl)};
+                } else {
+                    return ServiceProtectedPointer{impl};
+                }
             } else {
                 static_assert(!(std::is_default_constructible_v<Impl> && RequestsProperties<Impl>), "Cannot have a properties constructor and a default constructor simultaneously.");
                 auto cmpMgr = Detail::LifecycleManager<Impl, Interfaces...>::template create<>(std::forward<Properties>(properties), InterfacesList<Interfaces...>);
@@ -574,6 +566,7 @@ namespace Ichor {
 
                 if constexpr (DO_INTERNAL_DEBUG || DO_HARDENING) {
                     if (_services.contains(serviceId)) [[unlikely]] {
+                        ICHOR_EMERGENCY_LOG1(_logger, "Service id already exists. Bug in ichor?");
                         std::terminate();
                     }
                 }
@@ -584,7 +577,11 @@ namespace Ichor {
                 auto event_priority = std::min(INTERNAL_DEPENDENCY_EVENT_PRIORITY, priority);
                 _eventQueue->pushPrioritisedEvent<StartServiceEvent>(serviceId, event_priority, serviceId);
 
-                return impl;
+                if constexpr(IsConstructorInjector<Impl>) {
+                    return ServiceProtectedPointer{static_cast<IService*>(impl)};
+                } else {
+                    return ServiceProtectedPointer{impl};
+                }
             }
         }
 
@@ -597,11 +594,13 @@ namespace Ichor {
             if(waitingIt != end(_eventWaiters)) {
                 waitingIt->second.count--;
                 INTERNAL_DEBUG("handleEventError {}:{} {} waiting {} {}", evt.id, evt.get_name(), evt.originatingService, waitingIt->second.count, waitingIt->second.events.size());
-#ifdef ICHOR_USE_HARDENING
-                if(waitingIt->second.count == std::numeric_limits<decltype(waitingIt->second.count)>::max()) [[unlikely]] {
-                    std::terminate();
+                if constexpr (DO_INTERNAL_DEBUG || DO_HARDENING) {
+                    if (waitingIt->second.count == std::numeric_limits<decltype(waitingIt->second.count)>::max()) [[unlikely]] {
+                        ICHOR_EMERGENCY_LOG1(_logger, "Underflow detected.");
+                        std::terminate();
+                    }
                 }
-#endif
+
                 if(waitingIt->second.count == 0) {
                     for(auto &asyncEvt : waitingIt->second.events) {
                         asyncEvt.second->set();
@@ -609,23 +608,6 @@ namespace Ichor {
                     _eventWaiters.erase(waitingIt);
                 }
             }
-
-            if(evt.originatingService == 0) {
-                return;
-            }
-
-            auto service = _services.find(evt.originatingService);
-            if(service == end(_services) || service->second->getServiceState() != ServiceState::ACTIVE) {
-                return;
-            }
-
-            auto callback = _errorCallbacks.find(CallbackKey{evt.originatingService, EventT::TYPE});
-
-            if(callback == end(_errorCallbacks)) {
-                return;
-            }
-
-            callback->second(evt);
         }
 
         /// Convenience function to log adding of services
@@ -684,6 +666,7 @@ namespace Ichor {
         void stop();
         /// Called from the queue implementation
         void addInternalServiceManager(std::unique_ptr<ILifecycleManager> svc);
+        void removeInternalService(std::vector<EventInterceptInfo> &allEventInterceptorsCopy, std::vector<EventInterceptInfo> &eventInterceptorsCopy, ServiceIdType svcId);
         /// Check if there is a coroutine for the given serviceId that is still waiting on something
         /// \param serviceId
         /// \return
@@ -702,14 +685,12 @@ namespace Ichor {
 
         unordered_map<ServiceIdType, std::unique_ptr<ILifecycleManager>> _services{}; // key = service id
         unordered_map<DependencyTrackerKey, std::vector<DependencyTrackerInfo>, DependencyTrackerKeyHash, std::equal_to<>> _dependencyRequestTrackers{}; // key = interface name hash
-        unordered_map<CallbackKey, std::function<void(Event const &)>> _completionCallbacks{}; // key = listening service id + event type
-        unordered_map<CallbackKey, std::function<void(Event const &)>> _errorCallbacks{}; // key = listening service id + event type
         unordered_map<uint64_t, std::vector<EventCallbackInfo>> _eventCallbacks{}; // key = event id
         unordered_map<uint64_t, std::vector<EventInterceptInfo>> _eventInterceptors{}; // key = event id
         unordered_map<uint64_t, std::unique_ptr<IGenerator>> _scopedGenerators{}; // key = promise id
         unordered_map<uint64_t, std::unique_ptr<Event>> _scopedEvents{}; // key = promise id
         unordered_map<uint64_t, EventWaiter> _eventWaiters{}; // key = event id
-        unordered_map<uint64_t, EventWaiter> _dependencyWaiters{}; // key = event id
+        unordered_map<ServiceIdType, EventWaiter> _dependencyWaiters{}; // key = service id
         IEventQueue *_eventQueue;
         IFrameworkLogger *_logger{};
         std::atomic<bool> _started{false};
@@ -721,7 +702,6 @@ namespace Ichor {
 
         friend class IEventQueue;
         friend class ILifecycleManager;
-        friend class EventCompletionHandlerRegistration;
         friend class CommunicationChannel;
     };
 

@@ -28,18 +28,28 @@ struct AwaitNoCopy{
     static uint64_t countMoved;
 };
 
-struct AwaitReturnService final : public AdvancedService<AwaitReturnService> {
+struct IAwaitReturnService {
+    virtual uint64_t getCount() const = 0;
+    virtual AsyncGenerator<AwaitNoCopy> Await() = 0;
+    virtual Task<AwaitNoCopy> AwaitTask() = 0;
+};
+
+struct AwaitReturnService final : public IAwaitReturnService, public AdvancedService<AwaitReturnService> {
     AwaitReturnService() = default;
     ~AwaitReturnService() final = default;
 
-    AsyncGenerator<AwaitNoCopy> Await() {
+    AsyncGenerator<AwaitNoCopy> Await() final {
         co_await *_evt;
         co_return AwaitNoCopy{};
     }
 
-    Task<AwaitNoCopy> AwaitTask() {
+    Task<AwaitNoCopy> AwaitTask() final {
         co_await *_evt;
         co_return AwaitNoCopy{};
+    }
+
+    uint64_t getCount() const final {
+        return count;
     }
 
     uint64_t count{};

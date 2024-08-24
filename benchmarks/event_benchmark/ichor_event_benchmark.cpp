@@ -46,7 +46,10 @@ int main(int argc, char *argv[]) {
         if(liburing) {
 #ifdef ICHOR_USE_LIBURING
             auto q = std::make_unique<IOUringQueue>(10, 10'000);
-            q->createEventLoop();
+            if(!q->createEventLoop()) {
+                fmt::println("Couldn't create event loop.");
+                std::terminate();
+            }
             queue = std::move(q);
 #endif
         } else {
@@ -72,7 +75,10 @@ int main(int argc, char *argv[]) {
                 if(liburing) {
 #ifdef ICHOR_USE_LIBURING
                     auto q = std::make_unique<IOUringQueue>(10, 10'000);
-                    q->createEventLoop();
+                    if(!q->createEventLoop()) {
+                        fmt::println("Couldn't create event loop.");
+                        std::terminate();
+                    }
                     queue = std::move(q);
 #endif
                 } else {

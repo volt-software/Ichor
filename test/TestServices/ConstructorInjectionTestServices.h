@@ -1,7 +1,6 @@
 #pragma once
 
 #include "UselessService.h"
-#include "DependencyService.h"
 
 using namespace Ichor;
 struct IConstructorInjectionTestService {

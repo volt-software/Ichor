@@ -28,9 +28,6 @@ public:
 private:
     Task<tl::expected<void, Ichor::StartError>> start() final {
         if(startCount == 0) {
-            _startServiceRegistration = _dm->registerEventCompletionCallbacks<StartServiceEvent>(this, this);
-            _stopServiceRegistration = _dm->registerEventCompletionCallbacks<StopServiceEvent>(this, this);
-
             _start = std::chrono::steady_clock::now();
             _dm->getEventQueue().pushPrioritisedEvent<StopServiceEvent>(getServiceId(), INTERNAL_DEPENDENCY_EVENT_PRIORITY, _testServiceId);
         } else if(startCount < START_STOP_COUNT) {
@@ -38,8 +35,6 @@ private:
         } else {
             auto end = std::chrono::steady_clock::now();
             _dm->getEventQueue().pushEvent<QuitEvent>(getServiceId());
-            _startServiceRegistration.reset();
-            _stopServiceRegistration.reset();
             ICHOR_LOG_INFO(_logger, "dm {} finished in {:L} µs", _dm->getId(), std::chrono::duration_cast<std::chrono::microseconds>(end-_start).count());
         }
         startCount++;
@@ -75,18 +70,6 @@ private:
     void removeDependencyInstance(DependencyManager&, IService&) {
     }
 
-    void handleCompletion(StartServiceEvent const &evt) {
-    }
-
-    void handleError(StartServiceEvent const &evt) {
-    }
-
-    void handleCompletion(StopServiceEvent const &evt) {
-    }
-
-    void handleError(StopServiceEvent const &evt) {
-    }
-
     friend DependencyRegister;
     friend DependencyManager;
 
@@ -95,6 +78,4 @@ private:
     uint64_t _testServiceId{0};
     std::chrono::steady_clock::time_point _start{};
     uint64_t startCount{0};
-    EventCompletionHandlerRegistration _startServiceRegistration{};
-    EventCompletionHandlerRegistration _stopServiceRegistration{};
 };

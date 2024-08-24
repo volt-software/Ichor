@@ -17,12 +17,12 @@ namespace Ichor::Detail {
     public:
         template <typename U = ServiceType> requires RequestsProperties<U>
         explicit LifecycleManager(Properties&& properties) : _interfaces(), _service(std::forward<Properties>(properties)) {
-            (_interfaces.emplace_back(typeNameHash<IFaces>(), typeName<IFaces>().data(), DependencyFlags::NONE, false),...);
+            (_interfaces.emplace_back(typeNameHash<IFaces>(), typeName<IFaces>(), DependencyFlags::NONE, false),...);
         }
 
         template <typename U = ServiceType> requires (!RequestsProperties<U>)
         explicit LifecycleManager(Properties&& properties) : _interfaces(), _service() {
-            (_interfaces.emplace_back(typeNameHash<IFaces>(), typeName<IFaces>().data(), DependencyFlags::NONE, false),...);
+            (_interfaces.emplace_back(typeNameHash<IFaces>(), typeName<IFaces>(), DependencyFlags::NONE, false),...);
             _service.setProperties(std::forward<Properties>(properties));
         }
 

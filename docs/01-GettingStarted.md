@@ -457,21 +457,20 @@ struct LoggerFactory final {
         // In this case, we apply a filter specifically so that the requesting service id is the only one that will match.
         props.template emplace<>("Filter", Ichor::make_any<Filter>(ServiceIdFilterEntry{evt.originatingService}));
         auto *newLogger = _dm->createServiceManager<Logger, ILogger>(std::move(props));
-        _loggers.emplace(evt.originatingService, newLogger);
+        _loggers.emplace(evt.originatingService, newLogger->getServiceId());
     }
 
     void handleDependencyUndoRequest(AlwaysNull<ILogger*>, DependencyUndoRequestEvent const &evt) {
         auto service = _loggers.find(evt.originatingService);
         if(service != end(_loggers)) {
-            _dm->pushEvent<StopServiceEvent>(AdvancedService<LoggerFactory<LogT>>::getServiceId(), service->second->getServiceId());
-            // + 11 because the first stop triggers a dep offline event and inserts a new stop with 10 higher priority.
-            _dm->pushPrioritisedEvent<RemoveServiceEvent>(AdvancedService<LoggerFactory<LogT>>::getServiceId(), INTERNAL_EVENT_PRIORITY + 11, service->second->getServiceId());
+            // the true at the end tells Ichor to remove the service immediately after being stopped.
+            _dm->pushPrioritisedEvent<StopServiceEvent>(AdvancedService<LoggerFactory<LogT>>::getServiceId(), INTERNAL_DEPENDENCY_EVENT_PRIORITY, service->second, true);
             _loggers.erase(service);
         }
     }
     
     DependencyTrackerRegistration _loggerTrackerRegistration{};
-    unordered_map<uint64_t, IService*> _loggers;
+    unordered_map<ServiceIdType, ServiceIdType> _loggers;
     DependencyManager *_dm;
 };
 

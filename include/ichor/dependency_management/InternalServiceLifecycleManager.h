@@ -14,7 +14,7 @@ namespace Ichor::Detail {
     class InternalServiceLifecycleManager final : public ILifecycleManager {
     public:
         explicit InternalServiceLifecycleManager(ServiceType *q) : _q(q) {
-            _interfaces.emplace_back(typeNameHash<ServiceType>(), typeName<ServiceType>().data(), DependencyFlags::NONE, false);
+            _interfaces.emplace_back(typeNameHash<ServiceType>(), typeName<ServiceType>(), DependencyFlags::NONE, false);
         }
 
         ~InternalServiceLifecycleManager() final = default;

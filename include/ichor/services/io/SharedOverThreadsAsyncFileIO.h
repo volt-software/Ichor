@@ -3,6 +3,7 @@
 #include <ichor/services/io/IAsyncFileIO.h>
 #include <ichor/coroutines/AsyncManualResetEvent.h>
 #include <ichor/dependency_management/AdvancedService.h>
+#include <ichor/stl/ErrnoUtils.h>
 #include <queue>
 #include <mutex>
 #include <thread>

@@ -39,10 +39,6 @@ public:
         _queue = nullptr;
     }
 
-    ServiceIdType _getServiceId() const noexcept final {
-        return getServiceId();
-    }
-
     void stopAllTimers() noexcept final {
         for(auto& timer : _timers) {
             timer->stopTimer();
@@ -74,7 +70,7 @@ void Ichor::TimerFactoryFactory::handleDependencyRequest(AlwaysNull<ITimerFactor
         return;
     }
 
-    _factories.emplace(evt.originatingService, Ichor::GetThreadLocalManager().createServiceManager<TimerFactory, ITimerFactory>(Properties{{"requestingSvcId", Ichor::make_any<ServiceIdType>(evt.originatingService)}}, evt.priority));
+    _factories.emplace(evt.originatingService, Ichor::GetThreadLocalManager().createServiceManager<TimerFactory, Detail::InternalTimerFactory, ITimerFactory>(Properties{{"requestingSvcId", Ichor::make_any<ServiceIdType>(evt.originatingService)}}, evt.priority)->getServiceId());
 }
 
 void Ichor::TimerFactoryFactory::handleDependencyUndoRequest(AlwaysNull<ITimerFactory *>, const DependencyUndoRequestEvent &evt) {
@@ -84,11 +80,15 @@ void Ichor::TimerFactoryFactory::handleDependencyUndoRequest(AlwaysNull<ITimerFa
         return;
     }
 
-    factory->second->stopAllTimers();
+    auto svc = GetThreadLocalManager().getService<Detail::InternalTimerFactory>(factory->second);
 
-    // because we manually tell the factory to stop all timers, stopping the factory itself isn't a high priority action anymore.
-    GetThreadLocalEventQueue().pushEvent<StopServiceEvent>(getServiceId(), factory->second->_getServiceId());
-    // + 11 because the first stop triggers a dep offline event and inserts a new stop with 10 higher priority.
-    GetThreadLocalEventQueue().pushPrioritisedEvent<RemoveServiceEvent>(getServiceId(), INTERNAL_EVENT_PRIORITY + 11, factory->second->_getServiceId());
+    if(!svc) {
+        _factories.erase(factory);
+        return;
+    }
+
+    (*svc).first->stopAllTimers();
+
+    GetThreadLocalEventQueue().pushPrioritisedEvent<StopServiceEvent>(getServiceId(), INTERNAL_DEPENDENCY_EVENT_PRIORITY, factory->second, true);
     _factories.erase(factory);
 }
