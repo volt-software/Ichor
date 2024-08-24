@@ -11,7 +11,7 @@ class TestService final {
 public:
     TestService(DependencyManager *dm, IService *self, ILogger *logger, ISerializer<TestMsg> *serializer) : _dm(dm), _self(self), _logger(logger), _serializer(serializer) {
         ICHOR_LOG_INFO(_logger, "TestService started with dependency");
-        _doWorkRegistration = dm->registerEventCompletionCallbacks<DoWorkEvent>(this, self);
+        _doWorkRegistration = dm->registerEventHandler<DoWorkEvent>(this, self);
         dm->getEventQueue().pushEvent<DoWorkEvent>(self->getServiceId());
     }
     ~TestService() {
@@ -19,7 +19,7 @@ public:
     }
 
 private:
-    void handleCompletion(DoWorkEvent const &) {
+    AsyncGenerator<IchorBehaviour> handleEvent(DoWorkEvent const &) {
         TestMsg msg{20, "five hundred"};
         auto res = _serializer->serialize(msg);
         auto msg2 = _serializer->deserialize(std::move(res));
@@ -29,10 +29,7 @@ private:
             ICHOR_LOG_ERROR(_logger, "serde correct!");
         }
         _dm->getEventQueue().pushEvent<QuitEvent>(_self->getServiceId());
-    }
-
-    void handleError(DoWorkEvent const &evt) {
-        ICHOR_LOG_ERROR(_logger, "Error handling DoWorkEvent");
+        co_return {};
     }
 
     friend DependencyManager;
@@ -41,5 +38,5 @@ private:
     IService *_self{};
     ILogger *_logger{};
     ISerializer<TestMsg> *_serializer{};
-    EventCompletionHandlerRegistration _doWorkRegistration{};
+    EventHandlerRegistration _doWorkRegistration{};
 };

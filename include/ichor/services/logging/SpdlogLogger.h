@@ -23,8 +23,8 @@ namespace Ichor {
         void addDependencyInstance(ISpdlogSharedService &shared, IService &isvc) noexcept;
         void removeDependencyInstance(ISpdlogSharedService &shared, IService &isvc) noexcept;
 
-        void setLogLevel(LogLevel level) final;
-        [[nodiscard]] LogLevel getLogLevel() const final;
+        void setLogLevel(LogLevel level) noexcept final;
+        [[nodiscard]] LogLevel getLogLevel() const noexcept final;
 
     private:
         Task<tl::expected<void, Ichor::StartError>> start() final;

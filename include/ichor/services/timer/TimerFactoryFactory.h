@@ -8,7 +8,6 @@
 namespace Ichor {
     namespace Detail {
         struct InternalTimerFactory {
-            [[nodiscard]] virtual ServiceIdType _getServiceId() const noexcept = 0;
             virtual void stopAllTimers() noexcept = 0;
 
         protected:
@@ -33,6 +32,6 @@ namespace Ichor {
         friend DependencyManager;
 
         DependencyTrackerRegistration _trackerRegistration{};
-        unordered_map<ServiceIdType, Detail::InternalTimerFactory*> _factories;
+        unordered_map<ServiceIdType, ServiceIdType> _factories;
     };
 }

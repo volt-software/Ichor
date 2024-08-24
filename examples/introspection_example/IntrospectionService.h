@@ -20,7 +20,7 @@ public:
 
             ICHOR_LOG_INFO(_logger, "\tInterfaces:");
             for(auto &iface : dm->getProvidedInterfacesForService(svc->getServiceId())) {
-                ICHOR_LOG_INFO(_logger, "\t\tInterface {} hash {}", iface.interfaceName, iface.interfaceNameHash);
+                ICHOR_LOG_INFO(_logger, "\t\tInterface {} hash {}", iface.getInterfaceName(), iface.interfaceNameHash);
             }
 
             ICHOR_LOG_INFO(_logger, "\tProperties:");
@@ -31,7 +31,7 @@ public:
             auto deps = dm->getDependencyRequestsForService(svc->getServiceId());
             ICHOR_LOG_INFO(_logger, "\tDependencies:");
             for(auto &dep : deps) {
-                ICHOR_LOG_INFO(_logger, "\t\tDependency {} flags {} satisfied {}", dep.interfaceName, dep.flags, dep.satisfied);
+                ICHOR_LOG_INFO(_logger, "\t\tDependency {} flags {} satisfied {}", dep.getInterfaceName(), dep.flags, dep.satisfied);
             }
 
             auto dependants = dm->getDependentsForService(svc->getServiceId());

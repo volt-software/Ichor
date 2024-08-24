@@ -12,15 +12,10 @@ namespace Ichor::Detail {
     class DependencyLifecycleManager final : public ILifecycleManager {
     public:
         explicit DependencyLifecycleManager(Properties&& properties) : _interfaces(), _registry(), _service(_registry, std::move(properties)) {
-            (_interfaces.emplace_back(typeNameHash<IFaces>(), typeName<IFaces>().data(), DependencyFlags::NONE, false),...);
+            (_interfaces.emplace_back(typeNameHash<IFaces>(), typeName<IFaces>(), DependencyFlags::NONE, false),...);
         }
 
-        ~DependencyLifecycleManager() final {
-            INTERNAL_DEBUG("destroying {}, id {}", typeName<ServiceType>(), _service.getServiceId());
-            for(auto const &dep : _registry) {
-                GetThreadLocalEventQueue().template pushPrioritisedEvent<DependencyUndoRequestEvent>(_service.getServiceId(), INTERNAL_DEPENDENCY_EVENT_PRIORITY, std::get<Dependency>(dep.second), std::move(_service._properties));
-            }
-        }
+        ~DependencyLifecycleManager() final = default;
 
         template<typename... Interfaces>
         [[nodiscard]]
@@ -79,7 +74,7 @@ namespace Ichor::Detail {
 
                 auto &dep = std::get<Dependency>(depIt->second);
 
-                INTERNAL_DEBUG("dependencyOnline() dep {} {} {}", dep.interfaceName, dep.satisfied, dep.flags);
+                INTERNAL_DEBUG("dependencyOnline() dep {} {} {}", dep.getInterfaceName(), dep.satisfied, dep.flags);
                 if(dep.satisfied == 0) {
                     interested = DependencyChange::FOUND;
                 }

@@ -9,6 +9,7 @@
 #include "TestServices/RequestsLoggingService.h"
 #include "TestServices/ConstructorInjectionTestServices.h"
 #include "TestServices/RequiredMultipleService.h"
+#include "TestServices/DependencyTrackerService.h"
 #include <ichor/event_queues/PriorityQueue.h>
 #include <ichor/events/RunFunctionEvent.h>
 #include <ichor/services/logging/LoggerFactory.h>
@@ -16,6 +17,16 @@
 #include <ichor/services/timer/TimerFactoryFactory.h>
 
 bool AddEventHandlerDuringEventHandlingService::_addedReg{};
+
+static void DisplayServices(DependencyManager &dm) {
+    auto svcs = dm.getAllServices();
+    for(auto &[k, v] : svcs) {
+        fmt::println("svc: {}:{} state {}", k, v->getServiceName(), v->getServiceState());
+        for(auto &[pk, pv] : v->getProperties()) {
+            fmt::println("\tprop: {} {}", pk, pv);
+        }
+    }
+}
 
 TEST_CASE("ServicesTests") {
 
@@ -109,7 +120,7 @@ TEST_CASE("ServicesTests") {
             dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>();
             dm.createServiceManager<UselessService, IUselessService>();
             secondUselessServiceId = dm.createServiceManager<UselessService, IUselessService>()->getServiceId();
-            dm.createServiceManager<DependencyService<DependencyFlags::REQUIRED | DependencyFlags::ALLOW_MULTIPLE>, ICountService>();
+            dm.createServiceManager<DependencyService<IUselessService, DependencyFlags::REQUIRED | DependencyFlags::ALLOW_MULTIPLE>, ICountService>();
             queue->start(CaptureSigInt);
         });
 
@@ -281,7 +292,7 @@ TEST_CASE("ServicesTests") {
             dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>();
             dm.createServiceManager<UselessService, IUselessService>();
             secondUselessServiceId = dm.createServiceManager<UselessService, IUselessService>()->getServiceId();
-            dm.createServiceManager<DependencyService<DependencyFlags::ALLOW_MULTIPLE>, ICountService>();
+            dm.createServiceManager<DependencyService<IUselessService, DependencyFlags::ALLOW_MULTIPLE>, ICountService>();
             queue->start(CaptureSigInt);
         });
 
@@ -405,9 +416,7 @@ TEST_CASE("ServicesTests") {
         queue->pushEvent<RunFunctionEvent>(0, [&]() {
             REQUIRE(dm.getServiceCount() == 5);
 
-            dm.getEventQueue().pushEvent<StopServiceEvent>(0, svcId);
-            // + 11 because the first stop triggers a dep offline event and inserts a new stop with 10 higher priority.
-            dm.getEventQueue().pushPrioritisedEvent<RemoveServiceEvent>(0, INTERNAL_EVENT_PRIORITY + 11, svcId);
+            dm.getEventQueue().pushEvent<StopServiceEvent>(0, svcId, true);
         });
 
 #ifdef ICHOR_MUSL
@@ -433,10 +442,10 @@ TEST_CASE("ServicesTests") {
 
         std::thread t([&]() {
             dm.createServiceManager<LoggerFactory<CoutLogger>, ILoggerFactory>();
-            dm.createServiceManager<DependencyService<DependencyFlags::ALLOW_MULTIPLE>, ICountService>();
+            dm.createServiceManager<DependencyService<IUselessService, DependencyFlags::ALLOW_MULTIPLE>, ICountService>();
             auto service = dm.createServiceManager<ConstructorInjectionTestService, IConstructorInjectionTestService>();
             svcId = service->getServiceId();
-            static_assert(std::is_same_v<decltype(service), NeverNull<IService*>>, "");
+            static_assert(std::is_same_v<decltype(service), ServiceProtectedPointer<IService>>, "");
             queue->start(CaptureSigInt);
         });
 
@@ -445,14 +454,13 @@ TEST_CASE("ServicesTests") {
         dm.runForOrQueueEmpty();
 
         queue->pushEvent<RunFunctionEvent>(0, [&]() {
+            DisplayServices(dm);
             REQUIRE(dm.getServiceCount() == 6);
             auto svcs = dm.getAllServicesOfType<IConstructorInjectionTestService>();
             REQUIRE(svcs.size() == 1);
             REQUIRE(svcs[0].second.getServiceId() == svcId);
 
-            dm.getEventQueue().pushEvent<StopServiceEvent>(0, svcId);
-            // + 11 because the first stop triggers a dep offline event and inserts a new stop with 10 higher priority.
-            dm.getEventQueue().pushPrioritisedEvent<RemoveServiceEvent>(0, INTERNAL_EVENT_PRIORITY + 11, svcId);
+            dm.getEventQueue().pushEvent<StopServiceEvent>(0, svcId, true);
         });
 
         dm.runForOrQueueEmpty();
@@ -463,6 +471,7 @@ TEST_CASE("ServicesTests") {
 #endif
 
         queue->pushEvent<RunFunctionEvent>(0, [&]() {
+            DisplayServices(dm);
             REQUIRE(dm.getServiceCount() == 4);
 
             dm.getEventQueue().pushEvent<QuitEvent>(0);
@@ -520,6 +529,76 @@ TEST_CASE("ServicesTests") {
             REQUIRE(dm.getServiceCount() == 3);
 
             dm.getEventQueue().pushEvent<QuitEvent>(0);
+        });
+
+        t.join();
+    }
+
+    SECTION("Multiple dependency trackers") {
+        auto queue = std::make_unique<PriorityQueue>();
+        auto &dm = queue->createManager();
+        ServiceIdType trackerSvcId{};
+        ServiceIdType depSvcId{};
+        std::thread t([&]() {
+            dm.createServiceManager<DependencyTrackerService<IUselessService, UselessService, IUselessService>>();
+            trackerSvcId = dm.createServiceManager<DependencyTrackerService<IUselessService, UselessService2, IUselessService>>()->getServiceId();
+            depSvcId = dm.createServiceManager<DependencyService<IUselessService, DependencyFlags::ALLOW_MULTIPLE>, ICountService>()->getServiceId();
+            queue->start(CaptureSigInt);
+        });
+
+        waitForRunning(dm);
+
+        dm.runForOrQueueEmpty();
+
+        queue->pushEvent<RunFunctionEvent>(0, [&]() {
+            DisplayServices(dm);
+            REQUIRE(dm.getServiceCount() == 7);
+            auto services = dm.getStartedServices<ICountService>();
+
+            REQUIRE(services.size() == 1);
+            REQUIRE(services[0]->isRunning());
+            REQUIRE(services[0]->getSvcCount() == 2);
+
+
+            queue->pushEvent<StopServiceEvent>(0, depSvcId, true);
+        });
+
+        dm.runForOrQueueEmpty();
+
+        queue->pushEvent<RunFunctionEvent>(0, [&]() {
+            DisplayServices(dm);
+            REQUIRE(dm.getServiceCount() == 4);
+            auto services = dm.getStartedServices<ICountService>();
+
+            REQUIRE(services.size() == 0);
+
+            queue->pushEvent<StopServiceEvent>(0, trackerSvcId, true);
+        });
+
+        dm.runForOrQueueEmpty();
+
+        queue->pushEvent<RunFunctionEvent>(0, [&]() {
+            DisplayServices(dm);
+            REQUIRE(dm.getServiceCount() == 3);
+            auto services = dm.getStartedServices<ICountService>();
+
+            REQUIRE(services.size() == 0);
+
+            depSvcId = dm.createServiceManager<DependencyService<IUselessService, DependencyFlags::ALLOW_MULTIPLE>, ICountService>()->getServiceId();
+        });
+
+        dm.runForOrQueueEmpty();
+
+        queue->pushEvent<RunFunctionEvent>(0, [&]() {
+            DisplayServices(dm);
+            REQUIRE(dm.getServiceCount() == 5);
+            auto services = dm.getStartedServices<ICountService>();
+
+            REQUIRE(services.size() == 1);
+            REQUIRE(services[0]->isRunning());
+            REQUIRE(services[0]->getSvcCount() == 1);
+
+            queue->pushEvent<QuitEvent>(0);
         });
 
         t.join();

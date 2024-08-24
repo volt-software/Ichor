@@ -9,7 +9,11 @@ using namespace Ichor;
 
 extern std::unique_ptr<Ichor::AsyncAutoResetEvent> _autoEvt;
 
-struct MultipleAwaitService final : public AdvancedService<MultipleAwaitService> {
+struct IMultipleAwaitService {
+    virtual uint64_t getCount() const = 0;
+};
+
+struct MultipleAwaitService final : public IMultipleAwaitService, public AdvancedService<MultipleAwaitService> {
     MultipleAwaitService() = default;
     ~MultipleAwaitService() final = default;
 
@@ -29,6 +33,10 @@ struct MultipleAwaitService final : public AdvancedService<MultipleAwaitService>
 
     Task<void> stop() final {
         co_return;
+    }
+
+    uint64_t getCount() const final {
+        return count;
     }
 
     uint64_t count{};

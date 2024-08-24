@@ -63,8 +63,8 @@ namespace Ichor {
     /// Similar to DependencyRequestEvent, but when a service gets destroyed/removed entirely
     /// Properties needs to be a copy as this event will be picked up after the service has been deleted from memory
     struct DependencyUndoRequestEvent final : public Event {
-        explicit DependencyUndoRequestEvent(uint64_t _id, uint64_t _originatingService, uint64_t _priority, Dependency _dependency, Properties _properties) noexcept :
-                Event(_id, _originatingService, _priority), dependency(_dependency), properties{std::move(_properties)} {}
+        explicit DependencyUndoRequestEvent(uint64_t _id, uint64_t _originatingService, uint64_t _priority, Dependency const &_dependency, tl::optional<Properties> const &_properties) noexcept :
+                Event(_id, _originatingService, _priority), dependency(_dependency), properties{_properties} {}
         ~DependencyUndoRequestEvent() final = default;
 
         [[nodiscard]] std::string_view get_name() const noexcept final {
@@ -74,8 +74,8 @@ namespace Ichor {
             return TYPE;
         }
 
-        Dependency dependency;
-        Properties properties;
+        Dependency const &dependency;
+        tl::optional<Properties> const &properties;
         static constexpr NameHashType TYPE = typeNameHash<DependencyUndoRequestEvent>();
         static constexpr std::string_view NAME = typeName<DependencyUndoRequestEvent>();
     };
@@ -96,7 +96,7 @@ namespace Ichor {
     };
 
     struct StopServiceEvent final : public Event {
-        StopServiceEvent(uint64_t _id, uint64_t _originatingService, uint64_t _priority, uint64_t _serviceId) noexcept : Event(_id, _originatingService, _priority), serviceId(_serviceId) {}
+        StopServiceEvent(uint64_t _id, uint64_t _originatingService, uint64_t _priority, uint64_t _serviceId, bool _removeAfter = false) noexcept : Event(_id, _originatingService, _priority), serviceId(_serviceId), removeAfter(_removeAfter) {}
         ~StopServiceEvent() final = default;
 
         [[nodiscard]] std::string_view get_name() const noexcept final {
@@ -107,6 +107,7 @@ namespace Ichor {
         }
 
         uint64_t serviceId;
+        bool removeAfter;
         static constexpr NameHashType TYPE = typeNameHash<StopServiceEvent>();
         static constexpr std::string_view NAME = typeName<StopServiceEvent>();
     };
@@ -156,22 +157,6 @@ namespace Ichor {
 
         static constexpr NameHashType TYPE = typeNameHash<DoWorkEvent>();
         static constexpr std::string_view NAME = typeName<DoWorkEvent>();
-    };
-
-    struct RemoveCompletionCallbacksEvent final : public Event {
-        RemoveCompletionCallbacksEvent(uint64_t _id, uint64_t _originatingService, uint64_t _priority, CallbackKey _key) noexcept : Event(_id, _originatingService, _priority), key(_key) {}
-        ~RemoveCompletionCallbacksEvent() final = default;
-
-        [[nodiscard]] std::string_view get_name() const noexcept final {
-            return NAME;
-        }
-        [[nodiscard]] NameHashType get_type() const noexcept final {
-            return TYPE;
-        }
-
-        CallbackKey key;
-        static constexpr NameHashType TYPE = typeNameHash<RemoveCompletionCallbacksEvent>();
-        static constexpr std::string_view NAME = typeName<RemoveCompletionCallbacksEvent>();
     };
 
     struct RemoveEventHandlerEvent final : public Event {

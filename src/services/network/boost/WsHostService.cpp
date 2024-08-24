@@ -29,6 +29,10 @@ public:
 
         return !props.has_value() || !props->contains("Address");
     }
+
+    [[nodiscard]] std::string getDescription() const noexcept {
+        return fmt::format("ClientConnectionFilter");
+    }
 };
 
 Ichor::WsHostService::WsHostService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {
@@ -85,7 +89,7 @@ Ichor::Task<void> Ichor::WsHostService::stop() {
     _quit = true;
 
     for(auto conn : _connections) {
-        _queue->pushEvent<StopServiceEvent>(getServiceId(), conn->getServiceId());
+        _queue->pushEvent<StopServiceEvent>(getServiceId(), conn, true);
     }
 
     INTERNAL_DEBUG("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! acceptor {}", getServiceId());
@@ -136,7 +140,7 @@ Ichor::AsyncGenerator<Ichor::IchorBehaviour> Ichor::WsHostService::handleEvent(I
         {"Socket", Ichor::make_unformattable_any<decltype(evt._socket)>(evt._socket)},
         {"Filter", Ichor::make_any<Filter>(ClientConnectionFilter{})}
     });
-    _connections.push_back(connection);
+    _connections.push_back(connection->getServiceId());
 
     co_return {};
 }

@@ -48,11 +48,11 @@ void Ichor::SpdlogLogger::error(const char *filename_in, int line_in, const char
     }
 }
 
-void Ichor::SpdlogLogger::setLogLevel(LogLevel level) {
+void Ichor::SpdlogLogger::setLogLevel(LogLevel level) noexcept {
     _level = level;
 }
 
-Ichor::LogLevel Ichor::SpdlogLogger::getLogLevel() const {
+Ichor::LogLevel Ichor::SpdlogLogger::getLogLevel() const noexcept {
     return _level;
 }
 

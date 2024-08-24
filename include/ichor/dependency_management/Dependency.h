@@ -20,7 +20,7 @@ namespace Ichor {
 
     struct Dependency {
         Dependency() noexcept = default;
-        Dependency(uint64_t _interfaceNameHash, char const *_interfaceName, DependencyFlags _flags, uint64_t _satisfied) noexcept : interfaceNameHash(_interfaceNameHash), interfaceName(_interfaceName), flags(_flags), satisfied(_satisfied) {}
+        explicit Dependency(uint64_t _interfaceNameHash, std::string_view _interfaceName, DependencyFlags _flags, uint64_t _satisfied) noexcept : interfaceNameHash(_interfaceNameHash), flags(_flags), satisfied(_satisfied), interfaceName(_interfaceName.data()), interfaceNameLength(_interfaceName.size()) {}
         Dependency(const Dependency &other) noexcept = default;
         Dependency(Dependency &&other) noexcept = default;
         Dependency& operator=(const Dependency &other) noexcept = default;
@@ -28,11 +28,17 @@ namespace Ichor {
         bool operator==(const Dependency &other) const noexcept {
             return interfaceNameHash == other.interfaceNameHash && flags == other.flags;
         }
+        [[nodiscard]] std::string_view getInterfaceName() const noexcept {
+            return std::string_view{interfaceName, interfaceNameLength};
+        }
 
         uint64_t interfaceNameHash;
-        char const *interfaceName;
         DependencyFlags flags;
         uint64_t satisfied;
+    private:
+        // this workaround is necessary to ensure trivially default constructability. But I would much rather it be possible to storage a string_view directly.
+        char const *interfaceName;
+        std::size_t interfaceNameLength;
     };
 
     static_assert(std::is_trivially_default_constructible_v<Dependency>, "Dependency is required to be trivially default constructible");

@@ -26,7 +26,6 @@ namespace Ichor {
         }
         ~LoggerFactory() final = default;
 
-
         void setDefaultLogLevel(LogLevel level) final {
             _defaultLevel = level;
         }
@@ -68,7 +67,7 @@ namespace Ichor {
                 props.template emplace<>("Filter", Ichor::make_any<Filter>(ServiceIdFilterEntry{evt.originatingService}));
                 props.template emplace<>("LogLevel", Ichor::make_any<LogLevel>(requestedLevel));
                 auto newLogger = GetThreadLocalManager().template createServiceManager<LogT, ILogger>(std::move(props), evt.priority);
-                _loggers.emplace(evt.originatingService, newLogger);
+                _loggers.emplace(evt.originatingService, newLogger->getServiceId());
             } else {
                 ICHOR_LOG_TRACE(_logger, "svcid {} already has logger", evt.originatingService);
             }
@@ -76,12 +75,9 @@ namespace Ichor {
 
         void handleDependencyUndoRequest(AlwaysNull<ILogger*>, DependencyUndoRequestEvent const &evt) {
             auto service = _loggers.find(evt.originatingService);
-            if(service != end(_loggers)) {
-                // since loggers only do things upon requests and the requesting service is already stopped, there is no harm in using a lower priority.
 
-                GetThreadLocalEventQueue().template pushEvent<StopServiceEvent>(AdvancedService<LoggerFactory<LogT>>::getServiceId(), service->second->getServiceId());
-                // + 11 because the first stop triggers a dep offline event and inserts a new stop with 10 higher priority.
-                GetThreadLocalEventQueue().template pushPrioritisedEvent<RemoveServiceEvent>(AdvancedService<LoggerFactory<LogT>>::getServiceId(), INTERNAL_EVENT_PRIORITY + 11, service->second->getServiceId());
+            if(service != end(_loggers)) {
+                GetThreadLocalEventQueue().template pushPrioritisedEvent<StopServiceEvent>(AdvancedService<LoggerFactory<LogT>>::getServiceId(), INTERNAL_DEPENDENCY_EVENT_PRIORITY, service->second, true);
                 _loggers.erase(service);
             }
         }
@@ -91,7 +87,7 @@ namespace Ichor {
 
         IFrameworkLogger *_logger{};
         DependencyTrackerRegistration _loggerTrackerRegistration{};
-        unordered_map<uint64_t, NeverNull<IService*>> _loggers;
+        unordered_map<ServiceIdType, ServiceIdType> _loggers;
         LogLevel _defaultLevel{LogLevel::LOG_ERROR};
     };
 }

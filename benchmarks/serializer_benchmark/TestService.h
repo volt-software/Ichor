@@ -30,7 +30,7 @@ public:
 private:
     Task<tl::expected<void, Ichor::StartError>> start() final {
         ICHOR_LOG_INFO(_logger, "TestService started with dependency");
-        _doWorkRegistration = GetThreadLocalManager().registerEventCompletionCallbacks<DoWorkEvent>(this, this);
+        _doWorkRegistration = GetThreadLocalManager().registerEventHandler<DoWorkEvent>(this, this);
         GetThreadLocalEventQueue().pushEvent<DoWorkEvent>(getServiceId());
         co_return {};
     }
@@ -59,7 +59,7 @@ private:
         ICHOR_LOG_INFO(_logger, "Removed serializer");
     }
 
-    void handleCompletion(DoWorkEvent const &evt) {
+    AsyncGenerator<IchorBehaviour> handleEvent(DoWorkEvent const &) {
         ICHOR_LOG_ERROR(_logger, "handling DoWorkEvent");
         TestMsg msg{20, "five hundred"};
         sizeof_test = _serializer->serialize(msg).size();
@@ -74,10 +74,7 @@ private:
         auto end = std::chrono::steady_clock::now();
         ICHOR_LOG_ERROR(_logger, "finished in {:L} µs", std::chrono::duration_cast<std::chrono::microseconds>(end-start).count());
         GetThreadLocalEventQueue().pushEvent<QuitEvent>(getServiceId());
-    }
-
-    void handleError(DoWorkEvent const &evt) {
-        ICHOR_LOG_ERROR(_logger, "Error handling DoWorkEvent");
+        co_return {};
     }
 
     friend DependencyRegister;
@@ -85,5 +82,5 @@ private:
 
     ILogger *_logger{};
     ISerializer<TestMsg> *_serializer{};
-    EventCompletionHandlerRegistration _doWorkRegistration{};
+    EventHandlerRegistration _doWorkRegistration{};
 };

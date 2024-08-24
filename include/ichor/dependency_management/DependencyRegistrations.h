@@ -3,34 +3,6 @@
 #include <ichor/Callbacks.h>
 
 namespace Ichor {
-    class [[nodiscard]] EventCompletionHandlerRegistration final {
-    public:
-        EventCompletionHandlerRegistration(CallbackKey key, uint64_t priority) noexcept : _key(key), _priority(priority) {}
-        EventCompletionHandlerRegistration() noexcept = default;
-        ~EventCompletionHandlerRegistration();
-
-        EventCompletionHandlerRegistration(const EventCompletionHandlerRegistration&) = delete;
-        EventCompletionHandlerRegistration(EventCompletionHandlerRegistration&& o) noexcept {
-            reset();
-            _key = o._key;
-            _priority = o._priority;
-            o._key.type = 0;
-        }
-        EventCompletionHandlerRegistration& operator=(const EventCompletionHandlerRegistration&) = delete;
-        EventCompletionHandlerRegistration& operator=(EventCompletionHandlerRegistration&& o) noexcept {
-            reset();
-            _key = o._key;
-            _priority = o._priority;
-            o._key.type = 0;
-            return *this;
-        }
-
-        void reset();
-    private:
-        CallbackKey _key{0, 0};
-        uint64_t _priority{0};
-    };
-
     class [[nodiscard]] EventHandlerRegistration final {
     public:
         EventHandlerRegistration(CallbackKey key, uint64_t priority) noexcept : _key(key), _priority(priority) {}

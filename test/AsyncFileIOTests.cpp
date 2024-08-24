@@ -53,7 +53,7 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests") {
 
         std::thread t([&]() {
 #ifdef TEST_URING
-            queue->createEventLoop();
+            REQUIRE(queue->createEventLoop());
 #endif
             dm.createServiceManager<LoggerFactory<CoutLogger>, ILoggerFactory>(Properties{{"DefaultLogLevel", Ichor::make_any<LogLevel>(LogLevel::LOG_TRACE)}});
             ioSvcId = dm.createServiceManager<IOIMPL, IAsyncFileIO>()->getServiceId();
@@ -87,25 +87,26 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests") {
         uint64_t ioSvcId{};
 
         std::thread t([&]() {
+            // moved to inside thread, because REQUIRE() isn't thread-safe -.-
+            {
+                std::remove("NoPermIO.txt"); // ignore error, each OS handles this differently and most of the time it's just because it didn't exist in the first place
+
+                std::ofstream out("NoPermIO.txt");
+                out << "This is a test";
+                out.close();
+
+                std::error_code ec;
+                std::filesystem::permissions("NoPermIO.txt", std::filesystem::perms::none, ec);
+                REQUIRE(!ec); // if running tests as root, this will fail
+            }
+
 #ifdef TEST_URING
-            queue->createEventLoop();
+            REQUIRE(queue->createEventLoop());
 #endif
             dm.createServiceManager<LoggerFactory<CoutLogger>, ILoggerFactory>(Properties{{"DefaultLogLevel", Ichor::make_any<LogLevel>(LogLevel::LOG_TRACE)}});
             ioSvcId = dm.createServiceManager<IOIMPL, IAsyncFileIO>()->getServiceId();
             queue->start(CaptureSigInt);
         });
-
-        {
-            std::remove("NoPermIO.txt"); // ignore error, each OS handles this differently and most of the time it's just because it didn't exist in the first place
-
-            std::ofstream out("NoPermIO.txt");
-            out << "This is a test";
-            out.close();
-
-            std::error_code ec;
-            std::filesystem::permissions("NoPermIO.txt", std::filesystem::perms::none, ec);
-            REQUIRE(!ec);
-        }
 
         waitForRunning(dm);
 
@@ -137,7 +138,7 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests") {
 
         std::thread t([&]() {
 #ifdef TEST_URING
-            queue->createEventLoop();
+            REQUIRE(queue->createEventLoop());
 #endif
             dm.createServiceManager<LoggerFactory<CoutLogger>, ILoggerFactory>(Properties{{"DefaultLogLevel", Ichor::make_any<LogLevel>(LogLevel::LOG_TRACE)}});
             ioSvcId = dm.createServiceManager<IOIMPL, IAsyncFileIO>()->getServiceId();
@@ -172,7 +173,7 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests") {
 
         std::thread t([&]() {
 #ifdef TEST_URING
-            queue->createEventLoop();
+            REQUIRE(queue->createEventLoop());
 #endif
             dm.createServiceManager<LoggerFactory<CoutLogger>, ILoggerFactory>(Properties{{"DefaultLogLevel", Ichor::make_any<LogLevel>(LogLevel::LOG_TRACE)}});
             ioSvcId = dm.createServiceManager<IOIMPL, IAsyncFileIO>()->getServiceId();
@@ -207,7 +208,7 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests") {
 
         std::thread t([&]() {
 #ifdef TEST_URING
-            queue->createEventLoop();
+            REQUIRE(queue->createEventLoop());
 #endif
             dm.createServiceManager<LoggerFactory<CoutLogger>, ILoggerFactory>(Properties{{"DefaultLogLevel", Ichor::make_any<LogLevel>(LogLevel::LOG_TRACE)}});
             ioSvcId = dm.createServiceManager<IOIMPL, IAsyncFileIO>()->getServiceId();
@@ -238,7 +239,7 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests") {
 
         std::thread t([&]() {
 #ifdef TEST_URING
-            queue->createEventLoop();
+            REQUIRE(queue->createEventLoop());
 #endif
             dm.createServiceManager<LoggerFactory<CoutLogger>, ILoggerFactory>(Properties{{"DefaultLogLevel", Ichor::make_any<LogLevel>(LogLevel::LOG_TRACE)}});
             ioSvcId = dm.createServiceManager<IOIMPL, IAsyncFileIO>()->getServiceId();
@@ -280,7 +281,7 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests") {
 
         std::thread t([&]() {
 #ifdef TEST_URING
-            queue->createEventLoop();
+            REQUIRE(queue->createEventLoop());
 #endif
             dm.createServiceManager<LoggerFactory<CoutLogger>, ILoggerFactory>(Properties{{"DefaultLogLevel", Ichor::make_any<LogLevel>(LogLevel::LOG_TRACE)}});
             ioSvcId = dm.createServiceManager<IOIMPL, IAsyncFileIO>()->getServiceId();
@@ -317,7 +318,7 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests") {
 
         std::thread t([&]() {
 #ifdef TEST_URING
-            queue->createEventLoop();
+            REQUIRE(queue->createEventLoop());
 #endif
             dm.createServiceManager<LoggerFactory<CoutLogger>, ILoggerFactory>(Properties{{"DefaultLogLevel", Ichor::make_any<LogLevel>(LogLevel::LOG_TRACE)}});
             ioSvcId = dm.createServiceManager<IOIMPL, IAsyncFileIO>()->getServiceId();
@@ -347,7 +348,7 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests") {
 
         std::thread t([&]() {
 #ifdef TEST_URING
-            queue->createEventLoop();
+            REQUIRE(queue->createEventLoop());
 #endif
             dm.createServiceManager<LoggerFactory<CoutLogger>, ILoggerFactory>(Properties{{"DefaultLogLevel", Ichor::make_any<LogLevel>(LogLevel::LOG_TRACE)}});
             ioSvcId = dm.createServiceManager<IOIMPL, IAsyncFileIO>()->getServiceId();
@@ -388,7 +389,7 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests") {
 
         std::thread t([&]() {
 #ifdef TEST_URING
-            queue->createEventLoop();
+            REQUIRE(queue->createEventLoop());
 #endif
             dm.createServiceManager<LoggerFactory<CoutLogger>, ILoggerFactory>(Properties{{"DefaultLogLevel", Ichor::make_any<LogLevel>(LogLevel::LOG_TRACE)}});
             ioSvcId = dm.createServiceManager<IOIMPL, IAsyncFileIO>()->getServiceId();
@@ -427,7 +428,7 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests") {
 
         std::thread t([&]() {
 #ifdef TEST_URING
-            queue->createEventLoop();
+            REQUIRE(queue->createEventLoop());
 #endif
             dm.createServiceManager<LoggerFactory<CoutLogger>, ILoggerFactory>(Properties{{"DefaultLogLevel", Ichor::make_any<LogLevel>(LogLevel::LOG_TRACE)}});
             ioSvcId = dm.createServiceManager<IOIMPL, IAsyncFileIO>()->getServiceId();
@@ -470,7 +471,7 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests") {
 
         std::thread t([&]() {
 #ifdef TEST_URING
-            queue->createEventLoop();
+            REQUIRE(queue->createEventLoop());
 #endif
             dm.createServiceManager<LoggerFactory<CoutLogger>, ILoggerFactory>(Properties{{"DefaultLogLevel", Ichor::make_any<LogLevel>(LogLevel::LOG_TRACE)}});
             ioSvcId = dm.createServiceManager<IOIMPL, IAsyncFileIO>()->getServiceId();

@@ -250,4 +250,80 @@ TEST_CASE("Interceptor Tests") {
 
         REQUIRE_FALSE(dm.isRunning());
     }
+
+    SECTION("Remove interceptors during intercept") {
+        auto queue = std::make_unique<PriorityQueue>();
+        auto &dm = queue->createManager();
+
+        std::thread t([&]() {
+            dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>();
+            dm.createServiceManager<AddInterceptorDuringEventHandlingService>();
+            queue->start(CaptureSigInt);
+        });
+
+        waitForRunning(dm);
+
+        dm.runForOrQueueEmpty();
+
+        queue->pushEvent<TestEvent>(0);
+
+        dm.runForOrQueueEmpty();
+
+        queue->pushEvent<QuitEvent>(0);
+
+        t.join();
+
+        REQUIRE_FALSE(dm.isRunning());
+    }
+
+    SECTION("Remove interceptors leaves others intact") {
+        auto queue = std::make_unique<PriorityQueue>();
+        auto &dm = queue->createManager();
+        ServiceIdType svcId{};
+
+        std::thread t([&]() {
+            dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>();
+            svcId = dm.createServiceManager<InterceptorService<TestEvent>, IInterceptorService>()->getServiceId();
+            dm.createServiceManager<InterceptorService<TestEvent>, IInterceptorService>();
+            queue->start(CaptureSigInt);
+        });
+
+        waitForRunning(dm);
+
+        dm.runForOrQueueEmpty();
+
+        queue->pushEvent<RunFunctionEvent>(0, [&]() {
+            dm.getEventQueue().pushEvent<StopServiceEvent>(0, svcId, true);
+        });
+
+        dm.runForOrQueueEmpty();
+
+        queue->pushEvent<TestEvent>(0);
+
+        dm.runForOrQueueEmpty();
+
+        queue->pushEvent<RunFunctionEvent>(0, [&]() {
+            auto services = dm.getStartedServices<IInterceptorService>();
+
+            REQUIRE(services.size() == 1);
+
+            auto &pre = services[0]->getPreinterceptedCounters();
+            auto &post = services[0]->getPostinterceptedCounters();
+            auto &un = services[0]->getUnprocessedInterceptedCounters();
+
+            // One of the services will see a StartServiceEvent, but we won't check it here
+            REQUIRE(pre.size() >= 1);
+            REQUIRE(pre.find(TestEvent::TYPE) != end(pre));
+            REQUIRE(pre.find(TestEvent::TYPE)->second == 1);
+            REQUIRE(post.find(TestEvent::TYPE) == end(post));
+            REQUIRE(un.find(TestEvent::TYPE) != end(un));
+            REQUIRE(un.find(TestEvent::TYPE)->second == 1);
+
+            dm.getEventQueue().pushEvent<QuitEvent>(0);
+        });
+
+        t.join();
+
+        REQUIRE_FALSE(dm.isRunning());
+    }
 }

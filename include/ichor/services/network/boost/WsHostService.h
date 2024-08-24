@@ -49,7 +49,7 @@ namespace Ichor {
         std::atomic<int64_t> _finishedListenAndRead{};
         ILogger *_logger{};
         IAsioContextService *_asioContextService{};
-        std::vector<WsConnectionService*> _connections{};
+        std::vector<ServiceIdType> _connections{};
         EventHandlerRegistration _eventRegistration{};
         AsyncManualResetEvent _startStopEvent{};
         IEventQueue *_queue;

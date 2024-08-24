@@ -20,6 +20,10 @@ public:
         return scopeProp != cend(manager.getProperties()) && Ichor::any_cast<const std::string&>(scopeProp->second) == scope;
     }
 
+    [[nodiscard]] std::string getDescription() const noexcept {
+        return fmt::format("ScopeFilterEntry {}", scope);
+    }
+
     std::string scope;
 };
 
@@ -62,15 +66,21 @@ private:
             // In this case, we tell Ichor to only insert this service if the requesting service has a matching scope
             newProps.emplace("Filter", Ichor::make_any<Filter>(ScopeFilterEntry{scope}));
 
-            _scopedRuntimeServices.emplace(scope, GetThreadLocalManager().createServiceManager<RuntimeCreatedService, IRuntimeCreatedService>(std::move(newProps)));
+            _scopedRuntimeServices.emplace(scope, GetThreadLocalManager().createServiceManager<RuntimeCreatedService, IRuntimeCreatedService>(std::move(newProps))->getServiceId());
         }
     }
 
     // a service has been created but now has to be destroyed and requested an IRuntimeCreatedService
     void handleDependencyUndoRequest(AlwaysNull<IRuntimeCreatedService*>, DependencyUndoRequestEvent const &evt) {
-        auto scopeProp = evt.properties.find("scope");
+        if(!evt.properties) {
+            ICHOR_LOG_ERROR(_logger, "properties missing");
+            return;
+        }
 
-        if(scopeProp == end(evt.properties)) {
+        auto &properties = (*evt.properties);
+        auto scopeProp = properties.find("scope");
+
+        if(scopeProp == end(properties)) {
             ICHOR_LOG_ERROR(_logger, "scope missing");
             return;
         }
@@ -83,9 +93,7 @@ private:
         // That is easily fixed by using a reference counter in the container, but is outside the scope of this example (pun intended)
         auto service = _scopedRuntimeServices.find(scope);
         if(service != end(_scopedRuntimeServices)) {
-            // TODO: This only works for synchronous start/stop loggers, maybe turn into async and await a stop before removing?
-            GetThreadLocalEventQueue().pushEvent<StopServiceEvent>(_self->getServiceId(), service->second->getServiceId());
-            GetThreadLocalEventQueue().pushPrioritisedEvent<RemoveServiceEvent>(_self->getServiceId(), INTERNAL_EVENT_PRIORITY + 11, service->second->getServiceId());
+            GetThreadLocalEventQueue().pushPrioritisedEvent<StopServiceEvent>(_self->getServiceId(), INTERNAL_DEPENDENCY_EVENT_PRIORITY, service->second, true);
             _scopedRuntimeServices.erase(scope);
         }
     }
@@ -95,5 +103,5 @@ private:
     IService *_self{};
     ILogger *_logger{};
     DependencyTrackerRegistration _trackerRegistration{};
-    std::unordered_map<std::string, IService*> _scopedRuntimeServices{};
+    std::unordered_map<std::string, ServiceIdType> _scopedRuntimeServices{};
 };

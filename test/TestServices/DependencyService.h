@@ -5,10 +5,10 @@
 
 using namespace Ichor;
 
-template<DependencyFlags flags>
-struct DependencyService final : public ICountService, public AdvancedService<DependencyService<flags>> {
-    DependencyService(DependencyRegister &reg, Properties props) : AdvancedService<DependencyService<flags>>(std::move(props)) {
-        reg.registerDependency<IUselessService>(this, flags);
+template<typename DependencyType, DependencyFlags flags>
+struct DependencyService final : public ICountService, public AdvancedService<DependencyService<DependencyType, flags>> {
+    DependencyService(DependencyRegister &reg, Properties props) : AdvancedService<DependencyService<DependencyType, flags>>(std::move(props)) {
+        reg.registerDependency<DependencyType>(this, flags);
     }
     ~DependencyService() final = default;
     Task<tl::expected<void, Ichor::StartError>> start() final {
@@ -20,11 +20,11 @@ struct DependencyService final : public ICountService, public AdvancedService<De
         co_return;
     }
 
-    void addDependencyInstance(IUselessService&, IService&) {
+    void addDependencyInstance(DependencyType&, IService&) {
         svcCount++;
     }
 
-    void removeDependencyInstance(IUselessService&, IService&) {
+    void removeDependencyInstance(DependencyType&, IService&) {
         svcCount--;
     }
 
