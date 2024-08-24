@@ -8,6 +8,7 @@
 
 #include <fmt/core.h>
 #include <unistd.h>
+#include <sys/utsname.h>
 #if defined(__SANITIZE_THREAD__)
 #define TSAN_ENABLED
 #elif defined(__has_feature)
@@ -42,6 +43,21 @@ namespace Ichor {
             std::terminate();
         }
         _threadId = std::this_thread::get_id(); // re-set in functions below, because adding events when the queue isn't running yet cannot be done from another thread.
+
+        utsname buffer{};
+        if(uname(&buffer) != 0) {
+            fmt::println("Couldn't get uname: {}", strerror(errno));
+            std::terminate();
+        }
+
+        auto version = parseStringAsVersion(buffer.release);
+
+        if(!version) {
+            fmt::println("Couldn't parse uname version: {}", buffer.release);
+            std::terminate();
+        }
+
+        _kernelVersion = *version;
     }
 
     IOUringQueue::~IOUringQueue() {
@@ -56,7 +72,7 @@ namespace Ichor {
         }
 
         if(Detail::registeredSignalHandler) {
-            if (::signal(SIGINT, SIG_DFL) == SIG_ERR) {
+            if(::signal(SIGINT, SIG_DFL) == SIG_ERR) {
 //                fmt::println("Couldn't unset signal handler");
             }
         }
@@ -175,7 +191,7 @@ namespace Ichor {
         return !_quit.load(std::memory_order_acquire);
     }
 
-    io_uring* IOUringQueue::createEventLoop(unsigned entriesCount) {
+    tl::optional<NeverNull<io_uring*>> IOUringQueue::createEventLoop(unsigned entriesCount) {
         _eventQueue = std::make_unique<io_uring>();
         _eventQueuePtr = _eventQueue.get();
         _entriesCount = entriesCount;
@@ -194,26 +210,28 @@ namespace Ichor {
                 throw std::system_error(-ret, std::generic_category(), "io_uring_queue_init_params() failed");
             }
         }
-        if (!checkRingFlags(_eventQueuePtr)) {
-            return nullptr; // TODO change return type to std::expected with nevernull.
+        if(!checkRingFlags(_eventQueuePtr)) {
+            return {};
         }
         ret = io_uring_register_ring_fd(_eventQueuePtr);
         if(ret < 0) [[unlikely]] {
             throw std::system_error(-ret, std::generic_category(), "io_uring_register_ring_fd() failed");
         }
 
+        _priorityQueue.reserve(entriesCount);
         _threadId = std::this_thread::get_id();
         _initializedQueue.store(true, std::memory_order_release);
         return _eventQueuePtr;
     }
 
-    bool IOUringQueue::useEventLoop(io_uring *event, unsigned entriesCount) {
-        if (!checkRingFlags(event)) {
+    bool IOUringQueue::useEventLoop(NeverNull<io_uring*> event, unsigned entriesCount) {
+        if(!checkRingFlags(event)) {
             return false;
         }
         _threadId = std::this_thread::get_id();
         _eventQueuePtr = event;
         _entriesCount = entriesCount;
+        _priorityQueue.reserve(entriesCount);
         _initializedQueue.store(true, std::memory_order_release);
         return true;
     }
@@ -236,7 +254,7 @@ namespace Ichor {
 //        fmt::println("start() {} {}", std::hash<std::thread::id>{}(std::this_thread::get_id()), std::hash<std::thread::id>{}(_threadId));
 
         if(captureSigInt && !Ichor::Detail::registeredSignalHandler.exchange(true)) {
-            if (::signal(SIGINT, Ichor::Detail::on_sigint) == SIG_ERR) {
+            if(::signal(SIGINT, Ichor::Detail::on_sigint) == SIG_ERR) {
                 fmt::println("Couldn't set signal");
                 return false;
             }
@@ -252,7 +270,7 @@ namespace Ichor {
             if(ret < 0) [[unlikely]] {
                 throw std::system_error(-ret, std::generic_category(), "io_uring_submit() failed.");
             }
-            if ((unsigned)ret != _entriesCount - space) [[unlikely]] {
+            if((unsigned)ret != _entriesCount - space) [[unlikely]] {
 //                fmt::println("io_uring_submit {}", ret);
                 fmt::println("submit wrong amount");
                 std::terminate();
@@ -277,41 +295,71 @@ namespace Ichor {
             unsigned int handled{};
             unsigned int head{};
             if(ret != -ETIME) {
+                // attempt at forcing some sort of priority for events, though with cqe's being a non-continuous range, impossible to guarantee.
+                // also takes a significant performance hit.
+#if 0
                 io_uring_for_each_cqe(_eventQueuePtr, head, cqe) {
-//                    fmt::println("ret != -ETIME {} {} {}", cqe->flags, cqe->res, io_uring_cqe_get_data(cqe));
                     TSAN_ANNOTATE_HAPPENS_AFTER(cqe->user_data);
                     auto *evt = reinterpret_cast<Event *>(io_uring_cqe_get_data(cqe));
-                    if (evt != nullptr) {
-//                        fmt::println("processing {}", evt->get_name());
-                        std::unique_ptr<Event> uniqueEvt{evt};
-                        if(uniqueEvt->get_type() == UringResponseEvent::TYPE) {
-                            auto *resEvt = reinterpret_cast<UringResponseEvent*>(uniqueEvt.get());
-                            resEvt->fun(cqe->res);
-                        } else {
-                            processEvent(uniqueEvt);
+                    if(evt != nullptr) {
+                        if(evt->get_type() == UringResponseEvent::TYPE) {
+                            auto *resEvt = reinterpret_cast<UringResponseEvent*>(evt);
+                            resEvt->res = cqe->res;
                         }
-//                        fmt::println("Done processing {}", evt->get_name());
+                        _priorityQueue.emplace(evt);
                     }
                     handled++;
                 }
-
                 io_uring_cq_advance(_eventQueuePtr, handled);
+
+                while(!_priorityQueue.empty()) {
+                    auto evt = _priorityQueue.pop();
+                    if(!evt) {
+                        std::terminate();
+                    }
+                    if(evt->get_type() == UringResponseEvent::TYPE) {
+                        auto *resEvt = reinterpret_cast<UringResponseEvent*>(evt.get());
+                        resEvt->fun(resEvt->res);
+                    } else {
+                        processEvent(evt);
+                    }
+                }
+#else
+                io_uring_for_each_cqe(_eventQueuePtr, head, cqe) {
+                    TSAN_ANNOTATE_HAPPENS_AFTER(cqe->user_data);
+                    auto *evt = reinterpret_cast<Event *>(io_uring_cqe_get_data(cqe));
+                    std::unique_ptr<Event> uniqueEvt{evt};
+                    if(evt != nullptr) {
+                        if(evt->get_type() == UringResponseEvent::TYPE) {
+                            auto *resEvt = reinterpret_cast<UringResponseEvent*>(evt);
+                            resEvt->fun(cqe->res);
+                            if((cqe->flags & IORING_CQE_F_MORE) == IORING_CQE_F_MORE) {
+                                uniqueEvt.release();
+                            }
+                        } else {
+                            processEvent(uniqueEvt);
+                        }
+                    }
+                    handled++;
+                }
+                io_uring_cq_advance(_eventQueuePtr, handled);
+#endif
+
                 {
                     auto space = io_uring_sq_space_left(_eventQueuePtr);
                     auto ready = io_uring_cq_ready(_eventQueuePtr);
-                    if (space < _entriesCount && ready == 0u) {
-                        //fmt::println("submit end of loop");
+                    if(space < _entriesCount && ready == 0u) {
+//                        fmt::println("submit end of loop {}", _entriesCount - space);
                         ret = io_uring_submit(_eventQueuePtr);
                         if(ret < 0) [[unlikely]] {
                             throw std::system_error(-ret, std::generic_category(), "io_uring_submit() failed.");
                         }
-                        if ((unsigned int)ret != _entriesCount - space) [[unlikely]] {
+                        if((unsigned int)ret != _entriesCount - space) [[unlikely]] {
                             fmt::println("submit wrong amount");
                             std::terminate();
                         }
                     }
                 }
-
             }
 
             shouldAddQuitEvent();
@@ -349,7 +397,7 @@ namespace Ichor {
     }
 
     bool IOUringQueue::shouldQuit() {
-        if (_quitEventSent.load(std::memory_order_acquire) && std::chrono::steady_clock::now() - _whenQuitEventWasSent >= std::chrono::milliseconds(_quitTimeoutMs)) [[unlikely]] {
+        if(_quitEventSent.load(std::memory_order_acquire) && std::chrono::steady_clock::now() - _whenQuitEventWasSent >= std::chrono::milliseconds(_quitTimeoutMs)) [[unlikely]] {
             _quit.store(true, std::memory_order_release);
         }
 
@@ -360,23 +408,28 @@ namespace Ichor {
         _quit.store(true, std::memory_order_release);
     }
 
-    NeverNull<io_uring*> IOUringQueue::getRing() {
+    NeverNull<io_uring*> IOUringQueue::getRing() noexcept {
+        if constexpr (DO_INTERNAL_DEBUG || DO_HARDENING) {
+            if(_eventQueuePtr == nullptr) [[unlikely]] {
+                std::terminate();
+            }
+        }
         return _eventQueuePtr;
     }
 
-    unsigned int IOUringQueue::getMaxEntriesCount() {
+    unsigned int IOUringQueue::getMaxEntriesCount() const noexcept {
         return _entriesCount;
     }
 
-    uint64_t IOUringQueue::getNextEventIdFromIchor() {
+    uint64_t IOUringQueue::getNextEventIdFromIchor() noexcept {
         return this->IEventQueue::getNextEventId();
     }
 
-    uint32_t IOUringQueue::sqeSpaceLeft() {
+    uint32_t IOUringQueue::sqeSpaceLeft() const noexcept {
         return io_uring_sq_space_left(_eventQueuePtr);
     }
 
-    io_uring_sqe *IOUringQueue::getSqe() {
+    io_uring_sqe *IOUringQueue::getSqe() noexcept {
         auto sqe = io_uring_get_sqe(_eventQueuePtr);
         if(sqe == nullptr) {
             submitIfNeeded();
@@ -392,12 +445,12 @@ namespace Ichor {
     void IOUringQueue::submitIfNeeded() {
         auto space = io_uring_sq_space_left(_eventQueuePtr);
         if(space == 0) {
+//            fmt::println("submit {}", _entriesCount);
             auto ret = io_uring_submit(_eventQueuePtr);
-            //fmt::println("submit");
             if(ret < 0) [[unlikely]] {
                 throw std::system_error(-ret, std::generic_category(), "io_uring_submit() failed.");
             }
-            if ((unsigned int)ret != _entriesCount) [[unlikely]] {
+            if((unsigned int)ret != _entriesCount) [[unlikely]] {
                 fmt::println("submit wrong amount");
                 std::terminate();
             }
@@ -406,6 +459,7 @@ namespace Ichor {
 
     void IOUringQueue::submitAndWait(uint32_t waitNr) {
         auto toSubmit = io_uring_sq_ready(_eventQueuePtr);
+//        fmt::println("submit and wait {}", toSubmit);
         auto ret = io_uring_submit_and_wait(_eventQueuePtr, waitNr);
 
         if(ret < 0) [[unlikely]] {
@@ -413,27 +467,40 @@ namespace Ichor {
             throw std::system_error(-ret, std::generic_category(), "io_uring_submit_and_wait() failed");
         }
 
-        if ((unsigned int)ret != toSubmit) [[unlikely]] {
+        if((unsigned int)ret != toSubmit) [[unlikely]] {
             fmt::println("submit wrong amount");
             std::terminate();
         }
     }
 
+    Version IOUringQueue::getKernelVersion() const noexcept {
+        return _kernelVersion;
+    }
+
     bool IOUringQueue::checkRingFlags(io_uring *ring) {
-        if (!(ring->features & IORING_FEAT_FAST_POLL)) {
-            fmt::println("IORING_FEAT_FAST_POLL not supported, expect reduced performance.");
+        if(!(ring->features & IORING_FEAT_FAST_POLL)) {
+            fmt::println("IORING_FEAT_FAST_POLL not supported, requires kernel >= 5.7.0, expect reduced queue performance.");
         }
-        if (!(ring->features & IORING_FEAT_NODROP)) {
-            fmt::println("IORING_FEAT_NODROP not supported, cqe overflow will lead to dropped packets!");
+        if(!(ring->features & IORING_FEAT_NODROP)) {
+            fmt::println("IORING_FEAT_NODROP not supported, requires kernel >= 5.5.0, cqe overflow will lead to dropped packets!");
         }
-        if (!(ring->features & IORING_FEAT_EXT_ARG)) {
-            fmt::println("IORING_FEAT_EXT_ARG (a.k.a. IORING_ENTER_EXT_ARG) not supported, expect reduced performance.");
+        if(!(ring->features & IORING_FEAT_EXT_ARG)) {
+            fmt::println("IORING_FEAT_EXT_ARG (a.k.a. IORING_ENTER_EXT_ARG), requires kernel >= 5.11.0, not supported, expect reduced queue performance.");
         }
-        // it seems all code in Ichor so far keeps state stable until completion, so this shouldn't be necessary.
-//        if (!(ring->features & IORING_FEAT_SUBMIT_STABLE)) {
-//            fmt::println("IORING_FEAT_SUBMIT_STABLE not supported, kernel too old to use Ichor's io_uring implementation.");
+        if(!(ring->features & IORING_FEAT_SUBMIT_STABLE)) {
+            fmt::println("IORING_FEAT_SUBMIT_STABLE not supported, requires kernel >= 5.5.0, expect reduced queue performance.");
+            // it seems all code in Ichor so far keeps state stable until completion, so return false shouldn't be necessary.
 //            return false;
-//        }
+        }
+        if(_kernelVersion < Version{6, 7, 0}) {
+            fmt::println("io_uring_prep_cmd_sock not supported, requires >= 6.7.0, expect reduced socket creation performance.");
+        }
+        if(_kernelVersion < Version{6, 0, 0}) {
+            fmt::println("io_uring_prep_recv_multishot not supported, requires >= 6.0.0, expect reduced socket performance.");
+        }
+        if(_kernelVersion < Version{5, 19, 0}) {
+            fmt::println("io_uring_prep_multishot_accept not supported, requires >= 5.19.0, expect reduced socket performance.");
+        }
         return true;
     }
 
