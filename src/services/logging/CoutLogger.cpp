@@ -21,7 +21,7 @@ void Ichor::CoutLogger::trace(const char *filename_in, int line_in, const char *
         }
 #endif
         fmt::vformat_to(std::back_inserter(buf), format_str, args);
-        std::cout.write(buf.data(), static_cast<int64_t>(buf.size())) << "\n";
+        std::cout.write(buf.data(), static_cast<ptrdiff_t>(buf.size())) << "\n";
     }
 }
 
@@ -36,7 +36,7 @@ void Ichor::CoutLogger::debug(const char *filename_in, int line_in, const char *
         }
 #endif
         fmt::vformat_to(std::back_inserter(buf), format_str, args);
-        std::cout.write(buf.data(), static_cast<int64_t>(buf.size())) << "\n";
+        std::cout.write(buf.data(), static_cast<ptrdiff_t>(buf.size())) << "\n";
     }
 }
 
@@ -51,7 +51,7 @@ void Ichor::CoutLogger::info(const char *filename_in, int line_in, const char *f
         }
 #endif
         fmt::vformat_to(std::back_inserter(buf), format_str, args);
-        std::cout.write(buf.data(), static_cast<int64_t>(buf.size())) << "\n";
+        std::cout.write(buf.data(), static_cast<ptrdiff_t>(buf.size())) << "\n";
     }
 }
 
@@ -66,7 +66,7 @@ void Ichor::CoutLogger::warn(const char *filename_in, int line_in, const char *f
         }
 #endif
         fmt::vformat_to(std::back_inserter(buf), format_str, args);
-        std::cout.write(buf.data(), static_cast<int64_t>(buf.size())) << "\n";
+        std::cout.write(buf.data(), static_cast<ptrdiff_t>(buf.size())) << "\n";
     }
 }
 
@@ -81,7 +81,7 @@ void Ichor::CoutLogger::error(const char *filename_in, int line_in, const char *
         }
 #endif
         fmt::vformat_to(std::back_inserter(buf), format_str, args);
-        std::cout.write(buf.data(), static_cast<int64_t>(buf.size())) << "\n";
+        std::cout.write(buf.data(), static_cast<ptrdiff_t>(buf.size())) << "\n";
     }
 }
 

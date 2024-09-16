@@ -48,7 +48,7 @@ namespace Ichor {
         std::vector<std::string_view> output;
         if(delims.size() == 1) {
             auto count = std::count(str.cbegin(), str.cend(), delims[0]);
-            output.reserve(static_cast<uint64_t>(count));
+            output.reserve(static_cast<size_t>(count));
         }
 
         for(auto first = str.data(), second = str.data(), last = first + str.size(); second != last && first != last; first = second + 1) {

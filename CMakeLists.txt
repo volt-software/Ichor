@@ -68,6 +68,7 @@ cmake_dependent_option(ICHOR_USE_LIBCPP "Uses clang's libc++ stdlib if compiling
 cmake_dependent_option(ICHOR_USE_MIMALLOC "Use mimalloc for significant performance improvements" ON "(CMAKE_CXX_COMPILER_ID STREQUAL \"Clang\" AND ICHOR_USE_SANITIZERS) OR NOT ICHOR_USE_SANITIZERS" OFF)
 cmake_dependent_option(ICHOR_USE_SYSTEM_MIMALLOC "Use system or vendored mimalloc" OFF "(CMAKE_CXX_COMPILER_ID STREQUAL \"Clang\" AND ICHOR_USE_SANITIZERS) OR NOT ICHOR_USE_SANITIZERS" OFF)
 cmake_dependent_option(ICHOR_USE_LIBURING "Add liburing based queue/integration" ON "NOT WIN32 AND NOT APPLE" OFF)
+cmake_dependent_option(ICHOR_FORCE_32_BIT "Force add 32 bit to compile flags" OFF "(CMAKE_CXX_COMPILER_ID STREQUAL \"Clang\" OR CMAKE_CXX_COMPILER_ID STREQUAL \"GNU\")" OFF)
 
 option(ICHOR_USE_BACKWARD "Use backward-cpp to print stacktraces on crashes or when the user wants to. Useful for debugging." $ICHOR_BUILDING_DEBUG)
 option(ICHOR_USE_HIREDIS "Add hiredis dependency" OFF)
@@ -175,6 +176,16 @@ if(NOT WIN32)
             $<$<COMPILE_LANGUAGE:CXX>:-Wconversion>)
     target_compile_options(ichor PUBLIC -pthread $<$<COMPILE_LANGUAGE:CXX>:-ftemplate-backtrace-limit=0>)
 
+    if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+        target_compile_options(ichor PUBLIC -Wtrampolines)
+    endif()
+
+    if(ICHOR_FORCE_32_BIT)
+        target_compile_options(ichor PUBLIC -m32)
+        target_link_options(ichor PUBLIC -m32)
+        target_compile_definitions(ichor PUBLIC ICHOR_32_BIT)
+    endif()
+
     # TODO Would love to refactor this to a function, but functions don't seem to be able to reach variables not yet defined when the function is defined.
     if(ICHOR_USE_HARDENING AND CMAKE_BUILD_TYPE MATCHES Debug)
         # target_compile_definitions annoyingly adds "-D" in front of "-U" and target_compile_options goes after target_compile_definitions. Argh.
@@ -187,6 +198,14 @@ if(NOT WIN32)
         target_compile_options(ichor PUBLIC -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=3)
 
         target_compile_definitions(ichor PUBLIC _GLIBCXX_ASSERTIONS _LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_FAST)
+
+        target_compile_options(ichor PUBLIC -fno-delete-null-pointer-checks)
+        if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR (CMAKE_CXX_COMPILER_ID STREQUAL "CLANG" AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL "18"))
+            target_compile_options(ichor PUBLIC -fno-strict-aliasing)
+        endif()
+        if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR (CMAKE_CXX_COMPILER_ID STREQUAL "CLANG" AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL "16"))
+            target_compile_options(ichor PUBLIC -ftrivial-auto-var-init=zero)
+        endif()
     endif()
     target_compile_definitions(ichor PUBLIC _FILE_OFFSET_BITS=64 _TIME_BITS=64)
 
@@ -292,7 +311,7 @@ if(ICHOR_USE_SANITIZERS)
     else()
         set(ICHOR_SANITIZE_OPTIONS -fsanitize=address,undefined)
 
-        target_compile_options(ichor PUBLIC ${ICHOR_SANITIZE_OPTIONS} -fno-omit-frame-pointer)
+        target_compile_options(ichor PUBLIC ${ICHOR_SANITIZE_OPTIONS} -fno-omit-frame-pointer -fno-optimize-sibling-calls -fno-common)
         target_link_options(ichor PUBLIC ${ICHOR_SANITIZE_OPTIONS})
         target_compile_definitions(ichor PUBLIC __SANITIZE_ADDRESS__ _GLIBCXX_SANITIZE_VECTOR)
 
@@ -372,7 +391,7 @@ elseif(ICHOR_USE_HARDENING)
     target_compile_definitions(ichor PUBLIC ICHOR_USE_HARDENING)
 
     if(NOT APPLE)
-        target_link_options(ichor PUBLIC -Wl,-z,nodlopen -Wl,-z,noexecstack -Wl,-z,relro -Wl,-z,now)
+        target_link_options(ichor PUBLIC -Wl,-z,nodlopen -Wl,-z,noexecstack -Wl,-z,relro -Wl,-z,now -Wl,--as-needed -Wl,--no-copy-dt-needed-entries)
     else()
         target_link_options(ichor PUBLIC -Wl,-bind_at_load)
     endif()
@@ -441,6 +460,10 @@ if(ICHOR_USE_MIMALLOC)
 
             add_subdirectory(external/mimalloc EXCLUDE_FROM_ALL)
             target_link_libraries(ichor PUBLIC mimalloc-static)
+            if(ICHOR_FORCE_32_BIT)
+                target_compile_options(mimalloc-static PRIVATE -m32)
+                target_link_libraries(mimalloc-static PRIVATE -m32)
+            endif()
         endfunction()
 
         ichor_add_mimalloc()
@@ -735,6 +758,14 @@ if(ICHOR_BUILD_TESTING)
         target_compile_options(Catch2WithMain PRIVATE -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=3)
         target_compile_definitions(Catch2 PRIVATE _GLIBCXX_ASSERTIONS _LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_FAST)
         target_compile_definitions(Catch2WithMain PRIVATE _GLIBCXX_ASSERTIONS _LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_FAST)
+    endif()
+
+
+    if(ICHOR_FORCE_32_BIT)
+        target_compile_options(Catch2 PUBLIC -m32)
+        target_compile_options(Catch2WithMain PUBLIC -m32)
+        target_link_options(Catch2 PUBLIC -m32)
+        target_link_options(Catch2WithMain PUBLIC -m32)
     endif()
 
     if(ICHOR_USE_LIBCPP)

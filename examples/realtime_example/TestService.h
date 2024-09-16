@@ -96,9 +96,9 @@ private:
         if(_finishedWorkloads == ITERATIONS) {
             GetThreadLocalEventQueue().pushEvent<QuitEvent>(getServiceId());
 
-            long min = *std::min_element(begin(_executionTimes), end(_executionTimes), [](long &a, long &b){return a < b; });
-            long max = *std::max_element(begin(_executionTimes), end(_executionTimes), [](long &a, long &b){return a < b; });
-            long avg = std::accumulate(begin(_executionTimes), end(_executionTimes), 0L, [](long i, long &entry){ return i + entry; }) / static_cast<long>(_executionTimes.size());
+            int64_t min = *std::min_element(begin(_executionTimes), end(_executionTimes), [](int64_t &a, int64_t &b){return a < b; });
+			int64_t max = *std::max_element(begin(_executionTimes), end(_executionTimes), [](int64_t &a, int64_t &b){return a < b; });
+			int64_t avg = std::accumulate(begin(_executionTimes), end(_executionTimes), 0L, [](int64_t i, int64_t &entry){ return i + entry; }) / static_cast<long>(_executionTimes.size());
 
             fmt::print("duration min/max/avg: {:L}/{:L}/{:L} µs\n", min, max, avg);
         } else {
@@ -113,8 +113,8 @@ private:
 
     ILogger *_logger{};
     bool _started{false};
-    uint64_t _injectionCount{0};
-    uint64_t _finishedWorkloads{0};
-    std::array<long, ITERATIONS> _executionTimes{};
+    size_t _injectionCount{0};
+    size_t _finishedWorkloads{0};
+    std::array<int64_t, ITERATIONS> _executionTimes{};
     EventHandlerRegistration _eventHandlerRegistration{};
 };
