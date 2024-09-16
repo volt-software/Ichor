@@ -10,6 +10,7 @@
 #include "TestServices/ConstructorInjectionTestServices.h"
 #include "TestServices/RequiredMultipleService.h"
 #include "TestServices/DependencyTrackerService.h"
+#include "TestServices/RemoveAfterAwaitedStopService.h"
 #include <ichor/event_queues/PriorityQueue.h>
 #include <ichor/events/RunFunctionEvent.h>
 #include <ichor/services/logging/LoggerFactory.h>
@@ -599,6 +600,31 @@ TEST_CASE("ServicesTests") {
             REQUIRE(services[0]->getSvcCount() == 1);
 
             queue->pushEvent<QuitEvent>(0);
+        });
+
+        t.join();
+    }
+
+    SECTION("RemoveAfterAwaitedStopService") {
+        auto queue = std::make_unique<PriorityQueue>();
+        auto &dm = queue->createManager();
+        std::thread t([&]() {
+            dm.createServiceManager<RemoveAfterAwaitedStopService<true>, IRemoveAfterAwaitedStopService>();
+            dm.createServiceManager<UselessService, IUselessService>();
+            queue->start(CaptureSigInt);
+        });
+
+        t.join();
+    }
+
+    SECTION("RemoveAfterAwaitedStopService with dependee") {
+        auto queue = std::make_unique<PriorityQueue>();
+        auto &dm = queue->createManager();
+        std::thread t([&]() {
+            dm.createServiceManager<RemoveAfterAwaitedStopService<false>, IRemoveAfterAwaitedStopService>();
+            dm.createServiceManager<UselessService, IUselessService>();
+            dm.createServiceManager<DependingOnRemoveAfterAwaitedStopService>();
+            queue->start(CaptureSigInt);
         });
 
         t.join();

@@ -26,8 +26,8 @@ namespace Ichor {
 
     /// When a service should stop but before it has actually stopped, this event gets added to uninject it from other services
     struct DependencyOfflineEvent final : public Event {
-        explicit DependencyOfflineEvent(uint64_t _id, uint64_t _originatingService, uint64_t _priority) noexcept :
-                Event(_id, _originatingService, _priority) {}
+        explicit DependencyOfflineEvent(uint64_t _id, uint64_t _originatingService, uint64_t _priority, bool _removeOriginatingServiceAfterStop) noexcept :
+                Event(_id, _originatingService, _priority), removeOriginatingServiceAfterStop(_removeOriginatingServiceAfterStop) {}
         ~DependencyOfflineEvent() final = default;
 
         [[nodiscard]] std::string_view get_name() const noexcept final {
@@ -37,6 +37,7 @@ namespace Ichor {
             return TYPE;
         }
 
+        bool removeOriginatingServiceAfterStop;
         static constexpr NameHashType TYPE = typeNameHash<DependencyOfflineEvent>();
         static constexpr std::string_view NAME = typeName<DependencyOfflineEvent>();
     };
