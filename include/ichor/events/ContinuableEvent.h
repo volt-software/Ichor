@@ -38,8 +38,8 @@ namespace Ichor {
     };
 
     struct ContinuableDependencyOfflineEvent final : public Event {
-        explicit ContinuableDependencyOfflineEvent(uint64_t _id, uint64_t _originatingService, uint64_t _priority, uint64_t _originatingOfflineServiceId) noexcept :
-                Event(_id, _originatingService, _priority), originatingOfflineServiceId(_originatingOfflineServiceId) {}
+        explicit ContinuableDependencyOfflineEvent(uint64_t _id, uint64_t _originatingService, uint64_t _priority, uint64_t _originatingOfflineServiceId, bool _removeOriginatingOfflineServiceAfterStop) noexcept :
+                Event(_id, _originatingService, _priority), originatingOfflineServiceId(_originatingOfflineServiceId), removeOriginatingOfflineServiceAfterStop(_removeOriginatingOfflineServiceAfterStop) {}
         ~ContinuableDependencyOfflineEvent() final = default;
 
         [[nodiscard]] std::string_view get_name() const noexcept final {
@@ -50,6 +50,7 @@ namespace Ichor {
         }
 
         uint64_t originatingOfflineServiceId;
+        bool removeOriginatingOfflineServiceAfterStop;
         static constexpr NameHashType TYPE = typeNameHash<ContinuableDependencyOfflineEvent>();
         static constexpr std::string_view NAME = typeName<ContinuableDependencyOfflineEvent>();
     };
