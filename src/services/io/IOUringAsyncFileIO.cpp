@@ -36,22 +36,21 @@ void Ichor::IOUringAsyncFileIO::removeDependencyInstance(ILogger&, IService&) no
     _logger = nullptr;
 }
 
-Ichor::Task<tl::expected<std::string, Ichor::FileIOError>> Ichor::IOUringAsyncFileIO::readWholeFile(std::filesystem::path const &file_path) {
+Ichor::Task<tl::expected<std::string, Ichor::IOError>> Ichor::IOUringAsyncFileIO::readWholeFile(std::filesystem::path const &file_path) {
     INTERNAL_IO_DEBUG("readWholeFile({})", file_path);
 
     if(_shouldStop) {
-        co_return tl::unexpected(FileIOError::SERVICE_STOPPED);
+        co_return tl::unexpected(IOError::SERVICE_STOPPED);
     }
 
     AsyncManualResetEvent evt;
 
-    auto *sqe = _q->getSqe();
     int res{};
-    io_uring_sqe_set_data(sqe, new UringResponseEvent{_q->getNextEventIdFromIchor(), getServiceId(), INTERNAL_EVENT_PRIORITY, [&evt, &res](int32_t _res) {
-        INTERNAL_IO_DEBUG("openat res: {} {}", _res, _res < 0 ? strerror(-_res) : "");
-        res = _res;
+    auto *sqe = _q->getSqeWithData(this, [&evt, &res](io_uring_cqe *cqe) {
+        INTERNAL_IO_DEBUG("openat res: {} {}", cqe->res, cqe->res < 0 ? strerror(-cqe->res) : "");
+        res = cqe->res;
         evt.set();
-    }});
+    });
     if(file_path.is_absolute()) {
         io_uring_prep_openat(sqe, 0, file_path.c_str(), O_RDONLY | O_CLOEXEC, 0);
     } else {
@@ -61,7 +60,7 @@ Ichor::Task<tl::expected<std::string, Ichor::FileIOError>> Ichor::IOUringAsyncFi
     INTERNAL_IO_DEBUG("readWholeFile({}) 1", file_path);
 
     if(_shouldStop) {
-        co_return tl::unexpected(FileIOError::SERVICE_STOPPED);
+        co_return tl::unexpected(IOError::SERVICE_STOPPED);
     }
 
     if(res < 0) {
@@ -70,20 +69,19 @@ Ichor::Task<tl::expected<std::string, Ichor::FileIOError>> Ichor::IOUringAsyncFi
 
     int fd = res;
     struct statx x{};
-    sqe = _q->getSqe();
     res = 0;
     evt.reset();
-    io_uring_sqe_set_data(sqe, new UringResponseEvent{_q->getNextEventIdFromIchor(), getServiceId(), INTERNAL_EVENT_PRIORITY, [&evt, &res](int32_t _res) {
-        INTERNAL_IO_DEBUG("statx res: {} {}", _res, _res < 0 ? strerror(-_res) : "");
-        res = _res;
+    sqe = _q->getSqeWithData(this, [&evt, &res](io_uring_cqe *cqe) {
+        INTERNAL_IO_DEBUG("statx res: {} {}", cqe->res, cqe->res < 0 ? strerror(-cqe->res) : "");
+        res = cqe->res;
         evt.set();
-    }});
+    });
     io_uring_prep_statx(sqe, fd, "", AT_EMPTY_PATH, STATX_SIZE, &x);
     co_await evt;
     INTERNAL_IO_DEBUG("readWholeFile({}) statx res: {} {}", file_path, res, x.stx_size);
 
     if(_shouldStop) {
-        co_return tl::unexpected(FileIOError::SERVICE_STOPPED);
+        co_return tl::unexpected(IOError::SERVICE_STOPPED);
     }
 
     if(res < 0) {
@@ -99,13 +97,13 @@ Ichor::Task<tl::expected<std::string, Ichor::FileIOError>> Ichor::IOUringAsyncFi
 
     if(x.stx_size > contents.max_size()) {
         ICHOR_LOG_ERROR(_logger, "Attempt to read file with size {} that is larger than string max size {}", x.stx_size, contents.max_size());
-        co_return tl::unexpected(FileIOError::FILE_SIZE_TOO_BIG);
+        co_return tl::unexpected(IOError::FILE_SIZE_TOO_BIG);
     }
 
     uint32_t maxSubmissions = std::min(_bufferBatchSize, _q->getMaxEntriesCount());
     uint64_t size_left = x.stx_size;
     evt.reset();
-    contents.reserve(x.stx_size);
+    contents.reserve(static_cast<size_t>(x.stx_size));
 
     res = 0;
     recursiveSubmitReadWholeFile(evt, res, contents, size_left, 0, x.stx_size, fd, maxSubmissions);
@@ -113,7 +111,7 @@ Ichor::Task<tl::expected<std::string, Ichor::FileIOError>> Ichor::IOUringAsyncFi
     INTERNAL_IO_DEBUG("readWholeFile({}) 4", file_path);
 
     if(_shouldStop) {
-        co_return tl::unexpected(FileIOError::SERVICE_STOPPED);
+        co_return tl::unexpected(IOError::SERVICE_STOPPED);
     }
 
     if(res < 0) {
@@ -123,41 +121,36 @@ Ichor::Task<tl::expected<std::string, Ichor::FileIOError>> Ichor::IOUringAsyncFi
     co_return contents;
 }
 
-Ichor::Task<tl::expected<void, Ichor::FileIOError>> Ichor::IOUringAsyncFileIO::copyFile(const std::filesystem::path &from, const std::filesystem::path &to) {
+Ichor::Task<tl::expected<void, Ichor::IOError>> Ichor::IOUringAsyncFileIO::copyFile(const std::filesystem::path &from, const std::filesystem::path &to) {
     INTERNAL_IO_DEBUG("copyFile({}, {})", from, to);
 
     if(_shouldStop) {
-        co_return tl::unexpected(FileIOError::SERVICE_STOPPED);
+        co_return tl::unexpected(IOError::SERVICE_STOPPED);
     }
 
     AsyncManualResetEvent evt;
 
-    auto *sqe = _q->getSqe();
-    int fromFd{};
+    int fromFd{-1};
     int toFd{};
-    io_uring_sqe_set_data(sqe, new UringResponseEvent{_q->getNextEventIdFromIchor(), getServiceId(), INTERNAL_EVENT_PRIORITY, [&evt, &fromFd](int32_t _res) {
-        INTERNAL_IO_DEBUG("openat res: {} {}", _res, _res < 0 ? strerror(-_res) : "");
-        fromFd = _res;
-        if(_res < 0) {
-        evt.set();
-        }
-    }});
+    auto *sqe = _q->getSqeWithData(this, [&fromFd](io_uring_cqe *cqe) {
+        INTERNAL_IO_DEBUG("openat res: {} {}", cqe->res, cqe->res < 0 ? strerror(-cqe->res) : "");
+        fromFd = cqe->res;
+    });
     if(from.is_absolute()) {
         io_uring_prep_openat(sqe, 0, from.c_str(), O_RDONLY | O_CLOEXEC, 0);
     } else {
         io_uring_prep_openat(sqe, AT_FDCWD, from.c_str(), O_RDONLY | O_CLOEXEC, 0);
     }
-    sqe = _q->getSqe();
-    io_uring_sqe_set_data(sqe, new UringResponseEvent{_q->getNextEventIdFromIchor(), getServiceId(), INTERNAL_EVENT_PRIORITY, [&evt, &toFd](int32_t _res) {
-        INTERNAL_IO_DEBUG("openat res: {} {}", _res, _res < 0 ? strerror(-_res) : "");
+    sqe = _q->getSqeWithData(this, [&evt, &toFd](io_uring_cqe *cqe) {
+        INTERNAL_IO_DEBUG("openat res: {} {}", cqe->res, cqe->res < 0 ? strerror(-cqe->res) : "");
 
         if(evt.is_set()) {
             return;
         }
 
-        toFd = _res;
+        toFd = cqe->res;
         evt.set();
-    }});
+    });
     if(to.is_absolute()) {
         io_uring_prep_openat(sqe, 0, to.c_str(), O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH);
     } else {
@@ -167,7 +160,7 @@ Ichor::Task<tl::expected<void, Ichor::FileIOError>> Ichor::IOUringAsyncFileIO::c
     INTERNAL_IO_DEBUG("copyFile({}, {}) 1", from, to);
 
     if(_shouldStop) {
-        co_return tl::unexpected(FileIOError::SERVICE_STOPPED);
+        co_return tl::unexpected(IOError::SERVICE_STOPPED);
     }
 
     if(fromFd < 0) {
@@ -179,20 +172,19 @@ Ichor::Task<tl::expected<void, Ichor::FileIOError>> Ichor::IOUringAsyncFileIO::c
     }
 
     struct statx x{};
-    sqe = _q->getSqe();
     int res = 0;
     evt.reset();
-    io_uring_sqe_set_data(sqe, new UringResponseEvent{_q->getNextEventIdFromIchor(), getServiceId(), INTERNAL_EVENT_PRIORITY, [&evt, &res](int32_t _res) {
-        INTERNAL_IO_DEBUG("statx res: {} {}", _res, _res < 0 ? strerror(-_res) : "");
-        res = _res;
+    sqe = _q->getSqeWithData(this, [&evt, &res](io_uring_cqe *cqe) {
+        INTERNAL_IO_DEBUG("statx res: {} {}", cqe->res, cqe->res < 0 ? strerror(-cqe->res) : "");
+        res = cqe->res;
         evt.set();
-    }});
+    });
     io_uring_prep_statx(sqe, fromFd, "", AT_EMPTY_PATH, STATX_SIZE, &x);
     co_await evt;
     INTERNAL_IO_DEBUG("copyFile({}, {}) statx res: {} {}", from, to, res, x.stx_size);
 
     if(_shouldStop) {
-        co_return tl::unexpected(FileIOError::SERVICE_STOPPED);
+        co_return tl::unexpected(IOError::SERVICE_STOPPED);
     }
 
     if(res < 0) {
@@ -214,7 +206,7 @@ Ichor::Task<tl::expected<void, Ichor::FileIOError>> Ichor::IOUringAsyncFileIO::c
     INTERNAL_IO_DEBUG("copyFile({}, {}) 4", from, to);
 
     if(_shouldStop) {
-        co_return tl::unexpected(FileIOError::SERVICE_STOPPED);
+        co_return tl::unexpected(IOError::SERVICE_STOPPED);
     }
 
     if(res < 0) {
@@ -224,22 +216,21 @@ Ichor::Task<tl::expected<void, Ichor::FileIOError>> Ichor::IOUringAsyncFileIO::c
     co_return {};
 }
 
-Ichor::Task<tl::expected<void, Ichor::FileIOError>> Ichor::IOUringAsyncFileIO::removeFile(const std::filesystem::path &file) {
+Ichor::Task<tl::expected<void, Ichor::IOError>> Ichor::IOUringAsyncFileIO::removeFile(const std::filesystem::path &file) {
     INTERNAL_IO_DEBUG("removeFile({})", file);
 
     if(_shouldStop) {
-        co_return tl::unexpected(FileIOError::SERVICE_STOPPED);
+        co_return tl::unexpected(IOError::SERVICE_STOPPED);
     }
 
     AsyncManualResetEvent evt;
 
-    auto *sqe = _q->getSqe();
     int res{};
-    io_uring_sqe_set_data(sqe, new UringResponseEvent{_q->getNextEventIdFromIchor(), getServiceId(), INTERNAL_EVENT_PRIORITY, [&evt, &res](int32_t _res) {
-        INTERNAL_IO_DEBUG("unlinkat res: {}", _res, _res < 0 ? strerror(-_res) : "");
-        res = _res;
+    auto *sqe = _q->getSqeWithData(this, [&evt, &res](io_uring_cqe *cqe) {
+        INTERNAL_IO_DEBUG("unlinkat res: {}", cqe->res, cqe->res < 0 ? strerror(-cqe->res) : "");
+        res = cqe->res;
         evt.set();
-    }});
+    });
     if(file.is_absolute()) {
         io_uring_prep_unlinkat(sqe, 0, file.c_str(), 0);
     } else {
@@ -249,7 +240,7 @@ Ichor::Task<tl::expected<void, Ichor::FileIOError>> Ichor::IOUringAsyncFileIO::r
     INTERNAL_IO_DEBUG("removeFile({}) 1", file);
 
     if(_shouldStop) {
-        co_return tl::unexpected(FileIOError::SERVICE_STOPPED);
+        co_return tl::unexpected(IOError::SERVICE_STOPPED);
     }
 
     if(res < 0) {
@@ -259,22 +250,21 @@ Ichor::Task<tl::expected<void, Ichor::FileIOError>> Ichor::IOUringAsyncFileIO::r
     co_return {};
 }
 
-Ichor::Task<tl::expected<void, Ichor::FileIOError>> Ichor::IOUringAsyncFileIO::writeFile(const std::filesystem::path &file_path, std::string_view contents) {
+Ichor::Task<tl::expected<void, Ichor::IOError>> Ichor::IOUringAsyncFileIO::writeFile(const std::filesystem::path &file_path, std::string_view contents) {
     INTERNAL_IO_DEBUG("writeFile({})", file_path);
 
     if(_shouldStop) {
-        co_return tl::unexpected(FileIOError::SERVICE_STOPPED);
+        co_return tl::unexpected(IOError::SERVICE_STOPPED);
     }
 
     AsyncManualResetEvent evt;
 
-    auto *sqe = _q->getSqe();
     int res{};
-    io_uring_sqe_set_data(sqe, new UringResponseEvent{_q->getNextEventIdFromIchor(), getServiceId(), INTERNAL_EVENT_PRIORITY, [&evt, &res](int32_t _res) {
-        INTERNAL_IO_DEBUG("openat res: {}", _res, _res < 0 ? strerror(-_res) : "");
-        res = _res;
+    auto *sqe = _q->getSqeWithData(this, [&evt, &res](io_uring_cqe *cqe) {
+        INTERNAL_IO_DEBUG("openat res: {}", cqe->res, cqe->res < 0 ? strerror(-cqe->res) : "");
+        res = cqe->res;
         evt.set();
-    }});
+    });
     if(file_path.is_absolute()) {
         io_uring_prep_openat(sqe, 0, file_path.c_str(), O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH);
     } else {
@@ -284,7 +274,7 @@ Ichor::Task<tl::expected<void, Ichor::FileIOError>> Ichor::IOUringAsyncFileIO::w
     INTERNAL_IO_DEBUG("writeFile({}) 1", file_path);
 
     if(_shouldStop) {
-        co_return tl::unexpected(FileIOError::SERVICE_STOPPED);
+        co_return tl::unexpected(IOError::SERVICE_STOPPED);
     }
 
     if(res < 0) {
@@ -292,18 +282,17 @@ Ichor::Task<tl::expected<void, Ichor::FileIOError>> Ichor::IOUringAsyncFileIO::w
     }
 
     if(_shouldStop) {
-        co_return tl::unexpected(FileIOError::SERVICE_STOPPED);
+        co_return tl::unexpected(IOError::SERVICE_STOPPED);
     }
 
     int fd = res;
     evt.reset();
-    sqe = _q->getSqe();
     res = 0;
-    io_uring_sqe_set_data(sqe, new UringResponseEvent{_q->getNextEventIdFromIchor(), getServiceId(), INTERNAL_EVENT_PRIORITY, [&evt, &res](int32_t _res) {
-        INTERNAL_IO_DEBUG("write res: {}", _res, _res < 0 ? strerror(-_res) : "");
-        res = _res;
+    sqe = _q->getSqeWithData(this, [&evt, &res](io_uring_cqe *cqe) {
+        INTERNAL_IO_DEBUG("write res: {}", cqe->res, cqe->res < 0 ? strerror(-cqe->res) : "");
+        res = cqe->res;
         evt.set();
-    }});
+    });
     io_uring_prep_write(sqe, fd, contents.data(), static_cast<unsigned>(contents.size()), std::numeric_limits<__u64>::max());
 
     co_await evt;
@@ -311,23 +300,22 @@ Ichor::Task<tl::expected<void, Ichor::FileIOError>> Ichor::IOUringAsyncFileIO::w
     co_return {};
 }
 
-Ichor::Task<tl::expected<void, Ichor::FileIOError>> Ichor::IOUringAsyncFileIO::appendFile(const std::filesystem::path &file_path, std::string_view contents) {
+Ichor::Task<tl::expected<void, Ichor::IOError>> Ichor::IOUringAsyncFileIO::appendFile(const std::filesystem::path &file_path, std::string_view contents) {
     // TODO refactor writeFile and appendFile to re-use the same code.
     INTERNAL_IO_DEBUG("appendFile({})", file_path);
 
     if(_shouldStop) {
-        co_return tl::unexpected(FileIOError::SERVICE_STOPPED);
+        co_return tl::unexpected(IOError::SERVICE_STOPPED);
     }
 
     AsyncManualResetEvent evt;
 
-    auto *sqe = _q->getSqe();
     int res{};
-    io_uring_sqe_set_data(sqe, new UringResponseEvent{_q->getNextEventIdFromIchor(), getServiceId(), INTERNAL_EVENT_PRIORITY, [&evt, &res](int32_t _res) {
-        INTERNAL_IO_DEBUG("openat res: {}", _res, _res < 0 ? strerror(-_res) : "");
-        res = _res;
+    auto *sqe = _q->getSqeWithData(this, [&evt, &res](io_uring_cqe *cqe) {
+        INTERNAL_IO_DEBUG("openat res: {}", cqe->res, cqe->res < 0 ? strerror(-cqe->res) : "");
+        res = cqe->res;
         evt.set();
-    }});
+    });
     if(file_path.is_absolute()) {
         io_uring_prep_openat(sqe, 0, file_path.c_str(), O_WRONLY | O_CREAT | O_APPEND | O_CLOEXEC, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH);
     } else {
@@ -337,7 +325,7 @@ Ichor::Task<tl::expected<void, Ichor::FileIOError>> Ichor::IOUringAsyncFileIO::a
     INTERNAL_IO_DEBUG("appendFile({}) 1", file_path);
 
     if(_shouldStop) {
-        co_return tl::unexpected(FileIOError::SERVICE_STOPPED);
+        co_return tl::unexpected(IOError::SERVICE_STOPPED);
     }
 
     if(res < 0) {
@@ -345,18 +333,17 @@ Ichor::Task<tl::expected<void, Ichor::FileIOError>> Ichor::IOUringAsyncFileIO::a
     }
 
     if(_shouldStop) {
-        co_return tl::unexpected(FileIOError::SERVICE_STOPPED);
+        co_return tl::unexpected(IOError::SERVICE_STOPPED);
     }
 
     int fd = res;
     evt.reset();
-    sqe = _q->getSqe();
     res = 0;
-    io_uring_sqe_set_data(sqe, new UringResponseEvent{_q->getNextEventIdFromIchor(), getServiceId(), INTERNAL_EVENT_PRIORITY, [&evt, &res](int32_t _res) {
-        INTERNAL_IO_DEBUG("write res: {}", _res, _res < 0 ? strerror(-_res) : "");
-        res = _res;
+    sqe = _q->getSqeWithData(this, [&evt, &res](io_uring_cqe *cqe) {
+        INTERNAL_IO_DEBUG("write res: {}", cqe->res, cqe->res < 0 ? strerror(-cqe->res) : "");
+        res = cqe->res;
         evt.set();
-    }});
+    });
     io_uring_prep_write(sqe, fd, contents.data(), static_cast<unsigned>(contents.size()), std::numeric_limits<__u64>::max());
 
     co_await evt;
@@ -367,11 +354,10 @@ Ichor::Task<tl::expected<void, Ichor::FileIOError>> Ichor::IOUringAsyncFileIO::a
 void Ichor::IOUringAsyncFileIO::recursiveSubmitReadWholeFile(AsyncManualResetEvent &evt, int &res, std::string &contents, uint64_t &sizeLeft, uint64_t offset, uint64_t fileSize, int fd, uint32_t maxSubmissions) {
     uint32_t submissions = maxSubmissions;
     while(sizeLeft > 0 && submissions > 0) {
-        auto *sqe = _q->getSqe();
         char* buf = new char[_bufferSize];
         bool isLastInBatch = sizeLeft < _bufferSize || submissions == 1;
 
-        io_uring_sqe_set_data(sqe, new UringResponseEvent{_q->getNextEventIdFromIchor(), getServiceId(), INTERNAL_EVENT_PRIORITY, createNewEventHandlerReadWholeFile(evt, res, contents, sizeLeft, fileSize, fd, maxSubmissions, offset, buf, isLastInBatch)});
+        auto *sqe = _q->getSqeWithData(this, createNewEventHandlerReadWholeFile(evt, res, contents, sizeLeft, fileSize, fd, maxSubmissions, offset, buf, isLastInBatch));
         io_uring_prep_read(sqe, fd, buf, _bufferSize, offset);
         INTERNAL_IO_DEBUG("add read");
 
@@ -386,10 +372,10 @@ void Ichor::IOUringAsyncFileIO::recursiveSubmitReadWholeFile(AsyncManualResetEve
     }
 }
 
-std::function<void(int32_t)> Ichor::IOUringAsyncFileIO::createNewEventHandlerReadWholeFile(Ichor::AsyncManualResetEvent &evt, int &res, std::string &contents, uint64_t &sizeLeft, uint64_t fileSize, int fd, uint32_t maxSubmissions, uint64_t offset, char *buf, bool isLastInBatch) {
-    return [this, &evt, &res, &contents, &sizeLeft, fileSize, fd, buf, offset, isLastInBatch, maxSubmissions](int32_t _res) {
+std::function<void(io_uring_cqe*)> Ichor::IOUringAsyncFileIO::createNewEventHandlerReadWholeFile(Ichor::AsyncManualResetEvent &evt, int &res, std::string &contents, uint64_t &sizeLeft, uint64_t fileSize, int fd, uint32_t maxSubmissions, uint64_t offset, char *buf, bool isLastInBatch) {
+    return [this, &evt, &res, &contents, &sizeLeft, fileSize, fd, buf, offset, isLastInBatch, maxSubmissions](io_uring_cqe *cqe) {
         std::unique_ptr<char[]> uniqueBuf{buf};
-        INTERNAL_IO_DEBUG("read response {} {} {} {} {} {}", _res, _res < 0 ? strerror(-_res) : "", _shouldStop, evt.is_set(), contents.size(), fileSize);
+        INTERNAL_IO_DEBUG("read response {} {} {} {} {} {}", cqe->res, cqe->res < 0 ? strerror(-cqe->res) : "", _shouldStop, evt.is_set(), contents.size(), fileSize);
         if(_shouldStop || res < 0) {
             if(isLastInBatch && !evt.is_set()) {
                 evt.set();
@@ -397,19 +383,19 @@ std::function<void(int32_t)> Ichor::IOUringAsyncFileIO::createNewEventHandlerRea
             return;
         }
 
-        if(_res < 0) {
-            ICHOR_LOG_ERROR(_logger, "read failed with result {} res {}", _res, res);
-            res = _res;
+        if(cqe->res < 0) {
+            ICHOR_LOG_ERROR(_logger, "read failed with result {} res {}", cqe->res, res);
+            res = cqe->res;
             if(isLastInBatch) {
                 evt.set();
             }
             return;
         }
 
-        auto readBytes = static_cast<uint32_t>(_res);
+        auto readBytes = static_cast<uint32_t>(cqe->res);
 
         if(contents.size() >= fileSize) {
-            ICHOR_LOG_ERROR(_logger, "read contents already filled? with result {} res {} contents size {} statx size {}", _res, res, contents.size(), fileSize);
+            ICHOR_LOG_ERROR(_logger, "read contents already filled? with result {} res {} contents size {} statx size {}", cqe->res, res, contents.size(), fileSize);
             res = -2;
             if(isLastInBatch) {
                 evt.set();
@@ -431,8 +417,7 @@ std::function<void(int32_t)> Ichor::IOUringAsyncFileIO::createNewEventHandlerRea
 
         if(readBytes < _bufferSize) {
             uniqueBuf.reset();
-            auto *sqe = _q->getSqe();
-            io_uring_sqe_set_data(sqe, new UringResponseEvent{_q->getNextEventIdFromIchor(), getServiceId(), INTERNAL_EVENT_PRIORITY, createNewEventHandlerReadWholeFile(evt, res, contents, sizeLeft, fileSize, fd, maxSubmissions, offset + readBytes, buf, isLastInBatch)});
+            auto *sqe = _q->getSqeWithData(this, createNewEventHandlerReadWholeFile(evt, res, contents, sizeLeft, fileSize, fd, maxSubmissions, offset + readBytes, buf, isLastInBatch));
             io_uring_prep_read(sqe, fd, buf, _bufferSize -  readBytes, offset + readBytes);
             INTERNAL_IO_DEBUG("add read");
         }
@@ -447,11 +432,10 @@ std::function<void(int32_t)> Ichor::IOUringAsyncFileIO::createNewEventHandlerRea
 void Ichor::IOUringAsyncFileIO::recursiveSubmitCopyFile(AsyncManualResetEvent &evt, int &res, uint64_t &sizeLeft, uint64_t offset, uint64_t fileSize, int fromFd, int toFd, uint32_t maxSubmissions) {
     uint32_t submissions = maxSubmissions;
     while(sizeLeft > 0 && submissions > 0) {
-        auto *sqe = _q->getSqe();
         char* buf = new char[_bufferSize];
         bool isLastInBatch = sizeLeft < _bufferSize || submissions == 1;
 
-        io_uring_sqe_set_data(sqe, new UringResponseEvent{_q->getNextEventIdFromIchor(), getServiceId(), INTERNAL_EVENT_PRIORITY, createNewEventHandlerCopyFileReadPart(evt, res, sizeLeft, fileSize, fromFd, toFd, maxSubmissions, offset, buf, isLastInBatch)});
+        auto *sqe = _q->getSqeWithData(this, createNewEventHandlerCopyFileReadPart(evt, res, sizeLeft, fileSize, fromFd, toFd, maxSubmissions, offset, buf, isLastInBatch));
         io_uring_prep_read(sqe, fromFd, buf, _bufferSize, offset);
         INTERNAL_IO_DEBUG("add read");
 
@@ -466,10 +450,10 @@ void Ichor::IOUringAsyncFileIO::recursiveSubmitCopyFile(AsyncManualResetEvent &e
     }
 }
 
-std::function<void(int32_t)> Ichor::IOUringAsyncFileIO::createNewEventHandlerCopyFileReadPart(Ichor::AsyncManualResetEvent &evt, int &res, uint64_t &sizeLeft, uint64_t fileSize, int fromFd, int toFd, uint32_t maxSubmissions, uint64_t offset, char *buf, bool isLastInBatch) {
-    return [this, &evt, &res, &sizeLeft, fileSize, fromFd, toFd, buf, offset, isLastInBatch, maxSubmissions](int32_t _res) {
+std::function<void(io_uring_cqe*)> Ichor::IOUringAsyncFileIO::createNewEventHandlerCopyFileReadPart(Ichor::AsyncManualResetEvent &evt, int &res, uint64_t &sizeLeft, uint64_t fileSize, int fromFd, int toFd, uint32_t maxSubmissions, uint64_t offset, char *buf, bool isLastInBatch) {
+    return [this, &evt, &res, &sizeLeft, fileSize, fromFd, toFd, buf, offset, isLastInBatch, maxSubmissions](io_uring_cqe *cqe) {
         std::unique_ptr<char[]> uniqueBuf{buf};
-        INTERNAL_IO_DEBUG("read response {} {} {} {} {}", _res, _res < 0 ? strerror(-_res) : "", _shouldStop, evt.is_set(), fileSize);
+        INTERNAL_IO_DEBUG("read response {} {} {} {} {}", cqe->res, cqe->res < 0 ? strerror(-cqe->res) : "", _shouldStop, evt.is_set(), fileSize);
         if(_shouldStop || res < 0) {
             if(isLastInBatch && !evt.is_set()) {
                 evt.set();
@@ -477,31 +461,29 @@ std::function<void(int32_t)> Ichor::IOUringAsyncFileIO::createNewEventHandlerCop
             return;
         }
 
-        if(_res < 0) {
-            ICHOR_LOG_ERROR(_logger, "read failed with result {} res {}", _res, res);
-            res = _res;
+        if(cqe->res < 0) {
+            ICHOR_LOG_ERROR(_logger, "read failed with result {} res {}", cqe->res, res);
+            res = cqe->res;
             if(isLastInBatch) {
                 evt.set();
             }
             return;
         }
 
-        auto readBytes = static_cast<uint32_t>(_res);
+        auto readBytes = static_cast<uint32_t>(cqe->res);
         bool isLastInWriteBatch = offset + readBytes == fileSize;
 
         {
             // buf will be deleted in write handler
             uniqueBuf.release();
-            auto *sqe = _q->getSqe();
-            io_uring_sqe_set_data(sqe, new UringResponseEvent{_q->getNextEventIdFromIchor(), getServiceId(), INTERNAL_EVENT_PRIORITY, createNewEventHandlerCopyFileWritePart(evt, res, buf, isLastInWriteBatch)});
+            auto *sqe = _q->getSqeWithData(this, createNewEventHandlerCopyFileWritePart(evt, res, buf, isLastInWriteBatch));
             io_uring_prep_write(sqe, toFd, buf, readBytes, std::numeric_limits<__u64>::max());
             INTERNAL_IO_DEBUG("add write");
         }
 
         if(!isLastInWriteBatch && readBytes < _bufferSize) {
             char *newBuf = new char[_bufferSize];
-            auto *sqe = _q->getSqe();
-            io_uring_sqe_set_data(sqe, new UringResponseEvent{_q->getNextEventIdFromIchor(), getServiceId(), INTERNAL_EVENT_PRIORITY, createNewEventHandlerCopyFileReadPart(evt, res, sizeLeft, fileSize, fromFd, toFd, maxSubmissions, offset + readBytes, newBuf, isLastInBatch)});
+            auto *sqe = _q->getSqeWithData(this, createNewEventHandlerCopyFileReadPart(evt, res, sizeLeft, fileSize, fromFd, toFd, maxSubmissions, offset + readBytes, newBuf, isLastInBatch));
             io_uring_prep_read(sqe, fromFd, newBuf, _bufferSize -  readBytes, offset + readBytes);
             INTERNAL_IO_DEBUG("add read");
         }
@@ -513,10 +495,10 @@ std::function<void(int32_t)> Ichor::IOUringAsyncFileIO::createNewEventHandlerCop
     };
 }
 
-std::function<void(int32_t)> Ichor::IOUringAsyncFileIO::createNewEventHandlerCopyFileWritePart(Ichor::AsyncManualResetEvent &evt, int &res, char *buf, bool isLastInBatch) {
-    return [this, &evt, &res, buf, isLastInBatch](int32_t _res) {
+std::function<void(io_uring_cqe*)> Ichor::IOUringAsyncFileIO::createNewEventHandlerCopyFileWritePart(Ichor::AsyncManualResetEvent &evt, int &res, char *buf, bool isLastInBatch) {
+    return [this, &evt, &res, buf, isLastInBatch](io_uring_cqe *cqe) {
         std::unique_ptr<char[]> uniqueBuf{buf};
-        INTERNAL_IO_DEBUG("write response {} {} {} {}", _res, _res < 0 ? strerror(-_res) : "", _shouldStop, evt.is_set());
+        INTERNAL_IO_DEBUG("write response {} {} {} {}", cqe->res, cqe->res < 0 ? strerror(-cqe->res) : "", _shouldStop, evt.is_set());
         if(_shouldStop || res < 0) {
             if(isLastInBatch && !evt.is_set()) {
                 evt.set();
@@ -524,9 +506,9 @@ std::function<void(int32_t)> Ichor::IOUringAsyncFileIO::createNewEventHandlerCop
             return;
         }
 
-        if(_res < 0) {
-            ICHOR_LOG_ERROR(_logger, "write failed with result {} res {}", _res, res);
-            res = _res;
+        if(cqe->res < 0) {
+            ICHOR_LOG_ERROR(_logger, "write failed with result {} res {}", cqe->res, res);
+            res = cqe->res;
             if(isLastInBatch) {
                 evt.set();
             }

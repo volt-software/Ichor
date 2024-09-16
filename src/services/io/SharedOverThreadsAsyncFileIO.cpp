@@ -71,7 +71,7 @@ Ichor::Task<void> Ichor::SharedOverThreadsAsyncFileIO::stop() {
     co_return;
 }
 
-Ichor::Task<tl::expected<std::string, Ichor::FileIOError>> Ichor::SharedOverThreadsAsyncFileIO::readWholeFile(std::filesystem::path const &file_path) {
+Ichor::Task<tl::expected<std::string, Ichor::IOError>> Ichor::SharedOverThreadsAsyncFileIO::readWholeFile(std::filesystem::path const &file_path) {
     INTERNAL_IO_DEBUG("readWholeFile()");
 
     auto submission = std::make_shared<io_operation_submission>();
@@ -89,7 +89,7 @@ Ichor::Task<tl::expected<std::string, Ichor::FileIOError>> Ichor::SharedOverThre
         file.seekg(0, std::ios::end);
 
         if((unsigned long)file.tellg() > contents.max_size()) {
-            res = tl::unexpected(FileIOError::FILE_SIZE_TOO_BIG);
+            res = tl::unexpected(IOError::FILE_SIZE_TOO_BIG);
             return;
         }
 
@@ -116,7 +116,7 @@ Ichor::Task<tl::expected<std::string, Ichor::FileIOError>> Ichor::SharedOverThre
     co_return contents;
 }
 
-Ichor::Task<tl::expected<void, Ichor::FileIOError>> Ichor::SharedOverThreadsAsyncFileIO::copyFile(const std::filesystem::path &from, const std::filesystem::path &to) {
+Ichor::Task<tl::expected<void, Ichor::IOError>> Ichor::SharedOverThreadsAsyncFileIO::copyFile(const std::filesystem::path &from, const std::filesystem::path &to) {
     INTERNAL_IO_DEBUG("copyFile()");
 
     auto submission = std::make_shared<io_operation_submission>();
@@ -128,12 +128,12 @@ Ichor::Task<tl::expected<void, Ichor::FileIOError>> Ichor::SharedOverThreadsAsyn
             DWORD err = GetLastError();
             INTERNAL_IO_DEBUG("CopyFileExA failed: {}", err);
             if(err == ERROR_FILE_NOT_FOUND) {
-                res = tl::unexpected(FileIOError::FILE_DOES_NOT_EXIST);
+                res = tl::unexpected(IOError::FILE_DOES_NOT_EXIST);
                 return;
             }
 
             INTERNAL_IO_DEBUG("CopyFileExA failed: {}", GetLastError());
-            res = tl::unexpected(FileIOError::FAILED);
+            res = tl::unexpected(IOError::FAILED);
             return;
         }
 #elif defined(__APPLE__)
@@ -208,7 +208,7 @@ Ichor::Task<tl::expected<void, Ichor::FileIOError>> Ichor::SharedOverThreadsAsyn
     co_return {};
 }
 
-Ichor::Task<tl::expected<void, Ichor::FileIOError>> Ichor::SharedOverThreadsAsyncFileIO::removeFile(const std::filesystem::path &file) {
+Ichor::Task<tl::expected<void, Ichor::IOError>> Ichor::SharedOverThreadsAsyncFileIO::removeFile(const std::filesystem::path &file) {
     INTERNAL_IO_DEBUG("removeFile()");
 
     auto submission = std::make_shared<io_operation_submission>();
@@ -220,14 +220,14 @@ Ichor::Task<tl::expected<void, Ichor::FileIOError>> Ichor::SharedOverThreadsAsyn
             DWORD err = GetLastError();
             INTERNAL_IO_DEBUG("DeleteFile failed: {}", err);
             if(err == ERROR_FILE_NOT_FOUND) {
-                res = tl::unexpected(FileIOError::FILE_DOES_NOT_EXIST);
+                res = tl::unexpected(IOError::FILE_DOES_NOT_EXIST);
                 return;
             }
             if(err == ERROR_ACCESS_DENIED) {
-                res = tl::unexpected(FileIOError::NO_PERMISSION);
+                res = tl::unexpected(IOError::NO_PERMISSION);
                 return;
             }
-            res = tl::unexpected(FileIOError::FAILED);
+            res = tl::unexpected(IOError::FAILED);
         }
 #else
         int ret = unlink(file.string().c_str());
@@ -254,7 +254,7 @@ Ichor::Task<tl::expected<void, Ichor::FileIOError>> Ichor::SharedOverThreadsAsyn
     co_return {};
 }
 
-Ichor::Task<tl::expected<void, Ichor::FileIOError>> Ichor::SharedOverThreadsAsyncFileIO::writeFile(const std::filesystem::path &file, std::string_view contents) {
+Ichor::Task<tl::expected<void, Ichor::IOError>> Ichor::SharedOverThreadsAsyncFileIO::writeFile(const std::filesystem::path &file, std::string_view contents) {
 
     INTERNAL_IO_DEBUG("writeFile()");
 
@@ -284,7 +284,7 @@ Ichor::Task<tl::expected<void, Ichor::FileIOError>> Ichor::SharedOverThreadsAsyn
     co_return {};
 }
 
-Ichor::Task<tl::expected<void, Ichor::FileIOError>> Ichor::SharedOverThreadsAsyncFileIO::appendFile(const std::filesystem::path &file, std::string_view contents) {
+Ichor::Task<tl::expected<void, Ichor::IOError>> Ichor::SharedOverThreadsAsyncFileIO::appendFile(const std::filesystem::path &file, std::string_view contents) {
 
     INTERNAL_IO_DEBUG("appendFile()");
 

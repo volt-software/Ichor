@@ -22,7 +22,7 @@ private:
     AsyncGenerator<IchorBehaviour> handleEvent(DoWorkEvent const &) {
         TestMsg msg{20, "five hundred"};
         auto res = _serializer->serialize(msg);
-        auto msg2 = _serializer->deserialize(std::move(res));
+        auto msg2 = _serializer->deserialize(res);
         if(msg2->id != msg.id || msg2->val != msg.val) {
             ICHOR_LOG_ERROR(_logger, "serde incorrect!");
         } else {

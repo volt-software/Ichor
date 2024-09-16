@@ -91,7 +91,7 @@ private:
                 throw std::runtime_error("testThreadId id incorrect");
             }
 
-            auto msg = _testSerializer->deserialize(std::move(req.body));
+            auto msg = _testSerializer->deserialize(req.body);
             evtGate = true;
 
             co_await *_evt;
@@ -140,7 +140,7 @@ private:
             throw std::runtime_error("test status not ok");
         }
 
-        auto msg = _testSerializer->deserialize(std::move(response.body));
+        auto msg = _testSerializer->deserialize(response.body);
         fmt::print("Received TestMsg {}:{}\n", msg->id, msg->val);
 
         GetThreadLocalEventQueue().pushEvent<RunFunctionEventAsync>(getServiceId(), [this]() -> AsyncGenerator<IchorBehaviour> {
@@ -171,7 +171,7 @@ private:
             throw std::runtime_error(fmt::format("regex1 status not ok {}", (int)response.status).c_str());
         }
 
-        auto msg = _regexSerializer->deserialize(std::move(response.body));
+        auto msg = _regexSerializer->deserialize(response.body);
         if(!msg) {
             throw std::runtime_error("regex1 could not deserialize");
         }
@@ -195,7 +195,7 @@ private:
             throw std::runtime_error(fmt::format("regex2 status not ok {}", (int)response.status).c_str());
         }
 
-        msg = _regexSerializer->deserialize(std::move(response.body));
+        msg = _regexSerializer->deserialize(response.body);
         if(!msg) {
             throw std::runtime_error("regex2 could not deserialize");
         }
@@ -219,7 +219,7 @@ private:
             throw std::runtime_error(fmt::format("regex3 status not ok {}", (int)response.status).c_str());
         }
 
-        msg = _regexSerializer->deserialize(std::move(response.body));
+        msg = _regexSerializer->deserialize(response.body);
         if(!msg) {
             throw std::runtime_error("regex3 could not deserialize");
         }
@@ -246,7 +246,7 @@ private:
             throw std::runtime_error(fmt::format("regex4 status not ok {}", (int)response.status).c_str());
         }
 
-        msg = _regexSerializer->deserialize(std::move(response.body));
+        msg = _regexSerializer->deserialize(response.body);
         if(!msg) {
             throw std::runtime_error("regex4 could not deserialize");
         }

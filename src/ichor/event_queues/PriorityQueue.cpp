@@ -13,7 +13,7 @@ namespace Ichor {
     template <typename COMPARE>
     TemplatePriorityQueue<COMPARE>::TemplatePriorityQueue() = default;
     template <typename COMPARE>
-    TemplatePriorityQueue<COMPARE>::TemplatePriorityQueue(bool spinlock) : _spinlock(spinlock) {
+    TemplatePriorityQueue<COMPARE>::TemplatePriorityQueue(uint64_t quitTimeoutMs, bool spinlock) : _spinlock(spinlock), _quitTimeoutMs(quitTimeoutMs) {
     }
 
     template <typename COMPARE>
@@ -129,7 +129,7 @@ namespace Ichor {
         bool const shouldQuit = Detail::sigintQuit.load(std::memory_order_acquire);
 
 //        INTERNAL_DEBUG("shouldQuit() {} {:L}", shouldQuit, (std::chrono::steady_clock::now() - _whenQuitEventWasSent).count());
-        if (shouldQuit && _quitEventSent && std::chrono::steady_clock::now() - _whenQuitEventWasSent >= 5000ms) [[unlikely]] {
+        if (shouldQuit && _quitEventSent && std::chrono::steady_clock::now() - _whenQuitEventWasSent >= std::chrono::milliseconds(_quitTimeoutMs)) [[unlikely]] {
             _quit.store(true, std::memory_order_release);
         }
 

@@ -112,7 +112,7 @@ private:
         }
 
         if(response.status == HttpStatus::ok) {
-            auto msg = _serializer->deserialize(std::move(response.body));
+            auto msg = _serializer->deserialize(response.body);
             co_return msg;
         } else {
             ICHOR_LOG_ERROR(_logger, "Received status {}", (int)response.status);

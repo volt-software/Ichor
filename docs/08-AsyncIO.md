@@ -39,7 +39,7 @@ queue->pushEvent<RunFunctionEventAsync>(0, [&]() -> AsyncGenerator<IchorBehaviou
 
     // enqueue reading the file on another thread and co_await its result
     // not using auto to show the type in example. Using auto would be a lot easier here.
-    tl::expected<std::string, Ichor::FileIOError> ret = co_await async_io_svc->first->readWholeFile("AsyncFileIO.txt");
+    tl::expected<std::string, Ichor::IOError> ret = co_await async_io_svc->first->readWholeFile("AsyncFileIO.txt");
 
     if(!ret || ret != "This is a test") {
         fmt::print("Couldn't read file\n");
@@ -47,7 +47,7 @@ queue->pushEvent<RunFunctionEventAsync>(0, [&]() -> AsyncGenerator<IchorBehaviou
     }
 
     // enqueue writing to file (automatically overwrites if already exists)
-    tl::expected<void, Ichor::FileIOError> ret2 = co_await async_io_svc->first->writeFile("AsyncFileIO.txt", "Overwrite");
+    tl::expected<void, Ichor::IOError> ret2 = co_await async_io_svc->first->writeFile("AsyncFileIO.txt", "Overwrite");
 
     if(!ret2) {
         fmt::print("Couldn't write file\n");

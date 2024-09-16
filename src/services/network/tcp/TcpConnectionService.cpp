@@ -186,13 +186,13 @@ void Ichor::TcpConnectionService::removeDependencyInstance(ITimerFactory &, ISer
     _timerFactory = nullptr;
 }
 
-tl::expected<uint64_t, Ichor::SendErrorReason> Ichor::TcpConnectionService::sendAsync(std::vector<uint8_t> &&msg) {
+Ichor::Task<tl::expected<uint64_t, Ichor::IOError>> Ichor::TcpConnectionService::sendAsync(std::vector<uint8_t> &&msg) {
     auto id = ++_msgIdCounter;
     size_t sent_bytes = 0;
 
     if(_quit) {
         ICHOR_LOG_TRACE(_logger, "[{}] quitting, no send", _id);
-        return tl::unexpected(SendErrorReason::QUITTING);
+        co_return tl::unexpected(IOError::SERVICE_QUITTING);
     }
 
     while(sent_bytes < msg.size()) {
@@ -200,7 +200,7 @@ tl::expected<uint64_t, Ichor::SendErrorReason> Ichor::TcpConnectionService::send
 
         if(_quit) {
             ICHOR_LOG_TRACE(_logger, "[{}] quitting mid-send", _id);
-            return tl::unexpected(SendErrorReason::QUITTING);
+            co_return tl::unexpected(IOError::SERVICE_QUITTING);
         }
 
         if(ret < 0) {
@@ -208,10 +208,10 @@ tl::expected<uint64_t, Ichor::SendErrorReason> Ichor::TcpConnectionService::send
             break;
         }
 
-        sent_bytes += static_cast<uint64_t>(ret);
+        sent_bytes += static_cast<size_t>(ret);
     }
 
-    return id;
+    co_return id;
 }
 
 void Ichor::TcpConnectionService::setPriority(uint64_t priority) {
@@ -222,6 +222,19 @@ uint64_t Ichor::TcpConnectionService::getPriority() {
     return _priority;
 }
 
+bool Ichor::TcpConnectionService::isClient() const noexcept {
+    return getProperties().find("Socket") == getProperties().end();
+}
+
+void Ichor::TcpConnectionService::setReceiveHandler(std::function<void(std::span<uint8_t const>)> recvHandler) {
+    _recvHandler = recvHandler;
+
+    for(auto &msg : _queuedMessages) {
+        _recvHandler(msg);
+    }
+    _queuedMessages.clear();
+}
+
 void Ichor::TcpConnectionService::recvHandler() {
     ScopeGuard sg{[this]() {
         if(!_quit) {
@@ -230,25 +243,41 @@ void Ichor::TcpConnectionService::recvHandler() {
             ICHOR_LOG_TRACE(_logger, "[{}] quitting, no push", _id);
         }
     }};
-    std::array<char, 1024> buf{};
-    auto ret = recv(_socket, buf.data(), buf.size(), 0);
-
-    if (ret == 0) {
-        return;
-    }
+	std::vector<uint8_t> msg{};
+	int64_t ret{};
+	{
+		std::vector<uint8_t> buf{};
+		buf.resize(1024);
+		do {
+			ret = recv(_socket, buf.data(), buf.size(), 0);
+			if (ret > 0) {
+				auto data = std::span<uint8_t const>{reinterpret_cast<uint8_t const*>(buf.data()), static_cast<decltype(buf.size())>(ret)};
+				msg.insert(msg.end(), data.begin(), data.end());
+			}
+		} while (ret > 0 && !_quit);
+	}
 
     if (_quit) {
         ICHOR_LOG_TRACE(_logger, "[{}] quitting", _id);
         return;
     }
 
+	if(!msg.empty()) {
+		if(_recvHandler) {
+			_recvHandler(msg);
+		} else {
+			_queuedMessages.emplace_back(msg);
+		}
+	}
+
     if(ret < 0) {
+		if(errno == EAGAIN) {
+			return;
+		}
         ICHOR_LOG_ERROR(_logger, "[{}] Error receiving from socket: {}", _id, errno);
         GetThreadLocalEventQueue().pushEvent<RecoverableErrorEvent>(getServiceId(), 4u, "Error receiving from socket. errno = " + std::to_string(errno));
         return;
     }
-
-    GetThreadLocalEventQueue().pushPrioritisedEvent<NetworkDataEvent>(getServiceId(), _priority, std::vector<uint8_t>{buf.data(), buf.data() + ret});
 }
 
 #endif

@@ -62,17 +62,20 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests") {
 
         waitForRunning(dm);
 
+        dm.runForOrQueueEmpty();
+
         queue->pushEvent<RunFunctionEventAsync>(0, [&]() -> AsyncGenerator<IchorBehaviour> {
             fmt::print("run function co_await\n");
             auto async_io_svc = dm.getService<IAsyncFileIO>(ioSvcId);
-            tl::expected<std::string, Ichor::FileIOError> ret = co_await async_io_svc->first->readWholeFile("NonExistentFile.txt");
+            REQUIRE(async_io_svc);
+            tl::expected<std::string, Ichor::IOError> ret = co_await async_io_svc->first->readWholeFile("NonExistentFile.txt");
             if(!ret) {
                 fmt::println("readWholeFile error {}", ret.error());
             } else {
                 fmt::println("readWholeFile found an existing file.");
             }
             REQUIRE(!ret);
-            REQUIRE(ret.error() == FileIOError::FILE_DOES_NOT_EXIST);
+            REQUIRE(ret.error() == IOError::FILE_DOES_NOT_EXIST);
             queue->pushEvent<QuitEvent>(0);
             co_return {};
         });
@@ -110,17 +113,19 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests") {
 
         waitForRunning(dm);
 
+        dm.runForOrQueueEmpty();
+
         queue->pushEvent<RunFunctionEventAsync>(0, [&]() -> AsyncGenerator<IchorBehaviour> {
             fmt::print("run function co_await\n");
             auto async_io_svc = dm.getService<IAsyncFileIO>(ioSvcId);
-            tl::expected<std::string, Ichor::FileIOError> ret = co_await async_io_svc->first->readWholeFile("NoPermIO.txt");
+            tl::expected<std::string, Ichor::IOError> ret = co_await async_io_svc->first->readWholeFile("NoPermIO.txt");
             if(!ret) {
                 fmt::println("readWholeFile error {}", ret.error());
             } else {
                 fmt::println("readWholeFile found an existing file. {}", (*ret).size());
             }
             REQUIRE(!ret);
-            REQUIRE(ret.error() == FileIOError::NO_PERMISSION);
+            REQUIRE(ret.error() == IOError::NO_PERMISSION);
             queue->pushEvent<QuitEvent>(0);
             co_return {};
         });
@@ -153,10 +158,12 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests") {
 
         waitForRunning(dm);
 
+        dm.runForOrQueueEmpty();
+
         queue->pushEvent<RunFunctionEventAsync>(0, [&]() -> AsyncGenerator<IchorBehaviour> {
             fmt::print("run function co_await\n");
             auto async_io_svc = dm.getService<IAsyncFileIO>(ioSvcId);
-            tl::expected<std::string, Ichor::FileIOError> ret = co_await async_io_svc->first->readWholeFile("AsyncFileIO.txt");
+            tl::expected<std::string, Ichor::IOError> ret = co_await async_io_svc->first->readWholeFile("AsyncFileIO.txt");
             fmt::print("require\n");
             REQUIRE(ret == "This is a test");
             queue->pushEvent<QuitEvent>(0);
@@ -182,10 +189,12 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests") {
 
         waitForRunning(dm);
 
+        dm.runForOrQueueEmpty();
+
         queue->pushEvent<RunFunctionEventAsync>(0, [&]() -> AsyncGenerator<IchorBehaviour> {
             fmt::println("run function co_await");
             auto async_io_svc = dm.getService<IAsyncFileIO>(ioSvcId);
-            tl::expected<std::string, Ichor::FileIOError> ret = co_await async_io_svc->first->readWholeFile("BigFile.txt");
+            tl::expected<std::string, Ichor::IOError> ret = co_await async_io_svc->first->readWholeFile("BigFile.txt");
             if(!ret) {
                 fmt::println("readWholeFile error {}\n", ret.error());
             } else {
@@ -217,13 +226,15 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests") {
 
         waitForRunning(dm);
 
+        dm.runForOrQueueEmpty();
+
         queue->pushEvent<RunFunctionEventAsync>(0, [&]() -> AsyncGenerator<IchorBehaviour> {
             fmt::print("run function co_await\n");
             auto async_io_svc = dm.getService<IAsyncFileIO>(ioSvcId);
-            tl::expected<void, Ichor::FileIOError> ret = co_await async_io_svc->first->copyFile("NonExistentFile.txt", "DestinationNull.txt");
+            tl::expected<void, Ichor::IOError> ret = co_await async_io_svc->first->copyFile("NonExistentFile.txt", "DestinationNull.txt");
             fmt::print("require\n");
             REQUIRE(!ret);
-            REQUIRE(ret.error() == FileIOError::FILE_DOES_NOT_EXIST);
+            REQUIRE(ret.error() == IOError::FILE_DOES_NOT_EXIST);
             queue->pushEvent<QuitEvent>(0);
             co_return {};
         });
@@ -256,15 +267,17 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests") {
 
         waitForRunning(dm);
 
+        dm.runForOrQueueEmpty();
+
         queue->pushEvent<RunFunctionEventAsync>(0, [&]() -> AsyncGenerator<IchorBehaviour> {
             fmt::print("run function co_await\n");
             auto async_io_svc = dm.getService<IAsyncFileIO>(ioSvcId);
             {
-                tl::expected<void, Ichor::FileIOError> ret = co_await async_io_svc->first->copyFile("AsyncFileIO.txt", "Destination.txt");
+                tl::expected<void, Ichor::IOError> ret = co_await async_io_svc->first->copyFile("AsyncFileIO.txt", "Destination.txt");
                 fmt::print("require\n");
                 REQUIRE(ret);
             }
-            tl::expected<std::string, Ichor::FileIOError> ret = co_await async_io_svc->first->readWholeFile("Destination.txt");
+            tl::expected<std::string, Ichor::IOError> ret = co_await async_io_svc->first->readWholeFile("Destination.txt");
             REQUIRE(ret == "This is a test");
             queue->pushEvent<QuitEvent>(0);
             co_return {};
@@ -292,15 +305,17 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests") {
 
         waitForRunning(dm);
 
+        dm.runForOrQueueEmpty();
+
         queue->pushEvent<RunFunctionEventAsync>(0, [&]() -> AsyncGenerator<IchorBehaviour> {
             fmt::print("run function co_await\n");
             auto async_io_svc = dm.getService<IAsyncFileIO>(ioSvcId);
             {
-                tl::expected<void, Ichor::FileIOError> ret = co_await async_io_svc->first->copyFile("BigFile.txt", "Destination.txt");
+                tl::expected<void, Ichor::IOError> ret = co_await async_io_svc->first->copyFile("BigFile.txt", "Destination.txt");
                 fmt::print("require\n");
                 REQUIRE(ret);
             }
-            tl::expected<std::string, Ichor::FileIOError> ret = co_await async_io_svc->first->readWholeFile("Destination.txt");
+            tl::expected<std::string, Ichor::IOError> ret = co_await async_io_svc->first->readWholeFile("Destination.txt");
             REQUIRE(ret);
             REQUIRE((*ret).size() == (uint64_t)bigFilefilesize);
             queue->pushEvent<QuitEvent>(0);
@@ -327,12 +342,14 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests") {
 
         waitForRunning(dm);
 
+        dm.runForOrQueueEmpty();
+
         queue->pushEvent<RunFunctionEventAsync>(0, [&]() -> AsyncGenerator<IchorBehaviour> {
             fmt::print("run function co_await\n");
             auto async_io_svc = dm.getService<IAsyncFileIO>(ioSvcId);
-            tl::expected<void, Ichor::FileIOError> ret = co_await async_io_svc->first->removeFile("MissingFile.txt");
+            tl::expected<void, Ichor::IOError> ret = co_await async_io_svc->first->removeFile("MissingFile.txt");
             REQUIRE(!ret);
-            REQUIRE(ret.error() == FileIOError::FILE_DOES_NOT_EXIST);
+            REQUIRE(ret.error() == IOError::FILE_DOES_NOT_EXIST);
             queue->pushEvent<QuitEvent>(0);
             co_return {};
         });
@@ -363,17 +380,19 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests") {
 
         waitForRunning(dm);
 
+        dm.runForOrQueueEmpty();
+
         queue->pushEvent<RunFunctionEventAsync>(0, [&]() -> AsyncGenerator<IchorBehaviour> {
             fmt::print("run function co_await\n");
             auto async_io_svc = dm.getService<IAsyncFileIO>(ioSvcId);
             {
-                tl::expected<void, Ichor::FileIOError> ret = co_await async_io_svc->first->removeFile("AsyncFileIO.txt");
+                tl::expected<void, Ichor::IOError> ret = co_await async_io_svc->first->removeFile("AsyncFileIO.txt");
                 fmt::print("require\n");
                 REQUIRE(ret);
             }
-            tl::expected<std::string, Ichor::FileIOError> ret = co_await async_io_svc->first->readWholeFile("AsyncFileIO.txt");
+            tl::expected<std::string, Ichor::IOError> ret = co_await async_io_svc->first->readWholeFile("AsyncFileIO.txt");
             REQUIRE(!ret);
-            REQUIRE(ret.error() == FileIOError::FILE_DOES_NOT_EXIST);
+            REQUIRE(ret.error() == IOError::FILE_DOES_NOT_EXIST);
             queue->pushEvent<QuitEvent>(0);
             co_return {};
         });
@@ -402,15 +421,17 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests") {
 
         waitForRunning(dm);
 
+        dm.runForOrQueueEmpty();
+
         queue->pushEvent<RunFunctionEventAsync>(0, [&]() -> AsyncGenerator<IchorBehaviour> {
             fmt::print("run function co_await\n");
             auto async_io_svc = dm.getService<IAsyncFileIO>(ioSvcId);
             {
-                tl::expected<void, Ichor::FileIOError> ret = co_await async_io_svc->first->writeFile("AsyncFileIO.txt", "This is a test");
+                tl::expected<void, Ichor::IOError> ret = co_await async_io_svc->first->writeFile("AsyncFileIO.txt", "This is a test");
                 fmt::print("require\n");
                 REQUIRE(ret);
             }
-            tl::expected<std::string, Ichor::FileIOError> ret = co_await async_io_svc->first->readWholeFile("AsyncFileIO.txt");
+            tl::expected<std::string, Ichor::IOError> ret = co_await async_io_svc->first->readWholeFile("AsyncFileIO.txt");
             REQUIRE(ret);
             REQUIRE(ret == "This is a test");
             queue->pushEvent<QuitEvent>(0);
@@ -443,13 +464,15 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests") {
 
         waitForRunning(dm);
 
+        dm.runForOrQueueEmpty();
+
         queue->pushEvent<RunFunctionEventAsync>(0, [&]() -> AsyncGenerator<IchorBehaviour> {
             fmt::print("run function co_await\n");
             auto async_io_svc = dm.getService<IAsyncFileIO>(ioSvcId);
-            tl::expected<std::string, Ichor::FileIOError> ret = co_await async_io_svc->first->readWholeFile("AsyncFileIO.txt");
+            tl::expected<std::string, Ichor::IOError> ret = co_await async_io_svc->first->readWholeFile("AsyncFileIO.txt");
             REQUIRE(ret);
             {
-                tl::expected<void, Ichor::FileIOError> ret2 = co_await async_io_svc->first->writeFile("AsyncFileIO.txt", "Overwrite");
+                tl::expected<void, Ichor::IOError> ret2 = co_await async_io_svc->first->writeFile("AsyncFileIO.txt", "Overwrite");
                 fmt::print("require\n");
                 REQUIRE(ret2);
             }
@@ -486,13 +509,15 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests") {
 
         waitForRunning(dm);
 
+        dm.runForOrQueueEmpty();
+
         queue->pushEvent<RunFunctionEventAsync>(0, [&]() -> AsyncGenerator<IchorBehaviour> {
             fmt::print("run function co_await\n");
             auto async_io_svc = dm.getService<IAsyncFileIO>(ioSvcId);
-            tl::expected<std::string, Ichor::FileIOError> ret = co_await async_io_svc->first->readWholeFile("AsyncFileIO.txt");
+            tl::expected<std::string, Ichor::IOError> ret = co_await async_io_svc->first->readWholeFile("AsyncFileIO.txt");
             REQUIRE(ret);
             {
-                tl::expected<void, Ichor::FileIOError> ret2 = co_await async_io_svc->first->appendFile("AsyncFileIO.txt", "Overwrite");
+                tl::expected<void, Ichor::IOError> ret2 = co_await async_io_svc->first->appendFile("AsyncFileIO.txt", "Overwrite");
                 fmt::print("require\n");
                 REQUIRE(ret2);
             }

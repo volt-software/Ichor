@@ -7,34 +7,6 @@
 #include <ichor/services/network/http/HttpScopeGuards.h>
 #include <ichor/events/RunFunctionEvent.h>
 
-class ClientConnectionFilter final {
-public:
-    // If a service is requesting IConnection as a means to create a new connection, we don't want it to register for dependencies
-    // that are created for incoming connections. If the "Address" key is present in the dependency registration properties, we skip it.
-    // Currently only used for WsHostService
-    [[nodiscard]] bool matches(Ichor::ILifecycleManager const &manager) const noexcept {
-        auto const *reg = manager.getDependencyRegistry();
-
-        if(reg == nullptr) {
-            return true;
-        }
-
-        auto regIt = reg->_registrations.find(Ichor::typeNameHash<Ichor::IConnectionService>());
-
-        if(regIt == reg->_registrations.end()) {
-            return true;
-        }
-
-        auto props = std::get<3>(regIt->second);
-
-        return !props.has_value() || !props->contains("Address");
-    }
-
-    [[nodiscard]] std::string getDescription() const noexcept {
-        return fmt::format("ClientConnectionFilter");
-    }
-};
-
 Ichor::WsHostService::WsHostService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {
     reg.registerDependency<ILogger>(this, DependencyFlags::REQUIRED);
     reg.registerDependency<IAsioContextService>(this, DependencyFlags::REQUIRED);
@@ -137,8 +109,7 @@ Ichor::AsyncGenerator<Ichor::IchorBehaviour> Ichor::WsHostService::handleEvent(I
 
     auto connection = GetThreadLocalManager().createServiceManager<WsConnectionService, IConnectionService>(Properties{
         {"WsHostServiceId", Ichor::make_any<uint64_t>(getServiceId())},
-        {"Socket", Ichor::make_unformattable_any<decltype(evt._socket)>(evt._socket)},
-        {"Filter", Ichor::make_any<Filter>(ClientConnectionFilter{})}
+        {"Socket", Ichor::make_unformattable_any<decltype(evt._socket)>(evt._socket)}
     });
     _connections.push_back(connection->getServiceId());
 

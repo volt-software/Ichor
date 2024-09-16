@@ -3,6 +3,7 @@
 #include <ichor/services/network/ws/WsEvents.h>
 #include <ichor/services/network/NetworkEvents.h>
 #include <ichor/services/network/IHostService.h>
+#include <ichor/services/network/boost/AsioContextService.h>
 #include <ichor/services/network/http/HttpScopeGuards.h>
 #include <ichor/events/RunFunctionEvent.h>
 #include <ichor/ScopeGuard.h>
@@ -135,10 +136,10 @@ void Ichor::WsConnectionService::removeDependencyInstance(IAsioContextService&, 
     _asioContextService = nullptr;
 }
 
-tl::expected<uint64_t, Ichor::SendErrorReason> Ichor::WsConnectionService::sendAsync(std::vector<uint8_t> &&msg) {
+Ichor::Task<tl::expected<uint64_t, Ichor::IOError>> Ichor::WsConnectionService::sendAsync(std::vector<uint8_t> &&msg) {
     static_assert(std::is_move_assignable_v<Detail::WsConnectionOutboxMessage>, "ConnectionOutboxMessage should be move assignable");
     if(_quit.load(std::memory_order_acquire) || !_connected.load(std::memory_order_acquire) || _asioContextService->fibersShouldStop()) {
-        return tl::unexpected(SendErrorReason::QUITTING);
+        co_return tl::unexpected(IOError::SERVICE_QUITTING);
     }
 
     auto id = ++_msgIdCounter;
@@ -178,7 +179,7 @@ tl::expected<uint64_t, Ichor::SendErrorReason> Ichor::WsConnectionService::sendA
         }
     }ASIO_SPAWN_COMPLETION_TOKEN);
 
-    return id;
+    co_return id;
 }
 
 void Ichor::WsConnectionService::setPriority(uint64_t priority) {
@@ -187,6 +188,19 @@ void Ichor::WsConnectionService::setPriority(uint64_t priority) {
 
 uint64_t Ichor::WsConnectionService::getPriority() {
     return _priority.load(std::memory_order_acquire);
+}
+
+bool Ichor::WsConnectionService::isClient() const noexcept {
+	return getProperties().find("Socket") == getProperties().end();
+}
+
+void Ichor::WsConnectionService::setReceiveHandler(std::function<void(std::span<uint8_t const>)> recvHandler) {
+	_recvHandler = recvHandler;
+
+	for(auto &msg : _queuedMessages) {
+		_recvHandler(msg);
+	}
+	_queuedMessages.clear();
 }
 
 void Ichor::WsConnectionService::fail(beast::error_code ec, const char *what) {
@@ -362,7 +376,13 @@ void Ichor::WsConnectionService::read(net::yield_context &yield) {
 
         if(_ws->got_text()) {
             auto data = buffer.data();
-            _queue->pushPrioritisedEvent<NetworkDataEvent>(getServiceId(), _priority.load(std::memory_order_acquire),  std::vector<uint8_t>{static_cast<char*>(data.data()), static_cast<char*>(data.data()) + data.size()});
+            _queue->pushPrioritisedEvent<RunFunctionEvent>(getServiceId(), _priority.load(std::memory_order_acquire), [this, data = std::vector<uint8_t>{static_cast<uint8_t*>(data.data()), static_cast<uint8_t*>(data.data()) + data.size()}]() mutable {
+                if(_recvHandler) {
+                    _recvHandler(data);
+                } else {
+                    _queuedMessages.emplace_back(std::move(data));
+                }
+            });
         }
     }
 

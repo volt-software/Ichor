@@ -27,7 +27,7 @@ public:
         return buf;
     }
 
-    tl::optional<RegexJsonMsg> deserialize(std::vector<uint8_t> &&stream) final {
+    tl::optional<RegexJsonMsg> deserialize(std::span<uint8_t const> stream) final {
         RegexJsonMsg msg;
         auto err = glz::read_json(msg, stream);
 

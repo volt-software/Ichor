@@ -52,6 +52,6 @@ namespace Ichor {
         std::vector<ServiceIdType> _connections{};
         EventHandlerRegistration _eventRegistration{};
         AsyncManualResetEvent _startStopEvent{};
-        IEventQueue *_queue;
+        IEventQueue *_queue{};
     };
 }

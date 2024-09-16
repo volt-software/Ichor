@@ -24,9 +24,13 @@ namespace Ichor {
         TcpConnectionService(DependencyRegister &reg, Properties props);
         ~TcpConnectionService() final = default;
 
-        tl::expected<uint64_t, SendErrorReason> sendAsync(std::vector<uint8_t>&& msg) final;
+        Task<tl::expected<uint64_t, IOError>> sendAsync(std::vector<uint8_t>&& msg) final;
         void setPriority(uint64_t priority) final;
         uint64_t getPriority() final;
+
+        [[nodiscard]] bool isClient() const noexcept final;
+
+        void setReceiveHandler(std::function<void(std::span<uint8_t const>)>) final;
 
     private:
         Task<tl::expected<void, Ichor::StartError>> start() final;
@@ -54,6 +58,8 @@ namespace Ichor {
         ILogger *_logger{};
         ITimerFactory *_timerFactory{};
         ITimer *_timer{};
+        std::vector<std::vector<uint8_t>> _queuedMessages{};
+        std::function<void(std::span<uint8_t const>)> _recvHandler;
     };
 }
 
