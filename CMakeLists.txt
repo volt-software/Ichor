@@ -472,13 +472,18 @@ if(ICHOR_USE_MIMALLOC)
 endif()
 
 if(ICHOR_USE_LIBURING)
-    execute_process(COMMAND "./configure" WORKING_DIRECTORY ${ICHOR_EXTERNAL_DIR}/liburing/ RESULT_VARIABLE LIBURING_RESULT)
-
-    if(NOT LIBURING_RESULT EQUAL 0)
-        message(FATAL_ERROR "Liburing configure not successful")
+    if(ICHOR_USE_SANITIZERS)
+        execute_process(COMMAND "./configure" "--enable-sanitizer" WORKING_DIRECTORY ${ICHOR_EXTERNAL_DIR}/liburing/ RESULT_VARIABLE LIBURING_RESULT ECHO_OUTPUT_VARIABLE ECHO_ERROR_VARIABLE COMMAND_ECHO STDOUT)
+        set(LIBURING_SOURCES ${ICHOR_EXTERNAL_DIR}/liburing/src/nolibc.c ${ICHOR_EXTERNAL_DIR}/liburing/src/queue.c ${ICHOR_EXTERNAL_DIR}/liburing/src/register.c ${ICHOR_EXTERNAL_DIR}/liburing/src/setup.c ${ICHOR_EXTERNAL_DIR}/liburing/src/syscall.c ${ICHOR_EXTERNAL_DIR}/liburing/src/version.c ${ICHOR_EXTERNAL_DIR}/liburing/src/sanitize.c)
+    else()
+        execute_process(COMMAND "./configure" WORKING_DIRECTORY ${ICHOR_EXTERNAL_DIR}/liburing/ RESULT_VARIABLE LIBURING_RESULT ECHO_OUTPUT_VARIABLE ECHO_ERROR_VARIABLE)
+        set(LIBURING_SOURCES ${ICHOR_EXTERNAL_DIR}/liburing/src/nolibc.c ${ICHOR_EXTERNAL_DIR}/liburing/src/queue.c ${ICHOR_EXTERNAL_DIR}/liburing/src/register.c ${ICHOR_EXTERNAL_DIR}/liburing/src/setup.c ${ICHOR_EXTERNAL_DIR}/liburing/src/syscall.c ${ICHOR_EXTERNAL_DIR}/liburing/src/version.c)
     endif()
 
-    set(LIBURING_SOURCES ${ICHOR_EXTERNAL_DIR}/liburing/src/nolibc.c ${ICHOR_EXTERNAL_DIR}/liburing/src/queue.c ${ICHOR_EXTERNAL_DIR}/liburing/src/register.c ${ICHOR_EXTERNAL_DIR}/liburing/src/setup.c ${ICHOR_EXTERNAL_DIR}/liburing/src/syscall.c ${ICHOR_EXTERNAL_DIR}/liburing/src/version.c)
+    if(NOT LIBURING_RESULT EQUAL 0)
+        message(FATAL_ERROR "Liburing configure not successful: ${LIBURING_RESULT}")
+    endif()
+
     target_sources(ichor PRIVATE ${LIBURING_SOURCES})
     target_compile_options(ichor PRIVATE -include "${ICHOR_EXTERNAL_DIR}liburing/config-host.h")
     target_compile_definitions(ichor PUBLIC _GNU_SOURCE ICHOR_USE_LIBURING)
