@@ -822,14 +822,22 @@ TEST_CASE("STL Tests") {
         static_assert(sizeof(typename Detail::SizeType<65535>::type) == 2, "SizeType wrong");
         static_assert(sizeof(typename Detail::SizeType<65536>::type) == 4, "SizeType wrong");
         static_assert(sizeof(typename Detail::SizeType<4294967295>::type) == 4, "SizeType wrong");
+#ifndef ICHOR_32_BIT
         static_assert(sizeof(typename Detail::SizeType<4294967296>::type) == 8, "SizeType wrong");
+#endif
         static_assert(sizeof(Detail::UninitializedArray<int, 0>) == 1, "SizeType wrong");
         static_assert(sizeof(Detail::UninitializedArray<int, 1>) == 4, "SizeType wrong");
         static_assert(sizeof(Detail::AlignedByteArray<int, 0>) == 1, "SizeType wrong");
         static_assert(sizeof(Detail::AlignedByteArray<int, 1>) == 4, "SizeType wrong");
+#ifdef ICHOR_32_BIT
+		static_assert(sizeof(StaticVector<int, 0>) == 8, "sizeof static vector wrong");
+        static_assert(sizeof(StaticVector<int, 1>) == 12, "sizeof static vector wrong");
+        static_assert(sizeof(StaticVector<int, 2>) == 16, "sizeof static vector wrong");
+#else
         static_assert(sizeof(StaticVector<int, 0>) == 16, "sizeof static vector wrong");
         static_assert(sizeof(StaticVector<int, 1>) == 16, "sizeof static vector wrong");
         static_assert(sizeof(StaticVector<int, 2>) == 24, "sizeof static vector wrong");
+#endif
         static_assert(Detail::is_sufficiently_trivial<int>, "type not sufficiently trivial");
         static_assert(Detail::is_sufficiently_trivial<noncopyable>, "type not sufficiently trivial");
         static_assert(!Detail::is_sufficiently_trivial<sufficiently_non_trivial>, "type not sufficiently non-trivial");

@@ -38,7 +38,7 @@ namespace Ichor {
 namespace std {
     template <>
     struct hash<Ichor::CallbackKey> {
-        std::size_t operator()(const Ichor::CallbackKey& k) const noexcept {
+        uint64_t operator()(const Ichor::CallbackKey& k) const noexcept {
             return k.id ^ k.type;
         }
     };
