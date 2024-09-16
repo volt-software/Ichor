@@ -47,10 +47,11 @@ run_benchmarks ()
   utils="$1"/ichor_utils_benchmark
   eval $coroutine || exit 1
   eval $event || exit 1
+  echo -n "uring: "
   eval $event -u || exit 1
   eval $serializer || exit 1
-  eval $start -a || exit 1
-  eval $start -c || exit 1
+#  eval $start -a || exit 1
+#  eval $start -c || exit 1
   eval $start_stop || exit 1
   eval $utils -r || exit 1
   eval $utils -a || exit 1
@@ -61,22 +62,22 @@ if [ $REBUILD -eq 1 ]; then
   mkdir -p ../std_std ../std_mimalloc ../std_no_hardening ../clang_libcpp_mimalloc
 
   rm -rf ./* ../bin/*
-  CC=gcc CXX=g++ cmake -GNinja -DICHOR_USE_MIMALLOC=OFF -DICHOR_ARCH_OPTIMIZATION=X86_64_AVX2 -DCMAKE_BUILD_TYPE=Release -DICHOR_USE_SANITIZERS=OFF -DICHOR_USE_MOLD=ON -DICHOR_BUILD_EXAMPLES=OFF -DICHOR_BUILD_TESTING=OFF -DICHOR_USE_BOOST_BEAST=ON .. || exit 1
+  CC=gcc CXX=g++ cmake -GNinja -DICHOR_USE_MIMALLOC=OFF -DICHOR_ARCH_OPTIMIZATION=X86_64_AVX2 -DCMAKE_BUILD_TYPE=Release -DICHOR_USE_SANITIZERS=OFF -DICHOR_USE_MOLD=ON -DICHOR_BUILD_EXAMPLES=OFF -DICHOR_BUILD_TESTING=OFF -DICHOR_USE_BOOST_BEAST=OFF .. || exit 1
   ninja || exit 1
   cp ../bin/*benchmark ../std_std || exit 1
 
   rm -rf ./* ../bin/*
-  CC=gcc CXX=g++ cmake -GNinja -DICHOR_USE_MIMALLOC=ON -DICHOR_ARCH_OPTIMIZATION=X86_64_AVX2 -DCMAKE_BUILD_TYPE=Release -DICHOR_USE_SANITIZERS=OFF -DICHOR_USE_MOLD=ON -DICHOR_BUILD_EXAMPLES=OFF -DICHOR_BUILD_TESTING=OFF -DICHOR_USE_BOOST_BEAST=ON .. || exit 1
+  CC=gcc CXX=g++ cmake -GNinja -DICHOR_USE_MIMALLOC=ON -DICHOR_ARCH_OPTIMIZATION=X86_64_AVX2 -DCMAKE_BUILD_TYPE=Release -DICHOR_USE_SANITIZERS=OFF -DICHOR_USE_MOLD=ON -DICHOR_BUILD_EXAMPLES=OFF -DICHOR_BUILD_TESTING=OFF -DICHOR_USE_BOOST_BEAST=OFF .. || exit 1
   ninja || exit 1
   cp ../bin/*benchmark ../std_mimalloc || exit 1
 
   rm -rf ./* ../bin/*
-  CC=clang CXX=clang++ cmake -GNinja -DICHOR_USE_MIMALLOC=ON -DICHOR_ARCH_OPTIMIZATION=X86_64_AVX2 -DCMAKE_BUILD_TYPE=Release -DICHOR_USE_SANITIZERS=OFF -DICHOR_USE_MOLD=ON -DICHOR_BUILD_EXAMPLES=OFF -DICHOR_BUILD_TESTING=OFF -DICHOR_USE_BOOST_BEAST=ON .. || exit 1
+  CC=clang CXX=clang++ cmake -GNinja -DICHOR_USE_MIMALLOC=ON -DICHOR_ARCH_OPTIMIZATION=X86_64_AVX2 -DCMAKE_BUILD_TYPE=Release -DICHOR_USE_SANITIZERS=OFF -DICHOR_USE_MOLD=ON -DICHOR_BUILD_EXAMPLES=OFF -DICHOR_BUILD_TESTING=OFF -DICHOR_USE_BOOST_BEAST=OFF .. || exit 1
   ninja || exit 1
   cp ../bin/*benchmark ../clang_libcpp_mimalloc || exit 1
 
   rm -rf ./* ../bin/*
-  CC=gcc CXX=g++ cmake -GNinja -DICHOR_USE_MIMALLOC=ON -DICHOR_USE_HARDENING=OFF -DICHOR_ARCH_OPTIMIZATION=X86_64_AVX2 -DCMAKE_BUILD_TYPE=Release -DICHOR_USE_SANITIZERS=OFF -DICHOR_USE_MOLD=ON -DICHOR_BUILD_EXAMPLES=OFF -DICHOR_BUILD_TESTING=OFF -DICHOR_USE_BOOST_BEAST=ON .. || exit 1
+  CC=gcc CXX=g++ cmake -GNinja -DICHOR_USE_MIMALLOC=ON -DICHOR_USE_HARDENING=OFF -DICHOR_ARCH_OPTIMIZATION=X86_64_AVX2 -DCMAKE_BUILD_TYPE=Release -DICHOR_USE_SANITIZERS=OFF -DICHOR_USE_MOLD=ON -DICHOR_BUILD_EXAMPLES=OFF -DICHOR_BUILD_TESTING=OFF -DICHOR_USE_BOOST_BEAST=OFF .. || exit 1
   ninja || exit 1
   cp ../bin/*benchmark ../std_no_hardening || exit 1
 fi

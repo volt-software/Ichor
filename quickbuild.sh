@@ -1,26 +1,42 @@
 #!/bin/bash
 
-cleanup ()
-{
-    kill -s SIGTERM $!
-    exit 0
-}
+curr=`basename $(pwd)`
+
+if [[ "$curr" != "build" ]]; then
+  echo "Not in build directory"
+  exit 1;
+fi
+
+. ../build_common.sh
 
 trap cleanup SIGINT SIGTERM
 
 POSITIONAL_ARGS=()
 ASAN=1
 TSAN=0
-GCC=0
 BUILDTYPE="Debug"
 RUN_EXAMPLES=0
 IODEBUG=0
 DEBUG=0
+CCOMP=clang-20
+CXXCOMP=clang++-20
+BOOST=0
 
 while [[ $# -gt 0 ]]; do
   case $1 in
     --gcc)
-      GCC=1
+      CCOMP=gcc
+      CXXCOMP=g++
+      shift # past value
+      ;;
+    --oldgcc)
+      CCOMP=gcc-12
+      CXXCOMP=g++-12
+      shift # past value
+      ;;
+    --oldclang)
+      CCOMP=clang-15
+      CXXCOMP=clang++-15
       shift # past value
       ;;
     --tsan)
@@ -51,6 +67,10 @@ while [[ $# -gt 0 ]]; do
       RUN_EXAMPLES=1
       shift # past value
       ;;
+    --with-boost)
+      BOOST=1
+      shift # past value
+      ;;
     -*|--*)
       echo "Unknown option $1"
       exit 1
@@ -64,42 +84,19 @@ done
 
 set -- "${POSITIONAL_ARGS[@]}" # restore positional parameters
 
-curr=`basename $(pwd)`
-
-
-if [[ "$curr" != "build" ]]; then
-  echo "Not in build directory"
-  exit 1;
-fi
-
 rm -rf ./*
 rm -rf ../bin/*
 
-if [[ $GCC -eq 1 ]]; then
-  CC=gcc CXX=g++ cmake -DCMAKE_BUILD_TYPE=${BUILDTYPE} -DICHOR_REMOVE_SOURCE_NAMES=0 -DICHOR_ENABLE_INTERNAL_DEBUGGING=${DEBUG} -DICHOR_ENABLE_INTERNAL_IO_DEBUGGING=${IODEBUG} -DICHOR_ARCH_OPTIMIZATION=X86_64_AVX2 -DICHOR_USE_BACKWARD=0 -DICHOR_USE_BOOST_BEAST=1 -DICHOR_USE_HIREDIS=1 -DICHOR_USE_SANITIZERS=${ASAN} -DICHOR_USE_THREAD_SANITIZER=${TSAN} -DICHOR_USE_MOLD=1 -GNinja ..
-else
-  CC=clang CXX=clang++ cmake -DCMAKE_BUILD_TYPE=${BUILDTYPE} -DICHOR_REMOVE_SOURCE_NAMES=0 -DICHOR_ENABLE_INTERNAL_DEBUGGING=${DEBUG} -DICHOR_ENABLE_INTERNAL_IO_DEBUGGING=${IODEBUG} -DICHOR_ARCH_OPTIMIZATION=X86_64_AVX2 -DICHOR_USE_BACKWARD=0 -DICHOR_USE_BOOST_BEAST=1 -DICHOR_USE_HIREDIS=1 -DICHOR_USE_LIBCPP=0 -DICHOR_USE_SANITIZERS=${ASAN} -DICHOR_USE_THREAD_SANITIZER=${TSAN} -DICHOR_USE_MOLD=1 -DICHOR_USE_SPDLOG=0 -GNinja ..
-fi
+CC=${CCOMP} CXX=${CXXCOMP} cmake -DCMAKE_BUILD_TYPE=${BUILDTYPE} -DICHOR_REMOVE_SOURCE_NAMES=0 -DICHOR_ENABLE_INTERNAL_DEBUGGING=${DEBUG} -DICHOR_ENABLE_INTERNAL_IO_DEBUGGING=${IODEBUG} -DICHOR_ARCH_OPTIMIZATION=X86_64_AVX2 -DICHOR_USE_BACKWARD=0 -DICHOR_USE_BOOST_BEAST=${BOOST} -DICHOR_USE_HIREDIS=1 -DICHOR_USE_LIBCPP=0 -DICHOR_USE_SANITIZERS=${ASAN} -DICHOR_USE_THREAD_SANITIZER=${TSAN} -DICHOR_USE_MOLD=1 -DICHOR_USE_SPDLOG=0 -GNinja .. || exit 1
 
-ninja && ninja test
+ninja || exit 1
+ninja test || exit 1
 
 if [[ $RUN_EXAMPLES -eq 1 ]]; then
-    ../bin/ichor_http_example || exit 1
-    ../bin/ichor_multithreaded_example || exit 1
-    ../bin/ichor_optional_dependency_example || exit 1
-    ../bin/ichor_event_statistics_example || exit 1
-    ../bin/ichor_serializer_example || exit 1
-    ../bin/ichor_tcp_example || exit 1
-    ../bin/ichor_timer_example || exit 1
-    ../bin/ichor_factory_example || exit 1
-    ../bin/ichor_introspection_example || exit 1
-    ../bin/ichor_websocket_example || exit 1
-    ../bin/ichor_websocket_example -t4 || exit 1
-    ../bin/ichor_yielding_timer_example || exit 1
-    ../bin/ichor_etcd_example || exit 1
+  run_examples $BOOST 1
 fi
 
 if command -v checksec --help &> /dev/null
 then
-    checksec --file=../bin/ichor_tcp_example
+  checksec --file=../bin/ichor_tcp_example
 fi
