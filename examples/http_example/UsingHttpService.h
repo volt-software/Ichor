@@ -76,7 +76,7 @@ private:
     void addDependencyInstance(IHttpHostService &svc, IService&) {
         ICHOR_LOG_INFO(_logger, "Inserted IHttpHostService");
         _routeRegistrations.emplace_back(svc.addRoute(HttpMethod::post, "/test", [this](HttpRequest &req) -> AsyncGenerator<HttpResponse> {
-            auto msg = _serializer->deserialize(std::move(req.body));
+            auto msg = _serializer->deserialize(req.body);
             ICHOR_LOG_WARN(_logger, "received request on route {} {} with testmsg {} - {}", (int)req.method, req.route, msg->id, msg->val);
             co_return HttpResponse{HttpStatus::ok, "application/json", _serializer->serialize(TestMsg{11, "hello"}), {}};
         }));
@@ -107,7 +107,7 @@ private:
         }
 
         if(response.status == HttpStatus::ok) {
-            auto msg = _serializer->deserialize(std::move(response.body));
+            auto msg = _serializer->deserialize(response.body);
             ICHOR_LOG_INFO(_logger, "Received TestMsg id {} val {}", msg->id, msg->val);
         } else {
             ICHOR_LOG_ERROR(_logger, "Received status {}", (int)response.status);

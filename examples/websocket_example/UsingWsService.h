@@ -8,6 +8,7 @@
 #include <ichor/services/network/IHostService.h>
 #include <ichor/dependency_management/AdvancedService.h>
 #include <ichor/services/serialization/ISerializer.h>
+#include <ichor/events/RunFunctionEvent.h>
 #include "../common/TestMsg.h"
 
 using namespace Ichor;
@@ -17,26 +18,17 @@ public:
     UsingWsService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {
         reg.registerDependency<ILogger>(this, DependencyFlags::REQUIRED);
         reg.registerDependency<ISerializer<TestMsg>>(this, DependencyFlags::REQUIRED);
-        reg.registerDependency<IConnectionService>(this, DependencyFlags::REQUIRED, getProperties());
+        reg.registerDependency<IConnectionService>(this, DependencyFlags::REQUIRED | DependencyFlags::ALLOW_MULTIPLE, getProperties());
     }
     ~UsingWsService() final = default;
 
 private:
     Task<tl::expected<void, Ichor::StartError>> start() final {
         ICHOR_LOG_INFO(_logger, "UsingWsService started");
-        _dataEventRegistration = GetThreadLocalManager().registerEventHandler<NetworkDataEvent>(this, this);
-        _failureEventRegistration = GetThreadLocalManager().registerEventHandler<FailedSendMessageEvent>(this, this);
-        auto ret = _connectionService->sendAsync(_serializer->serialize(TestMsg{11, "hello"}));
-        if(!ret) {
-            ICHOR_LOG_ERROR(_logger, "start() send error: {}", (int)ret.error());
-        }
-
         co_return {};
     }
 
     Task<void> stop() final {
-        _dataEventRegistration.reset();
-        _failureEventRegistration.reset();
         ICHOR_LOG_INFO(_logger, "UsingWsService stopped");
         co_return;
     }
@@ -60,36 +52,38 @@ private:
     }
 
     void addDependencyInstance(IConnectionService &connectionService, IService&) {
-        _connectionService = &connectionService;
-        ICHOR_LOG_INFO(_logger, "Inserted connectionService");
+		if(connectionService.isClient()) {
+			_clientService = &connectionService;
+			ICHOR_LOG_INFO(_logger, "Inserted clientService");
+		} else {
+			_hostService = &connectionService;
+			ICHOR_LOG_INFO(_logger, "Inserted _hostService");
+			_hostService->setReceiveHandler([this](std::span<uint8_t const> data) {
+				auto msg = _serializer->deserialize(data);
+				if (msg) {
+                    ICHOR_LOG_INFO(_logger, "Received TestMsg id {} val {}", msg->id, msg->val);
+				} else {
+					ICHOR_LOG_ERROR(_logger, "Couldn't deserialize message {}", std::string_view{reinterpret_cast<char const *>(data.data()), data.size()});
+					std::terminate();
+				}
+                GetThreadLocalEventQueue().pushEvent<QuitEvent>(getServiceId());
+			});
+		}
+
+		if(_clientService != nullptr && _hostService != nullptr) {
+			GetThreadLocalEventQueue().pushEvent<RunFunctionEventAsync>(getServiceId(), [this]() -> AsyncGenerator<IchorBehaviour> {
+				auto ser = _serializer->serialize(TestMsg{11, "Hello World"});
+				auto ret = co_await _clientService->sendAsync(std::move(ser));
+				if(!ret) {
+					ICHOR_LOG_ERROR(_logger, "start() send error: {}", (int)ret.error());
+				}
+				co_return {};
+			});
+		}
     }
 
     void removeDependencyInstance(IConnectionService&, IService&) {
         ICHOR_LOG_INFO(_logger, "Removed connectionService");
-    }
-
-    void addDependencyInstance(IHostService&, IService&) {
-    }
-
-    void removeDependencyInstance(IHostService&, IService&) {
-    }
-
-    AsyncGenerator<IchorBehaviour> handleEvent(NetworkDataEvent const &evt) {
-        auto msg = _serializer->deserialize(std::vector<uint8_t>{evt.getData()});
-        ICHOR_LOG_INFO(_logger, "Received TestMsg id {} val {}", msg->id, msg->val);
-        GetThreadLocalEventQueue().pushEvent<QuitEvent>(getServiceId());
-
-        co_return {};
-    }
-
-    AsyncGenerator<IchorBehaviour> handleEvent(FailedSendMessageEvent const &evt) {
-        ICHOR_LOG_INFO(_logger, "Failed to send message id {}, retrying", evt.msgId);
-        auto ret = _connectionService->sendAsync(std::move(evt.data));
-        if(!ret) {
-            ICHOR_LOG_ERROR(_logger, "handleEvent() send error: {}", (int)ret.error());
-        }
-
-        co_return {};
     }
 
     friend DependencyRegister;
@@ -97,7 +91,6 @@ private:
 
     ILogger *_logger{};
     ISerializer<TestMsg> *_serializer{};
-    IConnectionService *_connectionService{};
-    EventHandlerRegistration _dataEventRegistration{};
-    EventHandlerRegistration _failureEventRegistration{};
+	IConnectionService *_clientService{};
+	IConnectionService *_hostService{};
 };

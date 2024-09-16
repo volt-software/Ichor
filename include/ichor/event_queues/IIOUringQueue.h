@@ -9,40 +9,65 @@
 #include <ichor/ConstevalHash.h>
 #include <ichor/stl/ErrnoUtils.h>
 #include <ichor/stl/StringUtils.h>
+#include <ichor/dependency_management/IService.h>
+#include <tl/expected.h>
 #include <functional>
 
 struct io_uring;
 struct io_uring_sqe;
+struct io_uring_cqe;
+struct io_uring_buf_ring;
 
 namespace Ichor {
-    struct UringResponseEvent final : public Event {
-        explicit UringResponseEvent(uint64_t _id, uint64_t _originatingService, uint64_t _priority, std::function<void(int32_t)> _fun) noexcept :
-                Event(_id, _originatingService, _priority), fun(std::move(_fun)) {}
-        ~UringResponseEvent() final = default;
-
-        [[nodiscard]] std::string_view get_name() const noexcept final {
-            return NAME;
+    using ProvidedBufferIdType = int;
+    struct IOUringBuf final {
+        IOUringBuf() = default;
+        IOUringBuf(io_uring *eventQueue, io_uring_buf_ring *bufRing, char *entriesBuf, unsigned short entries, unsigned int entryBufferSize, ProvidedBufferIdType id);
+        IOUringBuf(IOUringBuf const &) = delete;
+        IOUringBuf(IOUringBuf &&) noexcept;
+        IOUringBuf& operator=(IOUringBuf const &) = delete;
+        IOUringBuf& operator=(IOUringBuf&&) noexcept;
+        ~IOUringBuf();
+        [[nodiscard]] std::string_view readMemory(unsigned int entry) const noexcept;
+        void markEntryAvailableAgain(unsigned short entry) noexcept;
+        [[nodiscard]] unsigned int getEntries() const noexcept {
+            return _entries;
         }
-        [[nodiscard]] NameHashType get_type() const noexcept final {
-            return TYPE;
+        [[nodiscard]] ProvidedBufferIdType getBufferGroupId() const noexcept {
+            return _bgid;
         }
-
-        std::function<void(int32_t)> fun;
-        int32_t res{};
-        static constexpr NameHashType TYPE = typeNameHash<UringResponseEvent>();
-        static constexpr std::string_view NAME = typeName<UringResponseEvent>();
+    private:
+        io_uring *_eventQueue{};
+        io_uring_buf_ring* _bufRing;
+        char *_entriesBuf;
+        unsigned short _entries;
+        unsigned int _entryBufferSize;
+        ProvidedBufferIdType _bgid;
+        int _mask;
     };
+
+    static_assert(std::is_default_constructible_v<IOUringBuf>, "IOUringBuf is required to be default constructible");
+    static_assert(std::is_destructible_v<IOUringBuf>, "IOUringBuf is required to be destructible");
+    static_assert(!std::is_copy_constructible_v<IOUringBuf>, "IOUringBuf is required to not be copy constructible");
+    static_assert(!std::is_copy_assignable_v<IOUringBuf>, "IOUringBuf is required to not be copy assignable");
+    static_assert(std::is_move_constructible_v<IOUringBuf>, "IOUringBuf is required to be move constructible");
+    static_assert(std::is_move_assignable_v<IOUringBuf>, "IOUringBuf is required to be move assignable");
 
     class IIOUringQueue {
     public:
         virtual ~IIOUringQueue() = default;
         [[nodiscard]] virtual NeverNull<io_uring*> getRing() noexcept = 0;
         virtual unsigned int getMaxEntriesCount() const noexcept = 0;
-        [[nodiscard]] virtual uint64_t getNextEventIdFromIchor() noexcept = 0;
         virtual uint32_t sqeSpaceLeft() const noexcept = 0;
         virtual void submitIfNeeded() = 0;
+        virtual void forceSubmit() = 0;
         virtual void submitAndWait(uint32_t waitNr) = 0;
-        [[nodiscard]] virtual io_uring_sqe *getSqe() noexcept = 0;
+        [[nodiscard]] virtual io_uring_sqe* getSqe() noexcept = 0;
+        virtual io_uring_sqe* getSqeWithData(IService *self, std::function<void(io_uring_cqe*)> fun) noexcept = 0;
         [[nodiscard]] virtual Version getKernelVersion() const noexcept = 0;
+        ///
+        /// \param entries no. of entries in the to-be-created buffer. Cannot be 0, cannot be larger than 32768 and has to be a power of two
+        /// \return
+        [[nodiscard]] virtual tl::expected<IOUringBuf, IOError> createProvidedBuffer(unsigned short entries, unsigned int entryBufferSize) noexcept = 0;
     };
 }

@@ -12,7 +12,7 @@
 namespace Ichor {
     struct io_operation_submission final {
         Ichor::AsyncManualResetEvent evt;
-        tl::expected<void, Ichor::FileIOError> result;
+        tl::expected<void, Ichor::IOError> result;
         std::function<void(decltype(result)&)> fn;
     };
 
@@ -20,11 +20,11 @@ namespace Ichor {
     public:
         SharedOverThreadsAsyncFileIO(Properties props);
 
-        Task<tl::expected<std::string, FileIOError>> readWholeFile(std::filesystem::path const &file) final;
-        Task<tl::expected<void, FileIOError>> copyFile(std::filesystem::path const &from, std::filesystem::path const &to) final;
-        Task<tl::expected<void, FileIOError>> removeFile(std::filesystem::path const &file) final;
-        Task<tl::expected<void, FileIOError>> writeFile(std::filesystem::path const &file, std::string_view contents) final;
-        Task<tl::expected<void, FileIOError>> appendFile(std::filesystem::path const &file, std::string_view contents) final;
+        Task<tl::expected<std::string, IOError>> readWholeFile(std::filesystem::path const &file) final;
+        Task<tl::expected<void, IOError>> copyFile(std::filesystem::path const &from, std::filesystem::path const &to) final;
+        Task<tl::expected<void, IOError>> removeFile(std::filesystem::path const &file) final;
+        Task<tl::expected<void, IOError>> writeFile(std::filesystem::path const &file, std::string_view contents) final;
+        Task<tl::expected<void, IOError>> appendFile(std::filesystem::path const &file, std::string_view contents) final;
 
     private:
         Task<tl::expected<void, Ichor::StartError>> start() final;

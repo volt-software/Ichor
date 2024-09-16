@@ -65,26 +65,27 @@ int main(int argc, char *argv[]) {
     } else if(verbosity >= 4) {
         level = Ichor::LogLevel::LOG_TRACE;
     }
+    uint64_t priorityToEnsureHostStartingFirst = 51;
 
     auto start = std::chrono::steady_clock::now();
     auto queue = std::make_unique<PriorityQueue>(spinlock);
     auto &dm = queue->createManager();
 #ifdef ICHOR_USE_SPDLOG
-    dm.createServiceManager<SpdlogSharedService, ISpdlogSharedService>();
+    dm.createServiceManager<SpdlogSharedService, ISpdlogSharedService>(Properties{}, priorityToEnsureHostStartingFirst);
 #endif
 
     if(verbosity > 0) {
-        dm.createServiceManager<FRAMEWORK_LOGGER_TYPE, IFrameworkLogger>(Properties{{"LogLevel", Ichor::make_any<LogLevel>(level)}});
+        dm.createServiceManager<FRAMEWORK_LOGGER_TYPE, IFrameworkLogger>(Properties{{"LogLevel", Ichor::make_any<LogLevel>(level)}}, priorityToEnsureHostStartingFirst);
     }
 
     if(silent) {
-        dm.createServiceManager<LoggerFactory<NullLogger>, ILoggerFactory>();
+        dm.createServiceManager<LoggerFactory<NullLogger>, ILoggerFactory>(Properties{}, priorityToEnsureHostStartingFirst);
     } else {
-        dm.createServiceManager<LoggerFactory<LOGGER_TYPE>, ILoggerFactory>(Properties{{"DefaultLogLevel", Ichor::make_any<LogLevel>(level)}});
+        dm.createServiceManager<LoggerFactory<LOGGER_TYPE>, ILoggerFactory>(Properties{{"DefaultLogLevel", Ichor::make_any<LogLevel>(level)}}, priorityToEnsureHostStartingFirst);
     }
     dm.createServiceManager<TestMsgGlazeSerializer, ISerializer<TestMsg>>();
     dm.createServiceManager<AsioContextService, IAsioContextService>(Properties{{"Threads", Ichor::make_any<uint64_t>(threads)}});
-    dm.createServiceManager<WsHostService, IHostService>(Properties{{"Address", Ichor::make_any<std::string>(address)}, {"Port", Ichor::make_any<uint16_t>(static_cast<uint16_t>(8001))}});
+    dm.createServiceManager<WsHostService, IHostService>(Properties{{"Address", Ichor::make_any<std::string>(address)}, {"Port", Ichor::make_any<uint16_t>(static_cast<uint16_t>(8001))}}, priorityToEnsureHostStartingFirst);
     dm.createServiceManager<ClientFactory<WsConnectionService>, IClientFactory>();
     dm.createServiceManager<UsingWsService>(Properties{{"Address", Ichor::make_any<std::string>(address)}, {"Port", Ichor::make_any<uint16_t>(static_cast<uint16_t>(8001))}});
     queue->start(CaptureSigInt);

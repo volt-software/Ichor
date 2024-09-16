@@ -28,13 +28,13 @@ public:
         return buf;
     }
 
-    tl::optional<TestMsg> deserialize(std::vector<uint8_t> &&stream) final {
+    tl::optional<TestMsg> deserialize(std::span<uint8_t const> stream) final {
         TestMsg msg;
         auto err = glz::read_json(msg, stream);
 
         if(err) {
             fmt::print("Glaze error {} at {}\n", (int)err.ec, err.location);
-            fmt::print("json {}\n", (char*)stream.data());
+            fmt::print("json {}\n", std::string_view{(char*)stream.data(), stream.size()});
             return tl::nullopt;
         }
 

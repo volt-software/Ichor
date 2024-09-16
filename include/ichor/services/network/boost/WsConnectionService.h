@@ -30,9 +30,12 @@ namespace Ichor {
         WsConnectionService(DependencyRegister &reg, Properties props);
         ~WsConnectionService() final = default;
 
-        tl::expected<uint64_t, SendErrorReason> sendAsync(std::vector<uint8_t>&& msg) final;
+        Task<tl::expected<uint64_t, IOError>> sendAsync(std::vector<uint8_t>&& msg) final;
         void setPriority(uint64_t priority) final;
         uint64_t getPriority() final;
+
+		[[nodiscard]] bool isClient() const noexcept final;
+		void setReceiveHandler(std::function<void(std::span<uint8_t const>)>) final;
 
     private:
         Task<tl::expected<void, StartError>> start() final;
@@ -67,5 +70,7 @@ namespace Ichor {
         AsyncManualResetEvent _startStopEvent{};
         boost::circular_buffer<Detail::WsConnectionOutboxMessage> _outbox{10};
         IEventQueue *_queue;
+		std::vector<std::vector<uint8_t>> _queuedMessages{};
+		std::function<void(std::span<uint8_t const>)> _recvHandler;
     };
 }

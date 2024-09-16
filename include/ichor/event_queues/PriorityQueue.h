@@ -12,14 +12,14 @@ namespace Ichor {
 
     // Most of the time, insertion order is not important, priority is. Not guaranteeing insertion order improves performance and somehow reduces the amount of memory used in benchmarks.
     struct PriorityQueueCompare final {
-        [[nodiscard]] bool operator()( const std::unique_ptr<Event>& lhs, const std::unique_ptr<Event>& rhs ) const noexcept {
+        [[nodiscard]] bool operator()(const std::unique_ptr<Event> &lhs, const std::unique_ptr<Event> &rhs) const noexcept {
             return lhs->priority > rhs->priority;
         }
     };
 
     // When determinism is necessary, use this.
     struct OrderedPriorityQueueCompare final {
-        [[nodiscard]] bool operator()( const std::unique_ptr<Event>& lhs, const std::unique_ptr<Event>& rhs ) const noexcept {
+        [[nodiscard]] bool operator()(const std::unique_ptr<Event>& lhs, const std::unique_ptr<Event>& rhs) const noexcept {
             if(lhs->priority == rhs->priority) {
                 return lhs->id > rhs->id;
             }
@@ -34,7 +34,7 @@ namespace Ichor {
         /// Construct a std::priority_queue based queue, supporting priorities
         /// \param spinlock Spinlock 10ms before going to sleep, improves latency in high workload cases at the expense of CPU usage
         TemplatePriorityQueue();
-        explicit TemplatePriorityQueue(bool spinlock);
+        explicit TemplatePriorityQueue(uint64_t quitTimeoutMs, bool spinlock = false);
         ~TemplatePriorityQueue() final;
 
         void pushEventInternal(uint64_t priority, std::unique_ptr<Event> &&event) final;
@@ -57,6 +57,7 @@ namespace Ichor {
         bool _quitEventSent{false};
         bool _spinlock{false};
         std::chrono::steady_clock::time_point _whenQuitEventWasSent{};
+        uint64_t _quitTimeoutMs{5'000};
     };
 
     using PriorityQueue = TemplatePriorityQueue<PriorityQueueCompare>;

@@ -4,7 +4,6 @@
 
 #include <ichor/services/network/IHostService.h>
 #include <ichor/services/logging/Logger.h>
-#include <ichor/services/network/tcp/TcpConnectionService.h>
 #include <ichor/services/timer/ITimerFactory.h>
 
 namespace Ichor {

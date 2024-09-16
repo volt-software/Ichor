@@ -105,7 +105,7 @@ set(ICHOR_IO_SOURCES ${ICHOR_TOP_DIR}/src/services/io/SharedOverThreadsAsyncFile
 set(ICHOR_TCP_SOURCES ${ICHOR_TOP_DIR}/src/services/network/tcp/TcpConnectionService.cpp ${ICHOR_TOP_DIR}/src/services/network/tcp/TcpHostService.cpp)
 if(ICHOR_USE_LIBURING)
     set(ICHOR_IO_SOURCES ${ICHOR_IO_SOURCES} ${ICHOR_TOP_DIR}/src/services/io/IOUringAsyncFileIO.cpp)
-    set(ICHOR_TCP_SOURCES ${ICHOR_TCP_SOURCES} ${ICHOR_TOP_DIR}/src/services/network/tcp/IOUringTcpConnectionService.cpp)
+    set(ICHOR_TCP_SOURCES ${ICHOR_TCP_SOURCES} ${ICHOR_TOP_DIR}/src/services/network/tcp/IOUringTcpConnectionService.cpp ${ICHOR_TOP_DIR}/src/services/network/tcp/IOUringTcpHostService.cpp)
 endif()
 
 file(GLOB SPDLOG_SOURCES ${ICHOR_EXTERNAL_DIR}/spdlog/src/*.cpp)

@@ -66,7 +66,7 @@ private:
         auto start = std::chrono::steady_clock::now();
         for(uint64_t i = 0; i < SERDE_COUNT; i++) {
             auto res = _serializer->serialize(msg);
-            auto msg2 = _serializer->deserialize(std::move(res));
+            auto msg2 = _serializer->deserialize(res);
             if(msg2->id != msg.id || msg2->val != msg.val) {
                 ICHOR_LOG_ERROR(_logger, "serde incorrect!");
             }

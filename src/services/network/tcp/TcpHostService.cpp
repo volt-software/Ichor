@@ -25,7 +25,7 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::TcpHostService::start(
 
     _newSocketEventHandlerRegistration = GetThreadLocalManager().registerEventHandler<NewSocketEvent>(this, this);
 
-    _socket = ::socket(AF_INET, SOCK_STREAM, 0);
+    _socket = ::socket(AF_INET, SOCK_STREAM | SOCK_CLOEXEC, 0);
     if(_socket == -1) {
         throw std::runtime_error("Couldn't create socket: errno = " + std::to_string(errno));
     }
@@ -46,8 +46,8 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::TcpHostService::start(
         if(::inet_aton(hostname.c_str(), &address.sin_addr) != 0) {
             auto *hp = ::gethostbyname(hostname.c_str());
             if (hp == nullptr) {
-                _socket = -1;
                 close(_socket);
+                _socket = -1;
                 throw std::runtime_error("gethostbyname: errno = " + std::to_string(errno));
             }
 
@@ -61,14 +61,14 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::TcpHostService::start(
     _bindFd = ::bind(_socket, (sockaddr *)&address, sizeof(address));
 
     if(_bindFd == -1) {
-        _socket = -1;
         close(_socket);
+        _socket = -1;
         throw std::runtime_error("Couldn't bind socket: errno = " + std::to_string(errno));
     }
 
     if(::listen(_socket, 10) != 0) {
-        _socket = -1;
         close(_socket);
+        _socket = -1;
         throw std::runtime_error("Couldn't listen on socket: errno = " + std::to_string(errno));
     }
 
@@ -149,6 +149,9 @@ void Ichor::TcpHostService::acceptHandler() {
     }
 
     if (newConnection == -1) {
+		if(errno == EAGAIN) {
+			return;
+		}
         ICHOR_LOG_ERROR(_logger, "New connection but accept() returned {} errno {}", newConnection, errno);
         if(errno == EINVAL) {
             GetThreadLocalEventQueue().pushEvent<UnrecoverableErrorEvent>(getServiceId(), 4u, "Accept() generated error. errno = " + std::to_string(errno));

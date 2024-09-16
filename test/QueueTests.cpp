@@ -2,13 +2,15 @@
 #include "TestEvents.h"
 #include "TestServices/UselessService.h"
 #include <ichor/event_queues/PriorityQueue.h>
-//#include <spdlog/spdlog.h>
-//#include <spdlog/sinks/stdout_color_sinks.h>
 #ifdef ICHOR_USE_SDEVENT
 #include <ichor/event_queues/SdeventQueue.h>
 #endif
 #ifdef ICHOR_USE_LIBURING
 #include <ichor/event_queues/IOUringQueue.h>
+#include "TestServices/IOUringSleepService.h"
+#endif
+#ifdef __linux__
+#include <unistd.h>
 #endif
 
 TEST_CASE("QueueTests") {
@@ -171,5 +173,22 @@ TEST_CASE("QueueTests") {
 
         t.join();
     }
+
+    SECTION("IOUringQueue Sleep") {
+        std::atomic<DependencyManager*> _dm{};
+        std::thread t([&] {
+            auto queue = std::make_unique<IOUringQueue>(10, 10'000);
+            auto &dm = queue->createManager();
+            _dm.store(&dm, std::memory_order_release);
+
+            REQUIRE(queue->createEventLoop());
+            dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>();
+            dm.createServiceManager<IOUringSleepService>();
+            queue->start(DoNotCaptureSigInt);
+        });
+
+        t.join();
+    }
+
 #endif
 }
