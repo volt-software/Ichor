@@ -4,7 +4,7 @@
 #include <ichor/events/RunFunctionEvent.h>
 
 Ichor::HttpHostService::HttpHostService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {
-    reg.registerDependency<ILogger>(this, DependencyFlags::REQUIRED);
+    reg.registerDependency<ILogger>(this, DependencyFlags::NONE);
     reg.registerDependency<IAsioContextService>(this, DependencyFlags::REQUIRED);
 }
 
@@ -108,7 +108,7 @@ void Ichor::HttpHostService::addDependencyInstance(ILogger &logger, IService &) 
     _logger.store(&logger, std::memory_order_release);
 }
 
-void Ichor::HttpHostService::removeDependencyInstance(ILogger &logger, IService&) {
+void Ichor::HttpHostService::removeDependencyInstance(ILogger &, IService&) {
     _logger.store(nullptr, std::memory_order_release);
 }
 
@@ -131,28 +131,21 @@ uint64_t Ichor::HttpHostService::getPriority() {
 }
 
 Ichor::HttpRouteRegistration Ichor::HttpHostService::addRoute(HttpMethod method, std::string_view route, std::function<AsyncGenerator<HttpResponse>(HttpRequest&)> handler) {
-    fmt::print("HttpHostService addRoute1\n");
     return addRoute(method, std::make_unique<StringRouteMatcher>(route), std::move(handler));
 }
 
 Ichor::HttpRouteRegistration Ichor::HttpHostService::addRoute(HttpMethod method, std::unique_ptr<RouteMatcher> newMatcher, std::function<AsyncGenerator<HttpResponse>(HttpRequest&)> handler) {
-    fmt::print("HttpHostService addRoute2\n");
     auto routes = _handlers.find(method);
 
-    fmt::print("HttpHostService addRoute3\n");
     newMatcher->set_id(_matchersIdCounter);
 
-    fmt::print("HttpHostService addRoute4\n");
     if(routes == _handlers.end()) {
-        fmt::print("HttpHostService addRoute5\n");
         unordered_map<std::unique_ptr<RouteMatcher>, std::function<AsyncGenerator<HttpResponse>(HttpRequest&)>> newSubMap{};
         newSubMap.emplace(std::move(newMatcher), std::move(handler));
         _handlers.emplace(method, std::move(newSubMap));
     } else {
-        fmt::print("HttpHostService addRoute6\n");
         routes->second.emplace(std::move(newMatcher), std::move(handler));
     }
-    fmt::print("HttpHostService addRoute7\n");
 
     return {method, _matchersIdCounter++, this};
 }
@@ -170,7 +163,9 @@ void Ichor::HttpHostService::removeRoute(HttpMethod method, RouteIdType id) {
 }
 
 void Ichor::HttpHostService::fail(beast::error_code ec, const char *what, bool stopSelf) {
-    ICHOR_LOG_ERROR_ATOMIC(_logger, "Boost.BEAST fail: {}, {}", what, ec.message());
+    _queue->pushPrioritisedEvent<RunFunctionEvent>(getServiceId(), _priority.load(std::memory_order_acquire), [this, what, ec]() {
+        ICHOR_LOG_ERROR_ATOMIC(_logger, "Boost.BEAST fail: {}, {}", what, ec.message());
+    });
     if(stopSelf) {
         _queue->pushPrioritisedEvent<StopServiceEvent>(getServiceId(), _priority.load(std::memory_order_acquire), getServiceId());
     }

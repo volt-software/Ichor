@@ -2,7 +2,6 @@
 
 #include <ichor/DependencyManager.h>
 #include <ichor/services/logging/Logger.h>
-#include <ichor/services/network/NetworkEvents.h>
 #include <ichor/services/network/IConnectionService.h>
 #include <ichor/dependency_management/AdvancedService.h>
 #include <ichor/dependency_management/DependencyRegister.h>
@@ -50,7 +49,7 @@ private:
         ICHOR_LOG_INFO(_logger, "Removed serializer");
     }
 
-    void addDependencyInstance(IConnectionService &connectionService, IService&) {
+    void addDependencyInstance(IConnectionService &connectionService, IService &svc) {
         if(connectionService.isClient()) {
             _clientService = &connectionService;
             ICHOR_LOG_INFO(_logger, "Inserted clientService");

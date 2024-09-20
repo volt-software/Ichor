@@ -19,9 +19,10 @@ using tcp = boost::asio::ip::tcp;       // from <boost/asio/ip/tcp.hpp>
 
 namespace Ichor {
     namespace Detail {
-        struct WsConnectionOutboxMessage {
-            uint64_t msgId;
+        struct WsConnectionOutboxMessage final {
             std::vector<uint8_t> msg;
+            AsyncManualResetEvent *evt;
+            bool *success;
         };
     }
 
@@ -30,7 +31,8 @@ namespace Ichor {
         WsConnectionService(DependencyRegister &reg, Properties props);
         ~WsConnectionService() final = default;
 
-        Task<tl::expected<uint64_t, IOError>> sendAsync(std::vector<uint8_t>&& msg) final;
+        Task<tl::expected<void, IOError>> sendAsync(std::vector<uint8_t>&& msg) final;
+        Task<tl::expected<void, IOError>> sendAsync(std::vector<std::vector<uint8_t>>&& msgs) final;
         void setPriority(uint64_t priority) final;
         uint64_t getPriority() final;
 
@@ -59,7 +61,6 @@ namespace Ichor {
         void read(net::yield_context &yield);
 
         std::shared_ptr<websocket::stream<beast::tcp_stream>> _ws{};
-        uint64_t _msgIdCounter{};
         std::atomic<uint64_t> _priority{};
         std::atomic<bool> _connected{};
         std::atomic<bool> _quit{};
@@ -69,6 +70,7 @@ namespace Ichor {
         std::atomic<int64_t> _finishedListenAndRead{};
         AsyncManualResetEvent _startStopEvent{};
         boost::circular_buffer<Detail::WsConnectionOutboxMessage> _outbox{10};
+        RealtimeMutex _outboxMutex{};
         IEventQueue *_queue;
 		std::vector<std::vector<uint8_t>> _queuedMessages{};
 		std::function<void(std::span<uint8_t const>)> _recvHandler;

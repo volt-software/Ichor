@@ -2,11 +2,10 @@
 #include <ichor/events/RunFunctionEvent.h>
 #include <ichor/services/network/boost/HttpConnectionService.h>
 #include <ichor/services/network/http/HttpScopeGuards.h>
-#include <ichor/services/network/NetworkEvents.h>
 #include <ichor/ScopeGuard.h>
 
 Ichor::HttpConnectionService::HttpConnectionService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {
-    reg.registerDependency<ILogger>(this, DependencyFlags::REQUIRED);
+    reg.registerDependency<ILogger>(this, DependencyFlags::NONE);
     reg.registerDependency<IAsioContextService>(this, DependencyFlags::REQUIRED);
 }
 

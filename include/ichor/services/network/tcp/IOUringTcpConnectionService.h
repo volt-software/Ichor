@@ -31,7 +31,8 @@ namespace Ichor {
         IOUringTcpConnectionService(DependencyRegister &reg, Properties props);
         ~IOUringTcpConnectionService() final = default;
 
-        Task<tl::expected<uint64_t, IOError>> sendAsync(std::vector<uint8_t>&& msg) final;
+        Task<tl::expected<void, IOError>> sendAsync(std::vector<uint8_t>&& msg) final;
+        Task<tl::expected<void, IOError>> sendAsync(std::vector<std::vector<uint8_t>>&& msgs) final;
         void setPriority(uint64_t priority) final;
         uint64_t getPriority() final;
 
@@ -58,14 +59,13 @@ namespace Ichor {
         uint64_t _id;
         int64_t _sendTimeout{250'000};
         int64_t _recvTimeout{250'000};
-        uint32_t _bufferEntries{8};
-        uint32_t _bufferEntrySize{16'384};
+        uint32_t _bufferEntries{16};
+        uint32_t _bufferEntrySize{8192};
         tl::optional<IOUringBuf> _buffer{};
         bool _quit{};
         IIOUringQueue *_q{};
         ILogger *_logger{};
         std::vector<uint8_t> _recvBuf{};
-        decltype(_recvBuf) _multipartRecvBuf{};
         std::vector<decltype(_recvBuf)> _queuedMessages{};
         std::function<void(std::span<uint8_t const>)> _recvHandler;
     };
