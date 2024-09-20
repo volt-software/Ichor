@@ -11,14 +11,14 @@ RUN apk add gcc g++ build-base cmake git wget ninja-build ninja-is-really-ninja 
 WORKDIR /opt
 RUN wget https://boostorg.jfrog.io/artifactory/main/release/1.81.0/source/boost_1_81_0.tar.bz2
 RUN wget https://github.com/redis/hiredis/archive/refs/tags/v1.2.0.tar.gz
-RUN wget https://www.openssl.org/source/openssl-3.0.14.tar.gz
+RUN wget https://github.com/openssl/openssl/releases/download/openssl-3.0.15/openssl-3.0.15.tar.gz
 
 ENV CFLAGS="-O2 -fstack-protector-strong -mbranch-protection=standard -fstack-clash-protection -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=3 -ffunction-sections -fdata-sections"
 ENV CXXFLAGS="-O2 -std=c++20 -fstack-protector-strong -mbranch-protection=standard -fstack-clash-protection -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=3 -D_GLIBCXX_ASSERTIONS -D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_FAST -ffunction-sections -fdata-sections"
 ENV LDFLAGS="-static-libgcc -static-libstdc++ -static -Wl,-z,nodlopen -Wl,-z,noexecstack -Wl,-z,relro -Wl,-z,now -Wl,--gc-sections"
 #Build openssl statically, alpine (and probably most distros) only provide shared libraries. Might be a security thing?
-RUN tar xf openssl-3.0.14.tar.gz
-WORKDIR /opt/openssl-3.0.14
+RUN tar xf openssl-3.0.15.tar.gz
+WORKDIR /opt/openssl-3.0.15
 RUN ./Configure --prefix=/usr --openssldir=/etc/ssl --libdir=lib no-shared
 RUN make -j
 RUN make -j install
