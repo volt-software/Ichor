@@ -756,12 +756,12 @@ Ichor::Task<tl::expected<std::unordered_map<std::string, std::string>, Ichor::Re
     }
 
     std::string_view infoView{evt.reply->str};
-    auto infoSplit = split(infoView, "\r\n");
+    auto infoSplit = split(infoView, "\r\n", false);
     std::unordered_map<std::string, std::string> ret;
     ret.reserve(infoSplit.size());
     for(auto const &i : infoSplit) {
         if(i.find(":") != std::string_view::npos) {
-            auto lineSplit = split(i, ":");
+            auto lineSplit = split(i, ":", false);
             if(lineSplit.size() != 2) {
                 continue;
             }
