@@ -243,6 +243,7 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &uniqueEvt) {
 
                     if(it.get_value() == StartBehaviour::STOPPED) {
                         INTERNAL_DEBUG("DependencyOfflineEvent {} {} {}:{} {} service {} stopped", evt->id, evt->priority, evt->originatingService, manager->implementationName(), manager->getServiceState(), serviceId);
+                        clearServiceRegistrations(allEventInterceptorsCopy, eventInterceptorsCopy, serviceId);
                         finishWaitingService(serviceId, StopServiceEvent::TYPE, StopServiceEvent::NAME);
                         _eventQueue->pushPrioritisedEvent<DependencyOfflineEvent>(serviceId, evt->priority, false);
                     }
@@ -529,6 +530,7 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &uniqueEvt) {
                         depIt->second->getDependees().erase(stopServiceEvt->serviceId);
                     }
                     dependencies.clear();
+                    clearServiceRegistrations(allEventInterceptorsCopy, eventInterceptorsCopy, stopServiceEvt->serviceId);
 
                     finishWaitingService(stopServiceEvt->serviceId, StopServiceEvent::TYPE, StopServiceEvent::NAME);
 
@@ -817,6 +819,7 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &uniqueEvt) {
                         }
                         dependencies.clear();
 
+                        clearServiceRegistrations(allEventInterceptorsCopy, eventInterceptorsCopy, origEvt->serviceId);
                         if(origEvt->removeAfter) {
                             removeInternalService(allEventInterceptorsCopy, eventInterceptorsCopy, origEvt->serviceId);
                         }
@@ -847,6 +850,7 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &uniqueEvt) {
                             // The dependee of originatingOfflineServiceId went offline during the async handling of the original
                             // DependencyOfflineEvent. Add a proper DependencyOfflineEvent to handle that.
                             _eventQueue->pushPrioritisedEvent<DependencyOfflineEvent>(origEvt->originatingService, std::min(INTERNAL_COROUTINE_EVENT_PRIORITY, evt->priority), origEvt->removeOriginatingOfflineServiceAfterStop);
+                            clearServiceRegistrations(allEventInterceptorsCopy, eventInterceptorsCopy, origEvt->originatingService);
                             finishWaitingService(origEvt->originatingService, StopServiceEvent::TYPE, StopServiceEvent::NAME);
                         }
 
@@ -1007,6 +1011,51 @@ void Ichor::DependencyManager::addInternalServiceManager(std::unique_ptr<ILifecy
     _services.emplace(svc->serviceId(), std::move(svc));
 }
 
+void Ichor::DependencyManager::clearServiceRegistrations(std::vector<EventInterceptInfo> &allEventInterceptorsCopy, std::vector<EventInterceptInfo> &eventInterceptorsCopy, ServiceIdType svcId) {
+
+    for(auto trackers = _dependencyRequestTrackers.begin(); trackers != _dependencyRequestTrackers.end(); ) {
+        std::erase_if(trackers->second, [&svcId](DependencyTrackerInfo const &info) {
+            return info.svcId == svcId;
+        });
+        if(trackers->second.empty()) {
+            trackers = _dependencyRequestTrackers.erase(trackers);
+        } else {
+            trackers++;
+        }
+    }
+
+    for(auto callbacks = _eventCallbacks.begin(); callbacks != _eventCallbacks.end(); ) {
+        std::erase_if(callbacks->second, [&svcId](EventCallbackInfo const &info) {
+            return info.listeningServiceId == svcId;
+        });
+        if(callbacks->second.empty()) {
+            callbacks = _eventCallbacks.erase(callbacks);
+        } else {
+            callbacks++;
+        }
+    }
+
+    for(auto interceptors = _eventInterceptors.begin(); interceptors != _eventInterceptors.end(); ) {
+        std::erase_if(interceptors->second, [&svcId](EventInterceptInfo const &info) {
+            return info.listeningServiceId == svcId;
+        });
+        if(interceptors->second.empty()) {
+            interceptors = _eventInterceptors.erase(interceptors);
+        } else {
+            interceptors++;
+        }
+    }
+
+    std::erase_if(allEventInterceptorsCopy, [&svcId](EventInterceptInfo const &info) {
+        return info.listeningServiceId == svcId;
+    });
+
+    std::erase_if(eventInterceptorsCopy, [&svcId](EventInterceptInfo const &info) {
+        return info.listeningServiceId == svcId;
+    });
+    INTERNAL_DEBUG("cleared registrations for {}", svcId);
+}
+
 void Ichor::DependencyManager::removeInternalService(std::vector<EventInterceptInfo> &allEventInterceptorsCopy, std::vector<EventInterceptInfo> &eventInterceptorsCopy, ServiceIdType svcId) {
     auto svcIt = _services.find(svcId);
 
@@ -1076,35 +1125,6 @@ void Ichor::DependencyManager::removeInternalService(std::vector<EventInterceptI
         }
     }
 
-    for(auto callbacks = _eventCallbacks.begin(); callbacks != _eventCallbacks.end(); ) {
-        std::erase_if(callbacks->second, [&svcId](EventCallbackInfo const &info) {
-            return info.listeningServiceId == svcId;
-        });
-        if(callbacks->second.empty()) {
-            callbacks = _eventCallbacks.erase(callbacks);
-        } else {
-            callbacks++;
-        }
-    }
-
-    for(auto interceptors = _eventInterceptors.begin(); interceptors != _eventInterceptors.end(); ) {
-        std::erase_if(interceptors->second, [&svcId](EventInterceptInfo const &info) {
-            return info.listeningServiceId == svcId;
-        });
-        if(interceptors->second.empty()) {
-            interceptors = _eventInterceptors.erase(interceptors);
-        } else {
-            interceptors++;
-        }
-    }
-
-    std::erase_if(allEventInterceptorsCopy, [&svcId](EventInterceptInfo const &info) {
-        return info.listeningServiceId == svcId;
-    });
-
-    std::erase_if(eventInterceptorsCopy, [&svcId](EventInterceptInfo const &info) {
-        return info.listeningServiceId == svcId;
-    });
     INTERNAL_DEBUG("Removed {}:{}", svcId, svcIt->second->implementationName());
     _services.erase(svcIt);
 }
