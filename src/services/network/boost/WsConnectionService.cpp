@@ -1,7 +1,6 @@
 #include <ichor/DependencyManager.h>
 #include <ichor/services/network/boost/WsConnectionService.h>
 #include <ichor/services/network/ws/WsEvents.h>
-#include <ichor/services/network/NetworkEvents.h>
 #include <ichor/services/network/IHostService.h>
 #include <ichor/services/network/boost/AsioContextService.h>
 #include <ichor/services/network/http/HttpScopeGuards.h>
@@ -25,7 +24,7 @@ void setup_stream(std::shared_ptr<websocket::stream<NextLayer>>& ws)
 }
 
 Ichor::WsConnectionService::WsConnectionService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {
-    reg.registerDependency<ILogger>(this, DependencyFlags::REQUIRED);
+    reg.registerDependency<ILogger>(this, DependencyFlags::NONE);
     reg.registerDependency<IAsioContextService>(this, DependencyFlags::REQUIRED);
     if(auto propIt = getProperties().find("WsHostServiceId"); propIt != getProperties().end()) {
         reg.registerDependency<IHostService>(this, DependencyFlags::REQUIRED,
@@ -85,7 +84,9 @@ Ichor::Task<void> Ichor::WsConnectionService::stop() {
             _ws->async_close(beast::websocket::close_code::normal, yield[ec]);
 //            fmt::print("----------------------------------------------- {}:{} async_close done\n", getServiceId(), getServiceName());
             if (ec) {
-                ICHOR_LOG_ERROR(_logger, "Boost.BEAST fail: {}", ec.message());
+                _queue->pushEvent<RunFunctionEvent>(getServiceId(), [this, ec]() {
+                    ICHOR_LOG_ERROR(_logger, "Boost.BEAST fail: {}", ec.message());
+                });
             }
             _queue->pushPrioritisedEvent<RunFunctionEvent>(getServiceId(), _priority.load(std::memory_order_acquire), [this]() {
 //                fmt::print("{}:{} rfe2\n", getServiceId(), getServiceName());
@@ -136,23 +137,24 @@ void Ichor::WsConnectionService::removeDependencyInstance(IAsioContextService&, 
     _asioContextService = nullptr;
 }
 
-Ichor::Task<tl::expected<uint64_t, Ichor::IOError>> Ichor::WsConnectionService::sendAsync(std::vector<uint8_t> &&msg) {
-    static_assert(std::is_move_assignable_v<Detail::WsConnectionOutboxMessage>, "ConnectionOutboxMessage should be move assignable");
+static_assert(std::is_move_assignable_v<Ichor::Detail::WsConnectionOutboxMessage>, "ConnectionOutboxMessage should be move assignable");
+Ichor::Task<tl::expected<void, Ichor::IOError>> Ichor::WsConnectionService::sendAsync(std::vector<uint8_t> &&msg) {
     if(_quit.load(std::memory_order_acquire) || !_connected.load(std::memory_order_acquire) || _asioContextService->fibersShouldStop()) {
         co_return tl::unexpected(IOError::SERVICE_QUITTING);
     }
-
-    auto id = ++_msgIdCounter;
-    net::spawn(*_strand, [this, id, msg = std::move(msg)](net::yield_context yield) mutable {
+    AsyncManualResetEvent evt;
+    bool success{};
+    net::spawn(*_strand, [this, &evt, &success, msg = std::move(msg)](net::yield_context yield) mutable {
         ScopeGuardAtomicCount const guard{_finishedListenAndRead};
         if(_quit.load(std::memory_order_acquire) || !_connected.load(std::memory_order_acquire) || _asioContextService->fibersShouldStop()) {
             return;
         }
 
+        std::unique_lock lg{_outboxMutex};
         if(_outbox.full()) {
             _outbox.set_capacity(std::max<uint64_t>(_outbox.capacity() * 2, 10ul));
         }
-        _outbox.push_back({id, std::move(msg)});
+        _outbox.push_back({std::move(msg), &evt, &success});
         if(_outbox.size() > 1) {
             // handled by existing net::spawn
             return;
@@ -160,8 +162,16 @@ Ichor::Task<tl::expected<uint64_t, Ichor::IOError>> Ichor::WsConnectionService::
         auto ws = _ws;
         while(!_outbox.empty()) {
             auto next = std::move(_outbox.front());
+            lg.unlock();
 
-            ScopeGuard const coroutineGuard{[this]() {
+            ScopeGuard const coroutineGuard{[this, event = next.evt, &lg]() {
+                // use service id 0 to ensure event gets run, even if service is stopped. Otherwise, the coroutine will never complete.
+                // Similarly, use priority 0 to ensure these events run before any dependency changes, otherwise the service might be destroyed
+                // before we can finish all the coroutines.
+                _queue->pushPrioritisedEvent<RunFunctionEvent>(0u, 0u, [event]() {
+                    event->set();
+                });
+                lg.lock();
                 _outbox.pop_front();
             }};
 
@@ -172,14 +182,87 @@ Ichor::Task<tl::expected<uint64_t, Ichor::IOError>> Ichor::WsConnectionService::
             beast::error_code ec;
             ws->async_write(net::const_buffer(next.msg.data(), next.msg.size()), yield[ec]);
 
+            *(next.success) = !ec;
             if(ec) {
-                ICHOR_LOG_ERROR(_logger, "couldn't send msg for service {}: {}", getServiceId(), ec.message());
-                _queue->pushEvent<FailedSendMessageEvent>(getServiceId(), std::move(next.msg), next.msgId);
+                _queue->pushEvent<RunFunctionEvent>(getServiceId(), [this, ec]() {
+                    ICHOR_LOG_ERROR(_logger, "couldn't send msg for service {}: {}", getServiceId(), ec.message());
+                });
             }
         }
     }ASIO_SPAWN_COMPLETION_TOKEN);
 
-    co_return id;
+    co_await evt;
+
+    if(!success) {
+        co_return tl::unexpected(IOError::FAILED);
+    }
+
+    co_return {};
+}
+
+
+Ichor::Task<tl::expected<void, Ichor::IOError>> Ichor::WsConnectionService::sendAsync(std::vector<std::vector<uint8_t>>&& msgs) {
+    if(_quit.load(std::memory_order_acquire) || !_connected.load(std::memory_order_acquire) || _asioContextService->fibersShouldStop()) {
+        co_return tl::unexpected(IOError::SERVICE_QUITTING);
+    }
+    AsyncManualResetEvent evt;
+    bool success{};
+    net::spawn(*_strand, [this, &evt, &success, msgs = std::move(msgs)](net::yield_context yield) mutable {
+        ScopeGuardAtomicCount const guard{_finishedListenAndRead};
+        if(_quit.load(std::memory_order_acquire) || !_connected.load(std::memory_order_acquire) || _asioContextService->fibersShouldStop()) {
+            return;
+        }
+
+        std::unique_lock lg{_outboxMutex};
+        for(auto &msg : msgs) {
+            if (_outbox.full()) {
+                _outbox.set_capacity(std::max<uint64_t>(_outbox.capacity() * 2, 10ul));
+            }
+            _outbox.push_back({std::move(msg), &evt, &success});
+        }
+        if(_outbox.size() > msgs.size()) {
+            // handled by existing net::spawn
+            return;
+        }
+        auto ws = _ws;
+        while(!_outbox.empty()) {
+            auto next = std::move(_outbox.front());
+            lg.unlock();
+
+            ScopeGuard const coroutineGuard{[this, event = next.evt, &lg]() {
+                // use service id 0 to ensure event gets run, even if service is stopped. Otherwise, the coroutine will never complete.
+                // Similarly, use priority 0 to ensure these events run before any dependency changes, otherwise the service might be destroyed
+                // before we can finish all the coroutines.
+                _queue->pushPrioritisedEvent<RunFunctionEvent>(0u, 0u, [event]() {
+                    event->set();
+                });
+                lg.lock();
+                _outbox.pop_front();
+            }};
+
+            if(_quit.load(std::memory_order_acquire)) {
+                continue;
+            }
+
+            beast::error_code ec;
+            ws->async_write(net::const_buffer(next.msg.data(), next.msg.size()), yield[ec]);
+
+            *(next.success) = !ec;
+            if(ec) {
+                _queue->pushEvent<RunFunctionEvent>(getServiceId(), [this, ec]() {
+                    ICHOR_LOG_ERROR(_logger, "couldn't send msg for service {}: {}", getServiceId(), ec.message());
+                });
+            }
+        }
+    }ASIO_SPAWN_COMPLETION_TOKEN);
+
+    co_await evt;
+
+    if(!success) {
+        co_return tl::unexpected(IOError::FAILED);
+    }
+
+    co_return {};
 }
 
 void Ichor::WsConnectionService::setPriority(uint64_t priority) {
@@ -205,9 +288,9 @@ void Ichor::WsConnectionService::setReceiveHandler(std::function<void(std::span<
 
 void Ichor::WsConnectionService::fail(beast::error_code ec, const char *what) {
 //    fmt::print("{}:{} fail {}\n", getServiceId(), getServiceName(), ec.message());
-    ICHOR_LOG_ERROR(_logger, "Boost.BEAST fail: {}, {}", what, ec.message());
 
-    _queue->pushPrioritisedEvent<RunFunctionEvent>(getServiceId(), _priority.load(std::memory_order_acquire), [this]() {
+    _queue->pushPrioritisedEvent<RunFunctionEvent>(getServiceId(), _priority.load(std::memory_order_acquire), [this, ec, what]() {
+        ICHOR_LOG_ERROR(_logger, "Boost.BEAST fail: {}, {}", what, ec.message());
 //        fmt::print("{}:{} rfe\n", getServiceId(), getServiceName());
         _startStopEvent.set();
     });

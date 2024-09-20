@@ -2,7 +2,6 @@
 
 #include <ichor/DependencyManager.h>
 #include <ichor/services/network/tcp/TcpConnectionService.h>
-#include <ichor/services/network/NetworkEvents.h>
 #include <ichor/events/RunFunctionEvent.h>
 #include <ichor/ScopeGuard.h>
 #include <arpa/inet.h>
@@ -16,7 +15,7 @@
 uint64_t Ichor::TcpConnectionService::tcpConnId{};
 
 Ichor::TcpConnectionService::TcpConnectionService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)), _socket(-1), _id(tcpConnId++), _attempts(), _priority(INTERNAL_EVENT_PRIORITY), _quit() {
-    reg.registerDependency<ILogger>(this, DependencyFlags::REQUIRED);
+    reg.registerDependency<ILogger>(this, DependencyFlags::NONE);
     reg.registerDependency<ITimerFactory>(this, DependencyFlags::REQUIRED);
 }
 
@@ -186,8 +185,7 @@ void Ichor::TcpConnectionService::removeDependencyInstance(ITimerFactory &, ISer
     _timerFactory = nullptr;
 }
 
-Ichor::Task<tl::expected<uint64_t, Ichor::IOError>> Ichor::TcpConnectionService::sendAsync(std::vector<uint8_t> &&msg) {
-    auto id = ++_msgIdCounter;
+Ichor::Task<tl::expected<void, Ichor::IOError>> Ichor::TcpConnectionService::sendAsync(std::vector<uint8_t> &&msg) {
     size_t sent_bytes = 0;
 
     if(_quit) {
@@ -198,20 +196,37 @@ Ichor::Task<tl::expected<uint64_t, Ichor::IOError>> Ichor::TcpConnectionService:
     while(sent_bytes < msg.size()) {
         auto ret = ::send(_socket, msg.data() + sent_bytes, msg.size() - sent_bytes, 0);
 
-        if(_quit) {
-            ICHOR_LOG_TRACE(_logger, "[{}] quitting mid-send", _id);
-            co_return tl::unexpected(IOError::SERVICE_QUITTING);
-        }
-
         if(ret < 0) {
-            GetThreadLocalEventQueue().pushEvent<FailedSendMessageEvent>(getServiceId(), std::move(msg), id);
-            break;
+            co_return tl::unexpected(IOError::FAILED);
         }
 
         sent_bytes += static_cast<size_t>(ret);
     }
 
-    co_return id;
+    co_return {};
+}
+
+Ichor::Task<tl::expected<void, Ichor::IOError>> Ichor::TcpConnectionService::sendAsync(std::vector<std::vector<uint8_t>> &&msgs) {
+    if(_quit) {
+        ICHOR_LOG_TRACE(_logger, "[{}] quitting, no send", _id);
+        co_return tl::unexpected(IOError::SERVICE_QUITTING);
+    }
+
+    for(auto &msg : msgs) {
+        size_t sent_bytes = 0;
+
+        while(sent_bytes < msg.size()) {
+            auto ret = ::send(_socket, msg.data() + sent_bytes, msg.size() - sent_bytes, 0);
+
+            if(ret < 0) {
+                co_return tl::unexpected(IOError::FAILED);
+            }
+
+            sent_bytes += static_cast<size_t>(ret);
+        }
+    }
+
+    co_return {};
 }
 
 void Ichor::TcpConnectionService::setPriority(uint64_t priority) {
@@ -246,8 +261,7 @@ void Ichor::TcpConnectionService::recvHandler() {
 	std::vector<uint8_t> msg{};
 	int64_t ret{};
 	{
-		std::vector<uint8_t> buf{};
-		buf.resize(1024);
+        std::array<uint8_t, 1024> buf;
 		do {
 			ret = recv(_socket, buf.data(), buf.size(), 0);
 			if (ret > 0) {
@@ -270,12 +284,18 @@ void Ichor::TcpConnectionService::recvHandler() {
 		}
 	}
 
+    if(ret == 0) {
+        // closed connection
+        GetThreadLocalEventQueue().pushEvent<StopServiceEvent>(getServiceId(), getServiceId(), true);
+        return;
+    }
+
     if(ret < 0) {
 		if(errno == EAGAIN) {
 			return;
 		}
         ICHOR_LOG_ERROR(_logger, "[{}] Error receiving from socket: {}", _id, errno);
-        GetThreadLocalEventQueue().pushEvent<RecoverableErrorEvent>(getServiceId(), 4u, "Error receiving from socket. errno = " + std::to_string(errno));
+        GetThreadLocalEventQueue().pushEvent<StopServiceEvent>(getServiceId(), getServiceId(), true);
         return;
     }
 }

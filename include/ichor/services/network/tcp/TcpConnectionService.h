@@ -24,7 +24,8 @@ namespace Ichor {
         TcpConnectionService(DependencyRegister &reg, Properties props);
         ~TcpConnectionService() final = default;
 
-        Task<tl::expected<uint64_t, IOError>> sendAsync(std::vector<uint8_t>&& msg) final;
+        Task<tl::expected<void, IOError>> sendAsync(std::vector<uint8_t>&& msg) final;
+        Task<tl::expected<void, IOError>> sendAsync(std::vector<std::vector<uint8_t>>&& msgs) final;
         void setPriority(uint64_t priority) final;
         uint64_t getPriority() final;
 
@@ -51,7 +52,6 @@ namespace Ichor {
         uint64_t _id;
         uint64_t _attempts;
         uint64_t _priority;
-        uint64_t _msgIdCounter{};
         int64_t _sendTimeout{250'000};
         int64_t _recvTimeout{250'000};
         bool _quit;

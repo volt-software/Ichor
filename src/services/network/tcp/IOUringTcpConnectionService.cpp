@@ -1,7 +1,6 @@
 #include <ichor/DependencyManager.h>
 #include <ichor/event_queues/IIOUringQueue.h>
 #include <ichor/services/network/tcp/IOUringTcpConnectionService.h>
-#include <ichor/services/network/NetworkEvents.h>
 #include <ichor/events/RunFunctionEvent.h>
 #include <ichor/ScopeGuard.h>
 #include <arpa/inet.h>
@@ -14,7 +13,7 @@
 uint64_t Ichor::IOUringTcpConnectionService::tcpConnId{};
 
 Ichor::IOUringTcpConnectionService::IOUringTcpConnectionService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)), _socket(-1), _id(tcpConnId++) {
-    reg.registerDependency<ILogger>(this, DependencyFlags::REQUIRED);
+    reg.registerDependency<ILogger>(this, DependencyFlags::NONE);
     reg.registerDependency<IIOUringQueue>(this, DependencyFlags::REQUIRED);
 }
 
@@ -41,11 +40,11 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::IOUringTcpConnectionSe
         ICHOR_LOG_TRACE(_logger, "[{}] Starting TCP connection for existing socket", _id);
     } else {
 
-        if (addrIt == getProperties().end()) {
+        if(addrIt == getProperties().end()) {
             ICHOR_LOG_ERROR(_logger, "[{}] Missing address", _id);
             co_return tl::unexpected(StartError::FAILED);
         }
-        if (portIt == getProperties().end()) {
+        if(portIt == getProperties().end()) {
             ICHOR_LOG_ERROR(_logger, "[{}] Missing port", _id);
             co_return tl::unexpected(StartError::FAILED);
         }
@@ -61,7 +60,7 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::IOUringTcpConnectionSe
         io_uring_prep_socket(sqe, AF_INET, SOCK_STREAM | SOCK_CLOEXEC, 0, 0);
         co_await evt;
 
-        if (res < 0) {
+        if(res < 0) {
             ICHOR_LOG_ERROR(_logger, "Couldn't open a socket to {}:{}: {}", Ichor::any_cast<std::string &>(addrIt->second),
                             Ichor::any_cast<uint16_t>(portIt->second), mapErrnoToError(-res));
             co_return tl::unexpected(StartError::FAILED);
@@ -240,13 +239,14 @@ std::function<void(io_uring_cqe*)> Ichor::IOUringTcpConnectionService::createRec
     return [this](io_uring_cqe *cqe) {
         INTERNAL_IO_DEBUG("recv res: {} {}", cqe->res, cqe->res < 0 ? strerror(-cqe->res) : "");
 
-        if (_quit) {
+        if(_quit) {
             INTERNAL_IO_DEBUG("quit");
             return;
         }
         // TODO: check for -ENOBUFS and if so, create more provided buffers, swap and re-arm
-        if (cqe->res <= 0) {
+        if(cqe->res <= 0) {
             ICHOR_LOG_ERROR(_logger, "recv returned an error {}:{}", cqe->res, strerror(-cqe->res));
+            GetThreadLocalEventQueue().pushEvent<StopServiceEvent>(getServiceId(), getServiceId(), true);
             return;
         }
 
@@ -254,56 +254,33 @@ std::function<void(io_uring_cqe*)> Ichor::IOUringTcpConnectionService::createRec
             if((cqe->flags & IORING_CQE_F_BUFFER) != IORING_CQE_F_BUFFER) {
                 ICHOR_LOG_ERROR(_logger, "no buffer to cqe, connection probably closed? {}", cqe->res);
                 return;
-
-                // TODO
-                //auto *sqe = _q->getSqeWithData(this, createRecvHandler());
-                //                io_uring_prep_recv_multishot(sqe, _socket, nullptr, 0, 0);
-                //                sqe->buf_group = static_cast<__u16>(_buffer->getBufferGroupId());
-                //                sqe->flags |= IOSQE_BUFFER_SELECT;
             }
+
             auto entry = cqe->flags >> IORING_CQE_BUFFER_SHIFT;
             auto entryData = _buffer->readMemory(entry);
             auto data = std::span<uint8_t const>{reinterpret_cast<uint8_t const*>(entryData.data()), std::min(entryData.size(), static_cast<decltype(entryData.size())>(cqe->res))};
-            fmt::println("received {} len, entry {}", cqe->res, entry);
-            if((cqe->flags & IORING_CQE_F_SOCK_NONEMPTY) == IORING_CQE_F_SOCK_NONEMPTY) {
-                fmt::println("IORING_CQE_F_SOCK_NONEMPTY", cqe->res, entry);
-                _multipartRecvBuf.insert(_multipartRecvBuf.end(), data.begin(), data.end());
-            } else if(!_multipartRecvBuf.empty()) {
-                fmt::println("!_multipartRecvBuf.empty()", cqe->res, entry);
-                _multipartRecvBuf.insert(_multipartRecvBuf.end(), data.begin(), data.end());
-                if (_recvHandler) {
-                    _recvHandler(_multipartRecvBuf);
-                } else {
-                    _queuedMessages.emplace_back(std::move(_multipartRecvBuf));
-                }
-                _multipartRecvBuf.clear();
+//            fmt::println("received {} len, entry {}, {} {}", cqe->res, entry, _bufferEntries, _bufferEntrySize);
+            if(_recvHandler) {
+                _recvHandler(data);
             } else {
-                fmt::println("fits in one buffer! :D", cqe->res, entry);
-                if (_recvHandler) {
-                    _recvHandler(data);
-                } else {
-                    auto &copy = _queuedMessages.emplace_back();
-                    copy.assign(data.begin(), data.end());
-                }
+                auto &copy = _queuedMessages.emplace_back();
+                copy.assign(data.begin(), data.end());
             }
             _buffer->markEntryAvailableAgain(static_cast<unsigned short>(entry));
         } else {
-    //            auto origSize = _recvBuf.capacity();
-    //            _recvBuf.resize(static_cast<unsigned long>(cqe->res));
-
-            if (_recvHandler) {
+            if(_recvHandler) {
                 _recvHandler(std::span<uint8_t const>{_recvBuf.begin(), _recvBuf.begin() + cqe->res});
             } else {
                 _queuedMessages.emplace_back(std::move(_recvBuf));
             }
-    //            _recvBuf.resize(origSize);
+
             auto *sqe = _q->getSqeWithData(this, createRecvHandler());
             io_uring_prep_recv(sqe, _socket, _recvBuf.data(), _recvBuf.size(), 0);
         }
     };
 }
 
-Ichor::Task<tl::expected<uint64_t, Ichor::IOError>> Ichor::IOUringTcpConnectionService::sendAsync(std::vector<uint8_t> &&msg) {
+Ichor::Task<tl::expected<void, Ichor::IOError>> Ichor::IOUringTcpConnectionService::sendAsync(std::vector<uint8_t> &&msg) {
     size_t sent_bytes = 0;
 
     if(_quit) {
@@ -330,13 +307,74 @@ Ichor::Task<tl::expected<uint64_t, Ichor::IOError>> Ichor::IOUringTcpConnectionS
             ICHOR_LOG_ERROR(_logger, "Couldn't send message: {}", ret);
             co_return tl::unexpected(ret);
         }
-		fmt::println("sent {} bytes", res);
+//        fmt::println("sent {} bytes", res);
 
         sent_bytes += static_cast<size_t>(res);
     }
 
     INTERNAL_IO_DEBUG("sending done");
-    co_return 0u;
+    co_return {};
+}
+
+Ichor::Task<tl::expected<void, Ichor::IOError>> Ichor::IOUringTcpConnectionService::sendAsync(std::vector<std::vector<uint8_t>> &&msgs) {
+    if(_quit) {
+        ICHOR_LOG_TRACE(_logger, "[{}] quitting, no send", _id);
+        co_return tl::unexpected(IOError::SERVICE_QUITTING);
+    }
+
+    if(_quit) {
+        ICHOR_LOG_TRACE(_logger, "[{}] quitting, no send", _id);
+        co_return tl::unexpected(IOError::SERVICE_QUITTING);
+    }
+
+    AsyncManualResetEvent evt{};
+    int32_t res{};
+    uint64_t totalBytes{};
+    msghdr hdr{};
+    if(msgs.size() < 64) {
+        iovec vecs[64];
+        hdr.msg_iov = vecs;
+        hdr.msg_iovlen = msgs.size();
+        for(uint64_t i = 0; i < msgs.size(); i++) {
+            vecs[i].iov_base = msgs[i].data();
+            vecs[i].iov_len = msgs[i].size();
+            totalBytes += msgs[i].size();
+        }
+        auto *sqe = _q->getSqeWithData(this, [&res, &evt](io_uring_cqe *cqe) {
+            res = cqe->res;
+            evt.set();
+        });
+        io_uring_prep_sendmsg(sqe, _socket, &hdr, 0);
+        co_await evt;
+    } else {
+        std::vector<iovec> vecs;
+        vecs.resize(msgs.size());
+        hdr.msg_iov = vecs.data();
+        hdr.msg_iovlen = msgs.size();
+        for(uint64_t i = 0; i < msgs.size(); i++) {
+            vecs[i].iov_base = msgs[i].data();
+            vecs[i].iov_len = msgs[i].size();
+            totalBytes += msgs[i].size();
+        }
+        auto *sqe = _q->getSqeWithData(this, [&res, &evt](io_uring_cqe *cqe) {
+            res = cqe->res;
+            evt.set();
+        });
+        io_uring_prep_sendmsg(sqe, _socket, &hdr, 0);
+        co_await evt;
+    }
+    if(res < 0) {
+        auto ret = mapErrnoToError(res);
+        ICHOR_LOG_ERROR(_logger, "Couldn't send message: {} {} {} {}", ret, res, msgs.size(), totalBytes);
+        co_return tl::unexpected(ret);
+    }
+//    fmt::println("sent {} bytes, expected to send {} bytes", res, totalBytes);
+    if(static_cast<uint64_t>(res) != totalBytes) {
+        std::terminate();
+    }
+
+    INTERNAL_IO_DEBUG("sending done");
+    co_return {};
 }
 
 void Ichor::IOUringTcpConnectionService::setPriority(uint64_t priority) {

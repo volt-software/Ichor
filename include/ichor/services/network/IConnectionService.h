@@ -10,9 +10,15 @@ namespace Ichor {
         /**
          * Awaitable send function.
          * @param msg message to send
-         * @return id of message (deprecated)
+         * @return void on success, IOError otherwise
          */
-        virtual Ichor::Task<tl::expected<uint64_t, IOError>> sendAsync(std::vector<uint8_t>&& msg) = 0;
+        virtual Ichor::Task<tl::expected<void, IOError>> sendAsync(std::vector<uint8_t>&& msg) = 0;
+        /**
+         * Awaitable send function for multiple messages. Some implementations may use iovec to send all messages in one go.
+         * @param msgs messages to send
+         * @return void on success, IOError otherwise
+         */
+        virtual Ichor::Task<tl::expected<void, IOError>> sendAsync(std::vector<std::vector<uint8_t>>&& msgs) = 0;
         /**
          * Send function with callback, in case many messages have to be sent without awaiting.
          * @param msg message to send

@@ -3,12 +3,11 @@
 #include <ichor/services/network/boost/WsHostService.h>
 #include <ichor/services/network/boost/WsConnectionService.h>
 #include <ichor/services/network/ws/WsEvents.h>
-#include <ichor/services/network/NetworkEvents.h>
 #include <ichor/services/network/http/HttpScopeGuards.h>
 #include <ichor/events/RunFunctionEvent.h>
 
 Ichor::WsHostService::WsHostService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {
-    reg.registerDependency<ILogger>(this, DependencyFlags::REQUIRED);
+    reg.registerDependency<ILogger>(this, DependencyFlags::NONE);
     reg.registerDependency<IAsioContextService>(this, DependencyFlags::REQUIRED);
 }
 

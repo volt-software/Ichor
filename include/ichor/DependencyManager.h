@@ -666,6 +666,7 @@ namespace Ichor {
         void stop();
         /// Called from the queue implementation
         void addInternalServiceManager(std::unique_ptr<ILifecycleManager> svc);
+        void clearServiceRegistrations(std::vector<EventInterceptInfo> &allEventInterceptorsCopy, std::vector<EventInterceptInfo> &eventInterceptorsCopy, ServiceIdType svcId);
         void removeInternalService(std::vector<EventInterceptInfo> &allEventInterceptorsCopy, std::vector<EventInterceptInfo> &eventInterceptorsCopy, ServiceIdType svcId);
         /// Check if there is a coroutine for the given serviceId that is still waiting on something
         /// \param serviceId

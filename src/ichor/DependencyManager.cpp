@@ -327,7 +327,15 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &uniqueEvt) {
                             std::terminate();
                         }
                         if (!_scopedEvents.empty()) {
-                            ICHOR_EMERGENCY_LOG1(_logger, "Bug in Ichor, please submit a bug report.");
+                            ICHOR_EMERGENCY_LOG1(_logger, "Bug in Ichor, please submit a bug report and include at least the following, if any:");
+                            for(auto const &[promiseId, scopedEvt] : _scopedEvents) {
+                                auto svcIt = _services.find(scopedEvt->originatingService);
+                                std::string_view svcName = "UNKNOWN";
+                                if(svcIt != _services.end()) {
+                                    svcName = svcIt->second->implementationName();
+                                }
+                                ICHOR_EMERGENCY_LOG2(_logger, "promise {} service {}:{} evt {}", promiseId, scopedEvt->originatingService, svcName, scopedEvt->get_name());
+                            }
                             std::terminate();
                         }
                         if (!_scopedGenerators.empty()) {

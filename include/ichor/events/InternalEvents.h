@@ -208,40 +208,6 @@ namespace Ichor {
         static constexpr std::string_view NAME = typeName<RemoveTrackerEvent>();
     };
 
-    struct UnrecoverableErrorEvent final : public Event {
-        UnrecoverableErrorEvent(uint64_t _id, uint64_t _originatingService, uint64_t _priority, uint64_t _errorType, std::string _error) noexcept : Event(_id, _originatingService, _priority), errorType(_errorType), error(std::move(_error)) {}
-        ~UnrecoverableErrorEvent() final = default;
-
-        [[nodiscard]] std::string_view get_name() const noexcept final {
-            return NAME;
-        }
-        [[nodiscard]] NameHashType get_type() const noexcept final {
-            return TYPE;
-        }
-
-        uint64_t errorType;
-        std::string error;
-        static constexpr NameHashType TYPE = typeNameHash<UnrecoverableErrorEvent>();
-        static constexpr std::string_view NAME = typeName<UnrecoverableErrorEvent>();
-    };
-
-    struct RecoverableErrorEvent final : public Event {
-        RecoverableErrorEvent(uint64_t _id, uint64_t _originatingService, uint64_t _priority, uint64_t _errorType, std::string _error) noexcept : Event(_id, _originatingService, _priority), errorType(_errorType), error(std::move(_error)) {}
-        ~RecoverableErrorEvent() final = default;
-
-        [[nodiscard]] std::string_view get_name() const noexcept final {
-            return NAME;
-        }
-        [[nodiscard]] NameHashType get_type() const noexcept final {
-            return TYPE;
-        }
-
-        uint64_t errorType;
-        std::string error;
-        static constexpr NameHashType TYPE = typeNameHash<RecoverableErrorEvent>();
-        static constexpr std::string_view NAME = typeName<RecoverableErrorEvent>();
-    };
-
     struct ContinueCoroutineBroadcastEvent final : public Event {
         ContinueCoroutineBroadcastEvent(uint64_t _id, uint64_t _originatingService, uint64_t _priority) noexcept : Event(_id, _originatingService, _priority) {}
         ~ContinueCoroutineBroadcastEvent() final = default;

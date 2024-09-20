@@ -3,7 +3,6 @@
 #include <ichor/DependencyManager.h>
 #include <ichor/services/logging/Logger.h>
 #include <ichor/services/timer/ITimerFactory.h>
-#include <ichor/services/network/NetworkEvents.h>
 #include <ichor/services/network/IConnectionService.h>
 #include <ichor/services/network/IHostService.h>
 #include <ichor/dependency_management/AdvancedService.h>
@@ -52,34 +51,35 @@ private:
     }
 
     void addDependencyInstance(IConnectionService &connectionService, IService&) {
-		if(connectionService.isClient()) {
-			_clientService = &connectionService;
-			ICHOR_LOG_INFO(_logger, "Inserted clientService");
-		} else {
-			_hostService = &connectionService;
-			ICHOR_LOG_INFO(_logger, "Inserted _hostService");
-			_hostService->setReceiveHandler([this](std::span<uint8_t const> data) {
-				auto msg = _serializer->deserialize(data);
-				if (msg) {
+        if(connectionService.isClient()) {
+            _clientService = &connectionService;
+            ICHOR_LOG_INFO(_logger, "Inserted clientService");
+        } else {
+            _hostService = &connectionService;
+            ICHOR_LOG_INFO(_logger, "Inserted _hostService");
+            _hostService->setReceiveHandler([this](std::span<uint8_t const> data) {
+                auto msg = _serializer->deserialize(data);
+                if (msg) {
                     ICHOR_LOG_INFO(_logger, "Received TestMsg id {} val {}", msg->id, msg->val);
-				} else {
-					ICHOR_LOG_ERROR(_logger, "Couldn't deserialize message {}", std::string_view{reinterpret_cast<char const *>(data.data()), data.size()});
-					std::terminate();
-				}
+                } else {
+                    ICHOR_LOG_ERROR(_logger, "Couldn't deserialize message {}", std::string_view{reinterpret_cast<char const *>(data.data()), data.size()});
+                    std::terminate();
+                }
                 GetThreadLocalEventQueue().pushEvent<QuitEvent>(getServiceId());
-			});
-		}
+            });
+        }
 
-		if(_clientService != nullptr && _hostService != nullptr) {
-			GetThreadLocalEventQueue().pushEvent<RunFunctionEventAsync>(getServiceId(), [this]() -> AsyncGenerator<IchorBehaviour> {
-				auto ser = _serializer->serialize(TestMsg{11, "Hello World"});
-				auto ret = co_await _clientService->sendAsync(std::move(ser));
-				if(!ret) {
-					ICHOR_LOG_ERROR(_logger, "start() send error: {}", (int)ret.error());
-				}
-				co_return {};
-			});
-		}
+        if(_clientService != nullptr && _hostService != nullptr) {
+            ICHOR_LOG_ERROR(_logger, "addDependencyInstance push event");
+            GetThreadLocalEventQueue().pushEvent<RunFunctionEventAsync>(getServiceId(), [this]() -> AsyncGenerator<IchorBehaviour> {
+                auto ser = _serializer->serialize(TestMsg{11, "Hello World"});
+                auto ret = co_await _clientService->sendAsync(std::move(ser));
+                if(!ret) {
+                    ICHOR_LOG_ERROR(_logger, "send error: {}", (int)ret.error());
+                }
+                co_return {};
+            });
+        }
     }
 
     void removeDependencyInstance(IConnectionService&, IService&) {

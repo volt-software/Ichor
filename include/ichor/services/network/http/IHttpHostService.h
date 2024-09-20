@@ -116,9 +116,7 @@ namespace Ichor {
         HttpRouteRegistration(HttpMethod method, RouteIdType id, IHttpHostService *service) : _method(method), _id(id), _service(service) {}
         HttpRouteRegistration(const HttpRouteRegistration&) = delete;
         HttpRouteRegistration(HttpRouteRegistration&& o) noexcept {
-            fmt::print("HttpRouteRegistration1\n");
             reset();
-            fmt::print("HttpRouteRegistration2\n");
             _method = o._method;
             _id = o._id;
             _service = o._service;
@@ -126,16 +124,12 @@ namespace Ichor {
         }
 
         ~HttpRouteRegistration() {
-            fmt::print("HttpRouteRegistration3\n");
             reset();
-            fmt::print("HttpRouteRegistration4\n");
         }
 
         HttpRouteRegistration& operator=(const HttpRouteRegistration&) = delete;
         HttpRouteRegistration& operator=(HttpRouteRegistration&& o) noexcept {
-            fmt::print("HttpRouteRegistration5\n");
             reset();
-            fmt::print("HttpRouteRegistration6\n");
             _method = o._method;
             _id = o._id;
             _service = o._service;
@@ -145,7 +139,6 @@ namespace Ichor {
         }
 
         void reset() {
-            fmt::print("HttpRouteRegistration reset {}\n", (void*)_service);
             if(_service != nullptr) {
                 _service->removeRoute(_method, _id);
             }
