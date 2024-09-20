@@ -62,7 +62,7 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests") {
 
         waitForRunning(dm);
 
-        dm.runForOrQueueEmpty();
+        runForOrQueueEmpty(dm);
 
         queue->pushEvent<RunFunctionEventAsync>(0, [&]() -> AsyncGenerator<IchorBehaviour> {
             fmt::print("run function co_await\n");
@@ -113,7 +113,7 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests") {
 
         waitForRunning(dm);
 
-        dm.runForOrQueueEmpty();
+        runForOrQueueEmpty(dm);
 
         queue->pushEvent<RunFunctionEventAsync>(0, [&]() -> AsyncGenerator<IchorBehaviour> {
             fmt::print("run function co_await\n");
@@ -158,7 +158,7 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests") {
 
         waitForRunning(dm);
 
-        dm.runForOrQueueEmpty();
+        runForOrQueueEmpty(dm);
 
         queue->pushEvent<RunFunctionEventAsync>(0, [&]() -> AsyncGenerator<IchorBehaviour> {
             fmt::print("run function co_await\n");
@@ -189,7 +189,7 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests") {
 
         waitForRunning(dm);
 
-        dm.runForOrQueueEmpty();
+        runForOrQueueEmpty(dm);
 
         queue->pushEvent<RunFunctionEventAsync>(0, [&]() -> AsyncGenerator<IchorBehaviour> {
             fmt::println("run function co_await");
@@ -226,7 +226,7 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests") {
 
         waitForRunning(dm);
 
-        dm.runForOrQueueEmpty();
+        runForOrQueueEmpty(dm);
 
         queue->pushEvent<RunFunctionEventAsync>(0, [&]() -> AsyncGenerator<IchorBehaviour> {
             fmt::print("run function co_await\n");
@@ -267,7 +267,7 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests") {
 
         waitForRunning(dm);
 
-        dm.runForOrQueueEmpty();
+        runForOrQueueEmpty(dm);
 
         queue->pushEvent<RunFunctionEventAsync>(0, [&]() -> AsyncGenerator<IchorBehaviour> {
             fmt::print("run function co_await\n");
@@ -305,7 +305,7 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests") {
 
         waitForRunning(dm);
 
-        dm.runForOrQueueEmpty();
+        runForOrQueueEmpty(dm);
 
         queue->pushEvent<RunFunctionEventAsync>(0, [&]() -> AsyncGenerator<IchorBehaviour> {
             fmt::print("run function co_await\n");
@@ -342,7 +342,7 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests") {
 
         waitForRunning(dm);
 
-        dm.runForOrQueueEmpty();
+        runForOrQueueEmpty(dm);
 
         queue->pushEvent<RunFunctionEventAsync>(0, [&]() -> AsyncGenerator<IchorBehaviour> {
             fmt::print("run function co_await\n");
@@ -380,7 +380,7 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests") {
 
         waitForRunning(dm);
 
-        dm.runForOrQueueEmpty();
+        runForOrQueueEmpty(dm);
 
         queue->pushEvent<RunFunctionEventAsync>(0, [&]() -> AsyncGenerator<IchorBehaviour> {
             fmt::print("run function co_await\n");
@@ -421,7 +421,7 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests") {
 
         waitForRunning(dm);
 
-        dm.runForOrQueueEmpty();
+        runForOrQueueEmpty(dm);
 
         queue->pushEvent<RunFunctionEventAsync>(0, [&]() -> AsyncGenerator<IchorBehaviour> {
             fmt::print("run function co_await\n");
@@ -464,7 +464,7 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests") {
 
         waitForRunning(dm);
 
-        dm.runForOrQueueEmpty();
+        runForOrQueueEmpty(dm);
 
         queue->pushEvent<RunFunctionEventAsync>(0, [&]() -> AsyncGenerator<IchorBehaviour> {
             fmt::print("run function co_await\n");
@@ -509,7 +509,7 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests") {
 
         waitForRunning(dm);
 
-        dm.runForOrQueueEmpty();
+        runForOrQueueEmpty(dm);
 
         queue->pushEvent<RunFunctionEventAsync>(0, [&]() -> AsyncGenerator<IchorBehaviour> {
             fmt::print("run function co_await\n");

@@ -33,7 +33,7 @@ TEST_CASE("CoroutineTests") {
 
         waitForRunning(dm);
 
-        dm.runForOrQueueEmpty();
+        runForOrQueueEmpty(dm);
 
         queue->pushEvent<RunFunctionEventAsync>(0, [&]() -> AsyncGenerator<IchorBehaviour>{
             auto services = dm.getStartedServices<IGeneratorService>();
@@ -78,7 +78,7 @@ TEST_CASE("CoroutineTests") {
 
         waitForRunning(dm);
 
-        dm.runForOrQueueEmpty();
+        runForOrQueueEmpty(dm);
 
         queue->pushEvent<RunFunctionEventAsync>(0, [&]() -> AsyncGenerator<IchorBehaviour> {
             auto services = dm.getStartedServices<IAwaitService>();
@@ -102,7 +102,7 @@ TEST_CASE("CoroutineTests") {
             co_return {};
         });
 
-        dm.runForOrQueueEmpty();
+        runForOrQueueEmpty(dm);
 
         queue->pushEvent<RunFunctionEvent>(0, []() {
             INTERNAL_DEBUG("set");
@@ -126,11 +126,11 @@ TEST_CASE("CoroutineTests") {
 
         waitForRunning(dm);
 
-        dm.runForOrQueueEmpty();
+        runForOrQueueEmpty(dm);
 
         queue->pushEvent<AwaitEvent>(0);
 
-        dm.runForOrQueueEmpty();
+        runForOrQueueEmpty(dm);
 
         queue->pushEvent<RunFunctionEvent>(0, []() {
             INTERNAL_DEBUG("set");
@@ -156,7 +156,7 @@ TEST_CASE("CoroutineTests") {
 
         waitForRunning(dm);
 
-        dm.runForOrQueueEmpty();
+        runForOrQueueEmpty(dm);
 
         queue->pushEvent<RunFunctionEvent>(0, [&]() {
             INTERNAL_DEBUG("set");
@@ -187,7 +187,7 @@ TEST_CASE("CoroutineTests") {
 
         waitForRunning(dm);
 
-        dm.runForOrQueueEmpty();
+        runForOrQueueEmpty(dm);
 
         queue->pushEvent<RunFunctionEvent>(0, []() {
             INTERNAL_DEBUG("set");
@@ -215,7 +215,7 @@ TEST_CASE("CoroutineTests") {
 
         waitForRunning(dm);
 
-        dm.runForOrQueueEmpty();
+        runForOrQueueEmpty(dm);
 
         queue->pushEvent<RunFunctionEventAsync>(0, [&]() -> AsyncGenerator<IchorBehaviour> {
             auto svc = dm.getService<IAwaitReturnService>(svcId);
@@ -224,7 +224,7 @@ TEST_CASE("CoroutineTests") {
             co_return {};
         });
 
-        dm.runForOrQueueEmpty();
+        runForOrQueueEmpty(dm);
 
         queue->pushEvent<RunFunctionEvent>(0, [&dm = dm]() {
             INTERNAL_DEBUG("set");
@@ -257,7 +257,7 @@ TEST_CASE("CoroutineTests") {
 
         waitForRunning(dm);
 
-        dm.runForOrQueueEmpty();
+        runForOrQueueEmpty(dm);
 
         queue->pushEvent<RunFunctionEventAsync>(0, [&]() -> AsyncGenerator<IchorBehaviour> {
             auto svc = dm.getService<IAwaitReturnService>(svcId);
@@ -266,7 +266,7 @@ TEST_CASE("CoroutineTests") {
             co_return {};
         });
 
-        dm.runForOrQueueEmpty();
+        runForOrQueueEmpty(dm);
 
         queue->pushEvent<RunFunctionEvent>(0, [&dm = dm]() {
             INTERNAL_DEBUG("set");
@@ -311,7 +311,7 @@ TEST_CASE("CoroutineTests") {
 
         waitForRunning(dm);
 
-        dm.runForOrQueueEmpty();
+        runForOrQueueEmpty(dm);
 
         queue->pushEvent<RunFunctionEvent>(0, [&dm = dm, svcId]() {
             auto services = dm.getStartedServices<IDependencyOfflineWhileStartingService>();
@@ -329,7 +329,7 @@ TEST_CASE("CoroutineTests") {
             REQUIRE(svcs.find(svcId)->second->getServiceState() == Ichor::ServiceState::INJECTING);
         });
 
-        dm.runForOrQueueEmpty();
+        runForOrQueueEmpty(dm);
 
         queue->pushEvent<RunFunctionEvent>(0, [&dm = dm, svcId]() {
             auto svcs = dm.getAllServices();
@@ -361,7 +361,7 @@ TEST_CASE("CoroutineTests") {
 
         waitForRunning(dm);
 
-        dm.runForOrQueueEmpty();
+        runForOrQueueEmpty(dm);
 
         queue->pushEvent<RunFunctionEvent>(0, [&dm = dm, svcId]() {
             auto services = dm.getStartedServices<IDependencyOnlineWhileStoppingService>();
@@ -379,7 +379,7 @@ TEST_CASE("CoroutineTests") {
             REQUIRE(svcs.find(svcId)->second->getServiceState() == Ichor::ServiceState::INSTALLED);
         });
 
-        dm.runForOrQueueEmpty();
+        runForOrQueueEmpty(dm);
 
         queue->pushEvent<RunFunctionEvent>(0, [&dm = dm, svcId]() {
             auto services = dm.getStartedServices<IDependencyOnlineWhileStoppingService>();

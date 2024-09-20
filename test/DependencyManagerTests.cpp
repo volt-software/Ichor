@@ -57,7 +57,7 @@ TEST_CASE("DependencyManager") {
             queue->start(CaptureSigInt);
         });
 
-        dm.runForOrQueueEmpty();
+        runForOrQueueEmpty(dm);
 
         REQUIRE(dm.isRunning());
 
@@ -114,7 +114,7 @@ TEST_CASE("DependencyManager") {
 
         waitForRunning(dm);
 
-        dm.runForOrQueueEmpty();
+        runForOrQueueEmpty(dm);
 
         queue->pushEvent<RunFunctionEvent>(0, [&]() {
             REQUIRE(dm.getServiceCount() == 5);
@@ -157,7 +157,7 @@ TEST_CASE("DependencyManager") {
             queue->start(CaptureSigInt);
         });
 
-        dm.runForOrQueueEmpty();
+        runForOrQueueEmpty(dm);
 
         REQUIRE(dm.isRunning());
 
@@ -177,7 +177,7 @@ TEST_CASE("DependencyManager") {
             co_return {};
         });
 
-        dm.runForOrQueueEmpty();
+        runForOrQueueEmpty(dm);
 
         REQUIRE(Ichor::Detail::_local_dm == nullptr);
 
@@ -202,7 +202,7 @@ TEST_CASE("DependencyManager") {
             queue->start(CaptureSigInt);
         });
 
-        dm.runForOrQueueEmpty();
+        runForOrQueueEmpty(dm);
 
         REQUIRE(dm.isRunning());
 
@@ -251,7 +251,7 @@ TEST_CASE("DependencyManager") {
             queue->start(CaptureSigInt);
         });
 
-        dm.runForOrQueueEmpty();
+        runForOrQueueEmpty(dm);
 
         REQUIRE(dm.isRunning());
 
@@ -291,7 +291,7 @@ TEST_CASE("DependencyManager") {
             queue->start(CaptureSigInt);
         });
 
-        dm.runForOrQueueEmpty();
+        runForOrQueueEmpty(dm);
 
         REQUIRE(dm.isRunning());
 

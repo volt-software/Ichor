@@ -14,6 +14,16 @@ void waitForRunning(DependencyManager &dm) {
     }
 }
 
+void runForOrQueueEmpty(DependencyManager &dm) {
+#ifdef ICHOR_MUSL
+    // likely that is run on a slower device or in emulation, requiring more time.
+    std::this_thread::sleep_for(50ms);
+    dm.runForOrQueueEmpty(1'000ms);
+#else
+    dm.runForOrQueueEmpty();
+#endif
+}
+
 class ExceptionMatcher final : public Catch::Matchers::MatcherBase<std::exception> {
 public:
     ExceptionMatcher() = default;
