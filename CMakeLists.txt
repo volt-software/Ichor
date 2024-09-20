@@ -455,6 +455,8 @@ if(ICHOR_USE_MIMALLOC)
             endif()
             if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND ICHOR_USE_SANITIZERS AND NOT WIN32)
                 set(MI_DEBUG_UBSAN ON)
+            endif()
+            if(ICHOR_USE_SANITIZERS AND NOT WIN32)
                 set(MI_TRACK_ASAN ON)
             endif()
 
