@@ -180,7 +180,7 @@ if(NOT WIN32)
         target_compile_options(ichor PUBLIC -Wtrampolines)
     endif()
 
-    if(ICHOR_FORCE_32_BIT)
+    if(ICHOR_FORCE_32_BIT OR CMAKE_SIZEOF_VOID_P EQUAL 4)
         target_compile_options(ichor PUBLIC -m32)
         target_link_options(ichor PUBLIC -m32)
         target_compile_definitions(ichor PUBLIC ICHOR_32_BIT)
