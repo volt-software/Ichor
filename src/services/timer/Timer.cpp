@@ -8,7 +8,8 @@
 
 using namespace std::chrono_literals;
 
-Ichor::Timer::Timer(NeverNull<IEventQueue*> queue, uint64_t timerId, uint64_t svcId) noexcept : _queue(queue), _timerId(timerId), _requestingServiceId(svcId) {
+Ichor::Timer::Timer(IEventQueue& queue, uint64_t timerId, uint64_t svcId) noexcept : _queue(queue), _timerId(timerId), _requestingServiceId(svcId) {
+    fmt::println("Timer for {}", _requestingServiceId);
     stopTimer();
 }
 
@@ -121,9 +122,9 @@ void Ichor::Timer::insertEventLoop(bool fireImmediately) {
         }
         // Make copy of function, in case setCallback() gets called during async stuff.
         if(_fnAsync) {
-            _queue->pushPrioritisedEvent<RunFunctionEventAsync>(_requestingServiceId, getPriority(), _fnAsync);
+            _queue.pushPrioritisedEvent<RunFunctionEventAsync>(_requestingServiceId, getPriority(), _fnAsync);
         } else {
-            _queue->pushPrioritisedEvent<RunFunctionEvent>(_requestingServiceId, getPriority(), _fn);
+            _queue.pushPrioritisedEvent<RunFunctionEvent>(_requestingServiceId, getPriority(), _fn);
         }
 
         if(_fireOnce.load(std::memory_order_acquire)) {

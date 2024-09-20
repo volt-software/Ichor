@@ -5,8 +5,7 @@
 
 class Ichor::TimerFactory final : public Ichor::ITimerFactory, public Detail::InternalTimerFactory, public Ichor::AdvancedService<TimerFactory> {
 public:
-    TimerFactory(Ichor::DependencyRegister &reg, Ichor::Properties props) : Ichor::AdvancedService<TimerFactory>(std::move(props)) {
-        reg.registerDependency<Ichor::IEventQueue>(this, DependencyFlags::REQUIRED);
+    TimerFactory(Ichor::Properties props) : Ichor::AdvancedService<TimerFactory>(std::move(props)) {
         _requestingSvcId = Ichor::any_cast<ServiceIdType>(getProperties()["requestingSvcId"]);
     }
     ~TimerFactory() final = default;
@@ -17,7 +16,7 @@ public:
             std::terminate();
         }
 #endif
-        return *(_timers.emplace_back(new Ichor::Timer(_queue, _timerIdCounter.fetch_add(1, std::memory_order_relaxed), _requestingSvcId)));
+        return *(_timers.emplace_back(new Ichor::Timer(GetThreadLocalEventQueue(), _timerIdCounter.fetch_add(1, std::memory_order_relaxed), _requestingSvcId)));
     }
 
     void destroyTimer(uint64_t timerId) final {
@@ -31,14 +30,6 @@ public:
         });
     }
 
-    void addDependencyInstance(Ichor::IEventQueue &q, IService&) noexcept {
-        _queue = &q;
-    }
-
-    void removeDependencyInstance(Ichor::IEventQueue&, IService&) noexcept {
-        _queue = nullptr;
-    }
-
     void stopAllTimers() noexcept final {
         for(auto& timer : _timers) {
             timer->stopTimer();
@@ -47,7 +38,6 @@ public:
 
     static std::atomic<uint64_t> _timerIdCounter;
     std::vector<std::unique_ptr<Ichor::Timer>> _timers;
-    Ichor::IEventQueue* _queue{};
     ServiceIdType _requestingSvcId{};
 };
 std::atomic<uint64_t> Ichor::TimerFactory::_timerIdCounter{};
@@ -70,13 +60,13 @@ void Ichor::TimerFactoryFactory::handleDependencyRequest(AlwaysNull<ITimerFactor
         return;
     }
 
-    _factories.emplace(evt.originatingService, Ichor::GetThreadLocalManager().createServiceManager<TimerFactory, Detail::InternalTimerFactory, ITimerFactory>(Properties{{"requestingSvcId", Ichor::make_any<ServiceIdType>(evt.originatingService)}}, evt.priority)->getServiceId());
+    _factories.emplace(evt.originatingService, Ichor::GetThreadLocalManager().createServiceManager<TimerFactory, Detail::InternalTimerFactory, ITimerFactory>(Properties{{"requestingSvcId", Ichor::make_any<ServiceIdType>(evt.originatingService)}, {"Filter", Ichor::make_any<Filter>(ServiceIdFilterEntry{evt.originatingService})}}, evt.priority)->getServiceId());
 }
 
 void Ichor::TimerFactoryFactory::handleDependencyUndoRequest(AlwaysNull<ITimerFactory *>, const DependencyUndoRequestEvent &evt) {
     auto factory = _factories.find(evt.originatingService);
 
-    if(factory != _factories.end()) {
+    if(factory == _factories.end()) {
         return;
     }
 
