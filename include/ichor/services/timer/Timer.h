@@ -47,13 +47,13 @@ namespace Ichor {
         ///
         /// \param timerId unique identifier for timer
         /// \param svcId unique identifier for svc using this timer
-        Timer(NeverNull<IEventQueue*> queue, uint64_t timerId, uint64_t svcId) noexcept;
+        Timer(IEventQueue& queue, uint64_t timerId, uint64_t svcId) noexcept;
 
         void insertEventLoop(bool fireImmediately);
 
         friend class TimerFactory;
 
-        NeverNull<IEventQueue*> _queue;
+        IEventQueue& _queue;
         uint64_t _timerId{};
         std::atomic<bool> _fireOnce{};
         std::atomic<uint64_t> _intervalNanosec{1'000'000'000};
