@@ -51,7 +51,11 @@ void* run_example(void*) {
 }
 
 int main(int argc, char *argv[]) {
-    std::locale::global(std::locale("en_US.UTF-8"));
+    try {
+        std::locale::global(std::locale("en_US.UTF-8"));
+    } catch(std::runtime_error const &e) {
+        fmt::println("Couldn't set locale to en_US.UTF-8: {}", e.what());
+    }
     progName = argv[0];
 
 #if (defined(WIN32) || defined(_WIN32) || defined(__WIN32) || defined(__APPLE__)) && !defined(__CYGWIN__)
