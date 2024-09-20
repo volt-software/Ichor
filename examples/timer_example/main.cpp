@@ -18,7 +18,11 @@
 using namespace std::string_literals;
 
 int main(int argc, char *argv[]) {
-    std::locale::global(std::locale("en_US.UTF-8"));
+    try {
+        std::locale::global(std::locale("en_US.UTF-8"));
+    } catch(std::runtime_error const &e) {
+        fmt::println("Couldn't set locale to en_US.UTF-8: {}", e.what());
+    }
 
     auto start = std::chrono::steady_clock::now();
     auto queue = std::make_unique<PriorityQueue>();
