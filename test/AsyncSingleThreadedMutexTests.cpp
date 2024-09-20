@@ -27,13 +27,7 @@ TEST_CASE("AsyncSingleThreadedMutexTests") {
             REQUIRE(!val);
         });
 
-#ifdef ICHOR_MUSL
-        // likely that this test is run on a slower device or in emulation, requiring more time.
-        std::this_thread::sleep_for(50ms);
-        dm.runForOrQueueEmpty(1'000ms);
-#else
-        dm.runForOrQueueEmpty();
-#endif
+        runForOrQueueEmpty(dm);
 
         queue->pushEvent<RunFunctionEventAsync>(0, [&]() -> AsyncGenerator<IchorBehaviour> {
             started_async_func = true;
@@ -42,13 +36,7 @@ TEST_CASE("AsyncSingleThreadedMutexTests") {
             co_return {};
         });
 
-#ifdef ICHOR_MUSL
-        // likely that this test is run on a slower device or in emulation, requiring more time.
-        std::this_thread::sleep_for(50ms);
-        dm.runForOrQueueEmpty(1'000ms);
-#else
-        dm.runForOrQueueEmpty();
-#endif
+        runForOrQueueEmpty(dm);
         REQUIRE(started_async_func);
         REQUIRE(!unlocked);
 
@@ -56,7 +44,7 @@ TEST_CASE("AsyncSingleThreadedMutexTests") {
             lg->unlock();
         });
 
-        dm.runForOrQueueEmpty();
+        runForOrQueueEmpty(dm);
 
         REQUIRE(unlocked);
 

@@ -59,7 +59,7 @@ TEST_CASE("ServicesTests") {
 
         waitForRunning(dm);
 
-        dm.runForOrQueueEmpty();
+        runForOrQueueEmpty(dm);
 
         queue->pushEvent<RunFunctionEvent>(0, [&]() {
             auto services = dm.getStartedServices<IFailOnStartService>();
@@ -92,7 +92,7 @@ TEST_CASE("ServicesTests") {
 
         waitForRunning(dm);
 
-        dm.runForOrQueueEmpty();
+        runForOrQueueEmpty(dm);
 
         queue->pushEvent<RunFunctionEvent>(0, [&]() {
             auto services = dm.getStartedServices<IFailOnStartService>();
@@ -127,7 +127,7 @@ TEST_CASE("ServicesTests") {
 
         waitForRunning(dm);
 
-        dm.runForOrQueueEmpty();
+        runForOrQueueEmpty(dm);
 
         queue->pushEvent<RunFunctionEvent>(0, [&]() {
             auto services = dm.getStartedServices<ICountService>();
@@ -139,7 +139,7 @@ TEST_CASE("ServicesTests") {
             dm.getEventQueue().pushEvent<StopServiceEvent>(0, secondUselessServiceId);
         });
 
-        dm.runForOrQueueEmpty();
+        runForOrQueueEmpty(dm);
 
         queue->pushEvent<RunFunctionEvent>(0, [&]() {
             auto services = dm.getStartedServices<ICountService>();
@@ -171,7 +171,7 @@ TEST_CASE("ServicesTests") {
 
         waitForRunning(dm);
 
-        dm.runForOrQueueEmpty();
+        runForOrQueueEmpty(dm);
 
         queue->pushEvent<RunFunctionEvent>(0, [&]() {
             auto services = dm.getStartedServices<ICountService>();
@@ -183,7 +183,7 @@ TEST_CASE("ServicesTests") {
             secondUselessServiceId = dm.createServiceManager<UselessService, IUselessService>()->getServiceId();
         });
 
-        dm.runForOrQueueEmpty();
+        runForOrQueueEmpty(dm);
 
         queue->pushEvent<RunFunctionEvent>(0, [&]() {
             auto services = dm.getStartedServices<ICountService>();
@@ -195,7 +195,7 @@ TEST_CASE("ServicesTests") {
             dm.getEventQueue().pushEvent<StopServiceEvent>(0, firstUselessServiceId);
         });
 
-        dm.runForOrQueueEmpty();
+        runForOrQueueEmpty(dm);
 
         queue->pushEvent<RunFunctionEvent>(0, [&]() {
             auto services = dm.getStartedServices<ICountService>();
@@ -207,7 +207,7 @@ TEST_CASE("ServicesTests") {
             dm.getEventQueue().pushEvent<StopServiceEvent>(0, secondUselessServiceId);
         });
 
-        dm.runForOrQueueEmpty();
+        runForOrQueueEmpty(dm);
 
         queue->pushEvent<RunFunctionEvent>(0, [&]() {
             auto services = dm.getStartedServices<ICountService>();
@@ -237,7 +237,7 @@ TEST_CASE("ServicesTests") {
 
         waitForRunning(dm);
 
-        dm.runForOrQueueEmpty();
+        runForOrQueueEmpty(dm);
 
         queue->pushEvent<RunFunctionEvent>(0, [&]() {
             auto services = dm.getStartedServices<ICountService>();
@@ -247,7 +247,7 @@ TEST_CASE("ServicesTests") {
             secondUselessServiceId = dm.createServiceManager<UselessService, IUselessService>()->getServiceId();
         });
 
-        dm.runForOrQueueEmpty();
+        runForOrQueueEmpty(dm);
 
         queue->pushEvent<RunFunctionEvent>(0, [&]() {
             auto services = dm.getStartedServices<ICountService>();
@@ -259,7 +259,7 @@ TEST_CASE("ServicesTests") {
             dm.getEventQueue().pushEvent<StopServiceEvent>(0, firstUselessServiceId);
         });
 
-        dm.runForOrQueueEmpty();
+        runForOrQueueEmpty(dm);
 
         queue->pushEvent<RunFunctionEvent>(0, [&]() {
             auto services = dm.getStartedServices<ICountService>();
@@ -269,7 +269,7 @@ TEST_CASE("ServicesTests") {
             dm.getEventQueue().pushEvent<StopServiceEvent>(0, secondUselessServiceId);
         });
 
-        dm.runForOrQueueEmpty();
+        runForOrQueueEmpty(dm);
 
         queue->pushEvent<RunFunctionEvent>(0, [&]() {
             auto services = dm.getStartedServices<ICountService>();
@@ -299,7 +299,7 @@ TEST_CASE("ServicesTests") {
 
         waitForRunning(dm);
 
-        dm.runForOrQueueEmpty();
+        runForOrQueueEmpty(dm);
 
         queue->pushEvent<RunFunctionEvent>(0, [&]() {
             auto services = dm.getStartedServices<ICountService>();
@@ -309,11 +309,11 @@ TEST_CASE("ServicesTests") {
             REQUIRE(services[0]->getSvcCount() == 2);
         });
 
-        dm.runForOrQueueEmpty();
+        runForOrQueueEmpty(dm);
 
         queue->pushEvent<StopServiceEvent>(0, secondUselessServiceId);
 
-        dm.runForOrQueueEmpty();
+        runForOrQueueEmpty(dm);
 
         queue->pushEvent<RunFunctionEvent>(0, [&]() {
             auto services = dm.getStartedServices<ICountService>();
@@ -363,7 +363,7 @@ TEST_CASE("ServicesTests") {
 
         waitForRunning(dm);
 
-        dm.runForOrQueueEmpty();
+        runForOrQueueEmpty(dm);
 
         queue->pushEvent<RunFunctionEvent>(0, [&]() {
             auto ret = dm.getService<ITimerRunsOnceService>(svcId);
@@ -388,11 +388,11 @@ TEST_CASE("ServicesTests") {
 
         waitForRunning(dm);
 
-        dm.runForOrQueueEmpty();
+        runForOrQueueEmpty(dm);
 
         queue->pushEvent<TestEvent>(0);
 
-        dm.runForOrQueueEmpty();
+        runForOrQueueEmpty(dm);
 
         queue->pushEvent<QuitEvent>(0);
 
@@ -412,7 +412,7 @@ TEST_CASE("ServicesTests") {
 
         waitForRunning(dm);
 
-        dm.runForOrQueueEmpty();
+        runForOrQueueEmpty(dm);
 
         queue->pushEvent<RunFunctionEvent>(0, [&]() {
             REQUIRE(dm.getServiceCount() == 5);
@@ -420,12 +420,7 @@ TEST_CASE("ServicesTests") {
             dm.getEventQueue().pushEvent<StopServiceEvent>(0, svcId, true);
         });
 
-#ifdef ICHOR_MUSL
-        std::this_thread::sleep_for(50ms);
-        dm.runForOrQueueEmpty(1'000ms);
-#else
-        dm.runForOrQueueEmpty();
-#endif
+        runForOrQueueEmpty(dm);
 
         queue->pushEvent<RunFunctionEvent>(0, [&]() {
             REQUIRE(dm.getServiceCount() == 3);
@@ -452,7 +447,7 @@ TEST_CASE("ServicesTests") {
 
         waitForRunning(dm);
 
-        dm.runForOrQueueEmpty();
+        runForOrQueueEmpty(dm);
 
         queue->pushEvent<RunFunctionEvent>(0, [&]() {
             DisplayServices(dm);
@@ -464,7 +459,7 @@ TEST_CASE("ServicesTests") {
             dm.getEventQueue().pushEvent<StopServiceEvent>(0, svcId, true);
         });
 
-        dm.runForOrQueueEmpty();
+        runForOrQueueEmpty(dm);
 
         // the qemu setup used in build.sh is not fast enough to have the test pass.
 #ifdef ICHOR_AARCH64
@@ -524,7 +519,7 @@ TEST_CASE("ServicesTests") {
 
         waitForRunning(dm);
 
-        dm.runForOrQueueEmpty();
+        runForOrQueueEmpty(dm);
 
         queue->pushEvent<RunFunctionEvent>(0, [&]() {
             REQUIRE(dm.getServiceCount() == 3);
@@ -549,7 +544,7 @@ TEST_CASE("ServicesTests") {
 
         waitForRunning(dm);
 
-        dm.runForOrQueueEmpty();
+        runForOrQueueEmpty(dm);
 
         queue->pushEvent<RunFunctionEvent>(0, [&]() {
             DisplayServices(dm);
@@ -564,7 +559,7 @@ TEST_CASE("ServicesTests") {
             queue->pushEvent<StopServiceEvent>(0, depSvcId, true);
         });
 
-        dm.runForOrQueueEmpty();
+        runForOrQueueEmpty(dm);
 
         queue->pushEvent<RunFunctionEvent>(0, [&]() {
             DisplayServices(dm);
@@ -576,7 +571,7 @@ TEST_CASE("ServicesTests") {
             queue->pushEvent<StopServiceEvent>(0, trackerSvcId, true);
         });
 
-        dm.runForOrQueueEmpty();
+        runForOrQueueEmpty(dm);
 
         queue->pushEvent<RunFunctionEvent>(0, [&]() {
             DisplayServices(dm);
@@ -588,7 +583,7 @@ TEST_CASE("ServicesTests") {
             depSvcId = dm.createServiceManager<DependencyService<IUselessService, DependencyFlags::ALLOW_MULTIPLE>, ICountService>()->getServiceId();
         });
 
-        dm.runForOrQueueEmpty();
+        runForOrQueueEmpty(dm);
 
         queue->pushEvent<RunFunctionEvent>(0, [&]() {
             DisplayServices(dm);

@@ -29,7 +29,7 @@ TEST_CASE("Interceptor Tests") {
 
         queue->pushEvent<TestEvent>(0);
 
-        dm.runForOrQueueEmpty();
+        runForOrQueueEmpty(dm);
 
         queue->pushEvent<RunFunctionEvent>(0, [&]() {
             auto services = dm.getStartedServices<IInterceptorService>();
@@ -69,7 +69,7 @@ TEST_CASE("Interceptor Tests") {
 
         queue->pushEvent<TestEvent>(0);
 
-        dm.runForOrQueueEmpty();
+        runForOrQueueEmpty(dm);
 
         queue->pushEvent<RunFunctionEvent>(0, [&]() {
             auto services = dm.getStartedServices<IInterceptorService>();
@@ -109,7 +109,7 @@ TEST_CASE("Interceptor Tests") {
 
         queue->pushEvent<TestEvent>(0);
 
-        dm.runForOrQueueEmpty();
+        runForOrQueueEmpty(dm);
 
         queue->pushEvent<RunFunctionEvent>(0, [&]() {
             auto interceptorServices = dm.getStartedServices<IInterceptorService>();
@@ -150,7 +150,7 @@ TEST_CASE("Interceptor Tests") {
 
         waitForRunning(dm);
 
-        dm.runForOrQueueEmpty();
+        runForOrQueueEmpty(dm);
 
         queue->pushEvent<RunFunctionEvent>(0, [&]() {
             auto services = dm.getStartedServices<IInterceptorService>();
@@ -193,7 +193,7 @@ TEST_CASE("Interceptor Tests") {
 
         waitForRunning(dm);
 
-        dm.runForOrQueueEmpty();
+        runForOrQueueEmpty(dm);
 
         queue->pushEvent<RunFunctionEvent>(0, [&]() {
             auto services = dm.getStartedServices<IInterceptorService>();
@@ -238,11 +238,11 @@ TEST_CASE("Interceptor Tests") {
 
         waitForRunning(dm);
 
-        dm.runForOrQueueEmpty();
+        runForOrQueueEmpty(dm);
 
         queue->pushEvent<TestEvent>(0);
 
-        dm.runForOrQueueEmpty();
+        runForOrQueueEmpty(dm);
 
         queue->pushEvent<QuitEvent>(0);
 
@@ -263,11 +263,11 @@ TEST_CASE("Interceptor Tests") {
 
         waitForRunning(dm);
 
-        dm.runForOrQueueEmpty();
+        runForOrQueueEmpty(dm);
 
         queue->pushEvent<TestEvent>(0);
 
-        dm.runForOrQueueEmpty();
+        runForOrQueueEmpty(dm);
 
         queue->pushEvent<QuitEvent>(0);
 
@@ -290,17 +290,17 @@ TEST_CASE("Interceptor Tests") {
 
         waitForRunning(dm);
 
-        dm.runForOrQueueEmpty();
+        runForOrQueueEmpty(dm);
 
         queue->pushEvent<RunFunctionEvent>(0, [&]() {
             dm.getEventQueue().pushEvent<StopServiceEvent>(0, svcId, true);
         });
 
-        dm.runForOrQueueEmpty();
+        runForOrQueueEmpty(dm);
 
         queue->pushEvent<TestEvent>(0);
 
-        dm.runForOrQueueEmpty();
+        runForOrQueueEmpty(dm);
 
         queue->pushEvent<RunFunctionEvent>(0, [&]() {
             auto services = dm.getStartedServices<IInterceptorService>();
