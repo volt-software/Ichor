@@ -44,7 +44,7 @@ namespace Ichor {
     };
 
     // Taken from https://www.cppstories.com/2018/07/string-view-perf-followup/
-    static inline std::vector<std::string_view> split(std::string_view str, std::string_view delims) {
+    static inline std::vector<std::string_view> split(std::string_view str, std::string_view delims, bool includeDelims) {
         std::vector<std::string_view> output;
         if(delims.size() == 1) {
             auto count = std::count(str.cbegin(), str.cend(), delims[0]);
@@ -55,11 +55,30 @@ namespace Ichor {
             second = std::find_first_of(first, last, std::cbegin(delims), std::cend(delims));
 
             if(first != second) {
-                output.emplace_back(first, second - first);
+                auto end = static_cast<size_t>(second - first);
+                if(includeDelims && second != last) {
+                    end += delims.size();
+                }
+                output.emplace_back(first, end);
             }
         }
 
         return output;
+    }
+
+    template <typename CB>
+    static inline void split(std::string_view str, std::string_view delims, bool includeDelims, CB&& cb) {
+        for(auto first = str.data(), second = str.data(), last = first + str.size(); second != last && first != last; first = second + 1) {
+            second = std::find_first_of(first, last, std::cbegin(delims), std::cend(delims));
+
+            if(first != second) {
+                auto end = static_cast<size_t>(second - first);
+                if(includeDelims && second != last) {
+                    end += delims.size();
+                }
+                cb(std::string_view{first, end});
+            }
+        }
     }
 
     static inline tl::optional<Version> parseStringAsVersion(std::string_view str) {
@@ -79,7 +98,7 @@ namespace Ichor {
             return {};
         }
 
-        auto splitStr = split(str, ".");
+        auto splitStr = split(str, ".", false);
 
         if(splitStr.size() != 3) {
             return {};
