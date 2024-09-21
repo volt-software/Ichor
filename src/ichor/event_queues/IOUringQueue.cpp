@@ -43,6 +43,139 @@ namespace Ichor::Detail {
     void on_sigint([[maybe_unused]] int sig);
 }
 
+
+template<>
+struct fmt::formatter<io_uring_op> {
+    constexpr auto parse(format_parse_context &ctx) -> decltype(ctx.begin()) {
+        return ctx.end();
+    }
+
+    template<typename FormatContext>
+    auto format(const io_uring_op &input, FormatContext &ctx) -> decltype(ctx.out()) {
+        switch(input) {
+            case io_uring_op::IORING_OP_NOP:
+                return fmt::format_to(ctx.out(), "io_uring_op::IORING_OP_NOP");
+            case io_uring_op::IORING_OP_READV:
+                return fmt::format_to(ctx.out(), "io_uring_op::IORING_OP_READV");
+            case io_uring_op::IORING_OP_WRITEV:
+                return fmt::format_to(ctx.out(), "io_uring_op::IORING_OP_WRITEV");
+            case io_uring_op::IORING_OP_FSYNC:
+                return fmt::format_to(ctx.out(), "io_uring_op::IORING_OP_FSYNC");
+            case io_uring_op::IORING_OP_READ_FIXED:
+                return fmt::format_to(ctx.out(), "io_uring_op::IORING_OP_READ_FIXED");
+            case io_uring_op::IORING_OP_WRITE_FIXED:
+                return fmt::format_to(ctx.out(), "io_uring_op::IORING_OP_WRITE_FIXED");
+            case io_uring_op::IORING_OP_POLL_ADD:
+                return fmt::format_to(ctx.out(), "io_uring_op::IORING_OP_POLL_ADD");
+            case io_uring_op::IORING_OP_POLL_REMOVE:
+                return fmt::format_to(ctx.out(), "io_uring_op::IORING_OP_POLL_REMOVE");
+            case io_uring_op::IORING_OP_SYNC_FILE_RANGE:
+                return fmt::format_to(ctx.out(), "io_uring_op::IORING_OP_SYNC_FILE_RANGE");
+            case io_uring_op::IORING_OP_SENDMSG:
+                return fmt::format_to(ctx.out(), "io_uring_op::IORING_OP_SENDMSG");
+            case io_uring_op::IORING_OP_RECVMSG:
+                return fmt::format_to(ctx.out(), "io_uring_op::IORING_OP_RECVMSG");
+            case io_uring_op::IORING_OP_TIMEOUT:
+                return fmt::format_to(ctx.out(), "io_uring_op::IORING_OP_TIMEOUT");
+            case io_uring_op::IORING_OP_TIMEOUT_REMOVE:
+                return fmt::format_to(ctx.out(), "io_uring_op::IORING_OP_TIMEOUT_REMOVE");
+            case io_uring_op::IORING_OP_ACCEPT:
+                return fmt::format_to(ctx.out(), "io_uring_op::IORING_OP_ACCEPT");
+            case io_uring_op::IORING_OP_ASYNC_CANCEL:
+                return fmt::format_to(ctx.out(), "io_uring_op::IORING_OP_ASYNC_CANCEL");
+            case io_uring_op::IORING_OP_LINK_TIMEOUT:
+                return fmt::format_to(ctx.out(), "io_uring_op::IORING_OP_LINK_TIMEOUT");
+            case io_uring_op::IORING_OP_CONNECT:
+                return fmt::format_to(ctx.out(), "io_uring_op::IORING_OP_CONNECT");
+            case io_uring_op::IORING_OP_FALLOCATE:
+                return fmt::format_to(ctx.out(), "io_uring_op::IORING_OP_FALLOCATE");
+            case io_uring_op::IORING_OP_OPENAT:
+                return fmt::format_to(ctx.out(), "io_uring_op::IORING_OP_OPENAT");
+            case io_uring_op::IORING_OP_CLOSE:
+                return fmt::format_to(ctx.out(), "io_uring_op::IORING_OP_CLOSE");
+            case io_uring_op::IORING_OP_FILES_UPDATE:
+                return fmt::format_to(ctx.out(), "io_uring_op::IORING_OP_FILES_UPDATE");
+            case io_uring_op::IORING_OP_STATX:
+                return fmt::format_to(ctx.out(), "io_uring_op::IORING_OP_STATX");
+            case io_uring_op::IORING_OP_READ:
+                return fmt::format_to(ctx.out(), "io_uring_op::IORING_OP_READ");
+            case io_uring_op::IORING_OP_WRITE:
+                return fmt::format_to(ctx.out(), "io_uring_op::IORING_OP_WRITE");
+            case io_uring_op::IORING_OP_FADVISE:
+                return fmt::format_to(ctx.out(), "io_uring_op::IORING_OP_FADVISE");
+            case io_uring_op::IORING_OP_MADVISE:
+                return fmt::format_to(ctx.out(), "io_uring_op::IORING_OP_MADVISE");
+            case io_uring_op::IORING_OP_SEND:
+                return fmt::format_to(ctx.out(), "io_uring_op::IORING_OP_SEND");
+            case io_uring_op::IORING_OP_RECV:
+                return fmt::format_to(ctx.out(), "io_uring_op::IORING_OP_RECV");
+            case io_uring_op::IORING_OP_OPENAT2:
+                return fmt::format_to(ctx.out(), "io_uring_op::IORING_OP_OPENAT2");
+            case io_uring_op::IORING_OP_EPOLL_CTL:
+                return fmt::format_to(ctx.out(), "io_uring_op::IORING_OP_EPOLL_CTL");
+            case io_uring_op::IORING_OP_SPLICE:
+                return fmt::format_to(ctx.out(), "io_uring_op::IORING_OP_SPLICE");
+            case io_uring_op::IORING_OP_PROVIDE_BUFFERS:
+                return fmt::format_to(ctx.out(), "io_uring_op::IORING_OP_PROVIDE_BUFFERS");
+            case io_uring_op::IORING_OP_REMOVE_BUFFERS:
+                return fmt::format_to(ctx.out(), "io_uring_op::IORING_OP_REMOVE_BUFFERS");
+            case io_uring_op::IORING_OP_TEE:
+                return fmt::format_to(ctx.out(), "io_uring_op::IORING_OP_TEE");
+            case io_uring_op::IORING_OP_SHUTDOWN:
+                return fmt::format_to(ctx.out(), "io_uring_op::IORING_OP_SHUTDOWN");
+            case io_uring_op::IORING_OP_RENAMEAT:
+                return fmt::format_to(ctx.out(), "io_uring_op::IORING_OP_RENAMEAT");
+            case io_uring_op::IORING_OP_UNLINKAT:
+                return fmt::format_to(ctx.out(), "io_uring_op::IORING_OP_UNLINKAT");
+            case io_uring_op::IORING_OP_MKDIRAT:
+                return fmt::format_to(ctx.out(), "io_uring_op::IORING_OP_MKDIRAT");
+            case io_uring_op::IORING_OP_SYMLINKAT:
+                return fmt::format_to(ctx.out(), "io_uring_op::IORING_OP_SYMLINKAT");
+            case io_uring_op::IORING_OP_LINKAT:
+                return fmt::format_to(ctx.out(), "io_uring_op::IORING_OP_LINKAT");
+            case io_uring_op::IORING_OP_MSG_RING:
+                return fmt::format_to(ctx.out(), "io_uring_op::IORING_OP_MSG_RING");
+            case io_uring_op::IORING_OP_FSETXATTR:
+                return fmt::format_to(ctx.out(), "io_uring_op::IORING_OP_FSETXATTR");
+            case io_uring_op::IORING_OP_SETXATTR:
+                return fmt::format_to(ctx.out(), "io_uring_op::IORING_OP_SETXATTR");
+            case io_uring_op::IORING_OP_FGETXATTR:
+                return fmt::format_to(ctx.out(), "io_uring_op::IORING_OP_FGETXATTR");
+            case io_uring_op::IORING_OP_GETXATTR:
+                return fmt::format_to(ctx.out(), "io_uring_op::IORING_OP_GETXATTR");
+            case io_uring_op::IORING_OP_SOCKET:
+                return fmt::format_to(ctx.out(), "io_uring_op::IORING_OP_SOCKET");
+            case io_uring_op::IORING_OP_URING_CMD:
+                return fmt::format_to(ctx.out(), "io_uring_op::IORING_OP_URING_CMD");
+            case io_uring_op::IORING_OP_SEND_ZC:
+                return fmt::format_to(ctx.out(), "io_uring_op::IORING_OP_SEND_ZC");
+            case io_uring_op::IORING_OP_SENDMSG_ZC:
+                return fmt::format_to(ctx.out(), "io_uring_op::IORING_OP_SENDMSG_ZC");
+            case io_uring_op::IORING_OP_READ_MULTISHOT:
+                return fmt::format_to(ctx.out(), "io_uring_op::IORING_OP_READ_MULTISHOT");
+            case io_uring_op::IORING_OP_WAITID:
+                return fmt::format_to(ctx.out(), "io_uring_op::IORING_OP_WAITID");
+            case io_uring_op::IORING_OP_FUTEX_WAIT:
+                return fmt::format_to(ctx.out(), "io_uring_op::IORING_OP_FUTEX_WAIT");
+            case io_uring_op::IORING_OP_FUTEX_WAKE:
+                return fmt::format_to(ctx.out(), "io_uring_op::IORING_OP_FUTEX_WAKE");
+            case io_uring_op::IORING_OP_FUTEX_WAITV:
+                return fmt::format_to(ctx.out(), "io_uring_op::IORING_OP_FUTEX_WAITV");
+            case io_uring_op::IORING_OP_FIXED_FD_INSTALL:
+                return fmt::format_to(ctx.out(), "io_uring_op::IORING_OP_FIXED_FD_INSTALL");
+            case io_uring_op::IORING_OP_FTRUNCATE:
+                return fmt::format_to(ctx.out(), "io_uring_op::IORING_OP_FTRUNCATE");
+            case io_uring_op::IORING_OP_BIND:
+                return fmt::format_to(ctx.out(), "io_uring_op::IORING_OP_BIND");
+            case io_uring_op::IORING_OP_LISTEN:
+                return fmt::format_to(ctx.out(), "io_uring_op::IORING_OP_LISTEN");
+            case io_uring_op::IORING_OP_LAST:
+                return fmt::format_to(ctx.out(), "io_uring_op::IORING_OP_LAST");
+        }
+        return fmt::format_to(ctx.out(), "io_uring_op:: {} ???  report bug!", (uint32_t)input);
+    }
+};
+
 static int io_uring_ring_dontdump(struct io_uring *ring)
 {
 	size_t len;
@@ -383,7 +516,7 @@ namespace Ichor {
         }
         ret = io_uring_register_ring_fd(_eventQueuePtr);
         if(ret < 0) [[unlikely]] {
-            throw std::system_error(-ret, std::generic_category(), "io_uring_register_ring_fd() failed");
+            fmt::println("Couldn't register ring fd. Expect reduced performance. {}", ret);
         }
         ret = io_uring_ring_dontfork(_eventQueuePtr);
         if(ret < 0) [[unlikely]] {
@@ -452,7 +585,7 @@ namespace Ichor {
             }
             if((unsigned)ret != _entriesCount - space) [[unlikely]] {
 //                fmt::println("io_uring_submit {}", ret);
-                fmt::println("submit wrong amount1");
+                fmt::println("submit wrong amount1 {} {} {}", ret, _entriesCount, space);
                 std::terminate();
             }
         }
@@ -532,6 +665,29 @@ namespace Ichor {
                     auto space = io_uring_sq_space_left(_eventQueuePtr);
                     auto ready = io_uring_cq_ready(_eventQueuePtr);
                     if(space < _entriesCount && ready == 0u) {
+
+                        {
+                            struct io_uring_sq *sq = &_eventQueuePtr->sq;
+                            int shift = 0;
+                            unsigned int tail = sq->sqe_tail;
+                            if (!(_eventQueuePtr->flags & IORING_SETUP_SQPOLL))
+                                head = *sq->khead;
+                            else
+                                head = io_uring_smp_load_acquire(sq->khead);
+
+                            if (_eventQueuePtr->flags & IORING_SETUP_SQE128) {
+                                shift = 1;
+                            }
+
+                            struct io_uring_sqe *sqe;
+                            fmt::println("going to submit {} {} {}", ret, _entriesCount, space);
+                            while(head != tail) {
+                                sqe = &sq->sqes[(head & sq->ring_mask) << shift];
+                                fmt::println("going to submit {}", (io_uring_op) sqe->opcode);
+                                head++;
+                            }
+                        }
+
                         INTERNAL_IO_DEBUG("submit end of loop {}", _entriesCount - space);
                         ret = io_uring_submit_and_get_events(_eventQueuePtr);
                         if(ret < 0) [[unlikely]] {
@@ -539,6 +695,29 @@ namespace Ichor {
                         }
                         if((unsigned int)ret != _entriesCount - space) [[unlikely]] {
                             fmt::println("submit wrong amount2 {} {} {}", ret, _entriesCount, space);
+
+                            {
+                                struct io_uring_sq *sq = &_eventQueuePtr->sq;
+                                int shift = 0;
+                                unsigned int tail = sq->sqe_tail;
+                                if (!(_eventQueuePtr->flags & IORING_SETUP_SQPOLL))
+                                    head = *sq->khead;
+                                else
+                                    head = io_uring_smp_load_acquire(sq->khead);
+
+                                if (_eventQueuePtr->flags & IORING_SETUP_SQE128) {
+                                    shift = 1;
+                                }
+
+                                struct io_uring_sqe *sqe;
+                                fmt::println("still left in queue:", ret, _entriesCount, space);
+                                while(head != tail) {
+                                    sqe = &sq->sqes[(head & sq->ring_mask) << shift];
+                                    fmt::println("{}", (io_uring_op) sqe->opcode);
+                                    head++;
+                                }
+                            }
+
                             std::terminate();
                         }
                     }
@@ -643,19 +822,20 @@ namespace Ichor {
                 throw std::system_error(-ret, std::generic_category(), "io_uring_submit() failed.");
             }
             if((unsigned int)ret != _entriesCount) [[unlikely]] {
-                fmt::println("submit wrong amount3");
+                fmt::println("submit wrong amount3 {} {} {}", ret, _entriesCount, space);
                 std::terminate();
             }
         }
     }
 
     void IOUringQueue::forceSubmit() {
+        auto space = io_uring_sq_space_left(_eventQueuePtr);
         auto ret = io_uring_submit(_eventQueuePtr);
         if(ret < 0) [[unlikely]] {
             throw std::system_error(-ret, std::generic_category(), "io_uring_submit() failed.");
         }
-        if((unsigned int)ret != _entriesCount) [[unlikely]] {
-            fmt::println("submit wrong amount4");
+        if((unsigned int)ret != _entriesCount - space) [[unlikely]] {
+            fmt::println("submit wrong amount4 {} {} {}", ret, _entriesCount, space);
             std::terminate();
         }
     }
@@ -671,7 +851,7 @@ namespace Ichor {
         }
 
         if((unsigned int)ret != toSubmit) [[unlikely]] {
-            fmt::println("submit wrong amount5");
+            fmt::println("submit wrong amount5 {} {} {}", ret, _entriesCount, toSubmit);
             std::terminate();
         }
     }
