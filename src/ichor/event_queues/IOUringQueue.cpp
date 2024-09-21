@@ -36,13 +36,11 @@ extern "C" void AnnotateHappensAfter(const char* f, int l, void* addr);
 #include <sanitizer/asan_interface.h>
 #endif
 
-
 namespace Ichor::Detail {
     extern std::atomic<bool> sigintQuit;
     extern std::atomic<bool> registeredSignalHandler;
     void on_sigint([[maybe_unused]] int sig);
 }
-
 
 template<>
 struct fmt::formatter<io_uring_op> {
@@ -175,6 +173,33 @@ struct fmt::formatter<io_uring_op> {
         return fmt::format_to(ctx.out(), "io_uring_op:: {} ???  report bug!", (uint32_t)input);
     }
 };
+
+#ifdef ICHOR_ENABLE_INTERNAL_URING_DEBUGGING
+static inline std::vector<std::pair<io_uring_op, Ichor::Event*>> getToBeSubmittedOpcodes(io_uring *ring) {
+    std::vector<std::pair<io_uring_op, Ichor::Event*>> ret;
+    struct io_uring_sq *sq = &ring->sq;
+    int shift = 0;
+    unsigned int head;
+    unsigned int tail = sq->sqe_tail;
+    if (!(ring->flags & IORING_SETUP_SQPOLL))
+        head = *sq->khead;
+    else
+        head = io_uring_smp_load_acquire(sq->khead);
+
+    if (ring->flags & IORING_SETUP_SQE128) {
+        shift = 1;
+    }
+    ret.reserve(tail - head);
+
+    struct io_uring_sqe *sqe;
+    while(head != tail) {
+        sqe = &sq->sqes[(head & sq->ring_mask) << shift];
+        ret.emplace_back((io_uring_op)sqe->opcode, reinterpret_cast<Ichor::Event*>(sqe->user_data));
+        head++;
+    }
+    return ret;
+}
+#endif
 
 static int io_uring_ring_dontdump(struct io_uring *ring)
 {
@@ -580,12 +605,20 @@ namespace Ichor {
         {
             auto space = io_uring_sq_space_left(_eventQueuePtr);
             auto ret = io_uring_submit(_eventQueuePtr);
+
+#ifdef ICHOR_ENABLE_INTERNAL_URING_DEBUGGING
+            beforeSubmitDebug(space);
+#endif
+
             if(ret < 0) [[unlikely]] {
                 throw std::system_error(-ret, std::generic_category(), "io_uring_submit() failed.");
             }
             if((unsigned)ret != _entriesCount - space) [[unlikely]] {
 //                fmt::println("io_uring_submit {}", ret);
                 fmt::println("submit wrong amount1 {} {} {}", ret, _entriesCount, space);
+#ifdef ICHOR_ENABLE_INTERNAL_URING_DEBUGGING
+                afterSubmitDebug(ret, space);
+#endif
                 std::terminate();
             }
         }
@@ -666,27 +699,9 @@ namespace Ichor {
                     auto ready = io_uring_cq_ready(_eventQueuePtr);
                     if(space < _entriesCount && ready == 0u) {
 
-                        {
-                            struct io_uring_sq *sq = &_eventQueuePtr->sq;
-                            int shift = 0;
-                            unsigned int tail = sq->sqe_tail;
-                            if (!(_eventQueuePtr->flags & IORING_SETUP_SQPOLL))
-                                head = *sq->khead;
-                            else
-                                head = io_uring_smp_load_acquire(sq->khead);
-
-                            if (_eventQueuePtr->flags & IORING_SETUP_SQE128) {
-                                shift = 1;
-                            }
-
-                            struct io_uring_sqe *sqe;
-                            fmt::println("going to submit {} {} {}", ret, _entriesCount, space);
-                            while(head != tail) {
-                                sqe = &sq->sqes[(head & sq->ring_mask) << shift];
-                                fmt::println("going to submit {}", (io_uring_op) sqe->opcode);
-                                head++;
-                            }
-                        }
+#ifdef ICHOR_ENABLE_INTERNAL_URING_DEBUGGING
+                        beforeSubmitDebug(space);
+#endif
 
                         INTERNAL_IO_DEBUG("submit end of loop {}", _entriesCount - space);
                         ret = io_uring_submit_and_get_events(_eventQueuePtr);
@@ -696,27 +711,9 @@ namespace Ichor {
                         if((unsigned int)ret != _entriesCount - space) [[unlikely]] {
                             fmt::println("submit wrong amount2 {} {} {}", ret, _entriesCount, space);
 
-                            {
-                                struct io_uring_sq *sq = &_eventQueuePtr->sq;
-                                int shift = 0;
-                                unsigned int tail = sq->sqe_tail;
-                                if (!(_eventQueuePtr->flags & IORING_SETUP_SQPOLL))
-                                    head = *sq->khead;
-                                else
-                                    head = io_uring_smp_load_acquire(sq->khead);
-
-                                if (_eventQueuePtr->flags & IORING_SETUP_SQE128) {
-                                    shift = 1;
-                                }
-
-                                struct io_uring_sqe *sqe;
-                                fmt::println("still left in queue:", ret, _entriesCount, space);
-                                while(head != tail) {
-                                    sqe = &sq->sqes[(head & sq->ring_mask) << shift];
-                                    fmt::println("{}", (io_uring_op) sqe->opcode);
-                                    head++;
-                                }
-                            }
+#ifdef ICHOR_ENABLE_INTERNAL_URING_DEBUGGING
+                            afterSubmitDebug(ret, space);
+#endif
 
                             std::terminate();
                         }
@@ -817,12 +814,18 @@ namespace Ichor {
         auto space = io_uring_sq_space_left(_eventQueuePtr);
         if(space == 0) {
 //            fmt::println("submit {}", _entriesCount);
+#ifdef ICHOR_ENABLE_INTERNAL_URING_DEBUGGING
+            beforeSubmitDebug(space);
+#endif
             auto ret = io_uring_submit(_eventQueuePtr);
             if(ret < 0) [[unlikely]] {
                 throw std::system_error(-ret, std::generic_category(), "io_uring_submit() failed.");
             }
             if((unsigned int)ret != _entriesCount) [[unlikely]] {
                 fmt::println("submit wrong amount3 {} {} {}", ret, _entriesCount, space);
+#ifdef ICHOR_ENABLE_INTERNAL_URING_DEBUGGING
+                afterSubmitDebug(ret, space);
+#endif
                 std::terminate();
             }
         }
@@ -830,28 +833,40 @@ namespace Ichor {
 
     void IOUringQueue::forceSubmit() {
         auto space = io_uring_sq_space_left(_eventQueuePtr);
+#ifdef ICHOR_ENABLE_INTERNAL_URING_DEBUGGING
+        beforeSubmitDebug(space);
+#endif
         auto ret = io_uring_submit(_eventQueuePtr);
         if(ret < 0) [[unlikely]] {
             throw std::system_error(-ret, std::generic_category(), "io_uring_submit() failed.");
         }
         if((unsigned int)ret != _entriesCount - space) [[unlikely]] {
             fmt::println("submit wrong amount4 {} {} {}", ret, _entriesCount, space);
+#ifdef ICHOR_ENABLE_INTERNAL_URING_DEBUGGING
+            afterSubmitDebug(ret, space);
+#endif
             std::terminate();
         }
     }
 
     void IOUringQueue::submitAndWait(uint32_t waitNr) {
-        auto toSubmit = io_uring_sq_ready(_eventQueuePtr);
+        auto space = io_uring_sq_space_left(_eventQueuePtr);
 //        fmt::println("submit and wait {}", toSubmit);
+#ifdef ICHOR_ENABLE_INTERNAL_URING_DEBUGGING
+        beforeSubmitDebug(space);
+#endif
         auto ret = io_uring_submit_and_wait(_eventQueuePtr, waitNr);
 
         if(ret < 0) [[unlikely]] {
-            fmt::println("pushEventInternal() error waiting for available slots in ring {} {} {}", ret, _entriesCount, toSubmit);
+            fmt::println("pushEventInternal() error waiting for available slots in ring {} {} {}", ret, _entriesCount, space);
             throw std::system_error(-ret, std::generic_category(), "io_uring_submit_and_wait() failed");
         }
 
-        if((unsigned int)ret != toSubmit) [[unlikely]] {
-            fmt::println("submit wrong amount5 {} {} {}", ret, _entriesCount, toSubmit);
+        if((unsigned int)ret != _entriesCount - space) [[unlikely]] {
+            fmt::println("submit wrong amount5 {} {} {}", ret, _entriesCount, space);
+#ifdef ICHOR_ENABLE_INTERNAL_URING_DEBUGGING
+            afterSubmitDebug(ret, space);
+#endif
             std::terminate();
         }
     }
@@ -955,5 +970,40 @@ namespace Ichor {
         return IOUringBuf(_eventQueuePtr, bufRing, entriesBuf, entries, entryBufferSize, id);
     }
 }
+
+#ifdef ICHOR_ENABLE_INTERNAL_URING_DEBUGGING
+    void Ichor::IOUringQueue::beforeSubmitDebug(unsigned int space) {
+        fmt::println("going to submit {} {}", _entriesCount, space);
+        _debugOpcodes = getToBeSubmittedOpcodes(_eventQueuePtr);
+        for(auto &op : _debugOpcodes) {
+            auto svc = _dm->getIService(op.second->originatingService);
+            std::string_view svcName = "UNKNOWN";
+            if(svc) {
+                svcName = (*svc)->getServiceName();
+            }
+            fmt::println("{} from {}:{} with event type {}", op.first, op.second->originatingService, svcName, op.second->get_name());
+        }
+    }
+
+    void Ichor::IOUringQueue::afterSubmitDebug(int ret, unsigned int space) {
+        fmt::println("still left in queue {} {} {}", ret, _entriesCount, space);
+        auto newSubmitLog = getToBeSubmittedOpcodes(_eventQueuePtr);
+        for(auto &op : newSubmitLog) {
+            auto svc = _dm->getIService(op.second->originatingService);
+            std::string_view svcName = "UNKNOWN";
+            if(svc) {
+                svcName = (*svc)->getServiceName();
+            }
+            fmt::println("{} from {}:{} with event type {}", op.first, op.second->originatingService, svcName, op.second->get_name());
+        }
+        fmt::println("");
+        auto diff = _debugOpcodes.size() - newSubmitLog.size();
+        for(decltype(diff) i = 0; i < diff; i++) {
+            fmt::println("submitted {}", _debugOpcodes[i].first);
+        }
+        fmt::println("");
+        fmt::println("The last submission probably contains an error.");
+    }
+#endif
 
 #endif

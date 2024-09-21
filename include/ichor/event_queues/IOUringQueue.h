@@ -59,6 +59,11 @@ namespace Ichor {
         bool checkRingFlags(io_uring* ring);
         void shouldAddQuitEvent();
 
+#ifdef ICHOR_ENABLE_INTERNAL_URING_DEBUGGING
+        void beforeSubmitDebug(unsigned int space);
+        void afterSubmitDebug(int ret, unsigned int space);
+#endif
+
         std::unique_ptr<io_uring> _eventQueue{};
 //        SectionalPriorityQueue<std::unique_ptr<Event>, OrderedPriorityQueueCompare> _priorityQueue{};
         io_uring *_eventQueuePtr{};
@@ -73,5 +78,8 @@ namespace Ichor {
         std::atomic<bool> _quitEventSent{false};
         Version _kernelVersion{};
         long int _pageSize{};
+#ifdef ICHOR_ENABLE_INTERNAL_URING_DEBUGGING
+        std::vector<std::pair<io_uring_op, Ichor::Event*>> _debugOpcodes;
+#endif
     };
 }
