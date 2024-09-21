@@ -38,6 +38,10 @@ struct fmt::formatter<glz::error_code> {
                 return fmt::format_to(ctx.out(), "glz::error_code::expected_bracket");
             case glz::error_code::expected_quote:
                 return fmt::format_to(ctx.out(), "glz::error_code::expected_quote");
+            case glz::error_code::expected_comma:
+                return fmt::format_to(ctx.out(), "glz::error_code::expected_comma");
+            case glz::error_code::expected_colon:
+                return fmt::format_to(ctx.out(), "glz::error_code::expected_colon");
             case glz::error_code::exceeded_static_array_size:
                 return fmt::format_to(ctx.out(), "glz::error_code::exceeded_static_array_size");
             case glz::error_code::unexpected_end:
@@ -50,6 +54,8 @@ struct fmt::formatter<glz::error_code> {
                 return fmt::format_to(ctx.out(), "glz::error_code::key_not_found");
             case glz::error_code::unexpected_enum:
                 return fmt::format_to(ctx.out(), "glz::error_code::unexpected_enum");
+            case glz::error_code::attempt_const_read:
+                return fmt::format_to(ctx.out(), "glz::error_code::attempt_const_read");
             case glz::error_code::attempt_member_func_read:
                 return fmt::format_to(ctx.out(), "glz::error_code::attempt_member_func_read");
             case glz::error_code::attempt_read_hidden:
@@ -84,6 +90,8 @@ struct fmt::formatter<glz::error_code> {
                 return fmt::format_to(ctx.out(), "glz::error_code::unicode_escape_conversion_failure");
             case glz::error_code::file_open_failure:
                 return fmt::format_to(ctx.out(), "glz::error_code::file_open_failure");
+            case glz::error_code::file_close_failure:
+                return fmt::format_to(ctx.out(), "glz::error_code::file_close_failure");
             case glz::error_code::file_include_error:
                 return fmt::format_to(ctx.out(), "glz::error_code::file_include_error");
             case glz::error_code::dump_int_error:
@@ -114,8 +122,11 @@ struct fmt::formatter<glz::error_code> {
                 return fmt::format_to(ctx.out(), "glz::error_code::invalid_distribution_elements");
             case glz::error_code::missing_key:
                 return fmt::format_to(ctx.out(), "glz::error_code::missing_key");
-            default:
-                return fmt::format_to(ctx.out(), "glz::error_code:: ??? report bug!");
+            case glz::error_code::hostname_failure:
+                return fmt::format_to(ctx.out(), "glz::error_code::hostname_failure");
+            case glz::error_code::includer_error:
+                return fmt::format_to(ctx.out(), "glz::error_code::includer_error");
         }
+        return fmt::format_to(ctx.out(), "glz::error_code:: ??? report bug!");
     }
 };
