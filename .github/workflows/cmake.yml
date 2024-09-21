@@ -17,7 +17,7 @@ jobs:
 
     strategy:
       matrix:
-        compiler: [/opt/gcc-12.4/bin/gcc;/opt/gcc-12.4/bin/g++, clang:clang++]
+        compiler: [/opt/gcc-12.4/bin/gcc;/opt/gcc-12.4/bin/g++, clang;clang++]
         spdlog: [ON, OFF]
         opts: [Debug, Release]
         sanitizer: [asan] #tsan not yet supported due to missing sanitizer implementation in GCC 10, 11. As well as false positives. See:
