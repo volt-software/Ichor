@@ -183,7 +183,12 @@ namespace Ichor {
             std::terminate();
         }
 
-        auto version = parseStringAsVersion(buffer.release);
+        std::string_view release = buffer.release;
+        if(auto pos = release.find('-'); pos != std::string_view::npos) {
+            release = release.substr(0, pos);
+        }
+
+        auto version = parseStringAsVersion(release);
 
         if(!version) {
             fmt::println("Couldn't parse uname version: {}", buffer.release);
