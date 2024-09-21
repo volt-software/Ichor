@@ -17,8 +17,7 @@ jobs:
 
     strategy:
       matrix:
-        ccompiler: [/opt/gcc-12.4/bin/gcc, clang]
-        cxxcompiler: [/opt/gcc-12.4/bin/g++, clang++]
+        compiler: [/opt/gcc-12.4/bin/gcc:/opt/gcc-12.4/bin/g++, clang:clang++]
         spdlog: [ON, OFF]
         opts: [Debug, Release]
         sanitizer: [asan] #tsan not yet supported due to missing sanitizer implementation in GCC 10, 11. As well as false positives. See:
@@ -36,13 +35,13 @@ jobs:
       if: ${{matrix.sanitizer == 'asan'}}
       # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
       # See https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html?highlight=cmake_build_type
-      run: CC=${{matrix.ccompiler}} CXX=${{matrix.cxxcompiler}} cmake -GNinja -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{matrix.opts}} -DICHOR_USE_SPDLOG=${{matrix.spdlog}} -DICHOR_USE_BOOST_BEAST=ON -DICHOR_USE_SDEVENT=ON -DICHOR_USE_MOLD=OFF -DICHOR_USE_LIBCPP=OFF -DICHOR_USE_LIBURING=OFF
+      run: CC=$(echo "${{matrix.cxxcompiler}}" | cut -d ":" -f 1) CXX=$(echo "${{matrix.cxxcompiler}}" | cut -d ":" -f 2) cmake -GNinja -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{matrix.opts}} -DICHOR_USE_SPDLOG=${{matrix.spdlog}} -DICHOR_USE_BOOST_BEAST=ON -DICHOR_USE_SDEVENT=ON -DICHOR_USE_MOLD=OFF -DICHOR_USE_LIBCPP=OFF -DICHOR_USE_LIBURING=OFF
 
     - name: "Configure CMake (spdlog:${{matrix.spdlog}}, tsan)"
       if: ${{matrix.sanitizer == 'tsan'}}
       # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
       # See https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html?highlight=cmake_build_type
-      run: CC=${{matrix.ccompiler}} CXX=${{matrix.cxxcompiler}} cmake -GNinja -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{matrix.opts}} -DICHOR_USE_SPDLOG=${{matrix.spdlog}} -DICHOR_USE_BOOST_BEAST=ON -DICHOR_USE_SDEVENT=ON -DICHOR_USE_SANITIZERS=OFF -DICHOR_USE_THREAD_SANITIZER=ON -DICHOR_USE_MOLD=OFF -DICHOR_USE_LIBCPP=OFF -DICHOR_USE_LIBURING=OFF
+      run: CC=$(echo "${{matrix.cxxcompiler}}" | cut -d ":" -f 1) CXX=$(echo "${{matrix.cxxcompiler}}" | cut -d ":" -f 2) cmake -GNinja -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{matrix.opts}} -DICHOR_USE_SPDLOG=${{matrix.spdlog}} -DICHOR_USE_BOOST_BEAST=ON -DICHOR_USE_SDEVENT=ON -DICHOR_USE_SANITIZERS=OFF -DICHOR_USE_THREAD_SANITIZER=ON -DICHOR_USE_MOLD=OFF -DICHOR_USE_LIBCPP=OFF -DICHOR_USE_LIBURING=OFF
 
     - name: Build
       # Build your program with the given configuration
