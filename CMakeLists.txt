@@ -69,6 +69,7 @@ option(ICHOR_USE_MIMALLOC "Use mimalloc for significant performance improvements
 cmake_dependent_option(ICHOR_USE_SYSTEM_MIMALLOC "Use system or vendored mimalloc" OFF "(CMAKE_CXX_COMPILER_ID STREQUAL \"Clang\" AND ICHOR_USE_SANITIZERS) OR NOT ICHOR_USE_SANITIZERS" OFF)
 cmake_dependent_option(ICHOR_USE_LIBURING "Add liburing based queue/integration" ON "NOT WIN32 AND NOT APPLE" OFF)
 cmake_dependent_option(ICHOR_FORCE_32_BIT "Force add 32 bit to compile flags" OFF "(CMAKE_CXX_COMPILER_ID STREQUAL \"Clang\" OR CMAKE_CXX_COMPILER_ID STREQUAL \"GNU\")" OFF)
+cmake_dependent_option(ICHOR_ENABLE_INTERNAL_URING_DEBUGGING "Add verbose logging of Ichor uring queue" OFF "ICHOR_USE_LIBURING" OFF)
 
 option(ICHOR_USE_BACKWARD "Use backward-cpp to print stacktraces on crashes or when the user wants to. Useful for debugging." $ICHOR_BUILDING_DEBUG)
 option(ICHOR_USE_HIREDIS "Add hiredis dependency" OFF)
@@ -123,6 +124,9 @@ if(ICHOR_ENABLE_INTERNAL_IO_DEBUGGING)
 endif()
 if(ICHOR_ENABLE_INTERNAL_STL_DEBUGGING)
     target_compile_definitions(ichor PUBLIC ICHOR_ENABLE_INTERNAL_STL_DEBUGGING)
+endif()
+if(ICHOR_ENABLE_INTERNAL_URING_DEBUGGING)
+    target_compile_definitions(ichor PUBLIC ICHOR_ENABLE_INTERNAL_URING_DEBUGGING)
 endif()
 
 if(ICHOR_USE_SPDLOG)
