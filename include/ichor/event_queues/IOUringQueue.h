@@ -6,8 +6,6 @@
 
 #include <ichor/event_queues/IEventQueue.h>
 #include <ichor/event_queues/IIOUringQueue.h>
-//#include <ichor/event_queues/PriorityQueue.h>
-//#include <ichor/stl/SectionalPriorityQueue.h>
 #include <ichor/ichor_liburing.h>
 #include <atomic>
 #include <thread>
@@ -65,7 +63,6 @@ namespace Ichor {
 #endif
 
         std::unique_ptr<io_uring> _eventQueue{};
-//        SectionalPriorityQueue<std::unique_ptr<Event>, OrderedPriorityQueueCompare> _priorityQueue{};
         io_uring *_eventQueuePtr{};
         std::atomic<bool> _quit{false};
         std::atomic<bool> _initializedQueue{false};

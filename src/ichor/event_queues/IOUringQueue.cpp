@@ -522,15 +522,32 @@ namespace Ichor {
         _eventQueuePtr = _eventQueue.get();
         _entriesCount = entriesCount;
         io_uring_params p{};
-        p.flags = IORING_SETUP_DEFER_TASKRUN | IORING_SETUP_COOP_TASKRUN | IORING_SETUP_SINGLE_ISSUER;
+        if(_kernelVersion >= Version{5, 19, 0}) {
+            p.flags |= IORING_SETUP_COOP_TASKRUN;
+        } else {
+            fmt::println("IORING_SETUP_COOP_TASKRUN not supported, requires kernel >= 5.19.0, expect reduced performance.");
+        }
+        if(_kernelVersion >= Version{6, 0, 0}) {
+            p.flags |= IORING_SETUP_SINGLE_ISSUER;
+        } else {
+            fmt::println("IORING_SETUP_SINGLE_ISSUER not supported, requires kernel >= 6.0.0, expect reduced performance.");
+        }
+        if(_kernelVersion >= Version{6, 1, 0}) {
+            p.flags |= IORING_SETUP_DEFER_TASKRUN;
+        } else {
+            fmt::println("IORING_SETUP_DEFER_TASKRUN not supported, requires kernel >= 6.1.0, expect reduced performance.");
+        }
         p.sq_thread_idle = 50;
         auto ret = io_uring_queue_init_params(entriesCount, _eventQueuePtr, &p);
         if(ret == -ENOSYS) [[unlikely]] {
             throw std::system_error(-ret, std::generic_category(), "io_uring_queue_init_params() failed, probably not enabled in the kernel.");
         }
         if(ret < 0) [[unlikely]] {
+            if(p.flags == 0) { // no use in retrying
+                throw std::system_error(-ret, std::generic_category(), "io_uring_queue_init_params() failed");
+            }
+            fmt::println("Couldn't set queue params {}, retrying without. Expect reduced performance.", p.flags);
             p.flags = 0;
-            fmt::println("Couldn't set queue params IORING_SETUP_DEFER_TASKRUN | IORING_SETUP_COOP_TASKRUN | IORING_SETUP_SINGLE_ISSUER, retrying without. Expect reduced performance.");
             ret = io_uring_queue_init_params(entriesCount, _eventQueuePtr, &p);
             if(ret < 0) [[unlikely]] {
                 throw std::system_error(-ret, std::generic_category(), "io_uring_queue_init_params() failed");
@@ -541,7 +558,7 @@ namespace Ichor {
         }
         ret = io_uring_register_ring_fd(_eventQueuePtr);
         if(ret < 0) [[unlikely]] {
-            fmt::println("Couldn't register ring fd. Expect reduced performance. {}", ret);
+            fmt::println("Couldn't register ring fd. Expect reduced performance. Requires kernel >= 5.18 {}", ret);
         }
         ret = io_uring_ring_dontfork(_eventQueuePtr);
         if(ret < 0) [[unlikely]] {
@@ -556,7 +573,6 @@ namespace Ichor {
 			fmt::println("warning: io_uring_ring_mlock() failed: {}", errno);
 		}
 
-//        _priorityQueue.reserve(entriesCount);
         _threadId = std::this_thread::get_id();
         _initializedQueue.store(true, std::memory_order_release);
         return _eventQueuePtr;
@@ -569,7 +585,6 @@ namespace Ichor {
         _threadId = std::this_thread::get_id();
         _eventQueuePtr = event;
         _entriesCount = entriesCount;
-//        _priorityQueue.reserve(entriesCount);
         _initializedQueue.store(true, std::memory_order_release);
         return true;
     }
@@ -641,36 +656,6 @@ namespace Ichor {
             unsigned int handled{};
             unsigned int head{};
             if(ret != -ETIME) {
-                // attempt at forcing some sort of priority for events, though with cqe's being a non-continuous range, impossible to guarantee.
-                // also takes a significant performance hit.
-#if 0
-                io_uring_for_each_cqe(_eventQueuePtr, head, cqe) {
-                    TSAN_ANNOTATE_HAPPENS_AFTER(cqe->user_data);
-                    auto *evt = reinterpret_cast<Event *>(io_uring_cqe_get_data(cqe));
-                    if(evt != nullptr) {
-                        if(evt->get_type() == UringResponseEvent::TYPE) {
-                            auto *resEvt = reinterpret_cast<UringResponseEvent*>(evt);
-                            resEvt->res = cqe->res;
-                        }
-                        _priorityQueue.emplace(evt);
-                    }
-                    handled++;
-                }
-                io_uring_cq_advance(_eventQueuePtr, handled);
-
-                while(!_priorityQueue.empty()) {
-                    auto evt = _priorityQueue.pop();
-                    if(!evt) {
-                        std::terminate();
-                    }
-                    if(evt->get_type() == UringResponseEvent::TYPE) {
-                        auto *resEvt = reinterpret_cast<UringResponseEvent*>(evt.get());
-                        resEvt->fun(resEvt->res);
-                    } else {
-                        processEvent(evt);
-                    }
-                }
-#else
 
                 io_uring_for_each_cqe(_eventQueuePtr, head, cqe) {
                     TSAN_ANNOTATE_HAPPENS_AFTER(cqe->user_data);
@@ -692,7 +677,6 @@ namespace Ichor {
                     handled++;
                 }
                 io_uring_cq_advance(_eventQueuePtr, handled);
-#endif
 
                 {
                     auto space = io_uring_sq_space_left(_eventQueuePtr);
