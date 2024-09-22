@@ -117,7 +117,7 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::IOUringTcpHostService:
     if(_bindFd == -1) {
         close(_socket);
         _socket = -1;
-        ICHOR_LOG_ERROR(_logger, "Couldn't bind socket with address {} port {}: {}", addressProp == cend(getProperties()) ? std::string{"ANY"} : Ichor::any_cast<std::string>(addressProp->second), Ichor::any_cast<uint16_t>((getProperties())["Port"]), mapErrnoToError(-res));
+        ICHOR_LOG_ERROR(_logger, "Couldn't bind socket with address {} port {}: {}", addressProp == cend(getProperties()) ? std::string{"ANY"} : Ichor::any_cast<std::string>(addressProp->second), Ichor::any_cast<uint16_t>((getProperties())["Port"]), mapErrnoToError(errno));
         co_return tl::unexpected(StartError::FAILED);
     }
 
