@@ -62,7 +62,7 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::TcpConnectionService::
 
         // The start function possibly gets called multiple times due to trying to recover from not being able to connect
         if(_socket == -1) {
-            _socket = socket(AF_INET, SOCK_STREAM, 0);
+            _socket = socket(AF_INET, SOCK_STREAM | SOCK_CLOEXEC, 0);
             if (_socket == -1) {
                 throw std::runtime_error("Couldn't create socket: errno = " + std::to_string(errno));
             }
