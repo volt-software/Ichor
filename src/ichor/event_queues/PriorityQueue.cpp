@@ -54,13 +54,13 @@ namespace Ichor {
     template <typename COMPARE>
     bool TemplatePriorityQueue<COMPARE>::empty() const noexcept {
         std::shared_lock const l(_eventQueueMutex);
-        return _eventQueue.empty();
+        return _eventQueue.empty() && !_processingEvt.load(std::memory_order_acquire);
     }
 
     template <typename COMPARE>
     uint64_t TemplatePriorityQueue<COMPARE>::size() const noexcept {
         std::shared_lock const l(_eventQueueMutex);
-        return static_cast<uint64_t>(_eventQueue.size());
+        return static_cast<uint64_t>(_eventQueue.size()) + _processingEvt.load(std::memory_order_acquire);
     }
 
     template <typename COMPARE>
@@ -116,7 +116,9 @@ namespace Ichor {
 
             auto evt = _eventQueue.pop();
             l.unlock();
+            _processingEvt.store(true, std::memory_order_release);
             processEvent(evt);
+            _processingEvt.store(false, std::memory_order_release);
         }
 
         stopDm();
