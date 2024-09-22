@@ -54,6 +54,7 @@ namespace Ichor {
         mutable Ichor::RealtimeReadWriteMutex _eventQueueMutex{};
         ConditionVariableAny<RealtimeReadWriteMutex> _wakeup{};
         std::atomic<bool> _quit{false};
+        std::atomic<bool> _processingEvt{false};
         bool _quitEventSent{false};
         bool _spinlock{false};
         std::chrono::steady_clock::time_point _whenQuitEventWasSent{};
