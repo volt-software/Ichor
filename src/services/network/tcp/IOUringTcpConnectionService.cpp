@@ -18,6 +18,10 @@ Ichor::IOUringTcpConnectionService::IOUringTcpConnectionService(DependencyRegist
 }
 
 Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::IOUringTcpConnectionService::start() {
+    if(_q->getKernelVersion() < Version{5, 5, 0}) {
+        fmt::println("Kernel version too old to use IOUringTcpConnectionService. Requires >= 5.5.0");
+    }
+
     if(auto propIt = getProperties().find("TimeoutSendUs"); propIt != getProperties().end()) {
         _sendTimeout = Ichor::any_cast<int64_t>(propIt->second);
     }
@@ -49,24 +53,29 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::IOUringTcpConnectionSe
             co_return tl::unexpected(StartError::FAILED);
         }
 
-        AsyncManualResetEvent evt;
 
-        int res{};
-        auto *sqe = _q->getSqeWithData(this, [&evt, &res](io_uring_cqe *cqe) {
-            INTERNAL_IO_DEBUG("socket res: {} {}", cqe->res, cqe->res < 0 ? strerror(-cqe->res) : "");
-            res = cqe->res;
-            evt.set();
-        });
-        io_uring_prep_socket(sqe, AF_INET, SOCK_STREAM | SOCK_CLOEXEC, 0, 0);
-        co_await evt;
+        if(_q->getKernelVersion() >= Version{5, 19, 0}) {
+            AsyncManualResetEvent evt;
 
-        if(res < 0) {
-            ICHOR_LOG_ERROR(_logger, "Couldn't open a socket to {}:{}: {}", Ichor::any_cast<std::string &>(addrIt->second),
-                            Ichor::any_cast<uint16_t>(portIt->second), mapErrnoToError(-res));
-            co_return tl::unexpected(StartError::FAILED);
+            int res{};
+            auto *sqe = _q->getSqeWithData(this, [&evt, &res](io_uring_cqe *cqe) {
+                INTERNAL_IO_DEBUG("socket res: {} {}", cqe->res, cqe->res < 0 ? strerror(-cqe->res) : "");
+                res = cqe->res;
+                evt.set();
+            });
+            io_uring_prep_socket(sqe, AF_INET, SOCK_STREAM | SOCK_CLOEXEC, 0, 0);
+            co_await evt;
+
+            if (res < 0) {
+                ICHOR_LOG_ERROR(_logger, "Couldn't open a socket to {}:{}: {}", Ichor::any_cast<std::string &>(addrIt->second),
+                                Ichor::any_cast<uint16_t>(portIt->second), mapErrnoToError(-res));
+                co_return tl::unexpected(StartError::FAILED);
+            }
+
+            _socket = res;
+        } else {
+            _socket = socket(AF_INET, SOCK_STREAM | SOCK_CLOEXEC, 0);
         }
-
-        _socket = res;
     }
 
     if(_q->getKernelVersion() >= Version{6, 7, 0}) {
@@ -76,26 +85,31 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::IOUringTcpConnectionSe
         int resSndtimeo{-1};
         timeval timeout{};
         AsyncManualResetEvent evtSockopt;
-        auto *sqeNodelay = _q->getSqeWithData(this, [&resNodelay](io_uring_cqe *cqe) {
+        if(_q->sqeSpaceLeft() < 3) {
+            _q->forceSubmit();
+        }
+        auto *sqe = _q->getSqeWithData(this, [&resNodelay](io_uring_cqe *cqe) {
             INTERNAL_IO_DEBUG("setsockopt TCP_NODELAY res: {} {}", cqe->res, cqe->res < 0 ? strerror(-cqe->res) : "");
             resNodelay = cqe->res;
         });
-        io_uring_prep_cmd_sock(sqeNodelay, SOCKET_URING_OP_SETSOCKOPT, _socket, IPPROTO_TCP, TCP_NODELAY, &setting, sizeof(setting));
+        sqe->flags |= IOSQE_IO_HARDLINK;
+        io_uring_prep_cmd_sock(sqe, SOCKET_URING_OP_SETSOCKOPT, _socket, IPPROTO_TCP, TCP_NODELAY, &setting, sizeof(setting));
 
         timeout.tv_usec = _recvTimeout;
-        auto *sqeRcvtimeo = _q->getSqeWithData(this, [&resRcvtimeo](io_uring_cqe *cqe) {
+        sqe = _q->getSqeWithData(this, [&resRcvtimeo](io_uring_cqe *cqe) {
             INTERNAL_IO_DEBUG("setsockopt SO_RCVTIMEO res: {} {}", cqe->res, cqe->res < 0 ? strerror(-cqe->res) : "");
             resRcvtimeo = cqe->res;
         });
-        io_uring_prep_cmd_sock(sqeRcvtimeo, SOCKET_URING_OP_SETSOCKOPT, _socket, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
+        sqe->flags |= IOSQE_IO_HARDLINK;
+        io_uring_prep_cmd_sock(sqe, SOCKET_URING_OP_SETSOCKOPT, _socket, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
 
         timeout.tv_usec = _sendTimeout;
-        auto *sqeSndtimeo = _q->getSqeWithData(this, [&evtSockopt, &resSndtimeo](io_uring_cqe *cqe) {
+        sqe = _q->getSqeWithData(this, [&evtSockopt, &resSndtimeo](io_uring_cqe *cqe) {
             INTERNAL_IO_DEBUG("setsockopt SO_SNDTIMEO res: {} {}", cqe->res, cqe->res < 0 ? strerror(-cqe->res) : "");
             resSndtimeo = cqe->res;
             evtSockopt.set();
         });
-        io_uring_prep_cmd_sock(sqeSndtimeo, SOCKET_URING_OP_SETSOCKOPT, _socket, SOL_SOCKET, SO_SNDTIMEO, &timeout, sizeof(timeout));
+        io_uring_prep_cmd_sock(sqe, SOCKET_URING_OP_SETSOCKOPT, _socket, SOL_SOCKET, SO_SNDTIMEO, &timeout, sizeof(timeout));
 
         co_await evtSockopt;
 
