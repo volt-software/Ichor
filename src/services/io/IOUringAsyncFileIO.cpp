@@ -12,6 +12,9 @@ Ichor::IOUringAsyncFileIO::IOUringAsyncFileIO(DependencyRegister &reg, Propertie
 
 
 Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::IOUringAsyncFileIO::start() {
+    if(_q->getKernelVersion() < Version{5, 5, 0}) {
+        fmt::println("Kernel version too old to use IOUringAsyncFileIO. Requires >= 5.5.0");
+    }
     co_return {};
 }
 
@@ -128,6 +131,10 @@ Ichor::Task<tl::expected<void, Ichor::IOError>> Ichor::IOUringAsyncFileIO::copyF
         co_return tl::unexpected(IOError::SERVICE_STOPPED);
     }
 
+    if(_q->sqeSpaceLeft() < 2) {
+        _q->forceSubmit();
+    }
+
     AsyncManualResetEvent evt;
 
     int fromFd{-1};
@@ -136,6 +143,7 @@ Ichor::Task<tl::expected<void, Ichor::IOError>> Ichor::IOUringAsyncFileIO::copyF
         INTERNAL_IO_DEBUG("openat res: {} {}", cqe->res, cqe->res < 0 ? strerror(-cqe->res) : "");
         fromFd = cqe->res;
     });
+    sqe->flags |= IOSQE_IO_HARDLINK;
     if(from.is_absolute()) {
         io_uring_prep_openat(sqe, 0, from.c_str(), O_RDONLY | O_CLOEXEC, 0);
     } else {
@@ -143,11 +151,6 @@ Ichor::Task<tl::expected<void, Ichor::IOError>> Ichor::IOUringAsyncFileIO::copyF
     }
     sqe = _q->getSqeWithData(this, [&evt, &toFd](io_uring_cqe *cqe) {
         INTERNAL_IO_DEBUG("openat res: {} {}", cqe->res, cqe->res < 0 ? strerror(-cqe->res) : "");
-
-        if(evt.is_set()) {
-            return;
-        }
-
         toFd = cqe->res;
         evt.set();
     });

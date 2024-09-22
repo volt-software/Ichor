@@ -197,34 +197,49 @@ Ichor::Task<void> Ichor::IOUringTcpConnectionService::stop() {
     INTERNAL_IO_DEBUG("quit");
 
     if(_socket >= 0) {
-        AsyncManualResetEvent evt;
-        int res{};
-        auto *sqe = _q->getSqeWithData(this, [&evt, &res](io_uring_cqe *cqe) {
-            INTERNAL_IO_DEBUG("shutdown res: {} {}", cqe->res, cqe->res < 0 ? strerror(-cqe->res) : "");
-            res = cqe->res;
-            evt.set();
-        });
-        io_uring_prep_shutdown(sqe, _socket, SHUT_RDWR);
+        if(_q->getKernelVersion() >= Version{5, 19, 0}) {
+            int shutdownRes{};
+            int closeRes{};
+            AsyncManualResetEvent evt;
+            if(_q->sqeSpaceLeft() < 2) {
+                _q->forceSubmit();
+            }
+            auto *sqe = _q->getSqeWithData(this, [&shutdownRes](io_uring_cqe *cqe) {
+                INTERNAL_IO_DEBUG("shutdown res: {} {}", cqe->res, cqe->res < 0 ? strerror(-cqe->res) : "");
+                shutdownRes = cqe->res;
+            });
+            sqe->flags |= IOSQE_IO_HARDLINK;
+            io_uring_prep_shutdown(sqe, _socket, SHUT_RDWR);
 
-        co_await evt;
+            sqe = _q->getSqeWithData(this, [&evt, &closeRes](io_uring_cqe *cqe) {
+                INTERNAL_IO_DEBUG("close res: {} {}", cqe->res, cqe->res < 0 ? strerror(-cqe->res) : "");
+                closeRes = cqe->res;
+                evt.set();
+            });
+            io_uring_prep_close(sqe, _socket);
 
-        if(res < 0) {
-            ICHOR_LOG_ERROR(_logger, "Couldn't shutdown socket: {}", mapErrnoToError(-res));
-        }
+            co_await evt;
 
-        res = 0;
-        evt.reset();
-        sqe = _q->getSqeWithData(this, [&evt, &res](io_uring_cqe *cqe) {
-            INTERNAL_IO_DEBUG("close res: {} {}", cqe->res, cqe->res < 0 ? strerror(-cqe->res) : "");
-            res = cqe->res;
-            evt.set();
-        });
-        io_uring_prep_close(sqe, _socket);
+            if(shutdownRes < 0) {
+                ICHOR_LOG_ERROR(_logger, "Couldn't shutdown socket: {}", mapErrnoToError(-shutdownRes));
+            }
+            if(closeRes < 0) {
+                ICHOR_LOG_ERROR(_logger, "Couldn't close socket: {}", mapErrnoToError(-closeRes));
+            }
 
-        co_await evt;
+            co_await evt;
+        } else {
+            int res = shutdown(_socket, SHUT_RDWR);
 
-        if(res < 0) {
-            ICHOR_LOG_ERROR(_logger, "Couldn't close socket: {}", mapErrnoToError(-res));
+            if(res < 0) {
+                ICHOR_LOG_ERROR(_logger, "Couldn't shutdown socket: {}", mapErrnoToError(errno));
+            }
+
+            res = close(_socket);
+
+            if(res < 0) {
+                ICHOR_LOG_ERROR(_logger, "Couldn't close socket: {}", mapErrnoToError(errno));
+            }
         }
 
         _socket = 0;
