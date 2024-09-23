@@ -81,16 +81,17 @@ Optional services:
 * Websocket service through Boost.BEAST
 * HTTP/HTTPS client and server services through Boost.BEAST
 * Spdlog logging service
-* TCP communication service
+* TCP communication service through io_uring and Boost.ASIO
 * JSON serialization services examples
 * Timer service
 * Redis service
-* Etcd v2 service
+* Etcd v2 & v3 service
 
 # Roadmap
 
+* Safe CPP proposal support
+* Custom HTTP server implementation for usage with io_uring
 * EDF scheduling / WCET measurements
-* Look into Etcd v3 HTTP API
 * Pubsub interfaces
     * Kafka? Pulsar? Ecal?
 * Shell Commands / REPL
@@ -98,6 +99,8 @@ Optional services:
     * Opentracing? Jaeger?
 * "Remote" services, where services are either in a different thread or a different machine
 * Code generator to reduce boilerplate
+* windows completion ports implementation?
+* OSX kqueue implementation?
 * ...
 
 # Benchmarks
