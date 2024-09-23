@@ -13,11 +13,21 @@ trap cleanup SIGINT SIGTERM
 
 POSITIONAL_ARGS=()
 DOCKER=1
+DEV=0
+GCC=0
 
 while [[ $# -gt 0 ]]; do
   case $1 in
     --no-docker)
       DOCKER=0
+      shift # past value
+      ;;
+    --dev)
+      DEV=1
+      shift # past value
+      ;;
+    --gcc)
+      GCC=1
       shift # past value
       ;;
     -*|--*)
@@ -31,19 +41,21 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-ccompilers=("clang-15" "clang-19" "gcc-12" "gcc")
-cppcompilers=("clang++-15" "clang++-19" "g++-12" "g++")
+ccompilers=("clang-15" "clang-20" "gcc-12" "gcc")
+cppcompilers=("clang++-15" "clang++-20" "g++-12" "g++")
+ldlibpath=("" "" "" "/opt/gcc/14/lib64/")
 
-if [[ "$1" == "--dev" ]]; then
+if [[ $DEV -eq 1 ]]; then
   ccompilers=("clang" "gcc")
   cppcompilers=("clang++" "g++")
+  ldlibpath=("" "/opt/gcc/14/lib64/")
 fi
 
-if [[ "$1" == "--gcc" ]]; then
+if [[ $GCC -eq 1 ]]; then
   ccompilers=("gcc")
   cppcompilers=("g++")
+  ldlibpath=("/opt/gcc/14/lib64/")
 fi
-
 
 if [[ $DOCKER -eq 1 ]]; then
   chmod a+w ../build
@@ -88,7 +100,7 @@ if [[ $DOCKER -eq 1 ]]; then
 #ninja && ../bin/AsyncFileIOTests
 #EOF
 #  chmod +x ../bin/run_aarch64_examples_and_tests.sh
-#  docker run -v $(pwd)/../:/opt/ichor/src -v $(pwd)/../build:/opt/ichor/build --rm --privileged --security-opt seccomp=unconfined  -it ichor-musl-aarch64 "sh -c 'ulimit -r unlimited && /opt/ichor/src/bin/run_aarch64_examples_and_tests.sh'" || exit 1
+#  docker run -v $(pwd)/../:/opt/ichor/src -v $(pwd)/../build:/opt/ichor/build --rm --privileged --security-opt seccomp=unconfined -it ichor-musl-aarch64 "sh -c 'ulimit -r unlimited && /opt/ichor/src/bin/run_aarch64_examples_and_tests.sh'" || exit 1
   run_examples 1 0
   # run_fast_benchmarks # this is still too slow, need to refactor benchmarks to specify iterations on command line
 
@@ -115,6 +127,7 @@ ninja test || exit 1
 run_examples 0 1
 
 for i in ${!ccompilers[@]}; do
+  export LD_LIBRARY_PATH=${ldlibpath[i]}
   rm -rf ./* ../bin/*
   CC=${ccompilers[i]} CXX=${cppcompilers[i]} cmake -GNinja -DCMAKE_BUILD_TYPE=Debug -DICHOR_USE_SANITIZERS=1 -DICHOR_ENABLE_INTERNAL_DEBUGGING=1 -DICHOR_USE_MOLD=1 -DICHOR_USE_BOOST_BEAST=1 -DICHOR_USE_LIBCPP=0 -DICHOR_USE_HIREDIS=1 .. || exit 1
   ninja || exit 1
