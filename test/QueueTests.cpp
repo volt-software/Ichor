@@ -143,13 +143,13 @@ TEST_CASE("QueueTests") {
     }
 
     SECTION("IOUringQueue Live") {
+        auto queue = std::make_unique<IOUringQueue>(10, 10'000);
         std::atomic<DependencyManager*> _dm{};
         std::thread t([&] {
-            auto queue = std::make_unique<IOUringQueue>(10, 10'000);
+            REQUIRE(queue->createEventLoop());
             auto &dm = queue->createManager();
             _dm.store(&dm, std::memory_order_release);
 
-            REQUIRE(queue->createEventLoop());
             dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>();
             dm.createServiceManager<UselessService>();
             queue->start(DoNotCaptureSigInt);
@@ -171,21 +171,34 @@ TEST_CASE("QueueTests") {
             throw;
         }
 
+        auto start = std::chrono::steady_clock::now();
+        while(queue->is_running()) {
+            std::this_thread::sleep_for(10ms);
+            auto now = std::chrono::steady_clock::now();
+            REQUIRE(now - start < 1s);
+        }
+
         t.join();
     }
 
     SECTION("IOUringQueue Sleep") {
+        auto queue = std::make_unique<IOUringQueue>(10, 10'000);
         std::atomic<DependencyManager*> _dm{};
         std::thread t([&] {
-            auto queue = std::make_unique<IOUringQueue>(10, 10'000);
+            REQUIRE(queue->createEventLoop());
             auto &dm = queue->createManager();
             _dm.store(&dm, std::memory_order_release);
-
-            REQUIRE(queue->createEventLoop());
             dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>();
             dm.createServiceManager<IOUringSleepService>();
             queue->start(DoNotCaptureSigInt);
         });
+
+        auto start = std::chrono::steady_clock::now();
+        while(queue->is_running()) {
+            std::this_thread::sleep_for(10ms);
+            auto now = std::chrono::steady_clock::now();
+            REQUIRE(now - start < 1s);
+        }
 
         t.join();
     }
