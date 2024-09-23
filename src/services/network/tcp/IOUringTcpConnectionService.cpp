@@ -20,6 +20,7 @@ Ichor::IOUringTcpConnectionService::IOUringTcpConnectionService(DependencyRegist
 Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::IOUringTcpConnectionService::start() {
     if(_q->getKernelVersion() < Version{5, 5, 0}) {
         fmt::println("Kernel version too old to use IOUringTcpConnectionService. Requires >= 5.5.0");
+        co_return tl::unexpected(StartError::FAILED);
     }
 
     if(auto propIt = getProperties().find("TimeoutSendUs"); propIt != getProperties().end()) {

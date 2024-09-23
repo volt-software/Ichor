@@ -25,7 +25,7 @@ void Ichor::Timer::startTimer() {
 }
 
 void Ichor::Timer::startTimer(bool fireImmediately) {
-    if(!_fn && !_fnAsync) {
+    if(!_fn && !_fnAsync) [[unlikely]] {
         throw std::runtime_error("No callback set.");
     }
 

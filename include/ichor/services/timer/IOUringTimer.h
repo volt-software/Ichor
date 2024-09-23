@@ -1,17 +1,22 @@
 #pragma once
 
-#include <thread>
+#ifndef ICHOR_USE_LIBURING
+#error "Ichor has not been compiled with io_uring support"
+#endif
+
 #include <ichor/services/timer/ITimer.h>
-#include <ichor/event_queues/IEventQueue.h>
+#include <ichor/event_queues/IIOUringQueue.h>
+#include <ichor/ichor_liburing.h>
+#include <ichor/coroutines/AsyncManualResetEvent.h>
 
 namespace Ichor {
     template <typename TIMER, typename QUEUE>
     class TimerFactory;
 
     // Rather shoddy implementation, setting the interval does not reset the insertEventLoop function and the sleep_for is sketchy at best.
-    class Timer final : public ITimer {
+    class IOUringTimer final : public ITimer {
     public:
-        ~Timer() noexcept;
+        ~IOUringTimer() noexcept = default;
 
         /// Thread-safe.
         void startTimer() final;
@@ -19,6 +24,7 @@ namespace Ichor {
         void startTimer(bool fireImmediately) final;
         /// Thread-safe.
         void stopTimer() final;
+//        void stopTimer(std::function<void()>) final;
 
         /// Thread-safe.
         [[nodiscard]] bool running() const noexcept final;
@@ -48,22 +54,22 @@ namespace Ichor {
         ///
         /// \param timerId unique identifier for timer
         /// \param svcId unique identifier for svc using this timer
-        Timer(IEventQueue& queue, uint64_t timerId, uint64_t svcId) noexcept;
-
-        void insertEventLoop(bool fireImmediately);
+        IOUringTimer(IIOUringQueue& queue, uint64_t timerId, uint64_t svcId) noexcept;
+        std::function<void(io_uring_cqe*)> createNewHandler() noexcept;
 
         template <typename TIMER, typename QUEUE>
         friend class TimerFactory;
 
-        IEventQueue& _queue;
+        IIOUringQueue& _q;
         uint64_t _timerId{};
-        std::atomic<bool> _fireOnce{};
-        std::atomic<uint64_t> _intervalNanosec{1'000'000'000};
-        std::unique_ptr<std::thread> _eventInsertionThread{};
+        bool _fireOnce{};
+        __kernel_timespec _timespec{};
         std::function<AsyncGenerator<IchorBehaviour>()> _fnAsync{};
         std::function<void()> _fn{};
-        std::atomic<bool> _quit{true};
-        std::atomic<uint64_t> _priority{INTERNAL_EVENT_PRIORITY};
+//        std::function<void()> _stopCb{};
+        bool _quit{true};
+        uint64_t _priority{INTERNAL_EVENT_PRIORITY};
         uint64_t _requestingServiceId{};
+        uint64_t _uringTimerId{};
     };
 }

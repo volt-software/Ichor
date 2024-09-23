@@ -12,9 +12,8 @@
 #include <chrono>
 
 namespace Ichor {
-
     /// Provides an io_uring based queue, expects the running OS to have at least kernel 5.4
-    class IOUringQueue final : public IEventQueue, public IIOUringQueue {
+    class IOUringQueue final : public IIOUringQueue {
     public:
         IOUringQueue(uint64_t quitTimeoutMs = 5'000, long long pollTimeoutNs = 100'000'000, tl::optional<Version> emulateKernelVersion = {});
         ~IOUringQueue() final;
@@ -45,6 +44,7 @@ namespace Ichor {
         uint32_t sqeSpaceLeft() const noexcept final;
         [[nodiscard]] io_uring_sqe *getSqe() noexcept final;
         io_uring_sqe* getSqeWithData(IService *self, std::function<void(io_uring_cqe*)> fun) noexcept final;
+        io_uring_sqe* getSqeWithData(ServiceIdType serviceId, std::function<void(io_uring_cqe*)> fun) noexcept final;
 
         void submitIfNeeded() final;
         void forceSubmit() final;

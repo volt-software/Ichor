@@ -794,6 +794,13 @@ namespace Ichor {
         return sqe;
     }
 
+    io_uring_sqe* IOUringQueue::getSqeWithData(ServiceIdType serviceId, std::function<void(io_uring_cqe*)> fun) noexcept {
+        INTERNAL_IO_DEBUG("getSqeWithData");
+        auto sqe = getSqe();
+        io_uring_sqe_set_data(sqe, new UringResponseEvent{getNextEventId(), serviceId, INTERNAL_EVENT_PRIORITY, std::move(fun)});
+        return sqe;
+    }
+
     void IOUringQueue::submitIfNeeded() {
         auto space = io_uring_sq_space_left(_eventQueuePtr);
         if(space == 0) {
