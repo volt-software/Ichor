@@ -25,15 +25,16 @@ jobs:
                       # - https://gcc.gnu.org/bugzilla/show_bug.cgi?id=100655
                       # - https://gcc.gnu.org/bugzilla/show_bug.cgi?id=101978
 
-    env:
-      CC: $(echo "${{matrix.compiler}}" | cut -d ";" -f 1)
-      CXX: $(echo "${{matrix.compiler}}" | cut -d ";" -f 2)
-      LD_LIBRARY_PATH: $(echo "${{matrix.compiler}}" | cut -d ";" -f 3)
-
     steps:
     - uses: actions/checkout@v4
       with:
         submodules: recursive
+
+    - name: "Set env"
+      run: |
+        echo "${{matrix.compiler}}" | cut -d ";" -f 1 | (echo -n CC= && cat) >> $GITHUB_ENV
+        echo "${{matrix.compiler}}" | cut -d ";" -f 2 | (echo -n CXX= && cat) >> $GITHUB_ENV
+        echo "${{matrix.compiler}}" | cut -d ";" -f 3 | (echo -n LD_LIBRARY_PATH= && cat) >> $GITHUB_ENV
 
     - name: "Configure CMake (spdlog:${{matrix.spdlog}}, asan)"
       if: ${{matrix.sanitizer == 'asan'}}
