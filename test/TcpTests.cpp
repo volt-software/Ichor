@@ -62,8 +62,11 @@ TEST_CASE("TcpTests") {
             queue->start(CaptureSigInt);
         });
 
+        auto start = std::chrono::steady_clock::now();
         while(evtGate.load(std::memory_order_acquire) != 1) {
             std::this_thread::sleep_for(500us);
+            auto now = std::chrono::steady_clock::now();
+            REQUIRE(now - start < 1s);
         }
 
         evtGate.store(0, std::memory_order_release);
@@ -80,7 +83,7 @@ TEST_CASE("TcpTests") {
             co_return {};
         });
 
-        auto start = std::chrono::steady_clock::now();
+        start = std::chrono::steady_clock::now();
         while(evtGate.load(std::memory_order_acquire) != 1) {
             std::this_thread::sleep_for(500us);
             auto now = std::chrono::steady_clock::now();
@@ -135,8 +138,11 @@ TEST_CASE("TcpTests") {
         }
         data.emplace_back('\n');
 
+        auto start = std::chrono::steady_clock::now();
         while(evtGate.load(std::memory_order_acquire) != 1) {
             std::this_thread::sleep_for(500us);
+            auto now = std::chrono::steady_clock::now();
+            REQUIRE(now - start < 1s);
         }
 
         evtGate.store(0, std::memory_order_release);
@@ -150,7 +156,7 @@ TEST_CASE("TcpTests") {
             co_return {};
         });
 
-        auto start = std::chrono::steady_clock::now();
+        start = std::chrono::steady_clock::now();
         while(evtGate.load(std::memory_order_acquire) != 1) {
             std::this_thread::sleep_for(500us);
             auto now = std::chrono::steady_clock::now();
@@ -198,8 +204,11 @@ TEST_CASE("TcpTests") {
             queue->start(CaptureSigInt);
         });
 
+        auto start = std::chrono::steady_clock::now();
         while(evtGate.load(std::memory_order_acquire) != 1) {
             std::this_thread::sleep_for(500us);
+            auto now = std::chrono::steady_clock::now();
+            REQUIRE(now - start < 1s);
         }
 
         evtGate.store(0, std::memory_order_release);
@@ -225,7 +234,7 @@ TEST_CASE("TcpTests") {
             co_return {};
         });
 
-        auto start = std::chrono::steady_clock::now();
+        start = std::chrono::steady_clock::now();
         while(evtGate.load(std::memory_order_acquire) != 2) {
             std::this_thread::sleep_for(500us);
             auto now = std::chrono::steady_clock::now();
@@ -282,8 +291,11 @@ TEST_CASE("TcpTests") {
             queue->start(CaptureSigInt);
         });
 
+        auto start = std::chrono::steady_clock::now();
         while(evtGate.load(std::memory_order_acquire) != 1) {
             std::this_thread::sleep_for(500us);
+            auto now = std::chrono::steady_clock::now();
+            REQUIRE(now - start < 1s);
         }
 
         evtGate.store(0, std::memory_order_release);
@@ -305,7 +317,7 @@ TEST_CASE("TcpTests") {
             co_return {};
         });
 
-        auto start = std::chrono::steady_clock::now();
+        start = std::chrono::steady_clock::now();
         while(evtGate.load(std::memory_order_acquire) != 1) {
             std::this_thread::sleep_for(500us);
             auto now = std::chrono::steady_clock::now();
@@ -355,8 +367,11 @@ TEST_CASE("TcpTests") {
             queue->start(CaptureSigInt);
         });
 
+        auto start = std::chrono::steady_clock::now();
         while(evtGate.load(std::memory_order_acquire) != 1) {
             std::this_thread::sleep_for(500us);
+            auto now = std::chrono::steady_clock::now();
+            REQUIRE(now - start < 1s);
         }
 
         evtGate.store(0, std::memory_order_release);
@@ -381,7 +396,7 @@ TEST_CASE("TcpTests") {
             co_return {};
         });
 
-        auto start = std::chrono::steady_clock::now();
+        start = std::chrono::steady_clock::now();
         while(evtGate.load(std::memory_order_acquire) != 1) {
             std::this_thread::sleep_for(500us);
             auto now = std::chrono::steady_clock::now();
@@ -430,8 +445,11 @@ TEST_CASE("TcpTests") {
             queue->start(CaptureSigInt);
         });
 
+        auto start = std::chrono::steady_clock::now();
         while(evtGate.load(std::memory_order_acquire) != 1) {
             std::this_thread::sleep_for(500us);
+            auto now = std::chrono::steady_clock::now();
+            REQUIRE(now - start < 1s);
         }
 
         evtGate.store(0, std::memory_order_release);
@@ -444,7 +462,7 @@ TEST_CASE("TcpTests") {
             co_return {};
         });
 
-        auto start = std::chrono::steady_clock::now();
+        start = std::chrono::steady_clock::now();
         while(evtGate.load(std::memory_order_acquire) != 2) {
             std::this_thread::sleep_for(500us);
             auto now = std::chrono::steady_clock::now();

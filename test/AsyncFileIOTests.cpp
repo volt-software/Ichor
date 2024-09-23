@@ -80,6 +80,13 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests") {
             co_return {};
         });
 
+        auto start = std::chrono::steady_clock::now();
+        while(queue->is_running()) {
+            std::this_thread::sleep_for(10ms);
+            auto now = std::chrono::steady_clock::now();
+            REQUIRE(now - start < 20s);
+        }
+
         t.join();
     }
 
@@ -130,6 +137,13 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests") {
             co_return {};
         });
 
+        auto start = std::chrono::steady_clock::now();
+        while(queue->is_running()) {
+            std::this_thread::sleep_for(10ms);
+            auto now = std::chrono::steady_clock::now();
+            REQUIRE(now - start < 20s);
+        }
+
         t.join();
 
         std::remove("NoPermIO.txt"); // ignore error, each OS handles this differently and most of the time it's just because it didn't exist in the first place
@@ -170,6 +184,13 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests") {
             co_return {};
         });
 
+        auto start = std::chrono::steady_clock::now();
+        while(queue->is_running()) {
+            std::this_thread::sleep_for(10ms);
+            auto now = std::chrono::steady_clock::now();
+            REQUIRE(now - start < 20s);
+        }
+
         t.join();
     }
     SECTION("Read whole file large") {
@@ -206,6 +227,13 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests") {
             co_return {};
         });
 
+        auto start = std::chrono::steady_clock::now();
+        while(queue->is_running()) {
+            std::this_thread::sleep_for(10ms);
+            auto now = std::chrono::steady_clock::now();
+            REQUIRE(now - start < 20s);
+        }
+
         t.join();
     }
 
@@ -238,6 +266,13 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests") {
             queue->pushEvent<QuitEvent>(0);
             co_return {};
         });
+
+        auto start = std::chrono::steady_clock::now();
+        while(queue->is_running()) {
+            std::this_thread::sleep_for(10ms);
+            auto now = std::chrono::steady_clock::now();
+            REQUIRE(now - start < 20s);
+        }
 
         t.join();
     }
@@ -283,6 +318,13 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests") {
             co_return {};
         });
 
+        auto start = std::chrono::steady_clock::now();
+        while(queue->is_running()) {
+            std::this_thread::sleep_for(10ms);
+            auto now = std::chrono::steady_clock::now();
+            REQUIRE(now - start < 20s);
+        }
+
         t.join();
     }
 
@@ -322,6 +364,13 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests") {
             co_return {};
         });
 
+        auto start = std::chrono::steady_clock::now();
+        while(queue->is_running()) {
+            std::this_thread::sleep_for(10ms);
+            auto now = std::chrono::steady_clock::now();
+            REQUIRE(now - start < 20s);
+        }
+
         t.join();
     }
 
@@ -353,6 +402,13 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests") {
             queue->pushEvent<QuitEvent>(0);
             co_return {};
         });
+
+        auto start = std::chrono::steady_clock::now();
+        while(queue->is_running()) {
+            std::this_thread::sleep_for(10ms);
+            auto now = std::chrono::steady_clock::now();
+            REQUIRE(now - start < 20s);
+        }
 
         t.join();
     }
@@ -397,6 +453,13 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests") {
             co_return {};
         });
 
+        auto start = std::chrono::steady_clock::now();
+        while(queue->is_running()) {
+            std::this_thread::sleep_for(10ms);
+            auto now = std::chrono::steady_clock::now();
+            REQUIRE(now - start < 20s);
+        }
+
         t.join();
     }
 
@@ -437,6 +500,13 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests") {
             queue->pushEvent<QuitEvent>(0);
             co_return {};
         });
+
+        auto start = std::chrono::steady_clock::now();
+        while(queue->is_running()) {
+            std::this_thread::sleep_for(10ms);
+            auto now = std::chrono::steady_clock::now();
+            REQUIRE(now - start < 20s);
+        }
 
         t.join();
     }
@@ -483,6 +553,13 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests") {
             co_return {};
         });
 
+        auto start = std::chrono::steady_clock::now();
+        while(queue->is_running()) {
+            std::this_thread::sleep_for(10ms);
+            auto now = std::chrono::steady_clock::now();
+            REQUIRE(now - start < 20s);
+        }
+
         t.join();
     }
 
@@ -527,6 +604,13 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests") {
             queue->pushEvent<QuitEvent>(0);
             co_return {};
         });
+
+        auto start = std::chrono::steady_clock::now();
+        while(queue->is_running()) {
+            std::this_thread::sleep_for(10ms);
+            auto now = std::chrono::steady_clock::now();
+            REQUIRE(now - start < 20s);
+        }
 
         t.join();
     }
