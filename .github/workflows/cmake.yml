@@ -17,10 +17,10 @@ jobs:
 
     strategy:
       matrix:
-        compiler: [/opt/gcc-12.4/bin/gcc;/opt/gcc-12.4/bin/g++, clang;clang++]
+        compiler: [/opt/gcc-12.4/bin/gcc;/opt/gcc-12.4/bin/g++;/opt/gcc-12.4/lib64, clang;clang++;]
         spdlog: [ON, OFF]
         opts: [Debug, Release]
-        sanitizer: [asan] #tsan not yet supported due to missing sanitizer implementation in GCC 10, 11. As well as false positives. See:
+        sanitizer: [none, asan] #tsan not yet supported due to missing sanitizer implementation in GCC 10, 11. As well as false positives. See:
                       # - https://gcc.gnu.org/git/?p=gcc.git;a=commit;h=80b4ce1a5190ebe764b1009afae57dcef45f92c2
                       # - https://gcc.gnu.org/bugzilla/show_bug.cgi?id=100655
                       # - https://gcc.gnu.org/bugzilla/show_bug.cgi?id=101978
@@ -35,13 +35,19 @@ jobs:
       if: ${{matrix.sanitizer == 'asan'}}
       # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
       # See https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html?highlight=cmake_build_type
-      run: CC=$(echo "${{matrix.compiler}}" | cut -d ";" -f 1) CXX=$(echo "${{matrix.compiler}}" | cut -d ";" -f 2) cmake -GNinja -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{matrix.opts}} -DICHOR_USE_SPDLOG=${{matrix.spdlog}} -DICHOR_USE_BOOST_BEAST=ON -DICHOR_USE_SDEVENT=ON -DICHOR_USE_MOLD=OFF -DICHOR_USE_LIBCPP=OFF -DICHOR_USE_LIBURING=OFF
+      run: CC=$(echo "${{matrix.compiler}}" | cut -d ";" -f 1) CXX=$(echo "${{matrix.compiler}}" | cut -d ";" -f 2) LD_LIBRARY_PATH=$(echo "${{matrix.compiler}}" | cut -d ";" -f 3) cmake -GNinja -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{matrix.opts}} -DICHOR_USE_SPDLOG=${{matrix.spdlog}} -DICHOR_USE_BOOST_BEAST=ON -DICHOR_USE_SDEVENT=ON -DICHOR_USE_SANITIZERS=ON -DICHOR_USE_MOLD=OFF -DICHOR_USE_LIBCPP=OFF -DICHOR_USE_LIBURING=ON
+
+    - name: "Configure CMake (spdlog:${{matrix.spdlog}}, no asan)"
+      if: ${{matrix.sanitizer == 'none'}}
+      # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
+      # See https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html?highlight=cmake_build_type
+      run: CC=$(echo "${{matrix.compiler}}" | cut -d ";" -f 1) CXX=$(echo "${{matrix.compiler}}" | cut -d ";" -f 2) LD_LIBRARY_PATH=$(echo "${{matrix.compiler}}" | cut -d ";" -f 3) cmake -GNinja -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{matrix.opts}} -DICHOR_USE_SPDLOG=${{matrix.spdlog}} -DICHOR_USE_BOOST_BEAST=ON -DICHOR_USE_SDEVENT=ON -DICHOR_USE_SANITIZERS=OFF -DICHOR_USE_MOLD=OFF -DICHOR_USE_LIBCPP=OFF -DICHOR_USE_LIBURING=ON
 
     - name: "Configure CMake (spdlog:${{matrix.spdlog}}, tsan)"
       if: ${{matrix.sanitizer == 'tsan'}}
       # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
       # See https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html?highlight=cmake_build_type
-      run: CC=$(echo "${{matrix.compiler}}" | cut -d ";" -f 1) CXX=$(echo "${{matrix.compiler}}" | cut -d ";" -f 2) cmake -GNinja -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{matrix.opts}} -DICHOR_USE_SPDLOG=${{matrix.spdlog}} -DICHOR_USE_BOOST_BEAST=ON -DICHOR_USE_SDEVENT=ON -DICHOR_USE_SANITIZERS=OFF -DICHOR_USE_THREAD_SANITIZER=ON -DICHOR_USE_MOLD=OFF -DICHOR_USE_LIBCPP=OFF -DICHOR_USE_LIBURING=OFF
+      run: CC=$(echo "${{matrix.compiler}}" | cut -d ";" -f 1) CXX=$(echo "${{matrix.compiler}}" | cut -d ";" -f 2) LD_LIBRARY_PATH=$(echo "${{matrix.compiler}}" | cut -d ";" -f 3) cmake -GNinja -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{matrix.opts}} -DICHOR_USE_SPDLOG=${{matrix.spdlog}} -DICHOR_USE_BOOST_BEAST=ON -DICHOR_USE_SDEVENT=ON -DICHOR_USE_SANITIZERS=OFF -DICHOR_USE_THREAD_SANITIZER=ON -DICHOR_USE_MOLD=OFF -DICHOR_USE_LIBCPP=OFF -DICHOR_USE_LIBURING=ON
 
     - name: Build
       # Build your program with the given configuration
