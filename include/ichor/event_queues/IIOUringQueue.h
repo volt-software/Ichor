@@ -10,6 +10,7 @@
 #include <ichor/stl/ErrnoUtils.h>
 #include <ichor/stl/StringUtils.h>
 #include <ichor/dependency_management/IService.h>
+#include <ichor/event_queues/IEventQueue.h>
 #include <tl/expected.h>
 #include <functional>
 
@@ -53,7 +54,7 @@ namespace Ichor {
     static_assert(std::is_move_constructible_v<IOUringBuf>, "IOUringBuf is required to be move constructible");
     static_assert(std::is_move_assignable_v<IOUringBuf>, "IOUringBuf is required to be move assignable");
 
-    class IIOUringQueue {
+    class IIOUringQueue : public IEventQueue {
     public:
         virtual ~IIOUringQueue() = default;
         [[nodiscard]] virtual NeverNull<io_uring*> getRing() noexcept = 0;
@@ -64,6 +65,7 @@ namespace Ichor {
         virtual void submitAndWait(uint32_t waitNr) = 0;
         [[nodiscard]] virtual io_uring_sqe* getSqe() noexcept = 0;
         virtual io_uring_sqe* getSqeWithData(IService *self, std::function<void(io_uring_cqe*)> fun) noexcept = 0;
+        virtual io_uring_sqe* getSqeWithData(ServiceIdType serviceId, std::function<void(io_uring_cqe*)> fun) noexcept = 0;
         [[nodiscard]] virtual Version getKernelVersion() const noexcept = 0;
         ///
         /// \param entries no. of entries in the to-be-created buffer. Cannot be 0, cannot be larger than 32768 and has to be a power of two

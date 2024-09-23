@@ -3,7 +3,6 @@
 #include <ichor/services/logging/LoggerFactory.h>
 #include <ichor/services/network/ClientFactory.h>
 #include <ichor/services/serialization/ISerializer.h>
-#include <ichor/services/timer/TimerFactoryFactory.h>
 
 // Some compile time logic to instantiate a regular cout logger or to use the spdlog logger, if Ichor has been compiled with it.
 #ifdef ICHOR_USE_SPDLOG
@@ -30,6 +29,7 @@
 #include <ichor/services/network/tcp/TcpConnectionService.h>
 #include <ichor/services/network/tcp/TcpHostService.h>
 #include <ichor/event_queues/PriorityQueue.h>
+#include <ichor/services/timer/TimerFactoryFactory.h>
 
 #define QIMPL PriorityQueue
 #define CONNIMPL TcpConnectionService
@@ -68,7 +68,9 @@ int main(int argc, char *argv[]) {
     dm.createServiceManager<TestMsgGlazeSerializer, ISerializer<TestMsg>>();
     dm.createServiceManager<HOSTIMPL, IHostService>(Properties{{"Address", Ichor::make_any<std::string>("127.0.0.1"s)}, {"Port", Ichor::make_any<uint16_t>(static_cast<uint16_t>(8001))}}, priorityToEnsureHostStartingFirst);
     dm.createServiceManager<ClientFactory<CONNIMPL>, IClientFactory>();
+#ifndef URING_EXAMPLE
     dm.createServiceManager<TimerFactoryFactory>(Properties{}, priorityToEnsureHostStartingFirst);
+#endif
     dm.createServiceManager<UsingTcpService>(Properties{{"Address", Ichor::make_any<std::string>("127.0.0.1"s)}, {"Port", Ichor::make_any<uint16_t>(static_cast<uint16_t>(8001))}});
     queue->start(CaptureSigInt);
     auto end = std::chrono::steady_clock::now();

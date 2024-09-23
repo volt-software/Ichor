@@ -98,7 +98,7 @@ file(GLOB_RECURSE ICHOR_LOGGING_SOURCES ${ICHOR_TOP_DIR}/src/services/logging/*.
 file(GLOB_RECURSE ICHOR_TCP_SOURCES ${ICHOR_TOP_DIR}/src/services/network/tcp/*.cpp)
 file(GLOB_RECURSE ICHOR_BOOST_BEAST_SOURCES ${ICHOR_TOP_DIR}/src/services/network/boost/*.cpp)
 file(GLOB_RECURSE ICHOR_METRICS_SOURCES ${ICHOR_TOP_DIR}/src/services/metrics/*.cpp)
-file(GLOB_RECURSE ICHOR_TIMER_SOURCES ${ICHOR_TOP_DIR}/src/services/timer/*.cpp)
+file(GLOB_RECURSE ICHOR_TIMER_SOURCES ${ICHOR_TOP_DIR}/src/services/timer/Timer.cpp ${ICHOR_TOP_DIR}/src/services/timer/TimerFactoryFactory.cpp)
 file(GLOB_RECURSE ICHOR_OPTIONAL_HIREDIS_SOURCES ${ICHOR_TOP_DIR}/src/services/redis/*.cpp)
 file(GLOB_RECURSE ICHOR_BASE64_SOURCES ${ICHOR_TOP_DIR}/src/base64/*.cpp)
 
@@ -107,6 +107,7 @@ set(ICHOR_TCP_SOURCES ${ICHOR_TOP_DIR}/src/services/network/tcp/TcpConnectionSer
 if(ICHOR_USE_LIBURING)
     set(ICHOR_IO_SOURCES ${ICHOR_IO_SOURCES} ${ICHOR_TOP_DIR}/src/services/io/IOUringAsyncFileIO.cpp)
     set(ICHOR_TCP_SOURCES ${ICHOR_TCP_SOURCES} ${ICHOR_TOP_DIR}/src/services/network/tcp/IOUringTcpConnectionService.cpp ${ICHOR_TOP_DIR}/src/services/network/tcp/IOUringTcpHostService.cpp)
+    set(ICHOR_TIMER_SOURCES ${ICHOR_TIMER_SOURCES} ${ICHOR_TOP_DIR}/src/services/timer/IOUringTimerFactoryFactory.cpp ${ICHOR_TOP_DIR}/src/services/timer/IOUringTimer.cpp)
 endif()
 if(ICHOR_USE_MIMALLOC AND NOT ICHOR_USE_SYSTEM_MIMALLOC)
     set(ICHOR_FRAMEWORK_SOURCES ${ICHOR_FRAMEWORK_SOURCES} ${ICHOR_TOP_DIR}/external/mimalloc/src/static.c)

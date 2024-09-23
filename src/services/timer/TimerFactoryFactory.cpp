@@ -1,46 +1,10 @@
 #include <ichor/services/timer/TimerFactoryFactory.h>
-#include <ichor/services/timer/ITimerFactory.h>
+#include <ichor/services/timer/TemplatedTimerFactory.h>
 #include <ichor/services/timer/Timer.h>
+#include <ichor/events/RunFunctionEvent.h>
 #include <atomic>
 
-class Ichor::TimerFactory final : public Ichor::ITimerFactory, public Detail::InternalTimerFactory, public Ichor::AdvancedService<TimerFactory> {
-public:
-    TimerFactory(Ichor::Properties props) : Ichor::AdvancedService<TimerFactory>(std::move(props)) {
-        _requestingSvcId = Ichor::any_cast<ServiceIdType>(getProperties()["requestingSvcId"]);
-    }
-    ~TimerFactory() final = default;
-
-    Ichor::ITimer& createTimer() final {
-#ifdef ICHOR_USE_HARDENING
-        if(!isStarted()) {
-            std::terminate();
-        }
-#endif
-        return *(_timers.emplace_back(new Ichor::Timer(GetThreadLocalEventQueue(), _timerIdCounter.fetch_add(1, std::memory_order_relaxed), _requestingSvcId)));
-    }
-
-    void destroyTimer(uint64_t timerId) final {
-#ifdef ICHOR_USE_HARDENING
-        if(!isStarted()) {
-            std::terminate();
-        }
-#endif
-        std::erase_if(_timers, [timerId](std::unique_ptr<Ichor::Timer> const &timer) {
-            return timer->getTimerId() == timerId;
-        });
-    }
-
-    void stopAllTimers() noexcept final {
-        for(auto& timer : _timers) {
-            timer->stopTimer();
-        }
-    }
-
-    static std::atomic<uint64_t> _timerIdCounter;
-    std::vector<std::unique_ptr<Ichor::Timer>> _timers;
-    ServiceIdType _requestingSvcId{};
-};
-std::atomic<uint64_t> Ichor::TimerFactory::_timerIdCounter{};
+std::atomic<uint64_t> Ichor::_timerIdCounter{1};
 
 Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::TimerFactoryFactory::start() {
     _trackerRegistration = GetThreadLocalManager().registerDependencyTracker<ITimerFactory>(this, this);
@@ -50,6 +14,18 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::TimerFactoryFactory::s
 
 Ichor::Task<void> Ichor::TimerFactoryFactory::stop() {
     _trackerRegistration.reset();
+
+    for(auto it = _factories.begin(); it != _factories.end(); ) {
+        it = pushStopEventForTimerFactory(it);
+    }
+
+    if constexpr(DO_INTERNAL_DEBUG || DO_HARDENING) {
+        if(!_factories.empty()) {
+            fmt::println("_factories not empty. Please file a bug.");
+            std::terminate();
+        }
+    }
+
     co_return;
 }
 
@@ -60,7 +36,7 @@ void Ichor::TimerFactoryFactory::handleDependencyRequest(AlwaysNull<ITimerFactor
         return;
     }
 
-    _factories.emplace(evt.originatingService, Ichor::GetThreadLocalManager().createServiceManager<TimerFactory, Detail::InternalTimerFactory, ITimerFactory>(Properties{{"requestingSvcId", Ichor::make_any<ServiceIdType>(evt.originatingService)}, {"Filter", Ichor::make_any<Filter>(ServiceIdFilterEntry{evt.originatingService})}}, evt.priority)->getServiceId());
+    _factories.emplace(evt.originatingService, GetThreadLocalManager().createServiceManager<TimerFactory<Timer, IEventQueue>, Detail::InternalTimerFactory, ITimerFactory>(Properties{{"requestingSvcId", Ichor::make_any<ServiceIdType>(evt.originatingService)}, {"Filter", Ichor::make_any<Filter>(ServiceIdFilterEntry{evt.originatingService})}}, evt.priority)->getServiceId());
 }
 
 void Ichor::TimerFactoryFactory::handleDependencyUndoRequest(AlwaysNull<ITimerFactory *>, const DependencyUndoRequestEvent &evt) {
@@ -70,15 +46,18 @@ void Ichor::TimerFactoryFactory::handleDependencyUndoRequest(AlwaysNull<ITimerFa
         return;
     }
 
+    pushStopEventForTimerFactory(factory);
+}
+
+decltype(Ichor::TimerFactoryFactory::_factories)::iterator Ichor::TimerFactoryFactory::pushStopEventForTimerFactory(decltype(Ichor::TimerFactoryFactory::_factories)::iterator const &factory) noexcept {
     auto svc = GetThreadLocalManager().getService<Detail::InternalTimerFactory>(factory->second);
 
     if(!svc) {
-        _factories.erase(factory);
-        return;
+        return _factories.erase(factory);
     }
 
     (*svc).first->stopAllTimers();
 
     GetThreadLocalEventQueue().pushPrioritisedEvent<StopServiceEvent>(getServiceId(), INTERNAL_DEPENDENCY_EVENT_PRIORITY, factory->second, true);
-    _factories.erase(factory);
+    return _factories.erase(factory);
 }

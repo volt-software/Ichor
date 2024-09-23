@@ -9,6 +9,7 @@ namespace Ichor {
         /// Thread-safe.
         virtual void startTimer(bool fireImmediately) = 0;
         /// Thread-safe.
+        /// \param cb called when timer is stopped, after which it is safe to destroy.
         virtual void stopTimer() = 0;
         /// Thread-safe.
         [[nodiscard]] virtual bool running() const noexcept = 0;
