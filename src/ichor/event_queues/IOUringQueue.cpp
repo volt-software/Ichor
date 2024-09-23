@@ -740,6 +740,8 @@ namespace Ichor {
             io_uring_cq_advance(_eventQueuePtr, handled);
         }
 
+        stopDm();
+
         return true;
     }
 
