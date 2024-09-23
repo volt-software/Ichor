@@ -24,7 +24,7 @@ jobs:
       run: echo "/opt/gcc-12.4/bin" >> $GITHUB_PATH
 
     - name: "Configure CMake"
-      run: cmake -GNinja -B ${{github.workspace}}/build-coverage -DCMAKE_BUILD_TYPE=Debug -DICHOR_USE_BOOST_BEAST=ON -DICHOR_BUILD_COVERAGE=ON -DICHOR_USE_HIREDIS=ON -DICHOR_USE_SANITIZERS=OFF -DICHOR_USE_LIBCPP=OFF -DICHOR_USE_MOLD=OFF -DICHOR_ENABLE_INTERNAL_DEBUGGING=ON -DICHOR_USE_LIBURING=OFF
+      run: cmake -GNinja -B ${{github.workspace}}/build-coverage -DCMAKE_BUILD_TYPE=Debug -DICHOR_USE_BOOST_BEAST=ON -DICHOR_BUILD_COVERAGE=ON -DICHOR_USE_HIREDIS=ON -DICHOR_USE_SANITIZERS=OFF -DICHOR_USE_LIBCPP=OFF -DICHOR_USE_MOLD=OFF -DICHOR_ENABLE_INTERNAL_DEBUGGING=ON -DICHOR_USE_LIBURING=ON
 
     - name: Build
       run: cmake --build ${{github.workspace}}/build-coverage --config Debug
