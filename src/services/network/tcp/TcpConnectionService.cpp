@@ -194,7 +194,7 @@ Ichor::Task<tl::expected<void, Ichor::IOError>> Ichor::TcpConnectionService::sen
     }
 
     while(sent_bytes < msg.size()) {
-        auto ret = ::send(_socket, msg.data() + sent_bytes, msg.size() - sent_bytes, 0);
+        auto ret = ::send(_socket, msg.data() + sent_bytes, msg.size() - sent_bytes, MSG_NOSIGNAL);
 
         if(ret < 0) {
             co_return tl::unexpected(IOError::FAILED);
