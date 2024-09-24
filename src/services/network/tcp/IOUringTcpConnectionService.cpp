@@ -330,7 +330,7 @@ Ichor::Task<tl::expected<void, Ichor::IOError>> Ichor::IOUringTcpConnectionServi
             res = cqe->res;
             evt.set();
         });
-        io_uring_prep_send(sqe, _socket, msg.data() + sent_bytes, msg.size() - sent_bytes, 0);
+        io_uring_prep_send(sqe, _socket, msg.data() + sent_bytes, msg.size() - sent_bytes, MSG_NOSIGNAL);
         co_await evt;
         if(res < 0) {
             auto ret = mapErrnoToError(res);
