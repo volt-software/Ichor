@@ -630,7 +630,7 @@ namespace Ichor {
         }
 
         if(std::this_thread::get_id() != _threadId) [[unlikely]] {
-            fmt::print("Creation of ring and start() have to be on the same thread.");
+            fmt::println("Creation of ring and start() have to be on the same thread.");
             std::terminate();
         }
 //        fmt::println("start() {} {}", std::hash<std::thread::id>{}(std::this_thread::get_id()), std::hash<std::thread::id>{}(_threadId));

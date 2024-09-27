@@ -56,10 +56,10 @@ namespace Ichor {
 
     class IIOUringQueue : public IEventQueue {
     public:
-        virtual ~IIOUringQueue() = default;
+        ~IIOUringQueue() override = default;
         [[nodiscard]] virtual NeverNull<io_uring*> getRing() noexcept = 0;
-        virtual unsigned int getMaxEntriesCount() const noexcept = 0;
-        virtual uint32_t sqeSpaceLeft() const noexcept = 0;
+        [[nodiscard]] virtual unsigned int getMaxEntriesCount() const noexcept = 0;
+        [[nodiscard]] virtual uint32_t sqeSpaceLeft() const noexcept = 0;
         virtual void submitIfNeeded() = 0;
         virtual void forceSubmit() = 0;
         virtual void submitAndWait(uint32_t waitNr) = 0;

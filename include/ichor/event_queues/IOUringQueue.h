@@ -39,9 +39,9 @@ namespace Ichor {
         void quit() final;
 
         [[nodiscard]] NeverNull<io_uring*> getRing() noexcept final;
-        unsigned int getMaxEntriesCount() const noexcept final;
+        [[nodiscard]] unsigned int getMaxEntriesCount() const noexcept final;
 
-        uint32_t sqeSpaceLeft() const noexcept final;
+        [[nodiscard]] uint32_t sqeSpaceLeft() const noexcept final;
         [[nodiscard]] io_uring_sqe *getSqe() noexcept final;
         io_uring_sqe* getSqeWithData(IService *self, std::function<void(io_uring_cqe*)> fun) noexcept final;
         io_uring_sqe* getSqeWithData(ServiceIdType serviceId, std::function<void(io_uring_cqe*)> fun) noexcept final;
