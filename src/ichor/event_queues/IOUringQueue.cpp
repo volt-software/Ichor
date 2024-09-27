@@ -7,10 +7,10 @@
 
 #include <fmt/core.h>
 #include <unistd.h>
-#include <sys/utsname.h>
 #include <sys/mman.h>
 #include <cstdlib>
 #include <ichor/event_queues/IIOUringQueue.h>
+#include <ichor/stl/LinuxUtils.h>
 
 #if defined(__SANITIZE_THREAD__)
 #define TSAN_ENABLED
@@ -335,27 +335,19 @@ namespace Ichor {
         }
         _threadId = std::this_thread::get_id(); // re-set in functions below, because adding events when the queue isn't running yet cannot be done from another thread.
 
-        utsname buffer{};
-        if(uname(&buffer) != 0) {
-            fmt::println("Couldn't get uname: {}", strerror(errno));
-            std::terminate();
-        }
-
-        std::string_view release = buffer.release;
-        if(auto pos = release.find('-'); pos != std::string_view::npos) {
-            release = release.substr(0, pos);
-        }
-
-        auto version = parseStringAsVersion(release);
+        auto version = kernelVersion();
 
         if(!version) {
-            fmt::println("Couldn't parse uname version: {}", buffer.release);
             std::terminate();
         }
 
         if(*version < Version{5, 4, 0}) {
             fmt::println("Kernel version {} is too old, use at least 5.4.0 or newer.", *version);
             std::terminate();
+        }
+
+        if(*version < Version{5, 18, 0}) {
+            fmt::println("WARNING! Kernel version {} is too old to support inserting events from other threads, use at least 5.18.0 or newer.", *version);
         }
 
 		if(emulateKernelVersion && *version < emulateKernelVersion) {
@@ -421,20 +413,43 @@ namespace Ichor {
         Event *procEvent = event.release();
 //        fmt::println("pushEventInternal {} {}", procEvent->get_name(), reinterpret_cast<void*>(procEvent));
         if(std::this_thread::get_id() != _threadId) [[unlikely]] {
+            if(_kernelVersion < Version{5, 18, 0}) [[unlikely]] {
+                fmt::println("Ignored previous warning about kernel too old for inserting events from other threads. Terminating.");
+                std::terminate();
+            }
+
             TSAN_ANNOTATE_HAPPENS_BEFORE(procEvent);
             io_uring tempQueue{};
             io_uring_params p{};
-            p.flags = IORING_SETUP_DEFER_TASKRUN | IORING_SETUP_COOP_TASKRUN | IORING_SETUP_SINGLE_ISSUER | IORING_SETUP_ATTACH_WQ;
+            p.flags = IORING_SETUP_ATTACH_WQ;
+            if(_kernelVersion >= Version{5, 19, 0}) {
+                p.flags |= IORING_SETUP_COOP_TASKRUN;
+            } else {
+                fmt::println("IORING_SETUP_COOP_TASKRUN not supported, requires kernel >= 5.19.0, expect reduced performance.");
+            }
+            if(_kernelVersion >= Version{6, 0, 0}) {
+                p.flags |= IORING_SETUP_SINGLE_ISSUER;
+            } else {
+                fmt::println("IORING_SETUP_SINGLE_ISSUER not supported, requires kernel >= 6.0.0, expect reduced performance.");
+            }
+            if(_kernelVersion >= Version{6, 1, 0}) {
+                p.flags |= IORING_SETUP_DEFER_TASKRUN;
+            } else {
+                fmt::println("IORING_SETUP_DEFER_TASKRUN not supported, requires kernel >= 6.1.0, expect reduced performance.");
+            }
             p.wq_fd = static_cast<__u32>(_eventQueuePtr->ring_fd);
-            auto ret = io_uring_queue_init_params(8, &tempQueue, &p);
+            auto ret = io_uring_queue_init_params(4, &tempQueue, &p);
             if(ret == -ENOSYS) [[unlikely]] {
                 // TODO replace all throws with prints + terminates
                 throw std::system_error(-ret, std::generic_category(), "io_uring_queue_init_params() with WQ failed, probably not enabled in the kernel.");
             }
             if(ret < 0) [[unlikely]] {
+                if(p.flags == IORING_SETUP_ATTACH_WQ) { // no use in retrying
+                    throw std::system_error(-ret, std::generic_category(), "io_uring_queue_init_params() failed");
+                }
+                fmt::println("Couldn't set queue params 0x{:X}, retrying without. Expect reduced performance.", p.flags);
                 p.flags = IORING_SETUP_ATTACH_WQ;
-                fmt::println("Couldn't set queue params IORING_SETUP_DEFER_TASKRUN | IORING_SETUP_COOP_TASKRUN | IORING_SETUP_SINGLE_ISSUER, retrying without. Expect reduced performance.");
-                ret = io_uring_queue_init_params(8, &tempQueue, &p);
+                ret = io_uring_queue_init_params(4, &tempQueue, &p);
                 if(ret < 0) [[unlikely]] {
                     throw std::system_error(-ret, std::generic_category(), "io_uring_queue_init_params() for tempQueue failed");
                 }
@@ -448,10 +463,24 @@ namespace Ichor {
             TSAN_ANNOTATE_HAPPENS_BEFORE(_eventQueuePtr);
             ret = io_uring_submit_and_wait(&tempQueue, 1);
             if(ret != 1) [[unlikely]] {
-                fmt::println("io_uring_submit_and_wait {}", ret);
-                fmt::println("submit wrong amount, would have resulted in dropping event");
+                fmt::println("io_uring_submit_and_get_events {}", ret);
+                fmt::println("submit wrong amount, would result in dropping event");
                 std::terminate();
             }
+
+            io_uring_cqe *cqe;
+            ret = io_uring_wait_cqe(&tempQueue, &cqe);
+            if(ret < 0) {
+                fmt::println("io_uring_wait_cqe {}", ret);
+                fmt::println("couldn't get completion event, would result in dropping event");
+                std::terminate();
+            }
+            if(cqe->res < 0) {
+                fmt::println("completion event {}", cqe->res);
+                fmt::println("Completion event failure, would result in dropping event");
+                std::terminate();
+            }
+            io_uring_cqe_seen(&tempQueue, cqe);
 
 //            fmt::println("pushEventInternal() {} {}", std::hash<std::thread::id>{}(std::this_thread::get_id()), std::hash<std::thread::id>{}(_threadId));
 
@@ -546,7 +575,7 @@ namespace Ichor {
             if(p.flags == 0) { // no use in retrying
                 throw std::system_error(-ret, std::generic_category(), "io_uring_queue_init_params() failed");
             }
-            fmt::println("Couldn't set queue params {}, retrying without. Expect reduced performance.", p.flags);
+            fmt::println("Couldn't set queue params 0x{:X}, retrying without. Expect reduced performance.", p.flags);
             p.flags = 0;
             ret = io_uring_queue_init_params(entriesCount, _eventQueuePtr, &p);
             if(ret < 0) [[unlikely]] {

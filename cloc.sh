@@ -10,4 +10,4 @@ cloc --quiet --hide-rate examples/ --exclude-dir=tl,sole,backward,gsm_enc,base64
 echo -e "=== benchmarks ==="
 cloc --quiet --hide-rate benchmarks/ --exclude-dir=tl,sole,backward,gsm_enc,base64,ctre,ankerl --exclude-content=LYRA_LYRA_HPP
 echo -e "=== total ==="
-cloc --quiet --hide-rate src/ include/ test/ examples/ benchmarks/ --exclude-dir=tl,sole,backward,gsm_enc,base64,ctre,ankerl --exclude-content=LYRA_LYRA_HPP
+cloc --quiet --hide-rate src/ include/ test/ examples/ benchmarks/ CMakeLists.txt --exclude-dir=tl,sole,backward,gsm_enc,base64,ctre,ankerl --exclude-content=LYRA_LYRA_HPP

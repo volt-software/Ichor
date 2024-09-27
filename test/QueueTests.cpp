@@ -7,6 +7,7 @@
 #endif
 #ifdef ICHOR_USE_LIBURING
 #include <ichor/event_queues/IOUringQueue.h>
+#include <ichor/stl/LinuxUtils.h>
 #include "TestServices/IOUringSleepService.h"
 #endif
 #ifdef __linux__
@@ -143,6 +144,13 @@ TEST_CASE("QueueTests") {
     }
 
     SECTION("IOUringQueue Live") {
+        auto version = Ichor::kernelVersion();
+
+        REQUIRE(version);
+        if(version < Version{5, 18, 0}) {
+            return;
+        }
+
         auto queue = std::make_unique<IOUringQueue>(10, 10'000);
         std::atomic<DependencyManager*> _dm{};
         std::thread t([&] {
