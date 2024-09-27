@@ -9,6 +9,7 @@
 #ifdef TEST_URING
 #include <ichor/event_queues/IOUringQueue.h>
 #include <ichor/services/io/IOUringAsyncFileIO.h>
+#include <ichor/stl/LinuxUtils.h>
 
 #define IOIMPL IOUringAsyncFileIO
 #define QIMPL IOUringQueue
@@ -41,6 +42,12 @@ struct AsyncFileIOExpensiveSetup {
 
 #ifdef TEST_URING
 TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests_uring") {
+    auto version = Ichor::kernelVersion();
+
+    REQUIRE(version);
+    if(version < Version{5, 18, 0}) {
+        return;
+    }
 #else
 TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests") {
 #endif

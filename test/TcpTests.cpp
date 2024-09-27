@@ -16,6 +16,7 @@ std::atomic<uint64_t> evtGate;
 #include <ichor/services/network/tcp/IOUringTcpConnectionService.h>
 #include <ichor/services/network/tcp/IOUringTcpHostService.h>
 #include <ichor/event_queues/IOUringQueue.h>
+#include <ichor/stl/LinuxUtils.h>
 
 #define QIMPL IOUringQueue
 #define CONNIMPL IOUringTcpConnectionService
@@ -35,6 +36,14 @@ using namespace std::string_literals;
 
 #ifdef TEST_URING
 TEST_CASE("TcpTests_uring") {
+
+    auto version = Ichor::kernelVersion();
+
+    REQUIRE(version);
+    if(version < Version{5, 18, 0}) {
+        return;
+    }
+
 #else
 TEST_CASE("TcpTests") {
 #endif
