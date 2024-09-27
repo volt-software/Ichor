@@ -5,7 +5,7 @@ ARG CONTAINER_OWNER_ID=1000
 
 RUN apt update && apt-get install -y wget lsb-release software-properties-common gnupg
 RUN wget https://apt.llvm.org/llvm.sh && chmod +x llvm.sh && ./llvm.sh 18 all
-RUN apt install -y cmake libssl-dev pkg-config git ninja-build nano libzip-dev clang-18
+RUN apt install -y cmake libssl-dev pkg-config git ninja-build nano libzip-dev clang-18 libsystemd-dev
 
 # Run all downloads first to be able to use Docker's layers as cache and prevent excessive redownloads
 
@@ -51,4 +51,4 @@ WORKDIR /opt/ichor/build
 
 ENTRYPOINT ["/bin/bash", "-c"]
 
-CMD ["unset CFLAGS CXXFLAGS LDFLAGS && cd /opt/ichor/build && cmake -GNinja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DICHOR_USE_SANITIZERS=0 -DICHOR_USE_HIREDIS=1 -DICHOR_USE_BOOST_BEAST=1 -DICHOR_USE_SPDLOG=1 -DICHOR_SKIP_EXTERNAL_TESTS=1 /opt/ichor/src && ninja && ninja test"]
+CMD ["unset CFLAGS CXXFLAGS LDFLAGS && cd /opt/ichor/build && cmake -GNinja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DICHOR_USE_SANITIZERS=0 -DICHOR_USE_HIREDIS=1 -DICHOR_USE_BOOST_BEAST=1 -DICHOR_USE_SPDLOG=1 -DICHOR_USE_SDEVENT=1 -DICHOR_SKIP_EXTERNAL_TESTS=1 /opt/ichor/src && ninja && ninja test"]

@@ -16,12 +16,19 @@
 #include <ichor/services/logging/CoutLogger.h>
 
 
-#ifdef TEST_URING
+#if defined(TEST_URING)
 #include <ichor/event_queues/IOUringQueue.h>
 #include <ichor/services/timer/IOUringTimerFactoryFactory.h>
+#include <ichor/stl/LinuxUtils.h>
 
 #define QIMPL IOUringQueue
 #define TFFIMPL IOUringTimerFactoryFactory
+#elif defined(TEST_SDEVENT)
+#include <ichor/event_queues/SdeventQueue.h>
+#include <ichor/services/timer/TimerFactoryFactory.h>
+
+#define QIMPL SdeventQueue
+#define TFFIMPL TimerFactoryFactory
 #else
 #include <ichor/event_queues/PriorityQueue.h>
 #include <ichor/services/timer/TimerFactoryFactory.h>
@@ -46,8 +53,18 @@ static void DisplayServices(DependencyManager &dm) {
     }
 }
 
-#ifdef TEST_URING
+#if defined(TEST_URING)
 TEST_CASE("ServicesTests_uring") {
+
+    auto version = Ichor::kernelVersion();
+
+    REQUIRE(version);
+    if(version < Version{5, 18, 0}) {
+        return;
+    }
+
+#elif defined(TEST_SDEVENT)
+TEST_CASE("ServicesTests_sdevent") {
 #else
 #ifdef TEST_ORDERED
 TEST_CASE("ServicesTests_ordered") {
@@ -61,13 +78,20 @@ TEST_CASE("ServicesTests") {
         auto &dm = queue->createManager();
 
         std::thread t([&]() {
-#ifdef TEST_URING
+#if defined(TEST_URING)
             REQUIRE(queue->createEventLoop());
+#elif defined(TEST_SDEVENT)
+            auto *loop = queue->createEventLoop();
+            REQUIRE(loop);
 #endif
             dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>();
             dm.createServiceManager<UselessService, IUselessService>();
             dm.createServiceManager<QuitOnStartWithDependenciesService>();
             queue->start(CaptureSigInt);
+#if defined(TEST_SDEVENT)
+            int r = sd_event_loop(loop);
+            REQUIRE(r >= 0);
+#endif
         });
 
         t.join();
@@ -80,12 +104,19 @@ TEST_CASE("ServicesTests") {
         auto &dm = queue->createManager();
 
         std::thread t([&]() {
-#ifdef TEST_URING
+#if defined(TEST_URING)
             REQUIRE(queue->createEventLoop());
+#elif defined(TEST_SDEVENT)
+            auto *loop = queue->createEventLoop();
+            REQUIRE(loop);
 #endif
             dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>();
             dm.createServiceManager<FailOnStartService, IFailOnStartService>();
             queue->start(CaptureSigInt);
+#if defined(TEST_SDEVENT)
+            int r = sd_event_loop(loop);
+            REQUIRE(r >= 0);
+#endif
         });
 
         waitForRunning(dm);
@@ -115,13 +146,20 @@ TEST_CASE("ServicesTests") {
         auto &dm = queue->createManager();
 
         std::thread t([&]() {
-#ifdef TEST_URING
+#if defined(TEST_URING)
             REQUIRE(queue->createEventLoop());
+#elif defined(TEST_SDEVENT)
+            auto *loop = queue->createEventLoop();
+            REQUIRE(loop);
 #endif
             dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>();
             dm.createServiceManager<UselessService, IUselessService>();
             dm.createServiceManager<FailOnStartWithDependenciesService, IFailOnStartService>();
             queue->start(CaptureSigInt);
+#if defined(TEST_SDEVENT)
+            int r = sd_event_loop(loop);
+            REQUIRE(r >= 0);
+#endif
         });
 
         waitForRunning(dm);
@@ -152,14 +190,21 @@ TEST_CASE("ServicesTests") {
         uint64_t secondUselessServiceId{};
 
         std::thread t([&]() {
-#ifdef TEST_URING
+#if defined(TEST_URING)
             REQUIRE(queue->createEventLoop());
+#elif defined(TEST_SDEVENT)
+            auto *loop = queue->createEventLoop();
+            REQUIRE(loop);
 #endif
             dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>();
             dm.createServiceManager<UselessService, IUselessService>();
             secondUselessServiceId = dm.createServiceManager<UselessService, IUselessService>()->getServiceId();
             dm.createServiceManager<DependencyService<IUselessService, DependencyFlags::REQUIRED | DependencyFlags::ALLOW_MULTIPLE>, ICountService>();
             queue->start(CaptureSigInt);
+#if defined(TEST_SDEVENT)
+            int r = sd_event_loop(loop);
+            REQUIRE(r >= 0);
+#endif
         });
 
         waitForRunning(dm);
@@ -200,13 +245,20 @@ TEST_CASE("ServicesTests") {
         uint64_t secondUselessServiceId{};
 
         std::thread t([&]() {
-#ifdef TEST_URING
+#if defined(TEST_URING)
             REQUIRE(queue->createEventLoop());
+#elif defined(TEST_SDEVENT)
+            auto *loop = queue->createEventLoop();
+            REQUIRE(loop);
 #endif
             dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>();
             firstUselessServiceId = dm.createServiceManager<UselessService, IUselessService>()->getServiceId();
             dm.createServiceManager<RequiredMultipleService, ICountService>();
             queue->start(CaptureSigInt);
+#if defined(TEST_SDEVENT)
+            int r = sd_event_loop(loop);
+            REQUIRE(r >= 0);
+#endif
         });
 
         waitForRunning(dm);
@@ -269,13 +321,20 @@ TEST_CASE("ServicesTests") {
         uint64_t secondUselessServiceId{};
 
         std::thread t([&]() {
-#ifdef TEST_URING
+#if defined(TEST_URING)
             REQUIRE(queue->createEventLoop());
+#elif defined(TEST_SDEVENT)
+            auto *loop = queue->createEventLoop();
+            REQUIRE(loop);
 #endif
             dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>();
             firstUselessServiceId = dm.createServiceManager<UselessService, IUselessService>()->getServiceId();
             dm.createServiceManager<RequiredMultipleService2, ICountService>();
             queue->start(CaptureSigInt);
+#if defined(TEST_SDEVENT)
+            int r = sd_event_loop(loop);
+            REQUIRE(r >= 0);
+#endif
         });
 
         waitForRunning(dm);
@@ -333,14 +392,21 @@ TEST_CASE("ServicesTests") {
         uint64_t secondUselessServiceId{};
 
         std::thread t([&]() {
-#ifdef TEST_URING
+#if defined(TEST_URING)
             REQUIRE(queue->createEventLoop());
+#elif defined(TEST_SDEVENT)
+            auto *loop = queue->createEventLoop();
+            REQUIRE(loop);
 #endif
             dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>();
             dm.createServiceManager<UselessService, IUselessService>();
             secondUselessServiceId = dm.createServiceManager<UselessService, IUselessService>()->getServiceId();
             dm.createServiceManager<DependencyService<IUselessService, DependencyFlags::ALLOW_MULTIPLE>, ICountService>();
             queue->start(CaptureSigInt);
+#if defined(TEST_SDEVENT)
+            int r = sd_event_loop(loop);
+            REQUIRE(r >= 0);
+#endif
         });
 
         waitForRunning(dm);
@@ -381,8 +447,11 @@ TEST_CASE("ServicesTests") {
         auto &dm = queue->createManager();
 
         std::thread t([&]() {
-#ifdef TEST_URING
+#if defined(TEST_URING)
             REQUIRE(queue->createEventLoop());
+#elif defined(TEST_SDEVENT)
+            auto *loop = queue->createEventLoop();
+            REQUIRE(loop);
 #endif
             dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>();
             dm.createServiceManager<MixServiceOne, IMixOne, IMixTwo>();
@@ -393,6 +462,10 @@ TEST_CASE("ServicesTests") {
             dm.createServiceManager<MixServiceSix, IMixOne, IMixTwo>();
             dm.createServiceManager<CheckMixService, ICountService>();
             queue->start(CaptureSigInt);
+#if defined(TEST_SDEVENT)
+            int r = sd_event_loop(loop);
+            REQUIRE(r >= 0);
+#endif
         });
 
         t.join();
@@ -404,13 +477,20 @@ TEST_CASE("ServicesTests") {
         uint64_t svcId{};
 
         std::thread t([&]() {
-#ifdef TEST_URING
+#if defined(TEST_URING)
             REQUIRE(queue->createEventLoop());
+#elif defined(TEST_SDEVENT)
+            auto *loop = queue->createEventLoop();
+            REQUIRE(loop);
 #endif
             dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>();
             svcId = dm.createServiceManager<TimerRunsOnceService, ITimerRunsOnceService>()->getServiceId();
             dm.createServiceManager<TFFIMPL>();
             queue->start(CaptureSigInt);
+#if defined(TEST_SDEVENT)
+            int r = sd_event_loop(loop);
+            REQUIRE(r >= 0);
+#endif
         });
 
         waitForRunning(dm);
@@ -439,13 +519,20 @@ TEST_CASE("ServicesTests") {
         auto &dm = queue->createManager();
 
         std::thread t([&]() {
-#ifdef TEST_URING
+#if defined(TEST_URING)
             REQUIRE(queue->createEventLoop());
+#elif defined(TEST_SDEVENT)
+            auto *loop = queue->createEventLoop();
+            REQUIRE(loop);
 #endif
             dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>();
             dm.createServiceManager<AddEventHandlerDuringEventHandlingService>();
             dm.createServiceManager<AddEventHandlerDuringEventHandlingService>();
             queue->start(CaptureSigInt);
+#if defined(TEST_SDEVENT)
+            int r = sd_event_loop(loop);
+            REQUIRE(r >= 0);
+#endif
         });
 
         waitForRunning(dm);
@@ -467,12 +554,19 @@ TEST_CASE("ServicesTests") {
         uint64_t svcId{};
 
         std::thread t([&]() {
-#ifdef TEST_URING
+#if defined(TEST_URING)
             REQUIRE(queue->createEventLoop());
+#elif defined(TEST_SDEVENT)
+            auto *loop = queue->createEventLoop();
+            REQUIRE(loop);
 #endif
             dm.createServiceManager<LoggerFactory<CoutLogger>, ILoggerFactory>();
             svcId = dm.createServiceManager<RequestsLoggingService, IRequestsLoggingService>()->getServiceId();
             queue->start(CaptureSigInt);
+#if defined(TEST_SDEVENT)
+            int r = sd_event_loop(loop);
+            REQUIRE(r >= 0);
+#endif
         });
 
         waitForRunning(dm);
@@ -481,7 +575,7 @@ TEST_CASE("ServicesTests") {
 
         queue->pushEvent<RunFunctionEvent>(0, [&]() {
             DisplayServices(dm);
-#ifdef TEST_URING
+#if defined(TEST_URING) || defined(TEST_SDEVENT)
             REQUIRE(dm.getServiceCount() == 6);
 #else
             REQUIRE(dm.getServiceCount() == 5);
@@ -494,7 +588,7 @@ TEST_CASE("ServicesTests") {
 
         queue->pushEvent<RunFunctionEvent>(0, [&]() {
             DisplayServices(dm);
-#ifdef TEST_URING
+#if defined(TEST_URING) || defined(TEST_SDEVENT)
             REQUIRE(dm.getServiceCount() == 4);
 #else
             REQUIRE(dm.getServiceCount() == 3);
@@ -512,8 +606,11 @@ TEST_CASE("ServicesTests") {
         uint64_t svcId{};
 
         std::thread t([&]() {
-#ifdef TEST_URING
+#if defined(TEST_URING)
             REQUIRE(queue->createEventLoop());
+#elif defined(TEST_SDEVENT)
+            auto *loop = queue->createEventLoop();
+            REQUIRE(loop);
 #endif
             dm.createServiceManager<LoggerFactory<CoutLogger>, ILoggerFactory>();
             dm.createServiceManager<DependencyService<IUselessService, DependencyFlags::ALLOW_MULTIPLE>, ICountService>();
@@ -521,6 +618,10 @@ TEST_CASE("ServicesTests") {
             svcId = service->getServiceId();
             static_assert(std::is_same_v<decltype(service), ServiceProtectedPointer<IService>>, "");
             queue->start(CaptureSigInt);
+#if defined(TEST_SDEVENT)
+            int r = sd_event_loop(loop);
+            REQUIRE(r >= 0);
+#endif
         });
 
         waitForRunning(dm);
@@ -531,7 +632,7 @@ TEST_CASE("ServicesTests") {
             DisplayServices(dm);
 
             DisplayServices(dm);
-#ifdef TEST_URING
+#if defined(TEST_URING) || defined(TEST_SDEVENT)
             REQUIRE(dm.getServiceCount() == 7);
 #else
             REQUIRE(dm.getServiceCount() == 6);
@@ -553,7 +654,7 @@ TEST_CASE("ServicesTests") {
         queue->pushEvent<RunFunctionEvent>(0, [&]() {
             DisplayServices(dm);
             DisplayServices(dm);
-#ifdef TEST_URING
+#if defined(TEST_URING) || defined(TEST_SDEVENT)
             REQUIRE(dm.getServiceCount() == 5);
 #else
             REQUIRE(dm.getServiceCount() == 4);
@@ -568,12 +669,19 @@ TEST_CASE("ServicesTests") {
     SECTION("ConstructorInjectionQuitService") {
         std::thread t([]() {
             auto queue = std::make_unique<QIMPL>(500);
-#ifdef TEST_URING
+#if defined(TEST_URING)
             REQUIRE(queue->createEventLoop());
+#elif defined(TEST_SDEVENT)
+            auto *loop = queue->createEventLoop();
+            REQUIRE(loop);
 #endif
             auto &dm = queue->createManager();
             dm.createServiceManager<ConstructorInjectionQuitService>();
             queue->start(CaptureSigInt);
+#if defined(TEST_SDEVENT)
+            int r = sd_event_loop(loop);
+            REQUIRE(r >= 0);
+#endif
         });
 
         t.join();
@@ -582,12 +690,19 @@ TEST_CASE("ServicesTests") {
     SECTION("ConstructorInjectionQuitService2") {
         std::thread t([]() {
             auto queue = std::make_unique<QIMPL>(500);
-#ifdef TEST_URING
+#if defined(TEST_URING)
             REQUIRE(queue->createEventLoop());
+#elif defined(TEST_SDEVENT)
+            auto *loop = queue->createEventLoop();
+            REQUIRE(loop);
 #endif
             auto &dm = queue->createManager();
             dm.createServiceManager<ConstructorInjectionQuitService2>();
             queue->start(CaptureSigInt);
+#if defined(TEST_SDEVENT)
+            int r = sd_event_loop(loop);
+            REQUIRE(r >= 0);
+#endif
         });
 
         t.join();
@@ -596,12 +711,19 @@ TEST_CASE("ServicesTests") {
     SECTION("ConstructorInjectionQuitService3") {
         std::thread t([]() {
             auto queue = std::make_unique<QIMPL>(500);
-#ifdef TEST_URING
+#if defined(TEST_URING)
             REQUIRE(queue->createEventLoop());
+#elif defined(TEST_SDEVENT)
+            auto *loop = queue->createEventLoop();
+            REQUIRE(loop);
 #endif
             auto &dm = queue->createManager();
             dm.createServiceManager<ConstructorInjectionQuitService3>();
             queue->start(CaptureSigInt);
+#if defined(TEST_SDEVENT)
+            int r = sd_event_loop(loop);
+            REQUIRE(r >= 0);
+#endif
         });
 
         t.join();
@@ -611,11 +733,18 @@ TEST_CASE("ServicesTests") {
         auto queue = std::make_unique<QIMPL>(500);
         auto &dm = queue->createManager();
         std::thread t([&]() {
-#ifdef TEST_URING
+#if defined(TEST_URING)
             REQUIRE(queue->createEventLoop());
+#elif defined(TEST_SDEVENT)
+            auto *loop = queue->createEventLoop();
+            REQUIRE(loop);
 #endif
             dm.createServiceManager<ConstructorInjectionQuitService4>();
             queue->start(CaptureSigInt);
+#if defined(TEST_SDEVENT)
+            int r = sd_event_loop(loop);
+            REQUIRE(r >= 0);
+#endif
         });
 
         waitForRunning(dm);
@@ -624,7 +753,7 @@ TEST_CASE("ServicesTests") {
 
         queue->pushEvent<RunFunctionEvent>(0, [&]() {
             DisplayServices(dm);
-#ifdef TEST_URING
+#if defined(TEST_URING) || defined(TEST_SDEVENT)
             REQUIRE(dm.getServiceCount() == 4);
 #else
             REQUIRE(dm.getServiceCount() == 3);
@@ -642,13 +771,20 @@ TEST_CASE("ServicesTests") {
         ServiceIdType trackerSvcId{};
         ServiceIdType depSvcId{};
         std::thread t([&]() {
-#ifdef TEST_URING
+#if defined(TEST_URING)
             REQUIRE(queue->createEventLoop());
+#elif defined(TEST_SDEVENT)
+            auto *loop = queue->createEventLoop();
+            REQUIRE(loop);
 #endif
             dm.createServiceManager<DependencyTrackerService<IUselessService, UselessService, IUselessService>>();
             trackerSvcId = dm.createServiceManager<DependencyTrackerService<IUselessService, UselessService2, IUselessService>>()->getServiceId();
             depSvcId = dm.createServiceManager<DependencyService<IUselessService, DependencyFlags::ALLOW_MULTIPLE>, ICountService>()->getServiceId();
             queue->start(CaptureSigInt);
+#if defined(TEST_SDEVENT)
+            int r = sd_event_loop(loop);
+            REQUIRE(r >= 0);
+#endif
         });
 
         waitForRunning(dm);
@@ -657,7 +793,7 @@ TEST_CASE("ServicesTests") {
 
         queue->pushEvent<RunFunctionEvent>(0, [&]() {
             DisplayServices(dm);
-#ifdef TEST_URING
+#if defined(TEST_URING) || defined(TEST_SDEVENT)
             REQUIRE(dm.getServiceCount() == 8);
 #else
             REQUIRE(dm.getServiceCount() == 7);
@@ -676,7 +812,7 @@ TEST_CASE("ServicesTests") {
 
         queue->pushEvent<RunFunctionEvent>(0, [&]() {
             DisplayServices(dm);
-#ifdef TEST_URING
+#if defined(TEST_URING) || defined(TEST_SDEVENT)
             REQUIRE(dm.getServiceCount() == 5);
 #else
             REQUIRE(dm.getServiceCount() == 4);
@@ -693,7 +829,7 @@ TEST_CASE("ServicesTests") {
         queue->pushEvent<RunFunctionEvent>(0, [&]() {
             DisplayServices(dm);
             DisplayServices(dm);
-#ifdef TEST_URING
+#if defined(TEST_URING) || defined(TEST_SDEVENT)
             REQUIRE(dm.getServiceCount() == 4);
 #else
             REQUIRE(dm.getServiceCount() == 3);
@@ -710,7 +846,7 @@ TEST_CASE("ServicesTests") {
         queue->pushEvent<RunFunctionEvent>(0, [&]() {
             DisplayServices(dm);
             DisplayServices(dm);
-#ifdef TEST_URING
+#if defined(TEST_URING) || defined(TEST_SDEVENT)
             REQUIRE(dm.getServiceCount() == 6);
 #else
             REQUIRE(dm.getServiceCount() == 5);
@@ -731,12 +867,19 @@ TEST_CASE("ServicesTests") {
         auto queue = std::make_unique<QIMPL>(500);
         auto &dm = queue->createManager();
         std::thread t([&]() {
-#ifdef TEST_URING
+#if defined(TEST_URING)
             REQUIRE(queue->createEventLoop());
+#elif defined(TEST_SDEVENT)
+            auto *loop = queue->createEventLoop();
+            REQUIRE(loop);
 #endif
             dm.createServiceManager<RemoveAfterAwaitedStopService<true>, IRemoveAfterAwaitedStopService>();
             dm.createServiceManager<UselessService, IUselessService>();
             queue->start(CaptureSigInt);
+#if defined(TEST_SDEVENT)
+            int r = sd_event_loop(loop);
+            REQUIRE(r >= 0);
+#endif
         });
 
         t.join();
@@ -746,13 +889,20 @@ TEST_CASE("ServicesTests") {
         auto queue = std::make_unique<QIMPL>(500);
         auto &dm = queue->createManager();
         std::thread t([&]() {
-#ifdef TEST_URING
+#if defined(TEST_URING)
             REQUIRE(queue->createEventLoop());
+#elif defined(TEST_SDEVENT)
+            auto *loop = queue->createEventLoop();
+            REQUIRE(loop);
 #endif
             dm.createServiceManager<RemoveAfterAwaitedStopService<false>, IRemoveAfterAwaitedStopService>();
             dm.createServiceManager<UselessService, IUselessService>();
             dm.createServiceManager<DependingOnRemoveAfterAwaitedStopService>();
             queue->start(CaptureSigInt);
+#if defined(TEST_SDEVENT)
+            int r = sd_event_loop(loop);
+            REQUIRE(r >= 0);
+#endif
         });
 
         t.join();
