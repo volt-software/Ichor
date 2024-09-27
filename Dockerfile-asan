@@ -4,7 +4,7 @@ ARG CONTAINER_OWNER_GID=1000
 ARG CONTAINER_OWNER_ID=1000
 
 RUN apt update
-RUN apt install -y g++-12 gcc-12 build-essential cmake pkg-config git wget ninja-build nano libzip-dev
+RUN apt install -y g++-12 gcc-12 build-essential cmake pkg-config git wget ninja-build nano libzip-dev libsystemd-dev
 
 RUN update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-12 60
 RUN update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-12 60
@@ -57,4 +57,4 @@ WORKDIR /opt/ichor/build
 
 ENTRYPOINT ["/bin/bash", "-c"]
 
-CMD ["unset CFLAGS CXXFLAGS && cd /opt/ichor/build && cmake -GNinja -DCMAKE_BUILD_TYPE=Debug -DICHOR_USE_SANITIZERS=1 -DICHOR_USE_HIREDIS=1 -DICHOR_USE_BOOST_BEAST=1 -DICHOR_USE_SPDLOG=1 -DICHOR_SKIP_EXTERNAL_TESTS=1 /opt/ichor/src && ninja && ninja test"]
+CMD ["unset CFLAGS CXXFLAGS && cd /opt/ichor/build && cmake -GNinja -DCMAKE_BUILD_TYPE=Debug -DICHOR_USE_SANITIZERS=1 -DICHOR_USE_HIREDIS=1 -DICHOR_USE_BOOST_BEAST=1 -DICHOR_USE_SPDLOG=1 -DICHOR_USE_SDEVENT=1 -DICHOR_SKIP_EXTERNAL_TESTS=1 /opt/ichor/src && ninja && ninja test"]

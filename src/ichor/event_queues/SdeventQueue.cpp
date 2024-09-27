@@ -2,6 +2,7 @@
 
 #include <ichor/event_queues/SdeventQueue.h>
 #include <ichor/DependencyManager.h>
+#include <ichor/dependency_management/InternalServiceLifecycleManager.h>
 #include <sys/eventfd.h>
 
 namespace Ichor::Detail {
@@ -18,7 +19,12 @@ namespace Ichor {
 
     SdeventQueue::SdeventQueue() {
         _eventfd = eventfd(0, EFD_NONBLOCK | EFD_SEMAPHORE);
-        _threadId = std::this_thread::get_id();
+        _threadId = std::this_thread::get_id(); // re-set in functions below, because adding events when the queue isn't running yet cannot be done from another thread.
+    }
+
+    SdeventQueue::SdeventQueue(uint64_t unused) {
+        _eventfd = eventfd(0, EFD_NONBLOCK | EFD_SEMAPHORE);
+        _threadId = std::this_thread::get_id(); // re-set in functions below, because adding events when the queue isn't running yet cannot be done from another thread.
     }
 
     SdeventQueue::~SdeventQueue() {
@@ -140,6 +146,7 @@ namespace Ichor {
 
         registerEventFd();
         registerTimer();
+        _threadId = std::this_thread::get_id();
 
         _initializedSdevent.store(true, std::memory_order_release);
         return _eventQueue;
@@ -150,18 +157,24 @@ namespace Ichor {
         _eventQueue = event;
         registerEventFd();
         registerTimer();
+        _threadId = std::this_thread::get_id();
         _initializedSdevent.store(true, std::memory_order_release);
     }
 
     bool SdeventQueue::start(bool captureSigInt) {
         if(!_initializedSdevent.load(std::memory_order_acquire)) [[unlikely]] {
-            fmt::println("IOUringQueue not initialized. Call createEventLoop or useEventLoop first.");
+            fmt::println("SdeventQueue not initialized. Call createEventLoop or useEventLoop first.");
             return false;
         }
 
         if(!_dm) [[unlikely]] {
             fmt::println("Please create a manager first!");
             return false;
+        }
+
+        if(std::this_thread::get_id() != _threadId) [[unlikely]] {
+            fmt::println("Creation of ring and start() have to be on the same thread.");
+            std::terminate();
         }
 
         // this capture currently has no way to wake all queues. Multimap f.e. polls sigintQuit, but with sdevent the
@@ -171,6 +184,8 @@ namespace Ichor {
                 return false;
             }
         }
+
+        addInternalServiceManager(std::make_unique<Detail::InternalServiceLifecycleManager<ISdeventQueue>>(this));
 
         startDm();
 
@@ -201,6 +216,8 @@ namespace Ichor {
 
             sd_event_exit(q->_eventQueue, 0);
             sd_event_source_unref(source);
+
+            q->stopDm();
 
             return 0;
         }, this);
@@ -266,6 +283,10 @@ namespace Ichor {
         if (ret < 0) [[unlikely]] {
             throw std::system_error(-ret, std::generic_category(), "sd_event_add_io() failed");
         }
+    }
+
+    NeverNull<sd_event *> SdeventQueue::getLoop() noexcept {
+        return _eventQueue;
     }
 }
 
