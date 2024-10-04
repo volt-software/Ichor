@@ -517,7 +517,7 @@ if(ICHOR_USE_SDEVENT)
     if(NOT TARGET PkgConfig::Systemd)
         message(FATAL_ERROR "libsystemd was not found")
     endif()
-    target_link_libraries(ichor PUBLIC PkgConfig::Systemd)
+    target_link_libraries(ichor PUBLIC ${Systemd_LIBRARIES})
     target_compile_definitions(ichor PUBLIC ICHOR_USE_SDEVENT)
 endif()
 
