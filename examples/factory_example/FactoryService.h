@@ -39,18 +39,18 @@ public:
 
 private:
     // a service has been created and has requested an IRuntimeCreatedService
-    void handleDependencyRequest(AlwaysNull<IRuntimeCreatedService*>, DependencyRequestEvent const &evt) {
+    AsyncGenerator<IchorBehaviour> handleDependencyRequest(AlwaysNull<IRuntimeCreatedService*>, DependencyRequestEvent const &evt) {
         // What to do when the requesting service has no properties? In this case, we don't create anything, probably preventing the service from being started.
         if(!evt.properties.has_value()) {
             ICHOR_LOG_ERROR(_logger, "missing properties");
-            return;
+            co_return {};
         }
 
         auto scopeProp = evt.properties.value()->find("scope");
 
         if(scopeProp == end(*evt.properties.value())) {
             ICHOR_LOG_ERROR(_logger, "scope missing");
-            return;
+            co_return {};
         }
 
         auto const& scope = Ichor::any_cast<const std::string&>(scopeProp->second);
@@ -68,13 +68,15 @@ private:
 
             _scopedRuntimeServices.emplace(scope, GetThreadLocalManager().createServiceManager<RuntimeCreatedService, IRuntimeCreatedService>(std::move(newProps))->getServiceId());
         }
+
+        co_return {};
     }
 
     // a service has been created but now has to be destroyed and requested an IRuntimeCreatedService
-    void handleDependencyUndoRequest(AlwaysNull<IRuntimeCreatedService*>, DependencyUndoRequestEvent const &evt) {
+    AsyncGenerator<IchorBehaviour> handleDependencyUndoRequest(AlwaysNull<IRuntimeCreatedService*>, DependencyUndoRequestEvent const &evt) {
         if(!evt.properties) {
             ICHOR_LOG_ERROR(_logger, "properties missing");
-            return;
+            co_return {};
         }
 
         auto &properties = (*evt.properties);
@@ -82,7 +84,7 @@ private:
 
         if(scopeProp == end(properties)) {
             ICHOR_LOG_ERROR(_logger, "scope missing");
-            return;
+            co_return {};
         }
 
         auto const& scope = Ichor::any_cast<const std::string&>(scopeProp->second);
@@ -96,6 +98,8 @@ private:
             GetThreadLocalEventQueue().pushPrioritisedEvent<StopServiceEvent>(_self->getServiceId(), INTERNAL_DEPENDENCY_EVENT_PRIORITY, service->second, true);
             _scopedRuntimeServices.erase(scope);
         }
+
+        co_return {};
     }
 
     friend DependencyManager;

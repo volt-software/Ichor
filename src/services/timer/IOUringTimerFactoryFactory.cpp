@@ -43,24 +43,28 @@ void Ichor::IOUringTimerFactoryFactory::removeDependencyInstance(IIOUringQueue&,
     _q = nullptr;
 }
 
-void Ichor::IOUringTimerFactoryFactory::handleDependencyRequest(AlwaysNull<ITimerFactory *>, const DependencyRequestEvent &evt) {
+Ichor::AsyncGenerator<Ichor::IchorBehaviour> Ichor::IOUringTimerFactoryFactory::handleDependencyRequest(AlwaysNull<ITimerFactory *>, const DependencyRequestEvent &evt) {
     auto factory = _factories.find(evt.originatingService);
 
     if(factory != _factories.end()) {
-        return;
+        co_return {};
     }
 
     _factories.emplace(evt.originatingService, Ichor::GetThreadLocalManager().createServiceManager<TimerFactory<IOUringTimer, IIOUringQueue>, Detail::InternalTimerFactory, ITimerFactory>(Properties{{"requestingSvcId", Ichor::make_any<ServiceIdType>(evt.originatingService)}, {"Filter", Ichor::make_any<Filter>(ServiceIdFilterEntry{evt.originatingService})}}, evt.priority)->getServiceId());
+
+    co_return {};
 }
 
-void Ichor::IOUringTimerFactoryFactory::handleDependencyUndoRequest(AlwaysNull<ITimerFactory *>, const DependencyUndoRequestEvent &evt) {
+Ichor::AsyncGenerator<Ichor::IchorBehaviour> Ichor::IOUringTimerFactoryFactory::handleDependencyUndoRequest(AlwaysNull<ITimerFactory *>, const DependencyUndoRequestEvent &evt) {
     auto factory = _factories.find(evt.originatingService);
 
     if(factory == _factories.end()) {
-        return;
+        co_return {};
     }
 
     pushStopEventForTimerFactory(factory);
+
+    co_return {};
 }
 
 decltype(Ichor::IOUringTimerFactoryFactory::_factories)::iterator Ichor::IOUringTimerFactoryFactory::pushStopEventForTimerFactory(decltype(Ichor::IOUringTimerFactoryFactory::_factories)::iterator const &factory) noexcept {

@@ -194,8 +194,12 @@ namespace Ichor {
 
     template<typename INTERFACE_TYPENAME>
     [[nodiscard]] consteval NameHashType typeNameHash() {
-        std::string_view name = typeName<INTERFACE_TYPENAME>();
-        return consteval_wyhash(name.data(), name.size(), 0);
+        constexpr std::string_view name = typeName<INTERFACE_TYPENAME>();
+        constexpr NameHashType ret = consteval_wyhash(name.data(), name.size(), 0);
+
+        static_assert(ret != 0, "typeNameHash cannot be 0");
+
+        return ret;
     }
 }
 

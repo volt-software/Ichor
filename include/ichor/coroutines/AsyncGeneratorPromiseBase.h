@@ -124,6 +124,14 @@ namespace Ichor::Detail {
             _priority = priority;
         }
 
+        [[nodiscard]] ServiceIdType get_service_id() const noexcept {
+            return _svcId;
+        }
+
+        void set_service_id(ServiceIdType svcId) noexcept {
+            _svcId = svcId;
+        }
+
     protected:
         AsyncGeneratorYieldOperation internal_yield_value() noexcept;
 
@@ -138,6 +146,7 @@ namespace Ichor::Detail {
         std::coroutine_handle<> _consumerCoroutine;
         uint64_t _id;
         uint64_t _priority{100}; // TODO: use INTERNAL_DEPENDENCY_EVENT_PRIORITY by refactoring headers
+        ServiceIdType _svcId{};
 #ifdef ICHOR_USE_HARDENING
         DependencyManager *_dmAtTimeOfCreation{_local_dm};
 #endif

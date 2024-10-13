@@ -10,6 +10,8 @@
 #include "TestServices/ConstructorInjectionTestServices.h"
 #include "TestServices/RequiredMultipleService.h"
 #include "TestServices/DependencyTrackerService.h"
+#include "TestServices/AsyncDependencyTrackerService.h"
+#include "TestServices/AsyncBroadcastService.h"
 #include "TestServices/RemoveAfterAwaitedStopService.h"
 #include <ichor/events/RunFunctionEvent.h>
 #include <ichor/services/logging/LoggerFactory.h>
@@ -42,6 +44,7 @@
 
 bool AddEventHandlerDuringEventHandlingService::_addedReg{};
 std::atomic<uint64_t> evtGate;
+std::unique_ptr<Ichor::AsyncManualResetEvent> _evt;
 
 static void DisplayServices(DependencyManager &dm) {
     auto svcs = dm.getAllServices();
@@ -72,6 +75,8 @@ TEST_CASE("ServicesTests_ordered") {
 TEST_CASE("ServicesTests") {
 #endif
 #endif
+
+    _evt.reset();
 
     SECTION("QuitOnQuitEvent") {
         auto queue = std::make_unique<QIMPL>(500);
@@ -858,6 +863,218 @@ TEST_CASE("ServicesTests") {
             REQUIRE(services[0]->getSvcCount() == 1);
 
             queue->pushEvent<QuitEvent>(0);
+        });
+
+        t.join();
+    }
+
+    SECTION("Async multiple dependency trackers") {
+        auto queue = std::make_unique<QIMPL>(500);
+        auto &dm = queue->createManager();
+        ServiceIdType trackerSvcId{};
+        ServiceIdType depSvcId{};
+        _evt = std::make_unique<AsyncManualResetEvent>();
+        std::thread t([&]() {
+#if defined(TEST_URING)
+            REQUIRE(queue->createEventLoop());
+#elif defined(TEST_SDEVENT)
+            auto *loop = queue->createEventLoop();
+            REQUIRE(loop);
+#endif
+            dm.createServiceManager<AsyncDependencyTrackerService<IUselessService, UselessService, IUselessService>>();
+            trackerSvcId = dm.createServiceManager<AsyncDependencyTrackerService<IUselessService, UselessService2, IUselessService>>()->getServiceId();
+            depSvcId = dm.createServiceManager<DependencyService<IUselessService, DependencyFlags::ALLOW_MULTIPLE>, ICountService>()->getServiceId();
+            queue->start(CaptureSigInt);
+#if defined(TEST_SDEVENT)
+            int r = sd_event_loop(loop);
+            REQUIRE(r >= 0);
+#endif
+        });
+
+        waitForRunning(dm);
+
+        runForOrQueueEmpty(dm);
+
+        queue->pushEvent<RunFunctionEvent>(0, [&]() {
+            DisplayServices(dm);
+#if defined(TEST_URING) || defined(TEST_SDEVENT)
+            REQUIRE(dm.getServiceCount() == 6);
+#else
+            REQUIRE(dm.getServiceCount() == 5);
+#endif
+            auto services = dm.getStartedServices<ICountService>();
+
+            REQUIRE(services.size() == 1);
+            REQUIRE(services[0]->isRunning());
+            REQUIRE(services[0]->getSvcCount() == 0);
+
+            _evt->set();
+        });
+
+        runForOrQueueEmpty(dm);
+
+        queue->pushEvent<RunFunctionEvent>(0, [&]() {
+            DisplayServices(dm);
+#if defined(TEST_URING) || defined(TEST_SDEVENT)
+            REQUIRE(dm.getServiceCount() == 8);
+#else
+            REQUIRE(dm.getServiceCount() == 7);
+#endif
+            auto services = dm.getStartedServices<ICountService>();
+
+            REQUIRE(services.size() == 1);
+            REQUIRE(services[0]->isRunning());
+            REQUIRE(services[0]->getSvcCount() == 2);
+
+            _evt->reset();
+
+            queue->pushEvent<StopServiceEvent>(0, depSvcId, true);
+        });
+
+        runForOrQueueEmpty(dm);
+
+        queue->pushEvent<RunFunctionEvent>(0, [&]() {
+            DisplayServices(dm);
+#if defined(TEST_URING) || defined(TEST_SDEVENT)
+            REQUIRE(dm.getServiceCount() == 7);
+#else
+            REQUIRE(dm.getServiceCount() == 6);
+#endif
+            auto services = dm.getStartedServices<ICountService>();
+
+            REQUIRE(services.size() == 0);
+
+            _evt->set();
+        });
+
+        runForOrQueueEmpty(dm);
+
+        queue->pushEvent<RunFunctionEvent>(0, [&]() {
+            DisplayServices(dm);
+#if defined(TEST_URING) || defined(TEST_SDEVENT)
+            REQUIRE(dm.getServiceCount() == 5);
+#else
+            REQUIRE(dm.getServiceCount() == 4);
+#endif
+            auto services = dm.getStartedServices<ICountService>();
+
+            REQUIRE(services.size() == 0);
+
+            queue->pushEvent<StopServiceEvent>(0, trackerSvcId, true);
+        });
+
+        runForOrQueueEmpty(dm);
+
+        queue->pushEvent<RunFunctionEvent>(0, [&]() {
+            DisplayServices(dm);
+            DisplayServices(dm);
+#if defined(TEST_URING) || defined(TEST_SDEVENT)
+            REQUIRE(dm.getServiceCount() == 4);
+#else
+            REQUIRE(dm.getServiceCount() == 3);
+#endif
+            auto services = dm.getStartedServices<ICountService>();
+
+            REQUIRE(services.size() == 0);
+
+            depSvcId = dm.createServiceManager<DependencyService<IUselessService, DependencyFlags::ALLOW_MULTIPLE>, ICountService>()->getServiceId();
+        });
+
+        runForOrQueueEmpty(dm);
+
+        queue->pushEvent<RunFunctionEvent>(0, [&]() {
+            DisplayServices(dm);
+            DisplayServices(dm);
+#if defined(TEST_URING) || defined(TEST_SDEVENT)
+            REQUIRE(dm.getServiceCount() == 6);
+#else
+            REQUIRE(dm.getServiceCount() == 5);
+#endif
+            auto services = dm.getStartedServices<ICountService>();
+
+            REQUIRE(services.size() == 1);
+            REQUIRE(services[0]->isRunning());
+            REQUIRE(services[0]->getSvcCount() == 1);
+
+            queue->pushEvent<QuitEvent>(0);
+        });
+
+        t.join();
+    }
+
+    SECTION("Async Multiple Broadcast Handlers") {
+        auto queue = std::make_unique<QIMPL>(500);
+        auto &dm = queue->createManager();
+        _evt = std::make_unique<AsyncManualResetEvent>();
+        std::thread t([&]() {
+#if defined(TEST_URING)
+            REQUIRE(queue->createEventLoop());
+#elif defined(TEST_SDEVENT)
+            auto *loop = queue->createEventLoop();
+            REQUIRE(loop);
+#endif
+            dm.createServiceManager<AsyncBroadcastService, IAsyncBroadcastService>();
+            dm.createServiceManager<AsyncBroadcastService, IAsyncBroadcastService>();
+            dm.createServiceManager<AsyncBroadcastService, IAsyncBroadcastService>();
+            queue->start(CaptureSigInt);
+#if defined(TEST_SDEVENT)
+            int r = sd_event_loop(loop);
+            REQUIRE(r >= 0);
+#endif
+        });
+
+        waitForRunning(dm);
+
+        runForOrQueueEmpty(dm);
+
+        queue->pushEvent<RunFunctionEventAsync>(0, [&]() -> AsyncGenerator<IchorBehaviour> {
+            DisplayServices(dm);
+            auto services = dm.getStartedServices<IAsyncBroadcastService>();
+
+            REQUIRE(services.size() == 3);
+            for (auto &svc: services) {
+                REQUIRE(svc->getFinishedCalls() == 0);
+                REQUIRE(svc->getFinishedPosts() == 0);
+            }
+
+            for (auto &svc: services) {
+                co_await svc->postEvent();
+            }
+
+            co_return {};
+        });
+
+        runForOrQueueEmpty(dm);
+
+        queue->pushEvent<RunFunctionEvent>(0, [&]() {
+            DisplayServices(dm);
+            auto services = dm.getStartedServices<IAsyncBroadcastService>();
+
+            REQUIRE(services.size() == 3);
+            for (auto &svc: services) {
+                REQUIRE(svc->getFinishedCalls() == 0);
+                REQUIRE(svc->getFinishedPosts() == 0);
+            }
+
+            _evt->set();
+            for (auto &svc: services) {
+                REQUIRE(svc->getFinishedCalls() == 1);
+                REQUIRE(svc->getFinishedPosts() == 0);
+            }
+        });
+
+        runForOrQueueEmpty(dm);
+
+        queue->pushEvent<RunFunctionEvent>(0, [&]() {
+            DisplayServices(dm);
+            auto services = dm.getStartedServices<IAsyncBroadcastService>();
+
+            for (auto &svc: services) {
+                REQUIRE(svc->getFinishedCalls() == 3);
+                REQUIRE(svc->getFinishedPosts() == 1);
+            }
+
+            dm.getEventQueue().pushEvent<QuitEvent>(0);
         });
 
         t.join();

@@ -72,7 +72,7 @@ namespace Ichor {
             co_return;
         }
 
-        void handleDependencyRequest(AlwaysNull<NetworkInterfaceType*>, DependencyRequestEvent const &evt) {
+        AsyncGenerator<IchorBehaviour> handleDependencyRequest(AlwaysNull<NetworkInterfaceType*>, DependencyRequestEvent const &evt) {
             if(!evt.properties.has_value()) {
                 throw std::runtime_error("Missing properties");
             }
@@ -93,9 +93,11 @@ namespace Ichor {
                 newMap.emplace(_connectionCounter++, GetThreadLocalManager().template createServiceManager<NetworkType, NetworkInterfaceType>(std::move(newProps), evt.priority)->getServiceId());
                 _connections.emplace(evt.originatingService, std::move(newMap));
             }
+
+            co_return {};
         }
 
-        void handleDependencyUndoRequest(AlwaysNull<NetworkInterfaceType*>, DependencyUndoRequestEvent const &evt) {
+        AsyncGenerator<IchorBehaviour> handleDependencyUndoRequest(AlwaysNull<NetworkInterfaceType*>, DependencyUndoRequestEvent const &evt) {
             auto existingConnections = _connections.find(evt.originatingService);
 
             if(existingConnections != end(_connections)) {
@@ -104,6 +106,8 @@ namespace Ichor {
                 }
                 _connections.erase(existingConnections);
             }
+
+            co_return {};
         }
 
         void addDependencyInstance(ILogger &logger, IService &) {

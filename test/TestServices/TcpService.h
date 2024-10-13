@@ -9,7 +9,6 @@
 
 using namespace Ichor;
 
-//extern std::unique_ptr<Ichor::AsyncManualResetEvent> _evt;
 extern std::atomic<uint64_t> evtGate;
 
 struct ITcpService {

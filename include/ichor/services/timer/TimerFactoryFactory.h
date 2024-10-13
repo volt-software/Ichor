@@ -18,8 +18,8 @@ namespace Ichor {
         Task<tl::expected<void, Ichor::StartError>> start() final;
         Task<void> stop() final;
 
-        void handleDependencyRequest(AlwaysNull<ITimerFactory*>, DependencyRequestEvent const &evt);
-        void handleDependencyUndoRequest(AlwaysNull<ITimerFactory*>, DependencyUndoRequestEvent const &evt);
+        AsyncGenerator<IchorBehaviour> handleDependencyRequest(AlwaysNull<ITimerFactory*>, DependencyRequestEvent const &evt);
+        AsyncGenerator<IchorBehaviour> handleDependencyUndoRequest(AlwaysNull<ITimerFactory*>, DependencyUndoRequestEvent const &evt);
 
         friend DependencyManager;
 

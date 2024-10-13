@@ -439,6 +439,11 @@ namespace Ichor {
             _coroutine.promise().set_priority(priority);
         }
 
+        void set_service_id(ServiceIdType svcId) noexcept {
+            INTERNAL_COROUTINE_DEBUG("AsyncGenerator<{}>::set_service_id({}) {} {}", typeName<T>(), svcId, *_destroyed, _coroutine.promise()._state);
+            _coroutine.promise().set_service_id(svcId);
+        }
+
     private:
         std::coroutine_handle<promise_type> _coroutine;
         ReferenceCountedPointer<bool> _destroyed;
