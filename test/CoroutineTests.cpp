@@ -263,6 +263,7 @@ TEST_CASE("CoroutineTests") {
             auto svc = dm.getService<IAwaitReturnService>(svcId);
             REQUIRE(svc);
             auto await = co_await (*svc).first->AwaitTask();
+            REQUIRE(await.countConstructed == 1);
             co_return {};
         });
 

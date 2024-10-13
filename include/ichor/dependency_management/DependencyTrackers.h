@@ -2,10 +2,10 @@
 
 namespace Ichor {
     struct DependencyTrackerInfo final {
-        explicit DependencyTrackerInfo(ServiceIdType _svcId, std::function<void(Event const &)> _trackFunc, std::function<void(Event const &)> _untrackFunc) noexcept : svcId(_svcId), trackFunc(std::move(_trackFunc)), untrackFunc(std::move(_untrackFunc)) {}
+        explicit DependencyTrackerInfo(ServiceIdType _svcId, std::function<AsyncGenerator<IchorBehaviour>(Event const &)> _trackFunc, std::function<AsyncGenerator<IchorBehaviour>(Event const &)> _untrackFunc) noexcept : svcId(_svcId), trackFunc(std::move(_trackFunc)), untrackFunc(std::move(_untrackFunc)) {}
         ServiceIdType svcId;
-        std::function<void(Event const &)> trackFunc;
-        std::function<void(Event const &)> untrackFunc;
+        std::function<AsyncGenerator<IchorBehaviour>(Event const &)> trackFunc;
+        std::function<AsyncGenerator<IchorBehaviour>(Event const &)> untrackFunc;
     };
 
     struct DependencyTrackerKey final {

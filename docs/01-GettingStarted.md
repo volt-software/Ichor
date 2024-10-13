@@ -444,11 +444,11 @@ struct LoggerFactory final {
         _loggerTrackerRegistration = _dm->registerDependencyTracker<ILogger>(this, self);
     }
 
-    void handleDependencyRequest(AlwaysNull<ILogger*>, DependencyRequestEvent const &evt) {
+    AsyncGenerator<IchorBehaviour> handleDependencyRequest(AlwaysNull<ILogger*>, DependencyRequestEvent const &evt) {
         auto logger = _loggers.find(evt.originatingService);
 
         if (logger != end(_loggers)) {
-            return; // already created a logger for this service!
+            co_return {}; // already created a logger for this service!
         }
 
 
@@ -458,15 +458,18 @@ struct LoggerFactory final {
         props.template emplace<>("Filter", Ichor::make_any<Filter>(ServiceIdFilterEntry{evt.originatingService}));
         auto *newLogger = _dm->createServiceManager<Logger, ILogger>(std::move(props));
         _loggers.emplace(evt.originatingService, newLogger->getServiceId());
+
+        co_return {};
     }
 
-    void handleDependencyUndoRequest(AlwaysNull<ILogger*>, DependencyUndoRequestEvent const &evt) {
+    AsyncGenerator<IchorBehaviour> handleDependencyUndoRequest(AlwaysNull<ILogger*>, DependencyUndoRequestEvent const &evt) {
         auto service = _loggers.find(evt.originatingService);
         if(service != end(_loggers)) {
             // the true at the end tells Ichor to remove the service immediately after being stopped.
             _dm->pushPrioritisedEvent<StopServiceEvent>(AdvancedService<LoggerFactory<LogT>>::getServiceId(), INTERNAL_DEPENDENCY_EVENT_PRIORITY, service->second, true);
             _loggers.erase(service);
         }
+        co_return {};
     }
     
     DependencyTrackerRegistration _loggerTrackerRegistration{};

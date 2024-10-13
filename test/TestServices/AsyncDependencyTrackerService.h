@@ -2,17 +2,19 @@
 
 using namespace Ichor;
 
-struct IDependencyTrackerService {
+extern std::unique_ptr<Ichor::AsyncManualResetEvent> _evt;
+
+struct IAsyncDependencyTrackerService {
     [[nodiscard]] virtual unordered_map<uint64_t, ServiceIdType> getCreatedServices() noexcept = 0;
 protected:
-    ~IDependencyTrackerService() = default;
+    ~IAsyncDependencyTrackerService() = default;
 };
 
 template<typename TrackingServiceType, typename CreateServiceType, typename CreateServiceInterfaceType>
-struct DependencyTrackerService final : public IDependencyTrackerService, public AdvancedService<DependencyTrackerService<TrackingServiceType, CreateServiceType, CreateServiceInterfaceType>> {
-    DependencyTrackerService(DependencyRegister &reg, Properties props) : AdvancedService<DependencyTrackerService<TrackingServiceType, CreateServiceType, CreateServiceInterfaceType>>(std::move(props)) {
+struct AsyncDependencyTrackerService final : public IAsyncDependencyTrackerService, public AdvancedService<AsyncDependencyTrackerService<TrackingServiceType, CreateServiceType, CreateServiceInterfaceType>> {
+    AsyncDependencyTrackerService(DependencyRegister &reg, Properties props) : AdvancedService<AsyncDependencyTrackerService<TrackingServiceType, CreateServiceType, CreateServiceInterfaceType>>(std::move(props)) {
     }
-    ~DependencyTrackerService() final = default;
+    ~AsyncDependencyTrackerService() final = default;
     Task<tl::expected<void, Ichor::StartError>> start() final {
         _trackerRegistration = GetThreadLocalManager().template registerDependencyTracker<TrackingServiceType>(this, this);
         co_return {};
@@ -23,6 +25,8 @@ struct DependencyTrackerService final : public IDependencyTrackerService, public
     }
 
     AsyncGenerator<IchorBehaviour> handleDependencyRequest(AlwaysNull<TrackingServiceType*>, DependencyRequestEvent const &evt) {
+        co_await *_evt;
+
         auto svc = _services.find(evt.originatingService);
 
         if (svc != end(_services)) {
@@ -37,10 +41,12 @@ struct DependencyTrackerService final : public IDependencyTrackerService, public
     }
 
     AsyncGenerator<IchorBehaviour> handleDependencyUndoRequest(AlwaysNull<TrackingServiceType*>, DependencyUndoRequestEvent const &evt) {
+        co_await *_evt;
+
         auto service = _services.find(evt.originatingService);
 
         if(service != end(_services)) {
-            GetThreadLocalEventQueue().template pushPrioritisedEvent<StopServiceEvent>(AdvancedService<DependencyTrackerService<TrackingServiceType, CreateServiceType, CreateServiceInterfaceType>>::getServiceId(), INTERNAL_DEPENDENCY_EVENT_PRIORITY, service->second, true);
+            co_await GetThreadLocalManager().template pushPrioritisedEventAsync<StopServiceEvent>(AdvancedService<AsyncDependencyTrackerService<TrackingServiceType, CreateServiceType, CreateServiceInterfaceType>>::getServiceId(), INTERNAL_DEPENDENCY_EVENT_PRIORITY, true, service->second, true);
             _services.erase(service);
         }
 

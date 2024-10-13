@@ -53,7 +53,7 @@ namespace Ichor {
             _logger = nullptr;
         }
 
-        void handleDependencyRequest(AlwaysNull<ILogger*>, DependencyRequestEvent const &evt) {
+        AsyncGenerator<IchorBehaviour> handleDependencyRequest(AlwaysNull<ILogger*>, DependencyRequestEvent const &evt) {
             auto logger = _loggers.find(evt.originatingService);
 
             if (logger == end(_loggers)) {
@@ -71,15 +71,19 @@ namespace Ichor {
             } else {
                 ICHOR_LOG_TRACE(_logger, "svcid {} already has logger", evt.originatingService);
             }
+
+            co_return {};
         }
 
-        void handleDependencyUndoRequest(AlwaysNull<ILogger*>, DependencyUndoRequestEvent const &evt) {
+        AsyncGenerator<IchorBehaviour> handleDependencyUndoRequest(AlwaysNull<ILogger*>, DependencyUndoRequestEvent const &evt) {
             auto service = _loggers.find(evt.originatingService);
 
             if(service != end(_loggers)) {
                 GetThreadLocalEventQueue().template pushPrioritisedEvent<StopServiceEvent>(AdvancedService<LoggerFactory<LogT>>::getServiceId(), INTERNAL_DEPENDENCY_EVENT_PRIORITY, service->second, true);
                 _loggers.erase(service);
             }
+
+            co_return {};
         }
 
         friend DependencyRegister;

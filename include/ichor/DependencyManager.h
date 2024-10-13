@@ -58,7 +58,6 @@ namespace Ichor {
         std::vector<std::pair<uint64_t, std::unique_ptr<AsyncManualResetEvent>>> events{};
         ServiceIdType waitingSvcId;
         uint64_t eventType;
-        uint32_t count{1}; // default of 1, to be decremented in event completion/error
     };
 
     class [[nodiscard]] DependencyManager final {
@@ -150,10 +149,14 @@ namespace Ichor {
             static_assert(!std::is_same_v<EventT, QuitEvent>, "QuitEvent cannot be used in an async manner");
             static_assert(!std::is_same_v<EventT, RemoveEventHandlerEvent>, "RemoveEventHandlerEvent cannot be used in an async manner");
             static_assert(!std::is_same_v<EventT, RemoveEventInterceptorEvent>, "RemoveEventInterceptorEvent cannot be used in an async manner");
+            static_assert(!std::is_same_v<EventT, AddTrackerEvent>, "AddTrackerEvent cannot be used in an async manner");
             static_assert(!std::is_same_v<EventT, RemoveTrackerEvent>, "RemoveTrackerEvent cannot be used in an async manner");
             static_assert(!std::is_same_v<EventT, ContinuableEvent>, "ContinuableEvent cannot be used in an async manner");
             static_assert(!std::is_same_v<EventT, ContinuableStartEvent>, "ContinuableStartEvent cannot be used in an async manner");
+            static_assert(!std::is_same_v<EventT, DependencyRequestEvent>, "DependencyRequestEvent cannot be used in an async manner");
             static_assert(!std::is_same_v<EventT, DependencyUndoRequestEvent>, "DependencyUndoRequestEvent cannot be used in an async manner");
+            static_assert(!std::is_same_v<EventT, DependencyOnlineEvent>, "DependencyOnlineEvent cannot be used in an async manner");
+            static_assert(!std::is_same_v<EventT, DependencyOfflineEvent>, "DependencyOfflineEvent cannot be used in an async manner");
 
             if constexpr (DO_INTERNAL_DEBUG || DO_HARDENING) {
                 if (originatingServiceId != 0 && _services.find(originatingServiceId) == _services.end()) [[unlikely]] {
@@ -163,7 +166,7 @@ namespace Ichor {
             }
 
             if(coalesce) {
-                auto waitingIt = std::find_if(_eventWaiters.begin(), _eventWaiters.end(),
+                auto const waitingIt = std::find_if(_eventWaiters.begin(), _eventWaiters.end(),
                                               [originatingServiceId](const auto &waiter) {
                                                   return waiter.second.waitingSvcId == originatingServiceId && waiter.second.eventType == EventT::TYPE;
                                               });
@@ -178,7 +181,7 @@ namespace Ichor {
             uint64_t eventId = _eventQueue->getNextEventId();
             _eventQueue->pushEventInternal(priority, std::unique_ptr<Event>{new EventT(std::forward<uint64_t>(eventId), std::forward<ServiceIdType>(originatingServiceId), std::forward<uint64_t>(priority), std::forward<Args>(args)...)});
             auto it = _eventWaiters.emplace(eventId, EventWaiter(originatingServiceId, EventT::TYPE));
-            INTERNAL_DEBUG("pushPrioritisedEventAsync {}:{} {} waiting {} {}", eventId, typeName<EventT>(), originatingServiceId, it.first->second.count, it.first->second.events.size());
+            INTERNAL_DEBUG("pushPrioritisedEventAsync {}:{} {} events.size {}", eventId, typeName<EventT>(), originatingServiceId, it.first->second.events.size());
             co_await *it.first->second.events.begin()->second.get();
             co_return;
         }
@@ -202,39 +205,17 @@ namespace Ichor {
                 }
 
                 if(self->getServiceState() < ServiceState::STARTING || self->getServiceState() > ServiceState::ACTIVE) {
-                    ICHOR_EMERGENCY_LOG1(_logger, "Cannot register tracker unless service is starting/started. Did you start it in an AdvancedService constructor?");
+                    ICHOR_EMERGENCY_LOG1(_logger, "Cannot register tracker unless service is starting/started. Did you accidentally try registering inside an AdvancedService constructor? Try calling it in start() instead.");
                     std::terminate();
                 }
             }
             auto requestTrackersForType = _dependencyRequestTrackers.find(typeNameHash<Interface>());
 
-            DependencyTrackerInfo requestInfo{self->getServiceId(), std::function<void(Event const &)>{[impl](Event const &evt) {
-                impl->handleDependencyRequest(AlwaysNull<Interface*>(), static_cast<DependencyRequestEvent const &>(evt));
-            }}, std::function<void(Event const &)>{[impl](Event const &evt) {
-                impl->handleDependencyUndoRequest(AlwaysNull<Interface*>(), static_cast<DependencyUndoRequestEvent const &>(evt));
+            DependencyTrackerInfo requestInfo{self->getServiceId(), std::function<AsyncGenerator<IchorBehaviour>(Event const &)>{[impl](Event const &evt) -> AsyncGenerator<IchorBehaviour> {
+                return impl->handleDependencyRequest(AlwaysNull<Interface*>(), static_cast<DependencyRequestEvent const &>(evt));
+            }}, std::function<AsyncGenerator<IchorBehaviour>(Event const &)>{[impl](Event const &evt) -> AsyncGenerator<IchorBehaviour> {
+                return impl->handleDependencyUndoRequest(AlwaysNull<Interface*>(), static_cast<DependencyUndoRequestEvent const &>(evt));
             }}};
-
-            std::vector<DependencyRequestEvent> requests{};
-            for(auto const &[key, mgr] : _services) {
-                auto const *depRegistry = mgr->getDependencyRegistry();
-//                ICHOR_LOG_ERROR(_logger, "register svcId {} dm {}", mgr->serviceId(), _id);
-
-                // only DependencyLifecycleManager has a non-nullptr value. Other Lifecyclemanagers return nullptr because they don't request dependencies.
-                if(depRegistry == nullptr) {
-                    continue;
-                }
-
-                for (auto const &[interfaceHash, registration] : depRegistry->_registrations) {
-                    if(interfaceHash == typeNameHash<Interface>()) {
-                        auto const &props = std::get<tl::optional<Properties>>(registration);
-                        requests.emplace_back(0, mgr->serviceId(), std::min(mgr->getPriority(), INTERNAL_DEPENDENCY_EVENT_PRIORITY), std::get<Dependency>(registration), props.has_value() ? &props.value() : tl::optional<Properties const *>{});
-                    }
-                }
-            }
-
-            for(const auto& request : requests) {
-                requestInfo.trackFunc(request);
-            }
 
             if(requestTrackersForType == end(_dependencyRequestTrackers)) {
                 std::vector<DependencyTrackerInfo> v{};
@@ -243,6 +224,8 @@ namespace Ichor {
             } else {
                 requestTrackersForType->second.emplace_back(std::move(requestInfo));
             }
+
+            _eventQueue->pushPrioritisedEvent<AddTrackerEvent>(self->getServiceId(), std::min(INTERNAL_INSERT_SERVICE_EVENT_PRIORITY, self->getServicePriority()), typeNameHash<Interface>());
 
             return DependencyTrackerRegistration(self->getServiceId(), typeNameHash<Interface>(), self->getServicePriority());
         }
@@ -585,31 +568,6 @@ namespace Ichor {
             }
         }
 
-        template <typename EventT>
-#if (!defined(WIN32) && !defined(_WIN32) && !defined(__WIN32)) || defined(__CYGWIN__)
-        requires Derived<EventT, Event>
-#endif
-        void handleEventError(EventT const &evt) {
-            auto waitingIt = _eventWaiters.find(evt.id);
-            if(waitingIt != end(_eventWaiters)) {
-                waitingIt->second.count--;
-                INTERNAL_DEBUG("handleEventError {}:{} {} waiting {} {}", evt.id, evt.get_name(), evt.originatingService, waitingIt->second.count, waitingIt->second.events.size());
-                if constexpr (DO_INTERNAL_DEBUG || DO_HARDENING) {
-                    if (waitingIt->second.count == std::numeric_limits<decltype(waitingIt->second.count)>::max()) [[unlikely]] {
-                        ICHOR_EMERGENCY_LOG1(_logger, "Underflow detected.");
-                        std::terminate();
-                    }
-                }
-
-                if(waitingIt->second.count == 0) {
-                    for(auto &asyncEvt : waitingIt->second.events) {
-                        asyncEvt.second->set();
-                    }
-                    _eventWaiters.erase(waitingIt);
-                }
-            }
-        }
-
         /// Convenience function to log adding of services
         /// \tparam Impl
         /// \tparam Interface1
@@ -652,7 +610,7 @@ namespace Ichor {
         ///
         /// \param evt
         /// \return number of event handlers broadcasted to and a pointer to a potentially moved evt due to coroutines.
-        [[nodiscard]] uint64_t broadcastEvent(std::unique_ptr<Event> const &evt);
+        [[nodiscard]] std::pair<uint64_t, Event*> broadcastEvent(std::unique_ptr<Event> &evt);
         /// Sets the communication channel. Only to be used from inside the CommunicationChannel class itself.
         /// \param channel
         void setCommunicationChannel(NeverNull<CommunicationChannel*> channel);
@@ -689,7 +647,7 @@ namespace Ichor {
         unordered_map<uint64_t, std::vector<EventCallbackInfo>> _eventCallbacks{}; // key = event id
         unordered_map<uint64_t, std::vector<EventInterceptInfo>> _eventInterceptors{}; // key = event id
         unordered_map<uint64_t, std::unique_ptr<IGenerator>> _scopedGenerators{}; // key = promise id
-        unordered_map<uint64_t, std::unique_ptr<Event>> _scopedEvents{}; // key = promise id
+        unordered_map<uint64_t, ReferenceCountedPointer<Event>> _scopedEvents{}; // key = promise id
         unordered_map<uint64_t, EventWaiter> _eventWaiters{}; // key = event id
         unordered_map<ServiceIdType, EventWaiter> _dependencyWaiters{}; // key = service id
         IEventQueue *_eventQueue;

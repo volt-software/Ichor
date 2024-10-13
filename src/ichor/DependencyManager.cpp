@@ -129,8 +129,8 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &uniqueEvt) {
     }
 
     {
-        auto interceptorsForAllEvents = _eventInterceptors.find(0);
-        auto interceptorsForEvent = _eventInterceptors.find(evtType);
+        auto const interceptorsForAllEvents = _eventInterceptors.find(0);
+        auto const interceptorsForEvent = _eventInterceptors.find(evtType);
 
         if (interceptorsForAllEvents != end(_eventInterceptors)) {
             // Make copy because the vector can be modified in the preIntercept() call.
@@ -157,11 +157,10 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &uniqueEvt) {
         switch (evtType) {
             case DependencyOnlineEvent::TYPE: {
                 auto *depOnlineEvt = static_cast<DependencyOnlineEvent *>(evt);
-                auto managerIt = _services.find(depOnlineEvt->originatingService);
+                auto const managerIt = _services.find(depOnlineEvt->originatingService);
 
                 if (managerIt == end(_services)) [[unlikely]] {
                     INTERNAL_DEBUG("DependencyOnlineEvent not found {}", evt->id);
-                    handleEventError(*depOnlineEvt);
                     break;
                 }
 
@@ -171,7 +170,6 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &uniqueEvt) {
 
                 if (!manager->setInjected()) {
                     INTERNAL_DEBUG("Couldn't set injected for {} {} {}", manager->serviceId(), manager->implementationName(), manager->getServiceState());
-                    handleEventError(*depOnlineEvt);
                     break;
                 }
 
@@ -200,6 +198,7 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &uniqueEvt) {
 
                         auto gen = possibleDependentLifecycleManager->startAfterDependencyOnline();
                         gen.set_priority(std::min(possibleDependentLifecycleManager->getPriority(), INTERNAL_DEPENDENCY_EVENT_PRIORITY));
+                        gen.set_service_id(serviceId);
                         auto it = gen.begin();
 
                         INTERNAL_DEBUG("DependencyOnlineEvent {} {}:{} interested service is {}:{} {} {}", evt->id, manager->serviceId(), manager->implementationName(), serviceId, possibleDependentLifecycleManager->implementationName(), it.get_promise_id(), it.get_finished());
@@ -212,22 +211,19 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &uniqueEvt) {
                             }
                             _scopedGenerators.emplace(it.get_promise_id(), std::make_unique<AsyncGenerator<StartBehaviour>>(std::move(gen)));
                             // create new event that will be inserted upon finish of coroutine in ContinuableStartEvent
-                            _scopedEvents.emplace(it.get_promise_id(), std::make_unique<DependencyOnlineEvent>(_eventQueue->getNextEventId(), serviceId, std::min(INTERNAL_DEPENDENCY_EVENT_PRIORITY, evt->priority)));
+                            _scopedEvents.emplace(it.get_promise_id(), make_reference_counted<DependencyOnlineEvent>(_eventQueue->getNextEventId(), serviceId, std::min(INTERNAL_DEPENDENCY_EVENT_PRIORITY, evt->priority)));
                         } else if(it.get_value() == StartBehaviour::STARTED) {
                             _eventQueue->pushPrioritisedEvent<DependencyOnlineEvent>(serviceId, std::min(INTERNAL_DEPENDENCY_EVENT_PRIORITY, evt->priority));
                         }
                     }
                 }
-
-                handleEventCompletion(*depOnlineEvt);
             }
                 break;
             case DependencyOfflineEvent::TYPE: {
                 auto *depOfflineEvt = static_cast<DependencyOfflineEvent *>(evt);
-                auto managerIt = _services.find(depOfflineEvt->originatingService);
+                auto const managerIt = _services.find(depOfflineEvt->originatingService);
 
                 if (managerIt == end(_services)) [[unlikely]] {
-                    handleEventError(*depOfflineEvt);
                     break;
                 }
 
@@ -237,7 +233,6 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &uniqueEvt) {
                 if (!manager->setUninjected()) {
                     // DependencyOfflineEvent already started or processed
                     INTERNAL_DEBUG("Couldn't set uninjected for {} {} {}", manager->serviceId(), manager->implementationName(), manager->getServiceState());
-                    handleEventError(*depOfflineEvt);
                     break;
                 }
 
@@ -245,7 +240,7 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &uniqueEvt) {
                 auto dependees = manager->getDependees();
                 bool allDependeesFinished{true};
                 for (auto &serviceId : dependees) {
-                    auto depIt = _services.find(serviceId);
+                    auto const depIt = _services.find(serviceId);
 
                     if constexpr (DO_INTERNAL_DEBUG || DO_HARDENING) {
                         if (depIt == _services.end()) [[unlikely]] {
@@ -262,6 +257,7 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &uniqueEvt) {
 
                     auto gen = depIt->second->dependencyOffline(manager.get(), std::move(depIts));
                     gen.set_priority(std::min(depIt->second->getPriority(), INTERNAL_DEPENDENCY_EVENT_PRIORITY));
+                    gen.set_service_id(serviceId);
                     auto it = gen.begin();
 
                     if(!it.get_finished()) {
@@ -274,7 +270,7 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &uniqueEvt) {
                         allDependeesFinished = false;
                         _scopedGenerators.emplace(it.get_promise_id(), std::make_unique<AsyncGenerator<StartBehaviour>>(std::move(gen)));
                         // create new event that will be inserted upon finish of coroutine in ContinuableStartEvent
-                        _scopedEvents.emplace(it.get_promise_id(), std::make_unique<ContinuableDependencyOfflineEvent>(_eventQueue->getNextEventId(), serviceId, INTERNAL_DEPENDENCY_EVENT_PRIORITY, depOfflineEvt->originatingService, depOfflineEvt->removeOriginatingServiceAfterStop));
+                        _scopedEvents.emplace(it.get_promise_id(), make_reference_counted<ContinuableDependencyOfflineEvent>(_eventQueue->getNextEventId(), serviceId, INTERNAL_DEPENDENCY_EVENT_PRIORITY, depOfflineEvt->originatingService, depOfflineEvt->removeOriginatingServiceAfterStop));
                         continue;
                     }
 
@@ -295,23 +291,33 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &uniqueEvt) {
                 if(allDependeesFinished) {
                     finishWaitingService(depOfflineEvt->originatingService, DependencyOfflineEvent::TYPE, DependencyOfflineEvent::NAME);
                 }
-                handleEventCompletion(*depOfflineEvt);
             }
                 break;
             case DependencyRequestEvent::TYPE: {
                 auto *depReqEvt = static_cast<DependencyRequestEvent *>(evt);
                 INTERNAL_DEBUG("DependencyRequestEvent {} {} {} {}", evt->id, evt->priority, evt->originatingService, depReqEvt->dependency.getInterfaceName());
 
-                auto trackers = _dependencyRequestTrackers.find(depReqEvt->dependency.interfaceNameHash);
+                auto const trackers = _dependencyRequestTrackers.find(depReqEvt->dependency.interfaceNameHash);
                 if (trackers == end(_dependencyRequestTrackers)) {
-                    handleEventCompletion(*depReqEvt);
                     break;
                 }
 
+                ReferenceCountedPointer<Event> refEvt;
                 for (DependencyTrackerInfo const &info : trackers->second) {
-                    info.trackFunc(*depReqEvt);
+                    auto gen = info.trackFunc(*depReqEvt);
+                    gen.set_priority(evt->priority);
+                    gen.set_service_id(evt->originatingService);
+                    auto it = gen.begin();
+
+                    if(!it.get_finished()) {
+                        _scopedGenerators.emplace(it.get_promise_id(), std::make_unique<AsyncGenerator<IchorBehaviour>>(std::move(gen)));
+                        if(!refEvt.has_value()) {
+                            refEvt = std::move(uniqueEvt);
+                            evt = refEvt.get();
+                        }
+                        _scopedEvents.emplace(it.get_promise_id(), refEvt);
+                    }
                 }
-                handleEventCompletion(*depReqEvt);
             }
                 break;
             case QuitEvent::TYPE: {
@@ -352,9 +358,9 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &uniqueEvt) {
                             if (existingCoroutineFor(key)) {
                                 INTERNAL_DEBUG("Existing coroutine");
                             }
-                            auto waiter = _dependencyWaiters.find(key);
+                            auto const waiter = _dependencyWaiters.find(key);
                             if (waiter != _dependencyWaiters.end()) {
-                                INTERNAL_DEBUG("Existing dependency offline waiter {} {} {} {}", waiter->second.waitingSvcId, waiter->second.eventType, waiter->second.count, waiter->second.events.size());
+                                INTERNAL_DEBUG("Existing dependency offline waiter {} {} {}", waiter->second.waitingSvcId, waiter->second.eventType, waiter->second.events.size());
                             }
                         }
                     }
@@ -373,7 +379,7 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &uniqueEvt) {
                         if (!_scopedEvents.empty()) {
                             ICHOR_EMERGENCY_LOG1(_logger, "Bug in Ichor, please submit a bug report and include at least the following, if any:");
                             for(auto const &[promiseId, scopedEvt] : _scopedEvents) {
-                                auto svcIt = _services.find(scopedEvt->originatingService);
+                                auto const svcIt = _services.find(scopedEvt->originatingService);
                                 std::string_view svcName = "UNKNOWN";
                                 if(svcIt != _services.end()) {
                                     svcName = svcIt->second->implementationName();
@@ -415,12 +421,13 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &uniqueEvt) {
                     if(startBehaviour == StartBehaviour::STARTED) {
                         auto gen = cmpMgr->startAfterDependencyOnline();
                         gen.set_priority(std::min(cmpMgr->getPriority(), INTERNAL_DEPENDENCY_EVENT_PRIORITY));
+                        gen.set_service_id(evt->originatingService);
                         auto it = gen.begin();
 
                         if(!it.get_finished()) {
                             _scopedGenerators.emplace(it.get_promise_id(), std::make_unique<AsyncGenerator<StartBehaviour>>(std::move(gen)));
                             // create new event that will be inserted upon finish of coroutine in ContinuableStartEvent
-                            _scopedEvents.emplace(it.get_promise_id(), std::make_unique<DependencyOnlineEvent>(_eventQueue->getNextEventId(), cmpMgr->serviceId(), std::min(INTERNAL_DEPENDENCY_EVENT_PRIORITY, evt->priority)));
+                            _scopedEvents.emplace(it.get_promise_id(), make_reference_counted<DependencyOnlineEvent>(_eventQueue->getNextEventId(), cmpMgr->serviceId(), std::min(INTERNAL_DEPENDENCY_EVENT_PRIORITY, evt->priority)));
                         } else if(it.get_value() == StartBehaviour::STARTED) {
                             _eventQueue->pushPrioritisedEvent<DependencyOnlineEvent>(cmpMgr->serviceId(), std::min(INTERNAL_DEPENDENCY_EVENT_PRIORITY, evt->priority));
                         }
@@ -454,12 +461,13 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &uniqueEvt) {
 
                     auto gen = cmpMgr->startAfterDependencyOnline();
                     gen.set_priority(std::min(cmpMgr->getPriority(), INTERNAL_DEPENDENCY_EVENT_PRIORITY));
+                    gen.set_service_id(evt->originatingService);
                     auto it = gen.begin();
 
                     if(!it.get_finished()) {
                         _scopedGenerators.emplace(it.get_promise_id(), std::make_unique<AsyncGenerator<StartBehaviour>>(std::move(gen)));
                         // create new event that will be inserted upon finish of coroutine in ContinuableStartEvent
-                        _scopedEvents.emplace(it.get_promise_id(), std::make_unique<DependencyOnlineEvent>(_eventQueue->getNextEventId(), cmpMgr->serviceId(), std::min(INTERNAL_DEPENDENCY_EVENT_PRIORITY, evt->priority)));
+                        _scopedEvents.emplace(it.get_promise_id(), make_reference_counted<DependencyOnlineEvent>(_eventQueue->getNextEventId(), cmpMgr->serviceId(), std::min(INTERNAL_DEPENDENCY_EVENT_PRIORITY, evt->priority)));
                     } else if(it.get_value() == StartBehaviour::STARTED) {
                         _eventQueue->pushPrioritisedEvent<DependencyOnlineEvent>(cmpMgr->serviceId(), std::min(INTERNAL_DEPENDENCY_EVENT_PRIORITY, evt->priority));
                     }
@@ -471,11 +479,10 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &uniqueEvt) {
                 ILifecycleManager *toStopService;
 
                 {
-                    auto toStopServiceIt = _services.find(stopServiceEvt->serviceId);
+                    auto const toStopServiceIt = _services.find(stopServiceEvt->serviceId);
 
                     if (toStopServiceIt == end(_services)) [[unlikely]] {
                         ICHOR_LOG_ERROR(_logger, "Couldn't stop service {}, missing from known services", stopServiceEvt->serviceId);
-                        handleEventError(*stopServiceEvt);
                         break;
                     }
 
@@ -487,19 +494,17 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &uniqueEvt) {
                 // already stopped
                 if(toStopService->getServiceState() == ServiceState::INSTALLED) {
                     INTERNAL_DEBUG("already stopped");
-                    handleEventError(*stopServiceEvt);
                     break;
                 }
                 if(toStopService->getServiceState() == ServiceState::STOPPING) {
                     INTERNAL_DEBUG("already stopping");
-                    handleEventError(*stopServiceEvt);
                     break;
                 }
 
                 auto &dependencies = toStopService->getDependencies();
                 auto &dependees = toStopService->getDependees();
 
-                auto depWaiterIt = _dependencyWaiters.find(stopServiceEvt->serviceId);
+                auto const depWaiterIt = _dependencyWaiters.find(stopServiceEvt->serviceId);
                 if(depWaiterIt != _dependencyWaiters.end()) {
                     if(!dependees.empty() || toStopService->getServiceState() != ServiceState::UNINJECTING) {
                         INTERNAL_DEBUG("existing dependency offline waiter {} {} {}", dependees.size(), toStopService->getServiceState(), depWaiterIt->second.events.size());
@@ -508,7 +513,6 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &uniqueEvt) {
                                 INTERNAL_DEBUG("dependee: {}", serviceId);
                             }
                         }
-                        handleEventError(*stopServiceEvt);
                         break;
                     }
 
@@ -520,7 +524,6 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &uniqueEvt) {
                 // coroutine needs to finish before we can stop the service
                 if(existingCoroutineFor(toStopService->serviceId())) {
                     INTERNAL_DEBUG("existing scoped event");
-                    handleEventError(*stopServiceEvt);
                     break;
                 }
 
@@ -542,6 +545,7 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &uniqueEvt) {
 
                     auto gen = toStopService->stop();
                     gen.set_priority(std::min(toStopService->getPriority(), INTERNAL_DEPENDENCY_EVENT_PRIORITY));
+                    gen.set_service_id(stopServiceEvt->serviceId);
                     auto it = gen.begin();
 
                     if (!it.get_finished()) {
@@ -568,12 +572,11 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &uniqueEvt) {
 
                     INTERNAL_DEBUG("service->stop() {}:{} state {}", toStopService->serviceId(), toStopService->implementationName(), toStopService->getServiceState());
                     if (toStopService->getServiceState() != ServiceState::INSTALLED) [[unlikely]] {
-                        handleEventError(*stopServiceEvt);
                         break;
                     }
 
                     for (auto serviceId : dependencies) {
-                        auto depIt = _services.find(serviceId);
+                        auto const depIt = _services.find(serviceId);
 
                         if (depIt == _services.end()) {
                             continue;
@@ -595,13 +598,12 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &uniqueEvt) {
                     _eventQueue->pushPrioritisedEvent<DependencyOfflineEvent>(toStopService->serviceId(), evt->priority, stopServiceEvt->removeAfter);
                     _eventQueue->pushPrioritisedEvent<StopServiceEvent>(stopServiceEvt->originatingService, std::max(INTERNAL_DEPENDENCY_EVENT_PRIORITY, evt->priority + 10), stopServiceEvt->serviceId, stopServiceEvt->removeAfter);
                 }
-                handleEventCompletion(*stopServiceEvt);
             }
                 break;
             case StartServiceEvent::TYPE: {
                 auto *startServiceEvt = static_cast<StartServiceEvent *>(evt);
 
-                auto toStartServiceIt = _services.find(startServiceEvt->serviceId);
+                auto const toStartServiceIt = _services.find(startServiceEvt->serviceId);
 
                 if (toStartServiceIt == end(_services)) [[unlikely]] {
                     INTERNAL_DEBUG( "Couldn't start service {}, missing from known services", startServiceEvt->serviceId);
@@ -611,25 +613,23 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &uniqueEvt) {
                             INTERNAL_DEBUG( "service {}:{}", svcId, svc->implementationName());
                         }
                     }
-                    handleEventError(*startServiceEvt);
                     break;
                 }
 
                 auto *toStartService = toStartServiceIt->second.get();
                 if (toStartService->getServiceState() == ServiceState::ACTIVE) {
                     INTERNAL_DEBUG("StartServiceEvent service {}:{} already started", toStartService->serviceId(), toStartService->implementationName());
-                    handleEventCompletion(*startServiceEvt);
                     break;
                 }
                 if (toStartService->getServiceState() == ServiceState::STARTING || toStartService->getServiceState() == ServiceState::INJECTING) {
                     INTERNAL_DEBUG("StartServiceEvent service {}:{} already starting", toStartService->serviceId(), toStartService->implementationName());
-                    handleEventCompletion(*startServiceEvt);
                     break;
                 }
 
                 INTERNAL_DEBUG("StartServiceEvent service {} {} {}:{}", evt->id, evt->priority, toStartService->serviceId(), toStartService->implementationName());
                 auto gen = toStartService->start();
                 gen.set_priority(std::min(toStartService->getPriority(), INTERNAL_DEPENDENCY_EVENT_PRIORITY));
+                gen.set_service_id(startServiceEvt->serviceId);
                 auto it = gen.begin();
 
                 if (!it.get_finished()) {
@@ -655,24 +655,21 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &uniqueEvt) {
 
                 if(toStartService->getServiceState() == ServiceState::INSTALLED) [[unlikely]] {
                     INTERNAL_DEBUG("StartServiceEvent service INSTALLED {}:{} {} {}", toStartService->serviceId(), toStartService->implementationName(), it.get_promise_id(), it.get_finished());
-                    handleEventError(*startServiceEvt);
                     break;
                 }
 
                 INTERNAL_DEBUG("StartServiceEvent finished {}:{} {}", toStartService->serviceId(), toStartService->implementationName(), it.get_promise_id());
 
                 _eventQueue->pushPrioritisedEvent<DependencyOnlineEvent>(toStartService->serviceId(), std::min(INTERNAL_DEPENDENCY_EVENT_PRIORITY, evt->priority));
-                handleEventCompletion(*startServiceEvt);
             }
                 break;
             case RemoveServiceEvent::TYPE: {
                 auto *removeServiceEvt = static_cast<RemoveServiceEvent *>(evt);
 
-                auto toRemoveServiceIt = _services.find(removeServiceEvt->serviceId);
+                auto const toRemoveServiceIt = _services.find(removeServiceEvt->serviceId);
 
                 if (toRemoveServiceIt == end(_services)) [[unlikely]] {
                     ICHOR_LOG_ERROR(_logger, "Couldn't remove service {}, missing from known services", removeServiceEvt->serviceId);
-                    handleEventError(*removeServiceEvt);
                     break;
                 }
 
@@ -682,12 +679,10 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &uniqueEvt) {
                 if(toRemoveService->getServiceState() != ServiceState::INSTALLED || !toRemoveService->getDependees().empty() || !toRemoveService->getDependencies().empty()) {
                     INTERNAL_DEBUG("Couldn't remove service {}, not stopped first {} {}", removeServiceEvt->serviceId, toRemoveService->getDependees().size(), toRemoveService->getDependencies().size());
                     ICHOR_LOG_ERROR(_logger, "Couldn't remove service {}, not stopped first", removeServiceEvt->serviceId);
-                    handleEventError(*removeServiceEvt);
                     break;
                 }
 
                 removeInternalService(allEventInterceptorsCopy, eventInterceptorsCopy, toRemoveServiceIt->first);
-                handleEventCompletion(*removeServiceEvt);
             }
                 break;
             case RemoveEventHandlerEvent::TYPE: {
@@ -695,7 +690,7 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &uniqueEvt) {
                 auto *removeEventHandlerEvt = static_cast<RemoveEventHandlerEvent *>(evt);
 
                 // key.id = service id, key.type == event id
-                auto existingHandlers = _eventCallbacks.find(removeEventHandlerEvt->key.type);
+                auto const existingHandlers = _eventCallbacks.find(removeEventHandlerEvt->key.type);
                 if (existingHandlers != end(_eventCallbacks)) [[likely]] {
                     std::erase_if(existingHandlers->second, [removeEventHandlerEvt](const EventCallbackInfo &info) noexcept {
                         return info.listeningServiceId == removeEventHandlerEvt->key.id;
@@ -708,7 +703,7 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &uniqueEvt) {
                 auto *removeEventHandlerEvt = static_cast<RemoveEventInterceptorEvent *>(evt);
 
                 // key.id = service id, key.type == event id
-                auto existingHandlers = _eventInterceptors.find(removeEventHandlerEvt->key.type);
+                auto const existingHandlers = _eventInterceptors.find(removeEventHandlerEvt->key.type);
                 if (existingHandlers != end(_eventInterceptors)) [[likely]] {
                     std::erase_if(existingHandlers->second, [removeEventHandlerEvt](const EventInterceptInfo &info) noexcept {
                         return info.listeningServiceId == removeEventHandlerEvt->key.id;
@@ -716,11 +711,56 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &uniqueEvt) {
                 }
             }
                 break;
+            case AddTrackerEvent::TYPE: {
+                INTERNAL_DEBUG("AddTrackerEvent {} {}", evt->id, evt->priority);
+                auto *addTrackerEvt = static_cast<AddTrackerEvent *>(evt);
+
+                if(auto const trackers = _dependencyRequestTrackers.find(addTrackerEvt->interfaceNameHash); trackers != _dependencyRequestTrackers.end()) {
+                    for(auto &tracker : trackers->second) {
+                        if(tracker.svcId != addTrackerEvt->originatingService) {
+                            continue;
+                        }
+
+                        std::vector<ReferenceCountedPointer<DependencyRequestEvent>> requests{};
+                        for(auto const &[key, mgr] : _services) {
+                            auto const *depRegistry = mgr->getDependencyRegistry();
+//                            ICHOR_LOG_ERROR(_logger, "register svcId {} dm {}", mgr->serviceId(), _id);
+
+                            // only DependencyLifecycleManager has a non-nullptr value. Other Lifecyclemanagers return nullptr because they don't request dependencies.
+                            if(depRegistry == nullptr) {
+                                continue;
+                            }
+
+                            for (auto const &[interfaceHash, registration] : depRegistry->_registrations) {
+                                if(interfaceHash == addTrackerEvt->interfaceNameHash) {
+                                    auto const &props = std::get<tl::optional<Properties>>(registration);
+                                    requests.emplace_back(0u, mgr->serviceId(), std::min(mgr->getPriority(), INTERNAL_DEPENDENCY_EVENT_PRIORITY), std::get<Dependency>(registration), props.has_value() ? &props.value() : tl::optional<Properties const *>{});
+                                }
+                            }
+                        }
+
+                        for(auto& request : requests) {
+                            auto gen = tracker.trackFunc(*request);
+                            gen.set_priority(evt->priority);
+                            gen.set_service_id(evt->originatingService);
+                            auto it = gen.begin();
+
+                            if(!it.get_finished()) {
+                                _scopedGenerators.emplace(it.get_promise_id(), std::make_unique<AsyncGenerator<IchorBehaviour>>(std::move(gen)));
+                                _scopedEvents.emplace(it.get_promise_id(), std::move(request));
+                            }
+                        }
+
+                        break;
+                    }
+                }
+            }
+                break;
             case RemoveTrackerEvent::TYPE: {
                 INTERNAL_DEBUG("RemoveTrackerEvent {} {}", evt->id, evt->priority);
                 auto *removeTrackerEvt = static_cast<RemoveTrackerEvent *>(evt);
 
-                if(auto trackers = _dependencyRequestTrackers.find(removeTrackerEvt->interfaceNameHash); trackers != _dependencyRequestTrackers.end()) {
+                if(auto const trackers = _dependencyRequestTrackers.find(removeTrackerEvt->interfaceNameHash); trackers != _dependencyRequestTrackers.end()) {
                     std::erase_if(trackers->second, [&removeTrackerEvt](DependencyTrackerInfo const &info) {
                         return info.svcId == removeTrackerEvt->originatingService;
                     });
@@ -733,7 +773,7 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &uniqueEvt) {
             case ContinuableEvent::TYPE: {
                 auto *continuableEvt = static_cast<ContinuableEvent *>(evt);
                 INTERNAL_DEBUG("ContinuableEvent {} {} {}", continuableEvt->promiseId, evt->id, evt->priority);
-                auto genIt = _scopedGenerators.find(continuableEvt->promiseId);
+                auto const genIt = _scopedGenerators.find(continuableEvt->promiseId);
 
                 if (genIt != _scopedGenerators.end()) {
                     INTERNAL_DEBUG("ContinuableEvent2 {}", genIt->second->done());
@@ -754,34 +794,32 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &uniqueEvt) {
                         }
 
                         if (it->get_finished()) {
-                            INTERNAL_DEBUG("removed1 {} {}", continuableEvt->promiseId, _scopedGenerators.size() - 1);
-                            auto origEventIt = _scopedEvents.find(continuableEvt->promiseId);
+                            INTERNAL_DEBUG("removed1 {} size {}", continuableEvt->promiseId, _scopedGenerators.size() - 1);
+                            auto const origEventIt = _scopedEvents.find(continuableEvt->promiseId);
 
-                            if constexpr (DO_INTERNAL_DEBUG || DO_HARDENING) {
-                                if (origEventIt == end(_scopedEvents)) [[unlikely]] {
-                                    ICHOR_EMERGENCY_LOG2(_logger, "Couldn't find orig evt associated with promise {}", continuableEvt->promiseId);
-                                    std::terminate();
+                            if (origEventIt != end(_scopedEvents)) [[unlikely]] {
+                                INTERNAL_DEBUG("removed1 {} use_count {}", continuableEvt->promiseId, origEventIt->second.use_count());
+                                if(origEventIt->second.use_count() == 1) {
+                                    handleEventCompletion(*origEventIt->second);
                                 }
+                                _scopedEvents.erase(origEventIt);
                             }
 
-                            handleEventCompletion(*origEventIt->second);
-                            _scopedGenerators.erase(continuableEvt->promiseId);
-                            _scopedEvents.erase(continuableEvt->promiseId);
+                            _scopedGenerators.erase(genIt);
                         }
                     } else {
-                        INTERNAL_DEBUG("removed2 {} {}", continuableEvt->promiseId, _scopedGenerators.size() - 1);
-                        auto origEventIt = _scopedEvents.find(continuableEvt->promiseId);
+                        INTERNAL_DEBUG("removed2 {} size {}", continuableEvt->promiseId, _scopedGenerators.size() - 1);
+                        auto const origEventIt = _scopedEvents.find(continuableEvt->promiseId);
 
-                        if constexpr (DO_INTERNAL_DEBUG || DO_HARDENING) {
-                            if (origEventIt == end(_scopedEvents)) [[unlikely]] {
-                                ICHOR_EMERGENCY_LOG2(_logger, "Couldn't find orig evt associated with promise {}", continuableEvt->promiseId);
-                                std::terminate();
+                        if (origEventIt != end(_scopedEvents)) [[unlikely]] {
+                            INTERNAL_DEBUG("removed2 {} use_count {}", continuableEvt->promiseId, origEventIt->second.use_count());
+                            if(origEventIt->second.use_count() == 1) {
+                                handleEventCompletion(*origEventIt->second);
                             }
+                            _scopedEvents.erase(origEventIt);
                         }
 
-                        handleEventCompletion(*origEventIt->second);
-                        _scopedGenerators.erase(continuableEvt->promiseId);
-                        _scopedEvents.erase(continuableEvt->promiseId);
+                        _scopedGenerators.erase(genIt);
                     }
                 }
             }
@@ -789,7 +827,7 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &uniqueEvt) {
             case ContinuableStartEvent::TYPE: {
                 auto *continuableEvt = static_cast<ContinuableStartEvent *>(evt);
                 INTERNAL_DEBUG("ContinuableStartEvent {} {} {}", continuableEvt->promiseId, evt->id, evt->priority);
-                auto genIt = _scopedGenerators.find(continuableEvt->promiseId);
+                auto const genIt = _scopedGenerators.find(continuableEvt->promiseId);
 
                 if (genIt != _scopedGenerators.end()) {
                     INTERNAL_DEBUG("ContinuableStartEvent {}", genIt->second->done());
@@ -815,7 +853,7 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &uniqueEvt) {
                     }
 
                     INTERNAL_DEBUG("ContinuableStartEvent removed {} {} {}", it_ret, continuableEvt->promiseId, _scopedGenerators.size() - 1);
-                    auto origEvtIt = _scopedEvents.find(continuableEvt->promiseId);
+                    auto const origEvtIt = _scopedEvents.find(continuableEvt->promiseId);
 
                     if constexpr (DO_INTERNAL_DEBUG || DO_HARDENING) {
                         if (origEvtIt == end(_scopedEvents)) [[unlikely]] {
@@ -827,7 +865,7 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &uniqueEvt) {
                     auto origEvtType = origEvtIt->second->get_type();
 
                     if(origEvtType == StartServiceEvent::TYPE) {
-                        auto origEvt = static_cast<StartServiceEvent*>(origEvtIt->second.get());
+                        auto const origEvt = static_cast<StartServiceEvent*>(origEvtIt->second.get());
 
                         INTERNAL_DEBUG("Finishing handling StartServiceEvent {} {} {} {}", origEvt->id, origEvt->priority, origEvt->originatingService, origEvt->serviceId);
 
@@ -839,7 +877,7 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &uniqueEvt) {
                         INTERNAL_DEBUG("Finishing handling StopServiceEvent {} {} {} {} {}", origEvt->id, origEvt->priority, origEvt->originatingService, origEvt->serviceId, origEvt->removeAfter);
 
                         finishWaitingService(origEvt->serviceId, StopServiceEvent::TYPE, StopServiceEvent::NAME);
-                        auto serviceIt = _services.find(origEvt->serviceId);
+                        auto const serviceIt = _services.find(origEvt->serviceId);
 
                         if constexpr (DO_INTERNAL_DEBUG || DO_HARDENING) {
                             if(serviceIt == _services.end()) [[unlikely]] {
@@ -861,7 +899,7 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &uniqueEvt) {
 
                         auto &dependencies = serviceIt->second->getDependencies();
                         for (auto serviceId : dependencies) {
-                            auto depIt = _services.find(serviceId);
+                            auto const depIt = _services.find(serviceId);
 
                             if (depIt == _services.end()) {
                                 continue;
@@ -896,7 +934,7 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &uniqueEvt) {
 
                         if(it_ret == StartBehaviour::STOPPED) {
                             if constexpr (DO_INTERNAL_DEBUG) {
-                                [[maybe_unused]] auto serviceIt = _services.find(origEvt->originatingService);
+                                [[maybe_unused]] auto const serviceIt = _services.find(origEvt->originatingService);
                                 INTERNAL_DEBUG("it_ret stopped {} {}", origEvt->originatingService, serviceIt->second->getServiceState());
                             }
                             // The dependee of originatingOfflineServiceId went offline during the async handling of the original
@@ -908,10 +946,10 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &uniqueEvt) {
 
                         // the originating event is actually from a dependee of the originatingOfflineServiceId
                         // We need to check if all its dependees are handled and if so, finish its offline waiter
-                        auto originatingOfflineServiceIt = _services.find(origEvt->originatingOfflineServiceId);
+                        auto const originatingOfflineServiceIt = _services.find(origEvt->originatingOfflineServiceId);
 #ifdef ICHOR_ENABLE_INTERNAL_DEBUGGING
                         if(originatingOfflineServiceIt != _services.end()) {
-                            auto serviceIt = _services.find(origEvt->originatingOfflineServiceId);
+                            auto const serviceIt = _services.find(origEvt->originatingOfflineServiceId);
                             auto &deps = originatingOfflineServiceIt->second->getDependees();
                             INTERNAL_DEBUG("originatingOfflineService {} {} {}", origEvt->originatingOfflineServiceId, serviceIt->second->getServiceState(), deps.size());
                             for(auto dep : deps) {
@@ -922,7 +960,7 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &uniqueEvt) {
 
                         if(originatingOfflineServiceIt != _services.end() && originatingOfflineServiceIt->second->getDependees().empty()) {
 #ifdef ICHOR_ENABLE_INTERNAL_DEBUGGING
-                            auto serviceIt = _services.find(origEvt->originatingOfflineServiceId);
+                            auto const serviceIt = _services.find(origEvt->originatingOfflineServiceId);
                             INTERNAL_DEBUG("originatingOfflineService found waiting service {} {}", origEvt->originatingOfflineServiceId, serviceIt->second->getServiceState());
 #endif
                             // Service needs to be stopped to complete the sequence
@@ -936,8 +974,8 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &uniqueEvt) {
                         std::terminate();
                     }
 
-                    _scopedGenerators.erase(continuableEvt->promiseId);
-                    _scopedEvents.erase(continuableEvt->promiseId);
+                    _scopedGenerators.erase(genIt);
+                    _scopedEvents.erase(origEvtIt);
                 }
             }
                 break;
@@ -948,21 +986,18 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &uniqueEvt) {
 
                 // Do not handle stale run function events
                 if(runFunctionEvt->originatingService != 0) {
-                    auto requestingServiceIt = _services.find(runFunctionEvt->originatingService);
+                    auto const requestingServiceIt = _services.find(runFunctionEvt->originatingService);
                     if(requestingServiceIt == end(_services)) {
                         INTERNAL_DEBUG("Service {} not found", runFunctionEvt->originatingService);
-                        handleEventError(*runFunctionEvt);
                         break;
                     }
                     if(requestingServiceIt->second->getServiceState() == ServiceState::INSTALLED) {
                         INTERNAL_DEBUG("Service {}:{} not active", runFunctionEvt->originatingService, requestingServiceIt->second->implementationName());
-                        handleEventError(*runFunctionEvt);
                         break;
                     }
                 }
 
                 runFunctionEvt->fun();
-                handleEventCompletion(*runFunctionEvt);
             }
                 break;
             case RunFunctionEventAsync::TYPE: {
@@ -971,21 +1006,20 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &uniqueEvt) {
 
                 // Do not handle stale run function events
                 if(runFunctionEvt->originatingService != 0) {
-                    auto requestingServiceIt = _services.find(runFunctionEvt->originatingService);
+                    auto const requestingServiceIt = _services.find(runFunctionEvt->originatingService);
                     if(requestingServiceIt == end(_services)) {
                         INTERNAL_DEBUG("Service {} not found", runFunctionEvt->originatingService);
-                        handleEventError(*runFunctionEvt);
                         break;
                     }
                     if(requestingServiceIt->second->getServiceState() == ServiceState::INSTALLED) {
                         INTERNAL_DEBUG("Service {}:{} not active", runFunctionEvt->originatingService, requestingServiceIt->second->implementationName());
-                        handleEventError(*runFunctionEvt);
                         break;
                     }
                 }
 
                 auto gen = runFunctionEvt->fun();
                 gen.set_priority(evt->priority);
+                gen.set_service_id(evt->originatingService);
                 auto it = gen.begin();
                 INTERNAL_DEBUG("state: {} {} {} {} {}", gen.done(), it.get_finished(), it.get_op_state(), it.get_promise_state(), it.get_promise_id());
 
@@ -1011,13 +1045,13 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &uniqueEvt) {
                         }
                     }
                 }
-
-                handleEventCompletion(*runFunctionEvt);
             }
                 break;
             default: {
                 INTERNAL_DEBUG("{} {} {}", evt->get_name(), evt->id, evt->priority);
-                handlerAmount = broadcastEvent(uniqueEvt);
+                auto ret = broadcastEvent(uniqueEvt);
+                handlerAmount = ret.first;
+                evt = ret.second;
             }
                 break;
         }
@@ -1031,6 +1065,9 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &uniqueEvt) {
         info.postIntercept(*evt, allowProcessing && handlerAmount > 0);
     }
 
+    if(uniqueEvt) {
+        handleEventCompletion(*uniqueEvt);
+    }
 }
 
 void Ichor::DependencyManager::stop() {
@@ -1109,7 +1146,7 @@ void Ichor::DependencyManager::clearServiceRegistrations(std::vector<EventInterc
 }
 
 void Ichor::DependencyManager::removeInternalService(std::vector<EventInterceptInfo> &allEventInterceptorsCopy, std::vector<EventInterceptInfo> &eventInterceptorsCopy, ServiceIdType svcId) {
-    auto svcIt = _services.find(svcId);
+    auto const svcIt = _services.find(svcId);
 
     if constexpr (DO_INTERNAL_DEBUG || DO_HARDENING) {
         if (svcIt == _services.end()) [[unlikely]] {
@@ -1134,33 +1171,42 @@ void Ichor::DependencyManager::removeInternalService(std::vector<EventInterceptI
     if(depReg != nullptr) {
         for(auto &dep : *depReg) {
             // this looks a lot like processEvent(), but because calling processEvent() directly would cause a lot of overhead, duplicate part of it.
-            DependencyUndoRequestEvent depUndoReqEvt{_eventQueue->getNextEventId(), svcId, INTERNAL_DEPENDENCY_EVENT_PRIORITY, std::get<Dependency>(dep.second), std::get<tl::optional<Properties>>(dep.second)};
+            ReferenceCountedPointer<DependencyUndoRequestEvent> depUndoReqEvt = make_reference_counted<DependencyUndoRequestEvent>(_eventQueue->getNextEventId(), svcId, INTERNAL_DEPENDENCY_EVENT_PRIORITY, std::get<Dependency>(dep.second), std::get<tl::optional<Properties>>(dep.second));
 
             uint64_t handlerAmount = 0;
 
             for (EventInterceptInfo const &info : allEventInterceptorsCopy) {
-                info.preIntercept(depUndoReqEvt);
+                info.preIntercept(*depUndoReqEvt);
             }
 
             for (EventInterceptInfo const &info : eventInterceptorsCopy) {
-                info.preIntercept(depUndoReqEvt);
+                info.preIntercept(*depUndoReqEvt);
             }
 
-            auto trackers = _dependencyRequestTrackers.find(depUndoReqEvt.dependency.interfaceNameHash);
+            auto const trackers = _dependencyRequestTrackers.find(depUndoReqEvt->dependency.interfaceNameHash);
             if (trackers != end(_dependencyRequestTrackers)) {
                 for (DependencyTrackerInfo const &info : trackers->second) {
                     INTERNAL_DEBUG("DependencyUndoRequestEvent tracker {}", info.svcId);
-                    info.untrackFunc(depUndoReqEvt);
+                    auto gen = info.untrackFunc(*depUndoReqEvt);
+                    gen.set_priority(depUndoReqEvt->priority);
+                    gen.set_service_id(depUndoReqEvt->originatingService);
+                    auto it = gen.begin();
+
+                    if(!it.get_finished()) {
+                        _scopedGenerators.emplace(it.get_promise_id(), std::make_unique<AsyncGenerator<IchorBehaviour>>(std::move(gen)));
+                        _scopedEvents.emplace(it.get_promise_id(), depUndoReqEvt);
+                    }
+
                     handlerAmount++;
                 }
             }
 
             for (EventInterceptInfo const &info : allEventInterceptorsCopy) {
-                info.postIntercept(depUndoReqEvt, handlerAmount > 0);
+                info.postIntercept(*depUndoReqEvt, handlerAmount > 0);
             }
 
             for (EventInterceptInfo const &info : eventInterceptorsCopy) {
-                info.postIntercept(depUndoReqEvt, handlerAmount > 0);
+                info.postIntercept(*depUndoReqEvt, handlerAmount > 0);
             }
         }
     }
@@ -1182,7 +1228,7 @@ void Ichor::DependencyManager::removeInternalService(std::vector<EventInterceptI
 }
 
 bool Ichor::DependencyManager::existingCoroutineFor(ServiceIdType serviceId) const noexcept {
-    auto existingCoroutineEvent = std::find_if(_scopedEvents.begin(), _scopedEvents.end(), [serviceId](const std::pair<uint64_t, std::unique_ptr<Event>> &t) {
+    auto existingCoroutineEvent = std::find_if(_scopedEvents.begin(), _scopedEvents.end(), [serviceId](const std::pair<uint64_t, ReferenceCountedPointer<Event>> &t) {
         auto evtType = t.second->get_type();
         switch(evtType) {
             case StartServiceEvent::TYPE:
@@ -1214,7 +1260,7 @@ Ichor::Task<void> Ichor::DependencyManager::waitForService(ServiceIdType service
         }
     }
 
-    auto it = _dependencyWaiters.find(serviceId);
+    auto const it = _dependencyWaiters.find(serviceId);
     if(it != _dependencyWaiters.end()) {
         auto &waiter = it->second.events.emplace_back(eventType, std::make_unique<AsyncManualResetEvent>());
         INTERNAL_DEBUG("waitForService {} {} {}", serviceId, eventType, it->second.events.size());
@@ -1267,43 +1313,32 @@ bool Ichor::DependencyManager::finishWaitingService(ServiceIdType serviceId, uin
 void Ichor::DependencyManager::handleEventCompletion(Ichor::Event const &evt) {
     auto waitingIt = _eventWaiters.find(evt.id);
     if(waitingIt != end(_eventWaiters)) {
-        waitingIt->second.count--;
-        INTERNAL_DEBUG("handleEventCompletion {}:{} {} waiting {} {}", evt.id, evt.get_name(), evt.originatingService, waitingIt->second.count, waitingIt->second.events.size());
+        INTERNAL_DEBUG("handleEventCompletion {}:{} {} events.size {}", evt.id, evt.get_name(), evt.originatingService, waitingIt->second.events.size());
 
-        if constexpr (DO_INTERNAL_DEBUG || DO_HARDENING) {
-            if (waitingIt->second.count == std::numeric_limits<decltype(waitingIt->second.count)>::max()) [[unlikely]] {
-                ICHOR_EMERGENCY_LOG1(_logger, "Underflow detected");
-                std::terminate();
-            }
+        for(auto &asyncEvt : waitingIt->second.events) {
+            asyncEvt.second->set();
         }
-
-        if(waitingIt->second.count == 0) {
-            for(auto &asyncEvt : waitingIt->second.events) {
-                asyncEvt.second->set();
-            }
-            _eventWaiters.erase(waitingIt);
-        } else {
-            // there are multiple handlers for this event, we will handle completion once the last one is done.
-            return;
-        }
+        // callback above may modify _eventWaiters, invalidating iterators.
+        _eventWaiters.erase(evt.id);
     }
 }
 
-uint64_t Ichor::DependencyManager::broadcastEvent(std::unique_ptr<Event> const &evt) {
-    auto registeredListeners = _eventCallbacks.find(evt->get_type());
+std::pair<uint64_t, Ichor::Event*> Ichor::DependencyManager::broadcastEvent(std::unique_ptr<Event> &uniqueEvt) {
+    auto const registeredListeners = _eventCallbacks.find(uniqueEvt->get_type());
 
     if(registeredListeners == end(_eventCallbacks)) {
-        handleEventCompletion(*evt);
-        return 0;
+        return {0, uniqueEvt.get()};
     }
 
-    auto waitingIt = _eventWaiters.find(evt->id);
+    auto const waitingIt = _eventWaiters.find(uniqueEvt->id);
 
     // Make copy because the vector can be modified in the callback() call.
     std::vector<EventCallbackInfo> callbacksCopy = registeredListeners->second;
+    Event *evt = uniqueEvt.get();
+    ReferenceCountedPointer<Event> refEvt{};
 
     for (auto &callbackInfo: callbacksCopy) {
-        auto service = _services.find(callbackInfo.listeningServiceId);
+        auto const service = _services.find(callbackInfo.listeningServiceId);
         if (service == end(_services) ||
             (service->second->getServiceState() != ServiceState::ACTIVE && service->second->getServiceState() != ServiceState::INJECTING)) {
             continue;
@@ -1315,6 +1350,7 @@ uint64_t Ichor::DependencyManager::broadcastEvent(std::unique_ptr<Event> const &
 
         auto gen = callbackInfo.callback(*evt);
         gen.set_priority(service->second->getPriority());
+        gen.set_service_id(callbackInfo.listeningServiceId);
 
         if (!gen.done()) {
             auto it = gen.begin();
@@ -1329,11 +1365,15 @@ uint64_t Ichor::DependencyManager::broadcastEvent(std::unique_ptr<Event> const &
                 }
                 INTERNAL_DEBUG("contains3 {} {} {}", it.get_promise_id(), _scopedGenerators.contains(it.get_promise_id()), _scopedGenerators.size() + 1);
                 _scopedGenerators.emplace(it.get_promise_id(), std::make_unique<AsyncGenerator<IchorBehaviour>>(std::move(gen)));
-                _scopedEvents.emplace(it.get_promise_id(), std::make_unique<ContinueCoroutineBroadcastEvent>(_eventQueue->getNextEventId(), evt->originatingService, evt->priority));
+                if(refEvt.has_value()) {
+                    _scopedEvents.emplace(it.get_promise_id(), refEvt);
+                } else {
+                    auto scopedIt = _scopedEvents.emplace(it.get_promise_id(), std::move(uniqueEvt));
+                    refEvt = scopedIt.first->second;
+                    evt = refEvt.get();
+                }
                 if (waitingIt != end(_eventWaiters)) {
-                    waitingIt->second.count++;
-                    INTERNAL_DEBUG("broadcastEvent {}:{} {} waiting {} {}", evt->id, evt->get_name(), evt->originatingService, waitingIt->second.count,
-                                   waitingIt->second.events.size());
+                    INTERNAL_DEBUG("broadcastEvent {}:{} {} events.size {}", evt->id, evt->get_name(), evt->originatingService, waitingIt->second.events.size());
                 }
             }
 
@@ -1349,9 +1389,7 @@ uint64_t Ichor::DependencyManager::broadcastEvent(std::unique_ptr<Event> const &
         }
     }
 
-    handleEventCompletion(*evt);
-
-    return callbacksCopy.size();
+    return {callbacksCopy.size(), evt};
 }
 
 void Ichor::DependencyManager::runForOrQueueEmpty(std::chrono::milliseconds ms) const noexcept {
@@ -1380,7 +1418,7 @@ void Ichor::DependencyManager::runForOrQueueEmpty(std::chrono::milliseconds ms) 
         }
     }
 
-    auto svc = _services.find(id);
+    auto const svc = _services.find(id);
 
     if(svc == _services.end()) {
         return {};
@@ -1416,7 +1454,7 @@ std::vector<Ichor::Dependency> Ichor::DependencyManager::getDependencyRequestsFo
         }
     }
 
-    auto svc = _services.find(svcId);
+    auto const svc = _services.find(svcId);
 
     if(svc == _services.end()) {
         return {};
@@ -1445,7 +1483,7 @@ std::vector<Ichor::NeverNull<Ichor::IService const *>> Ichor::DependencyManager:
         }
     }
 
-    auto svc = _services.find(svcId);
+    auto const svc = _services.find(svcId);
 
     if(svc == _services.end()) {
         return {};
@@ -1476,7 +1514,7 @@ std::span<Ichor::Dependency const> Ichor::DependencyManager::getProvidedInterfac
         }
     }
 
-    auto svc = _services.find(svcId);
+    auto const svc = _services.find(svcId);
 
     if(svc == _services.end()) {
         return {};
@@ -1530,7 +1568,7 @@ tl::optional<std::string_view> Ichor::DependencyManager::getImplementationNameFo
         }
     }
 
-    auto service = _services.find(serviceId);
+    auto const service = _services.find(serviceId);
 
     if(service == end(_services)) {
         return {};
