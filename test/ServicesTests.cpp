@@ -22,6 +22,7 @@
 #include <ichor/event_queues/IOUringQueue.h>
 #include <ichor/services/timer/IOUringTimerFactoryFactory.h>
 #include <ichor/stl/LinuxUtils.h>
+#include <catch2/generators/catch_generators.hpp>
 
 #define QIMPL IOUringQueue
 #define TFFIMPL IOUringTimerFactoryFactory
@@ -57,6 +58,8 @@ static void DisplayServices(DependencyManager &dm) {
 }
 
 #if defined(TEST_URING)
+tl::optional<Version> emulateKernelVersion;
+
 TEST_CASE("ServicesTests_uring") {
 
     auto version = Ichor::kernelVersion();
@@ -64,6 +67,15 @@ TEST_CASE("ServicesTests_uring") {
     REQUIRE(version);
     if(version < Version{5, 18, 0}) {
         return;
+    }
+
+    auto gen_i = GENERATE(1, 2);
+
+    if(gen_i == 2) {
+        emulateKernelVersion = Version{5, 18, 0};
+        fmt::println("emulating kernel version {}", *emulateKernelVersion);
+    } else {
+        fmt::println("kernel version {}", *version);
     }
 
 #elif defined(TEST_SDEVENT)
@@ -79,7 +91,11 @@ TEST_CASE("ServicesTests") {
     _evt.reset();
 
     SECTION("QuitOnQuitEvent") {
+#if defined(TEST_URING)
+        auto queue = std::make_unique<QIMPL>(500, 100'000'000, emulateKernelVersion);
+#else
         auto queue = std::make_unique<QIMPL>(500);
+#endif
         auto &dm = queue->createManager();
 
         std::thread t([&]() {
@@ -105,7 +121,11 @@ TEST_CASE("ServicesTests") {
     }
 
     SECTION("FailOnStartService") {
-        auto queue = std::make_unique<QIMPL>();
+#if defined(TEST_URING)
+        auto queue = std::make_unique<QIMPL>(500, 100'000'000, emulateKernelVersion);
+#else
+        auto queue = std::make_unique<QIMPL>(500);
+#endif
         auto &dm = queue->createManager();
 
         std::thread t([&]() {
@@ -147,7 +167,11 @@ TEST_CASE("ServicesTests") {
     }
 
     SECTION("FailOnStartWithDependenciesService") {
-        auto queue = std::make_unique<QIMPL>();
+#if defined(TEST_URING)
+        auto queue = std::make_unique<QIMPL>(500, 100'000'000, emulateKernelVersion);
+#else
+        auto queue = std::make_unique<QIMPL>(500);
+#endif
         auto &dm = queue->createManager();
 
         std::thread t([&]() {
@@ -190,7 +214,11 @@ TEST_CASE("ServicesTests") {
     }
 
     SECTION("Required dependencies") {
+#if defined(TEST_URING)
+        auto queue = std::make_unique<QIMPL>(500, 100'000'000, emulateKernelVersion);
+#else
         auto queue = std::make_unique<QIMPL>(500);
+#endif
         auto &dm = queue->createManager();
         uint64_t secondUselessServiceId{};
 
@@ -244,7 +272,11 @@ TEST_CASE("ServicesTests") {
     }
 
     SECTION("Multiple required dependencies, service starts on first and stops when everything uninjected") {
+#if defined(TEST_URING)
+        auto queue = std::make_unique<QIMPL>(500, 100'000'000, emulateKernelVersion);
+#else
         auto queue = std::make_unique<QIMPL>(500);
+#endif
         auto &dm = queue->createManager();
         uint64_t firstUselessServiceId{};
         uint64_t secondUselessServiceId{};
@@ -320,7 +352,11 @@ TEST_CASE("ServicesTests") {
     }
 
     SECTION("Multiple required dependencies, service starts on all and stops when everything uninjected") {
+#if defined(TEST_URING)
+        auto queue = std::make_unique<QIMPL>(500, 100'000'000, emulateKernelVersion);
+#else
         auto queue = std::make_unique<QIMPL>(500);
+#endif
         auto &dm = queue->createManager();
         uint64_t firstUselessServiceId{};
         uint64_t secondUselessServiceId{};
@@ -392,7 +428,11 @@ TEST_CASE("ServicesTests") {
     }
 
     SECTION("Optional dependencies") {
+#if defined(TEST_URING)
+        auto queue = std::make_unique<QIMPL>(500, 100'000'000, emulateKernelVersion);
+#else
         auto queue = std::make_unique<QIMPL>(500);
+#endif
         auto &dm = queue->createManager();
         uint64_t secondUselessServiceId{};
 
@@ -448,7 +488,11 @@ TEST_CASE("ServicesTests") {
     }
 
     SECTION("Mixing services should not cause UB") {
+#if defined(TEST_URING)
+        auto queue = std::make_unique<QIMPL>(500, 100'000'000, emulateKernelVersion);
+#else
         auto queue = std::make_unique<QIMPL>(500);
+#endif
         auto &dm = queue->createManager();
 
         std::thread t([&]() {
@@ -477,7 +521,11 @@ TEST_CASE("ServicesTests") {
     }
 
     SECTION("TimerService runs exactly once") {
+#if defined(TEST_URING)
+        auto queue = std::make_unique<QIMPL>(500, 100'000'000, emulateKernelVersion);
+#else
         auto queue = std::make_unique<QIMPL>(500);
+#endif
         auto &dm = queue->createManager();
         uint64_t svcId{};
 
@@ -520,7 +568,11 @@ TEST_CASE("ServicesTests") {
     }
 
     SECTION("Add event handler during event handling") {
+#if defined(TEST_URING)
+        auto queue = std::make_unique<QIMPL>(500, 100'000'000, emulateKernelVersion);
+#else
         auto queue = std::make_unique<QIMPL>(500);
+#endif
         auto &dm = queue->createManager();
 
         std::thread t([&]() {
@@ -554,7 +606,11 @@ TEST_CASE("ServicesTests") {
     }
 
     SECTION("LoggerAdmin removes logger when service is gone") {
+#if defined(TEST_URING)
+        auto queue = std::make_unique<QIMPL>(500, 100'000'000, emulateKernelVersion);
+#else
         auto queue = std::make_unique<QIMPL>(500);
+#endif
         auto &dm = queue->createManager();
         uint64_t svcId{};
 
@@ -606,7 +662,11 @@ TEST_CASE("ServicesTests") {
     }
 
     SECTION("ConstructorInjectionService basic test") {
+#if defined(TEST_URING)
+        auto queue = std::make_unique<QIMPL>(500, 100'000'000, emulateKernelVersion);
+#else
         auto queue = std::make_unique<QIMPL>(500);
+#endif
         auto &dm = queue->createManager();
         uint64_t svcId{};
 
@@ -673,7 +733,11 @@ TEST_CASE("ServicesTests") {
 
     SECTION("ConstructorInjectionQuitService") {
         std::thread t([]() {
+#if defined(TEST_URING)
+            auto queue = std::make_unique<QIMPL>(500, 100'000'000, emulateKernelVersion);
+#else
             auto queue = std::make_unique<QIMPL>(500);
+#endif
 #if defined(TEST_URING)
             REQUIRE(queue->createEventLoop());
 #elif defined(TEST_SDEVENT)
@@ -694,7 +758,11 @@ TEST_CASE("ServicesTests") {
 
     SECTION("ConstructorInjectionQuitService2") {
         std::thread t([]() {
+#if defined(TEST_URING)
+            auto queue = std::make_unique<QIMPL>(500, 100'000'000, emulateKernelVersion);
+#else
             auto queue = std::make_unique<QIMPL>(500);
+#endif
 #if defined(TEST_URING)
             REQUIRE(queue->createEventLoop());
 #elif defined(TEST_SDEVENT)
@@ -715,7 +783,11 @@ TEST_CASE("ServicesTests") {
 
     SECTION("ConstructorInjectionQuitService3") {
         std::thread t([]() {
+#if defined(TEST_URING)
+            auto queue = std::make_unique<QIMPL>(500, 100'000'000, emulateKernelVersion);
+#else
             auto queue = std::make_unique<QIMPL>(500);
+#endif
 #if defined(TEST_URING)
             REQUIRE(queue->createEventLoop());
 #elif defined(TEST_SDEVENT)
@@ -735,7 +807,11 @@ TEST_CASE("ServicesTests") {
     }
 
     SECTION("ConstructorInjectionQuitService4") {
+#if defined(TEST_URING)
+        auto queue = std::make_unique<QIMPL>(500, 100'000'000, emulateKernelVersion);
+#else
         auto queue = std::make_unique<QIMPL>(500);
+#endif
         auto &dm = queue->createManager();
         std::thread t([&]() {
 #if defined(TEST_URING)
@@ -771,7 +847,11 @@ TEST_CASE("ServicesTests") {
     }
 
     SECTION("Multiple dependency trackers") {
+#if defined(TEST_URING)
+        auto queue = std::make_unique<QIMPL>(500, 100'000'000, emulateKernelVersion);
+#else
         auto queue = std::make_unique<QIMPL>(500);
+#endif
         auto &dm = queue->createManager();
         ServiceIdType trackerSvcId{};
         ServiceIdType depSvcId{};
@@ -1081,7 +1161,11 @@ TEST_CASE("ServicesTests") {
     }
 
     SECTION("RemoveAfterAwaitedStopService") {
+#if defined(TEST_URING)
+        auto queue = std::make_unique<QIMPL>(500, 100'000'000, emulateKernelVersion);
+#else
         auto queue = std::make_unique<QIMPL>(500);
+#endif
         auto &dm = queue->createManager();
         std::thread t([&]() {
 #if defined(TEST_URING)
@@ -1103,7 +1187,11 @@ TEST_CASE("ServicesTests") {
     }
 
     SECTION("RemoveAfterAwaitedStopService with dependee") {
+#if defined(TEST_URING)
+        auto queue = std::make_unique<QIMPL>(500, 100'000'000, emulateKernelVersion);
+#else
         auto queue = std::make_unique<QIMPL>(500);
+#endif
         auto &dm = queue->createManager();
         std::thread t([&]() {
 #if defined(TEST_URING)

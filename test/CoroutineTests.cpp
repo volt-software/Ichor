@@ -7,9 +7,7 @@
 #include "TestServices/StopsInAsyncStartService.h"
 #include "TestServices/DependencyOfflineWhileStartingService.h"
 #include "TestServices/DependencyOnlineWhileStoppingService.h"
-#include <ichor/event_queues/PriorityQueue.h>
 #include <ichor/events/RunFunctionEvent.h>
-#include <ichor/services/timer/TimerFactoryFactory.h>
 #include <memory>
 
 std::unique_ptr<Ichor::AsyncManualResetEvent> _evt;
@@ -18,17 +16,86 @@ uint64_t AwaitNoCopy::countConstructed{};
 uint64_t AwaitNoCopy::countDestructed{};
 uint64_t AwaitNoCopy::countMoved{};
 
+#if defined(TEST_URING)
+#include <ichor/event_queues/IOUringQueue.h>
+#include <ichor/services/timer/IOUringTimerFactoryFactory.h>
+#include <ichor/stl/LinuxUtils.h>
+#include <catch2/generators/catch_generators.hpp>
+
+#define QIMPL IOUringQueue
+#define TFFIMPL IOUringTimerFactoryFactory
+#elif defined(TEST_SDEVENT)
+#include <ichor/event_queues/SdeventQueue.h>
+#include <ichor/services/timer/TimerFactoryFactory.h>
+
+#define QIMPL SdeventQueue
+#define TFFIMPL TimerFactoryFactory
+#else
+#include <ichor/event_queues/PriorityQueue.h>
+#include <ichor/services/timer/TimerFactoryFactory.h>
+#define TFFIMPL TimerFactoryFactory
+#ifdef TEST_ORDERED
+#define QIMPL OrderedPriorityQueue
+#else
+#define QIMPL PriorityQueue
+#endif
+#endif
+
+#if defined(TEST_URING)
+tl::optional<Version> emulateKernelVersion;
+
+TEST_CASE("CoroutineTests_uring") {
+
+    auto version = Ichor::kernelVersion();
+
+    REQUIRE(version);
+    if(version < Version{5, 18, 0}) {
+        return;
+    }
+
+    auto gen_i = GENERATE(1, 2);
+
+    if(gen_i == 2) {
+        emulateKernelVersion = Version{5, 18, 0};
+        fmt::println("emulating kernel version {}", *emulateKernelVersion);
+    } else {
+        fmt::println("kernel version {}", *version);
+    }
+
+#elif defined(TEST_SDEVENT)
+TEST_CASE("CoroutineTests_sdevent") {
+#else
+#ifdef TEST_ORDERED
+TEST_CASE("CoroutineTests_ordered") {
+#else
 TEST_CASE("CoroutineTests") {
+#endif
+#endif
+
     _evt = std::make_unique<Ichor::AsyncManualResetEvent>();
 
     SECTION("Required dependencies") {
-        auto queue = std::make_unique<PriorityQueue>();
+#if defined(TEST_URING)
+        auto queue = std::make_unique<QIMPL>(500, 100'000'000, emulateKernelVersion);
+#else
+        auto queue = std::make_unique<QIMPL>(500);
+#endif
         auto &dm = queue->createManager();
 
         std::thread t([&]() {
+#if defined(TEST_URING)
+            REQUIRE(queue->createEventLoop());
+#elif defined(TEST_SDEVENT)
+            auto *loop = queue->createEventLoop();
+            REQUIRE(loop);
+#endif
             dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>();
             dm.createServiceManager<GeneratorService, IGeneratorService>();
             queue->start(CaptureSigInt);
+#if defined(TEST_SDEVENT)
+            int r = sd_event_loop(loop);
+            REQUIRE(r >= 0);
+#endif
         });
 
         waitForRunning(dm);
@@ -67,13 +134,27 @@ TEST_CASE("CoroutineTests") {
     }
 
     SECTION("co_await in function") {
-        auto queue = std::make_unique<PriorityQueue>();
+#if defined(TEST_URING)
+        auto queue = std::make_unique<QIMPL>(500, 100'000'000, emulateKernelVersion);
+#else
+        auto queue = std::make_unique<QIMPL>(500);
+#endif
         auto &dm = queue->createManager();
 
         std::thread t([&]() {
+#if defined(TEST_URING)
+            REQUIRE(queue->createEventLoop());
+#elif defined(TEST_SDEVENT)
+            auto *loop = queue->createEventLoop();
+            REQUIRE(loop);
+#endif
             dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>();
             dm.createServiceManager<AwaitService, IAwaitService>();
             queue->start(CaptureSigInt);
+#if defined(TEST_SDEVENT)
+            int r = sd_event_loop(loop);
+            REQUIRE(r >= 0);
+#endif
         });
 
         waitForRunning(dm);
@@ -115,13 +196,27 @@ TEST_CASE("CoroutineTests") {
     }
 
     SECTION("co_await in event handler") {
-        auto queue = std::make_unique<PriorityQueue>();
+#if defined(TEST_URING)
+        auto queue = std::make_unique<QIMPL>(500, 100'000'000, emulateKernelVersion);
+#else
+        auto queue = std::make_unique<QIMPL>(500);
+#endif
         auto &dm = queue->createManager();
 
         std::thread t([&]() {
+#if defined(TEST_URING)
+            REQUIRE(queue->createEventLoop());
+#elif defined(TEST_SDEVENT)
+            auto *loop = queue->createEventLoop();
+            REQUIRE(loop);
+#endif
             dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>();
             dm.createServiceManager<EventAwaitService>();
             queue->start(CaptureSigInt);
+#if defined(TEST_SDEVENT)
+            int r = sd_event_loop(loop);
+            REQUIRE(r >= 0);
+#endif
         });
 
         waitForRunning(dm);
@@ -143,15 +238,29 @@ TEST_CASE("CoroutineTests") {
     }
 
     SECTION("multiple awaiters in event handler") {
-        auto queue = std::make_unique<PriorityQueue>();
+#if defined(TEST_URING)
+        auto queue = std::make_unique<QIMPL>(500, 100'000'000, emulateKernelVersion);
+#else
+        auto queue = std::make_unique<QIMPL>(500);
+#endif
         auto &dm = queue->createManager();
         _autoEvt = std::make_unique<Ichor::AsyncAutoResetEvent>();
         ServiceIdType svcId{};
 
         std::thread t([&]() {
+#if defined(TEST_URING)
+            REQUIRE(queue->createEventLoop());
+#elif defined(TEST_SDEVENT)
+            auto *loop = queue->createEventLoop();
+            REQUIRE(loop);
+#endif
             dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>();
             svcId = dm.createServiceManager<MultipleAwaitService, IMultipleAwaitService>()->getServiceId();
             queue->start(CaptureSigInt);
+#if defined(TEST_SDEVENT)
+            int r = sd_event_loop(loop);
+            REQUIRE(r >= 0);
+#endif
         });
 
         waitForRunning(dm);
@@ -174,15 +283,29 @@ TEST_CASE("CoroutineTests") {
 
     SECTION("co_await in timer service") {
         fmt::print("co_await in timer service\n");
-        auto queue = std::make_unique<PriorityQueue>();
+#if defined(TEST_URING)
+        auto queue = std::make_unique<QIMPL>(500, 100'000'000, emulateKernelVersion);
+#else
+        auto queue = std::make_unique<QIMPL>(500);
+#endif
         auto &dm = queue->createManager();
 
         std::thread t([&]() {
+#if defined(TEST_URING)
+            REQUIRE(queue->createEventLoop());
+#elif defined(TEST_SDEVENT)
+            auto *loop = queue->createEventLoop();
+            REQUIRE(loop);
+#endif
             dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>();
             dm.createServiceManager<AwaitService, IAwaitService>();
             dm.createServiceManager<AsyncUsingTimerService>();
-            dm.createServiceManager<TimerFactoryFactory>();
+            dm.createServiceManager<TFFIMPL>();
             queue->start(CaptureSigInt);
+#if defined(TEST_SDEVENT)
+            int r = sd_event_loop(loop);
+            REQUIRE(r >= 0);
+#endif
         });
 
         waitForRunning(dm);
@@ -200,7 +323,11 @@ TEST_CASE("CoroutineTests") {
     }
 
     SECTION("co_await user defined struct generator") {
-        auto queue = std::make_unique<PriorityQueue>();
+#if defined(TEST_URING)
+        auto queue = std::make_unique<QIMPL>(500, 100'000'000, emulateKernelVersion);
+#else
+        auto queue = std::make_unique<QIMPL>(500);
+#endif
         auto &dm = queue->createManager();
         ServiceIdType svcId{};
         AwaitNoCopy::countConstructed = 0;
@@ -208,9 +335,19 @@ TEST_CASE("CoroutineTests") {
         AwaitNoCopy::countMoved = 0;
 
         std::thread t([&]() {
+#if defined(TEST_URING)
+            REQUIRE(queue->createEventLoop());
+#elif defined(TEST_SDEVENT)
+            auto *loop = queue->createEventLoop();
+            REQUIRE(loop);
+#endif
             dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>();
             svcId = dm.createServiceManager<AwaitReturnService, IAwaitReturnService>()->getServiceId();
             queue->start(CaptureSigInt);
+#if defined(TEST_SDEVENT)
+            int r = sd_event_loop(loop);
+            REQUIRE(r >= 0);
+#endif
         });
 
         waitForRunning(dm);
@@ -242,7 +379,11 @@ TEST_CASE("CoroutineTests") {
     }
 
     SECTION("co_await user defined struct task") {
-        auto queue = std::make_unique<PriorityQueue>();
+#if defined(TEST_URING)
+        auto queue = std::make_unique<QIMPL>(500, 100'000'000, emulateKernelVersion);
+#else
+        auto queue = std::make_unique<QIMPL>(500);
+#endif
         auto &dm = queue->createManager();
         ServiceIdType svcId{};
         AwaitNoCopy::countConstructed = 0;
@@ -250,9 +391,19 @@ TEST_CASE("CoroutineTests") {
         AwaitNoCopy::countMoved = 0;
 
         std::thread t([&]() {
+#if defined(TEST_URING)
+            REQUIRE(queue->createEventLoop());
+#elif defined(TEST_SDEVENT)
+            auto *loop = queue->createEventLoop();
+            REQUIRE(loop);
+#endif
             dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>();
             svcId = dm.createServiceManager<AwaitReturnService, IAwaitReturnService>()->getServiceId();
             queue->start(CaptureSigInt);
+#if defined(TEST_SDEVENT)
+            int r = sd_event_loop(loop);
+            REQUIRE(r >= 0);
+#endif
         });
 
         waitForRunning(dm);
@@ -285,13 +436,27 @@ TEST_CASE("CoroutineTests") {
     }
 
     SECTION("stop in async start") {
-        auto queue = std::make_unique<PriorityQueue>();
+#if defined(TEST_URING)
+        auto queue = std::make_unique<QIMPL>(500, 100'000'000, emulateKernelVersion);
+#else
+        auto queue = std::make_unique<QIMPL>(500);
+#endif
         auto &dm = queue->createManager();
 
         std::thread t([&]() {
+#if defined(TEST_URING)
+            REQUIRE(queue->createEventLoop());
+#elif defined(TEST_SDEVENT)
+            auto *loop = queue->createEventLoop();
+            REQUIRE(loop);
+#endif
             dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>();
             dm.createServiceManager<StopsInAsyncStartService>();
             queue->start(CaptureSigInt);
+#if defined(TEST_SDEVENT)
+            int r = sd_event_loop(loop);
+            REQUIRE(r >= 0);
+#endif
         });
 
         t.join();
@@ -300,14 +465,28 @@ TEST_CASE("CoroutineTests") {
     }
 
     SECTION("Dependency offline while starting service") {
-        auto queue = std::make_unique<PriorityQueue>();
+#if defined(TEST_URING)
+        auto queue = std::make_unique<QIMPL>(500, 100'000'000, emulateKernelVersion);
+#else
+        auto queue = std::make_unique<QIMPL>(500);
+#endif
         auto &dm = queue->createManager();
         uint64_t svcId{};
 
         std::thread t([&]() {
+#if defined(TEST_URING)
+            REQUIRE(queue->createEventLoop());
+#elif defined(TEST_SDEVENT)
+            auto *loop = queue->createEventLoop();
+            REQUIRE(loop);
+#endif
             svcId = dm.createServiceManager<DependencyOfflineWhileStartingService, IDependencyOfflineWhileStartingService>()->getServiceId();
             dm.createServiceManager<UselessService, IUselessService>();
             queue->start(CaptureSigInt);
+#if defined(TEST_SDEVENT)
+            int r = sd_event_loop(loop);
+            REQUIRE(r >= 0);
+#endif
         });
 
         waitForRunning(dm);
@@ -321,7 +500,11 @@ TEST_CASE("CoroutineTests") {
 
             auto svcs = dm.getAllServices();
 
+#if defined(TEST_URING) || defined(TEST_SDEVENT)
+            REQUIRE(svcs.size() == 5);
+#else
             REQUIRE(svcs.size() == 4);
+#endif
 
             REQUIRE(svcs.find(svcId)->second->getServiceState() == Ichor::ServiceState::STARTING);
 
@@ -350,14 +533,28 @@ TEST_CASE("CoroutineTests") {
     }
 
     SECTION("Dependency online while stopping service") {
-        auto queue = std::make_unique<PriorityQueue>();
+#if defined(TEST_URING)
+        auto queue = std::make_unique<QIMPL>(500, 100'000'000, emulateKernelVersion);
+#else
+        auto queue = std::make_unique<QIMPL>(500);
+#endif
         auto &dm = queue->createManager();
         uint64_t svcId{};
 
         std::thread t([&]() {
+#if defined(TEST_URING)
+            REQUIRE(queue->createEventLoop());
+#elif defined(TEST_SDEVENT)
+            auto *loop = queue->createEventLoop();
+            REQUIRE(loop);
+#endif
             svcId = dm.createServiceManager<DependencyOnlineWhileStoppingService, IDependencyOnlineWhileStoppingService>()->getServiceId();
             dm.createServiceManager<UselessService, IUselessService>();
             queue->start(CaptureSigInt);
+#if defined(TEST_SDEVENT)
+            int r = sd_event_loop(loop);
+            REQUIRE(r >= 0);
+#endif
         });
 
         waitForRunning(dm);
@@ -371,7 +568,11 @@ TEST_CASE("CoroutineTests") {
 
             auto svcs = dm.getAllServices();
 
+#if defined(TEST_URING) || defined(TEST_SDEVENT)
+            REQUIRE(svcs.size() == 5);
+#else
             REQUIRE(svcs.size() == 4);
+#endif
 
             REQUIRE(svcs.find(svcId)->second->getServiceState() == Ichor::ServiceState::STOPPING);
 
@@ -389,7 +590,11 @@ TEST_CASE("CoroutineTests") {
 
             auto svcs = dm.getAllServices();
 
+#if defined(TEST_URING) || defined(TEST_SDEVENT)
+            REQUIRE(svcs.size() == 5);
+#else
             REQUIRE(svcs.size() == 4);
+#endif
             REQUIRE(svcs.find(svcId)->second->getServiceState() == Ichor::ServiceState::INSTALLED);
 
             dm.getEventQueue().pushEvent<QuitEvent>(0);
