@@ -10,6 +10,7 @@ run_examples ()
 {
   BOOST=${1}
   URING=${2}
+  SDEVENT=${3}
   ../bin/ichor_multithreaded_example || exit 1
   ../bin/ichor_optional_dependency_example || exit 1
   ../bin/ichor_event_statistics_example || exit 1

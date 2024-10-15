@@ -228,7 +228,7 @@ Ichor::Task<void> Ichor::IOUringTcpConnectionService::stop() {
                 ICHOR_LOG_ERROR(_logger, "Couldn't close socket: {}", mapErrnoToError(-closeRes));
             }
 
-            co_await evt;
+            co_await _quitEvt;
         } else {
             int res = shutdown(_socket, SHUT_RDWR);
 
@@ -241,6 +241,8 @@ Ichor::Task<void> Ichor::IOUringTcpConnectionService::stop() {
             if(res < 0) {
                 ICHOR_LOG_ERROR(_logger, "Couldn't close socket: {}", mapErrnoToError(errno));
             }
+
+            co_await _quitEvt;
         }
 
         _socket = 0;
@@ -271,12 +273,15 @@ std::function<void(io_uring_cqe*)> Ichor::IOUringTcpConnectionService::createRec
 
         if(_quit) {
             INTERNAL_IO_DEBUG("quit");
+            _quitEvt.set();
             return;
         }
+
         // TODO: check for -ENOBUFS and if so, create more provided buffers, swap and re-arm
         if(cqe->res <= 0) {
             ICHOR_LOG_ERROR(_logger, "recv returned an error {}:{}", cqe->res, strerror(-cqe->res));
             GetThreadLocalEventQueue().pushEvent<StopServiceEvent>(getServiceId(), getServiceId(), true);
+            _quitEvt.set();
             return;
         }
 

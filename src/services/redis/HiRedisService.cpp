@@ -183,11 +183,11 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::HiredisService::start(
             uint64_t now = static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count());
             if(_redisContext != nullptr) {
                 ICHOR_LOG_INFO(_logger, "Connected");
-                _timeoutTimer->stopTimer();
+                _timeoutTimer->stopTimer({});
                 _startEvt.set();
             } else if(error || now > _timeWhenDisconnected + _timeoutMs) {
                 ICHOR_LOG_INFO(_logger, "Could not connect within {:L} ms", _timeoutMs);
-                _timeoutTimer->stopTimer();
+                _timeoutTimer->stopTimer({});
                 _startEvt.set();
                 _queue->pushPrioritisedEvent<StopServiceEvent>(getServiceId(), INTERNAL_DEPENDENCY_EVENT_PRIORITY, getServiceId());
             }
@@ -783,7 +783,7 @@ Ichor::Task<tl::expected<Ichor::Version, Ichor::RedisError>> Ichor::HiredisServi
 
 void Ichor::HiredisService::onRedisConnect(int status) {
     if(status != REDIS_OK) {
-        if(!_timeoutTimer->running()) {
+        if(_timeoutTimer->getState() == TimerState::STOPPED) {
             if(_redisContext != nullptr) {
                 ICHOR_LOG_ERROR(_logger, "Couldn't connect because {} \"{}\"", _redisContext->err, _redisContext->errstr);
             } else {
@@ -796,7 +796,7 @@ void Ichor::HiredisService::onRedisConnect(int status) {
             _redisContext = nullptr;
         }
     } else {
-        _timeoutTimer->stopTimer();
+        _timeoutTimer->stopTimer({});
         _disconnectEvt.set();
     }
 }
@@ -812,7 +812,7 @@ void Ichor::HiredisService::onRedisDisconnect(int status) {
         } else {
             ICHOR_LOG_ERROR(_logger, "Disconnected");
         }
-        if(!_timeoutTimer->running()) {
+        if(_timeoutTimer->getState() == TimerState::STOPPED) {
             _disconnectEvt.reset();
             _redisContext = nullptr;
             _timeWhenDisconnected = static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count());

@@ -13,21 +13,19 @@ namespace Ichor {
     template <typename TIMER, typename QUEUE>
     class TimerFactory;
 
-    // Rather shoddy implementation, setting the interval does not reset the insertEventLoop function and the sleep_for is sketchy at best.
     class IOUringTimer final : public ITimer {
     public:
         ~IOUringTimer() noexcept = default;
 
         /// Thread-safe.
-        void startTimer() final;
+        bool startTimer() final;
         /// Thread-safe.
-        void startTimer(bool fireImmediately) final;
+        bool startTimer(bool fireImmediately) final;
         /// Thread-safe.
-        void stopTimer() final;
-//        void stopTimer(std::function<void()>) final;
+        bool stopTimer(std::function<void(void)> cb) final;
 
         /// Thread-safe.
-        [[nodiscard]] bool running() const noexcept final;
+        [[nodiscard]] TimerState getState() const noexcept final;
 
         /// Sets coroutine based callback, adds some overhead compared to sync version. Executed when timer expires. Terminates program if timer is running.
         /// \param fn callback
@@ -50,26 +48,30 @@ namespace Ichor {
         /// Thread-safe.
         [[nodiscard]] uint64_t getTimerId() const noexcept final;
 
+        [[nodiscard]] ServiceIdType getRequestingServiceId() const noexcept final;
+
     private:
         ///
         /// \param timerId unique identifier for timer
         /// \param svcId unique identifier for svc using this timer
-        IOUringTimer(IIOUringQueue& queue, uint64_t timerId, uint64_t svcId) noexcept;
+        IOUringTimer(IIOUringQueue& queue, uint64_t timerId, ServiceIdType svcId) noexcept;
         std::function<void(io_uring_cqe*)> createNewHandler() noexcept;
+        std::function<void(io_uring_cqe*)> createNewUpdateHandler() noexcept;
 
         template <typename TIMER, typename QUEUE>
         friend class TimerFactory;
 
         IIOUringQueue& _q;
         uint64_t _timerId{};
+        TimerState _state{};
         bool _fireOnce{};
+        bool _multishotCapable{};
         __kernel_timespec _timespec{};
         std::function<AsyncGenerator<IchorBehaviour>()> _fnAsync{};
         std::function<void()> _fn{};
-//        std::function<void()> _stopCb{};
-        bool _quit{true};
         uint64_t _priority{INTERNAL_EVENT_PRIORITY};
-        uint64_t _requestingServiceId{};
+        ServiceIdType _requestingServiceId{};
         uint64_t _uringTimerId{};
+        std::vector<std::function<void(void)>> _quitCbs;
     };
 }

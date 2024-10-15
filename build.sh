@@ -41,13 +41,13 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-ccompilers=("clang-15" "clang-20" "gcc-12" "gcc")
-cppcompilers=("clang++-15" "clang++-20" "g++-12" "g++")
+ccompilers=("clang-15" "clang-19" "gcc-12" "gcc")
+cppcompilers=("clang++-15" "clang++-19" "g++-12" "g++")
 ldlibpath=("" "" "" "/opt/gcc/14/lib64/")
 
 if [[ $DEV -eq 1 ]]; then
-  ccompilers=("clang" "gcc")
-  cppcompilers=("clang++" "g++")
+  ccompilers=("clang-19" "gcc")
+  cppcompilers=("clang++-19" "g++")
   ldlibpath=("" "/opt/gcc/14/lib64/")
 fi
 
@@ -60,33 +60,35 @@ fi
 if [[ $DOCKER -eq 1 ]]; then
   chmod a+w ../build
   rm -rf ./* ../bin/*
-  docker build -f ../Dockerfile  -t ichor --build-arg CONTAINER_OWNER_GID=$(id -g) --build-arg CONTAINER_OWNER_ID=$(id -u) . || exit 1
+  docker build -f ../Dockerfile -t ichor --build-arg CONTAINER_OWNER_GID=$(id -g) --build-arg CONTAINER_OWNER_ID=$(id -u) . || exit 1
   docker run -v $(pwd)/../:/opt/ichor/src -v $(pwd)/../build:/opt/ichor/build --rm --privileged -it ichor || exit 1
-  run_examples 1 1
+  run_examples 1 1 0
   run_fast_benchmarks
 
   rm -rf ./* ../bin/*
   docker build -f ../Dockerfile-musl -t ichor-musl --build-arg CONTAINER_OWNER_GID=$(id -g) --build-arg CONTAINER_OWNER_ID=$(id -u) . || exit 1
   docker run -v $(pwd)/../:/opt/ichor/src -v $(pwd)/../build:/opt/ichor/build --rm --privileged -it ichor-musl || exit 1
-  run_examples 1 1
+  run_examples 1 1 0
   run_fast_benchmarks
 
   rm -rf ./* ../bin/*
   docker build -f ../Dockerfile-asan -t ichor-asan --build-arg CONTAINER_OWNER_GID=$(id -g) --build-arg CONTAINER_OWNER_ID=$(id -u) . || exit 1
   docker run -v $(pwd)/../:/opt/ichor/src -v $(pwd)/../build:/opt/ichor/build --rm --privileged -it ichor-asan || exit 1
-  run_examples 1 1
+  run_examples 1 1 0
   run_benchmarks
 
   rm -rf ./* ../bin/*
   docker build -f ../Dockerfile-asan-clang -t ichor-asan-clang --build-arg CONTAINER_OWNER_GID=$(id -g) --build-arg CONTAINER_OWNER_ID=$(id -u) . || exit 1
   docker run -v $(pwd)/../:/opt/ichor/src -v $(pwd)/../build:/opt/ichor/build --rm --privileged -it ichor-asan-clang || exit 1
-  run_examples 1 1
+  docker run -v $(pwd)/../:/opt/ichor/src -v $(pwd)/../build:/opt/ichor/build --rm --privileged -it ichor-asan-clang "ninja" || exit 1
+  ../bin/TcpTests
+  run_examples 1 1 0
   run_benchmarks
 
   rm -rf ./* ../bin/*
   docker build -f ../Dockerfile-tsan -t ichor-tsan --build-arg CONTAINER_OWNER_GID=$(id -g) --build-arg CONTAINER_OWNER_ID=$(id -u) . || exit 1
   docker run -v $(pwd)/../:/opt/ichor/src -v $(pwd)/../build:/opt/ichor/build --rm --privileged -it ichor-tsan || exit 1
-  run_examples 1 1
+  run_examples 1 1 0
   run_benchmarks
 
   rm -rf ./* ../bin/*
@@ -101,7 +103,8 @@ if [[ $DOCKER -eq 1 ]]; then
 #EOF
 #  chmod +x ../bin/run_aarch64_examples_and_tests.sh
 #  docker run -v $(pwd)/../:/opt/ichor/src -v $(pwd)/../build:/opt/ichor/build --rm --privileged --security-opt seccomp=unconfined -it ichor-musl-aarch64 "sh -c 'ulimit -r unlimited && /opt/ichor/src/bin/run_aarch64_examples_and_tests.sh'" || exit 1
-  run_examples 1 0
+#  docker run -v $(pwd)/../:/opt/ichor/src -v $(pwd)/../build:/opt/ichor/build --rm --privileged --security-opt seccomp=unconfined -it ichor-musl-aarch64 "cd /opt/ichor/src/build && ninja" || exit 1
+  run_examples 1 0 0
   # run_fast_benchmarks # this is still too slow, need to refactor benchmarks to specify iterations on command line
 
   rm -rf ./* ../bin/*
@@ -118,35 +121,35 @@ rm -rf ./* ../bin/*
 CC=clang-19 CXX=clang++-19 cmake -GNinja -DCMAKE_BUILD_TYPE=Debug -DICHOR_USE_SANITIZERS=0 -DICHOR_ENABLE_INTERNAL_DEBUGGING=0 -DICHOR_USE_MOLD=1 -DICHOR_USE_BOOST_BEAST=1 -DICHOR_USE_SPDLOG=1 -DICHOR_USE_HIREDIS=1 -DICHOR_USE_LIBURING=1 -DICHOR_USE_SDEVENT=1 .. || exit 1
 ninja || exit 1
 ninja test || exit 1
-run_examples 1 1
+run_examples 1 1 1
 
 rm -rf ./* ../bin/*
 CC=gcc-12 CXX=g++-12 cmake -GNinja -DCMAKE_BUILD_TYPE=Debug -DICHOR_FORCE_32_BIT=1 -DICHOR_USE_SANITIZERS=0 -DICHOR_ENABLE_INTERNAL_DEBUGGING=0 -DICHOR_USE_MOLD=1 -DICHOR_USE_BOOST_BEAST=0 -DICHOR_USE_SPDLOG=1 -DICHOR_USE_HIREDIS=0 -DICHOR_USE_LIBURING=1 -DICHOR_USE_SDEVENT=1 .. || exit 1
 ninja || exit 1
 ninja test || exit 1
-run_examples 0 1
+run_examples 0 1 1
 
 for i in ${!ccompilers[@]}; do
   export LD_LIBRARY_PATH=${ldlibpath[i]}
   rm -rf ./* ../bin/*
-  CC=${ccompilers[i]} CXX=${cppcompilers[i]} cmake -GNinja -DCMAKE_BUILD_TYPE=Debug -DICHOR_USE_SANITIZERS=1 -DICHOR_ENABLE_INTERNAL_DEBUGGING=1 -DICHOR_USE_MOLD=1 -DICHOR_USE_BOOST_BEAST=1 -DICHOR_USE_LIBCPP=0 -DICHOR_USE_HIREDIS=1 -DICHOR_USE_SDEVENT=1 .. || exit 1
+  CC=${ccompilers[i]} CXX=${cppcompilers[i]} cmake -GNinja -DCMAKE_BUILD_TYPE=Debug -DICHOR_USE_SANITIZERS=1 -DICHOR_ENABLE_INTERNAL_DEBUGGING=1 -DICHOR_ENABLE_INTERNAL_IO_DEBUGGING=1 -DICHOR_ENABLE_INTERNAL_STL_DEBUGGING=1 -DICHOR_ENABLE_INTERNAL_COROUTINE_DEBUGGING=1 -DICHOR_USE_MOLD=1 -DICHOR_USE_BOOST_BEAST=1 -DICHOR_USE_LIBCPP=0 -DICHOR_USE_HIREDIS=1 -DICHOR_USE_SDEVENT=1 .. || exit 1
   ninja || exit 1
   ninja test || exit 1
-  run_examples 1 1
+  run_examples 1 1 1
   run_benchmarks
 
   rm -rf ./* ../bin/*
   CC=${ccompilers[i]} CXX=${cppcompilers[i]} cmake -GNinja -DCMAKE_BUILD_TYPE=Debug -DICHOR_USE_SANITIZERS=1 -DICHOR_ENABLE_INTERNAL_DEBUGGING=1 -DICHOR_DISABLE_RTTI=0 -DICHOR_USE_MOLD=1 -DICHOR_USE_BOOST_BEAST=0 -DICHOR_USE_LIBCPP=0 -DICHOR_USE_SPDLOG=1 -DICHOR_USE_HIREDIS=1 -DICHOR_USE_SDEVENT=1 .. || exit 1
   ninja || exit 1
   ninja test || exit 1
-  run_examples 0 1
+  run_examples 0 1 1
   run_benchmarks
 
   rm -rf ./* ../bin/*
   CC=${ccompilers[i]} CXX=${cppcompilers[i]} cmake -GNinja -DCMAKE_BUILD_TYPE=Release -DICHOR_REMOVE_SOURCE_NAMES=0 -DICHOR_USE_SANITIZERS=0 -DICHOR_ENABLE_INTERNAL_DEBUGGING=1 -DICHOR_USE_MOLD=1 -DICHOR_USE_BOOST_BEAST=1 -DICHOR_USE_LIBCPP=0 -DICHOR_USE_HIREDIS=1 -DICHOR_USE_SDEVENT=1 .. || exit 1
   ninja || exit 1
   ninja test || exit 1
-  run_examples 1 1
+  run_examples 1 1 1
   run_benchmarks
 done
 
@@ -154,5 +157,5 @@ rm -rf ./* ../bin/*
 CC=clang-19 CXX=clang++-19 cmake -GNinja -DCMAKE_BUILD_TYPE=Release -DICHOR_USE_SANITIZERS=0 -DICHOR_USE_MOLD=1 -DICHOR_USE_BOOST_BEAST=1 -DICHOR_USE_HIREDIS=1 -DICHOR_USE_SDEVENT=1 .. || exit 1
 ninja || exit 1
 ninja test || exit 1
-run_examples 1 1
+run_examples 1 1 1
 run_benchmarks

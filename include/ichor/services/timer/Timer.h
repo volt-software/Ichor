@@ -3,6 +3,7 @@
 #include <thread>
 #include <ichor/services/timer/ITimer.h>
 #include <ichor/event_queues/IEventQueue.h>
+#include <ichor/stl/RealtimeMutex.h>
 
 namespace Ichor {
     template <typename TIMER, typename QUEUE>
@@ -14,14 +15,14 @@ namespace Ichor {
         ~Timer() noexcept;
 
         /// Thread-safe.
-        void startTimer() final;
+        bool startTimer() final;
         /// Thread-safe.
-        void startTimer(bool fireImmediately) final;
+        bool startTimer(bool fireImmediately) final;
         /// Thread-safe.
-        void stopTimer() final;
+        bool stopTimer(std::function<void(void)> cb) final;
 
         /// Thread-safe.
-        [[nodiscard]] bool running() const noexcept final;
+        [[nodiscard]] TimerState getState() const noexcept final;
 
         /// Sets coroutine based callback, adds some overhead compared to sync version. Executed when timer expires. Terminates program if timer is running.
         /// \param fn callback
@@ -44,26 +45,31 @@ namespace Ichor {
         /// Thread-safe.
         [[nodiscard]] uint64_t getTimerId() const noexcept final;
 
+        [[nodiscard]] ServiceIdType getRequestingServiceId() const noexcept final;
+
     private:
         ///
         /// \param timerId unique identifier for timer
         /// \param svcId unique identifier for svc using this timer
-        Timer(IEventQueue& queue, uint64_t timerId, uint64_t svcId) noexcept;
+        Timer(IEventQueue& queue, uint64_t timerId, ServiceIdType svcId) noexcept;
 
-        void insertEventLoop(bool fireImmediately);
+        void insertEventLoop(bool fireImmediately, uint64_t startId);
 
         template <typename TIMER, typename QUEUE>
         friend class TimerFactory;
 
         IEventQueue& _queue;
         uint64_t _timerId{};
-        std::atomic<bool> _fireOnce{};
-        std::atomic<uint64_t> _intervalNanosec{1'000'000'000};
+        uint64_t _startId{}; // used to prevent stale stop events from running
+        TimerState _state{};
+        bool _fireOnce{};
+        uint64_t _intervalNanosec{1'000'000'000};
         std::unique_ptr<std::thread> _eventInsertionThread{};
         std::function<AsyncGenerator<IchorBehaviour>()> _fnAsync{};
         std::function<void()> _fn{};
-        std::atomic<bool> _quit{true};
-        std::atomic<uint64_t> _priority{INTERNAL_EVENT_PRIORITY};
-        uint64_t _requestingServiceId{};
+        uint64_t _priority{INTERNAL_EVENT_PRIORITY};
+        ServiceIdType _requestingServiceId{};
+        std::vector<std::function<void(void)>> _quitCbs;
+        mutable RealtimeMutex _m;
     };
 }

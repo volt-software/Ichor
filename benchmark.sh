@@ -50,8 +50,8 @@ run_benchmarks ()
   echo -n "uring: "
   eval $event -u || exit 1
   eval $serializer || exit 1
-#  eval $start -a || exit 1
-#  eval $start -c || exit 1
+  eval $start -a || exit 1
+  eval $start -c || exit 1
   eval $start_stop || exit 1
   eval $utils -r || exit 1
   eval $utils -a || exit 1

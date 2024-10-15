@@ -57,5 +57,6 @@ namespace Ichor {
         IIOUringQueue *_q{};
         ILogger *_logger{};
         std::vector<ServiceIdType> _connections;
+        AsyncManualResetEvent _quitEvt;
     };
 }

@@ -20,9 +20,19 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::IOUringTimerFactoryFac
 
 Ichor::Task<void> Ichor::IOUringTimerFactoryFactory::stop() {
     _trackerRegistration.reset();
+    _quitting = true;
 
-    for(auto it = _factories.begin(); it != _factories.end(); ) {
-        it = pushStopEventForTimerFactory(it);
+    if(!_factories.empty()) {
+        std::vector<std::pair<ServiceIdType, ServiceIdType>> ids;
+        ids.reserve(_factories.size());
+        for(auto [reqSvcId, factoryId] : _factories) {
+            ids.emplace_back(reqSvcId, factoryId);
+        }
+        for(auto [reqSvcId, factoryId] : ids) {
+//            fmt::println("TimerFactoryFactory extracting {}", reqSvcId);
+            co_await pushStopEventForTimerFactory(reqSvcId, factoryId);
+            _factories.erase(reqSvcId);
+        }
     }
 
     if constexpr(DO_INTERNAL_DEBUG || DO_HARDENING) {
@@ -43,7 +53,22 @@ void Ichor::IOUringTimerFactoryFactory::removeDependencyInstance(IIOUringQueue&,
     _q = nullptr;
 }
 
+std::vector<Ichor::ServiceIdType> Ichor::IOUringTimerFactoryFactory::getCreatedTimerFactoryIds() const noexcept {
+    std::vector<ServiceIdType> ret;
+    ret.reserve(_factories.size());
+
+    for(auto [_, factoryId] : _factories) {
+        ret.emplace_back(factoryId);
+    }
+
+    return ret;
+}
+
 Ichor::AsyncGenerator<Ichor::IchorBehaviour> Ichor::IOUringTimerFactoryFactory::handleDependencyRequest(AlwaysNull<ITimerFactory *>, const DependencyRequestEvent &evt) {
+    if(_quitting) {
+        co_return {};
+    }
+
     auto factory = _factories.find(evt.originatingService);
 
     if(factory != _factories.end()) {
@@ -56,26 +81,33 @@ Ichor::AsyncGenerator<Ichor::IchorBehaviour> Ichor::IOUringTimerFactoryFactory::
 }
 
 Ichor::AsyncGenerator<Ichor::IchorBehaviour> Ichor::IOUringTimerFactoryFactory::handleDependencyUndoRequest(AlwaysNull<ITimerFactory *>, const DependencyUndoRequestEvent &evt) {
-    auto factory = _factories.find(evt.originatingService);
-
-    if(factory == _factories.end()) {
+    if(_quitting) {
         co_return {};
     }
 
-    pushStopEventForTimerFactory(factory);
+    auto factory = _factories.find(evt.originatingService);
+
+    if(factory == _factories.cend()) {
+        co_return {};
+    }
+
+    co_await pushStopEventForTimerFactory(factory->first, factory->second);
+
+    _factories.erase(evt.originatingService);
 
     co_return {};
 }
 
-decltype(Ichor::IOUringTimerFactoryFactory::_factories)::iterator Ichor::IOUringTimerFactoryFactory::pushStopEventForTimerFactory(decltype(Ichor::IOUringTimerFactoryFactory::_factories)::iterator const &factory) noexcept {
-    auto svc = GetThreadLocalManager().getService<Detail::InternalTimerFactory>(factory->second);
+Ichor::Task<void> Ichor::IOUringTimerFactoryFactory::pushStopEventForTimerFactory(ServiceIdType requestingSvcId, ServiceIdType factoryId) noexcept {
+    auto svc = GetThreadLocalManager().getService<Detail::InternalTimerFactory>(factoryId);
 
     if(!svc) {
-        return _factories.erase(factory);
+        co_return;
     }
 
-    (*svc).first->stopAllTimers();
+    // iterator may be invalidated after co_await.
+    co_await (*svc).first->stopAllTimers();
+    GetThreadLocalEventQueue().pushPrioritisedEvent<StopServiceEvent>(getServiceId(), INTERNAL_DEPENDENCY_EVENT_PRIORITY, factoryId, true);
 
-    GetThreadLocalEventQueue().pushPrioritisedEvent<StopServiceEvent>(getServiceId(), INTERNAL_DEPENDENCY_EVENT_PRIORITY, factory->second, true);
-    return _factories.erase(factory);
+    co_return;
 }
