@@ -10,6 +10,7 @@
 #include <ichor/event_queues/IOUringQueue.h>
 #include <ichor/services/io/IOUringAsyncFileIO.h>
 #include <ichor/stl/LinuxUtils.h>
+#include <catch2/generators/catch_generators.hpp>
 
 #define IOIMPL IOUringAsyncFileIO
 #define QIMPL IOUringQueue
@@ -41,6 +42,8 @@ struct AsyncFileIOExpensiveSetup {
 };
 
 #ifdef TEST_URING
+tl::optional<Version> emulateKernelVersion;
+
 TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests_uring") {
     auto version = Ichor::kernelVersion();
 
@@ -48,13 +51,26 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests_uring") {
     if(version < Version{5, 18, 0}) {
         return;
     }
+
+    auto gen_i = GENERATE(1, 2);
+
+    if(gen_i == 2) {
+        emulateKernelVersion = Version{5, 18, 0};
+        fmt::println("emulating kernel version {}", *emulateKernelVersion);
+    } else {
+        fmt::println("kernel version {}", *version);
+    }
 #else
 TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests") {
 #endif
 
     SECTION("Reading non-existent file should error") {
         fmt::print("section 1\n");
-        auto queue = std::make_unique<QIMPL>();
+#if defined(TEST_URING)
+        auto queue = std::make_unique<QIMPL>(500, 100'000'000, emulateKernelVersion);
+#else
+        auto queue = std::make_unique<QIMPL>(500);
+#endif
         auto &dm = queue->createManager();
         uint64_t ioSvcId{};
 
@@ -99,7 +115,11 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests") {
 
     SECTION("Reading file without permissions should error") {
         fmt::print("section 1\n");
-        auto queue = std::make_unique<QIMPL>();
+#if defined(TEST_URING)
+        auto queue = std::make_unique<QIMPL>(500, 100'000'000, emulateKernelVersion);
+#else
+        auto queue = std::make_unique<QIMPL>(500);
+#endif
         auto &dm = queue->createManager();
         uint64_t ioSvcId{};
 
@@ -158,7 +178,11 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests") {
 
     SECTION("Read whole file Small") {
         fmt::print("section 2a\n");
-        auto queue = std::make_unique<QIMPL>();
+#if defined(TEST_URING)
+        auto queue = std::make_unique<QIMPL>(500, 100'000'000, emulateKernelVersion);
+#else
+        auto queue = std::make_unique<QIMPL>(500);
+#endif
         auto &dm = queue->createManager();
         uint64_t ioSvcId{};
 
@@ -202,7 +226,11 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests") {
     }
     SECTION("Read whole file large") {
         fmt::println("section 2b");
-        auto queue = std::make_unique<QIMPL>();
+#if defined(TEST_URING)
+        auto queue = std::make_unique<QIMPL>(500, 100'000'000, emulateKernelVersion);
+#else
+        auto queue = std::make_unique<QIMPL>(500);
+#endif
         auto &dm = queue->createManager();
         uint64_t ioSvcId{};
 
@@ -246,7 +274,11 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests") {
 
     SECTION("Copying non-existent file should error") {
         fmt::print("section 3\n");
-        auto queue = std::make_unique<QIMPL>();
+#if defined(TEST_URING)
+        auto queue = std::make_unique<QIMPL>(500, 100'000'000, emulateKernelVersion);
+#else
+        auto queue = std::make_unique<QIMPL>(500);
+#endif
         auto &dm = queue->createManager();
         uint64_t ioSvcId{};
 
@@ -286,7 +318,11 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests") {
 
     SECTION("Copying file") {
         fmt::print("section 4\n");
-        auto queue = std::make_unique<QIMPL>();
+#if defined(TEST_URING)
+        auto queue = std::make_unique<QIMPL>(500, 100'000'000, emulateKernelVersion);
+#else
+        auto queue = std::make_unique<QIMPL>(500);
+#endif
         auto &dm = queue->createManager();
         uint64_t ioSvcId{};
 
@@ -337,7 +373,11 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests") {
 
     SECTION("Copying large file") {
         fmt::print("section 5\n");
-        auto queue = std::make_unique<QIMPL>();
+#if defined(TEST_URING)
+        auto queue = std::make_unique<QIMPL>(500, 100'000'000, emulateKernelVersion);
+#else
+        auto queue = std::make_unique<QIMPL>(500);
+#endif
         auto &dm = queue->createManager();
         uint64_t ioSvcId{};
 
@@ -383,7 +423,11 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests") {
 
     SECTION("Removing non-existing file should error") {
         fmt::print("section 6\n");
-        auto queue = std::make_unique<QIMPL>();
+#if defined(TEST_URING)
+        auto queue = std::make_unique<QIMPL>(500, 100'000'000, emulateKernelVersion);
+#else
+        auto queue = std::make_unique<QIMPL>(500);
+#endif
         auto &dm = queue->createManager();
         uint64_t ioSvcId{};
 
@@ -422,7 +466,11 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests") {
 
     SECTION("Removing file") {
         fmt::print("section 7\n");
-        auto queue = std::make_unique<QIMPL>();
+#if defined(TEST_URING)
+        auto queue = std::make_unique<QIMPL>(500, 100'000'000, emulateKernelVersion);
+#else
+        auto queue = std::make_unique<QIMPL>(500);
+#endif
         auto &dm = queue->createManager();
         uint64_t ioSvcId{};
 
@@ -472,7 +520,11 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests") {
 
     SECTION("Writing file") {
         fmt::print("section 8\n");
-        auto queue = std::make_unique<QIMPL>();
+#if defined(TEST_URING)
+        auto queue = std::make_unique<QIMPL>(500, 100'000'000, emulateKernelVersion);
+#else
+        auto queue = std::make_unique<QIMPL>(500);
+#endif
         auto &dm = queue->createManager();
         uint64_t ioSvcId{};
 
@@ -520,7 +572,11 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests") {
 
     SECTION("Writing file - overwrite") {
         fmt::print("section 9\n");
-        auto queue = std::make_unique<QIMPL>();
+#if defined(TEST_URING)
+        auto queue = std::make_unique<QIMPL>(500, 100'000'000, emulateKernelVersion);
+#else
+        auto queue = std::make_unique<QIMPL>(500);
+#endif
         auto &dm = queue->createManager();
         uint64_t ioSvcId{};
 
@@ -572,7 +628,11 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests") {
 
     SECTION("Appending file") {
         fmt::print("section 10\n");
-        auto queue = std::make_unique<QIMPL>();
+#if defined(TEST_URING)
+        auto queue = std::make_unique<QIMPL>(500, 100'000'000, emulateKernelVersion);
+#else
+        auto queue = std::make_unique<QIMPL>(500);
+#endif
         auto &dm = queue->createManager();
         uint64_t ioSvcId{};
 

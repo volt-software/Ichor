@@ -17,6 +17,7 @@ std::atomic<uint64_t> evtGate;
 #include <ichor/services/network/tcp/IOUringTcpHostService.h>
 #include <ichor/event_queues/IOUringQueue.h>
 #include <ichor/stl/LinuxUtils.h>
+#include <catch2/generators/catch_generators.hpp>
 
 #define QIMPL IOUringQueue
 #define CONNIMPL IOUringTcpConnectionService
@@ -35,6 +36,8 @@ std::atomic<uint64_t> evtGate;
 using namespace std::string_literals;
 
 #ifdef TEST_URING
+
+tl::optional<Version> emulateKernelVersion;
 TEST_CASE("TcpTests_uring") {
 
     auto version = Ichor::kernelVersion();
@@ -44,12 +47,25 @@ TEST_CASE("TcpTests_uring") {
         return;
     }
 
+    auto gen_i = GENERATE(1, 2);
+
+    if(gen_i == 2) {
+        emulateKernelVersion = Version{5, 18, 0};
+        fmt::println("emulating kernel version {}", *emulateKernelVersion);
+    } else {
+        fmt::println("kernel version {}", *version);
+    }
+
 #else
 TEST_CASE("TcpTests") {
 #endif
     SECTION("Send message") {
         _evt = std::make_unique<Ichor::AsyncManualResetEvent>();
-        auto queue = std::make_unique<QIMPL>(true);
+#if defined(TEST_URING)
+        auto queue = std::make_unique<QIMPL>(500, 100'000'000, emulateKernelVersion);
+#else
+        auto queue = std::make_unique<QIMPL>(500, true);
+#endif
         ServiceIdType tcpClientId;
         evtGate = false;
 
@@ -115,6 +131,13 @@ TEST_CASE("TcpTests") {
             co_return {};
         });
 
+        start = std::chrono::steady_clock::now();
+        while(queue->is_running()) {
+            std::this_thread::sleep_for(500us);
+            auto now = std::chrono::steady_clock::now();
+            REQUIRE(now - start < 1s);
+        }
+
         t.join();
     }
 
@@ -169,7 +192,12 @@ TEST_CASE("TcpTests") {
         while(evtGate.load(std::memory_order_acquire) != 1) {
             std::this_thread::sleep_for(500us);
             auto now = std::chrono::steady_clock::now();
+            // the qemu setup used in build.sh is not fast enough to have the test pass.
+#ifdef ICHOR_AARCH64
+            REQUIRE(now - start < 10s);
+#else
             REQUIRE(now - start < 1s);
+#endif
         }
 
         evtGate.store(0, std::memory_order_release);
@@ -409,7 +437,12 @@ TEST_CASE("TcpTests") {
         while(evtGate.load(std::memory_order_acquire) != 1) {
             std::this_thread::sleep_for(500us);
             auto now = std::chrono::steady_clock::now();
+            // the qemu setup used in build.sh is not fast enough to have the test pass.
+#ifdef ICHOR_AARCH64
+            REQUIRE(now - start < 10s);
+#else
             REQUIRE(now - start < 1s);
+#endif
         }
 
         evtGate.store(0, std::memory_order_release);
