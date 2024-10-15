@@ -68,5 +68,6 @@ namespace Ichor {
         std::vector<uint8_t> _recvBuf{};
         std::vector<decltype(_recvBuf)> _queuedMessages{};
         std::function<void(std::span<uint8_t const>)> _recvHandler;
+        AsyncManualResetEvent _quitEvt;
     };
 }

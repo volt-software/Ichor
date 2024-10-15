@@ -1,5 +1,7 @@
 #include <ichor/services/timer/Timer.h>
 #include <ichor/events/RunFunctionEvent.h>
+#include <ichor/ScopeGuard.h>
+#include <mutex>
 #if (defined(WIN32) || defined(_WIN32) || defined(__WIN32)) && !defined(__CYGWIN__)
 #include <windows.h>
 #include <processthreadsapi.h>
@@ -9,54 +11,72 @@
 using namespace std::chrono_literals;
 
 Ichor::Timer::Timer(IEventQueue& queue, uint64_t timerId, uint64_t svcId) noexcept : _queue(queue), _timerId(timerId), _requestingServiceId(svcId) {
-    fmt::println("Timer for {}", _requestingServiceId);
-    stopTimer();
+    INTERNAL_IO_DEBUG("Timer for {}", _requestingServiceId);
 }
 
 Ichor::Timer::~Timer() noexcept {
-    stopTimer();
+    {
+        std::unique_lock l{_m};
+        if(_state == TimerState::RUNNING) {
+            _state = TimerState::STOPPING;
+        }
+    }
     if(_eventInsertionThread && _eventInsertionThread->joinable()) {
         _eventInsertionThread->join();
     }
 }
 
-void Ichor::Timer::startTimer() {
-    startTimer(false);
+bool Ichor::Timer::startTimer() {
+    return startTimer(false);
 }
 
-void Ichor::Timer::startTimer(bool fireImmediately) {
+bool Ichor::Timer::startTimer(bool fireImmediately) {
     if(!_fn && !_fnAsync) [[unlikely]] {
         throw std::runtime_error("No callback set.");
     }
-
-    bool expected = true;
-    if(_quit.compare_exchange_strong(expected, false, std::memory_order_acq_rel)) {
+    std::unique_lock l{_m};
+    INTERNAL_IO_DEBUG("timer {} for {} startTimer({}) {} {}", _timerId, _requestingServiceId, fireImmediately, _state, _quitCbs.size());
+    if(_state == TimerState::STOPPED) {
+        l.unlock();
         if(_eventInsertionThread && _eventInsertionThread->joinable()) {
             _eventInsertionThread->join();
         }
-        _eventInsertionThread = std::make_unique<std::thread>([this, fireImmediately]() { this->insertEventLoop(fireImmediately); });
+        l.lock();
+        _startId++;
+        _state = TimerState::STARTING;
+        _eventInsertionThread = std::make_unique<std::thread>([this, fireImmediately, startId = _startId]() { this->insertEventLoop(fireImmediately, startId); });
 #if defined(__linux__) || defined(__CYGWIN__)
         pthread_setname_np(_eventInsertionThread->native_handle(), fmt::format("Tmr#{}", _timerId).c_str());
 #endif
+        _quitCbs.clear();
+        return true;
     }
+    return false;
 }
 
-void Ichor::Timer::stopTimer() {
-    bool expected = false;
-    if(_quit.compare_exchange_strong(expected, true, std::memory_order_acq_rel)) {
-        if(_eventInsertionThread->joinable()) {
-            _eventInsertionThread->join();
+bool Ichor::Timer::stopTimer(std::function<void(void)> cb) {
+    std::unique_lock l{_m};
+    INTERNAL_IO_DEBUG("timer {} for {} stop {}", _timerId, _requestingServiceId, _state);
+    if(_state == TimerState::RUNNING || _state == TimerState::STOPPING) {
+        if(cb) {
+            _quitCbs.emplace_back(std::move(cb));
         }
-        _eventInsertionThread = nullptr;
+        _state = TimerState::STOPPING;
+        return true;
+    } else if(cb) {
+        cb();
     }
+    return false;
 }
 
-bool Ichor::Timer::running() const noexcept {
-    return !_quit.load(std::memory_order_acquire);
+Ichor::TimerState Ichor::Timer::getState() const noexcept {
+    std::unique_lock l{_m};
+    return _state;
 };
 
 void Ichor::Timer::setCallbackAsync(std::function<AsyncGenerator<IchorBehaviour>()> fn) {
-    if(running()) {
+    std::unique_lock l{_m};
+    if(_state != TimerState::STOPPED) {
         std::terminate();
     }
 
@@ -65,7 +85,8 @@ void Ichor::Timer::setCallbackAsync(std::function<AsyncGenerator<IchorBehaviour>
 }
 
 void Ichor::Timer::setCallback(std::function<void()> fn) {
-    if(running()) {
+    std::unique_lock l{_m};
+    if(_state != TimerState::STOPPED) {
         std::terminate();
     }
 
@@ -74,31 +95,41 @@ void Ichor::Timer::setCallback(std::function<void()> fn) {
 }
 
 void Ichor::Timer::setInterval(uint64_t nanoseconds) noexcept {
-    _intervalNanosec.store(nanoseconds, std::memory_order_release);
+    std::unique_lock l{_m};
+    _intervalNanosec = nanoseconds;
 }
 
 
 void Ichor::Timer::setPriority(uint64_t priority) noexcept {
-    _priority.store(priority, std::memory_order_release);
+    std::unique_lock l{_m};
+    _priority = priority;
 }
 
 uint64_t Ichor::Timer::getPriority() const noexcept {
-    return _priority.load(std::memory_order_acquire);
+    std::unique_lock l{_m};
+    return _priority;
 }
 
 void Ichor::Timer::setFireOnce(bool fireOnce) noexcept {
-    _fireOnce.store(fireOnce, std::memory_order_release);
+    std::unique_lock l{_m};
+    _fireOnce = fireOnce;
 }
 
 bool Ichor::Timer::getFireOnce() const noexcept {
-    return _fireOnce.load(std::memory_order_acquire);
+    std::unique_lock l{_m};
+    return _fireOnce;
 }
 
 uint64_t Ichor::Timer::getTimerId() const noexcept {
     return _timerId;
 }
 
-void Ichor::Timer::insertEventLoop(bool fireImmediately) {
+Ichor::ServiceIdType Ichor::Timer::getRequestingServiceId() const noexcept {
+    return _requestingServiceId;
+}
+
+void Ichor::Timer::insertEventLoop(bool fireImmediately, uint64_t startId) {
+    INTERNAL_IO_DEBUG("timer {} for {} insertEventLoop", _timerId, _requestingServiceId);
 #if defined(__APPLE__)
     pthread_setname_np(fmt::format("Tmr#{}", _timerId).c_str());
 #endif
@@ -106,33 +137,54 @@ void Ichor::Timer::insertEventLoop(bool fireImmediately) {
     SetThreadDescription(GetCurrentThread(), fmt::format(L"Tmr#{}", _timerId).c_str());
 #endif
 
+    ScopeGuard sg{[this]() {
+        _queue.pushPrioritisedEvent<RunFunctionEvent>(0, getPriority(), [quitCbs = std::move(_quitCbs)](){
+            for(auto &cb : quitCbs) {
+                cb();
+            }
+        });
+        _state = TimerState::STOPPED;
+        _quitCbs.clear();
+    }};
     auto now = std::chrono::steady_clock::now();
     auto next = now;
+    std::unique_lock l{_m};
     if(!fireImmediately) {
-        next += std::chrono::nanoseconds(_intervalNanosec.load(std::memory_order_acquire));
+        next += std::chrono::nanoseconds(_intervalNanosec);
     }
-    while(!_quit.load(std::memory_order_acquire)) {
+    if(_state != TimerState::STARTING) {
+        INTERNAL_IO_DEBUG("timer {} for {} insertEventLoop quit before start??", _timerId, _requestingServiceId);
+        return;
+    }
+    _state = TimerState::RUNNING;
+    while(_state == TimerState::RUNNING) {
         while(now < next) {
-            std::this_thread::sleep_for(std::chrono::nanoseconds(_intervalNanosec.load(std::memory_order_acquire)/10));
+            auto ns = _intervalNanosec/10;
+            l.unlock();
+            INTERNAL_IO_DEBUG("timer {} for {} sleeping for {}", _timerId, _requestingServiceId, ns);
+            std::this_thread::sleep_for(std::chrono::nanoseconds(ns));
             now = std::chrono::steady_clock::now();
+            l.lock();
 
-            if(_quit.load(std::memory_order_acquire)) {
+            if(_state != TimerState::RUNNING) {
+                INTERNAL_IO_DEBUG("timer {} for {} stopping because state is {}", _timerId, _requestingServiceId, _state);
                 return;
             }
         }
+        INTERNAL_IO_DEBUG("timer {} for {} pushing event", _timerId, _requestingServiceId);
         // Make copy of function, in case setCallback() gets called during async stuff.
         if(_fnAsync) {
-            _queue.pushPrioritisedEvent<RunFunctionEventAsync>(_requestingServiceId, getPriority(), _fnAsync);
+            _queue.pushPrioritisedEvent<RunFunctionEventAsync>(_requestingServiceId, _priority, _fnAsync);
         } else {
-            _queue.pushPrioritisedEvent<RunFunctionEvent>(_requestingServiceId, getPriority(), _fn);
+            _queue.pushPrioritisedEvent<RunFunctionEvent>(_requestingServiceId, _priority, _fn);
         }
 
-        if(_fireOnce.load(std::memory_order_acquire)) {
-            bool expected = false;
-            _quit.compare_exchange_strong(expected, true, std::memory_order_acq_rel);
+        if(_fireOnce) {
+            INTERNAL_IO_DEBUG("timer {} for {} stopping, fireonce", _timerId, _requestingServiceId);
+            _state = TimerState::STOPPING;
             break;
         }
 
-        next += std::chrono::nanoseconds(_intervalNanosec.load(std::memory_order_acquire));
+        next += std::chrono::nanoseconds(_intervalNanosec);
     }
 }

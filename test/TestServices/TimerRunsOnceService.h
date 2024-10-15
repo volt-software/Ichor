@@ -22,7 +22,7 @@ public:
         timer.setCallback([this, &timer = timer]() {
             evtGate++;
             count++;
-            timer.stopTimer();
+            timer.stopTimer({});
         });
         timer.startTimer(true);
     }

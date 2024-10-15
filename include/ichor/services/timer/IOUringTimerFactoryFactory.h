@@ -7,19 +7,22 @@
 #include <ichor/services/timer/ITimer.h>
 #include <ichor/services/timer/ITimerFactory.h>
 #include <ichor/services/timer/IInternalTimerFactory.h>
+#include <ichor/services/timer/ITimerTimerFactory.h>
 #include <ichor/dependency_management/AdvancedService.h>
 #include <ichor/event_queues/IIOUringQueue.h>
 #include <ichor/DependencyManager.h>
 
 namespace Ichor {
     /// This class creates timer factories for requesting services, providing the requesting services' serviceId to the factory/timers
-    class IOUringTimerFactoryFactory final : public AdvancedService<IOUringTimerFactoryFactory> {
+    class IOUringTimerFactoryFactory final :  public ITimerTimerFactory, public AdvancedService<IOUringTimerFactoryFactory> {
     public:
         IOUringTimerFactoryFactory(DependencyRegister &reg, Properties props);
         ~IOUringTimerFactoryFactory() final = default;
 
         void addDependencyInstance(IIOUringQueue &, IService&) noexcept;
         void removeDependencyInstance(IIOUringQueue &, IService&) noexcept;
+
+        std::vector<ServiceIdType> getCreatedTimerFactoryIds() const noexcept final;
 
     private:
         Task<tl::expected<void, Ichor::StartError>> start() final;
@@ -33,8 +36,8 @@ namespace Ichor {
         IIOUringQueue *_q{};
         DependencyTrackerRegistration _trackerRegistration{};
         unordered_map<ServiceIdType, ServiceIdType> _factories;
-        AsyncManualResetEvent _quitEvt;
+        bool _quitting{};
 
-        decltype(_factories)::iterator pushStopEventForTimerFactory(decltype(_factories)::iterator const &factory) noexcept;
+        Task<void> pushStopEventForTimerFactory(ServiceIdType requestingSvcId, ServiceIdType factoryId) noexcept;
     };
 }

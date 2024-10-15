@@ -1147,7 +1147,6 @@ void Ichor::DependencyManager::clearServiceRegistrations(std::vector<EventInterc
 
 void Ichor::DependencyManager::removeInternalService(std::vector<EventInterceptInfo> &allEventInterceptorsCopy, std::vector<EventInterceptInfo> &eventInterceptorsCopy, ServiceIdType svcId) {
     auto const svcIt = _services.find(svcId);
-
     if constexpr (DO_INTERNAL_DEBUG || DO_HARDENING) {
         if (svcIt == _services.end()) [[unlikely]] {
             ICHOR_EMERGENCY_LOG2(_logger, "Couldn't remove service with id {}. Please file a bug.", svcId);

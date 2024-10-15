@@ -22,7 +22,7 @@ public:
             fmt::print("timer 1\n");
             co_await _awaitSvc->await_something();
             fmt::print("timer 2\n");
-            timer.stopTimer();
+            timer.stopTimer({});
             GetThreadLocalEventQueue().pushEvent<QuitEvent>(getServiceId());
 
             co_return {};
