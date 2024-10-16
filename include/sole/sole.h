@@ -971,7 +971,7 @@ struct fmt::formatter<sole::uuid> {
     }
 
     template <typename FormatContext>
-    auto format(const sole::uuid& change, FormatContext& ctx) {
+    auto format(const sole::uuid& change, FormatContext& ctx) const {
         return fmt::format_to(ctx.out(), "{}", change.str());
     }
 };

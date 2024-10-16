@@ -101,7 +101,7 @@ struct fmt::formatter<nonmoveable> {
     }
 
     template <typename FormatContext>
-    auto format(const nonmoveable& change, FormatContext& ctx) {
+    auto format(const nonmoveable& change, FormatContext& ctx) const {
         return fmt::format_to(ctx.out(), "nonmoveable");
     }
 };

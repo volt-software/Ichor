@@ -107,7 +107,7 @@ struct fmt::formatter<Ichor::IOError> {
     }
 
     template <typename FormatContext>
-    auto format(const Ichor::IOError& change, FormatContext& ctx) {
+    auto format(const Ichor::IOError& change, FormatContext& ctx) const {
         switch(change) {
             case Ichor::IOError::FAILED:
                 return fmt::format_to(ctx.out(), "FAILED");

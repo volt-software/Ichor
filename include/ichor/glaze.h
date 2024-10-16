@@ -22,7 +22,7 @@ struct fmt::formatter<glz::error_code> {
     }
 
     template <typename FormatContext>
-    auto format(const glz::error_code& input, FormatContext& ctx) -> decltype(ctx.out()) {
+    auto format(const glz::error_code& input, FormatContext& ctx) const -> decltype(ctx.out()) {
         switch(input) {
             case glz::error_code::none:
                 return fmt::format_to(ctx.out(), "glz::error_code::none");

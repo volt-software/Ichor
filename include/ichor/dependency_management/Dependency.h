@@ -54,7 +54,7 @@ struct fmt::formatter<Ichor::DependencyFlags> {
     }
 
     template <typename FormatContext>
-    auto format(const Ichor::DependencyFlags& flags, FormatContext& ctx) {
+    auto format(const Ichor::DependencyFlags& flags, FormatContext& ctx) const {
         if(flags == Ichor::DependencyFlags::NONE) {
             return fmt::format_to(ctx.out(), "NONE");
         }
