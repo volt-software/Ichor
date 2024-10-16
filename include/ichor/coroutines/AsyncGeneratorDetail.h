@@ -126,7 +126,7 @@ namespace Ichor::Detail {
 #endif
     }
 
-    inline AsyncGenerator<void> AsyncGeneratorPromise<void>::get_return_object() noexcept {
+    constexpr inline AsyncGenerator<void> AsyncGeneratorPromise<void>::get_return_object() noexcept {
         return AsyncGenerator<void>{ *this };
     }
 }

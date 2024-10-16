@@ -36,8 +36,10 @@ namespace Ichor::Detail {
 
     class AsyncGeneratorPromiseBase {
     public:
+
         AsyncGeneratorPromiseBase() noexcept
                 : _state(state::value_ready_producer_suspended)
+
                 , _exception(nullptr)
                 , _id(_idCounter++)
         {
@@ -55,14 +57,14 @@ namespace Ichor::Detail {
         AsyncGeneratorPromiseBase(const AsyncGeneratorPromiseBase& other) = delete;
         AsyncGeneratorPromiseBase& operator=(const AsyncGeneratorPromiseBase& other) = delete;
 
-        std::suspend_always initial_suspend() const noexcept {
+        constexpr std::suspend_always initial_suspend() const noexcept {
             INTERNAL_COROUTINE_DEBUG("AsyncGeneratorPromiseBase::initial_suspend {} {}", _id, _state);
             return {};
         }
 
-        AsyncGeneratorYieldOperation final_suspend() noexcept;
+        constexpr AsyncGeneratorYieldOperation final_suspend() noexcept;
 
-        void unhandled_exception() noexcept {
+        constexpr void unhandled_exception() noexcept {
             // Don't bother capturing the exception if we have been cancelled
             // as there is no consumer that will see it.
             if (_state != state::cancelled)
@@ -77,10 +79,13 @@ namespace Ichor::Detail {
         ///
         /// Only valid to call after resuming from an awaited advance operation.
         /// i.e. Either a begin() or iterator::operator++() operation.
-        [[nodiscard]] virtual bool finished() const noexcept = 0;
+        [[nodiscard]] constexpr virtual bool finished() const noexcept = 0;
 
-        virtual void set_finished() noexcept = 0;
+        constexpr virtual void set_finished() noexcept = 0;
 
+#if __cpp_constexpr >= 202207L
+        constexpr
+#endif
         void rethrow_if_unhandled_exception() {
             if (_exception)
             {
@@ -97,7 +102,7 @@ namespace Ichor::Detail {
         /// Returns false if the producer coroutine was not at a suitable suspend-point.
         /// The coroutine will be destroyed when it next reaches a co_yield or co_return
         /// statement.
-        bool request_cancellation() noexcept {
+        constexpr bool request_cancellation() noexcept {
             INTERNAL_COROUTINE_DEBUG("request_cancellation {}", _id);
             const auto previousState = std::exchange(_state, state::cancelled);
 
@@ -112,28 +117,28 @@ namespace Ichor::Detail {
             return previousState == state::value_ready_producer_suspended;
         }
 
-        [[nodiscard]] uint64_t get_id() const noexcept {
+        [[nodiscard]] constexpr uint64_t get_id() const noexcept {
             return _id;
         }
 
-        [[nodiscard]] uint64_t get_priority() const noexcept {
+        [[nodiscard]] constexpr uint64_t get_priority() const noexcept {
             return _priority;
         }
 
-        void set_priority(uint64_t priority) noexcept {
+        constexpr void set_priority(uint64_t priority) noexcept {
             _priority = priority;
         }
 
-        [[nodiscard]] ServiceIdType get_service_id() const noexcept {
+        [[nodiscard]] constexpr ServiceIdType get_service_id() const noexcept {
             return _svcId;
         }
 
-        void set_service_id(ServiceIdType svcId) noexcept {
+        constexpr void set_service_id(ServiceIdType svcId) noexcept {
             _svcId = svcId;
         }
 
     protected:
-        AsyncGeneratorYieldOperation internal_yield_value() noexcept;
+        constexpr AsyncGeneratorYieldOperation internal_yield_value() noexcept;
 
     public:
         friend class AsyncGeneratorYieldOperation;
@@ -161,20 +166,20 @@ namespace Ichor::Detail {
     {
     public:
 
-        AsyncGeneratorYieldOperation(AsyncGeneratorPromiseBase& promise, state initialState) noexcept
+        constexpr AsyncGeneratorYieldOperation(AsyncGeneratorPromiseBase& promise, state initialState) noexcept
                 : _promise(promise)
                 , _initialState(initialState)
         {
         }
 
-        bool await_ready() const noexcept {
+        constexpr bool await_ready() const noexcept {
             INTERNAL_COROUTINE_DEBUG("AsyncGeneratorYieldOperation::await_ready {} {}", _initialState, _promise._id);
             return _initialState == state::value_not_ready_consumer_suspended;
         }
 
-        bool await_suspend(std::coroutine_handle<> producer) noexcept;
+        constexpr bool await_suspend(std::coroutine_handle<> producer) noexcept;
 
-        void await_resume() noexcept {
+        constexpr void await_resume() noexcept {
         }
 
     private:
@@ -196,7 +201,7 @@ namespace Ichor::Detail {
             *_destroyed = true;
         };
 
-        AsyncGenerator<T> get_return_object() noexcept {
+        constexpr AsyncGenerator<T> get_return_object() noexcept {
             return AsyncGenerator<T>{ *this };
         }
 
@@ -210,22 +215,22 @@ namespace Ichor::Detail {
 
         void return_value(value_type &&value) noexcept(std::is_nothrow_constructible_v<T, T&&>);
 
-        T& value() noexcept {
+        constexpr T& value() noexcept {
             INTERNAL_COROUTINE_DEBUG("request value {}, {}", _id, _currentValue.has_value());
             return _currentValue.value();
         }
 
-        [[nodiscard]] bool finished() const noexcept final {
+        [[nodiscard]] constexpr bool finished() const noexcept final {
             return _finished;
         }
 
-        ReferenceCountedPointer<bool>& get_destroyed() noexcept  {
+        constexpr ReferenceCountedPointer<bool>& get_destroyed() noexcept  {
             INTERNAL_COROUTINE_DEBUG("AsyncGeneratorPromise<{}>::get_destroyed {}, {}", typeName<T>(), _id, *_destroyed);
             return _destroyed;
         }
 
     private:
-        void set_finished() noexcept final {
+        constexpr void set_finished() noexcept final {
             INTERNAL_COROUTINE_DEBUG("set_finished {} {}", _id, typeName<T>());
 
 #ifdef ICHOR_USE_HARDENING
@@ -257,22 +262,22 @@ namespace Ichor::Detail {
             *_destroyed = true;
         };
 
-        AsyncGenerator<void> get_return_object() noexcept;
+        constexpr AsyncGenerator<void> get_return_object() noexcept;
 
         AsyncGeneratorYieldOperation yield_value(Ichor::Empty) noexcept;
 
         void return_void() noexcept;
 
-        [[nodiscard]] bool finished() const noexcept final {
+        [[nodiscard]] constexpr bool finished() const noexcept final {
             return _finished;
         }
 
-        ReferenceCountedPointer<bool>& get_destroyed() noexcept  {
+        constexpr ReferenceCountedPointer<bool>& get_destroyed() noexcept  {
             return _destroyed;
         }
 
     private:
-        void set_finished() noexcept final {
+        constexpr void set_finished() noexcept final {
             INTERNAL_COROUTINE_DEBUG("set_finished {}", _id);
             _finished = true;
         }
