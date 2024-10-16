@@ -12,9 +12,7 @@
 #include <poll.h>
 #include <thread>
 
-uint64_t Ichor::TcpConnectionService::tcpConnId{};
-
-Ichor::TcpConnectionService::TcpConnectionService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)), _socket(-1), _id(tcpConnId++), _attempts(), _priority(INTERNAL_EVENT_PRIORITY), _quit() {
+Ichor::TcpConnectionService::TcpConnectionService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)), _socket(-1), _attempts(), _priority(INTERNAL_EVENT_PRIORITY), _quit() {
     reg.registerDependency<ILogger>(this, DependencyFlags::NONE);
     reg.registerDependency<ITimerFactory>(this, DependencyFlags::REQUIRED);
 }
@@ -26,9 +24,6 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::TcpConnectionService::
     if(auto propIt = getProperties().find("TimeoutSendUs"); propIt != getProperties().end()) {
         _sendTimeout = Ichor::any_cast<int64_t>(propIt->second);
     }
-    if(auto propIt = getProperties().find("TimeoutRecvUs"); propIt != getProperties().end()) {
-        _recvTimeout = Ichor::any_cast<int64_t>(propIt->second);
-    }
 
     if(getProperties().contains("Socket")) {
         if(auto propIt = getProperties().find("Socket"); propIt != getProperties().end()) {
@@ -39,26 +34,23 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::TcpConnectionService::
         ::setsockopt(_socket, IPPROTO_TCP, TCP_NODELAY, &setting, sizeof(setting));
 
         timeval timeout{};
-        timeout.tv_usec = _recvTimeout;
-        setsockopt(_socket, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
         timeout.tv_usec = _sendTimeout;
         setsockopt(_socket, SOL_SOCKET, SO_SNDTIMEO, &timeout, sizeof(timeout));
 
-        auto flags = ::fcntl(_socket, F_GETFL, 0);
-        ::fcntl(_socket, F_SETFL, flags | O_NONBLOCK);
-        ICHOR_LOG_TRACE(_logger, "[{}] Starting TCP connection for existing socket", _id);
+        ICHOR_LOG_DEBUG(_logger, "[{}] Starting TCP connection for existing socket", getServiceId());
     } else {
         auto addrIt = getProperties().find("Address");
         auto portIt = getProperties().find("Port");
 
         if(addrIt == getProperties().end()) {
-            ICHOR_LOG_ERROR(_logger, "[{}] Missing address", _id);
+            ICHOR_LOG_ERROR(_logger, "[{}] Missing address", getServiceId());
             co_return tl::unexpected(StartError::FAILED);
         }
         if(portIt == getProperties().end()) {
-            ICHOR_LOG_ERROR(_logger, "[{}] Missing port", _id);
+            ICHOR_LOG_ERROR(_logger, "[{}] Missing port", getServiceId());
             co_return tl::unexpected(StartError::FAILED);
         }
+        ICHOR_LOG_TRACE(_logger, "[{}] connecting to {}:{}", getServiceId(), Ichor::any_cast<std::string&>(addrIt->second), Ichor::any_cast<uint16_t>(portIt->second));
 
         // The start function possibly gets called multiple times due to trying to recover from not being able to connect
         if(_socket == -1) {
@@ -72,13 +64,8 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::TcpConnectionService::
         ::setsockopt(_socket, IPPROTO_TCP, TCP_NODELAY, &setting, sizeof(setting));
 
         timeval timeout{};
-        timeout.tv_usec = _recvTimeout;
-        setsockopt(_socket, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
         timeout.tv_usec = _sendTimeout;
         setsockopt(_socket, SOL_SOCKET, SO_SNDTIMEO, &timeout, sizeof(timeout));
-
-        auto flags = ::fcntl(_socket, F_GETFL, 0);
-        ::fcntl(_socket, F_SETFL, flags | O_NONBLOCK);
 
         sockaddr_in address{};
         address.sin_family = AF_INET;
@@ -90,61 +77,69 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::TcpConnectionService::
             throw std::runtime_error("inet_pton invalid address for given address family (has to be ipv4-valid address)");
         }
 
-        bool connected{};
-        while(!connected && connect(_socket, (struct sockaddr *)&address, sizeof(address)) < 0) {
-            ICHOR_LOG_ERROR(_logger, "[{}] connect error {}", _id, errno);
+        bool connected = connect(_socket, (struct sockaddr *)&address, sizeof(address)) < 0;
+        while(!connected && _attempts < 5) {
+            connected = connect(_socket, (struct sockaddr *)&address, sizeof(address)) < 0;
+            if(connected) {
+                break;
+            }
+            ICHOR_LOG_TRACE(_logger, "[{}] connect error {}", getServiceId(), errno);
             if(errno == EINPROGRESS) {
-                while(_attempts++ >= 5) {
-                    pollfd pfd{};
-                    pfd.fd = _socket;
-                    pfd.events = POLLOUT;
-                    ret = poll(&pfd, 1, static_cast<int>(_sendTimeout));
+                // this is from when the socket was marked as nonblocking, don't think this is necessary anymore.
+                pollfd pfd{};
+                pfd.fd = _socket;
+                pfd.events = POLLOUT;
+                ret = poll(&pfd, 1, static_cast<int>(_sendTimeout/1'000));
+
+                if(ret < 0) {
+                    ICHOR_LOG_ERROR(_logger, "[{}] poll error {}", getServiceId(), errno);
+                    continue;
+                }
+
+                // timeout
+                if(ret == 0) {
+                    continue;
+                }
+
+                if(pfd.revents & POLLERR) {
+                    ICHOR_LOG_ERROR(_logger, "[{}] POLLERR {}", getServiceId(), pfd.revents);
+                } else if(pfd.revents & POLLHUP) {
+                    ICHOR_LOG_ERROR(_logger, "[{}] POLLHUP {}", getServiceId(), pfd.revents);
+                } else if(pfd.revents & POLLOUT) {
+                    int connect_result{};
+                    socklen_t result_len = sizeof(connect_result);
+                    ret = getsockopt(_socket, SOL_SOCKET, SO_ERROR, &connect_result, &result_len);
 
                     if(ret < 0) {
-                        ICHOR_LOG_ERROR(_logger, "[{}] poll error {}", _id, errno);
-                        continue;
+                        throw std::runtime_error("getsocketopt error: Couldn't connect");
                     }
 
-                    // timeout
-                    if(ret == 0) {
-                        continue;
-                    }
-
-                    if(pfd.revents & POLLERR) {
-                        ICHOR_LOG_ERROR(_logger, "[{}] POLLERR {} {} {}", _id, pfd.revents);
-                    } else if(pfd.revents & POLLHUP) {
-                        ICHOR_LOG_ERROR(_logger, "[{}] POLLHUP {} {} {}", _id, pfd.revents);
-                    } else if(pfd.revents & POLLOUT) {
-                        int connect_result{};
-                        socklen_t result_len = sizeof(connect_result);
-                        ret = getsockopt(_socket, SOL_SOCKET, SO_ERROR, &connect_result, &result_len);
-
-                        if(ret < 0) {
-                            throw std::runtime_error("getsocketopt error: Couldn't connect");
-                        }
-
-                        // connect failed, retry
-                        if(connect_result < 0) {
-                            break;
-                        }
-                        connected = true;
+                    // connect failed, retry
+                    if(connect_result < 0) {
+                        ICHOR_LOG_ERROR(_logger, "[{}] POLLOUT {} {}", getServiceId(), pfd.revents, connect_result);
                         break;
                     }
+                    connected = true;
+                    break;
                 }
+            } else if(errno == EISCONN) {
+                connected = true;
+                break;
             } else if(errno == EALREADY) {
                 std::this_thread::sleep_for(std::chrono::microseconds(_sendTimeout));
             } else {
                 _attempts++;
             }
-
-            // we don't want to increment attempts in the EINPROGRESS case, but we do want to check it here
-            if(_attempts >= 5) {
-                throw std::runtime_error("Couldn't connect");
-            }
         }
 
         auto *ip = ::inet_ntoa(address.sin_addr);
-        ICHOR_LOG_TRACE(_logger, "[{}] Starting TCP connection for {}:{}", _id, ip, ::ntohs(address.sin_port));
+
+        if(!connected) {
+            ICHOR_LOG_ERROR(_logger, "[{}] Couldn't start TCP connection for {}:{}", getServiceId(), ip, ::ntohs(address.sin_port));
+            GetThreadLocalEventQueue().pushEvent<StopServiceEvent>(getServiceId(), getServiceId(), true);
+            co_return tl::unexpected(StartError::FAILED);
+        }
+        ICHOR_LOG_DEBUG(_logger, "[{}] Starting TCP connection for {}:{}", getServiceId(), ip, ::ntohs(address.sin_port));
     }
 
     _timer = &_timerFactory->createTimer();
@@ -160,6 +155,7 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::TcpConnectionService::
 
 Ichor::Task<void> Ichor::TcpConnectionService::stop() {
     _quit = true;
+    ICHOR_LOG_INFO(_logger, "[{}] stopping service", getServiceId());
 
     if(_socket >= 0) {
         ::shutdown(_socket, SHUT_RDWR);
@@ -189,12 +185,13 @@ Ichor::Task<tl::expected<void, Ichor::IOError>> Ichor::TcpConnectionService::sen
     size_t sent_bytes = 0;
 
     if(_quit) {
-        ICHOR_LOG_TRACE(_logger, "[{}] quitting, no send", _id);
+        ICHOR_LOG_TRACE(_logger, "[{}] quitting, no send", getServiceId());
         co_return tl::unexpected(IOError::SERVICE_QUITTING);
     }
 
     while(sent_bytes < msg.size()) {
         auto ret = ::send(_socket, msg.data() + sent_bytes, msg.size() - sent_bytes, MSG_NOSIGNAL);
+        ICHOR_LOG_TRACE(_logger, "[{}] queued sending {} bytes, errno = {}", getServiceId(), ret, errno);
 
         if(ret < 0) {
             co_return tl::unexpected(IOError::FAILED);
@@ -208,7 +205,7 @@ Ichor::Task<tl::expected<void, Ichor::IOError>> Ichor::TcpConnectionService::sen
 
 Ichor::Task<tl::expected<void, Ichor::IOError>> Ichor::TcpConnectionService::sendAsync(std::vector<std::vector<uint8_t>> &&msgs) {
     if(_quit) {
-        ICHOR_LOG_TRACE(_logger, "[{}] quitting, no send", _id);
+        ICHOR_LOG_TRACE(_logger, "[{}] quitting, no send", getServiceId());
         co_return tl::unexpected(IOError::SERVICE_QUITTING);
     }
 
@@ -217,6 +214,7 @@ Ichor::Task<tl::expected<void, Ichor::IOError>> Ichor::TcpConnectionService::sen
 
         while(sent_bytes < msg.size()) {
             auto ret = ::send(_socket, msg.data() + sent_bytes, msg.size() - sent_bytes, 0);
+            ICHOR_LOG_TRACE(_logger, "[{}] queued sending {} bytes", getServiceId(), ret);
 
             if(ret < 0) {
                 co_return tl::unexpected(IOError::FAILED);
@@ -253,26 +251,33 @@ void Ichor::TcpConnectionService::setReceiveHandler(std::function<void(std::span
 void Ichor::TcpConnectionService::recvHandler() {
     ScopeGuard sg{[this]() {
         if(!_quit) {
-            _timer->startTimer();
+            if(!_timer->startTimer()) {
+                GetThreadLocalEventQueue().pushEvent<RunFunctionEvent>(getServiceId(), [this]() {
+                    if(!_timer->startTimer()) {
+                        std::terminate();
+                    }
+                });
+            }
         } else {
-            ICHOR_LOG_TRACE(_logger, "[{}] quitting, no push", _id);
+            ICHOR_LOG_TRACE(_logger, "[{}] quitting, no push", getServiceId());
         }
     }};
 	std::vector<uint8_t> msg{};
-	int64_t ret{};
+	ssize_t ret{};
 	{
-        std::array<uint8_t, 1024> buf;
+        std::array<uint8_t, 4096> buf;
 		do {
-			ret = recv(_socket, buf.data(), buf.size(), 0);
+			ret = recv(_socket, buf.data(), buf.size(), MSG_DONTWAIT);
 			if (ret > 0) {
 				auto data = std::span<uint8_t const>{reinterpret_cast<uint8_t const*>(buf.data()), static_cast<decltype(buf.size())>(ret)};
 				msg.insert(msg.end(), data.begin(), data.end());
 			}
 		} while (ret > 0 && !_quit);
 	}
+    ICHOR_LOG_TRACE(_logger, "[{}] last received {} bytes, msg size = {}, errno = {}", getServiceId(), ret, msg.size(), errno);
 
     if (_quit) {
-        ICHOR_LOG_TRACE(_logger, "[{}] quitting", _id);
+        ICHOR_LOG_TRACE(_logger, "[{}] quitting", getServiceId());
         return;
     }
 
@@ -286,6 +291,7 @@ void Ichor::TcpConnectionService::recvHandler() {
 
     if(ret == 0) {
         // closed connection
+        ICHOR_LOG_INFO(_logger, "[{}] peer closed connection", getServiceId());
         GetThreadLocalEventQueue().pushEvent<StopServiceEvent>(getServiceId(), getServiceId(), true);
         return;
     }
@@ -294,7 +300,7 @@ void Ichor::TcpConnectionService::recvHandler() {
 		if(errno == EAGAIN) {
 			return;
 		}
-        ICHOR_LOG_ERROR(_logger, "[{}] Error receiving from socket: {}", _id, errno);
+        ICHOR_LOG_ERROR(_logger, "[{}] Error receiving from socket: {}", getServiceId(), errno);
         GetThreadLocalEventQueue().pushEvent<StopServiceEvent>(getServiceId(), getServiceId(), true);
         return;
     }
