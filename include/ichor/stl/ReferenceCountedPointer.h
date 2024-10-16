@@ -65,29 +65,29 @@ namespace Ichor {
     class [[nodiscard]] ReferenceCountedPointer final {
     public:
         constexpr ReferenceCountedPointer() noexcept = default;
-        ReferenceCountedPointer(const ReferenceCountedPointer &o) noexcept : _ptr(o._ptr) {
+        constexpr ReferenceCountedPointer(const ReferenceCountedPointer &o) noexcept : _ptr(o._ptr) {
             _ptr->useCount++;
         }
         template <typename U> requires Constructible<T, U>
-        ReferenceCountedPointer(const ReferenceCountedPointer<U> &o) noexcept : _ptr(o._ptr) {
+        constexpr ReferenceCountedPointer(const ReferenceCountedPointer<U> &o) noexcept : _ptr(o._ptr) {
             INTERNAL_STL_DEBUG("ReferenceCountedPointer<{}>(const ReferenceCountedPointer<{}> &o) {} {}", typeName<T>(), typeName<U>(), RFP_ID _ptr == nullptr);
             _ptr->useCount++;
         }
-        ReferenceCountedPointer(ReferenceCountedPointer &&o) noexcept : _ptr(o._ptr) {
+        constexpr ReferenceCountedPointer(ReferenceCountedPointer &&o) noexcept : _ptr(o._ptr) {
             o._ptr = nullptr;
         }
         template <typename U> requires Constructible<T, U>
-        ReferenceCountedPointer(ReferenceCountedPointer<U> &&o) noexcept : _ptr(o._ptr) {
+        constexpr ReferenceCountedPointer(ReferenceCountedPointer<U> &&o) noexcept : _ptr(o._ptr) {
             INTERNAL_STL_DEBUG("ReferenceCountedPointer<{}>(ReferenceCountedPointer<{}> &&o) {} {}", typeName<T>(), typeName<U>(), RFP_ID _ptr == nullptr);
             o._ptr = nullptr;
         }
 
-        explicit ReferenceCountedPointer(T* p) : _ptr(new Detail::ReferenceCountedPointerDeleter(p, [](void *ptr) { delete static_cast<T*>(ptr); })) {
+        explicit constexpr ReferenceCountedPointer(T* p) : _ptr(new Detail::ReferenceCountedPointerDeleter(p, [](void *ptr) { delete static_cast<T*>(ptr); })) {
             INTERNAL_STL_DEBUG("ReferenceCountedPointer<{}>(T* p) {} {}", typeName<T>(), RFP_ID _ptr == nullptr);
         }
 
         template <typename U> requires Constructible<T, U>
-        explicit ReferenceCountedPointer(U* p) : _ptr(new Detail::ReferenceCountedPointerDeleter(p, [](void *ptr) { delete static_cast<U*>(ptr); })) {
+        explicit constexpr ReferenceCountedPointer(U* p) : _ptr(new Detail::ReferenceCountedPointerDeleter(p, [](void *ptr) { delete static_cast<U*>(ptr); })) {
             INTERNAL_STL_DEBUG("ReferenceCountedPointer<{}>({}* p) {} {}", typeName<T>(), typeName<U>(), RFP_ID _ptr == nullptr);
         }
         template <typename... U> requires Constructible<T, U...>
@@ -105,12 +105,12 @@ namespace Ichor {
             unique.release();
         }
 
-        ~ReferenceCountedPointer() noexcept {
+        constexpr ~ReferenceCountedPointer() noexcept {
             INTERNAL_STL_DEBUG("~ReferenceCountedPointer<{}>() {} {}", typeName<T>(), RFP_ID _ptr == nullptr);
             decrement();
         }
 
-        ReferenceCountedPointer& operator=(const ReferenceCountedPointer &o) noexcept {
+        constexpr ReferenceCountedPointer& operator=(const ReferenceCountedPointer &o) noexcept {
             if(this == &o) [[unlikely]] {
                 return *this;
             }
@@ -123,7 +123,7 @@ namespace Ichor {
         }
 
         template <typename U> requires Constructible<T, U>
-        ReferenceCountedPointer& operator=(const ReferenceCountedPointer<U> &o) noexcept {
+        constexpr ReferenceCountedPointer& operator=(const ReferenceCountedPointer<U> &o) noexcept {
             INTERNAL_STL_DEBUG("ReferenceCountedPointer<{}> operator=(const ReferenceCountedPointer<{}> &o) {} {}", typeName<T>(), typeName<U>(), RFP_ID _ptr == nullptr);
             decrement();
             _ptr = o._ptr;
@@ -132,7 +132,7 @@ namespace Ichor {
             return *this;
         }
 
-        ReferenceCountedPointer& operator=(ReferenceCountedPointer &&o) noexcept {
+        constexpr ReferenceCountedPointer& operator=(ReferenceCountedPointer &&o) noexcept {
             if(this == &o) [[unlikely]] {
                 return *this;
             }
@@ -145,7 +145,7 @@ namespace Ichor {
         }
 
         template <typename U> requires Constructible<T, U>
-        ReferenceCountedPointer& operator=(ReferenceCountedPointer<U> &&o) noexcept {
+        constexpr ReferenceCountedPointer& operator=(ReferenceCountedPointer<U> &&o) noexcept {
             INTERNAL_STL_DEBUG("ReferenceCountedPointer<{}> operator=(ReferenceCountedPointer<{}> &&o) {} {}", typeName<T>(), typeName<U>(), RFP_ID _ptr == nullptr);
             decrement();
             _ptr = o._ptr;
@@ -155,7 +155,7 @@ namespace Ichor {
         }
 
         template <typename U> requires Constructible<T, U>
-        ReferenceCountedPointer& operator=(U *p) noexcept {
+        constexpr ReferenceCountedPointer& operator=(U *p) noexcept {
             INTERNAL_STL_DEBUG("ReferenceCountedPointer<{}> operator=({}* p) {} {}", typeName<T>(), typeName<U>(), RFP_ID _ptr == nullptr);
             decrement();
             _ptr = new Detail::ReferenceCountedPointerDeleter(p, [](void *ptr) { delete static_cast<U*>(ptr); });
@@ -164,7 +164,7 @@ namespace Ichor {
         }
 
         template <typename UniqueDeleter>
-        ReferenceCountedPointer& operator=(std::unique_ptr<T, UniqueDeleter> unique) noexcept {
+        constexpr ReferenceCountedPointer& operator=(std::unique_ptr<T, UniqueDeleter> unique) noexcept {
             INTERNAL_STL_DEBUG("ReferenceCountedPointer<{}> operator=(unique) {} {}", typeName<T>(), RFP_ID _ptr == nullptr);
             decrement();
             _ptr = new Detail::ReferenceCountedPointerDeleter(unique.get(), [deleter = unique.get_deleter()](void *ptr) { deleter(static_cast<T*>(ptr)); });
@@ -173,7 +173,7 @@ namespace Ichor {
             return *this;
         }
 
-        ReferenceCountedPointer& operator=(decltype(nullptr)) noexcept {
+        constexpr ReferenceCountedPointer& operator=(decltype(nullptr)) noexcept {
             INTERNAL_STL_DEBUG("ReferenceCountedPointer<{}> operator=(nullptr) {} {}", typeName<T>(), RFP_ID _ptr == nullptr);
             decrement();
             _ptr = nullptr;
@@ -181,7 +181,7 @@ namespace Ichor {
             return *this;
         }
 
-        [[nodiscard]] T& operator*() const noexcept {
+        [[nodiscard]] constexpr T& operator*() const noexcept {
             if constexpr (std::is_same_v<T, bool>) {
                 INTERNAL_STL_DEBUG("ReferenceCountedPointer<{}> operator*() {} {} bool! {}", typeName<T>(), RFP_ID _ptr == nullptr, *static_cast<T*>(_ptr->ptr.get()));
             } else {
@@ -195,13 +195,13 @@ namespace Ichor {
             return *static_cast<T*>(_ptr->ptr.get());
         }
 
-        [[nodiscard]] T* operator->() const noexcept {
+        [[nodiscard]] constexpr T* operator->() const noexcept {
             INTERNAL_STL_DEBUG("ReferenceCountedPointer<{}> operator->() {} {}", typeName<T>(), RFP_ID _ptr == nullptr);
-        if constexpr (DO_INTERNAL_STL_DEBUG || DO_HARDENING) {
-            if (_ptr == nullptr) [[unlikely]] {
-                std::terminate();
+            if constexpr (DO_INTERNAL_STL_DEBUG || DO_HARDENING) {
+                if (_ptr == nullptr) [[unlikely]] {
+                    std::terminate();
+                }
             }
-        }
             return static_cast<T*>(_ptr->ptr.get());
         }
 
@@ -213,18 +213,18 @@ namespace Ichor {
 //            return _ptr != nullptr;
 //        }
 
-        [[nodiscard]] bool operator==(decltype(nullptr)) const noexcept {
+        [[nodiscard]] constexpr bool operator==(decltype(nullptr)) const noexcept {
             INTERNAL_STL_DEBUG("ReferenceCountedPointer<{}> operator==(nullptr) {} {}", typeName<T>(), RFP_ID _ptr == nullptr);
             return _ptr == nullptr;
         }
 
         template <typename U>
-        [[nodiscard]] bool operator==(const ReferenceCountedPointer<U> &o) const noexcept {
+        [[nodiscard]] constexpr bool operator==(const ReferenceCountedPointer<U> &o) const noexcept {
             INTERNAL_STL_DEBUG("ReferenceCountedPointer<{}> operator==(const ReferenceCountedPointer<{}> &) {} {}", typeName<T>(), typeName<U>(), RFP_ID _ptr == nullptr);
             return _ptr == o._ptr;
         }
 
-        [[nodiscard]] uint64_t use_count() const noexcept {
+        [[nodiscard]] constexpr uint64_t use_count() const noexcept {
             if(_ptr == nullptr) {
                 return 0;
             }
@@ -232,11 +232,11 @@ namespace Ichor {
             return _ptr->useCount;
         }
 
-        [[nodiscard]] bool has_value() const noexcept {
+        [[nodiscard]] constexpr bool has_value() const noexcept {
             return _ptr != nullptr;
         }
 
-        [[nodiscard]] T* get() const noexcept {
+        [[nodiscard]] constexpr T* get() const noexcept {
             INTERNAL_STL_DEBUG("ReferenceCountedPointer<{}> get() {} {}", typeName<T>(), RFP_ID _ptr == nullptr);
             if constexpr (DO_INTERNAL_STL_DEBUG || DO_HARDENING) {
                 if (_ptr == nullptr) [[unlikely]] {
@@ -246,14 +246,14 @@ namespace Ichor {
             return static_cast<T*>(_ptr->ptr.get());
         }
 
-        void swap(ReferenceCountedPointer<T> &o) noexcept {
+        constexpr void swap(ReferenceCountedPointer<T> &o) noexcept {
             auto *ptr = _ptr;
             _ptr = o._ptr;
             o._ptr = ptr;
         }
 
     private:
-        void decrement() const noexcept {
+        constexpr void decrement() const noexcept {
             if(_ptr != nullptr) {
                 _ptr->useCount--;
                 if(_ptr->useCount == 0) {
@@ -272,14 +272,14 @@ namespace Ichor {
     };
 
     template <typename T, typename... Args>
-    ReferenceCountedPointer<T> make_reference_counted(Args&&... args) {
+    constexpr ReferenceCountedPointer<T> make_reference_counted(Args&&... args) {
         return ReferenceCountedPointer<T>(std::forward<Args>(args)...);
     }
 }
 
 namespace std {
     template<typename T>
-    inline void swap(Ichor::ReferenceCountedPointer<T>& a, Ichor::ReferenceCountedPointer<T>& b) noexcept {
+    inline constexpr void swap(Ichor::ReferenceCountedPointer<T>& a, Ichor::ReferenceCountedPointer<T>& b) noexcept {
         a.swap(b);
     }
 }
