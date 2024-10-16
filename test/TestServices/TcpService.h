@@ -31,13 +31,14 @@ public:
     ~TcpService() final = default;
 
     void addDependencyInstance(IConnectionService &connectionService, IService &svc) {
-        fmt::println("svc injected {} {}", svc.getServiceId(), connectionService.isClient());
+        fmt::println("{} svc injected {} {} {} {} {}", getServiceId(), svc.getServiceId(), connectionService.isClient(), evtGate.load(std::memory_order_acquire), _clientService == nullptr, _hostService == nullptr);
         if(connectionService.isClient()) {
             _clientService = &connectionService;
             _clientId = svc.getServiceId();
         } else {
             _hostService = &connectionService;
             _hostService->setReceiveHandler([this](std::span<uint8_t const> data) {
+                fmt::println("svc recv {}", data.size());
                 std::string_view fullMsg{reinterpret_cast<char const*>(data.data()), data.size()};
                 if(msgs.empty()) {
                     msgs.emplace_back();

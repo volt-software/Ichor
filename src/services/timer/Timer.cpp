@@ -36,7 +36,7 @@ bool Ichor::Timer::startTimer(bool fireImmediately) {
     }
     std::unique_lock l{_m};
     INTERNAL_IO_DEBUG("timer {} for {} startTimer({}) {} {}", _timerId, _requestingServiceId, fireImmediately, _state, _quitCbs.size());
-    if(_state == TimerState::STOPPED) {
+    if(_state == TimerState::STOPPED || _state == TimerState::STOPPING) {
         l.unlock();
         if(_eventInsertionThread && _eventInsertionThread->joinable()) {
             _eventInsertionThread->join();

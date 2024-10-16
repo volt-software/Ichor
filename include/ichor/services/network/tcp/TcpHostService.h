@@ -31,7 +31,6 @@ namespace Ichor {
      * - "Port" uint16_t - What port to bind to (required)
      * - "Priority" uint64_t - Which priority to use for inserted events (default INTERNAL_EVENT_PRIORITY)
      * - "TimeoutSendUs" int64_t - Timeout in microseconds for send calls (default 250'000)
-     * - "TimeoutRecvUs" int64_t - Timeout in microseconds for recv calls (default 250'000)
      */
     class TcpHostService final : public IHostService, public AdvancedService<TcpHostService> {
     public:
