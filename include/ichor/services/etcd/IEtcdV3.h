@@ -719,7 +719,7 @@ struct fmt::formatter<Ichor::Etcd::v3::EtcdError> {
     }
 
     template <typename FormatContext>
-    auto format(const Ichor::Etcd::v3::EtcdError& state, FormatContext& ctx) {
+    auto format(const Ichor::Etcd::v3::EtcdError& state, FormatContext& ctx) const {
         switch(state) {
             case Ichor::Etcd::v3::EtcdError::HTTP_RESPONSE_ERROR:
                 return fmt::format_to(ctx.out(), "HTTP_RESPONSE_ERROR");
@@ -761,7 +761,7 @@ struct fmt::formatter<Ichor::Etcd::v3::EtcdEventType> {
     }
 
     template <typename FormatContext>
-    auto format(const Ichor::Etcd::v3::EtcdEventType& state, FormatContext& ctx) {
+    auto format(const Ichor::Etcd::v3::EtcdEventType& state, FormatContext& ctx) const {
         switch(state) {
             case Ichor::Etcd::v3::EtcdEventType::PUT:
                 return fmt::format_to(ctx.out(), "PUT");
@@ -779,7 +779,7 @@ struct fmt::formatter<Ichor::Etcd::v3::EtcdSortOrder> {
     }
 
     template <typename FormatContext>
-    auto format(const Ichor::Etcd::v3::EtcdSortOrder& state, FormatContext& ctx) {
+    auto format(const Ichor::Etcd::v3::EtcdSortOrder& state, FormatContext& ctx) const {
         switch(state) {
             case Ichor::Etcd::v3::EtcdSortOrder::NONE:
                 return fmt::format_to(ctx.out(), "NONE");
@@ -799,7 +799,7 @@ struct fmt::formatter<Ichor::Etcd::v3::EtcdSortTarget> {
     }
 
     template <typename FormatContext>
-    auto format(const Ichor::Etcd::v3::EtcdSortTarget& state, FormatContext& ctx) {
+    auto format(const Ichor::Etcd::v3::EtcdSortTarget& state, FormatContext& ctx) const {
         switch(state) {
             case Ichor::Etcd::v3::EtcdSortTarget::KEY:
                 return fmt::format_to(ctx.out(), "KEY");
@@ -823,7 +823,7 @@ struct fmt::formatter<Ichor::Etcd::v3::EtcdCompareResult> {
     }
 
     template <typename FormatContext>
-    auto format(const Ichor::Etcd::v3::EtcdCompareResult& state, FormatContext& ctx) {
+    auto format(const Ichor::Etcd::v3::EtcdCompareResult& state, FormatContext& ctx) const {
         switch(state) {
             case Ichor::Etcd::v3::EtcdCompareResult::EQUAL:
                 return fmt::format_to(ctx.out(), "EQUAL");
@@ -845,7 +845,7 @@ struct fmt::formatter<Ichor::Etcd::v3::EtcdCompareTarget> {
     }
 
     template <typename FormatContext>
-    auto format(const Ichor::Etcd::v3::EtcdCompareTarget& state, FormatContext& ctx) {
+    auto format(const Ichor::Etcd::v3::EtcdCompareTarget& state, FormatContext& ctx) const {
         switch(state) {
             case Ichor::Etcd::v3::EtcdCompareTarget::VERSION:
                 return fmt::format_to(ctx.out(), "VERSION");
@@ -869,7 +869,7 @@ struct fmt::formatter<Ichor::Etcd::v3::EtcdAuthPermissionType> {
     }
 
     template <typename FormatContext>
-    auto format(const Ichor::Etcd::v3::EtcdAuthPermissionType& state, FormatContext& ctx) {
+    auto format(const Ichor::Etcd::v3::EtcdAuthPermissionType& state, FormatContext& ctx) const {
         switch(state) {
             case Ichor::Etcd::v3::EtcdAuthPermissionType::READ:
                 return fmt::format_to(ctx.out(), "READ");

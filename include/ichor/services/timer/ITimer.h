@@ -78,7 +78,7 @@ struct fmt::formatter<Ichor::TimerState> {
     }
 
     template <typename FormatContext>
-    auto format(const Ichor::TimerState& change, FormatContext& ctx) {
+    auto format(const Ichor::TimerState& change, FormatContext& ctx) const {
         switch(change) {
             case Ichor::TimerState::STOPPED:
                 return fmt::format_to(ctx.out(), "STOPPED");

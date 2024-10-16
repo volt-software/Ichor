@@ -394,18 +394,14 @@ namespace Ichor::Etcd::v2 {
 }
 
 template <>
-struct fmt::formatter<Ichor::Etcd::v2::EtcdError>
-{
-    constexpr auto parse(format_parse_context& ctx)
-    {
+struct fmt::formatter<Ichor::Etcd::v2::EtcdError> {
+    constexpr auto parse(format_parse_context& ctx) {
         return ctx.end();
     }
 
     template <typename FormatContext>
-    auto format(const Ichor::Etcd::v2::EtcdError& state, FormatContext& ctx)
-    {
-        switch(state)
-        {
+    auto format(const Ichor::Etcd::v2::EtcdError& state, FormatContext& ctx) const {
+        switch(state) {
             case Ichor::Etcd::v2::EtcdError::HTTP_RESPONSE_ERROR:
                 return fmt::format_to(ctx.out(), "HTTP_RESPONSE_ERROR");
             case Ichor::Etcd::v2::EtcdError::JSON_PARSE_ERROR:
@@ -436,16 +432,13 @@ struct fmt::formatter<Ichor::Etcd::v2::EtcdError>
 };
 
 template <>
-struct fmt::formatter<Ichor::Etcd::v2::EtcdErrorCodes>
-{
-    constexpr auto parse(format_parse_context& ctx)
-    {
+struct fmt::formatter<Ichor::Etcd::v2::EtcdErrorCodes> {
+    constexpr auto parse(format_parse_context& ctx) {
         return ctx.end();
     }
 
     template <typename FormatContext>
-    auto format(const Ichor::Etcd::v2::EtcdErrorCodes& state, FormatContext& ctx)
-    {
+    auto format(const Ichor::Etcd::v2::EtcdErrorCodes& state, FormatContext& ctx) const {
         switch(state)
         {
             case Ichor::Etcd::v2::EtcdErrorCodes::KEY_DOES_NOT_EXIST:

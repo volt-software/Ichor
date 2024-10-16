@@ -273,7 +273,7 @@ struct fmt::formatter<Ichor::any> {
     }
 
     template <typename FormatContext>
-    auto format(const Ichor::any& change, FormatContext& ctx) {
+    auto format(const Ichor::any& change, FormatContext& ctx) const {
         return fmt::format_to(ctx.out(), "{}", change.to_string());
     }
 };

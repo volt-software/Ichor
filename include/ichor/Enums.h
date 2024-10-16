@@ -95,7 +95,7 @@ struct fmt::formatter<Ichor::ServiceState> {
     }
 
     template <typename FormatContext>
-    auto format(const Ichor::ServiceState& state, FormatContext& ctx) {
+    auto format(const Ichor::ServiceState& state, FormatContext& ctx) const {
         switch(state) {
             case Ichor::ServiceState::UNINSTALLED:
                 return fmt::format_to(ctx.out(), "UNINSTALLED");
@@ -123,7 +123,7 @@ struct fmt::formatter<Ichor::state> {
     }
 
     template <typename FormatContext>
-    auto format(const Ichor::state& state, FormatContext& ctx) {
+    auto format(const Ichor::state& state, FormatContext& ctx) const {
         switch(state) {
             case Ichor::state::unknown:
                 return fmt::format_to(ctx.out(), "unknown");
@@ -149,7 +149,7 @@ struct fmt::formatter<Ichor::Detail::DependencyChange> {
     }
 
     template <typename FormatContext>
-    auto format(const Ichor::Detail::DependencyChange& change, FormatContext& ctx) {
+    auto format(const Ichor::Detail::DependencyChange& change, FormatContext& ctx) const {
         switch(change) {
             case Ichor::Detail::DependencyChange::NOT_FOUND:
                 return fmt::format_to(ctx.out(), "NOT_FOUND");
@@ -171,7 +171,7 @@ struct fmt::formatter<Ichor::StartBehaviour> {
     }
 
     template <typename FormatContext>
-    auto format(const Ichor::StartBehaviour& change, FormatContext& ctx) {
+    auto format(const Ichor::StartBehaviour& change, FormatContext& ctx) const {
         switch(change) {
             case Ichor::StartBehaviour::DONE:
                 return fmt::format_to(ctx.out(), "DONE");
@@ -191,7 +191,7 @@ struct fmt::formatter<Ichor::LogLevel> {
     }
 
     template <typename FormatContext>
-    auto format(const Ichor::LogLevel& change, FormatContext& ctx) {
+    auto format(const Ichor::LogLevel& change, FormatContext& ctx) const {
         switch(change) {
             case Ichor::LogLevel::LOG_TRACE:
                 return fmt::format_to(ctx.out(), "LOG_TRACE");

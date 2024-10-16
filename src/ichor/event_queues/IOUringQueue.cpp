@@ -49,7 +49,7 @@ struct fmt::formatter<io_uring_op> {
     }
 
     template<typename FormatContext>
-    auto format(const io_uring_op &input, FormatContext &ctx) -> decltype(ctx.out()) {
+    auto format(const io_uring_op &input, FormatContext &ctx) const -> decltype(ctx.out()) {
         switch(input) {
             case io_uring_op::IORING_OP_NOP:
                 return fmt::format_to(ctx.out(), "io_uring_op::IORING_OP_NOP");

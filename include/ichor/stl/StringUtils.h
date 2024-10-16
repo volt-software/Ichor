@@ -132,7 +132,7 @@ struct fmt::formatter<Ichor::Version> {
     }
 
     template <typename FormatContext>
-    auto format(const Ichor::Version& v, FormatContext& ctx) {
+    auto format(const Ichor::Version& v, FormatContext& ctx) const {
         return fmt::format_to(ctx.out(), "{}.{}.{}", v.major, v.minor, v.patch);
     }
 };

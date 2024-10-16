@@ -108,7 +108,7 @@ struct fmt::formatter<Ichor::Filter> {
     }
 
     template <typename FormatContext>
-    auto format(const Ichor::Filter& f, FormatContext& ctx) {
+    auto format(const Ichor::Filter& f, FormatContext& ctx) const {
         return fmt::format_to(ctx.out(), "{}", f.getDescription());
     }
 };
