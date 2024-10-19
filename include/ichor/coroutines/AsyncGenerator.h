@@ -114,7 +114,7 @@ namespace Ichor {
             {
             }
 
-            constexpr AsyncGeneratorIterator<T>& await_resume();
+            ICHOR_COROUTINE_CONSTEXPR AsyncGeneratorIterator<T>& await_resume();
 
         private:
             AsyncGeneratorIterator<T>& _iterator;

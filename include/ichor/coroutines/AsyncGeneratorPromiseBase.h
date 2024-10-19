@@ -68,7 +68,7 @@ namespace Ichor::Detail {
             return {};
         }
 
-        constexpr AsyncGeneratorYieldOperation final_suspend() noexcept;
+        ICHOR_COROUTINE_CONSTEXPR AsyncGeneratorYieldOperation final_suspend() noexcept;
 
         constexpr void unhandled_exception() noexcept {
             // Don't bother capturing the exception if we have been cancelled
@@ -183,7 +183,7 @@ namespace Ichor::Detail {
             return _initialState == state::value_not_ready_consumer_suspended;
         }
 
-        constexpr bool await_suspend(std::coroutine_handle<> producer) noexcept;
+        ICHOR_COROUTINE_CONSTEXPR bool await_suspend(std::coroutine_handle<> producer) noexcept;
 
         constexpr void await_resume() noexcept {
         }
