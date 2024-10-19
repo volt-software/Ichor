@@ -47,12 +47,12 @@ namespace Ichor {
             }
 
         public:
-            constexpr bool await_ready() const noexcept {
+            ICHOR_COROUTINE_CONSTEXPR bool await_ready() const noexcept {
                 INTERNAL_COROUTINE_DEBUG("AsyncGeneratorAdvanceOperation::await_ready {} {}", _initialState, _promise->_id);
                 return _initialState == state::value_ready_producer_suspended;
             }
 
-            constexpr bool await_suspend(std::coroutine_handle<> consumerCoroutine) noexcept {
+            ICHOR_COROUTINE_CONSTEXPR bool await_suspend(std::coroutine_handle<> consumerCoroutine) noexcept {
                 INTERNAL_COROUTINE_DEBUG("AsyncGeneratorAdvanceOperation::await_suspend {} {}", _promise->_id, _promise->finished());
                 _promise->_consumerCoroutine = consumerCoroutine;
                 if(!_promise->_hasSuspended.has_value()) {
@@ -165,7 +165,7 @@ namespace Ichor {
         };
 
         template<typename T>
-        constexpr AsyncGeneratorIterator<T>& AsyncGeneratorIncrementOperation<T>::await_resume() {
+        ICHOR_COROUTINE_CONSTEXPR AsyncGeneratorIterator<T>& AsyncGeneratorIncrementOperation<T>::await_resume() {
             INTERNAL_COROUTINE_DEBUG("AsyncGeneratorIncrementOperation<{}>::await_resume {}", typeName<T>(), _promise->_id);
             if (_promise->finished()) {
                 // Update iterator to end()
@@ -184,24 +184,24 @@ namespace Ichor {
 
         public:
 
-            constexpr AsyncGeneratorBeginOperation(std::nullptr_t) noexcept
+            ICHOR_COROUTINE_CONSTEXPR AsyncGeneratorBeginOperation(std::nullptr_t) noexcept
                 : AsyncGeneratorAdvanceOperation(nullptr) {
                 INTERNAL_COROUTINE_DEBUG("AsyncGeneratorBeginOperation<{}>(nullptr) {}", typeName<T>(), _initialState);
             }
 
-            constexpr AsyncGeneratorBeginOperation(handle_type producerCoroutine) noexcept
+            ICHOR_COROUTINE_CONSTEXPR AsyncGeneratorBeginOperation(handle_type producerCoroutine) noexcept
                 : AsyncGeneratorAdvanceOperation(producerCoroutine.promise(), producerCoroutine) {
                 INTERNAL_COROUTINE_DEBUG("AsyncGeneratorBeginOperation<{}>(producerCoroutine) {} {}", typeName<T>(), _initialState, _promise->_state);
             }
 
             constexpr ~AsyncGeneratorBeginOperation() final = default;
 
-            constexpr bool await_ready() const noexcept {
+            ICHOR_COROUTINE_CONSTEXPR bool await_ready() const noexcept {
                 INTERNAL_COROUTINE_DEBUG("AsyncGeneratorBeginOperation<{}>::await_ready {}", typeName<T>(), _promise == nullptr ? 0u : _promise->_id);
                 return _promise == nullptr || AsyncGeneratorAdvanceOperation::await_ready();
             }
 
-            [[nodiscard]] constexpr bool get_finished() const noexcept final {
+            [[nodiscard]] ICHOR_COROUTINE_CONSTEXPR bool get_finished() const noexcept final {
                 INTERNAL_COROUTINE_DEBUG("AsyncGeneratorBeginOperation<{}>::get_finished {} {}", typeName<T>(), _promise == nullptr, _promise == nullptr ? false : _promise->finished());
                 return _promise == nullptr || _promise->finished();
             }
@@ -247,7 +247,7 @@ namespace Ichor {
                 return prom.promise().value();
             }
 
-            constexpr AsyncGeneratorIterator<T> await_resume() {
+            ICHOR_COROUTINE_CONSTEXPR AsyncGeneratorIterator<T> await_resume() {
                 if (_promise == nullptr) {
                     INTERNAL_COROUTINE_DEBUG("AsyncGeneratorIterator<{}>::await_resume NULL", typeName<T>());
                     // Called begin() on the empty generator.
@@ -263,7 +263,7 @@ namespace Ichor {
             }
         };
 
-        inline constexpr bool AsyncGeneratorYieldOperation::await_suspend(std::coroutine_handle<> producer) noexcept {
+        inline ICHOR_COROUTINE_CONSTEXPR bool AsyncGeneratorYieldOperation::await_suspend(std::coroutine_handle<> producer) noexcept {
             INTERNAL_COROUTINE_DEBUG("AsyncGeneratorYieldOperation::await_suspend {} {}", _promise._id, _promise.finished());
             state currentState = _initialState;
             if(!_promise._hasSuspended.has_value()) {
@@ -318,7 +318,7 @@ namespace Ichor {
             return true;
         }
 
-        inline constexpr AsyncGeneratorYieldOperation AsyncGeneratorPromiseBase::final_suspend() noexcept {
+        inline ICHOR_COROUTINE_CONSTEXPR AsyncGeneratorYieldOperation AsyncGeneratorPromiseBase::final_suspend() noexcept {
             INTERNAL_COROUTINE_DEBUG("AsyncGeneratorPromiseBase::final_suspend {}", _id);
             set_finished();
             return internal_yield_value();
@@ -350,17 +350,17 @@ namespace Ichor {
         using promise_type = Detail::AsyncGeneratorPromise<T>;
         using iterator = Detail::AsyncGeneratorIterator<T>;
 
-        constexpr AsyncGenerator() noexcept
+        ICHOR_COROUTINE_CONSTEXPR AsyncGenerator() noexcept
             : IGenerator(), _coroutine(nullptr), _destroyed() {
             INTERNAL_COROUTINE_DEBUG("AsyncGenerator<{}>()", typeName<T>());
         }
 
-        explicit constexpr AsyncGenerator(promise_type& promise) noexcept
+        explicit ICHOR_COROUTINE_CONSTEXPR AsyncGenerator(promise_type& promise) noexcept
             : IGenerator(), _coroutine(std::coroutine_handle<promise_type>::from_promise(promise)), _destroyed(promise.get_destroyed()) {
             INTERNAL_COROUTINE_DEBUG("AsyncGenerator<{}>(promise_type& promise) {} {}", typeName<T>(), _coroutine.promise().get_id(), *_destroyed);
         }
 
-        constexpr AsyncGenerator(AsyncGenerator&& other) noexcept
+        ICHOR_COROUTINE_CONSTEXPR AsyncGenerator(AsyncGenerator&& other) noexcept
             : IGenerator(), _coroutine(std::move(other._coroutine)), _destroyed(other._destroyed) {
             INTERNAL_COROUTINE_DEBUG("AsyncGenerator<{}>(AsyncGenerator&& other) {} {}", typeName<T>(), _coroutine.promise().get_id(), *_destroyed);
             other._coroutine = nullptr;
@@ -370,7 +370,7 @@ namespace Ichor {
             }
         }
 
-        constexpr ~AsyncGenerator() final {
+        ICHOR_COROUTINE_CONSTEXPR ~AsyncGenerator() final {
             INTERNAL_COROUTINE_DEBUG("~AsyncGenerator<{}>() {} {} {}", typeName<T>(), *_destroyed, _coroutine == nullptr, !(*_destroyed) && _coroutine != nullptr ? _coroutine.promise().get_id() : 0);
             if (!(*_destroyed) && _coroutine) {
                 if (_coroutine.promise().request_cancellation()) {
@@ -380,7 +380,7 @@ namespace Ichor {
             }
         }
 
-        constexpr AsyncGenerator& operator=(AsyncGenerator&& other) noexcept {
+        ICHOR_COROUTINE_CONSTEXPR AsyncGenerator& operator=(AsyncGenerator&& other) noexcept {
             INTERNAL_COROUTINE_DEBUG("operator=(AsyncGenerator<{}>&& other) {} {} {}", typeName<T>(), other._coroutine.promise().get_id(), *_destroyed, *other._destroyed);
             AsyncGenerator temp(std::move(other));
             swap(temp);
@@ -394,7 +394,7 @@ namespace Ichor {
         AsyncGenerator(const AsyncGenerator&) = delete;
         AsyncGenerator& operator=(const AsyncGenerator&) = delete;
 
-        [[nodiscard]] constexpr auto begin() noexcept {
+        [[nodiscard]] ICHOR_COROUTINE_CONSTEXPR auto begin() noexcept {
             INTERNAL_COROUTINE_DEBUG("AsyncGenerator<{}>::begin() {} {}", typeName<T>(), *_destroyed, _coroutine == nullptr);
             if ((*_destroyed) || !_coroutine) {
                 return Detail::AsyncGeneratorBeginOperation<T>{ nullptr };
@@ -403,7 +403,7 @@ namespace Ichor {
             return Detail::AsyncGeneratorBeginOperation<T>{ _coroutine };
         }
 
-        [[nodiscard]] constexpr std::unique_ptr<IAsyncGeneratorBeginOperation> begin_interface() noexcept final {
+        [[nodiscard]] ICHOR_COROUTINE_CONSTEXPR std::unique_ptr<IAsyncGeneratorBeginOperation> begin_interface() noexcept final {
             INTERNAL_COROUTINE_DEBUG("AsyncGenerator<{}>::begin_interface() {} {}", typeName<T>(), *_destroyed, _coroutine == nullptr);
             if ((*_destroyed) || !_coroutine) {
                 return std::make_unique<Detail::AsyncGeneratorBeginOperation<T>>(nullptr);
@@ -416,12 +416,12 @@ namespace Ichor {
             return iterator{ nullptr };
         }
 
-        [[nodiscard]] constexpr bool done() const noexcept final {
+        [[nodiscard]] ICHOR_COROUTINE_CONSTEXPR bool done() const noexcept final {
             INTERNAL_COROUTINE_DEBUG("AsyncGenerator<{}>::done() {} {}", typeName<T>(), *_destroyed, _coroutine == nullptr ? state::unknown : _coroutine.promise()._state);
             return (*_destroyed) || _coroutine == nullptr || _coroutine.done();
         }
 
-        constexpr void swap(AsyncGenerator& other) noexcept {
+        ICHOR_COROUTINE_CONSTEXPR void swap(AsyncGenerator& other) noexcept {
             INTERNAL_COROUTINE_DEBUG("AsyncGenerator<{}>::swap() {} {} {}", typeName<T>(), *_destroyed, _coroutine.promise()._state, *other._destroyed);
             using std::swap;
             swap(_coroutine, other._coroutine);
@@ -429,17 +429,17 @@ namespace Ichor {
         }
 
         template <typename U = T> requires (!std::is_same_v<U, void>)
-        [[nodiscard]] constexpr U& get_value() noexcept {
+        [[nodiscard]] ICHOR_COROUTINE_CONSTEXPR U& get_value() noexcept {
             INTERNAL_COROUTINE_DEBUG("AsyncGenerator<{}>::get_value() {} {} {}", typeName<T>(), typeName<U>(), *_destroyed, _coroutine.promise()._state);
             return _coroutine.promise().value();
         }
 
-        constexpr void set_priority(uint64_t priority) noexcept {
+        ICHOR_COROUTINE_CONSTEXPR void set_priority(uint64_t priority) noexcept {
             INTERNAL_COROUTINE_DEBUG("AsyncGenerator<{}>::set_priority({}) {} {}", typeName<T>(), priority, *_destroyed, _coroutine.promise()._state);
             _coroutine.promise().set_priority(priority);
         }
 
-        constexpr void set_service_id(ServiceIdType svcId) noexcept {
+        ICHOR_COROUTINE_CONSTEXPR void set_service_id(ServiceIdType svcId) noexcept {
             INTERNAL_COROUTINE_DEBUG("AsyncGenerator<{}>::set_service_id({}) {} {}", typeName<T>(), svcId, *_destroyed, _coroutine.promise()._state);
             _coroutine.promise().set_service_id(svcId);
         }
