@@ -26,6 +26,12 @@ namespace Ichor {
     struct Empty;
 }
 
+#ifdef ICHOR_ENABLE_INTERNAL_COROUTINE_DEBUGGING
+#define ICHOR_COROUTINE_CONSTEXPR
+#else
+#define ICHOR_COROUTINE_CONSTEXPR constexpr
+#endif
+
 namespace Ichor::Detail {
     constinit thread_local extern DependencyManager *_local_dm;
 
@@ -57,7 +63,7 @@ namespace Ichor::Detail {
         AsyncGeneratorPromiseBase(const AsyncGeneratorPromiseBase& other) = delete;
         AsyncGeneratorPromiseBase& operator=(const AsyncGeneratorPromiseBase& other) = delete;
 
-        constexpr std::suspend_always initial_suspend() const noexcept {
+        ICHOR_COROUTINE_CONSTEXPR std::suspend_always initial_suspend() const noexcept {
             INTERNAL_COROUTINE_DEBUG("AsyncGeneratorPromiseBase::initial_suspend {} {}", _id, _state);
             return {};
         }
@@ -102,7 +108,7 @@ namespace Ichor::Detail {
         /// Returns false if the producer coroutine was not at a suitable suspend-point.
         /// The coroutine will be destroyed when it next reaches a co_yield or co_return
         /// statement.
-        constexpr bool request_cancellation() noexcept {
+        ICHOR_COROUTINE_CONSTEXPR bool request_cancellation() noexcept {
             INTERNAL_COROUTINE_DEBUG("request_cancellation {}", _id);
             const auto previousState = std::exchange(_state, state::cancelled);
 
@@ -172,7 +178,7 @@ namespace Ichor::Detail {
         {
         }
 
-        constexpr bool await_ready() const noexcept {
+        ICHOR_COROUTINE_CONSTEXPR bool await_ready() const noexcept {
             INTERNAL_COROUTINE_DEBUG("AsyncGeneratorYieldOperation::await_ready {} {}", _initialState, _promise._id);
             return _initialState == state::value_not_ready_consumer_suspended;
         }
@@ -215,7 +221,7 @@ namespace Ichor::Detail {
 
         void return_value(value_type &&value) noexcept(std::is_nothrow_constructible_v<T, T&&>);
 
-        constexpr T& value() noexcept {
+        ICHOR_COROUTINE_CONSTEXPR T& value() noexcept {
             INTERNAL_COROUTINE_DEBUG("request value {}, {}", _id, _currentValue.has_value());
             return _currentValue.value();
         }
@@ -224,13 +230,13 @@ namespace Ichor::Detail {
             return _finished;
         }
 
-        constexpr ReferenceCountedPointer<bool>& get_destroyed() noexcept  {
+        ICHOR_COROUTINE_CONSTEXPR ReferenceCountedPointer<bool>& get_destroyed() noexcept  {
             INTERNAL_COROUTINE_DEBUG("AsyncGeneratorPromise<{}>::get_destroyed {}, {}", typeName<T>(), _id, *_destroyed);
             return _destroyed;
         }
 
     private:
-        constexpr void set_finished() noexcept final {
+        ICHOR_COROUTINE_CONSTEXPR void set_finished() noexcept final {
             INTERNAL_COROUTINE_DEBUG("set_finished {} {}", _id, typeName<T>());
 
 #ifdef ICHOR_USE_HARDENING
@@ -277,7 +283,7 @@ namespace Ichor::Detail {
         }
 
     private:
-        constexpr void set_finished() noexcept final {
+        ICHOR_COROUTINE_CONSTEXPR void set_finished() noexcept final {
             INTERNAL_COROUTINE_DEBUG("set_finished {}", _id);
             _finished = true;
         }
