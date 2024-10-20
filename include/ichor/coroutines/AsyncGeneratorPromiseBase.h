@@ -207,7 +207,7 @@ namespace Ichor::Detail {
             *_destroyed = true;
         };
 
-        constexpr AsyncGenerator<T> get_return_object() noexcept {
+        ICHOR_COROUTINE_CONSTEXPR AsyncGenerator<T> get_return_object() noexcept {
             return AsyncGenerator<T>{ *this };
         }
 
@@ -268,7 +268,7 @@ namespace Ichor::Detail {
             *_destroyed = true;
         };
 
-        constexpr AsyncGenerator<void> get_return_object() noexcept;
+        ICHOR_COROUTINE_CONSTEXPR AsyncGenerator<void> get_return_object() noexcept;
 
         AsyncGeneratorYieldOperation yield_value(Ichor::Empty) noexcept;
 

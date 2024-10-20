@@ -115,7 +115,7 @@ namespace Ichor::Detail {
         return internal_yield_value();
     }
 
-    inline void AsyncGeneratorPromise<void>::return_void() noexcept {
+    ICHOR_COROUTINE_CONSTEXPR inline void AsyncGeneratorPromise<void>::return_void() noexcept {
         INTERNAL_COROUTINE_DEBUG("return_value<void> {} {}", _id, !!_consumerCoroutine);
 
 #ifdef ICHOR_USE_HARDENING
@@ -126,7 +126,7 @@ namespace Ichor::Detail {
 #endif
     }
 
-    constexpr inline AsyncGenerator<void> AsyncGeneratorPromise<void>::get_return_object() noexcept {
+    ICHOR_COROUTINE_CONSTEXPR inline AsyncGenerator<void> AsyncGeneratorPromise<void>::get_return_object() noexcept {
         return AsyncGenerator<void>{ *this };
     }
 }
