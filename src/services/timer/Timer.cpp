@@ -1,6 +1,7 @@
 #include <ichor/services/timer/Timer.h>
 #include <ichor/events/RunFunctionEvent.h>
 #include <ichor/ScopeGuard.h>
+#include <fmt/format.h>
 #include <mutex>
 #if (defined(WIN32) || defined(_WIN32) || defined(__WIN32)) && !defined(__CYGWIN__)
 #include <windows.h>
@@ -42,9 +43,8 @@ bool Ichor::Timer::startTimer(bool fireImmediately) {
             _eventInsertionThread->join();
         }
         l.lock();
-        _startId++;
         _state = TimerState::STARTING;
-        _eventInsertionThread = std::make_unique<std::thread>([this, fireImmediately, startId = _startId]() { this->insertEventLoop(fireImmediately, startId); });
+        _eventInsertionThread = std::make_unique<std::thread>([this, fireImmediately]() { this->insertEventLoop(fireImmediately); });
 #if defined(__linux__) || defined(__CYGWIN__)
         pthread_setname_np(_eventInsertionThread->native_handle(), fmt::format("Tmr#{}", _timerId).c_str());
 #endif
@@ -128,7 +128,7 @@ Ichor::ServiceIdType Ichor::Timer::getRequestingServiceId() const noexcept {
     return _requestingServiceId;
 }
 
-void Ichor::Timer::insertEventLoop(bool fireImmediately, uint64_t startId) {
+void Ichor::Timer::insertEventLoop(bool fireImmediately) {
     INTERNAL_IO_DEBUG("timer {} for {} insertEventLoop", _timerId, _requestingServiceId);
 #if defined(__APPLE__)
     pthread_setname_np(fmt::format("Tmr#{}", _timerId).c_str());
@@ -138,7 +138,8 @@ void Ichor::Timer::insertEventLoop(bool fireImmediately, uint64_t startId) {
 #endif
 
     ScopeGuard sg{[this]() {
-        _queue.pushPrioritisedEvent<RunFunctionEvent>(0, getPriority(), [quitCbs = std::move(_quitCbs)](){
+        std::unique_lock l{_m};
+        _queue.pushPrioritisedEvent<RunFunctionEvent>(0, _priority, [quitCbs = std::move(_quitCbs)](){
             for(auto &cb : quitCbs) {
                 cb();
             }
