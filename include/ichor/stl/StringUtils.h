@@ -4,13 +4,21 @@
 #include <string_view>
 #include <algorithm>
 #include <tl/optional.h>
-#include <fmt/core.h>
+#include <fmt/base.h>
+#include <cstring>
+#include <cstdint>
+
+#ifdef _GLIBCXX_DEBUG
+#define NO_DEBUG_CONSTEXPR
+#else
+#define NO_DEBUG_CONSTEXPR constexpr
+#endif
 
 namespace Ichor {
 
     /// Code modified from https://stackoverflow.com/a/73078442/1460998
     /// converts a string to an integer with little error checking. Only use if you're very sure that the string is actually a number.
-    static constexpr inline int64_t FastAtoi(const char* str) noexcept {
+    static constexpr int64_t FastAtoi(const char* str) noexcept {
         int64_t val = 0;
         uint8_t x;
         bool neg{};
@@ -24,7 +32,7 @@ namespace Ichor {
 
     /// Code from https://stackoverflow.com/a/73078442/1460998
     /// converts a string to an unsigned integer with little error checking. Only use if you're very sure that the string is actually a number.
-    static constexpr inline uint64_t FastAtoiu(const char* str) noexcept {
+    static constexpr uint64_t FastAtoiu(const char* str) noexcept {
         uint64_t val = 0;
         uint8_t  x;
         while ((x = uint8_t(*str++ - '0')) <= 9) val = val * 10 + x;
@@ -36,15 +44,13 @@ namespace Ichor {
         uint64_t minor;
         uint64_t patch;
 
-        auto operator<=>(Version const &v) const = default;
+        constexpr auto operator<=>(Version const &v) const = default;
 
-        [[nodiscard]] std::string toString() const {
-            return fmt::format("{}.{}.{}", major, minor, patch);
-        }
+        [[nodiscard]] std::string toString() const;
     };
 
     // Taken from https://www.cppstories.com/2018/07/string-view-perf-followup/
-    static inline std::vector<std::string_view> split(std::string_view str, std::string_view delims, bool includeDelims) {
+    static NO_DEBUG_CONSTEXPR std::vector<std::string_view> split(std::string_view str, std::string_view delims, bool includeDelims) {
         std::vector<std::string_view> output;
         if(delims.size() == 1) {
             auto count = std::count(str.cbegin(), str.cend(), delims[0]);
@@ -67,7 +73,7 @@ namespace Ichor {
     }
 
     template <typename CB>
-    static inline void split(std::string_view str, std::string_view delims, bool includeDelims, CB&& cb) {
+    static constexpr void split(std::string_view str, std::string_view delims, bool includeDelims, CB&& cb) {
         for(auto first = str.data(), second = str.data(), last = first + str.size(); second != last && first != last; first = second + 1) {
             second = std::find_first_of(first, last, std::cbegin(delims), std::cend(delims));
 
@@ -81,7 +87,7 @@ namespace Ichor {
         }
     }
 
-    static inline tl::optional<Version> parseStringAsVersion(std::string_view str) {
+    static constexpr tl::optional<Version> parseStringAsVersion(std::string_view str) {
         if(str.length() < 5) {
             return {};
         }
@@ -108,7 +114,7 @@ namespace Ichor {
     }
 
     // Copied and modified from spdlog
-    static inline const char *basename(const char *filename) {
+    static constexpr const char *basename(const char *filename) {
 #ifdef _WIN32
         const std::reverse_iterator<const char *> begin(filename + std::strlen(filename));
         const std::reverse_iterator<const char *> end(filename);

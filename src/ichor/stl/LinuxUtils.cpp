@@ -1,9 +1,6 @@
-//
-// Created by oipo on 27-9-24.
-//
-
 #include <ichor/stl/LinuxUtils.h>
 #include <sys/utsname.h>
+#include <cerrno>
 
 
 tl::optional<Ichor::Version> Ichor::kernelVersion() {
