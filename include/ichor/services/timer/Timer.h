@@ -53,14 +53,13 @@ namespace Ichor {
         /// \param svcId unique identifier for svc using this timer
         Timer(IEventQueue& queue, uint64_t timerId, ServiceIdType svcId) noexcept;
 
-        void insertEventLoop(bool fireImmediately, uint64_t startId);
+        void insertEventLoop(bool fireImmediately);
 
         template <typename TIMER, typename QUEUE>
         friend class TimerFactory;
 
         IEventQueue& _queue;
         uint64_t _timerId{};
-        uint64_t _startId{}; // used to prevent stale stop events from running
         TimerState _state{};
         bool _fireOnce{};
         uint64_t _intervalNanosec{1'000'000'000};
