@@ -2,6 +2,7 @@
 #include <ichor/services/timer/TemplatedTimerFactory.h>
 #include <ichor/services/timer/IOUringTimer.h>
 #include <ichor/events/RunFunctionEvent.h>
+#include <ichor/Filter.h>
 
 Ichor::IOUringTimerFactoryFactory::IOUringTimerFactoryFactory(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {
     reg.registerDependency<IIOUringQueue>(this, DependencyFlags::REQUIRED);

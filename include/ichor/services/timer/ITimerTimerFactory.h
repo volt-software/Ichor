@@ -5,7 +5,7 @@
 
 namespace Ichor {
     struct ITimerTimerFactory {
-        virtual std::vector<ServiceIdType> getCreatedTimerFactoryIds() const noexcept = 0;
+        [[nodiscard]] virtual std::vector<ServiceIdType> getCreatedTimerFactoryIds() const noexcept = 0;
 
     protected:
         ~ITimerTimerFactory() = default;

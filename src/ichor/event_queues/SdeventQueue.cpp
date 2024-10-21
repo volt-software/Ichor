@@ -4,6 +4,7 @@
 #include <ichor/DependencyManager.h>
 #include <ichor/dependency_management/InternalServiceLifecycleManager.h>
 #include <sys/eventfd.h>
+#include <mutex>
 
 namespace Ichor::Detail {
     extern std::atomic<bool> sigintQuit;

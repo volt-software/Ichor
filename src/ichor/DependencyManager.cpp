@@ -1,11 +1,13 @@
 #include <thread>
 #include <ichor/DependencyManager.h>
 #include <ichor/CommunicationChannel.h>
+#include <ichor/Filter.h>
 #include <ichor/stl/Any.h>
 #include <ichor/events/RunFunctionEvent.h>
 #include <ichor/dependency_management/InternalService.h>
 #include <ichor/dependency_management/InternalServiceLifecycleManager.h>
 #include <ichor/dependency_management/IServiceInterestedLifecycleManager.h>
+#include <fmt/format.h>
 
 #if defined(ICHOR_USE_SYSTEM_MIMALLOC) || defined(ICHOR_USE_MIMALLOC)
 #include <mimalloc-new-delete.h>

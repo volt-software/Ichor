@@ -4,6 +4,7 @@
 #include <hiredis/hiredis.h>
 #include <hiredis/async.h>
 #include <hiredis/adapters/poll.h>
+#include <fmt/format.h>
 
 using namespace std::literals;
 

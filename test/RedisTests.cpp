@@ -2,7 +2,6 @@
 
 #include <ichor/event_queues/PriorityQueue.h>
 #include <ichor/services/logging/LoggerFactory.h>
-#include <ichor/services/logging/CoutFrameworkLogger.h>
 #include <ichor/services/redis/HiredisService.h>
 #include <ichor/services/timer/TimerFactoryFactory.h>
 #include "TestServices/RedisUsingService.h"

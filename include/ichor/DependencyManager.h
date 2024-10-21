@@ -1,7 +1,6 @@
 #pragma once
 
 #include <vector>
-#include <unordered_map>
 #include <memory>
 #include <chrono>
 #include <atomic>
@@ -16,12 +15,12 @@
 #include <ichor/dependency_management/LifecycleManager.h>
 #include <ichor/coroutines/AsyncManualResetEvent.h>
 #include <ichor/Callbacks.h>
-#include <ichor/Filter.h>
 #include <ichor/dependency_management/DependencyRegistrations.h>
 #include <ichor/dependency_management/ConstructorInjectionService.h>
 #include <ichor/dependency_management/DependencyTrackers.h>
 #include <ichor/event_queues/IEventQueue.h>
 #include <ichor/stl/ServiceProtectedPointer.h>
+#include <fmt/base.h>
 
 using namespace std::chrono_literals;
 
@@ -577,7 +576,7 @@ namespace Ichor {
         template <typename Impl, typename Interface1, typename Interface2, typename... Interfaces>
         void logAddService(ServiceIdType id) {
             if(_logger != nullptr && _logger->getLogLevel() <= LogLevel::LOG_DEBUG) {
-                fmt::memory_buffer out;
+                std::string out;
                 fmt::format_to(std::back_inserter(out), "added ServiceManager<{}, {}, ", typeName<Interface1>(), typeName<Interface2>());
                 (fmt::format_to(std::back_inserter(out), "{}, ", typeName<Interfaces>()), ...);
                 fmt::format_to(std::back_inserter(out), "{}>", typeName<Impl>());

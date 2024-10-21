@@ -363,7 +363,7 @@ namespace Ichor
             struct awaitable : awaitable_base {
                 using awaitable_base::awaitable_base;
 
-                void await_resume() const noexcept {}
+                constexpr void await_resume() const noexcept {}
             };
 
             return awaitable{ m_coroutine };

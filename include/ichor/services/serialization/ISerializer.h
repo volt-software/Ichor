@@ -2,7 +2,6 @@
 
 #include <vector>
 #include <memory>
-#include <tuple>
 #include <span>
 
 namespace Ichor {

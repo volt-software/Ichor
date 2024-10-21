@@ -962,7 +962,7 @@ int main() {
 #pragma GCC diagnostic pop
 #endif
 
-#include <fmt/core.h>
+#include <fmt/base.h>
 
 template <>
 struct fmt::formatter<sole::uuid> {
