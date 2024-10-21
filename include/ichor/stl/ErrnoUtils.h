@@ -3,7 +3,7 @@
 #include <type_traits>
 #include <cstdint>
 #include <cerrno>
-#include <fmt/core.h>
+#include <fmt/base.h>
 
 namespace Ichor {
     enum class IOError : uint_fast16_t {

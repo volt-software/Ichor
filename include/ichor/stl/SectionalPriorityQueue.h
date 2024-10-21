@@ -9,30 +9,30 @@
 namespace Ichor {
     template <typename T, typename Compare>
     struct SectionalPriorityQueue final {
-        [[nodiscard]] bool empty() const noexcept {
+        [[nodiscard]] constexpr bool empty() const noexcept {
             return c.empty();
         }
 
-        [[nodiscard]] typename std::vector<T>::size_type size() const noexcept {
+        [[nodiscard]] constexpr typename std::vector<T>::size_type size() const noexcept {
             return c.size();
         }
 
-        [[nodiscard]] typename std::vector<T>::size_type maxSize() const noexcept {
+        [[nodiscard]] constexpr typename std::vector<T>::size_type maxSize() const noexcept {
             return c.max_size();
         }
 
-        void push(T const &t) {
+        constexpr void push(T const &t) {
             c.push_back(t);
             std::push_heap(c.begin(), c.end(), Compare{});
         }
 
-        void push(T &&t) {
+        constexpr void push(T &&t) {
             c.push_back(std::forward<T>(t));
             std::push_heap(c.begin(), c.end(), Compare{});
         }
 
         template <typename... Args>
-        void emplace(Args&&... args) {
+        constexpr void emplace(Args&&... args) {
             c.emplace_back(std::forward<Args>(args)...);
             std::push_heap(c.begin(), c.end(), Compare{});
         }
@@ -41,14 +41,14 @@ namespace Ichor {
          * pops the last element in the vector and returns it (note: different than std::priority_queue!)
          * @return
          */
-        T pop() {
+        constexpr T pop() {
             std::pop_heap(c.begin(), c.end(), Compare{});
             T t = std::move(c.back());
             c.pop_back();
             return t;
         }
 
-        void reserve(typename std::vector<T>::size_type size) {
+        constexpr void reserve(typename std::vector<T>::size_type size) {
             c.reserve(size);
         }
 

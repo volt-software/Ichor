@@ -101,7 +101,7 @@ file(GLOB_RECURSE ICHOR_METRICS_SOURCES ${ICHOR_TOP_DIR}/src/services/metrics/*.
 file(GLOB_RECURSE ICHOR_TIMER_SOURCES ${ICHOR_TOP_DIR}/src/services/timer/Timer.cpp ${ICHOR_TOP_DIR}/src/services/timer/TimerFactoryFactory.cpp)
 file(GLOB_RECURSE ICHOR_OPTIONAL_HIREDIS_SOURCES ${ICHOR_TOP_DIR}/src/services/redis/*.cpp)
 file(GLOB_RECURSE ICHOR_BASE64_SOURCES ${ICHOR_TOP_DIR}/src/base64/*.cpp)
-file(GLOB_RECURSE ICHOR_STL_SOURCES ${ICHOR_TOP_DIR}/src/ichor/stl/LinuxUtils.cpp)
+file(GLOB_RECURSE ICHOR_STL_SOURCES ${ICHOR_TOP_DIR}/src/ichor/stl/Any.cpp ${ICHOR_TOP_DIR}/src/ichor/stl/LinuxUtils.cpp ${ICHOR_TOP_DIR}/src/ichor/stl/StringUtils.cpp)
 
 set(ICHOR_IO_SOURCES ${ICHOR_TOP_DIR}/src/services/io/SharedOverThreadsAsyncFileIO.cpp)
 set(ICHOR_TCP_SOURCES ${ICHOR_TOP_DIR}/src/services/network/tcp/TcpConnectionService.cpp ${ICHOR_TOP_DIR}/src/services/network/tcp/TcpHostService.cpp)
