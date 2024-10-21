@@ -1,6 +1,7 @@
 #include <ichor/event_queues/PriorityQueue.h>
 #include <ichor/events/RunFunctionEvent.h>
 #include <ichor/coroutines/AsyncManualResetEvent.h>
+#include <ichor/Filter.h>
 #include "TestServices/UselessService.h"
 #include "TestServices/RegistrationCheckerService.h"
 #include "TestServices/MultipleSeparateDependencyRequestsService.h"
@@ -40,7 +41,9 @@ public:
     }
 
     [[nodiscard]] std::string getDescription() const noexcept {
-        return fmt::format("ScopeFilter {}", scope);
+        std::string s;
+        fmt::format_to(std::back_inserter(s), "ScopeFilter {}", scope);
+        return s;
     }
 
     std::string scope;

@@ -1,6 +1,7 @@
 #include <ichor/DependencyManager.h>
 #include <ichor/services/network/boost/AsioContextService.h>
 #include <ichor/events/RunFunctionEvent.h>
+#include <fmt/format.h>
 #if (defined(WIN32) || defined(_WIN32) || defined(__WIN32)) && !defined(__CYGWIN__)
 #include <processthreadsapi.h>
 #include <fmt/xchar.h>

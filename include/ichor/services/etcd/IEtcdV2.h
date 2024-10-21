@@ -6,7 +6,7 @@
 #include <tl/optional.h>
 #include <string>
 #include <tl/expected.h>
-#include <fmt/core.h>
+#include <fmt/base.h>
 
 namespace Ichor::Etcd::v2 {
     enum class EtcdError : uint_fast16_t {

@@ -2,6 +2,7 @@
 #include <ichor/services/timer/TemplatedTimerFactory.h>
 #include <ichor/services/timer/Timer.h>
 #include <ichor/events/RunFunctionEvent.h>
+#include <ichor/Filter.h>
 #include <atomic>
 
 std::atomic<uint64_t> Ichor::_timerIdCounter{1};

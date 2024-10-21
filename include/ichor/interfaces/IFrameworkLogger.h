@@ -1,6 +1,6 @@
 #pragma once
 
-#include <fmt/format.h>
+#include <fmt/base.h>
 #include <ichor/Common.h>
 #include <ichor/Enums.h>
 

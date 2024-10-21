@@ -3,6 +3,7 @@
 #include <ichor/DependencyManager.h>
 #include <ichor/dependency_management/AdvancedService.h>
 #include <ichor/services/logging/Logger.h>
+#include <ichor/Filter.h>
 
 namespace Ichor {
     struct ILoggerFactory {

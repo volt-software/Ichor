@@ -2,6 +2,7 @@
 
 #include <utility>
 #include <ichor/DependencyManager.h>
+#include <ichor/Filter.h>
 #include <ichor/services/logging/Logger.h>
 #include "RuntimeCreatedService.h"
 
@@ -21,7 +22,9 @@ public:
     }
 
     [[nodiscard]] std::string getDescription() const noexcept {
-        return fmt::format("ScopeFilterEntry {}", scope);
+        std::string s;
+        fmt::format_to(std::back_inserter(s), "ScopeFilterEntry {}", scope);
+        return s;
     }
 
     std::string scope;

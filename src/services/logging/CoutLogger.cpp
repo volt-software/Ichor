@@ -1,5 +1,6 @@
 #include <ichor/services/logging/CoutLogger.h>
 #include <ichor/stl/StringUtils.h>
+#include <fmt/format.h>
 #include <iostream>
 #define FMT_INLINE_BUFFER_SIZE 1024
 

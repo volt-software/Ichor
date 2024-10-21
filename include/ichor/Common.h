@@ -7,7 +7,7 @@
 
 #if defined(ICHOR_ENABLE_INTERNAL_DEBUGGING) || defined(ICHOR_ENABLE_INTERNAL_COROUTINE_DEBUGGING) || defined(ICHOR_ENABLE_INTERNAL_IO_DEBUGGING) || defined(ICHOR_ENABLE_INTERNAL_STL_DEBUGGING)
 #include <chrono>
-#include <fmt/core.h>
+#include <fmt/base.h>
 #include <thread>
 #include <fmt/std.h>
 #include <ichor/stl/StringUtils.h>

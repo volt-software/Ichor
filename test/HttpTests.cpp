@@ -9,8 +9,8 @@
 #include <ichor/services/network/boost/AsioContextService.h>
 #include <ichor/services/network/ClientFactory.h>
 #include <ichor/services/serialization/ISerializer.h>
-#include <ichor/services/logging/CoutFrameworkLogger.h>
 #include <ichor/services/logging/CoutLogger.h>
+#include <fmt/format.h>
 #include "Common.h"
 #include "TestServices/HttpThreadService.h"
 #include "../examples/common/TestMsgGlazeSerializer.h"

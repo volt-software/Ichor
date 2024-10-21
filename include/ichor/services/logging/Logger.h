@@ -1,8 +1,6 @@
 #pragma once
 
-#include <fmt/format.h>
 #include <ichor/interfaces/IFrameworkLogger.h>
-#include <ichor/Common.h>
 #include <ichor/Enums.h>
 
 namespace Ichor {

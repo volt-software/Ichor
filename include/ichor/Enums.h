@@ -1,6 +1,6 @@
 #pragma once
 
-#include <fmt/core.h>
+#include <fmt/base.h>
 #include <cstdint>
 
 namespace Ichor

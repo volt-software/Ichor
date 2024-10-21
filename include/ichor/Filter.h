@@ -26,7 +26,9 @@ namespace Ichor {
         }
 
         [[nodiscard]] std::string getDescription() const noexcept {
-            return fmt::format("PropertiesFilterEntry {}:{}", key, val);
+            std::string s;
+            fmt::format_to(std::back_inserter(s), "PropertiesFilterEntry {}:{}", key, val);
+            return s;
         }
 
         std::string key;
@@ -42,7 +44,9 @@ namespace Ichor {
         }
 
         [[nodiscard]] std::string getDescription() const noexcept {
-            return fmt::format("ServiceIdFilterEntry {}", id);
+            std::string s;
+            fmt::format_to(std::back_inserter(s), "ServiceIdFilterEntry {}", id);
+            return s;
         }
 
         uint64_t id;

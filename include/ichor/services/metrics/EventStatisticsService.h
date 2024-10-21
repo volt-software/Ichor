@@ -1,6 +1,5 @@
 #pragma once
 
-#include <unordered_map>
 #include <ichor/dependency_management/AdvancedService.h>
 #include <ichor/dependency_management/DependencyRegistrations.h>
 #include <ichor/services/logging/Logger.h>

@@ -5,12 +5,10 @@
 #endif
 
 #include <ichor/stl/RealtimeReadWriteMutex.h>
-#include <ichor/stl/ConditionVariableAny.h>
 #include <ichor/event_queues/ISdeventQueue.h>
 #include <systemd/sd-event.h>
 #include <atomic>
 #include <thread>
-
 #include <map>
 
 namespace Ichor {

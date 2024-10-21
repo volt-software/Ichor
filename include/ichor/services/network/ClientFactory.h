@@ -4,7 +4,7 @@
 #include <ichor/services/network/IClientFactory.h>
 #include <ichor/services/logging/Logger.h>
 #include <ichor/DependencyManager.h>
-#include <thread>
+#include <ichor/Filter.h>
 
 namespace Ichor {
     using ConnectionCounterType = uint64_t;

@@ -27,6 +27,7 @@ void runForOrQueueEmpty(DependencyManager &dm) {
 class ExceptionMatcher final : public Catch::Matchers::MatcherBase<std::exception> {
 public:
     ExceptionMatcher() = default;
+    ~ExceptionMatcher() final = default;
 
     bool match(std::exception const& ex) const final {
         return true;

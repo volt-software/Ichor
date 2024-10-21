@@ -6,6 +6,7 @@
 #include <ichor/services/network/http/HttpScopeGuards.h>
 #include <ichor/events/RunFunctionEvent.h>
 #include <ichor/ScopeGuard.h>
+#include <ichor/Filter.h>
 #include <thread>
 
 template<class NextLayer>
