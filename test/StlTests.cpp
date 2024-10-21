@@ -184,6 +184,10 @@ TEST_CASE("STL Tests") {
         REQUIRE(someInt.to_string() == "Unprintable value");
         REQUIRE_THROWS_MATCHES(any_cast<uint64_t>(someInt), bad_any_cast, ExceptionMatcher());
 
+        someMovedInt.reset();
+        REQUIRE_THROWS_MATCHES(any_cast<uint64_t>(someMovedInt), bad_any_cast, ExceptionMatcher());
+        REQUIRE(someMovedInt.to_string() == "Unprintable value");
+
         const auto someConstInt = make_any<int>(12);
         REQUIRE_NOTHROW(any_cast<int>(someConstInt));
         REQUIRE(any_cast<int>(someConstInt) == 12);
