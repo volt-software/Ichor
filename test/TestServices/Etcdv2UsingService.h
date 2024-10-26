@@ -235,13 +235,14 @@ namespace Ichor {
             }
             // Recursive directory test
             {
+                co_await _etcd->del("test_key_dir", true, true);
                 auto putReply = co_await _etcd->put("test_key_dir", "root", {}, {}, {}, {}, false, true, false);
                 if (!putReply) {
                     throw std::runtime_error("");
                 }
 
                 if (!putReply.value().node || putReply.value().node->value) {
-                    throw std::runtime_error("Incorrect put dir node value");
+                    throw std::runtime_error("Incorrect put dir node value1");
                 }
 
                 if (!putReply.value().node->dir || !*putReply.value().node->dir) {
