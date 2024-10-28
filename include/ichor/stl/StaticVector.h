@@ -28,14 +28,14 @@ namespace Ichor {
 
         template <typename T, std::size_t N>
         struct UninitializedArray {
-            constexpr auto data() noexcept -> T * {
+            constexpr auto data() noexcept ICHOR_LIFETIME_BOUND -> T * {
                 if constexpr (is_sufficiently_trivial<T>) {
                     return static_cast<T *>(_storage.data());
                 } else {
                     return reinterpret_cast<T *>(_storage.buff);
                 }
             }
-            constexpr auto data() const noexcept -> T const * {
+            constexpr auto data() const noexcept ICHOR_LIFETIME_BOUND -> T const * {
                 if constexpr (is_sufficiently_trivial<T>) {
                     return static_cast<T const *>(_storage.data());
                 } else {
@@ -49,10 +49,10 @@ namespace Ichor {
         };
         template<typename T>
         struct UninitializedArray<T, 0> {
-            constexpr auto data() noexcept -> T * {
+            constexpr auto data() noexcept ICHOR_LIFETIME_BOUND -> T * {
                 return nullptr;
             }
-            constexpr auto data() const noexcept -> T const * {
+            constexpr auto data() const noexcept ICHOR_LIFETIME_BOUND -> T const * {
                 return nullptr;
             }
         };
@@ -74,11 +74,11 @@ namespace Ichor {
         using reference         = std::conditional_t<Const, value_type const &, value_type &>;
 
         constexpr explicit SVIterator() noexcept : _ptr() {}
-        constexpr explicit SVIterator(pointer ptr) noexcept : _ptr(ptr) {}
+        constexpr explicit SVIterator(pointer ptr ICHOR_LIFETIME_BOUND) noexcept : _ptr(ptr) {}
 
-        constexpr reference operator*() const noexcept { return *_ptr; }
-        constexpr pointer operator->() const noexcept { return _ptr; }
-        constexpr reference operator[](difference_type n) const noexcept { return _ptr[n]; }
+        constexpr reference operator*() const noexcept ICHOR_LIFETIME_BOUND { return *_ptr; }
+        constexpr pointer operator->() const noexcept ICHOR_LIFETIME_BOUND { return _ptr; }
+        constexpr reference operator[](difference_type n) const noexcept ICHOR_LIFETIME_BOUND { return _ptr[n]; }
 
         constexpr SVIterator& operator++() noexcept { ++_ptr; return *this; }
         constexpr SVIterator operator++(int) noexcept { return SVIterator{++_ptr}; }
@@ -123,18 +123,18 @@ namespace Ichor {
 
         virtual constexpr void assign(size_type n, const_reference u) = 0;
 
-        virtual constexpr iterator               begin()         noexcept = 0;
-        virtual constexpr const_iterator         begin()   const noexcept = 0;
-        virtual constexpr iterator               end()           noexcept = 0;
-        virtual constexpr const_iterator         end()     const noexcept = 0;
-        virtual constexpr reverse_iterator       rbegin()        noexcept = 0;
-        virtual constexpr const_reverse_iterator rbegin()  const noexcept = 0;
-        virtual constexpr reverse_iterator       rend()          noexcept = 0;
-        virtual constexpr const_reverse_iterator rend()    const noexcept = 0;
-        virtual constexpr const_iterator         cbegin()  const noexcept = 0;
-        virtual constexpr const_iterator         cend()    const noexcept = 0;
-        virtual constexpr const_reverse_iterator crbegin() const noexcept = 0;
-        virtual constexpr const_reverse_iterator crend()   const noexcept = 0;
+        virtual constexpr iterator               begin()         noexcept ICHOR_LIFETIME_BOUND = 0;
+        virtual constexpr const_iterator         begin()   const noexcept ICHOR_LIFETIME_BOUND = 0;
+        virtual constexpr iterator               end()           noexcept ICHOR_LIFETIME_BOUND = 0;
+        virtual constexpr const_iterator         end()     const noexcept ICHOR_LIFETIME_BOUND = 0;
+        virtual constexpr reverse_iterator       rbegin()        noexcept ICHOR_LIFETIME_BOUND = 0;
+        virtual constexpr const_reverse_iterator rbegin()  const noexcept ICHOR_LIFETIME_BOUND = 0;
+        virtual constexpr reverse_iterator       rend()          noexcept ICHOR_LIFETIME_BOUND = 0;
+        virtual constexpr const_reverse_iterator rend()    const noexcept ICHOR_LIFETIME_BOUND = 0;
+        virtual constexpr const_iterator         cbegin()  const noexcept ICHOR_LIFETIME_BOUND = 0;
+        virtual constexpr const_iterator         cend()    const noexcept ICHOR_LIFETIME_BOUND = 0;
+        virtual constexpr const_reverse_iterator crbegin() const noexcept ICHOR_LIFETIME_BOUND = 0;
+        virtual constexpr const_reverse_iterator crend()   const noexcept ICHOR_LIFETIME_BOUND = 0;
 
         [[nodiscard]] virtual constexpr bool empty() const noexcept = 0;
         [[nodiscard]] virtual constexpr size_type size() const noexcept = 0;
@@ -155,25 +155,25 @@ namespace Ichor {
 
         virtual constexpr void resize(size_type sz, const_reference c) = 0;
 
-        virtual constexpr reference       operator[](size_type n) = 0;
-        virtual constexpr const_reference operator[](size_type n) const = 0;
-        virtual constexpr reference       front() = 0;
-        virtual constexpr const_reference front() const = 0;
-        virtual constexpr reference       back() = 0;
-        virtual constexpr const_reference back() const = 0;
-        virtual constexpr pointer         data()       noexcept = 0;
-        virtual constexpr const_pointer   data() const noexcept = 0;
+        virtual constexpr reference       operator[](size_type n) ICHOR_LIFETIME_BOUND = 0;
+        virtual constexpr const_reference operator[](size_type n) const ICHOR_LIFETIME_BOUND = 0;
+        virtual constexpr reference       front() ICHOR_LIFETIME_BOUND = 0;
+        virtual constexpr const_reference front() const ICHOR_LIFETIME_BOUND = 0;
+        virtual constexpr reference       back() ICHOR_LIFETIME_BOUND = 0;
+        virtual constexpr const_reference back() const ICHOR_LIFETIME_BOUND = 0;
+        virtual constexpr pointer         data()       noexcept ICHOR_LIFETIME_BOUND = 0;
+        virtual constexpr const_pointer   data() const noexcept ICHOR_LIFETIME_BOUND = 0;
 
-        virtual constexpr iterator insert(const_iterator const_position, const_reference x) = 0;
-        virtual constexpr iterator insert(const_iterator const_position, value_type&& x) = 0;
-        virtual constexpr iterator insert(const_iterator const_position, size_type n, const_reference x) = 0;
+        virtual constexpr iterator insert(const_iterator const_position, const_reference x) ICHOR_LIFETIME_BOUND = 0;
+        virtual constexpr iterator insert(const_iterator const_position, value_type&& x) ICHOR_LIFETIME_BOUND = 0;
+        virtual constexpr iterator insert(const_iterator const_position, size_type n, const_reference x) ICHOR_LIFETIME_BOUND = 0;
 
         virtual constexpr void push_back(const_reference x) = 0;
         virtual constexpr void push_back(value_type&& x) = 0;
 
         virtual constexpr void pop_back() noexcept(Detail::is_sufficiently_trivial<T>) = 0;
-        virtual constexpr iterator erase(const_iterator position) = 0;
-        virtual constexpr iterator erase(const_iterator first, const_iterator last) = 0;
+        virtual constexpr iterator erase(const_iterator position) ICHOR_LIFETIME_BOUND = 0;
+        virtual constexpr iterator erase(const_iterator first, const_iterator last) ICHOR_LIFETIME_BOUND = 0;
 
         virtual constexpr void clear() noexcept = 0;
 
@@ -298,40 +298,40 @@ namespace Ichor {
             clear();
         }
 
-        constexpr iterator               begin()         noexcept final {
+        constexpr iterator               begin()         noexcept ICHOR_LIFETIME_BOUND final {
             return iterator{_data.data()};
         }
-        constexpr const_iterator         begin()   const noexcept final {
+        constexpr const_iterator         begin()   const noexcept ICHOR_LIFETIME_BOUND final {
             return const_iterator{_data.data()};
         }
-        constexpr iterator               end()           noexcept final {
+        constexpr iterator               end()           noexcept ICHOR_LIFETIME_BOUND final {
             return iterator{_data.data() + _size};
         }
-        constexpr const_iterator         end()     const noexcept final {
+        constexpr const_iterator         end()     const noexcept ICHOR_LIFETIME_BOUND final {
             return const_iterator{_data.data() + _size};
         }
-        constexpr reverse_iterator       rbegin()        noexcept final {
+        constexpr reverse_iterator       rbegin()        noexcept ICHOR_LIFETIME_BOUND final {
             return reverse_iterator{end()};
         }
-        constexpr const_reverse_iterator rbegin()  const noexcept final {
+        constexpr const_reverse_iterator rbegin()  const noexcept ICHOR_LIFETIME_BOUND final {
             return const_reverse_iterator{end()};
         }
-        constexpr reverse_iterator       rend()          noexcept final {
+        constexpr reverse_iterator       rend()          noexcept ICHOR_LIFETIME_BOUND final {
             return reverse_iterator{begin()};
         }
-        constexpr const_reverse_iterator rend()    const noexcept final {
+        constexpr const_reverse_iterator rend()    const noexcept ICHOR_LIFETIME_BOUND final {
             return const_reverse_iterator{begin()};
         }
-        constexpr const_iterator         cbegin()  const noexcept final {
+        constexpr const_iterator         cbegin()  const noexcept ICHOR_LIFETIME_BOUND final {
             return const_iterator{_data.data()};
         }
-        constexpr const_iterator         cend()    const noexcept final {
+        constexpr const_iterator         cend()    const noexcept ICHOR_LIFETIME_BOUND final {
             return const_iterator{_data.data() + _size};
         }
-        constexpr const_reverse_iterator crbegin() const noexcept final {
+        constexpr const_reverse_iterator crbegin() const noexcept ICHOR_LIFETIME_BOUND final {
             return const_reverse_iterator{cend()};
         }
-        constexpr const_reverse_iterator crend()   const noexcept final {
+        constexpr const_reverse_iterator crend()   const noexcept ICHOR_LIFETIME_BOUND final {
             return const_reverse_iterator{cbegin()};
         }
 
@@ -379,34 +379,34 @@ namespace Ichor {
             _size = static_cast<storage_size_type>(sz);
         }
 
-        constexpr reference       operator[](size_type n) final {
+        constexpr reference       operator[](size_type n) ICHOR_LIFETIME_BOUND final {
             assert(n < _size);
             return *(_data.data() + n);
         }
-        constexpr const_reference operator[](size_type n) const final {
+        constexpr const_reference operator[](size_type n) const ICHOR_LIFETIME_BOUND final {
             assert(n < _size);
             return *(_data.data() + n);
         }
-        constexpr reference       front() final {
+        constexpr reference       front() ICHOR_LIFETIME_BOUND final {
             return *_data.data();
         }
-        constexpr const_reference front() const final {
+        constexpr const_reference front() const ICHOR_LIFETIME_BOUND final {
             return *_data.data();
         }
-        constexpr reference       back() final {
+        constexpr reference       back() ICHOR_LIFETIME_BOUND final {
             return *(_data.data() + (_size - 1));
         }
-        constexpr const_reference back() const final {
+        constexpr const_reference back() const ICHOR_LIFETIME_BOUND final {
             return *(_data.data() + (_size - 1));
         }
-        constexpr pointer         data()       noexcept final {
+        constexpr pointer         data()       noexcept ICHOR_LIFETIME_BOUND final {
             return std::addressof(front());
         }
-        constexpr const_pointer   data() const noexcept final {
+        constexpr const_pointer   data() const noexcept ICHOR_LIFETIME_BOUND final {
             return std::addressof(front());
         }
 
-        constexpr iterator insert(const_iterator const_position, const_reference x) final {
+        constexpr iterator insert(const_iterator const_position, const_reference x) ICHOR_LIFETIME_BOUND final {
             assert(_size < N);
             auto position = iterator{const_cast<pointer>(const_position.operator->())};
             ++_size;
@@ -421,7 +421,7 @@ namespace Ichor {
             return position;
         }
 
-        constexpr iterator insert(const_iterator const_position, value_type&& x) final {
+        constexpr iterator insert(const_iterator const_position, value_type&& x) ICHOR_LIFETIME_BOUND final {
             assert(_size < N);
             auto position = iterator{const_cast<pointer>(const_position.operator->())};
             ++_size;
@@ -438,7 +438,7 @@ namespace Ichor {
             return position;
         }
 
-        constexpr iterator insert(const_iterator const_position, size_type n, const_reference x) final {
+        constexpr iterator insert(const_iterator const_position, size_type n, const_reference x) ICHOR_LIFETIME_BOUND final {
             assert(_size + n <= N);
             auto position = iterator{const_cast<pointer>(const_position.operator->())};
             _size += static_cast<storage_size_type>(n);
@@ -455,7 +455,7 @@ namespace Ichor {
             return position;
         }
         template <class InputIterator>
-        constexpr iterator insert(const_iterator const_position, InputIterator first, InputIterator last) {
+        constexpr iterator insert(const_iterator const_position, InputIterator first, InputIterator last) ICHOR_LIFETIME_BOUND {
             difference_type n = std::distance(first, last);
             assert(n >= 0);
             assert(_size + (std::size_t)n <= N);
@@ -478,7 +478,7 @@ namespace Ichor {
         }
 
         template <class... Args>
-        constexpr iterator emplace(const_iterator const_position, Args&&... args) {
+        constexpr iterator emplace(const_iterator const_position, Args&&... args) ICHOR_LIFETIME_BOUND {
             assert(_size < N);
             auto position = iterator{const_cast<pointer>(const_position.operator->())};
             ++_size;
@@ -493,7 +493,7 @@ namespace Ichor {
             return position;
         }
         template <class... Args>
-        constexpr reference emplace_back(Args&&... args) noexcept(Detail::is_sufficiently_trivial<T>) {
+        constexpr reference emplace_back(Args&&... args) noexcept(Detail::is_sufficiently_trivial<T>) ICHOR_LIFETIME_BOUND {
             assert(_size < N);
             //fmt::print("emplace_back {} {}\n", _size, (void*)(data() + size()));
             std::construct_at(data() + size(), std::forward<Args>(args)...);
@@ -523,7 +523,7 @@ namespace Ichor {
             }
             --_size;
         }
-        constexpr iterator erase(const_iterator const_position) final {
+        constexpr iterator erase(const_iterator const_position) ICHOR_LIFETIME_BOUND final {
             auto position = iterator{const_cast<pointer>(const_position.operator->())};
             if(position + 1 != end()) {
                 if constexpr (std::is_move_constructible_v<T>) {
@@ -536,7 +536,7 @@ namespace Ichor {
             pop_back();
             return position;
         }
-        constexpr iterator erase(const_iterator const_first, const_iterator const_last) final {
+        constexpr iterator erase(const_iterator const_first, const_iterator const_last) ICHOR_LIFETIME_BOUND final {
             auto first = iterator{const_cast<pointer>(const_first.operator->())};
             if(const_first != const_last) {
                 auto last = iterator{const_cast<pointer>(const_last.operator->())};

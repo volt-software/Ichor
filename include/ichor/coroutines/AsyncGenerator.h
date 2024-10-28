@@ -14,10 +14,11 @@
 #include <ichor/coroutines/IGenerator.h>
 #include <ichor/coroutines/AsyncGeneratorPromiseBase.h>
 #include <ichor/stl/ReferenceCountedPointer.h>
+#include <ichor/stl/CompilerSpecific.h>
 
 namespace Ichor {
     template<typename T>
-    class AsyncGenerator;
+    class ICHOR_CORO_AWAIT_ELIDABLE ICHOR_CORO_LIFETIME_BOUND AsyncGenerator;
 
     namespace Detail {
         class AsyncGeneratorAdvanceOperation {
@@ -345,7 +346,7 @@ namespace Ichor {
     }
 
     template<typename T>
-    class AsyncGenerator final : public IGenerator {
+    class ICHOR_CORO_AWAIT_ELIDABLE ICHOR_CORO_LIFETIME_BOUND AsyncGenerator final : public IGenerator {
     public:
         using promise_type = Detail::AsyncGeneratorPromise<T>;
         using iterator = Detail::AsyncGeneratorIterator<T>;

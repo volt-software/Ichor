@@ -3,8 +3,8 @@
 #include <cstdint>
 #include <type_traits>
 #include <memory>
-#include <atomic>
 #include <ichor/stl/NeverAlwaysNull.h>
+#include <ichor/stl/CompilerSpecific.h>
 #include <ichor/Common.h>
 
 namespace Ichor {
@@ -17,6 +17,7 @@ namespace Ichor {
 
 
 #ifdef ICHOR_ENABLE_INTERNAL_STL_DEBUGGING
+#include <atomic>
     extern std::atomic<uint64_t> _rfpCounter;
 #define RFP_ID _id,
 #else
@@ -28,31 +29,31 @@ namespace Ichor {
     namespace Detail {
         struct [[nodiscard]] ReferenceCountedPointerBase {
             ReferenceCountedPointerBase(const ReferenceCountedPointerBase &) = delete;
-            ReferenceCountedPointerBase(ReferenceCountedPointerBase &&) = default;
+            constexpr ReferenceCountedPointerBase(ReferenceCountedPointerBase &&) = default;
             ReferenceCountedPointerBase &operator=(const ReferenceCountedPointerBase &) = delete;
-            ReferenceCountedPointerBase &operator=(ReferenceCountedPointerBase &&) = default;
-            virtual ~ReferenceCountedPointerBase() noexcept = default;
+            constexpr ReferenceCountedPointerBase &operator=(ReferenceCountedPointerBase &&) = default;
+            constexpr virtual ~ReferenceCountedPointerBase() noexcept = default;
             NeverNull<void*> ptr;
             uint64_t useCount{};
 
         protected:
-            ReferenceCountedPointerBase(void* _ptr, uint64_t _useCount) noexcept : ptr(_ptr), useCount(_useCount) {
+            constexpr ReferenceCountedPointerBase(void* _ptr, uint64_t _useCount) noexcept : ptr(_ptr), useCount(_useCount) {
             }
         };
 
         template <typename DeleterType>
         struct [[nodiscard]] ReferenceCountedPointerDeleter final : public ReferenceCountedPointerBase {
             ReferenceCountedPointerDeleter(const ReferenceCountedPointerDeleter &) = delete;
-            ReferenceCountedPointerDeleter(ReferenceCountedPointerDeleter &&) = default;
+            constexpr ReferenceCountedPointerDeleter(ReferenceCountedPointerDeleter &&) = default;
             ReferenceCountedPointerDeleter &operator=(const ReferenceCountedPointerDeleter &) = delete;
-            ReferenceCountedPointerDeleter &operator=(ReferenceCountedPointerDeleter &&) = default;
+            constexpr ReferenceCountedPointerDeleter &operator=(ReferenceCountedPointerDeleter &&) = default;
 
             template<typename U>
-            explicit ReferenceCountedPointerDeleter(U *p, DeleterType fn) noexcept : ReferenceCountedPointerBase(p, 1), deleteFn(fn) {
+            constexpr explicit ReferenceCountedPointerDeleter(U *p, DeleterType fn) noexcept : ReferenceCountedPointerBase(p, 1), deleteFn(fn) {
 
             }
 
-            ~ReferenceCountedPointerDeleter() noexcept final {
+            constexpr ~ReferenceCountedPointerDeleter() noexcept final {
                 deleteFn(ptr);
             }
 
@@ -91,7 +92,7 @@ namespace Ichor {
             INTERNAL_STL_DEBUG("ReferenceCountedPointer<{}>({}* p) {} {}", typeName<T>(), typeName<U>(), RFP_ID _ptr == nullptr);
         }
         template <typename... U> requires Constructible<T, U...>
-        explicit ReferenceCountedPointer(U&&... args) : _ptr(new Detail::ReferenceCountedPointerDeleter(new T(std::forward<U>(args)...), [](void *ptr) { delete static_cast<T*>(ptr); })) {
+        ICHOR_CXX23_CONSTEXPR explicit ReferenceCountedPointer(U&&... args) : _ptr(new Detail::ReferenceCountedPointerDeleter(new T(std::forward<U>(args)...), [](void *ptr) { delete static_cast<T*>(ptr); })) {
             if constexpr (std::is_same_v<T, bool>) {
                 static_assert(std::is_same_v<T, U...>);
                 INTERNAL_STL_DEBUG("ReferenceCountedPointer<{}>(U&&... args) {} {} bool! {}", typeName<T>(), RFP_ID _ptr == nullptr, *static_cast<T*>(_ptr->ptr.get()));
@@ -100,7 +101,7 @@ namespace Ichor {
             }
         }
         template <typename UniqueDeleter>
-        ReferenceCountedPointer(std::unique_ptr<T, UniqueDeleter> unique) : _ptr(new Detail::ReferenceCountedPointerDeleter(unique.get(), [deleter = unique.get_deleter()](void *ptr) { deleter(static_cast<T*>(ptr)); })) {
+        ICHOR_CXX23_CONSTEXPR ReferenceCountedPointer(std::unique_ptr<T, UniqueDeleter> unique) : _ptr(new Detail::ReferenceCountedPointerDeleter(unique.get(), [deleter = unique.get_deleter()](void *ptr) { deleter(static_cast<T*>(ptr)); })) {
             INTERNAL_STL_DEBUG("ReferenceCountedPointer<{}>(unique) {} {}", typeName<T>(), RFP_ID _ptr == nullptr);
             unique.release();
         }
@@ -181,7 +182,7 @@ namespace Ichor {
             return *this;
         }
 
-        [[nodiscard]] constexpr T& operator*() const noexcept {
+        [[nodiscard]] constexpr T& operator*() const noexcept ICHOR_LIFETIME_BOUND {
             if constexpr (std::is_same_v<T, bool>) {
                 INTERNAL_STL_DEBUG("ReferenceCountedPointer<{}> operator*() {} {} bool! {}", typeName<T>(), RFP_ID _ptr == nullptr, *static_cast<T*>(_ptr->ptr.get()));
             } else {
@@ -195,7 +196,7 @@ namespace Ichor {
             return *static_cast<T*>(_ptr->ptr.get());
         }
 
-        [[nodiscard]] constexpr T* operator->() const noexcept {
+        [[nodiscard]] constexpr T* operator->() const noexcept ICHOR_LIFETIME_BOUND {
             INTERNAL_STL_DEBUG("ReferenceCountedPointer<{}> operator->() {} {}", typeName<T>(), RFP_ID _ptr == nullptr);
             if constexpr (DO_INTERNAL_STL_DEBUG || DO_HARDENING) {
                 if (_ptr == nullptr) [[unlikely]] {
@@ -236,7 +237,7 @@ namespace Ichor {
             return _ptr != nullptr;
         }
 
-        [[nodiscard]] constexpr T* get() const noexcept {
+        [[nodiscard]] constexpr T* get() const noexcept ICHOR_LIFETIME_BOUND {
             INTERNAL_STL_DEBUG("ReferenceCountedPointer<{}> get() {} {}", typeName<T>(), RFP_ID _ptr == nullptr);
             if constexpr (DO_INTERNAL_STL_DEBUG || DO_HARDENING) {
                 if (_ptr == nullptr) [[unlikely]] {

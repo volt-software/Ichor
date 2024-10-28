@@ -210,9 +210,9 @@ namespace Ichor {
             }
             auto requestTrackersForType = _dependencyRequestTrackers.find(typeNameHash<Interface>());
 
-            DependencyTrackerInfo requestInfo{self->getServiceId(), std::function<AsyncGenerator<IchorBehaviour>(Event const &)>{[impl](Event const &evt) -> AsyncGenerator<IchorBehaviour> {
+            DependencyTrackerInfo requestInfo{self->getServiceId(), std::function<AsyncGenerator<IchorBehaviour>(Event const &)>{[impl] (Event const &evt) -> AsyncGenerator<IchorBehaviour> {
                 return impl->handleDependencyRequest(AlwaysNull<Interface*>(), static_cast<DependencyRequestEvent const &>(evt));
-            }}, std::function<AsyncGenerator<IchorBehaviour>(Event const &)>{[impl](Event const &evt) -> AsyncGenerator<IchorBehaviour> {
+            }}, std::function<AsyncGenerator<IchorBehaviour>(Event const &)>{[impl] (Event const &evt) -> AsyncGenerator<IchorBehaviour> {
                 return impl->handleDependencyUndoRequest(AlwaysNull<Interface*>(), static_cast<DependencyUndoRequestEvent const &>(evt));
             }}};
 

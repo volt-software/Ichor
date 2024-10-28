@@ -16,10 +16,11 @@
 #include <ichor/Enums.h>
 #include <ichor/Common.h>
 #include <ichor/stl/ReferenceCountedPointer.h>
+#include <ichor/stl/CompilerSpecific.h>
 
 namespace Ichor {
     template<typename T>
-    class AsyncGenerator;
+    class ICHOR_CORO_AWAIT_ELIDABLE ICHOR_CORO_LIFETIME_BOUND AsyncGenerator;
 
     class DependencyManager;
 

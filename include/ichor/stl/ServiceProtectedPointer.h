@@ -8,17 +8,17 @@
 namespace Ichor {
     template <typename T>
     struct ServiceProtectedPointer final {
-        explicit ServiceProtectedPointer(T *ptr) noexcept : _ptr(ptr) {}
+        explicit constexpr ServiceProtectedPointer(T *ptr ICHOR_LIFETIME_BOUND) noexcept : _ptr(ptr) {}
         ServiceProtectedPointer(ServiceProtectedPointer const &) = delete;
         ServiceProtectedPointer(ServiceProtectedPointer &&) = delete;
         ServiceProtectedPointer& operator=(ServiceProtectedPointer const &) = delete;
         ServiceProtectedPointer& operator=(ServiceProtectedPointer &&) = delete;
 
-        [[nodiscard]] std::remove_pointer_t<T>* operator->() const noexcept {
+        [[nodiscard]] constexpr std::remove_pointer_t<T>* operator->() const noexcept ICHOR_LIFETIME_BOUND {
             return _ptr;
         }
 
-        [[nodiscard]] std::remove_pointer_t<T>* get() const noexcept {
+        [[nodiscard]] constexpr std::remove_pointer_t<T>* get() const noexcept ICHOR_LIFETIME_BOUND {
             return _ptr;
         }
 

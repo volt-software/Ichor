@@ -91,12 +91,6 @@ static constexpr bool DO_HARDENING = true;
 static constexpr bool DO_HARDENING = false;
 #endif
 
-#if defined(__has_cpp_attribute) && __has_cpp_attribute(assume)
-#define ICHOR_ASSUME(...) [[assume(__VA_ARGS__)]];
-#else
-#define ICHOR_ASSUME(...) static_assert(true, "")
-#endif
-
 // GNU C Library contains defines in sys/sysmacros.h. However, for compatibility reasons, this header is included in sys/types.h. Which is used by std.
 #undef major
 #undef minor
