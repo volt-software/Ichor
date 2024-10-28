@@ -55,7 +55,7 @@ int main(int argc, char *argv[]) {
             }
             queue->start(CaptureSigInt);
             auto end = std::chrono::steady_clock::now();
-            fmt::println("{} single threaded advanced injection ran for {:L} µs with {:L} peak memory usage\n", argv[0], std::chrono::duration_cast<std::chrono::microseconds>(end - start).count(), getPeakRSS());
+            fmt::println("{} single threaded advanced injection ran for {:L} µs with {:L} peak memory usage", argv[0], std::chrono::duration_cast<std::chrono::microseconds>(end - start).count(), getPeakRSS());
         }
 
         if(!singleOnly) {
@@ -76,7 +76,7 @@ int main(int argc, char *argv[]) {
                 threads[i].join();
             }
             auto end = std::chrono::steady_clock::now();
-            fmt::println("{} multi threaded advanced injection ran for {:L} µs with {:L} peak memory usage\n",
+            fmt::println("{} multi threaded advanced injection ran for {:L} µs with {:L} peak memory usage",
                             argv[0], std::chrono::duration_cast<std::chrono::microseconds>(end - start).count(), getPeakRSS());
         }
     }
@@ -93,7 +93,7 @@ int main(int argc, char *argv[]) {
             }
             queue->start(CaptureSigInt);
             auto end = std::chrono::steady_clock::now();
-            fmt::println("{} single threaded constructor injection ran for {:L} µs with {:L} peak memory usage\n", argv[0], std::chrono::duration_cast<std::chrono::microseconds>(end - start).count(), getPeakRSS());
+            fmt::println("{} single threaded constructor injection ran for {:L} µs with {:L} peak memory usage", argv[0], std::chrono::duration_cast<std::chrono::microseconds>(end - start).count(), getPeakRSS());
         }
 
         if(!singleOnly) {
@@ -114,7 +114,7 @@ int main(int argc, char *argv[]) {
                 threads[i].join();
             }
             auto end = std::chrono::steady_clock::now();
-            fmt::println("{} multi threaded constructor injection ran for {:L} µs with {:L} peak memory usage\n",
+            fmt::println("{} multi threaded constructor injection ran for {:L} µs with {:L} peak memory usage",
                             argv[0], std::chrono::duration_cast<std::chrono::microseconds>(end - start).count(), getPeakRSS());
         }
     }
