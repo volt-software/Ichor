@@ -7,7 +7,7 @@
 	branch = devel
 [submodule "external/fmt"]
 	path = external/fmt
-	url = https://github.com/fmtlib/fmt.git
+	url = https://github.com/Oipo/fmt.git
 [submodule "external/mimalloc"]
 	path = external/mimalloc
 	url = https://github.com/volt-software/mimalloc-static.git
