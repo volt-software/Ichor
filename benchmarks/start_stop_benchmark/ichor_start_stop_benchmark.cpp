@@ -42,7 +42,7 @@ int main(int argc, char *argv[]) {
         dm.createServiceManager<StartStopService>(Properties{{"LogLevel", Ichor::make_any<LogLevel>(LogLevel::LOG_INFO)}});
         queue->start(CaptureSigInt);
         auto end = std::chrono::steady_clock::now();
-        fmt::println("{} single threaded ran for {:L} µs with {:L} peak memory usage {:L} start & stop /s\n", argv[0], std::chrono::duration_cast<std::chrono::microseconds>(end - start).count(), getPeakRSS(),
+        fmt::println("{} single threaded ran for {:L} µs with {:L} peak memory usage {:L} start & stop /s", argv[0], std::chrono::duration_cast<std::chrono::microseconds>(end - start).count(), getPeakRSS(),
                      std::floor(1'000'000. / static_cast<double>(std::chrono::duration_cast<std::chrono::microseconds>(end - start).count()) * START_STOP_COUNT));
     }
 
@@ -63,7 +63,7 @@ int main(int argc, char *argv[]) {
             threads[i].join();
         }
         auto end = std::chrono::steady_clock::now();
-        fmt::println("{} multi threaded ran for {:L} µs with {:L} peak memory usage {:L} start & stop /s\n",
+        fmt::println("{} multi threaded ran for {:L} µs with {:L} peak memory usage {:L} start & stop /s",
                      argv[0], std::chrono::duration_cast<std::chrono::microseconds>(end - start).count(), getPeakRSS(),
                      std::floor(1'000'000. / static_cast<double>(std::chrono::duration_cast<std::chrono::microseconds>(end - start).count()) * START_STOP_COUNT * 8.));
     }

@@ -46,7 +46,7 @@ int main(int argc, char *argv[]) {
         dm.createServiceManager<TestService>();
         queue->start(CaptureSigInt);
         auto end = std::chrono::steady_clock::now();
-        fmt::println("{} single threaded glaze ran for {:L} µs with {:L} peak memory usage {:L} MB/s\n", argv[0], std::chrono::duration_cast<std::chrono::microseconds>(end - start).count(), getPeakRSS(),
+        fmt::println("{} single threaded glaze ran for {:L} µs with {:L} peak memory usage {:L} MB/s", argv[0], std::chrono::duration_cast<std::chrono::microseconds>(end - start).count(), getPeakRSS(),
                      std::floor(1'000'000. / static_cast<double>(std::chrono::duration_cast<std::chrono::microseconds>(end - start).count()) * SERDE_COUNT * static_cast<double>(sizeof_test) / 1'000'000.));
     }
 
@@ -67,7 +67,7 @@ int main(int argc, char *argv[]) {
             threads[i].join();
         }
         auto end = std::chrono::steady_clock::now();
-        fmt::println("{} multi threaded glaze ran for {:L} µs with {:L} peak memory usage {:L} MB/s\n",
+        fmt::println("{} multi threaded glaze ran for {:L} µs with {:L} peak memory usage {:L} MB/s",
                      argv[0], std::chrono::duration_cast<std::chrono::microseconds>(end - start).count(), getPeakRSS(),
                      std::floor(1'000'000. / static_cast<double>(std::chrono::duration_cast<std::chrono::microseconds>(end - start).count()) * SERDE_COUNT * threadCount * static_cast<double>(sizeof_test) / 1'000'000.));
     }
