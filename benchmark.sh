@@ -45,16 +45,16 @@ run_benchmarks ()
   start="$1"/ichor_start_benchmark
   start_stop="$1"/ichor_start_stop_benchmark
   utils="$1"/ichor_utils_benchmark
-  eval $coroutine || exit 1
-  eval $event || exit 1
+  eval taskset -c 0-7 $coroutine || exit 1
+  eval taskset -c 0-7 $event || exit 1
   echo -n "uring: "
-  eval $event -u || exit 1
-  eval $serializer || exit 1
-  eval $start -a || exit 1
-  eval $start -c || exit 1
-  eval $start_stop || exit 1
-  eval $utils -r || exit 1
-  eval $utils -a || exit 1
+  eval taskset -c 0-7 $event -u || exit 1
+  eval taskset -c 0-7 $serializer || exit 1
+  eval taskset -c 0-7 $start -a || exit 1
+  eval taskset -c 0-7 $start -c || exit 1
+  eval taskset -c 0-7 $start_stop || exit 1
+  eval taskset -c 0-7 $utils -r || exit 1
+  eval taskset -c 0-7 $utils -a || exit 1
 }
 
 if [ $REBUILD -eq 1 ]; then
