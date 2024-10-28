@@ -11,6 +11,7 @@
 #include <cstdlib>
 #include <ichor/event_queues/IIOUringQueue.h>
 #include <ichor/stl/LinuxUtils.h>
+#include <ichor/stl/CompilerSpecific.h>
 
 #if defined(__SANITIZE_THREAD__)
 #define TSAN_ENABLED

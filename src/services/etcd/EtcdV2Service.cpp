@@ -345,15 +345,15 @@ Ichor::Task<tl::expected<EtcdReply, EtcdError>> EtcdService::put(std::string_vie
     co_return etcd_reply;
 }
 
-Ichor::Task<tl::expected<EtcdReply, EtcdError>> EtcdService::put(std::string_view key, std::string_view value, tl::optional<uint64_t> ttl_second, bool refresh) {
+ICHOR_CORO_WRAPPER Ichor::Task<tl::expected<EtcdReply, EtcdError>> EtcdService::put(std::string_view key, std::string_view value, tl::optional<uint64_t> ttl_second, bool refresh) {
     return put(key, value, {}, {}, {}, ttl_second, refresh, false, false);
 }
 
-Ichor::Task<tl::expected<EtcdReply, EtcdError>> EtcdService::put(std::string_view key, std::string_view value, tl::optional<uint64_t> ttl_second) {
+ICHOR_CORO_WRAPPER Ichor::Task<tl::expected<EtcdReply, EtcdError>> EtcdService::put(std::string_view key, std::string_view value, tl::optional<uint64_t> ttl_second) {
     return put(key, value, {}, {}, {}, ttl_second, false, false, false);
 }
 
-Ichor::Task<tl::expected<EtcdReply, EtcdError>> EtcdService::put(std::string_view key, std::string_view value) {
+ICHOR_CORO_WRAPPER Ichor::Task<tl::expected<EtcdReply, EtcdError>> EtcdService::put(std::string_view key, std::string_view value) {
     return put(key, value, {}, {}, {}, {}, false, false, false);
 }
 
@@ -425,7 +425,7 @@ Ichor::Task<tl::expected<EtcdReply, EtcdError>> EtcdService::get(std::string_vie
     co_return etcd_reply;
 }
 
-Ichor::Task<tl::expected<EtcdReply, EtcdError>> EtcdService::get(std::string_view key) {
+ICHOR_CORO_WRAPPER Ichor::Task<tl::expected<EtcdReply, EtcdError>> EtcdService::get(std::string_view key) {
     return get(key, false, false, false, {});
 }
 

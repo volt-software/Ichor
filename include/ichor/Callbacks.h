@@ -4,11 +4,12 @@
 #include <tl/optional.h>
 #include <functional>
 #include <ichor/Enums.h>
+#include <ichor/stl/CompilerSpecific.h>
 
 namespace Ichor {
     struct Event;
     template <typename T>
-    class AsyncGenerator;
+    class ICHOR_CORO_AWAIT_ELIDABLE ICHOR_CORO_LIFETIME_BOUND AsyncGenerator;
 
     class [[nodiscard]] EventCallbackInfo final {
     public:
