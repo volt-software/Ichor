@@ -17,7 +17,7 @@ namespace websocket = beast::websocket; // from <boost/beast/websocket.hpp>
 namespace net = boost::asio;            // from <boost/asio.hpp>
 using tcp = boost::asio::ip::tcp;       // from <boost/asio/ip/tcp.hpp>
 
-namespace Ichor {
+namespace Ichor::Boost {
     namespace Detail {
         struct WsConnectionOutboxMessage final {
             std::vector<uint8_t> msg;

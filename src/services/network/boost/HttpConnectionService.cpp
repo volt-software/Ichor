@@ -5,12 +5,12 @@
 #include <ichor/ScopeGuard.h>
 #include <fmt/format.h>
 
-Ichor::HttpConnectionService::HttpConnectionService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {
+Ichor::Boost::HttpConnectionService::HttpConnectionService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {
     reg.registerDependency<ILogger>(this, DependencyFlags::NONE);
     reg.registerDependency<IAsioContextService>(this, DependencyFlags::REQUIRED);
 }
 
-Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::HttpConnectionService::start() {
+Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::Boost::HttpConnectionService::start() {
     _queue = &GetThreadLocalEventQueue();
 
     if (!_asioContextService->fibersShouldStop()) {
@@ -74,7 +74,7 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::HttpConnectionService:
     co_return {};
 }
 
-Ichor::Task<void> Ichor::HttpConnectionService::stop() {
+Ichor::Task<void> Ichor::Boost::HttpConnectionService::stop() {
     _quit.store(true, std::memory_order_release);
 //    INTERNAL_DEBUG("----------------------------------------------- STOP");
 
@@ -85,32 +85,32 @@ Ichor::Task<void> Ichor::HttpConnectionService::stop() {
     co_return;
 }
 
-void Ichor::HttpConnectionService::addDependencyInstance(ILogger &logger, IService &) {
+void Ichor::Boost::HttpConnectionService::addDependencyInstance(ILogger &logger, IService &) {
     _logger.store(&logger, std::memory_order_release);
 }
 
-void Ichor::HttpConnectionService::removeDependencyInstance(ILogger &logger, IService&) {
+void Ichor::Boost::HttpConnectionService::removeDependencyInstance(ILogger &logger, IService&) {
     _logger.store(nullptr, std::memory_order_release);
 }
 
-void Ichor::HttpConnectionService::addDependencyInstance(IAsioContextService &AsioContextService, IService&) {
+void Ichor::Boost::HttpConnectionService::addDependencyInstance(IAsioContextService &AsioContextService, IService&) {
     _asioContextService = &AsioContextService;
     ICHOR_LOG_TRACE_ATOMIC(_logger, "Inserted AsioContextService");
 }
 
-void Ichor::HttpConnectionService::removeDependencyInstance(IAsioContextService&, IService&) {
+void Ichor::Boost::HttpConnectionService::removeDependencyInstance(IAsioContextService&, IService&) {
     _asioContextService = nullptr;
 }
 
-void Ichor::HttpConnectionService::setPriority(uint64_t priority) {
+void Ichor::Boost::HttpConnectionService::setPriority(uint64_t priority) {
     _priority.store(priority, std::memory_order_release);
 }
 
-uint64_t Ichor::HttpConnectionService::getPriority() {
+uint64_t Ichor::Boost::HttpConnectionService::getPriority() {
     return _priority.load(std::memory_order_acquire);
 }
 
-Ichor::Task<Ichor::HttpResponse> Ichor::HttpConnectionService::sendAsync(Ichor::HttpMethod method, std::string_view route, unordered_map<std::string, std::string> &&headers, std::vector<uint8_t> &&msg) {
+Ichor::Task<Ichor::HttpResponse> Ichor::Boost::HttpConnectionService::sendAsync(Ichor::HttpMethod method, std::string_view route, unordered_map<std::string, std::string> &&headers, std::vector<uint8_t> &&msg) {
     if(method == HttpMethod::get && !msg.empty()) {
         throw std::runtime_error("GET requests cannot have a body.");
     }
@@ -247,7 +247,7 @@ Ichor::Task<Ichor::HttpResponse> Ichor::HttpConnectionService::sendAsync(Ichor::
     co_return response;
 }
 
-Ichor::Task<void> Ichor::HttpConnectionService::close() {
+Ichor::Task<void> Ichor::Boost::HttpConnectionService::close() {
     if(_useSsl.load(std::memory_order_acquire)) {
         if(!_sslStream) {
             co_return;
@@ -288,12 +288,12 @@ Ichor::Task<void> Ichor::HttpConnectionService::close() {
     co_return;
 }
 
-void Ichor::HttpConnectionService::fail(beast::error_code ec, const char *what) {
+void Ichor::Boost::HttpConnectionService::fail(beast::error_code ec, const char *what) {
     ICHOR_LOG_ERROR_ATOMIC(_logger, "Boost.BEAST fail: {}, {}", what, ec.message());
     _queue->pushPrioritisedEvent<StopServiceEvent>(getServiceId(), _priority.load(std::memory_order_acquire), getServiceId());
 }
 
-void Ichor::HttpConnectionService::connect(tcp::endpoint endpoint, net::yield_context yield) {
+void Ichor::Boost::HttpConnectionService::connect(tcp::endpoint endpoint, net::yield_context yield) {
     ScopeGuardAtomicCount guard{_finishedListenAndRead};
     beast::error_code ec;
 

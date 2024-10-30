@@ -7,7 +7,7 @@
 #include <fmt/xchar.h>
 #endif
 
-Ichor::AsioContextService::AsioContextService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {
+Ichor::Boost::AsioContextService::AsioContextService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {
     if(auto propIt = getProperties().find("Threads"); propIt != getProperties().end()) {
         _threads = Ichor::any_cast<uint64_t>(propIt->second);
         if(_threads == 0) {
@@ -18,7 +18,7 @@ Ichor::AsioContextService::AsioContextService(DependencyRegister &reg, Propertie
     reg.registerDependency<ILogger>(this, DependencyFlags::NONE);
 }
 
-Ichor::AsioContextService::~AsioContextService() {
+Ichor::Boost::AsioContextService::~AsioContextService() {
     for(auto &thread : _asioThreads) {
         if(thread.joinable()) {
             // "We're in a bad situation, sir, and do not know how to recover."
@@ -27,7 +27,7 @@ Ichor::AsioContextService::~AsioContextService() {
     }
 }
 
-Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::AsioContextService::start() {
+Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::Boost::AsioContextService::start() {
     _quit = false;
     if(_threads == 1) {
         _context = std::make_unique<net::io_context>(BOOST_ASIO_CONCURRENCY_HINT_UNSAFE_IO);
@@ -90,7 +90,7 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::AsioContextService::st
     co_return {};
 }
 
-Ichor::Task<void> Ichor::AsioContextService::stop() {
+Ichor::Task<void> Ichor::Boost::AsioContextService::stop() {
     _quit.store(true, std::memory_order_release);
     INTERNAL_DEBUG("+++++++++++++++++++++++++++++++++++++++++++++++ STOP ++++++++++++++++++++++++++++++++");
 
@@ -115,22 +115,22 @@ Ichor::Task<void> Ichor::AsioContextService::stop() {
     co_return;
 }
 
-void Ichor::AsioContextService::addDependencyInstance(ILogger &logger, IService &) {
+void Ichor::Boost::AsioContextService::addDependencyInstance(ILogger &logger, IService &) {
     _logger = &logger;
 }
 
-void Ichor::AsioContextService::removeDependencyInstance(ILogger &logger, IService&) {
+void Ichor::Boost::AsioContextService::removeDependencyInstance(ILogger &logger, IService&) {
     _logger = nullptr;
 }
 
-net::io_context* Ichor::AsioContextService::getContext() noexcept {
+net::io_context* Ichor::Boost::AsioContextService::getContext() noexcept {
     return _context.get();
 }
 
-bool Ichor::AsioContextService::fibersShouldStop() const noexcept {
+bool Ichor::Boost::AsioContextService::fibersShouldStop() const noexcept {
     return _quit.load(std::memory_order_acquire);
 }
 
-uint64_t Ichor::AsioContextService::threadCount() const noexcept {
+uint64_t Ichor::Boost::AsioContextService::threadCount() const noexcept {
     return _threads;
 }

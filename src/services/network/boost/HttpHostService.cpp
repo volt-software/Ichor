@@ -3,12 +3,12 @@
 #include <ichor/services/network/http/HttpScopeGuards.h>
 #include <ichor/events/RunFunctionEvent.h>
 
-Ichor::HttpHostService::HttpHostService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {
+Ichor::Boost::HttpHostService::HttpHostService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {
     reg.registerDependency<ILogger>(this, DependencyFlags::NONE);
     reg.registerDependency<IAsioContextService>(this, DependencyFlags::REQUIRED);
 }
 
-Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::HttpHostService::start() {
+Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::Boost::HttpHostService::start() {
     auto addrIt = getProperties().find("Address");
     auto portIt = getProperties().find("Port");
 
@@ -63,7 +63,7 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::HttpHostService::start
     co_return {};
 }
 
-Ichor::Task<void> Ichor::HttpHostService::stop() {
+Ichor::Task<void> Ichor::Boost::HttpHostService::stop() {
     INTERNAL_DEBUG("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! HttpHostService::stop()");
     _quit.store(true, std::memory_order_release);
 
@@ -104,37 +104,37 @@ Ichor::Task<void> Ichor::HttpHostService::stop() {
     co_return;
 }
 
-void Ichor::HttpHostService::addDependencyInstance(ILogger &logger, IService &) {
+void Ichor::Boost::HttpHostService::addDependencyInstance(ILogger &logger, IService &) {
     _logger.store(&logger, std::memory_order_release);
 }
 
-void Ichor::HttpHostService::removeDependencyInstance(ILogger &, IService&) {
+void Ichor::Boost::HttpHostService::removeDependencyInstance(ILogger &, IService&) {
     _logger.store(nullptr, std::memory_order_release);
 }
 
-void Ichor::HttpHostService::addDependencyInstance(IAsioContextService &AsioContextService, IService&) {
+void Ichor::Boost::HttpHostService::addDependencyInstance(IAsioContextService &AsioContextService, IService&) {
     _asioContextService = &AsioContextService;
     ICHOR_LOG_TRACE_ATOMIC(_logger, "Inserted AsioContextService");
 }
 
-void Ichor::HttpHostService::removeDependencyInstance(IAsioContextService&, IService&) {
+void Ichor::Boost::HttpHostService::removeDependencyInstance(IAsioContextService&, IService&) {
     ICHOR_LOG_TRACE_ATOMIC(_logger, "Removing AsioContextService");
     _asioContextService = nullptr;
 }
 
-void Ichor::HttpHostService::setPriority(uint64_t priority) {
+void Ichor::Boost::HttpHostService::setPriority(uint64_t priority) {
     _priority.store(priority, std::memory_order_release);
 }
 
-uint64_t Ichor::HttpHostService::getPriority() {
+uint64_t Ichor::Boost::HttpHostService::getPriority() {
     return _priority.load(std::memory_order_acquire);
 }
 
-Ichor::HttpRouteRegistration Ichor::HttpHostService::addRoute(HttpMethod method, std::string_view route, std::function<AsyncGenerator<HttpResponse>(HttpRequest&)> handler) {
+Ichor::HttpRouteRegistration Ichor::Boost::HttpHostService::addRoute(HttpMethod method, std::string_view route, std::function<AsyncGenerator<HttpResponse>(HttpRequest&)> handler) {
     return addRoute(method, std::make_unique<StringRouteMatcher>(route), std::move(handler));
 }
 
-Ichor::HttpRouteRegistration Ichor::HttpHostService::addRoute(HttpMethod method, std::unique_ptr<RouteMatcher> newMatcher, std::function<AsyncGenerator<HttpResponse>(HttpRequest&)> handler) {
+Ichor::HttpRouteRegistration Ichor::Boost::HttpHostService::addRoute(HttpMethod method, std::unique_ptr<RouteMatcher> newMatcher, std::function<AsyncGenerator<HttpResponse>(HttpRequest&)> handler) {
     auto routes = _handlers.find(method);
 
     newMatcher->set_id(_matchersIdCounter);
@@ -150,7 +150,7 @@ Ichor::HttpRouteRegistration Ichor::HttpHostService::addRoute(HttpMethod method,
     return {method, _matchersIdCounter++, this};
 }
 
-void Ichor::HttpHostService::removeRoute(HttpMethod method, RouteIdType id) {
+void Ichor::Boost::HttpHostService::removeRoute(HttpMethod method, RouteIdType id) {
     auto routes = _handlers.find(method);
 
     if(routes == std::end(_handlers)) {
@@ -162,7 +162,7 @@ void Ichor::HttpHostService::removeRoute(HttpMethod method, RouteIdType id) {
     });
 }
 
-void Ichor::HttpHostService::fail(beast::error_code ec, const char *what, bool stopSelf) {
+void Ichor::Boost::HttpHostService::fail(beast::error_code ec, const char *what, bool stopSelf) {
     _queue->pushPrioritisedEvent<RunFunctionEvent>(getServiceId(), _priority.load(std::memory_order_acquire), [this, what, ec]() {
         ICHOR_LOG_ERROR_ATOMIC(_logger, "Boost.BEAST fail: {}, {}", what, ec.message());
     });
@@ -171,7 +171,7 @@ void Ichor::HttpHostService::fail(beast::error_code ec, const char *what, bool s
     }
 }
 
-void Ichor::HttpHostService::listen(tcp::endpoint endpoint, net::yield_context yield) {
+void Ichor::Boost::HttpHostService::listen(tcp::endpoint endpoint, net::yield_context yield) {
     ScopeGuardAtomicCount guard{_finishedListenAndRead};
     beast::error_code ec;
 
@@ -253,7 +253,7 @@ void Ichor::HttpHostService::listen(tcp::endpoint endpoint, net::yield_context y
 }
 
 template <typename SocketT>
-void Ichor::HttpHostService::read(tcp::socket socket, net::yield_context yield) {
+void Ichor::Boost::HttpHostService::read(tcp::socket socket, net::yield_context yield) {
     ScopeGuardAtomicCount const guard{ _finishedListenAndRead };
     beast::error_code ec;
     auto addr = socket.remote_endpoint().address().to_string();
@@ -406,7 +406,7 @@ void Ichor::HttpHostService::read(tcp::socket socket, net::yield_context yield) 
 }
 
 template <typename SocketT>
-void Ichor::HttpHostService::sendInternal(std::shared_ptr<Detail::Connection<SocketT>> &connection, http::response<http::vector_body<uint8_t>, http::basic_fields<std::allocator<uint8_t>>> &&res) {
+void Ichor::Boost::HttpHostService::sendInternal(std::shared_ptr<Detail::Connection<SocketT>> &connection, http::response<http::vector_body<uint8_t>, http::basic_fields<std::allocator<uint8_t>>> &&res) {
     static_assert(std::is_move_assignable_v<Detail::HostOutboxMessage>, "HostOutboxMessage should be move assignable");
 
     if(_quit.load(std::memory_order_acquire) || _asioContextService->fibersShouldStop()) {

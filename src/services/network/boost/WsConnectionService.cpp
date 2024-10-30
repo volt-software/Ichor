@@ -24,7 +24,7 @@ void setup_stream(std::shared_ptr<websocket::stream<NextLayer>>& ws)
     ws->auto_fragment(false);
 }
 
-Ichor::WsConnectionService::WsConnectionService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {
+Ichor::Boost::WsConnectionService::WsConnectionService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {
     reg.registerDependency<ILogger>(this, DependencyFlags::NONE);
     reg.registerDependency<IAsioContextService>(this, DependencyFlags::REQUIRED);
     if(auto propIt = getProperties().find("WsHostServiceId"); propIt != getProperties().end()) {
@@ -33,7 +33,7 @@ Ichor::WsConnectionService::WsConnectionService(DependencyRegister &reg, Propert
     }
 }
 
-Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::WsConnectionService::start() {
+Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::Boost::WsConnectionService::start() {
     if(_connected.load(std::memory_order_acquire)) {
         co_return {};
     }
@@ -73,7 +73,7 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::WsConnectionService::s
     co_return {};
 }
 
-Ichor::Task<void> Ichor::WsConnectionService::stop() {
+Ichor::Task<void> Ichor::Boost::WsConnectionService::stop() {
 //    INTERNAL_DEBUG("----------------------------------------------- trying to stop WsConnectionService {}", getServiceId());
 //    fmt::print("----------------------------------------------- {}:{} stop\n", getServiceId(), getServiceName());
     _quit.store(true, std::memory_order_release);
@@ -111,26 +111,26 @@ Ichor::Task<void> Ichor::WsConnectionService::stop() {
     co_return;
 }
 
-void Ichor::WsConnectionService::addDependencyInstance(ILogger &logger, IService &) {
+void Ichor::Boost::WsConnectionService::addDependencyInstance(ILogger &logger, IService &) {
     _logger = &logger;
 }
 
-void Ichor::WsConnectionService::removeDependencyInstance(ILogger &logger, IService&) {
+void Ichor::Boost::WsConnectionService::removeDependencyInstance(ILogger &logger, IService&) {
     _logger = nullptr;
 }
 
-void Ichor::WsConnectionService::addDependencyInstance(IHostService&, IService&) {
+void Ichor::Boost::WsConnectionService::addDependencyInstance(IHostService&, IService&) {
 
 }
 
-void Ichor::WsConnectionService::removeDependencyInstance(IHostService& host, IService&) {
+void Ichor::Boost::WsConnectionService::removeDependencyInstance(IHostService& host, IService&) {
 }
 
-void Ichor::WsConnectionService::addDependencyInstance(IAsioContextService &AsioContextService, IService&) {
+void Ichor::Boost::WsConnectionService::addDependencyInstance(IAsioContextService &AsioContextService, IService&) {
     _asioContextService = &AsioContextService;
 }
 
-void Ichor::WsConnectionService::removeDependencyInstance(IAsioContextService&, IService&) {
+void Ichor::Boost::WsConnectionService::removeDependencyInstance(IAsioContextService&, IService&) {
 //    fmt::print("{}:{} {} set nullptr\n", getServiceId(), getServiceName(), getServiceState());
     if(getServiceState() != ServiceState::INSTALLED) {
         std::terminate();
@@ -138,8 +138,8 @@ void Ichor::WsConnectionService::removeDependencyInstance(IAsioContextService&, 
     _asioContextService = nullptr;
 }
 
-static_assert(std::is_move_assignable_v<Ichor::Detail::WsConnectionOutboxMessage>, "ConnectionOutboxMessage should be move assignable");
-Ichor::Task<tl::expected<void, Ichor::IOError>> Ichor::WsConnectionService::sendAsync(std::vector<uint8_t> &&msg) {
+static_assert(std::is_move_assignable_v<Ichor::Boost::Detail::WsConnectionOutboxMessage>, "ConnectionOutboxMessage should be move assignable");
+Ichor::Task<tl::expected<void, Ichor::IOError>> Ichor::Boost::WsConnectionService::sendAsync(std::vector<uint8_t> &&msg) {
     if(_quit.load(std::memory_order_acquire) || !_connected.load(std::memory_order_acquire) || _asioContextService->fibersShouldStop()) {
         co_return tl::unexpected(IOError::SERVICE_QUITTING);
     }
@@ -202,7 +202,7 @@ Ichor::Task<tl::expected<void, Ichor::IOError>> Ichor::WsConnectionService::send
 }
 
 
-Ichor::Task<tl::expected<void, Ichor::IOError>> Ichor::WsConnectionService::sendAsync(std::vector<std::vector<uint8_t>>&& msgs) {
+Ichor::Task<tl::expected<void, Ichor::IOError>> Ichor::Boost::WsConnectionService::sendAsync(std::vector<std::vector<uint8_t>>&& msgs) {
     if(_quit.load(std::memory_order_acquire) || !_connected.load(std::memory_order_acquire) || _asioContextService->fibersShouldStop()) {
         co_return tl::unexpected(IOError::SERVICE_QUITTING);
     }
@@ -266,19 +266,19 @@ Ichor::Task<tl::expected<void, Ichor::IOError>> Ichor::WsConnectionService::send
     co_return {};
 }
 
-void Ichor::WsConnectionService::setPriority(uint64_t priority) {
+void Ichor::Boost::WsConnectionService::setPriority(uint64_t priority) {
     _priority.store(priority, std::memory_order_release);
 }
 
-uint64_t Ichor::WsConnectionService::getPriority() {
+uint64_t Ichor::Boost::WsConnectionService::getPriority() {
     return _priority.load(std::memory_order_acquire);
 }
 
-bool Ichor::WsConnectionService::isClient() const noexcept {
+bool Ichor::Boost::WsConnectionService::isClient() const noexcept {
 	return getProperties().find("Socket") == getProperties().end();
 }
 
-void Ichor::WsConnectionService::setReceiveHandler(std::function<void(std::span<uint8_t const>)> recvHandler) {
+void Ichor::Boost::WsConnectionService::setReceiveHandler(std::function<void(std::span<uint8_t const>)> recvHandler) {
 	_recvHandler = recvHandler;
 
 	for(auto &msg : _queuedMessages) {
@@ -287,7 +287,7 @@ void Ichor::WsConnectionService::setReceiveHandler(std::function<void(std::span<
 	_queuedMessages.clear();
 }
 
-void Ichor::WsConnectionService::fail(beast::error_code ec, const char *what) {
+void Ichor::Boost::WsConnectionService::fail(beast::error_code ec, const char *what) {
 //    fmt::print("{}:{} fail {}\n", getServiceId(), getServiceName(), ec.message());
 
     _queue->pushPrioritisedEvent<RunFunctionEvent>(getServiceId(), _priority.load(std::memory_order_acquire), [this, ec, what]() {
@@ -298,7 +298,7 @@ void Ichor::WsConnectionService::fail(beast::error_code ec, const char *what) {
     _queue->pushEvent<StopServiceEvent>(getServiceId(), getServiceId());
 }
 
-void Ichor::WsConnectionService::accept(net::yield_context yield) {
+void Ichor::Boost::WsConnectionService::accept(net::yield_context yield) {
     beast::error_code ec;
 
     {
@@ -359,7 +359,7 @@ void Ichor::WsConnectionService::accept(net::yield_context yield) {
     read(yield);
 }
 
-void Ichor::WsConnectionService::connect(net::yield_context yield) {
+void Ichor::Boost::WsConnectionService::connect(net::yield_context yield) {
     beast::error_code ec;
     auto const& address = Ichor::any_cast<std::string&>(getProperties()["Address"]);
     auto const port = Ichor::any_cast<uint16_t>(getProperties()["Port"]);
@@ -436,7 +436,7 @@ void Ichor::WsConnectionService::connect(net::yield_context yield) {
     read(yield);
 }
 
-void Ichor::WsConnectionService::read(net::yield_context &yield) {
+void Ichor::Boost::WsConnectionService::read(net::yield_context &yield) {
     beast::error_code ec;
 
     while(!_quit.load(std::memory_order_acquire) && !_asioContextService->fibersShouldStop()) {
