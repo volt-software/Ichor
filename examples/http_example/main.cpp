@@ -91,11 +91,11 @@ int main(int argc, char *argv[]) {
     // Create the JSON serializer for the TestMsg class
     dm.createServiceManager<TestMsgGlazeSerializer, ISerializer<TestMsg>>();
     // Create the Event Thread for Boost.ASIO
-    dm.createServiceManager<AsioContextService, IAsioContextService>(Properties{{"Threads", Ichor::make_any<uint64_t>(threads)}});
+    dm.createServiceManager<Boost::AsioContextService, Boost::IAsioContextService>(Properties{{"Threads", Ichor::make_any<uint64_t>(threads)}});
     // Create the HTTP server binding to the given address
-    dm.createServiceManager<HttpHostService, IHttpHostService>(Properties{{"Address", Ichor::make_any<std::string>(address)}, {"Port", Ichor::make_any<uint16_t>(static_cast<uint16_t>(8001))}});
+    dm.createServiceManager<Boost::HttpHostService, IHttpHostService>(Properties{{"Address", Ichor::make_any<std::string>(address)}, {"Port", Ichor::make_any<uint16_t>(static_cast<uint16_t>(8001))}});
     // Setup a factory which creates HTTP clients for every class requesting an IHttpConnectionService
-    dm.createServiceManager<ClientFactory<HttpConnectionService, IHttpConnectionService>, IClientFactory>();
+    dm.createServiceManager<ClientFactory<Boost::HttpConnectionService, IHttpConnectionService>, IClientFactory>();
     // Create the class that we defined in this example, to setup a /test endpoint in the server, to request (and therefore create) an HTTP client and send a message to the /test endpoint using the serializer for TestMsg
     dm.createServiceManager<UsingHttpService>(Properties{{"Address", Ichor::make_any<std::string>(address)}, {"Port", Ichor::make_any<uint16_t>(static_cast<uint16_t>(8001))}});
     queue->start(CaptureSigInt);

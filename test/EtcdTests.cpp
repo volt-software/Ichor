@@ -33,8 +33,8 @@ TEST_CASE("EtcdTests") {
             dm.createServiceManager<SpdlogSharedService, ISpdlogSharedService>();
 #endif
             dm.createServiceManager<LoggerFactory<LOGGER_TYPE>, ILoggerFactory>(Properties{{"DefaultLogLevel", Ichor::make_any<LogLevel>(LogLevel::LOG_TRACE)}});
-            dm.createServiceManager<AsioContextService, IAsioContextService>();
-            dm.createServiceManager<ClientFactory<HttpConnectionService, IHttpConnectionService>, IClientFactory>();
+            dm.createServiceManager<Boost::AsioContextService, Boost::IAsioContextService>();
+            dm.createServiceManager<ClientFactory<Boost::HttpConnectionService, IHttpConnectionService>, IClientFactory>();
             dm.createServiceManager<Etcd::v2::EtcdService, Etcd::v2::IEtcd>(Properties{{"Address", Ichor::make_any<std::string>("127.0.0.1")}, {"Port", Ichor::make_any<uint16_t>(static_cast<uint16_t>(2379))}, {"TimeoutMs", Ichor::make_any<uint64_t>(1'000ul)}, {"Debug", Ichor::make_any<bool>(true)}});
             dm.createServiceManager<Etcdv2UsingService>(Properties{{"LogLevel", Ichor::make_any<LogLevel>(LogLevel::LOG_TRACE)}});
             dm.createServiceManager<TimerFactoryFactory>();
@@ -55,8 +55,8 @@ TEST_CASE("EtcdTests") {
             dm.createServiceManager<SpdlogSharedService, ISpdlogSharedService>();
 #endif
             dm.createServiceManager<LoggerFactory<LOGGER_TYPE>, ILoggerFactory>(Properties{{"DefaultLogLevel", Ichor::make_any<LogLevel>(LogLevel::LOG_TRACE)}});
-            dm.createServiceManager<AsioContextService, IAsioContextService>();
-            dm.createServiceManager<ClientFactory<HttpConnectionService, IHttpConnectionService>, IClientFactory>();
+            dm.createServiceManager<Boost::AsioContextService, Boost::IAsioContextService>();
+            dm.createServiceManager<ClientFactory<Boost::HttpConnectionService, IHttpConnectionService>, IClientFactory>();
             dm.createServiceManager<Etcd::v3::EtcdService, Etcd::v3::IEtcd>(Properties{{"Address", Ichor::make_any<std::string>("127.0.0.1")}, {"Port", Ichor::make_any<uint16_t>(static_cast<uint16_t>(2379))}, {"TimeoutMs", Ichor::make_any<uint64_t>(1'000ul)}, {"Debug", Ichor::make_any<bool>(true)}});
             dm.createServiceManager<Etcdv3UsingService>(Properties{{"LogLevel", Ichor::make_any<LogLevel>(LogLevel::LOG_TRACE)}});
             dm.createServiceManager<TimerFactoryFactory>();

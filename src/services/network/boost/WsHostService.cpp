@@ -6,12 +6,12 @@
 #include <ichor/services/network/http/HttpScopeGuards.h>
 #include <ichor/events/RunFunctionEvent.h>
 
-Ichor::WsHostService::WsHostService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {
+Ichor::Boost::WsHostService::WsHostService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {
     reg.registerDependency<ILogger>(this, DependencyFlags::NONE);
     reg.registerDependency<IAsioContextService>(this, DependencyFlags::REQUIRED);
 }
 
-Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::WsHostService::start() {
+Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::Boost::WsHostService::start() {
     auto addrIt = getProperties().find("Address");
     auto portIt = getProperties().find("Port");
 
@@ -55,7 +55,7 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::WsHostService::start()
     co_return {};
 }
 
-Ichor::Task<void> Ichor::WsHostService::stop() {
+Ichor::Task<void> Ichor::Boost::WsHostService::stop() {
     INTERNAL_DEBUG("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! trying to stop WsHostService {}", getServiceId());
     _quit = true;
 
@@ -85,23 +85,23 @@ Ichor::Task<void> Ichor::WsHostService::stop() {
     co_return;
 }
 
-void Ichor::WsHostService::addDependencyInstance(ILogger &logger, IService &) {
+void Ichor::Boost::WsHostService::addDependencyInstance(ILogger &logger, IService &) {
     _logger = &logger;
 }
 
-void Ichor::WsHostService::removeDependencyInstance(ILogger &logger, IService&) {
+void Ichor::Boost::WsHostService::removeDependencyInstance(ILogger &logger, IService&) {
     _logger = nullptr;
 }
 
-void Ichor::WsHostService::addDependencyInstance(IAsioContextService &AsioContextService, IService&) {
+void Ichor::Boost::WsHostService::addDependencyInstance(IAsioContextService &AsioContextService, IService&) {
     _asioContextService = &AsioContextService;
 }
 
-void Ichor::WsHostService::removeDependencyInstance(IAsioContextService&, IService&) {
+void Ichor::Boost::WsHostService::removeDependencyInstance(IAsioContextService&, IService&) {
     _asioContextService = nullptr;
 }
 
-Ichor::AsyncGenerator<Ichor::IchorBehaviour> Ichor::WsHostService::handleEvent(Ichor::NewWsConnectionEvent const &evt) {
+Ichor::AsyncGenerator<Ichor::IchorBehaviour> Ichor::Boost::WsHostService::handleEvent(Ichor::NewWsConnectionEvent const &evt) {
     if(_quit.load(std::memory_order_acquire)) {
         co_return {};
     }
@@ -115,15 +115,15 @@ Ichor::AsyncGenerator<Ichor::IchorBehaviour> Ichor::WsHostService::handleEvent(I
     co_return {};
 }
 
-void Ichor::WsHostService::setPriority(uint64_t priority) {
+void Ichor::Boost::WsHostService::setPriority(uint64_t priority) {
     _priority = priority;
 }
 
-uint64_t Ichor::WsHostService::getPriority() {
+uint64_t Ichor::Boost::WsHostService::getPriority() {
     return _priority;
 }
 
-void Ichor::WsHostService::fail(beast::error_code ec, const char *what) {
+void Ichor::Boost::WsHostService::fail(beast::error_code ec, const char *what) {
     ICHOR_LOG_ERROR(_logger, "Boost.BEAST fail: {}, {}", what, ec.message());
     INTERNAL_DEBUG("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! push {}", getServiceId());
     _queue->pushPrioritisedEvent<RunFunctionEvent>(getServiceId(), INTERNAL_EVENT_PRIORITY, [this]() {
@@ -133,7 +133,7 @@ void Ichor::WsHostService::fail(beast::error_code ec, const char *what) {
     _queue->pushPrioritisedEvent<StopServiceEvent>(getServiceId(), _priority, getServiceId());
 }
 
-void Ichor::WsHostService::listen(tcp::endpoint endpoint, net::yield_context yield)
+void Ichor::Boost::WsHostService::listen(tcp::endpoint endpoint, net::yield_context yield)
 {
     beast::error_code ec;
 

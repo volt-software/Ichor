@@ -20,7 +20,7 @@ namespace http = beast::http;           // from <boost/beast/http.hpp>
 namespace net = boost::asio;            // from <boost/asio.hpp>
 using tcp = boost::asio::ip::tcp;       // from <boost/asio/ip/tcp.hpp>
 
-namespace Ichor {
+namespace Ichor::Boost {
     class IAsioContextService {
     public:
         virtual net::io_context* getContext() noexcept = 0;

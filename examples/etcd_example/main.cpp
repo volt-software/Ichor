@@ -38,8 +38,8 @@ int main(int argc, char *argv[]) {
     dm.createServiceManager<LoggerFactory<LOGGER_TYPE>, ILoggerFactory>(Properties{{"DefaultLogLevel", Ichor::make_any<LogLevel>(LogLevel::LOG_INFO)}});
     dm.createServiceManager<Etcd::v2::EtcdService, Etcd::v2::IEtcd>(Properties{{"Address", Ichor::make_any<std::string>("127.0.0.1")}, {"Port", Ichor::make_any<uint16_t>(static_cast<uint16_t>(2379))}, {"TimeoutMs", Ichor::make_any<uint64_t>(1'000ul)}});
     dm.createServiceManager<UsingEtcdV2Service>();
-    dm.createServiceManager<AsioContextService, IAsioContextService>();
-    dm.createServiceManager<ClientFactory<HttpConnectionService, IHttpConnectionService>, IClientFactory>();
+    dm.createServiceManager<Boost::AsioContextService, Boost::IAsioContextService>();
+    dm.createServiceManager<ClientFactory<Boost::HttpConnectionService, IHttpConnectionService>, IClientFactory>();
     dm.createServiceManager<TimerFactoryFactory>();
     queue->start(CaptureSigInt);
     auto end = std::chrono::steady_clock::now();

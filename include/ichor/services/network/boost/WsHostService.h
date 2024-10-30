@@ -15,7 +15,7 @@ namespace websocket = beast::websocket; // from <boost/beast/websocket.hpp>
 namespace net = boost::asio;            // from <boost/asio.hpp>
 using tcp = boost::asio::ip::tcp;       // from <boost/asio/ip/tcp.hpp>
 
-namespace Ichor {
+namespace Ichor::Boost {
     class WsHostService final : public IHostService, public AdvancedService<WsHostService> {
     public:
         WsHostService(DependencyRegister &reg, Properties props);

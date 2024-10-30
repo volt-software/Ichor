@@ -89,9 +89,9 @@ int main(int argc, char *argv[]) {
         dm.createServiceManager<LoggerFactory<LOGGER_TYPE>, ILoggerFactory>(Properties{{"DefaultLogLevel", Ichor::make_any<LogLevel>(level)}}, priorityToEnsureHostStartingFirst);
     }
     dm.createServiceManager<TestMsgGlazeSerializer, ISerializer<TestMsg>>();
-    dm.createServiceManager<AsioContextService, IAsioContextService>(Properties{{"Threads", Ichor::make_any<uint64_t>(threads)}});
-    dm.createServiceManager<WsHostService, IHostService>(Properties{{"Address", Ichor::make_any<std::string>(address)}, {"Port", Ichor::make_any<uint16_t>(static_cast<uint16_t>(8001))}}, priorityToEnsureHostStartingFirst);
-    dm.createServiceManager<ClientFactory<WsConnectionService>, IClientFactory>();
+    dm.createServiceManager<Boost::AsioContextService, Boost::IAsioContextService>(Properties{{"Threads", Ichor::make_any<uint64_t>(threads)}});
+    dm.createServiceManager<Boost::WsHostService, IHostService>(Properties{{"Address", Ichor::make_any<std::string>(address)}, {"Port", Ichor::make_any<uint16_t>(static_cast<uint16_t>(8001))}}, priorityToEnsureHostStartingFirst);
+    dm.createServiceManager<ClientFactory<Boost::WsConnectionService>, IClientFactory>();
     dm.createServiceManager<UsingWsService>(Properties{{"Address", Ichor::make_any<std::string>(address)}, {"Port", Ichor::make_any<uint16_t>(static_cast<uint16_t>(8001))}});
     queue->start(CaptureSigInt);
     auto end = std::chrono::steady_clock::now();
