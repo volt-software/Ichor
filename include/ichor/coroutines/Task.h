@@ -12,6 +12,7 @@
 #include <cassert>
 #include <coroutine>
 #include <new>
+#include <type_traits>
 #include <ichor/stl/CompilerSpecific.h>
 
 namespace Ichor
