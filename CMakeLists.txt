@@ -15,6 +15,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_C_EXTENSIONS OFF)
 include(CMakeDependentOption)
 include(CMakePackageConfigHelpers)
+string(TOLOWER ${CMAKE_CXX_COMPILER_ID} ICHOR_COMPILER_ID)
 
 if(NOT CMAKE_BUILD_TYPE)
     SET(CMAKE_BUILD_TYPE Debug CACHE STRING
@@ -30,10 +31,10 @@ if(NOT hasParent)
 endif()
 
 
-if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS "12")
+if(ICHOR_COMPILER_ID STREQUAL "gnu" AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS "12")
     message(FATAL_ERROR "Gcc below version 12 not supported.")
 endif()
-if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS "15")
+if(ICHOR_COMPILER_ID STREQUAL "clang" AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS "15")
     message(FATAL_ERROR "Clang below version 15 not supported.")
 endif()
 
@@ -64,11 +65,11 @@ cmake_dependent_option(ICHOR_USE_MOLD "Use mold when linking, recommended to use
 cmake_dependent_option(ICHOR_USE_SDEVENT "Add sd-event based queue/integration" OFF "NOT WIN32" OFF)
 option(ICHOR_DISABLE_RTTI "Disable RTTI. Reduces memory usage, disables dynamic_cast<>()" ON)
 option(ICHOR_USE_HARDENING "Uses compiler-specific flags which add stack protection and similar features, as well as adding safety checks in Ichor itself." ON)
-cmake_dependent_option(ICHOR_USE_LIBCPP "Uses clang's libc++ stdlib if compiling with clang" ON "CMAKE_CXX_COMPILER_ID STREQUAL \"Clang\"" OFF)
+cmake_dependent_option(ICHOR_USE_LIBCPP "Uses clang's libc++ stdlib if compiling with clang" ON "ICHOR_COMPILER_ID STREQUAL \"clang\"" OFF)
 cmake_dependent_option(ICHOR_USE_MIMALLOC "Use mimalloc for significant performance improvements" ON "NOT ICHOR_USE_SANITIZERS AND NOT ICHOR_USE_THREAD_SANITIZER" OFF)
 cmake_dependent_option(ICHOR_USE_SYSTEM_MIMALLOC "Use system or vendored mimalloc" OFF "NOT ICHOR_USE_SANITIZERS AND NOT ICHOR_USE_THREAD_SANITIZER" OFF)
 cmake_dependent_option(ICHOR_USE_LIBURING "Add liburing based queue/integration" ON "NOT WIN32 AND NOT APPLE" OFF)
-cmake_dependent_option(ICHOR_FORCE_32_BIT "Force add 32 bit to compile flags" OFF "(CMAKE_CXX_COMPILER_ID STREQUAL \"Clang\" OR CMAKE_CXX_COMPILER_ID STREQUAL \"GNU\")" OFF)
+cmake_dependent_option(ICHOR_FORCE_32_BIT "Force add 32 bit to compile flags" OFF "(ICHOR_COMPILER_ID STREQUAL \"clang\" OR ICHOR_COMPILER_ID STREQUAL \"gnu\")" OFF)
 cmake_dependent_option(ICHOR_ENABLE_INTERNAL_URING_DEBUGGING "Add verbose logging of Ichor uring queue" OFF "ICHOR_USE_LIBURING" OFF)
 
 option(ICHOR_USE_BACKWARD "Use backward-cpp to print stacktraces on crashes or when the user wants to. Useful for debugging." $ICHOR_BUILDING_DEBUG)
@@ -78,7 +79,7 @@ option(ICHOR_AARCH64 "Use when building for aarch64. Turns off some x86-specific
 
 set(BUILD_TESTING OFF) #disable Catch 2 testing
 
-if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+if(ICHOR_COMPILER_ID STREQUAL "clang")
     # clang tidy requires the same compiler arguments as clang
     # some gcc arguments cause it to error out
     option(ICHOR_RUN_CLANG_TIDY "Runs clang-tidy every compile" OFF)
@@ -87,7 +88,7 @@ endif()
 set(ICHOR_ARCH_OPTIMIZATION OFF CACHE STRING "Tell compiler to optimize for target")
 set_property(CACHE ICHOR_ARCH_OPTIMIZATION PROPERTY STRINGS OFF NATIVE X86_64 X86_64_SSE4 X86_64_AVX2 X86_64_AVX512 MODERN_ARM_GENERIC RASPBERRY_PI_ONE RASPBERRY_PI_TWO RASPBERRY_PI_THREE RASPBERRY_PI_FOUR RASPBERRY_PI_FIVE)
 
-if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND ICHOR_RUN_CLANG_TIDY)
+if(ICHOR_COMPILER_ID STREQUAL "clang" AND ICHOR_RUN_CLANG_TIDY)
     set(CMAKE_CXX_CLANG_TIDY "clang-tidy;-checks=*,-llvmlibc-*,-readability-function-cognitive-complexity,-altera-*,-modernize-use-trailing-return-type,-concurrency-mt-unsafe,-fuchsia-default-arguments-calls,-android-*,-readability-identifier-length,-clang-analyzer-optin.cplusplus.UninitializedObject")
 endif()
 
@@ -185,8 +186,11 @@ if(NOT WIN32)
             $<$<COMPILE_LANGUAGE:CXX>:-Wconversion>)
     target_compile_options(ichor PUBLIC -pthread $<$<COMPILE_LANGUAGE:CXX>:-ftemplate-backtrace-limit=0>)
 
-    if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    if(ICHOR_COMPILER_ID STREQUAL "gnu")
         target_compile_options(ichor PUBLIC -Wtrampolines)
+    endif()
+    if(ICHOR_COMPILER_ID STREQUAL "clang")
+        target_compile_options(ichor PUBLIC -fstrict-vtable-pointers)
     endif()
 
     if(ICHOR_FORCE_32_BIT OR CMAKE_SIZEOF_VOID_P EQUAL 4)
@@ -209,10 +213,10 @@ if(NOT WIN32)
         target_compile_definitions(ichor PUBLIC _GLIBCXX_ASSERTIONS _LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_FAST)
 
         target_compile_options(ichor PUBLIC -fno-delete-null-pointer-checks)
-        if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR (CMAKE_CXX_COMPILER_ID STREQUAL "CLANG" AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL "18"))
+        if(ICHOR_COMPILER_ID STREQUAL "gnu" OR (ICHOR_COMPILER_ID STREQUAL "clang" AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL "18"))
             target_compile_options(ichor PUBLIC -fno-strict-aliasing)
         endif()
-        if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR (CMAKE_CXX_COMPILER_ID STREQUAL "CLANG" AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL "16"))
+        if(ICHOR_COMPILER_ID STREQUAL "gnu" OR (ICHOR_COMPILER_ID STREQUAL "clang" AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL "16"))
             target_compile_options(ichor PUBLIC -ftrivial-auto-var-init=zero)
         endif()
     endif()
@@ -244,7 +248,7 @@ if(ICHOR_USE_MOLD AND NOT WIN32)
     #target_link_options(ichor PUBLIC -Wl,--separate-debug-file) # TODO test version first, available since 2.33.0
 endif()
 
-if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+if(ICHOR_COMPILER_ID STREQUAL "gnu")
     target_compile_options(ichor PUBLIC -Wduplicated-cond -Wduplicated-branches -Wlogical-op)
 endif()
 
@@ -329,7 +333,7 @@ if(ICHOR_USE_SANITIZERS)
             target_link_options(ichor PUBLIC -no-pie)
         endif()
 
-        if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+        if(ICHOR_COMPILER_ID STREQUAL "gnu")
             target_compile_options(ichor PUBLIC -no-pie)
         endif()
 
@@ -358,7 +362,7 @@ if(ICHOR_USE_THREAD_SANITIZER)
         target_link_options(ichor PUBLIC -no-pie)
     endif()
 
-    if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    if(ICHOR_COMPILER_ID STREQUAL "gnu")
         target_compile_options(ichor PUBLIC -no-pie)
         target_link_options(ichor PUBLIC -static-libtsan)
     else()
@@ -406,10 +410,10 @@ elseif(ICHOR_USE_HARDENING)
     endif()
 endif()
 
-if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+if(ICHOR_COMPILER_ID STREQUAL "gnu")
     target_compile_options(ichor PRIVATE $<$<COMPILE_LANGUAGE:CXX>:-fconcepts-diagnostics-depth=3>)
     target_compile_options(ichor PUBLIC $<$<COMPILE_LANGUAGE:CXX>:-fcoroutines>)
-elseif(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS_EQUAL "15")
+elseif(ICHOR_COMPILER_ID STREQUAL "clang" AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS_EQUAL "15")
     target_compile_options(ichor PUBLIC $<$<COMPILE_LANGUAGE:CXX>:-fcoroutines-ts>)
 endif()
 
@@ -421,7 +425,7 @@ if(NOT WIN32 AND NOT ICHOR_BUILD_COVERAGE)
     set(CMAKE_CXX_FLAGS_MINSIZEREL "-Os -DNDEBUG")
 endif()
 
-if(ICHOR_BUILD_COVERAGE AND CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+if(ICHOR_BUILD_COVERAGE AND ICHOR_COMPILER_ID MATCHES "gnu|clang")
     target_compile_options(ichor PUBLIC -O0 -g --coverage)
     if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.13)
         target_link_options(ichor PUBLIC --coverage)
@@ -439,7 +443,7 @@ endif()
 # https://gcc.gnu.org/bugzilla/show_bug.cgi?id=105329
 # 12.3 has a bug where [[maybe_unused]] in glaze is somehow ignored.
 # boost still uses std::aligned_storage, so we can't use this until we find replacements for boost
-#if(NOT CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND NOT WIN32)
+#if(NOT ICHOR_COMPILER_ID STREQUAL "gnu" AND NOT WIN32)
 #    target_compile_options(ichor PRIVATE "-Werror") #prevent externally compiled sources to error out on warnings
 #endif()
 
@@ -582,7 +586,7 @@ if(ICHOR_USE_BACKWARD AND NOT ICHOR_MUSL)
     target_compile_definitions(ichor PUBLIC ICHOR_USE_BACKWARD=1)
     if(NOT WIN32 AND NOT APPLE)
         find_package(PkgConfig REQUIRED)
-        if(NOT CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+        if(NOT ICHOR_COMPILER_ID STREQUAL "gnu")
             pkg_check_modules(LIBUNWIND libunwind-generic)
             if(LIBUNWIND_FOUND)
                 target_include_directories(ichor PRIVATE ${LIBUNWIND_INCLUDE_DIR})
