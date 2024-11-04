@@ -6,6 +6,7 @@
 #include <ichor/services/network/boost/HttpConnectionService.h>
 #include <ichor/services/network/boost/AsioContextService.h>
 #include <ichor/services/network/ClientFactory.h>
+#include <ichor/ichor-mimalloc.h>
 
 // Some compile time logic to instantiate a regular cout logger or to use the spdlog logger, if Ichor has been compiled with it.
 #ifdef ICHOR_USE_SPDLOG

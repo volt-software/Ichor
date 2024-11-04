@@ -5,6 +5,7 @@
 #include <catch2/matchers/catch_matchers.hpp>
 #include <ichor/DependencyManager.h>
 #include <ichor/services/logging/CoutFrameworkLogger.h>
+#include <ichor/ichor-mimalloc.h>
 
 using namespace Ichor;
 

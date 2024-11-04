@@ -28,6 +28,7 @@
 #include <string>
 #include <fmt/format.h>
 #include <ichor/glaze.h>
+#include <ichor/ichor-mimalloc.h>
 
 namespace beast = boost::beast;         // from <boost/beast.hpp>
 namespace http = beast::http;           // from <boost/beast/http.hpp>

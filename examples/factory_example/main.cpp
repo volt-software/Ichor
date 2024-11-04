@@ -3,6 +3,7 @@
 #include "RuntimeCreatedService.h"
 #include <ichor/event_queues/PriorityQueue.h>
 #include <ichor/services/logging/LoggerFactory.h>
+#include <ichor/ichor-mimalloc.h>
 
 // Some compile time logic to instantiate a regular cout logger or to use the spdlog logger, if Ichor has been compiled with it.
 #ifdef ICHOR_USE_SPDLOG
