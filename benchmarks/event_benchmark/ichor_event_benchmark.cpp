@@ -6,6 +6,7 @@
 #include <ichor/services/logging/LoggerFactory.h>
 #include <ichor/services/logging/NullLogger.h>
 #include <ichor/services/metrics/MemoryUsageFunctions.h>
+#include <ichor/ichor-mimalloc.h>
 #include <iostream>
 #include <thread>
 #include <array>

@@ -2,6 +2,7 @@
 #include "OptionalService.h"
 #include <ichor/event_queues/PriorityQueue.h>
 #include <ichor/services/logging/LoggerFactory.h>
+#include <ichor/ichor-mimalloc.h>
 #include "GlobalRealtimeSettings.h"
 
 #if defined(NDEBUG)

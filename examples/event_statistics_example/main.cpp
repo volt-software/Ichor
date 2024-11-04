@@ -2,6 +2,7 @@
 #include <ichor/services/logging/LoggerFactory.h>
 #include <ichor/services/metrics/EventStatisticsService.h>
 #include <ichor/services/timer/TimerFactoryFactory.h>
+#include <ichor/ichor-mimalloc.h>
 #include "UsingStatisticsService.h"
 
 // Some compile time logic to instantiate a regular cout logger or to use the spdlog logger, if Ichor has been compiled with it.

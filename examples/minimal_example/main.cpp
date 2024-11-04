@@ -1,6 +1,7 @@
 #include <ichor/event_queues/PriorityQueue.h>
 #include <ichor/DependencyManager.h>
 #include <ichor/services/timer/TimerFactoryFactory.h>
+#include <ichor/ichor-mimalloc.h>
 #include <csignal>
 
 using namespace Ichor;

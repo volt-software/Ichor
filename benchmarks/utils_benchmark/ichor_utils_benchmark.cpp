@@ -5,6 +5,7 @@
 #include <ichor/stl/StringUtils.h>
 #include <ichor/services/metrics/MemoryUsageFunctions.h>
 #include <ichor/services/network/http/IHttpHostService.h>
+#include <ichor/ichor-mimalloc.h>
 #include "../../examples/common/lyra.hpp"
 
 
