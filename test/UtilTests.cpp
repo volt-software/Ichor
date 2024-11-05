@@ -1,7 +1,6 @@
 #include "Common.h"
 #include <ichor/Common.h>
 #include <ctre/ctre.hpp>
-#include <regex>
 
 namespace Ichor {
     struct SomeStruct {
@@ -32,17 +31,6 @@ TEST_CASE("Util Tests") {
                 REQUIRE(result.get<i>() == "12");
             }
         });
-    }
-
-    SECTION("std regex tests") {
-        std::string_view input = "/some/http/10/11/12/test";
-        std::regex _r{"\\/some\\/http\\/(\\d{1,2})\\/(\\d{1,2})\\/(\\d{1,2})\\/test", std::regex::ECMAScript | std::regex::optimize};
-        std::match_results<typename decltype(input)::const_iterator> matches;
-        auto result = std::regex_match(input.cbegin(), input.cend(), matches, _r);
-        REQUIRE(result);
-        for(auto &match : matches) {
-            fmt::print("std match {}\n", match.str());
-        }
     }
 
     SECTION("Typename tests") {
