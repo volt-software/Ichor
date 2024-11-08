@@ -15,6 +15,7 @@ namespace Ichor::Detail {
     public:
         explicit InternalServiceLifecycleManager(ServiceType *q) : _q(q) {
             _interfaces.emplace_back(typeNameHash<ServiceType>(), typeName<ServiceType>(), DependencyFlags::NONE, false);
+            _service.setState(ServiceState::ACTIVE);
         }
 
         ~InternalServiceLifecycleManager() final = default;
@@ -50,23 +51,25 @@ namespace Ichor::Detail {
 
         [[nodiscard]]
         AsyncGenerator<StartBehaviour> start() final {
+            _service.setState(ServiceState::ACTIVE);
             co_return {};
         }
 
         [[nodiscard]]
         AsyncGenerator<StartBehaviour> stop() final {
-            _state = ServiceState::INSTALLED;
+            _service.setState(ServiceState::INSTALLED);
             co_return {};
         }
 
         [[nodiscard]]
         bool setInjected() final {
+            _service.setState(ServiceState::ACTIVE);
             return true;
         }
 
         [[nodiscard]]
         bool setUninjected() final {
-            _state = ServiceState::UNINJECTING;
+            _service.setState(ServiceState::INSTALLED);
             return true;
         }
 
@@ -87,7 +90,7 @@ namespace Ichor::Detail {
         }
 
         [[nodiscard]] ServiceState getServiceState() const noexcept final {
-            return _state;
+            return _service.getServiceState();
         }
 
         [[nodiscard]] NeverNull<IService*> getIService() noexcept final {
@@ -140,7 +143,6 @@ namespace Ichor::Detail {
 
     private:
         ServiceType *_q;
-        ServiceState _state{ServiceState::ACTIVE};
         unordered_set<uint64_t> _serviceIdsOfDependees; // services that depend on this service
         StaticVector<Dependency, 1> _interfaces;
         InternalService<ServiceType> _service;

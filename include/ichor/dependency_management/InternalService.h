@@ -65,60 +65,17 @@ namespace Ichor::Detail {
             return _properties;
         }
 
+        [[nodiscard]] ServiceState getState() noexcept {
+            return _serviceState;
+        }
+
+        void setState(ServiceState state) noexcept {
+            _serviceState = state;
+        }
+
     protected:
         Properties _properties;
     private:
-        ///
-        /// \return true if started
-        [[nodiscard]] Task<StartBehaviour> internal_start(DependencyRegister const *_dependencies) {
-            if(_serviceState != ServiceState::INSTALLED || (_dependencies != nullptr && !_dependencies->allSatisfied())) {
-                INTERNAL_DEBUG("internal_start service {}:{} state {} dependencies {} {}", getServiceId(), typeName<OriginalType>(), getState(), _dependencies->size(), _dependencies->allSatisfied());
-                co_return {};
-            }
-
-            INTERNAL_DEBUG("internal_start service {}:{} state {} -> {}", getServiceId(), typeName<OriginalType>(), getState(), ServiceState::INJECTING);
-            _serviceState = ServiceState::INJECTING;
-
-            co_return {};
-        }
-        ///
-        /// \return true if stopped or already stopped
-        [[nodiscard]] Task<StartBehaviour> internal_stop() {
-#ifdef ICHOR_USE_HARDENING
-            if(_serviceState != ServiceState::UNINJECTING) [[unlikely]] {
-                std::terminate();
-            }
-#endif
-
-            INTERNAL_DEBUG("internal_stop service {}:{} state {} -> {}", getServiceId(), typeName<OriginalType>(), getState(), ServiceState::INSTALLED);
-            _serviceState = ServiceState::INSTALLED;
-
-            co_return {};
-        }
-
-        [[nodiscard]] bool internalSetInjected() {
-            if(_serviceState != ServiceState::INJECTING) {
-                return false;
-            }
-
-            INTERNAL_DEBUG("internalSetInjected service {}:{} state {} -> {}", getServiceId(), typeName<OriginalType>(), getState(), ServiceState::ACTIVE);
-            _serviceState = ServiceState::ACTIVE;
-            return true;
-        }
-
-        [[nodiscard]] bool internalSetUninjected() {
-            if(_serviceState != ServiceState::ACTIVE) {
-                return false;
-            }
-
-            INTERNAL_DEBUG("internalSetUninjected service {}:{} state {} -> {}", getServiceId(), typeName<OriginalType>(), getState(), ServiceState::UNINJECTING);
-            _serviceState = ServiceState::UNINJECTING;
-            return true;
-        }
-
-        [[nodiscard]] ServiceState getState() const noexcept {
-            return _serviceState;
-        }
 
         uint64_t _serviceId;
         uint64_t _servicePriority;
