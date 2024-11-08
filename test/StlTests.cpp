@@ -452,6 +452,7 @@ TEST_CASE("STL Tests") {
     SECTION("string_view split tests") {
         std::string_view s{"this\nis\na\nstring\n"};
         std::string_view s2{"this\r\nis\r\na\r\nstring\r\n"};
+        std::string_view s3{"this\r\n\r\nis\r\n\r\na\r\n\r\nstring\r\n\r\n"};
         {
             auto ret = split(s, "\n", false);
             REQUIRE(ret.size() == 4);
@@ -494,11 +495,36 @@ TEST_CASE("STL Tests") {
             REQUIRE(ret[2] == "a\r\n");
             REQUIRE(ret[3] == "string\r\n");
         }
+        {
+            auto ret = split(s3, "\r\n", false);
+            REQUIRE(ret.size() == 8);
+            REQUIRE(ret[0] == "this");
+            REQUIRE(ret[1] == "");
+            REQUIRE(ret[2] == "is");
+            REQUIRE(ret[3] == "");
+            REQUIRE(ret[4] == "a");
+            REQUIRE(ret[5] == "");
+            REQUIRE(ret[6] == "string");
+            REQUIRE(ret[7] == "");
+        }
+        {
+            auto ret = split(s3, "\r\n", true);
+            REQUIRE(ret.size() == 8);
+            REQUIRE(ret[0] == "this\r\n");
+            REQUIRE(ret[1] == "\r\n");
+            REQUIRE(ret[2] == "is\r\n");
+            REQUIRE(ret[3] == "\r\n");
+            REQUIRE(ret[4] == "a\r\n");
+            REQUIRE(ret[5] == "\r\n");
+            REQUIRE(ret[6] == "string\r\n");
+            REQUIRE(ret[7] == "\r\n");
+        }
     }
 
     SECTION("string_view split tests2") {
         std::string_view s{"this\nis\na\nstring\n"};
         std::string_view s2{"this\r\nis\r\na\r\nstring\r\n"};
+        std::string_view s3{"this\r\n\r\nis\r\n\r\na\r\n\r\nstring\r\n\r\n"};
         std::vector<std::string_view> ret;
         {
             split(s, "\n", false, [&](std::string_view n) {
@@ -558,6 +584,36 @@ TEST_CASE("STL Tests") {
             REQUIRE(ret[1] == "is\r\n");
             REQUIRE(ret[2] == "a\r\n");
             REQUIRE(ret[3] == "string\r\n");
+            ret.clear();
+        }
+        {
+            split(s3, "\r\n", false, [&](std::string_view n) {
+                ret.emplace_back(n);
+            });
+            REQUIRE(ret.size() == 8);
+            REQUIRE(ret[0] == "this");
+            REQUIRE(ret[1] == "");
+            REQUIRE(ret[2] == "is");
+            REQUIRE(ret[3] == "");
+            REQUIRE(ret[4] == "a");
+            REQUIRE(ret[5] == "");
+            REQUIRE(ret[6] == "string");
+            REQUIRE(ret[7] == "");
+            ret.clear();
+        }
+        {
+            split(s3, "\r\n", true, [&](std::string_view n) {
+                ret.emplace_back(n);
+            });
+            REQUIRE(ret.size() == 8);
+            REQUIRE(ret[0] == "this\r\n");
+            REQUIRE(ret[1] == "\r\n");
+            REQUIRE(ret[2] == "is\r\n");
+            REQUIRE(ret[3] == "\r\n");
+            REQUIRE(ret[4] == "a\r\n");
+            REQUIRE(ret[5] == "\r\n");
+            REQUIRE(ret[6] == "string\r\n");
+            REQUIRE(ret[7] == "\r\n");
             ret.clear();
         }
     }
