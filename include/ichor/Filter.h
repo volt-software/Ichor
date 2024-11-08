@@ -6,23 +6,23 @@
 
 namespace Ichor {
 
-    template <typename T>
+    template <typename T, bool MissingOk>
     class PropertiesFilterEntry final {
     public:
-        PropertiesFilterEntry(std::string _key, T _val) noexcept : key(std::move(_key)), val(std::move(_val)) {}
+        PropertiesFilterEntry(std::string_view _key, T _val) noexcept : key(_key), val(std::move(_val)) {}
 
         [[nodiscard]] bool matches(ILifecycleManager const &manager) const noexcept {
             auto const propVal = manager.getProperties().find(key);
 
             if(propVal == cend(manager.getProperties())) {
-                return false;
+                return MissingOk;
             }
 
             if(propVal->second.type_hash() != typeNameHash<T>()) {
-                return false;
+                return MissingOk;
             }
 
-            return Ichor::any_cast<T&>(propVal->second) == val;
+            return Ichor::any_cast<T const &>(propVal->second) == val;
         }
 
         [[nodiscard]] std::string getDescription() const noexcept {
@@ -31,8 +31,55 @@ namespace Ichor {
             return s;
         }
 
-        std::string key;
+        std::string_view key;
         T val;
+    };
+
+    template <typename DepT, typename PropT, bool MissingOk>
+    class DependencyPropertiesFilterEntry final {
+    public:
+        DependencyPropertiesFilterEntry(std::string_view _key, PropT _val) noexcept : key(_key), val(std::move(_val)) {}
+
+        [[nodiscard]] bool matches(ILifecycleManager const &manager) const noexcept {
+            auto registry = manager.getDependencyRegistry();
+
+            if(registry == nullptr) {
+                return MissingOk;
+            }
+
+            auto it = registry->find(typeNameHash<DepT>());
+
+            if(it == registry->end()) {
+                return MissingOk;
+            }
+
+            auto const &props = std::get<tl::optional<Properties>>(it->second);
+
+            if(!props) {
+                return MissingOk;
+            }
+
+            auto const propVal = (*props).find(key);
+
+            if(propVal == cend(*props)) {
+                return MissingOk;
+            }
+
+            if(propVal->second.type_hash() != typeNameHash<PropT>()) {
+                return MissingOk;
+            }
+
+            return Ichor::any_cast<PropT const &>(propVal->second) == val;
+        }
+
+        [[nodiscard]] std::string getDescription() const noexcept {
+            std::string s;
+            fmt::format_to(std::back_inserter(s), "DependencyPropertiesFilterEntry {}:{}:{}", typeName<DepT>, key, val);
+            return s;
+        }
+
+        std::string_view key;
+        PropT val;
     };
 
     class ServiceIdFilterEntry final {

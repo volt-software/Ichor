@@ -75,6 +75,26 @@ namespace Ichor {
     }
 
     [[nodiscard]]
+    auto DependencyRegister::find(NameHashType hash) const noexcept -> typename decltype(_registrations)::const_iterator  {
+        INTERNAL_DEBUG("find() size {}", size());
+        return std::find_if(begin(), end(), [hash](PairType const& node) noexcept {
+            auto const &dep = std::get<Dependency>(node.second);
+            INTERNAL_DEBUG("find() {}:{}", dep.interfaceNameHash, hash);
+            return dep.interfaceNameHash == hash;
+        });
+    }
+
+    [[nodiscard]]
+    auto DependencyRegister::find(NameHashType hash) noexcept -> typename decltype(_registrations)::iterator  {
+        INTERNAL_DEBUG("find() size {}", size());
+        return std::find_if(begin(), end(), [hash](PairType const& node) noexcept {
+            auto const &dep = std::get<Dependency>(node.second);
+            INTERNAL_DEBUG("find() {}:{}", dep.interfaceNameHash, hash);
+            return dep.interfaceNameHash == hash;
+        });
+    }
+
+    [[nodiscard]]
     size_t DependencyRegister::size() const noexcept {
         return _registrations.size();
     }
