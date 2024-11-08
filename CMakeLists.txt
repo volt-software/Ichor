@@ -32,7 +32,7 @@ endif()
 
 
 if(ICHOR_COMPILER_ID STREQUAL "gnu" AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS "12")
-    message(FATAL_ERROR "Gcc below version 12 not supported.")
+    message(FATAL_ERROR "Gcc below version 12 not supported. Detected: ${CMAKE_CXX_COMPILER_VERSION}")
 endif()
 if(ICHOR_COMPILER_ID STREQUAL "clang" AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS "15")
     message(FATAL_ERROR "Clang below version 15 not supported.")
@@ -247,7 +247,7 @@ if(NOT WIN32)
             target_compile_options(ichor PUBLIC -fno-strict-aliasing)
         endif()
         if(ICHOR_COMPILER_ID STREQUAL "gnu" OR (ICHOR_COMPILER_ID STREQUAL "clang" AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL "16"))
-            target_compile_options(ichor PUBLIC -ftrivial-auto-var-init=zero)
+            target_compile_options(ichor PUBLIC -ftrivial-auto-var-init=pattern)
         endif()
     endif()
     target_compile_definitions(ichor PUBLIC _FILE_OFFSET_BITS=64 _TIME_BITS=64)
@@ -275,7 +275,7 @@ if(ICHOR_USE_MOLD AND NOT WIN32)
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fuse-ld=mold ")
     set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -fuse-ld=mold ")
     set(CMAKE_MODULE_LINKER_FLAGS "${CMAKE_MODULE_LINKER_FLAGS} -fuse-ld=mold ")
-    #target_link_options(ichor PUBLIC -Wl,--separate-debug-file) # TODO test version first, available since 2.33.0
+    #target_link_options(ichor PUBLIC -Wl,--separate-debug-file) # TODO test mold version first, available since 2.33.0
 endif()
 
 if(ICHOR_COMPILER_ID STREQUAL "gnu")
