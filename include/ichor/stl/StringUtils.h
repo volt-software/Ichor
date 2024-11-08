@@ -49,7 +49,7 @@ namespace Ichor {
         [[nodiscard]] std::string toString() const;
     };
 
-    // Taken from https://www.cppstories.com/2018/07/string-view-perf-followup/
+    // Taken & adapted from https://www.cppstories.com/2018/07/string-view-perf-followup/
     static NO_DEBUG_CONSTEXPR std::vector<std::string_view> split(std::string_view str, std::string_view delims, bool includeDelims) {
         std::vector<std::string_view> output;
         if(delims.size() == 1) {
@@ -57,16 +57,14 @@ namespace Ichor {
             output.reserve(static_cast<size_t>(count));
         }
 
-        for(auto first = str.data(), second = str.data(), last = first + str.size(); second != last && first != last; first = second + 1) {
-            second = std::find_first_of(first, last, std::cbegin(delims), std::cend(delims));
+        for(auto first = str.data(), second = str.data(), last = first + str.size(); second != last && first != last; first = second + delims.size()) {
+            second = std::search(first, last, std::cbegin(delims), std::cend(delims));
 
-            if(first != second) {
-                auto end = static_cast<size_t>(second - first);
-                if(includeDelims && second != last) {
-                    end += delims.size();
-                }
-                output.emplace_back(first, end);
+            auto end = static_cast<size_t>(second - first);
+            if(includeDelims && second != last) {
+                end += delims.size();
             }
+            output.emplace_back(first, end);
         }
 
         return output;
@@ -74,16 +72,14 @@ namespace Ichor {
 
     template <typename CB>
     static constexpr void split(std::string_view str, std::string_view delims, bool includeDelims, CB&& cb) {
-        for(auto first = str.data(), second = str.data(), last = first + str.size(); second != last && first != last; first = second + 1) {
-            second = std::find_first_of(first, last, std::cbegin(delims), std::cend(delims));
+        for(auto first = str.data(), second = str.data(), last = first + str.size(); second != last && first != last; first = second + delims.size()) {
+            second = std::search(first, last, std::cbegin(delims), std::cend(delims));
 
-            if(first != second) {
-                auto end = static_cast<size_t>(second - first);
-                if(includeDelims && second != last) {
-                    end += delims.size();
-                }
-                cb(std::string_view{first, end});
+            auto end = static_cast<size_t>(second - first);
+            if(includeDelims && second != last) {
+                end += delims.size();
             }
+            cb(std::string_view{first, end});
         }
     }
 
