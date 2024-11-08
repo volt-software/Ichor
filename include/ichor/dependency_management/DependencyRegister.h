@@ -76,6 +76,12 @@ namespace Ichor {
         typename decltype(_registrations)::iterator find(NameHashType hash, bool satisfied) noexcept;
 
         [[nodiscard]]
+        typename decltype(_registrations)::const_iterator find(NameHashType hash) const noexcept;
+
+        [[nodiscard]]
+        typename decltype(_registrations)::iterator find(NameHashType hash) noexcept;
+
+        [[nodiscard]]
         size_t size() const noexcept;
 
         [[nodiscard]]
