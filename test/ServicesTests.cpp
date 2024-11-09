@@ -16,6 +16,7 @@
 #include <ichor/events/RunFunctionEvent.h>
 #include <ichor/services/logging/LoggerFactory.h>
 #include <ichor/services/logging/CoutLogger.h>
+#include <ichor/services/logging/CoutFrameworkLogger.h>
 
 
 #if defined(TEST_URING)
@@ -621,6 +622,7 @@ TEST_CASE("ServicesTests") {
             auto *loop = queue->createEventLoop();
             REQUIRE(loop);
 #endif
+            dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>();
             dm.createServiceManager<LoggerFactory<CoutLogger>, ILoggerFactory>();
             svcId = dm.createServiceManager<RequestsLoggingService, IRequestsLoggingService>()->getServiceId();
             queue->start(CaptureSigInt);
@@ -637,9 +639,9 @@ TEST_CASE("ServicesTests") {
         queue->pushEvent<RunFunctionEvent>(0, [&]() {
             DisplayServices(dm);
 #if defined(TEST_URING) || defined(TEST_SDEVENT)
-            REQUIRE(dm.getServiceCount() == 6);
+            REQUIRE(dm.getServiceCount() == 7);
 #else
-            REQUIRE(dm.getServiceCount() == 5);
+            REQUIRE(dm.getServiceCount() == 6);
 #endif
 
             dm.getEventQueue().pushEvent<StopServiceEvent>(0, svcId, true);
@@ -650,9 +652,9 @@ TEST_CASE("ServicesTests") {
         queue->pushEvent<RunFunctionEvent>(0, [&]() {
             DisplayServices(dm);
 #if defined(TEST_URING) || defined(TEST_SDEVENT)
-            REQUIRE(dm.getServiceCount() == 4);
+            REQUIRE(dm.getServiceCount() == 5);
 #else
-            REQUIRE(dm.getServiceCount() == 3);
+            REQUIRE(dm.getServiceCount() == 4);
 #endif
 
             dm.getEventQueue().pushEvent<QuitEvent>(0);
@@ -677,6 +679,7 @@ TEST_CASE("ServicesTests") {
             auto *loop = queue->createEventLoop();
             REQUIRE(loop);
 #endif
+            dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>();
             dm.createServiceManager<LoggerFactory<CoutLogger>, ILoggerFactory>();
             dm.createServiceManager<DependencyService<IUselessService, DependencyFlags::ALLOW_MULTIPLE>, ICountService>();
             auto service = dm.createServiceManager<ConstructorInjectionTestService, IConstructorInjectionTestService>();
@@ -698,9 +701,9 @@ TEST_CASE("ServicesTests") {
 
             DisplayServices(dm);
 #if defined(TEST_URING) || defined(TEST_SDEVENT)
-            REQUIRE(dm.getServiceCount() == 7);
+            REQUIRE(dm.getServiceCount() == 8);
 #else
-            REQUIRE(dm.getServiceCount() == 6);
+            REQUIRE(dm.getServiceCount() == 7);
 #endif
             auto svcs = dm.getAllServicesOfType<IConstructorInjectionTestService>();
             REQUIRE(svcs.size() == 1);
@@ -720,9 +723,9 @@ TEST_CASE("ServicesTests") {
             DisplayServices(dm);
             DisplayServices(dm);
 #if defined(TEST_URING) || defined(TEST_SDEVENT)
-            REQUIRE(dm.getServiceCount() == 5);
+            REQUIRE(dm.getServiceCount() == 6);
 #else
-            REQUIRE(dm.getServiceCount() == 4);
+            REQUIRE(dm.getServiceCount() == 5);
 #endif
 
             dm.getEventQueue().pushEvent<QuitEvent>(0);

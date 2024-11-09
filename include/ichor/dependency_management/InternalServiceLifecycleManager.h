@@ -63,13 +63,19 @@ namespace Ichor::Detail {
 
         [[nodiscard]]
         bool setInjected() final {
+            if(_service.getState() != ServiceState::INJECTING) {
+                return false;
+            }
             _service.setState(ServiceState::ACTIVE);
             return true;
         }
 
         [[nodiscard]]
         bool setUninjected() final {
-            _service.setState(ServiceState::INSTALLED);
+            if(_service.getState() != ServiceState::ACTIVE) {
+                return false;
+            }
+            _service.setState(ServiceState::UNINJECTING);
             return true;
         }
 
