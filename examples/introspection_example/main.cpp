@@ -1,5 +1,6 @@
 #include <ichor/event_queues/PriorityQueue.h>
 #include <ichor/services/logging/LoggerFactory.h>
+#include <ichor/services/logging/NullFrameworkLogger.h>
 #include <ichor/services/timer/TimerFactoryFactory.h>
 #include <ichor/ichor-mimalloc.h>
 #include "IntrospectionService.h"
@@ -32,6 +33,7 @@ int main(int argc, char *argv[]) {
 #ifdef ICHOR_USE_SPDLOG
     dm.createServiceManager<SpdlogSharedService, ISpdlogSharedService>();
 #endif
+    dm.createServiceManager<NullFrameworkLogger, IFrameworkLogger>();
     dm.createServiceManager<LoggerFactory<LOGGER_TYPE>, ILoggerFactory>(Properties{{"DefaultLogLevel", Ichor::make_any<LogLevel>(LogLevel::LOG_INFO)}});
     dm.createServiceManager<TimerFactoryFactory>();
     dm.createServiceManager<IntrospectionService>();

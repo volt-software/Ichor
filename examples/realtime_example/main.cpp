@@ -2,6 +2,7 @@
 #include "OptionalService.h"
 #include <ichor/event_queues/PriorityQueue.h>
 #include <ichor/services/logging/LoggerFactory.h>
+#include <ichor/services/logging/NullFrameworkLogger.h>
 #include <ichor/ichor-mimalloc.h>
 #include "GlobalRealtimeSettings.h"
 
@@ -37,6 +38,7 @@ void* run_example(void*) {
     {
         auto queue = std::make_unique<PriorityQueue>();
         auto &dm = queue->createManager();
+        dm.createServiceManager<NullFrameworkLogger, IFrameworkLogger>();
         dm.createServiceManager<LoggerFactory<LOGGER_TYPE>, ILoggerFactory>(Properties{{"DefaultLogLevel", Ichor::make_any<LogLevel>(LogLevel::LOG_INFO)}});
         dm.createServiceManager<OptionalService, IOptionalService>();
         dm.createServiceManager<OptionalService, IOptionalService>();

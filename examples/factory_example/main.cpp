@@ -3,6 +3,7 @@
 #include "RuntimeCreatedService.h"
 #include <ichor/event_queues/PriorityQueue.h>
 #include <ichor/services/logging/LoggerFactory.h>
+#include <ichor/services/logging/NullFrameworkLogger.h>
 #include <ichor/ichor-mimalloc.h>
 
 // Some compile time logic to instantiate a regular cout logger or to use the spdlog logger, if Ichor has been compiled with it.
@@ -32,6 +33,7 @@ int main(int argc, char *argv[]) {
 #ifdef ICHOR_USE_SPDLOG
     dm.createServiceManager<SpdlogSharedService, ISpdlogSharedService>();
 #endif
+    dm.createServiceManager<NullFrameworkLogger, IFrameworkLogger>();
     dm.createServiceManager<LoggerFactory<LOGGER_TYPE>, ILoggerFactory>(Properties{{"DefaultLogLevel", Ichor::make_any<LogLevel>(LogLevel::LOG_INFO)}});
     dm.createServiceManager<TestService>(Properties{{"scope", Ichor::make_any<std::string>("one"s)}});
     dm.createServiceManager<TestService>(Properties{{"scope", Ichor::make_any<std::string>("two"s)}});

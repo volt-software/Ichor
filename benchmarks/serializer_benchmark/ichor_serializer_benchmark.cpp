@@ -3,6 +3,7 @@
 #include <ichor/services/logging/LoggerFactory.h>
 #include <ichor/services/serialization/ISerializer.h>
 #include <ichor/services/logging/NullLogger.h>
+#include <ichor/services/logging/NullFrameworkLogger.h>
 #include <ichor/services/metrics/MemoryUsageFunctions.h>
 #include <ichor/ichor-mimalloc.h>
 #include <iostream>
@@ -43,6 +44,7 @@ int main(int argc, char *argv[]) {
         auto queue = std::make_unique<PriorityQueue>();
         auto &dm = queue->createManager();
         dm.createServiceManager<LoggerFactory<NullLogger>, ILoggerFactory>();
+        dm.createServiceManager<NullFrameworkLogger, IFrameworkLogger>();
         dm.createServiceManager<TestMsgGlazeSerializer, ISerializer<TestMsg>>();
         dm.createServiceManager<TestService>();
         queue->start(CaptureSigInt);
@@ -59,6 +61,7 @@ int main(int argc, char *argv[]) {
             threads[i] = std::thread([&queues, i] {
                 auto &dm = queues[i].createManager();
                 dm.createServiceManager<LoggerFactory<NullLogger>, ILoggerFactory>();
+                dm.createServiceManager<NullFrameworkLogger, IFrameworkLogger>();
                 dm.createServiceManager<TestMsgGlazeSerializer, ISerializer<TestMsg>>();
                 dm.createServiceManager<TestService>();
                 queues[i].start(CaptureSigInt);

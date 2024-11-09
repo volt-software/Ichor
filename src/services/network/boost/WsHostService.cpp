@@ -106,7 +106,7 @@ Ichor::AsyncGenerator<Ichor::IchorBehaviour> Ichor::Boost::WsHostService::handle
         co_return {};
     }
 
-    auto connection = GetThreadLocalManager().createServiceManager<WsConnectionService, IConnectionService, IHostConnectionService>(Properties{
+    auto connection = GetThreadLocalManager().createServiceManager<WsConnectionService<IHostConnectionService>, IConnectionService, IHostConnectionService>(Properties{
         {"WsHostServiceId", Ichor::make_any<uint64_t>(getServiceId())},
         {"Socket", Ichor::make_unformattable_any<decltype(evt._socket)>(evt._socket)}
     });
