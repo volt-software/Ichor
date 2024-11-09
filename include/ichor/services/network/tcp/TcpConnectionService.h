@@ -5,6 +5,7 @@
 #include <ichor/services/network/IConnectionService.h>
 #include <ichor/services/logging/Logger.h>
 #include <ichor/services/timer/ITimerFactory.h>
+#include <ichor/Concepts.h>
 
 namespace Ichor {
 
@@ -18,7 +19,8 @@ namespace Ichor {
      * - "Priority" uint64_t - Which priority to use for inserted events (default INTERNAL_EVENT_PRIORITY)
      * - "TimeoutSendUs" int64_t - Timeout in microseconds for send calls (default 250'000)
      */
-    class TcpConnectionService final : public IConnectionService, public AdvancedService<TcpConnectionService> {
+    template <typename InterfaceT> requires DerivedAny<InterfaceT, IConnectionService, IHostConnectionService, IClientConnectionService>
+    class TcpConnectionService final : public InterfaceT, public AdvancedService<TcpConnectionService<InterfaceT>> {
     public:
         TcpConnectionService(DependencyRegister &reg, Properties props);
         ~TcpConnectionService() final = default;

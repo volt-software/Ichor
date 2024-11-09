@@ -14,7 +14,7 @@
 #include <fcntl.h>
 
 Ichor::TcpHostService::TcpHostService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)), _socket(-1), _bindFd(), _priority(INTERNAL_EVENT_PRIORITY), _quit() {
-    reg.registerDependency<ILogger>(this, DependencyFlags::NONE);
+    reg.registerDependency<ILogger>(this, DependencyFlags::REQUIRED);
     reg.registerDependency<ITimerFactory>(this, DependencyFlags::REQUIRED);
 }
 
@@ -122,10 +122,12 @@ uint64_t Ichor::TcpHostService::getPriority() {
 
 Ichor::AsyncGenerator<Ichor::IchorBehaviour> Ichor::TcpHostService::handleEvent(NewSocketEvent const &evt) {
     Properties props{};
+    props.reserve(4);
     props.emplace("Priority", Ichor::make_any<uint64_t>(_priority));
     props.emplace("Socket", Ichor::make_any<int>(evt.socket));
     props.emplace("TimeoutSendUs", Ichor::make_any<int64_t>(_sendTimeout));
-    _connections.emplace_back(GetThreadLocalManager().template createServiceManager<TcpConnectionService, IConnectionService>(std::move(props))->getServiceId());
+    props.emplace("TcpHostService", Ichor::make_any<ServiceIdType>(getServiceId()));
+    _connections.emplace_back(GetThreadLocalManager().template createServiceManager<TcpConnectionService<IHostConnectionService>, IConnectionService, IHostConnectionService>(std::move(props))->getServiceId());
 
     co_return {};
 }

@@ -13,11 +13,12 @@ namespace Ichor {
     class ClientFactory final : public IClientFactory, public AdvancedService<ClientFactory<NetworkType, NetworkInterfaceType>> {
     public:
         ClientFactory(DependencyRegister &reg, Properties properties) : AdvancedService<ClientFactory<NetworkType, NetworkInterfaceType>>(std::move(properties)) {
-            reg.registerDependency<ILogger>(this, DependencyFlags::NONE, AdvancedService<ClientFactory<NetworkType, NetworkInterfaceType>>::getProperties());
+            reg.registerDependency<ILogger>(this, DependencyFlags::REQUIRED, AdvancedService<ClientFactory<NetworkType, NetworkInterfaceType>>::getProperties());
         }
         ~ClientFactory() final = default;
 
         uint64_t createNewConnection(NeverNull<IService*> requestingSvc, Properties properties) final {
+            properties.erase("Filter");
             properties.emplace("Filter", Ichor::make_any<Filter>(ServiceIdFilterEntry{requestingSvc->getServiceId()}));
             ConnectionCounterType count = _connectionCounter++;
 
@@ -74,19 +75,24 @@ namespace Ichor {
 
         AsyncGenerator<IchorBehaviour> handleDependencyRequest(AlwaysNull<NetworkInterfaceType*>, DependencyRequestEvent const &evt) {
             if(!evt.properties.has_value()) {
-                throw std::runtime_error("Missing properties");
+                ICHOR_LOG_TRACE(_logger, "Missing properties when creating new connection {}", evt.originatingService);
+                co_return {};
             }
 
             if(!evt.properties.value()->contains("Address")) {
-                throw std::runtime_error("Missing address");
+                ICHOR_LOG_TRACE(_logger, "Missing address when creating new connection {}", evt.originatingService);
+                co_return {};
             }
 
             if(!evt.properties.value()->contains("Port")) {
-                throw std::runtime_error("Missing port");
+                ICHOR_LOG_TRACE(_logger, "Missing port when creating new connection {}", evt.originatingService);
+                co_return {};
             }
 
             if(!_connections.contains(evt.originatingService)) {
+                fmt::println("{} creating {} for {}", typeName<ClientFactory<NetworkType, NetworkInterfaceType>>(), typeName<NetworkInterfaceType>(), evt.originatingService);
                 auto newProps = *evt.properties.value();
+                newProps.erase("Filter");
                 newProps.emplace("Filter", Ichor::make_any<Filter>(ServiceIdFilterEntry{evt.originatingService}));
 
                 unordered_map<ConnectionCounterType, ServiceIdType> newMap;

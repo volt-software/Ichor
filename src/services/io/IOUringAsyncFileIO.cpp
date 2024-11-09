@@ -7,7 +7,7 @@
 
 Ichor::IOUringAsyncFileIO::IOUringAsyncFileIO(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {
     reg.registerDependency<IIOUringQueue>(this, DependencyFlags::REQUIRED);
-    reg.registerDependency<ILogger>(this, DependencyFlags::NONE);
+    reg.registerDependency<ILogger>(this, DependencyFlags::REQUIRED);
 }
 
 

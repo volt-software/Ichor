@@ -30,6 +30,7 @@ namespace Ichor {
     class NeverNull {
     public:
         static_assert(Detail::is_comparable_to_nullptr<T>::value, "T cannot be compared to nullptr.");
+        static_assert(std::is_pointer_v<T>, "T has to be a pointer.");
 
         template <typename U, typename = std::enable_if_t<std::is_convertible<U, T>::value>>
         constexpr NeverNull(U&& u) : ptr_(std::forward<U>(u))

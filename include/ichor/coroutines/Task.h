@@ -17,7 +17,7 @@
 
 namespace Ichor
 {
-    template<typename T> class ICHOR_CORO_AWAIT_ELIDABLE ICHOR_CORO_LIFETIME_BOUND ICHOR_CORO_RETURN_TYPE Task;
+    template<typename T> class ICHOR_CORO_AWAIT_ELIDABLE ICHOR_CORO_LIFETIME_BOUND Task;
 
     namespace Detail
     {
@@ -250,7 +250,7 @@ namespace Ichor
     /// caller. Execution of the coroutine body does not start until the
     /// coroutine is first co_await'ed.
     template<typename T = void>
-    class [[nodiscard]] ICHOR_CORO_AWAIT_ELIDABLE ICHOR_CORO_LIFETIME_BOUND ICHOR_CORO_RETURN_TYPE Task
+    class [[nodiscard]] ICHOR_CORO_AWAIT_ELIDABLE ICHOR_CORO_LIFETIME_BOUND Task
     {
     public:
 

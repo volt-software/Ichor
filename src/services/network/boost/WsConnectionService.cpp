@@ -25,7 +25,7 @@ void setup_stream(std::shared_ptr<websocket::stream<NextLayer>>& ws)
 }
 
 Ichor::Boost::WsConnectionService::WsConnectionService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {
-    reg.registerDependency<ILogger>(this, DependencyFlags::NONE);
+    reg.registerDependency<ILogger>(this, DependencyFlags::REQUIRED);
     reg.registerDependency<IAsioContextService>(this, DependencyFlags::REQUIRED);
     if(auto propIt = getProperties().find("WsHostServiceId"); propIt != getProperties().end()) {
         reg.registerDependency<IHostService>(this, DependencyFlags::REQUIRED,

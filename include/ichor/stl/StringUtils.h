@@ -7,6 +7,7 @@
 #include <fmt/base.h>
 #include <cstring>
 #include <cstdint>
+#include <locale>
 
 #ifdef _GLIBCXX_DEBUG
 #define NO_DEBUG_CONSTEXPR
@@ -36,6 +37,16 @@ namespace Ichor {
         uint64_t val = 0;
         uint8_t  x;
         while ((x = uint8_t(*str++ - '0')) <= 9) val = val * 10 + x;
+        return val;
+    }
+    static constexpr uint64_t FastAtoiu(std::string_view str) noexcept {
+        uint64_t val = 0;
+        uint8_t  x;
+        size_t pos{};
+        while (pos < str.size() && (x = uint8_t(str[pos] - '0')) <= 9) {
+            val = val * 10 + x;
+            pos++;
+        }
         return val;
     }
 
@@ -83,16 +94,22 @@ namespace Ichor {
         }
     }
 
+    static constexpr bool IsOnlyDigits(std::string_view str) {
+        return std::all_of(str.cbegin(), str.cend(), [](char const c) {
+            return c >= '0' && c <= '9';
+        });
+    }
+
     static constexpr tl::optional<Version> parseStringAsVersion(std::string_view str) {
         if(str.length() < 5) {
             return {};
         }
 
-        auto wrongLetterCount = std::count_if(str.cbegin(), str.cend(), [](char const c) {
+        auto wrongLetterCount = std::any_of(str.cbegin(), str.cend(), [](char const c) {
             return c != '0' && c != '1' && c != '2' && c != '3' && c != '4' && c != '5' && c != '6' && c != '7' && c != '8' && c != '9' && c != '.';
         });
 
-        if(wrongLetterCount != 0) {
+        if(wrongLetterCount) {
             return {};
         }
 

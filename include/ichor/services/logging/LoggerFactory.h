@@ -18,7 +18,7 @@ namespace Ichor {
     class LoggerFactory final : public ILoggerFactory, public AdvancedService<LoggerFactory<LogT>> {
     public:
         LoggerFactory(DependencyRegister &reg, Properties props) : AdvancedService<LoggerFactory<LogT>>(std::move(props)) {
-            reg.registerDependency<IFrameworkLogger>(this, DependencyFlags::NONE);
+            reg.registerDependency<IFrameworkLogger>(this, DependencyFlags::REQUIRED);
 
             auto logLevelProp = AdvancedService<LoggerFactory<LogT>>::getProperties().find("DefaultLogLevel");
             if(logLevelProp != end(AdvancedService<LoggerFactory<LogT>>::getProperties())) {
@@ -65,10 +65,12 @@ namespace Ichor {
                 }
 
                 Properties props{};
+                props.reserve(2);
                 props.template emplace<>("Filter", Ichor::make_any<Filter>(ServiceIdFilterEntry{evt.originatingService}));
                 props.template emplace<>("LogLevel", Ichor::make_any<LogLevel>(requestedLevel));
                 auto newLogger = GetThreadLocalManager().template createServiceManager<LogT, ILogger>(std::move(props), evt.priority);
                 _loggers.emplace(evt.originatingService, newLogger->getServiceId());
+                ICHOR_LOG_TRACE(_logger, "created logger for svcid {}", evt.originatingService);
             } else {
                 ICHOR_LOG_TRACE(_logger, "svcid {} already has logger", evt.originatingService);
             }

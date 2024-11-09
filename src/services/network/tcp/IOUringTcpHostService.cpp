@@ -3,6 +3,7 @@
 #include <ichor/services/network/tcp/IOUringTcpConnectionService.h>
 #include <ichor/events/RunFunctionEvent.h>
 #include <ichor/ScopeGuard.h>
+#include <ichor/Filter.h>
 #include <arpa/inet.h>
 #include <sys/socket.h>
 #include <netinet/tcp.h>
@@ -11,7 +12,7 @@
 #include <ichor/ichor_liburing.h>
 
 Ichor::IOUringTcpHostService::IOUringTcpHostService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)), _socket(-1), _bindFd(), _priority(INTERNAL_EVENT_PRIORITY), _quit() {
-    reg.registerDependency<ILogger>(this, DependencyFlags::NONE);
+    reg.registerDependency<ILogger>(this, DependencyFlags::REQUIRED);
     reg.registerDependency<IIOUringQueue>(this, DependencyFlags::REQUIRED);
 }
 
@@ -250,17 +251,19 @@ std::function<void(io_uring_cqe *)> Ichor::IOUringTcpHostService::createAcceptHa
         }
 
         Properties props{};
+        props.reserve(7);
         props.emplace("Priority", Ichor::make_any<uint64_t>(_priority));
         props.emplace("Socket", Ichor::make_any<int>(cqe->res));
         props.emplace("TimeoutSendUs", Ichor::make_any<int64_t>(_sendTimeout));
         props.emplace("TimeoutRecvUs", Ichor::make_any<int64_t>(_recvTimeout));
+        props.emplace("TcpHostService", Ichor::make_any<ServiceIdType>(getServiceId()));
 		if(_bufferEntries) {
 			props.emplace("BufferEntries", Ichor::make_any<uint32_t>(*_bufferEntries));
 		}
 		if(_bufferEntrySize) {
 			props.emplace("BufferEntrySize", Ichor::make_any<uint32_t>(*_bufferEntrySize));
 		}
-        _connections.emplace_back(GetThreadLocalManager().template createServiceManager<IOUringTcpConnectionService, IConnectionService>(std::move(props))->getServiceId());
+        _connections.emplace_back(GetThreadLocalManager().template createServiceManager<IOUringTcpConnectionService<IHostConnectionService>, IConnectionService, IHostConnectionService>(std::move(props))->getServiceId());
 
         if(_q->getKernelVersion() < Version{5, 19, 0}) {
             auto *sqe = _q->getSqeWithData(this, createAcceptHandler());
