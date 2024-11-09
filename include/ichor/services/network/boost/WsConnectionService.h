@@ -26,7 +26,8 @@ namespace Ichor::Boost {
         };
     }
 
-    class WsConnectionService final : public IConnectionService, public IHostConnectionService, public IClientConnectionService, public AdvancedService<WsConnectionService> {
+    template <typename InterfaceT> requires DerivedAny<InterfaceT, IConnectionService, IHostConnectionService, IClientConnectionService>
+    class WsConnectionService final : public InterfaceT, public AdvancedService<WsConnectionService<InterfaceT>> {
     public:
         WsConnectionService(DependencyRegister &reg, Properties props);
         ~WsConnectionService() final = default;

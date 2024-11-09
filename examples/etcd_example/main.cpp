@@ -1,6 +1,7 @@
 #include "UsingEtcdService.h"
 #include <ichor/event_queues/PriorityQueue.h>
 #include <ichor/services/logging/LoggerFactory.h>
+#include <ichor/services/logging/NullFrameworkLogger.h>
 #include <ichor/services/etcd/EtcdV2Service.h>
 #include <ichor/services/timer/TimerFactoryFactory.h>
 #include <ichor/services/network/boost/HttpConnectionService.h>
@@ -35,6 +36,7 @@ int main(int argc, char *argv[]) {
 #ifdef ICHOR_USE_SPDLOG
     dm.createServiceManager<SpdlogSharedService, ISpdlogSharedService>();
 #endif
+    dm.createServiceManager<NullFrameworkLogger, IFrameworkLogger>();
     dm.createServiceManager<LoggerFactory<LOGGER_TYPE>, ILoggerFactory>(Properties{{"DefaultLogLevel", Ichor::make_any<LogLevel>(LogLevel::LOG_INFO)}});
     dm.createServiceManager<Etcd::v2::EtcdService, Etcd::v2::IEtcd>(Properties{{"Address", Ichor::make_any<std::string>("127.0.0.1")}, {"Port", Ichor::make_any<uint16_t>(static_cast<uint16_t>(2379))}, {"TimeoutMs", Ichor::make_any<uint64_t>(1'000ul)}});
     dm.createServiceManager<UsingEtcdV2Service>();

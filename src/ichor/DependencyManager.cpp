@@ -67,7 +67,14 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &uniqueEvt) {
     }
     // when this event needs to be stored in _scopedEvents, we move uniqueEvt and then re-assign evt.
     Event *evt = uniqueEvt.get();
-    ICHOR_LOG_TRACE(_logger, "evt id {} type {} has {} prio", evt->id, evt->get_name(), evt->priority);
+    if(_logger != nullptr && _logger->getLogLevel() == LogLevel::LOG_TRACE) {
+        auto const svcIt = _services.find(evt->originatingService);
+        std::string_view svcName = "UNKNOWN";
+        if(svcIt != _services.end()) {
+            svcName = svcIt->second->implementationName();
+        }
+        ICHOR_LOG_TRACE(_logger, "depMgr {} evt id {} type {} has {} prio from {}", getId(), evt->id, evt->get_name(), evt->priority, svcName);
+    }
 
     bool allowProcessing = true;
     uint64_t handlerAmount = 1; // for the non-default case below, the DepMan handles the event
@@ -387,6 +394,8 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &uniqueEvt) {
                         }
                     }
                 }
+
+                // TODO if service does not request dependencies, skip next part
 
                 // loop over all services, check if cmpMgr is interested in the active ones and inject them if so
                 for (auto &[key, mgr] : _services) {

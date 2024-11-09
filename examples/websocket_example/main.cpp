@@ -79,9 +79,7 @@ int main(int argc, char *argv[]) {
     dm.createServiceManager<SpdlogSharedService, ISpdlogSharedService>(Properties{}, priorityToEnsureHostStartingFirst);
 #endif
 
-    if(verbosity > 0) {
-        dm.createServiceManager<FRAMEWORK_LOGGER_TYPE, IFrameworkLogger>(Properties{{"LogLevel", Ichor::make_any<LogLevel>(level)}}, priorityToEnsureHostStartingFirst);
-    }
+    dm.createServiceManager<FRAMEWORK_LOGGER_TYPE, IFrameworkLogger>(Properties{{"LogLevel", Ichor::make_any<LogLevel>(level)}}, priorityToEnsureHostStartingFirst);
 
     if(silent) {
         dm.createServiceManager<LoggerFactory<NullLogger>, ILoggerFactory>(Properties{}, priorityToEnsureHostStartingFirst);
@@ -91,7 +89,7 @@ int main(int argc, char *argv[]) {
     dm.createServiceManager<TestMsgGlazeSerializer, ISerializer<TestMsg>>();
     dm.createServiceManager<Boost::AsioContextService, Boost::IAsioContextService>(Properties{{"Threads", Ichor::make_any<uint64_t>(threads)}});
     dm.createServiceManager<Boost::WsHostService, IHostService>(Properties{{"Address", Ichor::make_any<std::string>(address)}, {"Port", Ichor::make_any<uint16_t>(static_cast<uint16_t>(8001))}}, priorityToEnsureHostStartingFirst);
-    dm.createServiceManager<ClientFactory<Boost::WsConnectionService>, IClientFactory>();
+    dm.createServiceManager<ClientFactory<Boost::WsConnectionService<IConnectionService>>, IClientFactory>();
     dm.createServiceManager<UsingWsService>(Properties{{"Address", Ichor::make_any<std::string>(address)}, {"Port", Ichor::make_any<uint16_t>(static_cast<uint16_t>(8001))}});
     queue->start(CaptureSigInt);
     auto end = std::chrono::steady_clock::now();

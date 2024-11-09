@@ -4,6 +4,7 @@
 #include <ichor/event_queues/IOUringQueue.h>
 #endif
 #include <ichor/services/logging/LoggerFactory.h>
+#include <ichor/services/logging/NullFrameworkLogger.h>
 #include <ichor/services/logging/NullLogger.h>
 #include <ichor/services/metrics/MemoryUsageFunctions.h>
 #include <ichor/ichor-mimalloc.h>
@@ -63,6 +64,7 @@ int main(int argc, char *argv[]) {
 //        spdlog::info("start");
         auto &dm = queue->createManager();
         dm.createServiceManager<LoggerFactory<NullLogger>, ILoggerFactory>();
+        dm.createServiceManager<NullFrameworkLogger, IFrameworkLogger>();
         dm.createServiceManager<TestService>(Properties{{"LogLevel", Ichor::make_any<LogLevel>(LogLevel::LOG_WARN)}});
         queue->start(CaptureSigInt);
         auto end = std::chrono::steady_clock::now();
@@ -91,6 +93,7 @@ int main(int argc, char *argv[]) {
                 }
                 auto &dm = queue->createManager();
                 dm.createServiceManager<LoggerFactory<NullLogger>, ILoggerFactory>();
+                dm.createServiceManager<NullFrameworkLogger, IFrameworkLogger>();
                 dm.createServiceManager<TestService>(Properties{{"LogLevel", Ichor::make_any<LogLevel>(LogLevel::LOG_WARN)}});
                 queue->start(CaptureSigInt);
             });
