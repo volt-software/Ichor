@@ -1041,7 +1041,7 @@ namespace glz::detail {
 }
 
 EtcdService::EtcdService(DependencyRegister &reg, Properties props) : AdvancedService<EtcdService>(std::move(props)) {
-    reg.registerDependency<ILogger>(this, DependencyFlags::NONE, getProperties());
+    reg.registerDependency<ILogger>(this, DependencyFlags::REQUIRED, getProperties());
     reg.registerDependency<IHttpConnectionService>(this, DependencyFlags::REQUIRED | DependencyFlags::ALLOW_MULTIPLE, getProperties());
     reg.registerDependency<IClientFactory>(this, DependencyFlags::REQUIRED);
 }

@@ -1,12 +1,7 @@
-#ifdef ICHOR_USE_BOOST_BEAST
-
 #include <ichor/event_queues/PriorityQueue.h>
 #include <ichor/events/RunFunctionEvent.h>
 #include <ichor/coroutines/AsyncManualResetEvent.h>
 #include <ichor/services/logging/LoggerFactory.h>
-#include <ichor/services/network/boost/HttpHostService.h>
-#include <ichor/services/network/boost/HttpConnectionService.h>
-#include <ichor/services/network/boost/AsioContextService.h>
 #include <ichor/services/network/ClientFactory.h>
 #include <ichor/services/serialization/ISerializer.h>
 #include <ichor/services/logging/CoutLogger.h>
@@ -16,31 +11,98 @@
 #include "../examples/common/TestMsgGlazeSerializer.h"
 #include "serialization/RegexJsonMsgSerializer.h"
 
+#ifdef TEST_BOOST
+#include <ichor/services/network/boost/HttpHostService.h>
+#include <ichor/services/network/boost/HttpConnectionService.h>
+#include <ichor/services/network/boost/AsioContextService.h>
+#include <ichor/event_queues/PriorityQueue.h>
+
+
+#define QIMPL PriorityQueue
+#define HTTPHOSTIMPL Boost::HttpHostService
+#define HTTPCONNIMPL Boost::HttpConnectionService
+#elif defined(TEST_URING)
+#include <ichor/services/network/tcp/IOUringTcpConnectionService.h>
+#include <ichor/services/network/tcp/IOUringTcpHostService.h>
+#include <ichor/event_queues/IOUringQueue.h>
+#include <ichor/services/network/http/HttpHostService.h>
+#include <ichor/services/network/http/HttpConnectionService.h>
+#include <catch2/generators/catch_generators.hpp>
+#include <ichor/stl/LinuxUtils.h>
+
+using namespace std::string_literals;
+
+#define QIMPL IOUringQueue
+#define CONNIMPL IOUringTcpConnectionService
+#define HOSTIMPL IOUringTcpHostService
+#define HTTPHOSTIMPL HttpHostService
+#define HTTPCONNIMPL HttpConnectionService
+#else
+#error "no uring/boost"
+#endif
+
 using namespace Ichor;
 
 std::unique_ptr<Ichor::AsyncManualResetEvent> _evt;
 std::thread::id testThreadId;
 std::thread::id dmThreadId;
 std::atomic<bool> evtGate;
+#if defined(TEST_URING)
+tl::optional<Version> emulateKernelVersion;
 
-TEST_CASE("HttpTests") {
+TEST_CASE("HttpTests_uring") {
+
+    auto version = Ichor::kernelVersion();
+
+    REQUIRE(version);
+    if(version < Version{5, 18, 0}) {
+        return;
+    }
+
+    auto gen_i = GENERATE(1, 2);
+
+    if(gen_i == 2) {
+        emulateKernelVersion = Version{5, 18, 0};
+        fmt::println("emulating kernel version {}", *emulateKernelVersion);
+    } else {
+        fmt::println("kernel version {}", *version);
+    }
+#else
+TEST_CASE("HttpTests_boost") {
+#endif
+
     SECTION("Http events on same thread") {
         testThreadId = std::this_thread::get_id();
         _evt = std::make_unique<Ichor::AsyncManualResetEvent>();
-        auto queue = std::make_unique<PriorityQueue>(true);
+#if defined(TEST_URING)
+        auto queue = std::make_unique<QIMPL>(500, 100'000'000, emulateKernelVersion);
+#else
+        auto queue = std::make_unique<QIMPL>(500, true);
+#endif
         auto &dm = queue->createManager();
         evtGate = false;
 
         std::thread t([&]() {
+#ifdef TEST_URING
+            REQUIRE(queue->createEventLoop());
+#endif
             dmThreadId = std::this_thread::get_id();
 
             dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>({}, 10);
-            dm.createServiceManager<LoggerFactory<CoutLogger>, ILoggerFactory>();
+            dm.createServiceManager<LoggerFactory<CoutLogger>, ILoggerFactory>(Properties{{"DefaultLogLevel", Ichor::make_any<LogLevel>(LogLevel::LOG_TRACE)}});
             dm.createServiceManager<TestMsgGlazeSerializer, ISerializer<TestMsg>>();
             dm.createServiceManager<RegexJsonMsgSerializer, ISerializer<RegexJsonMsg>>();
+#ifdef TEST_BOOST
             dm.createServiceManager<Boost::AsioContextService, Boost::IAsioContextService>();
-            dm.createServiceManager<Boost::HttpHostService, IHttpHostService>(Properties{{"Address", Ichor::make_any<std::string>("127.0.0.1")}, {"Port", Ichor::make_any<uint16_t>(static_cast<uint16_t>(8001))}});
-            dm.createServiceManager<ClientFactory<Boost::HttpConnectionService, IHttpConnectionService>, IClientFactory>();
+#else
+
+#endif
+            dm.createServiceManager<HTTPHOSTIMPL, IHttpHostService>(Properties{{"Address", Ichor::make_any<std::string>("127.0.0.1")}, {"Port", Ichor::make_any<uint16_t>(static_cast<uint16_t>(8001))}});
+            dm.createServiceManager<ClientFactory<HTTPCONNIMPL, IHttpConnectionService>, IClientFactory>();
+#ifdef TEST_URING
+            dm.createServiceManager<HOSTIMPL, IHostService>(Properties{{"Address", Ichor::make_any<std::string>("127.0.0.1"s)}, {"Port", Ichor::make_any<uint16_t>(static_cast<uint16_t>(8001))}});
+            dm.createServiceManager<ClientFactory<CONNIMPL<IClientConnectionService>, IClientConnectionService>, IClientFactory>();
+#endif
             dm.createServiceManager<HttpThreadService>(Properties{{"Address", Ichor::make_any<std::string>("127.0.0.1")}, {"Port", Ichor::make_any<uint16_t>(static_cast<uint16_t>(8001))}});
 
             queue->start(CaptureSigInt);
@@ -61,6 +123,7 @@ TEST_CASE("HttpTests") {
         t.join();
     }
 
+#ifdef TEST_BOOST
     SECTION("Https events on same thread") {
         testThreadId = std::this_thread::get_id();
         _evt = std::make_unique<Ichor::AsyncManualResetEvent>();
@@ -220,16 +283,5 @@ TEST_CASE("HttpTests") {
 
         t.join();
     }
-}
-
-#else
-
-#include "Common.h"
-
-TEST_CASE("HttpTests") {
-    SECTION("Empty Test so that Catch2 exits with 0") {
-        REQUIRE(true);
-    }
-}
-
 #endif
+}

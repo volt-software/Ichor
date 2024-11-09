@@ -38,7 +38,7 @@ e.g. here is a service that adds a REST API endpoint to the running HTTP host se
 class BasicService final {
 public:
     BasicService(IHttpHostService *hostService) {
-        _routeRegistration = hostService->addRoute(HttpMethod::get, "/basic", [this, serializer](HttpRequest &req) -> AsyncGenerator<HttpResponse> {
+        _routeRegistration = hostService->addRoute(HttpMethod::get, "/basic", [this, serializer](HttpRequest &req) -> Task<HttpResponse> {
             co_return HttpResponse{HttpStatus::ok, "application/text, "<html><body>This is my basic webpage</body></html>", {}};
         });
     }

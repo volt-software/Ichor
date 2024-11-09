@@ -3,6 +3,7 @@
 #include <ichor/stl/ErrnoUtils.h>
 #include <tl/expected.h>
 #include <vector>
+#include <span>
 
 namespace Ichor {
     class IConnectionService {
@@ -40,5 +41,19 @@ namespace Ichor {
 
     protected:
         ~IConnectionService() = default;
+    };
+
+    struct IHostConnectionService : public IConnectionService {
+        using IConnectionService::IConnectionService;
+
+    protected:
+        ~IHostConnectionService() = default;
+    };
+
+    struct IClientConnectionService : public IConnectionService {
+        using IConnectionService::IConnectionService;
+
+    protected:
+        ~IClientConnectionService() = default;
     };
 }

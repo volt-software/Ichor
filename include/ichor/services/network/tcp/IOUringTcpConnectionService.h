@@ -26,7 +26,8 @@ namespace Ichor {
      * - "BufferEntries" uint32_t - If kernel supports multishot, how many buffers to create for recv (default 8)
      * - "BufferEntrySize" uint32_t - If kernel supports multishot, how big one entry is for the allocated buffers (default 16'384)
      */
-    class IOUringTcpConnectionService final : public IConnectionService, public AdvancedService<IOUringTcpConnectionService> {
+    template <typename InterfaceT> requires DerivedAny<InterfaceT, IConnectionService, IHostConnectionService, IClientConnectionService>
+    class IOUringTcpConnectionService final : public InterfaceT, public AdvancedService<IOUringTcpConnectionService<InterfaceT>> {
     public:
         IOUringTcpConnectionService(DependencyRegister &reg, Properties props);
         ~IOUringTcpConnectionService() final = default;
@@ -54,9 +55,7 @@ namespace Ichor {
 
         friend DependencyRegister;
 
-        static uint64_t tcpConnId;
         int _socket;
-        uint64_t _id;
         int64_t _sendTimeout{250'000};
         int64_t _recvTimeout{250'000};
         uint32_t _bufferEntries{16};

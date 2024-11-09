@@ -26,7 +26,7 @@ namespace Ichor::Boost {
         };
     }
 
-    class WsConnectionService final : public IConnectionService, public AdvancedService<WsConnectionService> {
+    class WsConnectionService final : public IConnectionService, public IHostConnectionService, public IClientConnectionService, public AdvancedService<WsConnectionService> {
     public:
         WsConnectionService(DependencyRegister &reg, Properties props);
         ~WsConnectionService() final = default;

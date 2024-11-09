@@ -30,7 +30,7 @@ int main(int argc, char *argv[]) {
 
 class UsingHttpService final {
     UsingHttpService(IHttpHostService *host) {
-        _routeRegistrations.emplace_back(host->addRoute(HttpMethod::post, "/test", [this](HttpRequest &req) -> AsyncGenerator<HttpResponse> {
+        _routeRegistrations.emplace_back(host->addRoute(HttpMethod::post, "/test", [this](HttpRequest &req) -> Task<HttpResponse> {
             co_return HttpResponse{HttpStatus::ok, "application/text", "<html><body>This is my basic webpage</body></html>", {}};
         }));
     }
@@ -47,7 +47,7 @@ To add routes that capture parts of the URL, Ichor provides a regex route matche
 
 class UsingHttpService final {
     UsingHttpService(IHttpHostService *host) {
-        _routeRegistrations.emplace_back(svc.addRoute(HttpMethod::get, std::make_unique<RegexRouteMatch<R"(\/user\/(\d{1,2})\?*(.*))">>(), [this](HttpRequest &req) -> AsyncGenerator<HttpResponse> {
+        _routeRegistrations.emplace_back(svc.addRoute(HttpMethod::get, std::make_unique<RegexRouteMatch<R"(\/user\/(\d{1,2})\?*(.*))">>(), [this](HttpRequest &req) -> Task<HttpResponse> {
             std::string user_id = req.regex_params[0];
             if(req.regex_params.size() > 1) {
                 std::string query_params = req.regex_params[1]; // e.g. param1=one&param2=two, parsing string is left to the user for now, though Ichor does provide a string_view split function in stl/StringUtils.h
@@ -87,7 +87,7 @@ struct CustomRouteMatcher final : public RouteMatcher {
 And use that with the route registration:
 
 ```c++
-_routeRegistrations.emplace_back(svc.addRoute(HttpMethod::get, std::make_unique<CustomRouteMatcher>(), [this](HttpRequest &req) -> AsyncGenerator<HttpResponse> {
+_routeRegistrations.emplace_back(svc.addRoute(HttpMethod::get, std::make_unique<CustomRouteMatcher>(), [this](HttpRequest &req) -> Task<HttpResponse> {
     co_return HttpResponse{HttpStatus::ok, "text/plain", {}, {}};
 }));
 ```

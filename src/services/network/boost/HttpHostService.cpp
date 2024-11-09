@@ -4,7 +4,7 @@
 #include <ichor/events/RunFunctionEvent.h>
 
 Ichor::Boost::HttpHostService::HttpHostService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {
-    reg.registerDependency<ILogger>(this, DependencyFlags::NONE);
+    reg.registerDependency<ILogger>(this, DependencyFlags::REQUIRED);
     reg.registerDependency<IAsioContextService>(this, DependencyFlags::REQUIRED);
 }
 
@@ -130,17 +130,17 @@ uint64_t Ichor::Boost::HttpHostService::getPriority() {
     return _priority.load(std::memory_order_acquire);
 }
 
-Ichor::HttpRouteRegistration Ichor::Boost::HttpHostService::addRoute(HttpMethod method, std::string_view route, std::function<AsyncGenerator<HttpResponse>(HttpRequest&)> handler) {
+Ichor::HttpRouteRegistration Ichor::Boost::HttpHostService::addRoute(HttpMethod method, std::string_view route, std::function<Task<HttpResponse>(HttpRequest&)> handler) {
     return addRoute(method, std::make_unique<StringRouteMatcher>(route), std::move(handler));
 }
 
-Ichor::HttpRouteRegistration Ichor::Boost::HttpHostService::addRoute(HttpMethod method, std::unique_ptr<RouteMatcher> newMatcher, std::function<AsyncGenerator<HttpResponse>(HttpRequest&)> handler) {
+Ichor::HttpRouteRegistration Ichor::Boost::HttpHostService::addRoute(HttpMethod method, std::unique_ptr<RouteMatcher> newMatcher, std::function<Task<HttpResponse>(HttpRequest&)> handler) {
     auto routes = _handlers.find(method);
 
     newMatcher->set_id(_matchersIdCounter);
 
     if(routes == _handlers.end()) {
-        unordered_map<std::unique_ptr<RouteMatcher>, std::function<AsyncGenerator<HttpResponse>(HttpRequest&)>> newSubMap{};
+        unordered_map<std::unique_ptr<RouteMatcher>, std::function<Task<HttpResponse>(HttpRequest&)>> newSubMap{};
         newSubMap.emplace(std::move(newMatcher), std::move(handler));
         _handlers.emplace(method, std::move(newSubMap));
     } else {
@@ -335,14 +335,14 @@ void Ichor::Boost::HttpHostService::read(tcp::socket socket, net::yield_context 
 #else
         _queue->pushEvent<RunFunctionEventAsync>(getServiceId(), [this, connection, httpReq = std::move(httpReq), version = req.version(), keep_alive = req.keep_alive()]() mutable -> AsyncGenerator<IchorBehaviour> {
 #endif
-            auto routes = _handlers.find(static_cast<HttpMethod>(httpReq.method));
+            auto routes = _handlers.find(httpReq.method);
 
             if (_quit.load(std::memory_order_acquire) || _asioContextService->fibersShouldStop()) {
                 co_return{};
             }
 
             if (routes != std::end(_handlers)) {
-                std::function<AsyncGenerator<HttpResponse>(HttpRequest&)> const *f{};
+                std::function<Task<HttpResponse>(HttpRequest&)> const *f{};
                 for(auto const &[matcher, handler] : routes->second) {
                     if(matcher->matches(httpReq.route)) {
                         httpReq.regex_params = matcher->route_params();
@@ -352,9 +352,7 @@ void Ichor::Boost::HttpHostService::read(tcp::socket socket, net::yield_context 
                 }
 
                 if (f != nullptr) {
-                    auto gen = (*f)(httpReq);
-                    auto it = co_await gen.begin();
-                    HttpResponse httpRes = std::move(*it);
+                    auto httpRes = co_await (*f)(httpReq);
                     http::response<http::vector_body<uint8_t>, http::basic_fields<std::allocator<uint8_t>>> res{ static_cast<http::status>(httpRes.status), version };
                     if (_sendServerHeader) {
                         res.set(http::field::server, BOOST_BEAST_VERSION_STRING);

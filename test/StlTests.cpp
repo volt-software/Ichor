@@ -439,7 +439,12 @@ TEST_CASE("STL Tests") {
         REQUIRE(Ichor::FastAtoiu("0") == 0);
         REQUIRE(Ichor::FastAtoiu("u10") == 0);
         REQUIRE(Ichor::FastAtoiu("10u") == 10);
+        REQUIRE(Ichor::FastAtoiu("10"sv) == 10);
+        REQUIRE(Ichor::FastAtoiu("0"sv) == 0);
+        REQUIRE(Ichor::FastAtoiu("u10"sv) == 0);
+        REQUIRE(Ichor::FastAtoiu("10u"sv) == 10);
         REQUIRE(Ichor::FastAtoiu(std::to_string(std::numeric_limits<uint64_t>::max()).c_str()) == std::numeric_limits<uint64_t>::max());
+        REQUIRE(Ichor::FastAtoiu(std::to_string(std::numeric_limits<uint64_t>::max())) == std::numeric_limits<uint64_t>::max());
         REQUIRE(Ichor::FastAtoi("10") == 10);
         REQUIRE(Ichor::FastAtoi("0") == 0);
         REQUIRE(Ichor::FastAtoi("u10") == 0);

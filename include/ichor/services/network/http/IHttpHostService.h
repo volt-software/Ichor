@@ -98,8 +98,8 @@ namespace Ichor {
 
     class IHttpHostService {
     public:
-        virtual HttpRouteRegistration addRoute(HttpMethod method, std::string_view route, std::function<AsyncGenerator<HttpResponse>(HttpRequest&)> handler) = 0;
-        virtual HttpRouteRegistration addRoute(HttpMethod method, std::unique_ptr<RouteMatcher> matcher, std::function<AsyncGenerator<HttpResponse>(HttpRequest&)> handler) = 0;
+        virtual HttpRouteRegistration addRoute(HttpMethod method, std::string_view route, std::function<Task<HttpResponse>(HttpRequest&)> handler) = 0;
+        virtual HttpRouteRegistration addRoute(HttpMethod method, std::unique_ptr<RouteMatcher> matcher, std::function<Task<HttpResponse>(HttpRequest&)> handler) = 0;
         virtual void setPriority(uint64_t priority) = 0;
         virtual uint64_t getPriority() = 0;
 

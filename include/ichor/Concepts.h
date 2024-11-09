@@ -5,6 +5,8 @@
 #include <ichor/stl/NeverAlwaysNull.h>
 #include <concepts>
 
+#include "Concepts.h"
+
 namespace Ichor {
 
     struct DependencyRegister;
@@ -24,6 +26,12 @@ namespace Ichor {
 
     template <class T, class U>
     concept Derived = std::is_base_of<U, T>::value;
+
+    template <class T, class U, class V>
+    concept DerivedEither = std::is_base_of<U, T>::value || std::is_base_of<V, T>::value;
+
+    template <class T, class U, class V, class X>
+    concept DerivedAny = std::is_base_of<U, T>::value || std::is_base_of<V, T>::value;
 
     template <class T, template <class> class U>
     concept DerivedTemplated = std::is_base_of<U<T>, T>::value;

@@ -3,20 +3,17 @@
 
 TEST_CASE("AsyncManualResetEventTests") {
 
-    SECTION("default constructor initially not set")
-    {
+    SECTION("default constructor initially not set") {
         Ichor::AsyncManualResetEvent event;
         CHECK(!event.is_set());
     }
 
-    SECTION("construct event initially set")
-    {
+    SECTION("construct event initially set") {
         Ichor::AsyncManualResetEvent event{true};
         CHECK(event.is_set());
     }
 
-    SECTION("set and reset")
-    {
+    SECTION("set and reset") {
         Ichor::AsyncManualResetEvent event;
         CHECK(!event.is_set());
         event.set();

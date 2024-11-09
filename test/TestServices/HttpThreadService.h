@@ -82,7 +82,8 @@ private:
     }
 
     void addDependencyInstance(IHttpHostService &svc, IService&) {
-        _routeRegistration = svc.addRoute(HttpMethod::post, "/test", [this](HttpRequest &req) -> AsyncGenerator<HttpResponse> {
+        _routeRegistration = svc.addRoute(HttpMethod::post, "/test", [this](HttpRequest &req) -> Task<HttpResponse> {
+            fmt::println("/test POST");
             if(dmThreadId != std::this_thread::get_id()) {
                 throw std::runtime_error("dmThreadId id incorrect");
             }
@@ -104,7 +105,8 @@ private:
 
             co_return HttpResponse{HttpStatus::ok, "application/json", _testSerializer->serialize(TestMsg{11, "hello"}), {}};
         });
-        _regexRouteRegistration = svc.addRoute(HttpMethod::get, std::make_unique<RegexRouteMatch<R"(\/regex_test\/([a-zA-Z0-9]*)\?*([a-zA-Z0-9]+=[a-zA-Z0-9]+)*&*([a-zA-Z0-9]+=[a-zA-Z0-9]+)*)">>(), [this](HttpRequest &req) -> AsyncGenerator<HttpResponse> {
+        _regexRouteRegistration = svc.addRoute(HttpMethod::get, std::make_unique<RegexRouteMatch<R"(\/regex_test\/([a-zA-Z0-9]*)\?*([a-zA-Z0-9]+=[a-zA-Z0-9]+)*&*([a-zA-Z0-9]+=[a-zA-Z0-9]+)*)">>(), [this](HttpRequest &req) -> Task<HttpResponse> {
+            fmt::println("/regex_test POST");
             if(dmThreadId != std::this_thread::get_id()) {
                 throw std::runtime_error("dmThreadId id incorrect");
             }
@@ -136,10 +138,14 @@ private:
         }
 
         if(response.status != HttpStatus::ok) {
+            fmt::println("test status not ok {}", static_cast<uint_fast16_t>(response.status));
             throw std::runtime_error("test status not ok");
         }
 
         auto msg = _testSerializer->deserialize(response.body);
+        if(!msg) {
+            std::terminate();
+        }
         fmt::print("Received TestMsg {}:{}\n", msg->id, msg->val);
 
         GetThreadLocalEventQueue().pushEvent<RunFunctionEventAsync>(getServiceId(), [this]() -> AsyncGenerator<IchorBehaviour> {
@@ -167,7 +173,7 @@ private:
         }
 
         if(response.status != HttpStatus::ok) {
-            throw std::runtime_error(fmt::format("regex1 status not ok {}", (int)response.status).c_str());
+            throw std::runtime_error(fmt::format("regex1 status not ok {}", (int)response.status));
         }
 
         auto msg = _regexSerializer->deserialize(response.body);
@@ -191,7 +197,7 @@ private:
         }
 
         if(response.status != HttpStatus::ok) {
-            throw std::runtime_error(fmt::format("regex2 status not ok {}", (int)response.status).c_str());
+            throw std::runtime_error(fmt::format("regex2 status not ok {}", (int)response.status));
         }
 
         msg = _regexSerializer->deserialize(response.body);
@@ -215,7 +221,7 @@ private:
         }
 
         if(response.status != HttpStatus::ok) {
-            throw std::runtime_error(fmt::format("regex3 status not ok {}", (int)response.status).c_str());
+            throw std::runtime_error(fmt::format("regex3 status not ok {}", (int)response.status));
         }
 
         msg = _regexSerializer->deserialize(response.body);
@@ -242,7 +248,7 @@ private:
         }
 
         if(response.status != HttpStatus::ok) {
-            throw std::runtime_error(fmt::format("regex4 status not ok {}", (int)response.status).c_str());
+            throw std::runtime_error(fmt::format("regex4 status not ok {}", (int)response.status));
         }
 
         msg = _regexSerializer->deserialize(response.body);

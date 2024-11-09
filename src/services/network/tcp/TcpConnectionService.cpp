@@ -12,21 +12,23 @@
 #include <poll.h>
 #include <thread>
 
-Ichor::TcpConnectionService::TcpConnectionService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)), _socket(-1), _attempts(), _priority(INTERNAL_EVENT_PRIORITY), _quit() {
-    reg.registerDependency<ILogger>(this, DependencyFlags::NONE);
+template <typename InterfaceT> requires Ichor::DerivedAny<InterfaceT, Ichor::IConnectionService, Ichor::IHostConnectionService, Ichor::IClientConnectionService>
+Ichor::TcpConnectionService<InterfaceT>::TcpConnectionService(DependencyRegister &reg, Properties props) : AdvancedService<TcpConnectionService<InterfaceT>>(std::move(props)), _socket(-1), _attempts(), _priority(INTERNAL_EVENT_PRIORITY), _quit() {
+    reg.registerDependency<ILogger>(this, DependencyFlags::REQUIRED);
     reg.registerDependency<ITimerFactory>(this, DependencyFlags::REQUIRED);
 }
 
-Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::TcpConnectionService::start() {
-    if(auto propIt = getProperties().find("Priority"); propIt != getProperties().end()) {
+template <typename InterfaceT> requires Ichor::DerivedAny<InterfaceT, Ichor::IConnectionService, Ichor::IHostConnectionService, Ichor::IClientConnectionService>
+Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::TcpConnectionService<InterfaceT>::start() {
+    if(auto propIt = AdvancedService<TcpConnectionService>::getProperties().find("Priority"); propIt != AdvancedService<TcpConnectionService>::getProperties().end()) {
         _priority = Ichor::any_cast<uint64_t>(propIt->second);
     }
-    if(auto propIt = getProperties().find("TimeoutSendUs"); propIt != getProperties().end()) {
+    if(auto propIt = AdvancedService<TcpConnectionService>::getProperties().find("TimeoutSendUs"); propIt != AdvancedService<TcpConnectionService>::getProperties().end()) {
         _sendTimeout = Ichor::any_cast<int64_t>(propIt->second);
     }
 
-    if(getProperties().contains("Socket")) {
-        if(auto propIt = getProperties().find("Socket"); propIt != getProperties().end()) {
+    if(AdvancedService<TcpConnectionService>::getProperties().contains("Socket")) {
+        if(auto propIt = AdvancedService<TcpConnectionService>::getProperties().find("Socket"); propIt != AdvancedService<TcpConnectionService>::getProperties().end()) {
             _socket = Ichor::any_cast<int>(propIt->second);
         }
 
@@ -37,20 +39,20 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::TcpConnectionService::
         timeout.tv_usec = _sendTimeout;
         setsockopt(_socket, SOL_SOCKET, SO_SNDTIMEO, &timeout, sizeof(timeout));
 
-        ICHOR_LOG_DEBUG(_logger, "[{}] Starting TCP connection for existing socket", getServiceId());
+        ICHOR_LOG_DEBUG(_logger, "[{}] Starting TCP connection for existing socket", AdvancedService<TcpConnectionService>::getServiceId());
     } else {
-        auto addrIt = getProperties().find("Address");
-        auto portIt = getProperties().find("Port");
+        auto addrIt = AdvancedService<TcpConnectionService>::getProperties().find("Address");
+        auto portIt = AdvancedService<TcpConnectionService>::getProperties().find("Port");
 
-        if(addrIt == getProperties().end()) {
-            ICHOR_LOG_ERROR(_logger, "[{}] Missing address", getServiceId());
+        if(addrIt == AdvancedService<TcpConnectionService>::getProperties().end()) {
+            ICHOR_LOG_ERROR(_logger, "[{}] Missing address", AdvancedService<TcpConnectionService>::getServiceId());
             co_return tl::unexpected(StartError::FAILED);
         }
-        if(portIt == getProperties().end()) {
-            ICHOR_LOG_ERROR(_logger, "[{}] Missing port", getServiceId());
+        if(portIt == AdvancedService<TcpConnectionService>::getProperties().end()) {
+            ICHOR_LOG_ERROR(_logger, "[{}] Missing port", AdvancedService<TcpConnectionService>::getServiceId());
             co_return tl::unexpected(StartError::FAILED);
         }
-        ICHOR_LOG_TRACE(_logger, "[{}] connecting to {}:{}", getServiceId(), Ichor::any_cast<std::string&>(addrIt->second), Ichor::any_cast<uint16_t>(portIt->second));
+        ICHOR_LOG_TRACE(_logger, "[{}] connecting to {}:{}", AdvancedService<TcpConnectionService>::getServiceId(), Ichor::any_cast<std::string&>(addrIt->second), Ichor::any_cast<uint16_t>(portIt->second));
 
         // The start function possibly gets called multiple times due to trying to recover from not being able to connect
         if(_socket == -1) {
@@ -83,7 +85,7 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::TcpConnectionService::
             if(connected) {
                 break;
             }
-            ICHOR_LOG_TRACE(_logger, "[{}] connect error {}", getServiceId(), errno);
+            ICHOR_LOG_TRACE(_logger, "[{}] connect error {}", AdvancedService<TcpConnectionService>::getServiceId(), errno);
             if(errno == EINPROGRESS) {
                 // this is from when the socket was marked as nonblocking, don't think this is necessary anymore.
                 pollfd pfd{};
@@ -92,7 +94,7 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::TcpConnectionService::
                 ret = poll(&pfd, 1, static_cast<int>(_sendTimeout/1'000));
 
                 if(ret < 0) {
-                    ICHOR_LOG_ERROR(_logger, "[{}] poll error {}", getServiceId(), errno);
+                    ICHOR_LOG_ERROR(_logger, "[{}] poll error {}", AdvancedService<TcpConnectionService>::getServiceId(), errno);
                     continue;
                 }
 
@@ -102,9 +104,9 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::TcpConnectionService::
                 }
 
                 if(pfd.revents & POLLERR) {
-                    ICHOR_LOG_ERROR(_logger, "[{}] POLLERR {}", getServiceId(), pfd.revents);
+                    ICHOR_LOG_ERROR(_logger, "[{}] POLLERR {}", AdvancedService<TcpConnectionService>::getServiceId(), pfd.revents);
                 } else if(pfd.revents & POLLHUP) {
-                    ICHOR_LOG_ERROR(_logger, "[{}] POLLHUP {}", getServiceId(), pfd.revents);
+                    ICHOR_LOG_ERROR(_logger, "[{}] POLLHUP {}", AdvancedService<TcpConnectionService>::getServiceId(), pfd.revents);
                 } else if(pfd.revents & POLLOUT) {
                     int connect_result{};
                     socklen_t result_len = sizeof(connect_result);
@@ -116,7 +118,7 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::TcpConnectionService::
 
                     // connect failed, retry
                     if(connect_result < 0) {
-                        ICHOR_LOG_ERROR(_logger, "[{}] POLLOUT {} {}", getServiceId(), pfd.revents, connect_result);
+                        ICHOR_LOG_ERROR(_logger, "[{}] POLLOUT {} {}", AdvancedService<TcpConnectionService>::getServiceId(), pfd.revents, connect_result);
                         break;
                     }
                     connected = true;
@@ -135,11 +137,11 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::TcpConnectionService::
         auto *ip = ::inet_ntoa(address.sin_addr);
 
         if(!connected) {
-            ICHOR_LOG_ERROR(_logger, "[{}] Couldn't start TCP connection for {}:{}", getServiceId(), ip, ::ntohs(address.sin_port));
-            GetThreadLocalEventQueue().pushEvent<StopServiceEvent>(getServiceId(), getServiceId(), true);
+            ICHOR_LOG_ERROR(_logger, "[{}] Couldn't start TCP connection for {}:{}", AdvancedService<TcpConnectionService>::getServiceId(), ip, ::ntohs(address.sin_port));
+            GetThreadLocalEventQueue().pushEvent<StopServiceEvent>(AdvancedService<TcpConnectionService>::getServiceId(), AdvancedService<TcpConnectionService>::getServiceId(), true);
             co_return tl::unexpected(StartError::FAILED);
         }
-        ICHOR_LOG_DEBUG(_logger, "[{}] Starting TCP connection for {}:{}", getServiceId(), ip, ::ntohs(address.sin_port));
+        ICHOR_LOG_DEBUG(_logger, "[{}] Starting TCP connection for {}:{}", AdvancedService<TcpConnectionService>::getServiceId(), ip, ::ntohs(address.sin_port));
     }
 
     _timer = &_timerFactory->createTimer();
@@ -153,9 +155,10 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::TcpConnectionService::
     co_return {};
 }
 
-Ichor::Task<void> Ichor::TcpConnectionService::stop() {
+template <typename InterfaceT> requires Ichor::DerivedAny<InterfaceT, Ichor::IConnectionService, Ichor::IHostConnectionService, Ichor::IClientConnectionService>
+Ichor::Task<void> Ichor::TcpConnectionService<InterfaceT>::stop() {
     _quit = true;
-    ICHOR_LOG_INFO(_logger, "[{}] stopping service", getServiceId());
+    ICHOR_LOG_INFO(_logger, "[{}] stopping service", AdvancedService<TcpConnectionService>::getServiceId());
 
     if(_socket >= 0) {
         ::shutdown(_socket, SHUT_RDWR);
@@ -165,33 +168,38 @@ Ichor::Task<void> Ichor::TcpConnectionService::stop() {
     co_return;
 }
 
-void Ichor::TcpConnectionService::addDependencyInstance(ILogger &logger, IService &) {
+template <typename InterfaceT> requires Ichor::DerivedAny<InterfaceT, Ichor::IConnectionService, Ichor::IHostConnectionService, Ichor::IClientConnectionService>
+void Ichor::TcpConnectionService<InterfaceT>::addDependencyInstance(ILogger &logger, IService &) {
     _logger = &logger;
 }
 
-void Ichor::TcpConnectionService::removeDependencyInstance(ILogger &, IService&) {
+template <typename InterfaceT> requires Ichor::DerivedAny<InterfaceT, Ichor::IConnectionService, Ichor::IHostConnectionService, Ichor::IClientConnectionService>
+void Ichor::TcpConnectionService<InterfaceT>::removeDependencyInstance(ILogger &, IService&) {
     _logger = nullptr;
 }
 
-void Ichor::TcpConnectionService::addDependencyInstance(ITimerFactory &timerFactory, IService &) {
+template <typename InterfaceT> requires Ichor::DerivedAny<InterfaceT, Ichor::IConnectionService, Ichor::IHostConnectionService, Ichor::IClientConnectionService>
+void Ichor::TcpConnectionService<InterfaceT>::addDependencyInstance(ITimerFactory &timerFactory, IService &) {
     _timerFactory = &timerFactory;
 }
 
-void Ichor::TcpConnectionService::removeDependencyInstance(ITimerFactory &, IService&) {
+template <typename InterfaceT> requires Ichor::DerivedAny<InterfaceT, Ichor::IConnectionService, Ichor::IHostConnectionService, Ichor::IClientConnectionService>
+void Ichor::TcpConnectionService<InterfaceT>::removeDependencyInstance(ITimerFactory &, IService&) {
     _timerFactory = nullptr;
 }
 
-Ichor::Task<tl::expected<void, Ichor::IOError>> Ichor::TcpConnectionService::sendAsync(std::vector<uint8_t> &&msg) {
+template <typename InterfaceT> requires Ichor::DerivedAny<InterfaceT, Ichor::IConnectionService, Ichor::IHostConnectionService, Ichor::IClientConnectionService>
+Ichor::Task<tl::expected<void, Ichor::IOError>> Ichor::TcpConnectionService<InterfaceT>::sendAsync(std::vector<uint8_t> &&msg) {
     size_t sent_bytes = 0;
 
     if(_quit) {
-        ICHOR_LOG_TRACE(_logger, "[{}] quitting, no send", getServiceId());
+        ICHOR_LOG_TRACE(_logger, "[{}] quitting, no send", AdvancedService<TcpConnectionService>::getServiceId());
         co_return tl::unexpected(IOError::SERVICE_QUITTING);
     }
 
     while(sent_bytes < msg.size()) {
         auto ret = ::send(_socket, msg.data() + sent_bytes, msg.size() - sent_bytes, MSG_NOSIGNAL);
-        ICHOR_LOG_TRACE(_logger, "[{}] queued sending {} bytes, errno = {}", getServiceId(), ret, errno);
+        ICHOR_LOG_TRACE(_logger, "[{}] queued sending {} bytes, errno = {}", AdvancedService<TcpConnectionService>::getServiceId(), ret, errno);
 
         if(ret < 0) {
             co_return tl::unexpected(IOError::FAILED);
@@ -203,9 +211,10 @@ Ichor::Task<tl::expected<void, Ichor::IOError>> Ichor::TcpConnectionService::sen
     co_return {};
 }
 
-Ichor::Task<tl::expected<void, Ichor::IOError>> Ichor::TcpConnectionService::sendAsync(std::vector<std::vector<uint8_t>> &&msgs) {
+template <typename InterfaceT> requires Ichor::DerivedAny<InterfaceT, Ichor::IConnectionService, Ichor::IHostConnectionService, Ichor::IClientConnectionService>
+Ichor::Task<tl::expected<void, Ichor::IOError>> Ichor::TcpConnectionService<InterfaceT>::sendAsync(std::vector<std::vector<uint8_t>> &&msgs) {
     if(_quit) {
-        ICHOR_LOG_TRACE(_logger, "[{}] quitting, no send", getServiceId());
+        ICHOR_LOG_TRACE(_logger, "[{}] quitting, no send", AdvancedService<TcpConnectionService>::getServiceId());
         co_return tl::unexpected(IOError::SERVICE_QUITTING);
     }
 
@@ -214,7 +223,7 @@ Ichor::Task<tl::expected<void, Ichor::IOError>> Ichor::TcpConnectionService::sen
 
         while(sent_bytes < msg.size()) {
             auto ret = ::send(_socket, msg.data() + sent_bytes, msg.size() - sent_bytes, 0);
-            ICHOR_LOG_TRACE(_logger, "[{}] queued sending {} bytes", getServiceId(), ret);
+            ICHOR_LOG_TRACE(_logger, "[{}] queued sending {} bytes", AdvancedService<TcpConnectionService>::getServiceId(), ret);
 
             if(ret < 0) {
                 co_return tl::unexpected(IOError::FAILED);
@@ -227,19 +236,23 @@ Ichor::Task<tl::expected<void, Ichor::IOError>> Ichor::TcpConnectionService::sen
     co_return {};
 }
 
-void Ichor::TcpConnectionService::setPriority(uint64_t priority) {
+template <typename InterfaceT> requires Ichor::DerivedAny<InterfaceT, Ichor::IConnectionService, Ichor::IHostConnectionService, Ichor::IClientConnectionService>
+void Ichor::TcpConnectionService<InterfaceT>::setPriority(uint64_t priority) {
     _priority = priority;
 }
 
-uint64_t Ichor::TcpConnectionService::getPriority() {
+template <typename InterfaceT> requires Ichor::DerivedAny<InterfaceT, Ichor::IConnectionService, Ichor::IHostConnectionService, Ichor::IClientConnectionService>
+uint64_t Ichor::TcpConnectionService<InterfaceT>::getPriority() {
     return _priority;
 }
 
-bool Ichor::TcpConnectionService::isClient() const noexcept {
-    return getProperties().find("Socket") == getProperties().end();
+template <typename InterfaceT> requires Ichor::DerivedAny<InterfaceT, Ichor::IConnectionService, Ichor::IHostConnectionService, Ichor::IClientConnectionService>
+bool Ichor::TcpConnectionService<InterfaceT>::isClient() const noexcept {
+    return AdvancedService<TcpConnectionService>::getProperties().find("Socket") == AdvancedService<TcpConnectionService>::getProperties().end();
 }
 
-void Ichor::TcpConnectionService::setReceiveHandler(std::function<void(std::span<uint8_t const>)> recvHandler) {
+template <typename InterfaceT> requires Ichor::DerivedAny<InterfaceT, Ichor::IConnectionService, Ichor::IHostConnectionService, Ichor::IClientConnectionService>
+void Ichor::TcpConnectionService<InterfaceT>::setReceiveHandler(std::function<void(std::span<uint8_t const>)> recvHandler) {
     _recvHandler = recvHandler;
 
     for(auto &msg : _queuedMessages) {
@@ -248,18 +261,19 @@ void Ichor::TcpConnectionService::setReceiveHandler(std::function<void(std::span
     _queuedMessages.clear();
 }
 
-void Ichor::TcpConnectionService::recvHandler() {
+template <typename InterfaceT> requires Ichor::DerivedAny<InterfaceT, Ichor::IConnectionService, Ichor::IHostConnectionService, Ichor::IClientConnectionService>
+void Ichor::TcpConnectionService<InterfaceT>::recvHandler() {
     ScopeGuard sg{[this]() {
         if(!_quit) {
             if(!_timer->startTimer()) {
-                GetThreadLocalEventQueue().pushEvent<RunFunctionEvent>(getServiceId(), [this]() {
+                GetThreadLocalEventQueue().pushEvent<RunFunctionEvent>(AdvancedService<TcpConnectionService>::getServiceId(), [this]() {
                     if(!_timer->startTimer()) {
                         std::terminate();
                     }
                 });
             }
         } else {
-            ICHOR_LOG_TRACE(_logger, "[{}] quitting, no push", getServiceId());
+            ICHOR_LOG_TRACE(_logger, "[{}] quitting, no push", AdvancedService<TcpConnectionService>::getServiceId());
         }
     }};
 	std::vector<uint8_t> msg{};
@@ -274,10 +288,10 @@ void Ichor::TcpConnectionService::recvHandler() {
 			}
 		} while (ret > 0 && !_quit);
 	}
-    ICHOR_LOG_TRACE(_logger, "[{}] last received {} bytes, msg size = {}, errno = {}", getServiceId(), ret, msg.size(), errno);
+    ICHOR_LOG_TRACE(_logger, "[{}] last received {} bytes, msg size = {}, errno = {}", AdvancedService<TcpConnectionService>::getServiceId(), ret, msg.size(), errno);
 
     if (_quit) {
-        ICHOR_LOG_TRACE(_logger, "[{}] quitting", getServiceId());
+        ICHOR_LOG_TRACE(_logger, "[{}] quitting", AdvancedService<TcpConnectionService>::getServiceId());
         return;
     }
 
@@ -291,8 +305,8 @@ void Ichor::TcpConnectionService::recvHandler() {
 
     if(ret == 0) {
         // closed connection
-        ICHOR_LOG_INFO(_logger, "[{}] peer closed connection", getServiceId());
-        GetThreadLocalEventQueue().pushEvent<StopServiceEvent>(getServiceId(), getServiceId(), true);
+        ICHOR_LOG_INFO(_logger, "[{}] peer closed connection", AdvancedService<TcpConnectionService>::getServiceId());
+        GetThreadLocalEventQueue().pushEvent<StopServiceEvent>(AdvancedService<TcpConnectionService>::getServiceId(), AdvancedService<TcpConnectionService>::getServiceId(), true);
         return;
     }
 
@@ -300,10 +314,14 @@ void Ichor::TcpConnectionService::recvHandler() {
 		if(errno == EAGAIN) {
 			return;
 		}
-        ICHOR_LOG_ERROR(_logger, "[{}] Error receiving from socket: {}", getServiceId(), errno);
-        GetThreadLocalEventQueue().pushEvent<StopServiceEvent>(getServiceId(), getServiceId(), true);
+        ICHOR_LOG_ERROR(_logger, "[{}] Error receiving from socket: {}", AdvancedService<TcpConnectionService>::getServiceId(), errno);
+        GetThreadLocalEventQueue().pushEvent<StopServiceEvent>(AdvancedService<TcpConnectionService>::getServiceId(), AdvancedService<TcpConnectionService>::getServiceId(), true);
         return;
     }
 }
+
+template class Ichor::TcpConnectionService<Ichor::IConnectionService>;
+template class Ichor::TcpConnectionService<Ichor::IHostConnectionService>;
+template class Ichor::TcpConnectionService<Ichor::IClientConnectionService>;
 
 #endif

@@ -7,7 +7,7 @@
 #include <ichor/events/RunFunctionEvent.h>
 
 Ichor::Boost::WsHostService::WsHostService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {
-    reg.registerDependency<ILogger>(this, DependencyFlags::NONE);
+    reg.registerDependency<ILogger>(this, DependencyFlags::REQUIRED);
     reg.registerDependency<IAsioContextService>(this, DependencyFlags::REQUIRED);
 }
 
@@ -106,7 +106,7 @@ Ichor::AsyncGenerator<Ichor::IchorBehaviour> Ichor::Boost::WsHostService::handle
         co_return {};
     }
 
-    auto connection = GetThreadLocalManager().createServiceManager<WsConnectionService, IConnectionService>(Properties{
+    auto connection = GetThreadLocalManager().createServiceManager<WsConnectionService, IConnectionService, IHostConnectionService>(Properties{
         {"WsHostServiceId", Ichor::make_any<uint64_t>(getServiceId())},
         {"Socket", Ichor::make_unformattable_any<decltype(evt._socket)>(evt._socket)}
     });

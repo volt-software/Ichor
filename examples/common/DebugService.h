@@ -20,11 +20,12 @@ private:
         auto &_timer = _timerFactory->createTimer();
         _timer.setCallback([this]() {
             printServices();
+            std::terminate();
         });
-        _timer.setChronoInterval(500ms);
+        _timer.setChronoInterval(1000ms);
         _timer.startTimer();
 
-        printServices();
+        // printServices();
 
         co_return {};
     }
@@ -69,6 +70,8 @@ private:
 
             ICHOR_LOG_INFO(_logger, "");
         }
+
+        ICHOR_LOG_INFO(_logger, "\n===================================\n");
     }
 
     void addDependencyInstance(ILogger &logger, IService &) {

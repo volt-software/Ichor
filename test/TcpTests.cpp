@@ -77,7 +77,7 @@ TEST_CASE("TcpTests") {
             dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>(Properties{{"DefaultLogLevel", Ichor::make_any<LogLevel>(LogLevel::LOG_TRACE)}}, priorityToEnsureHostStartingFirst);
             dm.createServiceManager<LoggerFactory<CoutLogger>, ILoggerFactory>(Properties{{"DefaultLogLevel", Ichor::make_any<LogLevel>(LogLevel::LOG_TRACE)}}, priorityToEnsureHostStartingFirst);
             dm.createServiceManager<HOSTIMPL, IHostService>(Properties{{"Address", Ichor::make_any<std::string>("127.0.0.1"s)}, {"Port", Ichor::make_any<uint16_t>(static_cast<uint16_t>(8001))}}, priorityToEnsureHostStartingFirst);
-            dm.createServiceManager<ClientFactory<CONNIMPL>, IClientFactory>();
+            dm.createServiceManager<ClientFactory<CONNIMPL<IClientConnectionService>>, IClientFactory>();
 #ifndef TEST_URING
             dm.createServiceManager<TimerFactoryFactory>(Properties{}, priorityToEnsureHostStartingFirst);
 #endif
@@ -155,7 +155,7 @@ TEST_CASE("TcpTests") {
             dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>(Properties{{"DefaultLogLevel", Ichor::make_any<LogLevel>(LogLevel::LOG_DEBUG)}}, priorityToEnsureHostStartingFirst);
             dm.createServiceManager<LoggerFactory<CoutLogger>, ILoggerFactory>(Properties{{"DefaultLogLevel", Ichor::make_any<LogLevel>(LogLevel::LOG_DEBUG)}}, priorityToEnsureHostStartingFirst);
             dm.createServiceManager<HOSTIMPL, IHostService>(Properties{{"Address", Ichor::make_any<std::string>("127.0.0.1"s)}, {"Port", Ichor::make_any<uint16_t>(static_cast<uint16_t>(8001))}, {"BufferEntries", Ichor::make_any<uint32_t>(static_cast<uint16_t>(16))}, {"BufferEntrySize", Ichor::make_any<uint32_t>(static_cast<uint16_t>(16'384))}}, priorityToEnsureHostStartingFirst);
-            dm.createServiceManager<ClientFactory<CONNIMPL>, IClientFactory>();
+            dm.createServiceManager<ClientFactory<CONNIMPL<IClientConnectionService>>, IClientFactory>();
 #ifndef TEST_URING
             dm.createServiceManager<TimerFactoryFactory>(Properties{}, priorityToEnsureHostStartingFirst);
 #endif
@@ -231,7 +231,7 @@ TEST_CASE("TcpTests") {
             dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>(Properties{{"DefaultLogLevel", Ichor::make_any<LogLevel>(LogLevel::LOG_TRACE)}}, priorityToEnsureHostStartingFirst);
             dm.createServiceManager<LoggerFactory<CoutLogger>, ILoggerFactory>(Properties{{"DefaultLogLevel", Ichor::make_any<LogLevel>(LogLevel::LOG_TRACE)}}, priorityToEnsureHostStartingFirst);
             dm.createServiceManager<HOSTIMPL, IHostService>(Properties{{"Address", Ichor::make_any<std::string>("127.0.0.1"s)}, {"Port", Ichor::make_any<uint16_t>(static_cast<uint16_t>(8001))}}, priorityToEnsureHostStartingFirst);
-            dm.createServiceManager<ClientFactory<CONNIMPL>, IClientFactory>();
+            dm.createServiceManager<ClientFactory<CONNIMPL<IClientConnectionService>>, IClientFactory>();
 #ifndef TEST_URING
             dm.createServiceManager<TimerFactoryFactory>(Properties{}, priorityToEnsureHostStartingFirst);
 #endif
@@ -318,7 +318,7 @@ TEST_CASE("TcpTests") {
             dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>(Properties{{"DefaultLogLevel", Ichor::make_any<LogLevel>(LogLevel::LOG_TRACE)}}, priorityToEnsureHostStartingFirst);
             dm.createServiceManager<LoggerFactory<CoutLogger>, ILoggerFactory>(Properties{{"DefaultLogLevel", Ichor::make_any<LogLevel>(LogLevel::LOG_TRACE)}}, priorityToEnsureHostStartingFirst);
             dm.createServiceManager<HOSTIMPL, IHostService>(Properties{{"Address", Ichor::make_any<std::string>("127.0.0.1"s)}, {"Port", Ichor::make_any<uint16_t>(static_cast<uint16_t>(8001))}}, priorityToEnsureHostStartingFirst);
-            dm.createServiceManager<ClientFactory<CONNIMPL>, IClientFactory>();
+            dm.createServiceManager<ClientFactory<CONNIMPL<IClientConnectionService>>, IClientFactory>();
 #ifndef TEST_URING
             dm.createServiceManager<TimerFactoryFactory>(Properties{}, priorityToEnsureHostStartingFirst);
 #endif
@@ -394,7 +394,7 @@ TEST_CASE("TcpTests") {
             dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>(Properties{{"DefaultLogLevel", Ichor::make_any<LogLevel>(LogLevel::LOG_TRACE)}}, priorityToEnsureHostStartingFirst);
             dm.createServiceManager<LoggerFactory<CoutLogger>, ILoggerFactory>(Properties{{"DefaultLogLevel", Ichor::make_any<LogLevel>(LogLevel::LOG_TRACE)}}, priorityToEnsureHostStartingFirst);
             dm.createServiceManager<HOSTIMPL, IHostService>(Properties{{"Address", Ichor::make_any<std::string>("127.0.0.1"s)}, {"Port", Ichor::make_any<uint16_t>(static_cast<uint16_t>(8001))}, {"BufferEntries", Ichor::make_any<uint32_t>(static_cast<uint16_t>(512))}, {"BufferEntrySize", Ichor::make_any<uint32_t>(static_cast<uint16_t>(32))}}, priorityToEnsureHostStartingFirst);
-            dm.createServiceManager<ClientFactory<CONNIMPL>, IClientFactory>();
+            dm.createServiceManager<ClientFactory<CONNIMPL<IClientConnectionService>>, IClientFactory>();
 #ifndef TEST_URING
             dm.createServiceManager<TimerFactoryFactory>(Properties{}, priorityToEnsureHostStartingFirst);
 #endif
@@ -477,7 +477,7 @@ TEST_CASE("TcpTests") {
             dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>(Properties{{"DefaultLogLevel", Ichor::make_any<LogLevel>(LogLevel::LOG_TRACE)}}, priorityToEnsureHostStartingFirst);
             dm.createServiceManager<LoggerFactory<CoutLogger>, ILoggerFactory>(Properties{{"DefaultLogLevel", Ichor::make_any<LogLevel>(LogLevel::LOG_TRACE)}}, priorityToEnsureHostStartingFirst);
             dm.createServiceManager<HOSTIMPL, IHostService>(Properties{{"Address", Ichor::make_any<std::string>("127.0.0.1"s)}, {"Port", Ichor::make_any<uint16_t>(static_cast<uint16_t>(8001))}}, priorityToEnsureHostStartingFirst);
-            dm.createServiceManager<ClientFactory<CONNIMPL>, IClientFactory>();
+            dm.createServiceManager<ClientFactory<CONNIMPL<IClientConnectionService>>, IClientFactory>();
 #ifndef TEST_URING
             dm.createServiceManager<TimerFactoryFactory>(Properties{}, priorityToEnsureHostStartingFirst);
 #endif
