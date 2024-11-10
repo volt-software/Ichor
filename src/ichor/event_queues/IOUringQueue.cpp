@@ -420,6 +420,17 @@ namespace Ichor {
             }
 
             TSAN_ANNOTATE_HAPPENS_BEFORE(procEvent);
+
+            if(HasThreadLocalManager()) {
+                auto &q = GetThreadLocalEventQueue();
+                if(q.get_queue_name_hash() == get_queue_name_hash()) {
+                    auto &ioq = static_cast<IOUringQueue&>(q);
+                    auto sqe = ioq.getSqe();
+                    io_uring_prep_msg_ring(sqe, _eventQueuePtr->ring_fd, 0, reinterpret_cast<uintptr_t>(reinterpret_cast<void*>(procEvent)), 0);
+                    return;
+                }
+            }
+
             io_uring tempQueue{};
             io_uring_params p{};
             p.flags = IORING_SETUP_ATTACH_WQ;
@@ -535,6 +546,10 @@ namespace Ichor {
 
     bool IOUringQueue::is_running() const noexcept {
         return !_quit.load(std::memory_order_acquire);
+    }
+
+    NameHashType IOUringQueue::get_queue_name_hash() const noexcept {
+        return typeNameHash<IOUringQueue>();
     }
 
     tl::optional<NeverNull<io_uring*>> IOUringQueue::createEventLoop(unsigned entriesCount) {

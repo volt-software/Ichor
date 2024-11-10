@@ -1587,6 +1587,10 @@ void Ichor::DependencyManager::clearCommunicationChannel() {
     _communicationChannel = nullptr;
 }
 
+[[nodiscard]] bool Ichor::HasThreadLocalManager() noexcept {
+    return Detail::_local_dm != nullptr;
+}
+
 [[nodiscard]] Ichor::DependencyManager& Ichor::GetThreadLocalManager() noexcept {
     return *Detail::_local_dm;
 }
