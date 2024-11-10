@@ -69,6 +69,11 @@ namespace Ichor {
     }
 
     template <typename COMPARE>
+    NameHashType TemplatePriorityQueue<COMPARE>::get_queue_name_hash() const noexcept {
+        return typeNameHash<TemplatePriorityQueue<COMPARE>>();
+    }
+
+    template <typename COMPARE>
     bool TemplatePriorityQueue<COMPARE>::start(bool captureSigInt) {
         if(!_dm) [[unlikely]] {
             fmt::println("Please create a manager first!");

@@ -1,6 +1,5 @@
 #include "OneService.h"
 #include "OtherService.h"
-#include <ichor/event_queues/PriorityQueue.h>
 #include <ichor/services/logging/LoggerFactory.h>
 #include <ichor/services/logging/NullFrameworkLogger.h>
 #include <ichor/ichor-mimalloc.h>
@@ -12,6 +11,23 @@
 #else
 #include <ichor/services/logging/CoutLogger.h>
 #define LOGGER_TYPE CoutLogger
+#endif
+
+#if defined(URING_EXAMPLE)
+#include <ichor/event_queues/IOUringQueue.h>
+
+#define QIMPL IOUringQueue
+#elif defined(SDEVENT_EXAMPLE)
+#include <ichor/event_queues/SdeventQueue.h>
+
+#define QIMPL SdeventQueue
+#else
+#include <ichor/event_queues/PriorityQueue.h>
+#ifdef ORDERED_EXAMPLE
+#define QIMPL OrderedPriorityQueue
+#else
+#define QIMPL PriorityQueue
+#endif
 #endif
 
 #include <ichor/CommunicationChannel.h>
@@ -29,14 +45,19 @@ int main(int argc, char *argv[]) {
     auto start = std::chrono::steady_clock::now();
 
     CommunicationChannel channel{};
-    auto queueOne = std::make_unique<PriorityQueue>();
+    auto queueOne = std::make_unique<QIMPL>();
     auto &dmOne = queueOne->createManager();
-    auto queueTwo = std::make_unique<PriorityQueue>();
+    auto queueTwo = std::make_unique<QIMPL>();
     auto &dmTwo = queueTwo->createManager();
     channel.addManager(&dmOne);
     channel.addManager(&dmTwo);
 
     std::thread t1([&] {
+#if defined(URING_EXAMPLE)
+        queueOne->createEventLoop();
+#elif defined(SDEVENT_EXAMPLE)
+        auto *loop = queue->createEventLoop();
+#endif
 #ifdef ICHOR_USE_SPDLOG
         dmOne.createServiceManager<SpdlogSharedService, ISpdlogSharedService>();
 #endif
@@ -44,9 +65,17 @@ int main(int argc, char *argv[]) {
         dmOne.createServiceManager<LoggerFactory<LOGGER_TYPE>, ILoggerFactory>(Properties{{"DefaultLogLevel", Ichor::make_any<LogLevel>(LogLevel::LOG_INFO)}});
         dmOne.createServiceManager<OneService>();
         queueOne->start(CaptureSigInt);
+#if defined(SDEVENT_EXAMPLE)
+        sd_event_loop(loop);
+#endif
     });
 
     std::thread t2([&] {
+#if defined(URING_EXAMPLE)
+        queueTwo->createEventLoop();
+#elif defined(SDEVENT_EXAMPLE)
+        auto *loop = queue->createEventLoop();
+#endif
 #ifdef ICHOR_USE_SPDLOG
         dmTwo.createServiceManager<SpdlogSharedService, ISpdlogSharedService>();
 #endif
@@ -54,6 +83,9 @@ int main(int argc, char *argv[]) {
         dmTwo.createServiceManager<LoggerFactory<LOGGER_TYPE>, ILoggerFactory>(Properties{{"DefaultLogLevel", Ichor::make_any<LogLevel>(LogLevel::LOG_INFO)}});
         dmTwo.createServiceManager<OtherService>();
         queueTwo->start(CaptureSigInt);
+#if defined(SDEVENT_EXAMPLE)
+        sd_event_loop(loop);
+#endif
     });
 
     t1.join();

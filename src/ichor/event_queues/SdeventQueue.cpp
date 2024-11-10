@@ -138,6 +138,10 @@ namespace Ichor {
         return !_quit.load(std::memory_order_acquire);
     }
 
+    NameHashType SdeventQueue::get_queue_name_hash() const noexcept {
+        return typeNameHash<SdeventQueue>();
+    }
+
     [[nodiscard]] sd_event* SdeventQueue::createEventLoop() {
         auto ret = sd_event_default(&_eventQueue);
 

@@ -673,6 +673,7 @@ namespace Ichor {
     /// Returns thread-local manager. Can only be used after the manager's start() function has been called.
     /// \return
     [[nodiscard]] DependencyManager& GetThreadLocalManager() noexcept;
+    [[nodiscard]] bool HasThreadLocalManager() noexcept;
 }
 
 #include <ichor/coroutines/AsyncGeneratorDetail.h>
