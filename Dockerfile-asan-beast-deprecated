@@ -1,0 +1,98 @@
+# Boost is ridiculously time consuming to maintain. Every couple of releases, the API changes for common functions like spawn/post, the ucontext context-impl is supposed to work with address sanitizer but leads to compilation errrors because fcontext stuff is still being used and the various support channels to go to for support have resulted in 0 responses so far. Boost really is not a high quality library IMO and I personally recommend to stop using it.
+# This file serves to show how to compile boost with sanitizer support, but is not being maintained and might not compile Ichor anymore.
+
+# linker issue is because net::spawn is used inside of a coroutine in HttpConnection. EtcdTests and other programs fail to link with the following message:
+# /usr/bin/ld: /usr/lib/libboost_coroutine.a(coroutine_context.o): in function `boost::coroutines::detail::coroutine_context::coroutine_context(void (*)(boost::context::detail::transfer_t), boost::coroutines::detail::preallocated const&)':
+#/opt/boost_1_85_0/libs/coroutine/src/detail/coroutine_context.cpp:41:(.text+0x1b3): undefined reference to `make_fcontext'
+#/usr/bin/ld: /usr/lib/libboost_coroutine.a(coroutine_context.o): in function `boost::coroutines::detail::coroutine_context::jump(boost::coroutines::detail::coroutine_context&, void*)':
+#/opt/boost_1_85_0/libs/coroutine/src/detail/coroutine_context.cpp:68:(.text+0x842): undefined reference to `jump_fcontext'
+
+FROM ubuntu:jammy
+
+ARG CONTAINER_OWNER_GID=1000
+ARG CONTAINER_OWNER_ID=1000
+
+RUN apt update
+RUN apt install -y g++-12 gcc-12 build-essential cmake pkg-config git wget ninja-build nano libzip-dev libsystemd-dev
+
+RUN update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-12 60
+RUN update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-12 60
+RUN update-alternatives --install /usr/bin/cpp cpp /usr/bin/cpp-12 60
+
+# Run all downloads first to be able to use Docker's layers as cache and prevent excessive redownloads
+
+WORKDIR /opt
+RUN wget https://github.com/redis/hiredis/archive/refs/tags/v1.2.0.tar.gz
+RUN wget https://boostorg.jfrog.io/artifactory/main/release/1.85.0/source/boost_1_85_0.tar.bz2
+RUN wget https://github.com/openssl/openssl/releases/download/openssl-3.0.15/openssl-3.0.15.tar.gz
+
+ENV CFLAGS="-Og -fsanitize=address,undefined -fno-sanitize=vptr"
+ENV CXXFLAGS="-Og -fsanitize=address,undefined -fno-sanitize=vptr"
+ENV LDFLAGS="-fsanitize=address,undefined -static-libasan -static-libgcc -static-libstdc++"
+
+RUN tar xf openssl-3.0.15.tar.gz
+WORKDIR /opt/openssl-3.0.15
+RUN ./Configure --prefix=/usr --openssldir=/etc/ssl --libdir=lib no-shared
+RUN make -j
+RUN make -j install
+
+WORKDIR /opt
+#Build boost with support for asan
+RUN tar xf boost_1_85_0.tar.bz2
+
+WORKDIR /opt/boost_1_85_0
+
+# Boost disappoints once again
+RUN <<EOF
+cat >> patch << EOR
+diff -r -u boost-1.81.0/boost/asio/detail/std_fenced_block.hpp boost-1.81.0-fencecd/boost/asio/detail/std_fenced_block.hpp
+--- ./boost/asio/detail/std_fenced_block.hpp	2022-12-14 16:15:35.000000000 +0100
++++ ./boost/asio/detail/std_fenced_block.hpp	2023-10-03 20:17:11.701435674 +0200
+@@ -43,14 +43,16 @@
+   // Constructor for a full fenced block.
+   explicit std_fenced_block(full_t)
+   {
+-    std::atomic_thread_fence(std::memory_order_acquire);
++    _fence.load(std::memory_order_acquire);
+   }
+
+   // Destructor.
+   ~std_fenced_block()
+   {
+-    std::atomic_thread_fence(std::memory_order_release);
++    _fence.store(true, std::memory_order_release);
+   }
++
++  std::atomic<bool> _fence;
+ };
+
+ } // namespace detail
+EOR
+EOF
+RUN patch ./boost/asio/detail/std_fenced_block.hpp < patch
+
+RUN ./bootstrap.sh --prefix=/usr
+RUN ./b2 cxxflags="-fsanitize=address,undefined -fno-sanitize=vptr -Og -std=c++20 -DBOOST_USE_ASAN -DBOOST_USE_UCONTEXT"  linkflags="-static-libasan -static-libgcc -static-libstdc++ -lubsan" variant=debug link=static threading=multi context-impl=ucontext
+RUN ./b2 cxxflags="-fsanitize=address,undefined -fno-sanitize=vptr -Og -std=c++20 -DBOOST_USE_ASAN -DBOOST_USE_UCONTEXT"  linkflags="-static-libasan -static-libgcc -static-libstdc++ -lubsan" variant=debug link=static threading=multi context-impl=ucontext install
+
+WORKDIR /opt
+
+#Build latest hiredis containing sdevent support, not available yet in apt
+RUN tar xf v1.2.0.tar.gz
+RUN mkdir /opt/hiredis-1.2.0/build
+
+WORKDIR /opt/hiredis-1.2.0/build
+RUN cmake -GNinja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DDISABLE_TESTS=1 -DCMAKE_INSTALL_PREFIX=/usr -DBUILD_SHARED_LIBS=OFF -DENABLE_SSL=1 ..
+RUN ninja && ninja install
+
+RUN mkdir -p /opt/ichor/build
+
+RUN groupadd -g ${CONTAINER_OWNER_GID} buildgroup && useradd -m -u ${CONTAINER_OWNER_ID} -g buildgroup builduser
+RUN chown builduser:buildgroup /opt/ichor/build
+USER builduser
+
+WORKDIR /opt/ichor/build
+
+ENTRYPOINT ["/bin/bash", "-c"]
+
+CMD ["unset CFLAGS CXXFLAGS && cd /opt/ichor/build && cmake -GNinja -DCMAKE_BUILD_TYPE=Debug -DICHOR_USE_SANITIZERS=1 -DICHOR_USE_HIREDIS=1 -DICHOR_USE_BOOST_BEAST=1 -DICHOR_USE_SPDLOG=1 -DICHOR_USE_SDEVENT=1 -DICHOR_SKIP_EXTERNAL_TESTS=1 /opt/ichor/src && ninja && ninja test"]

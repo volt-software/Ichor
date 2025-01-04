@@ -1,4 +1,6 @@
-#ifdef ICHOR_USE_SDEVENT
+#ifndef ICHOR_USE_SDEVENT
+#error "Sdevent not enabled."
+#endif
 
 #include <ichor/event_queues/SdeventQueue.h>
 #include <ichor/DependencyManager.h>
@@ -294,5 +296,3 @@ namespace Ichor {
         return _eventQueue;
     }
 }
-
-#endif

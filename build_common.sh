@@ -21,9 +21,8 @@ run_examples ()
   ../bin/ichor_yielding_timer_example || exit 1
   if [[ $BOOST -eq 1 ]]; then
     ../bin/ichor_tcp_example || exit 1
-    ../bin/ichor_http_example || exit 1
+    ../bin/ichor_http_example_boost || exit 1
     ../bin/ichor_websocket_example || exit 1
-    ../bin/ichor_websocket_example -t4 || exit 1
     ../bin/ichor_etcd_example || exit 1
   fi
   if [[ URING -eq 1 ]]; then
@@ -31,6 +30,7 @@ run_examples ()
     ../bin/ichor_tcp_example_uring || exit 1
     ../bin/ichor_timer_example_uring || exit 1
     ../bin/ichor_yielding_timer_example_uring || exit 1
+    ../bin/ichor_http_example_uring || exit 1
   fi
 }
 run_benchmarks ()

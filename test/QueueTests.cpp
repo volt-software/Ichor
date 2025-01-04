@@ -13,6 +13,9 @@
 #ifdef __linux__
 #include <unistd.h>
 #endif
+#ifdef ICHOR_USE_BOOST_BEAST
+#include <ichor/event_queues/BoostAsioQueue.h>
+#endif
 
 TEST_CASE("QueueTests") {
 
@@ -103,6 +106,58 @@ TEST_CASE("QueueTests") {
 
             int r = sd_event_loop(loop);
             REQUIRE(r >= 0);
+        });
+
+        while(_dm.load(std::memory_order_acquire) == nullptr) {
+            std::this_thread::sleep_for(1ms);
+        }
+        auto *dm = _dm.load(std::memory_order_acquire);
+
+        dm->runForOrQueueEmpty();
+
+        REQUIRE(dm->isRunning());
+
+        try {
+            dm->getEventQueue().pushEvent<QuitEvent>(0);
+        } catch(const std::exception &e) {
+            fmt::print("exception: {}\n", e.what());
+            throw;
+        }
+
+        t.join();
+    }
+#endif
+
+#ifdef ICHOR_USE_BOOST_BEAST
+    SECTION("BoostAsioQueue") {
+        auto queue = std::make_unique<BoostAsioQueue>();
+        auto &dm = queue->createManager();
+
+        Detail::_local_dm = &dm;
+
+        // REQUIRE_THROWS(queue->pushEventInternal(0, nullptr));
+        // REQUIRE_THROWS(queue->empty());
+        // REQUIRE_THROWS(queue->size());
+
+        REQUIRE(queue->empty());
+        REQUIRE(queue->size() == 0);
+        REQUIRE(!queue->shouldQuit());
+
+        queue->quit();
+
+        REQUIRE(queue->shouldQuit());
+    }
+
+    SECTION("BoostAsioQueue Live") {
+        std::atomic<DependencyManager*> _dm{};
+        std::thread t([&] {
+            auto queue = std::make_unique<BoostAsioQueue>();
+            auto &dm = queue->createManager();
+            _dm.store(&dm, std::memory_order_release);
+
+            dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>();
+            dm.createServiceManager<UselessService>();
+            queue->start(DoNotCaptureSigInt);
         });
 
         while(_dm.load(std::memory_order_acquire) == nullptr) {

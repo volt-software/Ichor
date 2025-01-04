@@ -8,7 +8,7 @@
 
 Ichor::Boost::WsHostService::WsHostService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {
     reg.registerDependency<ILogger>(this, DependencyFlags::REQUIRED);
-    reg.registerDependency<IAsioContextService>(this, DependencyFlags::REQUIRED);
+    reg.registerDependency<IBoostAsioQueue>(this, DependencyFlags::REQUIRED);
 }
 
 Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::Boost::WsHostService::start() {
@@ -28,16 +28,14 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::Boost::WsHostService::
         _priority = Ichor::any_cast<uint64_t>(propIt->second);
     }
     if(auto propIt = getProperties().find("NoDelay"); propIt != getProperties().end()) {
-        _tcpNoDelay.store(Ichor::any_cast<bool>(propIt->second), std::memory_order_release);
+        _tcpNoDelay = Ichor::any_cast<bool>(propIt->second);
     }
-
-    _queue = &GetThreadLocalEventQueue();
 
     _eventRegistration = GetThreadLocalManager().registerEventHandler<NewWsConnectionEvent>(this, this, getServiceId());
 
     auto address = net::ip::make_address(Ichor::any_cast<std::string&>(addrIt->second));
     auto port = Ichor::any_cast<uint16_t>(portIt->second);
-    _strand = std::make_unique<net::strand<net::io_context::executor_type>>(_asioContextService->getContext()->get_executor());
+    _strand = std::make_unique<net::strand<net::io_context::executor_type>>(_queue->getContext().get_executor());
 
     net::spawn(*_strand, [this, address = std::move(address), port](net::yield_context yield) {
         ScopeGuardAtomicCount const guard{_finishedListenAndRead};
@@ -63,19 +61,17 @@ Ichor::Task<void> Ichor::Boost::WsHostService::stop() {
         _queue->pushEvent<StopServiceEvent>(getServiceId(), conn, true);
     }
 
-    INTERNAL_DEBUG("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! acceptor {}", getServiceId());
-    net::spawn(*_strand, [this](net::yield_context yield) {
-        ScopeGuardAtomicCount const guard{_finishedListenAndRead};
-//        fmt::print("----------------------------------------------- {}:{} ws acceptor close\n", getServiceId(), getServiceName());
-        _wsAcceptor->close();
-//        fmt::print("----------------------------------------------- {}:{} ws acceptor done\n", getServiceId(), getServiceName());
-    }ASIO_SPAWN_COMPLETION_TOKEN);
+    _wsAcceptor->close();
 
     INTERNAL_DEBUG("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! pre-await {} {}", getServiceId(), _startStopEvent.is_set());
     co_await _startStopEvent;
 
     while(_finishedListenAndRead.load(std::memory_order_acquire) != 0) {
-        std::this_thread::sleep_for(1ms);
+        _startStopEvent.reset();
+        _queue->pushEvent<RunFunctionEvent>(getServiceId(), [this]() {
+            _startStopEvent.set();
+        });
+        co_await _startStopEvent;
     }
 
     INTERNAL_DEBUG("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! stopped WsHostService {}", getServiceId());
@@ -93,16 +89,16 @@ void Ichor::Boost::WsHostService::removeDependencyInstance(ILogger &logger, ISer
     _logger = nullptr;
 }
 
-void Ichor::Boost::WsHostService::addDependencyInstance(IAsioContextService &AsioContextService, IService&) {
-    _asioContextService = &AsioContextService;
+void Ichor::Boost::WsHostService::addDependencyInstance(IBoostAsioQueue &q, IService&) {
+    _queue = &q;
 }
 
-void Ichor::Boost::WsHostService::removeDependencyInstance(IAsioContextService&, IService&) {
-    _asioContextService = nullptr;
+void Ichor::Boost::WsHostService::removeDependencyInstance(IBoostAsioQueue&, IService&) {
+    _queue = nullptr;
 }
 
 Ichor::AsyncGenerator<Ichor::IchorBehaviour> Ichor::Boost::WsHostService::handleEvent(Ichor::NewWsConnectionEvent const &evt) {
-    if(_quit.load(std::memory_order_acquire)) {
+    if(_quit) {
         co_return {};
     }
 
@@ -125,19 +121,16 @@ uint64_t Ichor::Boost::WsHostService::getPriority() {
 
 void Ichor::Boost::WsHostService::fail(beast::error_code ec, const char *what) {
     ICHOR_LOG_ERROR(_logger, "Boost.BEAST fail: {}, {}", what, ec.message());
-    INTERNAL_DEBUG("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! push {}", getServiceId());
-    _queue->pushPrioritisedEvent<RunFunctionEvent>(getServiceId(), INTERNAL_EVENT_PRIORITY, [this]() {
-        INTERNAL_DEBUG("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! _startStopEvent set {}", getServiceId());
-        _startStopEvent.set();
-    });
     _queue->pushPrioritisedEvent<StopServiceEvent>(getServiceId(), _priority, getServiceId());
+    INTERNAL_DEBUG("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! _startStopEvent set {}", getServiceId());
+    _startStopEvent.set();
 }
 
 void Ichor::Boost::WsHostService::listen(tcp::endpoint endpoint, net::yield_context yield)
 {
     beast::error_code ec;
 
-    _wsAcceptor = std::make_unique<tcp::acceptor>(*_asioContextService->getContext());
+    _wsAcceptor = std::make_unique<tcp::acceptor>(_queue->getContext());
     _wsAcceptor->open(endpoint.protocol(), ec);
     if(ec) {
         return fail(ec, "open");
@@ -158,16 +151,15 @@ void Ichor::Boost::WsHostService::listen(tcp::endpoint endpoint, net::yield_cont
         return fail(ec, "listen");
     }
 
-    while(!_quit && !_asioContextService->fibersShouldStop())
-    {
-        tcp::socket socket(*_asioContextService->getContext());
+    while(!_quit && !_queue->fibersShouldStop()) {
+        tcp::socket socket(_queue->getContext());
 
         // tcp accept new connections
         _wsAcceptor->async_accept(socket, yield[ec]);
         if(ec) {
             return fail(ec, "accept");
         }
-        if(_quit.load(std::memory_order_acquire)) {
+        if(_quit) {
             break;
         }
 
@@ -177,8 +169,5 @@ void Ichor::Boost::WsHostService::listen(tcp::endpoint endpoint, net::yield_cont
     }
 
     INTERNAL_DEBUG("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! push2 {}", getServiceId());
-    _queue->pushPrioritisedEvent<RunFunctionEvent>(getServiceId(), 1000, [this]() {
-        INTERNAL_DEBUG("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! _startStopEvent set2 {}", getServiceId());
-        _startStopEvent.set();
-    });
+    _startStopEvent.set();
 }

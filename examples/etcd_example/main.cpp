@@ -1,11 +1,10 @@
 #include "UsingEtcdService.h"
-#include <ichor/event_queues/PriorityQueue.h>
+#include <ichor/event_queues/BoostAsioQueue.h>
 #include <ichor/services/logging/LoggerFactory.h>
 #include <ichor/services/logging/NullFrameworkLogger.h>
 #include <ichor/services/etcd/EtcdV2Service.h>
 #include <ichor/services/timer/TimerFactoryFactory.h>
 #include <ichor/services/network/boost/HttpConnectionService.h>
-#include <ichor/services/network/boost/AsioContextService.h>
 #include <ichor/services/network/ClientFactory.h>
 #include <ichor/ichor-mimalloc.h>
 
@@ -31,7 +30,7 @@ int main(int argc, char *argv[]) {
     }
 
     auto start = std::chrono::steady_clock::now();
-    auto queue = std::make_unique<PriorityQueue>();
+    auto queue = std::make_unique<BoostAsioQueue>();
     auto &dm = queue->createManager();
 #ifdef ICHOR_USE_SPDLOG
     dm.createServiceManager<SpdlogSharedService, ISpdlogSharedService>();
@@ -40,7 +39,6 @@ int main(int argc, char *argv[]) {
     dm.createServiceManager<LoggerFactory<LOGGER_TYPE>, ILoggerFactory>(Properties{{"DefaultLogLevel", Ichor::make_any<LogLevel>(LogLevel::LOG_INFO)}});
     dm.createServiceManager<Etcd::v2::EtcdService, Etcd::v2::IEtcd>(Properties{{"Address", Ichor::make_any<std::string>("127.0.0.1")}, {"Port", Ichor::make_any<uint16_t>(static_cast<uint16_t>(2379))}, {"TimeoutMs", Ichor::make_any<uint64_t>(1'000ul)}});
     dm.createServiceManager<UsingEtcdV2Service>();
-    dm.createServiceManager<Boost::AsioContextService, Boost::IAsioContextService>();
     dm.createServiceManager<ClientFactory<Boost::HttpConnectionService, IHttpConnectionService>, IClientFactory>();
     dm.createServiceManager<TimerFactoryFactory>();
     queue->start(CaptureSigInt);

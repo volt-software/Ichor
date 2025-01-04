@@ -4,7 +4,6 @@
 #error "Ichor has not been compiled with io_uring support"
 #endif
 
-#include <ichor/event_queues/IEventQueue.h>
 #include <ichor/event_queues/IIOUringQueue.h>
 #include <ichor/ichor_liburing.h>
 #include <atomic>
@@ -12,7 +11,7 @@
 #include <chrono>
 
 namespace Ichor {
-    /// Provides an io_uring based queue, expects the running OS to have at least kernel 5.4
+    /// Provides an io_uring based queue, expects the running OS to have at least kernel 5.4, but multithreading support is only available from 5.18 and later.
     class IOUringQueue final : public IIOUringQueue {
     public:
         IOUringQueue(uint64_t quitTimeoutMs = 5'000, long long pollTimeoutNs = 100'000'000, tl::optional<Version> emulateKernelVersion = {});

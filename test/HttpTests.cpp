@@ -1,4 +1,3 @@
-#include <ichor/event_queues/PriorityQueue.h>
 #include <ichor/events/RunFunctionEvent.h>
 #include <ichor/coroutines/AsyncManualResetEvent.h>
 #include <ichor/services/logging/LoggerFactory.h>
@@ -14,11 +13,10 @@
 #ifdef TEST_BOOST
 #include <ichor/services/network/boost/HttpHostService.h>
 #include <ichor/services/network/boost/HttpConnectionService.h>
-#include <ichor/services/network/boost/AsioContextService.h>
-#include <ichor/event_queues/PriorityQueue.h>
+#include <ichor/event_queues/BoostAsioQueue.h>
 
 
-#define QIMPL PriorityQueue
+#define QIMPL BoostAsioQueue
 #define HTTPHOSTIMPL Boost::HttpHostService
 #define HTTPCONNIMPL Boost::HttpConnectionService
 #elif defined(TEST_URING)
@@ -77,7 +75,7 @@ TEST_CASE("HttpTests_boost") {
 #if defined(TEST_URING)
         auto queue = std::make_unique<QIMPL>(500, 100'000'000, emulateKernelVersion);
 #else
-        auto queue = std::make_unique<QIMPL>(500, true);
+        auto queue = std::make_unique<QIMPL>(500);
 #endif
         auto &dm = queue->createManager();
         evtGate = false;
@@ -92,11 +90,6 @@ TEST_CASE("HttpTests_boost") {
             dm.createServiceManager<LoggerFactory<CoutLogger>, ILoggerFactory>(Properties{{"DefaultLogLevel", Ichor::make_any<LogLevel>(LogLevel::LOG_TRACE)}});
             dm.createServiceManager<TestMsgGlazeSerializer, ISerializer<TestMsg>>();
             dm.createServiceManager<RegexJsonMsgSerializer, ISerializer<RegexJsonMsg>>();
-#ifdef TEST_BOOST
-            dm.createServiceManager<Boost::AsioContextService, Boost::IAsioContextService>();
-#else
-
-#endif
             dm.createServiceManager<HTTPHOSTIMPL, IHttpHostService>(Properties{{"Address", Ichor::make_any<std::string>("127.0.0.1")}, {"Port", Ichor::make_any<uint16_t>(static_cast<uint16_t>(8001))}});
             dm.createServiceManager<ClientFactory<HTTPCONNIMPL, IHttpConnectionService>, IClientFactory>();
 #ifdef TEST_URING
@@ -127,7 +120,7 @@ TEST_CASE("HttpTests_boost") {
     SECTION("Https events on same thread") {
         testThreadId = std::this_thread::get_id();
         _evt = std::make_unique<Ichor::AsyncManualResetEvent>();
-        auto queue = std::make_unique<PriorityQueue>(true);
+        auto queue = std::make_unique<BoostAsioQueue>(true);
         auto &dm = queue->createManager();
         evtGate = false;
 
@@ -224,7 +217,6 @@ TEST_CASE("HttpTests_boost") {
             dm.createServiceManager<LoggerFactory<CoutLogger>, ILoggerFactory>();
             dm.createServiceManager<TestMsgGlazeSerializer, ISerializer<TestMsg>>();
             dm.createServiceManager<RegexJsonMsgSerializer, ISerializer<RegexJsonMsg>>();
-            dm.createServiceManager<Boost::AsioContextService, Boost::IAsioContextService>();
             dm.createServiceManager<Boost::HttpHostService, IHttpHostService>(Properties{{"Address", Ichor::make_any<std::string>("127.0.0.1")}, {"Port", Ichor::make_any<uint16_t>(static_cast<uint16_t>(8001))}, {"SslKey", Ichor::make_any<std::string>(key)}, {"SslCert", Ichor::make_any<std::string>(cert)}});
             dm.createServiceManager<ClientFactory<Boost::HttpConnectionService, IHttpConnectionService>, IClientFactory>();
             dm.createServiceManager<HttpThreadService>(Properties{{"Address", Ichor::make_any<std::string>("127.0.0.1")}, {"Port", Ichor::make_any<uint16_t>(static_cast<uint16_t>(8001))}, {"ConnectOverSsl", Ichor::make_any<bool>(true)}, {"RootCA", Ichor::make_any<std::string>(cert)}});
@@ -241,43 +233,6 @@ TEST_CASE("HttpTests_boost") {
             REQUIRE(testThreadId != std::this_thread::get_id());
             REQUIRE(dmThreadId == std::this_thread::get_id());
             fmt::print("2 _evt set\n");
-            _evt->set();
-        });
-
-        t.join();
-    }
-
-    SECTION("Http events on 4 threads") {
-        testThreadId = std::this_thread::get_id();
-        _evt = std::make_unique<Ichor::AsyncManualResetEvent>();
-        auto queue = std::make_unique<PriorityQueue>(true);
-        auto &dm = queue->createManager();
-        evtGate = false;
-
-        std::thread t([&]() {
-            dmThreadId = std::this_thread::get_id();
-
-            dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>({}, 10);
-            dm.createServiceManager<LoggerFactory<CoutLogger>, ILoggerFactory>();
-            dm.createServiceManager<TestMsgGlazeSerializer, ISerializer<TestMsg>>();
-            dm.createServiceManager<RegexJsonMsgSerializer, ISerializer<RegexJsonMsg>>();
-            dm.createServiceManager<Boost::AsioContextService, Boost::IAsioContextService>(Properties{{"Threads", Ichor::make_any<uint64_t>(4ul)}});
-            dm.createServiceManager<Boost::HttpHostService, IHttpHostService>(Properties{{"Address", Ichor::make_any<std::string>("127.0.0.1")}, {"Port", Ichor::make_any<uint16_t>(static_cast<uint16_t>(8001))}});
-            dm.createServiceManager<ClientFactory<Boost::HttpConnectionService, IHttpConnectionService>, IClientFactory>();
-            dm.createServiceManager<HttpThreadService>(Properties{{"Address", Ichor::make_any<std::string>("127.0.0.1")}, {"Port", Ichor::make_any<uint16_t>(static_cast<uint16_t>(8001))}});
-
-            queue->start(CaptureSigInt);
-        });
-
-        while(!evtGate) {
-            std::this_thread::sleep_for(500us);
-        }
-
-        queue->pushEvent<RunFunctionEvent>(0, [&]() {
-            REQUIRE(Ichor::Detail::_local_dm == &dm);
-            REQUIRE(testThreadId != std::this_thread::get_id());
-            REQUIRE(dmThreadId == std::this_thread::get_id());
-            fmt::print("3 _evt set\n");
             _evt->set();
         });
 

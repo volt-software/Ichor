@@ -12,14 +12,14 @@ fi
 trap cleanup SIGINT SIGTERM
 
 POSITIONAL_ARGS=()
-DOCKER=1
+DOCKER=0
 DEV=0
 GCC=0
 
 while [[ $# -gt 0 ]]; do
   case $1 in
-    --no-docker)
-      DOCKER=0
+    --docker)
+      DOCKER=1
       shift # past value
       ;;
     --dev)
@@ -74,21 +74,21 @@ if [[ $DOCKER -eq 1 ]]; then
   rm -rf ./* ../bin/*
   docker build -f ../Dockerfile-asan -t ichor-asan --build-arg CONTAINER_OWNER_GID=$(id -g) --build-arg CONTAINER_OWNER_ID=$(id -u) . || exit 1
   docker run -v $(pwd)/../:/opt/ichor/src -v $(pwd)/../build:/opt/ichor/build --rm --privileged -it ichor-asan || exit 1
-  run_examples 1 1 0
+  run_examples 0 1 0
   run_benchmarks
 
   rm -rf ./* ../bin/*
   docker build -f ../Dockerfile-asan-clang -t ichor-asan-clang --build-arg CONTAINER_OWNER_GID=$(id -g) --build-arg CONTAINER_OWNER_ID=$(id -u) . || exit 1
   docker run -v $(pwd)/../:/opt/ichor/src -v $(pwd)/../build:/opt/ichor/build --rm --privileged -it ichor-asan-clang || exit 1
-  docker run -v $(pwd)/../:/opt/ichor/src -v $(pwd)/../build:/opt/ichor/build --rm --privileged -it ichor-asan-clang "ninja" || exit 1
+#  docker run -v $(pwd)/../:/opt/ichor/src -v $(pwd)/../build:/opt/ichor/build --rm --privileged -it ichor-asan-clang "ninja" || exit 1
   ../bin/TcpTests
-  run_examples 1 1 0
+  run_examples 0 1 0
   run_benchmarks
 
   rm -rf ./* ../bin/*
   docker build -f ../Dockerfile-tsan -t ichor-tsan --build-arg CONTAINER_OWNER_GID=$(id -g) --build-arg CONTAINER_OWNER_ID=$(id -u) . || exit 1
   docker run -v $(pwd)/../:/opt/ichor/src -v $(pwd)/../build:/opt/ichor/build --rm --privileged -it ichor-tsan || exit 1
-  run_examples 1 1 0
+  run_examples 0 1 0
   run_benchmarks
 
   rm -rf ./* ../bin/*
@@ -108,7 +108,7 @@ if [[ $DOCKER -eq 1 ]]; then
   # run_fast_benchmarks # this is still too slow, need to refactor benchmarks to specify iterations on command line
 
   rm -rf ./* ../bin/*
-  docker build -f ../Dockerfile-musl-aarch64-bench -t ichor-musl-aarch64-bench --build-arg CONTAINER_OWNER_GID=$(id -g) --build-arg CONTAINER_OWNER_ID=$(id -u) . || exit 1
+  docker build -f ../Dockerfile-musl-aarch64-bench -t ichor-musl-aarch64-bench --build-arg CONTAINER_OWNER_GID=$(id -g) --build-arg CONTAINER_OWNER_ID=$(id -u) . --platform=linux/arm64 || exit 1
   docker run -v $(pwd)/../:/opt/ichor/src -v $(pwd)/../build:/opt/ichor/build --rm -it ichor-musl-aarch64-bench || exit 1
   rm -rf ../arm_bench
   mkdir -p ../arm_bench
@@ -132,10 +132,10 @@ run_examples 0 1 1
 for i in ${!ccompilers[@]}; do
   export LD_LIBRARY_PATH=${ldlibpath[i]}
   rm -rf ./* ../bin/*
-  CC=${ccompilers[i]} CXX=${cppcompilers[i]} cmake -GNinja -DCMAKE_BUILD_TYPE=Debug -DICHOR_USE_SANITIZERS=1 -DICHOR_ENABLE_INTERNAL_DEBUGGING=1 -DICHOR_ENABLE_INTERNAL_IO_DEBUGGING=1 -DICHOR_ENABLE_INTERNAL_STL_DEBUGGING=1 -DICHOR_ENABLE_INTERNAL_COROUTINE_DEBUGGING=1 -DICHOR_USE_MOLD=1 -DICHOR_USE_BOOST_BEAST=1 -DICHOR_USE_LIBCPP=0 -DICHOR_USE_HIREDIS=1 -DICHOR_USE_SDEVENT=1 .. || exit 1
+  CC=${ccompilers[i]} CXX=${cppcompilers[i]} cmake -GNinja -DCMAKE_BUILD_TYPE=Debug -DICHOR_USE_SANITIZERS=1 -DICHOR_ENABLE_INTERNAL_DEBUGGING=1 -DICHOR_ENABLE_INTERNAL_IO_DEBUGGING=1 -DICHOR_ENABLE_INTERNAL_STL_DEBUGGING=1 -DICHOR_ENABLE_INTERNAL_COROUTINE_DEBUGGING=1 -DICHOR_USE_MOLD=1 -DICHOR_USE_BOOST_BEAST=0 -DICHOR_USE_LIBCPP=0 -DICHOR_USE_HIREDIS=1 -DICHOR_USE_SDEVENT=1 .. || exit 1
   ninja || exit 1
   ninja test || exit 1
-  run_examples 1 1 1
+  run_examples 0 1 1
   run_benchmarks
 
   rm -rf ./* ../bin/*

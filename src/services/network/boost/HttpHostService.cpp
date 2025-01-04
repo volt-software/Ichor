@@ -5,7 +5,7 @@
 
 Ichor::Boost::HttpHostService::HttpHostService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {
     reg.registerDependency<ILogger>(this, DependencyFlags::REQUIRED);
-    reg.registerDependency<IAsioContextService>(this, DependencyFlags::REQUIRED);
+    reg.registerDependency<IBoostAsioQueue>(this, DependencyFlags::REQUIRED);
 }
 
 Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::Boost::HttpHostService::start() {
@@ -13,16 +13,16 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::Boost::HttpHostService
     auto portIt = getProperties().find("Port");
 
     if(addrIt == getProperties().end()) {
-        ICHOR_LOG_ERROR_ATOMIC(_logger, "Missing address");
+        ICHOR_LOG_ERROR(_logger, "Missing address");
         co_return tl::unexpected(StartError::FAILED);
     }
     if(portIt == getProperties().end()) {
-        ICHOR_LOG_ERROR_ATOMIC(_logger, "Missing port");
+        ICHOR_LOG_ERROR(_logger, "Missing port");
         co_return tl::unexpected(StartError::FAILED);
     }
 
     if(auto propIt = getProperties().find("Priority"); propIt != getProperties().end()) {
-        _priority.store(Ichor::any_cast<uint64_t>(propIt->second), std::memory_order_release);
+        _priority = Ichor::any_cast<uint64_t>(propIt->second);
     }
     if(auto propIt = getProperties().find("Debug"); propIt != getProperties().end()) {
         _debug = Ichor::any_cast<bool>(propIt->second);
@@ -31,32 +31,30 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::Boost::HttpHostService
         _sendServerHeader = Ichor::any_cast<bool>(propIt->second);
     }
     if(auto propIt = getProperties().find("NoDelay"); propIt != getProperties().end()) {
-        _tcpNoDelay.store(Ichor::any_cast<bool>(propIt->second), std::memory_order_release);
+        _tcpNoDelay = Ichor::any_cast<bool>(propIt->second);
     }
     if(auto propIt = getProperties().find("SslCert"); propIt != getProperties().end()) {
-        _useSsl.store(true, std::memory_order_release);
+        _useSsl = true;
     }
 
     auto sslKeyIt = getProperties().find("SslKey");
 
-    if((_useSsl.load(std::memory_order_acquire) && sslKeyIt == getProperties().end()) ||
-        (!_useSsl.load(std::memory_order_acquire) && sslKeyIt != getProperties().end())) {
-        ICHOR_LOG_ERROR_ATOMIC(_logger, "Both SslCert and SslKey properties are required when using ssl");
+    if((_useSsl && sslKeyIt == getProperties().end()) ||
+        (!_useSsl && sslKeyIt != getProperties().end())) {
+        ICHOR_LOG_ERROR(_logger, "Both SslCert and SslKey properties are required when using ssl");
         co_return tl::unexpected(StartError::FAILED);
     }
-
-    _queue = &GetThreadLocalEventQueue();
 
     boost::system::error_code ec;
     auto address = net::ip::make_address(Ichor::any_cast<std::string &>(addrIt->second), ec);
     auto port = Ichor::any_cast<uint16_t>(portIt->second);
 
     if(ec) {
-        ICHOR_LOG_ERROR_ATOMIC(_logger, "Couldn't parse address \"{}\": {} {}", Ichor::any_cast<std::string &>(addrIt->second), ec.value(), ec.message());
+        ICHOR_LOG_ERROR(_logger, "Couldn't parse address \"{}\": {} {}", Ichor::any_cast<std::string &>(addrIt->second), ec.value(), ec.message());
         co_return tl::unexpected(StartError::FAILED);
     }
 
-    net::spawn(*_asioContextService->getContext(), [this, address = std::move(address), port](net::yield_context yield) {
+    net::spawn(_queue->getContext(), [this, address = std::move(address), port](net::yield_context yield) {
         listen(tcp::endpoint{address, port}, std::move(yield));
     }ASIO_SPAWN_COMPLETION_TOKEN);
 
@@ -65,37 +63,35 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::Boost::HttpHostService
 
 Ichor::Task<void> Ichor::Boost::HttpHostService::stop() {
     INTERNAL_DEBUG("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! HttpHostService::stop()");
-    _quit.store(true, std::memory_order_release);
+    _quit = true;
 
-    if(!_goingToCleanupStream.exchange(true, std::memory_order_acq_rel) && _httpAcceptor) {
+    if(!_goingToCleanupStream && _httpAcceptor) {
+        _goingToCleanupStream = true;
         if(_httpAcceptor->is_open()) {
             _httpAcceptor->close();
         }
-        net::spawn(*_asioContextService->getContext(), [this](net::yield_context _yield) {
-            ScopeGuardAtomicCount const guard{_finishedListenAndRead};
-            {
-                std::unique_lock const lg{_streamsMutex};
-                for (auto &[id, stream]: _httpStreams) {
-                    stream->socket.cancel();
-                }
-                for (auto &[id, stream]: _sslStreams) {
-                    beast::get_lowest_layer(stream->socket).cancel();
-                }
-            }
 
-            _httpAcceptor = nullptr;
+        for (auto &[id, stream]: _httpStreams) {
+            stream->socket.cancel();
+        }
+        for (auto &[id, stream]: _sslStreams) {
+            beast::get_lowest_layer(stream->socket).cancel();
+        }
 
-            _queue->pushEvent<RunFunctionEvent>(getServiceId(), [this]() {
-                _startStopEvent.set();
-            });
-        }ASIO_SPAWN_COMPLETION_TOKEN);
+        _httpAcceptor = nullptr;
+
+        _startStopEvent.set();
     }
 
     co_await _startStopEvent;
     INTERNAL_DEBUG("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! post await");
 
     while(_finishedListenAndRead.load(std::memory_order_acquire) != 0) {
-        std::this_thread::sleep_for(1ms);
+        _startStopEvent.reset();
+        _queue->pushEvent<RunFunctionEvent>(getServiceId(), [this]() {
+            _startStopEvent.set();
+        });
+        co_await _startStopEvent;
     }
 
     _httpStreams.clear();
@@ -105,29 +101,27 @@ Ichor::Task<void> Ichor::Boost::HttpHostService::stop() {
 }
 
 void Ichor::Boost::HttpHostService::addDependencyInstance(ILogger &logger, IService &) {
-    _logger.store(&logger, std::memory_order_release);
+    _logger = &logger;
 }
 
 void Ichor::Boost::HttpHostService::removeDependencyInstance(ILogger &, IService&) {
-    _logger.store(nullptr, std::memory_order_release);
+    _logger = nullptr;
 }
 
-void Ichor::Boost::HttpHostService::addDependencyInstance(IAsioContextService &AsioContextService, IService&) {
-    _asioContextService = &AsioContextService;
-    ICHOR_LOG_TRACE_ATOMIC(_logger, "Inserted AsioContextService");
+void Ichor::Boost::HttpHostService::addDependencyInstance(IBoostAsioQueue &q, IService&) {
+    _queue = &q;
 }
 
-void Ichor::Boost::HttpHostService::removeDependencyInstance(IAsioContextService&, IService&) {
-    ICHOR_LOG_TRACE_ATOMIC(_logger, "Removing AsioContextService");
-    _asioContextService = nullptr;
+void Ichor::Boost::HttpHostService::removeDependencyInstance(IBoostAsioQueue&, IService&) {
+    _queue = nullptr;
 }
 
 void Ichor::Boost::HttpHostService::setPriority(uint64_t priority) {
-    _priority.store(priority, std::memory_order_release);
+    _priority = priority;
 }
 
 uint64_t Ichor::Boost::HttpHostService::getPriority() {
-    return _priority.load(std::memory_order_acquire);
+    return _priority;
 }
 
 Ichor::HttpRouteRegistration Ichor::Boost::HttpHostService::addRoute(HttpMethod method, std::string_view route, std::function<Task<HttpResponse>(HttpRequest&)> handler) {
@@ -163,11 +157,9 @@ void Ichor::Boost::HttpHostService::removeRoute(HttpMethod method, RouteIdType i
 }
 
 void Ichor::Boost::HttpHostService::fail(beast::error_code ec, const char *what, bool stopSelf) {
-    _queue->pushPrioritisedEvent<RunFunctionEvent>(getServiceId(), _priority.load(std::memory_order_acquire), [this, what, ec]() {
-        ICHOR_LOG_ERROR_ATOMIC(_logger, "Boost.BEAST fail: {}, {}", what, ec.message());
-    });
+    ICHOR_LOG_ERROR(_logger, "Boost.BEAST fail: {}, {}", what, ec.message());
     if(stopSelf) {
-        _queue->pushPrioritisedEvent<StopServiceEvent>(getServiceId(), _priority.load(std::memory_order_acquire), getServiceId());
+        _queue->pushPrioritisedEvent<StopServiceEvent>(getServiceId(), _priority, getServiceId());
     }
 }
 
@@ -175,7 +167,7 @@ void Ichor::Boost::HttpHostService::listen(tcp::endpoint endpoint, net::yield_co
     ScopeGuardAtomicCount guard{_finishedListenAndRead};
     beast::error_code ec;
 
-    if(_useSsl.load(std::memory_order_acquire)) {
+    if(_useSsl) {
         _sslContext = std::make_unique<net::ssl::context>(net::ssl::context::tlsv12);
 
         if(auto propIt = getProperties().find("SslPassword"); propIt != getProperties().end()) {
@@ -198,7 +190,7 @@ void Ichor::Boost::HttpHostService::listen(tcp::endpoint endpoint, net::yield_co
         _sslContext->use_private_key(boost::asio::buffer(key.data(), key.size()), boost::asio::ssl::context::file_format::pem);
     }
 
-    _httpAcceptor = std::make_unique<tcp::acceptor>(*_asioContextService->getContext());
+    _httpAcceptor = std::make_unique<tcp::acceptor>(_queue->getContext());
     _httpAcceptor->open(endpoint.protocol(), ec);
     if(ec) {
         return fail(ec, "HttpHostService::listen open", true);
@@ -219,9 +211,9 @@ void Ichor::Boost::HttpHostService::listen(tcp::endpoint endpoint, net::yield_co
         return fail(ec, "HttpHostService::listen listen", true);
     }
 
-    while(!_quit.load(std::memory_order_acquire) && !_asioContextService->fibersShouldStop())
+    while(!_quit && !_queue->fibersShouldStop())
     {
-        auto socket = tcp::socket(*_asioContextService->getContext());
+        auto socket = tcp::socket(_queue->getContext());
 
         // tcp accept new connections
         _httpAcceptor->async_accept(socket, yield[ec]);
@@ -231,10 +223,10 @@ void Ichor::Boost::HttpHostService::listen(tcp::endpoint endpoint, net::yield_co
             continue;
         }
 
-        socket.set_option(tcp::no_delay(_tcpNoDelay.load(std::memory_order_acquire)));
+        socket.set_option(tcp::no_delay(_tcpNoDelay));
 
-        net::spawn(*_asioContextService->getContext(), [this, socket = std::move(socket)](net::yield_context _yield) mutable {
-            if(_quit.load(std::memory_order_acquire)) {
+        net::spawn(_queue->getContext(), [this, socket = std::move(socket)](net::yield_context _yield) mutable {
+            if(_quit) {
                 return;
             }
 
@@ -246,8 +238,9 @@ void Ichor::Boost::HttpHostService::listen(tcp::endpoint endpoint, net::yield_co
         }ASIO_SPAWN_COMPLETION_TOKEN);
     }
 
-    ICHOR_LOG_WARN_ATOMIC(_logger, "finished listen() {} {}", _quit.load(std::memory_order_acquire), _asioContextService->fibersShouldStop());
-    if(!_goingToCleanupStream.exchange(true, std::memory_order_acq_rel) && _httpAcceptor) {
+    ICHOR_LOG_WARN(_logger, "finished listen() {} {}", _quit, _queue->fibersShouldStop());
+    if(!_goingToCleanupStream && _httpAcceptor) {
+        _goingToCleanupStream = true;
         _queue->pushPrioritisedEvent<StopServiceEvent>(getServiceId(), getPriority(), getServiceId());
     }
 }
@@ -258,15 +251,11 @@ void Ichor::Boost::HttpHostService::read(tcp::socket socket, net::yield_context 
     beast::error_code ec;
     auto addr = socket.remote_endpoint().address().to_string();
     std::shared_ptr<Detail::Connection<SocketT>> connection;
-    uint64_t streamId;
-    {
-        std::lock_guard const lg(_streamsMutex);
-        streamId = _streamIdCounter++;
-        if constexpr (std::is_same_v<SocketT, beast::tcp_stream>) {
-            connection = _httpStreams.emplace(streamId, std::make_shared<Detail::Connection<SocketT>>(std::move(socket))).first->second;
-        } else {
-            connection = _sslStreams.emplace(streamId, std::make_shared<Detail::Connection<SocketT>>(std::move(socket), *_sslContext)).first->second;
-        }
+    uint64_t streamId = _streamIdCounter++;
+    if constexpr (std::is_same_v<SocketT, beast::tcp_stream>) {
+        connection = _httpStreams.emplace(streamId, std::make_shared<Detail::Connection<SocketT>>(std::move(socket))).first->second;
+    } else {
+        connection = _sslStreams.emplace(streamId, std::make_shared<Detail::Connection<SocketT>>(std::move(socket), *_sslContext)).first->second;
     }
 
     if constexpr (!std::is_same_v<SocketT, beast::tcp_stream>) {
@@ -281,7 +270,7 @@ void Ichor::Boost::HttpHostService::read(tcp::socket socket, net::yield_context 
     // This buffer is required to persist across reads
     beast::basic_flat_buffer buffer{ std::allocator<uint8_t>{} };
 
-    while (!_quit.load(std::memory_order_acquire) && !_asioContextService->fibersShouldStop())
+    while (!_quit && !_queue->fibersShouldStop())
     {
         // Set the timeout.
         if constexpr (std::is_same_v<SocketT, beast::tcp_stream>) {
@@ -315,7 +304,7 @@ void Ichor::Boost::HttpHostService::read(tcp::socket socket, net::yield_context 
         }
 
         auto target = std::string{req.target()};
-        ICHOR_LOG_TRACE_ATOMIC(_logger, "New request for {} {}", (int)req.method(), target);
+        ICHOR_LOG_TRACE(_logger, "New request for {} {}", (int)req.method(), target);
 
         unordered_map<std::string, std::string> headers{};
         headers.reserve(static_cast<unsigned long>(std::distance(std::begin(req), std::end(req))));
@@ -337,7 +326,7 @@ void Ichor::Boost::HttpHostService::read(tcp::socket socket, net::yield_context 
 #endif
             auto routes = _handlers.find(httpReq.method);
 
-            if (_quit.load(std::memory_order_acquire) || _asioContextService->fibersShouldStop()) {
+            if (_quit || _queue->fibersShouldStop()) {
                 co_return{};
             }
 
@@ -366,7 +355,7 @@ void Ichor::Boost::HttpHostService::read(tcp::socket socket, net::yield_context 
                         res.set(header.first, header.second);
                     }
                     res.keep_alive(keep_alive);
-                    ICHOR_LOG_TRACE_ATOMIC(_logger, "sending http response {} - {}", (int)httpRes.status,
+                    ICHOR_LOG_TRACE(_logger, "sending http response {} - {}", (int)httpRes.status,
                         std::string_view(reinterpret_cast<char*>(httpRes.body.data()), httpRes.body.size()));
 
                     res.body() = std::move(httpRes.body);
@@ -390,33 +379,29 @@ void Ichor::Boost::HttpHostService::read(tcp::socket socket, net::yield_context 
         });
     }
 
-    {
-        std::lock_guard lg(_streamsMutex);
-        if constexpr (std::is_same_v<SocketT, beast::tcp_stream>) {
-            _httpStreams.erase(streamId);
-        } else {
-            _sslStreams.erase(streamId);
-        }
+    if constexpr (std::is_same_v<SocketT, beast::tcp_stream>) {
+        _httpStreams.erase(streamId);
+    } else {
+        _sslStreams.erase(streamId);
     }
 
     // At this point the connection is closed gracefully
-    ICHOR_LOG_WARN_ATOMIC(_logger, "finished read() {} {}", _quit.load(std::memory_order_acquire), _asioContextService->fibersShouldStop());
+    ICHOR_LOG_WARN(_logger, "finished read() {} {}", _quit, _queue->fibersShouldStop());
 }
 
 template <typename SocketT>
 void Ichor::Boost::HttpHostService::sendInternal(std::shared_ptr<Detail::Connection<SocketT>> &connection, http::response<http::vector_body<uint8_t>, http::basic_fields<std::allocator<uint8_t>>> &&res) {
     static_assert(std::is_move_assignable_v<Detail::HostOutboxMessage>, "HostOutboxMessage should be move assignable");
 
-    if(_quit.load(std::memory_order_acquire) || _asioContextService->fibersShouldStop()) {
+    if(_quit || _queue->fibersShouldStop()) {
         return;
     }
 
-    net::spawn(*_asioContextService->getContext(), [this, res = std::move(res), connection = std::move(connection)](net::yield_context yield) mutable {
-        if(_quit.load(std::memory_order_acquire)) {
+    net::spawn(_queue->getContext(), [this, res = std::move(res), connection = std::move(connection)](net::yield_context yield) mutable {
+        if(_quit) {
             return;
         }
 
-        std::unique_lock lg(connection->mutex);
         if(connection->outbox.full()) {
             connection->outbox.set_capacity(std::max<uint64_t>(connection->outbox.capacity() * 2, 10ul));
         }
@@ -426,10 +411,9 @@ void Ichor::Boost::HttpHostService::sendInternal(std::shared_ptr<Detail::Connect
             return;
         }
 
-        while(!_quit.load(std::memory_order_acquire) && !connection->outbox.empty()) {
+        while(!_quit && !connection->outbox.empty()) {
             // Move message, should be trivially copyable and prevents iterator invalidation
             auto next = std::move(connection->outbox.front());
-            lg.unlock();
             if constexpr (std::is_same_v<SocketT, beast::tcp_stream>) {
                 connection->socket.expires_after(30s);
             } else {
@@ -446,7 +430,6 @@ void Ichor::Boost::HttpHostService::sendInternal(std::shared_ptr<Detail::Connect
             } else if(ec) {
                 fail(ec, "HttpHostService::sendInternal write", false);
             }
-            lg.lock();
             connection->outbox.pop_front();
         }
     }ASIO_SPAWN_COMPLETION_TOKEN);
