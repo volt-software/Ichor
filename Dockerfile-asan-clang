@@ -11,7 +11,6 @@ RUN apt install -y cmake pkg-config git ninja-build nano libzip-dev clang-18 lib
 
 WORKDIR /opt
 RUN wget https://github.com/redis/hiredis/archive/refs/tags/v1.2.0.tar.gz
-RUN wget https://boostorg.jfrog.io/artifactory/main/release/1.83.0/source/boost_1_83_0.tar.bz2
 RUN wget https://github.com/openssl/openssl/releases/download/openssl-3.0.15/openssl-3.0.15.tar.gz
 
 ENV CC="clang"
@@ -28,18 +27,6 @@ WORKDIR /opt/openssl-3.0.15
 RUN ./Configure --prefix=/usr --openssldir=/etc/ssl --libdir=lib no-shared
 RUN make -j
 RUN make -j install
-
-WORKDIR /opt
-#Build boost with support for asan
-RUN tar xf boost_1_83_0.tar.bz2
-
-WORKDIR /opt/boost_1_83_0
-
-RUN ./bootstrap.sh --prefix=/usr --with-toolset=clang
-RUN clang++ --version
-RUN find /usr/lib -name "*-linux*"
-RUN ./b2 cxxflags="-fsanitize=address,undefined -fno-sanitize=vptr -Og -std=c++17 -stdlib=libc++ -DBOOST_USE_ASAN -DBOOST_USE_UCONTEXT"  linkflags="-stdlib=libc++ -static-libstdc++ -l:libc++abi.a -static-libsan -lubsan" variant=debug link=static threading=multi context-impl=ucontext
-RUN ./b2 cxxflags="-fsanitize=address,undefined -fno-sanitize=vptr -Og -std=c++17 -stdlib=libc++ -DBOOST_USE_ASAN -DBOOST_USE_UCONTEXT"  linkflags="-stdlib=libc++ -static-libstdc++ -l:libc++abi.a -static-libsan -lubsan" variant=debug link=static threading=multi context-impl=ucontext install
 
 WORKDIR /opt
 
@@ -61,4 +48,4 @@ WORKDIR /opt/ichor/build
 
 ENTRYPOINT ["/bin/bash", "-c"]
 
-CMD ["unset CFLAGS CXXFLAGS && cd /opt/ichor/build && cmake -GNinja -DCMAKE_BUILD_TYPE=Debug -DICHOR_USE_SANITIZERS=1 -DICHOR_USE_HIREDIS=1 -DICHOR_USE_BOOST_BEAST=1 -DICHOR_USE_SPDLOG=1 -DICHOR_USE_SDEVENT=1 -DICHOR_SKIP_EXTERNAL_TESTS=1 /opt/ichor/src && ninja && ninja test"]
+CMD ["unset CFLAGS CXXFLAGS && cd /opt/ichor/build && cmake -GNinja -DCMAKE_BUILD_TYPE=Debug -DICHOR_USE_SANITIZERS=1 -DICHOR_USE_HIREDIS=1 -DICHOR_USE_SPDLOG=1 -DICHOR_USE_SDEVENT=1 -DICHOR_SKIP_EXTERNAL_TESTS=1 /opt/ichor/src && ninja && ninja test"]

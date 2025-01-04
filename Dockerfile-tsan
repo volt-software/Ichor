@@ -14,7 +14,6 @@ RUN update-alternatives --install /usr/bin/cpp cpp /usr/bin/cpp-12 60
 
 WORKDIR /opt
 RUN wget https://github.com/redis/hiredis/archive/refs/tags/v1.2.0.tar.gz
-RUN wget https://boostorg.jfrog.io/artifactory/main/release/1.81.0/source/boost_1_81_0.tar.bz2
 RUN wget https://github.com/openssl/openssl/releases/download/openssl-3.0.15/openssl-3.0.15.tar.gz
 
 ENV CFLAGS="-Og -fsanitize=thread"
@@ -26,45 +25,6 @@ WORKDIR /opt/openssl-3.0.15
 RUN ./Configure --prefix=/usr --openssldir=/etc/ssl --libdir=lib no-shared
 RUN make -j
 RUN make -j install
-
-WORKDIR /opt
-
-#Build boost with support for asan
-RUN tar xf boost_1_81_0.tar.bz2
-
-WORKDIR /opt/boost_1_81_0
-
-RUN <<EOF
-cat >> patch << EOR
-diff -r -u boost-1.81.0/boost/asio/detail/std_fenced_block.hpp boost-1.81.0-fencecd/boost/asio/detail/std_fenced_block.hpp
---- ./boost/asio/detail/std_fenced_block.hpp	2022-12-14 16:15:35.000000000 +0100
-+++ ./boost/asio/detail/std_fenced_block.hpp	2023-10-03 20:17:11.701435674 +0200
-@@ -43,14 +43,16 @@
-   // Constructor for a full fenced block.
-   explicit std_fenced_block(full_t)
-   {
--    std::atomic_thread_fence(std::memory_order_acquire);
-+    _fence.load(std::memory_order_acquire);
-   }
-
-   // Destructor.
-   ~std_fenced_block()
-   {
--    std::atomic_thread_fence(std::memory_order_release);
-+    _fence.store(true, std::memory_order_release);
-   }
-+
-+  std::atomic<bool> _fence;
- };
-
- } // namespace detail
-EOR
-EOF
-RUN patch ./boost/asio/detail/std_fenced_block.hpp < patch
-
-RUN ./bootstrap.sh --prefix=/usr
-RUN ./b2 cxxflags="-fsanitize=thread -Og -std=c++20 -DBOOST_USE_TSAN -DBOOST_USE_UCONTEXT"  linkflags="-static-libtsan -static-libgcc -static-libstdc++" variant=debug link=static threading=multi context-impl=ucontext
-RUN ./b2 cxxflags="-fsanitize=thread -Og -std=c++20 -DBOOST_USE_TSAN -DBOOST_USE_UCONTEXT"  linkflags="-static-libtsan -static-libgcc -static-libstdc++" variant=debug link=static threading=multi context-impl=ucontext install
 
 WORKDIR /opt
 
@@ -86,4 +46,4 @@ WORKDIR /opt/ichor/build
 
 ENTRYPOINT ["/bin/bash", "-c"]
 
-CMD ["unset CFLAGS CXXFLAGS && cd /opt/ichor/build && cmake -GNinja -DCMAKE_BUILD_TYPE=Debug -DICHOR_USE_SANITIZERS=0 -DICHOR_USE_MIMALLOC=0 -DICHOR_USE_THREAD_SANITIZER=1 -DICHOR_USE_HIREDIS=1 -DICHOR_USE_BOOST_BEAST=1 -DICHOR_USE_SPDLOG=1 -DICHOR_USE_BACKWARD=0 -DICHOR_USE_SDEVENT=1 -DICHOR_SKIP_EXTERNAL_TESTS=1 /opt/ichor/src && ninja && ninja test"]
+CMD ["unset CFLAGS CXXFLAGS && cd /opt/ichor/build && cmake -GNinja -DCMAKE_BUILD_TYPE=Debug -DICHOR_USE_SANITIZERS=0 -DICHOR_USE_MIMALLOC=0 -DICHOR_USE_THREAD_SANITIZER=1 -DICHOR_USE_HIREDIS=1 -DICHOR_USE_SPDLOG=1 -DICHOR_USE_BACKWARD=0 -DICHOR_USE_SDEVENT=1 -DICHOR_SKIP_EXTERNAL_TESTS=1 /opt/ichor/src && ninja && ninja test"]

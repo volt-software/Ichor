@@ -1,10 +1,9 @@
 #include "PongService.h"
 #include "PingMsgJsonSerializer.h"
 #include "../common/lyra.hpp"
-#include <ichor/event_queues/PriorityQueue.h>
+#include <ichor/event_queues/BoostAsioQueue.h>
 #include <ichor/services/logging/LoggerFactory.h>
 #include <ichor/services/network/boost/HttpHostService.h>
-#include <ichor/services/network/boost/AsioContextService.h>
 #include <ichor/services/serialization/ISerializer.h>
 #include <ichor/services/logging/NullLogger.h>
 #include <ichor/ichor-mimalloc.h>
@@ -36,7 +35,6 @@ int main(int argc, char *argv[]) {
     }
 
     uint64_t verbosity{};
-    uint64_t threads{1};
     bool silent{};
     bool spinlock{};
     bool showHelp{};
@@ -45,7 +43,6 @@ int main(int argc, char *argv[]) {
     auto cli = lyra::help(showHelp)
                | lyra::opt(address, "address")["-a"]["--address"]("Address to bind to, e.g. 127.0.0.1")
                | lyra::opt([&verbosity](bool) { verbosity++; })["-v"]["--verbose"]("Increase logging for each -v").cardinality(0, 4)
-               | lyra::opt(threads, "threads")["-t"]["--threads"]("Number of threads to use for I/O, default: 1")
                | lyra::opt(spinlock)["-p"]["--spinlock"]("Spinlock 10ms before going to sleep, improves latency in high workload cases at the expense of CPU usage")
                | lyra::opt(silent)["-s"]["--silent"]("No output");
 
@@ -72,7 +69,7 @@ int main(int argc, char *argv[]) {
     }
 
     auto start = std::chrono::steady_clock::now();
-    auto queue = std::make_unique<PriorityQueue>(spinlock);
+    auto queue = std::make_unique<BoostAsioQueue>();
     auto &dm = queue->createManager();
 
 #ifdef ICHOR_USE_SPDLOG
@@ -90,7 +87,6 @@ int main(int argc, char *argv[]) {
     }
 
     dm.createServiceManager<PingMsgJsonSerializer, ISerializer<PingMsg>>();
-    dm.createServiceManager<Boost::AsioContextService, Boost::IAsioContextService>(Properties{{"Threads", Ichor::make_any<uint64_t>(threads)}});
     dm.createServiceManager<Boost::HttpHostService, IHttpHostService>(Properties{{"Address", Ichor::make_any<std::string>(address)}, {"Port", Ichor::make_any<uint16_t>(static_cast<uint16_t>(8001))}, {"NoDelay", Ichor::make_any<bool>(true)}});
     dm.createServiceManager<PongService>();
     queue->start(CaptureSigInt);

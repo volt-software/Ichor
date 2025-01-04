@@ -41,7 +41,7 @@ jobs:
       if: ${{matrix.sanitizer == 'asan'}}
       # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
       # See https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html?highlight=cmake_build_type
-      run: cmake -GNinja -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{matrix.opts}} -DICHOR_USE_SPDLOG=${{matrix.spdlog}} -DICHOR_USE_BOOST_BEAST=ON -DICHOR_USE_SDEVENT=ON -DICHOR_USE_SANITIZERS=ON -DICHOR_USE_MOLD=ON -DICHOR_USE_LIBCPP=OFF -DICHOR_USE_LIBURING=ON
+      run: cmake -GNinja -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{matrix.opts}} -DICHOR_USE_SPDLOG=${{matrix.spdlog}} -DICHOR_USE_BOOST_BEAST=OFF -DICHOR_USE_SDEVENT=ON -DICHOR_USE_SANITIZERS=ON -DICHOR_USE_MOLD=ON -DICHOR_USE_LIBCPP=OFF -DICHOR_USE_LIBURING=ON
 
     - name: "Configure CMake (spdlog:${{matrix.spdlog}}, no asan)"
       if: ${{matrix.sanitizer == 'none'}}
@@ -53,7 +53,7 @@ jobs:
       if: ${{matrix.sanitizer == 'tsan'}}
       # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
       # See https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html?highlight=cmake_build_type
-      run:  cmake -GNinja -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{matrix.opts}} -DICHOR_USE_SPDLOG=${{matrix.spdlog}} -DICHOR_USE_BOOST_BEAST=ON -DICHOR_USE_SDEVENT=ON -DICHOR_USE_SANITIZERS=OFF -DICHOR_USE_THREAD_SANITIZER=ON -DICHOR_USE_MOLD=ON -DICHOR_USE_LIBCPP=OFF -DICHOR_USE_LIBURING=ON
+      run:  cmake -GNinja -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{matrix.opts}} -DICHOR_USE_SPDLOG=${{matrix.spdlog}} -DICHOR_USE_BOOST_BEAST=OFF -DICHOR_USE_SDEVENT=ON -DICHOR_USE_SANITIZERS=OFF -DICHOR_USE_THREAD_SANITIZER=ON -DICHOR_USE_MOLD=ON -DICHOR_USE_LIBCPP=OFF -DICHOR_USE_LIBURING=ON
 
     - name: Build
       # Build your program with the given configuration
@@ -65,7 +65,13 @@ jobs:
       # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
       run: ctest --output-on-failure -C ${{env.BUILD_TYPE}}
 
-    - name: Examples
+    - name: Examples no san
+      if: ${{matrix.sanitizer == 'none'}}
       working-directory: ${{github.workspace}}/bin
-      run: ../bin/ichor_etcd_example && ../bin/ichor_http_example && ../bin/ichor_multithreaded_example && ../bin/ichor_optional_dependency_example && ../bin/ichor_serializer_example && ../bin/ichor_tcp_example && ../bin/ichor_timer_example && ../bin/ichor_factory_example && ../bin/ichor_websocket_example && ../bin/ichor_websocket_example -t4 && ../bin/ichor_yielding_timer_example && ../bin/ichor_event_statistics_example && ../bin/ichor_introspection_example
+      run: ../bin/ichor_etcd_example && ../bin/ichor_http_example_boost && ../bin/ichor_http_example_uring && ../bin/ichor_multithreaded_example && ../bin/ichor_multithreaded_example_uring && ../bin/ichor_optional_dependency_example && ../bin/ichor_serializer_example && ../bin/ichor_tcp_example && ../bin/ichor_tcp_example_uring && ../bin/ichor_timer_example && ../bin/ichor_yielding_timer_example && ../bin/ichor_timer_example_uring && ../bin/ichor_yielding_timer_example_uring && ../bin/ichor_factory_example && ../bin/ichor_websocket_example && ../bin/ichor_event_statistics_example && ../bin/ichor_introspection_example
+
+    - name: Examples san
+      if: ${{matrix.sanitizer != 'none'}}
+      working-directory: ${{github.workspace}}/bin
+      run: ../bin/ichor_http_example_uring && ../bin/ichor_multithreaded_example && ../bin/ichor_multithreaded_example_uring && ../bin/ichor_optional_dependency_example && ../bin/ichor_serializer_example && ../bin/ichor_tcp_example && ../bin/ichor_tcp_example_uring && ../bin/ichor_timer_example && ../bin/ichor_yielding_timer_example && ../bin/ichor_timer_example_uring && ../bin/ichor_yielding_timer_example_uring && ../bin/ichor_factory_example && ../bin/ichor_event_statistics_example && ../bin/ichor_introspection_example
 

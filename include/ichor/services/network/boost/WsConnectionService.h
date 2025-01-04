@@ -1,12 +1,10 @@
 #pragma once
 
+#include <ichor/event_queues/IBoostAsioQueue.h>
 #include <ichor/services/network/IConnectionService.h>
 #include <ichor/services/network/IHostService.h>
-#include <ichor/services/network/boost/AsioContextService.h>
 #include <ichor/services/logging/Logger.h>
 #include <ichor/coroutines/AsyncManualResetEvent.h>
-#include <ichor/stl/RealtimeMutex.h>
-#include <queue>
 #include <boost/beast.hpp>
 #include <boost/asio/spawn.hpp>
 #include <boost/circular_buffer.hpp>
@@ -50,8 +48,8 @@ namespace Ichor::Boost {
         void addDependencyInstance(IHostService&, IService &isvc);
         void removeDependencyInstance(IHostService&, IService &isvc);
 
-        void addDependencyInstance(IAsioContextService &logger, IService&);
-        void removeDependencyInstance(IAsioContextService &logger, IService&);
+        void addDependencyInstance(IBoostAsioQueue &q, IService&);
+        void removeDependencyInstance(IBoostAsioQueue &q, IService&);
 
         friend DependencyRegister;
         friend DependencyManager;
@@ -62,17 +60,15 @@ namespace Ichor::Boost {
         void read(net::yield_context &yield);
 
         std::shared_ptr<websocket::stream<beast::tcp_stream>> _ws{};
-        std::atomic<uint64_t> _priority{};
-        std::atomic<bool> _connected{};
-        std::atomic<bool> _quit{};
+        uint64_t _priority{};
+        bool _connected{};
+        bool _quit{};
         ILogger *_logger{};
-        IAsioContextService *_asioContextService{};
+        IBoostAsioQueue *_queue{};
         std::unique_ptr<net::strand<net::io_context::executor_type>> _strand{};
         std::atomic<int64_t> _finishedListenAndRead{};
         AsyncManualResetEvent _startStopEvent{};
         boost::circular_buffer<Detail::WsConnectionOutboxMessage> _outbox{10};
-        RealtimeMutex _outboxMutex{};
-        IEventQueue *_queue;
 		std::vector<std::vector<uint8_t>> _queuedMessages{};
 		std::function<void(std::span<uint8_t const>)> _recvHandler;
     };

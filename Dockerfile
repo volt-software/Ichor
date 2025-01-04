@@ -14,7 +14,7 @@ RUN update-alternatives --install /usr/bin/cpp cpp /usr/bin/cpp-12 60
 
 WORKDIR /opt
 RUN wget https://github.com/redis/hiredis/archive/refs/tags/v1.2.0.tar.gz
-RUN wget https://boostorg.jfrog.io/artifactory/main/release/1.83.0/source/boost_1_83_0.tar.bz2
+RUN wget https://archives.boost.io/release/1.83.0/source/boost_1_83_0.tar.bz2
 RUN wget https://github.com/openssl/openssl/releases/download/openssl-3.0.15/openssl-3.0.15.tar.gz
 
 ENV CFLAGS="-O2 -fstack-protector-strong -fcf-protection -fstack-clash-protection -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=3"

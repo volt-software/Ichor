@@ -1,9 +1,9 @@
 #pragma once
 
+#include <ichor/event_queues/BoostAsioQueue.h>
 #include <ichor/services/network/IHostService.h>
 #include <ichor/services/logging/Logger.h>
 #include <ichor/services/network/boost//WsConnectionService.h>
-#include <ichor/services/network/boost/AsioContextService.h>
 #include <ichor/services/network/ws/WsEvents.h>
 #include <ichor/coroutines/AsyncManualResetEvent.h>
 #include <boost/beast.hpp>
@@ -30,8 +30,8 @@ namespace Ichor::Boost {
 
         void addDependencyInstance(ILogger &logger, IService &isvc);
         void removeDependencyInstance(ILogger &logger, IService &isvc);
-        void addDependencyInstance(IAsioContextService &logger, IService&);
-        void removeDependencyInstance(IAsioContextService &logger, IService&);
+        void addDependencyInstance(IBoostAsioQueue &q, IService&);
+        void removeDependencyInstance(IBoostAsioQueue &q, IService&);
 
         AsyncGenerator<IchorBehaviour> handleEvent(NewWsConnectionEvent const &evt);
 
@@ -44,14 +44,13 @@ namespace Ichor::Boost {
         std::unique_ptr<tcp::acceptor> _wsAcceptor{};
         std::unique_ptr<net::strand<net::io_context::executor_type>> _strand{};
         uint64_t _priority{INTERNAL_EVENT_PRIORITY};
-        std::atomic<bool> _quit{};
-        std::atomic<bool> _tcpNoDelay{};
+        bool _quit{};
+        bool _tcpNoDelay{};
         std::atomic<int64_t> _finishedListenAndRead{};
         ILogger *_logger{};
-        IAsioContextService *_asioContextService{};
         std::vector<ServiceIdType> _connections{};
         EventHandlerRegistration _eventRegistration{};
         AsyncManualResetEvent _startStopEvent{};
-        IEventQueue *_queue{};
+        IBoostAsioQueue *_queue{};
     };
 }

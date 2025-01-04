@@ -1,11 +1,8 @@
 #include "UsingHttpService.h"
 #include "../common/TestMsgGlazeSerializer.h"
 #include "../common/lyra.hpp"
-#include <ichor/event_queues/PriorityQueue.h>
 #include <ichor/services/logging/NullLogger.h>
 #include <ichor/services/logging/LoggerFactory.h>
-#include <ichor/services/network/boost/HttpHostService.h>
-#include <ichor/services/network/boost/HttpConnectionService.h>
 #include <ichor/services/network/ClientFactory.h>
 #include <ichor/services/serialization/ISerializer.h>
 #include <ichor/ichor-mimalloc.h>
@@ -23,6 +20,28 @@
 #define LOGGER_TYPE CoutLogger
 #endif
 
+#if defined(URING_EXAMPLE)
+#include <ichor/event_queues/IOUringQueue.h>
+#include <ichor/services/network/http/HttpHostService.h>
+#include <ichor/services/network/http/HttpConnectionService.h>
+#include <ichor/services/network/tcp/IOUringTcpConnectionService.h>
+#include <ichor/services/network/tcp/IOUringTcpHostService.h>
+
+#define QIMPL IOUringQueue
+#define CONNIMPL IOUringTcpConnectionService
+#define HOSTIMPL IOUringTcpHostService
+#define HTTPHOSTIMPL HttpHostService
+#define HTTPCONNIMPL HttpConnectionService
+#else
+#include <ichor/services/network/boost/HttpHostService.h>
+#include <ichor/services/network/boost/HttpConnectionService.h>
+#include <ichor/event_queues/BoostAsioQueue.h>
+
+#define QIMPL BoostAsioQueue
+#define HTTPHOSTIMPL Boost::HttpHostService
+#define HTTPCONNIMPL Boost::HttpConnectionService
+#endif
+
 #include <chrono>
 #include <iostream>
 
@@ -37,17 +56,13 @@ int main(int argc, char *argv[]) {
     }
 
     uint64_t verbosity{};
-    uint64_t threads{1};
     bool silent{};
-    bool spinlock{};
     bool showHelp{};
     std::string address{"127.0.0.1"};
 
     auto cli = lyra::help(showHelp)
                | lyra::opt(address, "address")["-a"]["--address"]("Address to bind to, e.g. 127.0.0.1")
                | lyra::opt([&verbosity](bool) { verbosity++; })["-v"]["--verbose"]("Increase logging for each -v").cardinality(0, 4)
-               | lyra::opt(threads, "threads")["-t"]["--threads"]("Number of threads to use for I/O, default: 1")
-               | lyra::opt(spinlock)["-p"]["--spinlock"]("Spinlock 10ms before going to sleep, improves latency in high workload cases at the expense of CPU usage")
                | lyra::opt(silent)["-s"]["--silent"]("No output");
 
     auto result = cli.parse( { argc, argv } );
@@ -73,8 +88,14 @@ int main(int argc, char *argv[]) {
     }
 
     auto start = std::chrono::steady_clock::now();
-    auto queue = std::make_unique<PriorityQueue>(spinlock);
+    auto queue = std::make_unique<QIMPL>(500);
     auto &dm = queue->createManager();
+#ifdef URING_EXAMPLE
+    if(!queue->createEventLoop()) {
+        fmt::println("Couldn't create io_uring event loop");
+        return -1;
+    }
+#endif
 #ifdef ICHOR_USE_SPDLOG
     dm.createServiceManager<SpdlogSharedService, ISpdlogSharedService>();
 #endif
@@ -88,12 +109,14 @@ int main(int argc, char *argv[]) {
     }
     // Create the JSON serializer for the TestMsg class
     dm.createServiceManager<TestMsgGlazeSerializer, ISerializer<TestMsg>>();
-    // Create the Event Thread for Boost.ASIO
-    dm.createServiceManager<Boost::AsioContextService, Boost::IAsioContextService>(Properties{{"Threads", Ichor::make_any<uint64_t>(threads)}});
+#ifdef URING_EXAMPLE
+    dm.createServiceManager<HOSTIMPL, IHostService>(Properties{{"Address", Ichor::make_any<std::string>("127.0.0.1"s)}, {"Port", Ichor::make_any<uint16_t>(static_cast<uint16_t>(8001))}});
+    dm.createServiceManager<ClientFactory<CONNIMPL<IClientConnectionService>, IClientConnectionService>, IClientFactory>();
+#endif
     // Create the HTTP server binding to the given address
-    dm.createServiceManager<Boost::HttpHostService, IHttpHostService>(Properties{{"Address", Ichor::make_any<std::string>(address)}, {"Port", Ichor::make_any<uint16_t>(static_cast<uint16_t>(8001))}});
+    dm.createServiceManager<HTTPHOSTIMPL, IHttpHostService>(Properties{{"Address", Ichor::make_any<std::string>(address)}, {"Port", Ichor::make_any<uint16_t>(static_cast<uint16_t>(8001))}});
     // Setup a factory which creates HTTP clients for every class requesting an IHttpConnectionService
-    dm.createServiceManager<ClientFactory<Boost::HttpConnectionService, IHttpConnectionService>, IClientFactory>();
+    dm.createServiceManager<ClientFactory<HTTPCONNIMPL, IHttpConnectionService>, IClientFactory>();
     // Create the class that we defined in this example, to setup a /test endpoint in the server, to request (and therefore create) an HTTP client and send a message to the /test endpoint using the serializer for TestMsg
     dm.createServiceManager<UsingHttpService>(Properties{{"Address", Ichor::make_any<std::string>(address)}, {"Port", Ichor::make_any<uint16_t>(static_cast<uint16_t>(8001))}});
     queue->start(CaptureSigInt);

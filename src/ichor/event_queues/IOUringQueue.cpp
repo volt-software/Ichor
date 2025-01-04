@@ -1,4 +1,6 @@
-#ifdef ICHOR_USE_LIBURING
+#ifndef ICHOR_USE_LIBURING
+#error "Uring not enabled."
+#endif
 
 #include <ichor/event_queues/IOUringQueue.h>
 #include <ichor/ScopeGuard.h>
@@ -1042,6 +1044,4 @@ namespace Ichor {
         fmt::println("");
         fmt::println("The last submission probably contains an error.");
     }
-#endif
-
 #endif

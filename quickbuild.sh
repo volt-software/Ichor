@@ -23,12 +23,14 @@ CXXCOMP=clang++-19
 BOOST=0
 SPDLOG=0
 HIREDIS=0
+LD_PATH=
 
 while [[ $# -gt 0 ]]; do
   case $1 in
     --gcc)
       CCOMP=gcc
       CXXCOMP=g++
+      LD_PATH="/opt/gcc/14/lib64/"
       shift # past value
       ;;
     --oldgcc)
@@ -65,7 +67,7 @@ while [[ $# -gt 0 ]]; do
       DEBUG=1
       shift # past value
       ;;
-    --run-examples)
+    --examples)
       RUN_EXAMPLES=1
       shift # past value
       ;;
@@ -94,6 +96,7 @@ done
 
 set -- "${POSITIONAL_ARGS[@]}" # restore positional parameters
 
+export LD_LIBRARY_PATH=$LD_PATH:$LD_LIBRARY_PATH
 rm -rf ./*
 rm -rf ../bin/*
 

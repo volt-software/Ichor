@@ -1,10 +1,9 @@
 #include "PingService.h"
 #include "PingMsgJsonSerializer.h"
 #include "../common/lyra.hpp"
-#include <ichor/event_queues/PriorityQueue.h>
+#include <ichor/event_queues/BoostAsioQueue.h>
 #include <ichor/services/logging/LoggerFactory.h>
 #include <ichor/services/network/boost/HttpConnectionService.h>
-#include <ichor/services/network/boost/AsioContextService.h>
 #include <ichor/services/network/ClientFactory.h>
 #include <ichor/services/serialization/ISerializer.h>
 #include <ichor/services/logging/NullLogger.h>
@@ -70,7 +69,7 @@ int main(int argc, char *argv[]) {
     }
 
     auto start = std::chrono::steady_clock::now();
-    auto queue = std::make_unique<PriorityQueue>();
+    auto queue = std::make_unique<BoostAsioQueue>();
     auto &dm = queue->createManager();
 
 #ifdef ICHOR_USE_SPDLOG
@@ -88,7 +87,6 @@ int main(int argc, char *argv[]) {
     }
 
     dm.createServiceManager<PingMsgJsonSerializer, ISerializer<PingMsg>>();
-    dm.createServiceManager<Boost::AsioContextService, Boost::IAsioContextService>();
     dm.createServiceManager<ClientFactory<Boost::HttpConnectionService, IHttpConnectionService>, IClientFactory>();
     dm.createServiceManager<PingService>(Properties{{"Address", Ichor::make_any<std::string>(address)}, {"Port", Ichor::make_any<uint16_t>(static_cast<uint16_t>(8001))}, {"NoDelay", Ichor::make_any<bool>(true)}});
     dm.createServiceManager<TimerFactoryFactory>();

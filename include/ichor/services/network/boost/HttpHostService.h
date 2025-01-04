@@ -1,10 +1,9 @@
 #pragma once
 
+#include <ichor/event_queues/BoostAsioQueue.h>
 #include <ichor/services/network/http/IHttpHostService.h>
-#include <ichor/services/network/boost/AsioContextService.h>
 #include <ichor/services/logging/Logger.h>
 #include <ichor/coroutines/AsyncManualResetEvent.h>
-#include <ichor/stl/RealtimeMutex.h>
 #include <boost/beast.hpp>
 #include <boost/beast/ssl.hpp>
 #include <boost/asio/spawn.hpp>
@@ -27,12 +26,11 @@ namespace Ichor::Boost {
             Connection(tcp::socket &&_socket, net::ssl::context &ctx) : socket(std::move(_socket), ctx) {}
             SocketT socket;
             boost::circular_buffer<HostOutboxMessage> outbox{10};
-            RealtimeMutex mutex{};
         };
     }
 
     /**
-     * Service for creating an HTTP/1.1 server using boost. Requires an IAsioContextService and a logger.
+     * Service for creating an HTTP/1.1 server using boost. Requires an IBoostAsioQueue and a logger.
      *
      * Properties:
      * - "Address" std::string - What address to bind to (required)
@@ -63,8 +61,8 @@ namespace Ichor::Boost {
 
         void addDependencyInstance(ILogger &logger, IService &isvc);
         void removeDependencyInstance(ILogger &logger, IService &isvc);
-        void addDependencyInstance(IAsioContextService &logger, IService&);
-        void removeDependencyInstance(IAsioContextService &logger, IService&);
+        void addDependencyInstance(IBoostAsioQueue &q, IService&);
+        void removeDependencyInstance(IBoostAsioQueue &q, IService&);
 
         void fail(beast::error_code, char const* what, bool stopSelf);
         void listen(tcp::endpoint endpoint, net::yield_context yield);
@@ -81,21 +79,19 @@ namespace Ichor::Boost {
         unordered_map<uint64_t, std::shared_ptr<Detail::Connection<beast::tcp_stream>>> _httpStreams{};
         unordered_map<uint64_t, std::shared_ptr<Detail::Connection<beast::ssl_stream<beast::tcp_stream>>>> _sslStreams{};
         std::unique_ptr<net::ssl::context> _sslContext{};
-        RealtimeMutex _streamsMutex{};
-        std::atomic<uint64_t> _priority{INTERNAL_EVENT_PRIORITY};
-        std::atomic<bool> _quit{};
-        std::atomic<bool> _goingToCleanupStream{};
+        uint64_t _priority{INTERNAL_EVENT_PRIORITY};
+        bool _quit{};
+        bool _goingToCleanupStream{};
         std::atomic<int64_t> _finishedListenAndRead{};
-        std::atomic<bool> _tcpNoDelay{};
-        std::atomic<bool> _useSsl{};
+        bool _tcpNoDelay{};
+        bool _useSsl{};
         uint64_t _streamIdCounter{};
         uint64_t _matchersIdCounter{};
         bool _sendServerHeader{true};
         bool _debug{};
-        std::atomic<ILogger*> _logger{};
-        IAsioContextService *_asioContextService{};
+        ILogger* _logger{};
         unordered_map<HttpMethod, unordered_map<std::unique_ptr<RouteMatcher>, std::function<Task<HttpResponse>(HttpRequest&)>>> _handlers{};
         AsyncManualResetEvent _startStopEvent{};
-        IEventQueue *_queue;
+        IBoostAsioQueue *_queue{};
     };
 }

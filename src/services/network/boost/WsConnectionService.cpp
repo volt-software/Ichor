@@ -2,7 +2,6 @@
 #include <ichor/services/network/boost/WsConnectionService.h>
 #include <ichor/services/network/ws/WsEvents.h>
 #include <ichor/services/network/IHostService.h>
-#include <ichor/services/network/boost/AsioContextService.h>
 #include <ichor/services/network/http/HttpScopeGuards.h>
 #include <ichor/events/RunFunctionEvent.h>
 #include <ichor/ScopeGuard.h>
@@ -27,7 +26,7 @@ void setup_stream(std::shared_ptr<websocket::stream<NextLayer>>& ws)
 template <typename InterfaceT> requires Ichor::DerivedAny<InterfaceT, Ichor::IConnectionService, Ichor::IHostConnectionService, Ichor::IClientConnectionService>
 Ichor::Boost::WsConnectionService<InterfaceT>::WsConnectionService(DependencyRegister &reg, Properties props) : AdvancedService<WsConnectionService<InterfaceT>>(std::move(props)) {
     reg.registerDependency<ILogger>(this, DependencyFlags::REQUIRED);
-    reg.registerDependency<IAsioContextService>(this, DependencyFlags::REQUIRED);
+    reg.registerDependency<IBoostAsioQueue>(this, DependencyFlags::REQUIRED);
     if(auto propIt = AdvancedService<WsConnectionService<InterfaceT>>::getProperties().find("WsHostServiceId"); propIt != AdvancedService<WsConnectionService<InterfaceT>>::getProperties().end()) {
         reg.registerDependency<IHostService>(this, DependencyFlags::REQUIRED,
                                              Properties{{"Filter", Ichor::make_any<Filter>(ServiceIdFilterEntry{Ichor::any_cast<uint64_t>(propIt->second)})}});
@@ -36,19 +35,17 @@ Ichor::Boost::WsConnectionService<InterfaceT>::WsConnectionService(DependencyReg
 
 template <typename InterfaceT> requires Ichor::DerivedAny<InterfaceT, Ichor::IConnectionService, Ichor::IHostConnectionService, Ichor::IClientConnectionService>
 Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::Boost::WsConnectionService<InterfaceT>::start() {
-    if(_connected.load(std::memory_order_acquire)) {
+    if(_connected) {
         co_return {};
     }
 
-    _queue = &GetThreadLocalEventQueue();
-
-    _quit.store(false, std::memory_order_release);
+    _quit = false;
 
     if(auto propIt = AdvancedService<WsConnectionService<InterfaceT>>::getProperties().find("Priority"); propIt != AdvancedService<WsConnectionService<InterfaceT>>::getProperties().end()) {
         _priority = Ichor::any_cast<uint64_t>(propIt->second);
     }
 
-    _strand = std::make_unique<net::strand<net::io_context::executor_type>>(_asioContextService->getContext()->get_executor());
+    _strand = std::make_unique<net::strand<net::io_context::executor_type>>(_queue->getContext().get_executor());
     if (AdvancedService<WsConnectionService<InterfaceT>>::getProperties().contains("Socket")) {
         net::spawn(*_strand, [this](net::yield_context yield) {
             ScopeGuardAtomicCount const guard{_finishedListenAndRead};
@@ -64,52 +61,44 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::Boost::WsConnectionSer
     co_await _startStopEvent;
     _startStopEvent.reset();
 
-    if(!_connected.load(std::memory_order_acquire)) {
+    if(!_connected) {
         auto const& address = Ichor::any_cast<std::string&>(AdvancedService<WsConnectionService<InterfaceT>>::getProperties()["Address"]);
         auto const port = Ichor::any_cast<uint16_t>(AdvancedService<WsConnectionService<InterfaceT>>::getProperties()["Port"]);
         ICHOR_LOG_ERROR(_logger, "Could not connect to {}:{}", address, port);
         co_return tl::unexpected(StartError::FAILED);
     }
-//    fmt::print("----------------------------------------------- {}:{} start done\n", AdvancedService<WsConnectionService<InterfaceT>>::getServiceId(), getServiceName());
 
     co_return {};
 }
 
 template <typename InterfaceT> requires Ichor::DerivedAny<InterfaceT, Ichor::IConnectionService, Ichor::IHostConnectionService, Ichor::IClientConnectionService>
 Ichor::Task<void> Ichor::Boost::WsConnectionService<InterfaceT>::stop() {
-//    INTERNAL_DEBUG("----------------------------------------------- trying to stop WsConnectionService {}", AdvancedService<WsConnectionService<InterfaceT>>::getServiceId());
-//    fmt::print("----------------------------------------------- {}:{} stop\n", AdvancedService<WsConnectionService<InterfaceT>>::getServiceId(), getServiceName());
-    _quit.store(true, std::memory_order_release);
+    INTERNAL_DEBUG("----------------------------------------------- trying to stop WsConnectionService {}", AdvancedService<WsConnectionService<InterfaceT>>::getServiceId());
+    _quit = true;
     if(_ws != nullptr) {
         net::spawn(*_strand, [this](net::yield_context yield) {
             ScopeGuardAtomicCount const guard{_finishedListenAndRead};
             boost::system::error_code ec;
-//            fmt::print("----------------------------------------------- {}:{} async_close\n", AdvancedService<WsConnectionService<InterfaceT>>::getServiceId(), getServiceName());
             _ws->async_close(beast::websocket::close_code::normal, yield[ec]);
-//            fmt::print("----------------------------------------------- {}:{} async_close done\n", AdvancedService<WsConnectionService<InterfaceT>>::getServiceId(), getServiceName());
             if (ec) {
-                _queue->pushEvent<RunFunctionEvent>(AdvancedService<WsConnectionService<InterfaceT>>::getServiceId(), [this, ec]() {
-                    ICHOR_LOG_ERROR(_logger, "Boost.BEAST fail: {}", ec.message());
-                });
+                ICHOR_LOG_ERROR(_logger, "Boost.BEAST fail: {}", ec.message());
             }
-            _queue->pushPrioritisedEvent<RunFunctionEvent>(AdvancedService<WsConnectionService<InterfaceT>>::getServiceId(), _priority.load(std::memory_order_acquire), [this]() {
-//                fmt::print("{}:{} rfe2\n", AdvancedService<WsConnectionService<InterfaceT>>::getServiceId(), getServiceName());
-                _startStopEvent.set();
-            });
+            _startStopEvent.set();
         }ASIO_SPAWN_COMPLETION_TOKEN);
 
-//        fmt::print("----------------------------------------------- {}:{} wait {}\n", AdvancedService<WsConnectionService<InterfaceT>>::getServiceId(), getServiceName(), _startStopEvent.is_set());
         co_await _startStopEvent;
-//        fmt::print("----------------------------------------------- {}:{} wait done\n", AdvancedService<WsConnectionService<InterfaceT>>::getServiceId(), getServiceName());
 
         while(_finishedListenAndRead.load(std::memory_order_acquire) != 0) {
-            std::this_thread::sleep_for(1ms);
+            _startStopEvent.reset();
+            _queue->pushEvent<RunFunctionEvent>(AdvancedService<WsConnectionService<InterfaceT>>::getServiceId(), [this]() {
+                _startStopEvent.set();
+            });
+            co_await _startStopEvent;
         }
 
         _ws = nullptr;
         _strand = nullptr;
     }
-//    fmt::print("----------------------------------------------- {}:{} stop done\n", AdvancedService<WsConnectionService<InterfaceT>>::getServiceId(), getServiceName());
 
     co_return;
 }
@@ -134,34 +123,32 @@ void Ichor::Boost::WsConnectionService<InterfaceT>::removeDependencyInstance(IHo
 }
 
 template <typename InterfaceT> requires Ichor::DerivedAny<InterfaceT, Ichor::IConnectionService, Ichor::IHostConnectionService, Ichor::IClientConnectionService>
-void Ichor::Boost::WsConnectionService<InterfaceT>::addDependencyInstance(IAsioContextService &AsioContextService, IService&) {
-    _asioContextService = &AsioContextService;
+void Ichor::Boost::WsConnectionService<InterfaceT>::addDependencyInstance(IBoostAsioQueue &q, IService&) {
+    _queue = &q;
 }
 
 template <typename InterfaceT> requires Ichor::DerivedAny<InterfaceT, Ichor::IConnectionService, Ichor::IHostConnectionService, Ichor::IClientConnectionService>
-void Ichor::Boost::WsConnectionService<InterfaceT>::removeDependencyInstance(IAsioContextService&, IService&) {
-//    fmt::print("{}:{} {} set nullptr\n", AdvancedService<WsConnectionService<InterfaceT>>::getServiceId(), getServiceName(), getServiceState());
+void Ichor::Boost::WsConnectionService<InterfaceT>::removeDependencyInstance(IBoostAsioQueue&, IService&) {
     if(AdvancedService<WsConnectionService<InterfaceT>>::getServiceState() != ServiceState::INSTALLED) {
         std::terminate();
     }
-    _asioContextService = nullptr;
+    _queue = nullptr;
 }
 
 static_assert(std::is_move_assignable_v<Ichor::Boost::Detail::WsConnectionOutboxMessage>, "ConnectionOutboxMessage should be move assignable");
 template <typename InterfaceT> requires Ichor::DerivedAny<InterfaceT, Ichor::IConnectionService, Ichor::IHostConnectionService, Ichor::IClientConnectionService>
 Ichor::Task<tl::expected<void, Ichor::IOError>> Ichor::Boost::WsConnectionService<InterfaceT>::sendAsync(std::vector<uint8_t> &&msg) {
-    if(_quit.load(std::memory_order_acquire) || !_connected.load(std::memory_order_acquire) || _asioContextService->fibersShouldStop()) {
+    if(_quit || !_connected || _queue->fibersShouldStop()) {
         co_return tl::unexpected(IOError::SERVICE_QUITTING);
     }
     AsyncManualResetEvent evt;
     bool success{};
     net::spawn(*_strand, [this, &evt, &success, msg = std::move(msg)](net::yield_context yield) mutable {
         ScopeGuardAtomicCount const guard{_finishedListenAndRead};
-        if(_quit.load(std::memory_order_acquire) || !_connected.load(std::memory_order_acquire) || _asioContextService->fibersShouldStop()) {
+        if(_quit || !_connected || _queue->fibersShouldStop()) {
             return;
         }
 
-        std::unique_lock lg{_outboxMutex};
         if(_outbox.full()) {
             _outbox.set_capacity(std::max<uint64_t>(_outbox.capacity() * 2, 10ul));
         }
@@ -173,20 +160,16 @@ Ichor::Task<tl::expected<void, Ichor::IOError>> Ichor::Boost::WsConnectionServic
         auto ws = _ws;
         while(!_outbox.empty()) {
             auto next = std::move(_outbox.front());
-            lg.unlock();
 
-            ScopeGuard const coroutineGuard{[this, event = next.evt, &lg]() {
+            ScopeGuard const coroutineGuard{[this, event = next.evt]() {
                 // use service id 0 to ensure event gets run, even if service is stopped. Otherwise, the coroutine will never complete.
                 // Similarly, use priority 0 to ensure these events run before any dependency changes, otherwise the service might be destroyed
                 // before we can finish all the coroutines.
-                _queue->pushPrioritisedEvent<RunFunctionEvent>(0u, 0u, [event]() {
-                    event->set();
-                });
-                lg.lock();
+                event->set();
                 _outbox.pop_front();
             }};
 
-            if(_quit.load(std::memory_order_acquire)) {
+            if(_quit) {
                 continue;
             }
 
@@ -195,11 +178,10 @@ Ichor::Task<tl::expected<void, Ichor::IOError>> Ichor::Boost::WsConnectionServic
 
             *(next.success) = !ec;
             if(ec) {
-                _queue->pushEvent<RunFunctionEvent>(AdvancedService<WsConnectionService<InterfaceT>>::getServiceId(), [this, ec]() {
-                    ICHOR_LOG_ERROR(_logger, "couldn't send msg for service {}: {}", AdvancedService<WsConnectionService<InterfaceT>>::getServiceId(), ec.message());
-                });
+                ICHOR_LOG_ERROR(_logger, "couldn't send msg for service {}: {}", AdvancedService<WsConnectionService<InterfaceT>>::getServiceId(), ec.message());
             }
         }
+
     }ASIO_SPAWN_COMPLETION_TOKEN);
 
     co_await evt;
@@ -214,18 +196,17 @@ Ichor::Task<tl::expected<void, Ichor::IOError>> Ichor::Boost::WsConnectionServic
 
 template <typename InterfaceT> requires Ichor::DerivedAny<InterfaceT, Ichor::IConnectionService, Ichor::IHostConnectionService, Ichor::IClientConnectionService>
 Ichor::Task<tl::expected<void, Ichor::IOError>> Ichor::Boost::WsConnectionService<InterfaceT>::sendAsync(std::vector<std::vector<uint8_t>>&& msgs) {
-    if(_quit.load(std::memory_order_acquire) || !_connected.load(std::memory_order_acquire) || _asioContextService->fibersShouldStop()) {
+    if(_quit || !_connected || _queue->fibersShouldStop()) {
         co_return tl::unexpected(IOError::SERVICE_QUITTING);
     }
     AsyncManualResetEvent evt;
     bool success{};
     net::spawn(*_strand, [this, &evt, &success, msgs = std::move(msgs)](net::yield_context yield) mutable {
         ScopeGuardAtomicCount const guard{_finishedListenAndRead};
-        if(_quit.load(std::memory_order_acquire) || !_connected.load(std::memory_order_acquire) || _asioContextService->fibersShouldStop()) {
+        if(_quit || !_connected || _queue->fibersShouldStop()) {
             return;
         }
 
-        std::unique_lock lg{_outboxMutex};
         for(auto &msg : msgs) {
             if (_outbox.full()) {
                 _outbox.set_capacity(std::max<uint64_t>(_outbox.capacity() * 2, 10ul));
@@ -239,20 +220,16 @@ Ichor::Task<tl::expected<void, Ichor::IOError>> Ichor::Boost::WsConnectionServic
         auto ws = _ws;
         while(!_outbox.empty()) {
             auto next = std::move(_outbox.front());
-            lg.unlock();
 
-            ScopeGuard const coroutineGuard{[this, event = next.evt, &lg]() {
+            ScopeGuard const coroutineGuard{[this, event = next.evt]() {
                 // use service id 0 to ensure event gets run, even if service is stopped. Otherwise, the coroutine will never complete.
                 // Similarly, use priority 0 to ensure these events run before any dependency changes, otherwise the service might be destroyed
                 // before we can finish all the coroutines.
-                _queue->pushPrioritisedEvent<RunFunctionEvent>(0u, 0u, [event]() {
-                    event->set();
-                });
-                lg.lock();
+                event->set();
                 _outbox.pop_front();
             }};
 
-            if(_quit.load(std::memory_order_acquire)) {
+            if(_quit) {
                 continue;
             }
 
@@ -261,9 +238,7 @@ Ichor::Task<tl::expected<void, Ichor::IOError>> Ichor::Boost::WsConnectionServic
 
             *(next.success) = !ec;
             if(ec) {
-                _queue->pushEvent<RunFunctionEvent>(AdvancedService<WsConnectionService<InterfaceT>>::getServiceId(), [this, ec]() {
-                    ICHOR_LOG_ERROR(_logger, "couldn't send msg for service {}: {}", AdvancedService<WsConnectionService<InterfaceT>>::getServiceId(), ec.message());
-                });
+                ICHOR_LOG_ERROR(_logger, "couldn't send msg for service {}: {}", AdvancedService<WsConnectionService<InterfaceT>>::getServiceId(), ec.message());
             }
         }
     }ASIO_SPAWN_COMPLETION_TOKEN);
@@ -279,12 +254,12 @@ Ichor::Task<tl::expected<void, Ichor::IOError>> Ichor::Boost::WsConnectionServic
 
 template <typename InterfaceT> requires Ichor::DerivedAny<InterfaceT, Ichor::IConnectionService, Ichor::IHostConnectionService, Ichor::IClientConnectionService>
 void Ichor::Boost::WsConnectionService<InterfaceT>::setPriority(uint64_t priority) {
-    _priority.store(priority, std::memory_order_release);
+    _priority = priority;
 }
 
 template <typename InterfaceT> requires Ichor::DerivedAny<InterfaceT, Ichor::IConnectionService, Ichor::IHostConnectionService, Ichor::IClientConnectionService>
 uint64_t Ichor::Boost::WsConnectionService<InterfaceT>::getPriority() {
-    return _priority.load(std::memory_order_acquire);
+    return _priority;
 }
 
 template <typename InterfaceT> requires Ichor::DerivedAny<InterfaceT, Ichor::IConnectionService, Ichor::IHostConnectionService, Ichor::IClientConnectionService>
@@ -304,14 +279,9 @@ void Ichor::Boost::WsConnectionService<InterfaceT>::setReceiveHandler(std::funct
 
 template <typename InterfaceT> requires Ichor::DerivedAny<InterfaceT, Ichor::IConnectionService, Ichor::IHostConnectionService, Ichor::IClientConnectionService>
 void Ichor::Boost::WsConnectionService<InterfaceT>::fail(beast::error_code ec, const char *what) {
-//    fmt::print("{}:{} fail {}\n", AdvancedService<WsConnectionService<InterfaceT>>::getServiceId(), getServiceName(), ec.message());
-
-    _queue->pushPrioritisedEvent<RunFunctionEvent>(AdvancedService<WsConnectionService<InterfaceT>>::getServiceId(), _priority.load(std::memory_order_acquire), [this, ec, what]() {
-        ICHOR_LOG_ERROR(_logger, "Boost.BEAST fail: {}, {}", what, ec.message());
-//        fmt::print("{}:{} rfe\n", AdvancedService<WsConnectionService<InterfaceT>>::getServiceId(), getServiceName());
-        _startStopEvent.set();
-    });
     _queue->pushEvent<StopServiceEvent>(AdvancedService<WsConnectionService<InterfaceT>>::getServiceId(), AdvancedService<WsConnectionService<InterfaceT>>::getServiceId());
+    ICHOR_LOG_ERROR(_logger, "Boost.BEAST fail: {}, {}", what, ec.message());
+    _startStopEvent.set();
 }
 
 template <typename InterfaceT> requires Ichor::DerivedAny<InterfaceT, Ichor::IConnectionService, Ichor::IHostConnectionService, Ichor::IClientConnectionService>
@@ -320,10 +290,7 @@ void Ichor::Boost::WsConnectionService<InterfaceT>::accept(net::yield_context yi
 
     {
         ScopeGuard const coroutineGuard{[this]() {
-            _queue->pushPrioritisedEvent<RunFunctionEvent>(AdvancedService<WsConnectionService<InterfaceT>>::getServiceId(), _priority.load(std::memory_order_acquire), [this]() {
-//                fmt::print("{}:{} rfe accept\n", AdvancedService<WsConnectionService<InterfaceT>>::getServiceId(), getServiceName());
-                _startStopEvent.set();
-            });
+            _startStopEvent.set();
         }};
 
         if (!_ws) {
@@ -353,12 +320,12 @@ void Ichor::Boost::WsConnectionService<InterfaceT>::accept(net::yield_context yi
         // If it fails (due to connecting earlier than the host is available), wait 250 ms and make another attempt
         // After 5 attempts, fail.
         int attempts{};
-        while (!_quit.load(std::memory_order_acquire) && !_asioContextService->fibersShouldStop() && attempts < 5) {
+        while (!_quit && !_queue->fibersShouldStop() && attempts < 5) {
             // initiate websocket handshake
             _ws->async_accept(yield[ec]);
             if (ec) {
                 attempts++;
-                net::steady_timer t{*_asioContextService->getContext()};
+                net::steady_timer t{_queue->getContext()};
                 t.expires_after(250ms);
                 t.async_wait(yield);
             } else {
@@ -370,7 +337,7 @@ void Ichor::Boost::WsConnectionService<InterfaceT>::accept(net::yield_context yi
             return fail(ec, "accept");
         }
 
-        _connected.store(true, std::memory_order_release);
+        _connected = true;
     }
 
     read(yield);
@@ -383,15 +350,12 @@ void Ichor::Boost::WsConnectionService<InterfaceT>::connect(net::yield_context y
     auto const port = Ichor::any_cast<uint16_t>(AdvancedService<WsConnectionService<InterfaceT>>::getProperties()["Port"]);
 
     // These objects perform our I/O
-    tcp::resolver resolver(*_asioContextService->getContext());
-    _ws = std::make_shared<websocket::stream<beast::tcp_stream>>(*_asioContextService->getContext());
+    tcp::resolver resolver(_queue->getContext());
+    _ws = std::make_shared<websocket::stream<beast::tcp_stream>>(_queue->getContext());
 
     {
         ScopeGuard const coroutineGuard{[this]() {
-            _queue->pushPrioritisedEvent<RunFunctionEvent>(AdvancedService<WsConnectionService<InterfaceT>>::getServiceId(), _priority.load(std::memory_order_acquire), [this]() {
-//                fmt::print("{}:{} rfe connect\n", AdvancedService<WsConnectionService<InterfaceT>>::getServiceId(), getServiceName());
-                _startStopEvent.set();
-            });
+            _startStopEvent.set();
         }};
 
         // Look up the domain name
@@ -407,11 +371,11 @@ void Ichor::Boost::WsConnectionService<InterfaceT>::connect(net::yield_context y
         // If it fails (due to connecting earlier than the host is available), wait 250 ms and make another attempt
         // After 5 attempts, fail.
         int attempts{};
-        while (!_quit.load(std::memory_order_acquire) && !_asioContextService->fibersShouldStop() && attempts < 5) {
+        while (!_quit && !_queue->fibersShouldStop() && attempts < 5) {
             beast::get_lowest_layer(*_ws).async_connect(results, yield[ec]);
             if (ec) {
                 attempts++;
-                net::steady_timer t{*_asioContextService->getContext()};
+                net::steady_timer t{_queue->getContext()};
                 t.expires_after(std::chrono::milliseconds(250));
                 t.async_wait(yield);
             } else {
@@ -424,7 +388,7 @@ void Ichor::Boost::WsConnectionService<InterfaceT>::connect(net::yield_context y
             return fail(ec, "connect");
         }
 
-        _connected.store(true, std::memory_order_release);
+        _connected = true;
 
         // Turn off the timeout on the tcp_stream, because
         // the websocket stream has its own timeout system.
@@ -443,10 +407,10 @@ void Ichor::Boost::WsConnectionService<InterfaceT>::connect(net::yield_context y
                             " ichor");
                 }));
 
-        // Perform the websocket handshake
+        // Perform the websocket handshake7
         _ws->async_handshake(address, "/", yield[ec]);
         if (ec) {
-            _connected.store(false, std::memory_order_release);
+            _connected = false;
             return fail(ec, "handshake");
         }
     }
@@ -458,14 +422,12 @@ template <typename InterfaceT> requires Ichor::DerivedAny<InterfaceT, Ichor::ICo
 void Ichor::Boost::WsConnectionService<InterfaceT>::read(net::yield_context &yield) {
     beast::error_code ec;
 
-    while(!_quit.load(std::memory_order_acquire) && !_asioContextService->fibersShouldStop()) {
-//        fmt::print("{}:{} read\n", AdvancedService<WsConnectionService<InterfaceT>>::getServiceId(), getServiceName());
+    while(!_quit && !_queue->fibersShouldStop()) {
         beast::basic_flat_buffer buffer{std::allocator<uint8_t>{}};
 
         _ws->async_read(buffer, yield[ec]);
-//        fmt::print("{}:{} read post async_read\n", AdvancedService<WsConnectionService<InterfaceT>>::getServiceId(), getServiceName());
 
-        if(_quit.load(std::memory_order_acquire) || _asioContextService->fibersShouldStop()) {
+        if(_quit || _queue->fibersShouldStop()) {
             break;
         }
 
@@ -473,25 +435,22 @@ void Ichor::Boost::WsConnectionService<InterfaceT>::read(net::yield_context &yie
             break;
         }
         if(ec) {
-            _connected.store(false, std::memory_order_release);
+            _connected = false;
             return fail(ec, "read");
         }
 
         if(_ws->got_text()) {
             auto data = buffer.data();
-            _queue->pushPrioritisedEvent<RunFunctionEvent>(AdvancedService<WsConnectionService<InterfaceT>>::getServiceId(), _priority.load(std::memory_order_acquire), [this, data = std::vector<uint8_t>{static_cast<uint8_t*>(data.data()), static_cast<uint8_t*>(data.data()) + data.size()}]() mutable {
                 if(_recvHandler) {
-                    _recvHandler(data);
+                    _recvHandler(std::span<uint8_t const>(static_cast<uint8_t*>(data.data()), data.size()));
                 } else {
-                    _queuedMessages.emplace_back(std::move(data));
+                    _queuedMessages.emplace_back(static_cast<uint8_t*>(data.data()), static_cast<uint8_t*>(data.data()) + data.size());
                 }
-            });
         }
     }
 
-    _connected.store(false, std::memory_order_release);
+    _connected = false;
     INTERNAL_DEBUG("read stopped WsConnectionService {}", AdvancedService<WsConnectionService<InterfaceT>>::getServiceId());
-//    fmt::print("{}:{} read done\n", AdvancedService<WsConnectionService<InterfaceT>>::getServiceId(), getServiceName());
 }
 
 template class Ichor::Boost::WsConnectionService<Ichor::IConnectionService>;
