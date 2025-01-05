@@ -15,6 +15,7 @@
 
 #if defined(URING_EXAMPLE)
 #include <ichor/event_queues/IOUringQueue.h>
+#include <ichor/stl/LinuxUtils.h>
 
 #define QIMPL IOUringQueue
 #elif defined(SDEVENT_EXAMPLE)
@@ -41,6 +42,15 @@ int main(int argc, char *argv[]) {
     } catch(std::runtime_error const &e) {
         fmt::println("Couldn't set locale to en_US.UTF-8: {}", e.what());
     }
+
+#if defined(URING_EXAMPLE)
+    auto version = Ichor::kernelVersion();
+
+    if(version < Version{5, 18, 0}) {
+        fmt::print("{} kernel version of {} too old to support multithreading. Requires 5.18.0 or newer.\n", argv[0], *version);
+        return 0;
+    }
+#endif
 
     auto start = std::chrono::steady_clock::now();
 
