@@ -77,6 +77,7 @@ option(ICHOR_USE_HIREDIS "Add hiredis dependency" OFF)
 option(ICHOR_MUSL "Use when building for musl instead of glibc" OFF)
 option(ICHOR_AARCH64 "Use when building for aarch64. Turns off some x86-specific compiler flags." OFF)
 
+# see https://github.com/llvm/llvm-project/issues/121704
 if(CMAKE_BUILD_TYPE STREQUAL "Release" AND NOT (ICHOR_COMPILER_ID STREQUAL "clang" AND ICHOR_USE_SANITIZERS))
     include(CheckIPOSupported)
     check_ipo_supported(RESULT LTO_SUPPORTED OUTPUT LTO_ERROR)
@@ -84,8 +85,12 @@ if(CMAKE_BUILD_TYPE STREQUAL "Release" AND NOT (ICHOR_COMPILER_ID STREQUAL "clan
         set(CMAKE_POLICY_DEFAULT_CMP0069 NEW)
         set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
         if(ICHOR_COMPILER_ID STREQUAL "clang")
-            set(CMAKE_C_COMPILE_OPTIONS_IPO "-flto=full")
-            set(CMAKE_CXX_COMPILE_OPTIONS_IPO "-flto=full")
+            set(CMAKE_C_COMPILE_OPTIONS_IPO -flto=full)
+            set(CMAKE_CXX_COMPILE_OPTIONS_IPO -flto=full)
+        endif()
+        if(ICHOR_COMPILER_ID STREQUAL "gnu")
+            set(CMAKE_C_COMPILE_OPTIONS_IPO -flto=1 -fno-fat-lto-objects)
+            set(CMAKE_CXX_COMPILE_OPTIONS_IPO -flto=1 -fno-fat-lto-objects)
         endif()
         set(ICHOR_LTO ON)
         message(STATUS "Enabled LTO")
@@ -207,7 +212,7 @@ if(ICHOR_LTO)
 endif()
 
 if(NOT WIN32)
-    # Everything is c++ specific so that the liburing source files, which don't meet Ichor's standards, spam warnings all over.
+    # Everything is c++ specific so that the liburing source files, which don't meet Ichor's standards, don't spam warnings all over.
     target_compile_options(ichor PUBLIC
             -Wall
             -Wextra
