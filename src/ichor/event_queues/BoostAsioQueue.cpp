@@ -76,7 +76,7 @@ void Ichor::BoostAsioQueue::pushEventInternal(uint64_t priority, std::unique_ptr
     //            }
     //#endif
 
-    fmt::println("pushing {}:{}", event->id, event->get_name());
+//    fmt::println("pushing {}:{}", event->id, event->get_name());
     net::post(_context, [this, event = std::move(event)]() mutable {
         if constexpr (DO_INTERNAL_DEBUG) {
             if(std::this_thread::get_id() != _threadId) {
