@@ -57,7 +57,7 @@ jobs:
 
     - name: Build
       # Build your program with the given configuration
-      run: cmake --build ${{github.workspace}}/build --config ${{matrix.opts}}
+      run: cmake --build ${{github.workspace}}/build --config ${{matrix.opts}} -j6
 
     - name: Test
       working-directory: ${{github.workspace}}/build
