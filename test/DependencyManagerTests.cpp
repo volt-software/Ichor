@@ -1,3 +1,4 @@
+#include "Common.h"
 #include <ichor/event_queues/PriorityQueue.h>
 #include <ichor/events/RunFunctionEvent.h>
 #include <ichor/coroutines/AsyncManualResetEvent.h>
@@ -5,7 +6,6 @@
 #include "TestServices/UselessService.h"
 #include "TestServices/RegistrationCheckerService.h"
 #include "TestServices/MultipleSeparateDependencyRequestsService.h"
-#include "Common.h"
 
 class ScopeFilter final {
 public:
