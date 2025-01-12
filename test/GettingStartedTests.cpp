@@ -1,3 +1,4 @@
+#include "Common.h"
 #include <catch2/catch_test_macros.hpp>
 #include <ichor/event_queues/PriorityQueue.h>
 #include "TestServices/UselessService.h"

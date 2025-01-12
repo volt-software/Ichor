@@ -1,9 +1,9 @@
+#include "Common.h"
 #include <ichor/events/RunFunctionEvent.h>
 #include <ichor/coroutines/AsyncManualResetEvent.h>
 #include <ichor/services/logging/LoggerFactory.h>
 #include <ichor/services/network/ClientFactory.h>
 #include <ichor/services/logging/CoutLogger.h>
-#include "Common.h"
 #include "TestServices/TcpService.h"
 
 using namespace Ichor;

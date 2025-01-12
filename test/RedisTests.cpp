@@ -1,11 +1,11 @@
 #ifdef ICHOR_USE_HIREDIS
 
+#include "Common.h"
 #include <ichor/event_queues/PriorityQueue.h>
 #include <ichor/services/logging/LoggerFactory.h>
 #include <ichor/services/redis/HiredisService.h>
 #include <ichor/services/timer/TimerFactoryFactory.h>
 #include "TestServices/RedisUsingService.h"
-#include "Common.h"
 
 #ifdef ICHOR_USE_SPDLOG
 #include <ichor/services/logging/SpdlogLogger.h>
