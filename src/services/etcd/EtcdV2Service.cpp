@@ -308,37 +308,43 @@ Ichor::Task<tl::expected<EtcdReply, EtcdError>> EtcdService::put(std::string_vie
     }
     HttpMethod method = in_order ? HttpMethod::post : HttpMethod::put;
     auto http_reply = co_await _mainConn->sendAsync(method, fmt::format("/v2/keys/{}", key), std::move(headers), std::move(msg_buf));
-    ICHOR_LOG_TRACE(_logger, "put status: {}, body: {}", (int)http_reply.status, http_reply.body.empty() ? "" : http_reply.body.empty() ? "" : (char*)http_reply.body.data());
 
-    if(http_reply.status != HttpStatus::ok && http_reply.status != HttpStatus::created && http_reply.status != HttpStatus::forbidden && http_reply.status != HttpStatus::precondition_failed && http_reply.status != HttpStatus::not_found) {
-        ICHOR_LOG_ERROR(_logger, "Error on route {}, http status {}", fmt::format("/v2/keys/{}", key), (int)http_reply.status);
+    if(!http_reply) {
+        ICHOR_LOG_ERROR(_logger, "Error on route {}, http send error {}", fmt::format("/v2/keys/{}", key), http_reply.error());
+        co_return tl::unexpected(EtcdError::HTTP_SEND_ERROR);
+    }
+
+    ICHOR_LOG_TRACE(_logger, "put status: {}, body: {}", (int)http_reply->status, http_reply->body.empty() ? "" : http_reply->body.empty() ? "" : (char*)http_reply->body.data());
+
+    if(http_reply->status != HttpStatus::ok && http_reply->status != HttpStatus::created && http_reply->status != HttpStatus::forbidden && http_reply->status != HttpStatus::precondition_failed && http_reply->status != HttpStatus::not_found) {
+        ICHOR_LOG_ERROR(_logger, "Error on route {}, http status {}", fmt::format("/v2/keys/{}", key), (int)http_reply->status);
         co_return tl::unexpected(EtcdError::HTTP_RESPONSE_ERROR);
     }
 
     EtcdReply etcd_reply;
-    auto err = glz::read_json(etcd_reply, http_reply.body);
+    auto err = glz::read_json(etcd_reply, http_reply->body);
 
     if(err) {
         ICHOR_LOG_ERROR(_logger, "Glaze error {} at {}", err.ec, err.location);
-        ICHOR_LOG_ERROR(_logger, "json {}", http_reply.body.empty() ? "" : http_reply.body.empty() ? "" : (char*)http_reply.body.data());
+        ICHOR_LOG_ERROR(_logger, "json {}", http_reply->body.empty() ? "" : http_reply->body.empty() ? "" : (char*)http_reply->body.data());
         co_return tl::unexpected(EtcdError::JSON_PARSE_ERROR);
     }
 
-    auto cluster_id = http_reply.headers.find("X-Etcd-Cluster-Id");
-    auto etcd_index = http_reply.headers.find("X-Etcd-Index");
-    auto raft_index = http_reply.headers.find("X-Raft-Index");
-    auto raft_term = http_reply.headers.find("X-Raft-Term");
+    auto cluster_id = http_reply->headers.find("X-Etcd-Cluster-Id");
+    auto etcd_index = http_reply->headers.find("X-Etcd-Index");
+    auto raft_index = http_reply->headers.find("X-Raft-Index");
+    auto raft_term = http_reply->headers.find("X-Raft-Term");
 
-    if(cluster_id != end(http_reply.headers)) {
+    if(cluster_id != end(http_reply->headers)) {
         etcd_reply.x_etcd_cluster_id = cluster_id->second;
     }
-    if(etcd_index != end(http_reply.headers)) {
+    if(etcd_index != end(http_reply->headers)) {
         etcd_reply.x_etcd_index = Ichor::FastAtoiu(etcd_index->second.c_str());
     }
-    if(raft_index != end(http_reply.headers)) {
+    if(raft_index != end(http_reply->headers)) {
         etcd_reply.x_raft_index = Ichor::FastAtoiu(raft_index->second.c_str());
     }
-    if(raft_term != end(http_reply.headers)) {
+    if(raft_term != end(http_reply->headers)) {
         etcd_reply.x_raft_term = Ichor::FastAtoiu(raft_term->second.c_str());
     }
 
@@ -402,23 +408,29 @@ Ichor::Task<tl::expected<EtcdReply, EtcdError>> EtcdService::get(std::string_vie
     }
 
     auto http_reply = co_await connToUse->sendAsync(HttpMethod::get, url, std::move(headers), {});
-    ICHOR_LOG_TRACE(_logger, "get status: {}, body: {}", (int)http_reply.status, http_reply.body.empty() ? "" : http_reply.body.empty() ? "" : (char*)http_reply.body.data());
 
-    if(http_reply.status != HttpStatus::ok && http_reply.status != HttpStatus::not_found) {
-        ICHOR_LOG_ERROR(_logger, "Error on route {}, http status {}", url, (int)http_reply.status);
+    if(!http_reply) {
+        ICHOR_LOG_ERROR(_logger, "Error on route {}, http send error {}", fmt::format("/v2/keys/{}", key), http_reply.error());
+        co_return tl::unexpected(EtcdError::HTTP_SEND_ERROR);
+    }
+
+    ICHOR_LOG_TRACE(_logger, "get status: {}, body: {}", (int)http_reply->status, http_reply->body.empty() ? "" : http_reply->body.empty() ? "" : (char*)http_reply->body.data());
+
+    if(http_reply->status != HttpStatus::ok && http_reply->status != HttpStatus::not_found) {
+        ICHOR_LOG_ERROR(_logger, "Error on route {}, http status {}", url, (int)http_reply->status);
         co_return tl::unexpected(EtcdError::HTTP_RESPONSE_ERROR);
     }
 
-    if(http_reply.body.empty() && http_reply.status == HttpStatus::ok) {
+    if(http_reply->body.empty() && http_reply->status == HttpStatus::ok) {
         co_return tl::unexpected(EtcdError::CONNECTION_CLOSED_PREMATURELY_TRY_AGAIN);
     }
 
     EtcdReply etcd_reply;
-    auto err = glz::read_json(etcd_reply, http_reply.body);
+    auto err = glz::read_json(etcd_reply, http_reply->body);
 
     if(err) {
         ICHOR_LOG_ERROR(_logger, "Glaze error {} at {}", err.ec, err.location);
-        ICHOR_LOG_ERROR(_logger, "json {}", http_reply.body.empty() ? "" : http_reply.body.empty() ? "" : (char*)http_reply.body.data());
+        ICHOR_LOG_ERROR(_logger, "json {}", http_reply->body.empty() ? "" : http_reply->body.empty() ? "" : (char*)http_reply->body.data());
         co_return tl::unexpected(EtcdError::JSON_PARSE_ERROR);
     }
 
@@ -446,19 +458,25 @@ Ichor::Task<tl::expected<EtcdReply, EtcdError>> EtcdService::del(std::string_vie
     }
 
     auto http_reply = co_await _mainConn->sendAsync(HttpMethod::delete_, url, std::move(headers), {});
-    ICHOR_LOG_TRACE(_logger, "del status: {}, body: {}", (int)http_reply.status, http_reply.body.empty() ? "" : http_reply.body.empty() ? "" : (char*)http_reply.body.data());
 
-    if(http_reply.status != HttpStatus::ok) {
-        ICHOR_LOG_ERROR(_logger, "Error on route {}, http status {}", url, (int)http_reply.status);
+    if(!http_reply) {
+        ICHOR_LOG_ERROR(_logger, "Error on route {}, http send error {}", fmt::format("/v2/keys/{}", key), http_reply.error());
+        co_return tl::unexpected(EtcdError::HTTP_SEND_ERROR);
+    }
+
+    ICHOR_LOG_TRACE(_logger, "del status: {}, body: {}", (int)http_reply->status, http_reply->body.empty() ? "" : http_reply->body.empty() ? "" : (char*)http_reply->body.data());
+
+    if(http_reply->status != HttpStatus::ok) {
+        ICHOR_LOG_ERROR(_logger, "Error on route {}, http status {}", url, (int)http_reply->status);
         co_return tl::unexpected(EtcdError::HTTP_RESPONSE_ERROR);
     }
 
     EtcdReply etcd_reply;
-    auto err = glz::read_json(etcd_reply, http_reply.body);
+    auto err = glz::read_json(etcd_reply, http_reply->body);
 
     if(err) {
         ICHOR_LOG_ERROR(_logger, "Glaze error {} at {}", err.ec, err.location);
-        ICHOR_LOG_ERROR(_logger, "json {}", http_reply.body.empty() ? "" : http_reply.body.empty() ? "" : (char*)http_reply.body.data());
+        ICHOR_LOG_ERROR(_logger, "json {}", http_reply->body.empty() ? "" : http_reply->body.empty() ? "" : (char*)http_reply->body.data());
         co_return tl::unexpected(EtcdError::JSON_PARSE_ERROR);
     }
 
@@ -468,26 +486,38 @@ Ichor::Task<tl::expected<EtcdReply, EtcdError>> EtcdService::del(std::string_vie
 Ichor::Task<tl::expected<EtcdReply, EtcdError>> EtcdService::leaderStatistics() {
     std::string url = fmt::format("/v2/stats/leader");
     auto http_reply = co_await _mainConn->sendAsync(HttpMethod::get, url, {}, {});
-    ICHOR_LOG_ERROR(_logger, "leaderStatistics json {}", http_reply.body.empty() ? "" : http_reply.body.empty() ? "" : (char*)http_reply.body.data());
+
+    if(!http_reply) {
+        ICHOR_LOG_ERROR(_logger, "leaderStatistics http send error {}", http_reply.error());
+        co_return tl::unexpected(EtcdError::HTTP_SEND_ERROR);
+    }
+
+    ICHOR_LOG_ERROR(_logger, "leaderStatistics json {}", http_reply->body.empty() ? "" : http_reply->body.empty() ? "" : (char*)http_reply->body.data());
     co_return tl::unexpected(EtcdError::JSON_PARSE_ERROR);
 }
 
 Ichor::Task<tl::expected<EtcdSelfStats, EtcdError>> EtcdService::selfStatistics() {
     std::string url = fmt::format("/v2/stats/self");
     auto http_reply = co_await _mainConn->sendAsync(HttpMethod::get, url, {}, {});
-    ICHOR_LOG_TRACE(_logger, "selfStatistics status: {}, body: {}", (int)http_reply.status, http_reply.body.empty() ? "" : http_reply.body.empty() ? "" : (char*)http_reply.body.data());
 
-    if(http_reply.status != HttpStatus::ok) {
-        ICHOR_LOG_ERROR(_logger, "Error on route {}, http status {}", url, (int)http_reply.status);
+    if(!http_reply) {
+        ICHOR_LOG_ERROR(_logger, "selfStatistics http send error {}", http_reply.error());
+        co_return tl::unexpected(EtcdError::HTTP_SEND_ERROR);
+    }
+
+    ICHOR_LOG_TRACE(_logger, "selfStatistics status: {}, body: {}", (int)http_reply->status, http_reply->body.empty() ? "" : http_reply->body.empty() ? "" : (char*)http_reply->body.data());
+
+    if(http_reply->status != HttpStatus::ok) {
+        ICHOR_LOG_ERROR(_logger, "Error on route {}, http status {}", url, (int)http_reply->status);
         co_return tl::unexpected(EtcdError::HTTP_RESPONSE_ERROR);
     }
 
     EtcdSelfStats etcd_reply;
-    auto err = glz::read_json(etcd_reply, http_reply.body);
+    auto err = glz::read_json(etcd_reply, http_reply->body);
 
     if(err) {
         ICHOR_LOG_ERROR(_logger, "Glaze error {} at {}", err.ec, err.location);
-        ICHOR_LOG_ERROR(_logger, "json {}", http_reply.body.empty() ? "" : http_reply.body.empty() ? "" : (char*)http_reply.body.data());
+        ICHOR_LOG_ERROR(_logger, "json {}", http_reply->body.empty() ? "" : http_reply->body.empty() ? "" : (char*)http_reply->body.data());
         co_return tl::unexpected(EtcdError::JSON_PARSE_ERROR);
     }
 
@@ -497,19 +527,25 @@ Ichor::Task<tl::expected<EtcdSelfStats, EtcdError>> EtcdService::selfStatistics(
 Ichor::Task<tl::expected<EtcdStoreStats, EtcdError>> EtcdService::storeStatistics() {
     std::string url = fmt::format("/v2/stats/store");
     auto http_reply = co_await _mainConn->sendAsync(HttpMethod::get, url, {}, {});
-    ICHOR_LOG_TRACE(_logger, "storeStatistics status: {}, body: {}", (int)http_reply.status, http_reply.body.empty() ? "" : (char*)http_reply.body.data());
 
-    if(http_reply.status != HttpStatus::ok) {
-        ICHOR_LOG_ERROR(_logger, "Error on route {}, http status {}", url, (int)http_reply.status);
+    if(!http_reply) {
+        ICHOR_LOG_ERROR(_logger, "storeStatistics http send error {}", http_reply.error());
+        co_return tl::unexpected(EtcdError::HTTP_SEND_ERROR);
+    }
+
+    ICHOR_LOG_TRACE(_logger, "storeStatistics status: {}, body: {}", (int)http_reply->status, http_reply->body.empty() ? "" : (char*)http_reply->body.data());
+
+    if(http_reply->status != HttpStatus::ok) {
+        ICHOR_LOG_ERROR(_logger, "Error on route {}, http status {}", url, (int)http_reply->status);
         co_return tl::unexpected(EtcdError::HTTP_RESPONSE_ERROR);
     }
 
     EtcdStoreStats etcd_reply;
-    auto err = glz::read_json(etcd_reply, http_reply.body);
+    auto err = glz::read_json(etcd_reply, http_reply->body);
 
     if(err) {
         ICHOR_LOG_ERROR(_logger, "Glaze error {} at {}", err.ec, err.location);
-        ICHOR_LOG_ERROR(_logger, "json {}", http_reply.body.empty() ? "" : (char*)http_reply.body.data());
+        ICHOR_LOG_ERROR(_logger, "json {}", http_reply->body.empty() ? "" : (char*)http_reply->body.data());
         co_return tl::unexpected(EtcdError::JSON_PARSE_ERROR);
     }
 
@@ -519,19 +555,25 @@ Ichor::Task<tl::expected<EtcdStoreStats, EtcdError>> EtcdService::storeStatistic
 Ichor::Task<tl::expected<EtcdVersionReply, EtcdError>> EtcdService::version() {
     std::string url = fmt::format("/version");
     auto http_reply = co_await _mainConn->sendAsync(HttpMethod::get, url, {}, {});
-    ICHOR_LOG_TRACE(_logger, "version status: {}, body: {}", (int)http_reply.status, http_reply.body.empty() ? "" : (char*)http_reply.body.data());
 
-    if(http_reply.status != HttpStatus::ok) {
-        ICHOR_LOG_ERROR(_logger, "Error on route {}, http status {}", url, (int)http_reply.status);
+    if(!http_reply) {
+        ICHOR_LOG_ERROR(_logger, "version http send error {}", http_reply.error());
+        co_return tl::unexpected(EtcdError::HTTP_SEND_ERROR);
+    }
+
+    ICHOR_LOG_TRACE(_logger, "version status: {}, body: {}", (int)http_reply->status, http_reply->body.empty() ? "" : (char*)http_reply->body.data());
+
+    if(http_reply->status != HttpStatus::ok) {
+        ICHOR_LOG_ERROR(_logger, "Error on route {}, http status {}", url, (int)http_reply->status);
         co_return tl::unexpected(EtcdError::HTTP_RESPONSE_ERROR);
     }
 
     EtcdVersionReply etcd_reply;
-    auto err = glz::read_json(etcd_reply, http_reply.body);
+    auto err = glz::read_json(etcd_reply, http_reply->body);
 
     if(err) {
         ICHOR_LOG_ERROR(_logger, "Glaze error {} at {}", err.ec, err.location);
-        ICHOR_LOG_ERROR(_logger, "json {}", http_reply.body.empty() ? "" : (char*)http_reply.body.data());
+        ICHOR_LOG_ERROR(_logger, "json {}", http_reply->body.empty() ? "" : (char*)http_reply->body.data());
         co_return tl::unexpected(EtcdError::JSON_PARSE_ERROR);
     }
 
@@ -541,19 +583,25 @@ Ichor::Task<tl::expected<EtcdVersionReply, EtcdError>> EtcdService::version() {
 Ichor::Task<tl::expected<bool, EtcdError>> EtcdService::health() {
     std::string url = fmt::format("/health");
     auto http_reply = co_await _mainConn->sendAsync(HttpMethod::get, url, {}, {});
-    ICHOR_LOG_TRACE(_logger, "health status: {}, body: {}", (int)http_reply.status, http_reply.body.empty() ? "" : (char*)http_reply.body.data());
 
-    if(http_reply.status != HttpStatus::ok) {
-        ICHOR_LOG_ERROR(_logger, "Error on route {}, http status {}", url, (int)http_reply.status);
+    if(!http_reply) {
+        ICHOR_LOG_ERROR(_logger, "health http send error {}", http_reply.error());
+        co_return tl::unexpected(EtcdError::HTTP_SEND_ERROR);
+    }
+
+    ICHOR_LOG_TRACE(_logger, "health status: {}, body: {}", (int)http_reply->status, http_reply->body.empty() ? "" : (char*)http_reply->body.data());
+
+    if(http_reply->status != HttpStatus::ok) {
+        ICHOR_LOG_ERROR(_logger, "Error on route {}, http status {}", url, (int)http_reply->status);
         co_return tl::unexpected(EtcdError::HTTP_RESPONSE_ERROR);
     }
 
     EtcdHealthReply etcd_reply;
-    auto err = glz::read_json(etcd_reply, http_reply.body);
+    auto err = glz::read_json(etcd_reply, http_reply->body);
 
     if(err) {
         ICHOR_LOG_ERROR(_logger, "Glaze error {} at {}", err.ec, err.location);
-        ICHOR_LOG_ERROR(_logger, "json {}", http_reply.body.empty() ? "" : (char*)http_reply.body.data());
+        ICHOR_LOG_ERROR(_logger, "json {}", http_reply->body.empty() ? "" : (char*)http_reply->body.data());
         co_return tl::unexpected(EtcdError::JSON_PARSE_ERROR);
     }
 
@@ -563,19 +611,25 @@ Ichor::Task<tl::expected<bool, EtcdError>> EtcdService::health() {
 Ichor::Task<tl::expected<bool, EtcdError>> EtcdService::authStatus() {
     std::string url = fmt::format("/v2/auth/enable");
     auto http_reply = co_await _mainConn->sendAsync(HttpMethod::get, url, {}, {});
-    ICHOR_LOG_TRACE(_logger, "authStatus status: {}, body: {}", (int)http_reply.status, http_reply.body.empty() ? "" : (char*)http_reply.body.data());
 
-    if(http_reply.status != HttpStatus::ok) {
-        ICHOR_LOG_ERROR(_logger, "Error on route {}, http status {}", url, (int)http_reply.status);
+    if(!http_reply) {
+        ICHOR_LOG_ERROR(_logger, "authSTatus http send error {}", http_reply.error());
+        co_return tl::unexpected(EtcdError::HTTP_SEND_ERROR);
+    }
+
+    ICHOR_LOG_TRACE(_logger, "authStatus status: {}, body: {}", (int)http_reply->status, http_reply->body.empty() ? "" : (char*)http_reply->body.data());
+
+    if(http_reply->status != HttpStatus::ok) {
+        ICHOR_LOG_ERROR(_logger, "Error on route {}, http status {}", url, (int)http_reply->status);
         co_return tl::unexpected(EtcdError::HTTP_RESPONSE_ERROR);
     }
 
     EtcdEnableAuthReply etcd_reply;
-    auto err = glz::read_json(etcd_reply, http_reply.body);
+    auto err = glz::read_json(etcd_reply, http_reply->body);
 
     if(err) {
         ICHOR_LOG_ERROR(_logger, "Glaze error {} at {}", err.ec, err.location);
-        ICHOR_LOG_ERROR(_logger, "json {}", http_reply.body.empty() ? "" : (char*)http_reply.body.data());
+        ICHOR_LOG_ERROR(_logger, "json {}", http_reply->body.empty() ? "" : (char*)http_reply->body.data());
         co_return tl::unexpected(EtcdError::JSON_PARSE_ERROR);
     }
 
@@ -585,14 +639,20 @@ Ichor::Task<tl::expected<bool, EtcdError>> EtcdService::authStatus() {
 Ichor::Task<tl::expected<bool, EtcdError>> EtcdService::enableAuth() {
     std::string url = fmt::format("/v2/auth/enable");
     auto http_reply = co_await _mainConn->sendAsync(HttpMethod::put, url, {}, {});
-    ICHOR_LOG_TRACE(_logger, "enableAuth status: {}, body: {}", (int)http_reply.status, http_reply.body.empty() ? "" : (char*)http_reply.body.data());
 
-    if(http_reply.status == HttpStatus::bad_request) {
+    if(!http_reply) {
+        ICHOR_LOG_ERROR(_logger, "enableAuth http send error {}", http_reply.error());
+        co_return tl::unexpected(EtcdError::HTTP_SEND_ERROR);
+    }
+
+    ICHOR_LOG_TRACE(_logger, "enableAuth status: {}, body: {}", (int)http_reply->status, http_reply->body.empty() ? "" : (char*)http_reply->body.data());
+
+    if(http_reply->status == HttpStatus::bad_request) {
         co_return tl::unexpected(EtcdError::ROOT_USER_NOT_YET_CREATED);
     }
 
-    if(http_reply.status != HttpStatus::ok && http_reply.status != HttpStatus::conflict) {
-        ICHOR_LOG_ERROR(_logger, "Error on route {}, http status {}", url, (int)http_reply.status);
+    if(http_reply->status != HttpStatus::ok && http_reply->status != HttpStatus::conflict) {
+        ICHOR_LOG_ERROR(_logger, "Error on route {}, http status {}", url, (int)http_reply->status);
         co_return tl::unexpected(EtcdError::HTTP_RESPONSE_ERROR);
     }
 
@@ -609,14 +669,20 @@ Ichor::Task<tl::expected<bool, EtcdError>> EtcdService::disableAuth() {
     // forced to declare as a variable due to internal compiler errors in gcc <= 12.3.0
     unordered_map<std::string, std::string> headers{{"Authorization", *_auth}};
     auto http_reply = co_await _mainConn->sendAsync(HttpMethod::delete_, url, std::move(headers), {});
-    ICHOR_LOG_TRACE(_logger, "disableAuth status: {}, body: {}", (int)http_reply.status, http_reply.body.empty() ? "" : (char*)http_reply.body.data());
 
-    if(http_reply.status == HttpStatus::unauthorized) {
+    if(!http_reply) {
+        ICHOR_LOG_ERROR(_logger, "disableAuth http send error {}", http_reply.error());
+        co_return tl::unexpected(EtcdError::HTTP_SEND_ERROR);
+    }
+
+    ICHOR_LOG_TRACE(_logger, "disableAuth status: {}, body: {}", (int)http_reply->status, http_reply->body.empty() ? "" : (char*)http_reply->body.data());
+
+    if(http_reply->status == HttpStatus::unauthorized) {
         co_return tl::unexpected(EtcdError::UNAUTHORIZED);
     }
 
-    if(http_reply.status != HttpStatus::ok && http_reply.status != HttpStatus::conflict) {
-        ICHOR_LOG_ERROR(_logger, "Error on route {}, http status {}", url, (int)http_reply.status);
+    if(http_reply->status != HttpStatus::ok && http_reply->status != HttpStatus::conflict) {
+        ICHOR_LOG_ERROR(_logger, "Error on route {}, http status {}", url, (int)http_reply->status);
         co_return tl::unexpected(EtcdError::HTTP_RESPONSE_ERROR);
     }
 
@@ -632,19 +698,25 @@ Ichor::Task<tl::expected<EtcdUsersReply, EtcdError>> EtcdService::getUsers() {
     }
 
     auto http_reply = co_await _mainConn->sendAsync(HttpMethod::get, url, std::move(headers), {});
-    ICHOR_LOG_TRACE(_logger, "getUsers status: {}, body: {}", (int)http_reply.status, http_reply.body.empty() ? "" : (char*)http_reply.body.data());
 
-    if(http_reply.status != HttpStatus::ok) {
-        ICHOR_LOG_ERROR(_logger, "Error on route {}, http status {}", url, (int)http_reply.status);
+    if(!http_reply) {
+        ICHOR_LOG_ERROR(_logger, "getUsers http send error {}", http_reply.error());
+        co_return tl::unexpected(EtcdError::HTTP_SEND_ERROR);
+    }
+
+    ICHOR_LOG_TRACE(_logger, "getUsers status: {}, body: {}", (int)http_reply->status, http_reply->body.empty() ? "" : (char*)http_reply->body.data());
+
+    if(http_reply->status != HttpStatus::ok) {
+        ICHOR_LOG_ERROR(_logger, "Error on route {}, http status {}", url, (int)http_reply->status);
         co_return tl::unexpected(EtcdError::HTTP_RESPONSE_ERROR);
     }
 
     EtcdUsersReply etcd_reply;
-    auto err = glz::read_json(etcd_reply, http_reply.body);
+    auto err = glz::read_json(etcd_reply, http_reply->body);
 
     if(err) {
         ICHOR_LOG_ERROR(_logger, "Glaze error {} at {}", err.ec, err.location);
-        ICHOR_LOG_ERROR(_logger, "json {}", http_reply.body.empty() ? "" : (char*)http_reply.body.data());
+        ICHOR_LOG_ERROR(_logger, "json {}", http_reply->body.empty() ? "" : (char*)http_reply->body.data());
         co_return tl::unexpected(EtcdError::JSON_PARSE_ERROR);
     }
 
@@ -660,19 +732,25 @@ Ichor::Task<tl::expected<EtcdUserReply, EtcdError>> EtcdService::getUserDetails(
     }
 
     auto http_reply = co_await _mainConn->sendAsync(HttpMethod::get, url, std::move(headers), {});
-    ICHOR_LOG_TRACE(_logger, "getUserDetails status: {}, body: {}", (int)http_reply.status, http_reply.body.empty() ? "" : (char*)http_reply.body.data());
 
-    if(http_reply.status != HttpStatus::ok) {
-        ICHOR_LOG_ERROR(_logger, "Error on route {}, http status {}", url, (int)http_reply.status);
+    if(!http_reply) {
+        ICHOR_LOG_ERROR(_logger, "getUserDetails http send error {}", http_reply.error());
+        co_return tl::unexpected(EtcdError::HTTP_SEND_ERROR);
+    }
+
+    ICHOR_LOG_TRACE(_logger, "getUserDetails status: {}, body: {}", (int)http_reply->status, http_reply->body.empty() ? "" : (char*)http_reply->body.data());
+
+    if(http_reply->status != HttpStatus::ok) {
+        ICHOR_LOG_ERROR(_logger, "Error on route {}, http status {}", url, (int)http_reply->status);
         co_return tl::unexpected(EtcdError::HTTP_RESPONSE_ERROR);
     }
 
     EtcdUserReply etcd_reply;
-    auto err = glz::read_json(etcd_reply, http_reply.body);
+    auto err = glz::read_json(etcd_reply, http_reply->body);
 
     if(err) {
         ICHOR_LOG_ERROR(_logger, "Glaze error {} at {}", err.ec, err.location);
-        ICHOR_LOG_ERROR(_logger, "json {}", http_reply.body.empty() ? "" : (char*)http_reply.body.data());
+        ICHOR_LOG_ERROR(_logger, "json {}", http_reply->body.empty() ? "" : (char*)http_reply->body.data());
         co_return tl::unexpected(EtcdError::JSON_PARSE_ERROR);
     }
 
@@ -720,19 +798,25 @@ Ichor::Task<tl::expected<EtcdUpdateUserReply, EtcdError>> EtcdService::createUse
     buf.push_back('\0');
 
     auto http_reply = co_await _mainConn->sendAsync(HttpMethod::put, url, std::move(headers), std::move(buf));
-    ICHOR_LOG_TRACE(_logger, "createUser status: {}, body: {}", (int)http_reply.status, http_reply.body.empty() ? "" : (char*)http_reply.body.data());
 
-    if(http_reply.status != HttpStatus::ok && http_reply.status != HttpStatus::created) {
-        ICHOR_LOG_ERROR(_logger, "Error on route {}, http status {}", url, (int)http_reply.status);
+    if(!http_reply) {
+        ICHOR_LOG_ERROR(_logger, "createUser http send error {}", http_reply.error());
+        co_return tl::unexpected(EtcdError::HTTP_SEND_ERROR);
+    }
+
+    ICHOR_LOG_TRACE(_logger, "createUser status: {}, body: {}", (int)http_reply->status, http_reply->body.empty() ? "" : (char*)http_reply->body.data());
+
+    if(http_reply->status != HttpStatus::ok && http_reply->status != HttpStatus::created) {
+        ICHOR_LOG_ERROR(_logger, "Error on route {}, http status {}", url, (int)http_reply->status);
         co_return tl::unexpected(EtcdError::HTTP_RESPONSE_ERROR);
     }
 
     EtcdUpdateUserReply etcd_reply;
-    err = glz::read_json(etcd_reply, http_reply.body);
+    err = glz::read_json(etcd_reply, http_reply->body);
 
     if(err) {
         ICHOR_LOG_ERROR(_logger, "Glaze error {} at {}", err.ec, err.location);
-        ICHOR_LOG_ERROR(_logger, "json {}", http_reply.body.empty() ? "" : (char*)http_reply.body.data());
+        ICHOR_LOG_ERROR(_logger, "json {}", http_reply->body.empty() ? "" : (char*)http_reply->body.data());
         co_return tl::unexpected(EtcdError::JSON_PARSE_ERROR);
     }
 
@@ -760,19 +844,25 @@ Ichor::Task<tl::expected<EtcdUpdateUserReply, EtcdError>> EtcdService::grantUser
     buf.push_back('\0');
 
     auto http_reply = co_await _mainConn->sendAsync(HttpMethod::put, url, std::move(headers), std::move(buf));
-    ICHOR_LOG_TRACE(_logger, "grantUserRoles status: {}, body: {}", (int)http_reply.status, http_reply.body.empty() ? "" : (char*)http_reply.body.data());
 
-    if(http_reply.status != HttpStatus::ok && http_reply.status != HttpStatus::created) {
-        ICHOR_LOG_ERROR(_logger, "Error on route {}, http status {}", url, (int)http_reply.status);
+    if(!http_reply) {
+        ICHOR_LOG_ERROR(_logger, "grantUserRoles http send error {}", http_reply.error());
+        co_return tl::unexpected(EtcdError::HTTP_SEND_ERROR);
+    }
+
+    ICHOR_LOG_TRACE(_logger, "grantUserRoles status: {}, body: {}", (int)http_reply->status, http_reply->body.empty() ? "" : (char*)http_reply->body.data());
+
+    if(http_reply->status != HttpStatus::ok && http_reply->status != HttpStatus::created) {
+        ICHOR_LOG_ERROR(_logger, "Error on route {}, http status {}", url, (int)http_reply->status);
         co_return tl::unexpected(EtcdError::HTTP_RESPONSE_ERROR);
     }
 
     EtcdUpdateUserReply etcd_reply;
-    err = glz::read_json(etcd_reply, http_reply.body);
+    err = glz::read_json(etcd_reply, http_reply->body);
 
     if(err) {
         ICHOR_LOG_ERROR(_logger, "Glaze error {} at {}", err.ec, err.location);
-        ICHOR_LOG_ERROR(_logger, "json {}", http_reply.body.empty() ? "" : (char*)http_reply.body.data());
+        ICHOR_LOG_ERROR(_logger, "json {}", http_reply->body.empty() ? "" : (char*)http_reply->body.data());
         co_return tl::unexpected(EtcdError::JSON_PARSE_ERROR);
     }
 
@@ -800,19 +890,25 @@ Ichor::Task<tl::expected<EtcdUpdateUserReply, EtcdError>> EtcdService::revokeUse
     buf.push_back('\0');
 
     auto http_reply = co_await _mainConn->sendAsync(HttpMethod::put, url, std::move(headers), std::move(buf));
-    ICHOR_LOG_TRACE(_logger, "revokeUserRoles status: {}, body: {}", (int)http_reply.status, http_reply.body.empty() ? "" : (char*)http_reply.body.data());
 
-    if(http_reply.status != HttpStatus::ok && http_reply.status != HttpStatus::created) {
-        ICHOR_LOG_ERROR(_logger, "Error on route {}, http status {}", url, (int)http_reply.status);
+    if(!http_reply) {
+        ICHOR_LOG_ERROR(_logger, "revokeUserRoles http send error {}", http_reply.error());
+        co_return tl::unexpected(EtcdError::HTTP_SEND_ERROR);
+    }
+
+    ICHOR_LOG_TRACE(_logger, "revokeUserRoles status: {}, body: {}", (int)http_reply->status, http_reply->body.empty() ? "" : (char*)http_reply->body.data());
+
+    if(http_reply->status != HttpStatus::ok && http_reply->status != HttpStatus::created) {
+        ICHOR_LOG_ERROR(_logger, "Error on route {}, http status {}", url, (int)http_reply->status);
         co_return tl::unexpected(EtcdError::HTTP_RESPONSE_ERROR);
     }
 
     EtcdUpdateUserReply etcd_reply;
-    err = glz::read_json(etcd_reply, http_reply.body);
+    err = glz::read_json(etcd_reply, http_reply->body);
 
     if(err) {
         ICHOR_LOG_ERROR(_logger, "Glaze error {} at {}", err.ec, err.location);
-        ICHOR_LOG_ERROR(_logger, "json {}", http_reply.body.empty() ? "" : (char*)http_reply.body.data());
+        ICHOR_LOG_ERROR(_logger, "json {}", http_reply->body.empty() ? "" : (char*)http_reply->body.data());
         co_return tl::unexpected(EtcdError::JSON_PARSE_ERROR);
     }
 
@@ -840,19 +936,25 @@ Ichor::Task<tl::expected<EtcdUpdateUserReply, EtcdError>> EtcdService::updateUse
     buf.push_back('\0');
 
     auto http_reply = co_await _mainConn->sendAsync(HttpMethod::put, url, std::move(headers), std::move(buf));
-    ICHOR_LOG_TRACE(_logger, "updateUserPassword status: {}, body: {}", (int)http_reply.status, http_reply.body.empty() ? "" : (char*)http_reply.body.data());
 
-    if(http_reply.status != HttpStatus::ok && http_reply.status != HttpStatus::created) {
-        ICHOR_LOG_ERROR(_logger, "Error on route {}, http status {}", url, (int)http_reply.status);
+    if(!http_reply) {
+        ICHOR_LOG_ERROR(_logger, "updateUserPassword http send error {}", http_reply.error());
+        co_return tl::unexpected(EtcdError::HTTP_SEND_ERROR);
+    }
+
+    ICHOR_LOG_TRACE(_logger, "updateUserPassword status: {}, body: {}", (int)http_reply->status, http_reply->body.empty() ? "" : (char*)http_reply->body.data());
+
+    if(http_reply->status != HttpStatus::ok && http_reply->status != HttpStatus::created) {
+        ICHOR_LOG_ERROR(_logger, "Error on route {}, http status {}", url, (int)http_reply->status);
         co_return tl::unexpected(EtcdError::HTTP_RESPONSE_ERROR);
     }
 
     EtcdUpdateUserReply etcd_reply;
-    err = glz::read_json(etcd_reply, http_reply.body);
+    err = glz::read_json(etcd_reply, http_reply->body);
 
     if(err) {
         ICHOR_LOG_ERROR(_logger, "Glaze error {} at {}", err.ec, err.location);
-        ICHOR_LOG_ERROR(_logger, "json {}", http_reply.body.empty() ? "" : (char*)http_reply.body.data());
+        ICHOR_LOG_ERROR(_logger, "json {}", http_reply->body.empty() ? "" : (char*)http_reply->body.data());
         co_return tl::unexpected(EtcdError::JSON_PARSE_ERROR);
     }
 
@@ -868,20 +970,26 @@ Ichor::Task<tl::expected<void, EtcdError>> EtcdService::deleteUser(std::string_v
     }
 
     auto http_reply = co_await _mainConn->sendAsync(HttpMethod::delete_, url, std::move(headers), {});
-    ICHOR_LOG_TRACE(_logger, "deleteUser status: {}, body: {}", (int)http_reply.status, http_reply.body.empty() ? "" : (char*)http_reply.body.data());
 
-    if(http_reply.status == HttpStatus::unauthorized) {
+    if(!http_reply) {
+        ICHOR_LOG_ERROR(_logger, "deleteUser http send error {}", http_reply.error());
+        co_return tl::unexpected(EtcdError::HTTP_SEND_ERROR);
+    }
+
+    ICHOR_LOG_TRACE(_logger, "deleteUser status: {}, body: {}", (int)http_reply->status, http_reply->body.empty() ? "" : (char*)http_reply->body.data());
+
+    if(http_reply->status == HttpStatus::unauthorized) {
         co_return tl::unexpected(EtcdError::UNAUTHORIZED);
     }
-    if(http_reply.status == HttpStatus::forbidden) {
+    if(http_reply->status == HttpStatus::forbidden) {
         co_return tl::unexpected(EtcdError::REMOVING_ROOT_NOT_ALLOWED_WITH_AUTH_ENABLED);
     }
-    if(http_reply.status == HttpStatus::not_found) {
+    if(http_reply->status == HttpStatus::not_found) {
         co_return tl::unexpected(EtcdError::NOT_FOUND);
     }
 
-    if(http_reply.status != HttpStatus::ok) {
-        ICHOR_LOG_ERROR(_logger, "Error on route {}, http status {}", url, (int)http_reply.status);
+    if(http_reply->status != HttpStatus::ok) {
+        ICHOR_LOG_ERROR(_logger, "Error on route {}, http status {}", url, (int)http_reply->status);
         co_return tl::unexpected(EtcdError::HTTP_RESPONSE_ERROR);
     }
 
@@ -897,23 +1005,29 @@ Ichor::Task<tl::expected<EtcdRolesReply, EtcdError>> EtcdService::getRoles() {
     }
 
     auto http_reply = co_await _mainConn->sendAsync(HttpMethod::get, url, std::move(headers), {});
-    ICHOR_LOG_TRACE(_logger, "getRoles status: {}, body: {}", (int)http_reply.status, http_reply.body.empty() ? "" : (char*)http_reply.body.data());
 
-    if(http_reply.status == HttpStatus::unauthorized) {
+    if(!http_reply) {
+        ICHOR_LOG_ERROR(_logger, "getRoles http send error {}", http_reply.error());
+        co_return tl::unexpected(EtcdError::HTTP_SEND_ERROR);
+    }
+
+    ICHOR_LOG_TRACE(_logger, "getRoles status: {}, body: {}", (int)http_reply->status, http_reply->body.empty() ? "" : (char*)http_reply->body.data());
+
+    if(http_reply->status == HttpStatus::unauthorized) {
         co_return tl::unexpected(EtcdError::UNAUTHORIZED);
     }
 
-    if(http_reply.status != HttpStatus::ok) {
-        ICHOR_LOG_ERROR(_logger, "Error on route {}, http status {}", url, (int)http_reply.status);
+    if(http_reply->status != HttpStatus::ok) {
+        ICHOR_LOG_ERROR(_logger, "Error on route {}, http status {}", url, (int)http_reply->status);
         co_return tl::unexpected(EtcdError::HTTP_RESPONSE_ERROR);
     }
 
     EtcdRolesReply etcd_reply;
-    auto err = glz::read_json(etcd_reply, http_reply.body);
+    auto err = glz::read_json(etcd_reply, http_reply->body);
 
     if(err) {
         ICHOR_LOG_ERROR(_logger, "Glaze error {} at {}", err.ec, err.location);
-        ICHOR_LOG_ERROR(_logger, "json {}", http_reply.body.empty() ? "" : (char*)http_reply.body.data());
+        ICHOR_LOG_ERROR(_logger, "json {}", http_reply->body.empty() ? "" : (char*)http_reply->body.data());
         co_return tl::unexpected(EtcdError::JSON_PARSE_ERROR);
     }
 
@@ -929,26 +1043,32 @@ Ichor::Task<tl::expected<EtcdRoleReply, EtcdError>> EtcdService::getRole(std::st
     }
 
     auto http_reply = co_await _mainConn->sendAsync(HttpMethod::get, url, std::move(headers), {});
-    ICHOR_LOG_TRACE(_logger, "getRole status: {}, body: {}", (int)http_reply.status, http_reply.body.empty() ? "" : (char*)http_reply.body.data());
 
-    if(http_reply.status == HttpStatus::unauthorized) {
+    if(!http_reply) {
+        ICHOR_LOG_ERROR(_logger, "getRole http send error {}", http_reply.error());
+        co_return tl::unexpected(EtcdError::HTTP_SEND_ERROR);
+    }
+
+    ICHOR_LOG_TRACE(_logger, "getRole status: {}, body: {}", (int)http_reply->status, http_reply->body.empty() ? "" : (char*)http_reply->body.data());
+
+    if(http_reply->status == HttpStatus::unauthorized) {
         co_return tl::unexpected(EtcdError::UNAUTHORIZED);
     }
-    if(http_reply.status == HttpStatus::not_found) {
+    if(http_reply->status == HttpStatus::not_found) {
         co_return tl::unexpected(EtcdError::NOT_FOUND);
     }
 
-    if(http_reply.status != HttpStatus::ok) {
-        ICHOR_LOG_ERROR(_logger, "Error on route {}, http status {}", url, (int)http_reply.status);
+    if(http_reply->status != HttpStatus::ok) {
+        ICHOR_LOG_ERROR(_logger, "Error on route {}, http status {}", url, (int)http_reply->status);
         co_return tl::unexpected(EtcdError::HTTP_RESPONSE_ERROR);
     }
 
     EtcdRoleReply etcd_reply;
-    auto err = glz::read_json(etcd_reply, http_reply.body);
+    auto err = glz::read_json(etcd_reply, http_reply->body);
 
     if(err) {
         ICHOR_LOG_ERROR(_logger, "Glaze error {} at {}", err.ec, err.location);
-        ICHOR_LOG_ERROR(_logger, "json {}", http_reply.body.empty() ? "" : (char*)http_reply.body.data());
+        ICHOR_LOG_ERROR(_logger, "json {}", http_reply->body.empty() ? "" : (char*)http_reply->body.data());
         co_return tl::unexpected(EtcdError::JSON_PARSE_ERROR);
     }
 
@@ -977,29 +1097,35 @@ Ichor::Task<tl::expected<EtcdRoleReply, EtcdError>> EtcdService::createRole(std:
     buf.push_back('\0');
 
     auto http_reply = co_await _mainConn->sendAsync(HttpMethod::put, url, std::move(headers), std::move(buf));
-    ICHOR_LOG_TRACE(_logger, "createRole status: {}, body: {}", (int)http_reply.status, http_reply.body.empty() ? "" : (char*)http_reply.body.data());
 
-    if(http_reply.status == HttpStatus::unauthorized) {
+    if(!http_reply) {
+        ICHOR_LOG_ERROR(_logger, "createRole http send error {}", http_reply.error());
+        co_return tl::unexpected(EtcdError::HTTP_SEND_ERROR);
+    }
+
+    ICHOR_LOG_TRACE(_logger, "createRole status: {}, body: {}", (int)http_reply->status, http_reply->body.empty() ? "" : (char*)http_reply->body.data());
+
+    if(http_reply->status == HttpStatus::unauthorized) {
         co_return tl::unexpected(EtcdError::UNAUTHORIZED);
     }
-    if(http_reply.status == HttpStatus::not_found) {
+    if(http_reply->status == HttpStatus::not_found) {
         co_return tl::unexpected(EtcdError::NOT_FOUND);
     }
-    if(http_reply.status == HttpStatus::conflict) {
+    if(http_reply->status == HttpStatus::conflict) {
         co_return tl::unexpected(EtcdError::DUPLICATE_PERMISSION_OR_REVOKING_NON_EXISTENT);
     }
 
-    if(http_reply.status != HttpStatus::ok && http_reply.status != HttpStatus::created) {
-        ICHOR_LOG_ERROR(_logger, "Error on route {}, http status {}", url, (int)http_reply.status);
+    if(http_reply->status != HttpStatus::ok && http_reply->status != HttpStatus::created) {
+        ICHOR_LOG_ERROR(_logger, "Error on route {}, http status {}", url, (int)http_reply->status);
         co_return tl::unexpected(EtcdError::HTTP_RESPONSE_ERROR);
     }
 
     EtcdRoleReply etcd_reply;
-    err = glz::read_json(etcd_reply, http_reply.body);
+    err = glz::read_json(etcd_reply, http_reply->body);
 
     if(err) {
         ICHOR_LOG_ERROR(_logger, "Glaze error {} at {}", err.ec, err.location);
-        ICHOR_LOG_ERROR(_logger, "json {}", http_reply.body.empty() ? "" : (char*)http_reply.body.data());
+        ICHOR_LOG_ERROR(_logger, "json {}", http_reply->body.empty() ? "" : (char*)http_reply->body.data());
         co_return tl::unexpected(EtcdError::JSON_PARSE_ERROR);
     }
 
@@ -1030,29 +1156,35 @@ Ichor::Task<tl::expected<EtcdRoleReply, EtcdError>> EtcdService::grantRolePermis
     buf.push_back('\0');
 
     auto http_reply = co_await _mainConn->sendAsync(HttpMethod::put, url, std::move(headers), std::move(buf));
-    ICHOR_LOG_TRACE(_logger, "grantRolePermissions status: {}, body: {}", (int)http_reply.status, http_reply.body.empty() ? "" : (char*)http_reply.body.data());
 
-    if(http_reply.status == HttpStatus::unauthorized) {
+    if(!http_reply) {
+        ICHOR_LOG_ERROR(_logger, "grantRolePermissions http send error {}", http_reply.error());
+        co_return tl::unexpected(EtcdError::HTTP_SEND_ERROR);
+    }
+
+    ICHOR_LOG_TRACE(_logger, "grantRolePermissions status: {}, body: {}", (int)http_reply->status, http_reply->body.empty() ? "" : (char*)http_reply->body.data());
+
+    if(http_reply->status == HttpStatus::unauthorized) {
         co_return tl::unexpected(EtcdError::UNAUTHORIZED);
     }
-    if(http_reply.status == HttpStatus::not_found) {
+    if(http_reply->status == HttpStatus::not_found) {
         co_return tl::unexpected(EtcdError::NOT_FOUND);
     }
-    if(http_reply.status == HttpStatus::conflict) {
+    if(http_reply->status == HttpStatus::conflict) {
         co_return tl::unexpected(EtcdError::DUPLICATE_PERMISSION_OR_REVOKING_NON_EXISTENT);
     }
 
-    if(http_reply.status != HttpStatus::ok && http_reply.status != HttpStatus::created) {
-        ICHOR_LOG_ERROR(_logger, "Error on route {}, http status {}", url, (int)http_reply.status);
+    if(http_reply->status != HttpStatus::ok && http_reply->status != HttpStatus::created) {
+        ICHOR_LOG_ERROR(_logger, "Error on route {}, http status {}", url, (int)http_reply->status);
         co_return tl::unexpected(EtcdError::HTTP_RESPONSE_ERROR);
     }
 
     EtcdRoleReply etcd_reply;
-    err = glz::read_json(etcd_reply, http_reply.body);
+    err = glz::read_json(etcd_reply, http_reply->body);
 
     if(err) {
         ICHOR_LOG_ERROR(_logger, "Glaze error {} at {}", err.ec, err.location);
-        ICHOR_LOG_ERROR(_logger, "json {}", http_reply.body.empty() ? "" : (char*)http_reply.body.data());
+        ICHOR_LOG_ERROR(_logger, "json {}", http_reply->body.empty() ? "" : (char*)http_reply->body.data());
         co_return tl::unexpected(EtcdError::JSON_PARSE_ERROR);
     }
 
@@ -1083,29 +1215,35 @@ Ichor::Task<tl::expected<EtcdRoleReply, EtcdError>> EtcdService::revokeRolePermi
     buf.push_back('\0');
 
     auto http_reply = co_await _mainConn->sendAsync(HttpMethod::put, url, std::move(headers), std::move(buf));
-    ICHOR_LOG_TRACE(_logger, "revokeRolePermissions status: {}, body: {}", (int)http_reply.status, http_reply.body.empty() ? "" : (char*)http_reply.body.data());
 
-    if(http_reply.status == HttpStatus::unauthorized) {
+    if(!http_reply) {
+        ICHOR_LOG_ERROR(_logger, "revokeRolePermissions http send error {}", http_reply.error());
+        co_return tl::unexpected(EtcdError::HTTP_SEND_ERROR);
+    }
+
+    ICHOR_LOG_TRACE(_logger, "revokeRolePermissions status: {}, body: {}", (int)http_reply->status, http_reply->body.empty() ? "" : (char*)http_reply->body.data());
+
+    if(http_reply->status == HttpStatus::unauthorized) {
         co_return tl::unexpected(EtcdError::UNAUTHORIZED);
     }
-    if(http_reply.status == HttpStatus::not_found) {
+    if(http_reply->status == HttpStatus::not_found) {
         co_return tl::unexpected(EtcdError::NOT_FOUND);
     }
-    if(http_reply.status == HttpStatus::conflict) {
+    if(http_reply->status == HttpStatus::conflict) {
         co_return tl::unexpected(EtcdError::DUPLICATE_PERMISSION_OR_REVOKING_NON_EXISTENT);
     }
 
-    if(http_reply.status != HttpStatus::ok && http_reply.status != HttpStatus::created) {
-        ICHOR_LOG_ERROR(_logger, "Error on route {}, http status {}", url, (int)http_reply.status);
+    if(http_reply->status != HttpStatus::ok && http_reply->status != HttpStatus::created) {
+        ICHOR_LOG_ERROR(_logger, "Error on route {}, http status {}", url, (int)http_reply->status);
         co_return tl::unexpected(EtcdError::HTTP_RESPONSE_ERROR);
     }
 
     EtcdRoleReply etcd_reply;
-    err = glz::read_json(etcd_reply, http_reply.body);
+    err = glz::read_json(etcd_reply, http_reply->body);
 
     if(err) {
         ICHOR_LOG_ERROR(_logger, "Glaze error {} at {}", err.ec, err.location);
-        ICHOR_LOG_ERROR(_logger, "json {}", http_reply.body.empty() ? "" : (char*)http_reply.body.data());
+        ICHOR_LOG_ERROR(_logger, "json {}", http_reply->body.empty() ? "" : (char*)http_reply->body.data());
         co_return tl::unexpected(EtcdError::JSON_PARSE_ERROR);
     }
 
@@ -1121,20 +1259,26 @@ Ichor::Task<tl::expected<void, EtcdError>> EtcdService::deleteRole(std::string_v
     }
 
     auto http_reply = co_await _mainConn->sendAsync(HttpMethod::delete_, url, std::move(headers), {});
-    ICHOR_LOG_TRACE(_logger, "deleteRole status: {}, body: {}", (int)http_reply.status, http_reply.body.empty() ? "" : (char*)http_reply.body.data());
 
-    if(http_reply.status == HttpStatus::unauthorized) {
+    if(!http_reply) {
+        ICHOR_LOG_ERROR(_logger, "deleteRole http send error {}", http_reply.error());
+        co_return tl::unexpected(EtcdError::HTTP_SEND_ERROR);
+    }
+
+    ICHOR_LOG_TRACE(_logger, "deleteRole status: {}, body: {}", (int)http_reply->status, http_reply->body.empty() ? "" : (char*)http_reply->body.data());
+
+    if(http_reply->status == HttpStatus::unauthorized) {
         co_return tl::unexpected(EtcdError::UNAUTHORIZED);
     }
-    if(http_reply.status == HttpStatus::forbidden) {
+    if(http_reply->status == HttpStatus::forbidden) {
         co_return tl::unexpected(EtcdError::CANNOT_DELETE_ROOT_WHILE_AUTH_IS_ENABLED);
     }
-    if(http_reply.status == HttpStatus::not_found) {
+    if(http_reply->status == HttpStatus::not_found) {
         co_return tl::unexpected(EtcdError::NOT_FOUND);
     }
 
-    if(http_reply.status != HttpStatus::ok) {
-        ICHOR_LOG_ERROR(_logger, "Error on route {}, http status {}", url, (int)http_reply.status);
+    if(http_reply->status != HttpStatus::ok) {
+        ICHOR_LOG_ERROR(_logger, "Error on route {}, http status {}", url, (int)http_reply->status);
         co_return tl::unexpected(EtcdError::HTTP_RESPONSE_ERROR);
     }
 

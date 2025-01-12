@@ -105,16 +105,21 @@ private:
         unordered_map<std::string, std::string> headers{{"Content-Type", "application/json"}};
         auto response = co_await _connectionService->sendAsync(HttpMethod::post, "/ping", std::move(headers), std::move(toSendMsg));
 
+        if(!response) {
+            ICHOR_LOG_ERROR(_logger, "Http send error {}", response.error());
+            co_return tl::optional<PingMsg>{};
+        }
+
         if(_serializer == nullptr) {
             // we're stopping, gotta bail.
             co_return tl::optional<PingMsg>{};
         }
 
-        if(response.status == HttpStatus::ok) {
-            auto msg = _serializer->deserialize(response.body);
+        if(response->status == HttpStatus::ok) {
+            auto msg = _serializer->deserialize(response->body);
             co_return msg;
         } else {
-            ICHOR_LOG_ERROR(_logger, "Received status {}", (int)response.status);
+            ICHOR_LOG_ERROR(_logger, "Received status {}", (int)response->status);
             co_return tl::optional<PingMsg>{};
         }
     }

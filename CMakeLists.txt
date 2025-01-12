@@ -121,7 +121,7 @@ endif()
 set(FMT_SOURCES ${ICHOR_EXTERNAL_DIR}/fmt/src/format.cc ${ICHOR_EXTERNAL_DIR}/fmt/src/os.cc)
 file(GLOB_RECURSE ICHOR_FRAMEWORK_SOURCES ${ICHOR_TOP_DIR}/src/ichor/coroutines/*.cpp ${ICHOR_TOP_DIR}/src/ichor/dependency_management/*.cpp ${ICHOR_TOP_DIR}/src/ichor/DependencyManager.cpp ${ICHOR_TOP_DIR}/src/ichor/LifecycleManager.cpp ${ICHOR_TOP_DIR}/src/ichor/Service.cpp)
 set(ICHOR_FRAMEWORK_QUEUE_SOURCES ${ICHOR_TOP_DIR}/src/ichor/event_queues/PriorityQueue.cpp ${ICHOR_TOP_DIR}/src/ichor/event_queues/EventQueue.cpp)
-file(GLOB_RECURSE ICHOR_OPTIONAL_ETCD_SOURCES ${ICHOR_TOP_DIR}/src/services/etcd/*.cpp)
+file(GLOB_RECURSE ICHOR_ETCD_SOURCES ${ICHOR_TOP_DIR}/src/services/etcd/*.cpp)
 file(GLOB_RECURSE ICHOR_LOGGING_SOURCES ${ICHOR_TOP_DIR}/src/services/logging/*.cpp)
 file(GLOB_RECURSE ICHOR_HTTP_SOURCES ${ICHOR_TOP_DIR}/src/services/network/http/*.cpp)
 file(GLOB_RECURSE ICHOR_BOOST_BEAST_SOURCES ${ICHOR_TOP_DIR}/src/services/network/boost/*.cpp)
@@ -152,7 +152,7 @@ if(ICHOR_USE_MIMALLOC AND NOT ICHOR_USE_SYSTEM_MIMALLOC)
     set(ICHOR_FRAMEWORK_SOURCES ${ICHOR_FRAMEWORK_SOURCES} ${ICHOR_TOP_DIR}/external/mimalloc/src/static.c)
 endif()
 
-add_library(ichor ${FMT_SOURCES} ${ICHOR_FRAMEWORK_SOURCES} ${ICHOR_FRAMEWORK_QUEUE_SOURCES} ${ICHOR_LOGGING_SOURCES} ${ICHOR_TCP_SOURCES} ${ICHOR_HTTP_SOURCES} ${ICHOR_METRICS_SOURCES} ${ICHOR_TIMER_SOURCES} ${ICHOR_IO_SOURCES} ${ICHOR_BASE64_SOURCES} ${ICHOR_STL_SOURCES})
+add_library(ichor ${FMT_SOURCES} ${ICHOR_FRAMEWORK_SOURCES} ${ICHOR_FRAMEWORK_QUEUE_SOURCES} ${ICHOR_LOGGING_SOURCES} ${ICHOR_TCP_SOURCES} ${ICHOR_HTTP_SOURCES} ${ICHOR_METRICS_SOURCES} ${ICHOR_TIMER_SOURCES} ${ICHOR_IO_SOURCES} ${ICHOR_BASE64_SOURCES} ${ICHOR_STL_SOURCES} ${ICHOR_ETCD_SOURCES})
 
 if(ICHOR_ENABLE_INTERNAL_DEBUGGING)
     target_compile_definitions(ichor PUBLIC ICHOR_ENABLE_INTERNAL_DEBUGGING)
@@ -588,10 +588,6 @@ if(ICHOR_USE_BOOST_BEAST) #beast
     if(ICHOR_USE_HARDENING OR ICHOR_ENABLE_INTERNAL_DEBUGGING)
         target_compile_definitions(ichor PUBLIC BOOST_ASIO_ENABLE_BUFFER_DEBUGGING)
     endif()
-
-    # Etcd implementation requires networking
-    target_sources(ichor PRIVATE ${ICHOR_OPTIONAL_ETCD_SOURCES})
-    target_compile_definitions(ichor PUBLIC ICHOR_USE_ETCD)
 endif()
 
 if(ICHOR_USE_HIREDIS)

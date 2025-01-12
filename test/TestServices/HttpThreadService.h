@@ -132,17 +132,21 @@ private:
         unordered_map<std::string, std::string> headers{{"Content-Type", "application/json"}};
         auto response = co_await _connectionService->sendAsync(HttpMethod::post, "/test", std::move(headers), std::move(toSendMsg));
 
+        if(!response) {
+            throw std::runtime_error("no response");
+        }
+
         if(_testSerializer == nullptr) {
             // we're stopping, gotta bail.
             co_return;
         }
 
-        if(response.status != HttpStatus::ok) {
-            fmt::println("test status not ok {}", static_cast<uint_fast16_t>(response.status));
+        if(response->status != HttpStatus::ok) {
+            fmt::println("test status not ok {}", static_cast<uint_fast16_t>(response->status));
             throw std::runtime_error("test status not ok");
         }
 
-        auto msg = _testSerializer->deserialize(response.body);
+        auto msg = _testSerializer->deserialize(response->body);
         if(!msg) {
             std::terminate();
         }
@@ -167,16 +171,20 @@ private:
     Task<void> sendRegexRequest() {
         auto response = co_await _connectionService->sendAsync(HttpMethod::get, "/regex_test/one", {}, {});
 
+        if(!response) {
+            throw std::runtime_error("regex1 no response");
+        }
+
         if(_regexSerializer == nullptr) {
             // we're stopping, gotta bail.
             co_return;
         }
 
-        if(response.status != HttpStatus::ok) {
-            throw std::runtime_error(fmt::format("regex1 status not ok {}", (int)response.status));
+        if(response->status != HttpStatus::ok) {
+            throw std::runtime_error(fmt::format("regex1 status not ok {}", (int)response->status));
         }
 
-        auto msg = _regexSerializer->deserialize(response.body);
+        auto msg = _regexSerializer->deserialize(response->body);
         if(!msg) {
             throw std::runtime_error("regex1 could not deserialize");
         }
@@ -191,16 +199,20 @@ private:
 
         response = co_await _connectionService->sendAsync(HttpMethod::get, "/regex_test/two?", {}, {});
 
+        if(!response) {
+            throw std::runtime_error("regex2 no response");
+        }
+
         if(_regexSerializer == nullptr) {
             // we're stopping, gotta bail.
             co_return;
         }
 
-        if(response.status != HttpStatus::ok) {
-            throw std::runtime_error(fmt::format("regex2 status not ok {}", (int)response.status));
+        if(response->status != HttpStatus::ok) {
+            throw std::runtime_error(fmt::format("regex2 status not ok {}", (int)response->status));
         }
 
-        msg = _regexSerializer->deserialize(response.body);
+        msg = _regexSerializer->deserialize(response->body);
         if(!msg) {
             throw std::runtime_error("regex2 could not deserialize");
         }
@@ -215,16 +227,20 @@ private:
 
         response = co_await _connectionService->sendAsync(HttpMethod::get, "/regex_test/three?param=test", {}, {});
 
+        if(!response) {
+            throw std::runtime_error("regex3 no response");
+        }
+
         if(_regexSerializer == nullptr) {
             // we're stopping, gotta bail.
             co_return;
         }
 
-        if(response.status != HttpStatus::ok) {
-            throw std::runtime_error(fmt::format("regex3 status not ok {}", (int)response.status));
+        if(response->status != HttpStatus::ok) {
+            throw std::runtime_error(fmt::format("regex3 status not ok {}", (int)response->status));
         }
 
-        msg = _regexSerializer->deserialize(response.body);
+        msg = _regexSerializer->deserialize(response->body);
         if(!msg) {
             throw std::runtime_error("regex3 could not deserialize");
         }
@@ -242,16 +258,20 @@ private:
 
         response = co_await _connectionService->sendAsync(HttpMethod::get, "/regex_test/four?param=test&second=123", {}, {});
 
+        if(!response) {
+            throw std::runtime_error("regex4 no response");
+        }
+
         if(_regexSerializer == nullptr) {
             // we're stopping, gotta bail.
             co_return;
         }
 
-        if(response.status != HttpStatus::ok) {
-            throw std::runtime_error(fmt::format("regex4 status not ok {}", (int)response.status));
+        if(response->status != HttpStatus::ok) {
+            throw std::runtime_error(fmt::format("regex4 status not ok {}", (int)response->status));
         }
 
-        msg = _regexSerializer->deserialize(response.body);
+        msg = _regexSerializer->deserialize(response->body);
         if(!msg) {
             throw std::runtime_error("regex4 could not deserialize");
         }

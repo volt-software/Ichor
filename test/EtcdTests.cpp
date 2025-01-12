@@ -1,15 +1,11 @@
-#ifdef ICHOR_USE_ETCD
-
-#include <ichor/event_queues/BoostAsioQueue.h>
+#include "Common.h"
 #include <ichor/services/logging/LoggerFactory.h>
 #include <ichor/services/etcd/EtcdV2Service.h>
 #include <ichor/services/etcd/EtcdV3Service.h>
 #include <ichor/services/timer/TimerFactoryFactory.h>
-#include <ichor/services/network/boost/HttpConnectionService.h>
 #include <ichor/services/network/ClientFactory.h>
 #include "TestServices/Etcdv2UsingService.h"
 #include "TestServices/Etcdv3UsingService.h"
-#include "Common.h"
 
 #ifdef ICHOR_USE_SPDLOG
 #include <ichor/services/logging/SpdlogLogger.h>
@@ -19,20 +15,75 @@
 #define LOGGER_TYPE CoutLogger
 #endif
 
-using namespace Ichor;
+#ifdef TEST_BOOST
+#include <ichor/services/network/boost/HttpConnectionService.h>
+#include <ichor/event_queues/BoostAsioQueue.h>
 
-TEST_CASE("EtcdTests") {
+
+#define QIMPL BoostAsioQueue
+#define HTTPCONNIMPL Boost::HttpConnectionService
+#elif defined(TEST_URING)
+#include <ichor/services/network/tcp/IOUringTcpConnectionService.h>
+#include <ichor/event_queues/IOUringQueue.h>
+#include <ichor/services/network/http/HttpConnectionService.h>
+#include <catch2/generators/catch_generators.hpp>
+#include <ichor/stl/LinuxUtils.h>
+
+using namespace std::string_literals;
+
+#define QIMPL IOUringQueue
+#define CONNIMPL IOUringTcpConnectionService
+#define HTTPCONNIMPL HttpConnectionService
+#else
+#error "no uring/boost"
+#endif
+
+using namespace Ichor;
+#if defined(TEST_URING)
+tl::optional<Version> emulateKernelVersion;
+
+TEST_CASE("EtcdTests_uring") {
+
+    auto version = Ichor::kernelVersion();
+
+    REQUIRE(version);
+    if(version < Version{5, 18, 0}) {
+        return;
+    }
+
+    auto gen_i = GENERATE(1, 2);
+
+    if(gen_i == 2) {
+        emulateKernelVersion = Version{5, 18, 0};
+        fmt::println("emulating kernel version {}", *emulateKernelVersion);
+    } else {
+        fmt::println("kernel version {}", *version);
+    }
+#else
+TEST_CASE("EtcdTests_boost") {
+#endif
+
     SECTION("v2") {
-        auto queue = std::make_unique<BoostAsioQueue>();
+#if defined(TEST_URING)
+        auto queue = std::make_unique<QIMPL>(500, 100'000'000, emulateKernelVersion);
+#else
+        auto queue = std::make_unique<QIMPL>(500);
+#endif
         auto &dm = queue->createManager();
 
         std::thread t([&]() {
+#ifdef TEST_URING
+            REQUIRE(queue->createEventLoop());
+#endif
             dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>({}, 10);
 #ifdef ICHOR_USE_SPDLOG
             dm.createServiceManager<SpdlogSharedService, ISpdlogSharedService>();
 #endif
             dm.createServiceManager<LoggerFactory<LOGGER_TYPE>, ILoggerFactory>(Properties{{"DefaultLogLevel", Ichor::make_any<LogLevel>(LogLevel::LOG_TRACE)}});
-            dm.createServiceManager<ClientFactory<Boost::HttpConnectionService, IHttpConnectionService>, IClientFactory>();
+            dm.createServiceManager<ClientFactory<HTTPCONNIMPL, IHttpConnectionService>, IClientFactory>();
+#ifdef TEST_URING
+            dm.createServiceManager<ClientFactory<CONNIMPL<IClientConnectionService>, IClientConnectionService>, IClientFactory>();
+#endif
             dm.createServiceManager<Etcd::v2::EtcdService, Etcd::v2::IEtcd>(Properties{{"Address", Ichor::make_any<std::string>("127.0.0.1")}, {"Port", Ichor::make_any<uint16_t>(static_cast<uint16_t>(2379))}, {"TimeoutMs", Ichor::make_any<uint64_t>(1'000ul)}, {"Debug", Ichor::make_any<bool>(true)}});
             dm.createServiceManager<Etcdv2UsingService>(Properties{{"LogLevel", Ichor::make_any<LogLevel>(LogLevel::LOG_TRACE)}});
             dm.createServiceManager<TimerFactoryFactory>();
@@ -44,16 +95,26 @@ TEST_CASE("EtcdTests") {
     }
 
     SECTION("v3") {
-        auto queue = std::make_unique<BoostAsioQueue>();
+#if defined(TEST_URING)
+        auto queue = std::make_unique<QIMPL>(500, 100'000'000, emulateKernelVersion);
+#else
+        auto queue = std::make_unique<QIMPL>(500);
+#endif
         auto &dm = queue->createManager();
 
         std::thread t([&]() {
+#ifdef TEST_URING
+            REQUIRE(queue->createEventLoop());
+#endif
             dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>({}, 10);
 #ifdef ICHOR_USE_SPDLOG
             dm.createServiceManager<SpdlogSharedService, ISpdlogSharedService>();
 #endif
             dm.createServiceManager<LoggerFactory<LOGGER_TYPE>, ILoggerFactory>(Properties{{"DefaultLogLevel", Ichor::make_any<LogLevel>(LogLevel::LOG_TRACE)}});
-            dm.createServiceManager<ClientFactory<Boost::HttpConnectionService, IHttpConnectionService>, IClientFactory>();
+            dm.createServiceManager<ClientFactory<HTTPCONNIMPL, IHttpConnectionService>, IClientFactory>();
+#ifdef TEST_URING
+            dm.createServiceManager<ClientFactory<CONNIMPL<IClientConnectionService>, IClientConnectionService>, IClientFactory>();
+#endif
             dm.createServiceManager<Etcd::v3::EtcdService, Etcd::v3::IEtcd>(Properties{{"Address", Ichor::make_any<std::string>("127.0.0.1")}, {"Port", Ichor::make_any<uint16_t>(static_cast<uint16_t>(2379))}, {"TimeoutMs", Ichor::make_any<uint64_t>(1'000ul)}, {"Debug", Ichor::make_any<bool>(true)}});
             dm.createServiceManager<Etcdv3UsingService>(Properties{{"LogLevel", Ichor::make_any<LogLevel>(LogLevel::LOG_TRACE)}});
             dm.createServiceManager<TimerFactoryFactory>();
@@ -64,16 +125,3 @@ TEST_CASE("EtcdTests") {
         t.join();
     }
 }
-
-#else
-
-#include "Common.h"
-
-TEST_CASE("EtcdTests") {
-    SECTION("Empty Test so that Catch2 exits with 0") {
-        REQUIRE(true);
-    }
-}
-
-#endif
-

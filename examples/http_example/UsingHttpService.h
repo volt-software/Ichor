@@ -100,16 +100,20 @@ private:
         unordered_map<std::string, std::string> headers{{"Content-Type", "application/json"}};
         auto response = co_await _connectionService->sendAsync(HttpMethod::post, "/test", std::move(headers), std::move(toSendMsg));
 
+        if(!response) {
+            ICHOR_LOG_ERROR(_logger, "Http send error {}", response.error());
+        }
+
         if(_serializer == nullptr) {
             // we're stopping, gotta bail.
             co_return;
         }
 
-        if(response.status == HttpStatus::ok) {
-            auto msg = _serializer->deserialize(response.body);
+        if(response->status == HttpStatus::ok) {
+            auto msg = _serializer->deserialize(response->body);
             ICHOR_LOG_INFO(_logger, "Received TestMsg id {} val {}", msg->id, msg->val);
         } else {
-            ICHOR_LOG_ERROR(_logger, "Received status {}", (int)response.status);
+            ICHOR_LOG_ERROR(_logger, "Received status {}", (int)response->status);
         }
 
         co_return;
@@ -118,7 +122,7 @@ private:
     Task<void> sendRegexRequest() {
         ICHOR_LOG_INFO(_logger, "sendRegexRequest");
         auto response = co_await _connectionService->sendAsync(HttpMethod::get, "/regex_test/one?param=123", {}, {});
-        ICHOR_LOG_ERROR(_logger, "Received status {}", (int)response.status);
+        ICHOR_LOG_ERROR(_logger, "Received status {}", (int)response->status);
 
         co_return;
     }

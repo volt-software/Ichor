@@ -21,7 +21,8 @@ namespace Ichor::Etcd::v2 {
         NOT_FOUND,
         DUPLICATE_PERMISSION_OR_REVOKING_NON_EXISTENT,
         CANNOT_DELETE_ROOT_WHILE_AUTH_IS_ENABLED,
-        QUITTING
+        QUITTING,
+        HTTP_SEND_ERROR
     };
 
     enum class EtcdErrorCodes : uint_fast16_t {
@@ -426,6 +427,8 @@ struct fmt::formatter<Ichor::Etcd::v2::EtcdError> {
                 return fmt::format_to(ctx.out(), "CANNOT_DELETE_ROOT_WHILE_AUTH_IS_ENABLED");
             case Ichor::Etcd::v2::EtcdError::QUITTING:
                 return fmt::format_to(ctx.out(), "QUITTING");
+            case Ichor::Etcd::v2::EtcdError::HTTP_SEND_ERROR:
+                return fmt::format_to(ctx.out(), "HTTP_SEND_ERROR");
         }
         return fmt::format_to(ctx.out(), "error, please file a bug in Ichor");
     }
