@@ -1472,4 +1472,48 @@ TEST_CASE("STL Tests") {
             REQUIRE(q.pop() == 50);
         }
     }
+
+    SECTION("Hex String To Uint64_t") {
+        REQUIRE(FastHexToUint("0") == 0ull);
+        REQUIRE(FastHexToUint("1") == 1ull);
+        REQUIRE(FastHexToUint("2") == 2ull);
+        REQUIRE(FastHexToUint("3") == 3ull);
+        REQUIRE(FastHexToUint("4") == 4ull);
+        REQUIRE(FastHexToUint("5") == 5ull);
+        REQUIRE(FastHexToUint("6") == 6ull);
+        REQUIRE(FastHexToUint("7") == 7ull);
+        REQUIRE(FastHexToUint("8") == 8ull);
+        REQUIRE(FastHexToUint("9") == 9ull);
+        REQUIRE(FastHexToUint("a") == 10ull);
+        REQUIRE(FastHexToUint("b") == 11ull);
+        REQUIRE(FastHexToUint("c") == 12ull);
+        REQUIRE(FastHexToUint("d") == 13ull);
+        REQUIRE(FastHexToUint("e") == 14ull);
+        REQUIRE(FastHexToUint("f") == 15ull);
+        REQUIRE(FastHexToUint("A") == 10ull);
+        REQUIRE(FastHexToUint("B") == 11ull);
+        REQUIRE(FastHexToUint("C") == 12ull);
+        REQUIRE(FastHexToUint("D") == 13ull);
+        REQUIRE(FastHexToUint("E") == 14ull);
+        REQUIRE(FastHexToUint("F") == 15ull);
+        REQUIRE(FastHexToUint("g") == -1ull);
+        REQUIRE(FastHexToUint("10") == 16ull);
+        REQUIRE(FastHexToUint("11") == 17ull);
+        REQUIRE(FastHexToUint("12") == 18ull);
+        REQUIRE(FastHexToUint("13") == 19ull);
+        REQUIRE(FastHexToUint("14") == 20ull);
+        REQUIRE(FastHexToUint("15") == 21ull);
+        REQUIRE(FastHexToUint("16") == 22ull);
+        REQUIRE(FastHexToUint("17") == 23ull);
+        REQUIRE(FastHexToUint("18") == 24ull);
+        REQUIRE(FastHexToUint("19") == 25ull);
+        REQUIRE(FastHexToUint("1a") == 26ull);
+        REQUIRE(FastHexToUint("1b") == 27ull);
+        REQUIRE(FastHexToUint("1c") == 28ull);
+        REQUIRE(FastHexToUint("1d") == 29ull);
+        REQUIRE(FastHexToUint("1e") == 30ull);
+        REQUIRE(FastHexToUint("1f") == 31ull);
+        REQUIRE(FastHexToUint("DEADBEEF") == 3735928559ull);
+        REQUIRE(FastHexToUint("DEADBEEFDEADBEEFDEADBEEFDEADBEEF") == 13644637895957118430ull); // overflow stuff happened, but it's defined behaviour
+    }
 }
