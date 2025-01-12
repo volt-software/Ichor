@@ -31,7 +31,7 @@ namespace Ichor {
         HttpConnectionService(DependencyRegister &reg, Properties props);
         ~HttpConnectionService() final = default;
 
-        Task<HttpResponse> sendAsync(HttpMethod method, std::string_view route, unordered_map<std::string, std::string> &&headers, std::vector<uint8_t>&& msg) final;
+        Task<tl::expected<HttpResponse, HttpError>> sendAsync(HttpMethod method, std::string_view route, unordered_map<std::string, std::string> &&headers, std::vector<uint8_t>&& msg) final;
 
         Task<void> close() final;
 
@@ -62,5 +62,6 @@ namespace Ichor {
         IClientConnectionService *_connection{};
         std::deque<AsyncReturningManualResetEvent<tl::expected<HttpResponse, HttpParseError>>> _events;
         std::string _buffer;
+        std::string const *_address;
     };
 }

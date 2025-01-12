@@ -7,27 +7,33 @@ Ichor::HttpConnectionService::HttpConnectionService(DependencyRegister &reg, Pro
     reg.registerDependency<IClientConnectionService>(this, DependencyFlags::REQUIRED, getProperties());
 }
 
-Ichor::Task<Ichor::HttpResponse> Ichor::HttpConnectionService::sendAsync(HttpMethod method, std::string_view route, unordered_map<std::string, std::string> &&headers, std::vector<uint8_t> &&msg) {
+Ichor::Task<tl::expected<Ichor::HttpResponse, Ichor::HttpError>> Ichor::HttpConnectionService::sendAsync(HttpMethod method, std::string_view route, unordered_map<std::string, std::string> &&headers, std::vector<uint8_t> &&msg) {
     if(_connection == nullptr) {
         ICHOR_LOG_TRACE(_logger, "_connection nullptr");
-        co_return {};
+        co_return tl::unexpected(HttpError::NO_CONNECTION);
+    }
+    if(method == HttpMethod::get && !msg.empty()) {
+        co_return tl::unexpected(HttpError::GET_REQUESTS_CANNOT_HAVE_BODY);
     }
 
     std::vector<uint8_t> resp;
     resp.reserve(8192);
     auto methodText = ICHOR_REVERSE_METHOD_MATCHING.find(method);
     if (methodText == ICHOR_REVERSE_METHOD_MATCHING.end()) {
-        co_return HttpResponse{};
+        co_return tl::unexpected(HttpError::WRONG_METHOD);
     }
     fmt::format_to(std::back_inserter(resp), "{} {} HTTP/1.1\r\n", methodText->second, route);
     for (auto const &[k, v] : headers) {
         if(k.empty() || k.front() == ' ' || k.back() == ' ') {
-            co_return HttpResponse{};
+        co_return tl::unexpected(HttpError::UNABLE_TO_PARSE_HEADER);
         }
         if(v.empty() || v.front() == ' ' || v.back() == ' ') {
-            co_return HttpResponse{};
+        co_return tl::unexpected(HttpError::UNABLE_TO_PARSE_HEADER);
         }
         fmt::format_to(std::back_inserter(resp), "{}: {}\r\n", k, v);
+    }
+    if (headers.find("Host") == headers.end() && _address != nullptr) {
+        fmt::format_to(std::back_inserter(resp), "Host: {}\r\n", *_address);
     }
     if(!msg.empty()) {
         fmt::format_to(std::back_inserter(resp), "Content-Length: {}\r\n", msg.size());
@@ -40,7 +46,7 @@ Ichor::Task<Ichor::HttpResponse> Ichor::HttpConnectionService::sendAsync(HttpMet
     auto success = co_await _connection->sendAsync(std::move(resp));
 
     if(!success) {
-        co_return HttpResponse{};
+        co_return tl::unexpected(HttpError::IO_ERROR);
     }
 
     auto &evt = _events.emplace_back();
@@ -49,7 +55,7 @@ Ichor::Task<Ichor::HttpResponse> Ichor::HttpConnectionService::sendAsync(HttpMet
 
     if(!parseResp) {
         ICHOR_LOG_TRACE(_logger, "HttpConnection {} Failed to parse response: {}", getServiceId(), parseResp.error());
-        co_return HttpResponse{};
+        co_return tl::unexpected(HttpError::UNABLE_TO_PARSE_RESPONSE);
     }
 
     co_return *parseResp;
@@ -72,6 +78,8 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::HttpConnectionService:
         co_return tl::unexpected(StartError::FAILED);
     }
 
+    _address = &Ichor::any_cast<std::string const &>(addrIt->second);
+
     if(auto propIt = getProperties().find("Priority"); propIt != getProperties().end()) {
         _priority = Ichor::any_cast<uint64_t>(propIt->second);
     }
@@ -87,6 +95,7 @@ Ichor::Task<void> Ichor::HttpConnectionService::stop() {
     if(!_events.empty()) {
         std::terminate();
     }
+    _address = nullptr;
     ICHOR_LOG_TRACE(_logger, "HttpConnection {} stopped", getServiceId());
 
     co_return;
@@ -290,10 +299,14 @@ tl::expected<Ichor::HttpResponse, Ichor::HttpParseError> Ichor::HttpConnectionSe
 
     if(complete.size() - len != contentLength) {
         ICHOR_LOG_TRACE(_logger, "HttpConnection {} BadRequest complete.size() - len != contentLength ({} - {} != {})", getServiceId(), complete.size(), len, contentLength);
+        ICHOR_LOG_TRACE(_logger, "HttpConnection {} BadRequest complete message: {}", getServiceId(), complete);
+        ICHOR_LOG_TRACE(_logger, "HttpConnection {} BadRequest partial message: {}", getServiceId(), partial);
         badRequest = true;
     } else {
-        std::string content{complete.data() + len, contentLength};
+        std::string_view content{complete.data() + len, contentLength};
+        resp.body.reserve(contentLength + 1);
         resp.body.assign(content.begin(), content.end());
+        resp.body.emplace_back(0);
         len = complete.size();
     }
 
@@ -302,7 +315,7 @@ tl::expected<Ichor::HttpResponse, Ichor::HttpParseError> Ichor::HttpConnectionSe
         return tl::unexpected(HttpParseError::BADREQUEST);
     }
 
-    ICHOR_LOG_TRACE(_logger, "HttpConnection {} parsed {} {}", getServiceId(), static_cast<uint_fast16_t>(resp.status), resp.body.size());
+    ICHOR_LOG_TRACE(_logger, "HttpConnection {} parsed \"{}\" {} {}", getServiceId(), partial, static_cast<uint_fast16_t>(resp.status), resp.body.size());
 
     return resp;
 }

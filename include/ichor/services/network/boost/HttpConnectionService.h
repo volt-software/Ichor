@@ -3,6 +3,7 @@
 #include <ichor/event_queues/BoostAsioQueue.h>
 #include <ichor/services/network/http/IHttpConnectionService.h>
 #include <ichor/coroutines/AsyncManualResetEvent.h>
+#include <ichor/coroutines/AsyncReturningManualResetEvent.h>
 #include <ichor/services/logging/Logger.h>
 #include <boost/beast.hpp>
 #include <boost/beast/ssl.hpp>
@@ -19,8 +20,7 @@ namespace Ichor::Boost {
         struct ConnectionOutboxMessage {
             Ichor::HttpMethod method;
             std::string_view route;
-            AsyncManualResetEvent* event;
-            HttpResponse* response;
+            AsyncReturningManualResetEvent<tl::expected<Ichor::HttpResponse, Ichor::HttpError>>* event;
             unordered_map<std::string, std::string>* headers;
             std::vector<uint8_t>* body;
         };
@@ -45,7 +45,7 @@ namespace Ichor::Boost {
         HttpConnectionService(DependencyRegister &reg, Properties props);
         ~HttpConnectionService() final = default;
 
-        Task<HttpResponse> sendAsync(HttpMethod method, std::string_view route, unordered_map<std::string, std::string> &&headers, std::vector<uint8_t>&& msg) final;
+        Task<tl::expected<HttpResponse, HttpError>> sendAsync(HttpMethod method, std::string_view route, unordered_map<std::string, std::string> &&headers, std::vector<uint8_t>&& msg) final;
 
         Task<void> close() final;
 

@@ -3,6 +3,7 @@
 #include <ichor/dependency_management/AdvancedService.h>
 #include <ichor/services/etcd/IEtcdV2.h>
 #include <ichor/events/RunFunctionEvent.h>
+#include <thread>
 
 namespace Ichor {
     struct Etcdv2UsingService final : public AdvancedService<Etcdv2UsingService> {

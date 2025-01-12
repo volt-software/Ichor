@@ -236,8 +236,10 @@ tl::expected<Ichor::HttpRequest, Ichor::HttpParseError> Ichor::HttpHostService::
         badRequest = true;
         len = complete.size();
     } else {
-        std::string content{complete.data() + len, contentLength};
+        std::string_view content{complete.data() + len, contentLength};
+        req.body.reserve(contentLength + 1);
         req.body.assign(content.begin(), content.end());
+        req.body.emplace_back(0);
         len = complete.size();
     }
 

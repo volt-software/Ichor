@@ -107,29 +107,27 @@ uint64_t Ichor::Boost::HttpConnectionService::getPriority() {
     return _priority;
 }
 
-Ichor::Task<Ichor::HttpResponse> Ichor::Boost::HttpConnectionService::sendAsync(Ichor::HttpMethod method, std::string_view route, unordered_map<std::string, std::string> &&headers, std::vector<uint8_t> &&msg) {
+Ichor::Task<tl::expected<Ichor::HttpResponse, Ichor::HttpError>> Ichor::Boost::HttpConnectionService::sendAsync(Ichor::HttpMethod method, std::string_view route, unordered_map<std::string, std::string> &&headers, std::vector<uint8_t> &&msg) {
     if(method == HttpMethod::get && !msg.empty()) {
-        throw std::runtime_error("GET requests cannot have a body.");
+        co_return tl::unexpected(HttpError::GET_REQUESTS_CANNOT_HAVE_BODY);
     }
 
     ICHOR_LOG_DEBUG(_logger, "sending to {}", route);
 
-    HttpResponse response{};
-
     if(_quit || _queue->fibersShouldStop()) {
-        co_return response;
+        co_return tl::unexpected(Ichor::HttpError::SVC_QUITTING);
     }
 
-    AsyncManualResetEvent event{};
+    AsyncReturningManualResetEvent<tl::expected<Ichor::HttpResponse, Ichor::HttpError>> event{};
 
-    net::spawn(_queue->getContext(), [this, method, route, &event, &response, &headers, &msg](net::yield_context yield) mutable {
+    net::spawn(_queue->getContext(), [this, method, route, &event, &headers, &msg](net::yield_context yield) mutable {
         static_assert(std::is_trivially_copyable_v<Detail::ConnectionOutboxMessage>, "ConnectionOutboxMessage should be trivially copyable");
         ScopeGuardAtomicCount const guard{_finishedListenAndRead};
 
         if(_outbox.full()) {
             _outbox.set_capacity(std::max<uint64_t>(_outbox.capacity() * 2, 10ul));
         }
-        _outbox.push_back({method, route, &event, &response, &headers, &msg});
+        _outbox.push_back({method, route, &event, &headers, &msg});
         if(_outbox.size() > 1) {
             // handled by existing net::spawn
             return;
@@ -138,17 +136,19 @@ Ichor::Task<Ichor::HttpResponse> Ichor::Boost::HttpConnectionService::sendAsync(
             // Copy message, should be trivially copyable and prevents iterator invalidation
             auto next = _outbox.front();
             INTERNAL_DEBUG("Outbox {}", next.route);
+            tl::expected<Ichor::HttpResponse, Ichor::HttpError> response;
 
-            ScopeGuard const coroutineGuard{[this, event = next.event]() {
+            ScopeGuard const coroutineGuard{[this, &response, event = next.event]() {
                 // use service id 0 to ensure event gets run, even if service is stopped. Otherwise, the coroutine will never complete.
                 // Similarly, use priority 0 to ensure these events run before any dependency changes, otherwise the service might be destroyed
                 // before we can finish all the coroutines.
-                event->set();
+                event->set(response);
                 _outbox.pop_front();
             }};
 
             // if the service has to quit, we still have to spool through all the remaining messages, to complete coroutines
             if(_quit) {
+                response = tl::unexpected(Ichor::HttpError::SVC_QUITTING);
                 continue;
             }
 
@@ -183,11 +183,13 @@ Ichor::Task<Ichor::HttpResponse> Ichor::Boost::HttpConnectionService::sendAsync(
             }
             if (ec) {
                 fail(ec, "HttpConnectionService::sendAsync write");
+                response = tl::unexpected(Ichor::HttpError::BOOST_READ_OR_WRITE_ERROR);
                 continue;
             }
 
             // if the service has to quit, we still have to spool through all the remaining messages, to complete coroutines
             if(_quit) {
+                response = tl::unexpected(Ichor::HttpError::SVC_QUITTING);
                 continue;
             }
 
@@ -208,6 +210,7 @@ Ichor::Task<Ichor::HttpResponse> Ichor::Boost::HttpConnectionService::sendAsync(
             }
             if (ec) {
                 fail(ec, "HttpConnectionService::sendAsync read");
+                response = tl::unexpected(Ichor::HttpError::BOOST_READ_OR_WRITE_ERROR);
                 continue;
             }
             // rapidjson f.e. expects a null terminator
@@ -223,18 +226,20 @@ Ichor::Task<Ichor::HttpResponse> Ichor::Boost::HttpConnectionService::sendAsync(
                 _httpStream->expires_never();
             }
 
-            next.response->status = (HttpStatus) (int) res.result();
-            next.response->headers.reserve(static_cast<unsigned long>(std::distance(std::begin(res), std::end(res))));
+            response = HttpResponse{};
+
+            response->status = (HttpStatus) (int) res.result();
+            response->headers.reserve(static_cast<unsigned long>(std::distance(std::begin(res), std::end(res))));
             for (auto const &header: res) {
-                next.response->headers.emplace(header.name_string(), header.value());
+                response->headers.emplace(header.name_string(), header.value());
             }
 
             // need to use move iterator instead of std::move directly, to prevent leaks.
-            next.response->body.insert(next.response->body.end(), std::make_move_iterator(res.body().begin()), std::make_move_iterator(res.body().end()));
+            response->body.insert(response->body.end(), std::make_move_iterator(res.body().begin()), std::make_move_iterator(res.body().end()));
         }
     }ASIO_SPAWN_COMPLETION_TOKEN);
 
-    co_await event;
+    auto response = co_await event;
 
     co_return response;
 }

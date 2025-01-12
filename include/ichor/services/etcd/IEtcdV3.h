@@ -23,7 +23,8 @@ namespace Ichor::Etcd::v3 {
         DUPLICATE_PERMISSION_OR_REVOKING_NON_EXISTENT,
         CANNOT_DELETE_ROOT_WHILE_AUTH_IS_ENABLED,
         QUITTING,
-        ETCD_SERVER_DOES_NOT_SUPPORT
+        ETCD_SERVER_DOES_NOT_SUPPORT,
+        HTTP_SEND_ERROR
     };
 
     enum class EtcdEventType : uint_fast16_t {
@@ -749,6 +750,8 @@ struct fmt::formatter<Ichor::Etcd::v3::EtcdError> {
                 return fmt::format_to(ctx.out(), "QUITTING");
             case Ichor::Etcd::v3::EtcdError::ETCD_SERVER_DOES_NOT_SUPPORT:
                 return fmt::format_to(ctx.out(), "ETCD_SERVER_DOES_NOT_SUPPORT");
+            case Ichor::Etcd::v3::EtcdError::HTTP_SEND_ERROR:
+                return fmt::format_to(ctx.out(), "HTTP_SEND_ERROR");
         }
         return fmt::format_to(ctx.out(), "error, please file a bug in Ichor");
     }
