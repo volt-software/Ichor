@@ -138,13 +138,15 @@ bool Ichor::BoostAsioQueue::start(bool captureSigInt) {
             }
         }
         net::steady_timer t{_context};
-        while (!_quit) {
+        while (!shouldQuit()) {
             t.expires_after(std::chrono::milliseconds(10));
             t.async_wait(yield);
+            shouldAddQuitEvent();
         }
+        fmt::println("quitting boost");
     }ASIO_SPAWN_COMPLETION_TOKEN);
 
-    while (!_context.stopped()) {
+    while (!shouldQuit()) {
         try {
             _context.run();
         } catch (boost::system::system_error const &e) {

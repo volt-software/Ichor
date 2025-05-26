@@ -39,7 +39,9 @@ class BasicService final {
 public:
     BasicService(IHttpHostService *hostService) {
         _routeRegistration = hostService->addRoute(HttpMethod::get, "/basic", [this, serializer](HttpRequest &req) -> Task<HttpResponse> {
-            co_return HttpResponse{HttpStatus::ok, "application/text, "<html><body>This is my basic webpage</body></html>", {}};
+            std::string_view body_view = "<html><body>This is my basic webpage</body></html>";
+            std::vector<uint8_t> body{body_view.begin(), body_view.end()};
+            co_return HttpResponse{HttpStatus::ok, "text/plain", std::move(body), {}};
         });
     }
 

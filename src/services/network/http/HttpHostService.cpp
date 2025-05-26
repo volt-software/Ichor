@@ -100,10 +100,12 @@ void Ichor::HttpHostService::addDependencyInstance(IHostConnectionService &clien
 
     auto TcpHostProp = s.getProperties().find("TcpHostService");
 
-    if(TcpHostProp == s.getProperties().end() || !_hostServiceIds.contains(Ichor::any_cast<ServiceIdType>(TcpHostProp->second))) {
-        if(_logger->getLogLevel() == LogLevel::LOG_TRACE) {
-            ICHOR_LOG_TRACE(_logger, "New connection {}:{} did not match hostServiceId {}", s.getServiceId(), Ichor::any_cast<ServiceIdType>(TcpHostProp->second), _hostServiceIds);
-        }
+    if(TcpHostProp == s.getProperties().end()) {
+        ICHOR_LOG_TRACE(_logger, "New connection {} did not have TcpHostService property", s.getServiceId());
+        return;
+    }
+    if(!_hostServiceIds.contains(Ichor::any_cast<ServiceIdType>(TcpHostProp->second))) {
+        ICHOR_LOG_TRACE(_logger, "New connection {}:{} did not match hostServiceId {}", s.getServiceId(), Ichor::any_cast<ServiceIdType>(TcpHostProp->second), _hostServiceIds);
         return;
     }
 
@@ -129,10 +131,12 @@ tl::expected<Ichor::HttpRequest, Ichor::HttpParseError> Ichor::HttpHostService::
     HttpRequest req{};
     uint64_t lineNo{};
     uint64_t crlfCounter{};
+    uint64_t protocolLength{};
     uint64_t contentLength{};
     std::string_view partial{complete.data(), len};
     bool badRequest{};
-    // ICHOR_LOG_TRACE(_logger, "HttpHostService {} parseRequest {}", getServiceId(), complete);
+    bool contentLengthHeader{};
+    ICHOR_LOG_TRACE(_logger, "HttpHostService {} parseResponse len {} complete \"{}\" partial \"{}\"", getServiceId(), len, complete, partial);
 
     split(partial, "\r\n", false, [&](std::string_view line) {
         if(badRequest) {
@@ -178,7 +182,6 @@ tl::expected<Ichor::HttpRequest, Ichor::HttpParseError> Ichor::HttpHostService::
         } else if(!line.empty()) {
             uint64_t wordNo{};
             bool matchedValue{};
-            bool contentLengthHeader{};
             std::string_view key;
             split(line, ": ", false, [&](std::string_view word) {
                 if(badRequest) {
@@ -218,6 +221,7 @@ tl::expected<Ichor::HttpRequest, Ichor::HttpParseError> Ichor::HttpHostService::
             crlfCounter++;
         }
 
+        protocolLength += line.size() + 2;
         lineNo++;
     });
 
@@ -227,28 +231,25 @@ tl::expected<Ichor::HttpRequest, Ichor::HttpParseError> Ichor::HttpHostService::
     }
 
     if(badRequest) {
-        len = complete.size();
+        if(contentLengthHeader && complete.size() < protocolLength + contentLength) {
+            len += contentLength;
+        } else {
+            len = partial.size();
+        }
         return tl::unexpected(HttpParseError::BADREQUEST);
     }
 
-    if(complete.size() - len != contentLength) {
-        ICHOR_LOG_TRACE(_logger, "HttpHostService {} BadRequest complete.size() - len != contentLength ({} - {} != {})", getServiceId(), complete.size(), len, contentLength);
-        badRequest = true;
-        len = complete.size();
+    if(contentLengthHeader && complete.size() < protocolLength + contentLength) {
+        return tl::unexpected(HttpParseError::INCOMPLETEREQUEST);
     } else {
         std::string_view content{complete.data() + len, contentLength};
         req.body.reserve(contentLength + 1);
         req.body.assign(content.begin(), content.end());
         req.body.emplace_back(0);
-        len = complete.size();
+        len += contentLength;
     }
 
-    if(badRequest) {
-        len = complete.size();
-        return tl::unexpected(HttpParseError::BADREQUEST);
-    }
-
-    ICHOR_LOG_TRACE(_logger, "HttpHostService {} parsed {} {} {} {}", getServiceId(), ICHOR_REVERSE_METHOD_MATCHING[req.method], req.address, req.route, req.body.size());
+    ICHOR_LOG_TRACE(_logger, "HttpHostService {} parsed \"{}\" {} {} {} {}", getServiceId(), partial, ICHOR_REVERSE_METHOD_MATCHING[req.method], req.address, req.route, req.body.size());
 
     return req;
 }
@@ -265,15 +266,19 @@ Ichor::Task<void> Ichor::HttpHostService::receiveRequestHandler(ServiceIdType id
     std::string_view msg = string;
 
     auto pos = msg.find("\r\n\r\n");
+    ICHOR_LOG_TRACE(_logger, "HttpHostService {} pos {} total {}", getServiceId(), pos, msg.size());
 
     while(pos != std::string_view::npos) {
-        // ICHOR_LOG_TRACE(_logger, "HttpHostService {} received\n{}\n===", getServiceId(), msg);
         pos += 4;
         auto req = parseRequest(msg, pos);
 
         HttpResponse resp{};
 
         if(!req) {
+            if(req.error() == HttpParseError::INCOMPLETEREQUEST) {
+                break;
+            }
+
             resp.status = HttpStatus::bad_request;
         } else {
             auto routes = _handlers.find(req->method);
@@ -296,6 +301,7 @@ Ichor::Task<void> Ichor::HttpHostService::receiveRequestHandler(ServiceIdType id
 
         msg = msg.substr(pos);
         pos = msg.find("\r\n\r\n");
+        ICHOR_LOG_TRACE(_logger, "HttpHostService {} new buffer {} pos {}", getServiceId(), msg, pos);
     }
 
     if(!msg.empty()) {

@@ -1,10 +1,7 @@
 #include "PongService.h"
 #include "PingMsgJsonSerializer.h"
 #include "../common/lyra.hpp"
-#include <ichor/event_queues/BoostAsioQueue.h>
 #include <ichor/services/logging/LoggerFactory.h>
-#include <ichor/services/network/boost/HttpHostService.h>
-#include <ichor/services/serialization/ISerializer.h>
 #include <ichor/services/logging/NullLogger.h>
 #include <ichor/ichor-mimalloc.h>
 
@@ -19,6 +16,23 @@
 #include <ichor/services/logging/CoutLogger.h>
 #define FRAMEWORK_LOGGER_TYPE CoutFrameworkLogger
 #define LOGGER_TYPE CoutLogger
+#endif
+
+
+#if defined(URING_EXAMPLE)
+#include <ichor/event_queues/IOUringQueue.h>
+#include <ichor/services/network/http/HttpHostService.h>
+#include <ichor/services/network/tcp/IOUringTcpHostService.h>
+
+#define QIMPL IOUringQueue
+#define HOSTIMPL IOUringTcpHostService
+#define HTTPHOSTIMPL HttpHostService
+#else
+#include <ichor/services/network/boost/HttpHostService.h>
+#include <ichor/event_queues/BoostAsioQueue.h>
+
+#define QIMPL BoostAsioQueue
+#define HTTPHOSTIMPL Boost::HttpHostService
 #endif
 
 #include <chrono>
@@ -69,16 +83,22 @@ int main(int argc, char *argv[]) {
     }
 
     auto start = std::chrono::steady_clock::now();
-    auto queue = std::make_unique<BoostAsioQueue>();
+    auto queue = std::make_unique<QIMPL>(500);
     auto &dm = queue->createManager();
+#ifdef URING_EXAMPLE
+    if(!queue->createEventLoop()) {
+        fmt::println("Couldn't create io_uring event loop");
+        return -1;
+    }
+#endif
 
 #ifdef ICHOR_USE_SPDLOG
     dm.createServiceManager<SpdlogSharedService, ISpdlogSharedService>();
 #endif
 
-    if(verbosity > 0) {
+//    if(verbosity > 0) {
         dm.createServiceManager<FRAMEWORK_LOGGER_TYPE, IFrameworkLogger>(Properties{{"LogLevel", Ichor::make_any<LogLevel>(level)}});
-    }
+//    }
 
     if(silent) {
         dm.createServiceManager<LoggerFactory<NullLogger>, ILoggerFactory>();
@@ -87,7 +107,11 @@ int main(int argc, char *argv[]) {
     }
 
     dm.createServiceManager<PingMsgJsonSerializer, ISerializer<PingMsg>>();
-    dm.createServiceManager<Boost::HttpHostService, IHttpHostService>(Properties{{"Address", Ichor::make_any<std::string>(address)}, {"Port", Ichor::make_any<uint16_t>(static_cast<uint16_t>(8001))}, {"NoDelay", Ichor::make_any<bool>(true)}});
+#ifdef URING_EXAMPLE
+    dm.createServiceManager<HOSTIMPL, IHostService>(Properties{{"Address", Ichor::make_any<std::string>("127.0.0.1"s)}, {"Port", Ichor::make_any<uint16_t>(static_cast<uint16_t>(8001))}, {"NoDelay", Ichor::make_any<bool>(true)}});
+#endif
+    // Create the HTTP server binding to the given address
+    dm.createServiceManager<HTTPHOSTIMPL, IHttpHostService>(Properties{{"Address", Ichor::make_any<std::string>(address)}, {"Port", Ichor::make_any<uint16_t>(static_cast<uint16_t>(8001))}, {"NoDelay", Ichor::make_any<bool>(true)}});
     dm.createServiceManager<PongService>();
     queue->start(CaptureSigInt);
     auto end = std::chrono::steady_clock::now();

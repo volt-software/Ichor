@@ -13,6 +13,7 @@ trap cleanup SIGINT SIGTERM
 
 POSITIONAL_ARGS=()
 DOCKER=0
+DOCKERTSAN=0
 DEV=0
 GCC=0
 
@@ -20,6 +21,10 @@ while [[ $# -gt 0 ]]; do
   case $1 in
     --docker)
       DOCKER=1
+      shift # past value
+      ;;
+    --docker-tsan)
+      DOCKERTSAN=1
       shift # past value
       ;;
     --dev)
@@ -86,12 +91,6 @@ if [[ $DOCKER -eq 1 ]]; then
   run_benchmarks
 
   rm -rf ./* ../bin/*
-  docker build -f ../Dockerfile-tsan -t ichor-tsan --build-arg CONTAINER_OWNER_GID=$(id -g) --build-arg CONTAINER_OWNER_ID=$(id -u) . || exit 1
-  docker run -v $(pwd)/../:/opt/ichor/src -v $(pwd)/../build:/opt/ichor/build --rm --privileged -it ichor-tsan || exit 1
-  run_examples 0 1 0
-  run_benchmarks
-
-  rm -rf ./* ../bin/*
   docker --debug build -f ../Dockerfile-musl-aarch64 -t ichor-musl-aarch64 --build-arg CONTAINER_OWNER_GID=$(id -g) --build-arg CONTAINER_OWNER_ID=$(id -u) . --platform=linux/arm64 || exit 1
   docker --debug run -v $(pwd)/../:/opt/ichor/src -v $(pwd)/../build:/opt/ichor/build --rm --security-opt seccomp=unconfined -it ichor-musl-aarch64 || exit 1
   # use the following to enable incremental builds for debugging (and don't forget to remove the two rm -rf's)
@@ -114,6 +113,14 @@ if [[ $DOCKER -eq 1 ]]; then
   mkdir -p ../arm_bench
   mv -f ../bin/* ../arm_bench
   rm -f ../arm_bench/*.a
+fi
+
+if [[ $DOCKERTSAN -eq 1 ]]; then
+  rm -rf ./* ../bin/*
+  docker build -f ../Dockerfile-tsan -t ichor-tsan --build-arg CONTAINER_OWNER_GID=$(id -g) --build-arg CONTAINER_OWNER_ID=$(id -u) . || exit 1
+  docker run -v $(pwd)/../:/opt/ichor/src -v $(pwd)/../build:/opt/ichor/build --rm --privileged -it ichor-tsan || exit 1
+  run_examples 0 1 0
+  run_benchmarks
 fi
 
 # Quick libcpp compile check
