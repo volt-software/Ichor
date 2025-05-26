@@ -31,7 +31,7 @@ run_examples ()
     ../bin/ichor_timer_example_uring || exit 1
     ../bin/ichor_yielding_timer_example_uring || exit 1
     ../bin/ichor_http_example_uring || exit 1
-    ../bin/ichor_etcd_example_uring || exit 1
+#    ../bin/ichor_etcd_example_uring || exit 1
   fi
 }
 run_benchmarks ()

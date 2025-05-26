@@ -131,6 +131,7 @@ void Ichor::HttpConnectionService::addDependencyInstance(IClientConnectionServic
         std::string_view msg{reinterpret_cast<char const*>(buffer.data()), buffer.size()};
         _buffer.append(msg.data(), msg.size());
         if(_buffer.size() > 1024*1024*512) {
+            ICHOR_LOG_TRACE(_logger, "HttpConnection {} buffer size {} too big", getServiceId(), _buffer.size());
             _buffer.clear();
             tl::expected<HttpResponse, HttpParseError> err = tl::unexpected(HttpParseError::BUFFEROVERFLOW);
             for(auto &evt : _events) {
@@ -139,17 +140,23 @@ void Ichor::HttpConnectionService::addDependencyInstance(IClientConnectionServic
             return;
         }
         msg = _buffer;
-        // ICHOR_LOG_TRACE(_logger, "HttpConnection {} receive buffer {}", getServiceId(), msg);
+        ICHOR_LOG_TRACE(_logger, "HttpConnection {} receive buffer {}", getServiceId(), msg);
 
         if(_events.empty()) {
             ICHOR_LOG_ERROR(_logger, "No events to set?");
         }
 
         auto pos = msg.find("\r\n\r\n");
+        ICHOR_LOG_TRACE(_logger, "HttpConnection {} pos {} total {}", getServiceId(), pos, msg.size());
 
         while(pos != std::string_view::npos) {
             pos += 4;
             auto resp = parseResponse(msg, pos);
+
+            if(!resp && resp.error() == HttpParseError::INCOMPLETEREQUEST) {
+                ICHOR_LOG_TRACE(_logger, "HttpConnection {} incomplete buffer {} pos {}", getServiceId(), msg, pos);
+                break;
+            }
 
             if(!_events.empty()) {
                 {
@@ -161,6 +168,7 @@ void Ichor::HttpConnectionService::addDependencyInstance(IClientConnectionServic
 
             msg = msg.substr(pos);
             pos = msg.find("\r\n\r\n");
+            ICHOR_LOG_TRACE(_logger, "HttpConnection {} new buffer {} pos {}", getServiceId(), msg, pos);
         }
 
         if(!msg.empty()) {
@@ -195,10 +203,12 @@ tl::expected<Ichor::HttpResponse, Ichor::HttpParseError> Ichor::HttpConnectionSe
     HttpResponse resp{};
     uint64_t lineNo{};
     uint64_t crlfCounter{};
+    uint64_t protocolLength{};
     uint64_t contentLength{};
     std::string_view partial{complete.data(), len};
     bool badRequest{};
-    // ICHOR_LOG_TRACE(_logger, "HttpConnection {} parseResponse {}", getServiceId(), complete);
+    bool contentLengthHeader{};
+    ICHOR_LOG_TRACE(_logger, "HttpConnection {} parseResponse len {} complete \"{}\" partial \"{}\"", getServiceId(), len, complete, partial);
 
     split(partial, "\r\n", false, [&](std::string_view line) {
         if(badRequest) {
@@ -244,7 +254,6 @@ tl::expected<Ichor::HttpResponse, Ichor::HttpParseError> Ichor::HttpConnectionSe
         } else if(!line.empty()) {
             uint64_t wordNo{};
             bool matchedValue{};
-            bool contentLengthHeader{};
             std::string_view key;
             split(line, ": ", false, [&](std::string_view word) {
                 if(badRequest) {
@@ -284,6 +293,8 @@ tl::expected<Ichor::HttpResponse, Ichor::HttpParseError> Ichor::HttpConnectionSe
             crlfCounter++;
         }
 
+        protocolLength += line.size() + 2;
+
         lineNo++;
     });
 
@@ -293,26 +304,23 @@ tl::expected<Ichor::HttpResponse, Ichor::HttpParseError> Ichor::HttpConnectionSe
     }
 
     if(badRequest) {
-        len = complete.size();
+        if(contentLengthHeader && complete.size() < protocolLength + contentLength) {
+            len += contentLength;
+        } else {
+            len = partial.size();
+        }
         return tl::unexpected(HttpParseError::BADREQUEST);
     }
 
-    if(complete.size() - len != contentLength) {
-        ICHOR_LOG_TRACE(_logger, "HttpConnection {} BadRequest complete.size() - len != contentLength ({} - {} != {})", getServiceId(), complete.size(), len, contentLength);
-        ICHOR_LOG_TRACE(_logger, "HttpConnection {} BadRequest complete message: {}", getServiceId(), complete);
-        ICHOR_LOG_TRACE(_logger, "HttpConnection {} BadRequest partial message: {}", getServiceId(), partial);
-        badRequest = true;
+    if(contentLengthHeader && complete.size() < protocolLength + contentLength) {
+        ICHOR_LOG_TRACE(_logger, "incomplete request {} {} {}", complete.size(), len, contentLength);
+        return tl::unexpected(HttpParseError::INCOMPLETEREQUEST);
     } else {
         std::string_view content{complete.data() + len, contentLength};
         resp.body.reserve(contentLength + 1);
         resp.body.assign(content.begin(), content.end());
         resp.body.emplace_back(0);
-        len = complete.size();
-    }
-
-    if(badRequest) {
-        len = complete.size();
-        return tl::unexpected(HttpParseError::BADREQUEST);
+        len += contentLength;
     }
 
     ICHOR_LOG_TRACE(_logger, "HttpConnection {} parsed \"{}\" {} {}", getServiceId(), partial, static_cast<uint_fast16_t>(resp.status), resp.body.size());

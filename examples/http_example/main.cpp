@@ -4,7 +4,6 @@
 #include <ichor/services/logging/NullLogger.h>
 #include <ichor/services/logging/LoggerFactory.h>
 #include <ichor/services/network/ClientFactory.h>
-#include <ichor/services/serialization/ISerializer.h>
 #include <ichor/ichor-mimalloc.h>
 
 // Some compile time logic to instantiate a regular cout logger or to use the spdlog logger, if Ichor has been compiled with it.
@@ -24,12 +23,12 @@
 #include <ichor/event_queues/IOUringQueue.h>
 #include <ichor/services/network/http/HttpHostService.h>
 #include <ichor/services/network/http/HttpConnectionService.h>
-#include <ichor/services/network/tcp/IOUringTcpConnectionService.h>
 #include <ichor/services/network/tcp/IOUringTcpHostService.h>
+#include <ichor/services/network/tcp/IOUringTcpConnectionService.h>
 
 #define QIMPL IOUringQueue
-#define CONNIMPL IOUringTcpConnectionService
 #define HOSTIMPL IOUringTcpHostService
+#define CONNIMPL IOUringTcpConnectionService
 #define HTTPHOSTIMPL HttpHostService
 #define HTTPCONNIMPL HttpConnectionService
 #else

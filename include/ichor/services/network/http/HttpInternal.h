@@ -15,7 +15,8 @@ namespace Ichor {
         BADREQUEST,
         WRONGHTTPVERSION,
         QUITTING,
-        BUFFEROVERFLOW
+        BUFFEROVERFLOW,
+        INCOMPLETEREQUEST
     };
 }
 
@@ -38,6 +39,8 @@ struct fmt::formatter<Ichor::HttpParseError> {
                 return fmt::format_to(ctx.out(), "QUITTING");
             case Ichor::HttpParseError::BUFFEROVERFLOW:
                 return fmt::format_to(ctx.out(), "BUFFEROVERFLOW");
+            case Ichor::HttpParseError::INCOMPLETEREQUEST:
+                return fmt::format_to(ctx.out(), "INCOMPLETEREQUEST");
         }
         return fmt::format_to(ctx.out(), "error, please file a bug in Ichor");
     }
