@@ -315,20 +315,21 @@ void Ichor::Boost::HttpHostService::read(tcp::socket socket, net::yield_context 
         if (!req.body().empty() && *req.body().rbegin() != 0) {
             req.body().push_back(0);
         }
-        HttpRequest httpReq{ std::move(req.body()), static_cast<HttpMethod>(req.method()), std::move(target), {}, addr, std::move(headers) };
+        HttpRequest httpReq{ std::move(req.body()), static_cast<HttpMethod>(req.method()), target, {}, addr, std::move(headers) };
         // Compiler bug prevents using named captures for now: https://www.reddit.com/r/cpp_questions/comments/17lc55f/coroutine_msvc_compiler_bug/
 #if (defined(WIN32) || defined(_WIN32) || defined(__WIN32)) && !defined(__CYGWIN__)
         auto version = req.version();
         auto keep_alive = req.keep_alive();
         _queue->pushEvent<RunFunctionEventAsync>(getServiceId(), [this, connection, httpReq, version, keep_alive]() mutable -> AsyncGenerator<IchorBehaviour> {
 #else
-        _queue->pushEvent<RunFunctionEventAsync>(getServiceId(), [this, connection, httpReq = std::move(httpReq), version = req.version(), keep_alive = req.keep_alive()]() mutable -> AsyncGenerator<IchorBehaviour> {
+        _queue->pushEvent<RunFunctionEventAsync>(getServiceId(), [this, connection, target = std::move(target), httpReq = std::move(httpReq), version = req.version(), keep_alive = req.keep_alive()]() mutable -> AsyncGenerator<IchorBehaviour> {
 #endif
             auto routes = _handlers.find(httpReq.method);
 
             if (_quit || _queue->fibersShouldStop()) {
                 co_return{};
             }
+            httpReq.route = target;
 
             if (routes != std::end(_handlers)) {
                 std::function<Task<HttpResponse>(HttpRequest&)> const *f{};
