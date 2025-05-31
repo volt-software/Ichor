@@ -21,7 +21,7 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::IOUringTcpConnectionSe
         fmt::println("Kernel version too old to use IOUringTcpConnectionService. Requires >= 5.5.0");
         co_return tl::unexpected(StartError::FAILED);
     }
-    fmt::println("{}::start() {}", typeName<IOUringTcpConnectionService>(), AdvancedService<IOUringTcpConnectionService>::getServiceId());
+    // fmt::println("{}::start() {}", typeName<IOUringTcpConnectionService>(), AdvancedService<IOUringTcpConnectionService>::getServiceId());
     auto const &props = AdvancedService<IOUringTcpConnectionService>::getProperties();
 
     if(auto propIt = props.find("TimeoutSendUs"); propIt != props.end()) {
@@ -223,7 +223,7 @@ Ichor::Task<void> Ichor::IOUringTcpConnectionService<InterfaceT>::stop() {
 
             co_await evt;
 
-            if(shutdownRes < 0) {
+            if(shutdownRes < 0 && shutdownRes != -ENOTCONN) {
                 ICHOR_LOG_ERROR(_logger, "Couldn't shutdown socket: {}", mapErrnoToError(-shutdownRes));
             }
             if(closeRes < 0) {
@@ -286,7 +286,11 @@ std::function<void(io_uring_cqe*)> Ichor::IOUringTcpConnectionService<InterfaceT
 
         // TODO: check for -ENOBUFS and if so, create more provided buffers, swap and re-arm
         if(cqe->res <= 0) {
-            ICHOR_LOG_ERROR(_logger, "recv returned an error {}:{}", cqe->res, strerror(-cqe->res));
+            if(cqe->res < 0 && cqe->res != -ECONNRESET) {
+                ICHOR_LOG_ERROR(_logger, "recv returned an error {}:{}", cqe->res, strerror(-cqe->res));
+            } else {
+                ICHOR_LOG_TRACE(_logger, "recv returned an error {}:{}", cqe->res, strerror(-cqe->res));
+            }
             GetThreadLocalEventQueue().pushEvent<StopServiceEvent>(AdvancedService<IOUringTcpConnectionService>::getServiceId(), AdvancedService<IOUringTcpConnectionService>::getServiceId(), true);
             _quitEvt.set();
             return;

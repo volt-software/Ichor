@@ -255,15 +255,18 @@ tl::expected<Ichor::HttpRequest, Ichor::HttpParseError> Ichor::HttpHostService::
 }
 
 Ichor::Task<void> Ichor::HttpHostService::receiveRequestHandler(ServiceIdType id) {
-    auto &string = _connectionBuffers[id];
-    if(string.size() > 1024*1024*512) {
-        string.clear();
-        HttpResponse resp{};
-        resp.status = HttpStatus::internal_server_error;
-        co_await sendResponse(id, resp);
-        co_return;
+    std::string_view msg;
+    {
+        auto &string = _connectionBuffers[id];
+        if(string.size() > 1024*1024*512) {
+            string.clear();
+            HttpResponse resp{};
+            resp.status = HttpStatus::internal_server_error;
+            co_await sendResponse(id, resp);
+            co_return;
+        }
+        msg = string;
     }
-    std::string_view msg = string;
 
     auto pos = msg.find("\r\n\r\n");
     ICHOR_LOG_TRACE(_logger, "HttpHostService {} pos {} total {}", getServiceId(), pos, msg.size());
@@ -299,11 +302,17 @@ Ichor::Task<void> Ichor::HttpHostService::receiveRequestHandler(ServiceIdType id
 
         co_await sendResponse(id, resp);
 
+        if(!_connections.contains(id)) {
+            ICHOR_LOG_TRACE(_logger, "HttpHostService {} connection {} closed", getServiceId(), id);
+            co_return;
+        }
+
         msg = msg.substr(pos);
         pos = msg.find("\r\n\r\n");
         ICHOR_LOG_TRACE(_logger, "HttpHostService {} new buffer {} pos {}", getServiceId(), msg, pos);
     }
 
+    auto &string = _connectionBuffers[id];
     if(!msg.empty()) {
         string = msg;
     } else {
