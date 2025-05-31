@@ -183,7 +183,7 @@ namespace Ichor {
     struct HttpRequest {
         std::vector<uint8_t> body;
         HttpMethod method;
-        std::string route;
+        std::string_view route;
         std::vector<std::string> regex_params;
         std::string_view address;
         unordered_map<std::string, std::string> headers;
