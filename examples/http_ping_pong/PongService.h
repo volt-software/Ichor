@@ -18,6 +18,8 @@ public:
             ICHOR_LOG_INFO(_logger, "received request from {} on route {} {} with PingMsg {}", req.address, (int) req.method, req.route, msg->sequence);
             co_return HttpResponse{HttpStatus::ok, "application/json", serializer->serialize(PingMsg{msg->sequence}), {}};
         });
+
+        fmt::println("started!");
     }
     ~PongService() {
         ICHOR_LOG_INFO(_logger, "PongService stopped");
