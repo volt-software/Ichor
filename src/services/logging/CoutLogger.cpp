@@ -13,7 +13,7 @@ Ichor::CoutLogger::CoutLogger(Properties props) : AdvancedService(std::move(prop
 
 void Ichor::CoutLogger::trace(const char *filename_in, int line_in, const char *funcname_in,
                                          std::string_view format_str, fmt::format_args args) {
-    ICHOR_CONTRACT_ASSERT(_level <= LogLevel::LOG_ERROR);
+    ICHOR_CONTRACT_ASSERT(_level <= LogLevel::LOG_TRACE);
 
     fmt::basic_memory_buffer<char, FMT_INLINE_BUFFER_SIZE> buf{};
 #ifndef ICHOR_REMOVE_SOURCE_NAMES_FROM_LOGGING
@@ -28,7 +28,7 @@ void Ichor::CoutLogger::trace(const char *filename_in, int line_in, const char *
 
 void Ichor::CoutLogger::debug(const char *filename_in, int line_in, const char *funcname_in,
                                          std::string_view format_str, fmt::format_args args) {
-    ICHOR_CONTRACT_ASSERT(_level <= LogLevel::LOG_ERROR);
+    ICHOR_CONTRACT_ASSERT(_level <= LogLevel::LOG_DEBUG);
 
     fmt::basic_memory_buffer<char, FMT_INLINE_BUFFER_SIZE> buf{};
 #ifndef ICHOR_REMOVE_SOURCE_NAMES_FROM_LOGGING
@@ -43,7 +43,7 @@ void Ichor::CoutLogger::debug(const char *filename_in, int line_in, const char *
 
 void Ichor::CoutLogger::info(const char *filename_in, int line_in, const char *funcname_in,
                                         std::string_view format_str, fmt::format_args args) {
-    ICHOR_CONTRACT_ASSERT(_level <= LogLevel::LOG_ERROR);
+    ICHOR_CONTRACT_ASSERT(_level <= LogLevel::LOG_INFO);
 
     fmt::basic_memory_buffer<char, FMT_INLINE_BUFFER_SIZE> buf{};
 #ifndef ICHOR_REMOVE_SOURCE_NAMES_FROM_LOGGING
@@ -58,7 +58,7 @@ void Ichor::CoutLogger::info(const char *filename_in, int line_in, const char *f
 
 void Ichor::CoutLogger::warn(const char *filename_in, int line_in, const char *funcname_in,
                                         std::string_view format_str, fmt::format_args args) {
-    ICHOR_CONTRACT_ASSERT(_level <= LogLevel::LOG_ERROR);
+    ICHOR_CONTRACT_ASSERT(_level <= LogLevel::LOG_WARN);
 
     fmt::basic_memory_buffer<char, FMT_INLINE_BUFFER_SIZE> buf{};
 #ifndef ICHOR_REMOVE_SOURCE_NAMES_FROM_LOGGING

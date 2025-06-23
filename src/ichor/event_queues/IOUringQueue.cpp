@@ -170,6 +170,14 @@ struct fmt::formatter<io_uring_op> {
                 return fmt::format_to(ctx.out(), "io_uring_op::IORING_OP_BIND");
             case io_uring_op::IORING_OP_LISTEN:
                 return fmt::format_to(ctx.out(), "io_uring_op::IORING_OP_LISTEN");
+            case io_uring_op::IORING_OP_RECV_ZC:
+                return fmt::format_to(ctx.out(), "io_uring_op::IORING_OP_RECV_ZC");
+            case io_uring_op::IORING_OP_EPOLL_WAIT:
+                return fmt::format_to(ctx.out(), "io_uring_op::IORING_OP_EPOLL_WAIT");
+            case io_uring_op::IORING_OP_READV_FIXED:
+                return fmt::format_to(ctx.out(), "io_uring_op::IORING_OP_READV_FIXED");
+            case io_uring_op::IORING_OP_WRITEV_FIXED:
+                return fmt::format_to(ctx.out(), "io_uring_op::IORING_OP_WRITEV_FIXED");
             case io_uring_op::IORING_OP_LAST:
                 return fmt::format_to(ctx.out(), "io_uring_op::IORING_OP_LAST");
         }
