@@ -52,28 +52,28 @@ Ichor::SpdlogFrameworkLogger::SpdlogFrameworkLogger(Properties props) : Advanced
 
 void Ichor::SpdlogFrameworkLogger::trace(const char *filename_in, int line_in, const char *funcname_in,
                                           std::string_view format_str, fmt::format_args args) {
-    ICHOR_CONTRACT_ASSERT(_level <= LogLevel::LOG_ERROR);
+    ICHOR_CONTRACT_ASSERT(_level <= LogLevel::LOG_TRACE);
 
     spdlog::log(spdlog::source_loc{filename_in, line_in, funcname_in}, spdlog::level::trace, fmt::vformat(format_str, args));
 }
 
 void Ichor::SpdlogFrameworkLogger::debug(const char *filename_in, int line_in, const char *funcname_in,
                                           std::string_view format_str, fmt::format_args args) {
-    ICHOR_CONTRACT_ASSERT(_level <= LogLevel::LOG_ERROR);
+    ICHOR_CONTRACT_ASSERT(_level <= LogLevel::LOG_DEBUG);
 
     spdlog::log(spdlog::source_loc{filename_in, line_in, funcname_in}, spdlog::level::debug, fmt::vformat(format_str, args));
 }
 
 void Ichor::SpdlogFrameworkLogger::info(const char *filename_in, int line_in, const char *funcname_in,
                                           std::string_view format_str, fmt::format_args args) {
-    ICHOR_CONTRACT_ASSERT(_level <= LogLevel::LOG_ERROR);
+    ICHOR_CONTRACT_ASSERT(_level <= LogLevel::LOG_INFO);
 
     spdlog::log(spdlog::source_loc{filename_in, line_in, funcname_in}, spdlog::level::info, fmt::vformat(format_str, args));
 }
 
 void Ichor::SpdlogFrameworkLogger::warn(const char *filename_in, int line_in, const char *funcname_in,
                                           std::string_view format_str, fmt::format_args args) {
-    ICHOR_CONTRACT_ASSERT(_level <= LogLevel::LOG_ERROR);
+    ICHOR_CONTRACT_ASSERT(_level <= LogLevel::LOG_WARN);
 
     spdlog::log(spdlog::source_loc{filename_in, line_in, funcname_in}, spdlog::level::warn, fmt::vformat(format_str, args));
 }

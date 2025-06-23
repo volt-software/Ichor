@@ -13,39 +13,74 @@ Ichor::SpdlogLogger::SpdlogLogger(DependencyRegister &reg, Properties props) : A
     }
 }
 
-void Ichor::SpdlogLogger::trace(const char *filename_in, int line_in, const char *funcname_in,
-                                           std::string_view format_str, fmt::format_args args) {
-    ICHOR_CONTRACT_ASSERT(_level <= LogLevel::LOG_ERROR);
+Ichor::SpdlogLogger::~SpdlogLogger() {
+    delete static_cast<spdlog::logger*>(_logger);
+    _logger = nullptr;
+}
 
-    _logger->log(spdlog::source_loc{filename_in, line_in, funcname_in}, spdlog::level::trace, fmt::vformat(format_str, args));
+void Ichor::SpdlogLogger::trace(const char *filename_in, int line_in, const char *funcname_in,
+                                std::string_view format_str, fmt::format_args args) {
+    ICHOR_CONTRACT_ASSERT(_level <= LogLevel::LOG_TRACE);
+
+#if defined(ICHOR_USE_HARDENING) || defined(ICHOR_ENABLE_INTERNAL_DEBUGGING)
+    if(_logger == nullptr) {
+        std::terminate();
+    }
+#endif
+
+    static_cast<spdlog::logger*>(_logger)->log(spdlog::source_loc{filename_in, line_in, funcname_in}, spdlog::level::trace, fmt::vformat(format_str, args));
 }
 
 void Ichor::SpdlogLogger::debug(const char *filename_in, int line_in, const char *funcname_in,
                                            std::string_view format_str, fmt::format_args args) {
-    ICHOR_CONTRACT_ASSERT(_level <= LogLevel::LOG_ERROR);
+    ICHOR_CONTRACT_ASSERT(_level <= LogLevel::LOG_DEBUG);
 
-    _logger->log(spdlog::source_loc{filename_in, line_in, funcname_in}, spdlog::level::debug, fmt::vformat(format_str, args));
+#if defined(ICHOR_USE_HARDENING) || defined(ICHOR_ENABLE_INTERNAL_DEBUGGING)
+    if(_logger == nullptr) {
+        std::terminate();
+    }
+#endif
+
+    static_cast<spdlog::logger*>(_logger)->log(spdlog::source_loc{filename_in, line_in, funcname_in}, spdlog::level::debug, fmt::vformat(format_str, args));
 }
 
 void Ichor::SpdlogLogger::info(const char *filename_in, int line_in, const char *funcname_in,
                                           std::string_view format_str, fmt::format_args args) {
-    ICHOR_CONTRACT_ASSERT(_level <= LogLevel::LOG_ERROR);
+    ICHOR_CONTRACT_ASSERT(_level <= LogLevel::LOG_INFO);
 
-    _logger->log(spdlog::source_loc{filename_in, line_in, funcname_in}, spdlog::level::info, fmt::vformat(format_str, args));
+#if defined(ICHOR_USE_HARDENING) || defined(ICHOR_ENABLE_INTERNAL_DEBUGGING)
+    if(_logger == nullptr) {
+        std::terminate();
+    }
+#endif
+
+    static_cast<spdlog::logger*>(_logger)->log(spdlog::source_loc{filename_in, line_in, funcname_in}, spdlog::level::info, fmt::vformat(format_str, args));
 }
 
 void Ichor::SpdlogLogger::warn(const char *filename_in, int line_in, const char *funcname_in,
                                           std::string_view format_str, fmt::format_args args) {
-    ICHOR_CONTRACT_ASSERT(_level <= LogLevel::LOG_ERROR);
+    ICHOR_CONTRACT_ASSERT(_level <= LogLevel::LOG_WARN);
 
-    _logger->log(spdlog::source_loc{filename_in, line_in, funcname_in}, spdlog::level::warn, fmt::vformat(format_str, args));
+#if defined(ICHOR_USE_HARDENING) || defined(ICHOR_ENABLE_INTERNAL_DEBUGGING)
+    if(_logger == nullptr) {
+        std::terminate();
+    }
+#endif
+
+    static_cast<spdlog::logger*>(_logger)->log(spdlog::source_loc{filename_in, line_in, funcname_in}, spdlog::level::warn, fmt::vformat(format_str, args));
 }
 
 void Ichor::SpdlogLogger::error(const char *filename_in, int line_in, const char *funcname_in,
                                            std::string_view format_str, fmt::format_args args) {
     ICHOR_CONTRACT_ASSERT(_level <= LogLevel::LOG_ERROR);
 
-    _logger->log(spdlog::source_loc{filename_in, line_in, funcname_in}, spdlog::level::err, fmt::vformat(format_str, args));
+#if defined(ICHOR_USE_HARDENING) || defined(ICHOR_ENABLE_INTERNAL_DEBUGGING)
+    if(_logger == nullptr) {
+        std::terminate();
+    }
+#endif
+
+    static_cast<spdlog::logger*>(_logger)->log(spdlog::source_loc{filename_in, line_in, funcname_in}, spdlog::level::err, fmt::vformat(format_str, args));
 }
 
 void Ichor::SpdlogLogger::setLogLevel(LogLevel level) noexcept {
@@ -58,12 +93,12 @@ Ichor::LogLevel Ichor::SpdlogLogger::getLogLevel() const noexcept {
 
 Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::SpdlogLogger::start() {
     auto const &sinks = _sharedService->getSinks();
-    _logger = make_reference_counted<spdlog::logger>("multi_sink", sinks.begin(), sinks.end());
+    _logger = new spdlog::logger("multi_sink", sinks.begin(), sinks.end());
 
 #ifndef ICHOR_REMOVE_SOURCE_NAMES_FROM_LOGGING
-    _logger->set_pattern("[%C-%m-%d %H:%M:%S.%e] [%s:%#] [%L] %v");
+    static_cast<spdlog::logger*>(_logger)->set_pattern("[%C-%m-%d %H:%M:%S.%e] [%s:%#] [%L] %v");
 #else
-    _logger->set_pattern("[%C-%m-%d %H:%M:%S.%e] [%L] %v");
+    static_cast<spdlog::logger*>(_logger)->set_pattern("[%C-%m-%d %H:%M:%S.%e] [%L] %v");
 #endif
 
     auto requestedLevelIt = _properties.find("LogLevel");
@@ -72,11 +107,13 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::SpdlogLogger::start() 
     } else {
         _level = Ichor::LogLevel::LOG_INFO;
     }
-    _logger->set_level(spdlog::level::trace);
+    static_cast<spdlog::logger*>(_logger)->set_level(spdlog::level::trace);
     co_return {};
 }
 
 Ichor::Task<void> Ichor::SpdlogLogger::stop() {
+    delete static_cast<spdlog::logger*>(_logger);
+    _logger = nullptr;
     co_return;
 }
 
