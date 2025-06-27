@@ -66,11 +66,42 @@ namespace Ichor {
         -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
         -1, -1, -1, -1, -1, -1, -1, -1, -1};
 
+    /// Unsafe function to convert hex string to uint, assumes input has been checked. Does not overflow.
+    /// @param str
+    /// @return uint64_t
     static constexpr uint64_t FastHexToUint(std::string_view str) noexcept {
+        if(str.size() > 16) {
+            return -1ull;
+        }
+
         uint64_t ret{};
         uint64_t shift{};
         auto it = str.crbegin();
         while(it != str.crend()) {
+            ret += static_cast<uint64_t>(digittoval[static_cast<unsigned char>(*it)]) << shift;
+            shift += 4;
+            ++it;
+        }
+        return ret;
+    }
+
+    /// Function to convert hex string to uint. Safe to use with unsanitized input and with values that may overflow.
+    /// @param str
+    /// @return Nothing if input not hex or if input would cause value to be more than uint64_t::max
+    static constexpr tl::optional<uint64_t> SafeHexToUint(std::string_view str) noexcept {
+        if(str.size() > 16) {
+            return tl::nullopt;
+        }
+
+        uint64_t ret{};
+        uint64_t shift{};
+        auto it = str.crbegin();
+        while(it != str.crend()) {
+            if(digittoval[static_cast<unsigned char>(*it)] == -1) {
+                return tl::nullopt;
+            }
+
+            auto prev = ret;
             ret += static_cast<uint64_t>(digittoval[static_cast<unsigned char>(*it)]) << shift;
             shift += 4;
             ++it;

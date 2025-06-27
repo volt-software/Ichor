@@ -1473,7 +1473,7 @@ TEST_CASE("STL Tests") {
         }
     }
 
-    SECTION("Hex String To Uint64_t") {
+    SECTION("Fast Hex String To Uint64_t") {
         REQUIRE(FastHexToUint("0") == 0ull);
         REQUIRE(FastHexToUint("1") == 1ull);
         REQUIRE(FastHexToUint("2") == 2ull);
@@ -1496,7 +1496,6 @@ TEST_CASE("STL Tests") {
         REQUIRE(FastHexToUint("D") == 13ull);
         REQUIRE(FastHexToUint("E") == 14ull);
         REQUIRE(FastHexToUint("F") == 15ull);
-        REQUIRE(FastHexToUint("g") == -1ull);
         REQUIRE(FastHexToUint("10") == 16ull);
         REQUIRE(FastHexToUint("11") == 17ull);
         REQUIRE(FastHexToUint("12") == 18ull);
@@ -1514,6 +1513,57 @@ TEST_CASE("STL Tests") {
         REQUIRE(FastHexToUint("1e") == 30ull);
         REQUIRE(FastHexToUint("1f") == 31ull);
         REQUIRE(FastHexToUint("DEADBEEF") == 3735928559ull);
-        REQUIRE(FastHexToUint("DEADBEEFDEADBEEFDEADBEEFDEADBEEF") == 13644637895957118430ull); // overflow stuff happened, but it's defined behaviour
+        REQUIRE(FastHexToUint("FFFFFFFFFFFFFFFF") == std::numeric_limits<uint64_t>::max());
+        REQUIRE(FastHexToUint("FFFFFFFFFFFFFFFFF") == -1ull); // not desired, but it's defined behaviour
+        REQUIRE(FastHexToUint("g") == -1ull); // not desired, but it's defined behaviour
+        REQUIRE(FastHexToUint("😜") == 18446744073709547247ull); // not desired, but it's defined behaviour
+        REQUIRE(FastHexToUint("DEADBEEFDEADBEEFDEADBEEFDEADBEEF") == -1ull); // not desired, but it's defined behaviour
+    }
+
+    SECTION("Safe Hex String To Uint64_t") {
+        REQUIRE(SafeHexToUint("0") == 0ull);
+        REQUIRE(SafeHexToUint("1") == 1ull);
+        REQUIRE(SafeHexToUint("2") == 2ull);
+        REQUIRE(SafeHexToUint("3") == 3ull);
+        REQUIRE(SafeHexToUint("4") == 4ull);
+        REQUIRE(SafeHexToUint("5") == 5ull);
+        REQUIRE(SafeHexToUint("6") == 6ull);
+        REQUIRE(SafeHexToUint("7") == 7ull);
+        REQUIRE(SafeHexToUint("8") == 8ull);
+        REQUIRE(SafeHexToUint("9") == 9ull);
+        REQUIRE(SafeHexToUint("a") == 10ull);
+        REQUIRE(SafeHexToUint("b") == 11ull);
+        REQUIRE(SafeHexToUint("c") == 12ull);
+        REQUIRE(SafeHexToUint("d") == 13ull);
+        REQUIRE(SafeHexToUint("e") == 14ull);
+        REQUIRE(SafeHexToUint("f") == 15ull);
+        REQUIRE(SafeHexToUint("A") == 10ull);
+        REQUIRE(SafeHexToUint("B") == 11ull);
+        REQUIRE(SafeHexToUint("C") == 12ull);
+        REQUIRE(SafeHexToUint("D") == 13ull);
+        REQUIRE(SafeHexToUint("E") == 14ull);
+        REQUIRE(SafeHexToUint("F") == 15ull);
+        REQUIRE(SafeHexToUint("10") == 16ull);
+        REQUIRE(SafeHexToUint("11") == 17ull);
+        REQUIRE(SafeHexToUint("12") == 18ull);
+        REQUIRE(SafeHexToUint("13") == 19ull);
+        REQUIRE(SafeHexToUint("14") == 20ull);
+        REQUIRE(SafeHexToUint("15") == 21ull);
+        REQUIRE(SafeHexToUint("16") == 22ull);
+        REQUIRE(SafeHexToUint("17") == 23ull);
+        REQUIRE(SafeHexToUint("18") == 24ull);
+        REQUIRE(SafeHexToUint("19") == 25ull);
+        REQUIRE(SafeHexToUint("1a") == 26ull);
+        REQUIRE(SafeHexToUint("1b") == 27ull);
+        REQUIRE(SafeHexToUint("1c") == 28ull);
+        REQUIRE(SafeHexToUint("1d") == 29ull);
+        REQUIRE(SafeHexToUint("1e") == 30ull);
+        REQUIRE(SafeHexToUint("1f") == 31ull);
+        REQUIRE(SafeHexToUint("DEADBEEF") == 3735928559ull);
+        REQUIRE(SafeHexToUint("FFFFFFFFFFFFFFFF") == std::numeric_limits<uint64_t>::max());
+        REQUIRE(!SafeHexToUint("FFFFFFFFFFFFFFFFF"));
+        REQUIRE(!SafeHexToUint("g"));
+        REQUIRE(!SafeHexToUint("😜"));
+        REQUIRE(!SafeHexToUint("DEADBEEFDEADBEEFDEADBEEFDEADBEEF")); // overflow stuff happened, but it's defined behaviour
     }
 }
