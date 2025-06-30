@@ -137,7 +137,7 @@ TEST_CASE("HttpConnectionTests") {
         auto f = [&]() mutable -> AsyncGenerator<tl::expected<HttpResponse, HttpError>> {
             unordered_map<std::string, std::string> headers;
             headers.emplace("testheader", "test");
-            std::string_view body_view = "<html><body>This is my basic webpage</body></html>";
+            std::string_view body_view = "<html><body>This is my basic webpa\r\n</body></html>";
             std::vector<uint8_t> body{body_view.begin(), body_view.end()};
             co_return co_await svc.getService().sendAsync(HttpMethod::post, "/some/route", std::move(headers), std::move(body));
         };
@@ -146,7 +146,7 @@ TEST_CASE("HttpConnectionTests") {
         REQUIRE(!it2.get_finished());
         REQUIRE(conn.getService().sentMessages.size() == 1);
         std::string_view sentMsg{reinterpret_cast<const char *>(conn.getService().sentMessages[0].data()), conn.getService().sentMessages[0].size()};
-        REQUIRE(sentMsg == "POST /some/route HTTP/1.1\r\ntestheader: test\r\nHost: 192.168.10.10\r\nContent-Length: 50\r\n\r\n<html><body>This is my basic webpage</body></html>");
+        REQUIRE(sentMsg == "POST /some/route HTTP/1.1\r\ntestheader: test\r\nHost: 192.168.10.10\r\nContent-Length: 50\r\n\r\n<html><body>This is my basic webpa\r\n</body></html>");
 
         std::string req{"HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n\r\n"};
         conn.getService().rcvHandler(std::span<uint8_t const>{reinterpret_cast<uint8_t*>(req.data()), req.size()});
@@ -172,7 +172,7 @@ TEST_CASE("HttpConnectionTests") {
         std::string_view sentMsg{reinterpret_cast<const char *>(conn.getService().sentMessages[0].data()), conn.getService().sentMessages[0].size()};
         REQUIRE(sentMsg == "GET /some/route HTTP/1.1\r\nHost: 192.168.10.10\r\n\r\n");
 
-        std::string req{"HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: 50\r\n\r\n<html><body>This is my basic webpage</body></html>"};
+        std::string req{"HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: 50\r\n\r\n<html><body>This is my basic webpa\r\n</body></html>"};
         conn.getService().rcvHandler(std::span<uint8_t const>{reinterpret_cast<uint8_t*>(req.data()), req.size()});
 
         REQUIRE(it2.get_finished());
@@ -184,7 +184,7 @@ TEST_CASE("HttpConnectionTests") {
         REQUIRE(resp->status == HttpStatus::ok);
         REQUIRE(resp->body.size() == 51);
         std::string_view resBody{reinterpret_cast<const char *>(resp->body.data()), resp->body.size() - 1};
-        REQUIRE(resBody == "<html><body>This is my basic webpage</body></html>");
+        REQUIRE(resBody == "<html><body>This is my basic webpa\r\n</body></html>");
     }
 
     SECTION("GET response with body in two packets") {
@@ -295,6 +295,34 @@ TEST_CASE("HttpConnectionTests") {
         auto resp = it2.get_value<tl::expected<HttpResponse, HttpError>>();
         REQUIRE(!resp);
         REQUIRE(resp.error() == HttpError::UNABLE_TO_PARSE_HEADER);
+    }
+
+    SECTION("Chunked response basic") {
+        auto f = [&]() mutable -> AsyncGenerator<tl::expected<HttpResponse, HttpError>> {
+            co_return co_await svc.getService().sendAsync(HttpMethod::get, "/some/route", {}, {});
+        };
+        auto gen2 = f();
+        auto it2 = gen2.begin();
+        REQUIRE(!it2.get_finished());
+        REQUIRE(conn.getService().sentMessages.size() == 1);
+        std::string_view sentMsg{reinterpret_cast<const char *>(conn.getService().sentMessages[0].data()), conn.getService().sentMessages[0].size()};
+        REQUIRE(sentMsg == "GET /some/route HTTP/1.1\r\nHost: 192.168.10.10\r\n\r\n");
+
+        std::string req{"HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nTransfer-Encoding: chunked\r\n\r\n1a\r\nabcdefghijklmnopqrstuvwxyz\r\n10\r\n1234567890abcdef\r\n0\r\nsome-footer: some-value\r\nanother-footer: another-value\r\n\r\n"};
+        conn.getService().rcvHandler(std::span<uint8_t const>{reinterpret_cast<uint8_t*>(req.data()), req.size()});
+
+        REQUIRE(it2.get_finished());
+        auto resp = it2.get_value<tl::expected<HttpResponse, HttpError>>();
+        REQUIRE(resp);
+        REQUIRE(resp->headers.size() == 4);
+        REQUIRE(resp->headers["Content-Type"] == "application/json");
+        REQUIRE(resp->headers["Transfer-Encoding"] == "chunked");
+        REQUIRE(resp->headers["some-footer"] == "some-value");
+        REQUIRE(resp->headers["another-footer"] == "another-value");
+        REQUIRE(resp->status == HttpStatus::ok);
+        REQUIRE(resp->body.size() == 43);
+        std::string_view resBody{reinterpret_cast<const char *>(resp->body.data()), resp->body.size() - 1};
+        REQUIRE(resBody == "abcdefghijklmnopqrstuvwxyz1234567890abcdef");
     }
 }
 
@@ -579,6 +607,46 @@ TEST_CASE("HttpHostTests") {
         REQUIRE(reqCopy.body.size() == 51);
         std::string_view reqBody{reinterpret_cast<const char *>(reqCopy.body.data()), reqCopy.body.size() - 1};
         REQUIRE(reqBody == "<html><body>This is my basic webpage</body></html>");
+    }
+
+    SECTION("POST body with crlf") {
+        HttpRequest reqCopy{};
+        std::string address{};
+        auto reg = svc.getService().addRoute(HttpMethod::post, "/some/route", [&reqCopy, &address](HttpRequest &req) -> Task<HttpResponse> {
+            reqCopy = req;
+            address = req.address;
+            co_return HttpResponse{HttpStatus::ok, "text/plain", {}, {}};
+        });
+        std::string req{"POST /some/route HTTP/1.1\r\ntestheader: test\r\nHost: 192.168.10.10\r\nContent-Length: 50\r\n\r\n<html><body>This is my basic webpa\r\n</body></html>"};
+        conn.getService().rcvHandler(std::span<uint8_t const>{reinterpret_cast<uint8_t*>(req.data()), req.size()});
+        REQUIRE(q.getService().events.size() == 1);
+        REQUIRE(q.getService().events[0]->get_type() == RunFunctionEventAsync::TYPE);
+        auto *evt = q.getService().events[0].get();
+        auto gen2 = static_cast<RunFunctionEventAsync*>(evt)->fun();
+        auto it2 = gen2.begin();
+        REQUIRE(it2.get_finished());
+        auto _ = it2.get_value<IchorBehaviour>();
+        REQUIRE(conn.getService().sentMessages.size() == 1);
+        std::string_view sentMsg{reinterpret_cast<const char *>(conn.getService().sentMessages[0].data()), conn.getService().sentMessages[0].size()};
+        REQUIRE(sentMsg == "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n\r\n");
+
+        REQUIRE(reqCopy.headers.size() == 3);
+        auto testheader = reqCopy.headers.find("testheader");
+        REQUIRE(testheader != reqCopy.headers.end());
+        REQUIRE(testheader->second == "test");
+        auto contentLengthHeader = reqCopy.headers.find("Content-Length");
+        REQUIRE(contentLengthHeader != reqCopy.headers.end());
+        REQUIRE(contentLengthHeader->second == "50");
+        auto hostheader = reqCopy.headers.find("Host");
+        REQUIRE(hostheader != reqCopy.headers.end());
+        REQUIRE(hostheader->second == "192.168.10.10");
+
+        REQUIRE(reqCopy.route == "/some/route");
+        REQUIRE(reqCopy.method == HttpMethod::post);
+        REQUIRE(address == "");
+        REQUIRE(reqCopy.body.size() == 51);
+        std::string_view reqBody{reinterpret_cast<const char *>(reqCopy.body.data()), reqCopy.body.size() - 1};
+        REQUIRE(reqBody == "<html><body>This is my basic webpa\r\n</body></html>");
     }
 
     SECTION("POST basic in two packets") {

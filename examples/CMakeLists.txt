@@ -61,7 +61,6 @@ if(ICHOR_USE_BOOST_BEAST)
     add_executable(ichor_etcd_example_boost ${EXAMPLE_SOURCES})
     target_link_libraries(ichor_etcd_example_boost ${CMAKE_THREAD_LIBS_INIT})
     target_link_libraries(ichor_etcd_example_boost ichor)
-    target_link_libraries(ichor_etcd_example_boost ${ETCD_TARGET})
 
     file(GLOB_RECURSE EXAMPLE_SOURCES ${ICHOR_TOP_DIR}/examples/websocket_example/*.cpp)
     add_executable(ichor_websocket_example ${EXAMPLE_SOURCES})

@@ -1,6 +1,38 @@
 #include <ichor/services/network/http/HttpConnectionService.h>
 #include <ichor/stl/StringUtils.h>
 
+namespace {
+    enum class ChunkParseStatus {
+        NONE,
+        LENGTH,
+        CONTENT,
+        DONE
+    };
+}
+
+template <>
+struct fmt::formatter<ChunkParseStatus> {
+    constexpr auto parse(format_parse_context& ctx) {
+        return ctx.end();
+    }
+
+    template <typename FormatContext>
+    auto format(const ChunkParseStatus& state, FormatContext& ctx) const {
+        switch(state)
+        {
+            case ChunkParseStatus::NONE:
+                return fmt::format_to(ctx.out(), "NONE");
+            case ChunkParseStatus::LENGTH:
+                return fmt::format_to(ctx.out(), "LENGTH");
+            case ChunkParseStatus::CONTENT:
+                return fmt::format_to(ctx.out(), "CONTENT");
+            case ChunkParseStatus::DONE:
+                return fmt::format_to(ctx.out(), "DONE");
+        }
+        return fmt::format_to(ctx.out(), "error, please file a bug in Ichor");
+    }
+};
+
 Ichor::HttpConnectionService::HttpConnectionService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {
     reg.registerDependency<ILogger>(this, DependencyFlags::REQUIRED);
     reg.registerDependency<IEventQueue>(this, DependencyFlags::REQUIRED);
@@ -158,6 +190,11 @@ void Ichor::HttpConnectionService::addDependencyInstance(IClientConnectionServic
                 break;
             }
 
+            if(!resp && resp.error() == HttpParseError::CHUNKED) {
+                pos = msg.find("\r\n\r\n", pos);
+                continue;
+            }
+
             if(!_events.empty()) {
                 {
                     auto &front = _events.front();
@@ -205,9 +242,13 @@ tl::expected<Ichor::HttpResponse, Ichor::HttpParseError> Ichor::HttpConnectionSe
     uint64_t crlfCounter{};
     uint64_t protocolLength{};
     uint64_t contentLength{};
+    uint64_t chunkLength{};
+    ChunkParseStatus chunkedStatus{};
     std::string_view partial{complete.data(), len};
     bool badRequest{};
     bool contentLengthHeader{};
+    bool transferEncodingHeader{};
+    bool chunkedTransfer{};
     ICHOR_LOG_TRACE(_logger, "HttpConnection {} parseResponse len {} complete \"{}\" partial \"{}\"", getServiceId(), len, complete, partial);
 
     split(partial, "\r\n", false, [&](std::string_view line) {
@@ -255,42 +296,93 @@ tl::expected<Ichor::HttpResponse, Ichor::HttpParseError> Ichor::HttpConnectionSe
             uint64_t wordNo{};
             bool matchedValue{};
             std::string_view key;
-            split(line, ": ", false, [&](std::string_view word) {
-                if(badRequest) {
-                    return;
-                }
 
-                if(wordNo == 0) {
-                    key = word;
-                    if(key == "Content-Length") {
-                        contentLengthHeader = true;
+
+            if(chunkedStatus == ChunkParseStatus::NONE || chunkedStatus == ChunkParseStatus::DONE) {
+                split(line, ": ", false, [&](std::string_view word) {
+                    if(badRequest) {
+                        return;
                     }
-                } else if(wordNo == 1) {
-                    resp.headers.emplace(key, word);
-                    matchedValue = true;
-                    if(contentLengthHeader) {
-                        if(!IsOnlyDigits(word)) {
-                            ICHOR_LOG_TRACE(_logger, "HttpConnection {} BadRequest Content-Length not digits {}", getServiceId(), word);
-                            badRequest = true;
-                        } else {
-                            contentLength = FastAtoiu(word);
+
+                    if(wordNo == 0) {
+                        key = word;
+                        if(key == "Content-Length") {
+                            contentLengthHeader = true;
+                        } else if(key == "Transfer-Encoding") {
+                            transferEncodingHeader = true;
                         }
+
+                        if(contentLengthHeader && transferEncodingHeader) {
+                            ICHOR_LOG_TRACE(_logger, "HttpConnection {} BadRequest Content-Length and Transfer-Encoding cannot both be present.", getServiceId());
+                            badRequest = true;
+                        }
+                    } else if(wordNo == 1) {
+                        resp.headers.emplace(key, word);
+                        matchedValue = true;
+                        if(contentLengthHeader) {
+                            if(!IsOnlyDigits(word)) {
+                                ICHOR_LOG_TRACE(_logger, "HttpConnection {} BadRequest Content-Length not digits {}", getServiceId(), word);
+                                badRequest = true;
+                            } else {
+                                contentLength = FastAtoiu(word);
+                            }
+                        } else if(transferEncodingHeader) {
+                            if(word.find("chunked") != std::string_view::npos) {
+                                chunkedTransfer = true;
+                            }
+                        }
+                    } else {
+                        ICHOR_LOG_TRACE(_logger, "HttpConnection {} BadRequest header split error {}", getServiceId(), line);
+                        badRequest = true;
                     }
-                } else {
-                    ICHOR_LOG_TRACE(_logger, "HttpConnection {} BadRequest header split error {}", getServiceId(), line);
+
+                    wordNo++;
+                });
+
+                if(!matchedValue) {
+                    ICHOR_LOG_TRACE(_logger, "HttpConnection {} BadRequest header did not match value {}", getServiceId(), line);
                     badRequest = true;
                 }
-
-                wordNo++;
-            });
-
-            if(!matchedValue) {
-                ICHOR_LOG_TRACE(_logger, "HttpConnection {} BadRequest header did not match value {}", getServiceId(), line);
-                badRequest = true;
+            } else if(chunkedStatus == ChunkParseStatus::LENGTH) {
+                auto length = SafeHexToUint(line);
+                if(!length) {
+                    ICHOR_LOG_TRACE(_logger, "HttpConnection {} BadRequest chunk length invalid {}", getServiceId(), line);
+                    badRequest = true;
+                } else {
+                    chunkLength = *length;
+                    ICHOR_LOG_TRACE(_logger, "HttpConnection {} chunk length {}", getServiceId(), chunkLength);
+                    chunkedStatus = ChunkParseStatus::CONTENT;
+                    if(chunkLength == 0) {
+                        chunkedStatus = ChunkParseStatus::DONE;
+                        resp.body.emplace_back(0);
+                    } else {
+                        chunkLength += 2;
+                        resp.body.reserve(resp.body.size() + chunkLength);
+                    }
+                }
+            } else if(chunkedStatus == ChunkParseStatus::CONTENT) {
+                ICHOR_LOG_TRACE(_logger, "HttpConnection {} chunk content {}", getServiceId(), line);
+                resp.body.insert(resp.body.end(), line.begin(), line.end());
+                if(chunkLength < line.size() + 2) {
+                    ICHOR_LOG_TRACE(_logger, "HttpConnection {} BadRequest chunk body length invalid expected {} < {} for line {}", getServiceId(), chunkLength, line.size(), line);
+                    badRequest = true;
+                } else {
+                    chunkLength -= line.size() + 2;
+                    if(chunkLength == 0) {
+                        chunkedStatus = ChunkParseStatus::LENGTH;
+                    }
+                }
+            } else {
+                std::terminate();
             }
+
             crlfCounter = 1;
         } else if(line.empty()) {
             crlfCounter++;
+
+            if(chunkedTransfer && chunkedStatus != ChunkParseStatus::DONE) {
+                chunkedStatus = ChunkParseStatus::LENGTH;
+            }
         }
 
         protocolLength += line.size() + 2;
@@ -312,10 +404,13 @@ tl::expected<Ichor::HttpResponse, Ichor::HttpParseError> Ichor::HttpConnectionSe
         return tl::unexpected(HttpParseError::BADREQUEST);
     }
 
-    if(contentLengthHeader && complete.size() < protocolLength + contentLength) {
-        ICHOR_LOG_TRACE(_logger, "incomplete request {} {} {}", complete.size(), len, contentLength);
+    if(chunkedTransfer && chunkedStatus != ChunkParseStatus::DONE) {
+        ICHOR_LOG_TRACE(_logger, "incomplete request due to not all chunks received {} {} {} {}", complete.size(), len, contentLength, chunkedStatus);
+        return tl::unexpected(HttpParseError::CHUNKED);
+    } else if(contentLengthHeader && complete.size() < protocolLength + contentLength) {
+        ICHOR_LOG_TRACE(_logger, "incomplete request due to not all content received {} {} {}", complete.size(), len, contentLength);
         return tl::unexpected(HttpParseError::INCOMPLETEREQUEST);
-    } else {
+    } else if (!chunkedTransfer) {
         std::string_view content{complete.data() + len, contentLength};
         resp.body.reserve(contentLength + 1);
         resp.body.assign(content.begin(), content.end());
