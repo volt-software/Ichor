@@ -106,7 +106,7 @@ ninja || exit 1
 ninja test || exit 1
 
 if [[ $RUN_EXAMPLES -eq 1 ]]; then
-  run_examples $BOOST 1
+  run_examples $BOOST 1 0
 fi
 
 if command -v checksec --help &> /dev/null

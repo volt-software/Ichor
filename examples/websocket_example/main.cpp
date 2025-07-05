@@ -108,10 +108,10 @@ int main(int argc, char *argv[]) {
     dm.createServiceManager<TestMsgGlazeSerializer, ISerializer<TestMsg>>();
 #ifdef URING_EXAMPLE
     dm.createServiceManager<HOSTIMPL, IHostService>(Properties{{"Address", Ichor::v1::make_any<std::string>("127.0.0.1"s)}, {"Port", Ichor::v1::make_any<uint16_t>(static_cast<uint16_t>(8001))}});
-    dm.createServiceManager<ClientFactory<CONNIMPL<IClientConnectionService>, IClientConnectionService>, IClientFactory>();
+    dm.createServiceManager<ClientFactory<CONNIMPL<IClientConnectionService>, IClientConnectionService>, IClientFactory<IClientConnectionService>>();
 #endif
     dm.createServiceManager<WSHOSTIMPL, IHostService>(Properties{{"Address", Ichor::v1::make_any<std::string>(address)}, {"Port", Ichor::v1::make_any<uint16_t>(static_cast<uint16_t>(8001))}}, priorityToEnsureHostStartingFirst);
-    dm.createServiceManager<ClientFactory<WSCONNIMPL<IConnectionService>>, IClientFactory>();
+    dm.createServiceManager<ClientFactory<WSCONNIMPL<IConnectionService>>, IClientFactory<IConnectionService>>();
     dm.createServiceManager<UsingWsService>(Properties{{"Address", Ichor::v1::make_any<std::string>(address)}, {"Port", Ichor::v1::make_any<uint16_t>(static_cast<uint16_t>(8001))}});
     queue->start(CaptureSigInt);
     auto end = std::chrono::steady_clock::now();

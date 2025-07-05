@@ -1044,7 +1044,7 @@ namespace glz::detail {
 EtcdService::EtcdService(DependencyRegister &reg, Properties props) : AdvancedService<EtcdService>(std::move(props)) {
     reg.registerDependency<ILogger>(this, DependencyFlags::REQUIRED, getProperties());
     reg.registerDependency<IHttpConnectionService>(this, DependencyFlags::REQUIRED | DependencyFlags::ALLOW_MULTIPLE, getProperties());
-    reg.registerDependency<IClientFactory>(this, DependencyFlags::REQUIRED);
+    reg.registerDependency<IClientFactory<IHttpConnectionService>>(this, DependencyFlags::REQUIRED);
 }
 
 Ichor::Task<tl::expected<void, Ichor::StartError>> EtcdService::start() {
@@ -1125,12 +1125,12 @@ void EtcdService::removeDependencyInstance(IHttpConnectionService &conn, IServic
     }
 }
 
-void EtcdService::addDependencyInstance(IClientFactory &factory, IService &) {
+void EtcdService::addDependencyInstance(IClientFactory<IHttpConnectionService> &factory, IService &) {
     ICHOR_LOG_TRACE(_logger, "Added clientFactory");
     _clientFactory = &factory;
 }
 
-void EtcdService::removeDependencyInstance(IClientFactory&, IService&) {
+void EtcdService::removeDependencyInstance(IClientFactory<IHttpConnectionService>&, IService&) {
     ICHOR_LOG_TRACE(_logger, "Removed clientFactory");
     _clientFactory = nullptr;
 }

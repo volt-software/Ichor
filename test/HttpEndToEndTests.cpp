@@ -91,10 +91,10 @@ TEST_CASE("HttpEndToEndTests_boost") {
             dm.createServiceManager<TestMsgGlazeSerializer, ISerializer<TestMsg>>();
             dm.createServiceManager<RegexJsonMsgSerializer, ISerializer<RegexJsonMsg>>();
             dm.createServiceManager<HTTPHOSTIMPL, IHttpHostService>(Properties{{"Address", Ichor::v1::make_any<std::string>("127.0.0.1")}, {"Port", Ichor::v1::make_any<uint16_t>(static_cast<uint16_t>(8001))}});
-            dm.createServiceManager<ClientFactory<HTTPCONNIMPL, IHttpConnectionService>, IClientFactory>();
+            dm.createServiceManager<ClientFactory<HTTPCONNIMPL, IHttpConnectionService>, IClientFactory<IHttpConnectionService>>();
 #ifdef TEST_URING
             dm.createServiceManager<HOSTIMPL, IHostService>(Properties{{"Address", Ichor::v1::make_any<std::string>("127.0.0.1"s)}, {"Port", Ichor::v1::make_any<uint16_t>(static_cast<uint16_t>(8001))}});
-            dm.createServiceManager<ClientFactory<CONNIMPL<IClientConnectionService>, IClientConnectionService>, IClientFactory>();
+            dm.createServiceManager<ClientFactory<CONNIMPL<IClientConnectionService>, IClientConnectionService>, IClientFactory<IClientConnectionService>>();
 #endif
             dm.createServiceManager<HttpThreadService>(Properties{{"Address", Ichor::v1::make_any<std::string>("127.0.0.1")}, {"Port", Ichor::v1::make_any<uint16_t>(static_cast<uint16_t>(8001))}});
 
@@ -218,7 +218,7 @@ TEST_CASE("HttpEndToEndTests_boost") {
             dm.createServiceManager<TestMsgGlazeSerializer, ISerializer<TestMsg>>();
             dm.createServiceManager<RegexJsonMsgSerializer, ISerializer<RegexJsonMsg>>();
             dm.createServiceManager<Boost::v1::HttpHostService, IHttpHostService>(Properties{{"Address", Ichor::v1::make_any<std::string>("127.0.0.1")}, {"Port", Ichor::v1::make_any<uint16_t>(static_cast<uint16_t>(8001))}, {"SslKey", Ichor::v1::make_any<std::string>(key)}, {"SslCert", Ichor::v1::make_any<std::string>(cert)}});
-            dm.createServiceManager<ClientFactory<Boost::v1::HttpConnectionService, IHttpConnectionService>, IClientFactory>();
+            dm.createServiceManager<ClientFactory<Boost::v1::HttpConnectionService, IHttpConnectionService>, IClientFactory<IHttpConnectionService>>();
             dm.createServiceManager<HttpThreadService>(Properties{{"Address", Ichor::v1::make_any<std::string>("127.0.0.1")}, {"Port", Ichor::v1::make_any<uint16_t>(static_cast<uint16_t>(8001))}, {"ConnectOverSsl", Ichor::v1::make_any<bool>(true)}, {"RootCA", Ichor::v1::make_any<std::string>(cert)}});
 
             queue->start(CaptureSigInt);

@@ -72,14 +72,14 @@ namespace Ichor::Etcdv2::v1 {
         void addDependencyInstance(Ichor::v1::IHttpConnectionService &conn, IService &isvc);
         void removeDependencyInstance(Ichor::v1::IHttpConnectionService &conn, IService &isvc);
 
-        void addDependencyInstance(Ichor::v1::IClientFactory &conn, IService &isvc);
-        void removeDependencyInstance(Ichor::v1::IClientFactory &conn, IService &isvc);
+        void addDependencyInstance(Ichor::v1::IClientFactory<Ichor::v1::IHttpConnectionService> &conn, IService &isvc);
+        void removeDependencyInstance(Ichor::v1::IClientFactory<Ichor::v1::IHttpConnectionService> &conn, IService &isvc);
 
         friend DependencyRegister;
 
         Ichor::v1::ILogger *_logger{};
         Ichor::v1::IHttpConnectionService* _mainConn{};
-        Ichor::v1::IClientFactory *_clientFactory{};
+        Ichor::v1::IClientFactory<Ichor::v1::IHttpConnectionService> *_clientFactory{};
         std::stack<ConnRequest> _connRequests{};
         tl::optional<std::string> _auth;
     };

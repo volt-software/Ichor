@@ -80,9 +80,9 @@ TEST_CASE("EtcdTests_boost") {
             dm.createServiceManager<SpdlogSharedService, ISpdlogSharedService>();
 #endif
             dm.createServiceManager<LoggerFactory<LOGGER_TYPE>, ILoggerFactory>(Properties{{"DefaultLogLevel", Ichor::v1::make_any<LogLevel>(LogLevel::LOG_TRACE)}});
-            dm.createServiceManager<ClientFactory<HTTPCONNIMPL, IHttpConnectionService>, IClientFactory>();
+            dm.createServiceManager<ClientFactory<HTTPCONNIMPL, IHttpConnectionService>, IClientFactory<IHttpConnectionService>>();
 #ifdef TEST_URING
-            dm.createServiceManager<ClientFactory<CONNIMPL<IClientConnectionService>, IClientConnectionService>, IClientFactory>();
+            dm.createServiceManager<ClientFactory<CONNIMPL<IClientConnectionService>, IClientConnectionService>, IClientFactory<IClientConnectionService>>();
 #endif
             dm.createServiceManager<Etcdv2::v1::EtcdService, Etcdv2::v1::IEtcd>(Properties{{"Address", Ichor::v1::make_any<std::string>("127.0.0.1")}, {"Port", Ichor::v1::make_any<uint16_t>(static_cast<uint16_t>(2379))}, {"TimeoutMs", Ichor::v1::make_any<uint64_t>(1'000ul)}, {"Debug", Ichor::v1::make_any<bool>(true)}});
             dm.createServiceManager<Etcdv2UsingService>(Properties{{"LogLevel", Ichor::v1::make_any<LogLevel>(LogLevel::LOG_TRACE)}});
@@ -111,9 +111,9 @@ TEST_CASE("EtcdTests_boost") {
             dm.createServiceManager<SpdlogSharedService, ISpdlogSharedService>();
 #endif
             dm.createServiceManager<LoggerFactory<LOGGER_TYPE>, ILoggerFactory>(Properties{{"DefaultLogLevel", Ichor::v1::make_any<LogLevel>(LogLevel::LOG_TRACE)}});
-            dm.createServiceManager<ClientFactory<HTTPCONNIMPL, IHttpConnectionService>, IClientFactory>();
+            dm.createServiceManager<ClientFactory<HTTPCONNIMPL, IHttpConnectionService>, IClientFactory<IHttpConnectionService>>();
 #ifdef TEST_URING
-            dm.createServiceManager<ClientFactory<CONNIMPL<IClientConnectionService>, IClientConnectionService>, IClientFactory>();
+            dm.createServiceManager<ClientFactory<CONNIMPL<IClientConnectionService>, IClientConnectionService>, IClientFactory<IClientConnectionService>>();
 #endif
             dm.createServiceManager<Etcdv3::v1::EtcdService, Etcdv3::v1::IEtcd>(Properties{{"Address", Ichor::v1::make_any<std::string>("127.0.0.1")}, {"Port", Ichor::v1::make_any<uint16_t>(static_cast<uint16_t>(2379))}, {"TimeoutMs", Ichor::v1::make_any<uint64_t>(1'000ul)}, {"Debug", Ichor::v1::make_any<bool>(true)}});
             dm.createServiceManager<Etcdv3UsingService>(Properties{{"LogLevel", Ichor::v1::make_any<LogLevel>(LogLevel::LOG_TRACE)}});

@@ -1,4 +1,3 @@
-#include <boost/beast/core/string_type.hpp>
 #include <ichor/DependencyManager.h>
 #include <ichor/events/RunFunctionEvent.h>
 #include <ichor/services/network/http/HttpHostService.h>
