@@ -1,9 +1,8 @@
 #pragma once
 
-#include <ichor/coroutines/Task.h>
 #include <ichor/dependency_management/IService.h>
 
-namespace Ichor {
+namespace Ichor::v1 {
     class IClientFactory {
     public:
         /// Create a new connection which will be injected as a dependency. Connection will be automatically removed if requesting service is stopped, but removeConnection can be used as well.

@@ -7,6 +7,7 @@
 #include "RuntimeCreatedService.h"
 
 using namespace Ichor;
+using namespace Ichor::v1;
 
 // custom filter logic, to ensure a created RuntimeCreatedService only gets inserted into a `TestService` if the scope matches.
 class ScopeFilterEntry final {
@@ -18,7 +19,7 @@ public:
     [[nodiscard]] bool matches(ILifecycleManager const &manager) const noexcept {
         auto const scopeProp = manager.getProperties().find("scope");
 
-        return scopeProp != cend(manager.getProperties()) && Ichor::any_cast<const std::string&>(scopeProp->second) == scope;
+        return scopeProp != cend(manager.getProperties()) && Ichor::v1::any_cast<const std::string&>(scopeProp->second) == scope;
     }
 
     [[nodiscard]] std::string getDescription() const noexcept {
@@ -42,7 +43,7 @@ public:
 
 private:
     // a service has been created and has requested an IRuntimeCreatedService
-    AsyncGenerator<IchorBehaviour> handleDependencyRequest(AlwaysNull<IRuntimeCreatedService*>, DependencyRequestEvent const &evt) {
+    AsyncGenerator<IchorBehaviour> handleDependencyRequest(v1::AlwaysNull<IRuntimeCreatedService*>, DependencyRequestEvent const &evt) {
         // What to do when the requesting service has no properties? In this case, we don't create anything, probably preventing the service from being started.
         if(!evt.properties.has_value()) {
             ICHOR_LOG_ERROR(_logger, "missing properties");
@@ -56,7 +57,7 @@ private:
             co_return {};
         }
 
-        auto const& scope = Ichor::any_cast<const std::string&>(scopeProp->second);
+        auto const& scope = Ichor::v1::any_cast<const std::string&>(scopeProp->second);
 
         ICHOR_LOG_INFO(_logger, "Tracked IRuntimeCreatedService request for scope {}", scope);
 
@@ -68,7 +69,7 @@ private:
             newProps.erase("Filter");
             // `Filter` is a magic keyword that Ichor uses to determine if this service is global or if Ichor should use its filtering logic.
             // In this case, we tell Ichor to only insert this service if the requesting service has a matching scope
-            newProps.emplace("Filter", Ichor::make_any<Filter>(ScopeFilterEntry{scope}));
+            newProps.emplace("Filter", Ichor::v1::make_any<Filter>(ScopeFilterEntry{scope}));
 
             _scopedRuntimeServices.emplace(scope, GetThreadLocalManager().createServiceManager<RuntimeCreatedService, IRuntimeCreatedService>(std::move(newProps))->getServiceId());
         }
@@ -77,7 +78,7 @@ private:
     }
 
     // a service has been created but now has to be destroyed and requested an IRuntimeCreatedService
-    AsyncGenerator<IchorBehaviour> handleDependencyUndoRequest(AlwaysNull<IRuntimeCreatedService*>, DependencyUndoRequestEvent const &evt) {
+    AsyncGenerator<IchorBehaviour> handleDependencyUndoRequest(v1::AlwaysNull<IRuntimeCreatedService*>, DependencyUndoRequestEvent const &evt) {
         if(!evt.properties) {
             ICHOR_LOG_ERROR(_logger, "properties missing");
             co_return {};
@@ -91,7 +92,7 @@ private:
             co_return {};
         }
 
-        auto const& scope = Ichor::any_cast<const std::string&>(scopeProp->second);
+        auto const& scope = Ichor::v1::any_cast<const std::string&>(scopeProp->second);
 
         ICHOR_LOG_INFO(_logger, "Tracked IRuntimeCreatedService undo request for scope {}", scope);
 

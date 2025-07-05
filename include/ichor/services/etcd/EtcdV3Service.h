@@ -8,10 +8,10 @@
 #include <ichor/services/network/IClientFactory.h>
 #include <stack>
 
-namespace Ichor::Etcd::v3 {
+namespace Ichor::Etcdv3::v1 {
 
     struct ConnRequest final {
-        IHttpConnectionService *conn{};
+        Ichor::v1::IHttpConnectionService *conn{};
         AsyncManualResetEvent event{};
     };
 
@@ -55,7 +55,7 @@ namespace Ichor::Etcd::v3 {
         [[nodiscard]] Task<tl::expected<AuthRoleGrantPermissionResponse, EtcdError>> roleGrantPermission(AuthRoleGrantPermissionRequest const &req) final;
         [[nodiscard]] Task<tl::expected<AuthRoleRevokePermissionResponse, EtcdError>> roleRevokePermission(AuthRoleRevokePermissionRequest const &req) final;
         [[nodiscard]] Task<tl::expected<EtcdVersionReply, EtcdError>> version() final;
-        [[nodiscard]] Version getDetectedVersion() const final;
+        [[nodiscard]] Ichor::v1::Version getDetectedVersion() const final;
         [[nodiscard]] Task<tl::expected<bool, EtcdError>> health() final;
         [[nodiscard]] tl::optional<std::string> const &getAuthenticationUser() const final;
 
@@ -63,24 +63,24 @@ namespace Ichor::Etcd::v3 {
         Task<tl::expected<void, Ichor::StartError>> start() final;
         Task<void> stop() final;
 
-        void addDependencyInstance(ILogger &logger, IService &isvc);
-        void removeDependencyInstance(ILogger &logger, IService &isvc);
+        void addDependencyInstance(Ichor::v1::ILogger &logger, IService &isvc);
+        void removeDependencyInstance(Ichor::v1::ILogger &logger, IService &isvc);
 
-        void addDependencyInstance(IHttpConnectionService &conn, IService &isvc);
-        void removeDependencyInstance(IHttpConnectionService &conn, IService &isvc);
+        void addDependencyInstance(Ichor::v1::IHttpConnectionService &conn, IService &isvc);
+        void removeDependencyInstance(Ichor::v1::IHttpConnectionService &conn, IService &isvc);
 
-        void addDependencyInstance(IClientFactory &conn, IService &isvc);
-        void removeDependencyInstance(IClientFactory &conn, IService &isvc);
+        void addDependencyInstance(Ichor::v1::IClientFactory &conn, IService &isvc);
+        void removeDependencyInstance(Ichor::v1::IClientFactory &conn, IService &isvc);
 
         friend DependencyRegister;
 
-        ILogger *_logger{};
-        IHttpConnectionService* _mainConn{};
-        IClientFactory *_clientFactory{};
+        Ichor::v1::ILogger *_logger{};
+        Ichor::v1::IHttpConnectionService* _mainConn{};
+        Ichor::v1::IClientFactory *_clientFactory{};
         std::stack<ConnRequest> _connRequests{};
         tl::optional<std::string> _auth;
         tl::optional<std::string> _authUser;
-        Version _detectedVersion{};
+        Ichor::v1::Version _detectedVersion{};
         std::string_view _versionSpecificUrl{"/v3"};
     };
 }

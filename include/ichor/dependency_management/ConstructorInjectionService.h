@@ -293,12 +293,12 @@ namespace Ichor {
         }
 
         template <typename depT>
-        void addDependencyInstance(NeverNull<depT*> dep, NeverNull<IService*>) {
+        void addDependencyInstance(v1::NeverNull<depT*> dep, v1::NeverNull<IService*>) {
             _deps.emplace(typeNameHash<depT>(), dep);
         }
 
         template <typename depT>
-        void removeDependencyInstance(NeverNull<depT*>, NeverNull<IService*>) {
+        void removeDependencyInstance(v1::NeverNull<depT*>, v1::NeverNull<IService*>) {
             _deps.erase(typeNameHash<depT>());
         }
 

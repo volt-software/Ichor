@@ -7,7 +7,8 @@
 #include <ichor/events/RunFunctionEvent.h>
 
 using namespace Ichor;
-using namespace Ichor::Etcd::v2;
+using namespace Ichor::v1;
+using namespace Ichor::Etcdv2::v1;
 
 class UsingEtcdV2Service final {
 public:

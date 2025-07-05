@@ -7,7 +7,7 @@
 //#define ICHOR_REGEX_DEBUG(...) fmt::print(__VA_ARGS__)
 #define ICHOR_REGEX_DEBUG(...)
 
-namespace Ichor {
+namespace Ichor::v1 {
     class HttpRouteRegistration;
     using RouteIdType = uint64_t;
 

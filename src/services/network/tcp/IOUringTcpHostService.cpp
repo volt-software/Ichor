@@ -11,23 +11,23 @@
 #include <netdb.h>
 #include <ichor/ichor_liburing.h>
 
-Ichor::IOUringTcpHostService::IOUringTcpHostService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)), _socket(-1), _bindFd(), _priority(INTERNAL_EVENT_PRIORITY), _quit() {
+Ichor::v1::IOUringTcpHostService::IOUringTcpHostService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)), _socket(-1), _bindFd(), _priority(INTERNAL_EVENT_PRIORITY), _quit() {
     reg.registerDependency<ILogger>(this, DependencyFlags::REQUIRED);
     reg.registerDependency<IIOUringQueue>(this, DependencyFlags::REQUIRED);
 }
 
-Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::IOUringTcpHostService::start() {
+Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::v1::IOUringTcpHostService::start() {
     if(auto propIt = getProperties().find("Priority"); propIt != getProperties().end()) {
-        _priority = Ichor::any_cast<uint64_t>(propIt->second);
+        _priority = Ichor::v1::any_cast<uint64_t>(propIt->second);
     }
     if(auto propIt = getProperties().find("ListenBacklogSize"); propIt != getProperties().end()) {
-        _listenBacklogSize = Ichor::any_cast<uint16_t>(propIt->second);
+        _listenBacklogSize = Ichor::v1::any_cast<uint16_t>(propIt->second);
     }
 	if(auto propIt = getProperties().find("BufferEntries"); propIt != getProperties().end()) {
-		_bufferEntries = Ichor::any_cast<uint32_t>(propIt->second);
+		_bufferEntries = Ichor::v1::any_cast<uint32_t>(propIt->second);
 	}
 	if(auto propIt = getProperties().find("BufferEntrySize"); propIt != getProperties().end()) {
-		_bufferEntrySize = Ichor::any_cast<uint32_t>(propIt->second);
+		_bufferEntrySize = Ichor::v1::any_cast<uint32_t>(propIt->second);
 	}
 
 
@@ -95,7 +95,7 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::IOUringTcpHostService:
     auto const addressProp = getProperties().find("Address");
 
     if(addressProp != cend(getProperties())) {
-        auto hostname = Ichor::any_cast<std::string>(addressProp->second);
+        auto hostname = Ichor::v1::any_cast<std::string>(addressProp->second);
         if(::inet_aton(hostname.c_str(), &address.sin_addr) != 0) {
             auto *hp = ::gethostbyname(hostname.c_str());
             if (hp == nullptr) {
@@ -110,7 +110,7 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::IOUringTcpHostService:
     } else {
         address.sin_addr.s_addr = INADDR_ANY;
     }
-    address.sin_port = ::htons(Ichor::any_cast<uint16_t>((getProperties())["Port"]));
+    address.sin_port = ::htons(Ichor::v1::any_cast<uint16_t>((getProperties())["Port"]));
 
     // io_uring_prep_bind is not yet available in the kernel.
     _bindFd = ::bind(_socket, (sockaddr *)&address, sizeof(address));
@@ -118,7 +118,7 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::IOUringTcpHostService:
     if(_bindFd == -1) {
         close(_socket);
         _socket = -1;
-        ICHOR_LOG_ERROR(_logger, "Couldn't bind socket with address {} port {}: {}", addressProp == cend(getProperties()) ? std::string{"ANY"} : Ichor::any_cast<std::string>(addressProp->second), Ichor::any_cast<uint16_t>((getProperties())["Port"]), mapErrnoToError(errno));
+        ICHOR_LOG_ERROR(_logger, "Couldn't bind socket with address {} port {}: {}", addressProp == cend(getProperties()) ? std::string{"ANY"} : Ichor::v1::any_cast<std::string>(addressProp->second), Ichor::v1::any_cast<uint16_t>((getProperties())["Port"]), mapErrnoToError(errno));
         co_return tl::unexpected(StartError::FAILED);
     }
 
@@ -140,7 +140,7 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::IOUringTcpHostService:
     co_return {};
 }
 
-Ichor::Task<void> Ichor::IOUringTcpHostService::stop() {
+Ichor::Task<void> Ichor::v1::IOUringTcpHostService::stop() {
     _quit = true;
     INTERNAL_IO_DEBUG("quit");
 
@@ -198,31 +198,31 @@ Ichor::Task<void> Ichor::IOUringTcpHostService::stop() {
     co_return;
 }
 
-void Ichor::IOUringTcpHostService::addDependencyInstance(ILogger &logger, IService &) noexcept {
+void Ichor::v1::IOUringTcpHostService::addDependencyInstance(ILogger &logger, IService &) noexcept {
     _logger = &logger;
 }
 
-void Ichor::IOUringTcpHostService::removeDependencyInstance(ILogger &, IService&) noexcept {
+void Ichor::v1::IOUringTcpHostService::removeDependencyInstance(ILogger &, IService&) noexcept {
     _logger = nullptr;
 }
 
-void Ichor::IOUringTcpHostService::addDependencyInstance(IIOUringQueue &q, IService &) noexcept {
+void Ichor::v1::IOUringTcpHostService::addDependencyInstance(IIOUringQueue &q, IService &) noexcept {
     _q = &q;
 }
 
-void Ichor::IOUringTcpHostService::removeDependencyInstance(IIOUringQueue &, IService&) noexcept {
+void Ichor::v1::IOUringTcpHostService::removeDependencyInstance(IIOUringQueue &, IService&) noexcept {
     _q = nullptr;
 }
 
-void Ichor::IOUringTcpHostService::setPriority(uint64_t priority) {
+void Ichor::v1::IOUringTcpHostService::setPriority(uint64_t priority) {
     _priority = priority;
 }
 
-uint64_t Ichor::IOUringTcpHostService::getPriority() {
+uint64_t Ichor::v1::IOUringTcpHostService::getPriority() {
     return _priority;
 }
 
-std::function<void(io_uring_cqe *)> Ichor::IOUringTcpHostService::createAcceptHandler() noexcept {
+std::function<void(io_uring_cqe *)> Ichor::v1::IOUringTcpHostService::createAcceptHandler() noexcept {
     return [this](io_uring_cqe *cqe) {
         INTERNAL_IO_DEBUG("accept res: {} {}", cqe->res, cqe->res < 0 ? strerror(-cqe->res) : "");
 
@@ -252,16 +252,16 @@ std::function<void(io_uring_cqe *)> Ichor::IOUringTcpHostService::createAcceptHa
 
         Properties props{};
         props.reserve(7);
-        props.emplace("Priority", Ichor::make_any<uint64_t>(_priority));
-        props.emplace("Socket", Ichor::make_any<int>(cqe->res));
-        props.emplace("TimeoutSendUs", Ichor::make_any<int64_t>(_sendTimeout));
-        props.emplace("TimeoutRecvUs", Ichor::make_any<int64_t>(_recvTimeout));
-        props.emplace("TcpHostService", Ichor::make_any<ServiceIdType>(getServiceId()));
+        props.emplace("Priority", Ichor::v1::make_any<uint64_t>(_priority));
+        props.emplace("Socket", Ichor::v1::make_any<int>(cqe->res));
+        props.emplace("TimeoutSendUs", Ichor::v1::make_any<int64_t>(_sendTimeout));
+        props.emplace("TimeoutRecvUs", Ichor::v1::make_any<int64_t>(_recvTimeout));
+        props.emplace("TcpHostService", Ichor::v1::make_any<ServiceIdType>(getServiceId()));
 		if(_bufferEntries) {
-			props.emplace("BufferEntries", Ichor::make_any<uint32_t>(*_bufferEntries));
+			props.emplace("BufferEntries", Ichor::v1::make_any<uint32_t>(*_bufferEntries));
 		}
 		if(_bufferEntrySize) {
-			props.emplace("BufferEntrySize", Ichor::make_any<uint32_t>(*_bufferEntrySize));
+			props.emplace("BufferEntrySize", Ichor::v1::make_any<uint32_t>(*_bufferEntrySize));
 		}
         _connections.emplace_back(GetThreadLocalManager().template createServiceManager<IOUringTcpConnectionService<IHostConnectionService>, IConnectionService, IHostConnectionService>(std::move(props))->getServiceId());
 

@@ -4,6 +4,7 @@
 #include "ICountService.h"
 
 using namespace Ichor;
+using namespace Ichor::v1;
 
 struct RequiredMultipleService final : public ICountService, public AdvancedService<RequiredMultipleService> {
     RequiredMultipleService(DependencyRegister &reg, Properties props) : AdvancedService<RequiredMultipleService>(std::move(props)) {

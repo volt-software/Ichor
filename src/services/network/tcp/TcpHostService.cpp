@@ -13,14 +13,14 @@
 #include <netdb.h>
 #include <fcntl.h>
 
-Ichor::TcpHostService::TcpHostService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)), _socket(-1), _bindFd(), _priority(INTERNAL_EVENT_PRIORITY), _quit() {
+Ichor::v1::TcpHostService::TcpHostService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)), _socket(-1), _bindFd(), _priority(INTERNAL_EVENT_PRIORITY), _quit() {
     reg.registerDependency<ILogger>(this, DependencyFlags::REQUIRED);
     reg.registerDependency<ITimerFactory>(this, DependencyFlags::REQUIRED);
 }
 
-Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::TcpHostService::start() {
+Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::v1::TcpHostService::start() {
     if(auto propIt = getProperties().find("Priority"); propIt != getProperties().end()) {
-        _priority = Ichor::any_cast<uint64_t>(propIt->second);
+        _priority = Ichor::v1::any_cast<uint64_t>(propIt->second);
     }
 
     _newSocketEventHandlerRegistration = GetThreadLocalManager().registerEventHandler<NewSocketEvent>(this, this);
@@ -42,7 +42,7 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::TcpHostService::start(
     auto const addressProp = getProperties().find("Address");
 
     if(addressProp != cend(getProperties())) {
-        auto hostname = Ichor::any_cast<std::string>(addressProp->second);
+        auto hostname = Ichor::v1::any_cast<std::string>(addressProp->second);
         if(::inet_aton(hostname.c_str(), &address.sin_addr) != 0) {
             auto *hp = ::gethostbyname(hostname.c_str());
             if (hp == nullptr) {
@@ -56,7 +56,7 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::TcpHostService::start(
     } else {
         address.sin_addr.s_addr = INADDR_ANY;
     }
-    address.sin_port = ::htons(Ichor::any_cast<uint16_t>((getProperties())["Port"]));
+    address.sin_port = ::htons(Ichor::v1::any_cast<uint16_t>((getProperties())["Port"]));
 
     _bindFd = ::bind(_socket, (sockaddr *)&address, sizeof(address));
 
@@ -83,7 +83,7 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::TcpHostService::start(
     co_return {};
 }
 
-Ichor::Task<void> Ichor::TcpHostService::stop() {
+Ichor::Task<void> Ichor::v1::TcpHostService::stop() {
     _quit = true;
 
     if(_socket >= 0) {
@@ -96,43 +96,43 @@ Ichor::Task<void> Ichor::TcpHostService::stop() {
     co_return;
 }
 
-void Ichor::TcpHostService::addDependencyInstance(ILogger &logger, IService &) {
+void Ichor::v1::TcpHostService::addDependencyInstance(ILogger &logger, IService &) {
     _logger = &logger;
 }
 
-void Ichor::TcpHostService::removeDependencyInstance(ILogger &, IService&) {
+void Ichor::v1::TcpHostService::removeDependencyInstance(ILogger &, IService&) {
     _logger = nullptr;
 }
 
-void Ichor::TcpHostService::addDependencyInstance(ITimerFactory &timerFactory, IService &) {
+void Ichor::v1::TcpHostService::addDependencyInstance(ITimerFactory &timerFactory, IService &) {
     _timerFactory = &timerFactory;
 }
 
-void Ichor::TcpHostService::removeDependencyInstance(ITimerFactory &, IService&) {
+void Ichor::v1::TcpHostService::removeDependencyInstance(ITimerFactory &, IService&) {
     _timerFactory = nullptr;
 }
 
-void Ichor::TcpHostService::setPriority(uint64_t priority) {
+void Ichor::v1::TcpHostService::setPriority(uint64_t priority) {
     _priority = priority;
 }
 
-uint64_t Ichor::TcpHostService::getPriority() {
+uint64_t Ichor::v1::TcpHostService::getPriority() {
     return _priority;
 }
 
-Ichor::AsyncGenerator<Ichor::IchorBehaviour> Ichor::TcpHostService::handleEvent(NewSocketEvent const &evt) {
+Ichor::AsyncGenerator<Ichor::IchorBehaviour> Ichor::v1::TcpHostService::handleEvent(NewSocketEvent const &evt) {
     Properties props{};
     props.reserve(4);
-    props.emplace("Priority", Ichor::make_any<uint64_t>(_priority));
-    props.emplace("Socket", Ichor::make_any<int>(evt.socket));
-    props.emplace("TimeoutSendUs", Ichor::make_any<int64_t>(_sendTimeout));
-    props.emplace("TcpHostService", Ichor::make_any<ServiceIdType>(getServiceId()));
+    props.emplace("Priority", Ichor::v1::make_any<uint64_t>(_priority));
+    props.emplace("Socket", Ichor::v1::make_any<int>(evt.socket));
+    props.emplace("TimeoutSendUs", Ichor::v1::make_any<int64_t>(_sendTimeout));
+    props.emplace("TcpHostService", Ichor::v1::make_any<ServiceIdType>(getServiceId()));
     _connections.emplace_back(GetThreadLocalManager().template createServiceManager<TcpConnectionService<IHostConnectionService>, IConnectionService, IHostConnectionService>(std::move(props))->getServiceId());
 
     co_return {};
 }
 
-void Ichor::TcpHostService::acceptHandler() {
+void Ichor::v1::TcpHostService::acceptHandler() {
     sockaddr_in client_addr{};
     socklen_t client_addr_size = sizeof(client_addr);
     ScopeGuard sg{[this]() {

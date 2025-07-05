@@ -21,7 +21,7 @@ static std::function<void(io_uring_cqe *)> createNewStopHandler(Ichor::IIOUringQ
     };
 }
 
-Ichor::IOUringTimer::IOUringTimer(IIOUringQueue& queue, uint64_t timerId, uint64_t svcId) noexcept : _q(queue), _timerId(timerId), _requestingServiceId(svcId) {
+Ichor::v1::IOUringTimer::IOUringTimer(IIOUringQueue& queue, uint64_t timerId, uint64_t svcId) noexcept : _q(queue), _timerId(timerId), _requestingServiceId(svcId) {
     INTERNAL_IO_DEBUG("[{:L}][{}] IOUringTimer for {}", std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now().time_since_epoch()).count(), __LINE__, _requestingServiceId);
 
     if constexpr(DO_INTERNAL_DEBUG || DO_HARDENING) {
@@ -34,11 +34,11 @@ Ichor::IOUringTimer::IOUringTimer(IIOUringQueue& queue, uint64_t timerId, uint64
     _multishotCapable = _q.getKernelVersion() >= Version{6, 4, 0};
 }
 
-bool Ichor::IOUringTimer::startTimer() {
+bool Ichor::v1::IOUringTimer::startTimer() {
     return startTimer(false);
 }
 
-bool Ichor::IOUringTimer::startTimer(bool fireImmediately) {
+bool Ichor::v1::IOUringTimer::startTimer(bool fireImmediately) {
     if(!_fn && !_fnAsync) [[unlikely]] {
         throw std::runtime_error("No callback set.");
     }
@@ -70,7 +70,7 @@ bool Ichor::IOUringTimer::startTimer(bool fireImmediately) {
     return false;
 }
 
-bool Ichor::IOUringTimer::stopTimer(std::function<void(void)> cb) {
+bool Ichor::v1::IOUringTimer::stopTimer(std::function<void(void)> cb) {
     INTERNAL_IO_DEBUG("Stopping timer {} for {} _uringTimerId 0x{:X} state {}", _timerId, _requestingServiceId, _uringTimerId, _state);
     if(_state == TimerState::RUNNING) {
         auto *sqe = _q.getSqeWithData(_requestingServiceId, createNewStopHandler(&_q, _requestingServiceId, _timerId, _uringTimerId));
@@ -86,11 +86,11 @@ bool Ichor::IOUringTimer::stopTimer(std::function<void(void)> cb) {
     return false;
 }
 
-Ichor::TimerState Ichor::IOUringTimer::getState() const noexcept {
+Ichor::v1::TimerState Ichor::v1::IOUringTimer::getState() const noexcept {
     return _state;
 };
 
-void Ichor::IOUringTimer::setCallbackAsync(std::function<AsyncGenerator<IchorBehaviour>()> fn) {
+void Ichor::v1::IOUringTimer::setCallbackAsync(std::function<AsyncGenerator<IchorBehaviour>()> fn) {
     if(_state != TimerState::STOPPED) {
         std::terminate();
     }
@@ -99,7 +99,7 @@ void Ichor::IOUringTimer::setCallbackAsync(std::function<AsyncGenerator<IchorBeh
     _fn = {};
 }
 
-void Ichor::IOUringTimer::setCallback(std::function<void()> fn) {
+void Ichor::v1::IOUringTimer::setCallback(std::function<void()> fn) {
     if(_state != TimerState::STOPPED) {
         std::terminate();
     }
@@ -108,7 +108,7 @@ void Ichor::IOUringTimer::setCallback(std::function<void()> fn) {
     _fn = std::move(fn);
 }
 
-void Ichor::IOUringTimer::setInterval(uint64_t nanoseconds) noexcept {
+void Ichor::v1::IOUringTimer::setInterval(uint64_t nanoseconds) noexcept {
     if constexpr(DO_INTERNAL_DEBUG || DO_HARDENING) {
         if(nanoseconds > std::numeric_limits<decltype(_timespec.tv_nsec)>::max()) {
             fmt::println("timer {} for {} given nanoseconds {} is greater than allowed by type {}", _timerId, _requestingServiceId, nanoseconds, std::numeric_limits<decltype(_timespec.tv_nsec)>::max());
@@ -126,31 +126,31 @@ void Ichor::IOUringTimer::setInterval(uint64_t nanoseconds) noexcept {
 }
 
 
-void Ichor::IOUringTimer::setPriority(uint64_t priority) noexcept {
+void Ichor::v1::IOUringTimer::setPriority(uint64_t priority) noexcept {
     _priority = priority;
 }
 
-uint64_t Ichor::IOUringTimer::getPriority() const noexcept {
+uint64_t Ichor::v1::IOUringTimer::getPriority() const noexcept {
     return _priority;
 }
 
-void Ichor::IOUringTimer::setFireOnce(bool fireOnce) noexcept {
+void Ichor::v1::IOUringTimer::setFireOnce(bool fireOnce) noexcept {
     _fireOnce = fireOnce;
 }
 
-bool Ichor::IOUringTimer::getFireOnce() const noexcept {
+bool Ichor::v1::IOUringTimer::getFireOnce() const noexcept {
     return _fireOnce;
 }
 
-uint64_t Ichor::IOUringTimer::getTimerId() const noexcept {
+uint64_t Ichor::v1::IOUringTimer::getTimerId() const noexcept {
     return _timerId;
 }
 
-Ichor::ServiceIdType Ichor::IOUringTimer::getRequestingServiceId() const noexcept {
+Ichor::ServiceIdType Ichor::v1::IOUringTimer::getRequestingServiceId() const noexcept {
     return _requestingServiceId;
 }
 
-std::function<void(io_uring_cqe *)> Ichor::IOUringTimer::createNewHandler() noexcept {
+std::function<void(io_uring_cqe *)> Ichor::v1::IOUringTimer::createNewHandler() noexcept {
     INTERNAL_IO_DEBUG("IOUringTimer {} for {} createNewHandler", _timerId, _requestingServiceId);
     return [this](io_uring_cqe *cqe) {
         if((cqe->res <= 0 && cqe->res != -ETIME)) {
@@ -185,7 +185,7 @@ std::function<void(io_uring_cqe *)> Ichor::IOUringTimer::createNewHandler() noex
     };
 }
 
-std::function<void(io_uring_cqe *)> Ichor::IOUringTimer::createNewUpdateHandler() noexcept {
+std::function<void(io_uring_cqe *)> Ichor::v1::IOUringTimer::createNewUpdateHandler() noexcept {
     INTERNAL_IO_DEBUG("IOUringTimer {} for {} createNewUpdateHandler", _timerId, _requestingServiceId);
     return [this](io_uring_cqe *cqe) {
         if(cqe->res < 0) {

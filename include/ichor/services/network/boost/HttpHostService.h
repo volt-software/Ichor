@@ -16,7 +16,7 @@ namespace net = boost::asio;            // from <boost/asio.hpp>
 namespace ssl = boost::asio::ssl;       // from <boost/asio/ssl.hpp>
 using tcp = boost::asio::ip::tcp;       // from <boost/asio/ip/tcp.hpp>
 
-namespace Ichor::Boost {
+namespace Ichor::Boost::v1 {
     namespace Detail {
         using HostOutboxMessage = http::response<http::vector_body<uint8_t>, http::basic_fields<std::allocator<uint8_t>>>;
 
@@ -43,14 +43,14 @@ namespace Ichor::Boost {
      * - "TimeoutMs" uint64_t - with which interval in milliseconds to timeout for (re)connecting, after which the service stops itself (default: 10'000 ms)
      * - "Debug" bool - Enable verbose logging of requests and responses (default: false)
      */
-    class HttpHostService final : public IHttpHostService, public AdvancedService<HttpHostService> {
+    class HttpHostService final : public Ichor::v1::IHttpHostService, public AdvancedService<HttpHostService> {
     public:
         HttpHostService(DependencyRegister &reg, Properties props);
         ~HttpHostService() final = default;
 
-        HttpRouteRegistration addRoute(HttpMethod method, std::string_view route, std::function<Task<HttpResponse>(HttpRequest&)> handler) final;
-        HttpRouteRegistration addRoute(HttpMethod method, std::unique_ptr<RouteMatcher> matcher, std::function<Task<HttpResponse>(HttpRequest&)> handler) final;
-        void removeRoute(HttpMethod method, RouteIdType id) final;
+        Ichor::v1::HttpRouteRegistration addRoute(Ichor::v1::HttpMethod method, std::string_view route, std::function<Task<Ichor::v1::HttpResponse>(Ichor::v1::HttpRequest&)> handler) final;
+        Ichor::v1::HttpRouteRegistration addRoute(Ichor::v1::HttpMethod method, std::unique_ptr<Ichor::v1::RouteMatcher> matcher, std::function<Task<Ichor::v1::HttpResponse>(Ichor::v1::HttpRequest&)> handler) final;
+        void removeRoute(Ichor::v1::HttpMethod method, Ichor::v1::RouteIdType id) final;
 
         void setPriority(uint64_t priority) final;
         uint64_t getPriority() final;
@@ -59,8 +59,8 @@ namespace Ichor::Boost {
         Task<tl::expected<void, Ichor::StartError>> start() final;
         Task<void> stop() final;
 
-        void addDependencyInstance(ILogger &logger, IService &isvc);
-        void removeDependencyInstance(ILogger &logger, IService &isvc);
+        void addDependencyInstance(Ichor::v1::ILogger &logger, IService &isvc);
+        void removeDependencyInstance(Ichor::v1::ILogger &logger, IService &isvc);
         void addDependencyInstance(IBoostAsioQueue &q, IService&);
         void removeDependencyInstance(IBoostAsioQueue &q, IService&);
 
@@ -89,8 +89,8 @@ namespace Ichor::Boost {
         uint64_t _matchersIdCounter{};
         bool _sendServerHeader{true};
         bool _debug{};
-        ILogger* _logger{};
-        unordered_map<HttpMethod, unordered_map<std::unique_ptr<RouteMatcher>, std::function<Task<HttpResponse>(HttpRequest&)>>> _handlers{};
+        Ichor::v1::ILogger* _logger{};
+        unordered_map<Ichor::v1::HttpMethod, unordered_map<std::unique_ptr<Ichor::v1::RouteMatcher>, std::function<Task<Ichor::v1::HttpResponse>(Ichor::v1::HttpRequest&)>>> _handlers{};
         AsyncManualResetEvent _startStopEvent{};
         IBoostAsioQueue *_queue{};
     };

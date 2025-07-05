@@ -6,6 +6,7 @@
 #include <thread>
 
 using namespace Ichor;
+using namespace Ichor::v1;
 
 class UsingStatisticsService final {
 public:

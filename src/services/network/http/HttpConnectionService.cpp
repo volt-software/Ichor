@@ -33,13 +33,13 @@ struct fmt::formatter<ChunkParseStatus> {
     }
 };
 
-Ichor::HttpConnectionService::HttpConnectionService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {
+Ichor::v1::HttpConnectionService::HttpConnectionService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {
     reg.registerDependency<ILogger>(this, DependencyFlags::REQUIRED);
     reg.registerDependency<IEventQueue>(this, DependencyFlags::REQUIRED);
     reg.registerDependency<IClientConnectionService>(this, DependencyFlags::REQUIRED, getProperties());
 }
 
-Ichor::Task<tl::expected<Ichor::HttpResponse, Ichor::HttpError>> Ichor::HttpConnectionService::sendAsync(HttpMethod method, std::string_view route, unordered_map<std::string, std::string> &&headers, std::vector<uint8_t> &&msg) {
+Ichor::Task<tl::expected<Ichor::v1::HttpResponse, Ichor::v1::HttpError>> Ichor::v1::HttpConnectionService::sendAsync(HttpMethod method, std::string_view route, unordered_map<std::string, std::string> &&headers, std::vector<uint8_t> &&msg) {
     if(_connection == nullptr) {
         ICHOR_LOG_TRACE(_logger, "_connection nullptr");
         co_return tl::unexpected(HttpError::NO_CONNECTION);
@@ -93,11 +93,11 @@ Ichor::Task<tl::expected<Ichor::HttpResponse, Ichor::HttpError>> Ichor::HttpConn
     co_return *parseResp;
 }
 
-Ichor::Task<void> Ichor::HttpConnectionService::close() {
+Ichor::Task<void> Ichor::v1::HttpConnectionService::close() {
     co_return;
 }
 
-Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::HttpConnectionService::start() {
+Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::v1::HttpConnectionService::start() {
     auto addrIt = getProperties().find("Address");
     auto portIt = getProperties().find("Port");
 
@@ -110,20 +110,20 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::HttpConnectionService:
         co_return tl::unexpected(StartError::FAILED);
     }
 
-    _address = &Ichor::any_cast<std::string const &>(addrIt->second);
+    _address = &Ichor::v1::any_cast<std::string const &>(addrIt->second);
 
     if(auto propIt = getProperties().find("Priority"); propIt != getProperties().end()) {
-        _priority = Ichor::any_cast<uint64_t>(propIt->second);
+        _priority = Ichor::v1::any_cast<uint64_t>(propIt->second);
     }
     if(auto propIt = getProperties().find("Debug"); propIt != getProperties().end()) {
-        _debug = Ichor::any_cast<bool>(propIt->second);
+        _debug = Ichor::v1::any_cast<bool>(propIt->second);
     }
     ICHOR_LOG_TRACE(_logger, "HttpConnection {} started", getServiceId());
 
     co_return {};
 }
 
-Ichor::Task<void> Ichor::HttpConnectionService::stop() {
+Ichor::Task<void> Ichor::v1::HttpConnectionService::stop() {
     if(!_events.empty()) {
         std::terminate();
     }
@@ -133,25 +133,25 @@ Ichor::Task<void> Ichor::HttpConnectionService::stop() {
     co_return;
 }
 
-void Ichor::HttpConnectionService::addDependencyInstance(ILogger &logger, IService &) {
+void Ichor::v1::HttpConnectionService::addDependencyInstance(ILogger &logger, IService &) {
     _logger = &logger;
     ICHOR_LOG_TRACE(_logger, "HttpConnection {} got logger", getServiceId());
 }
 
-void Ichor::HttpConnectionService::removeDependencyInstance(ILogger &, IService &) {
+void Ichor::v1::HttpConnectionService::removeDependencyInstance(ILogger &, IService &) {
     _logger = nullptr;
 }
 
-void Ichor::HttpConnectionService::addDependencyInstance(IEventQueue &q, IService &) {
+void Ichor::v1::HttpConnectionService::addDependencyInstance(IEventQueue &q, IService &) {
     _queue = &q;
     ICHOR_LOG_TRACE(_logger, "HttpConnection {} got queue", getServiceId());
 }
 
-void Ichor::HttpConnectionService::removeDependencyInstance(IEventQueue &, IService &) {
+void Ichor::v1::HttpConnectionService::removeDependencyInstance(IEventQueue &, IService &) {
     _queue = nullptr;
 }
 
-void Ichor::HttpConnectionService::addDependencyInstance(IClientConnectionService &client, IService &s) {
+void Ichor::v1::HttpConnectionService::addDependencyInstance(IClientConnectionService &client, IService &s) {
     ICHOR_LOG_TRACE(_logger, "HttpConnection {} got connection {}", getServiceId(), s.getServiceId());
     if(!client.isClient()) {
         ICHOR_LOG_TRACE(_logger, "connection {} is not a client connection", s.getServiceId());
@@ -216,7 +216,7 @@ void Ichor::HttpConnectionService::addDependencyInstance(IClientConnectionServic
     });
 }
 
-void Ichor::HttpConnectionService::removeDependencyInstance(IClientConnectionService &client, IService &) {
+void Ichor::v1::HttpConnectionService::removeDependencyInstance(IClientConnectionService &client, IService &) {
     if(&client != _connection) {
         return;
     }
@@ -228,15 +228,15 @@ void Ichor::HttpConnectionService::removeDependencyInstance(IClientConnectionSer
     _events.clear();
 }
 
-void Ichor::HttpConnectionService::setPriority(uint64_t priority) {
+void Ichor::v1::HttpConnectionService::setPriority(uint64_t priority) {
     _priority = priority;
 }
 
-uint64_t Ichor::HttpConnectionService::getPriority() {
+uint64_t Ichor::v1::HttpConnectionService::getPriority() {
     return _priority;
 }
 
-tl::expected<Ichor::HttpResponse, Ichor::HttpParseError> Ichor::HttpConnectionService::parseResponse(std::string_view complete, size_t& len) const {
+tl::expected<Ichor::v1::HttpResponse, Ichor::v1::HttpParseError> Ichor::v1::HttpConnectionService::parseResponse(std::string_view complete, size_t& len) const {
     HttpResponse resp{};
     uint64_t lineNo{};
     uint64_t crlfCounter{};

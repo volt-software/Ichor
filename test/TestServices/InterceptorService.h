@@ -4,6 +4,7 @@
 #include <ichor/events/Event.h>
 
 using namespace Ichor;
+using namespace Ichor::v1;
 
 struct IInterceptorService {
     virtual std::unordered_map<uint64_t, uint64_t>& getPreinterceptedCounters() = 0;

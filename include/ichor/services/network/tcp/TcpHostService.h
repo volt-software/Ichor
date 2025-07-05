@@ -6,7 +6,7 @@
 #include <ichor/services/logging/Logger.h>
 #include <ichor/services/timer/ITimerFactory.h>
 
-namespace Ichor {
+namespace Ichor::v1 {
     struct NewSocketEvent final : public Ichor::Event {
         NewSocketEvent(uint64_t _id, uint64_t _originatingService, uint64_t _priority, int _socket) noexcept : Event(_id, _originatingService, _priority), socket(_socket) {}
         ~NewSocketEvent() final = default;

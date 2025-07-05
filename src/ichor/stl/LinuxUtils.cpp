@@ -3,7 +3,7 @@
 #include <cerrno>
 
 
-tl::optional<Ichor::Version> Ichor::kernelVersion() {
+tl::optional<Ichor::v1::Version> Ichor::v1::kernelVersion() {
     utsname buffer{};
     if(uname(&buffer) != 0) {
         fmt::println("Couldn't get uname: {}", strerror(errno));

@@ -6,12 +6,12 @@
 #include <ichor/services/network/http/HttpScopeGuards.h>
 #include <ichor/events/RunFunctionEvent.h>
 
-Ichor::Boost::WsHostService::WsHostService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {
-    reg.registerDependency<ILogger>(this, DependencyFlags::REQUIRED);
+Ichor::Boost::v1::WsHostService::WsHostService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {
+    reg.registerDependency<Ichor::v1::ILogger>(this, DependencyFlags::REQUIRED);
     reg.registerDependency<IBoostAsioQueue>(this, DependencyFlags::REQUIRED);
 }
 
-Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::Boost::WsHostService::start() {
+Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::Boost::v1::WsHostService::start() {
     auto addrIt = getProperties().find("Address");
     auto portIt = getProperties().find("Port");
 
@@ -25,20 +25,20 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::Boost::WsHostService::
     }
 
     if(auto propIt = getProperties().find("Priority"); propIt != getProperties().end()) {
-        _priority = Ichor::any_cast<uint64_t>(propIt->second);
+        _priority = Ichor::v1::any_cast<uint64_t>(propIt->second);
     }
     if(auto propIt = getProperties().find("NoDelay"); propIt != getProperties().end()) {
-        _tcpNoDelay = Ichor::any_cast<bool>(propIt->second);
+        _tcpNoDelay = Ichor::v1::any_cast<bool>(propIt->second);
     }
 
-    _eventRegistration = GetThreadLocalManager().registerEventHandler<NewWsConnectionEvent>(this, this, getServiceId());
+    _eventRegistration = GetThreadLocalManager().registerEventHandler<Ichor::v1::NewWsConnectionEvent>(this, this, getServiceId());
 
-    auto address = net::ip::make_address(Ichor::any_cast<std::string&>(addrIt->second));
-    auto port = Ichor::any_cast<uint16_t>(portIt->second);
+    auto address = net::ip::make_address(Ichor::v1::any_cast<std::string&>(addrIt->second));
+    auto port = Ichor::v1::any_cast<uint16_t>(portIt->second);
     _strand = std::make_unique<net::strand<net::io_context::executor_type>>(_queue->getContext().get_executor());
 
     net::spawn(*_strand, [this, address = std::move(address), port](net::yield_context yield) {
-        ScopeGuardAtomicCount const guard{_finishedListenAndRead};
+        Ichor::v1::ScopeGuardAtomicCount const guard{_finishedListenAndRead};
         try {
             listen(tcp::endpoint{address, port}, std::move(yield));
         } catch (std::runtime_error &e) {
@@ -53,7 +53,7 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::Boost::WsHostService::
     co_return {};
 }
 
-Ichor::Task<void> Ichor::Boost::WsHostService::stop() {
+Ichor::Task<void> Ichor::Boost::v1::WsHostService::stop() {
     INTERNAL_DEBUG("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! trying to stop WsHostService {}", getServiceId());
     _quit = true;
 
@@ -81,52 +81,52 @@ Ichor::Task<void> Ichor::Boost::WsHostService::stop() {
     co_return;
 }
 
-void Ichor::Boost::WsHostService::addDependencyInstance(ILogger &logger, IService &) {
+void Ichor::Boost::v1::WsHostService::addDependencyInstance(Ichor::v1::ILogger &logger, IService &) {
     _logger = &logger;
 }
 
-void Ichor::Boost::WsHostService::removeDependencyInstance(ILogger &logger, IService&) {
+void Ichor::Boost::v1::WsHostService::removeDependencyInstance(Ichor::v1::ILogger &logger, IService&) {
     _logger = nullptr;
 }
 
-void Ichor::Boost::WsHostService::addDependencyInstance(IBoostAsioQueue &q, IService&) {
+void Ichor::Boost::v1::WsHostService::addDependencyInstance(IBoostAsioQueue &q, IService&) {
     _queue = &q;
 }
 
-void Ichor::Boost::WsHostService::removeDependencyInstance(IBoostAsioQueue&, IService&) {
+void Ichor::Boost::v1::WsHostService::removeDependencyInstance(IBoostAsioQueue&, IService&) {
     _queue = nullptr;
 }
 
-Ichor::AsyncGenerator<Ichor::IchorBehaviour> Ichor::Boost::WsHostService::handleEvent(Ichor::NewWsConnectionEvent const &evt) {
+Ichor::AsyncGenerator<Ichor::IchorBehaviour> Ichor::Boost::v1::WsHostService::handleEvent(Ichor::v1::NewWsConnectionEvent const &evt) {
     if(_quit) {
         co_return {};
     }
 
-    auto connection = GetThreadLocalManager().createServiceManager<WsConnectionService<IHostConnectionService>, IConnectionService, IHostConnectionService>(Properties{
-        {"WsHostServiceId", Ichor::make_any<uint64_t>(getServiceId())},
-        {"Socket", Ichor::make_unformattable_any<decltype(evt._socket)>(evt._socket)}
+    auto connection = GetThreadLocalManager().createServiceManager<WsConnectionService<Ichor::v1::IHostConnectionService>, Ichor::v1::IConnectionService, Ichor::v1::IHostConnectionService>(Properties{
+        {"WsHostServiceId", Ichor::v1::make_any<uint64_t>(getServiceId())},
+        {"Socket", Ichor::v1::make_unformattable_any<decltype(evt._socket)>(evt._socket)}
     });
     _connections.push_back(connection->getServiceId());
 
     co_return {};
 }
 
-void Ichor::Boost::WsHostService::setPriority(uint64_t priority) {
+void Ichor::Boost::v1::WsHostService::setPriority(uint64_t priority) {
     _priority = priority;
 }
 
-uint64_t Ichor::Boost::WsHostService::getPriority() {
+uint64_t Ichor::Boost::v1::WsHostService::getPriority() {
     return _priority;
 }
 
-void Ichor::Boost::WsHostService::fail(beast::error_code ec, const char *what) {
+void Ichor::Boost::v1::WsHostService::fail(beast::error_code ec, const char *what) {
     ICHOR_LOG_ERROR(_logger, "Boost.BEAST fail: {}, {}", what, ec.message());
     _queue->pushPrioritisedEvent<StopServiceEvent>(getServiceId(), _priority, getServiceId());
     INTERNAL_DEBUG("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! _startStopEvent set {}", getServiceId());
     _startStopEvent.set();
 }
 
-void Ichor::Boost::WsHostService::listen(tcp::endpoint endpoint, net::yield_context yield)
+void Ichor::Boost::v1::WsHostService::listen(tcp::endpoint endpoint, net::yield_context yield)
 {
     beast::error_code ec;
 
@@ -165,7 +165,7 @@ void Ichor::Boost::WsHostService::listen(tcp::endpoint endpoint, net::yield_cont
 
         socket.set_option(tcp::no_delay(_tcpNoDelay));
 
-        _queue->pushPrioritisedEvent<NewWsConnectionEvent>(getServiceId(), _priority, std::make_shared<websocket::stream<beast::tcp_stream>>(std::move(socket)));
+        _queue->pushPrioritisedEvent<Ichor::v1::NewWsConnectionEvent>(getServiceId(), _priority, std::make_shared<websocket::stream<beast::tcp_stream>>(std::move(socket)));
     }
 
     INTERNAL_DEBUG("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! push2 {}", getServiceId());

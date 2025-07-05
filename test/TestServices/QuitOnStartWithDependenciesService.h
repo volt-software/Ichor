@@ -3,6 +3,7 @@
 #include "UselessService.h"
 
 using namespace Ichor;
+using namespace Ichor::v1;
 
 struct QuitOnStartWithDependenciesService final : public AdvancedService<QuitOnStartWithDependenciesService> {
     QuitOnStartWithDependenciesService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {

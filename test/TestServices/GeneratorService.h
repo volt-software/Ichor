@@ -3,6 +3,7 @@
 #include <ichor/dependency_management/AdvancedService.h>
 
 using namespace Ichor;
+using namespace Ichor::v1;
 
 struct IGeneratorService {
     virtual ~IGeneratorService() = default;

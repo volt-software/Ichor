@@ -36,8 +36,8 @@
 #include <ichor/event_queues/BoostAsioQueue.h>
 
 #define QIMPL BoostAsioQueue
-#define WSHOSTIMPL Boost::WsHostService
-#define WSCONNIMPL Boost::WsConnectionService
+#define WSHOSTIMPL Boost::v1::WsHostService
+#define WSCONNIMPL Boost::v1::WsConnectionService
 #endif
 
 #include <chrono>
@@ -98,21 +98,21 @@ int main(int argc, char *argv[]) {
     dm.createServiceManager<SpdlogSharedService, ISpdlogSharedService>(Properties{}, priorityToEnsureHostStartingFirst);
 #endif
 
-    dm.createServiceManager<FRAMEWORK_LOGGER_TYPE, IFrameworkLogger>(Properties{{"LogLevel", Ichor::make_any<LogLevel>(level)}}, priorityToEnsureHostStartingFirst);
+    dm.createServiceManager<FRAMEWORK_LOGGER_TYPE, IFrameworkLogger>(Properties{{"LogLevel", Ichor::v1::make_any<LogLevel>(level)}}, priorityToEnsureHostStartingFirst);
 
     if(silent) {
         dm.createServiceManager<LoggerFactory<NullLogger>, ILoggerFactory>(Properties{}, priorityToEnsureHostStartingFirst);
     } else {
-        dm.createServiceManager<LoggerFactory<LOGGER_TYPE>, ILoggerFactory>(Properties{{"DefaultLogLevel", Ichor::make_any<LogLevel>(level)}}, priorityToEnsureHostStartingFirst);
+        dm.createServiceManager<LoggerFactory<LOGGER_TYPE>, ILoggerFactory>(Properties{{"DefaultLogLevel", Ichor::v1::make_any<LogLevel>(level)}}, priorityToEnsureHostStartingFirst);
     }
     dm.createServiceManager<TestMsgGlazeSerializer, ISerializer<TestMsg>>();
 #ifdef URING_EXAMPLE
-    dm.createServiceManager<HOSTIMPL, IHostService>(Properties{{"Address", Ichor::make_any<std::string>("127.0.0.1"s)}, {"Port", Ichor::make_any<uint16_t>(static_cast<uint16_t>(8001))}});
+    dm.createServiceManager<HOSTIMPL, IHostService>(Properties{{"Address", Ichor::v1::make_any<std::string>("127.0.0.1"s)}, {"Port", Ichor::v1::make_any<uint16_t>(static_cast<uint16_t>(8001))}});
     dm.createServiceManager<ClientFactory<CONNIMPL<IClientConnectionService>, IClientConnectionService>, IClientFactory>();
 #endif
-    dm.createServiceManager<WSHOSTIMPL, IHostService>(Properties{{"Address", Ichor::make_any<std::string>(address)}, {"Port", Ichor::make_any<uint16_t>(static_cast<uint16_t>(8001))}}, priorityToEnsureHostStartingFirst);
+    dm.createServiceManager<WSHOSTIMPL, IHostService>(Properties{{"Address", Ichor::v1::make_any<std::string>(address)}, {"Port", Ichor::v1::make_any<uint16_t>(static_cast<uint16_t>(8001))}}, priorityToEnsureHostStartingFirst);
     dm.createServiceManager<ClientFactory<WSCONNIMPL<IConnectionService>>, IClientFactory>();
-    dm.createServiceManager<UsingWsService>(Properties{{"Address", Ichor::make_any<std::string>(address)}, {"Port", Ichor::make_any<uint16_t>(static_cast<uint16_t>(8001))}});
+    dm.createServiceManager<UsingWsService>(Properties{{"Address", Ichor::v1::make_any<std::string>(address)}, {"Port", Ichor::v1::make_any<uint16_t>(static_cast<uint16_t>(8001))}});
     queue->start(CaptureSigInt);
     auto end = std::chrono::steady_clock::now();
     fmt::print("{} ran for {:L} µs\n", argv[0], std::chrono::duration_cast<std::chrono::microseconds>(end-start).count());

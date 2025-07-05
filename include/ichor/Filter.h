@@ -22,7 +22,7 @@ namespace Ichor {
                 return MissingOk;
             }
 
-            return Ichor::any_cast<T const &>(propVal->second) == val;
+            return Ichor::v1::any_cast<T const &>(propVal->second) == val;
         }
 
         [[nodiscard]] std::string getDescription() const noexcept {
@@ -69,7 +69,7 @@ namespace Ichor {
                 return MissingOk;
             }
 
-            return Ichor::any_cast<PropT const &>(propVal->second) == val;
+            return Ichor::v1::any_cast<PropT const &>(propVal->second) == val;
         }
 
         [[nodiscard]] std::string getDescription() const noexcept {
@@ -148,7 +148,7 @@ namespace Ichor {
             return _templatedFilter->getDescription();
         }
 
-        ReferenceCountedPointer<ITemplatedFilter> _templatedFilter;
+        v1::ReferenceCountedPointer<ITemplatedFilter> _templatedFilter;
     };
 }
 

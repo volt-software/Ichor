@@ -15,12 +15,12 @@
 TEST_CASE("HttpConnectionTests") {
 
     Properties props{};
-    props.emplace("Address", Ichor::make_any<std::string>("192.168.10.10"));
-    props.emplace("Port", Ichor::make_any<std::string>("8080"));
-    Detail::DependencyLifecycleManager<QueueMock, IEventQueue> q{{}};
-    Detail::DependencyLifecycleManager<LoggerMock, ILogger> logger{{}};
-    Detail::DependencyLifecycleManager<ConnectionServiceMock<IClientConnectionService>, IClientConnectionService> conn{{}};
-    Detail::DependencyLifecycleManager<HttpConnectionService, IHttpConnectionService> svc{std::move(props)};
+    props.emplace("Address", Ichor::v1::make_any<std::string>("192.168.10.10"));
+    props.emplace("Port", Ichor::v1::make_any<std::string>("8080"));
+    Ichor::Detail::DependencyLifecycleManager<QueueMock, IEventQueue> q{{}};
+    Ichor::Detail::DependencyLifecycleManager<LoggerMock, ILogger> logger{{}};
+    Ichor::Detail::DependencyLifecycleManager<ConnectionServiceMock<IClientConnectionService>, IClientConnectionService> conn{{}};
+    Ichor::Detail::DependencyLifecycleManager<HttpConnectionService, IHttpConnectionService> svc{std::move(props)};
 
     conn.getService().is_client = true;
 
@@ -329,13 +329,13 @@ TEST_CASE("HttpConnectionTests") {
 TEST_CASE("HttpHostTests Missing properties") {
 
     Properties props{};
-    props.emplace("Address", Ichor::make_any<std::string>("192.168.10.10"));
-    props.emplace("Port", Ichor::make_any<std::string>("8080"));
-    Detail::DependencyLifecycleManager<QueueMock, IEventQueue> q{{}};
-    Detail::DependencyLifecycleManager<LoggerMock, ILogger> logger{{}};
-    Detail::DependencyLifecycleManager<ConnectionServiceMock<IHostConnectionService>, IHostConnectionService> conn{{}};
-    Detail::DependencyLifecycleManager<HostServiceMock, IHostService> host{Properties{props}};
-    Detail::DependencyLifecycleManager<HttpHostService, IHttpHostService> svc{std::move(props)};
+    props.emplace("Address", Ichor::v1::make_any<std::string>("192.168.10.10"));
+    props.emplace("Port", Ichor::v1::make_any<std::string>("8080"));
+    Ichor::Detail::DependencyLifecycleManager<QueueMock, IEventQueue> q{{}};
+    Ichor::Detail::DependencyLifecycleManager<LoggerMock, ILogger> logger{{}};
+    Ichor::Detail::DependencyLifecycleManager<ConnectionServiceMock<IHostConnectionService>, IHostConnectionService> conn{{}};
+    Ichor::Detail::DependencyLifecycleManager<HostServiceMock, IHostService> host{Properties{props}};
+    Ichor::Detail::DependencyLifecycleManager<HttpHostService, IHttpHostService> svc{std::move(props)};
 
     conn.getService().is_client = false;
 
@@ -358,13 +358,13 @@ TEST_CASE("HttpHostTests Missing properties") {
 TEST_CASE("HttpHostTests") {
 
     Properties props{};
-    props.emplace("Address", Ichor::make_any<std::string>("192.168.10.10"));
-    props.emplace("Port", Ichor::make_any<std::string>("8080"));
-    Detail::DependencyLifecycleManager<QueueMock, IEventQueue> q{{}};
-    Detail::DependencyLifecycleManager<LoggerMock, ILogger> logger{{}};
-    Detail::DependencyLifecycleManager<HostServiceMock, IHostService> host{Properties{props}};
-    Detail::DependencyLifecycleManager<ConnectionServiceMock<IHostConnectionService>, IHostConnectionService> conn{{{"TcpHostService", Ichor::make_any<ServiceIdType>(host.getService().getServiceId())}}};
-    Detail::DependencyLifecycleManager<HttpHostService, IHttpHostService> svc{std::move(props)};
+    props.emplace("Address", Ichor::v1::make_any<std::string>("192.168.10.10"));
+    props.emplace("Port", Ichor::v1::make_any<std::string>("8080"));
+    Ichor::Detail::DependencyLifecycleManager<QueueMock, IEventQueue> q{{}};
+    Ichor::Detail::DependencyLifecycleManager<LoggerMock, ILogger> logger{{}};
+    Ichor::Detail::DependencyLifecycleManager<HostServiceMock, IHostService> host{Properties{props}};
+    Ichor::Detail::DependencyLifecycleManager<ConnectionServiceMock<IHostConnectionService>, IHostConnectionService> conn{{{"TcpHostService", Ichor::v1::make_any<ServiceIdType>(host.getService().getServiceId())}}};
+    Ichor::Detail::DependencyLifecycleManager<HttpHostService, IHttpHostService> svc{std::move(props)};
 
     conn.getService().is_client = false;
 

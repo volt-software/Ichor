@@ -7,7 +7,7 @@
 #include <ichor/services/logging/Logger.h>
 #include <ichor/services/logging/SpdlogSharedService.h>
 
-namespace Ichor {
+namespace Ichor::v1 {
     class SpdlogLogger final : public ILogger, public AdvancedService<SpdlogLogger> {
     public:
         SpdlogLogger(DependencyRegister &reg, Properties props);

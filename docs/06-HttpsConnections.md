@@ -121,7 +121,7 @@ std::string cert = "-----BEGIN CERTIFICATE-----\n"
                    "-----END CERTIFICATE-----";
 
 dm.createServiceManager<AsioContextService, IAsioContextService>();
-dm.createServiceManager<HttpHostService, IHttpHostService>(Properties{{"Address", Ichor::make_any<std::string>("127.0.0.1")}, {"Port", Ichor::make_any<uint16_t>(static_cast<uint16_t>(443))}, {"SslKey", Ichor::make_any<std::string>(key)}, {"SslCert", Ichor::make_any<std::string>(cert)}});
+dm.createServiceManager<HttpHostService, IHttpHostService>(Properties{{"Address", Ichor::v1::make_any<std::string>("127.0.0.1")}, {"Port", Ichor::v1::make_any<uint16_t>(static_cast<uint16_t>(443))}, {"SslKey", Ichor::v1::make_any<std::string>(key)}, {"SslCert", Ichor::v1::make_any<std::string>(cert)}});
 
 queue->start(CaptureSigInt);
 ```
@@ -129,7 +129,7 @@ queue->start(CaptureSigInt);
 This will create a Https-only Host on 127.0.0.1:443. Be mindful that ports below 1000 usually require some sort of root or privileged user to use it. If you want to support Http as well, simply create another Host Service:
 
 ```c++
-dm.createServiceManager<HttpHostService, IHttpHostService>(Properties{{"Address", Ichor::make_any<std::string>("127.0.0.1")}, {"Port", Ichor::make_any<uint16_t>(static_cast<uint16_t>(8000))}});
+dm.createServiceManager<HttpHostService, IHttpHostService>(Properties{{"Address", Ichor::v1::make_any<std::string>("127.0.0.1")}, {"Port", Ichor::v1::make_any<uint16_t>(static_cast<uint16_t>(8000))}});
 ```
 
 ## Client
@@ -163,7 +163,7 @@ std::string cert = "-----BEGIN CERTIFICATE-----\n"
                    "-----END CERTIFICATE-----";
 
 dm.createServiceManager<AsioContextService, IAsioContextService>();
-dm.createServiceManager<HttpConnectionService, IHttpConnectionService>(Properties{{"Address", Ichor::make_any<std::string>("127.0.0.1")}, {"Port", Ichor::make_any<uint16_t>(static_cast<uint16_t>(443))}, {"ConnectOverSsl", Ichor::make_any<bool>(true)}, {"RootCA", Ichor::make_any<std::string>(cert)}});
+dm.createServiceManager<HttpConnectionService, IHttpConnectionService>(Properties{{"Address", Ichor::v1::make_any<std::string>("127.0.0.1")}, {"Port", Ichor::v1::make_any<uint16_t>(static_cast<uint16_t>(443))}, {"ConnectOverSsl", Ichor::v1::make_any<bool>(true)}, {"RootCA", Ichor::v1::make_any<std::string>(cert)}});
 
 queue->start(CaptureSigInt);
 ```

@@ -5,15 +5,15 @@
 #include <ichor/Filter.h>
 #include <atomic>
 
-std::atomic<uint64_t> Ichor::_timerIdCounter{1};
+std::atomic<uint64_t> Ichor::v1::_timerIdCounter{1};
 
-Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::TimerFactoryFactory::start() {
+Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::v1::TimerFactoryFactory::start() {
     _trackerRegistration = GetThreadLocalManager().registerDependencyTracker<ITimerFactory>(this, this);
 
     co_return {};
 }
 
-Ichor::Task<void> Ichor::TimerFactoryFactory::stop() {
+Ichor::Task<void> Ichor::v1::TimerFactoryFactory::stop() {
     if(_quitting) {
         std::terminate();
     }
@@ -45,7 +45,7 @@ Ichor::Task<void> Ichor::TimerFactoryFactory::stop() {
     co_return;
 }
 
-std::vector<Ichor::ServiceIdType> Ichor::TimerFactoryFactory::getCreatedTimerFactoryIds() const noexcept {
+std::vector<Ichor::ServiceIdType> Ichor::v1::TimerFactoryFactory::getCreatedTimerFactoryIds() const noexcept {
     std::vector<ServiceIdType> ret;
     ret.reserve(_factories.size());
 
@@ -56,7 +56,7 @@ std::vector<Ichor::ServiceIdType> Ichor::TimerFactoryFactory::getCreatedTimerFac
     return ret;
 }
 
-Ichor::AsyncGenerator<Ichor::IchorBehaviour> Ichor::TimerFactoryFactory::handleDependencyRequest(AlwaysNull<ITimerFactory *>, const DependencyRequestEvent &evt) {
+Ichor::AsyncGenerator<Ichor::IchorBehaviour> Ichor::v1::TimerFactoryFactory::handleDependencyRequest(v1::AlwaysNull<ITimerFactory *>, const DependencyRequestEvent &evt) {
     INTERNAL_IO_DEBUG("TimerFactoryFactory {} handleDependencyRequest for {} quit {}", getServiceId(), evt.originatingService, _quitting);
 
     if(_quitting) {
@@ -71,13 +71,13 @@ Ichor::AsyncGenerator<Ichor::IchorBehaviour> Ichor::TimerFactoryFactory::handleD
         co_return {};
     }
 
-    _factories.emplace(evt.originatingService, GetThreadLocalManager().createServiceManager<TimerFactory<Timer, IEventQueue>, Detail::InternalTimerFactory, ITimerFactory>(Properties{{"requestingSvcId", Ichor::make_any<ServiceIdType>(evt.originatingService)}, {"Filter", Ichor::make_any<Filter>(ServiceIdFilterEntry{evt.originatingService})}}, evt.priority)->getServiceId());
+    _factories.emplace(evt.originatingService, GetThreadLocalManager().createServiceManager<TimerFactory<Timer, IEventQueue>, Ichor::Detail::v1::InternalTimerFactory, ITimerFactory>(Properties{{"requestingSvcId", Ichor::v1::make_any<ServiceIdType>(evt.originatingService)}, {"Filter", Ichor::v1::make_any<Filter>(ServiceIdFilterEntry{evt.originatingService})}}, evt.priority)->getServiceId());
 
     INTERNAL_IO_DEBUG("TimerFactoryFactory {} handleDependencyRequest for {} done3", getServiceId(), evt.originatingService, _quitting);
     co_return {};
 }
 
-Ichor::AsyncGenerator<Ichor::IchorBehaviour> Ichor::TimerFactoryFactory::handleDependencyUndoRequest(AlwaysNull<ITimerFactory *>, const DependencyUndoRequestEvent &evt) {
+Ichor::AsyncGenerator<Ichor::IchorBehaviour> Ichor::v1::TimerFactoryFactory::handleDependencyUndoRequest(v1::AlwaysNull<ITimerFactory *>, const DependencyUndoRequestEvent &evt) {
     INTERNAL_IO_DEBUG("TimerFactoryFactory {} handleDependencyUndoRequest for {} quit {}", getServiceId(), evt.originatingService, _quitting);
 
     if(_quitting) {
@@ -103,9 +103,9 @@ Ichor::AsyncGenerator<Ichor::IchorBehaviour> Ichor::TimerFactoryFactory::handleD
     co_return {};
 }
 
-Ichor::Task<void> Ichor::TimerFactoryFactory::pushStopEventForTimerFactory(ServiceIdType requestingSvcId, ServiceIdType factoryId) noexcept {
+Ichor::Task<void> Ichor::v1::TimerFactoryFactory::pushStopEventForTimerFactory(ServiceIdType requestingSvcId, ServiceIdType factoryId) noexcept {
     INTERNAL_IO_DEBUG("TimerFactoryFactory {} pushStopEventForTimerFactory for {}", getServiceId(), requestingSvcId);
-    auto svc = GetThreadLocalManager().getService<Detail::InternalTimerFactory>(factoryId);
+    auto svc = GetThreadLocalManager().getService<Ichor::Detail::v1::InternalTimerFactory>(factoryId);
 
     if(!svc) {
         INTERNAL_IO_DEBUG("TimerFactoryFactory {} pushStopEventForTimerFactory for {} done1", getServiceId(), requestingSvcId);

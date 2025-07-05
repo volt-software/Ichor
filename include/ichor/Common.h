@@ -20,7 +20,7 @@ static constexpr bool DO_INTERNAL_DEBUG = true;
     if constexpr(DO_INTERNAL_DEBUG) { \
         std::thread::id this_id = std::this_thread::get_id();                         \
         fmt::print("[{:L}] [{}] ", std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now().time_since_epoch()).count(), this_id);    \
-        const char *base = Ichor::basename(__FILE__); \
+        const char *base = Ichor::v1::basename(__FILE__); \
         fmt::print("[{}:{}] ", base, __LINE__);    \
         fmt::println(__VA_ARGS__);    \
     }                                 \
@@ -38,7 +38,7 @@ static constexpr bool DO_INTERNAL_COROUTINE_DEBUG = true;
     if constexpr(DO_INTERNAL_COROUTINE_DEBUG) { \
         std::thread::id this_id = std::this_thread::get_id();                         \
         fmt::print("[{:L}] [{}] ", std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now().time_since_epoch()).count(), this_id);    \
-        const char *base = Ichor::basename(__FILE__); \
+        const char *base = Ichor::v1::basename(__FILE__); \
         fmt::print("[{}:{}] ", base, __LINE__);    \
         fmt::println(__VA_ARGS__);    \
     }                                 \
@@ -56,7 +56,7 @@ static constexpr bool DO_INTERNAL_IO_DEBUG = true;
     if constexpr(DO_INTERNAL_IO_DEBUG) { \
         std::thread::id this_id = std::this_thread::get_id();                         \
         fmt::print("[{:L}] [{}] ", std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now().time_since_epoch()).count(), this_id);    \
-        const char *base = Ichor::basename(__FILE__); \
+        const char *base = Ichor::v1::basename(__FILE__); \
         fmt::print("[{}:{}] ", base, __LINE__);    \
         fmt::println(__VA_ARGS__);    \
     }                                 \
@@ -74,7 +74,7 @@ static constexpr bool DO_INTERNAL_STL_DEBUG = true;
     if constexpr(DO_INTERNAL_STL_DEBUG) { \
         std::thread::id this_id = std::this_thread::get_id();                         \
         fmt::print("[{:L}] [{}] ", std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now().time_since_epoch()).count(), this_id);    \
-        const char *base = Ichor::basename(__FILE__); \
+        const char *base = Ichor::v1::basename(__FILE__); \
         fmt::print("[{}:{}] ", base, __LINE__);    \
         fmt::println(__VA_ARGS__);    \
     }                                 \
@@ -144,7 +144,7 @@ namespace Ichor {
             class Allocator = std::allocator<T>>
     using unordered_set = ankerl::unordered_dense::set<T, Hash, Eq, Allocator>;
 
-    using Properties = unordered_map<std::string, Ichor::any, string_hash, std::equal_to<>>;
+    using Properties = unordered_map<std::string, Ichor::v1::any, string_hash, std::equal_to<>>;
 
     inline constexpr bool PreventOthersHandling = false;
     inline constexpr bool AllowOthersHandling = true;

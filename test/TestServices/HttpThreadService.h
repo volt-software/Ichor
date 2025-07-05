@@ -12,6 +12,7 @@
 #include "../serialization/RegexJsonMsg.h"
 
 using namespace Ichor;
+using namespace Ichor::v1;
 
 extern std::unique_ptr<Ichor::AsyncManualResetEvent> _evt;
 extern std::atomic<bool> evtGate;

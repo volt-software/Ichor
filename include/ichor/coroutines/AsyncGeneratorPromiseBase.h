@@ -231,7 +231,7 @@ namespace Ichor::Detail {
             return _finished;
         }
 
-        ICHOR_COROUTINE_CONSTEXPR ReferenceCountedPointer<bool>& get_destroyed() noexcept  {
+        ICHOR_COROUTINE_CONSTEXPR v1::ReferenceCountedPointer<bool>& get_destroyed() noexcept  {
             INTERNAL_COROUTINE_DEBUG("AsyncGeneratorPromise<{}>::get_destroyed {}, {}", typeName<T>(), _id, *_destroyed);
             return _destroyed;
         }
@@ -254,7 +254,7 @@ namespace Ichor::Detail {
 
         tl::optional<T> _currentValue{};
         bool _finished{};
-        ReferenceCountedPointer<bool> _destroyed;
+        v1::ReferenceCountedPointer<bool> _destroyed;
     };
 
     template<>
@@ -279,7 +279,7 @@ namespace Ichor::Detail {
             return _finished;
         }
 
-        constexpr ReferenceCountedPointer<bool>& get_destroyed() noexcept  {
+        constexpr v1::ReferenceCountedPointer<bool>& get_destroyed() noexcept  {
             return _destroyed;
         }
 
@@ -290,7 +290,7 @@ namespace Ichor::Detail {
         }
 
         bool _finished{};
-        ReferenceCountedPointer<bool> _destroyed;
+        v1::ReferenceCountedPointer<bool> _destroyed;
     };
 }
 

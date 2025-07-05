@@ -19,7 +19,8 @@
 #include <ichor/glaze.h>
 #include <glaze/util/type_traits.hpp>
 
-using namespace Ichor::Etcd::v2;
+using namespace Ichor::Etcdv2::v1;
+using namespace Ichor::v1;
 
 template <>
 struct glz::meta<EtcdReplyNode> {
@@ -97,7 +98,7 @@ struct glz::meta<EtcdStoreStats> {
     );
 };
 
-namespace Ichor::Etcd::v2 {
+namespace Ichor::Etcdv2::v1 {
     struct EtcdHealthReply final {
         std::string health;
         std::optional<std::string> reason;
@@ -339,13 +340,13 @@ Ichor::Task<tl::expected<EtcdReply, EtcdError>> EtcdService::put(std::string_vie
         etcd_reply.x_etcd_cluster_id = cluster_id->second;
     }
     if(etcd_index != end(http_reply->headers)) {
-        etcd_reply.x_etcd_index = Ichor::FastAtoiu(etcd_index->second.c_str());
+        etcd_reply.x_etcd_index = Ichor::v1::FastAtoiu(etcd_index->second.c_str());
     }
     if(raft_index != end(http_reply->headers)) {
-        etcd_reply.x_raft_index = Ichor::FastAtoiu(raft_index->second.c_str());
+        etcd_reply.x_raft_index = Ichor::v1::FastAtoiu(raft_index->second.c_str());
     }
     if(raft_term != end(http_reply->headers)) {
-        etcd_reply.x_raft_term = Ichor::FastAtoiu(raft_term->second.c_str());
+        etcd_reply.x_raft_term = Ichor::v1::FastAtoiu(raft_term->second.c_str());
     }
 
     co_return etcd_reply;

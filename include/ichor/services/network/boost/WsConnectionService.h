@@ -15,7 +15,7 @@ namespace websocket = beast::websocket; // from <boost/beast/websocket.hpp>
 namespace net = boost::asio;            // from <boost/asio.hpp>
 using tcp = boost::asio::ip::tcp;       // from <boost/asio/ip/tcp.hpp>
 
-namespace Ichor::Boost {
+namespace Ichor::Boost::v1 {
     namespace Detail {
         struct WsConnectionOutboxMessage final {
             std::vector<uint8_t> msg;
@@ -24,14 +24,14 @@ namespace Ichor::Boost {
         };
     }
 
-    template <typename InterfaceT> requires DerivedAny<InterfaceT, IConnectionService, IHostConnectionService, IClientConnectionService>
+    template <typename InterfaceT> requires DerivedAny<InterfaceT, Ichor::v1::IConnectionService, Ichor::v1::IHostConnectionService, Ichor::v1::IClientConnectionService>
     class WsConnectionService final : public InterfaceT, public AdvancedService<WsConnectionService<InterfaceT>> {
     public:
         WsConnectionService(DependencyRegister &reg, Properties props);
         ~WsConnectionService() final = default;
 
-        Task<tl::expected<void, IOError>> sendAsync(std::vector<uint8_t>&& msg) final;
-        Task<tl::expected<void, IOError>> sendAsync(std::vector<std::vector<uint8_t>>&& msgs) final;
+        Task<tl::expected<void, Ichor::v1::IOError>> sendAsync(std::vector<uint8_t>&& msg) final;
+        Task<tl::expected<void, Ichor::v1::IOError>> sendAsync(std::vector<std::vector<uint8_t>>&& msgs) final;
         void setPriority(uint64_t priority) final;
         uint64_t getPriority() final;
 
@@ -42,11 +42,11 @@ namespace Ichor::Boost {
         Task<tl::expected<void, StartError>> start() final;
         Task<void> stop() final;
 
-        void addDependencyInstance(ILogger &logger, IService &isvc);
-        void removeDependencyInstance(ILogger &logger, IService &isvc);
+        void addDependencyInstance(Ichor::v1::ILogger &logger, IService &isvc);
+        void removeDependencyInstance(Ichor::v1::ILogger &logger, IService &isvc);
 
-        void addDependencyInstance(IHostService&, IService &isvc);
-        void removeDependencyInstance(IHostService&, IService &isvc);
+        void addDependencyInstance(Ichor::v1::IHostService&, IService &isvc);
+        void removeDependencyInstance(Ichor::v1::IHostService&, IService &isvc);
 
         void addDependencyInstance(IBoostAsioQueue &q, IService&);
         void removeDependencyInstance(IBoostAsioQueue &q, IService&);
@@ -63,7 +63,7 @@ namespace Ichor::Boost {
         uint64_t _priority{};
         bool _connected{};
         bool _quit{};
-        ILogger *_logger{};
+        Ichor::v1::ILogger *_logger{};
         IBoostAsioQueue *_queue{};
         std::unique_ptr<net::strand<net::io_context::executor_type>> _strand{};
         std::atomic<int64_t> _finishedListenAndRead{};

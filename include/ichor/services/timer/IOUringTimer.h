@@ -7,9 +7,8 @@
 #include <ichor/services/timer/ITimer.h>
 #include <ichor/event_queues/IIOUringQueue.h>
 #include <ichor/ichor_liburing.h>
-#include <ichor/coroutines/AsyncManualResetEvent.h>
 
-namespace Ichor {
+namespace Ichor::v1 {
     template <typename TIMER, typename QUEUE>
     class TimerFactory;
 

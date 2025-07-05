@@ -11,7 +11,7 @@
 
 struct io_uring;
 
-namespace Ichor {
+namespace Ichor::v1 {
     class IOUringAsyncFileIO final : public IAsyncFileIO, public AdvancedService<IOUringAsyncFileIO> {
     public:
         IOUringAsyncFileIO(DependencyRegister &reg, Properties props);

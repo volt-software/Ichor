@@ -12,6 +12,7 @@
 #include "../common/TestMsg.h"
 
 using namespace Ichor;
+using namespace Ichor::v1;
 
 class UsingHttpService final : public AdvancedService<UsingHttpService> {
 public:

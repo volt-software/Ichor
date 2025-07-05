@@ -53,8 +53,8 @@ int main(int argc, char *argv[]) {
             dm.createServiceManager<LoggerFactory<NullLogger>, ILoggerFactory>();
             dm.createServiceManager<NullFrameworkLogger, IFrameworkLogger>();
             for (uint64_t i = 0; i < SERVICES_COUNT; i++) {
-                dm.createServiceManager<TestService>(Properties{{"Iteration", Ichor::make_any<uint64_t>(i)},
-                                                                {"LogLevel",  Ichor::make_any<LogLevel>(LogLevel::LOG_WARN)}});
+                dm.createServiceManager<TestService>(Properties{{"Iteration", Ichor::v1::make_any<uint64_t>(i)},
+                                                                {"LogLevel",  Ichor::v1::make_any<LogLevel>(LogLevel::LOG_WARN)}});
             }
             queue->start(CaptureSigInt);
             auto end = std::chrono::steady_clock::now();
@@ -71,7 +71,7 @@ int main(int argc, char *argv[]) {
                     dm.createServiceManager<LoggerFactory<NullLogger>, ILoggerFactory>();
                     dm.createServiceManager<NullFrameworkLogger, IFrameworkLogger>();
                     for (uint64_t z = 0; z < SERVICES_COUNT; z++) {
-                        dm.createServiceManager<TestService>(Properties{{"Iteration", Ichor::make_any<uint64_t>(z)}, {"LogLevel", Ichor::make_any<LogLevel>(LogLevel::LOG_WARN)}});
+                        dm.createServiceManager<TestService>(Properties{{"Iteration", Ichor::v1::make_any<uint64_t>(z)}, {"LogLevel", Ichor::v1::make_any<LogLevel>(LogLevel::LOG_WARN)}});
                     }
                     queues[i].start(CaptureSigInt);
                 });
@@ -93,8 +93,8 @@ int main(int argc, char *argv[]) {
             dm.createServiceManager<LoggerFactory<NullLogger>, ILoggerFactory>();
             dm.createServiceManager<NullFrameworkLogger, IFrameworkLogger>();
             for (uint64_t i = 0; i < SERVICES_COUNT; i++) {
-                dm.createServiceManager<ConstructorInjectionTestService>(Properties{{"Iteration", Ichor::make_any<uint64_t>(i)},
-                                                                {"LogLevel",  Ichor::make_any<LogLevel>(LogLevel::LOG_WARN)}});
+                dm.createServiceManager<ConstructorInjectionTestService>(Properties{{"Iteration", Ichor::v1::make_any<uint64_t>(i)},
+                                                                {"LogLevel",  Ichor::v1::make_any<LogLevel>(LogLevel::LOG_WARN)}});
             }
             queue->start(CaptureSigInt);
             auto end = std::chrono::steady_clock::now();
@@ -111,7 +111,7 @@ int main(int argc, char *argv[]) {
                     dm.createServiceManager<LoggerFactory<NullLogger>, ILoggerFactory>();
                     dm.createServiceManager<NullFrameworkLogger, IFrameworkLogger>();
                     for (uint64_t z = 0; z < SERVICES_COUNT; z++) {
-                        dm.createServiceManager<ConstructorInjectionTestService>(Properties{{"Iteration", Ichor::make_any<uint64_t>(z)}, {"LogLevel", Ichor::make_any<LogLevel>(LogLevel::LOG_WARN)}});
+                        dm.createServiceManager<ConstructorInjectionTestService>(Properties{{"Iteration", Ichor::v1::make_any<uint64_t>(z)}, {"LogLevel", Ichor::v1::make_any<LogLevel>(LogLevel::LOG_WARN)}});
                     }
                     queues[i].start(CaptureSigInt);
                 });

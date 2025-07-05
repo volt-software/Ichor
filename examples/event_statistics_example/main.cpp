@@ -38,7 +38,7 @@ int main(int argc, char *argv[]) {
     dm.createServiceManager<SpdlogSharedService, ISpdlogSharedService>(Properties{}, priorityToEnsureStartingFirst);
 #endif
     dm.createServiceManager<NullFrameworkLogger, IFrameworkLogger>();
-    dm.createServiceManager<LoggerFactory<LOGGER_TYPE>, ILoggerFactory>(Properties{{"DefaultLogLevel", Ichor::make_any<LogLevel>(LogLevel::LOG_INFO)}}, priorityToEnsureStartingFirst);
+    dm.createServiceManager<LoggerFactory<LOGGER_TYPE>, ILoggerFactory>(Properties{{"DefaultLogLevel", Ichor::v1::make_any<LogLevel>(LogLevel::LOG_INFO)}}, priorityToEnsureStartingFirst);
     dm.createServiceManager<EventStatisticsService, IEventStatisticsService>(Properties{{"ShowStatisticsOnStop", make_any<bool>(true)}}, priorityToEnsureStartingFirst);
     dm.createServiceManager<UsingStatisticsService>();
     dm.createServiceManager<TimerFactoryFactory>(Properties{}, priorityToEnsureStartingFirst);

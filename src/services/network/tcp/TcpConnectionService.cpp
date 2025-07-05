@@ -12,24 +12,25 @@
 #include <poll.h>
 #include <thread>
 
-template <typename InterfaceT> requires Ichor::DerivedAny<InterfaceT, Ichor::IConnectionService, Ichor::IHostConnectionService, Ichor::IClientConnectionService>
-Ichor::TcpConnectionService<InterfaceT>::TcpConnectionService(DependencyRegister &reg, Properties props) : AdvancedService<TcpConnectionService<InterfaceT>>(std::move(props)), _socket(-1), _attempts(), _priority(INTERNAL_EVENT_PRIORITY), _quit() {
+
+template <typename InterfaceT> requires Ichor::DerivedAny<InterfaceT, Ichor::v1::IConnectionService, Ichor::v1::IHostConnectionService, Ichor::v1::IClientConnectionService>
+Ichor::v1::TcpConnectionService<InterfaceT>::TcpConnectionService(DependencyRegister &reg, Properties props) : AdvancedService<TcpConnectionService<InterfaceT>>(std::move(props)), _socket(-1), _attempts(), _priority(INTERNAL_EVENT_PRIORITY), _quit() {
     reg.registerDependency<ILogger>(this, DependencyFlags::REQUIRED);
     reg.registerDependency<ITimerFactory>(this, DependencyFlags::REQUIRED);
 }
 
-template <typename InterfaceT> requires Ichor::DerivedAny<InterfaceT, Ichor::IConnectionService, Ichor::IHostConnectionService, Ichor::IClientConnectionService>
-Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::TcpConnectionService<InterfaceT>::start() {
+template <typename InterfaceT> requires Ichor::DerivedAny<InterfaceT, Ichor::v1::IConnectionService, Ichor::v1::IHostConnectionService, Ichor::v1::IClientConnectionService>
+Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::v1::TcpConnectionService<InterfaceT>::start() {
     if(auto propIt = AdvancedService<TcpConnectionService>::getProperties().find("Priority"); propIt != AdvancedService<TcpConnectionService>::getProperties().end()) {
-        _priority = Ichor::any_cast<uint64_t>(propIt->second);
+        _priority = Ichor::v1::any_cast<uint64_t>(propIt->second);
     }
     if(auto propIt = AdvancedService<TcpConnectionService>::getProperties().find("TimeoutSendUs"); propIt != AdvancedService<TcpConnectionService>::getProperties().end()) {
-        _sendTimeout = Ichor::any_cast<int64_t>(propIt->second);
+        _sendTimeout = Ichor::v1::any_cast<int64_t>(propIt->second);
     }
 
     if(AdvancedService<TcpConnectionService>::getProperties().contains("Socket")) {
         if(auto propIt = AdvancedService<TcpConnectionService>::getProperties().find("Socket"); propIt != AdvancedService<TcpConnectionService>::getProperties().end()) {
-            _socket = Ichor::any_cast<int>(propIt->second);
+            _socket = Ichor::v1::any_cast<int>(propIt->second);
         }
 
         int setting = 1;
@@ -52,7 +53,7 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::TcpConnectionService<I
             ICHOR_LOG_ERROR(_logger, "[{}] Missing port", AdvancedService<TcpConnectionService>::getServiceId());
             co_return tl::unexpected(StartError::FAILED);
         }
-        ICHOR_LOG_TRACE(_logger, "[{}] connecting to {}:{}", AdvancedService<TcpConnectionService>::getServiceId(), Ichor::any_cast<std::string&>(addrIt->second), Ichor::any_cast<uint16_t>(portIt->second));
+        ICHOR_LOG_TRACE(_logger, "[{}] connecting to {}:{}", AdvancedService<TcpConnectionService>::getServiceId(), Ichor::v1::any_cast<std::string&>(addrIt->second), Ichor::v1::any_cast<uint16_t>(portIt->second));
 
         // The start function possibly gets called multiple times due to trying to recover from not being able to connect
         if(_socket == -1) {
@@ -71,9 +72,9 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::TcpConnectionService<I
 
         sockaddr_in address{};
         address.sin_family = AF_INET;
-        address.sin_port = htons(Ichor::any_cast<uint16_t>(portIt->second));
+        address.sin_port = htons(Ichor::v1::any_cast<uint16_t>(portIt->second));
 
-        int ret = inet_pton(AF_INET, Ichor::any_cast<std::string&>(addrIt->second).c_str(), &address.sin_addr);
+        int ret = inet_pton(AF_INET, Ichor::v1::any_cast<std::string&>(addrIt->second).c_str(), &address.sin_addr);
         if(ret == 0)
         {
             throw std::runtime_error("inet_pton invalid address for given address family (has to be ipv4-valid address)");
@@ -155,8 +156,8 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::TcpConnectionService<I
     co_return {};
 }
 
-template <typename InterfaceT> requires Ichor::DerivedAny<InterfaceT, Ichor::IConnectionService, Ichor::IHostConnectionService, Ichor::IClientConnectionService>
-Ichor::Task<void> Ichor::TcpConnectionService<InterfaceT>::stop() {
+template <typename InterfaceT> requires Ichor::DerivedAny<InterfaceT, Ichor::v1::IConnectionService, Ichor::v1::IHostConnectionService, Ichor::v1::IClientConnectionService>
+Ichor::Task<void> Ichor::v1::TcpConnectionService<InterfaceT>::stop() {
     _quit = true;
     ICHOR_LOG_INFO(_logger, "[{}] stopping service", AdvancedService<TcpConnectionService>::getServiceId());
 
@@ -168,28 +169,28 @@ Ichor::Task<void> Ichor::TcpConnectionService<InterfaceT>::stop() {
     co_return;
 }
 
-template <typename InterfaceT> requires Ichor::DerivedAny<InterfaceT, Ichor::IConnectionService, Ichor::IHostConnectionService, Ichor::IClientConnectionService>
-void Ichor::TcpConnectionService<InterfaceT>::addDependencyInstance(ILogger &logger, IService &) {
+template <typename InterfaceT> requires Ichor::DerivedAny<InterfaceT, Ichor::v1::IConnectionService, Ichor::v1::IHostConnectionService, Ichor::v1::IClientConnectionService>
+void Ichor::v1::TcpConnectionService<InterfaceT>::addDependencyInstance(ILogger &logger, IService &) {
     _logger = &logger;
 }
 
-template <typename InterfaceT> requires Ichor::DerivedAny<InterfaceT, Ichor::IConnectionService, Ichor::IHostConnectionService, Ichor::IClientConnectionService>
-void Ichor::TcpConnectionService<InterfaceT>::removeDependencyInstance(ILogger &, IService&) {
+template <typename InterfaceT> requires Ichor::DerivedAny<InterfaceT, Ichor::v1::IConnectionService, Ichor::v1::IHostConnectionService, Ichor::v1::IClientConnectionService>
+void Ichor::v1::TcpConnectionService<InterfaceT>::removeDependencyInstance(ILogger &, IService&) {
     _logger = nullptr;
 }
 
-template <typename InterfaceT> requires Ichor::DerivedAny<InterfaceT, Ichor::IConnectionService, Ichor::IHostConnectionService, Ichor::IClientConnectionService>
-void Ichor::TcpConnectionService<InterfaceT>::addDependencyInstance(ITimerFactory &timerFactory, IService &) {
+template <typename InterfaceT> requires Ichor::DerivedAny<InterfaceT, Ichor::v1::IConnectionService, Ichor::v1::IHostConnectionService, Ichor::v1::IClientConnectionService>
+void Ichor::v1::TcpConnectionService<InterfaceT>::addDependencyInstance(ITimerFactory &timerFactory, IService &) {
     _timerFactory = &timerFactory;
 }
 
-template <typename InterfaceT> requires Ichor::DerivedAny<InterfaceT, Ichor::IConnectionService, Ichor::IHostConnectionService, Ichor::IClientConnectionService>
-void Ichor::TcpConnectionService<InterfaceT>::removeDependencyInstance(ITimerFactory &, IService&) {
+template <typename InterfaceT> requires Ichor::DerivedAny<InterfaceT, Ichor::v1::IConnectionService, Ichor::v1::IHostConnectionService, Ichor::v1::IClientConnectionService>
+void Ichor::v1::TcpConnectionService<InterfaceT>::removeDependencyInstance(ITimerFactory &, IService&) {
     _timerFactory = nullptr;
 }
 
-template <typename InterfaceT> requires Ichor::DerivedAny<InterfaceT, Ichor::IConnectionService, Ichor::IHostConnectionService, Ichor::IClientConnectionService>
-Ichor::Task<tl::expected<void, Ichor::IOError>> Ichor::TcpConnectionService<InterfaceT>::sendAsync(std::vector<uint8_t> &&msg) {
+template <typename InterfaceT> requires Ichor::DerivedAny<InterfaceT, Ichor::v1::IConnectionService, Ichor::v1::IHostConnectionService, Ichor::v1::IClientConnectionService>
+Ichor::Task<tl::expected<void, Ichor::v1::IOError>> Ichor::v1::TcpConnectionService<InterfaceT>::sendAsync(std::vector<uint8_t> &&msg) {
     size_t sent_bytes = 0;
 
     if(_quit) {
@@ -211,8 +212,8 @@ Ichor::Task<tl::expected<void, Ichor::IOError>> Ichor::TcpConnectionService<Inte
     co_return {};
 }
 
-template <typename InterfaceT> requires Ichor::DerivedAny<InterfaceT, Ichor::IConnectionService, Ichor::IHostConnectionService, Ichor::IClientConnectionService>
-Ichor::Task<tl::expected<void, Ichor::IOError>> Ichor::TcpConnectionService<InterfaceT>::sendAsync(std::vector<std::vector<uint8_t>> &&msgs) {
+template <typename InterfaceT> requires Ichor::DerivedAny<InterfaceT, Ichor::v1::IConnectionService, Ichor::v1::IHostConnectionService, Ichor::v1::IClientConnectionService>
+Ichor::Task<tl::expected<void, Ichor::v1::IOError>> Ichor::v1::TcpConnectionService<InterfaceT>::sendAsync(std::vector<std::vector<uint8_t>> &&msgs) {
     if(_quit) {
         ICHOR_LOG_TRACE(_logger, "[{}] quitting, no send", AdvancedService<TcpConnectionService>::getServiceId());
         co_return tl::unexpected(IOError::SERVICE_QUITTING);
@@ -236,23 +237,23 @@ Ichor::Task<tl::expected<void, Ichor::IOError>> Ichor::TcpConnectionService<Inte
     co_return {};
 }
 
-template <typename InterfaceT> requires Ichor::DerivedAny<InterfaceT, Ichor::IConnectionService, Ichor::IHostConnectionService, Ichor::IClientConnectionService>
-void Ichor::TcpConnectionService<InterfaceT>::setPriority(uint64_t priority) {
+template <typename InterfaceT> requires Ichor::DerivedAny<InterfaceT, Ichor::v1::IConnectionService, Ichor::v1::IHostConnectionService, Ichor::v1::IClientConnectionService>
+void Ichor::v1::TcpConnectionService<InterfaceT>::setPriority(uint64_t priority) {
     _priority = priority;
 }
 
-template <typename InterfaceT> requires Ichor::DerivedAny<InterfaceT, Ichor::IConnectionService, Ichor::IHostConnectionService, Ichor::IClientConnectionService>
-uint64_t Ichor::TcpConnectionService<InterfaceT>::getPriority() {
+template <typename InterfaceT> requires Ichor::DerivedAny<InterfaceT, Ichor::v1::IConnectionService, Ichor::v1::IHostConnectionService, Ichor::v1::IClientConnectionService>
+uint64_t Ichor::v1::TcpConnectionService<InterfaceT>::getPriority() {
     return _priority;
 }
 
-template <typename InterfaceT> requires Ichor::DerivedAny<InterfaceT, Ichor::IConnectionService, Ichor::IHostConnectionService, Ichor::IClientConnectionService>
-bool Ichor::TcpConnectionService<InterfaceT>::isClient() const noexcept {
+template <typename InterfaceT> requires Ichor::DerivedAny<InterfaceT, Ichor::v1::IConnectionService, Ichor::v1::IHostConnectionService, Ichor::v1::IClientConnectionService>
+bool Ichor::v1::TcpConnectionService<InterfaceT>::isClient() const noexcept {
     return AdvancedService<TcpConnectionService>::getProperties().find("Socket") == AdvancedService<TcpConnectionService>::getProperties().end();
 }
 
-template <typename InterfaceT> requires Ichor::DerivedAny<InterfaceT, Ichor::IConnectionService, Ichor::IHostConnectionService, Ichor::IClientConnectionService>
-void Ichor::TcpConnectionService<InterfaceT>::setReceiveHandler(std::function<void(std::span<uint8_t const>)> recvHandler) {
+template <typename InterfaceT> requires Ichor::DerivedAny<InterfaceT, Ichor::v1::IConnectionService, Ichor::v1::IHostConnectionService, Ichor::v1::IClientConnectionService>
+void Ichor::v1::TcpConnectionService<InterfaceT>::setReceiveHandler(std::function<void(std::span<uint8_t const>)> recvHandler) {
     _recvHandler = recvHandler;
 
     for(auto &msg : _queuedMessages) {
@@ -261,8 +262,8 @@ void Ichor::TcpConnectionService<InterfaceT>::setReceiveHandler(std::function<vo
     _queuedMessages.clear();
 }
 
-template <typename InterfaceT> requires Ichor::DerivedAny<InterfaceT, Ichor::IConnectionService, Ichor::IHostConnectionService, Ichor::IClientConnectionService>
-void Ichor::TcpConnectionService<InterfaceT>::recvHandler() {
+template <typename InterfaceT> requires Ichor::DerivedAny<InterfaceT, Ichor::v1::IConnectionService, Ichor::v1::IHostConnectionService, Ichor::v1::IClientConnectionService>
+void Ichor::v1::TcpConnectionService<InterfaceT>::recvHandler() {
     ScopeGuard sg{[this]() {
         if(!_quit) {
             if(!_timer->startTimer()) {
@@ -320,8 +321,8 @@ void Ichor::TcpConnectionService<InterfaceT>::recvHandler() {
     }
 }
 
-template class Ichor::TcpConnectionService<Ichor::IConnectionService>;
-template class Ichor::TcpConnectionService<Ichor::IHostConnectionService>;
-template class Ichor::TcpConnectionService<Ichor::IClientConnectionService>;
+template class Ichor::v1::TcpConnectionService<Ichor::v1::IConnectionService>;
+template class Ichor::v1::TcpConnectionService<Ichor::v1::IHostConnectionService>;
+template class Ichor::v1::TcpConnectionService<Ichor::v1::IClientConnectionService>;
 
 #endif

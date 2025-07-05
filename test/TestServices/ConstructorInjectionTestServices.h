@@ -3,6 +3,8 @@
 #include "UselessService.h"
 
 using namespace Ichor;
+using namespace Ichor::v1;
+
 struct IConstructorInjectionTestService {
     virtual ~IConstructorInjectionTestService() {}
     [[nodiscard]] virtual uint64_t getServiceId() const noexcept = 0;

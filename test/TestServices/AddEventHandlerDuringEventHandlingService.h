@@ -5,6 +5,7 @@
 #include "../TestEvents.h"
 
 using namespace Ichor;
+using namespace Ichor::v1;
 
 struct AddEventHandlerDuringEventHandlingService final : public AdvancedService<AddEventHandlerDuringEventHandlingService> {
     AddEventHandlerDuringEventHandlingService() = default;

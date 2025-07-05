@@ -4,6 +4,7 @@
 #include <ichor/dependency_management/DependencyRegister.h>
 
 using namespace Ichor;
+using namespace Ichor::v1;
 
 struct INotUsed {
 
@@ -11,9 +12,9 @@ struct INotUsed {
 
 struct MultipleSeparateDependencyRequestsService final : public AdvancedService<MultipleSeparateDependencyRequestsService> {
     MultipleSeparateDependencyRequestsService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {
-        reg.registerDependency<INotUsed>(this, DependencyFlags::NONE, Properties{{"scope", Ichor::make_any<std::string>("scope_one")}});
-        reg.registerDependency<IUselessService>(this, DependencyFlags::REQUIRED, Properties{{"scope", Ichor::make_any<std::string>("scope_one")}});
-        reg.registerDependency<Ichor::IUselessService>(this, DependencyFlags::REQUIRED, Properties{{"scope", Ichor::make_any<std::string>("scope_two")}});
+        reg.registerDependency<INotUsed>(this, DependencyFlags::NONE, Properties{{"scope", Ichor::v1::make_any<std::string>("scope_one")}});
+        reg.registerDependency<IUselessService>(this, DependencyFlags::REQUIRED, Properties{{"scope", Ichor::v1::make_any<std::string>("scope_one")}});
+        reg.registerDependency<Ichor::IUselessService>(this, DependencyFlags::REQUIRED, Properties{{"scope", Ichor::v1::make_any<std::string>("scope_two")}});
     }
     ~MultipleSeparateDependencyRequestsService() final = default;
 

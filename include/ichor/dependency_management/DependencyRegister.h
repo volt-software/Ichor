@@ -23,8 +23,8 @@ namespace Ichor {
 
             _registrations.emplace(typeNameHash<Interface>(), std::make_tuple(
                     Dependency{typeNameHash<Interface>(), typeName<Interface>(), flags, 0},
-                    std::function<void(NeverNull<void*>, IService&)>{[svc](NeverNull<void*> dep, IService& isvc){ svc->addDependencyInstance(*reinterpret_cast<Interface*>(dep.get()), isvc); }},
-                    std::function<void(NeverNull<void*>, IService&)>{[svc](NeverNull<void*> dep, IService& isvc){ svc->removeDependencyInstance(*reinterpret_cast<Interface*>(dep.get()), isvc); }},
+                    std::function<void(v1::NeverNull<void*>, IService&)>{[svc](v1::NeverNull<void*> dep, IService& isvc){ svc->addDependencyInstance(*reinterpret_cast<Interface*>(dep.get()), isvc); }},
+                    std::function<void(v1::NeverNull<void*>, IService&)>{[svc](v1::NeverNull<void*> dep, IService& isvc){ svc->removeDependencyInstance(*reinterpret_cast<Interface*>(dep.get()), isvc); }},
                     std::move(props)));
         }
 
@@ -35,8 +35,8 @@ namespace Ichor {
 
             _registrations.emplace(typeNameHash<Interface>(), std::make_tuple(
                     Dependency{typeNameHash<Interface>(), typeName<Interface>(), DependencyFlags::REQUIRED, 0},
-                    std::function<void(NeverNull<void*>, IService&)>{[svc](NeverNull<void*> dep, IService& isvc){ svc->template addDependencyInstance<Interface>(reinterpret_cast<Interface*>(dep.get()), &isvc); }},
-                    std::function<void(NeverNull<void*>, IService&)>{[svc](NeverNull<void*> dep, IService& isvc){ svc->template removeDependencyInstance<Interface>(reinterpret_cast<Interface*>(dep.get()), &isvc); }},
+                    std::function<void(v1::NeverNull<void*>, IService&)>{[svc](v1::NeverNull<void*> dep, IService& isvc){ svc->template addDependencyInstance<Interface>(reinterpret_cast<Interface*>(dep.get()), &isvc); }},
+                    std::function<void(v1::NeverNull<void*>, IService&)>{[svc](v1::NeverNull<void*> dep, IService& isvc){ svc->template removeDependencyInstance<Interface>(reinterpret_cast<Interface*>(dep.get()), &isvc); }},
                     tl::optional<Properties>{}));
         }
 
@@ -46,7 +46,7 @@ namespace Ichor {
         DependencyRegister& operator=(const DependencyRegister&) = delete;
         DependencyRegister& operator=(DependencyRegister&&) noexcept = default;
 
-        std::unordered_multimap<uint64_t, std::tuple<Dependency, std::function<void(NeverNull<void*>, IService&)>, std::function<void(NeverNull<void*>, IService&)>, tl::optional<Properties>>> _registrations;
+        std::unordered_multimap<uint64_t, std::tuple<Dependency, std::function<void(v1::NeverNull<void*>, IService&)>, std::function<void(v1::NeverNull<void*>, IService&)>, tl::optional<Properties>>> _registrations;
 
         [[nodiscard]]
         typename decltype(_registrations)::iterator begin();

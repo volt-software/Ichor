@@ -5,6 +5,7 @@
 #include <ichor/glaze.h>
 
 using namespace Ichor;
+using namespace Ichor::v1;
 
 template <>
 struct glz::meta<TestMsg> {

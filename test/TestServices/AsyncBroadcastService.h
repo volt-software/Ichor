@@ -1,6 +1,7 @@
 #pragma once
 
 using namespace Ichor;
+using namespace Ichor::v1;
 
 extern std::unique_ptr<Ichor::AsyncManualResetEvent> _evt;
 extern std::atomic<uint64_t> evtGate;

@@ -2,7 +2,7 @@
 
 #include <ichor/services/logging/Logger.h>
 
-namespace Ichor {
+namespace Ichor::v1 {
 
     class NullLogger final : public ILogger {
     public:

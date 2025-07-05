@@ -6,6 +6,7 @@
 #include <ichor/coroutines/AsyncAutoResetEvent.h>
 
 using namespace Ichor;
+using namespace Ichor::v1;
 
 extern std::unique_ptr<Ichor::AsyncAutoResetEvent> _autoEvt;
 

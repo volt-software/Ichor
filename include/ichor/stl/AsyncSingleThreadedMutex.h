@@ -9,7 +9,7 @@
 
 // Mutex that prevents access between coroutines on the same thread
 
-namespace Ichor {
+namespace Ichor::v1 {
     class AsyncSingleThreadedMutex;
 
     class AsyncSingleThreadedLockGuard final {

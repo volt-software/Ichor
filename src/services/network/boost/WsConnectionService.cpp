@@ -23,18 +23,18 @@ void setup_stream(std::shared_ptr<websocket::stream<NextLayer>>& ws)
     ws->auto_fragment(false);
 }
 
-template <typename InterfaceT> requires Ichor::DerivedAny<InterfaceT, Ichor::IConnectionService, Ichor::IHostConnectionService, Ichor::IClientConnectionService>
-Ichor::Boost::WsConnectionService<InterfaceT>::WsConnectionService(DependencyRegister &reg, Properties props) : AdvancedService<WsConnectionService<InterfaceT>>(std::move(props)) {
-    reg.registerDependency<ILogger>(this, DependencyFlags::REQUIRED);
+template <typename InterfaceT> requires Ichor::DerivedAny<InterfaceT, Ichor::v1::IConnectionService, Ichor::v1::IHostConnectionService, Ichor::v1::IClientConnectionService>
+Ichor::Boost::v1::WsConnectionService<InterfaceT>::WsConnectionService(DependencyRegister &reg, Properties props) : AdvancedService<WsConnectionService<InterfaceT>>(std::move(props)) {
+    reg.registerDependency<Ichor::v1::ILogger>(this, DependencyFlags::REQUIRED);
     reg.registerDependency<IBoostAsioQueue>(this, DependencyFlags::REQUIRED);
     if(auto propIt = AdvancedService<WsConnectionService<InterfaceT>>::getProperties().find("WsHostServiceId"); propIt != AdvancedService<WsConnectionService<InterfaceT>>::getProperties().end()) {
-        reg.registerDependency<IHostService>(this, DependencyFlags::REQUIRED,
-                                             Properties{{"Filter", Ichor::make_any<Filter>(ServiceIdFilterEntry{Ichor::any_cast<uint64_t>(propIt->second)})}});
+        reg.registerDependency<Ichor::v1::IHostService>(this, DependencyFlags::REQUIRED,
+                                             Properties{{"Filter", Ichor::v1::make_any<Filter>(ServiceIdFilterEntry{Ichor::v1::any_cast<uint64_t>(propIt->second)})}});
     }
 }
 
-template <typename InterfaceT> requires Ichor::DerivedAny<InterfaceT, Ichor::IConnectionService, Ichor::IHostConnectionService, Ichor::IClientConnectionService>
-Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::Boost::WsConnectionService<InterfaceT>::start() {
+template <typename InterfaceT> requires Ichor::DerivedAny<InterfaceT, Ichor::v1::IConnectionService, Ichor::v1::IHostConnectionService, Ichor::v1::IClientConnectionService>
+Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::Boost::v1::WsConnectionService<InterfaceT>::start() {
     if(_connected) {
         co_return {};
     }
@@ -42,18 +42,18 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::Boost::WsConnectionSer
     _quit = false;
 
     if(auto propIt = AdvancedService<WsConnectionService<InterfaceT>>::getProperties().find("Priority"); propIt != AdvancedService<WsConnectionService<InterfaceT>>::getProperties().end()) {
-        _priority = Ichor::any_cast<uint64_t>(propIt->second);
+        _priority = Ichor::v1::any_cast<uint64_t>(propIt->second);
     }
 
     _strand = std::make_unique<net::strand<net::io_context::executor_type>>(_queue->getContext().get_executor());
     if (AdvancedService<WsConnectionService<InterfaceT>>::getProperties().contains("Socket")) {
         net::spawn(*_strand, [this](net::yield_context yield) {
-            ScopeGuardAtomicCount const guard{_finishedListenAndRead};
+            Ichor::v1::ScopeGuardAtomicCount const guard{_finishedListenAndRead};
             accept(std::move(yield));
         }ASIO_SPAWN_COMPLETION_TOKEN);
     } else {
         net::spawn(*_strand, [this](net::yield_context yield) {
-            ScopeGuardAtomicCount const guard{_finishedListenAndRead};
+            Ichor::v1::ScopeGuardAtomicCount const guard{_finishedListenAndRead};
             connect(std::move(yield));
         }ASIO_SPAWN_COMPLETION_TOKEN);
     }
@@ -62,8 +62,8 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::Boost::WsConnectionSer
     _startStopEvent.reset();
 
     if(!_connected) {
-        auto const& address = Ichor::any_cast<std::string&>(AdvancedService<WsConnectionService<InterfaceT>>::getProperties()["Address"]);
-        auto const port = Ichor::any_cast<uint16_t>(AdvancedService<WsConnectionService<InterfaceT>>::getProperties()["Port"]);
+        auto const& address = Ichor::v1::any_cast<std::string&>(AdvancedService<WsConnectionService<InterfaceT>>::getProperties()["Address"]);
+        auto const port = Ichor::v1::any_cast<uint16_t>(AdvancedService<WsConnectionService<InterfaceT>>::getProperties()["Port"]);
         ICHOR_LOG_ERROR(_logger, "Could not connect to {}:{}", address, port);
         co_return tl::unexpected(StartError::FAILED);
     }
@@ -71,13 +71,13 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::Boost::WsConnectionSer
     co_return {};
 }
 
-template <typename InterfaceT> requires Ichor::DerivedAny<InterfaceT, Ichor::IConnectionService, Ichor::IHostConnectionService, Ichor::IClientConnectionService>
-Ichor::Task<void> Ichor::Boost::WsConnectionService<InterfaceT>::stop() {
+template <typename InterfaceT> requires Ichor::DerivedAny<InterfaceT, Ichor::v1::IConnectionService, Ichor::v1::IHostConnectionService, Ichor::v1::IClientConnectionService>
+Ichor::Task<void> Ichor::Boost::v1::WsConnectionService<InterfaceT>::stop() {
     INTERNAL_DEBUG("----------------------------------------------- trying to stop WsConnectionService {}", AdvancedService<WsConnectionService<InterfaceT>>::getServiceId());
     _quit = true;
     if(_ws != nullptr) {
         net::spawn(*_strand, [this](net::yield_context yield) {
-            ScopeGuardAtomicCount const guard{_finishedListenAndRead};
+            Ichor::v1::ScopeGuardAtomicCount const guard{_finishedListenAndRead};
             boost::system::error_code ec;
             _ws->async_close(beast::websocket::close_code::normal, yield[ec]);
             if (ec) {
@@ -103,48 +103,48 @@ Ichor::Task<void> Ichor::Boost::WsConnectionService<InterfaceT>::stop() {
     co_return;
 }
 
-template <typename InterfaceT> requires Ichor::DerivedAny<InterfaceT, Ichor::IConnectionService, Ichor::IHostConnectionService, Ichor::IClientConnectionService>
-void Ichor::Boost::WsConnectionService<InterfaceT>::addDependencyInstance(ILogger &logger, IService &) {
+template <typename InterfaceT> requires Ichor::DerivedAny<InterfaceT, Ichor::v1::IConnectionService, Ichor::v1::IHostConnectionService, Ichor::v1::IClientConnectionService>
+void Ichor::Boost::v1::WsConnectionService<InterfaceT>::addDependencyInstance(Ichor::v1::ILogger &logger, IService &) {
     _logger = &logger;
 }
 
-template <typename InterfaceT> requires Ichor::DerivedAny<InterfaceT, Ichor::IConnectionService, Ichor::IHostConnectionService, Ichor::IClientConnectionService>
-void Ichor::Boost::WsConnectionService<InterfaceT>::removeDependencyInstance(ILogger &logger, IService&) {
+template <typename InterfaceT> requires Ichor::DerivedAny<InterfaceT, Ichor::v1::IConnectionService, Ichor::v1::IHostConnectionService, Ichor::v1::IClientConnectionService>
+void Ichor::Boost::v1::WsConnectionService<InterfaceT>::removeDependencyInstance(Ichor::v1::ILogger &logger, IService&) {
     _logger = nullptr;
 }
 
-template <typename InterfaceT> requires Ichor::DerivedAny<InterfaceT, Ichor::IConnectionService, Ichor::IHostConnectionService, Ichor::IClientConnectionService>
-void Ichor::Boost::WsConnectionService<InterfaceT>::addDependencyInstance(IHostService&, IService&) {
+template <typename InterfaceT> requires Ichor::DerivedAny<InterfaceT, Ichor::v1::IConnectionService, Ichor::v1::IHostConnectionService, Ichor::v1::IClientConnectionService>
+void Ichor::Boost::v1::WsConnectionService<InterfaceT>::addDependencyInstance(Ichor::v1::IHostService&, IService&) {
 
 }
 
-template <typename InterfaceT> requires Ichor::DerivedAny<InterfaceT, Ichor::IConnectionService, Ichor::IHostConnectionService, Ichor::IClientConnectionService>
-void Ichor::Boost::WsConnectionService<InterfaceT>::removeDependencyInstance(IHostService& host, IService&) {
+template <typename InterfaceT> requires Ichor::DerivedAny<InterfaceT, Ichor::v1::IConnectionService, Ichor::v1::IHostConnectionService, Ichor::v1::IClientConnectionService>
+void Ichor::Boost::v1::WsConnectionService<InterfaceT>::removeDependencyInstance(Ichor::v1::IHostService& host, IService&) {
 }
 
-template <typename InterfaceT> requires Ichor::DerivedAny<InterfaceT, Ichor::IConnectionService, Ichor::IHostConnectionService, Ichor::IClientConnectionService>
-void Ichor::Boost::WsConnectionService<InterfaceT>::addDependencyInstance(IBoostAsioQueue &q, IService&) {
+template <typename InterfaceT> requires Ichor::DerivedAny<InterfaceT, Ichor::v1::IConnectionService, Ichor::v1::IHostConnectionService, Ichor::v1::IClientConnectionService>
+void Ichor::Boost::v1::WsConnectionService<InterfaceT>::addDependencyInstance(IBoostAsioQueue &q, IService&) {
     _queue = &q;
 }
 
-template <typename InterfaceT> requires Ichor::DerivedAny<InterfaceT, Ichor::IConnectionService, Ichor::IHostConnectionService, Ichor::IClientConnectionService>
-void Ichor::Boost::WsConnectionService<InterfaceT>::removeDependencyInstance(IBoostAsioQueue&, IService&) {
+template <typename InterfaceT> requires Ichor::DerivedAny<InterfaceT, Ichor::v1::IConnectionService, Ichor::v1::IHostConnectionService, Ichor::v1::IClientConnectionService>
+void Ichor::Boost::v1::WsConnectionService<InterfaceT>::removeDependencyInstance(IBoostAsioQueue&, IService&) {
     if(AdvancedService<WsConnectionService<InterfaceT>>::getServiceState() != ServiceState::INSTALLED) {
         std::terminate();
     }
     _queue = nullptr;
 }
 
-static_assert(std::is_move_assignable_v<Ichor::Boost::Detail::WsConnectionOutboxMessage>, "ConnectionOutboxMessage should be move assignable");
-template <typename InterfaceT> requires Ichor::DerivedAny<InterfaceT, Ichor::IConnectionService, Ichor::IHostConnectionService, Ichor::IClientConnectionService>
-Ichor::Task<tl::expected<void, Ichor::IOError>> Ichor::Boost::WsConnectionService<InterfaceT>::sendAsync(std::vector<uint8_t> &&msg) {
+static_assert(std::is_move_assignable_v<Ichor::Boost::v1::Detail::WsConnectionOutboxMessage>, "ConnectionOutboxMessage should be move assignable");
+template <typename InterfaceT> requires Ichor::DerivedAny<InterfaceT, Ichor::v1::IConnectionService, Ichor::v1::IHostConnectionService, Ichor::v1::IClientConnectionService>
+Ichor::Task<tl::expected<void, Ichor::v1::IOError>> Ichor::Boost::v1::WsConnectionService<InterfaceT>::sendAsync(std::vector<uint8_t> &&msg) {
     if(_quit || !_connected || _queue->fibersShouldStop()) {
-        co_return tl::unexpected(IOError::SERVICE_QUITTING);
+        co_return tl::unexpected(Ichor::v1::IOError::SERVICE_QUITTING);
     }
     AsyncManualResetEvent evt;
     bool success{};
     net::spawn(*_strand, [this, &evt, &success, msg = std::move(msg)](net::yield_context yield) mutable {
-        ScopeGuardAtomicCount const guard{_finishedListenAndRead};
+        Ichor::v1::ScopeGuardAtomicCount const guard{_finishedListenAndRead};
         if(_quit || !_connected || _queue->fibersShouldStop()) {
             return;
         }
@@ -187,22 +187,22 @@ Ichor::Task<tl::expected<void, Ichor::IOError>> Ichor::Boost::WsConnectionServic
     co_await evt;
 
     if(!success) {
-        co_return tl::unexpected(IOError::FAILED);
+        co_return tl::unexpected(Ichor::v1::IOError::FAILED);
     }
 
     co_return {};
 }
 
 
-template <typename InterfaceT> requires Ichor::DerivedAny<InterfaceT, Ichor::IConnectionService, Ichor::IHostConnectionService, Ichor::IClientConnectionService>
-Ichor::Task<tl::expected<void, Ichor::IOError>> Ichor::Boost::WsConnectionService<InterfaceT>::sendAsync(std::vector<std::vector<uint8_t>>&& msgs) {
+template <typename InterfaceT> requires Ichor::DerivedAny<InterfaceT, Ichor::v1::IConnectionService, Ichor::v1::IHostConnectionService, Ichor::v1::IClientConnectionService>
+Ichor::Task<tl::expected<void, Ichor::v1::IOError>> Ichor::Boost::v1::WsConnectionService<InterfaceT>::sendAsync(std::vector<std::vector<uint8_t>>&& msgs) {
     if(_quit || !_connected || _queue->fibersShouldStop()) {
-        co_return tl::unexpected(IOError::SERVICE_QUITTING);
+        co_return tl::unexpected(Ichor::v1::IOError::SERVICE_QUITTING);
     }
     AsyncManualResetEvent evt;
     bool success{};
     net::spawn(*_strand, [this, &evt, &success, msgs = std::move(msgs)](net::yield_context yield) mutable {
-        ScopeGuardAtomicCount const guard{_finishedListenAndRead};
+        Ichor::v1::ScopeGuardAtomicCount const guard{_finishedListenAndRead};
         if(_quit || !_connected || _queue->fibersShouldStop()) {
             return;
         }
@@ -246,29 +246,29 @@ Ichor::Task<tl::expected<void, Ichor::IOError>> Ichor::Boost::WsConnectionServic
     co_await evt;
 
     if(!success) {
-        co_return tl::unexpected(IOError::FAILED);
+        co_return tl::unexpected(Ichor::v1::IOError::FAILED);
     }
 
     co_return {};
 }
 
-template <typename InterfaceT> requires Ichor::DerivedAny<InterfaceT, Ichor::IConnectionService, Ichor::IHostConnectionService, Ichor::IClientConnectionService>
-void Ichor::Boost::WsConnectionService<InterfaceT>::setPriority(uint64_t priority) {
+template <typename InterfaceT> requires Ichor::DerivedAny<InterfaceT, Ichor::v1::IConnectionService, Ichor::v1::IHostConnectionService, Ichor::v1::IClientConnectionService>
+void Ichor::Boost::v1::WsConnectionService<InterfaceT>::setPriority(uint64_t priority) {
     _priority = priority;
 }
 
-template <typename InterfaceT> requires Ichor::DerivedAny<InterfaceT, Ichor::IConnectionService, Ichor::IHostConnectionService, Ichor::IClientConnectionService>
-uint64_t Ichor::Boost::WsConnectionService<InterfaceT>::getPriority() {
+template <typename InterfaceT> requires Ichor::DerivedAny<InterfaceT, Ichor::v1::IConnectionService, Ichor::v1::IHostConnectionService, Ichor::v1::IClientConnectionService>
+uint64_t Ichor::Boost::v1::WsConnectionService<InterfaceT>::getPriority() {
     return _priority;
 }
 
-template <typename InterfaceT> requires Ichor::DerivedAny<InterfaceT, Ichor::IConnectionService, Ichor::IHostConnectionService, Ichor::IClientConnectionService>
-bool Ichor::Boost::WsConnectionService<InterfaceT>::isClient() const noexcept {
+template <typename InterfaceT> requires Ichor::DerivedAny<InterfaceT, Ichor::v1::IConnectionService, Ichor::v1::IHostConnectionService, Ichor::v1::IClientConnectionService>
+bool Ichor::Boost::v1::WsConnectionService<InterfaceT>::isClient() const noexcept {
 	return AdvancedService<WsConnectionService<InterfaceT>>::getProperties().find("Socket") == AdvancedService<WsConnectionService<InterfaceT>>::getProperties().end();
 }
 
-template <typename InterfaceT> requires Ichor::DerivedAny<InterfaceT, Ichor::IConnectionService, Ichor::IHostConnectionService, Ichor::IClientConnectionService>
-void Ichor::Boost::WsConnectionService<InterfaceT>::setReceiveHandler(std::function<void(std::span<uint8_t const>)> recvHandler) {
+template <typename InterfaceT> requires Ichor::DerivedAny<InterfaceT, Ichor::v1::IConnectionService, Ichor::v1::IHostConnectionService, Ichor::v1::IClientConnectionService>
+void Ichor::Boost::v1::WsConnectionService<InterfaceT>::setReceiveHandler(std::function<void(std::span<uint8_t const>)> recvHandler) {
 	_recvHandler = recvHandler;
 
 	for(auto &msg : _queuedMessages) {
@@ -277,15 +277,15 @@ void Ichor::Boost::WsConnectionService<InterfaceT>::setReceiveHandler(std::funct
 	_queuedMessages.clear();
 }
 
-template <typename InterfaceT> requires Ichor::DerivedAny<InterfaceT, Ichor::IConnectionService, Ichor::IHostConnectionService, Ichor::IClientConnectionService>
-void Ichor::Boost::WsConnectionService<InterfaceT>::fail(beast::error_code ec, const char *what) {
+template <typename InterfaceT> requires Ichor::DerivedAny<InterfaceT, Ichor::v1::IConnectionService, Ichor::v1::IHostConnectionService, Ichor::v1::IClientConnectionService>
+void Ichor::Boost::v1::WsConnectionService<InterfaceT>::fail(beast::error_code ec, const char *what) {
     _queue->pushEvent<StopServiceEvent>(AdvancedService<WsConnectionService<InterfaceT>>::getServiceId(), AdvancedService<WsConnectionService<InterfaceT>>::getServiceId());
     ICHOR_LOG_ERROR(_logger, "Boost.BEAST fail: {}, {}", what, ec.message());
     _startStopEvent.set();
 }
 
-template <typename InterfaceT> requires Ichor::DerivedAny<InterfaceT, Ichor::IConnectionService, Ichor::IHostConnectionService, Ichor::IClientConnectionService>
-void Ichor::Boost::WsConnectionService<InterfaceT>::accept(net::yield_context yield) {
+template <typename InterfaceT> requires Ichor::DerivedAny<InterfaceT, Ichor::v1::IConnectionService, Ichor::v1::IHostConnectionService, Ichor::v1::IClientConnectionService>
+void Ichor::Boost::v1::WsConnectionService<InterfaceT>::accept(net::yield_context yield) {
     beast::error_code ec;
 
     {
@@ -300,8 +300,8 @@ void Ichor::Boost::WsConnectionService<InterfaceT>::accept(net::yield_context yi
                 return fail(ec, "socket setup");
             }
 
-            _ws = Ichor::any_cast<std::shared_ptr<websocket::stream<beast::tcp_stream>> &>(socketIt->second);
-            socketIt->second = Ichor::make_any<bool>(false); // ensure we cannot start again by making a bogus reference to socket
+            _ws = Ichor::v1::any_cast<std::shared_ptr<websocket::stream<beast::tcp_stream>> &>(socketIt->second);
+            socketIt->second = Ichor::v1::make_any<bool>(false); // ensure we cannot start again by making a bogus reference to socket
         }
 
         setup_stream(_ws);
@@ -343,11 +343,11 @@ void Ichor::Boost::WsConnectionService<InterfaceT>::accept(net::yield_context yi
     read(yield);
 }
 
-template <typename InterfaceT> requires Ichor::DerivedAny<InterfaceT, Ichor::IConnectionService, Ichor::IHostConnectionService, Ichor::IClientConnectionService>
-void Ichor::Boost::WsConnectionService<InterfaceT>::connect(net::yield_context yield) {
+template <typename InterfaceT> requires Ichor::DerivedAny<InterfaceT, Ichor::v1::IConnectionService, Ichor::v1::IHostConnectionService, Ichor::v1::IClientConnectionService>
+void Ichor::Boost::v1::WsConnectionService<InterfaceT>::connect(net::yield_context yield) {
     beast::error_code ec;
-    auto const& address = Ichor::any_cast<std::string&>(AdvancedService<WsConnectionService<InterfaceT>>::getProperties()["Address"]);
-    auto const port = Ichor::any_cast<uint16_t>(AdvancedService<WsConnectionService<InterfaceT>>::getProperties()["Port"]);
+    auto const& address = Ichor::v1::any_cast<std::string&>(AdvancedService<WsConnectionService<InterfaceT>>::getProperties()["Address"]);
+    auto const port = Ichor::v1::any_cast<uint16_t>(AdvancedService<WsConnectionService<InterfaceT>>::getProperties()["Port"]);
 
     // These objects perform our I/O
     tcp::resolver resolver(_queue->getContext());
@@ -418,8 +418,8 @@ void Ichor::Boost::WsConnectionService<InterfaceT>::connect(net::yield_context y
     read(yield);
 }
 
-template <typename InterfaceT> requires Ichor::DerivedAny<InterfaceT, Ichor::IConnectionService, Ichor::IHostConnectionService, Ichor::IClientConnectionService>
-void Ichor::Boost::WsConnectionService<InterfaceT>::read(net::yield_context &yield) {
+template <typename InterfaceT> requires Ichor::DerivedAny<InterfaceT, Ichor::v1::IConnectionService, Ichor::v1::IHostConnectionService, Ichor::v1::IClientConnectionService>
+void Ichor::Boost::v1::WsConnectionService<InterfaceT>::read(net::yield_context &yield) {
     beast::error_code ec;
 
     while(!_quit && !_queue->fibersShouldStop()) {
@@ -453,6 +453,6 @@ void Ichor::Boost::WsConnectionService<InterfaceT>::read(net::yield_context &yie
     INTERNAL_DEBUG("read stopped WsConnectionService {}", AdvancedService<WsConnectionService<InterfaceT>>::getServiceId());
 }
 
-template class Ichor::Boost::WsConnectionService<Ichor::IConnectionService>;
-template class Ichor::Boost::WsConnectionService<Ichor::IHostConnectionService>;
-template class Ichor::Boost::WsConnectionService<Ichor::IClientConnectionService>;
+template class Ichor::Boost::v1::WsConnectionService<Ichor::v1::IConnectionService>;
+template class Ichor::Boost::v1::WsConnectionService<Ichor::v1::IHostConnectionService>;
+template class Ichor::Boost::v1::WsConnectionService<Ichor::v1::IClientConnectionService>;

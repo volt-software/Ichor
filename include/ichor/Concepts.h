@@ -83,7 +83,7 @@ namespace Ichor {
     };
 
     template <class ImplT, class Interface>
-    concept ImplementsTrackingHandlers = requires(ImplT impl, AlwaysNull<Interface*> svc, DependencyRequestEvent const &reqEvt, DependencyUndoRequestEvent const &reqUndoEvt) {
+    concept ImplementsTrackingHandlers = requires(ImplT impl, v1::AlwaysNull<Interface*> svc, DependencyRequestEvent const &reqEvt, DependencyUndoRequestEvent const &reqUndoEvt) {
         { impl.handleDependencyRequest(svc, reqEvt) } -> std::same_as<AsyncGenerator<IchorBehaviour>>;
         { impl.handleDependencyUndoRequest(svc, reqUndoEvt) } -> std::same_as<AsyncGenerator<IchorBehaviour>>;
     };

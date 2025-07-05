@@ -8,7 +8,7 @@
 #include <tl/expected.h>
 #include <fmt/base.h>
 
-namespace Ichor::Etcd::v2 {
+namespace Ichor::Etcdv2::v1 {
     enum class EtcdError : uint_fast16_t {
         HTTP_RESPONSE_ERROR,
         JSON_PARSE_ERROR,
@@ -395,39 +395,39 @@ namespace Ichor::Etcd::v2 {
 }
 
 template <>
-struct fmt::formatter<Ichor::Etcd::v2::EtcdError> {
+struct fmt::formatter<Ichor::Etcdv2::v1::EtcdError> {
     constexpr auto parse(format_parse_context& ctx) {
         return ctx.end();
     }
 
     template <typename FormatContext>
-    auto format(const Ichor::Etcd::v2::EtcdError& state, FormatContext& ctx) const {
+    auto format(const Ichor::Etcdv2::v1::EtcdError& state, FormatContext& ctx) const {
         switch(state) {
-            case Ichor::Etcd::v2::EtcdError::HTTP_RESPONSE_ERROR:
+            case Ichor::Etcdv2::v1::EtcdError::HTTP_RESPONSE_ERROR:
                 return fmt::format_to(ctx.out(), "HTTP_RESPONSE_ERROR");
-            case Ichor::Etcd::v2::EtcdError::JSON_PARSE_ERROR:
+            case Ichor::Etcdv2::v1::EtcdError::JSON_PARSE_ERROR:
                 return fmt::format_to(ctx.out(), "JSON_PARSE_ERROR");
-            case Ichor::Etcd::v2::EtcdError::TIMEOUT:
+            case Ichor::Etcdv2::v1::EtcdError::TIMEOUT:
                 return fmt::format_to(ctx.out(), "TIMEOUT");
-            case Ichor::Etcd::v2::EtcdError::CONNECTION_CLOSED_PREMATURELY_TRY_AGAIN:
+            case Ichor::Etcdv2::v1::EtcdError::CONNECTION_CLOSED_PREMATURELY_TRY_AGAIN:
                 return fmt::format_to(ctx.out(), "CONNECTION_CLOSED_PREMATURELY_TRY_AGAIN");
-            case Ichor::Etcd::v2::EtcdError::ROOT_USER_NOT_YET_CREATED:
+            case Ichor::Etcdv2::v1::EtcdError::ROOT_USER_NOT_YET_CREATED:
                 return fmt::format_to(ctx.out(), "ROOT_USER_NOT_YET_CREATED");
-            case Ichor::Etcd::v2::EtcdError::REMOVING_ROOT_NOT_ALLOWED_WITH_AUTH_ENABLED:
+            case Ichor::Etcdv2::v1::EtcdError::REMOVING_ROOT_NOT_ALLOWED_WITH_AUTH_ENABLED:
                 return fmt::format_to(ctx.out(), "REMOVING_ROOT_NOT_ALLOWED_WITH_AUTH_ENABLED");
-            case Ichor::Etcd::v2::EtcdError::NO_AUTHENTICATION_SET:
+            case Ichor::Etcdv2::v1::EtcdError::NO_AUTHENTICATION_SET:
                 return fmt::format_to(ctx.out(), "NO_AUTHENTICATION_SET");
-            case Ichor::Etcd::v2::EtcdError::UNAUTHORIZED:
+            case Ichor::Etcdv2::v1::EtcdError::UNAUTHORIZED:
                 return fmt::format_to(ctx.out(), "UNAUTHORIZED");
-            case Ichor::Etcd::v2::EtcdError::NOT_FOUND:
+            case Ichor::Etcdv2::v1::EtcdError::NOT_FOUND:
                 return fmt::format_to(ctx.out(), "NOT_FOUND");
-            case Ichor::Etcd::v2::EtcdError::DUPLICATE_PERMISSION_OR_REVOKING_NON_EXISTENT:
+            case Ichor::Etcdv2::v1::EtcdError::DUPLICATE_PERMISSION_OR_REVOKING_NON_EXISTENT:
                 return fmt::format_to(ctx.out(), "DUPLICATE_PERMISSION_OR_REVOKING_NON_EXISTENT");
-            case Ichor::Etcd::v2::EtcdError::CANNOT_DELETE_ROOT_WHILE_AUTH_IS_ENABLED:
+            case Ichor::Etcdv2::v1::EtcdError::CANNOT_DELETE_ROOT_WHILE_AUTH_IS_ENABLED:
                 return fmt::format_to(ctx.out(), "CANNOT_DELETE_ROOT_WHILE_AUTH_IS_ENABLED");
-            case Ichor::Etcd::v2::EtcdError::QUITTING:
+            case Ichor::Etcdv2::v1::EtcdError::QUITTING:
                 return fmt::format_to(ctx.out(), "QUITTING");
-            case Ichor::Etcd::v2::EtcdError::HTTP_SEND_ERROR:
+            case Ichor::Etcdv2::v1::EtcdError::HTTP_SEND_ERROR:
                 return fmt::format_to(ctx.out(), "HTTP_SEND_ERROR");
         }
         return fmt::format_to(ctx.out(), "error, please file a bug in Ichor");
@@ -435,46 +435,46 @@ struct fmt::formatter<Ichor::Etcd::v2::EtcdError> {
 };
 
 template <>
-struct fmt::formatter<Ichor::Etcd::v2::EtcdErrorCodes> {
+struct fmt::formatter<Ichor::Etcdv2::v1::EtcdErrorCodes> {
     constexpr auto parse(format_parse_context& ctx) {
         return ctx.end();
     }
 
     template <typename FormatContext>
-    auto format(const Ichor::Etcd::v2::EtcdErrorCodes& state, FormatContext& ctx) const {
+    auto format(const Ichor::Etcdv2::v1::EtcdErrorCodes& state, FormatContext& ctx) const {
         switch(state)
         {
-            case Ichor::Etcd::v2::EtcdErrorCodes::KEY_DOES_NOT_EXIST:
+            case Ichor::Etcdv2::v1::EtcdErrorCodes::KEY_DOES_NOT_EXIST:
                 return fmt::format_to(ctx.out(), "KEY_DOES_NOT_EXIST");
-            case Ichor::Etcd::v2::EtcdErrorCodes::COMPARE_AND_SWAP_FAILED:
+            case Ichor::Etcdv2::v1::EtcdErrorCodes::COMPARE_AND_SWAP_FAILED:
                 return fmt::format_to(ctx.out(), "COMPARE_AND_SWAP_FAILED");
-            case Ichor::Etcd::v2::EtcdErrorCodes::NOT_A_FILE:
+            case Ichor::Etcdv2::v1::EtcdErrorCodes::NOT_A_FILE:
                 return fmt::format_to(ctx.out(), "NOT_A_FILE");
-            case Ichor::Etcd::v2::EtcdErrorCodes::NOT_A_DIRECTORY:
+            case Ichor::Etcdv2::v1::EtcdErrorCodes::NOT_A_DIRECTORY:
                 return fmt::format_to(ctx.out(), "NOT_A_DIRECTORY");
-            case Ichor::Etcd::v2::EtcdErrorCodes::KEY_ALREADY_EXISTS:
+            case Ichor::Etcdv2::v1::EtcdErrorCodes::KEY_ALREADY_EXISTS:
                 return fmt::format_to(ctx.out(), "KEY_ALREADY_EXISTS");
-            case Ichor::Etcd::v2::EtcdErrorCodes::ROOT_IS_READ_ONLY:
+            case Ichor::Etcdv2::v1::EtcdErrorCodes::ROOT_IS_READ_ONLY:
                 return fmt::format_to(ctx.out(), "ROOT_IS_READ_ONLY");
-            case Ichor::Etcd::v2::EtcdErrorCodes::DIRECTORY_NOT_EMPTY:
+            case Ichor::Etcdv2::v1::EtcdErrorCodes::DIRECTORY_NOT_EMPTY:
                 return fmt::format_to(ctx.out(), "DIRECTORY_NOT_EMPTY");
-            case Ichor::Etcd::v2::EtcdErrorCodes::PREVIOUS_VALUE_REQUIRED:
+            case Ichor::Etcdv2::v1::EtcdErrorCodes::PREVIOUS_VALUE_REQUIRED:
                 return fmt::format_to(ctx.out(), "PREVIOUS_VALUE_REQUIRED");
-            case Ichor::Etcd::v2::EtcdErrorCodes::TTL_IS_NOT_A_NUMBER:
+            case Ichor::Etcdv2::v1::EtcdErrorCodes::TTL_IS_NOT_A_NUMBER:
                 return fmt::format_to(ctx.out(), "TTL_IS_NOT_A_NUMBER");
-            case Ichor::Etcd::v2::EtcdErrorCodes::INDEX_IS_NOT_A_NUMBER:
+            case Ichor::Etcdv2::v1::EtcdErrorCodes::INDEX_IS_NOT_A_NUMBER:
                 return fmt::format_to(ctx.out(), "INDEX_IS_NOT_A_NUMBER");
-            case Ichor::Etcd::v2::EtcdErrorCodes::INVALID_FIELD:
+            case Ichor::Etcdv2::v1::EtcdErrorCodes::INVALID_FIELD:
                 return fmt::format_to(ctx.out(), "INVALID_FIELD");
-            case Ichor::Etcd::v2::EtcdErrorCodes::INVALID_FORM:
+            case Ichor::Etcdv2::v1::EtcdErrorCodes::INVALID_FORM:
                 return fmt::format_to(ctx.out(), "INVALID_FORM");
-            case Ichor::Etcd::v2::EtcdErrorCodes::RAFT_INTERNAL_ERROR:
+            case Ichor::Etcdv2::v1::EtcdErrorCodes::RAFT_INTERNAL_ERROR:
                 return fmt::format_to(ctx.out(), "RAFT_INTERNAL_ERROR");
-            case Ichor::Etcd::v2::EtcdErrorCodes::LEADER_ELECTRION_ERROR:
+            case Ichor::Etcdv2::v1::EtcdErrorCodes::LEADER_ELECTRION_ERROR:
                 return fmt::format_to(ctx.out(), "LEADER_ELECTRION_ERROR");
-            case Ichor::Etcd::v2::EtcdErrorCodes::WATCHER_CLEARED_DUE_TO_RECOVERY:
+            case Ichor::Etcdv2::v1::EtcdErrorCodes::WATCHER_CLEARED_DUE_TO_RECOVERY:
                 return fmt::format_to(ctx.out(), "WATCHER_CLEARED_DUE_TO_RECOVERY");
-            case Ichor::Etcd::v2::EtcdErrorCodes::EVENT_INDEX_OUTDATED_AND_CLEARED:
+            case Ichor::Etcdv2::v1::EtcdErrorCodes::EVENT_INDEX_OUTDATED_AND_CLEARED:
                 return fmt::format_to(ctx.out(), "EVENT_INDEX_OUTDATED_AND_CLEARED");
         }
         return fmt::format_to(ctx.out(), "error, please file a bug in Ichor");

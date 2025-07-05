@@ -11,6 +11,7 @@
 #include "../common/TestMsg.h"
 
 using namespace Ichor;
+using namespace Ichor::v1;
 
 class UsingWsService final : public AdvancedService<UsingWsService> {
 public:

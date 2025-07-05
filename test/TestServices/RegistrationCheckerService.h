@@ -4,6 +4,7 @@
 #include <ichor/dependency_management/DependencyRegister.h>
 
 using namespace Ichor;
+using namespace Ichor::v1;
 
 struct RegistrationCheckerService final : public AdvancedService<RegistrationCheckerService> {
     RegistrationCheckerService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {

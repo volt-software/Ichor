@@ -15,8 +15,8 @@ namespace websocket = beast::websocket; // from <boost/beast/websocket.hpp>
 namespace net = boost::asio;            // from <boost/asio.hpp>
 using tcp = boost::asio::ip::tcp;       // from <boost/asio/ip/tcp.hpp>
 
-namespace Ichor::Boost {
-    class WsHostService final : public IHostService, public AdvancedService<WsHostService> {
+namespace Ichor::Boost::v1 {
+    class WsHostService final : public Ichor::v1::IHostService, public AdvancedService<WsHostService> {
     public:
         WsHostService(DependencyRegister &reg, Properties props);
         ~WsHostService() final = default;
@@ -28,12 +28,12 @@ namespace Ichor::Boost {
         Task<tl::expected<void, Ichor::StartError>> start() final;
         Task<void> stop() final;
 
-        void addDependencyInstance(ILogger &logger, IService &isvc);
-        void removeDependencyInstance(ILogger &logger, IService &isvc);
+        void addDependencyInstance(Ichor::v1::ILogger &logger, IService &isvc);
+        void removeDependencyInstance(Ichor::v1::ILogger &logger, IService &isvc);
         void addDependencyInstance(IBoostAsioQueue &q, IService&);
         void removeDependencyInstance(IBoostAsioQueue &q, IService&);
 
-        AsyncGenerator<IchorBehaviour> handleEvent(NewWsConnectionEvent const &evt);
+        AsyncGenerator<IchorBehaviour> handleEvent(Ichor::v1::NewWsConnectionEvent const &evt);
 
         friend DependencyRegister;
         friend DependencyManager;
@@ -47,7 +47,7 @@ namespace Ichor::Boost {
         bool _quit{};
         bool _tcpNoDelay{};
         std::atomic<int64_t> _finishedListenAndRead{};
-        ILogger *_logger{};
+        Ichor::v1::ILogger *_logger{};
         std::vector<ServiceIdType> _connections{};
         EventHandlerRegistration _eventRegistration{};
         AsyncManualResetEvent _startStopEvent{};

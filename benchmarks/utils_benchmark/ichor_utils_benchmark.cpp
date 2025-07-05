@@ -23,7 +23,7 @@ struct StringLiteral {
 };
 
 template <StringLiteral REGEX, decltype(std::regex::ECMAScript) flags>
-struct StdRegexRouteMatch final : public Ichor::RouteMatcher {
+struct StdRegexRouteMatch final : public Ichor::v1::RouteMatcher {
     ~StdRegexRouteMatch() noexcept final = default;
 
     bool matches(std::string_view route) noexcept final {
@@ -54,7 +54,7 @@ private:
 
 #ifdef ICHOR_USE_RE2
 template <StringLiteral REGEX>
-struct Re2RegexRouteMatch final : public Ichor::RouteMatcher {
+struct Re2RegexRouteMatch final : public Ichor::v1::RouteMatcher {
     Re2RegexRouteMatch() : _r(REGEX.value, RE2::CannedOptions::Latin1) {
         if(!_r.ok()) {
             fmt::print("Couldn't compile RE2 {}\n", REGEX.value);
@@ -98,7 +98,7 @@ const uint64_t ITERATION_COUNT = 500'000;
 
 template <StringLiteral REGEX, int EXPECTED_MATCHES>
 void run_regex_bench(char *argv) {
-    Ichor::RegexRouteMatch<REGEX.value> ctreMatcher{};
+    Ichor::v1::RegexRouteMatch<REGEX.value> ctreMatcher{};
     StdRegexRouteMatch<REGEX, std::regex::ECMAScript> stdMatcher{};
 #ifdef ICHOR_USE_RE2
     Re2RegexRouteMatch<REGEX> re2Matcher{};
@@ -252,14 +252,14 @@ int main(int argc, char *argv[]) {
         auto endLargeStd = std::chrono::steady_clock::now();
         auto startSmallIchor = std::chrono::steady_clock::now();
         for(uint64_t j = 0; j < ITERATION_COUNT * 10; j++) {
-            if(Ichor::FastAtoi(small.c_str()) != 1ll) {
+            if(Ichor::v1::FastAtoi(small.c_str()) != 1ll) {
                 std::terminate();
             }
         }
         auto endSmallIchor = std::chrono::steady_clock::now();
         auto startLargeIchor = std::chrono::steady_clock::now();
         for(uint64_t j = 0; j < ITERATION_COUNT * 10; j++) {
-            if(Ichor::FastAtoi(large.c_str()) != 1234567891011ll) {
+            if(Ichor::v1::FastAtoi(large.c_str()) != 1234567891011ll) {
                 std::terminate();
             }
         }

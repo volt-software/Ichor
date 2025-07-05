@@ -3,7 +3,7 @@
 #include <ichor/interfaces/IFrameworkLogger.h>
 #include <ichor/Enums.h>
 
-namespace Ichor {
+namespace Ichor::v1 {
     class ILogger {
     public:
         virtual void trace(const char *filename_in, int line_in, const char *funcname_in, std::string_view format_str, fmt::format_args args) = 0;

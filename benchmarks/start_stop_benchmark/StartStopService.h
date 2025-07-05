@@ -15,6 +15,7 @@ constexpr uint32_t START_STOP_COUNT = 1'000'000;
 #endif
 
 using namespace Ichor;
+using namespace Ichor::v1;
 
 class StartStopService final : public AdvancedService<StartStopService> {
 public:

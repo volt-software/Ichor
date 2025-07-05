@@ -4,6 +4,7 @@
 #include "ICountService.h"
 
 using namespace Ichor;
+using namespace Ichor::v1;
 
 template<typename DependencyType, DependencyFlags flags>
 struct DependencyService final : public ICountService, public AdvancedService<DependencyService<DependencyType, flags>> {

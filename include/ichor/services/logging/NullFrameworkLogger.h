@@ -3,7 +3,7 @@
 #include <ichor/interfaces/IFrameworkLogger.h>
 #include <ichor/dependency_management/AdvancedService.h>
 
-namespace Ichor {
+namespace Ichor::v1 {
 
     class NullFrameworkLogger final : public IFrameworkLogger, public AdvancedService<NullFrameworkLogger> {
     public:

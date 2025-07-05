@@ -1,6 +1,6 @@
 #include <ichor/services/network/http/HttpInternal.h>
 
-namespace Ichor {
+namespace Ichor::v1 {
     unordered_map<std::string_view, HttpMethod> ICHOR_METHOD_MATCHING {
         {"DELETE", HttpMethod::delete_},
         {"GET", HttpMethod::get},

@@ -3,7 +3,7 @@
 #include <ichor/coroutines/AsyncGenerator.h>
 #include <functional>
 
-namespace Ichor {
+namespace Ichor::v1 {
     enum class TimerState : uint_fast16_t {
         STOPPED,
         STARTING,
@@ -72,21 +72,21 @@ namespace Ichor {
 }
 
 template <>
-struct fmt::formatter<Ichor::TimerState> {
+struct fmt::formatter<Ichor::v1::TimerState> {
     constexpr auto parse(format_parse_context& ctx) {
         return ctx.end();
     }
 
     template <typename FormatContext>
-    auto format(const Ichor::TimerState& change, FormatContext& ctx) const {
+    auto format(const Ichor::v1::TimerState& change, FormatContext& ctx) const {
         switch(change) {
-            case Ichor::TimerState::STOPPED:
+            case Ichor::v1::TimerState::STOPPED:
                 return fmt::format_to(ctx.out(), "STOPPED");
-            case Ichor::TimerState::STARTING:
+            case Ichor::v1::TimerState::STARTING:
                 return fmt::format_to(ctx.out(), "STARTING");
-            case Ichor::TimerState::RUNNING:
+            case Ichor::v1::TimerState::RUNNING:
                 return fmt::format_to(ctx.out(), "RUNNING");
-            case Ichor::TimerState::STOPPING:
+            case Ichor::v1::TimerState::STOPPING:
                 return fmt::format_to(ctx.out(), "STOPPING");
         }
         return fmt::format_to(ctx.out(), "error, please file a bug in Ichor");

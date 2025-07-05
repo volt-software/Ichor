@@ -10,10 +10,10 @@ namespace spdlog::sinks {
     class sink;
 }
 
-namespace Ichor {
+namespace Ichor::v1 {
     class ISpdlogSharedService {
     public:
-        virtual std::vector<std::shared_ptr<spdlog::sinks::sink>> const& getSinks() const noexcept = 0;
+        [[nodiscard]] virtual std::vector<std::shared_ptr<spdlog::sinks::sink>> const& getSinks() const noexcept = 0;
     protected:
         ~ISpdlogSharedService() = default;
     };

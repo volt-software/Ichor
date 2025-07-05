@@ -1,9 +1,8 @@
 #pragma once
 
 #include <atomic>
-#include <tl/function_ref.h>
 
-namespace Ichor {
+namespace Ichor::v1 {
     class ScopeGuardAtomicCount final {
     public:
         explicit ScopeGuardAtomicCount(std::atomic<int64_t> &var) noexcept : _var(var) {

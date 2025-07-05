@@ -5,6 +5,7 @@
 #include <csignal>
 
 using namespace Ichor;
+using namespace Ichor::v1;
 
 std::atomic<bool> quit{};
 

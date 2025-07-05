@@ -51,9 +51,9 @@ namespace Ichor {
     private:
         void shouldAddQuitEvent();
 
-        SectionalPriorityQueue<std::unique_ptr<Event>, COMPARE> _eventQueue{};
-        mutable Ichor::RealtimeReadWriteMutex _eventQueueMutex{};
-        ConditionVariableAny<RealtimeReadWriteMutex> _wakeup{};
+        v1::SectionalPriorityQueue<std::unique_ptr<Event>, COMPARE> _eventQueue{};
+        mutable v1::RealtimeReadWriteMutex _eventQueueMutex{};
+        v1::ConditionVariableAny<v1::RealtimeReadWriteMutex> _wakeup{};
         std::atomic<bool> _quit{false};
         std::atomic<bool> _processingEvt{false};
         bool _quitEventSent{false};

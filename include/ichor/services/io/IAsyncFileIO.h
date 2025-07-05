@@ -7,7 +7,7 @@
 #include <filesystem>
 #include <tl/expected.h>
 
-namespace Ichor {
+namespace Ichor::v1 {
     class IAsyncFileIO {
     public:
 

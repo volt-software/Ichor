@@ -28,7 +28,7 @@ public:
                 for (auto const &[key, prop] : *props) {
                     fmt::print("depprop {} {}\n", key, prop);
 
-                    if(key == "scope" && Ichor::any_cast<const std::string&>(prop) == scope) {
+                    if(key == "scope" && Ichor::v1::any_cast<const std::string&>(prop) == scope) {
                         fmt::print("ScopeFilter matches {}:{}\n", manager.serviceId(), manager.implementationName());
                         return true;
                     }
@@ -94,9 +94,9 @@ TEST_CASE("DependencyManager") {
 
         dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>();
         dm.createServiceManager<MultipleSeparateDependencyRequestsService>();
-        dm.createServiceManager<UselessService, IUselessService>(Properties{{"Filter", Ichor::make_any<Filter>(ScopeFilter{"scope_one"})}});
-        dm.createServiceManager<UselessService, IUselessService>(Properties{{"Filter", Ichor::make_any<Filter>(ScopeFilter{"scope_two"})}});
-        dm.createServiceManager<UselessService, IUselessService>(Properties{{"Filter", Ichor::make_any<Filter>(ScopeFilter{"scope_three"})}});
+        dm.createServiceManager<UselessService, IUselessService>(Properties{{"Filter", Ichor::v1::make_any<Filter>(ScopeFilter{"scope_one"})}});
+        dm.createServiceManager<UselessService, IUselessService>(Properties{{"Filter", Ichor::v1::make_any<Filter>(ScopeFilter{"scope_two"})}});
+        dm.createServiceManager<UselessService, IUselessService>(Properties{{"Filter", Ichor::v1::make_any<Filter>(ScopeFilter{"scope_three"})}});
         queue->start(CaptureSigInt);
 
         REQUIRE_FALSE(dm.isRunning());

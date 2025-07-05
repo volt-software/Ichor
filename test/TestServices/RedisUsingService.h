@@ -3,6 +3,8 @@
 #include <ichor/dependency_management/AdvancedService.h>
 #include <ichor/services/redis/IRedis.h>
 
+using namespace Ichor::v1;
+
 namespace Ichor {
     struct RedisUsingService final : public AdvancedService<RedisUsingService> {
         RedisUsingService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {

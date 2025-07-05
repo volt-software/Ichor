@@ -2,17 +2,17 @@
 #include <ichor/DependencyManager.h>
 #include <numeric>
 
-Ichor::EventStatisticsService::EventStatisticsService(DependencyRegister &reg, Properties props) : AdvancedService<EventStatisticsService>(std::move(props)) {
+Ichor::v1::EventStatisticsService::EventStatisticsService(DependencyRegister &reg, Properties props) : AdvancedService<EventStatisticsService>(std::move(props)) {
     reg.registerDependency<ITimerFactory>(this, DependencyFlags::REQUIRED);
     reg.registerDependency<ILogger>(this, DependencyFlags::REQUIRED);
 }
 
-Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::EventStatisticsService::start() {
+Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::v1::EventStatisticsService::start() {
     if(auto propIt = getProperties().find("ShowStatisticsOnStop"); propIt != getProperties().end()) {
-        _showStatisticsOnStop = Ichor::any_cast<bool>(propIt->second);
+        _showStatisticsOnStop = Ichor::v1::any_cast<bool>(propIt->second);
     }
     if(auto propIt = getProperties().find("AveragingIntervalMs"); propIt != getProperties().end()) {
-        _averagingIntervalMs = Ichor::any_cast<uint64_t>(propIt->second);
+        _averagingIntervalMs = Ichor::v1::any_cast<uint64_t>(propIt->second);
     }
 
 //    fmt::print("evt stats {}:{} {} {}\n", getServiceId(), getServiceName(), _showStatisticsOnStop, _averagingIntervalMs);
@@ -34,7 +34,7 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::EventStatisticsService
     co_return {};
 }
 
-Ichor::Task<void> Ichor::EventStatisticsService::stop() {
+Ichor::Task<void> Ichor::v1::EventStatisticsService::stop() {
     _interceptorRegistration.reset();
 
     if(_logger == nullptr) {
@@ -66,7 +66,7 @@ Ichor::Task<void> Ichor::EventStatisticsService::stop() {
     co_return;
 }
 
-bool Ichor::EventStatisticsService::preInterceptEvent(Event const &evt) {
+bool Ichor::v1::EventStatisticsService::preInterceptEvent(Event const &evt) {
     _startProcessingTimestamp = std::chrono::steady_clock::now();
 
     auto evtType = evt.get_type();
@@ -77,7 +77,7 @@ bool Ichor::EventStatisticsService::preInterceptEvent(Event const &evt) {
     return (bool)AllowOthersHandling;
 }
 
-void Ichor::EventStatisticsService::postInterceptEvent(Event const &evt, bool processed) {
+void Ichor::v1::EventStatisticsService::postInterceptEvent(Event const &evt, bool processed) {
     if(!processed) {
         return;
     }
@@ -98,23 +98,23 @@ void Ichor::EventStatisticsService::postInterceptEvent(Event const &evt, bool pr
     }
 }
 
-void Ichor::EventStatisticsService::addDependencyInstance(ILogger &logger, IService &) {
+void Ichor::v1::EventStatisticsService::addDependencyInstance(ILogger &logger, IService &) {
     _logger = &logger;
 }
 
-void Ichor::EventStatisticsService::removeDependencyInstance(ILogger &, IService &) {
+void Ichor::v1::EventStatisticsService::removeDependencyInstance(ILogger &, IService &) {
     _logger = nullptr;
 }
 
-void Ichor::EventStatisticsService::addDependencyInstance(ITimerFactory &factory, IService &) {
+void Ichor::v1::EventStatisticsService::addDependencyInstance(ITimerFactory &factory, IService &) {
     _timerFactory = &factory;
 }
 
-void Ichor::EventStatisticsService::removeDependencyInstance(ITimerFactory &, IService &) {
+void Ichor::v1::EventStatisticsService::removeDependencyInstance(ITimerFactory &, IService &) {
     _timerFactory = nullptr;
 }
 
-void Ichor::EventStatisticsService::calculateAverage() {
+void Ichor::v1::EventStatisticsService::calculateAverage() {
     int64_t now = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
     decltype(_recentEventStatistics) newVec{};
     newVec.swap(_recentEventStatistics);
@@ -139,10 +139,10 @@ void Ichor::EventStatisticsService::calculateAverage() {
     }
 }
 
-const Ichor::unordered_map<uint64_t, std::vector<Ichor::StatisticEntry>> &Ichor::EventStatisticsService::getRecentStatistics() const noexcept {
+const Ichor::unordered_map<uint64_t, std::vector<Ichor::v1::StatisticEntry>> &Ichor::v1::EventStatisticsService::getRecentStatistics() const noexcept {
     return _recentEventStatistics;
 }
 
-const Ichor::unordered_map<uint64_t, std::vector<Ichor::AveragedStatisticEntry>> &Ichor::EventStatisticsService::getAverageStatistics() const noexcept {
+const Ichor::unordered_map<uint64_t, std::vector<Ichor::v1::AveragedStatisticEntry>> &Ichor::v1::EventStatisticsService::getAverageStatistics() const noexcept {
     return _averagedStatistics;
 }

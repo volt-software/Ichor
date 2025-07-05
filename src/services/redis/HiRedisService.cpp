@@ -16,7 +16,7 @@ if(_redisContext == nullptr) { \
     ICHOR_LOG_TRACE(_logger, "post-await\n");                                \
     if(_redisContext == nullptr) [[unlikely]] { \
         ICHOR_LOG_TRACE(_logger, "rediscontext null\n");                            \
-        co_return tl::unexpected(Ichor::RedisError::DISCONNECTED); \
+        co_return tl::unexpected(Ichor::v1::RedisError::DISCONNECTED); \
     } \
 }                                   \
 static_assert(true)
@@ -36,14 +36,14 @@ namespace Ichor {
     // this function assumes it is being called from the correct ichor thread.
     // the poll timer should take care of that.
     static void _onRedisConnect(const struct redisAsyncContext *c, int status) {
-        auto *svc = reinterpret_cast<Ichor::HiredisService *>(c->data);
+        auto *svc = reinterpret_cast<Ichor::v1::HiredisService *>(c->data);
         svc->onRedisConnect(status);
     }
 
     // this function assumes it is being called from the correct ichor thread.
     // the poll timer should take care of that.
     static void _onRedisDisconnect(const struct redisAsyncContext *c, int status) {
-        auto *svc = reinterpret_cast<Ichor::HiredisService *>(c->data);
+        auto *svc = reinterpret_cast<Ichor::v1::HiredisService *>(c->data);
         svc->onRedisDisconnect(status);
     }
 
@@ -83,7 +83,7 @@ namespace Ichor {
     // the poll timer should take care of that.
     static void _onAsyncReply(redisAsyncContext *c, void *reply, void *privdata) {
         auto *ichorReply = static_cast<IchorRedisReply*>(privdata);
-        auto *svc = static_cast<HiredisService*>(c->data);
+        auto *svc = static_cast<Ichor::v1::HiredisService*>(c->data);
         ichorReply->reply = static_cast<redisReply *>(reply);
         if(svc->getDebug()) {
             fmt::print("hiredis command \"{}\" got reply from redis type {}\n", ichorReply->origCommand, reply == nullptr ? -1 : ichorReply->reply->type);
@@ -99,7 +99,7 @@ namespace Ichor {
         ichorReply->evt.set();
     }
 
-    static fmt::basic_memory_buffer<char, FMT_INLINE_BUFFER_SIZE> _formatSet(std::string_view const &key, std::string_view const &value, RedisSetOptions const &opts) {
+    static fmt::basic_memory_buffer<char, FMT_INLINE_BUFFER_SIZE> _formatSet(std::string_view const &key, std::string_view const &value, Ichor::v1::RedisSetOptions const &opts) {
         fmt::basic_memory_buffer<char, FMT_INLINE_BUFFER_SIZE> buf{};
         fmt::format_to(std::back_inserter(buf), "SET {} {}", key, value);
         uint32_t timeOptsSet{};
@@ -142,13 +142,13 @@ namespace Ichor {
     }
 }
 
-Ichor::HiredisService::HiredisService(DependencyRegister &reg, Properties props) : AdvancedService<HiredisService>(std::move(props)) {
+Ichor::v1::HiredisService::HiredisService(DependencyRegister &reg, Properties props) : AdvancedService<HiredisService>(std::move(props)) {
     reg.registerDependency<ILogger>(this, DependencyFlags::REQUIRED);
     reg.registerDependency<ITimerFactory>(this, DependencyFlags::REQUIRED);
     reg.registerDependency<IEventQueue>(this, DependencyFlags::REQUIRED);
 }
 
-Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::HiredisService::start() {
+Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::v1::HiredisService::start() {
     if(auto propIt = getProperties().find("Address"); propIt == getProperties().end()) [[unlikely]] {
         throw std::runtime_error("Missing address when starting HiredisService");
     }
@@ -157,16 +157,16 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::HiredisService::start(
     }
 
     if(auto propIt = getProperties().find("TimeoutMs"); propIt != getProperties().end()) {
-        _timeoutMs = Ichor::any_cast<uint64_t>(propIt->second);
+        _timeoutMs = Ichor::v1::any_cast<uint64_t>(propIt->second);
     }
     if(auto propIt = getProperties().find("PollIntervalMs"); propIt != getProperties().end()) {
-        _pollIntervalMs = Ichor::any_cast<uint64_t>(propIt->second);
+        _pollIntervalMs = Ichor::v1::any_cast<uint64_t>(propIt->second);
     }
     if(auto propIt = getProperties().find("TryConnectIntervalMs"); propIt != getProperties().end()) {
-        _tryConnectIntervalMs = Ichor::any_cast<uint64_t>(propIt->second);
+        _tryConnectIntervalMs = Ichor::v1::any_cast<uint64_t>(propIt->second);
     }
     if(auto propIt = getProperties().find("Debug"); propIt != getProperties().end()) {
-        _debug = Ichor::any_cast<bool>(propIt->second);
+        _debug = Ichor::v1::any_cast<bool>(propIt->second);
     }
 
     _timeWhenDisconnected = static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count());
@@ -197,8 +197,8 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::HiredisService::start(
 
         auto addrIt = getProperties().find("Address");
         auto portIt = getProperties().find("Port");
-        auto &addr = Ichor::any_cast<std::string&>(addrIt->second);
-        auto port = Ichor::any_cast<uint16_t>(portIt->second);
+        auto &addr = Ichor::v1::any_cast<std::string&>(addrIt->second);
+        auto port = Ichor::v1::any_cast<uint16_t>(portIt->second);
 
         if(!connect(addr, port)) {
             ICHOR_LOG_ERROR(_logger, "Couldn't setup hiredis");
@@ -259,7 +259,7 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::HiredisService::start(
     co_return {};
 }
 
-Ichor::Task<void> Ichor::HiredisService::stop() {
+Ichor::Task<void> Ichor::v1::HiredisService::stop() {
     redisAsyncDisconnect(_redisContext);
 
     INTERNAL_DEBUG("HiredisService::stop() co_return");
@@ -267,31 +267,31 @@ Ichor::Task<void> Ichor::HiredisService::stop() {
     co_return;
 }
 
-void Ichor::HiredisService::addDependencyInstance(ILogger &logger, IService&) {
+void Ichor::v1::HiredisService::addDependencyInstance(ILogger &logger, IService&) {
     _logger = &logger;
 }
 
-void Ichor::HiredisService::removeDependencyInstance(ILogger &, IService&) {
+void Ichor::v1::HiredisService::removeDependencyInstance(ILogger &, IService&) {
     _logger = nullptr;
 }
 
-void Ichor::HiredisService::addDependencyInstance(ITimerFactory &factory, IService&) {
+void Ichor::v1::HiredisService::addDependencyInstance(ITimerFactory &factory, IService&) {
     _timerFactory = &factory;
 }
 
-void Ichor::HiredisService::removeDependencyInstance(ITimerFactory &, IService&) {
+void Ichor::v1::HiredisService::removeDependencyInstance(ITimerFactory &, IService&) {
     _timerFactory = nullptr;
 }
 
-void Ichor::HiredisService::addDependencyInstance(IEventQueue &queue, IService&) {
+void Ichor::v1::HiredisService::addDependencyInstance(IEventQueue &queue, IService&) {
     _queue = &queue;
 }
 
-void Ichor::HiredisService::removeDependencyInstance(IEventQueue &, IService&) {
+void Ichor::v1::HiredisService::removeDependencyInstance(IEventQueue &, IService&) {
     _queue = nullptr;
 }
 
-Ichor::Task<tl::expected<Ichor::RedisAuthReply, Ichor::RedisError>> Ichor::HiredisService::auth(std::string_view user, std::string_view password) {
+Ichor::Task<tl::expected<Ichor::v1::RedisAuthReply, Ichor::v1::RedisError>> Ichor::v1::HiredisService::auth(std::string_view user, std::string_view password) {
     ICHOR_WAIT_IF_NOT_CONNECTED;
 
     IchorRedisReply evt{};
@@ -316,7 +316,7 @@ Ichor::Task<tl::expected<Ichor::RedisAuthReply, Ichor::RedisError>> Ichor::Hired
     co_return RedisAuthReply{true};
 }
 
-Ichor::Task<tl::expected<Ichor::RedisSetReply, Ichor::RedisError>> Ichor::HiredisService::set(std::string_view key, std::string_view value) {
+Ichor::Task<tl::expected<Ichor::v1::RedisSetReply, Ichor::v1::RedisError>> Ichor::v1::HiredisService::set(std::string_view key, std::string_view value) {
     ICHOR_WAIT_IF_NOT_CONNECTED;
 
     IchorRedisReply evt{};
@@ -341,7 +341,7 @@ Ichor::Task<tl::expected<Ichor::RedisSetReply, Ichor::RedisError>> Ichor::Hiredi
     co_return RedisSetReply{true, evt.reply->str};
 }
 
-Ichor::Task<tl::expected<Ichor::RedisSetReply, Ichor::RedisError>> Ichor::HiredisService::set(std::string_view key, std::string_view value, RedisSetOptions const &opts) {
+Ichor::Task<tl::expected<Ichor::v1::RedisSetReply, Ichor::v1::RedisError>> Ichor::v1::HiredisService::set(std::string_view key, std::string_view value, RedisSetOptions const &opts) {
     ICHOR_WAIT_IF_NOT_CONNECTED;
 
     auto buf = _formatSet(key, value, opts);
@@ -368,7 +368,7 @@ Ichor::Task<tl::expected<Ichor::RedisSetReply, Ichor::RedisError>> Ichor::Hiredi
     co_return RedisSetReply{true, evt.reply->str};
 }
 
-Ichor::Task<tl::expected<Ichor::RedisGetReply, Ichor::RedisError>> Ichor::HiredisService::get(std::string_view key) {
+Ichor::Task<tl::expected<Ichor::v1::RedisGetReply, Ichor::v1::RedisError>> Ichor::v1::HiredisService::get(std::string_view key) {
     ICHOR_WAIT_IF_NOT_CONNECTED;
 
     IchorRedisReply evt{};
@@ -397,7 +397,7 @@ Ichor::Task<tl::expected<Ichor::RedisGetReply, Ichor::RedisError>> Ichor::Hiredi
     co_return RedisGetReply{evt.reply->str};
 }
 
-Ichor::Task<tl::expected<Ichor::RedisGetReply, Ichor::RedisError>> Ichor::HiredisService::getdel(std::string_view key) {
+Ichor::Task<tl::expected<Ichor::v1::RedisGetReply, Ichor::v1::RedisError>> Ichor::v1::HiredisService::getdel(std::string_view key) {
     ICHOR_WAIT_IF_NOT_CONNECTED;
 
     if(*_redisVersion < Version{6, 2, 0}) {
@@ -426,7 +426,7 @@ Ichor::Task<tl::expected<Ichor::RedisGetReply, Ichor::RedisError>> Ichor::Hiredi
     co_return RedisGetReply{evt.reply->str};
 }
 
-Ichor::Task<tl::expected<Ichor::RedisIntegerReply, Ichor::RedisError>> Ichor::HiredisService::del(std::string_view keys) {
+Ichor::Task<tl::expected<Ichor::v1::RedisIntegerReply, Ichor::v1::RedisError>> Ichor::v1::HiredisService::del(std::string_view keys) {
     ICHOR_WAIT_IF_NOT_CONNECTED;
 
     IchorRedisReply evt{};
@@ -451,7 +451,7 @@ Ichor::Task<tl::expected<Ichor::RedisIntegerReply, Ichor::RedisError>> Ichor::Hi
     co_return RedisIntegerReply{evt.reply->integer};
 }
 
-Ichor::Task<tl::expected<Ichor::RedisIntegerReply, Ichor::RedisError>> Ichor::HiredisService::incr(std::string_view keys) {
+Ichor::Task<tl::expected<Ichor::v1::RedisIntegerReply, Ichor::v1::RedisError>> Ichor::v1::HiredisService::incr(std::string_view keys) {
     ICHOR_WAIT_IF_NOT_CONNECTED;
 
     IchorRedisReply evt{};
@@ -476,7 +476,7 @@ Ichor::Task<tl::expected<Ichor::RedisIntegerReply, Ichor::RedisError>> Ichor::Hi
     co_return RedisIntegerReply{evt.reply->integer};
 }
 
-Ichor::Task<tl::expected<Ichor::RedisIntegerReply, Ichor::RedisError>> Ichor::HiredisService::incrBy(std::string_view keys, int64_t incr) {
+Ichor::Task<tl::expected<Ichor::v1::RedisIntegerReply, Ichor::v1::RedisError>> Ichor::v1::HiredisService::incrBy(std::string_view keys, int64_t incr) {
     ICHOR_WAIT_IF_NOT_CONNECTED;
 
     IchorRedisReply evt{};
@@ -501,7 +501,7 @@ Ichor::Task<tl::expected<Ichor::RedisIntegerReply, Ichor::RedisError>> Ichor::Hi
     co_return RedisIntegerReply{evt.reply->integer};
 }
 
-Ichor::Task<tl::expected<Ichor::RedisIntegerReply, Ichor::RedisError>> Ichor::HiredisService::incrByFloat(std::string_view keys, double incr) {
+Ichor::Task<tl::expected<Ichor::v1::RedisIntegerReply, Ichor::v1::RedisError>> Ichor::v1::HiredisService::incrByFloat(std::string_view keys, double incr) {
     ICHOR_WAIT_IF_NOT_CONNECTED;
 
     if(*_redisVersion < Version{2, 6, 0}) {
@@ -530,7 +530,7 @@ Ichor::Task<tl::expected<Ichor::RedisIntegerReply, Ichor::RedisError>> Ichor::Hi
     co_return RedisIntegerReply{evt.reply->integer};
 }
 
-Ichor::Task<tl::expected<Ichor::RedisIntegerReply, Ichor::RedisError>> Ichor::HiredisService::decr(std::string_view keys) {
+Ichor::Task<tl::expected<Ichor::v1::RedisIntegerReply, Ichor::v1::RedisError>> Ichor::v1::HiredisService::decr(std::string_view keys) {
     ICHOR_WAIT_IF_NOT_CONNECTED;
 
     IchorRedisReply evt{};
@@ -555,7 +555,7 @@ Ichor::Task<tl::expected<Ichor::RedisIntegerReply, Ichor::RedisError>> Ichor::Hi
     co_return RedisIntegerReply{evt.reply->integer};
 }
 
-Ichor::Task<tl::expected<Ichor::RedisIntegerReply, Ichor::RedisError>> Ichor::HiredisService::decrBy(std::string_view keys, int64_t decr) {
+Ichor::Task<tl::expected<Ichor::v1::RedisIntegerReply, Ichor::v1::RedisError>> Ichor::v1::HiredisService::decrBy(std::string_view keys, int64_t decr) {
     ICHOR_WAIT_IF_NOT_CONNECTED;
 
     IchorRedisReply evt{};
@@ -580,7 +580,7 @@ Ichor::Task<tl::expected<Ichor::RedisIntegerReply, Ichor::RedisError>> Ichor::Hi
     co_return RedisIntegerReply{evt.reply->integer};
 }
 
-Ichor::Task<tl::expected<Ichor::RedisIntegerReply, Ichor::RedisError>> Ichor::HiredisService::strlen(std::string_view key) {
+Ichor::Task<tl::expected<Ichor::v1::RedisIntegerReply, Ichor::v1::RedisError>> Ichor::v1::HiredisService::strlen(std::string_view key) {
     ICHOR_WAIT_IF_NOT_CONNECTED;
 
     if(*_redisVersion < Version{2, 2, 0}) {
@@ -609,7 +609,7 @@ Ichor::Task<tl::expected<Ichor::RedisIntegerReply, Ichor::RedisError>> Ichor::Hi
     co_return RedisIntegerReply{evt.reply->integer};
 }
 
-Ichor::Task<tl::expected<void, Ichor::RedisError>> Ichor::HiredisService::multi() {
+Ichor::Task<tl::expected<void, Ichor::v1::RedisError>> Ichor::v1::HiredisService::multi() {
     ICHOR_WAIT_IF_NOT_CONNECTED;
 
     if(*_redisVersion < Version{1, 2, 0}) {
@@ -634,7 +634,7 @@ Ichor::Task<tl::expected<void, Ichor::RedisError>> Ichor::HiredisService::multi(
     co_return {};
 }
 
-Ichor::Task<tl::expected<std::vector<std::variant<Ichor::RedisGetReply, Ichor::RedisSetReply, Ichor::RedisAuthReply, Ichor::RedisIntegerReply>>, Ichor::RedisError>> Ichor::HiredisService::exec() {
+Ichor::Task<tl::expected<std::vector<std::variant<Ichor::v1::RedisGetReply, Ichor::v1::RedisSetReply, Ichor::v1::RedisAuthReply, Ichor::v1::RedisIntegerReply>>, Ichor::v1::RedisError>> Ichor::v1::HiredisService::exec() {
     ScopeGuard sg{[this]() {
         _queuedResponseTypes.clear();
     }};
@@ -664,7 +664,7 @@ Ichor::Task<tl::expected<std::vector<std::variant<Ichor::RedisGetReply, Ichor::R
         std::terminate();
     }
 
-    std::vector<std::variant<Ichor::RedisGetReply, Ichor::RedisSetReply, Ichor::RedisAuthReply, Ichor::RedisIntegerReply>> ret;
+    std::vector<std::variant<Ichor::v1::RedisGetReply, Ichor::v1::RedisSetReply, Ichor::v1::RedisAuthReply, Ichor::v1::RedisIntegerReply>> ret;
     for(size_t i = 0; i < evt.reply->elements; i++) {
         auto *element = evt.reply->element[i];
         switch (_queuedResponseTypes[i]) {
@@ -709,7 +709,7 @@ Ichor::Task<tl::expected<std::vector<std::variant<Ichor::RedisGetReply, Ichor::R
     co_return ret;
 }
 
-Ichor::Task<tl::expected<void, Ichor::RedisError>> Ichor::HiredisService::discard() {
+Ichor::Task<tl::expected<void, Ichor::v1::RedisError>> Ichor::v1::HiredisService::discard() {
     ScopeGuard sg{[this]() {
         _queuedResponseTypes.clear();
     }};
@@ -738,7 +738,7 @@ Ichor::Task<tl::expected<void, Ichor::RedisError>> Ichor::HiredisService::discar
     co_return {};
 }
 
-Ichor::Task<tl::expected<std::unordered_map<std::string, std::string>, Ichor::RedisError>> Ichor::HiredisService::info() {
+Ichor::Task<tl::expected<std::unordered_map<std::string, std::string>, Ichor::v1::RedisError>> Ichor::v1::HiredisService::info() {
     ICHOR_WAIT_IF_NOT_CONNECTED;
 
     IchorRedisReply evt{};
@@ -772,7 +772,7 @@ Ichor::Task<tl::expected<std::unordered_map<std::string, std::string>, Ichor::Re
 
     co_return ret;
 }
-Ichor::Task<tl::expected<Ichor::Version, Ichor::RedisError>> Ichor::HiredisService::getServerVersion() {
+Ichor::Task<tl::expected<Ichor::v1::Version, Ichor::v1::RedisError>> Ichor::v1::HiredisService::getServerVersion() {
     ICHOR_WAIT_IF_NOT_CONNECTED;
 
     if(!_redisVersion) {
@@ -782,7 +782,7 @@ Ichor::Task<tl::expected<Ichor::Version, Ichor::RedisError>> Ichor::HiredisServi
     co_return _redisVersion.value();
 }
 
-void Ichor::HiredisService::onRedisConnect(int status) {
+void Ichor::v1::HiredisService::onRedisConnect(int status) {
     if(status != REDIS_OK) {
         if(_timeoutTimer->getState() == TimerState::STOPPED) {
             if(_redisContext != nullptr) {
@@ -802,7 +802,7 @@ void Ichor::HiredisService::onRedisConnect(int status) {
     }
 }
 
-void Ichor::HiredisService::onRedisDisconnect(int status) {
+void Ichor::v1::HiredisService::onRedisDisconnect(int status) {
     if(status == REDIS_OK) {
         // user requested disconnect
         ICHOR_LOG_INFO(_logger, "Disconnected");
@@ -824,16 +824,16 @@ void Ichor::HiredisService::onRedisDisconnect(int status) {
     }
 }
 
-void Ichor::HiredisService::setDebug(bool debug) noexcept {
+void Ichor::v1::HiredisService::setDebug(bool debug) noexcept {
     _debug = debug;
 }
 
-bool Ichor::HiredisService::getDebug() const noexcept {
+bool Ichor::v1::HiredisService::getDebug() const noexcept {
     return _debug;
 }
 
 
-tl::expected<void, Ichor::StartError> Ichor::HiredisService::connect(std::string const &addr, uint16_t port) {
+tl::expected<void, Ichor::StartError> Ichor::v1::HiredisService::connect(std::string const &addr, uint16_t port) {
     redisOptions opts{};
     REDIS_OPTIONS_SET_TCP(&opts, addr.c_str(), port);
     opts.options |= REDIS_OPT_REUSEADDR;

@@ -55,7 +55,7 @@ Of course, Ichor needs to know about this type and this is done by registering i
 ```c++
 auto queue = std::make_unique<PriorityQueue>(spinlock);
 auto &dm = queue->createManager();
-dm.createServiceManager<HttpHostService, IHttpHostService>(Properties{{"Address", Ichor::make_any<std::string>("127.0.0.1")}, {"Port", Ichor::make_any<uint16_t>(static_cast<uint16_t>(80))}});
+dm.createServiceManager<HttpHostService, IHttpHostService>(Properties{{"Address", Ichor::v1::make_any<std::string>("127.0.0.1")}, {"Port", Ichor::v1::make_any<uint16_t>(static_cast<uint16_t>(80))}});
 dm.createServiceManager<BasicService>();
 queue->start(CaptureSigInt);
 ```

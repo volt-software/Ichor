@@ -13,6 +13,6 @@ namespace Ichor {
     class ISdeventQueue : public IEventQueue {
     public:
         ~ISdeventQueue() override = default;
-        [[nodiscard]] virtual NeverNull<sd_event*> getLoop() noexcept = 0;
+        [[nodiscard]] virtual v1::NeverNull<sd_event*> getLoop() noexcept = 0;
     };
 }

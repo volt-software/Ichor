@@ -5,6 +5,7 @@
 #include "AwaitService.h"
 
 using namespace Ichor;
+using namespace Ichor::v1;
 
 class AsyncUsingTimerService final : public AdvancedService<AsyncUsingTimerService> {
 public:

@@ -9,10 +9,10 @@
 #include <thread>
 #include <atomic>
 
-namespace Ichor {
+namespace Ichor::v1 {
     struct io_operation_submission final {
         Ichor::AsyncManualResetEvent evt;
-        tl::expected<void, Ichor::IOError> result;
+        tl::expected<void, Ichor::v1::IOError> result;
         std::function<void(decltype(result)&)> fn;
     };
 

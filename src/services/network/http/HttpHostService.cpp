@@ -27,14 +27,14 @@ struct fmt::formatter<Ichor::unordered_set<Ichor::ServiceIdType>> {
     }
 };
 
-Ichor::HttpHostService::HttpHostService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {
+Ichor::v1::HttpHostService::HttpHostService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {
     reg.registerDependency<ILogger>(this, DependencyFlags::REQUIRED);
     reg.registerDependency<IEventQueue>(this, DependencyFlags::REQUIRED);
     reg.registerDependency<IHostService>(this, DependencyFlags::REQUIRED, getProperties());
     reg.registerDependency<IHostConnectionService>(this, DependencyFlags::ALLOW_MULTIPLE);
 }
 
-Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::HttpHostService::start() {
+Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::v1::HttpHostService::start() {
     auto addrIt = getProperties().find("Address");
     auto portIt = getProperties().find("Port");
 
@@ -48,50 +48,50 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::HttpHostService::start
     }
 
     if(auto propIt = getProperties().find("Priority"); propIt != getProperties().end()) {
-        _priority = Ichor::any_cast<uint64_t>(propIt->second);
+        _priority = Ichor::v1::any_cast<uint64_t>(propIt->second);
     }
     if(auto propIt = getProperties().find("Debug"); propIt != getProperties().end()) {
-        _debug = Ichor::any_cast<bool>(propIt->second);
+        _debug = Ichor::v1::any_cast<bool>(propIt->second);
     }
     if(auto propIt = getProperties().find("SendServerHeader"); propIt != getProperties().end()) {
-        _sendServerHeader = Ichor::any_cast<bool>(propIt->second);
+        _sendServerHeader = Ichor::v1::any_cast<bool>(propIt->second);
     }
 
     co_return {};
 }
 
-Ichor::Task<void> Ichor::HttpHostService::stop() {
+Ichor::Task<void> Ichor::v1::HttpHostService::stop() {
     co_return;
 }
 
-void Ichor::HttpHostService::addDependencyInstance(ILogger &logger, IService &) {
+void Ichor::v1::HttpHostService::addDependencyInstance(ILogger &logger, IService &) {
     _logger = &logger;
     ICHOR_LOG_TRACE(_logger, "HttpHost {} got logger", getServiceId());
 }
 
-void Ichor::HttpHostService::removeDependencyInstance(ILogger &, IService &) {
+void Ichor::v1::HttpHostService::removeDependencyInstance(ILogger &, IService &) {
     _logger = nullptr;
 }
 
-void Ichor::HttpHostService::addDependencyInstance(IEventQueue &q, IService &) {
+void Ichor::v1::HttpHostService::addDependencyInstance(IEventQueue &q, IService &) {
     ICHOR_LOG_TRACE(_logger, "HttpHost {} got queue", getServiceId());
     _queue = &q;
 }
 
-void Ichor::HttpHostService::removeDependencyInstance(IEventQueue &, IService &) {
+void Ichor::v1::HttpHostService::removeDependencyInstance(IEventQueue &, IService &) {
     _queue = nullptr;
 }
 
-void Ichor::HttpHostService::addDependencyInstance(IHostService &, IService &s) {
+void Ichor::v1::HttpHostService::addDependencyInstance(IHostService &, IService &s) {
     ICHOR_LOG_TRACE(_logger, "HttpHost {} got host service {}", getServiceId(), s.getServiceId());
     _hostServiceIds.emplace(s.getServiceId());
 }
 
-void Ichor::HttpHostService::removeDependencyInstance(IHostService &, IService &s) {
+void Ichor::v1::HttpHostService::removeDependencyInstance(IHostService &, IService &s) {
     _hostServiceIds.erase(s.getServiceId());
 }
 
-void Ichor::HttpHostService::addDependencyInstance(IHostConnectionService &client, IService &s) {
+void Ichor::v1::HttpHostService::addDependencyInstance(IHostConnectionService &client, IService &s) {
     ICHOR_LOG_TRACE(_logger, "HttpHost {} got connection {}", getServiceId(), s.getServiceId());
     if(client.isClient()) {
         ICHOR_LOG_TRACE(_logger, "connection {} is not a host connection", s.getServiceId());
@@ -104,8 +104,8 @@ void Ichor::HttpHostService::addDependencyInstance(IHostConnectionService &clien
         ICHOR_LOG_TRACE(_logger, "New connection {} did not have TcpHostService property", s.getServiceId());
         return;
     }
-    if(!_hostServiceIds.contains(Ichor::any_cast<ServiceIdType>(TcpHostProp->second))) {
-        ICHOR_LOG_TRACE(_logger, "New connection {}:{} did not match hostServiceId {}", s.getServiceId(), Ichor::any_cast<ServiceIdType>(TcpHostProp->second), _hostServiceIds);
+    if(!_hostServiceIds.contains(Ichor::v1::any_cast<ServiceIdType>(TcpHostProp->second))) {
+        ICHOR_LOG_TRACE(_logger, "New connection {}:{} did not match hostServiceId {}", s.getServiceId(), Ichor::v1::any_cast<ServiceIdType>(TcpHostProp->second), _hostServiceIds);
         return;
     }
 
@@ -122,12 +122,12 @@ void Ichor::HttpHostService::addDependencyInstance(IHostConnectionService &clien
     _connections.emplace(s.getServiceId(), &client);
 }
 
-void Ichor::HttpHostService::removeDependencyInstance(IHostConnectionService &, IService &s) {
+void Ichor::v1::HttpHostService::removeDependencyInstance(IHostConnectionService &, IService &s) {
     _connections.erase(s.getServiceId());
     _connectionBuffers.erase(s.getServiceId());
 }
 
-tl::expected<Ichor::HttpRequest, Ichor::HttpParseError> Ichor::HttpHostService::parseRequest(std::string_view complete, size_t& len) const {
+tl::expected<Ichor::v1::HttpRequest, Ichor::v1::HttpParseError> Ichor::v1::HttpHostService::parseRequest(std::string_view complete, size_t& len) const {
     HttpRequest req{};
     uint64_t lineNo{};
     uint64_t crlfCounter{};
@@ -254,7 +254,7 @@ tl::expected<Ichor::HttpRequest, Ichor::HttpParseError> Ichor::HttpHostService::
     return req;
 }
 
-Ichor::Task<void> Ichor::HttpHostService::receiveRequestHandler(ServiceIdType id) {
+Ichor::Task<void> Ichor::v1::HttpHostService::receiveRequestHandler(ServiceIdType id) {
     std::string_view msg;
     {
         auto &string = _connectionBuffers[id];
@@ -322,7 +322,7 @@ Ichor::Task<void> Ichor::HttpHostService::receiveRequestHandler(ServiceIdType id
     co_return;
 }
 
-Ichor::Task<void> Ichor::HttpHostService::sendResponse(ServiceIdType id, const HttpResponse &response) {
+Ichor::Task<void> Ichor::v1::HttpHostService::sendResponse(ServiceIdType id, const HttpResponse &response) {
     using namespace std::literals;
 
     std::vector<uint8_t> resp;
@@ -352,11 +352,11 @@ Ichor::Task<void> Ichor::HttpHostService::sendResponse(ServiceIdType id, const H
     co_return;
 }
 
-Ichor::HttpRouteRegistration Ichor::HttpHostService::addRoute(HttpMethod method, std::string_view route, std::function<Task<HttpResponse>(HttpRequest&)> handler) {
+Ichor::v1::HttpRouteRegistration Ichor::v1::HttpHostService::addRoute(HttpMethod method, std::string_view route, std::function<Task<HttpResponse>(HttpRequest&)> handler) {
     return addRoute(method, std::make_unique<StringRouteMatcher>(route), std::move(handler));
 }
 
-Ichor::HttpRouteRegistration Ichor::HttpHostService::addRoute(HttpMethod method, std::unique_ptr<RouteMatcher> newMatcher, std::function<Task<HttpResponse>(HttpRequest&)> handler) {
+Ichor::v1::HttpRouteRegistration Ichor::v1::HttpHostService::addRoute(HttpMethod method, std::unique_ptr<RouteMatcher> newMatcher, std::function<Task<HttpResponse>(HttpRequest&)> handler) {
     auto routes = _handlers.find(method);
 
     newMatcher->set_id(_matchersIdCounter);
@@ -372,7 +372,7 @@ Ichor::HttpRouteRegistration Ichor::HttpHostService::addRoute(HttpMethod method,
     return {method, _matchersIdCounter++, this};
 }
 
-void Ichor::HttpHostService::removeRoute(HttpMethod method, RouteIdType id) {
+void Ichor::v1::HttpHostService::removeRoute(HttpMethod method, RouteIdType id) {
     auto routes = _handlers.find(method);
 
     if(routes == std::end(_handlers)) {
@@ -384,10 +384,10 @@ void Ichor::HttpHostService::removeRoute(HttpMethod method, RouteIdType id) {
     });
 }
 
-void Ichor::HttpHostService::setPriority(uint64_t priority) {
+void Ichor::v1::HttpHostService::setPriority(uint64_t priority) {
     _priority = priority;
 }
 
-uint64_t Ichor::HttpHostService::getPriority() {
+uint64_t Ichor::v1::HttpHostService::getPriority() {
     return _priority;
 }

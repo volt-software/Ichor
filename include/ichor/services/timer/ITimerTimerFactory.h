@@ -1,9 +1,8 @@
 #pragma once
 
 #include <vector>
-#include <ichor/Common.h>
 
-namespace Ichor {
+namespace Ichor::v1 {
     struct ITimerTimerFactory {
         [[nodiscard]] virtual std::vector<ServiceIdType> getCreatedTimerFactoryIds() const noexcept = 0;
 

@@ -10,14 +10,14 @@ public:
     std::vector<Dependency *> interestedInDependencyGoingOffline(ILifecycleManager *dependentService) noexcept override {
         return {};
     }
-    StartBehaviour dependencyOnline(NeverNull<ILifecycleManager *> dependentService) override {
+    StartBehaviour dependencyOnline(v1::NeverNull<ILifecycleManager *> dependentService) override {
         return {};
     }
-    AsyncGenerator<StartBehaviour> dependencyOffline(NeverNull<ILifecycleManager *> dependentService, std::vector<Dependency *> deps) override {
+    AsyncGenerator<StartBehaviour> dependencyOffline(v1::NeverNull<ILifecycleManager *> dependentService, std::vector<Dependency *> deps) override {
         return {};
     }
     unordered_set<ServiceIdType> &getDependencies() noexcept override {
-        return Detail::emptyDependencies;
+        return Ichor::Detail::emptyDependencies;
     }
     unordered_set<ServiceIdType> &getDependees() noexcept override {
         return _serviceIdsOfDependees;
@@ -52,10 +52,10 @@ public:
     ServiceState getServiceState() const noexcept override {
         return {};
     }
-    NeverNull<IService *> getIService() noexcept override {
+    v1::NeverNull<IService *> getIService() noexcept override {
         std::terminate();
     }
-    NeverNull<IService const *> getIService() const noexcept override {
+    v1::NeverNull<IService const *> getIService() const noexcept override {
         std::terminate();
     }
     std::span<Dependency const> getInterfaces() const noexcept override {
@@ -67,10 +67,10 @@ public:
     DependencyRegister const *getDependencyRegistry() const noexcept override {
         return _dependencyRegistry;
     }
-    void insertSelfInto(uint64_t keyOfInterfaceToInject, ServiceIdType serviceIdOfOther, std::function<void(NeverNull<void *>, IService &)> &) override {
+    void insertSelfInto(uint64_t keyOfInterfaceToInject, ServiceIdType serviceIdOfOther, std::function<void(v1::NeverNull<void *>, IService &)> &) override {
 
     }
-    void removeSelfInto(uint64_t keyOfInterfaceToInject, ServiceIdType serviceIdOfOther, std::function<void(NeverNull<void *>, IService &)> &) override {
+    void removeSelfInto(uint64_t keyOfInterfaceToInject, ServiceIdType serviceIdOfOther, std::function<void(v1::NeverNull<void *>, IService &)> &) override {
 
     }
 

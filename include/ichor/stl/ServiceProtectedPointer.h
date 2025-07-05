@@ -5,7 +5,7 @@
 // When creating services, the returned pointer is not meant to be stored in a container nor used beyond the scope of that code block.
 // So by deleting the copy/move constructors/operators, hopefully force users to store only the service ID.
 
-namespace Ichor {
+namespace Ichor::v1 {
     template <typename T>
     struct ServiceProtectedPointer final {
         explicit constexpr ServiceProtectedPointer(T *ptr ICHOR_LIFETIME_BOUND) noexcept : _ptr(ptr) {}

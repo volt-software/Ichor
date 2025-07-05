@@ -10,7 +10,7 @@
 using tcp = boost::asio::ip::tcp;       // from <boost/asio/ip/tcp.hpp>
 namespace net = boost::asio;            // from <boost/asio/executor.hpp>
 
-namespace Ichor {
+namespace Ichor::v1 {
     struct NewWsConnectionEvent final : public Event {
         explicit NewWsConnectionEvent(uint64_t _id, uint64_t _originatingService, uint64_t _priority, std::shared_ptr<websocket::stream<beast::tcp_stream>> &&socket) noexcept :
                 Event(_id, _originatingService, _priority), _socket(std::move(socket)) {}

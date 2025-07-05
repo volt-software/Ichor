@@ -11,11 +11,11 @@
 
 using namespace std::chrono_literals;
 
-Ichor::Timer::Timer(IEventQueue& queue, uint64_t timerId, uint64_t svcId) noexcept : _queue(queue), _timerId(timerId), _requestingServiceId(svcId) {
+Ichor::v1::Timer::Timer(IEventQueue& queue, uint64_t timerId, uint64_t svcId) noexcept : _queue(queue), _timerId(timerId), _requestingServiceId(svcId) {
     INTERNAL_IO_DEBUG("Timer for {}", _requestingServiceId);
 }
 
-Ichor::Timer::~Timer() noexcept {
+Ichor::v1::Timer::~Timer() noexcept {
     {
         std::unique_lock l{_m};
         if(_state == TimerState::RUNNING) {
@@ -27,11 +27,11 @@ Ichor::Timer::~Timer() noexcept {
     }
 }
 
-bool Ichor::Timer::startTimer() {
+bool Ichor::v1::Timer::startTimer() {
     return startTimer(false);
 }
 
-bool Ichor::Timer::startTimer(bool fireImmediately) {
+bool Ichor::v1::Timer::startTimer(bool fireImmediately) {
     if(!_fn && !_fnAsync) [[unlikely]] {
         throw std::runtime_error("No callback set.");
     }
@@ -54,7 +54,7 @@ bool Ichor::Timer::startTimer(bool fireImmediately) {
     return false;
 }
 
-bool Ichor::Timer::stopTimer(std::function<void(void)> cb) {
+bool Ichor::v1::Timer::stopTimer(std::function<void(void)> cb) {
     std::unique_lock l{_m};
     INTERNAL_IO_DEBUG("timer {} for {} stop {}", _timerId, _requestingServiceId, _state);
     if(_state == TimerState::RUNNING || _state == TimerState::STOPPING) {
@@ -69,12 +69,12 @@ bool Ichor::Timer::stopTimer(std::function<void(void)> cb) {
     return false;
 }
 
-Ichor::TimerState Ichor::Timer::getState() const noexcept {
+Ichor::v1::TimerState Ichor::v1::Timer::getState() const noexcept {
     std::unique_lock l{_m};
     return _state;
 };
 
-void Ichor::Timer::setCallbackAsync(std::function<AsyncGenerator<IchorBehaviour>()> fn) {
+void Ichor::v1::Timer::setCallbackAsync(std::function<AsyncGenerator<IchorBehaviour>()> fn) {
     std::unique_lock l{_m};
     if(_state != TimerState::STOPPED) {
         std::terminate();
@@ -84,7 +84,7 @@ void Ichor::Timer::setCallbackAsync(std::function<AsyncGenerator<IchorBehaviour>
     _fn = {};
 }
 
-void Ichor::Timer::setCallback(std::function<void()> fn) {
+void Ichor::v1::Timer::setCallback(std::function<void()> fn) {
     std::unique_lock l{_m};
     if(_state != TimerState::STOPPED) {
         std::terminate();
@@ -94,41 +94,41 @@ void Ichor::Timer::setCallback(std::function<void()> fn) {
     _fn = std::move(fn);
 }
 
-void Ichor::Timer::setInterval(uint64_t nanoseconds) noexcept {
+void Ichor::v1::Timer::setInterval(uint64_t nanoseconds) noexcept {
     std::unique_lock l{_m};
     _intervalNanosec = nanoseconds;
 }
 
 
-void Ichor::Timer::setPriority(uint64_t priority) noexcept {
+void Ichor::v1::Timer::setPriority(uint64_t priority) noexcept {
     std::unique_lock l{_m};
     _priority = priority;
 }
 
-uint64_t Ichor::Timer::getPriority() const noexcept {
+uint64_t Ichor::v1::Timer::getPriority() const noexcept {
     std::unique_lock l{_m};
     return _priority;
 }
 
-void Ichor::Timer::setFireOnce(bool fireOnce) noexcept {
+void Ichor::v1::Timer::setFireOnce(bool fireOnce) noexcept {
     std::unique_lock l{_m};
     _fireOnce = fireOnce;
 }
 
-bool Ichor::Timer::getFireOnce() const noexcept {
+bool Ichor::v1::Timer::getFireOnce() const noexcept {
     std::unique_lock l{_m};
     return _fireOnce;
 }
 
-uint64_t Ichor::Timer::getTimerId() const noexcept {
+uint64_t Ichor::v1::Timer::getTimerId() const noexcept {
     return _timerId;
 }
 
-Ichor::ServiceIdType Ichor::Timer::getRequestingServiceId() const noexcept {
+Ichor::ServiceIdType Ichor::v1::Timer::getRequestingServiceId() const noexcept {
     return _requestingServiceId;
 }
 
-void Ichor::Timer::insertEventLoop(bool fireImmediately) {
+void Ichor::v1::Timer::insertEventLoop(bool fireImmediately) {
     INTERNAL_IO_DEBUG("timer {} for {} insertEventLoop", _timerId, _requestingServiceId);
 #if defined(__APPLE__)
     pthread_setname_np(fmt::format("Tmr#{}", _timerId).c_str());

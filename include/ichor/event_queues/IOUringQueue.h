@@ -14,7 +14,7 @@ namespace Ichor {
     /// Provides an io_uring based queue, expects the running OS to have at least kernel 5.4, but multithreading support is only available from 5.18 and later.
     class IOUringQueue final : public IIOUringQueue {
     public:
-        IOUringQueue(uint64_t quitTimeoutMs = 5'000, long long pollTimeoutNs = 100'000'000, tl::optional<Version> emulateKernelVersion = {});
+        IOUringQueue(uint64_t quitTimeoutMs = 5'000, long long pollTimeoutNs = 100'000'000, tl::optional<v1::Version> emulateKernelVersion = {});
         ~IOUringQueue() final;
 
         void pushEventInternal(uint64_t priority, std::unique_ptr<Event> &&event) final;
@@ -27,18 +27,18 @@ namespace Ichor {
         /// Creates an io_uring event loop with a standard flagset.
         /// \param entriesCount
         /// \return
-        [[nodiscard]] tl::optional<NeverNull<io_uring*>> createEventLoop(unsigned entriesCount = 2048);
+        [[nodiscard]] tl::optional<v1::NeverNull<io_uring*>> createEventLoop(unsigned entriesCount = 2048);
         /// Use given ring.
         /// \param loop
         /// \param entriesCount entries count used when creating ring
         /// \return false if ring doesn't support features required by Ichor, true otherwise
-        bool useEventLoop(NeverNull<io_uring*> loop, unsigned entriesCount);
+        bool useEventLoop(v1::NeverNull<io_uring*> loop, unsigned entriesCount);
 
         bool start(bool captureSigInt) final;
         [[nodiscard]] bool shouldQuit() final;
         void quit() final;
 
-        [[nodiscard]] NeverNull<io_uring*> getRing() noexcept final;
+        [[nodiscard]] v1::NeverNull<io_uring*> getRing() noexcept final;
         [[nodiscard]] unsigned int getMaxEntriesCount() const noexcept final;
 
         [[nodiscard]] uint32_t sqeSpaceLeft() const noexcept final;
@@ -50,8 +50,8 @@ namespace Ichor {
         void forceSubmit() final;
         void submitAndWait(uint32_t waitNr) final;
 
-        [[nodiscard]] Version getKernelVersion() const noexcept final;
-        [[nodiscard]] tl::expected<IOUringBuf, IOError> createProvidedBuffer(unsigned short entries, unsigned int entryBufferSize) noexcept final;
+        [[nodiscard]] v1::Version getKernelVersion() const noexcept final;
+        [[nodiscard]] tl::expected<IOUringBuf, v1::IOError> createProvidedBuffer(unsigned short entries, unsigned int entryBufferSize) noexcept final;
 
     private:
         bool checkRingFlags(io_uring* ring);
@@ -73,7 +73,7 @@ namespace Ichor {
         long long _pollTimeoutNs{};
         std::chrono::steady_clock::time_point _whenQuitEventWasSent{};
         std::atomic<bool> _quitEventSent{false};
-        Version _kernelVersion{};
+        v1::Version _kernelVersion{};
         long int _pageSize{};
 #ifdef ICHOR_ENABLE_INTERNAL_URING_DEBUGGING
         std::vector<std::pair<io_uring_op, Ichor::Event*>> _debugOpcodes;

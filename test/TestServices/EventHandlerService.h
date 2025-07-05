@@ -4,6 +4,7 @@
 #include <ichor/events/Event.h>
 
 using namespace Ichor;
+using namespace Ichor::v1;
 
 struct IEventHandlerService {
     virtual std::unordered_map<uint64_t, uint64_t>& getHandledEvents() = 0;
