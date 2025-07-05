@@ -10,7 +10,7 @@
 
 namespace Ichor::v1 {
     /**
-     * Service for creating an HTTP/1.1 server using boost. Requires an IAsioContextService and a logger.
+     * Service for creating an HTTP/1.1 server using boost. Requires an IAsioContextService and a logger. Is technically not RFC 9112 compliant.
      *
      * Properties:
      * - "Address" std::string - What address to bind to (required)

@@ -198,7 +198,7 @@ TEST_CASE("HttpConnectionTests") {
         std::string_view sentMsg{reinterpret_cast<const char *>(conn.getService().sentMessages[0].data()), conn.getService().sentMessages[0].size()};
         REQUIRE(sentMsg == "GET /some/route HTTP/1.1\r\nHost: 192.168.10.10\r\n\r\n");
 
-        std::string req{"HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: 50\r\n\r\n<html><body>This is"};
+        std::string req{"HTTP/1.1 200 OK\r\nContent-Length: 50\r\nContent-Type: application/json\r\n\r\n<html><body>This is"};
         conn.getService().rcvHandler(std::span<uint8_t const>{reinterpret_cast<uint8_t*>(req.data()), req.size()});
         req = " my basic webpage</body></html>";
         conn.getService().rcvHandler(std::span<uint8_t const>{reinterpret_cast<uint8_t*>(req.data()), req.size()});
@@ -577,7 +577,7 @@ TEST_CASE("HttpHostTests") {
             address = req.address;
             co_return HttpResponse{HttpStatus::ok, "text/plain", {}, {}};
         });
-        std::string req{"POST /some/route HTTP/1.1\r\ntestheader: test\r\nHost: 192.168.10.10\r\nContent-Length: 50\r\n\r\n<html><body>This is my basic webpage</body></html>"};
+        std::string req{"POST /some/route HTTP/1.1\r\ntestheader: test\r\nContent-Length: 50\r\nHost: 192.168.10.10\r\n\r\n<html><body>This is my basic webpage</body></html>"};
         conn.getService().rcvHandler(std::span<uint8_t const>{reinterpret_cast<uint8_t*>(req.data()), req.size()});
         REQUIRE(q.getService().events.size() == 1);
         REQUIRE(q.getService().events[0]->get_type() == RunFunctionEventAsync::TYPE);

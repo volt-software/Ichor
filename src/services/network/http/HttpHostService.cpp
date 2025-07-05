@@ -1,3 +1,4 @@
+#include <boost/beast/core/string_type.hpp>
 #include <ichor/DependencyManager.h>
 #include <ichor/events/RunFunctionEvent.h>
 #include <ichor/services/network/http/HttpHostService.h>
@@ -136,6 +137,7 @@ tl::expected<Ichor::v1::HttpRequest, Ichor::v1::HttpParseError> Ichor::v1::HttpH
     std::string_view partial{complete.data(), len};
     bool badRequest{};
     bool contentLengthHeader{};
+    bool contentLengthSet{};
     ICHOR_LOG_TRACE(_logger, "HttpHostService {} parseResponse len {} complete \"{}\" partial \"{}\"", getServiceId(), len, complete, partial);
 
     split(partial, "\r\n", false, [&](std::string_view line) {
@@ -202,7 +204,9 @@ tl::expected<Ichor::v1::HttpRequest, Ichor::v1::HttpParseError> Ichor::v1::HttpH
                             badRequest = true;
                         } else {
                             contentLength = FastAtoiu(word);
+                            contentLengthSet = true;
                         }
+                        contentLengthHeader = false;
                     }
                 } else {
                     ICHOR_LOG_TRACE(_logger, "HttpHostService {} too many words on line", getServiceId(), line);
@@ -231,7 +235,7 @@ tl::expected<Ichor::v1::HttpRequest, Ichor::v1::HttpParseError> Ichor::v1::HttpH
     }
 
     if(badRequest) {
-        if(contentLengthHeader && complete.size() < protocolLength + contentLength) {
+        if(contentLengthSet && complete.size() < protocolLength + contentLength) {
             len += contentLength;
         } else {
             len = partial.size();
@@ -239,7 +243,7 @@ tl::expected<Ichor::v1::HttpRequest, Ichor::v1::HttpParseError> Ichor::v1::HttpH
         return tl::unexpected(HttpParseError::BADREQUEST);
     }
 
-    if(contentLengthHeader && complete.size() < protocolLength + contentLength) {
+    if(contentLengthSet && complete.size() < protocolLength + contentLength) {
         return tl::unexpected(HttpParseError::INCOMPLETEREQUEST);
     } else {
         std::string_view content{complete.data() + len, contentLength};
@@ -283,6 +287,8 @@ Ichor::Task<void> Ichor::v1::HttpHostService::receiveRequestHandler(ServiceIdTyp
             }
 
             resp.status = HttpStatus::bad_request;
+            msg = std::string_view{};
+            pos = std::string_view::npos;
         } else {
             auto routes = _handlers.find(req->method);
 
@@ -307,9 +313,18 @@ Ichor::Task<void> Ichor::v1::HttpHostService::receiveRequestHandler(ServiceIdTyp
             co_return;
         }
 
-        msg = msg.substr(pos);
-        pos = msg.find("\r\n\r\n");
-        ICHOR_LOG_TRACE(_logger, "HttpHostService {} new buffer {} pos {}", getServiceId(), msg, pos);
+        if(!msg.empty()) {
+            if constexpr (DO_INTERNAL_DEBUG || DO_HARDENING) {
+                if(pos > msg.length()) [[unlikely]] {
+                    ICHOR_EMERGENCY_LOG2(_logger, "Position {} outside possible string length {}, Ichor bug.", pos, msg.length());
+                    std::terminate();
+                }
+            }
+
+            msg = msg.substr(pos);
+            pos = msg.find("\r\n\r\n");
+            ICHOR_LOG_TRACE(_logger, "HttpHostService {} new buffer {} pos {}", getServiceId(), msg, pos);
+        }
     }
 
     auto &string = _connectionBuffers[id];
