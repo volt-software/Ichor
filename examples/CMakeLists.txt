@@ -92,6 +92,12 @@ if(ICHOR_USE_LIBURING)
 endif()
 
 if(ICHOR_USE_LIBURING AND NOT (ICHOR_SKIP_EXTERNAL_TESTS AND ICHOR_AARCH64))
+    file(GLOB_RECURSE EXAMPLE_SOURCES ${ICHOR_TOP_DIR}/examples/etcd_example/*.cpp)
+    add_executable(ichor_etcd_example_uring ${EXAMPLE_SOURCES})
+    target_link_libraries(ichor_etcd_example_uring ${CMAKE_THREAD_LIBS_INIT})
+    target_link_libraries(ichor_etcd_example_uring ichor)
+    target_compile_definitions(ichor_etcd_example_uring PUBLIC URING_EXAMPLE)
+
     file(GLOB_RECURSE EXAMPLE_SOURCES ${ICHOR_TOP_DIR}/examples/tcp_example/*.cpp)
     add_executable(ichor_tcp_example_uring ${EXAMPLE_SOURCES})
     target_link_libraries(ichor_tcp_example_uring ${CMAKE_THREAD_LIBS_INIT})

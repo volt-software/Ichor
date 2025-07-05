@@ -87,7 +87,7 @@ int main(int argc, char *argv[]) {
     }
 
     dm.createServiceManager<PingMsgJsonSerializer, ISerializer<PingMsg>>();
-    dm.createServiceManager<ClientFactory<Boost::v1::HttpConnectionService, IHttpConnectionService>, IClientFactory>();
+    dm.createServiceManager<ClientFactory<Boost::v1::HttpConnectionService, IHttpConnectionService>, IClientFactory<IHttpConnectionService>>();
     dm.createServiceManager<PingService>(Properties{{"Address", Ichor::v1::make_any<std::string>(address)}, {"Port", Ichor::v1::make_any<uint16_t>(static_cast<uint16_t>(8001))}, {"NoDelay", Ichor::v1::make_any<bool>(true)}});
     dm.createServiceManager<TimerFactoryFactory>();
     queue->start(CaptureSigInt);

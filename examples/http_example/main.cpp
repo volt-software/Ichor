@@ -110,12 +110,12 @@ int main(int argc, char *argv[]) {
     dm.createServiceManager<TestMsgGlazeSerializer, ISerializer<TestMsg>>();
 #ifdef URING_EXAMPLE
     dm.createServiceManager<HOSTIMPL, IHostService>(Properties{{"Address", Ichor::v1::make_any<std::string>("127.0.0.1"s)}, {"Port", Ichor::v1::make_any<uint16_t>(static_cast<uint16_t>(8001))}});
-    dm.createServiceManager<ClientFactory<CONNIMPL<IClientConnectionService>, IClientConnectionService>, IClientFactory>();
+    dm.createServiceManager<ClientFactory<CONNIMPL<IClientConnectionService>, IClientConnectionService>, IClientFactory<IClientConnectionService>>();
 #endif
     // Create the HTTP server binding to the given address
     dm.createServiceManager<HTTPHOSTIMPL, IHttpHostService>(Properties{{"Address", Ichor::v1::make_any<std::string>(address)}, {"Port", Ichor::v1::make_any<uint16_t>(static_cast<uint16_t>(8001))}});
     // Setup a factory which creates HTTP clients for every class requesting an IHttpConnectionService
-    dm.createServiceManager<ClientFactory<HTTPCONNIMPL, IHttpConnectionService>, IClientFactory>();
+    dm.createServiceManager<ClientFactory<HTTPCONNIMPL, IHttpConnectionService>, IClientFactory<IHttpConnectionService>>();
     // Create the class that we defined in this example, to setup a /test endpoint in the server, to request (and therefore create) an HTTP client and send a message to the /test endpoint using the serializer for TestMsg
     dm.createServiceManager<UsingHttpService>(Properties{{"Address", Ichor::v1::make_any<std::string>(address)}, {"Port", Ichor::v1::make_any<uint16_t>(static_cast<uint16_t>(8001))}});
     queue->start(CaptureSigInt);

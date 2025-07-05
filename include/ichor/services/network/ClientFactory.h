@@ -10,7 +10,7 @@ namespace Ichor::v1 {
     using ConnectionCounterType = uint64_t;
 
     template <typename NetworkType, typename NetworkInterfaceType = IConnectionService>
-    class ClientFactory final : public IClientFactory, public AdvancedService<ClientFactory<NetworkType, NetworkInterfaceType>> {
+    class ClientFactory final : public IClientFactory<NetworkInterfaceType>, public AdvancedService<ClientFactory<NetworkType, NetworkInterfaceType>> {
     public:
         ClientFactory(DependencyRegister &reg, Properties properties) : AdvancedService<ClientFactory<NetworkType, NetworkInterfaceType>>(std::move(properties)) {
             reg.registerDependency<ILogger>(this, DependencyFlags::REQUIRED, AdvancedService<ClientFactory<NetworkType, NetworkInterfaceType>>::getProperties());

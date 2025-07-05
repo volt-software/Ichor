@@ -68,7 +68,7 @@ int main(int argc, char *argv[]) {
     dm.createServiceManager<LoggerFactory<LOGGER_TYPE>, ILoggerFactory>(Properties{{"DefaultLogLevel", Ichor::v1::make_any<LogLevel>(LogLevel::LOG_TRACE)}}, priorityToEnsureHostStartingFirst);
     dm.createServiceManager<TestMsgGlazeSerializer, ISerializer<TestMsg>>();
     dm.createServiceManager<HOSTIMPL, IHostService>(Properties{{"Address", Ichor::v1::make_any<std::string>("127.0.0.1"s)}, {"Port", Ichor::v1::make_any<uint16_t>(static_cast<uint16_t>(8001))}}, priorityToEnsureHostStartingFirst);
-    dm.createServiceManager<ClientFactory<CONNIMPL<IClientConnectionService>>, IClientFactory>();
+    dm.createServiceManager<ClientFactory<CONNIMPL<IClientConnectionService>>, IClientFactory<IConnectionService>>();
 #ifndef URING_EXAMPLE
     dm.createServiceManager<TimerFactoryFactory>(Properties{}, priorityToEnsureHostStartingFirst);
 #endif

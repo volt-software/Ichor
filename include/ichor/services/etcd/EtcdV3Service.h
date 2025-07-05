@@ -16,7 +16,7 @@ namespace Ichor::Etcdv3::v1 {
     };
 
     /**
-     * Service for the etcd protocol using the v3 REST API. Requires an IHttpConnectionService factory and a logger. See https://etcd.io/docs/v2.3/api/ for a detailed look at the etcd v2 API.
+     * Service for the etcd protocol using the v3 REST API. Requires an IHttpConnectionService factory and a logger. See https://etcd.io/docs/v3.6/dev-guide/api_grpc_gateway/ for a detailed look at the etcd v3 REST API.
      *
      * Properties:
      * - "Address" std::string - What address to connect to (required)
@@ -69,14 +69,14 @@ namespace Ichor::Etcdv3::v1 {
         void addDependencyInstance(Ichor::v1::IHttpConnectionService &conn, IService &isvc);
         void removeDependencyInstance(Ichor::v1::IHttpConnectionService &conn, IService &isvc);
 
-        void addDependencyInstance(Ichor::v1::IClientFactory &conn, IService &isvc);
-        void removeDependencyInstance(Ichor::v1::IClientFactory &conn, IService &isvc);
+        void addDependencyInstance(Ichor::v1::IClientFactory<Ichor::v1::IHttpConnectionService> &conn, IService &isvc);
+        void removeDependencyInstance(Ichor::v1::IClientFactory<Ichor::v1::IHttpConnectionService> &conn, IService &isvc);
 
         friend DependencyRegister;
 
         Ichor::v1::ILogger *_logger{};
         Ichor::v1::IHttpConnectionService* _mainConn{};
-        Ichor::v1::IClientFactory *_clientFactory{};
+        Ichor::v1::IClientFactory<Ichor::v1::IHttpConnectionService> *_clientFactory{};
         std::stack<ConnRequest> _connRequests{};
         tl::optional<std::string> _auth;
         tl::optional<std::string> _authUser;
