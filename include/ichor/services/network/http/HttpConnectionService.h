@@ -12,7 +12,7 @@
 
 namespace Ichor::v1 {
     /**
-     * Service for creating an HTTP/1.1 server. Does not support chunked encoding and is technically not RFC 7320 compliant.
+     * Service for creating an HTTP/1.1 server. Is technically not RFC 9112 compliant.
      *
      * Properties:
      * - "Address" std::string - What address to bind to (required)
