@@ -42,21 +42,21 @@ uint64_t AwaitNoCopy::countMoved{};
 #endif
 
 #if defined(TEST_URING)
-tl::optional<Version> emulateKernelVersion;
+tl::optional<v1::Version> emulateKernelVersion;
 
 TEST_CASE("CoroutineTests_uring") {
 
-    auto version = Ichor::kernelVersion();
+    auto version = Ichor::v1::kernelVersion();
 
     REQUIRE(version);
-    if(version < Version{5, 18, 0}) {
+    if(version < v1::Version{5, 18, 0}) {
         return;
     }
 
     auto gen_i = GENERATE(1, 2);
 
     if(gen_i == 2) {
-        emulateKernelVersion = Version{5, 18, 0};
+        emulateKernelVersion = v1::Version{5, 18, 0};
         fmt::println("emulating kernel version {}", *emulateKernelVersion);
     } else {
         fmt::println("kernel version {}", *version);

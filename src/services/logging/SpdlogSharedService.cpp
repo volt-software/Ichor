@@ -5,7 +5,7 @@
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/sinks/basic_file_sink.h>
 
-Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::SpdlogSharedService::start() {
+Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::v1::SpdlogSharedService::start() {
     auto console_sink = std::make_shared<spdlog::sinks::stdout_color_sink_st>();
 
     auto time_since_epoch = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch());
@@ -17,12 +17,12 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::SpdlogSharedService::s
     co_return {};
 }
 
-Ichor::Task<void> Ichor::SpdlogSharedService::stop() {
+Ichor::Task<void> Ichor::v1::SpdlogSharedService::stop() {
     _sinks.clear();
     co_return;
 }
 
-std::vector<std::shared_ptr<spdlog::sinks::sink>> const& Ichor::SpdlogSharedService::getSinks() const noexcept {
+std::vector<std::shared_ptr<spdlog::sinks::sink>> const& Ichor::v1::SpdlogSharedService::getSinks() const noexcept {
     return _sinks;
 }
 

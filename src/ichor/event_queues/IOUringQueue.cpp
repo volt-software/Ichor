@@ -339,25 +339,25 @@ namespace Ichor {
         static constexpr std::string_view NAME = typeName<UringResponseEvent>();
     };
 
-    IOUringQueue::IOUringQueue(uint64_t quitTimeoutMs, long long pollTimeoutNs, tl::optional<Version> emulateKernelVersion) : _quitTimeoutMs(quitTimeoutMs), _pollTimeoutNs(pollTimeoutNs) {
+    IOUringQueue::IOUringQueue(uint64_t quitTimeoutMs, long long pollTimeoutNs, tl::optional<v1::Version> emulateKernelVersion) : _quitTimeoutMs(quitTimeoutMs), _pollTimeoutNs(pollTimeoutNs) {
         if(io_uring_major_version() != 2 || io_uring_minor_version() != 10) {
             fmt::println("io_uring version is {}.{}, but expected 2.10. Ichor is not compiled correctly.", io_uring_major_version(), io_uring_minor_version());
             std::terminate();
         }
         _threadId = std::this_thread::get_id(); // re-set in functions below, because adding events when the queue isn't running yet cannot be done from another thread.
 
-        auto version = kernelVersion();
+        auto version = v1::kernelVersion();
 
         if(!version) {
             std::terminate();
         }
 
-        if(*version < Version{5, 4, 0}) {
+        if(*version < v1::Version{5, 4, 0}) {
             fmt::println("Kernel version {} is too old, use at least 5.4.0 or newer.", *version);
             std::terminate();
         }
 
-        if(*version < Version{5, 18, 0}) {
+        if(*version < v1::Version{5, 18, 0}) {
             fmt::println("WARNING! Kernel version {} is too old to support inserting events from other threads, use at least 5.18.0 or newer.", *version);
         }
 
@@ -424,7 +424,7 @@ namespace Ichor {
         Event *procEvent = event.release();
 //        fmt::println("pushEventInternal {} {}", procEvent->get_name(), reinterpret_cast<void*>(procEvent));
         if(std::this_thread::get_id() != _threadId) [[unlikely]] {
-            if(_kernelVersion < Version{5, 18, 0}) [[unlikely]] {
+            if(_kernelVersion < v1::Version{5, 18, 0}) [[unlikely]] {
                 fmt::println("Ignored previous warning about kernel too old for inserting events from other threads. Terminating.");
                 std::terminate();
             }
@@ -444,17 +444,17 @@ namespace Ichor {
             io_uring tempQueue{};
             io_uring_params p{};
             p.flags = IORING_SETUP_ATTACH_WQ;
-            if(_kernelVersion >= Version{5, 19, 0}) {
+            if(_kernelVersion >= v1::Version{5, 19, 0}) {
                 p.flags |= IORING_SETUP_COOP_TASKRUN;
             } else {
                 fmt::println("IORING_SETUP_COOP_TASKRUN not supported, requires kernel >= 5.19.0, expect reduced performance.");
             }
-            if(_kernelVersion >= Version{6, 0, 0}) {
+            if(_kernelVersion >= v1::Version{6, 0, 0}) {
                 p.flags |= IORING_SETUP_SINGLE_ISSUER;
             } else {
                 fmt::println("IORING_SETUP_SINGLE_ISSUER not supported, requires kernel >= 6.0.0, expect reduced performance.");
             }
-            if(_kernelVersion >= Version{6, 1, 0}) {
+            if(_kernelVersion >= v1::Version{6, 1, 0}) {
                 p.flags |= IORING_SETUP_DEFER_TASKRUN;
             } else {
                 fmt::println("IORING_SETUP_DEFER_TASKRUN not supported, requires kernel >= 6.1.0, expect reduced performance.");
@@ -562,7 +562,7 @@ namespace Ichor {
         return typeNameHash<IOUringQueue>();
     }
 
-    tl::optional<NeverNull<io_uring*>> IOUringQueue::createEventLoop(unsigned entriesCount) {
+    tl::optional<v1::NeverNull<io_uring*>> IOUringQueue::createEventLoop(unsigned entriesCount) {
         if(entriesCount == 0) {
             fmt::println("Cannot create an event loop with 0 entries.");
             return {};
@@ -577,17 +577,17 @@ namespace Ichor {
         _eventQueuePtr = _eventQueue.get();
         _entriesCount = entriesCount;
         io_uring_params p{};
-        if(_kernelVersion >= Version{5, 19, 0}) {
+        if(_kernelVersion >= v1::Version{5, 19, 0}) {
             p.flags |= IORING_SETUP_COOP_TASKRUN;
         } else {
             fmt::println("IORING_SETUP_COOP_TASKRUN not supported, requires kernel >= 5.19.0, expect reduced performance.");
         }
-        if(_kernelVersion >= Version{6, 0, 0}) {
+        if(_kernelVersion >= v1::Version{6, 0, 0}) {
             p.flags |= IORING_SETUP_SINGLE_ISSUER;
         } else {
             fmt::println("IORING_SETUP_SINGLE_ISSUER not supported, requires kernel >= 6.0.0, expect reduced performance.");
         }
-        if(_kernelVersion >= Version{6, 1, 0}) {
+        if(_kernelVersion >= v1::Version{6, 1, 0}) {
             p.flags |= IORING_SETUP_DEFER_TASKRUN;
         } else {
             fmt::println("IORING_SETUP_DEFER_TASKRUN not supported, requires kernel >= 6.1.0, expect reduced performance.");
@@ -633,7 +633,7 @@ namespace Ichor {
         return _eventQueuePtr;
     }
 
-    bool IOUringQueue::useEventLoop(NeverNull<io_uring*> event, unsigned entriesCount) {
+    bool IOUringQueue::useEventLoop(v1::NeverNull<io_uring*> event, unsigned entriesCount) {
         if(!checkRingFlags(event)) {
             return false;
         }
@@ -812,7 +812,7 @@ namespace Ichor {
         _quit.store(true, std::memory_order_release);
     }
 
-    NeverNull<io_uring*> IOUringQueue::getRing() noexcept {
+    v1::NeverNull<io_uring*> IOUringQueue::getRing() noexcept {
         if constexpr (DO_INTERNAL_DEBUG || DO_HARDENING) {
             if(_eventQueuePtr == nullptr) [[unlikely]] {
                 std::terminate();
@@ -919,7 +919,7 @@ namespace Ichor {
         }
     }
 
-    Version IOUringQueue::getKernelVersion() const noexcept {
+    v1::Version IOUringQueue::getKernelVersion() const noexcept {
         return _kernelVersion;
     }
 
@@ -938,13 +938,13 @@ namespace Ichor {
             // it seems all code in Ichor so far keeps state stable until completion, so return false shouldn't be necessary.
 //            return false;
         }
-        if(_kernelVersion < Version{6, 7, 0}) {
+        if(_kernelVersion < v1::Version{6, 7, 0}) {
             fmt::println("SOCKET_URING_OP_GETSOCKOPT/SOCKET_URING_OP_SETSOCKOPT not supported, requires kernel >= 6.7.0, expect reduced socket creation performance.");
         }
-        if(_kernelVersion < Version{6, 0, 0}) {
+        if(_kernelVersion < v1::Version{6, 0, 0}) {
             fmt::println("io_uring_prep_recv_multishot not supported, requires kernel >= 6.0.0, expect reduced socket performance.");
         }
-        if(_kernelVersion < Version{5, 19, 0}) {
+        if(_kernelVersion < v1::Version{5, 19, 0}) {
             fmt::println("io_uring_prep_multishot_accept not supported, requires kernel >= 5.19.0, expect reduced socket performance.");
         }
         return true;
@@ -960,51 +960,51 @@ namespace Ichor {
         }
     }
 
-    tl::expected<IOUringBuf, IOError> IOUringQueue::createProvidedBuffer(unsigned short entries, unsigned int entryBufferSize) noexcept {
+    tl::expected<IOUringBuf, v1::IOError> IOUringQueue::createProvidedBuffer(unsigned short entries, unsigned int entryBufferSize) noexcept {
         if(entries == 0) {
 			fmt::println("createProvidedBuffer entries == 0.");
-            return tl::unexpected(IOError::NOT_SUPPORTED);
+            return tl::unexpected(v1::IOError::NOT_SUPPORTED);
         }
 
         if(entries > 32768) {
-            return tl::unexpected(IOError::MESSAGE_SIZE_TOO_BIG);
+            return tl::unexpected(v1::IOError::MESSAGE_SIZE_TOO_BIG);
         }
 
         if((entries & (entries - 1)) != 0) {
 			fmt::println("createProvidedBuffer entries not a power of two.");
-            return tl::unexpected(IOError::NOT_SUPPORTED);
+            return tl::unexpected(v1::IOError::NOT_SUPPORTED);
         }
 
-        if(_kernelVersion < Version{5, 19, 0}) {
-            return tl::unexpected(IOError::KERNEL_TOO_OLD);
+        if(_kernelVersion < v1::Version{5, 19, 0}) {
+            return tl::unexpected(v1::IOError::KERNEL_TOO_OLD);
         }
 
         char *entriesBuf = static_cast<char *>(aligned_alloc(static_cast<size_t>(_pageSize), entries * entryBufferSize));
         if(entriesBuf == nullptr) {
-            return tl::unexpected(IOError::NO_MEMORY_AVAILABLE);
+            return tl::unexpected(v1::IOError::NO_MEMORY_AVAILABLE);
         }
 		if(madvise(entriesBuf, entries * entryBufferSize, MADV_DONTDUMP) != 0) {
 			fmt::println("createProvidedBuffer madvise entriesBuf MADV_DONTDUMP failed.");
-			return tl::unexpected(IOError::NOT_SUPPORTED);
+			return tl::unexpected(v1::IOError::NOT_SUPPORTED);
 		}
 		if(madvise(entriesBuf, entries * entryBufferSize, MADV_DONTFORK) != 0) {
 			fmt::println("createProvidedBuffer madvise entriesBuf MADV_DONTFORK failed.");
-			return tl::unexpected(IOError::NOT_SUPPORTED);
+			return tl::unexpected(v1::IOError::NOT_SUPPORTED);
 		}
 
         int ret;
         auto id = _uringBufIdCounter++;
         auto *bufRing = io_uring_setup_buf_ring(_eventQueuePtr, entries, id, 0, &ret);
         if(bufRing == nullptr) {
-            return tl::unexpected(mapErrnoToError(-ret));
+            return tl::unexpected(v1::mapErrnoToError(-ret));
         }
 		if(madvise(bufRing, entries * sizeof(struct io_uring_buf), MADV_DONTDUMP) != 0) {
 			fmt::println("createProvidedBuffer madvise bufRing MADV_DONTDUMP failed.");
-			return tl::unexpected(IOError::NOT_SUPPORTED);
+			return tl::unexpected(v1::IOError::NOT_SUPPORTED);
 		}
 		if(madvise(bufRing, entries * sizeof(struct io_uring_buf), MADV_DONTFORK) != 0) {
 			fmt::println("createProvidedBuffer madvise bufRing MADV_DONTFORK failed.");
-			return tl::unexpected(IOError::NOT_SUPPORTED);
+			return tl::unexpected(v1::IOError::NOT_SUPPORTED);
 		}
 
         char *ptr = entriesBuf;

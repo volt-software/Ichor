@@ -17,6 +17,7 @@ constexpr uint32_t SERDE_COUNT = 5'000'000;
 #endif
 
 using namespace Ichor;
+using namespace Ichor::v1;
 extern uint64_t sizeof_test;
 
 class TestService final : public AdvancedService<TestService> {

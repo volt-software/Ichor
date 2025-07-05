@@ -15,12 +15,12 @@ namespace http = beast::http;           // from <boost/beast/http.hpp>
 namespace net = boost::asio;            // from <boost/asio.hpp>
 using tcp = boost::asio::ip::tcp;       // from <boost/asio/ip/tcp.hpp>
 
-namespace Ichor::Boost {
+namespace Ichor::Boost::v1 {
     namespace Detail {
         struct ConnectionOutboxMessage {
-            Ichor::HttpMethod method;
+            Ichor::v1::HttpMethod method;
             std::string_view route;
-            AsyncReturningManualResetEvent<tl::expected<Ichor::HttpResponse, Ichor::HttpError>>* event;
+            AsyncReturningManualResetEvent<tl::expected<Ichor::v1::HttpResponse, Ichor::v1::HttpError>>* event;
             unordered_map<std::string, std::string>* headers;
             std::vector<uint8_t>* body;
         };
@@ -40,12 +40,12 @@ namespace Ichor::Boost {
      * - "TimeoutMs" uint64_t - with which interval in milliseconds to timeout for (re)connecting, after which the service stops itself (default: 10'000 ms)
      * - "Debug" bool - Enable verbose logging of requests and responses (default: false)
      */
-    class HttpConnectionService final : public IHttpConnectionService, public AdvancedService<HttpConnectionService> {
+    class HttpConnectionService final : public Ichor::v1::IHttpConnectionService, public AdvancedService<HttpConnectionService> {
     public:
         HttpConnectionService(DependencyRegister &reg, Properties props);
         ~HttpConnectionService() final = default;
 
-        Task<tl::expected<HttpResponse, HttpError>> sendAsync(HttpMethod method, std::string_view route, unordered_map<std::string, std::string> &&headers, std::vector<uint8_t>&& msg) final;
+        Task<tl::expected<Ichor::v1::HttpResponse, Ichor::v1::HttpError>> sendAsync(Ichor::v1::HttpMethod method, std::string_view route, unordered_map<std::string, std::string> &&headers, std::vector<uint8_t>&& msg) final;
 
         Task<void> close() final;
 
@@ -56,8 +56,8 @@ namespace Ichor::Boost {
         Task<tl::expected<void, Ichor::StartError>> start() final;
         Task<void> stop() final;
 
-        void addDependencyInstance(ILogger &logger, IService &);
-        void removeDependencyInstance(ILogger &logger, IService&);
+        void addDependencyInstance(Ichor::v1::ILogger &logger, IService &);
+        void removeDependencyInstance(Ichor::v1::ILogger &logger, IService&);
         void addDependencyInstance(IBoostAsioQueue &q, IService&);
         void removeDependencyInstance(IBoostAsioQueue &q, IService&);
 
@@ -76,7 +76,7 @@ namespace Ichor::Boost {
         bool _tcpNoDelay{};
         bool _useSsl{};
         std::atomic<int64_t> _finishedListenAndRead{};
-        ILogger* _logger{};
+        Ichor::v1::ILogger* _logger{};
         boost::circular_buffer<Detail::ConnectionOutboxMessage> _outbox{10};
         AsyncManualResetEvent _startStopEvent{};
         IBoostAsioQueue *_queue;

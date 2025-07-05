@@ -1,6 +1,7 @@
 #pragma once
 
 using namespace Ichor;
+using namespace Ichor::v1;
 
 struct IDependencyTrackerService {
     [[nodiscard]] virtual unordered_map<uint64_t, ServiceIdType> getCreatedServices() noexcept = 0;
@@ -22,7 +23,7 @@ struct DependencyTrackerService final : public IDependencyTrackerService, public
         co_return;
     }
 
-    AsyncGenerator<IchorBehaviour> handleDependencyRequest(AlwaysNull<TrackingServiceType*>, DependencyRequestEvent const &evt) {
+    AsyncGenerator<IchorBehaviour> handleDependencyRequest(v1::AlwaysNull<TrackingServiceType*>, DependencyRequestEvent const &evt) {
         auto svc = _services.find(evt.originatingService);
 
         if (svc != end(_services)) {
@@ -36,7 +37,7 @@ struct DependencyTrackerService final : public IDependencyTrackerService, public
         co_return {};
     }
 
-    AsyncGenerator<IchorBehaviour> handleDependencyUndoRequest(AlwaysNull<TrackingServiceType*>, DependencyUndoRequestEvent const &evt) {
+    AsyncGenerator<IchorBehaviour> handleDependencyUndoRequest(v1::AlwaysNull<TrackingServiceType*>, DependencyUndoRequestEvent const &evt) {
         auto service = _services.find(evt.originatingService);
 
         if(service != end(_services)) {

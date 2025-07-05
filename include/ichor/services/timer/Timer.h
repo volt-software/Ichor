@@ -5,7 +5,7 @@
 #include <ichor/event_queues/IEventQueue.h>
 #include <ichor/stl/RealtimeMutex.h>
 
-namespace Ichor {
+namespace Ichor::v1 {
     template <typename TIMER, typename QUEUE>
     class TimerFactory;
 

@@ -4,6 +4,8 @@
 #include <ichor/events/RunFunctionEvent.h>
 #include "UselessService.h"
 
+using namespace Ichor::v1;
+
 namespace Ichor {
 	struct IRemoveAfterAwaitedStopService {
 	};

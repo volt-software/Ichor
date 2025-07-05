@@ -8,7 +8,7 @@
 #include <ichor/event_queues/IEventQueue.h>
 #include <tl/expected.h>
 
-namespace Ichor {
+namespace Ichor::v1 {
     /**
      * Service for creating an HTTP/1.1 server using boost. Requires an IAsioContextService and a logger.
      *

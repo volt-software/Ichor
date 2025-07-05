@@ -13,7 +13,7 @@ struct LoggerMock : public ILogger, public AdvancedService<LoggerMock> {
             logs.emplace_back(buf.data(), buf.size());
             fmt::print("TRACE ");
             if (filename_in != nullptr) {
-                const char *base = Ichor::basename(filename_in);
+                const char *base = Ichor::v1::basename(filename_in);
                 fmt::print("[{}:{}] ", base, line_in);
             }
             std::cout.write(buf.data(), static_cast<ptrdiff_t>(buf.size())) << "\n";
@@ -27,7 +27,7 @@ struct LoggerMock : public ILogger, public AdvancedService<LoggerMock> {
             logs.emplace_back(buf.data(), buf.size());
             fmt::print("DEBUG ");
             if (filename_in != nullptr) {
-                const char *base = Ichor::basename(filename_in);
+                const char *base = Ichor::v1::basename(filename_in);
                 fmt::print("[{}:{}] ", base, line_in);
             }
             std::cout.write(buf.data(), static_cast<ptrdiff_t>(buf.size())) << "\n";
@@ -41,7 +41,7 @@ struct LoggerMock : public ILogger, public AdvancedService<LoggerMock> {
             logs.emplace_back(buf.data(), buf.size());
             fmt::print("INFO ");
             if (filename_in != nullptr) {
-                const char *base = Ichor::basename(filename_in);
+                const char *base = Ichor::v1::basename(filename_in);
                 fmt::print("[{}:{}] ", base, line_in);
             }
             std::cout.write(buf.data(), static_cast<ptrdiff_t>(buf.size())) << "\n";
@@ -55,7 +55,7 @@ struct LoggerMock : public ILogger, public AdvancedService<LoggerMock> {
             logs.emplace_back(buf.data(), buf.size());
             fmt::print("WARN ");
             if (filename_in != nullptr) {
-                const char *base = Ichor::basename(filename_in);
+                const char *base = Ichor::v1::basename(filename_in);
                 fmt::print("[{}:{}] ", base, line_in);
             }
             std::cout.write(buf.data(), static_cast<ptrdiff_t>(buf.size())) << "\n";
@@ -70,7 +70,7 @@ struct LoggerMock : public ILogger, public AdvancedService<LoggerMock> {
             logs.emplace_back(buf.data(), buf.size());
             fmt::print("ERROR ");
             if (filename_in != nullptr) {
-                const char *base = Ichor::basename(filename_in);
+                const char *base = Ichor::v1::basename(filename_in);
                 fmt::print("[{}:{}] ", base, line_in);
             }
             std::cout.write(buf.data(), static_cast<ptrdiff_t>(buf.size())) << "\n";

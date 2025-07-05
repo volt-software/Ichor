@@ -1,11 +1,12 @@
 #pragma once
 
 #include <ichor/services/timer/ITimer.h>
+#include <ichor/services/timer/IInternalTimerFactory.h>
 
-namespace Ichor {
+namespace Ichor::v1 {
     extern std::atomic<uint64_t> _timerIdCounter;
     template <typename TIMER, typename QUEUE>
-    class TimerFactory final : public ITimerFactory, public Detail::InternalTimerFactory, public AdvancedService<TimerFactory<TIMER, QUEUE>> {
+    class TimerFactory final : public ITimerFactory, public Ichor::Detail::v1::InternalTimerFactory, public AdvancedService<TimerFactory<TIMER, QUEUE>> {
     public:
         TimerFactory(DependencyRegister &reg, Properties props) : AdvancedService<TimerFactory<TIMER, QUEUE>>(std::move(props)) {
             _requestingSvcId = any_cast<ServiceIdType>(AdvancedService<TimerFactory<TIMER, QUEUE>>::getProperties()["requestingSvcId"]);

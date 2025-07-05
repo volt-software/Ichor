@@ -8,7 +8,7 @@
 #include <ichor/services/logging/Logger.h>
 #include <ichor/event_queues/IIOUringQueue.h>
 
-namespace Ichor {
+namespace Ichor::v1 {
     /**
      * Service for creating a TCP host
      *

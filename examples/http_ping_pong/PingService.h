@@ -13,11 +13,12 @@
 #include "PingMsg.h"
 
 using namespace Ichor;
+using namespace Ichor::v1;
 
 class PingService final : public AdvancedService<PingService> {
 public:
     PingService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {
-        reg.registerDependency<ILogger>(this, DependencyFlags::REQUIRED, Properties{{"LogLevel", Ichor::make_any<LogLevel>(LogLevel::LOG_INFO)}}); // using customer properties here prevents us refactoring this class to constructor injection
+        reg.registerDependency<ILogger>(this, DependencyFlags::REQUIRED, Properties{{"LogLevel", Ichor::v1::make_any<LogLevel>(LogLevel::LOG_INFO)}}); // using customer properties here prevents us refactoring this class to constructor injection
         reg.registerDependency<ISerializer<PingMsg>>(this, DependencyFlags::REQUIRED);
         reg.registerDependency<IHttpConnectionService>(this, DependencyFlags::REQUIRED, getProperties()); // using getProperties here prevents us refactoring this class to constructor injection
         reg.registerDependency<ITimerFactory>(this, DependencyFlags::REQUIRED);
@@ -36,7 +37,7 @@ private:
             auto start = std::chrono::steady_clock::now();
             auto msg = co_await sendTestRequest(std::move(toSendMsg));
             auto end = std::chrono::steady_clock::now();
-            auto &addr = Ichor::any_cast<std::string&>(getProperties()["Address"]);
+            auto &addr = Ichor::v1::any_cast<std::string&>(getProperties()["Address"]);
             if(msg) {
                 ICHOR_LOG_INFO(_logger, "{} bytes from {}: icmp_seq={}, time={:L} ms", sizeof(PingMsg), addr, msg->sequence,
                                static_cast<double>(std::chrono::duration_cast<std::chrono::microseconds>(end - start).count()) / 1000.);

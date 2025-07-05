@@ -7,7 +7,7 @@
 #include <ichor/stl/CompilerSpecific.h>
 #include <ichor/Common.h>
 
-namespace Ichor {
+namespace Ichor::v1 {
 
     template <typename T>
     class ReferenceCountedPointer;
@@ -280,7 +280,7 @@ namespace Ichor {
 
 namespace std {
     template<typename T>
-    inline constexpr void swap(Ichor::ReferenceCountedPointer<T>& a, Ichor::ReferenceCountedPointer<T>& b) noexcept {
+    inline constexpr void swap(Ichor::v1::ReferenceCountedPointer<T>& a, Ichor::v1::ReferenceCountedPointer<T>& b) noexcept {
         a.swap(b);
     }
 }

@@ -45,17 +45,17 @@ struct AsyncFileIOExpensiveSetup {
 tl::optional<Version> emulateKernelVersion;
 
 TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests_uring") {
-    auto version = Ichor::kernelVersion();
+    auto version = Ichor::v1::kernelVersion();
 
     REQUIRE(version);
-    if(version < Version{5, 18, 0}) {
+    if(version < v1::Version{5, 18, 0}) {
         return;
     }
 
     auto gen_i = GENERATE(1, 2);
 
     if(gen_i == 2) {
-        emulateKernelVersion = Version{5, 18, 0};
+        emulateKernelVersion = v1::Version{5, 18, 0};
         fmt::println("emulating kernel version {}", *emulateKernelVersion);
     } else {
         fmt::println("kernel version {}", *version);
@@ -78,7 +78,7 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests") {
 #ifdef TEST_URING
             REQUIRE(queue->createEventLoop());
 #endif
-            dm.createServiceManager<LoggerFactory<CoutLogger>, ILoggerFactory>(Properties{{"DefaultLogLevel", Ichor::make_any<LogLevel>(LogLevel::LOG_TRACE)}});
+            dm.createServiceManager<LoggerFactory<CoutLogger>, ILoggerFactory>(Properties{{"DefaultLogLevel", Ichor::v1::make_any<LogLevel>(LogLevel::LOG_TRACE)}});
             ioSvcId = dm.createServiceManager<IOIMPL, IAsyncFileIO>()->getServiceId();
             queue->start(CaptureSigInt);
         });
@@ -91,7 +91,7 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests") {
             fmt::print("run function co_await\n");
             auto async_io_svc = dm.getService<IAsyncFileIO>(ioSvcId);
             REQUIRE(async_io_svc);
-            tl::expected<std::string, Ichor::IOError> ret = co_await async_io_svc->first->readWholeFile("NonExistentFile.txt");
+            tl::expected<std::string, Ichor::v1::IOError> ret = co_await async_io_svc->first->readWholeFile("NonExistentFile.txt");
             if(!ret) {
                 fmt::println("readWholeFile error {}", ret.error());
             } else {
@@ -140,7 +140,7 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests") {
 #ifdef TEST_URING
             REQUIRE(queue->createEventLoop());
 #endif
-            dm.createServiceManager<LoggerFactory<CoutLogger>, ILoggerFactory>(Properties{{"DefaultLogLevel", Ichor::make_any<LogLevel>(LogLevel::LOG_TRACE)}});
+            dm.createServiceManager<LoggerFactory<CoutLogger>, ILoggerFactory>(Properties{{"DefaultLogLevel", Ichor::v1::make_any<LogLevel>(LogLevel::LOG_TRACE)}});
             ioSvcId = dm.createServiceManager<IOIMPL, IAsyncFileIO>()->getServiceId();
             queue->start(CaptureSigInt);
         });
@@ -152,7 +152,7 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests") {
         queue->pushEvent<RunFunctionEventAsync>(0, [&]() -> AsyncGenerator<IchorBehaviour> {
             fmt::print("run function co_await\n");
             auto async_io_svc = dm.getService<IAsyncFileIO>(ioSvcId);
-            tl::expected<std::string, Ichor::IOError> ret = co_await async_io_svc->first->readWholeFile("NoPermIO.txt");
+            tl::expected<std::string, Ichor::v1::IOError> ret = co_await async_io_svc->first->readWholeFile("NoPermIO.txt");
             if(!ret) {
                 fmt::println("readWholeFile error {}", ret.error());
             } else {
@@ -190,7 +190,7 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests") {
 #ifdef TEST_URING
             REQUIRE(queue->createEventLoop());
 #endif
-            dm.createServiceManager<LoggerFactory<CoutLogger>, ILoggerFactory>(Properties{{"DefaultLogLevel", Ichor::make_any<LogLevel>(LogLevel::LOG_TRACE)}});
+            dm.createServiceManager<LoggerFactory<CoutLogger>, ILoggerFactory>(Properties{{"DefaultLogLevel", Ichor::v1::make_any<LogLevel>(LogLevel::LOG_TRACE)}});
             ioSvcId = dm.createServiceManager<IOIMPL, IAsyncFileIO>()->getServiceId();
             queue->start(CaptureSigInt);
         });
@@ -208,7 +208,7 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests") {
         queue->pushEvent<RunFunctionEventAsync>(0, [&]() -> AsyncGenerator<IchorBehaviour> {
             fmt::print("run function co_await\n");
             auto async_io_svc = dm.getService<IAsyncFileIO>(ioSvcId);
-            tl::expected<std::string, Ichor::IOError> ret = co_await async_io_svc->first->readWholeFile("AsyncFileIO.txt");
+            tl::expected<std::string, Ichor::v1::IOError> ret = co_await async_io_svc->first->readWholeFile("AsyncFileIO.txt");
             fmt::print("require\n");
             REQUIRE(ret == "This is a test");
             queue->pushEvent<QuitEvent>(0);
@@ -238,7 +238,7 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests") {
 #ifdef TEST_URING
             REQUIRE(queue->createEventLoop());
 #endif
-            dm.createServiceManager<LoggerFactory<CoutLogger>, ILoggerFactory>(Properties{{"DefaultLogLevel", Ichor::make_any<LogLevel>(LogLevel::LOG_TRACE)}});
+            dm.createServiceManager<LoggerFactory<CoutLogger>, ILoggerFactory>(Properties{{"DefaultLogLevel", Ichor::v1::make_any<LogLevel>(LogLevel::LOG_TRACE)}});
             ioSvcId = dm.createServiceManager<IOIMPL, IAsyncFileIO>()->getServiceId();
             queue->start(CaptureSigInt);
         });
@@ -250,7 +250,7 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests") {
         queue->pushEvent<RunFunctionEventAsync>(0, [&]() -> AsyncGenerator<IchorBehaviour> {
             fmt::println("run function co_await");
             auto async_io_svc = dm.getService<IAsyncFileIO>(ioSvcId);
-            tl::expected<std::string, Ichor::IOError> ret = co_await async_io_svc->first->readWholeFile("BigFile.txt");
+            tl::expected<std::string, Ichor::v1::IOError> ret = co_await async_io_svc->first->readWholeFile("BigFile.txt");
             if(!ret) {
                 fmt::println("readWholeFile error {}\n", ret.error());
             } else {
@@ -286,7 +286,7 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests") {
 #ifdef TEST_URING
             REQUIRE(queue->createEventLoop());
 #endif
-            dm.createServiceManager<LoggerFactory<CoutLogger>, ILoggerFactory>(Properties{{"DefaultLogLevel", Ichor::make_any<LogLevel>(LogLevel::LOG_TRACE)}});
+            dm.createServiceManager<LoggerFactory<CoutLogger>, ILoggerFactory>(Properties{{"DefaultLogLevel", Ichor::v1::make_any<LogLevel>(LogLevel::LOG_TRACE)}});
             ioSvcId = dm.createServiceManager<IOIMPL, IAsyncFileIO>()->getServiceId();
             queue->start(CaptureSigInt);
         });
@@ -298,7 +298,7 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests") {
         queue->pushEvent<RunFunctionEventAsync>(0, [&]() -> AsyncGenerator<IchorBehaviour> {
             fmt::print("run function co_await\n");
             auto async_io_svc = dm.getService<IAsyncFileIO>(ioSvcId);
-            tl::expected<void, Ichor::IOError> ret = co_await async_io_svc->first->copyFile("NonExistentFile.txt", "DestinationNull.txt");
+            tl::expected<void, Ichor::v1::IOError> ret = co_await async_io_svc->first->copyFile("NonExistentFile.txt", "DestinationNull.txt");
             fmt::print("require\n");
             REQUIRE(!ret);
             REQUIRE(ret.error() == IOError::FILE_DOES_NOT_EXIST);
@@ -330,7 +330,7 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests") {
 #ifdef TEST_URING
             REQUIRE(queue->createEventLoop());
 #endif
-            dm.createServiceManager<LoggerFactory<CoutLogger>, ILoggerFactory>(Properties{{"DefaultLogLevel", Ichor::make_any<LogLevel>(LogLevel::LOG_TRACE)}});
+            dm.createServiceManager<LoggerFactory<CoutLogger>, ILoggerFactory>(Properties{{"DefaultLogLevel", Ichor::v1::make_any<LogLevel>(LogLevel::LOG_TRACE)}});
             ioSvcId = dm.createServiceManager<IOIMPL, IAsyncFileIO>()->getServiceId();
             queue->start(CaptureSigInt);
         });
@@ -351,11 +351,11 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests") {
             fmt::print("run function co_await\n");
             auto async_io_svc = dm.getService<IAsyncFileIO>(ioSvcId);
             {
-                tl::expected<void, Ichor::IOError> ret = co_await async_io_svc->first->copyFile("AsyncFileIO.txt", "Destination.txt");
+                tl::expected<void, Ichor::v1::IOError> ret = co_await async_io_svc->first->copyFile("AsyncFileIO.txt", "Destination.txt");
                 fmt::print("require\n");
                 REQUIRE(ret);
             }
-            tl::expected<std::string, Ichor::IOError> ret = co_await async_io_svc->first->readWholeFile("Destination.txt");
+            tl::expected<std::string, Ichor::v1::IOError> ret = co_await async_io_svc->first->readWholeFile("Destination.txt");
             REQUIRE(ret == "This is a test");
             queue->pushEvent<QuitEvent>(0);
             co_return {};
@@ -385,7 +385,7 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests") {
 #ifdef TEST_URING
             REQUIRE(queue->createEventLoop());
 #endif
-            dm.createServiceManager<LoggerFactory<CoutLogger>, ILoggerFactory>(Properties{{"DefaultLogLevel", Ichor::make_any<LogLevel>(LogLevel::LOG_TRACE)}});
+            dm.createServiceManager<LoggerFactory<CoutLogger>, ILoggerFactory>(Properties{{"DefaultLogLevel", Ichor::v1::make_any<LogLevel>(LogLevel::LOG_TRACE)}});
             ioSvcId = dm.createServiceManager<IOIMPL, IAsyncFileIO>()->getServiceId();
             queue->start(CaptureSigInt);
         });
@@ -400,11 +400,11 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests") {
             fmt::print("run function co_await\n");
             auto async_io_svc = dm.getService<IAsyncFileIO>(ioSvcId);
             {
-                tl::expected<void, Ichor::IOError> ret = co_await async_io_svc->first->copyFile("BigFile.txt", "Destination.txt");
+                tl::expected<void, Ichor::v1::IOError> ret = co_await async_io_svc->first->copyFile("BigFile.txt", "Destination.txt");
                 fmt::print("require\n");
                 REQUIRE(ret);
             }
-            tl::expected<std::string, Ichor::IOError> ret = co_await async_io_svc->first->readWholeFile("Destination.txt");
+            tl::expected<std::string, Ichor::v1::IOError> ret = co_await async_io_svc->first->readWholeFile("Destination.txt");
             REQUIRE(ret);
             REQUIRE((*ret).size() == (uint64_t)bigFilefilesize);
             queue->pushEvent<QuitEvent>(0);
@@ -435,7 +435,7 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests") {
 #ifdef TEST_URING
             REQUIRE(queue->createEventLoop());
 #endif
-            dm.createServiceManager<LoggerFactory<CoutLogger>, ILoggerFactory>(Properties{{"DefaultLogLevel", Ichor::make_any<LogLevel>(LogLevel::LOG_TRACE)}});
+            dm.createServiceManager<LoggerFactory<CoutLogger>, ILoggerFactory>(Properties{{"DefaultLogLevel", Ichor::v1::make_any<LogLevel>(LogLevel::LOG_TRACE)}});
             ioSvcId = dm.createServiceManager<IOIMPL, IAsyncFileIO>()->getServiceId();
             queue->start(CaptureSigInt);
         });
@@ -447,7 +447,7 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests") {
         queue->pushEvent<RunFunctionEventAsync>(0, [&]() -> AsyncGenerator<IchorBehaviour> {
             fmt::print("run function co_await\n");
             auto async_io_svc = dm.getService<IAsyncFileIO>(ioSvcId);
-            tl::expected<void, Ichor::IOError> ret = co_await async_io_svc->first->removeFile("MissingFile.txt");
+            tl::expected<void, Ichor::v1::IOError> ret = co_await async_io_svc->first->removeFile("MissingFile.txt");
             REQUIRE(!ret);
             REQUIRE(ret.error() == IOError::FILE_DOES_NOT_EXIST);
             queue->pushEvent<QuitEvent>(0);
@@ -478,7 +478,7 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests") {
 #ifdef TEST_URING
             REQUIRE(queue->createEventLoop());
 #endif
-            dm.createServiceManager<LoggerFactory<CoutLogger>, ILoggerFactory>(Properties{{"DefaultLogLevel", Ichor::make_any<LogLevel>(LogLevel::LOG_TRACE)}});
+            dm.createServiceManager<LoggerFactory<CoutLogger>, ILoggerFactory>(Properties{{"DefaultLogLevel", Ichor::v1::make_any<LogLevel>(LogLevel::LOG_TRACE)}});
             ioSvcId = dm.createServiceManager<IOIMPL, IAsyncFileIO>()->getServiceId();
             queue->start(CaptureSigInt);
         });
@@ -497,11 +497,11 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests") {
             fmt::print("run function co_await\n");
             auto async_io_svc = dm.getService<IAsyncFileIO>(ioSvcId);
             {
-                tl::expected<void, Ichor::IOError> ret = co_await async_io_svc->first->removeFile("AsyncFileIO.txt");
+                tl::expected<void, Ichor::v1::IOError> ret = co_await async_io_svc->first->removeFile("AsyncFileIO.txt");
                 fmt::print("require\n");
                 REQUIRE(ret);
             }
-            tl::expected<std::string, Ichor::IOError> ret = co_await async_io_svc->first->readWholeFile("AsyncFileIO.txt");
+            tl::expected<std::string, Ichor::v1::IOError> ret = co_await async_io_svc->first->readWholeFile("AsyncFileIO.txt");
             REQUIRE(!ret);
             REQUIRE(ret.error() == IOError::FILE_DOES_NOT_EXIST);
             queue->pushEvent<QuitEvent>(0);
@@ -532,7 +532,7 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests") {
 #ifdef TEST_URING
             REQUIRE(queue->createEventLoop());
 #endif
-            dm.createServiceManager<LoggerFactory<CoutLogger>, ILoggerFactory>(Properties{{"DefaultLogLevel", Ichor::make_any<LogLevel>(LogLevel::LOG_TRACE)}});
+            dm.createServiceManager<LoggerFactory<CoutLogger>, ILoggerFactory>(Properties{{"DefaultLogLevel", Ichor::v1::make_any<LogLevel>(LogLevel::LOG_TRACE)}});
             ioSvcId = dm.createServiceManager<IOIMPL, IAsyncFileIO>()->getServiceId();
             queue->start(CaptureSigInt);
         });
@@ -549,11 +549,11 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests") {
             fmt::print("run function co_await\n");
             auto async_io_svc = dm.getService<IAsyncFileIO>(ioSvcId);
             {
-                tl::expected<void, Ichor::IOError> ret = co_await async_io_svc->first->writeFile("AsyncFileIO.txt", "This is a test");
+                tl::expected<void, Ichor::v1::IOError> ret = co_await async_io_svc->first->writeFile("AsyncFileIO.txt", "This is a test");
                 fmt::print("require\n");
                 REQUIRE(ret);
             }
-            tl::expected<std::string, Ichor::IOError> ret = co_await async_io_svc->first->readWholeFile("AsyncFileIO.txt");
+            tl::expected<std::string, Ichor::v1::IOError> ret = co_await async_io_svc->first->readWholeFile("AsyncFileIO.txt");
             REQUIRE(ret);
             REQUIRE(ret == "This is a test");
             queue->pushEvent<QuitEvent>(0);
@@ -584,7 +584,7 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests") {
 #ifdef TEST_URING
             REQUIRE(queue->createEventLoop());
 #endif
-            dm.createServiceManager<LoggerFactory<CoutLogger>, ILoggerFactory>(Properties{{"DefaultLogLevel", Ichor::make_any<LogLevel>(LogLevel::LOG_TRACE)}});
+            dm.createServiceManager<LoggerFactory<CoutLogger>, ILoggerFactory>(Properties{{"DefaultLogLevel", Ichor::v1::make_any<LogLevel>(LogLevel::LOG_TRACE)}});
             ioSvcId = dm.createServiceManager<IOIMPL, IAsyncFileIO>()->getServiceId();
             queue->start(CaptureSigInt);
         });
@@ -602,10 +602,10 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests") {
         queue->pushEvent<RunFunctionEventAsync>(0, [&]() -> AsyncGenerator<IchorBehaviour> {
             fmt::print("run function co_await\n");
             auto async_io_svc = dm.getService<IAsyncFileIO>(ioSvcId);
-            tl::expected<std::string, Ichor::IOError> ret = co_await async_io_svc->first->readWholeFile("AsyncFileIO.txt");
+            tl::expected<std::string, Ichor::v1::IOError> ret = co_await async_io_svc->first->readWholeFile("AsyncFileIO.txt");
             REQUIRE(ret);
             {
-                tl::expected<void, Ichor::IOError> ret2 = co_await async_io_svc->first->writeFile("AsyncFileIO.txt", "Overwrite");
+                tl::expected<void, Ichor::v1::IOError> ret2 = co_await async_io_svc->first->writeFile("AsyncFileIO.txt", "Overwrite");
                 fmt::print("require\n");
                 REQUIRE(ret2);
             }
@@ -640,7 +640,7 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests") {
 #ifdef TEST_URING
             REQUIRE(queue->createEventLoop());
 #endif
-            dm.createServiceManager<LoggerFactory<CoutLogger>, ILoggerFactory>(Properties{{"DefaultLogLevel", Ichor::make_any<LogLevel>(LogLevel::LOG_TRACE)}});
+            dm.createServiceManager<LoggerFactory<CoutLogger>, ILoggerFactory>(Properties{{"DefaultLogLevel", Ichor::v1::make_any<LogLevel>(LogLevel::LOG_TRACE)}});
             ioSvcId = dm.createServiceManager<IOIMPL, IAsyncFileIO>()->getServiceId();
             queue->start(CaptureSigInt);
         });
@@ -658,10 +658,10 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests") {
         queue->pushEvent<RunFunctionEventAsync>(0, [&]() -> AsyncGenerator<IchorBehaviour> {
             fmt::print("run function co_await\n");
             auto async_io_svc = dm.getService<IAsyncFileIO>(ioSvcId);
-            tl::expected<std::string, Ichor::IOError> ret = co_await async_io_svc->first->readWholeFile("AsyncFileIO.txt");
+            tl::expected<std::string, Ichor::v1::IOError> ret = co_await async_io_svc->first->readWholeFile("AsyncFileIO.txt");
             REQUIRE(ret);
             {
-                tl::expected<void, Ichor::IOError> ret2 = co_await async_io_svc->first->appendFile("AsyncFileIO.txt", "Overwrite");
+                tl::expected<void, Ichor::v1::IOError> ret2 = co_await async_io_svc->first->appendFile("AsyncFileIO.txt", "Overwrite");
                 fmt::print("require\n");
                 REQUIRE(ret2);
             }

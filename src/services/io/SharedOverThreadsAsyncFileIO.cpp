@@ -21,19 +21,19 @@
 
 using namespace std::chrono_literals;
 
-std::atomic<bool> Ichor::SharedOverThreadsAsyncFileIO::_initialized;
-std::mutex Ichor::SharedOverThreadsAsyncFileIO::_io_mutex;
-std::queue<std::shared_ptr<Ichor::io_operation_submission>> Ichor::SharedOverThreadsAsyncFileIO::_evts;
+std::atomic<bool> Ichor::v1::SharedOverThreadsAsyncFileIO::_initialized;
+std::mutex Ichor::v1::SharedOverThreadsAsyncFileIO::_io_mutex;
+std::queue<std::shared_ptr<Ichor::v1::io_operation_submission>> Ichor::v1::SharedOverThreadsAsyncFileIO::_evts;
 
-Ichor::SharedOverThreadsAsyncFileIO::SharedOverThreadsAsyncFileIO(Ichor::Properties props) : AdvancedService<SharedOverThreadsAsyncFileIO>(std::move(props)) {
+Ichor::v1::SharedOverThreadsAsyncFileIO::SharedOverThreadsAsyncFileIO(Properties props) : AdvancedService<SharedOverThreadsAsyncFileIO>(std::move(props)) {
 
 }
 
 
-Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::SharedOverThreadsAsyncFileIO::start() {
+Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::v1::SharedOverThreadsAsyncFileIO::start() {
     INTERNAL_IO_DEBUG("setup_thread");
     if (!_initialized.exchange(true, std::memory_order_acq_rel)) {
-        auto &queue = Ichor::GetThreadLocalEventQueue();
+        auto &queue = GetThreadLocalEventQueue();
 
         _io_thread = std::thread([this, &queue = queue]() {
             INTERNAL_IO_DEBUG("io_thread");
@@ -47,7 +47,7 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::SharedOverThreadsAsync
                         _evts.pop();
                         lg.unlock();
                         submission->fn(submission->result);
-                        queue.pushEvent<Ichor::RunFunctionEvent>(0, [submission = std::move(submission)]() mutable {
+                        queue.pushEvent<RunFunctionEvent>(0, [submission = std::move(submission)]() mutable {
                             submission->evt.set();
                         });
                         lg.lock();
@@ -62,7 +62,7 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::SharedOverThreadsAsync
     co_return {};
 }
 
-Ichor::Task<void> Ichor::SharedOverThreadsAsyncFileIO::stop() {
+Ichor::Task<void> Ichor::v1::SharedOverThreadsAsyncFileIO::stop() {
     if(_io_thread && _io_thread->joinable()) {
         _should_stop.store(true, std::memory_order_release);
         _io_thread->join();
@@ -71,7 +71,7 @@ Ichor::Task<void> Ichor::SharedOverThreadsAsyncFileIO::stop() {
     co_return;
 }
 
-Ichor::Task<tl::expected<std::string, Ichor::IOError>> Ichor::SharedOverThreadsAsyncFileIO::readWholeFile(std::filesystem::path const &file_path) {
+Ichor::Task<tl::expected<std::string, Ichor::v1::IOError>> Ichor::v1::SharedOverThreadsAsyncFileIO::readWholeFile(std::filesystem::path const &file_path) {
     INTERNAL_IO_DEBUG("readWholeFile()");
 
     auto submission = std::make_shared<io_operation_submission>();
@@ -116,7 +116,7 @@ Ichor::Task<tl::expected<std::string, Ichor::IOError>> Ichor::SharedOverThreadsA
     co_return contents;
 }
 
-Ichor::Task<tl::expected<void, Ichor::IOError>> Ichor::SharedOverThreadsAsyncFileIO::copyFile(const std::filesystem::path &from, const std::filesystem::path &to) {
+Ichor::Task<tl::expected<void, Ichor::v1::IOError>> Ichor::v1::SharedOverThreadsAsyncFileIO::copyFile(const std::filesystem::path &from, const std::filesystem::path &to) {
     INTERNAL_IO_DEBUG("copyFile()");
 
     auto submission = std::make_shared<io_operation_submission>();
@@ -208,7 +208,7 @@ Ichor::Task<tl::expected<void, Ichor::IOError>> Ichor::SharedOverThreadsAsyncFil
     co_return {};
 }
 
-Ichor::Task<tl::expected<void, Ichor::IOError>> Ichor::SharedOverThreadsAsyncFileIO::removeFile(const std::filesystem::path &file) {
+Ichor::Task<tl::expected<void, Ichor::v1::IOError>> Ichor::v1::SharedOverThreadsAsyncFileIO::removeFile(const std::filesystem::path &file) {
     INTERNAL_IO_DEBUG("removeFile()");
 
     auto submission = std::make_shared<io_operation_submission>();
@@ -254,7 +254,7 @@ Ichor::Task<tl::expected<void, Ichor::IOError>> Ichor::SharedOverThreadsAsyncFil
     co_return {};
 }
 
-Ichor::Task<tl::expected<void, Ichor::IOError>> Ichor::SharedOverThreadsAsyncFileIO::writeFile(const std::filesystem::path &file, std::string_view contents) {
+Ichor::Task<tl::expected<void, Ichor::v1::IOError>> Ichor::v1::SharedOverThreadsAsyncFileIO::writeFile(const std::filesystem::path &file, std::string_view contents) {
 
     INTERNAL_IO_DEBUG("writeFile()");
 
@@ -284,7 +284,7 @@ Ichor::Task<tl::expected<void, Ichor::IOError>> Ichor::SharedOverThreadsAsyncFil
     co_return {};
 }
 
-Ichor::Task<tl::expected<void, Ichor::IOError>> Ichor::SharedOverThreadsAsyncFileIO::appendFile(const std::filesystem::path &file, std::string_view contents) {
+Ichor::Task<tl::expected<void, Ichor::v1::IOError>> Ichor::v1::SharedOverThreadsAsyncFileIO::appendFile(const std::filesystem::path &file, std::string_view contents) {
 
     INTERNAL_IO_DEBUG("appendFile()");
 

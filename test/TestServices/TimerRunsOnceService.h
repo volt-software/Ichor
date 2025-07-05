@@ -4,6 +4,7 @@
 #include <ichor/dependency_management/AdvancedService.h>
 
 using namespace Ichor;
+using namespace Ichor::v1;
 
 extern std::atomic<uint64_t> evtGate;
 

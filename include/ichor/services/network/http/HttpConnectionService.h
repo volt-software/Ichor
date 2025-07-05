@@ -1,7 +1,6 @@
 #pragma once
 
 #include <ichor/dependency_management/AdvancedService.h>
-#include <ichor/coroutines/AsyncManualResetEvent.h>
 #include <ichor/coroutines/AsyncReturningManualResetEvent.h>
 #include <ichor/services/network/http/IHttpConnectionService.h>
 #include <ichor/services/network/http/HttpInternal.h>
@@ -11,7 +10,7 @@
 #include <tl/expected.h>
 #include <deque>
 
-namespace Ichor {
+namespace Ichor::v1 {
     /**
      * Service for creating an HTTP/1.1 server. Does not support chunked encoding and is technically not RFC 7320 compliant.
      *

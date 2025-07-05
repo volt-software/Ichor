@@ -4,7 +4,7 @@
 #include <tl/expected.h>
 #include "HttpCommon.h"
 
-namespace Ichor {
+namespace Ichor::v1 {
     enum class HttpError {
         NO_CONNECTION,
         WRONG_METHOD,
@@ -47,30 +47,30 @@ namespace Ichor {
 }
 
 template <>
-struct fmt::formatter<Ichor::HttpError> {
+struct fmt::formatter<Ichor::v1::HttpError> {
     constexpr auto parse(format_parse_context& ctx) {
         return ctx.end();
     }
 
     template <typename FormatContext>
-    auto format(const Ichor::HttpError& state, FormatContext& ctx) const {
+    auto format(const Ichor::v1::HttpError& state, FormatContext& ctx) const {
         switch(state)
         {
-            case Ichor::HttpError::NO_CONNECTION:
+            case Ichor::v1::HttpError::NO_CONNECTION:
                 return fmt::format_to(ctx.out(), "NO_CONNECTION");
-            case Ichor::HttpError::WRONG_METHOD:
+            case Ichor::v1::HttpError::WRONG_METHOD:
                 return fmt::format_to(ctx.out(), "WRONG_METHOD");
-            case Ichor::HttpError::UNABLE_TO_PARSE_HEADER:
+            case Ichor::v1::HttpError::UNABLE_TO_PARSE_HEADER:
                 return fmt::format_to(ctx.out(), "UNABLE_TO_PARSE_HEADER");
-            case Ichor::HttpError::UNABLE_TO_PARSE_RESPONSE:
+            case Ichor::v1::HttpError::UNABLE_TO_PARSE_RESPONSE:
                 return fmt::format_to(ctx.out(), "UNABLE_TO_PARSE_RESPONSE");
-            case Ichor::HttpError::IO_ERROR:
+            case Ichor::v1::HttpError::IO_ERROR:
                 return fmt::format_to(ctx.out(), "IO_ERROR");
-            case Ichor::HttpError::GET_REQUESTS_CANNOT_HAVE_BODY:
+            case Ichor::v1::HttpError::GET_REQUESTS_CANNOT_HAVE_BODY:
                 return fmt::format_to(ctx.out(), "GET_REQUESTS_CANNOT_HAVE_BODY");
-            case Ichor::HttpError::SVC_QUITTING:
+            case Ichor::v1::HttpError::SVC_QUITTING:
                 return fmt::format_to(ctx.out(), "SVC_QUITTING");
-            case Ichor::HttpError::BOOST_READ_OR_WRITE_ERROR:
+            case Ichor::v1::HttpError::BOOST_READ_OR_WRITE_ERROR:
                 return fmt::format_to(ctx.out(), "BOOST_READ_OR_WRITE_ERROR");
         }
         return fmt::format_to(ctx.out(), "error, please file a bug in Ichor");

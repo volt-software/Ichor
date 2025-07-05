@@ -7,7 +7,7 @@
 #include <cassert>
 
 // Copied from Microsoft GSL: https://github.com/microsoft/GSL/blob/main/include/gsl/pointers
-namespace Ichor {
+namespace Ichor::v1 {
 
     namespace Detail {
         template <typename T, typename = void>
@@ -149,21 +149,21 @@ namespace Ichor {
 
     // more unwanted operators
     template <class T, class U>
-    std::ptrdiff_t operator-(const AlwaysNull<T>&, const AlwaysNull<U>&) = delete;
+    std::ptrdiff_t operator-(const v1::AlwaysNull<T>&, const v1::AlwaysNull<U>&) = delete;
     template <class T>
-    AlwaysNull<T> operator-(const AlwaysNull<T>&, std::ptrdiff_t) = delete;
+    v1::AlwaysNull<T> operator-(const v1::AlwaysNull<T>&, std::ptrdiff_t) = delete;
     template <class T>
-    AlwaysNull<T> operator+(const AlwaysNull<T>&, std::ptrdiff_t) = delete;
+    v1::AlwaysNull<T> operator+(const v1::AlwaysNull<T>&, std::ptrdiff_t) = delete;
     template <class T>
-    AlwaysNull<T> operator+(std::ptrdiff_t, const AlwaysNull<T>&) = delete;
+    v1::AlwaysNull<T> operator+(std::ptrdiff_t, const v1::AlwaysNull<T>&) = delete;
 }
 
 namespace std
 {
     template <class T>
-    struct hash<Ichor::NeverNull<T>>
+    struct hash<Ichor::v1::NeverNull<T>>
     {
-        std::size_t operator()(const Ichor::NeverNull<T>& value) const { return hash<T>{}(value.get()); }
+        std::size_t operator()(const Ichor::v1::NeverNull<T>& value) const { return hash<T>{}(value.get()); }
     };
 
 } // namespace std

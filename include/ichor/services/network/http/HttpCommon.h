@@ -3,7 +3,7 @@
 #include <tl/optional.h>
 #include <vector>
 
-namespace Ichor {
+namespace Ichor::v1 {
     // Copied/modified from Boost.BEAST
     enum class HttpMethod : uint_fast16_t {
         /** An unknown method.

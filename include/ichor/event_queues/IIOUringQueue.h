@@ -6,7 +6,6 @@
 
 #include <ichor/stl/NeverAlwaysNull.h>
 #include <ichor/events/Event.h>
-#include <ichor/ConstevalHash.h>
 #include <ichor/stl/ErrnoUtils.h>
 #include <ichor/stl/StringUtils.h>
 #include <ichor/dependency_management/IService.h>
@@ -57,7 +56,7 @@ namespace Ichor {
     class IIOUringQueue : public IEventQueue {
     public:
         ~IIOUringQueue() override = default;
-        [[nodiscard]] virtual NeverNull<io_uring*> getRing() noexcept = 0;
+        [[nodiscard]] virtual v1::NeverNull<io_uring*> getRing() noexcept = 0;
         [[nodiscard]] virtual unsigned int getMaxEntriesCount() const noexcept = 0;
         [[nodiscard]] virtual uint32_t sqeSpaceLeft() const noexcept = 0;
         virtual void submitIfNeeded() = 0;
@@ -66,10 +65,10 @@ namespace Ichor {
         [[nodiscard]] virtual io_uring_sqe* getSqe() noexcept = 0;
         virtual io_uring_sqe* getSqeWithData(IService *self, std::function<void(io_uring_cqe*)> fun) noexcept = 0;
         virtual io_uring_sqe* getSqeWithData(ServiceIdType serviceId, std::function<void(io_uring_cqe*)> fun) noexcept = 0;
-        [[nodiscard]] virtual Version getKernelVersion() const noexcept = 0;
+        [[nodiscard]] virtual v1::Version getKernelVersion() const noexcept = 0;
         ///
         /// \param entries no. of entries in the to-be-created buffer. Cannot be 0, cannot be larger than 32768 and has to be a power of two
         /// \return
-        [[nodiscard]] virtual tl::expected<IOUringBuf, IOError> createProvidedBuffer(unsigned short entries, unsigned int entryBufferSize) noexcept = 0;
+        [[nodiscard]] virtual tl::expected<IOUringBuf, v1::IOError> createProvidedBuffer(unsigned short entries, unsigned int entryBufferSize) noexcept = 0;
     };
 }

@@ -13,6 +13,7 @@ constexpr uint32_t SERVICES_COUNT = 10'000;
 #endif
 
 using namespace Ichor;
+using namespace Ichor::v1;
 
 class TestService final : public AdvancedService<TestService> {
 public:
@@ -23,7 +24,7 @@ public:
 
 private:
     Task<tl::expected<void, Ichor::StartError>> start() final {
-        auto iteration = Ichor::any_cast<uint64_t>(getProperties()["Iteration"]);
+        auto iteration = Ichor::v1::any_cast<uint64_t>(getProperties()["Iteration"]);
 //        fmt::print("Created {} #{} #{}\n", typeName<TestService>(), iteration, SERVICES_COUNT);
         if(iteration == SERVICES_COUNT - 1) {
             GetThreadLocalEventQueue().pushEvent<QuitEvent>(getServiceId());

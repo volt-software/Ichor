@@ -447,7 +447,7 @@ namespace Ichor {
 
     private:
         std::coroutine_handle<promise_type> _coroutine;
-        ReferenceCountedPointer<bool> _destroyed;
+        v1::ReferenceCountedPointer<bool> _destroyed;
     };
 
     template<typename T>

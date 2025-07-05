@@ -5,6 +5,7 @@
 #include <ichor/services/timer/ITimerFactory.h>
 
 using namespace Ichor;
+using namespace Ichor::v1;
 
 class UsingTimerService final {
 public:

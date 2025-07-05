@@ -84,7 +84,7 @@ namespace Ichor {
 #if (!defined(WIN32) && !defined(_WIN32) && !defined(__WIN32)) || defined(__CYGWIN__)
         requires ImplementsAll<Impl, Interfaces...>
 #endif
-        ServiceProtectedPointer<Impl> createServiceManager() {
+        v1::ServiceProtectedPointer<Impl> createServiceManager() {
             return internalCreateServiceManager<Impl, Impl, Interfaces...>(Properties{});
         }
 
@@ -93,7 +93,7 @@ namespace Ichor {
 #if (!defined(WIN32) && !defined(_WIN32) && !defined(__WIN32)) || defined(__CYGWIN__)
         requires ImplementsAll<Impl, Interfaces...>
 #endif
-        ServiceProtectedPointer<Impl> createServiceManager(Properties&& properties, uint64_t priority = INTERNAL_EVENT_PRIORITY) {
+        v1::ServiceProtectedPointer<Impl> createServiceManager(Properties&& properties, uint64_t priority = INTERNAL_EVENT_PRIORITY) {
             return internalCreateServiceManager<Impl, Impl, Interfaces...>(std::forward<Properties>(properties), priority);
         }
 
@@ -102,7 +102,7 @@ namespace Ichor {
 #if (!defined(WIN32) && !defined(_WIN32) && !defined(__WIN32)) || defined(__CYGWIN__)
         requires ImplementsAll<Impl, Interfaces...>
 #endif
-        ServiceProtectedPointer<IService> createServiceManager() {
+        v1::ServiceProtectedPointer<IService> createServiceManager() {
             return createConstructorInjectorServiceManager<Impl, Interfaces...>(Properties{}, INTERNAL_EVENT_PRIORITY);
         }
 
@@ -111,7 +111,7 @@ namespace Ichor {
 #if (!defined(WIN32) && !defined(_WIN32) && !defined(__WIN32)) || defined(__CYGWIN__)
         requires ImplementsAll<Impl, Interfaces...>
 #endif
-        ServiceProtectedPointer<IService> createServiceManager(Properties&& properties, uint64_t priority = INTERNAL_EVENT_PRIORITY) {
+        v1::ServiceProtectedPointer<IService> createServiceManager(Properties&& properties, uint64_t priority = INTERNAL_EVENT_PRIORITY) {
             return createConstructorInjectorServiceManager<Impl, Interfaces...>(std::move(properties), priority);
         }
 
@@ -120,7 +120,7 @@ namespace Ichor {
 #if (!defined(WIN32) && !defined(_WIN32) && !defined(__WIN32)) || defined(__CYGWIN__)
         requires ImplementsAll<Impl, Interfaces...>
 #endif
-        ServiceProtectedPointer<IService> createConstructorInjectorServiceManager(Properties&& properties, uint64_t priority = INTERNAL_EVENT_PRIORITY) {
+        v1::ServiceProtectedPointer<IService> createConstructorInjectorServiceManager(Properties&& properties, uint64_t priority = INTERNAL_EVENT_PRIORITY) {
             return internalCreateServiceManager<ConstructorInjectionService<Impl>, IService, Interfaces...>(std::move(properties), priority);
         }
 
@@ -211,9 +211,9 @@ namespace Ichor {
             auto requestTrackersForType = _dependencyRequestTrackers.find(typeNameHash<Interface>());
 
             DependencyTrackerInfo requestInfo{self->getServiceId(), std::function<AsyncGenerator<IchorBehaviour>(Event const &)>{[impl] (Event const &evt) -> AsyncGenerator<IchorBehaviour> {
-                return impl->handleDependencyRequest(AlwaysNull<Interface*>(), static_cast<DependencyRequestEvent const &>(evt));
+                return impl->handleDependencyRequest(v1::AlwaysNull<Interface*>(), static_cast<DependencyRequestEvent const &>(evt));
             }}, std::function<AsyncGenerator<IchorBehaviour>(Event const &)>{[impl] (Event const &evt) -> AsyncGenerator<IchorBehaviour> {
-                return impl->handleDependencyUndoRequest(AlwaysNull<Interface*>(), static_cast<DependencyUndoRequestEvent const &>(evt));
+                return impl->handleDependencyUndoRequest(v1::AlwaysNull<Interface*>(), static_cast<DependencyUndoRequestEvent const &>(evt));
             }}};
 
             if(requestTrackersForType == end(_dependencyRequestTrackers)) {
@@ -353,12 +353,12 @@ namespace Ichor {
         /// Get IService by local ID
         /// \param id service id
         /// \return optional
-        [[nodiscard]] tl::optional<NeverNull<const IService*>> getIService(ServiceIdType id) const noexcept;
+        [[nodiscard]] tl::optional<v1::NeverNull<const IService*>> getIService(ServiceIdType id) const noexcept;
 
         /// Get IService by global ID, much slower than getting by local ID
         /// \param id service uuid
         /// \return optional
-        [[nodiscard]] tl::optional<NeverNull<const IService*>> getIService(sole::uuid id) const noexcept;
+        [[nodiscard]] tl::optional<v1::NeverNull<const IService*>> getIService(sole::uuid id) const noexcept;
 
 
         template <typename Interface>
@@ -385,7 +385,7 @@ namespace Ichor {
             }
             Interface* ret{};
             IService* retIsvc{};
-            std::function<void(NeverNull<void*>, IService&)> f{[&ret, &retIsvc](NeverNull<void*> svc2, IService& isvc){ ret = reinterpret_cast<Interface*>(svc2.get()); retIsvc = &isvc; }};
+            std::function<void(v1::NeverNull<void*>, IService&)> f{[&ret, &retIsvc](v1::NeverNull<void*> svc2, IService& isvc){ ret = reinterpret_cast<Interface*>(svc2.get()); retIsvc = &isvc; }};
             svc->second->insertSelfInto(typeNameHash<Interface>(), 0, f);
             svc->second->getDependees().erase(0);
 
@@ -393,15 +393,15 @@ namespace Ichor {
         }
 
         template <typename Interface>
-        [[nodiscard]] std::vector<NeverNull<Interface*>> getStartedServices() noexcept {
+        [[nodiscard]] std::vector<v1::NeverNull<Interface*>> getStartedServices() noexcept {
             if constexpr (DO_INTERNAL_DEBUG || DO_HARDENING) {
                 if (this != Detail::_local_dm) [[unlikely]] {
                     ICHOR_EMERGENCY_LOG1(_logger, "Function called from wrong thread.");
                     std::terminate();
                 }
             }
-            std::vector<NeverNull<Interface*>> ret{};
-            std::function<void(NeverNull<void*>, IService&)> f{[&ret](NeverNull<void*> svc2, IService& /*isvc*/){ ret.push_back(reinterpret_cast<Interface*>(svc2.get())); }};
+            std::vector<v1::NeverNull<Interface*>> ret{};
+            std::function<void(v1::NeverNull<void*>, IService&)> f{[&ret](v1::NeverNull<void*> svc2, IService& /*isvc*/){ ret.push_back(reinterpret_cast<Interface*>(svc2.get())); }};
             for(auto &[key, svc] : _services) {
                 if(svc->getServiceState() != ServiceState::ACTIVE) {
                     continue;
@@ -427,7 +427,7 @@ namespace Ichor {
                 }
             }
             std::vector<std::pair<Interface&, IService&>> ret{};
-            std::function<void(NeverNull<void*>, IService&)> f{[&ret](NeverNull<void*> svc2, IService & isvc){ ret.emplace_back(*reinterpret_cast<Interface*>(svc2.get()), isvc); }};
+            std::function<void(v1::NeverNull<void*>, IService&)> f{[&ret](v1::NeverNull<void*> svc2, IService & isvc){ ret.emplace_back(*reinterpret_cast<Interface*>(svc2.get()), isvc); }};
             for(auto &[key, svc] : _services) {
                 auto intf = std::find_if(svc->getInterfaces().begin(), svc->getInterfaces().end(), [](const Dependency &dep) {
                     return dep.interfaceNameHash == typeNameHash<Interface>();
@@ -443,7 +443,7 @@ namespace Ichor {
         }
 
         [[nodiscard]] std::vector<Dependency> getDependencyRequestsForService(ServiceIdType svcId) const noexcept;
-        [[nodiscard]] std::vector<NeverNull<IService const *>> getDependentsForService(ServiceIdType svcId) const noexcept;
+        [[nodiscard]] std::vector<v1::NeverNull<IService const *>> getDependentsForService(ServiceIdType svcId) const noexcept;
         [[nodiscard]] std::span<Dependency const> getProvidedInterfacesForService(ServiceIdType svcId) const noexcept;
         [[nodiscard]] std::vector<DependencyTrackerKey> getTrackersForService(ServiceIdType svcId) const noexcept;
 
@@ -451,7 +451,7 @@ namespace Ichor {
         /// Do not use in coroutines or other threads.
         /// Not thread-safe.
         /// \return map of [serviceId, service]
-        [[nodiscard]] unordered_map<ServiceIdType, NeverNull<IService const *>> getAllServices() const noexcept;
+        [[nodiscard]] unordered_map<ServiceIdType, v1::NeverNull<IService const *>> getAllServices() const noexcept;
 
         /// Blocks until the queue is empty or the specified timeout has passed.
         /// Mainly useful for tests
@@ -468,16 +468,16 @@ namespace Ichor {
         /// Async method to wait until a service is started
         /// \param svc
         /// \return immediately return void if service is already started, await if not, WaitError if quitting
-        [[nodiscard]] Task<tl::expected<void, WaitError>> waitForServiceStarted(NeverNull<IService*> svc);
+        [[nodiscard]] Task<tl::expected<void, WaitError>> waitForServiceStarted(v1::NeverNull<IService*> svc);
 
         /// Async method to wait until a service is stopped
         /// \param svc
         /// \return immediately return void if service is already stopped, await if not, WaitError if quitting
-        [[nodiscard]] Task<tl::expected<void, WaitError>> waitForServiceStopped(NeverNull<IService*> svc);
+        [[nodiscard]] Task<tl::expected<void, WaitError>> waitForServiceStopped(v1::NeverNull<IService*> svc);
 
     private:
         template<typename Impl, typename ReturnImpl, typename... Interfaces>
-        ServiceProtectedPointer<ReturnImpl> internalCreateServiceManager(Properties&& properties, uint64_t priority = INTERNAL_EVENT_PRIORITY) {
+        v1::ServiceProtectedPointer<ReturnImpl> internalCreateServiceManager(Properties&& properties, uint64_t priority = INTERNAL_EVENT_PRIORITY) {
             if constexpr (DO_INTERNAL_DEBUG || DO_HARDENING) {
                 if (_started.load(std::memory_order_acquire) && this != Detail::_local_dm) [[unlikely]] {
                     ICHOR_EMERGENCY_LOG1(_logger, "Function called from wrong thread.");
@@ -526,9 +526,9 @@ namespace Ichor {
                 }
 
                 if constexpr(IsConstructorInjector<Impl>) {
-                    return ServiceProtectedPointer{static_cast<IService*>(impl)};
+                    return v1::ServiceProtectedPointer{static_cast<IService*>(impl)};
                 } else {
-                    return ServiceProtectedPointer{impl};
+                    return v1::ServiceProtectedPointer{impl};
                 }
             } else {
                 static_assert(!(std::is_default_constructible_v<Impl> && RequestsProperties<Impl>), "Cannot have a properties constructor and a default constructor simultaneously.");
@@ -560,9 +560,9 @@ namespace Ichor {
                 _eventQueue->pushPrioritisedEvent<StartServiceEvent>(serviceId, event_priority, serviceId);
 
                 if constexpr(IsConstructorInjector<Impl>) {
-                    return ServiceProtectedPointer{static_cast<IService*>(impl)};
+                    return v1::ServiceProtectedPointer{static_cast<IService*>(impl)};
                 } else {
-                    return ServiceProtectedPointer{impl};
+                    return v1::ServiceProtectedPointer{impl};
                 }
             }
         }
@@ -612,7 +612,7 @@ namespace Ichor {
         [[nodiscard]] std::pair<uint64_t, Event*> broadcastEvent(std::unique_ptr<Event> &evt);
         /// Sets the communication channel. Only to be used from inside the CommunicationChannel class itself.
         /// \param channel
-        void setCommunicationChannel(NeverNull<CommunicationChannel*> channel);
+        void setCommunicationChannel(v1::NeverNull<CommunicationChannel*> channel);
         /// Unlinks this DM from the communication channel. Only to be used from inside the CommunicationChannel class itself.
         void clearCommunicationChannel();
         /// Called from the queue implementation
@@ -646,7 +646,7 @@ namespace Ichor {
         unordered_map<uint64_t, std::vector<EventCallbackInfo>> _eventCallbacks{}; // key = event id
         unordered_map<uint64_t, std::vector<EventInterceptInfo>> _eventInterceptors{}; // key = event id
         unordered_map<uint64_t, std::unique_ptr<IGenerator>> _scopedGenerators{}; // key = promise id
-        unordered_map<uint64_t, ReferenceCountedPointer<Event>> _scopedEvents{}; // key = promise id
+        unordered_map<uint64_t, v1::ReferenceCountedPointer<Event>> _scopedEvents{}; // key = promise id
         unordered_map<uint64_t, EventWaiter> _eventWaiters{}; // key = event id
         unordered_map<ServiceIdType, EventWaiter> _dependencyWaiters{}; // key = service id
         IEventQueue *_eventQueue;

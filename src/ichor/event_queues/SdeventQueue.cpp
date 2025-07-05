@@ -292,7 +292,7 @@ namespace Ichor {
         }
     }
 
-    NeverNull<sd_event *> SdeventQueue::getLoop() noexcept {
+    v1::NeverNull<sd_event *> SdeventQueue::getLoop() noexcept {
         return _eventQueue;
     }
 }

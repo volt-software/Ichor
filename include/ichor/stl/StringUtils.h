@@ -15,7 +15,7 @@
 #define NO_DEBUG_CONSTEXPR constexpr
 #endif
 
-namespace Ichor {
+namespace Ichor::v1 {
 
     /// Code modified from https://stackoverflow.com/a/73078442/1460998
     /// converts a string to an integer with little error checking. Only use if you're very sure that the string is actually a number.
@@ -204,13 +204,13 @@ namespace Ichor {
 
 
 template <>
-struct fmt::formatter<Ichor::Version> {
+struct fmt::formatter<Ichor::v1::Version> {
     constexpr auto parse(format_parse_context& ctx) {
         return ctx.end();
     }
 
     template <typename FormatContext>
-    auto format(const Ichor::Version& v, FormatContext& ctx) const {
+    auto format(const Ichor::v1::Version& v, FormatContext& ctx) const {
         return fmt::format_to(ctx.out(), "{}.{}.{}", v.major, v.minor, v.patch);
     }
 };

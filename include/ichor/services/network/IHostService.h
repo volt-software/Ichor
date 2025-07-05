@@ -1,9 +1,8 @@
 #pragma once
 
 #include <cstdint>
-#include <ichor/Common.h>
 
-namespace Ichor {
+namespace Ichor::v1 {
     class IHostService {
     public:
         virtual void setPriority(uint64_t priority) = 0;

@@ -11,7 +11,7 @@
 // An implementation that is close to the StaticVector proposal: https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2023/p0843r6.html
 // Difference being that this implementation also supports type-erasure
 // Shoutout to David Stone, more info at https://www.youtube.com/watch?v=I8QJLGI0GOE
-namespace Ichor {
+namespace Ichor::v1 {
 
     namespace Detail {
         template <typename T>
@@ -591,56 +591,56 @@ namespace Ichor {
 
 namespace std {
     template <typename T, size_t N>
-    constexpr bool operator==(const Ichor::StaticVector<T, N>& a, const Ichor::StaticVector<T, N>& b) {
+    constexpr bool operator==(const Ichor::v1::StaticVector<T, N>& a, const Ichor::v1::StaticVector<T, N>& b) {
         return a == b;
     }
     template <typename T, size_t N>
-    constexpr bool operator!=(const Ichor::StaticVector<T, N>& a, const Ichor::StaticVector<T, N>& b) {
+    constexpr bool operator!=(const Ichor::v1::StaticVector<T, N>& a, const Ichor::v1::StaticVector<T, N>& b) {
         return a != b;
     }
     template <typename T, size_t N>
-    constexpr bool operator<(const Ichor::StaticVector<T, N>& a, const Ichor::StaticVector<T, N>& b) {
+    constexpr bool operator<(const Ichor::v1::StaticVector<T, N>& a, const Ichor::v1::StaticVector<T, N>& b) {
         return a < b;
     }
     template <typename T, size_t N>
-    constexpr bool operator<=(const Ichor::StaticVector<T, N>& a, const Ichor::StaticVector<T, N>& b) {
+    constexpr bool operator<=(const Ichor::v1::StaticVector<T, N>& a, const Ichor::v1::StaticVector<T, N>& b) {
         return a <= b;
     }
     template <typename T, size_t N>
-    constexpr bool operator>(const Ichor::StaticVector<T, N>& a, const Ichor::StaticVector<T, N>& b) {
+    constexpr bool operator>(const Ichor::v1::StaticVector<T, N>& a, const Ichor::v1::StaticVector<T, N>& b) {
         return a > b;
     }
     template <typename T, size_t N>
-    constexpr bool operator>=(const Ichor::StaticVector<T, N>& a, const Ichor::StaticVector<T, N>& b) {
+    constexpr bool operator>=(const Ichor::v1::StaticVector<T, N>& a, const Ichor::v1::StaticVector<T, N>& b) {
         return a >= b;
     }
     template <typename T>
-    constexpr bool operator==(const Ichor::IStaticVector<T>& a, const Ichor::IStaticVector<T>& b) {
+    constexpr bool operator==(const Ichor::v1::IStaticVector<T>& a, const Ichor::v1::IStaticVector<T>& b) {
         return a == b;
     }
     template <typename T>
-    constexpr bool operator!=(const Ichor::IStaticVector<T>& a, const Ichor::IStaticVector<T>& b) {
+    constexpr bool operator!=(const Ichor::v1::IStaticVector<T>& a, const Ichor::v1::IStaticVector<T>& b) {
         return a != b;
     }
     template <typename T>
-    constexpr bool operator<(const Ichor::IStaticVector<T>& a, const Ichor::IStaticVector<T>& b) {
+    constexpr bool operator<(const Ichor::v1::IStaticVector<T>& a, const Ichor::v1::IStaticVector<T>& b) {
         return a < b;
     }
     template <typename T>
-    constexpr bool operator<=(const Ichor::IStaticVector<T>& a, const Ichor::IStaticVector<T>& b) {
+    constexpr bool operator<=(const Ichor::v1::IStaticVector<T>& a, const Ichor::v1::IStaticVector<T>& b) {
         return a <= b;
     }
     template <typename T>
-    constexpr bool operator>(const Ichor::IStaticVector<T>& a, const Ichor::IStaticVector<T>& b) {
+    constexpr bool operator>(const Ichor::v1::IStaticVector<T>& a, const Ichor::v1::IStaticVector<T>& b) {
         return a > b;
     }
     template <typename T>
-    constexpr bool operator>=(const Ichor::IStaticVector<T>& a, const Ichor::IStaticVector<T>& b) {
+    constexpr bool operator>=(const Ichor::v1::IStaticVector<T>& a, const Ichor::v1::IStaticVector<T>& b) {
         return a >= b;
     }
 
     template<typename T, size_t N>
-    constexpr void swap(Ichor::StaticVector<T, N> &x, Ichor::StaticVector<T, N> &y)
+    constexpr void swap(Ichor::v1::StaticVector<T, N> &x, Ichor::v1::StaticVector<T, N> &y)
     noexcept(noexcept(x.swap(y))) {
         x.swap(y);
     }

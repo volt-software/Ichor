@@ -34,9 +34,9 @@ int main(int argc, char *argv[]) {
     dm.createServiceManager<SpdlogSharedService, ISpdlogSharedService>();
 #endif
     dm.createServiceManager<NullFrameworkLogger, IFrameworkLogger>();
-    dm.createServiceManager<LoggerFactory<LOGGER_TYPE>, ILoggerFactory>(Properties{{"DefaultLogLevel", Ichor::make_any<LogLevel>(LogLevel::LOG_INFO)}});
-    dm.createServiceManager<TestService>(Properties{{"scope", Ichor::make_any<std::string>("one"s)}});
-    dm.createServiceManager<TestService>(Properties{{"scope", Ichor::make_any<std::string>("two"s)}});
+    dm.createServiceManager<LoggerFactory<LOGGER_TYPE>, ILoggerFactory>(Properties{{"DefaultLogLevel", Ichor::v1::make_any<LogLevel>(LogLevel::LOG_INFO)}});
+    dm.createServiceManager<TestService>(Properties{{"scope", Ichor::v1::make_any<std::string>("one"s)}});
+    dm.createServiceManager<TestService>(Properties{{"scope", Ichor::v1::make_any<std::string>("two"s)}});
     dm.createServiceManager<FactoryService>();
     queue->start(CaptureSigInt);
     auto end = std::chrono::steady_clock::now();

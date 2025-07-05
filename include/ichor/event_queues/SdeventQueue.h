@@ -32,13 +32,13 @@ namespace Ichor {
         [[nodiscard]] bool shouldQuit() final;
         void quit() final;
 
-        [[nodiscard]] NeverNull<sd_event*> getLoop() noexcept final;
+        [[nodiscard]] v1::NeverNull<sd_event*> getLoop() noexcept final;
 
     private:
         void registerEventFd();
         void registerTimer();
 
-        mutable Ichor::RealtimeReadWriteMutex _eventQueueMutex{};
+        mutable v1::RealtimeReadWriteMutex _eventQueueMutex{};
         std::multimap<uint64_t, std::unique_ptr<Event>> _otherThreadEventQueue{};
         sd_event* _eventQueue{};
         std::atomic<bool> _quit{false};

@@ -34,7 +34,7 @@ int main(int argc, char *argv[]) {
     dm.createServiceManager<SpdlogSharedService, ISpdlogSharedService>();
 #endif
     dm.createServiceManager<NullFrameworkLogger, IFrameworkLogger>();
-    dm.createServiceManager<LoggerFactory<LOGGER_TYPE>, ILoggerFactory>(Properties{{"DefaultLogLevel", Ichor::make_any<LogLevel>(LogLevel::LOG_INFO)}});
+    dm.createServiceManager<LoggerFactory<LOGGER_TYPE>, ILoggerFactory>(Properties{{"DefaultLogLevel", Ichor::v1::make_any<LogLevel>(LogLevel::LOG_INFO)}});
     dm.createServiceManager<TimerFactoryFactory>();
     dm.createServiceManager<IntrospectionService>();
     queue->start(CaptureSigInt);

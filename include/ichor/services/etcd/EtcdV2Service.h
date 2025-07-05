@@ -8,10 +8,10 @@
 #include <ichor/services/network/IClientFactory.h>
 #include <stack>
 
-namespace Ichor::Etcd::v2 {
+namespace Ichor::Etcdv2::v1 {
 
     struct ConnRequest final {
-        IHttpConnectionService *conn{};
+        Ichor::v1::IHttpConnectionService *conn{};
         AsyncManualResetEvent event{};
     };
 
@@ -66,20 +66,20 @@ namespace Ichor::Etcd::v2 {
         Task<tl::expected<void, Ichor::StartError>> start() final;
         Task<void> stop() final;
 
-        void addDependencyInstance(ILogger &logger, IService &isvc);
-        void removeDependencyInstance(ILogger &logger, IService &isvc);
+        void addDependencyInstance(Ichor::v1::ILogger &logger, IService &isvc);
+        void removeDependencyInstance(Ichor::v1::ILogger &logger, IService &isvc);
 
-        void addDependencyInstance(IHttpConnectionService &conn, IService &isvc);
-        void removeDependencyInstance(IHttpConnectionService &conn, IService &isvc);
+        void addDependencyInstance(Ichor::v1::IHttpConnectionService &conn, IService &isvc);
+        void removeDependencyInstance(Ichor::v1::IHttpConnectionService &conn, IService &isvc);
 
-        void addDependencyInstance(IClientFactory &conn, IService &isvc);
-        void removeDependencyInstance(IClientFactory &conn, IService &isvc);
+        void addDependencyInstance(Ichor::v1::IClientFactory &conn, IService &isvc);
+        void removeDependencyInstance(Ichor::v1::IClientFactory &conn, IService &isvc);
 
         friend DependencyRegister;
 
-        ILogger *_logger{};
-        IHttpConnectionService* _mainConn{};
-        IClientFactory *_clientFactory{};
+        Ichor::v1::ILogger *_logger{};
+        Ichor::v1::IHttpConnectionService* _mainConn{};
+        Ichor::v1::IClientFactory *_clientFactory{};
         std::stack<ConnRequest> _connRequests{};
         tl::optional<std::string> _auth;
     };

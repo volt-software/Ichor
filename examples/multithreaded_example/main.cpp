@@ -44,9 +44,9 @@ int main(int argc, char *argv[]) {
     }
 
 #if defined(URING_EXAMPLE)
-    auto version = Ichor::kernelVersion();
+    auto version = Ichor::v1::kernelVersion();
 
-    if(version < Version{5, 18, 0}) {
+    if(version < v1::Version{5, 18, 0}) {
         fmt::print("{} kernel version of {} too old to support multithreading. Requires 5.18.0 or newer.\n", argv[0], *version);
         return 0;
     }
@@ -72,7 +72,7 @@ int main(int argc, char *argv[]) {
         dmOne.createServiceManager<SpdlogSharedService, ISpdlogSharedService>();
 #endif
         dmOne.createServiceManager<NullFrameworkLogger, IFrameworkLogger>();
-        dmOne.createServiceManager<LoggerFactory<LOGGER_TYPE>, ILoggerFactory>(Properties{{"DefaultLogLevel", Ichor::make_any<LogLevel>(LogLevel::LOG_INFO)}});
+        dmOne.createServiceManager<LoggerFactory<LOGGER_TYPE>, ILoggerFactory>(Properties{{"DefaultLogLevel", Ichor::v1::make_any<LogLevel>(LogLevel::LOG_INFO)}});
         dmOne.createServiceManager<OneService>();
         queueOne->start(CaptureSigInt);
 #if defined(SDEVENT_EXAMPLE)
@@ -90,7 +90,7 @@ int main(int argc, char *argv[]) {
         dmTwo.createServiceManager<SpdlogSharedService, ISpdlogSharedService>();
 #endif
         dmTwo.createServiceManager<NullFrameworkLogger, IFrameworkLogger>();
-        dmTwo.createServiceManager<LoggerFactory<LOGGER_TYPE>, ILoggerFactory>(Properties{{"DefaultLogLevel", Ichor::make_any<LogLevel>(LogLevel::LOG_INFO)}});
+        dmTwo.createServiceManager<LoggerFactory<LOGGER_TYPE>, ILoggerFactory>(Properties{{"DefaultLogLevel", Ichor::v1::make_any<LogLevel>(LogLevel::LOG_INFO)}});
         dmTwo.createServiceManager<OtherService>();
         queueTwo->start(CaptureSigInt);
 #if defined(SDEVENT_EXAMPLE)

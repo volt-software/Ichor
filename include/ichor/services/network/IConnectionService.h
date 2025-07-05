@@ -5,7 +5,7 @@
 #include <vector>
 #include <span>
 
-namespace Ichor {
+namespace Ichor::v1 {
     class IConnectionService {
     public:
         /**

@@ -4,11 +4,11 @@
 #include <ichor/events/RunFunctionEvent.h>
 #include <ichor/Filter.h>
 
-Ichor::IOUringTimerFactoryFactory::IOUringTimerFactoryFactory(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {
+Ichor::v1::IOUringTimerFactoryFactory::IOUringTimerFactoryFactory(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {
     reg.registerDependency<IIOUringQueue>(this, DependencyFlags::REQUIRED);
 }
 
-Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::IOUringTimerFactoryFactory::start() {
+Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::v1::IOUringTimerFactoryFactory::start() {
     if(_q->getKernelVersion() < Version{5, 5, 0}) {
         fmt::println("Kernel version too old to use IOUringTcpConnectionService. Requires >= 5.5.0");
         co_return tl::unexpected(StartError::FAILED);
@@ -19,7 +19,7 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::IOUringTimerFactoryFac
     co_return {};
 }
 
-Ichor::Task<void> Ichor::IOUringTimerFactoryFactory::stop() {
+Ichor::Task<void> Ichor::v1::IOUringTimerFactoryFactory::stop() {
     _trackerRegistration.reset();
     _quitting = true;
 
@@ -46,15 +46,15 @@ Ichor::Task<void> Ichor::IOUringTimerFactoryFactory::stop() {
     co_return;
 }
 
-void Ichor::IOUringTimerFactoryFactory::addDependencyInstance(IIOUringQueue &q, IService&) noexcept {
+void Ichor::v1::IOUringTimerFactoryFactory::addDependencyInstance(IIOUringQueue &q, IService&) noexcept {
     _q = &q;
 }
 
-void Ichor::IOUringTimerFactoryFactory::removeDependencyInstance(IIOUringQueue&, IService&) noexcept {
+void Ichor::v1::IOUringTimerFactoryFactory::removeDependencyInstance(IIOUringQueue&, IService&) noexcept {
     _q = nullptr;
 }
 
-std::vector<Ichor::ServiceIdType> Ichor::IOUringTimerFactoryFactory::getCreatedTimerFactoryIds() const noexcept {
+std::vector<Ichor::ServiceIdType> Ichor::v1::IOUringTimerFactoryFactory::getCreatedTimerFactoryIds() const noexcept {
     std::vector<ServiceIdType> ret;
     ret.reserve(_factories.size());
 
@@ -65,7 +65,7 @@ std::vector<Ichor::ServiceIdType> Ichor::IOUringTimerFactoryFactory::getCreatedT
     return ret;
 }
 
-Ichor::AsyncGenerator<Ichor::IchorBehaviour> Ichor::IOUringTimerFactoryFactory::handleDependencyRequest(AlwaysNull<ITimerFactory *>, const DependencyRequestEvent &evt) {
+Ichor::AsyncGenerator<Ichor::IchorBehaviour> Ichor::v1::IOUringTimerFactoryFactory::handleDependencyRequest(v1::AlwaysNull<ITimerFactory *>, const DependencyRequestEvent &evt) {
     if(_quitting) {
         co_return {};
     }
@@ -76,12 +76,12 @@ Ichor::AsyncGenerator<Ichor::IchorBehaviour> Ichor::IOUringTimerFactoryFactory::
         co_return {};
     }
 
-    _factories.emplace(evt.originatingService, Ichor::GetThreadLocalManager().createServiceManager<TimerFactory<IOUringTimer, IIOUringQueue>, Detail::InternalTimerFactory, ITimerFactory>(Properties{{"requestingSvcId", Ichor::make_any<ServiceIdType>(evt.originatingService)}, {"Filter", Ichor::make_any<Filter>(ServiceIdFilterEntry{evt.originatingService})}}, evt.priority)->getServiceId());
+    _factories.emplace(evt.originatingService, GetThreadLocalManager().createServiceManager<TimerFactory<IOUringTimer, IIOUringQueue>, Ichor::Detail::v1::InternalTimerFactory, ITimerFactory>(Properties{{"requestingSvcId", Ichor::v1::make_any<ServiceIdType>(evt.originatingService)}, {"Filter", Ichor::v1::make_any<Filter>(ServiceIdFilterEntry{evt.originatingService})}}, evt.priority)->getServiceId());
 
     co_return {};
 }
 
-Ichor::AsyncGenerator<Ichor::IchorBehaviour> Ichor::IOUringTimerFactoryFactory::handleDependencyUndoRequest(AlwaysNull<ITimerFactory *>, const DependencyUndoRequestEvent &evt) {
+Ichor::AsyncGenerator<Ichor::IchorBehaviour> Ichor::v1::IOUringTimerFactoryFactory::handleDependencyUndoRequest(v1::AlwaysNull<ITimerFactory *>, const DependencyUndoRequestEvent &evt) {
     if(_quitting) {
         co_return {};
     }
@@ -99,8 +99,8 @@ Ichor::AsyncGenerator<Ichor::IchorBehaviour> Ichor::IOUringTimerFactoryFactory::
     co_return {};
 }
 
-Ichor::Task<void> Ichor::IOUringTimerFactoryFactory::pushStopEventForTimerFactory(ServiceIdType requestingSvcId, ServiceIdType factoryId) noexcept {
-    auto svc = GetThreadLocalManager().getService<Detail::InternalTimerFactory>(factoryId);
+Ichor::Task<void> Ichor::v1::IOUringTimerFactoryFactory::pushStopEventForTimerFactory(ServiceIdType requestingSvcId, ServiceIdType factoryId) noexcept {
+    auto svc = GetThreadLocalManager().getService<Ichor::Detail::v1::InternalTimerFactory>(factoryId);
 
     if(!svc) {
         co_return;

@@ -13,7 +13,7 @@
 // e.g my_any_var.type_hash() == Ichor::typeNameHash<int>()
 // Also supports to_string() on the underlying value T, if there exists an fmt::formatter<T>.
 // Probably doesn't work in some situations where std::any would, as compiler support is missing.
-namespace Ichor {
+namespace Ichor::v1 {
 
     struct bad_any_cast final : public std::bad_cast {
         bad_any_cast(std::string_view type, std::string_view cast);
@@ -269,13 +269,13 @@ namespace Ichor {
 }
 
 template <>
-struct fmt::formatter<Ichor::any> {
+struct fmt::formatter<Ichor::v1::any> {
     constexpr auto parse(format_parse_context& ctx) {
         return ctx.end();
     }
 
     template <typename FormatContext>
-    auto format(const Ichor::any& change, FormatContext& ctx) const {
+    auto format(const Ichor::v1::any& change, FormatContext& ctx) const {
         return fmt::format_to(ctx.out(), "{}", change.to_string());
     }
 };

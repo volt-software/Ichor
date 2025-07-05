@@ -3,7 +3,7 @@
 #include <ichor/services/timer/ITimer.h>
 #include <vector>
 
-namespace Ichor {
+namespace Ichor::v1 {
     struct ITimerFactory {
         [[nodiscard]] virtual ITimer& createTimer() = 0;
         virtual bool destroyTimerIfStopped(uint64_t timerId) = 0;

@@ -6,7 +6,7 @@
 #include <ichor/services/timer/ITimerFactory.h>
 #include <chrono>
 
-namespace Ichor {
+namespace Ichor::v1 {
 
     struct StatisticEntry {
         StatisticEntry() = default;

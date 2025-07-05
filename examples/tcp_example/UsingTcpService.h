@@ -10,6 +10,7 @@
 #include "../common/TestMsg.h"
 
 using namespace Ichor;
+using namespace Ichor::v1;
 
 class UsingTcpService final : public AdvancedService<UsingTcpService> {
 public:

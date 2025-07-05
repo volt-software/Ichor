@@ -4,14 +4,14 @@
 #include <ichor/services/timer/ITimerFactory.h>
 #include <ichor/services/logging/Logger.h>
 #include <ichor/dependency_management/AdvancedService.h>
-#include "TestMsg.h"
 
 using namespace Ichor;
+using namespace Ichor::v1;
 
 class DebugService final : public AdvancedService<DebugService> {
 public:
     DebugService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {
-        reg.registerDependency<ILogger>(this, DependencyFlags::REQUIRED, Properties{{"LogLevel", Ichor::make_any<LogLevel>(LogLevel::LOG_INFO)}});
+        reg.registerDependency<ILogger>(this, DependencyFlags::REQUIRED, Properties{{"LogLevel", Ichor::v1::make_any<LogLevel>(LogLevel::LOG_INFO)}});
         reg.registerDependency<ITimerFactory>(this, DependencyFlags::REQUIRED);
     }
     ~DebugService() final = default;

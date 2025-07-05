@@ -7,6 +7,7 @@
 #include "CustomEvent.h"
 
 using namespace Ichor;
+using namespace Ichor::v1;
 
 class OneService final {
 public:

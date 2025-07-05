@@ -6,6 +6,7 @@
 #include "OptionalService.h"
 
 using namespace Ichor;
+using namespace Ichor::v1;
 
 class TestService final : public AdvancedService<TestService> {
 public:

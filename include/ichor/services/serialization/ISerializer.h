@@ -1,10 +1,9 @@
 #pragma once
 
 #include <vector>
-#include <memory>
 #include <span>
 
-namespace Ichor {
+namespace Ichor::v1 {
 
     template <typename T>
     class ISerializer {

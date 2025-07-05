@@ -65,7 +65,7 @@ int main(int argc, char *argv[]) {
         auto &dm = queue->createManager();
         dm.createServiceManager<LoggerFactory<NullLogger>, ILoggerFactory>();
         dm.createServiceManager<NullFrameworkLogger, IFrameworkLogger>();
-        dm.createServiceManager<TestService>(Properties{{"LogLevel", Ichor::make_any<LogLevel>(LogLevel::LOG_WARN)}});
+        dm.createServiceManager<TestService>(Properties{{"LogLevel", Ichor::v1::make_any<LogLevel>(LogLevel::LOG_WARN)}});
         queue->start(CaptureSigInt);
         auto end = std::chrono::steady_clock::now();
         fmt::println("{} single threaded ran for {:L} µs with {:L} peak memory usage {:L} events/s",argv[0],  std::chrono::duration_cast<std::chrono::microseconds>(end - start).count(), getPeakRSS(),
@@ -94,7 +94,7 @@ int main(int argc, char *argv[]) {
                 auto &dm = queue->createManager();
                 dm.createServiceManager<LoggerFactory<NullLogger>, ILoggerFactory>();
                 dm.createServiceManager<NullFrameworkLogger, IFrameworkLogger>();
-                dm.createServiceManager<TestService>(Properties{{"LogLevel", Ichor::make_any<LogLevel>(LogLevel::LOG_WARN)}});
+                dm.createServiceManager<TestService>(Properties{{"LogLevel", Ichor::v1::make_any<LogLevel>(LogLevel::LOG_WARN)}});
                 queue->start(CaptureSigInt);
             });
         }

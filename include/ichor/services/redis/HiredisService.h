@@ -8,7 +8,7 @@
 #include <ichor/stl/StringUtils.h>
 #include <hiredis/hiredis.h>
 
-namespace Ichor {
+namespace Ichor::v1 {
     /**
      * Service for the redis protocol.
      *

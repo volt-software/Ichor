@@ -6,6 +6,7 @@ struct Interface1{};
 struct Interface2{};
 
 using namespace Ichor;
+using namespace Ichor::v1;
 
 TEST_CASE("Filter Tests") {
 
@@ -14,13 +15,13 @@ TEST_CASE("Filter Tests") {
             PropertiesFilterEntry<bool, false> f{"TestProp", true};
             FakeLifecycleManager fm;
             REQUIRE(!f.matches(fm));
-            fm._properties.emplace("TestProp", Ichor::make_any<int>(5));
+            fm._properties.emplace("TestProp", Ichor::v1::make_any<int>(5));
             REQUIRE(!f.matches(fm));
             fm._properties.clear();
-            fm._properties.emplace("TestProp", Ichor::make_any<bool>(false));
+            fm._properties.emplace("TestProp", Ichor::v1::make_any<bool>(false));
             REQUIRE(!f.matches(fm));
             fm._properties.clear();
-            fm._properties.emplace("TestProp", Ichor::make_any<bool>(true));
+            fm._properties.emplace("TestProp", Ichor::v1::make_any<bool>(true));
             REQUIRE(f.matches(fm));
             fm._properties.clear();
         }
@@ -28,13 +29,13 @@ TEST_CASE("Filter Tests") {
             PropertiesFilterEntry<bool, true> f{"TestProp", true};
             FakeLifecycleManager fm;
             REQUIRE(f.matches(fm));
-            fm._properties.emplace("TestProp", Ichor::make_any<int>(5));
+            fm._properties.emplace("TestProp", Ichor::v1::make_any<int>(5));
             REQUIRE(f.matches(fm));
             fm._properties.clear();
-            fm._properties.emplace("TestProp", Ichor::make_any<bool>(false));
+            fm._properties.emplace("TestProp", Ichor::v1::make_any<bool>(false));
             REQUIRE(!f.matches(fm));
             fm._properties.clear();
-            fm._properties.emplace("TestProp", Ichor::make_any<bool>(true));
+            fm._properties.emplace("TestProp", Ichor::v1::make_any<bool>(true));
             REQUIRE(f.matches(fm));
             fm._properties.clear();
         }
@@ -73,7 +74,7 @@ TEST_CASE("Filter Tests") {
                     Dependency{typeNameHash<Interface1>(), typeName<Interface1>(), DependencyFlags::NONE, 0},
                     std::function<void(NeverNull<void*>, IService&)>{},
                     std::function<void(NeverNull<void*>, IService&)>{},
-                    Properties{{"TestProp", Ichor::make_any<int>(5)}})
+                    Properties{{"TestProp", Ichor::v1::make_any<int>(5)}})
                 );
             REQUIRE(!f.matches(fm));
             dr._registrations.clear();
@@ -83,7 +84,7 @@ TEST_CASE("Filter Tests") {
                     Dependency{typeNameHash<Interface1>(), typeName<Interface1>(), DependencyFlags::NONE, 0},
                     std::function<void(NeverNull<void*>, IService&)>{},
                     std::function<void(NeverNull<void*>, IService&)>{},
-                    Properties{{"TestProp", Ichor::make_any<bool>(false)}})
+                    Properties{{"TestProp", Ichor::v1::make_any<bool>(false)}})
                 );
             REQUIRE(!f.matches(fm));
             dr._registrations.clear();
@@ -93,7 +94,7 @@ TEST_CASE("Filter Tests") {
                     Dependency{typeNameHash<Interface1>(), typeName<Interface1>(), DependencyFlags::NONE, 0},
                     std::function<void(NeverNull<void*>, IService&)>{},
                     std::function<void(NeverNull<void*>, IService&)>{},
-                    Properties{{"TestProp", Ichor::make_any<bool>(true)}})
+                    Properties{{"TestProp", Ichor::v1::make_any<bool>(true)}})
                 );
             REQUIRE(f.matches(fm));
             dr._registrations.clear();
@@ -103,7 +104,7 @@ TEST_CASE("Filter Tests") {
                     Dependency{typeNameHash<Interface2>(), typeName<Interface2>(), DependencyFlags::NONE, 0},
                     std::function<void(NeverNull<void*>, IService&)>{},
                     std::function<void(NeverNull<void*>, IService&)>{},
-                    Properties{{"TestProp", Ichor::make_any<bool>(true)}})
+                    Properties{{"TestProp", Ichor::v1::make_any<bool>(true)}})
                 );
             REQUIRE(!f.matches(fm));
         }
@@ -139,7 +140,7 @@ TEST_CASE("Filter Tests") {
                     Dependency{typeNameHash<Interface1>(), typeName<Interface1>(), DependencyFlags::NONE, 0},
                     std::function<void(NeverNull<void*>, IService&)>{},
                     std::function<void(NeverNull<void*>, IService&)>{},
-                    Properties{{"TestProp", Ichor::make_any<int>(5)}})
+                    Properties{{"TestProp", Ichor::v1::make_any<int>(5)}})
                 );
             REQUIRE(f.matches(fm));
             dr._registrations.clear();
@@ -149,7 +150,7 @@ TEST_CASE("Filter Tests") {
                     Dependency{typeNameHash<Interface1>(), typeName<Interface1>(), DependencyFlags::NONE, 0},
                     std::function<void(NeverNull<void*>, IService&)>{},
                     std::function<void(NeverNull<void*>, IService&)>{},
-                    Properties{{"TestProp", Ichor::make_any<bool>(false)}})
+                    Properties{{"TestProp", Ichor::v1::make_any<bool>(false)}})
                 );
             REQUIRE(!f.matches(fm));
             dr._registrations.clear();
@@ -159,7 +160,7 @@ TEST_CASE("Filter Tests") {
                     Dependency{typeNameHash<Interface1>(), typeName<Interface1>(), DependencyFlags::NONE, 0},
                     std::function<void(NeverNull<void*>, IService&)>{},
                     std::function<void(NeverNull<void*>, IService&)>{},
-                    Properties{{"TestProp", Ichor::make_any<bool>(true)}})
+                    Properties{{"TestProp", Ichor::v1::make_any<bool>(true)}})
                 );
             REQUIRE(f.matches(fm));
             dr._registrations.clear();
@@ -169,7 +170,7 @@ TEST_CASE("Filter Tests") {
                     Dependency{typeNameHash<Interface2>(), typeName<Interface2>(), DependencyFlags::NONE, 0},
                     std::function<void(NeverNull<void*>, IService&)>{},
                     std::function<void(NeverNull<void*>, IService&)>{},
-                    Properties{{"TestProp", Ichor::make_any<bool>(true)}})
+                    Properties{{"TestProp", Ichor::v1::make_any<bool>(true)}})
                 );
             REQUIRE(f.matches(fm));
         }

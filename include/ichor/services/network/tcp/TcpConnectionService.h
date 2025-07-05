@@ -7,7 +7,7 @@
 #include <ichor/services/timer/ITimerFactory.h>
 #include <ichor/Concepts.h>
 
-namespace Ichor {
+namespace Ichor::v1 {
 
     /**
      * Service for managing a TCP connection

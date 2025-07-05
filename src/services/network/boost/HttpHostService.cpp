@@ -3,12 +3,12 @@
 #include <ichor/services/network/http/HttpScopeGuards.h>
 #include <ichor/events/RunFunctionEvent.h>
 
-Ichor::Boost::HttpHostService::HttpHostService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {
-    reg.registerDependency<ILogger>(this, DependencyFlags::REQUIRED);
+Ichor::Boost::v1::HttpHostService::HttpHostService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {
+    reg.registerDependency<Ichor::v1::ILogger>(this, DependencyFlags::REQUIRED);
     reg.registerDependency<IBoostAsioQueue>(this, DependencyFlags::REQUIRED);
 }
 
-Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::Boost::HttpHostService::start() {
+Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::Boost::v1::HttpHostService::start() {
     auto addrIt = getProperties().find("Address");
     auto portIt = getProperties().find("Port");
 
@@ -22,16 +22,16 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::Boost::HttpHostService
     }
 
     if(auto propIt = getProperties().find("Priority"); propIt != getProperties().end()) {
-        _priority = Ichor::any_cast<uint64_t>(propIt->second);
+        _priority = Ichor::v1::any_cast<uint64_t>(propIt->second);
     }
     if(auto propIt = getProperties().find("Debug"); propIt != getProperties().end()) {
-        _debug = Ichor::any_cast<bool>(propIt->second);
+        _debug = Ichor::v1::any_cast<bool>(propIt->second);
     }
     if(auto propIt = getProperties().find("SendServerHeader"); propIt != getProperties().end()) {
-        _sendServerHeader = Ichor::any_cast<bool>(propIt->second);
+        _sendServerHeader = Ichor::v1::any_cast<bool>(propIt->second);
     }
     if(auto propIt = getProperties().find("NoDelay"); propIt != getProperties().end()) {
-        _tcpNoDelay = Ichor::any_cast<bool>(propIt->second);
+        _tcpNoDelay = Ichor::v1::any_cast<bool>(propIt->second);
     }
     if(auto propIt = getProperties().find("SslCert"); propIt != getProperties().end()) {
         _useSsl = true;
@@ -46,11 +46,11 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::Boost::HttpHostService
     }
 
     boost::system::error_code ec;
-    auto address = net::ip::make_address(Ichor::any_cast<std::string &>(addrIt->second), ec);
-    auto port = Ichor::any_cast<uint16_t>(portIt->second);
+    auto address = net::ip::make_address(Ichor::v1::any_cast<std::string &>(addrIt->second), ec);
+    auto port = Ichor::v1::any_cast<uint16_t>(portIt->second);
 
     if(ec) {
-        ICHOR_LOG_ERROR(_logger, "Couldn't parse address \"{}\": {} {}", Ichor::any_cast<std::string &>(addrIt->second), ec.value(), ec.message());
+        ICHOR_LOG_ERROR(_logger, "Couldn't parse address \"{}\": {} {}", Ichor::v1::any_cast<std::string &>(addrIt->second), ec.value(), ec.message());
         co_return tl::unexpected(StartError::FAILED);
     }
 
@@ -61,7 +61,7 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::Boost::HttpHostService
     co_return {};
 }
 
-Ichor::Task<void> Ichor::Boost::HttpHostService::stop() {
+Ichor::Task<void> Ichor::Boost::v1::HttpHostService::stop() {
     INTERNAL_DEBUG("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! HttpHostService::stop()");
     _quit = true;
 
@@ -100,41 +100,41 @@ Ichor::Task<void> Ichor::Boost::HttpHostService::stop() {
     co_return;
 }
 
-void Ichor::Boost::HttpHostService::addDependencyInstance(ILogger &logger, IService &) {
+void Ichor::Boost::v1::HttpHostService::addDependencyInstance(Ichor::v1::ILogger &logger, IService &) {
     _logger = &logger;
 }
 
-void Ichor::Boost::HttpHostService::removeDependencyInstance(ILogger &, IService&) {
+void Ichor::Boost::v1::HttpHostService::removeDependencyInstance(Ichor::v1::ILogger &, IService&) {
     _logger = nullptr;
 }
 
-void Ichor::Boost::HttpHostService::addDependencyInstance(IBoostAsioQueue &q, IService&) {
+void Ichor::Boost::v1::HttpHostService::addDependencyInstance(IBoostAsioQueue &q, IService&) {
     _queue = &q;
 }
 
-void Ichor::Boost::HttpHostService::removeDependencyInstance(IBoostAsioQueue&, IService&) {
+void Ichor::Boost::v1::HttpHostService::removeDependencyInstance(IBoostAsioQueue&, IService&) {
     _queue = nullptr;
 }
 
-void Ichor::Boost::HttpHostService::setPriority(uint64_t priority) {
+void Ichor::Boost::v1::HttpHostService::setPriority(uint64_t priority) {
     _priority = priority;
 }
 
-uint64_t Ichor::Boost::HttpHostService::getPriority() {
+uint64_t Ichor::Boost::v1::HttpHostService::getPriority() {
     return _priority;
 }
 
-Ichor::HttpRouteRegistration Ichor::Boost::HttpHostService::addRoute(HttpMethod method, std::string_view route, std::function<Task<HttpResponse>(HttpRequest&)> handler) {
-    return addRoute(method, std::make_unique<StringRouteMatcher>(route), std::move(handler));
+Ichor::v1::HttpRouteRegistration Ichor::Boost::v1::HttpHostService::addRoute(Ichor::v1::HttpMethod method, std::string_view route, std::function<Task<Ichor::v1::HttpResponse>(Ichor::v1::HttpRequest&)> handler) {
+    return addRoute(method, std::make_unique<Ichor::v1::StringRouteMatcher>(route), std::move(handler));
 }
 
-Ichor::HttpRouteRegistration Ichor::Boost::HttpHostService::addRoute(HttpMethod method, std::unique_ptr<RouteMatcher> newMatcher, std::function<Task<HttpResponse>(HttpRequest&)> handler) {
+Ichor::v1::HttpRouteRegistration Ichor::Boost::v1::HttpHostService::addRoute(Ichor::v1::HttpMethod method, std::unique_ptr<Ichor::v1::RouteMatcher> newMatcher, std::function<Task<Ichor::v1::HttpResponse>(Ichor::v1::HttpRequest&)> handler) {
     auto routes = _handlers.find(method);
 
     newMatcher->set_id(_matchersIdCounter);
 
     if(routes == _handlers.end()) {
-        unordered_map<std::unique_ptr<RouteMatcher>, std::function<Task<HttpResponse>(HttpRequest&)>> newSubMap{};
+        unordered_map<std::unique_ptr<Ichor::v1::RouteMatcher>, std::function<Task<Ichor::v1::HttpResponse>(Ichor::v1::HttpRequest&)>> newSubMap{};
         newSubMap.emplace(std::move(newMatcher), std::move(handler));
         _handlers.emplace(method, std::move(newSubMap));
     } else {
@@ -144,7 +144,7 @@ Ichor::HttpRouteRegistration Ichor::Boost::HttpHostService::addRoute(HttpMethod 
     return {method, _matchersIdCounter++, this};
 }
 
-void Ichor::Boost::HttpHostService::removeRoute(HttpMethod method, RouteIdType id) {
+void Ichor::Boost::v1::HttpHostService::removeRoute(Ichor::v1::HttpMethod method, Ichor::v1::RouteIdType id) {
     auto routes = _handlers.find(method);
 
     if(routes == std::end(_handlers)) {
@@ -156,15 +156,15 @@ void Ichor::Boost::HttpHostService::removeRoute(HttpMethod method, RouteIdType i
     });
 }
 
-void Ichor::Boost::HttpHostService::fail(beast::error_code ec, const char *what, bool stopSelf) {
+void Ichor::Boost::v1::HttpHostService::fail(beast::error_code ec, const char *what, bool stopSelf) {
     ICHOR_LOG_ERROR(_logger, "Boost.BEAST fail: {}, {}", what, ec.message());
     if(stopSelf) {
         _queue->pushPrioritisedEvent<StopServiceEvent>(getServiceId(), _priority, getServiceId());
     }
 }
 
-void Ichor::Boost::HttpHostService::listen(tcp::endpoint endpoint, net::yield_context yield) {
-    ScopeGuardAtomicCount guard{_finishedListenAndRead};
+void Ichor::Boost::v1::HttpHostService::listen(tcp::endpoint endpoint, net::yield_context yield) {
+    Ichor::v1::ScopeGuardAtomicCount guard{_finishedListenAndRead};
     beast::error_code ec;
 
     if(_useSsl) {
@@ -172,7 +172,7 @@ void Ichor::Boost::HttpHostService::listen(tcp::endpoint endpoint, net::yield_co
 
         if(auto propIt = getProperties().find("SslPassword"); propIt != getProperties().end()) {
             _sslContext->set_password_callback(
-                    [password = Ichor::any_cast<std::string>(propIt->second)](std::size_t, boost::asio::ssl::context_base::password_purpose) {
+                    [password = Ichor::v1::any_cast<std::string>(propIt->second)](std::size_t, boost::asio::ssl::context_base::password_purpose) {
                         return password;
                     });
         }
@@ -184,8 +184,8 @@ void Ichor::Boost::HttpHostService::listen(tcp::endpoint endpoint, net::yield_co
                                  boost::asio::ssl::context::no_sslv3);
 
         //pretty sure that Boost.Beast uses references to the data/size, so we should make sure to keep this in memory until we're done.
-        auto& cert = Ichor::any_cast<std::string&>(getProperties()["SslCert"]);
-        auto& key = Ichor::any_cast<std::string&>(getProperties()["SslKey"]);
+        auto& cert = Ichor::v1::any_cast<std::string&>(getProperties()["SslCert"]);
+        auto& key = Ichor::v1::any_cast<std::string&>(getProperties()["SslKey"]);
         _sslContext->use_certificate_chain(boost::asio::buffer(cert.data(), cert.size()));
         _sslContext->use_private_key(boost::asio::buffer(key.data(), key.size()), boost::asio::ssl::context::file_format::pem);
     }
@@ -246,8 +246,8 @@ void Ichor::Boost::HttpHostService::listen(tcp::endpoint endpoint, net::yield_co
 }
 
 template <typename SocketT>
-void Ichor::Boost::HttpHostService::read(tcp::socket socket, net::yield_context yield) {
-    ScopeGuardAtomicCount const guard{ _finishedListenAndRead };
+void Ichor::Boost::v1::HttpHostService::read(tcp::socket socket, net::yield_context yield) {
+    Ichor::v1::ScopeGuardAtomicCount const guard{ _finishedListenAndRead };
     beast::error_code ec;
     auto addr = socket.remote_endpoint().address().to_string();
     std::shared_ptr<Detail::Connection<SocketT>> connection;
@@ -315,7 +315,7 @@ void Ichor::Boost::HttpHostService::read(tcp::socket socket, net::yield_context 
         if (!req.body().empty() && *req.body().rbegin() != 0) {
             req.body().push_back(0);
         }
-        HttpRequest httpReq{ std::move(req.body()), static_cast<HttpMethod>(req.method()), target, {}, addr, std::move(headers) };
+        Ichor::v1::HttpRequest httpReq{ std::move(req.body()), static_cast<Ichor::v1::HttpMethod>(req.method()), target, {}, addr, std::move(headers) };
         // Compiler bug prevents using named captures for now: https://www.reddit.com/r/cpp_questions/comments/17lc55f/coroutine_msvc_compiler_bug/
 #if (defined(WIN32) || defined(_WIN32) || defined(__WIN32)) && !defined(__CYGWIN__)
         auto version = req.version();
@@ -332,7 +332,7 @@ void Ichor::Boost::HttpHostService::read(tcp::socket socket, net::yield_context 
             httpReq.route = target;
 
             if (routes != std::end(_handlers)) {
-                std::function<Task<HttpResponse>(HttpRequest&)> const *f{};
+                std::function<Task<Ichor::v1::HttpResponse>(Ichor::v1::HttpRequest&)> const *f{};
                 for(auto const &[matcher, handler] : routes->second) {
                     if(matcher->matches(httpReq.route)) {
                         httpReq.regex_params = matcher->route_params();
@@ -391,7 +391,7 @@ void Ichor::Boost::HttpHostService::read(tcp::socket socket, net::yield_context 
 }
 
 template <typename SocketT>
-void Ichor::Boost::HttpHostService::sendInternal(std::shared_ptr<Detail::Connection<SocketT>> &connection, http::response<http::vector_body<uint8_t>, http::basic_fields<std::allocator<uint8_t>>> &&res) {
+void Ichor::Boost::v1::HttpHostService::sendInternal(std::shared_ptr<Detail::Connection<SocketT>> &connection, http::response<http::vector_body<uint8_t>, http::basic_fields<std::allocator<uint8_t>>> &&res) {
     static_assert(std::is_move_assignable_v<Detail::HostOutboxMessage>, "HostOutboxMessage should be move assignable");
 
     if(_quit || _queue->fibersShouldStop()) {

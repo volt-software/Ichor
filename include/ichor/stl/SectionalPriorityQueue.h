@@ -6,7 +6,7 @@
 // The SectionalPriorityQueue is specialized for one purpose only: an ordered, vector-mapped queue for unique_ptr's, which only gets pushed/popped to.
 // This ensures that the compare function never gets un-set unique_ptrs. (except when they get pushed, which this queue considers a user-mistake, for performance reasons)
 
-namespace Ichor {
+namespace Ichor::v1 {
     template <typename T, typename Compare>
     struct SectionalPriorityQueue final {
         [[nodiscard]] constexpr bool empty() const noexcept {

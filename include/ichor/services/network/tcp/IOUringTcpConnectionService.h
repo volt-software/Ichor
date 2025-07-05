@@ -8,9 +8,8 @@
 #include <ichor/services/logging/Logger.h>
 #include <ichor/event_queues/IIOUringQueue.h>
 #include <vector>
-#include <linux/time_types.h>
 
-namespace Ichor {
+namespace Ichor::v1 {
 
     /**
      * Service for managing a TCP connection

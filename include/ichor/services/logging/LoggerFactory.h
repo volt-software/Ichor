@@ -5,7 +5,7 @@
 #include <ichor/services/logging/Logger.h>
 #include <ichor/Filter.h>
 
-namespace Ichor {
+namespace Ichor::v1 {
     struct ILoggerFactory {
         virtual void setDefaultLogLevel(LogLevel level) = 0;
         [[nodiscard]] virtual LogLevel getDefaultLogLevel() const = 0;
@@ -22,7 +22,7 @@ namespace Ichor {
 
             auto logLevelProp = AdvancedService<LoggerFactory<LogT>>::getProperties().find("DefaultLogLevel");
             if(logLevelProp != end(AdvancedService<LoggerFactory<LogT>>::getProperties())) {
-                setDefaultLogLevel(Ichor::any_cast<LogLevel>(logLevelProp->second));
+                setDefaultLogLevel(Ichor::v1::any_cast<LogLevel>(logLevelProp->second));
             }
         }
         ~LoggerFactory() final = default;
@@ -54,20 +54,20 @@ namespace Ichor {
             _logger = nullptr;
         }
 
-        AsyncGenerator<IchorBehaviour> handleDependencyRequest(AlwaysNull<ILogger*>, DependencyRequestEvent const &evt) {
+        AsyncGenerator<IchorBehaviour> handleDependencyRequest(v1::AlwaysNull<ILogger*>, DependencyRequestEvent const &evt) {
             auto logger = _loggers.find(evt.originatingService);
 
             if (logger == end(_loggers)) {
                 auto requestedLevel = _defaultLevel;
                 if(evt.properties.has_value()) {
                     auto requestedLevelIt = evt.properties.value()->find("LogLevel");
-                    requestedLevel = requestedLevelIt != end(*evt.properties.value()) ? Ichor::any_cast<LogLevel>(requestedLevelIt->second) : requestedLevel;
+                    requestedLevel = requestedLevelIt != end(*evt.properties.value()) ? Ichor::v1::any_cast<LogLevel>(requestedLevelIt->second) : requestedLevel;
                 }
 
                 Properties props{};
                 props.reserve(2);
-                props.template emplace<>("Filter", Ichor::make_any<Filter>(ServiceIdFilterEntry{evt.originatingService}));
-                props.template emplace<>("LogLevel", Ichor::make_any<LogLevel>(requestedLevel));
+                props.template emplace<>("Filter", Ichor::v1::make_any<Filter>(ServiceIdFilterEntry{evt.originatingService}));
+                props.template emplace<>("LogLevel", Ichor::v1::make_any<LogLevel>(requestedLevel));
                 auto newLogger = GetThreadLocalManager().template createServiceManager<LogT, ILogger>(std::move(props), evt.priority);
                 _loggers.emplace(evt.originatingService, newLogger->getServiceId());
                 ICHOR_LOG_TRACE(_logger, "created logger for svcid {}", evt.originatingService);
@@ -78,7 +78,7 @@ namespace Ichor {
             co_return {};
         }
 
-        AsyncGenerator<IchorBehaviour> handleDependencyUndoRequest(AlwaysNull<ILogger*>, DependencyUndoRequestEvent const &evt) {
+        AsyncGenerator<IchorBehaviour> handleDependencyUndoRequest(v1::AlwaysNull<ILogger*>, DependencyUndoRequestEvent const &evt) {
             auto service = _loggers.find(evt.originatingService);
 
             if(service != end(_loggers)) {

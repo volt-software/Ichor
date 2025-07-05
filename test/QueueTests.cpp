@@ -75,7 +75,7 @@ TEST_CASE("QueueTests") {
         auto queue = std::make_unique<SdeventQueue>();
         auto &dm = queue->createManager();
 
-        Detail::_local_dm = &dm;
+        Ichor::Detail::_local_dm = &dm;
 
         REQUIRE_THROWS(queue->pushEventInternal(0, nullptr));
         REQUIRE_THROWS(queue->empty());
@@ -133,7 +133,7 @@ TEST_CASE("QueueTests") {
         auto queue = std::make_unique<BoostAsioQueue>();
         auto &dm = queue->createManager();
 
-        Detail::_local_dm = &dm;
+        Ichor::Detail::_local_dm = &dm;
 
         // REQUIRE_THROWS(queue->pushEventInternal(0, nullptr));
         // REQUIRE_THROWS(queue->empty());
@@ -186,7 +186,7 @@ TEST_CASE("QueueTests") {
         auto queue = std::make_unique<IOUringQueue>();
         auto &dm = queue->createManager();
 
-        Detail::_local_dm = &dm;
+        Ichor::Detail::_local_dm = &dm;
 
 //        REQUIRE_THROWS(queue->pushEventInternal(0, nullptr));
 //        REQUIRE_THROWS(queue->empty());
@@ -199,7 +199,7 @@ TEST_CASE("QueueTests") {
     }
 
     SECTION("IOUringQueue Live") {
-        auto version = Ichor::kernelVersion();
+        auto version = Ichor::v1::kernelVersion();
 
         REQUIRE(version);
         if(version < Version{5, 18, 0}) {

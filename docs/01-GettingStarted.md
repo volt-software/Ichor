@@ -444,7 +444,7 @@ struct LoggerFactory final {
         _loggerTrackerRegistration = _dm->registerDependencyTracker<ILogger>(this, self);
     }
 
-    AsyncGenerator<IchorBehaviour> handleDependencyRequest(AlwaysNull<ILogger*>, DependencyRequestEvent const &evt) {
+    AsyncGenerator<IchorBehaviour> handleDependencyRequest(v1::AlwaysNull<ILogger*>, DependencyRequestEvent const &evt) {
         auto logger = _loggers.find(evt.originatingService);
 
         if (logger != end(_loggers)) {
@@ -455,14 +455,14 @@ struct LoggerFactory final {
         Properties props{};
         // Filter is a special property in Ichor, if this is detected, it gets checked before asking another service if they're interested in it.
         // In this case, we apply a filter specifically so that the requesting service id is the only one that will match.
-        props.template emplace<>("Filter", Ichor::make_any<Filter>(ServiceIdFilterEntry{evt.originatingService}));
+        props.template emplace<>("Filter", Ichor::v1::make_any<Filter>(ServiceIdFilterEntry{evt.originatingService}));
         auto *newLogger = _dm->createServiceManager<Logger, ILogger>(std::move(props));
         _loggers.emplace(evt.originatingService, newLogger->getServiceId());
 
         co_return {};
     }
 
-    AsyncGenerator<IchorBehaviour> handleDependencyUndoRequest(AlwaysNull<ILogger*>, DependencyUndoRequestEvent const &evt) {
+    AsyncGenerator<IchorBehaviour> handleDependencyUndoRequest(v1::AlwaysNull<ILogger*>, DependencyUndoRequestEvent const &evt) {
         auto service = _loggers.find(evt.originatingService);
         if(service != end(_loggers)) {
             // the true at the end tells Ichor to remove the service immediately after being stopped.

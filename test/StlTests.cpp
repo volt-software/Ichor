@@ -218,13 +218,13 @@ TEST_CASE("STL Tests") {
         const auto someNonmoveableSboBuster = make_unformattable_any<nonmoveable_sbo_buster>();
         REQUIRE_NOTHROW(any_cast<nonmoveable_sbo_buster>(someNonmoveableSboBuster));
         auto someMovedNonmoveableSboBuster = std::move(someNonmoveableSboBuster);
-        auto someMoveConstructedNonmoveableSboBuster = Ichor::any(std::move(someNonmoveableSboBuster));
+        auto someMoveConstructedNonmoveableSboBuster = Ichor::v1::any(std::move(someNonmoveableSboBuster));
 
-        auto emptyAny = Ichor::any();
+        auto emptyAny = Ichor::v1::any();
         auto copyAssignedEmptyAny = emptyAny;
-        auto copyConstructedEmptyAny = Ichor::any(emptyAny);
+        auto copyConstructedEmptyAny = Ichor::v1::any(emptyAny);
         auto moveAssignedEmptyAny = std::move(emptyAny);
-        auto moveConstructedEmptyAny = Ichor::any(std::move(moveAssignedEmptyAny));
+        auto moveConstructedEmptyAny = Ichor::v1::any(std::move(moveAssignedEmptyAny));
 
         someCopiedFromConstInt = std::move(someMovedNonMoveable);
     }
@@ -331,7 +331,7 @@ TEST_CASE("STL Tests") {
             REQUIRE(*tc == 5);
         }
         {
-            ReferenceCountedPointer<int> tc = Ichor::make_reference_counted<int>(5);
+            ReferenceCountedPointer<int> tc = Ichor::v1::make_reference_counted<int>(5);
             REQUIRE(tc.use_count() == 1);
             REQUIRE(*tc == 5);
             tc = nullptr;
@@ -346,7 +346,7 @@ TEST_CASE("STL Tests") {
             REQUIRE(*tc == 5);
         }
         {
-            ReferenceCountedPointer<rc_test_class> tc = Ichor::make_reference_counted<rc_test_class>(5, 5.0f, noncopyable{});
+            ReferenceCountedPointer<rc_test_class> tc = Ichor::v1::make_reference_counted<rc_test_class>(5, 5.0f, noncopyable{});
             REQUIRE(tc.use_count() == 1);
             REQUIRE(tc->i == 5);
             REQUIRE(tc->f == 5.0f);
@@ -363,11 +363,11 @@ TEST_CASE("STL Tests") {
         {
             ReferenceCountedPointer<parent_test_class> tc{new rc_test_class(5, 5.0f, noncopyable{})};
             REQUIRE(tc.use_count() == 1);
-            tc = Ichor::make_reference_counted<rc_test_class>(5, 5.0f, noncopyable{});
+            tc = Ichor::v1::make_reference_counted<rc_test_class>(5, 5.0f, noncopyable{});
             REQUIRE(tc.use_count() == 1);
         }
         {
-            ReferenceCountedPointer<parent_test_class> tc = Ichor::make_reference_counted<rc_test_class>(5, 5.0f, noncopyable{});
+            ReferenceCountedPointer<parent_test_class> tc = Ichor::v1::make_reference_counted<rc_test_class>(5, 5.0f, noncopyable{});
             REQUIRE(tc.use_count() == 1);
         }
         {
@@ -435,23 +435,23 @@ TEST_CASE("STL Tests") {
     }
 
     SECTION("FastAtoi(u) tests") {
-        REQUIRE(Ichor::FastAtoiu("10") == 10);
-        REQUIRE(Ichor::FastAtoiu("0") == 0);
-        REQUIRE(Ichor::FastAtoiu("u10") == 0);
-        REQUIRE(Ichor::FastAtoiu("10u") == 10);
-        REQUIRE(Ichor::FastAtoiu("10"sv) == 10);
-        REQUIRE(Ichor::FastAtoiu("0"sv) == 0);
-        REQUIRE(Ichor::FastAtoiu("u10"sv) == 0);
-        REQUIRE(Ichor::FastAtoiu("10u"sv) == 10);
-        REQUIRE(Ichor::FastAtoiu(std::to_string(std::numeric_limits<uint64_t>::max()).c_str()) == std::numeric_limits<uint64_t>::max());
-        REQUIRE(Ichor::FastAtoiu(std::to_string(std::numeric_limits<uint64_t>::max())) == std::numeric_limits<uint64_t>::max());
-        REQUIRE(Ichor::FastAtoi("10") == 10);
-        REQUIRE(Ichor::FastAtoi("0") == 0);
-        REQUIRE(Ichor::FastAtoi("u10") == 0);
-        REQUIRE(Ichor::FastAtoi("10u") == 10);
-        REQUIRE(Ichor::FastAtoi("-10") == -10);
-        REQUIRE(Ichor::FastAtoi(std::to_string(std::numeric_limits<int64_t>::max()).c_str()) == std::numeric_limits<int64_t>::max());
-        REQUIRE(Ichor::FastAtoi(std::to_string(std::numeric_limits<int64_t>::min()).c_str()) == std::numeric_limits<int64_t>::min());
+        REQUIRE(Ichor::v1::FastAtoiu("10") == 10);
+        REQUIRE(Ichor::v1::FastAtoiu("0") == 0);
+        REQUIRE(Ichor::v1::FastAtoiu("u10") == 0);
+        REQUIRE(Ichor::v1::FastAtoiu("10u") == 10);
+        REQUIRE(Ichor::v1::FastAtoiu("10"sv) == 10);
+        REQUIRE(Ichor::v1::FastAtoiu("0"sv) == 0);
+        REQUIRE(Ichor::v1::FastAtoiu("u10"sv) == 0);
+        REQUIRE(Ichor::v1::FastAtoiu("10u"sv) == 10);
+        REQUIRE(Ichor::v1::FastAtoiu(std::to_string(std::numeric_limits<uint64_t>::max()).c_str()) == std::numeric_limits<uint64_t>::max());
+        REQUIRE(Ichor::v1::FastAtoiu(std::to_string(std::numeric_limits<uint64_t>::max())) == std::numeric_limits<uint64_t>::max());
+        REQUIRE(Ichor::v1::FastAtoi("10") == 10);
+        REQUIRE(Ichor::v1::FastAtoi("0") == 0);
+        REQUIRE(Ichor::v1::FastAtoi("u10") == 0);
+        REQUIRE(Ichor::v1::FastAtoi("10u") == 10);
+        REQUIRE(Ichor::v1::FastAtoi("-10") == -10);
+        REQUIRE(Ichor::v1::FastAtoi(std::to_string(std::numeric_limits<int64_t>::max()).c_str()) == std::numeric_limits<int64_t>::max());
+        REQUIRE(Ichor::v1::FastAtoi(std::to_string(std::numeric_limits<int64_t>::min()).c_str()) == std::numeric_limits<int64_t>::min());
     }
 
     SECTION("string_view split tests") {
@@ -678,13 +678,13 @@ TEST_CASE("STL Tests") {
     }
 
     SECTION("Basename tests") {
-        REQUIRE(Ichor::basename("") == ""sv);
-        REQUIRE(Ichor::basename("file.cpp") == "file.cpp"sv);
+        REQUIRE(Ichor::v1::basename("") == ""sv);
+        REQUIRE(Ichor::v1::basename("file.cpp") == "file.cpp"sv);
 #ifdef _WIN32
-        REQUIRE(Ichor::basename("path\\file.cpp") == "file.cpp"sv);
+        REQUIRE(Ichor::v1::basename("path\\file.cpp") == "file.cpp"sv);
 #else
-        REQUIRE(Ichor::basename("path/file.cpp") == "file.cpp"sv);
-        REQUIRE(Ichor::basename("more/path/file.cpp") == "file.cpp"sv);
+        REQUIRE(Ichor::v1::basename("path/file.cpp") == "file.cpp"sv);
+        REQUIRE(Ichor::v1::basename("more/path/file.cpp") == "file.cpp"sv);
 #endif
     }
 
@@ -987,18 +987,18 @@ TEST_CASE("STL Tests") {
         REQUIRE(moveSv[8] == 912);
         REQUIRE(moveSv[9] == 1234);
 
-        static_assert(sizeof(typename Detail::SizeType<255>::type) == 1, "SizeType wrong");
-        static_assert(sizeof(typename Detail::SizeType<256>::type) == 2, "SizeType wrong");
-        static_assert(sizeof(typename Detail::SizeType<65535>::type) == 2, "SizeType wrong");
-        static_assert(sizeof(typename Detail::SizeType<65536>::type) == 4, "SizeType wrong");
-        static_assert(sizeof(typename Detail::SizeType<4294967295>::type) == 4, "SizeType wrong");
+        static_assert(sizeof(typename Ichor::v1::Detail::SizeType<255>::type) == 1, "SizeType wrong");
+        static_assert(sizeof(typename Ichor::v1::Detail::SizeType<256>::type) == 2, "SizeType wrong");
+        static_assert(sizeof(typename Ichor::v1::Detail::SizeType<65535>::type) == 2, "SizeType wrong");
+        static_assert(sizeof(typename Ichor::v1::Detail::SizeType<65536>::type) == 4, "SizeType wrong");
+        static_assert(sizeof(typename Ichor::v1::Detail::SizeType<4294967295>::type) == 4, "SizeType wrong");
 #ifndef ICHOR_32_BIT
-        static_assert(sizeof(typename Detail::SizeType<4294967296>::type) == 8, "SizeType wrong");
+        static_assert(sizeof(typename Ichor::v1::Detail::SizeType<4294967296>::type) == 8, "SizeType wrong");
 #endif
-        static_assert(sizeof(Detail::UninitializedArray<int, 0>) == 1, "SizeType wrong");
-        static_assert(sizeof(Detail::UninitializedArray<int, 1>) == 4, "SizeType wrong");
-        static_assert(sizeof(Detail::AlignedByteArray<int, 0>) == 1, "SizeType wrong");
-        static_assert(sizeof(Detail::AlignedByteArray<int, 1>) == 4, "SizeType wrong");
+        static_assert(sizeof(Ichor::v1::Detail::UninitializedArray<int, 0>) == 1, "SizeType wrong");
+        static_assert(sizeof(Ichor::v1::Detail::UninitializedArray<int, 1>) == 4, "SizeType wrong");
+        static_assert(sizeof(Ichor::v1::Detail::AlignedByteArray<int, 0>) == 1, "SizeType wrong");
+        static_assert(sizeof(Ichor::v1::Detail::AlignedByteArray<int, 1>) == 4, "SizeType wrong");
 #ifdef ICHOR_32_BIT
 		static_assert(sizeof(StaticVector<int, 0>) == 8, "sizeof static vector wrong");
         static_assert(sizeof(StaticVector<int, 1>) == 12, "sizeof static vector wrong");
@@ -1008,9 +1008,9 @@ TEST_CASE("STL Tests") {
         static_assert(sizeof(StaticVector<int, 1>) == 16, "sizeof static vector wrong");
         static_assert(sizeof(StaticVector<int, 2>) == 24, "sizeof static vector wrong");
 #endif
-        static_assert(Detail::is_sufficiently_trivial<int>, "type not sufficiently trivial");
-        static_assert(Detail::is_sufficiently_trivial<noncopyable>, "type not sufficiently trivial");
-        static_assert(!Detail::is_sufficiently_trivial<sufficiently_non_trivial>, "type not sufficiently non-trivial");
+        static_assert(Ichor::v1::Detail::is_sufficiently_trivial<int>, "type not sufficiently trivial");
+        static_assert(Ichor::v1::Detail::is_sufficiently_trivial<noncopyable>, "type not sufficiently trivial");
+        static_assert(!Ichor::v1::Detail::is_sufficiently_trivial<sufficiently_non_trivial>, "type not sufficiently non-trivial");
         static_assert(std::contiguous_iterator<SVIterator<int, false>>, "iterator not contiguous");
         static_assert(std::contiguous_iterator<SVIterator<int, true>>, "iterator not contiguous");
         static_assert(std::contiguous_iterator<SVIterator<sufficiently_non_trivial, false>>, "iterator not contiguous");

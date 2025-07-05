@@ -1,7 +1,7 @@
 #pragma once
 
 
-namespace Ichor {
+namespace Ichor::v1 {
     class [[nodiscard]] EventStackUniquePtr final {
     public:
         EventStackUniquePtr() = default;

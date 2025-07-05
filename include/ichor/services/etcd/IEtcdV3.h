@@ -2,13 +2,12 @@
 
 #include <ichor/coroutines/Task.h>
 #include <ichor/stl/StringUtils.h>
-#include <string_view>
 #include <tl/optional.h>
 #include <string>
 #include <tl/expected.h>
 #include <fmt/base.h>
 
-namespace Ichor::Etcd::v3 {
+namespace Ichor::Etcdv3::v1 {
     enum class EtcdError : uint_fast16_t {
         HTTP_RESPONSE_ERROR,
         VERSION_PARSE_ERROR,
@@ -461,9 +460,9 @@ namespace Ichor::Etcd::v3 {
     };
 
     struct EtcdVersionReply final {
-        Version etcdserver;
-        Version etcdcluster;
-        tl::optional<Version> storage;
+        Ichor::v1::Version etcdserver;
+        Ichor::v1::Version etcdcluster;
+        tl::optional<Ichor::v1::Version> storage;
     };
 
     class IEtcd {
@@ -695,7 +694,7 @@ namespace Ichor::Etcd::v3 {
          * May terminate the program if called before service is started.
          * @return
          */
-        [[nodiscard]] virtual Version getDetectedVersion() const = 0;
+        [[nodiscard]] virtual Ichor::v1::Version getDetectedVersion() const = 0;
 
         /**
          * Get the health status of the etcd server that we're connected to
@@ -714,43 +713,43 @@ namespace Ichor::Etcd::v3 {
 }
 
 template <>
-struct fmt::formatter<Ichor::Etcd::v3::EtcdError> {
+struct fmt::formatter<Ichor::Etcdv3::v1::EtcdError> {
     constexpr auto parse(format_parse_context& ctx) {
         return ctx.end();
     }
 
     template <typename FormatContext>
-    auto format(const Ichor::Etcd::v3::EtcdError& state, FormatContext& ctx) const {
+    auto format(const Ichor::Etcdv3::v1::EtcdError& state, FormatContext& ctx) const {
         switch(state) {
-            case Ichor::Etcd::v3::EtcdError::HTTP_RESPONSE_ERROR:
+            case Ichor::Etcdv3::v1::EtcdError::HTTP_RESPONSE_ERROR:
                 return fmt::format_to(ctx.out(), "HTTP_RESPONSE_ERROR");
-            case Ichor::Etcd::v3::EtcdError::JSON_PARSE_ERROR:
+            case Ichor::Etcdv3::v1::EtcdError::JSON_PARSE_ERROR:
                 return fmt::format_to(ctx.out(), "JSON_PARSE_ERROR");
-            case Ichor::Etcd::v3::EtcdError::VERSION_PARSE_ERROR:
+            case Ichor::Etcdv3::v1::EtcdError::VERSION_PARSE_ERROR:
                 return fmt::format_to(ctx.out(), "VERSION_PARSE_ERROR");
-            case Ichor::Etcd::v3::EtcdError::TIMEOUT:
+            case Ichor::Etcdv3::v1::EtcdError::TIMEOUT:
                 return fmt::format_to(ctx.out(), "TIMEOUT");
-            case Ichor::Etcd::v3::EtcdError::CONNECTION_CLOSED_PREMATURELY_TRY_AGAIN:
+            case Ichor::Etcdv3::v1::EtcdError::CONNECTION_CLOSED_PREMATURELY_TRY_AGAIN:
                 return fmt::format_to(ctx.out(), "CONNECTION_CLOSED_PREMATURELY_TRY_AGAIN");
-            case Ichor::Etcd::v3::EtcdError::ROOT_USER_NOT_YET_CREATED:
+            case Ichor::Etcdv3::v1::EtcdError::ROOT_USER_NOT_YET_CREATED:
                 return fmt::format_to(ctx.out(), "ROOT_USER_NOT_YET_CREATED");
-            case Ichor::Etcd::v3::EtcdError::REMOVING_ROOT_NOT_ALLOWED_WITH_AUTH_ENABLED:
+            case Ichor::Etcdv3::v1::EtcdError::REMOVING_ROOT_NOT_ALLOWED_WITH_AUTH_ENABLED:
                 return fmt::format_to(ctx.out(), "REMOVING_ROOT_NOT_ALLOWED_WITH_AUTH_ENABLED");
-            case Ichor::Etcd::v3::EtcdError::NO_AUTHENTICATION_SET:
+            case Ichor::Etcdv3::v1::EtcdError::NO_AUTHENTICATION_SET:
                 return fmt::format_to(ctx.out(), "NO_AUTHENTICATION_SET");
-            case Ichor::Etcd::v3::EtcdError::UNAUTHORIZED:
+            case Ichor::Etcdv3::v1::EtcdError::UNAUTHORIZED:
                 return fmt::format_to(ctx.out(), "UNAUTHORIZED");
-            case Ichor::Etcd::v3::EtcdError::NOT_FOUND:
+            case Ichor::Etcdv3::v1::EtcdError::NOT_FOUND:
                 return fmt::format_to(ctx.out(), "NOT_FOUND");
-            case Ichor::Etcd::v3::EtcdError::DUPLICATE_PERMISSION_OR_REVOKING_NON_EXISTENT:
+            case Ichor::Etcdv3::v1::EtcdError::DUPLICATE_PERMISSION_OR_REVOKING_NON_EXISTENT:
                 return fmt::format_to(ctx.out(), "DUPLICATE_PERMISSION_OR_REVOKING_NON_EXISTENT");
-            case Ichor::Etcd::v3::EtcdError::CANNOT_DELETE_ROOT_WHILE_AUTH_IS_ENABLED:
+            case Ichor::Etcdv3::v1::EtcdError::CANNOT_DELETE_ROOT_WHILE_AUTH_IS_ENABLED:
                 return fmt::format_to(ctx.out(), "CANNOT_DELETE_ROOT_WHILE_AUTH_IS_ENABLED");
-            case Ichor::Etcd::v3::EtcdError::QUITTING:
+            case Ichor::Etcdv3::v1::EtcdError::QUITTING:
                 return fmt::format_to(ctx.out(), "QUITTING");
-            case Ichor::Etcd::v3::EtcdError::ETCD_SERVER_DOES_NOT_SUPPORT:
+            case Ichor::Etcdv3::v1::EtcdError::ETCD_SERVER_DOES_NOT_SUPPORT:
                 return fmt::format_to(ctx.out(), "ETCD_SERVER_DOES_NOT_SUPPORT");
-            case Ichor::Etcd::v3::EtcdError::HTTP_SEND_ERROR:
+            case Ichor::Etcdv3::v1::EtcdError::HTTP_SEND_ERROR:
                 return fmt::format_to(ctx.out(), "HTTP_SEND_ERROR");
         }
         return fmt::format_to(ctx.out(), "error, please file a bug in Ichor");
@@ -758,17 +757,17 @@ struct fmt::formatter<Ichor::Etcd::v3::EtcdError> {
 };
 
 template <>
-struct fmt::formatter<Ichor::Etcd::v3::EtcdEventType> {
+struct fmt::formatter<Ichor::Etcdv3::v1::EtcdEventType> {
     constexpr auto parse(format_parse_context& ctx) {
         return ctx.end();
     }
 
     template <typename FormatContext>
-    auto format(const Ichor::Etcd::v3::EtcdEventType& state, FormatContext& ctx) const {
+    auto format(const Ichor::Etcdv3::v1::EtcdEventType& state, FormatContext& ctx) const {
         switch(state) {
-            case Ichor::Etcd::v3::EtcdEventType::PUT:
+            case Ichor::Etcdv3::v1::EtcdEventType::PUT:
                 return fmt::format_to(ctx.out(), "PUT");
-            case Ichor::Etcd::v3::EtcdEventType::DELETE_:
+            case Ichor::Etcdv3::v1::EtcdEventType::DELETE_:
                 return fmt::format_to(ctx.out(), "DELETE");
         }
         return fmt::format_to(ctx.out(), "error, please file a bug in Ichor");
@@ -776,19 +775,19 @@ struct fmt::formatter<Ichor::Etcd::v3::EtcdEventType> {
 };
 
 template <>
-struct fmt::formatter<Ichor::Etcd::v3::EtcdSortOrder> {
+struct fmt::formatter<Ichor::Etcdv3::v1::EtcdSortOrder> {
     constexpr auto parse(format_parse_context& ctx) {
         return ctx.end();
     }
 
     template <typename FormatContext>
-    auto format(const Ichor::Etcd::v3::EtcdSortOrder& state, FormatContext& ctx) const {
+    auto format(const Ichor::Etcdv3::v1::EtcdSortOrder& state, FormatContext& ctx) const {
         switch(state) {
-            case Ichor::Etcd::v3::EtcdSortOrder::NONE:
+            case Ichor::Etcdv3::v1::EtcdSortOrder::NONE:
                 return fmt::format_to(ctx.out(), "NONE");
-            case Ichor::Etcd::v3::EtcdSortOrder::ASCEND:
+            case Ichor::Etcdv3::v1::EtcdSortOrder::ASCEND:
                 return fmt::format_to(ctx.out(), "ASCEND");
-            case Ichor::Etcd::v3::EtcdSortOrder::DESCEND:
+            case Ichor::Etcdv3::v1::EtcdSortOrder::DESCEND:
                 return fmt::format_to(ctx.out(), "DESCEND");
         }
         return fmt::format_to(ctx.out(), "error, please file a bug in Ichor");
@@ -796,23 +795,23 @@ struct fmt::formatter<Ichor::Etcd::v3::EtcdSortOrder> {
 };
 
 template <>
-struct fmt::formatter<Ichor::Etcd::v3::EtcdSortTarget> {
+struct fmt::formatter<Ichor::Etcdv3::v1::EtcdSortTarget> {
     constexpr auto parse(format_parse_context& ctx) {
         return ctx.end();
     }
 
     template <typename FormatContext>
-    auto format(const Ichor::Etcd::v3::EtcdSortTarget& state, FormatContext& ctx) const {
+    auto format(const Ichor::Etcdv3::v1::EtcdSortTarget& state, FormatContext& ctx) const {
         switch(state) {
-            case Ichor::Etcd::v3::EtcdSortTarget::KEY:
+            case Ichor::Etcdv3::v1::EtcdSortTarget::KEY:
                 return fmt::format_to(ctx.out(), "KEY");
-            case Ichor::Etcd::v3::EtcdSortTarget::VERSION:
+            case Ichor::Etcdv3::v1::EtcdSortTarget::VERSION:
                 return fmt::format_to(ctx.out(), "VERSION");
-            case Ichor::Etcd::v3::EtcdSortTarget::CREATE:
+            case Ichor::Etcdv3::v1::EtcdSortTarget::CREATE:
                 return fmt::format_to(ctx.out(), "CREATE");
-            case Ichor::Etcd::v3::EtcdSortTarget::MOD:
+            case Ichor::Etcdv3::v1::EtcdSortTarget::MOD:
                 return fmt::format_to(ctx.out(), "MOD");
-            case Ichor::Etcd::v3::EtcdSortTarget::VALUE:
+            case Ichor::Etcdv3::v1::EtcdSortTarget::VALUE:
                 return fmt::format_to(ctx.out(), "VALUE");
         }
         return fmt::format_to(ctx.out(), "error, please file a bug in Ichor");
@@ -820,21 +819,21 @@ struct fmt::formatter<Ichor::Etcd::v3::EtcdSortTarget> {
 };
 
 template <>
-struct fmt::formatter<Ichor::Etcd::v3::EtcdCompareResult> {
+struct fmt::formatter<Ichor::Etcdv3::v1::EtcdCompareResult> {
     constexpr auto parse(format_parse_context& ctx) {
         return ctx.end();
     }
 
     template <typename FormatContext>
-    auto format(const Ichor::Etcd::v3::EtcdCompareResult& state, FormatContext& ctx) const {
+    auto format(const Ichor::Etcdv3::v1::EtcdCompareResult& state, FormatContext& ctx) const {
         switch(state) {
-            case Ichor::Etcd::v3::EtcdCompareResult::EQUAL:
+            case Ichor::Etcdv3::v1::EtcdCompareResult::EQUAL:
                 return fmt::format_to(ctx.out(), "EQUAL");
-            case Ichor::Etcd::v3::EtcdCompareResult::GREATER:
+            case Ichor::Etcdv3::v1::EtcdCompareResult::GREATER:
                 return fmt::format_to(ctx.out(), "GREATER");
-            case Ichor::Etcd::v3::EtcdCompareResult::LESS:
+            case Ichor::Etcdv3::v1::EtcdCompareResult::LESS:
                 return fmt::format_to(ctx.out(), "LESS");
-            case Ichor::Etcd::v3::EtcdCompareResult::NOT_EQUAL:
+            case Ichor::Etcdv3::v1::EtcdCompareResult::NOT_EQUAL:
                 return fmt::format_to(ctx.out(), "NOT_EQUAL");
         }
         return fmt::format_to(ctx.out(), "error, please file a bug in Ichor");
@@ -842,23 +841,23 @@ struct fmt::formatter<Ichor::Etcd::v3::EtcdCompareResult> {
 };
 
 template <>
-struct fmt::formatter<Ichor::Etcd::v3::EtcdCompareTarget> {
+struct fmt::formatter<Ichor::Etcdv3::v1::EtcdCompareTarget> {
     constexpr auto parse(format_parse_context& ctx) {
         return ctx.end();
     }
 
     template <typename FormatContext>
-    auto format(const Ichor::Etcd::v3::EtcdCompareTarget& state, FormatContext& ctx) const {
+    auto format(const Ichor::Etcdv3::v1::EtcdCompareTarget& state, FormatContext& ctx) const {
         switch(state) {
-            case Ichor::Etcd::v3::EtcdCompareTarget::VERSION:
+            case Ichor::Etcdv3::v1::EtcdCompareTarget::VERSION:
                 return fmt::format_to(ctx.out(), "VERSION");
-            case Ichor::Etcd::v3::EtcdCompareTarget::CREATE:
+            case Ichor::Etcdv3::v1::EtcdCompareTarget::CREATE:
                 return fmt::format_to(ctx.out(), "CREATE");
-            case Ichor::Etcd::v3::EtcdCompareTarget::MOD:
+            case Ichor::Etcdv3::v1::EtcdCompareTarget::MOD:
                 return fmt::format_to(ctx.out(), "MOD");
-            case Ichor::Etcd::v3::EtcdCompareTarget::VALUE:
+            case Ichor::Etcdv3::v1::EtcdCompareTarget::VALUE:
                 return fmt::format_to(ctx.out(), "VALUE");
-            case Ichor::Etcd::v3::EtcdCompareTarget::LEASE:
+            case Ichor::Etcdv3::v1::EtcdCompareTarget::LEASE:
                 return fmt::format_to(ctx.out(), "LEASE");
         }
         return fmt::format_to(ctx.out(), "error, please file a bug in Ichor");
@@ -866,19 +865,19 @@ struct fmt::formatter<Ichor::Etcd::v3::EtcdCompareTarget> {
 };
 
 template <>
-struct fmt::formatter<Ichor::Etcd::v3::EtcdAuthPermissionType> {
+struct fmt::formatter<Ichor::Etcdv3::v1::EtcdAuthPermissionType> {
     constexpr auto parse(format_parse_context& ctx) {
         return ctx.end();
     }
 
     template <typename FormatContext>
-    auto format(const Ichor::Etcd::v3::EtcdAuthPermissionType& state, FormatContext& ctx) const {
+    auto format(const Ichor::Etcdv3::v1::EtcdAuthPermissionType& state, FormatContext& ctx) const {
         switch(state) {
-            case Ichor::Etcd::v3::EtcdAuthPermissionType::READ:
+            case Ichor::Etcdv3::v1::EtcdAuthPermissionType::READ:
                 return fmt::format_to(ctx.out(), "READ");
-            case Ichor::Etcd::v3::EtcdAuthPermissionType::WRITE:
+            case Ichor::Etcdv3::v1::EtcdAuthPermissionType::WRITE:
                 return fmt::format_to(ctx.out(), "WRITE");
-            case Ichor::Etcd::v3::EtcdAuthPermissionType::READWRITE:
+            case Ichor::Etcdv3::v1::EtcdAuthPermissionType::READWRITE:
                 return fmt::format_to(ctx.out(), "READWRITE");
         }
         return fmt::format_to(ctx.out(), "error, please file a bug in Ichor");

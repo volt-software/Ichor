@@ -7,7 +7,7 @@
 #endif
 
 // Differs from std::mutex by setting some extra properties when creating the mutex
-namespace Ichor {
+namespace Ichor::v1 {
     class RealtimeMutex final {
     public:
 #if (defined(WIN32) || defined(_WIN32) || defined(__WIN32)) && !defined(__CYGWIN__)

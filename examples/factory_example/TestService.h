@@ -7,6 +7,7 @@
 #include "RuntimeCreatedService.h"
 
 using namespace Ichor;
+using namespace Ichor::v1;
 
 class TestService final : public AdvancedService<TestService> {
 public:
@@ -41,7 +42,7 @@ private:
     void addDependencyInstance(IRuntimeCreatedService &svc, IService &isvc) {
         auto const ownScopeProp = getProperties().find("scope");
         auto const svcScopeProp = isvc.getProperties().find("scope");
-        ICHOR_LOG_INFO(_logger, "Inserted IRuntimeCreatedService svcid {} with scope {} for svcid {} with scope {}", isvc.getServiceId(), Ichor::any_cast<std::string&>(svcScopeProp->second), getServiceId(), Ichor::any_cast<std::string&>(ownScopeProp->second));
+        ICHOR_LOG_INFO(_logger, "Inserted IRuntimeCreatedService svcid {} with scope {} for svcid {} with scope {}", isvc.getServiceId(), Ichor::v1::any_cast<std::string&>(svcScopeProp->second), getServiceId(), Ichor::v1::any_cast<std::string&>(ownScopeProp->second));
     }
 
     void removeDependencyInstance(IRuntimeCreatedService&, IService&) {

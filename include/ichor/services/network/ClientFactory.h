@@ -6,7 +6,7 @@
 #include <ichor/DependencyManager.h>
 #include <ichor/Filter.h>
 
-namespace Ichor {
+namespace Ichor::v1 {
     using ConnectionCounterType = uint64_t;
 
     template <typename NetworkType, typename NetworkInterfaceType = IConnectionService>
@@ -19,7 +19,7 @@ namespace Ichor {
 
         uint64_t createNewConnection(NeverNull<IService*> requestingSvc, Properties properties) final {
             properties.erase("Filter");
-            properties.emplace("Filter", Ichor::make_any<Filter>(ServiceIdFilterEntry{requestingSvc->getServiceId()}));
+            properties.emplace("Filter", Ichor::v1::make_any<Filter>(ServiceIdFilterEntry{requestingSvc->getServiceId()}));
             ConnectionCounterType count = _connectionCounter++;
 
             ICHOR_LOG_TRACE(_logger, "Creating new connection {}", count);
@@ -73,7 +73,7 @@ namespace Ichor {
             co_return;
         }
 
-        AsyncGenerator<IchorBehaviour> handleDependencyRequest(AlwaysNull<NetworkInterfaceType*>, DependencyRequestEvent const &evt) {
+        AsyncGenerator<IchorBehaviour> handleDependencyRequest(v1::AlwaysNull<NetworkInterfaceType*>, DependencyRequestEvent const &evt) {
             if(!evt.properties.has_value()) {
                 ICHOR_LOG_TRACE(_logger, "Missing properties when creating new connection {}", evt.originatingService);
                 co_return {};
@@ -93,7 +93,7 @@ namespace Ichor {
                 fmt::println("{} creating {} for {}", typeName<ClientFactory<NetworkType, NetworkInterfaceType>>(), typeName<NetworkInterfaceType>(), evt.originatingService);
                 auto newProps = *evt.properties.value();
                 newProps.erase("Filter");
-                newProps.emplace("Filter", Ichor::make_any<Filter>(ServiceIdFilterEntry{evt.originatingService}));
+                newProps.emplace("Filter", Ichor::v1::make_any<Filter>(ServiceIdFilterEntry{evt.originatingService}));
 
                 unordered_map<ConnectionCounterType, ServiceIdType> newMap;
                 newMap.emplace(_connectionCounter++, GetThreadLocalManager().template createServiceManager<NetworkType, NetworkInterfaceType>(std::move(newProps), evt.priority)->getServiceId());
@@ -103,7 +103,7 @@ namespace Ichor {
             co_return {};
         }
 
-        AsyncGenerator<IchorBehaviour> handleDependencyUndoRequest(AlwaysNull<NetworkInterfaceType*>, DependencyUndoRequestEvent const &evt) {
+        AsyncGenerator<IchorBehaviour> handleDependencyUndoRequest(v1::AlwaysNull<NetworkInterfaceType*>, DependencyUndoRequestEvent const &evt) {
             auto existingConnections = _connections.find(evt.originatingService);
 
             if(existingConnections != end(_connections)) {

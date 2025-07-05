@@ -8,7 +8,7 @@
 #endif
 
 // Differs from std::condition_variable by working on steady clock only, using a reference instead of allocating memory and uses RealtimeMutex rather than needing std::condition_variable_any
-namespace Ichor {
+namespace Ichor::v1 {
 #if (defined(WIN32) || defined(_WIN32) || defined(__WIN32) || defined(__APPLE__) || defined(ICHOR_MUSL)) && !defined(__CYGWIN__)
     using ConditionVariable = std::condition_variable_any;
 #else

@@ -24,11 +24,11 @@ namespace Ichor::Detail {
             return {};
         }
 
-        StartBehaviour dependencyOnline(NeverNull<ILifecycleManager*> dependentService) final {
+        StartBehaviour dependencyOnline(v1::NeverNull<ILifecycleManager*> dependentService) final {
             return StartBehaviour::DONE;
         }
 
-        AsyncGenerator<StartBehaviour> dependencyOffline(NeverNull<ILifecycleManager*> dependentService, std::vector<Dependency*> deps) final {
+        AsyncGenerator<StartBehaviour> dependencyOffline(v1::NeverNull<ILifecycleManager*> dependentService, std::vector<Dependency*> deps) final {
             // this function should never be called
             std::terminate();
         }
@@ -99,11 +99,11 @@ namespace Ichor::Detail {
             return _service.getServiceState();
         }
 
-        [[nodiscard]] NeverNull<IService*> getIService() noexcept final {
+        [[nodiscard]] v1::NeverNull<IService*> getIService() noexcept final {
             return &_service;
         }
 
-        [[nodiscard]] NeverNull<IService const*> getIService() const noexcept final {
+        [[nodiscard]] v1::NeverNull<IService const*> getIService() const noexcept final {
             return &_service;
         }
 
@@ -123,7 +123,7 @@ namespace Ichor::Detail {
         /// \param keyOfInterfaceToInject
         /// \param serviceIdOfOther
         /// \param fn
-        void insertSelfInto(uint64_t keyOfInterfaceToInject, uint64_t serviceIdOfOther, std::function<void(NeverNull<void*>, IService&)> &fn) final {
+        void insertSelfInto(uint64_t keyOfInterfaceToInject, uint64_t serviceIdOfOther, std::function<void(v1::NeverNull<void*>, IService&)> &fn) final {
             if(keyOfInterfaceToInject != typeNameHash<ServiceType>()) {
                 return;
             }
@@ -137,7 +137,7 @@ namespace Ichor::Detail {
         /// \param keyOfInterfaceToInject
         /// \param serviceIdOfOther
         /// \param fn
-        void removeSelfInto(uint64_t keyOfInterfaceToInject, uint64_t serviceIdOfOther, std::function<void(NeverNull<void*>, IService&)> &fn) final {
+        void removeSelfInto(uint64_t keyOfInterfaceToInject, uint64_t serviceIdOfOther, std::function<void(v1::NeverNull<void*>, IService&)> &fn) final {
             if(keyOfInterfaceToInject != typeNameHash<ServiceType>()) {
                 return;
             }
@@ -150,7 +150,7 @@ namespace Ichor::Detail {
     private:
         ServiceType *_q;
         unordered_set<uint64_t> _serviceIdsOfDependees; // services that depend on this service
-        StaticVector<Dependency, 1> _interfaces;
+        v1::StaticVector<Dependency, 1> _interfaces;
         InternalService<ServiceType> _service;
     };
 }

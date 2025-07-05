@@ -45,7 +45,7 @@ namespace Ichor {
 
     /// When a new service gets created that requests dependencies, each dependency it requests adds this event
     struct DependencyRequestEvent final : public Event {
-        explicit DependencyRequestEvent(uint64_t _id, ServiceIdType _originatingService, uint64_t _priority, Dependency _dependency, tl::optional<NeverNull<Properties const *>> _properties) noexcept :
+        explicit DependencyRequestEvent(uint64_t _id, ServiceIdType _originatingService, uint64_t _priority, Dependency _dependency, tl::optional<v1::NeverNull<Properties const *>> _properties) noexcept :
                 Event(_id, _originatingService, _priority), dependency(_dependency), properties{_properties} {}
         ~DependencyRequestEvent() final = default;
 
@@ -57,7 +57,7 @@ namespace Ichor {
         }
 
         Dependency dependency;
-        tl::optional<NeverNull<Properties const *>> properties;
+        tl::optional<v1::NeverNull<Properties const *>> properties;
         static constexpr NameHashType TYPE = typeNameHash<DependencyRequestEvent>();
         static constexpr std::string_view NAME = typeName<DependencyRequestEvent>();
     };

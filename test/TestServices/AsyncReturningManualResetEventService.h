@@ -1,6 +1,7 @@
 #pragma once
 
 using namespace Ichor;
+using namespace Ichor::v1;
 
 struct NoCopyNoMove {
     NoCopyNoMove() {

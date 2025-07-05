@@ -19,7 +19,8 @@
 #include <ichor/glaze.h>
 #include <glaze/util/type_traits.hpp>
 
-using namespace Ichor::Etcd::v3;
+using namespace Ichor::Etcdv3::v1;
+using namespace Ichor::v1;
 
 namespace {
     struct EtcdInternalVersionReply final {
@@ -1135,7 +1136,7 @@ void EtcdService::removeDependencyInstance(IClientFactory&, IService&) {
 }
 
 template <typename ReqT, typename RespT>
-static Ichor::Task<tl::expected<RespT, EtcdError>> execute_request(std::string url, tl::optional<std::string> &auth, Ichor::ILogger *logger, Ichor::IHttpConnectionService* conn, ReqT const &req) {
+static Ichor::Task<tl::expected<RespT, EtcdError>> execute_request(std::string url, tl::optional<std::string> &auth, ILogger *logger, IHttpConnectionService* conn, ReqT const &req) {
     using namespace Ichor;
     unordered_map<std::string, std::string> headers{};
 
@@ -1478,7 +1479,7 @@ Ichor::Task<tl::expected<EtcdVersionReply, EtcdError>> EtcdService::version() {
     co_return EtcdVersionReply{*etcdserverver, *etcdclusterver, etcdstoragever};
 }
 
-Ichor::Version EtcdService::getDetectedVersion() const {
+Ichor::v1::Version EtcdService::getDetectedVersion() const {
     if(!isStarted()) [[unlikely]] {
         std::terminate();
     }

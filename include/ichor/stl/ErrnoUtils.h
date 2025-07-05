@@ -5,7 +5,7 @@
 #include <cerrno>
 #include <fmt/base.h>
 
-namespace Ichor {
+namespace Ichor::v1 {
     enum class IOError : uint_fast16_t {
         // catch-all error
         FAILED,
@@ -45,7 +45,7 @@ namespace Ichor {
     /*
      * Function to make an errno indicator to an Ichor IOError. Returns IOError::FAILED if it doesn't recognize the number.
      */
-    [[nodiscard]] static constexpr Ichor::IOError mapErrnoToError(std::remove_cvref_t<decltype(errno)> err) noexcept {
+    [[nodiscard]] static constexpr IOError mapErrnoToError(std::remove_cvref_t<decltype(errno)> err) noexcept {
         if(err == EACCES || err == EFAULT || err == EPERM) {
             return IOError::NO_PERMISSION;
         } else if(err == EINTR) {
@@ -101,71 +101,71 @@ namespace Ichor {
 
 
 template <>
-struct fmt::formatter<Ichor::IOError> {
+struct fmt::formatter<Ichor::v1::IOError> {
     constexpr auto parse(format_parse_context& ctx) {
         return ctx.end();
     }
 
     template <typename FormatContext>
-    auto format(const Ichor::IOError& change, FormatContext& ctx) const {
+    auto format(const Ichor::v1::IOError& change, FormatContext& ctx) const {
         switch(change) {
-            case Ichor::IOError::FAILED:
+            case Ichor::v1::IOError::FAILED:
                 return fmt::format_to(ctx.out(), "FAILED");
-            case Ichor::IOError::SERVICE_QUITTING:
+            case Ichor::v1::IOError::SERVICE_QUITTING:
                 return fmt::format_to(ctx.out(), "SERVICE_QUITTING");
-            case Ichor::IOError::FILE_DOES_NOT_EXIST:
+            case Ichor::v1::IOError::FILE_DOES_NOT_EXIST:
                 return fmt::format_to(ctx.out(), "FILE_DOES_NOT_EXIST");
-            case Ichor::IOError::NO_PERMISSION:
+            case Ichor::v1::IOError::NO_PERMISSION:
                 return fmt::format_to(ctx.out(), "NO_PERMISSION");
-            case Ichor::IOError::IS_DIR_SHOULD_BE_FILE:
+            case Ichor::v1::IOError::IS_DIR_SHOULD_BE_FILE:
                 return fmt::format_to(ctx.out(), "IS_DIR_SHOULD_BE_FILE");
-            case Ichor::IOError::IS_FILE_SHOULD_BE_DIR:
+            case Ichor::v1::IOError::IS_FILE_SHOULD_BE_DIR:
                 return fmt::format_to(ctx.out(), "IS_FILE_SHOULD_BE_DIR");
-            case Ichor::IOError::INTERRUPTED_BY_SIGNAL:
+            case Ichor::v1::IOError::INTERRUPTED_BY_SIGNAL:
                 return fmt::format_to(ctx.out(), "INTERRUPTED_BY_SIGNAL");
-            case Ichor::IOError::BASENAME_CONTAINS_INVALID_CHARACTERS:
+            case Ichor::v1::IOError::BASENAME_CONTAINS_INVALID_CHARACTERS:
                 return fmt::format_to(ctx.out(), "BASENAME_CONTAINS_INVALID_CHARACTERS");
-            case Ichor::IOError::TOO_MANY_SYMBOLIC_LINKS:
+            case Ichor::v1::IOError::TOO_MANY_SYMBOLIC_LINKS:
                 return fmt::format_to(ctx.out(), "TOO_MANY_SYMBOLIC_LINKS");
-            case Ichor::IOError::PER_PROCESS_LIMIT_REACHED:
+            case Ichor::v1::IOError::PER_PROCESS_LIMIT_REACHED:
                 return fmt::format_to(ctx.out(), "PER_PROCESS_LIMIT_REACHED");
-            case Ichor::IOError::FILEPATH_TOO_LONG:
+            case Ichor::v1::IOError::FILEPATH_TOO_LONG:
                 return fmt::format_to(ctx.out(), "FILEPATH_TOO_LONG");
-            case Ichor::IOError::SERVICE_STOPPED:
+            case Ichor::v1::IOError::SERVICE_STOPPED:
                 return fmt::format_to(ctx.out(), "SERVICE_STOPPED");
-            case Ichor::IOError::FILE_SIZE_TOO_BIG:
+            case Ichor::v1::IOError::FILE_SIZE_TOO_BIG:
                 return fmt::format_to(ctx.out(), "FILE_SIZE_TOO_BIG");
-            case Ichor::IOError::SYSTEM_BUG:
+            case Ichor::v1::IOError::SYSTEM_BUG:
                 return fmt::format_to(ctx.out(), "SYSTEM_BUG");
-            case Ichor::IOError::READ_ONLY_FS:
+            case Ichor::v1::IOError::READ_ONLY_FS:
                 return fmt::format_to(ctx.out(), "READ_ONLY_FS");
-            case Ichor::IOError::USER_QUOTA_REACHED:
+            case Ichor::v1::IOError::USER_QUOTA_REACHED:
                 return fmt::format_to(ctx.out(), "USER_QUOTA_REACHED");
-            case Ichor::IOError::NO_SPACE_LEFT:
+            case Ichor::v1::IOError::NO_SPACE_LEFT:
                 return fmt::format_to(ctx.out(), "NO_SPACE_LEFT");
-            case Ichor::IOError::IO_ERROR:
+            case Ichor::v1::IOError::IO_ERROR:
                 return fmt::format_to(ctx.out(), "IO_ERROR");
-            case Ichor::IOError::BAD_FILE_DESCRIPTOR:
+            case Ichor::v1::IOError::BAD_FILE_DESCRIPTOR:
                 return fmt::format_to(ctx.out(), "BAD_FILE_DESCRIPTOR");
-            case Ichor::IOError::NOT_CONNECTED:
+            case Ichor::v1::IOError::NOT_CONNECTED:
                 return fmt::format_to(ctx.out(), "NOT_CONNECTED");
-            case Ichor::IOError::NOT_A_SOCKET:
+            case Ichor::v1::IOError::NOT_A_SOCKET:
                 return fmt::format_to(ctx.out(), "NOT_A_SOCKET");
-            case Ichor::IOError::MESSAGE_SIZE_TOO_BIG:
+            case Ichor::v1::IOError::MESSAGE_SIZE_TOO_BIG:
                 return fmt::format_to(ctx.out(), "MESSAGE_SIZE_TOO_BIG");
-            case Ichor::IOError::CONNECTION_RESET:
+            case Ichor::v1::IOError::CONNECTION_RESET:
                 return fmt::format_to(ctx.out(), "CONNECTION_RESET");
-            case Ichor::IOError::DESTINATION_ADDRESS_REQUIRED:
+            case Ichor::v1::IOError::DESTINATION_ADDRESS_REQUIRED:
                 return fmt::format_to(ctx.out(), "DESTINATION_ADDRESS_REQUIRED");
-            case Ichor::IOError::ALREADY_CONNECTED:
+            case Ichor::v1::IOError::ALREADY_CONNECTED:
                 return fmt::format_to(ctx.out(), "ALREADY_CONNECTED");
-            case Ichor::IOError::NETWORK_INTERFACE_OUTPUT_QUEUE_FULL:
+            case Ichor::v1::IOError::NETWORK_INTERFACE_OUTPUT_QUEUE_FULL:
                 return fmt::format_to(ctx.out(), "NETWORK_INTERFACE_OUTPUT_QUEUE_FULL");
-            case Ichor::IOError::NO_MEMORY_AVAILABLE:
+            case Ichor::v1::IOError::NO_MEMORY_AVAILABLE:
                 return fmt::format_to(ctx.out(), "NO_MEMORY_AVAILABLE");
-            case Ichor::IOError::NOT_SUPPORTED:
+            case Ichor::v1::IOError::NOT_SUPPORTED:
                 return fmt::format_to(ctx.out(), "NOT_SUPPORTED");
-            case Ichor::IOError::KERNEL_TOO_OLD:
+            case Ichor::v1::IOError::KERNEL_TOO_OLD:
                 return fmt::format_to(ctx.out(), "KERNEL_TOO_OLD");
         }
         return fmt::format_to(ctx.out(), "error, please file a bug in Ichor");

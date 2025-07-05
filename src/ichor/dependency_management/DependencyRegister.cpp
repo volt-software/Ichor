@@ -25,7 +25,7 @@ namespace Ichor {
         return std::cend(_registrations);
     }
 
-    using PairType = std::pair<uint64_t, const std::tuple<Dependency, std::function<void(NeverNull<void*>, IService&)>, std::function<void(NeverNull<void*>, IService&)>, tl::optional<Properties>>>;
+    using PairType = std::pair<uint64_t, const std::tuple<Dependency, std::function<void(v1::NeverNull<void*>, IService&)>, std::function<void(v1::NeverNull<void*>, IService&)>, tl::optional<Properties>>>;
 
     [[nodiscard]]
     bool DependencyRegister::contains(const Dependency &dependency) const noexcept {

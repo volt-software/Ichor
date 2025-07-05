@@ -8,6 +8,7 @@
 #include <ichor/ichor-mimalloc.h>
 
 using namespace Ichor;
+using namespace Ichor::v1;
 
 void waitForRunning(DependencyManager &dm) {
     while(!dm.isRunning()) {

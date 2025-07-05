@@ -77,18 +77,18 @@ int main(int argc, char *argv[]) {
 #endif
 
     if(verbosity > 0) {
-        dm.createServiceManager<FRAMEWORK_LOGGER_TYPE, IFrameworkLogger>(Properties{{"LogLevel", Ichor::make_any<LogLevel>(level)}});
+        dm.createServiceManager<FRAMEWORK_LOGGER_TYPE, IFrameworkLogger>(Properties{{"LogLevel", Ichor::v1::make_any<LogLevel>(level)}});
     }
 
     if(silent) {
         dm.createServiceManager<LoggerFactory<NullLogger>, ILoggerFactory>();
     } else {
-        dm.createServiceManager<LoggerFactory<LOGGER_TYPE>, ILoggerFactory>(Properties{{"DefaultLogLevel", Ichor::make_any<LogLevel>(level)}});
+        dm.createServiceManager<LoggerFactory<LOGGER_TYPE>, ILoggerFactory>(Properties{{"DefaultLogLevel", Ichor::v1::make_any<LogLevel>(level)}});
     }
 
     dm.createServiceManager<PingMsgJsonSerializer, ISerializer<PingMsg>>();
-    dm.createServiceManager<ClientFactory<Boost::HttpConnectionService, IHttpConnectionService>, IClientFactory>();
-    dm.createServiceManager<PingService>(Properties{{"Address", Ichor::make_any<std::string>(address)}, {"Port", Ichor::make_any<uint16_t>(static_cast<uint16_t>(8001))}, {"NoDelay", Ichor::make_any<bool>(true)}});
+    dm.createServiceManager<ClientFactory<Boost::v1::HttpConnectionService, IHttpConnectionService>, IClientFactory>();
+    dm.createServiceManager<PingService>(Properties{{"Address", Ichor::v1::make_any<std::string>(address)}, {"Port", Ichor::v1::make_any<uint16_t>(static_cast<uint16_t>(8001))}, {"NoDelay", Ichor::v1::make_any<bool>(true)}});
     dm.createServiceManager<TimerFactoryFactory>();
     queue->start(CaptureSigInt);
     auto end = std::chrono::steady_clock::now();

@@ -16,6 +16,7 @@ constexpr uint32_t EVENT_COUNT = 5'000'000;
 #endif
 
 using namespace Ichor;
+using namespace Ichor::v1;
 
 struct UselessEvent final : public Event {
     explicit UselessEvent(uint64_t _id, uint64_t _originatingService, uint64_t _priority) noexcept :
