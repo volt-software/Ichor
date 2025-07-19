@@ -58,7 +58,6 @@ option(ICHOR_BUILD_COVERAGE "Build ichor with coverage" OFF)
 option(ICHOR_USE_SPDLOG "Use spdlog as framework logging implementation" OFF)
 cmake_dependent_option(ICHOR_USE_SANITIZERS "Enable sanitizers, catching potential errors but slowing down compilation and execution speed" $ICHOR_BUILDING_DEBUG "NOT ICHOR_MUSL" OFF)
 cmake_dependent_option(ICHOR_USE_THREAD_SANITIZER "Enable thread sanitizer, catching potential threading errors but slowing down compilation and execution speed. Cannot be combined with ICHOR_USE_SANITIZERS" OFF "NOT WIN32" OFF)
-cmake_dependent_option(ICHOR_USE_BOOST_BEAST "Add boost asio and boost BEAST as dependencies" OFF "NOT ICHOR_USE_SANITIZERS AND NOT ICHOR_USE_THREAD_SANITIZER" OFF)
 option(ICHOR_USE_UGLY_HACK_EXCEPTION_CATCHING "Enable an ugly hack on gcc to enable debugging the point where exceptions are thrown. Useful for debugging boost asio/beast backtraces." OFF)
 option(ICHOR_REMOVE_SOURCE_NAMES "Remove compiling source file names and line numbers when logging." $ICHOR_BUILDING_DEBUG)
 cmake_dependent_option(ICHOR_USE_MOLD "Use mold when linking, recommended to use with gcc 12+ or clang" OFF "NOT WIN32" OFF)
@@ -76,6 +75,12 @@ option(ICHOR_USE_BACKWARD "Use backward-cpp to print stacktraces on crashes or w
 option(ICHOR_USE_HIREDIS "Add hiredis dependency" OFF)
 option(ICHOR_MUSL "Use when building for musl instead of glibc" OFF)
 option(ICHOR_AARCH64 "Use when building for aarch64. Turns off some x86-specific compiler flags." OFF)
+
+find_package(OpenSSL 3.0.0 REQUIRED)
+
+cmake_dependent_option(ICHOR_USE_OPENSSL "Support using OpenSSL for TLS" ON "OpenSSL_FOUND" OFF)
+cmake_dependent_option(ICHOR_USE_BOOST_BEAST "Add boost asio and boost BEAST as dependencies" OFF "NOT ICHOR_USE_SANITIZERS AND NOT ICHOR_USE_THREAD_SANITIZER AND ICHOR_USE_OPENSSL" OFF)
+
 
 # see https://github.com/llvm/llvm-project/issues/121704
 if(CMAKE_BUILD_TYPE STREQUAL "Release" AND NOT (ICHOR_COMPILER_ID STREQUAL "clang" AND ICHOR_USE_SANITIZERS))
@@ -127,7 +132,8 @@ file(GLOB_RECURSE ICHOR_HTTP_SOURCES ${ICHOR_TOP_DIR}/src/services/network/http/
 file(GLOB_RECURSE ICHOR_BOOST_BEAST_SOURCES ${ICHOR_TOP_DIR}/src/services/network/boost/*.cpp)
 file(GLOB_RECURSE ICHOR_METRICS_SOURCES ${ICHOR_TOP_DIR}/src/services/metrics/*.cpp)
 file(GLOB_RECURSE ICHOR_TIMER_SOURCES ${ICHOR_TOP_DIR}/src/services/timer/Timer.cpp ${ICHOR_TOP_DIR}/src/services/timer/TimerFactoryFactory.cpp)
-file(GLOB_RECURSE ICHOR_OPTIONAL_HIREDIS_SOURCES ${ICHOR_TOP_DIR}/src/services/redis/*.cpp)
+file(GLOB_RECURSE ICHOR_HIREDIS_SOURCES ${ICHOR_TOP_DIR}/src/services/redis/*.cpp)
+file(GLOB_RECURSE ICHOR_OPENSSL_SOURCES ${ICHOR_TOP_DIR}/src/services/ssl/OpenSSLService.cpp ${ICHOR_TOP_DIR}/src/services/ssl/OpenSSLFactory.cpp)
 file(GLOB_RECURSE ICHOR_BASE64_SOURCES ${ICHOR_TOP_DIR}/src/base64/*.cpp)
 file(GLOB_RECURSE ICHOR_STL_SOURCES ${ICHOR_TOP_DIR}/src/ichor/stl/Any.cpp ${ICHOR_TOP_DIR}/src/ichor/stl/AsyncSingleThreadedMutex.cpp ${ICHOR_TOP_DIR}/src/ichor/stl/LinuxUtils.cpp ${ICHOR_TOP_DIR}/src/ichor/stl/StringUtils.cpp)
 
@@ -575,9 +581,6 @@ if(ICHOR_USE_BOOST_BEAST) #beast
     target_include_directories(ichor PUBLIC ${Boost_INCLUDE_DIRS})
     target_link_directories(ichor PUBLIC ${Boost_LIBRARY_DIRS})
     target_link_libraries(ichor PUBLIC ${Boost_LIBRARIES})
-    find_package(OpenSSL REQUIRED)
-    target_include_directories(ichor PUBLIC ${OPENSSL_INCLUDE_DIR})
-    target_link_libraries(ichor PUBLIC ${OPENSSL_LIBRARIES})
     #_SILENCE_ALL_CXX23_DEPRECATION_WARNINGS -> MSVC gives warnings on things like std::aligned_storage, which is still valid in C++20.
     target_compile_definitions(ichor PUBLIC BOOST_ASIO_NO_DEPRECATED _SILENCE_ALL_CXX23_DEPRECATION_WARNINGS)
 
@@ -595,7 +598,15 @@ if(ICHOR_USE_HIREDIS)
     target_link_libraries(ichor PUBLIC hiredis)
     target_compile_definitions(ichor PUBLIC ICHOR_USE_HIREDIS)
 
-    target_sources(ichor PRIVATE ${ICHOR_OPTIONAL_HIREDIS_SOURCES})
+    target_sources(ichor PRIVATE ${ICHOR_HIREDIS_SOURCES})
+endif()
+
+if(ICHOR_USE_OPENSSL)
+    target_include_directories(ichor PUBLIC ${OPENSSL_INCLUDE_DIR})
+    target_link_libraries(ichor PUBLIC ${OPENSSL_LIBRARIES})
+    target_compile_definitions(ichor PUBLIC ICHOR_USE_OPENSSL)
+
+    target_sources(ichor PRIVATE ${ICHOR_OPENSSL_SOURCES})
 endif()
 
 target_link_libraries(ichor PUBLIC ${CMAKE_THREAD_LIBS_INIT})
