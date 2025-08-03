@@ -39,7 +39,7 @@ TEST_CASE("HttpConnectionTests") {
     REQUIRE(conn.getService().rcvHandler);
 
     SECTION("GET basic") {
-        auto f = [&]() mutable -> AsyncGenerator<tl::expected<HttpResponse, HttpError>> {
+        auto f = [&]() -> AsyncGenerator<tl::expected<HttpResponse, HttpError>> {
             co_return co_await svc.getService().sendAsync(HttpMethod::get, "/some/route", {}, {});
         };
         auto gen2 = f();
@@ -63,7 +63,7 @@ TEST_CASE("HttpConnectionTests") {
     }
 
     SECTION("GET basic in multiple receives") {
-        auto f = [&]() mutable -> AsyncGenerator<tl::expected<HttpResponse, HttpError>> {
+        auto f = [&]() -> AsyncGenerator<tl::expected<HttpResponse, HttpError>> {
             unordered_map<std::string, std::string> headers;
             headers.emplace("testheader", "test");
             co_return co_await svc.getService().sendAsync(HttpMethod::get, "/some/route", std::move(headers), {});
@@ -93,7 +93,7 @@ TEST_CASE("HttpConnectionTests") {
     }
 
     SECTION("GET multiple in buffer") {
-        auto f = [&]() mutable -> AsyncGenerator<tl::expected<HttpResponse, HttpError>> {
+        auto f = [&]() -> AsyncGenerator<tl::expected<HttpResponse, HttpError>> {
             unordered_map<std::string, std::string> headers;
             headers.emplace("testheader", "test");
             co_return co_await svc.getService().sendAsync(HttpMethod::get, "/some/route", std::move(headers), {});
@@ -134,7 +134,7 @@ TEST_CASE("HttpConnectionTests") {
     }
 
     SECTION("POST request with body") {
-        auto f = [&]() mutable -> AsyncGenerator<tl::expected<HttpResponse, HttpError>> {
+        auto f = [&]() -> AsyncGenerator<tl::expected<HttpResponse, HttpError>> {
             unordered_map<std::string, std::string> headers;
             headers.emplace("testheader", "test");
             std::string_view body_view = "<html><body>This is my basic webpa\r\n</body></html>";
@@ -162,7 +162,7 @@ TEST_CASE("HttpConnectionTests") {
     }
 
     SECTION("GET response with body") {
-        auto f = [&]() mutable -> AsyncGenerator<tl::expected<HttpResponse, HttpError>> {
+        auto f = [&]() -> AsyncGenerator<tl::expected<HttpResponse, HttpError>> {
             co_return co_await svc.getService().sendAsync(HttpMethod::get, "/some/route", {}, {});
         };
         auto gen2 = f();
@@ -188,7 +188,7 @@ TEST_CASE("HttpConnectionTests") {
     }
 
     SECTION("GET response with body in two packets") {
-        auto f = [&]() mutable -> AsyncGenerator<tl::expected<HttpResponse, HttpError>> {
+        auto f = [&]() -> AsyncGenerator<tl::expected<HttpResponse, HttpError>> {
             co_return co_await svc.getService().sendAsync(HttpMethod::get, "/some/route", {}, {});
         };
         auto gen2 = f();
@@ -216,9 +216,9 @@ TEST_CASE("HttpConnectionTests") {
     }
 
     SECTION("Bad HTTP version response") {
-        unordered_map<std::string, std::string> headers;
-        headers.emplace("testheader", "test");
-        auto f = [&]() mutable -> AsyncGenerator<tl::expected<HttpResponse, HttpError>> {
+        auto f = [&]() -> AsyncGenerator<tl::expected<HttpResponse, HttpError>> {
+            unordered_map<std::string, std::string> headers;
+            headers.emplace("testheader", "test");
             co_return co_await svc.getService().sendAsync(HttpMethod::get, "/some/route", std::move(headers), {});
         };
         auto gen2 = f();
@@ -238,7 +238,7 @@ TEST_CASE("HttpConnectionTests") {
     }
 
     SECTION("Bad GET response with body missing content-length") {
-        auto f = [&]() mutable -> AsyncGenerator<tl::expected<HttpResponse, HttpError>> {
+        auto f = [&]() -> AsyncGenerator<tl::expected<HttpResponse, HttpError>> {
             co_return co_await svc.getService().sendAsync(HttpMethod::get, "/some/route", {}, {});
         };
         auto gen2 = f();
@@ -261,10 +261,30 @@ TEST_CASE("HttpConnectionTests") {
         REQUIRE(resp->body[0] == 0);
     }
 
+    SECTION("Bad GET response with body double content-length") {
+        auto f = [&]() -> AsyncGenerator<tl::expected<HttpResponse, HttpError>> {
+            co_return co_await svc.getService().sendAsync(HttpMethod::get, "/some/route", {}, {});
+        };
+        auto gen2 = f();
+        auto it2 = gen2.begin();
+        REQUIRE(!it2.get_finished());
+        REQUIRE(conn.getService().sentMessages.size() == 1);
+        std::string_view sentMsg{reinterpret_cast<const char *>(conn.getService().sentMessages[0].data()), conn.getService().sentMessages[0].size()};
+        REQUIRE(sentMsg == "GET /some/route HTTP/1.1\r\nHost: 192.168.10.10\r\n\r\n");
+
+        std::string req{"HTTP/1.1 200 OK\r\nContent-Length: 20\r\nContent-Length: 40\r\nContent-Type: application/json\r\n\r\n<html><body>This is my basic webpage</body></html>"};
+        conn.getService().rcvHandler(std::span<uint8_t const>{reinterpret_cast<uint8_t*>(req.data()), req.size()});
+
+        REQUIRE(it2.get_finished());
+        auto resp = it2.get_value<tl::expected<HttpResponse, HttpError>>();
+        REQUIRE(!resp);
+        REQUIRE(resp.error() == HttpError::UNABLE_TO_PARSE_RESPONSE);
+    }
+
     SECTION("Empty HTTP response") {
-        unordered_map<std::string, std::string> headers;
-        headers.emplace("testheader", "test");
-        auto f = [&]() mutable -> AsyncGenerator<tl::expected<HttpResponse, HttpError>> {
+        auto f = [&]() -> AsyncGenerator<tl::expected<HttpResponse, HttpError>> {
+            unordered_map<std::string, std::string> headers;
+            headers.emplace("testheader", "test");
             co_return co_await svc.getService().sendAsync(HttpMethod::get, "/some/route", std::move(headers), {});
         };
         auto gen2 = f();
@@ -284,9 +304,9 @@ TEST_CASE("HttpConnectionTests") {
     }
 
     SECTION("bad send request") {
-        unordered_map<std::string, std::string> headers;
-        headers.emplace("", "");
-        auto f = [&]() mutable -> AsyncGenerator<tl::expected<HttpResponse, HttpError>> {
+        auto f = [&]() -> AsyncGenerator<tl::expected<HttpResponse, HttpError>> {
+            unordered_map<std::string, std::string> headers;
+            headers.emplace("", "");
             co_return co_await svc.getService().sendAsync(HttpMethod::get, "/some/route", std::move(headers), {});
         };
         auto gen2 = f();
@@ -298,7 +318,7 @@ TEST_CASE("HttpConnectionTests") {
     }
 
     SECTION("Chunked response basic") {
-        auto f = [&]() mutable -> AsyncGenerator<tl::expected<HttpResponse, HttpError>> {
+        auto f = [&]() -> AsyncGenerator<tl::expected<HttpResponse, HttpError>> {
             co_return co_await svc.getService().sendAsync(HttpMethod::get, "/some/route", {}, {});
         };
         auto gen2 = f();
@@ -702,6 +722,28 @@ TEST_CASE("HttpHostTests") {
             std::string_view reqBody{reinterpret_cast<const char *>(reqCopy.body.data()), reqCopy.body.size() - 1};
             REQUIRE(reqBody == "<html><body>This is my basic webpage</body></html>");
         }
+    }
+
+    SECTION("POST double Content-Length") {
+        bool handlerActivated{};
+        auto reg = svc.getService().addRoute(HttpMethod::post, "/some/route", [&handlerActivated](HttpRequest &req) -> Task<HttpResponse> {
+            handlerActivated = true;
+            co_return HttpResponse{HttpStatus::ok, "text/plain", {}, {}};
+        });
+        std::string req{"POST /some/route HTTP/1.1\r\ntestheader: test\r\nContent-Length: 50\r\nContent-Length: 50\r\nHost: 192.168.10.10\r\n\r\n<html><body>This is my basic webpage</body></html>"};
+        conn.getService().rcvHandler(std::span<uint8_t const>{reinterpret_cast<uint8_t*>(req.data()), req.size()});
+        REQUIRE(q.getService().events.size() == 1);
+        REQUIRE(q.getService().events[0]->get_type() == RunFunctionEventAsync::TYPE);
+        auto *evt = q.getService().events[0].get();
+        auto gen2 = static_cast<RunFunctionEventAsync*>(evt)->fun();
+        auto it2 = gen2.begin();
+        REQUIRE(it2.get_finished());
+        auto _ = it2.get_value<IchorBehaviour>();
+        REQUIRE(conn.getService().sentMessages.size() == 1);
+        std::string_view sentMsg{reinterpret_cast<const char *>(conn.getService().sentMessages[0].data()), conn.getService().sentMessages[0].size()};
+        REQUIRE(sentMsg == "HTTP/1.1 400 Bad Request\r\n\r\n");
+
+        REQUIRE(!handlerActivated);
     }
 
 }

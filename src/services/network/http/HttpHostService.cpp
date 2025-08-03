@@ -192,6 +192,10 @@ tl::expected<Ichor::v1::HttpRequest, Ichor::v1::HttpParseError> Ichor::v1::HttpH
                 if(wordNo == 0) {
                     key = word;
                     if(key == "Content-Length") {
+                        if(contentLengthSet) {
+                            ICHOR_LOG_TRACE(_logger, "HttpHostService {} BadRequest Content-Length already set", getServiceId());
+                            badRequest = true;
+                        }
                         contentLengthHeader = true;
                     }
                 } else if(wordNo == 1) {

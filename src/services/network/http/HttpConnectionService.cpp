@@ -327,6 +327,10 @@ tl::expected<Ichor::v1::HttpResponse, Ichor::v1::HttpParseError> Ichor::v1::Http
                     if(wordNo == 0) {
                         key = word;
                         if(key == "Content-Length") {
+                            if(contentLengthSet) {
+                                ICHOR_LOG_TRACE(_logger, "HttpConnection {} BadRequest Content-Length already set", getServiceId());
+                                badRequest = true;
+                            }
                             contentLengthHeader = true;
                         } else if(key == "Transfer-Encoding") {
                             transferEncodingHeader = true;
