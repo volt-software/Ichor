@@ -6,6 +6,7 @@
 #include <ichor/stl/StringUtils.h>
 #include <ichor/stl/StaticVector.h>
 #include <ichor/stl/SectionalPriorityQueue.h>
+#include <ichor/stl/StrongTypedef.h>
 #include <memory>
 #include <string_view>
 #include "TestServices/UselessService.h"
@@ -1565,5 +1566,19 @@ TEST_CASE("STL Tests") {
         REQUIRE(!SafeHexToUint("g"));
         REQUIRE(!SafeHexToUint("😜"));
         REQUIRE(!SafeHexToUint("DEADBEEFDEADBEEFDEADBEEFDEADBEEF")); // overflow stuff happened, but it's defined behaviour
+    }
+
+    SECTION("StrongTypedef") {
+        StrongTypedef<uint64_t, uint64_t> sul{};
+        ++sul;
+        REQUIRE(sul.value == 1);
+        REQUIRE(sul++ == StrongTypedef<uint64_t, uint64_t>{1});
+        REQUIRE(sul.value == 2);
+        --sul;
+        REQUIRE(sul.value == 1);
+        REQUIRE(sul-- == StrongTypedef<uint64_t, uint64_t>{1});
+        REQUIRE(sul.value == 0);
+        REQUIRE(StrongTypedef<uint64_t, uint64_t>{1} > sul);
+
     }
 }
