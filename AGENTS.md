@@ -1,0 +1,1 @@
+Use "../quickbuild.sh --no-uring --gcc --no-mold --nosan" in a build directory inside of the checked out repository to build and test. Ignore the AsyncFileIOTest, as it does not work in the environment.
