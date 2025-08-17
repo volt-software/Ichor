@@ -5,7 +5,7 @@
 #include <ichor/dependency_management/AdvancedService.h>
 
 namespace Ichor::v1 {
-    struct OpenSSLContext;
+    class OpenSSLContext;
 
     class OpenSSLService final : public ISSL, public AdvancedService<OpenSSLService> {
     public:
