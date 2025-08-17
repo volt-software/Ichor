@@ -16,6 +16,11 @@ foreach(filename ${PROJECT_TEST_SOURCES})
     endif()
 
 
+    if(${testname} MATCHES "^OpenSSL" AND NOT ICHOR_USE_OPENSSL)
+        continue()
+    endif()
+
+
     if(NOT ${testname} STREQUAL "HttpEndToEndTests" AND NOT ${testname} STREQUAL "EtcdTests")
         add_executable(${testname} ${filename})
         target_link_libraries(${testname} ${CMAKE_THREAD_LIBS_INIT})

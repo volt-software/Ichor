@@ -133,7 +133,7 @@ file(GLOB_RECURSE ICHOR_BOOST_BEAST_SOURCES ${ICHOR_TOP_DIR}/src/services/networ
 file(GLOB_RECURSE ICHOR_METRICS_SOURCES ${ICHOR_TOP_DIR}/src/services/metrics/*.cpp)
 file(GLOB_RECURSE ICHOR_TIMER_SOURCES ${ICHOR_TOP_DIR}/src/services/timer/Timer.cpp ${ICHOR_TOP_DIR}/src/services/timer/TimerFactoryFactory.cpp)
 file(GLOB_RECURSE ICHOR_HIREDIS_SOURCES ${ICHOR_TOP_DIR}/src/services/redis/*.cpp)
-file(GLOB_RECURSE ICHOR_OPENSSL_SOURCES ${ICHOR_TOP_DIR}/src/services/ssl/OpenSSLService.cpp ${ICHOR_TOP_DIR}/src/services/ssl/OpenSSLFactory.cpp)
+file(GLOB_RECURSE ICHOR_OPENSSL_SOURCES ${ICHOR_TOP_DIR}/src/services/network/ssl/openssl/*.cpp)
 file(GLOB_RECURSE ICHOR_BASE64_SOURCES ${ICHOR_TOP_DIR}/src/base64/*.cpp)
 file(GLOB_RECURSE ICHOR_STL_SOURCES ${ICHOR_TOP_DIR}/src/ichor/stl/Any.cpp ${ICHOR_TOP_DIR}/src/ichor/stl/AsyncSingleThreadedMutex.cpp ${ICHOR_TOP_DIR}/src/ichor/stl/LinuxUtils.cpp ${ICHOR_TOP_DIR}/src/ichor/stl/StringUtils.cpp)
 
@@ -604,7 +604,7 @@ endif()
 if(ICHOR_USE_OPENSSL)
     target_include_directories(ichor PUBLIC ${OPENSSL_INCLUDE_DIR})
     target_link_libraries(ichor PUBLIC ${OPENSSL_LIBRARIES})
-    target_compile_definitions(ichor PUBLIC ICHOR_USE_OPENSSL)
+    target_compile_definitions(ichor PUBLIC ICHOR_USE_OPENSSL OPENSSL_NO_DEPRECATED OPENSSL_API_COMPAT=30000)
 
     target_sources(ichor PRIVATE ${ICHOR_OPENSSL_SOURCES})
 endif()

@@ -1,4 +1,4 @@
-#include <ichor/services/network/ssl/OpenSSLFactory.h>
+#include <ichor/services/network/ssl/openssl/OpenSSLFactory.h>
 
 Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::v1::OpenSSLFactory::start() {
 
