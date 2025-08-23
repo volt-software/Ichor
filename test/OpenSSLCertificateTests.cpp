@@ -61,20 +61,29 @@ TEST_CASE("OpenSSLCertificate basic properties") {
     SECTION("validity and signature") {
         auto validity = cert.getValidity();
         REQUIRE(validity.has_value());
-        auto before = std::chrono::system_clock::to_time_t(validity->notBefore);
-        auto after = std::chrono::system_clock::to_time_t(validity->notAfter);
-        REQUIRE(after > before);
+        REQUIRE(validity->notAfter > validity->notBefore);
 
-        std::tm before_tm{};
-        std::tm after_tm{};
-        gmtime_r(&before, &before_tm);
-        gmtime_r(&after, &after_tm);
-        REQUIRE(before_tm.tm_year + 1900 == 2017);
-        REQUIRE(before_tm.tm_mon + 1 == 5);
-        REQUIRE(before_tm.tm_mday == 3);
-        REQUIRE(after_tm.tm_year + 1900 == 2044);
-        REQUIRE(after_tm.tm_mon + 1 == 9);
-        REQUIRE(after_tm.tm_mday == 18);
+        std::chrono::year_month_day ymdNotBefore = std::chrono::floor<std::chrono::days>(validity->notBefore);
+        std::chrono::year_month_day ymdNotAfter = std::chrono::floor<std::chrono::days>(validity->notAfter);
+
+        REQUIRE(ymdNotBefore.year() == 2017y);
+        REQUIRE(ymdNotBefore.month() == std::chrono::May);
+        REQUIRE(ymdNotBefore.day() == 3d);
+
+        REQUIRE(ymdNotAfter.year() == 2044y);
+        REQUIRE(ymdNotAfter.month() == std::chrono::September);
+        REQUIRE(ymdNotAfter.day() == 18d);
+
+        std::chrono::hh_mm_ss hmsNotBefore(validity->notBefore - std::chrono::floor<std::chrono::days>(validity->notBefore));
+        std::chrono::hh_mm_ss hmsNotAfter(validity->notAfter - std::chrono::floor<std::chrono::days>(validity->notAfter));
+
+        REQUIRE(hmsNotBefore.hours().count() == 18);
+        REQUIRE(hmsNotBefore.minutes().count() == 39);
+        REQUIRE(hmsNotBefore.seconds().count() == 12);
+
+        REQUIRE(hmsNotAfter.hours().count() == 18);
+        REQUIRE(hmsNotAfter.minutes().count() == 39);
+        REQUIRE(hmsNotAfter.seconds().count() == 12);
 
         auto signature = cert.getSignature();
         REQUIRE_FALSE(signature.empty());
