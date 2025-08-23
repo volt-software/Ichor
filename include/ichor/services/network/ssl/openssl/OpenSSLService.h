@@ -5,6 +5,13 @@
 #include <ichor/dependency_management/AdvancedService.h>
 
 namespace Ichor::v1 {
+    enum class TLSHandshakeStatus {
+        WANT_READ,
+        WANT_WRITE,
+        NEITHER,
+        UNKNOWN
+    };
+
     class OpenSSLContext;
 
     class OpenSSLService final : public ISSL, public AdvancedService<OpenSSLService> {
@@ -20,7 +27,7 @@ namespace Ichor::v1 {
         tl::expected<void, bool> TLSWrite(TLSConnection &, const std::vector<uint8_t> &) final;
         tl::expected<std::vector<uint8_t>, bool> TLSRead(TLSConnection &) final;
 
-        void TLSDoHandshake(TLSConnection &conn);
+        TLSHandshakeStatus TLSDoHandshake(TLSConnection &conn);
 
     private:
         friend DependencyRegister;

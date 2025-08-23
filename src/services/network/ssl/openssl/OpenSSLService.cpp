@@ -25,6 +25,7 @@ namespace {
 #endif
 
         int ret = X509_verify_cert(storeCtx);
+
         if(ret == 1) {
             return 1;
         }
@@ -47,8 +48,6 @@ namespace {
 #endif
         auto logger = sslContext->getLogger();
         ICHOR_LOG_DEBUG(logger, "cert default verify failed, using custom callback: {} (subject: {})", err_msg, subject);
-
-        fmt::println("cert verify failed: {} (subject: {}) ", err_msg, subject);
 
         if(sslContext->certificateVerifyCallback) {
             return sslContext->certificateVerifyCallback(Ichor::v1::OpenSSLCertificateStore{storeCtx, Ichor::v1::TLSCertificateStoreIdType{1}}); // TODO maybe id here is not necessary (and who is responsible for the counter??)
@@ -168,6 +167,10 @@ tl::expected<std::unique_ptr<Ichor::v1::TLSContext>, Ichor::v1::TLSContextError>
     ++_contextIdCounter;
     auto tlsContext = std::make_unique<OpenSSLContext>(ctx_handle, _contextIdCounter, _currentlyActiveContexts, *this);
 
+    if(opts.certificateVerifyCallback) {
+        tlsContext->certificateVerifyCallback = std::move(opts.certificateVerifyCallback);
+    }
+
     if(opts.allowUnknownCertificates) {
         ::SSL_CTX_set_verify(ctx_handle, SSL_VERIFY_NONE, nullptr);
     } else {
@@ -243,6 +246,8 @@ tl::expected<void, bool> Ichor::v1::OpenSSLService::TLSWrite(TLSConnection &conn
         return tl::unexpected(false);
     }
 
+    ICHOR_LOG_TRACE(_logger, "Connection {} wrote {} bytes.", conn.getId().value, actual);
+
     return {};
 }
 
@@ -274,10 +279,12 @@ tl::expected<std::vector<uint8_t>, bool> Ichor::v1::OpenSSLService::TLSRead(TLSC
         return tl::unexpected(false);
     }
 
+    ICHOR_LOG_TRACE(_logger, "Connection {} read {} bytes.", conn.getId().value, actual);
+
     return ret;
 }
 
-void Ichor::v1::OpenSSLService::TLSDoHandshake(TLSConnection &conn) {
+Ichor::v1::TLSHandshakeStatus Ichor::v1::OpenSSLService::TLSDoHandshake(TLSConnection &conn) {
 #if defined(ICHOR_USE_HARDENING) || defined(ICHOR_ENABLE_INTERNAL_DEBUGGING)
     if(conn.getType() != TLSConnectionTypeType{1}) [[unlikely]] {
         ICHOR_LOG_ERROR(_logger, "TLSConnection type expected {} got {}", 1, conn.getType().value);
@@ -289,12 +296,25 @@ void Ichor::v1::OpenSSLService::TLSDoHandshake(TLSConnection &conn) {
 
     int ret = ::SSL_do_handshake(sslConn.getHandle());
 
-    if(ret == SSL_ERROR_WANT_WRITE || ret == SSL_ERROR_WANT_READ) {
-
-    } else if(ret != SSL_ERROR_NONE) {
-        printAllSslErrors(sslConn);
+    if(ret == 1) {
+        // Successful handshake
+        return TLSHandshakeStatus::NEITHER;
     }
 
+    // Get the specific error code
+    int err = ::SSL_get_error(sslConn.getHandle(), ret);
+    ICHOR_LOG_TRACE(_logger, "Connection {} handshake err {} ret {}.", conn.getId().value, err, ret);
+
+    switch (err) {
+        case SSL_ERROR_WANT_READ:
+            return TLSHandshakeStatus::WANT_READ;
+        case SSL_ERROR_WANT_WRITE:
+            return TLSHandshakeStatus::WANT_WRITE;
+        default:
+            // For other errors, print them and return UNKNOWN
+            printAllSslErrors(sslConn);
+            return TLSHandshakeStatus::UNKNOWN;
+    }
 }
 
 template <typename TLSObjectT>
