@@ -6,7 +6,6 @@ OpenSSLConnection::OpenSSLConnection(SSL* ctx, TLSConnectionIdType id) : TLSConn
 
 OpenSSLConnection::~OpenSSLConnection() {
     if(_ctx != nullptr) {
-        ::BIO_free(internalBio);
         ::BIO_free(externalBio);
         ::SSL_free(static_cast<SSL *>(_ctx));
         _ctx = nullptr;
