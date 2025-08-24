@@ -39,3 +39,5 @@ public:
         return "match exception exactly"; // by not providing custom logic to REQUIRE_THROWS_MATCHES :)
     }
 };
+
+#define NAMEOF(x) #x

@@ -63,7 +63,6 @@ struct LoggerMock : public ILogger, public AdvancedService<LoggerMock> {
     }
 
     void error(const char *filename_in, int line_in, const char *funcname_in, std::string_view format_str, fmt::format_args args) override {
-        fmt::println("logger mock level {}", level);
         if(level <= LogLevel::LOG_ERROR) {
             fmt::basic_memory_buffer<char> buf{};
             fmt::vformat_to(std::back_inserter(buf), format_str, args);
