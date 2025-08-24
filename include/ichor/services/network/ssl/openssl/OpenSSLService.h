@@ -41,7 +41,7 @@ namespace Ichor::v1 {
         void removeDependencyInstance(ILogger &logger, IService &isvc);
 
         template <typename TLSObjectT>
-        void printAllSslErrors(TLSObjectT const &obj) const;
+        void printAllSslErrors(TLSObjectT const &obj, int line_in) const;
 
         ILogger* getLogger() const;
 
