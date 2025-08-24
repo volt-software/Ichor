@@ -1,15 +1,54 @@
 #include <ichor/services/network/ssl/openssl/OpenSSLCertificate.h>
-#include <fmt/base.h>
+#include <ctime>
 #include <openssl/ssl.h>
 #include <openssl/x509.h>
 #include <openssl/evp.h>
-#include <ctime>
+#include <openssl/err.h>
 
 using namespace Ichor::v1;
 
-OpenSSLCertificate::OpenSSLCertificate(NeverNull<X509*> store, TLSCertificateIdType id) : TLSCertificate(store, id) {}
+OpenSSLCertificate::OpenSSLCertificate(NeverNull<X509*> store, TLSCertificateIdType id) : TLSCertificate(id), _ctx(store) {
+}
 
-OpenSSLCertificate::~OpenSSLCertificate() = default;
+OpenSSLCertificate::OpenSSLCertificate(OpenSSLCertificate &&o) noexcept : TLSCertificate{o._id}, _ctx{o._ctx}, _shouldFreeCtx{o._shouldFreeCtx} {
+    o._shouldFreeCtx = false;
+}
+
+OpenSSLCertificate::~OpenSSLCertificate() {
+    if(_shouldFreeCtx) {
+        ::X509_free(_ctx.get());
+    }
+}
+
+
+tl::expected<OpenSSLCertificate, OpenSSLMakeCertificateError> OpenSSLCertificate::makeOpenSSLCertificate(tl::optional<ILogger*> logger, NeverNull<const char *> data, uint64_t dataLength, TLSCertificateIdType id) {
+    BIO *bio = BIO_new_mem_buf(data, dataLength);
+
+    if(bio == nullptr) {
+        return tl::unexpected{OpenSSLMakeCertificateError::OUT_OF_MEMORY};
+    }
+
+    X509 *x509 = PEM_read_bio_X509(bio, nullptr, nullptr, nullptr);
+    BIO_free(bio);
+
+    if(x509 == nullptr) {
+        if(logger) {
+            unsigned long err;
+            while ((err = ERR_get_error()) != 0) {
+                ICHOR_LOG_ERROR((*logger), "Error reading certificate: {}", ERR_error_string(err, nullptr));
+            }
+        }
+
+        return tl::unexpected{OpenSSLMakeCertificateError::ERROR_WITH_CERTIFICATE};
+    }
+
+    OpenSSLCertificate cert{x509, id};
+    cert._shouldFreeCtx = true;
+
+    auto s = cert.getCommonNameViews(true);
+
+    return cert;
+}
 
 #if defined(ICHOR_USE_HARDENING) || defined(ICHOR_ENABLE_INTERNAL_DEBUGGING)
 TLSCertificateTypeType OpenSSLCertificate::getType() const noexcept {
@@ -32,7 +71,7 @@ std::string_view OpenSSLCertificate::asn1StringAsView(const ASN1_STRING* s) {
     return std::string_view{reinterpret_cast<const char*>(p), static_cast<long unsigned int>(n)};
 }
 
-std::string_view OpenSSLCertificate::getFirstAttribute(const X509_NAME* name, int nid) {
+std::string_view OpenSSLCertificate::getFirstAttribute(NeverNull<X509_NAME*> name, int nid) {
     int idx = X509_NAME_get_index_by_NID(name, nid, -1);
 
     if(idx < 0) {
@@ -78,7 +117,7 @@ std::vector<std::string_view> OpenSSLCertificate::getAllAttributes(const X509_NA
     return ret;
 }
 
-tl::optional<std::chrono::system_clock::time_point> OpenSSLCertificate::convertASN1tmUTCtoTimepoint(tm &tm_utc) {
+tl::optional<std::chrono::sys_seconds> OpenSSLCertificate::convertASN1tmUTCtoTimepoint(tm &tm_utc) {
     const std::chrono::year  y{tm_utc.tm_year + 1900};
     const std::chrono::month m{static_cast<unsigned>(tm_utc.tm_mon + 1)};
     const std::chrono::day   d{static_cast<unsigned>(tm_utc.tm_mday)};
@@ -89,29 +128,26 @@ tl::optional<std::chrono::system_clock::time_point> OpenSSLCertificate::convertA
 
     // sys_days is a time_point on system_clock with day precision.
     const std::chrono::sys_days days = std::chrono::year_month_day{y, m, d};
-    auto tp = days + std::chrono::hours{tm_utc.tm_hour}
+    auto tp = std::chrono::sys_seconds{days.time_since_epoch() + std::chrono::hours{tm_utc.tm_hour}
     + std::chrono::minutes{tm_utc.tm_min}
-    + std::chrono::seconds{tm_utc.tm_sec};
+    + std::chrono::seconds{tm_utc.tm_sec}};
 
     return tp;
 }
 
 TLSCertificateNameViews OpenSSLCertificate::getCommonNameViews(bool includeVectorViews) const noexcept {
-#if defined(ICHOR_USE_HARDENING) || defined(ICHOR_ENABLE_INTERNAL_DEBUGGING)
-    if(_ctx == nullptr) {
-        fmt::println("fatal error, certificate context is nullptr, please file a bug in Ichor.");
-        std::terminate();
-    }
-#endif
-
-    X509_NAME *snName = X509_get_subject_name(static_cast<X509*>(_ctx.get()));
+    X509_NAME *snName = X509_get_subject_name(_ctx.get());
 
     TLSCertificateNameViews nameView{};
+
+    if(snName == nullptr) {
+        return nameView;
+    }
+
     nameView.c = getFirstAttribute(snName, NID_countryName);
     nameView.st = getFirstAttribute(snName, NID_stateOrProvinceName);
     nameView.l = getFirstAttribute(snName, NID_localityName);
     nameView.o = getFirstAttribute(snName, NID_organizationName);
-    nameView.cn = getFirstAttribute(snName, NID_commonName);
     nameView.cn = getFirstAttribute(snName, NID_commonName);
 
     if(includeVectorViews) {
@@ -124,21 +160,18 @@ TLSCertificateNameViews OpenSSLCertificate::getCommonNameViews(bool includeVecto
 }
 
 TLSCertificateNameViews OpenSSLCertificate::getIssuerNameViews(bool includeVectorViews) const noexcept {
-#if defined(ICHOR_USE_HARDENING) || defined(ICHOR_ENABLE_INTERNAL_DEBUGGING)
-    if(_ctx == nullptr) {
-        fmt::println("fatal error, certificate context is nullptr, please file a bug in Ichor.");
-        std::terminate();
-    }
-#endif
-
-    X509_NAME *issName = X509_get_issuer_name(static_cast<X509*>(_ctx.get()));
+    X509_NAME *issName = X509_get_issuer_name(_ctx.get());
 
     TLSCertificateNameViews nameView{};
+
+    if(issName == nullptr) {
+        return nameView;
+    }
+
     nameView.c = getFirstAttribute(issName, NID_countryName);
     nameView.st = getFirstAttribute(issName, NID_stateOrProvinceName);
     nameView.l = getFirstAttribute(issName, NID_localityName);
     nameView.o = getFirstAttribute(issName, NID_organizationName);
-    nameView.cn = getFirstAttribute(issName, NID_commonName);
     nameView.cn = getFirstAttribute(issName, NID_commonName);
 
     if(includeVectorViews) {
@@ -151,13 +184,6 @@ TLSCertificateNameViews OpenSSLCertificate::getIssuerNameViews(bool includeVecto
 }
 
 std::string_view OpenSSLCertificate::getSerialNumber() const noexcept {
-#if defined(ICHOR_USE_HARDENING) || defined(ICHOR_ENABLE_INTERNAL_DEBUGGING)
-    if(_ctx == nullptr) {
-        fmt::println("fatal error, certificate context is nullptr, please file a bug in Ichor.");
-        std::terminate();
-    }
-#endif
-
     ASN1_INTEGER const *serial = X509_get0_serialNumber(static_cast<X509 *>(_ctx.get()));
 
     if(serial == nullptr) {
@@ -182,14 +208,7 @@ std::string_view OpenSSLCertificate::getSerialNumber() const noexcept {
 }
 
 uint32_t OpenSSLCertificate::getVersion() const noexcept {
-#if defined(ICHOR_USE_HARDENING) || defined(ICHOR_ENABLE_INTERNAL_DEBUGGING)
-    if(_ctx == nullptr) {
-        fmt::println("fatal error, certificate context is nullptr, please file a bug in Ichor.");
-        std::terminate();
-    }
-#endif
-
-    long version = X509_get_version(static_cast<X509*>(_ctx.get()));
+    long version = X509_get_version(_ctx.get());
 
     if(version < 0) {
         return {};
@@ -199,17 +218,10 @@ uint32_t OpenSSLCertificate::getVersion() const noexcept {
 }
 
 tl::optional<TLSValidity> OpenSSLCertificate::getValidity() const noexcept {
-#if defined(ICHOR_USE_HARDENING) || defined(ICHOR_ENABLE_INTERNAL_DEBUGGING)
-    if(_ctx == nullptr) {
-        fmt::println("fatal error, certificate context is nullptr, please file a bug in Ichor.");
-        std::terminate();
-    }
-#endif
+    auto *notBefore = X509_get0_notBefore(_ctx.get());
+    auto *notAfter = X509_get0_notAfter(_ctx.get());
 
-    auto *notBefore = X509_get0_notBefore(static_cast<X509*>(_ctx.get()));
-    auto *notAfter = X509_get0_notAfter(static_cast<X509*>(_ctx.get()));
-
-    auto timepoint = [](const ASN1_TIME *tmCert) -> tl::optional<std::chrono::system_clock::time_point> {
+    auto timepoint = [](const ASN1_TIME *tmCert) -> tl::optional<std::chrono::sys_seconds> {
         if(tmCert == nullptr) {
             return {};
         }
@@ -241,14 +253,8 @@ tl::optional<TLSValidity> OpenSSLCertificate::getValidity() const noexcept {
 }
 
 std::string_view OpenSSLCertificate::getSignature() const noexcept {
-#if defined(ICHOR_USE_HARDENING) || defined(ICHOR_ENABLE_INTERNAL_DEBUGGING)
-    if(_ctx == nullptr) {
-        fmt::println("fatal error, certificate context is nullptr, please file a bug in Ichor.");
-        std::terminate();
-    }
-#endif
     const ASN1_BIT_STRING *sig{};
-    X509_get0_signature(&sig, nullptr, static_cast<X509*>(_ctx.get()));
+    X509_get0_signature(&sig, nullptr, _ctx.get());
 
     if(sig == nullptr) {
         return {};
@@ -258,14 +264,8 @@ std::string_view OpenSSLCertificate::getSignature() const noexcept {
 }
 
 std::string_view OpenSSLCertificate::getSignatureAlgorithm() const noexcept {
-#if defined(ICHOR_USE_HARDENING) || defined(ICHOR_ENABLE_INTERNAL_DEBUGGING)
-    if(_ctx == nullptr) {
-        fmt::println("fatal error, certificate context is nullptr, please file a bug in Ichor.");
-        std::terminate();
-    }
-#endif
     const X509_ALGOR *alg{};
-    X509_get0_signature(nullptr, &alg, static_cast<X509*>(_ctx.get()));
+    X509_get0_signature(nullptr, &alg, _ctx.get());
 
     if(alg == nullptr) {
         return {};
@@ -282,13 +282,7 @@ std::string_view OpenSSLCertificate::getSignatureAlgorithm() const noexcept {
 }
 
 std::string_view OpenSSLCertificate::getPublicKey() const noexcept {
-#if defined(ICHOR_USE_HARDENING) || defined(ICHOR_ENABLE_INTERNAL_DEBUGGING)
-    if(_ctx == nullptr) {
-        fmt::println("fatal error, certificate context is nullptr, please file a bug in Ichor.");
-        std::terminate();
-    }
-#endif
-    const ASN1_BIT_STRING *pk = X509_get0_pubkey_bitstr(static_cast<X509*>(_ctx.get()));
+    const ASN1_BIT_STRING *pk = X509_get0_pubkey_bitstr(_ctx.get());
 
     if(pk == nullptr) {
         return {};

@@ -80,19 +80,26 @@ void Ichor::v1::OpenSSLService::removeDependencyInstance(ILogger &logger, IServi
     _logger = nullptr;
 }
 
-tl::expected<std::unique_ptr<Ichor::v1::TLSContext>, Ichor::v1::TLSContextError> Ichor::v1::OpenSSLService::createServerTLSContext(std::vector<uint8_t> cert, std::vector<uint8_t> key, TLSCreateContextOptions) {
+tl::expected<std::unique_ptr<Ichor::v1::TLSContext>, Ichor::v1::TLSContextError> Ichor::v1::OpenSSLService::createServerTLSContext(std::vector<uint8_t> cert, std::vector<uint8_t> key, TLSCreateContextOptions opts) {
     auto ctx_handle = ::SSL_CTX_new(SSLv23_server_method());
+    bool error{true};
 
     if(ctx_handle == nullptr) {
-        printAllSslErrors(NullStruct{});
+        printAllSslErrors(NullStruct{}, __LINE__);
         return tl::unexpected(TLSContextError::UNKNOWN);
     }
+
+    ScopeGuard sgCtx{[ctx_handle, &error] {
+        if(error) {
+            ::SSL_CTX_free(ctx_handle);
+        }
+    }};
 
     SSL_CTX_set_min_proto_version(ctx_handle, TLS1_3_VERSION);
     BIO *cert_bio = ::BIO_new_mem_buf(cert.data(), cert.size());
 
     if(cert_bio == nullptr) {
-        printAllSslErrors(NullStruct{});
+        printAllSslErrors(NullStruct{}, __LINE__);
         return tl::unexpected(TLSContextError::UNKNOWN);
     }
 
@@ -102,9 +109,19 @@ tl::expected<std::unique_ptr<Ichor::v1::TLSContext>, Ichor::v1::TLSContextError>
     X509* certx509 = ::PEM_read_bio_X509(cert_bio, nullptr, 0, nullptr);
 
     if(certx509 == nullptr) {
-        printAllSslErrors(NullStruct{});
+        printAllSslErrors(NullStruct{}, __LINE__);
         return tl::unexpected(TLSContextError::UNKNOWN);
     }
+
+    OpenSSLCertificate testCert{certx509, TLSCertificateIdType{1}};
+    if(opts.securityLevel == TLSContextSecurityLevel::WEAKER_THAN_DEFAULT_IF_AVAILABLE_DO_NOT_USE_UNLESS_YOU_KNOW_WHAT_YOURE_DOING) {
+        ::SSL_CTX_set_security_level(ctx_handle, 0);
+    } else if(opts.securityLevel == TLSContextSecurityLevel::STRONGER_THAN_DEFAULT_IF_AVAILABLE) {
+        ::SSL_CTX_set_security_level(ctx_handle, 3);
+    } else {
+        ::SSL_CTX_set_security_level(ctx_handle, 2);
+    }
+
 
     ScopeGuard sgCertx509{[certx509] {
         ::X509_free(certx509);
@@ -112,14 +129,14 @@ tl::expected<std::unique_ptr<Ichor::v1::TLSContext>, Ichor::v1::TLSContextError>
     auto ret = ::SSL_CTX_use_certificate(ctx_handle, certx509);
 
     if(ret != 1) {
-        printAllSslErrors(NullStruct{});
+        printAllSslErrors(NullStruct{}, __LINE__);
         return tl::unexpected(TLSContextError::UNKNOWN);
     }
 
     BIO *key_bio = ::BIO_new_mem_buf(key.data(), key.size());
 
     if(key_bio == nullptr) {
-        printAllSslErrors(NullStruct{});
+        printAllSslErrors(NullStruct{}, __LINE__);
         return tl::unexpected(TLSContextError::UNKNOWN);
     }
 
@@ -130,7 +147,7 @@ tl::expected<std::unique_ptr<Ichor::v1::TLSContext>, Ichor::v1::TLSContextError>
     EVP_PKEY* pkey = ::PEM_read_bio_PrivateKey(key_bio, nullptr, 0, nullptr);
 
     if(pkey == nullptr) {
-        printAllSslErrors(NullStruct{});
+        printAllSslErrors(NullStruct{}, __LINE__);
         return tl::unexpected(TLSContextError::UNKNOWN);
     }
 
@@ -140,18 +157,19 @@ tl::expected<std::unique_ptr<Ichor::v1::TLSContext>, Ichor::v1::TLSContextError>
     ret = ::SSL_CTX_use_PrivateKey(ctx_handle, pkey);
 
     if(ret != 1) {
-        printAllSslErrors(NullStruct{});
+        printAllSslErrors(NullStruct{}, __LINE__);
         return tl::unexpected(TLSContextError::UNKNOWN);
     }
 
     ret = ::SSL_CTX_check_private_key(ctx_handle);
 
     if(ret != 1) {
-        printAllSslErrors(NullStruct{});
+        printAllSslErrors(NullStruct{}, __LINE__);
         return tl::unexpected(TLSContextError::UNKNOWN);
     }
 
     ++_contextIdCounter;
+    error = false;
     return std::make_unique<OpenSSLContext>(ctx_handle, _contextIdCounter, _currentlyActiveContexts, *this);
 }
 
@@ -192,7 +210,7 @@ tl::expected<std::unique_ptr<Ichor::v1::TLSConnection>, Ichor::v1::TLSConnection
     auto ssl_handle = ::SSL_new(static_cast<OpenSSLContext&>(ctx).getHandle());
 
     if(ssl_handle == nullptr) {
-        printAllSslErrors(NullStruct{});
+        printAllSslErrors(NullStruct{}, __LINE__);
         return tl::unexpected(TLSConnectionError::UNKNOWN);
     }
 
@@ -201,7 +219,7 @@ tl::expected<std::unique_ptr<Ichor::v1::TLSConnection>, Ichor::v1::TLSConnection
     int ret = ::BIO_new_bio_pair(&con->internalBio, 0, &con->externalBio, 0);
 
     if(ret != 1) {
-        printAllSslErrors(*con.get());
+        printAllSslErrors(*con.get(), __LINE__);
         return tl::unexpected(TLSConnectionError::UNKNOWN);
     }
 
@@ -312,23 +330,23 @@ Ichor::v1::TLSHandshakeStatus Ichor::v1::OpenSSLService::TLSDoHandshake(TLSConne
             return TLSHandshakeStatus::WANT_WRITE;
         default:
             // For other errors, print them and return UNKNOWN
-            printAllSslErrors(sslConn);
+            printAllSslErrors(sslConn, __LINE__);
             return TLSHandshakeStatus::UNKNOWN;
     }
 }
 
 template <typename TLSObjectT>
-void Ichor::v1::OpenSSLService::printAllSslErrors(TLSObjectT const &obj) const {
+void Ichor::v1::OpenSSLService::printAllSslErrors(TLSObjectT const &obj, int line_in) const {
     char buf[256];
     auto errCode = ERR_get_error();
     while(errCode != 0) {
         ERR_error_string_n(errCode, buf, sizeof(buf));
         if constexpr(std::is_same_v<TLSObjectT, OpenSSLContext>) {
-            ICHOR_LOG_ERROR(_logger, "OpenSSL error {} for ctx {}: {}", errCode, obj.getId().value, buf);
+            ICHOR_LOG_ERROR(_logger, "Called from [{}] OpenSSL error {} for ctx {}: {}", line_in, errCode, obj.getId().value, buf);
         } else if constexpr (std::is_same_v<TLSObjectT, OpenSSLConnection>) {
-            ICHOR_LOG_ERROR(_logger, "OpenSSL error {} for conn {}: {}", errCode, obj.getId().value, buf);
+            ICHOR_LOG_ERROR(_logger, "Called from [{}] OpenSSL error {} for conn {}: {}", line_in, errCode, obj.getId().value, buf);
         } else if constexpr (std::is_same_v<TLSObjectT, NullStruct>) {
-            ICHOR_LOG_ERROR(_logger, "OpenSSL error {}: {}", errCode, buf);
+            ICHOR_LOG_ERROR(_logger, "Called from [{}] OpenSSL error {}: {}", line_in, errCode, buf);
         } else {
             static_assert(false, "TLSObjectT has to be either OpenSSLContext, OpenSSLConnection or NullStruct");
         }

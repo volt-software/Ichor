@@ -31,8 +31,8 @@ namespace Ichor::v1 {
     };
 
     struct TLSValidity {
-        std::chrono::system_clock::time_point notBefore;
-        std::chrono::system_clock::time_point notAfter;
+        std::chrono::sys_seconds notBefore;
+        std::chrono::sys_seconds notAfter;
     };
 
     struct TLSCertificate {
@@ -52,9 +52,8 @@ namespace Ichor::v1 {
         [[nodiscard]] virtual std::string_view getPublicKey() const noexcept = 0;
 
     protected:
-        TLSCertificate(NeverNull<void*> ctx, TLSCertificateIdType id) : _ctx{ctx}, _id{id} {}
+        explicit TLSCertificate(TLSCertificateIdType id) : _id{id} {}
 
-        NeverNull<void*> _ctx;
         TLSCertificateIdType _id{};
     };
 
@@ -118,10 +117,17 @@ namespace Ichor::v1 {
         UNKNOWN
     };
 
+    enum class TLSContextSecurityLevel {
+        DEFAULT,
+        WEAKER_THAN_DEFAULT_IF_AVAILABLE_DO_NOT_USE_UNLESS_YOU_KNOW_WHAT_YOURE_DOING, // really, this usually means wanting to use certificates which use weak protection, leaving your server vulnerable. Please just create a new certificate with modern level of encryption, like ed25519 or rsa3072/rsa4096
+        STRONGER_THAN_DEFAULT_IF_AVAILABLE,
+    };
+
     struct TLSCreateContextOptions {
         std::vector<uint8_t> trustedCertificates{};
-        bool allowUnknownCertificates{};
         std::function<bool(const TLSCertificateStore &)> certificateVerifyCallback{};
+        TLSContextSecurityLevel securityLevel{};
+        bool allowUnknownCertificates{};
     };
 
     struct TLSCreateConnectionOptions {
