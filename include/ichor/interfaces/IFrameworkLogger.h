@@ -48,4 +48,6 @@ namespace Ichor {
 #define ICHOR_EMERGENCY_LOG1(logger, str, ...) { if(logger != nullptr) { logger->error(nullptr, 0, nullptr, str, make_args()); } fmt::println(str); }; static_assert(true, "")
 #define ICHOR_EMERGENCY_LOG2(logger, str, ...) { if(logger != nullptr) { logger->error(nullptr, 0, nullptr, str, make_args(__VA_ARGS__)); } fmt::println(str, __VA_ARGS__); }; static_assert(true, "")
 #endif
+
+#define ICHOR_OUT_OF_MEM_LOG(bufContainingLog) { std::fwrite(bufContainingLog, 1, sizeof(bufContainingLog) - 1, stdout); std::fflush(nullptr); }
 }
