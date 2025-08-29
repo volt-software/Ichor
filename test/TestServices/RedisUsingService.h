@@ -49,7 +49,8 @@ namespace Ichor {
             ICHOR_LOG_INFO(_logger, "running test");
             auto versionReply = co_await _redis->getServerVersion();
             if(!versionReply) {
-                throw std::runtime_error("version");
+                fmt::println("version");
+                std::terminate();
             }
             _v = versionReply.value();
         }
@@ -58,15 +59,18 @@ namespace Ichor {
             ICHOR_LOG_INFO(_logger, "running test");
             auto setReply = co_await _redis->set("test_key", "test_value");
             if(!setReply) {
-                throw std::runtime_error("set");
+                fmt::println("set");
+                std::terminate();
             }
             auto getReply = co_await _redis->get("test_key");
             if(!getReply) {
-                throw std::runtime_error("get");
+                fmt::println("get");
+                std::terminate();
             }
 
             if (!getReply.value().value || *getReply.value().value != "test_value") {
-                throw std::runtime_error("Incorrect value");
+                fmt::println("Incorrect value");
+                std::terminate();
             }
         }
 
@@ -74,11 +78,13 @@ namespace Ichor {
             ICHOR_LOG_INFO(_logger, "running test");
             auto strlenReply = co_await _redis->strlen("test_key");
             if(!strlenReply) {
-                throw std::runtime_error("strlen");
+                fmt::println("strlen");
+                std::terminate();
             }
 
             if (strlenReply.value().value != 10) {
-                throw std::runtime_error("Incorrect value");
+                fmt::println("Incorrect value");
+                std::terminate();
             }
         }
 
@@ -86,15 +92,18 @@ namespace Ichor {
             ICHOR_LOG_INFO(_logger, "running test");
             auto setReply = co_await _redis->set("delete_key", "delete");
             if(!setReply) {
-                throw std::runtime_error("set");
+                fmt::println("set");
+                std::terminate();
             }
             auto delReply= co_await _redis->del("delete_key");
             if(!delReply) {
-                throw std::runtime_error("del");
+                fmt::println("del");
+                std::terminate();
             }
 
             if (delReply.value().value != 1) {
-                throw std::runtime_error("Incorrect value delReply");
+                fmt::println("Incorrect value delReply");
+                std::terminate();
             }
         }
 
@@ -103,24 +112,29 @@ namespace Ichor {
             if(_v >= Version{6, 2, 0}) {
                 auto setReply = co_await _redis->set("get_delete_key", "get_delete");
                 if(!setReply) {
-                    throw std::runtime_error("set");
+                    fmt::println("set");
+                    std::terminate();
                 }
                 auto delReply= co_await _redis->getdel("get_delete_key");
                 if(!delReply) {
-                    throw std::runtime_error("getdel");
+                    fmt::println("getdel");
+                    std::terminate();
                 }
 
                 if (!delReply.value().value || *delReply.value().value != "get_delete") {
-                    throw std::runtime_error("Incorrect value get_delete");
+                    fmt::println("Incorrect value get_delete");
+                    std::terminate();
                 }
                 auto getReply = co_await _redis->get("get_delete_key");
                 if(getReply && getReply->value.has_value()) {
-                    throw std::runtime_error("get");
+                    fmt::println("get");
+                    std::terminate();
                 }
             } else {
                 auto delReply = co_await _redis->getdel("get_delete_key");
                 if(delReply || delReply.error() != RedisError::FUNCTION_NOT_AVAILABLE_IN_SERVER) {
-                    throw std::runtime_error("getdel");
+                    fmt::println("getdel");
+                    std::terminate();
                 }
             }
         }
@@ -129,15 +143,18 @@ namespace Ichor {
             ICHOR_LOG_INFO(_logger, "running test");
             auto setReply = co_await _redis->set("integer_key", "10");
             if(!setReply) {
-                throw std::runtime_error("set");
+                fmt::println("set");
+                std::terminate();
             }
             auto incrReply= co_await _redis->incr("integer_key");
             if(!incrReply) {
-                throw std::runtime_error("incr");
+                fmt::println("incr");
+                std::terminate();
             }
 
             if (incrReply.value().value != 11) {
-                throw std::runtime_error("Incorrect value");
+                fmt::println("Incorrect value");
+                std::terminate();
             }
         }
 
@@ -145,15 +162,18 @@ namespace Ichor {
             ICHOR_LOG_INFO(_logger, "running test");
             auto setReply = co_await _redis->set("integer_key", "10");
             if(!setReply) {
-                throw std::runtime_error("set");
+                fmt::println("set");
+                std::terminate();
             }
             auto incrByReply= co_await _redis->incrBy("integer_key", 10);
             if(!incrByReply) {
-                throw std::runtime_error("incrBy");
+                fmt::println("incrBy");
+                std::terminate();
             }
 
             if (incrByReply.value().value != 20) {
-                throw std::runtime_error("Incorrect value");
+                fmt::println("Incorrect value");
+                std::terminate();
             }
         }
 
@@ -161,15 +181,18 @@ namespace Ichor {
             ICHOR_LOG_INFO(_logger, "running test");
             auto setReply = co_await _redis->set("integer_key", "10");
             if(!setReply) {
-                throw std::runtime_error("set");
+                fmt::println("set");
+                std::terminate();
             }
             auto decrReply = co_await _redis->decr("integer_key");
             if(!decrReply) {
-                throw std::runtime_error("decr");
+                fmt::println("decr");
+                std::terminate();
             }
 
             if (decrReply.value().value != 9) {
-                throw std::runtime_error("Incorrect value");
+                fmt::println("Incorrect value");
+                std::terminate();
             }
         }
 
@@ -177,15 +200,18 @@ namespace Ichor {
             ICHOR_LOG_INFO(_logger, "running test");
             auto setReply = co_await _redis->set("integer_key", "10");
             if(!setReply) {
-                throw std::runtime_error("set");
+                fmt::println("set");
+                std::terminate();
             }
             auto decrByReply= co_await _redis->decrBy("integer_key", 10);
             if(!decrByReply) {
-                throw std::runtime_error("decrBy");
+                fmt::println("decrBy");
+                std::terminate();
             }
 
             if (decrByReply.value().value != 0) {
-                throw std::runtime_error("Incorrect value");
+                fmt::println("Incorrect value");
+                std::terminate();
             }
         }
 
@@ -193,38 +219,46 @@ namespace Ichor {
             ICHOR_LOG_INFO(_logger, "running test");
             auto multiReply = co_await _redis->multi();
             if(!multiReply) {
-                throw std::runtime_error("multi");
+                fmt::println("multi");
+                std::terminate();
             }
             auto multi2Reply = co_await _redis->multi();
             if(multi2Reply) {
-                throw std::runtime_error("multi2");
+                fmt::println("multi2");
+                std::terminate();
             }
 
             auto setReply = co_await _redis->set("multi_key", "10");
             if(setReply || setReply.error() != RedisError::QUEUED) {
-                throw std::runtime_error("set");
+                fmt::println("set");
+                std::terminate();
             }
             auto getReply = co_await _redis->get("multi_key");
             if(getReply || getReply.error() != RedisError::QUEUED) {
-                throw std::runtime_error("get");
+                fmt::println("get");
+                std::terminate();
             }
 
             auto execReply = co_await _redis->exec();
             if(!execReply) {
-                throw std::runtime_error("exec");
+                fmt::println("exec");
+                std::terminate();
             }
 
             if(execReply.value().size() != 2) {
-                throw std::runtime_error("exec size");
+                fmt::println("exec size");
+                std::terminate();
             }
 
             if(std::get<RedisGetReply>(execReply.value()[1]).value != "10") {
-                throw std::runtime_error("exec value");
+                fmt::println("exec value");
+                std::terminate();
             }
 
             auto discardReply = co_await _redis->discard();
             if(discardReply) {
-                throw std::runtime_error("discard");
+                fmt::println("discard");
+                std::terminate();
             }
         }
 

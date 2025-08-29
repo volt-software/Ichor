@@ -50,41 +50,49 @@ namespace Ichor {
 
             auto putReply = co_await _etcd->put(putReq);
             if (!putReply) {
-                throw std::runtime_error("put");
+                fmt::println("put");
+                std::terminate();
             }
             revision = putReply->header.revision;
 
             Etcdv3::v1::EtcdRangeRequest rangeReq{.key = "v3_test_key"};
             auto rangeReply = co_await _etcd->range(rangeReq);
             if (!rangeReply) {
-                throw std::runtime_error("range");
+                fmt::println("range");
+                std::terminate();
             }
 
             if ((*rangeReply).kvs.size() != 1) {
-                throw std::runtime_error("range size");
+                fmt::println("range size");
+                std::terminate();
             }
 
             if ((*rangeReply).kvs[0].key != "v3_test_key") {
-                throw std::runtime_error("range key");
+                fmt::println("range key");
+                std::terminate();
             }
 
             if ((*rangeReply).kvs[0].value != "test_value") {
-                throw std::runtime_error("range value");
+                fmt::println("range value");
+                std::terminate();
             }
 
             Etcdv3::v1::EtcdDeleteRangeRequest deleteReq{.key = "v3_test_key"};
 
             auto deleteReply = co_await _etcd->deleteRange(deleteReq);
             if (!deleteReply) {
-                throw std::runtime_error("delete");
+                fmt::println("delete");
+                std::terminate();
             }
 
             if(deleteReply->deleted != 1) {
-                throw std::runtime_error("delete deleted != 1");
+                fmt::println("delete deleted != 1");
+                std::terminate();
             }
 
             if(deleteReply->header.revision != revision + 1) {
-                throw std::runtime_error("revision");
+                fmt::println("revision");
+                std::terminate();
             }
         }
 
@@ -95,16 +103,19 @@ namespace Ichor {
 
             auto putReply = co_await _etcd->put(putReq);
             if (!putReply) {
-                throw std::runtime_error("put");
+                fmt::println("put");
+                std::terminate();
             }
 
             Etcdv3::v1::EtcdRangeRequest rangeReq{.key = "v3_txn_key"};
             auto rangeReply = co_await _etcd->range(rangeReq);
             if (!rangeReply) {
-                throw std::runtime_error("range");
+                fmt::println("range");
+                std::terminate();
             }
             if (rangeReply->kvs.size() != 1) {
-                throw std::runtime_error("range size");
+                fmt::println("range size");
+                std::terminate();
             }
 
             revision = rangeReply->kvs[0].create_revision;
@@ -114,15 +125,18 @@ namespace Ichor {
             txnReq.success.emplace_back(Etcdv3::v1::EtcdRequestOp{.request_range = Etcdv3::v1::EtcdRangeRequest{.key = "v3_txn_key"}});
             auto txnReply = co_await _etcd->txn(txnReq);
             if (!txnReply) {
-                throw std::runtime_error("txn");
+                fmt::println("txn");
+                std::terminate();
             }
 
             if(!txnReply->succeeded) {
-                throw std::runtime_error("txn succeeded false");
+                fmt::println("txn succeeded false");
+                std::terminate();
             }
 
             if(txnReply->responses.size() != 1) {
-                throw std::runtime_error("txn responses size != 1");
+                fmt::println("txn responses size != 1");
+                std::terminate();
             }
         }
 
@@ -132,66 +146,81 @@ namespace Ichor {
 
             auto grantReply = co_await _etcd->leaseGrant(grantReq);
             if (!grantReply) {
-                throw std::runtime_error("grant");
+                fmt::println("grant");
+                std::terminate();
             }
 
             Etcdv3::v1::LeaseKeepAliveRequest keepAliveReq{101};
             auto keepAliveReply = co_await _etcd->leaseKeepAlive(keepAliveReq);
             if (!keepAliveReply) {
-                throw std::runtime_error("keepAlive");
+                fmt::println("keepAlive");
+                std::terminate();
             }
             if(keepAliveReply->result.id != 101) {
-                throw std::runtime_error("keepAlive id != 101");
+                fmt::println("keepAlive id != 101");
+                std::terminate();
             }
             if(keepAliveReply->result.ttl_in_seconds <= 90) {
-                throw std::runtime_error("keepAlive ttl_in_seconds <= 90");
+                fmt::println("keepAlive ttl_in_seconds <= 90");
+                std::terminate();
             }
 
             Etcdv3::v1::EtcdPutRequest putReq{"v3_lease_key", "lease_value", 101, tl::nullopt, tl::nullopt, tl::nullopt};
             auto putReply = co_await _etcd->put(putReq);
             if (!putReply) {
-                throw std::runtime_error("put");
+                fmt::println("put");
+                std::terminate();
             }
 
             Etcdv3::v1::LeaseTimeToLiveRequest ttlReq{101, true};
             auto ttlReply = co_await _etcd->leaseTimeToLive(ttlReq);
             if (!ttlReply) {
-                throw std::runtime_error("ttl");
+                fmt::println("ttl");
+                std::terminate();
             }
             if(ttlReply->id != 101) {
-                throw std::runtime_error("ttl id != 101");
+                fmt::println("ttl id != 101");
+                std::terminate();
             }
             if(ttlReply->ttl_in_seconds <= 90) {
-                throw std::runtime_error("ttl ttl_in_seconds <= 90");
+                fmt::println("ttl ttl_in_seconds <= 90");
+                std::terminate();
             }
             if(ttlReply->granted_ttl != 100) {
-                throw std::runtime_error("ttl granted_ttl != 100");
+                fmt::println("ttl granted_ttl != 100");
+                std::terminate();
             }
             if(ttlReply->keys.size() != 1) {
-                throw std::runtime_error("ttl keys.size() != 1");
+                fmt::println("ttl keys.size() != 1");
+                std::terminate();
             }
             if(ttlReply->keys[0] != "v3_lease_key") {
-                throw std::runtime_error("ttl keys[0] != v3_lease_key");
+                fmt::println("ttl keys[0] != v3_lease_key");
+                std::terminate();
             }
 
             if(_v >= Version{3, 3, 0}) {
                 Etcdv3::v1::LeaseLeasesRequest leasesReq{};
                 auto leasesReply = co_await _etcd->leaseLeases(leasesReq);
                 if (!leasesReply) {
-                    throw std::runtime_error("leases");
+                    fmt::println("leases");
+                    std::terminate();
                 }
                 if (leasesReply->leases.size() != 1) {
-                    throw std::runtime_error("leases leases.size() != 1");
+                    fmt::println("leases leases.size() != 1");
+                    std::terminate();
                 }
                 if (leasesReply->leases[0].id != 101) {
-                    throw std::runtime_error("leases leases[0].id != 101");
+                    fmt::println("leases leases[0].id != 101");
+                    std::terminate();
                 }
             }
 
             Etcdv3::v1::LeaseRevokeRequest revokeReq{101};
             auto revokeReply = co_await _etcd->leaseRevoke(revokeReq);
             if(!revokeReply) {
-                throw std::runtime_error("revoke");
+                fmt::println("revoke");
+                std::terminate();
             }
         }
 
@@ -204,116 +233,140 @@ namespace Ichor {
                 Etcdv3::v1::AuthUserDeleteRequest userDelReq{"v3_test_user"};
                 auto userDelReply = co_await _etcd->userDelete(userDelReq);
                 if(!userDelReply) {
-                    throw std::runtime_error("userDel at init");
+                    fmt::println("userDel at init");
+                    std::terminate();
                 }
             }
 
             Etcdv3::v1::AuthUserAddRequest userAddReq{"v3_test_user", "v3_test_password", {}, {}};
             auto userAddReply = co_await _etcd->userAdd(userAddReq);
             if (!userAddReply) {
-                throw std::runtime_error("userAdd");
+                fmt::println("userAdd");
+                std::terminate();
             }
 
             Etcdv3::v1::AuthUserListRequest userListReq{};
             auto userListReply = co_await _etcd->userList(userListReq);
             if (!userListReply) {
-                throw std::runtime_error("userList");
+                fmt::println("userList");
+                std::terminate();
             }
             if(std::find(userListReply->users.begin(), userListReply->users.end(), "v3_test_user") == userListReply->users.end()) {
-                throw std::runtime_error("v3_test_user not in list user");
+                fmt::println("v3_test_user not in list user");
+                std::terminate();
             }
             if(std::find(userListReply->users.begin(), userListReply->users.end(), "root") == userListReply->users.end()) {
                 userAddReq.name = "root";
                 userAddReq.password = "root";
                 userAddReply = co_await _etcd->userAdd(userAddReq);
                 if (!userAddReply) {
-                    throw std::runtime_error("userAdd root");
+                    fmt::println("userAdd root");
+                    std::terminate();
                 }
 
                 Etcdv3::v1::AuthUserGrantRoleRequest userGrantRoleReq{"root", "root"};
                 auto userGrantRoleReply = co_await _etcd->userGrantRole(userGrantRoleReq);
                 if(!userGrantRoleReply) {
-                    throw std::runtime_error("grant role root");
+                    fmt::println("grant role root");
+                    std::terminate();
                 }
             }
 
             Etcdv3::v1::AuthUserGrantRoleRequest userGrantRoleReq{"v3_test_user", "root"};
             auto userGrantRoleReply = co_await _etcd->userGrantRole(userGrantRoleReq);
             if(!userGrantRoleReply) {
-                throw std::runtime_error("grant role");
+                fmt::println("grant role");
+                std::terminate();
             }
 
             userGetReply = co_await _etcd->userGet(userGetReq);
             if(!userGetReply) {
-                throw std::runtime_error("userGetReply");
+                fmt::println("userGetReply");
+                std::terminate();
             }
 
             if(std::find(userGetReply->roles.begin(), userGetReply->roles.end(), "root") == userGetReply->roles.end()) {
-                throw std::runtime_error("root not in user's role list");
+                fmt::println("root not in user's role list");
+                std::terminate();
             }
 
             Etcdv3::v1::AuthEnableRequest authEnableReq{};
             auto authEnableReply = co_await _etcd->authEnable(authEnableReq);
             if(_v < Version{3, 3, 0} && authEnableReply) {
-                throw std::runtime_error("auth enable");
+                fmt::println("auth enable");
+                std::terminate();
             }
             if(_v >= Version{3, 3, 0} && !authEnableReply) {
-                throw std::runtime_error("auth enable");
+                fmt::println("auth enable");
+                std::terminate();
             }
 
             Etcdv3::v1::AuthenticateRequest userAuthReq{"v3_test_user", "v3_test_password"};
             auto userAuthReply = co_await _etcd->authenticate(userAuthReq);
             if(_v < Version{3, 3, 0} && userAuthReply) {
-                throw std::runtime_error("authenticate");
+                fmt::println("authenticate");
+                std::terminate();
             }
             if(_v >= Version{3, 3, 0} && !userAuthReply) {
-                throw std::runtime_error("authenticate");
+                fmt::println("authenticate");
+                std::terminate();
             }
             if(_v >= Version{3, 3, 0} && _etcd->getAuthenticationUser() != "v3_test_user") {
-                throw std::runtime_error("authenticate user");
+                fmt::println("authenticate user");
+                std::terminate();
             }
 
             Etcdv3::v1::AuthDisableRequest authDisableReq{};
             auto authDisableReply = co_await _etcd->authDisable(authDisableReq);
             if(_v < Version{3, 3, 0} && authDisableReply) {
-                throw std::runtime_error("auth disable");
+                fmt::println("auth disable");
+                std::terminate();
             }
             if(_v >= Version{3, 3, 0} && !authDisableReply) {
-                throw std::runtime_error("auth disable");
+                fmt::println("auth disable");
+                std::terminate();
             }
 
             Etcdv3::v1::AuthUserChangePasswordRequest authChangePassReq{"v3_test_user", "v3_test_password2"};
             auto authChangePassReply = co_await _etcd->userChangePassword(authChangePassReq);
             if(!authChangePassReply) {
-                throw std::runtime_error("auth change pass");
+                fmt::println("auth change pass");
+                std::terminate();
             }
 
             authEnableReply = co_await _etcd->authEnable(authEnableReq);
             if(_v < Version{3, 3, 0} && authEnableReply) {
-                throw std::runtime_error("auth enable2");
+                fmt::println("auth enable2");
+                std::terminate();
             }
             if(_v >= Version{3, 3, 0} && !authEnableReply) {
-                throw std::runtime_error("auth enable2");
+                fmt::println("auth enable2");
+                std::terminate();
             }
 
             userAuthReq.password = "v3_test_password2";
             userAuthReply = co_await _etcd->authenticate(userAuthReq);
             if(_v < Version{3, 3, 0} && userAuthReply) {
-                throw std::runtime_error("authenticate2");
+                fmt::println("authenticate2");
+                std::terminate();
             }
             if(_v >= Version{3, 3, 0} && !userAuthReply) {
-                throw std::runtime_error("authenticate2");
+                fmt::println("authenticate2");
+                std::terminate();
             }
             if(_v >= Version{3, 3, 0} && _etcd->getAuthenticationUser() != "v3_test_user") {
-                throw std::runtime_error("authenticate user2");
+                fmt::println("authenticate user2");
+                std::terminate();
             }
 
             authDisableReply = co_await _etcd->authDisable(authDisableReq);
             if(_v < Version{3, 3, 0} && authDisableReply) {
-                throw std::runtime_error("auth disable2");
+                fmt::println("auth disable2");
+                std::terminate();
             }
             if(_v >= Version{3, 3, 0} && !authDisableReply) {
-                throw std::runtime_error("auth disable2");
+                fmt::println("auth disable2");
+                std::terminate();
             }
 
 
@@ -321,22 +374,26 @@ namespace Ichor {
             Etcdv3::v1::AuthUserRevokeRoleRequest userRevokeRoleReq{"v3_test_user", "root"};
             auto userRevokeRoleReply = co_await _etcd->userRevokeRole(userRevokeRoleReq);
             if(!userRevokeRoleReply) {
-                throw std::runtime_error("revoke role");
+                fmt::println("revoke role");
+                std::terminate();
             }
 
             userGetReply = co_await _etcd->userGet(userGetReq);
             if(!userGetReply) {
-                throw std::runtime_error("userGetReply");
+                fmt::println("userGetReply");
+                std::terminate();
             }
 
             if(std::find(userGetReply->roles.begin(), userGetReply->roles.end(), "root") != userGetReply->roles.end()) {
-                throw std::runtime_error("root still in user's role list");
+                fmt::println("root still in user's role list");
+                std::terminate();
             }
 
             Etcdv3::v1::AuthUserDeleteRequest userDelReq{"v3_test_user"};
             auto userDelReply = co_await _etcd->userDelete(userDelReq);
             if(!userDelReply) {
-                throw std::runtime_error("userDel");
+                fmt::println("userDel");
+                std::terminate();
             }
         }
 
@@ -349,63 +406,74 @@ namespace Ichor {
                 Etcdv3::v1::AuthRoleDeleteRequest roleDelReq{"v3_test_role"};
                 auto roleDelReply = co_await _etcd->roleDelete(roleDelReq);
                 if(!roleDelReply) {
-                    throw std::runtime_error("roleDel at init");
+                    fmt::println("roleDel at init");
+                    std::terminate();
                 }
             }
 
             Etcdv3::v1::AuthRoleAddRequest roleAddReq{"v3_test_role"};
             auto roleAddReply = co_await _etcd->roleAdd(roleAddReq);
             if (!roleAddReply) {
-                throw std::runtime_error("roleAdd");
+                fmt::println("roleAdd");
+                std::terminate();
             }
 
             Etcdv3::v1::AuthRoleListRequest roleListReq{};
             auto roleListReply = co_await _etcd->roleList(roleListReq);
             if (!roleListReply) {
-                throw std::runtime_error("roleList");
+                fmt::println("roleList");
+                std::terminate();
             }
             if(std::find(roleListReply->roles.begin(), roleListReply->roles.end(), "v3_test_role") == roleListReply->roles.end()) {
-                throw std::runtime_error("v3_test_role not in list role");
+                fmt::println("v3_test_role not in list role");
+                std::terminate();
             }
 
             Etcdv3::v1::AuthRoleGrantPermissionRequest roleGrantPermissionReq{"v3_test_role", Etcdv3::v1::AuthPermission{Etcdv3::v1::EtcdAuthPermissionType::WRITE, "v3_test_role_permission"}};
             auto roleGrantPermissionReply = co_await _etcd->roleGrantPermission(roleGrantPermissionReq);
             if(!roleGrantPermissionReply) {
-                throw std::runtime_error("role grant permission");
+                fmt::println("role grant permission");
+                std::terminate();
             }
 
             roleGetReply = co_await _etcd->roleGet(roleGetReq);
             if(!roleGetReply) {
-                throw std::runtime_error("roleGetReply1");
+                fmt::println("roleGetReply1");
+                std::terminate();
             }
 
             if(std::find_if(roleGetReply->perm.begin(), roleGetReply->perm.end(), [](Etcdv3::v1::AuthPermission const &permission){
                 return permission.key == "v3_test_role_permission" && permission.permType == Etcdv3::v1::EtcdAuthPermissionType::WRITE;
             }) == roleGetReply->perm.end()) {
-                throw std::runtime_error("permission not in role's permission list");
+                fmt::println("permission not in role's permission list");
+                std::terminate();
             }
 
             Etcdv3::v1::AuthRoleRevokePermissionRequest roleRevokePermissionReq{"v3_test_role", "v3_test_role_permission"};
             auto roleRevokeRoleReply = co_await _etcd->roleRevokePermission(roleRevokePermissionReq);
             if(!roleRevokeRoleReply) {
-                throw std::runtime_error("role revoke permission");
+                fmt::println("role revoke permission");
+                std::terminate();
             }
 
             roleGetReply = co_await _etcd->roleGet(roleGetReq);
             if(!roleGetReply) {
-                throw std::runtime_error("roleGetReply2");
+                fmt::println("roleGetReply2");
+                std::terminate();
             }
 
             if(std::find_if(roleGetReply->perm.begin(), roleGetReply->perm.end(), [](Etcdv3::v1::AuthPermission const &permission){
                 return permission.key == "v3_test_role_permission" && permission.permType == Etcdv3::v1::EtcdAuthPermissionType::WRITE;
             }) != roleGetReply->perm.end()) {
-                throw std::runtime_error("permission still in role's permission list");
+                fmt::println("permission still in role's permission list");
+                std::terminate();
             }
 
             Etcdv3::v1::AuthRoleDeleteRequest roleDelReq{"v3_test_role"};
             auto roleDelReply = co_await _etcd->roleDelete(roleDelReq);
             if(!roleDelReply) {
-                throw std::runtime_error("roleDel");
+                fmt::println("roleDel");
+                std::terminate();
             }
         }
 
@@ -416,7 +484,8 @@ namespace Ichor {
 
             auto putReply = co_await _etcd->put(putReq);
             if (!putReply) {
-                throw std::runtime_error("put");
+                fmt::println("put");
+                std::terminate();
             }
 
             revision = putReply->header.revision;
@@ -425,7 +494,8 @@ namespace Ichor {
 
             auto compactionReply = co_await _etcd->compact(compactionRequest);
             if (!compactionReply) {
-                throw std::runtime_error("compactionReply");
+                fmt::println("compactionReply");
+                std::terminate();
             }
         }
 

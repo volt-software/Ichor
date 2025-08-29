@@ -40,7 +40,8 @@ bool Ichor::v1::IOUringTimer::startTimer() {
 
 bool Ichor::v1::IOUringTimer::startTimer(bool fireImmediately) {
     if(!_fn && !_fnAsync) [[unlikely]] {
-        throw std::runtime_error("No callback set.");
+        fmt::println("No callback set.");
+        std::terminate();
     }
 
     if(_state == TimerState::STOPPED) {

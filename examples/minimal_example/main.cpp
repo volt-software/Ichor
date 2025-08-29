@@ -39,11 +39,15 @@ public:
 
 int main(int argc, char *argv[]) {
     // some loggers require having a locale
+#if ICHOR_EXCEPTIONS_ENABLED
     try {
+#endif
         std::locale::global(std::locale("en_US.UTF-8"));
+#if ICHOR_EXCEPTIONS_ENABLED
     } catch(std::runtime_error const &e) {
         fmt::println("Couldn't set locale to en_US.UTF-8: {}", e.what());
     }
+#endif
 
     auto queue = std::make_unique<PriorityQueue>();
     auto &dm = queue->createManager();

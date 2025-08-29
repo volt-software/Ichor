@@ -160,9 +160,3 @@ namespace Ichor {
 
     using ServiceIdType = uint64_t;
 }
-
-#if defined(__cpp_contracts)
-#define ICHOR_CONTRACT_ASSERT contract_assert
-#else
-#define ICHOR_CONTRACT_ASSERT(expr) if constexpr (false) {  (void)!!(expr); }
-#endif

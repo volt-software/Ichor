@@ -17,221 +17,268 @@ namespace Ichor {
             {
                 auto putReply = co_await _etcd->put("test_key", "test_value");
                 if (!putReply) {
-                    throw std::runtime_error("");
+                    fmt::println("");
+                    std::terminate();
                 }
 
                 if (!putReply.value().action || putReply.value().action != "set") {
-                    throw std::runtime_error("Incorrect put action");
+                    fmt::println("Incorrect put action");
+                    std::terminate();
                 }
 
                 if (!putReply.value().node || putReply.value().node->value != "test_value") {
-                    throw std::runtime_error("Incorrect put node value");
+                    fmt::println("Incorrect put node value");
+                    std::terminate();
                 }
 
                 modifiedIndex = putReply.value().node->modifiedIndex;
 
                 if(!putReply->x_etcd_index || putReply->x_etcd_index != modifiedIndex) {
-                    throw std::runtime_error("Incorrect put x etcd index");
+                    fmt::println("Incorrect put x etcd index");
+                    std::terminate();
                 }
 
                 auto getReply = co_await _etcd->get("test_key");
                 if(!getReply) {
-                    throw std::runtime_error("");
+                    fmt::println("");
+                    std::terminate();
                 }
 
                 if (!getReply.value().action || getReply.value().action != "get") {
-                    throw std::runtime_error("Incorrect get action");
+                    fmt::println("Incorrect get action");
+                    std::terminate();
                 }
 
                 if (!getReply.value().node || getReply.value().node->value != "test_value") {
-                    throw std::runtime_error("Incorrect get node value");
+                    fmt::println("Incorrect get node value");
+                    std::terminate();
                 }
 
                 if (getReply.value().node->modifiedIndex != modifiedIndex) {
-                    throw std::runtime_error("Incorrect get node modifiedIndex");
+                    fmt::println("Incorrect get node modifiedIndex");
+                    std::terminate();
                 }
             }
             // Standard delete and get non-existing key test
             {
                 auto delReply = co_await _etcd->del("test_key", false, false);
                 if (!delReply) {
-                    throw std::runtime_error("");
+                    fmt::println("");
+                    std::terminate();
                 }
 
                 if (!delReply.value().action || delReply.value().action != "delete") {
-                    throw std::runtime_error("Incorrect del action");
+                    fmt::println("Incorrect del action");
+                    std::terminate();
                 }
 
                 if (!delReply.value().node) {
-                    throw std::runtime_error("Incorrect del node");
+                    fmt::println("Incorrect del node");
+                    std::terminate();
                 }
 
                 if (delReply.value().node->value) {
-                    throw std::runtime_error("Incorrect del node value");
+                    fmt::println("Incorrect del node value");
+                    std::terminate();
                 }
 
                 if (delReply.value().errorCode) {
-                    throw std::runtime_error("Incorrect del errorCode");
+                    fmt::println("Incorrect del errorCode");
+                    std::terminate();
                 }
 
                 if (delReply.value().node->modifiedIndex != modifiedIndex + 1) {
-                    throw std::runtime_error("Incorrect del node modifiedIndex");
+                    fmt::println("Incorrect del node modifiedIndex");
+                    std::terminate();
                 }
 
                 auto getReply = co_await _etcd->get("test_key");
                 if(!getReply || getReply->errorCode != Etcdv2::v1::EtcdErrorCodes::KEY_DOES_NOT_EXIST) {
-                    throw std::runtime_error("Incorrect get errorCode");
+                    fmt::println("Incorrect get errorCode");
+                    std::terminate();
                 }
             }
             // Compare and swap previous value test
             {
                 auto putReply = co_await _etcd->put("test_key", "test_value");
                 if (!putReply) {
-                    throw std::runtime_error("");
+                    fmt::println("");
+                    std::terminate();
                 }
 
                 if (!putReply.value().node || putReply.value().node->value != "test_value") {
-                    throw std::runtime_error("Incorrect put node value");
+                    fmt::println("Incorrect put node value");
+                    std::terminate();
                 }
 
                 auto putWrongCasReply = co_await _etcd->put("test_key", "wrong_value", "wrong_previous_value", {}, {}, {}, false, false, false);
                 if (!putWrongCasReply) {
-                    throw std::runtime_error("");
+                    fmt::println("");
+                    std::terminate();
                 }
 
                 if (!putWrongCasReply.value().errorCode || putWrongCasReply.value().errorCode != Etcdv2::v1::EtcdErrorCodes::COMPARE_AND_SWAP_FAILED) {
-                    throw std::runtime_error("Incorrect put wrong cas node errorCode");
+                    fmt::println("Incorrect put wrong cas node errorCode");
+                    std::terminate();
                 }
 
                 auto putCasReply = co_await _etcd->put("test_key", "new_value", "test_value", {}, {}, {}, false, false, false);
                 if (!putCasReply) {
-                    throw std::runtime_error("");
+                    fmt::println("");
+                    std::terminate();
                 }
 
                 if (putCasReply.value().errorCode) {
-                    throw std::runtime_error("Incorrect put cas errorCode");
+                    fmt::println("Incorrect put cas errorCode");
+                    std::terminate();
                 }
 
                 auto getReply = co_await _etcd->get("test_key");
                 if(!getReply) {
-                    throw std::runtime_error("");
+                    fmt::println("");
+                    std::terminate();
                 }
 
                 if (!getReply.value().node || getReply.value().node->value != "new_value") {
-                    throw std::runtime_error("Incorrect get node value");
+                    fmt::println("Incorrect get node value");
+                    std::terminate();
                 }
 
                 auto delReply = co_await _etcd->del("test_key", false, false);
                 if (!delReply) {
-                    throw std::runtime_error("");
+                    fmt::println("");
+                    std::terminate();
                 }
 
                 if (delReply.value().errorCode) {
-                    throw std::runtime_error("Incorrect del errorCode");
+                    fmt::println("Incorrect del errorCode");
+                    std::terminate();
                 }
             }
             // Compare and swap previous index test
             {
                 auto putReply = co_await _etcd->put("test_key", "test_value");
                 if (!putReply) {
-                    throw std::runtime_error("");
+                    fmt::println("");
+                    std::terminate();
                 }
 
                 if (!putReply.value().node || putReply.value().node->value != "test_value") {
-                    throw std::runtime_error("Incorrect put node value");
+                    fmt::println("Incorrect put node value");
+                    std::terminate();
                 }
                 uint64_t previous_index = putReply->node->modifiedIndex;
 
                 auto putWrongCasReply = co_await _etcd->put("test_key", "wrong_value", {}, previous_index + 1, {}, {}, false, false, false);
                 if (!putWrongCasReply) {
-                    throw std::runtime_error("");
+                    fmt::println("");
+                    std::terminate();
                 }
 
                 if (!putWrongCasReply.value().errorCode || putWrongCasReply.value().errorCode != Etcdv2::v1::EtcdErrorCodes::COMPARE_AND_SWAP_FAILED) {
-                    throw std::runtime_error("Incorrect put wrong cas node errorCode");
+                    fmt::println("Incorrect put wrong cas node errorCode");
+                    std::terminate();
                 }
 
                 auto putCasReply = co_await _etcd->put("test_key", "new_value", {}, previous_index, {}, {}, false, false, false);
                 if (!putCasReply) {
-                    throw std::runtime_error("");
+                    fmt::println("");
+                    std::terminate();
                 }
 
                 if (putCasReply.value().errorCode) {
-                    throw std::runtime_error("Incorrect put cas errorCode");
+                    fmt::println("Incorrect put cas errorCode");
+                    std::terminate();
                 }
 
                 auto getReply = co_await _etcd->get("test_key");
                 if(!getReply) {
-                    throw std::runtime_error("");
+                    fmt::println("");
+                    std::terminate();
                 }
 
                 if (!getReply.value().node || getReply.value().node->value != "new_value") {
-                    throw std::runtime_error("Incorrect get node value");
+                    fmt::println("Incorrect get node value");
+                    std::terminate();
                 }
 
                 auto delReply = co_await _etcd->del("test_key", false, false);
                 if (!delReply) {
-                    throw std::runtime_error("");
+                    fmt::println("");
+                    std::terminate();
                 }
 
                 if (delReply.value().errorCode) {
-                    throw std::runtime_error("Incorrect del errorCode");
+                    fmt::println("Incorrect del errorCode");
+                    std::terminate();
                 }
             }
             // previous exists tests
             {
                 auto putWrongCasReply = co_await _etcd->put("test_key", "test_value", {}, {}, true, {}, false, false, false);
                 if (!putWrongCasReply) {
-                    throw std::runtime_error("");
+                    fmt::println("");
+                    std::terminate();
                 }
 
                 if (!putWrongCasReply.value().errorCode || putWrongCasReply.value().errorCode != Etcdv2::v1::EtcdErrorCodes::KEY_DOES_NOT_EXIST) {
-                    throw std::runtime_error("Incorrect put wrong cas node errorCode");
+                    fmt::println("Incorrect put wrong cas node errorCode");
+                    std::terminate();
                 }
 
                 auto putCasReply = co_await _etcd->put("test_key", "test_value", {}, {}, false, {}, false, false, false);
                 if (!putCasReply) {
-                    throw std::runtime_error("");
+                    fmt::println("");
+                    std::terminate();
                 }
 
                 if (putCasReply.value().errorCode) {
-                    throw std::runtime_error("Incorrect put cas errorCode");
+                    fmt::println("Incorrect put cas errorCode");
+                    std::terminate();
                 }
 
                 putWrongCasReply = co_await _etcd->put("test_key", "test_value", {}, {}, false, {}, false, false, false);
                 if (!putWrongCasReply) {
-                    throw std::runtime_error("");
+                    fmt::println("");
+                    std::terminate();
                 }
 
                 if (!putWrongCasReply.value().errorCode || putWrongCasReply.value().errorCode != Etcdv2::v1::EtcdErrorCodes::KEY_ALREADY_EXISTS) {
-                    throw std::runtime_error("Incorrect put wrong cas node errorCode");
+                    fmt::println("Incorrect put wrong cas node errorCode");
+                    std::terminate();
                 }
 
                 putCasReply = co_await _etcd->put("test_key", "new_value", {}, {}, true, {}, false, false, false);
                 if (!putCasReply) {
-                    throw std::runtime_error("");
+                    fmt::println("");
+                    std::terminate();
                 }
 
                 if (putCasReply.value().errorCode) {
-                    throw std::runtime_error("Incorrect put cas errorCode");
+                    fmt::println("Incorrect put cas errorCode");
+                    std::terminate();
                 }
 
                 auto getReply = co_await _etcd->get("test_key");
                 if(!getReply) {
-                    throw std::runtime_error("");
+                    fmt::println("");
+                    std::terminate();
                 }
 
                 if (!getReply.value().node || getReply.value().node->value != "new_value") {
-                    throw std::runtime_error("Incorrect get node value");
+                    fmt::println("Incorrect get node value");
+                    std::terminate();
                 }
 
                 auto delReply = co_await _etcd->del("test_key", false, false);
                 if (!delReply) {
-                    throw std::runtime_error("");
+                    fmt::println("");
+                    std::terminate();
                 }
 
                 if (delReply.value().errorCode) {
-                    throw std::runtime_error("Incorrect del errorCode");
+                    fmt::println("Incorrect del errorCode");
+                    std::terminate();
                 }
             }
             // Recursive directory test
@@ -239,59 +286,72 @@ namespace Ichor {
                 co_await _etcd->del("test_key_dir", true, true);
                 auto putReply = co_await _etcd->put("test_key_dir", "root", {}, {}, {}, {}, false, true, false);
                 if (!putReply) {
-                    throw std::runtime_error("");
+                    fmt::println("");
+                    std::terminate();
                 }
 
                 if (!putReply.value().node || putReply.value().node->value) {
-                    throw std::runtime_error("Incorrect put dir node value1");
+                    fmt::println("Incorrect put dir node value1");
+                    std::terminate();
                 }
 
                 if (!putReply.value().node->dir || !*putReply.value().node->dir) {
-                    throw std::runtime_error("Incorrect put dir node dir");
+                    fmt::println("Incorrect put dir node dir");
+                    std::terminate();
                 }
 
                 putReply = co_await _etcd->put("test_key_dir/one", "one_value", {}, {}, {}, {}, false, false, false);
                 if (!putReply) {
-                    throw std::runtime_error("");
+                    fmt::println("");
+                    std::terminate();
                 }
 
                 if (!putReply.value().node || putReply.value().node->value != "one_value") {
-                    throw std::runtime_error("Incorrect put node value");
+                    fmt::println("Incorrect put node value");
+                    std::terminate();
                 }
 
                 putReply = co_await _etcd->put("test_key_dir/two", "two_value", {}, {}, {}, {}, false, false, false);
                 if (!putReply) {
-                    throw std::runtime_error("");
+                    fmt::println("");
+                    std::terminate();
                 }
 
                 if (!putReply.value().node || putReply.value().node->value != "two_value") {
-                    throw std::runtime_error("Incorrect put node value");
+                    fmt::println("Incorrect put node value");
+                    std::terminate();
                 }
 
                 putReply = co_await _etcd->put("test_key_dir/a", "a_value", {}, {}, {}, {}, false, false, false);
                 if (!putReply) {
-                    throw std::runtime_error("");
+                    fmt::println("");
+                    std::terminate();
                 }
 
                 if (!putReply.value().node || putReply.value().node->value != "a_value") {
-                    throw std::runtime_error("Incorrect put node value");
+                    fmt::println("Incorrect put node value");
+                    std::terminate();
                 }
 
                 auto getReply = co_await _etcd->get("test_key_dir", true, false, false, {});
                 if(!getReply) {
-                    throw std::runtime_error("");
+                    fmt::println("");
+                    std::terminate();
                 }
 
                 if (!getReply.value().node || getReply.value().node->value) {
-                    throw std::runtime_error("Incorrect get dir node value");
+                    fmt::println("Incorrect get dir node value");
+                    std::terminate();
                 }
 
                 if (!getReply.value().node->dir || !*getReply.value().node->dir) {
-                    throw std::runtime_error("Incorrect get dir node dir");
+                    fmt::println("Incorrect get dir node dir");
+                    std::terminate();
                 }
 
                 if (!getReply.value().node->nodes || getReply.value().node->nodes->empty()) {
-                    throw std::runtime_error("Incorrect get node nodes");
+                    fmt::println("Incorrect get node nodes");
+                    std::terminate();
                 }
 
                 bool found_a{};
@@ -300,163 +360,198 @@ namespace Ichor {
                 for(auto &node : *getReply.value().node->nodes) {
                     if(node.key == "/test_key_dir/a") {
                         if(!node.value || node.value != "a_value") {
-                            throw std::runtime_error("Incorrect a_value");
+                            fmt::println("Incorrect a_value");
+                            std::terminate();
                         }
                         found_a = true;
                     }
                     if(node.key == "/test_key_dir/one") {
                         if(!node.value || node.value != "one_value") {
-                            throw std::runtime_error("Incorrect one_value");
+                            fmt::println("Incorrect one_value");
+                            std::terminate();
                         }
                         found_one = true;
                     }
                     if(node.key == "/test_key_dir/two") {
                         if(!node.value || node.value != "two_value") {
-                            throw std::runtime_error("Incorrect two_value");
+                            fmt::println("Incorrect two_value");
+                            std::terminate();
                         }
                         found_two = true;
                     }
                 }
                 if(!found_a) {
-                    throw std::runtime_error("Did not find key a");
+                    fmt::println("Did not find key a");
+                    std::terminate();
                 }
                 if(!found_one) {
-                    throw std::runtime_error("Did not find key one");
+                    fmt::println("Did not find key one");
+                    std::terminate();
                 }
                 if(!found_two) {
-                    throw std::runtime_error("Did not find key two");
+                    fmt::println("Did not find key two");
+                    std::terminate();
                 }
 
                 getReply = co_await _etcd->get("test_key_dir", true, true, false, {});
                 if(!getReply) {
-                    throw std::runtime_error("");
+                    fmt::println("");
+                    std::terminate();
                 }
 
                 if((*getReply.value().node->nodes)[0].key != "/test_key_dir/a") {
-                    throw std::runtime_error("Incorrect sorted one_value order");
+                    fmt::println("Incorrect sorted one_value order");
+                    std::terminate();
                 }
 
                 if((*getReply.value().node->nodes)[1].key != "/test_key_dir/one") {
-                    throw std::runtime_error("Incorrect sorted one_value order");
+                    fmt::println("Incorrect sorted one_value order");
+                    std::terminate();
                 }
 
                 if((*getReply.value().node->nodes)[2].key != "/test_key_dir/two") {
-                    throw std::runtime_error("Incorrect sorted two_value order");
+                    fmt::println("Incorrect sorted two_value order");
+                    std::terminate();
                 }
 
                 auto delReply = co_await _etcd->del("test_key_dir", true, true);
                 if (!delReply) {
-                    throw std::runtime_error("");
+                    fmt::println("");
+                    std::terminate();
                 }
 
                 if (delReply.value().errorCode) {
-                    throw std::runtime_error("Incorrect del errorCode");
+                    fmt::println("Incorrect del errorCode");
+                    std::terminate();
                 }
             }
             // Recursive in-order directory test
             {
                 auto putReply = co_await _etcd->put("test_key_dir", "root", {}, {}, {}, {}, false, false, true);
                 if (!putReply) {
-                    throw std::runtime_error("");
+                    fmt::println("");
+                    std::terminate();
                 }
 
                 if (!putReply.value().node || putReply.value().node->value != "root") {
-                    throw std::runtime_error("Incorrect put dir node value");
+                    fmt::println("Incorrect put dir node value");
+                    std::terminate();
                 }
 
                 putReply = co_await _etcd->put("test_key_dir", "one_value", {}, {}, {}, {}, false, false, true);
                 if (!putReply) {
-                    throw std::runtime_error("");
+                    fmt::println("");
+                    std::terminate();
                 }
 
                 if (!putReply.value().node || putReply.value().node->value != "one_value") {
-                    throw std::runtime_error("Incorrect put node value");
+                    fmt::println("Incorrect put node value");
+                    std::terminate();
                 }
 
                 putReply = co_await _etcd->put("test_key_dir", "two_value", {}, {}, {}, {}, false, false, true);
                 if (!putReply) {
-                    throw std::runtime_error("");
+                    fmt::println("");
+                    std::terminate();
                 }
 
                 if (!putReply.value().node || putReply.value().node->value != "two_value") {
-                    throw std::runtime_error("Incorrect put node value");
+                    fmt::println("Incorrect put node value");
+                    std::terminate();
                 }
 
                 putReply = co_await _etcd->put("test_key_dir", "a_value", {}, {}, {}, {}, false, false, true);
                 if (!putReply) {
-                    throw std::runtime_error("");
+                    fmt::println("");
+                    std::terminate();
                 }
 
                 if (!putReply.value().node || putReply.value().node->value != "a_value") {
-                    throw std::runtime_error("Incorrect put node value");
+                    fmt::println("Incorrect put node value");
+                    std::terminate();
                 }
 
                 auto getReply = co_await _etcd->get("test_key_dir", true, true, false, {});
                 if(!getReply) {
-                    throw std::runtime_error("");
+                    fmt::println("");
+                    std::terminate();
                 }
 
                 if (!getReply.value().node || getReply.value().node->value) {
-                    throw std::runtime_error("Incorrect get dir node value");
+                    fmt::println("Incorrect get dir node value");
+                    std::terminate();
                 }
 
                 if (!getReply.value().node->dir || !*getReply.value().node->dir) {
-                    throw std::runtime_error("Incorrect get dir node dir");
+                    fmt::println("Incorrect get dir node dir");
+                    std::terminate();
                 }
 
                 if (!getReply.value().node->nodes || getReply.value().node->nodes->empty()) {
-                    throw std::runtime_error("Incorrect get node nodes");
+                    fmt::println("Incorrect get node nodes");
+                    std::terminate();
                 }
 
                 if((*getReply.value().node->nodes)[0].value != "root") {
-                    throw std::runtime_error("Incorrect root order");
+                    fmt::println("Incorrect root order");
+                    std::terminate();
                 }
 
                 if((*getReply.value().node->nodes)[1].value != "one_value") {
-                    throw std::runtime_error("Incorrect one_value order");
+                    fmt::println("Incorrect one_value order");
+                    std::terminate();
                 }
 
                 if((*getReply.value().node->nodes)[2].value != "two_value") {
-                    throw std::runtime_error("Incorrect two_value order");
+                    fmt::println("Incorrect two_value order");
+                    std::terminate();
                 }
 
                 if((*getReply.value().node->nodes)[3].value != "a_value") {
-                    throw std::runtime_error("Incorrect a_value order");
+                    fmt::println("Incorrect a_value order");
+                    std::terminate();
                 }
 
                 auto delReply = co_await _etcd->del("test_key_dir", true, true);
                 if (!delReply) {
-                    throw std::runtime_error("");
+                    fmt::println("");
+                    std::terminate();
                 }
 
                 if (delReply.value().errorCode) {
-                    throw std::runtime_error("Incorrect del errorCode");
+                    fmt::println("Incorrect del errorCode");
+                    std::terminate();
                 }
             }
             // TTL test
             {
                 auto putReply = co_await _etcd->put("ttl_key", "value", {}, {}, {}, 1u, false, false, false);
                 if (!putReply) {
-                    throw std::runtime_error("");
+                    fmt::println("");
+                    std::terminate();
                 }
 
                 if (!putReply.value().node || putReply.value().node->value != "value") {
-                    throw std::runtime_error("Incorrect put dir node value");
+                    fmt::println("Incorrect put dir node value");
+                    std::terminate();
                 }
 
                 if (putReply.value().node->ttl != 1) {
-                    throw std::runtime_error("Incorrect put dir node ttl");
+                    fmt::println("Incorrect put dir node ttl");
+                    std::terminate();
                 }
 
                 std::this_thread::sleep_for(std::chrono::milliseconds(1500));
 
                 auto getReply = co_await _etcd->get("ttl_key", false, false, false, {});
                 if(!getReply) {
-                    throw std::runtime_error("");
+                    fmt::println("");
+                    std::terminate();
                 }
 
                 if (!getReply.value().errorCode || getReply.value().errorCode != Etcdv2::v1::EtcdErrorCodes::KEY_DOES_NOT_EXIST) {
-                    throw std::runtime_error("Incorrect ttl node errorCode");
+                    fmt::println("Incorrect ttl node errorCode");
+                    std::terminate();
                 }
             }
             // Watch test
@@ -464,11 +559,13 @@ namespace Ichor {
                 {
                     auto putReply = co_await _etcd->put("watch_key", "value", {}, {}, {}, {}, false, false, false);
                     if (!putReply) {
-                        throw std::runtime_error("");
+                        fmt::println("");
+                        std::terminate();
                     }
 
                     if (!putReply.value().node || putReply.value().node->value != "value") {
-                        throw std::runtime_error("Incorrect put dir node value");
+                        fmt::println("Incorrect put dir node value");
+                        std::terminate();
                     }
                 }
 
@@ -482,11 +579,13 @@ namespace Ichor {
 
                     auto putReply = co_await _etcd->put("watch_key", "new_value", {}, {}, {}, {}, false, false, false);
                     if (!putReply) {
-                        throw std::runtime_error("");
+                        fmt::println("");
+                        std::terminate();
                     }
 
                     if (!putReply.value().node || putReply.value().node->value != "new_value") {
-                        throw std::runtime_error("Incorrect put dir node value");
+                        fmt::println("Incorrect put dir node value");
+                        std::terminate();
                     }
 
                     co_return {};
@@ -494,44 +593,52 @@ namespace Ichor {
 
                 auto getReply = co_await _etcd->get("watch_key", false, false, true, {});
                 if(!getReply) {
-                    throw std::runtime_error("");
+                    fmt::println("");
+                    std::terminate();
                 }
 
                 if (!getReply.value().node || getReply.value().node->value != "new_value") {
-                    throw std::runtime_error("Incorrect get node value");
+                    fmt::println("Incorrect get node value");
+                    std::terminate();
                 }
             }
             // Health test
             {
                 auto healthReply = co_await _etcd->health();
                 if (!healthReply) {
-                    throw std::runtime_error("");
+                    fmt::println("");
+                    std::terminate();
                 }
 
                 if (!healthReply.value()) {
-                    throw std::runtime_error("Incorrect health value");
+                    fmt::println("Incorrect health value");
+                    std::terminate();
                 }
             }
             // Version test
             {
                 auto versionReply = co_await _etcd->version();
                 if (!versionReply) {
-                    throw std::runtime_error("");
+                    fmt::println("");
+                    std::terminate();
                 }
 
                 if (versionReply.value().etcdcluster.empty()) {
-                    throw std::runtime_error("Incorrect etcdcluster value");
+                    fmt::println("Incorrect etcdcluster value");
+                    std::terminate();
                 }
 
                 if (versionReply.value().etcdserver.empty()) {
-                    throw std::runtime_error("Incorrect etcdcluster value");
+                    fmt::println("Incorrect etcdcluster value");
+                    std::terminate();
                 }
             }
             // Authentication test
             {
                 auto authReply = co_await _etcd->authStatus();
                 if (!authReply) {
-                    throw std::runtime_error("missing authReply");
+                    fmt::println("missing authReply");
+                    std::terminate();
                 }
 
                 if(authReply.value()) {
@@ -539,14 +646,16 @@ namespace Ichor {
 
                     auto disableAuthReply = co_await _etcd->disableAuth();
                     if (!disableAuthReply || !disableAuthReply.value()) {
-                        throw std::runtime_error("These tests require that auth is disabled before starting the tests, or that the tests can disable it automatically using root:root");
+                        fmt::println("These tests require that auth is disabled before starting the tests, or that the tests can disable it automatically using root:root");
+                        std::terminate();
                     }
 
                 }
 
                 auto usersReply = co_await _etcd->getUsers();
                 if (!usersReply) {
-                    throw std::runtime_error("missing usersReply");
+                    fmt::println("missing usersReply");
+                    std::terminate();
                 }
 
                 if(!usersReply.value().users || std::find_if(usersReply.value().users->begin(), usersReply.value().users->end(), [](Etcdv2::v1::EtcdUserReply const &r) {
@@ -554,115 +663,136 @@ namespace Ichor {
                 }) == usersReply.value().users->end()) {
                     auto createUserReply = co_await _etcd->createUser("root", "root");
                     if (!createUserReply) {
-                        throw std::runtime_error("missing createUserReply");
+                        fmt::println("missing createUserReply");
+                        std::terminate();
                     }
                 }
 
                 _etcd->setAuthentication("root", "root");
                 if(_etcd->getAuthenticationUser() != "root") {
-                    throw std::runtime_error("Incorrect auth user");
+                    fmt::println("Incorrect auth user");
+                    std::terminate();
                 }
 
                 auto enableAuthReply = co_await _etcd->enableAuth();
                 if (!enableAuthReply) {
-                    throw std::runtime_error("missing enableAuthReply");
+                    fmt::println("missing enableAuthReply");
+                    std::terminate();
                 }
 
                 if(!enableAuthReply.value()) {
-                    throw std::runtime_error("Could not enable auth");
+                    fmt::println("Could not enable auth");
+                    std::terminate();
                 }
 
                 authReply = co_await _etcd->authStatus();
                 if (!authReply) {
-                    throw std::runtime_error("missing authReply");
+                    fmt::println("missing authReply");
+                    std::terminate();
                 }
 
                 if(!authReply.value()) {
-                    throw std::runtime_error("Expected Auth enabled");
+                    fmt::println("Expected Auth enabled");
+                    std::terminate();
                 }
 
                 auto disableAuthReply = co_await _etcd->disableAuth();
                 if (!disableAuthReply) {
-                    throw std::runtime_error("missing disableAuthReply");
+                    fmt::println("missing disableAuthReply");
+                    std::terminate();
                 }
 
                 if(!disableAuthReply.value()) {
-                    throw std::runtime_error("Could not disable auth");
+                    fmt::println("Could not disable auth");
+                    std::terminate();
                 }
             }
             // Create / delete user tests
             {
                 auto usersReply = co_await _etcd->getUsers();
                 if (!usersReply) {
-                    throw std::runtime_error("missing usersReply");
+                    fmt::println("missing usersReply");
+                    std::terminate();
                 }
 
                 if(!usersReply.value().users || std::find_if(usersReply.value().users->begin(), usersReply.value().users->end(), [](Etcdv2::v1::EtcdUserReply const &r) {
                     return r.user == "test_user";
                 }) != usersReply.value().users->end()) {
-                    throw std::runtime_error("test_user already exists");
+                    fmt::println("test_user already exists");
+                    std::terminate();
                 }
 
                 auto createUserReply = co_await _etcd->createUser("test_user", "test_user");
                 if (!createUserReply) {
-                    throw std::runtime_error("missing createUserReply");
+                    fmt::println("missing createUserReply");
+                    std::terminate();
                 }
 
                 usersReply = co_await _etcd->getUsers();
                 if (!usersReply) {
-                    throw std::runtime_error("missing usersReply");
+                    fmt::println("missing usersReply");
+                    std::terminate();
                 }
 
                 if(!usersReply.value().users || std::find_if(usersReply.value().users->begin(), usersReply.value().users->end(), [](Etcdv2::v1::EtcdUserReply const &r) {
                     return r.user == "test_user";
                 }) == usersReply.value().users->end()) {
-                    throw std::runtime_error("test_user not created successfully");
+                    fmt::println("test_user not created successfully");
+                    std::terminate();
                 }
 
                 // forced to declare as a variable due to internal compiler errors in gcc <= 12.3.0
                 std::vector<std::string> roles{"test_role"};
                 auto grantUserReply = co_await _etcd->grantUserRoles("test_user", roles);
                 if (!grantUserReply) {
-                    throw std::runtime_error("missing grantUserReply");
+                    fmt::println("missing grantUserReply");
+                    std::terminate();
                 }
 
                 auto revokeUserReply = co_await _etcd->revokeUserRoles("test_user", roles);
                 if (!revokeUserReply) {
-                    throw std::runtime_error("missing revokeUserReply");
+                    fmt::println("missing revokeUserReply");
+                    std::terminate();
                 }
 
                 auto updatePassReply = co_await _etcd->updateUserPassword("test_user", "test_role2");
                 if (!updatePassReply) {
-                    throw std::runtime_error("missing updatePassReply");
+                    fmt::println("missing updatePassReply");
+                    std::terminate();
                 }
 
                 auto deleteUserReply = co_await _etcd->deleteUser("test_user");
                 if (!deleteUserReply) {
-                    throw std::runtime_error("missing deleteUserReply");
+                    fmt::println("missing deleteUserReply");
+                    std::terminate();
                 }
 
                 usersReply = co_await _etcd->getUsers();
                 if (!usersReply) {
-                    throw std::runtime_error("missing usersReply");
+                    fmt::println("missing usersReply");
+                    std::terminate();
                 }
 
                 if(!usersReply.value().users || std::find_if(usersReply.value().users->begin(), usersReply.value().users->end(), [](Etcdv2::v1::EtcdUserReply const &r) {
                     return r.user == "test_user";
                 }) != usersReply.value().users->end()) {
-                    throw std::runtime_error("test_user not deleted successfully");
+                    fmt::println("test_user not deleted successfully");
+                    std::terminate();
                 }
             }
             // Create / delete role tests
             {
                 auto rolesReply = co_await _etcd->getRoles();
                 if (!rolesReply) {
-                    throw std::runtime_error("missing rolesReply");
+                    fmt::println("missing rolesReply");
+                    std::terminate();
                 }
 
                 if(std::find_if(rolesReply.value().roles.begin(), rolesReply.value().roles.end(), [](Etcdv2::v1::EtcdRoleReply const &r) {
                     return r.role == "test_role";
                 }) != rolesReply.value().roles.end()) {
-                    throw std::runtime_error("test_role already exists");
+                    fmt::println("test_role already exists");
+                    std::terminate();
                 }
 
                 // forced to declare as a variable due to internal compiler errors in gcc <= 12.3.0
@@ -671,18 +801,21 @@ namespace Ichor {
                 auto createRoleReply = co_await _etcd->createRole("test_role", read_permissions, write_permissions);
                 if (!createRoleReply) {
                     fmt::print("missing createRoleReply {}\n", createRoleReply.error());
-                    throw std::runtime_error("missing createRoleReply");
+                    fmt::println("missing createRoleReply");
+                    std::terminate();
                 }
 
                 rolesReply = co_await _etcd->getRoles();
                 if (!rolesReply) {
-                    throw std::runtime_error("missing rolesReply");
+                    fmt::println("missing rolesReply");
+                    std::terminate();
                 }
 
                 if(std::find_if(rolesReply.value().roles.begin(), rolesReply.value().roles.end(), [](Etcdv2::v1::EtcdRoleReply const &r) {
                     return r.role == "test_role";
                 }) == rolesReply.value().roles.end()) {
-                    throw std::runtime_error("test_role not created successfully");
+                    fmt::println("test_role not created successfully");
+                    std::terminate();
                 }
 
                 read_permissions.clear();
@@ -690,29 +823,34 @@ namespace Ichor {
                 auto grantRoleReply = co_await _etcd->grantRolePermissions("test_role", read_permissions, {});
                 if (!grantRoleReply) {
                     fmt::print("missing grantRoleReply {}\n", grantRoleReply.error());
-                    throw std::runtime_error("missing grantRoleReply");
+                    fmt::println("missing grantRoleReply");
+                    std::terminate();
                 }
 
                 auto revokeRoleReply = co_await _etcd->revokeRolePermissions("test_role", read_permissions, {});
                 if (!revokeRoleReply) {
                     fmt::print("missing revokeRoleReply {}\n", revokeRoleReply.error());
-                    throw std::runtime_error("missing revokeRoleReply");
+                    fmt::println("missing revokeRoleReply");
+                    std::terminate();
                 }
 
                 auto deleteRoleReply = co_await _etcd->deleteRole("test_role");
                 if (!deleteRoleReply) {
-                    throw std::runtime_error("missing deleteRoleReply");
+                    fmt::println("missing deleteRoleReply");
+                    std::terminate();
                 }
 
                 rolesReply = co_await _etcd->getRoles();
                 if (!rolesReply) {
-                    throw std::runtime_error("missing rolesReply");
+                    fmt::println("missing rolesReply");
+                    std::terminate();
                 }
 
                 if(std::find_if(rolesReply.value().roles.begin(), rolesReply.value().roles.end(), [](Etcdv2::v1::EtcdRoleReply const &r) {
                     return r.role == "test_role";
                 }) != rolesReply.value().roles.end()) {
-                    throw std::runtime_error("test_role not deleted successfully");
+                    fmt::println("test_role not deleted successfully");
+                    std::terminate();
                 }
             }
 

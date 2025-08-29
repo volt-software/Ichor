@@ -35,19 +35,23 @@ private:
             auto toSendMsg = _testSerializer->serialize(TestMsg{11, "hello"});
 
             if(dmThreadId != std::this_thread::get_id()) {
-                throw std::runtime_error("dmThreadId id incorrect");
+                fmt::println("dmThreadId id incorrect");
+                std::terminate();
             }
             if(testThreadId == std::this_thread::get_id()) {
-                throw std::runtime_error("testThreadId id incorrect");
+                fmt::println("testThreadId id incorrect");
+                std::terminate();
             }
 
             co_await sendTestRequest(std::move(toSendMsg));
 
             if(dmThreadId != std::this_thread::get_id()) {
-                throw std::runtime_error("dmThreadId id incorrect");
+                fmt::println("dmThreadId id incorrect");
+                std::terminate();
             }
             if(testThreadId == std::this_thread::get_id()) {
-                throw std::runtime_error("testThreadId id incorrect");
+                fmt::println("testThreadId id incorrect");
+                std::terminate();
             }
 
             co_return {};
@@ -86,10 +90,12 @@ private:
         _routeRegistration = svc.addRoute(HttpMethod::post, "/test", [this](HttpRequest &req) -> Task<HttpResponse> {
             fmt::println("/test POST");
             if(dmThreadId != std::this_thread::get_id()) {
-                throw std::runtime_error("dmThreadId id incorrect");
+                fmt::println("dmThreadId id incorrect");
+                std::terminate();
             }
             if(testThreadId == std::this_thread::get_id()) {
-                throw std::runtime_error("testThreadId id incorrect");
+                fmt::println("testThreadId id incorrect");
+                std::terminate();
             }
 
             auto msg = _testSerializer->deserialize(req.body);
@@ -98,10 +104,12 @@ private:
             co_await *_evt;
 
             if(dmThreadId != std::this_thread::get_id()) {
-                throw std::runtime_error("dmThreadId id incorrect");
+                fmt::println("dmThreadId id incorrect");
+                std::terminate();
             }
             if(testThreadId == std::this_thread::get_id()) {
-                throw std::runtime_error("testThreadId id incorrect");
+                fmt::println("testThreadId id incorrect");
+                std::terminate();
             }
 
             co_return HttpResponse{HttpStatus::ok, "application/json", _testSerializer->serialize(TestMsg{11, "hello"}), {}};
@@ -109,10 +117,12 @@ private:
         _regexRouteRegistration = svc.addRoute(HttpMethod::get, std::make_unique<RegexRouteMatch<R"(\/regex_test\/([a-zA-Z0-9]*)\?*([a-zA-Z0-9]+=[a-zA-Z0-9]+)*&*([a-zA-Z0-9]+=[a-zA-Z0-9]+)*)">>(), [this](HttpRequest &req) -> Task<HttpResponse> {
             fmt::println("/regex_test POST");
             if(dmThreadId != std::this_thread::get_id()) {
-                throw std::runtime_error("dmThreadId id incorrect");
+                fmt::println("dmThreadId id incorrect");
+                std::terminate();
             }
             if(testThreadId == std::this_thread::get_id()) {
-                throw std::runtime_error("testThreadId id incorrect");
+                fmt::println("testThreadId id incorrect");
+                std::terminate();
             }
 
             co_return HttpResponse{HttpStatus::ok, "application/json", _regexSerializer->serialize(RegexJsonMsg{std::move(req.regex_params)}), {}};
@@ -134,7 +144,8 @@ private:
         auto response = co_await _connectionService->sendAsync(HttpMethod::post, "/test", std::move(headers), std::move(toSendMsg));
 
         if(!response) {
-            throw std::runtime_error("no response");
+            fmt::println("no response");
+            std::terminate();
         }
 
         if(_testSerializer == nullptr) {
@@ -144,7 +155,8 @@ private:
 
         if(response->status != HttpStatus::ok) {
             fmt::println("test status not ok {}", static_cast<uint_fast16_t>(response->status));
-            throw std::runtime_error("test status not ok");
+            fmt::println("test status not ok");
+            std::terminate();
         }
 
         auto msg = _testSerializer->deserialize(response->body);
@@ -173,7 +185,8 @@ private:
         auto response = co_await _connectionService->sendAsync(HttpMethod::get, "/regex_test/one", {}, {});
 
         if(!response) {
-            throw std::runtime_error("regex1 no response");
+            fmt::println("regex1 no response");
+            std::terminate();
         }
 
         if(_regexSerializer == nullptr) {
@@ -182,26 +195,31 @@ private:
         }
 
         if(response->status != HttpStatus::ok) {
-            throw std::runtime_error(fmt::format("regex1 status not ok {}", (int)response->status));
+            fmt::println("regex1 status not ok {}", (int)response->status);
+            std::terminate();
         }
 
         auto msg = _regexSerializer->deserialize(response->body);
         if(!msg) {
-            throw std::runtime_error("regex1 could not deserialize");
+            fmt::println("regex1 could not deserialize");
+            std::terminate();
         }
         print_query_params(msg.value());
 
         if(msg->query_params.size() != 1) {
-            throw std::runtime_error(fmt::format("regex1 query_params size not 1 {}", msg->query_params.size()));
+            fmt::println("regex1 query_params size not 1 {}", msg->query_params.size());
+            std::terminate();
         }
         if(msg->query_params[0] != "one") {
-            throw std::runtime_error("regex1 query_params[0] not one");
+            fmt::println("regex1 query_params[0] not one");
+            std::terminate();
         }
 
         response = co_await _connectionService->sendAsync(HttpMethod::get, "/regex_test/two?", {}, {});
 
         if(!response) {
-            throw std::runtime_error("regex2 no response");
+            fmt::println("regex2 no response");
+            std::terminate();
         }
 
         if(_regexSerializer == nullptr) {
@@ -210,26 +228,31 @@ private:
         }
 
         if(response->status != HttpStatus::ok) {
-            throw std::runtime_error(fmt::format("regex2 status not ok {}", (int)response->status));
+            fmt::println("regex2 status not ok {}", (int)response->status);
+            std::terminate();
         }
 
         msg = _regexSerializer->deserialize(response->body);
         if(!msg) {
-            throw std::runtime_error("regex2 could not deserialize");
+            fmt::println("regex2 could not deserialize");
+            std::terminate();
         }
         print_query_params(msg.value());
 
         if(msg->query_params.size() != 1) {
-            throw std::runtime_error("regex2 query_params size not 1");
+            fmt::println("regex2 query_params size not 1");
+            std::terminate();
         }
         if(msg->query_params[0] != "two") {
-            throw std::runtime_error("regex2 query_params[0] not two");
+            fmt::println("regex2 query_params[0] not two");
+            std::terminate();
         }
 
         response = co_await _connectionService->sendAsync(HttpMethod::get, "/regex_test/three?param=test", {}, {});
 
         if(!response) {
-            throw std::runtime_error("regex3 no response");
+            fmt::println("regex3 no response");
+            std::terminate();
         }
 
         if(_regexSerializer == nullptr) {
@@ -238,29 +261,35 @@ private:
         }
 
         if(response->status != HttpStatus::ok) {
-            throw std::runtime_error(fmt::format("regex3 status not ok {}", (int)response->status));
+            fmt::println("regex3 status not ok {}", (int)response->status);
+            std::terminate();
         }
 
         msg = _regexSerializer->deserialize(response->body);
         if(!msg) {
-            throw std::runtime_error("regex3 could not deserialize");
+            fmt::println("regex3 could not deserialize");
+            std::terminate();
         }
         print_query_params(msg.value());
 
         if(msg->query_params.size() != 2) {
-            throw std::runtime_error("regex3 query_params size not 2");
+            fmt::println("regex3 query_params size not 2");
+            std::terminate();
         }
         if(msg->query_params[0] != "three") {
-            throw std::runtime_error("regex3 query_params[0] not three");
+            fmt::println("regex3 query_params[0] not three");
+            std::terminate();
         }
         if(msg->query_params[1] != "param=test") {
-            throw std::runtime_error("regex3 query_params[0] not param=test");
+            fmt::println("regex3 query_params[0] not param=test");
+            std::terminate();
         }
 
         response = co_await _connectionService->sendAsync(HttpMethod::get, "/regex_test/four?param=test&second=123", {}, {});
 
         if(!response) {
-            throw std::runtime_error("regex4 no response");
+            fmt::println("regex4 no response");
+            std::terminate();
         }
 
         if(_regexSerializer == nullptr) {
@@ -269,26 +298,32 @@ private:
         }
 
         if(response->status != HttpStatus::ok) {
-            throw std::runtime_error(fmt::format("regex4 status not ok {}", (int)response->status));
+            fmt::println("regex4 status not ok {}", (int)response->status);
+            std::terminate();
         }
 
         msg = _regexSerializer->deserialize(response->body);
         if(!msg) {
-            throw std::runtime_error("regex4 could not deserialize");
+            fmt::println("regex4 could not deserialize");
+            std::terminate();
         }
         print_query_params(msg.value());
 
         if(msg->query_params.size() != 3) {
-            throw std::runtime_error("regex4 query_params size not 2");
+            fmt::println("regex4 query_params size not 2");
+            std::terminate();
         }
         if(msg->query_params[0] != "four") {
-            throw std::runtime_error("regex4 query_params[0] not three");
+            fmt::println("regex4 query_params[0] not three");
+            std::terminate();
         }
         if(msg->query_params[1] != "param=test") {
-            throw std::runtime_error("regex4 query_params[0] not param=test");
+            fmt::println("regex4 query_params[0] not param=test");
+            std::terminate();
         }
         if(msg->query_params[2] != "second=123") {
-            throw std::runtime_error("regex4 query_params[0] not param=test");
+            fmt::println("regex4 query_params[0] not param=test");
+            std::terminate();
         }
 
         GetThreadLocalEventQueue().pushEvent<QuitEvent>(getServiceId());
