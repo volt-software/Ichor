@@ -33,7 +33,8 @@ bool Ichor::v1::Timer::startTimer() {
 
 bool Ichor::v1::Timer::startTimer(bool fireImmediately) {
     if(!_fn && !_fnAsync) [[unlikely]] {
-        throw std::runtime_error("No callback set.");
+        fmt::println("No callback set.");
+        std::terminate();
     }
     std::unique_lock l{_m};
     INTERNAL_IO_DEBUG("timer {} for {} startTimer({}) {} {}", _timerId, _requestingServiceId, fireImmediately, _state, _quitCbs.size());

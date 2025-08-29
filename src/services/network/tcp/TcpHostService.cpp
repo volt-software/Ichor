@@ -27,7 +27,8 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::v1::TcpHostService::st
 
     _socket = ::socket(AF_INET, SOCK_STREAM | SOCK_CLOEXEC, 0);
     if(_socket == -1) {
-        throw std::runtime_error("Couldn't create socket: errno = " + std::to_string(errno));
+        fmt::println("Couldn't create socket: errno = ", std::to_string(errno));
+        co_return tl::unexpected(StartError::FAILED);
     }
 
     int setting = 1;
@@ -48,7 +49,8 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::v1::TcpHostService::st
             if (hp == nullptr) {
                 close(_socket);
                 _socket = -1;
-                throw std::runtime_error("gethostbyname: errno = " + std::to_string(errno));
+                fmt::println("gethostbyname: errno = ", std::to_string(errno));
+                co_return tl::unexpected(StartError::FAILED);
             }
 
             memcpy(&address.sin_addr, hp->h_addr, sizeof(address.sin_addr));
@@ -63,13 +65,15 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::v1::TcpHostService::st
     if(_bindFd == -1) {
         close(_socket);
         _socket = -1;
-        throw std::runtime_error("Couldn't bind socket: errno = " + std::to_string(errno));
+        fmt::println("Couldn't bind socket: errno = {}", std::to_string(errno));
+        co_return tl::unexpected(StartError::FAILED);
     }
 
     if(::listen(_socket, 10) != 0) {
         close(_socket);
         _socket = -1;
-        throw std::runtime_error("Couldn't listen on socket: errno = " + std::to_string(errno));
+        fmt::println("Couldn't listen on socket: errno = {}", std::to_string(errno));
+        co_return tl::unexpected(StartError::FAILED);
     }
 
     _timer = &_timerFactory->createTimer();

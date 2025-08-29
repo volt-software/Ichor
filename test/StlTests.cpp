@@ -133,91 +133,152 @@ TEST_CASE("STL Tests") {
 
     SECTION("Any basics") {
         auto someInt = make_any<uint64_t>(5u);
+
+#if ICHOR_EXCEPTIONS_ENABLED
         REQUIRE_NOTHROW(any_cast<uint64_t>(someInt));
+#else
+        (void)any_cast<uint64_t>(someInt);
+#endif
         REQUIRE(any_cast<uint64_t>(someInt) == 5u);
         REQUIRE(someInt.to_string() == "5");
         REQUIRE(someInt.get_size() == sizeof(uint64_t));
         REQUIRE(someInt.type_hash() == typeNameHash<uint64_t>());
         REQUIRE(someInt.type_name() == typeName<uint64_t>());
+#if ICHOR_EXCEPTIONS_ENABLED
         REQUIRE_THROWS_MATCHES(any_cast<float>(someInt), bad_any_cast, ExceptionMatcher());
         REQUIRE_THROWS_MATCHES(any_cast<int64_t>(someInt), bad_any_cast, ExceptionMatcher());
         REQUIRE_THROWS_MATCHES(any_cast<int32_t>(someInt), bad_any_cast, ExceptionMatcher());
         REQUIRE_THROWS_MATCHES(any_cast<uint32_t>(someInt), bad_any_cast, ExceptionMatcher());
+#endif
 
         any_cast<uint64_t&>(someInt) = 10;
         REQUIRE(any_cast<uint64_t>(someInt) == 10u);
 
         auto someString = make_any<std::string>("test");
+#if ICHOR_EXCEPTIONS_ENABLED
         REQUIRE_NOTHROW(any_cast<std::string>(someString));
+#else
+        (void)any_cast<std::string>(someString);
+#endif
         REQUIRE(any_cast<std::string>(someString) == "test");
         REQUIRE(someString.to_string() == "test");
         REQUIRE(someString.get_size() == sizeof(std::string));
         REQUIRE(someString.type_hash() == typeNameHash<std::string>());
         REQUIRE(someString.type_name() == typeName<std::string>());
+#if ICHOR_EXCEPTIONS_ENABLED
         REQUIRE_THROWS_MATCHES(any_cast<float>(someString), bad_any_cast, ExceptionMatcher());
         REQUIRE_THROWS_MATCHES(any_cast<int64_t>(someString), bad_any_cast, ExceptionMatcher());
         REQUIRE_THROWS_MATCHES(any_cast<int32_t>(someString), bad_any_cast, ExceptionMatcher());
         REQUIRE_THROWS_MATCHES(any_cast<uint32_t>(someString), bad_any_cast, ExceptionMatcher());
+#endif
 
         someString = make_any<float>(4.5f);
+#if ICHOR_EXCEPTIONS_ENABLED
         REQUIRE_NOTHROW(any_cast<float>(someString));
+#else
+        (void)any_cast<float>(someString);
+#endif
         REQUIRE(any_cast<float>(someString) == 4.5f);
+#if ICHOR_EXCEPTIONS_ENABLED
         REQUIRE_THROWS_MATCHES(any_cast<std::string>(someString), bad_any_cast, ExceptionMatcher());
+#endif
 
         auto someMovedFloat{std::move(someString)};
+#if ICHOR_EXCEPTIONS_ENABLED
         REQUIRE_NOTHROW(any_cast<float>(someMovedFloat));
+#else
+        (void)any_cast<float>(someMovedFloat);
+#endif
         REQUIRE(any_cast<float>(someMovedFloat) == 4.5f);
+#if ICHOR_EXCEPTIONS_ENABLED
         REQUIRE_THROWS_MATCHES(any_cast<float>(someString), bad_any_cast, ExceptionMatcher());
+#endif
         REQUIRE(someMovedFloat.to_string() == "4.5");
         REQUIRE(someString.to_string() == "Unprintable value");
 
         auto someCopiedInt = someInt;
+#if ICHOR_EXCEPTIONS_ENABLED
         REQUIRE_NOTHROW(any_cast<uint64_t>(someCopiedInt));
+#else
+        (void)any_cast<uint64_t>(someCopiedInt);
+#endif
         REQUIRE(any_cast<uint64_t>(someCopiedInt) == 10u);
         REQUIRE(any_cast<uint64_t>(someInt) == 10u);
         REQUIRE(someInt.to_string() == "10");
         REQUIRE(someCopiedInt.to_string() == "10");
 
         auto someMovedInt = std::move(someInt);
+#if ICHOR_EXCEPTIONS_ENABLED
         REQUIRE_NOTHROW(any_cast<uint64_t>(someMovedInt));
+#else
+        (void)any_cast<uint64_t>(someMovedInt);
+#endif
         REQUIRE(any_cast<uint64_t>(someMovedInt) == 10u);
         REQUIRE(someMovedInt.to_string() == "10");
         REQUIRE(someInt.to_string() == "Unprintable value");
+#if ICHOR_EXCEPTIONS_ENABLED
         REQUIRE_THROWS_MATCHES(any_cast<uint64_t>(someInt), bad_any_cast, ExceptionMatcher());
+#endif
 
         someMovedInt.reset();
+#if ICHOR_EXCEPTIONS_ENABLED
         REQUIRE_THROWS_MATCHES(any_cast<uint64_t>(someMovedInt), bad_any_cast, ExceptionMatcher());
+#endif
         REQUIRE(someMovedInt.to_string() == "Unprintable value");
 
         const auto someConstInt = make_any<int>(12);
+#if ICHOR_EXCEPTIONS_ENABLED
         REQUIRE_NOTHROW(any_cast<int>(someConstInt));
+#else
+        (void)any_cast<int>(someConstInt);
+#endif
         REQUIRE(any_cast<int>(someConstInt) == 12);
 
         auto someCopiedFromConstInt{someConstInt};
+#if ICHOR_EXCEPTIONS_ENABLED
         REQUIRE_NOTHROW(any_cast<int>(someConstInt));
+#else
+        (void)any_cast<int>(someConstInt);
+#endif
         REQUIRE(any_cast<int>(someConstInt) == 12);
+#if ICHOR_EXCEPTIONS_ENABLED
         REQUIRE_NOTHROW(any_cast<int>(someCopiedFromConstInt));
+#else
+        (void)any_cast<int>(someCopiedFromConstInt);
+#endif
         REQUIRE(any_cast<int>(someCopiedFromConstInt) == 12);
 
         const auto someNonmoveable = make_any<nonmoveable>();
+#if ICHOR_EXCEPTIONS_ENABLED
         REQUIRE_NOTHROW(any_cast<nonmoveable>(someNonmoveable));
+#else
+        (void)any_cast<nonmoveable>(someNonmoveable);
+#endif
         REQUIRE(someNonmoveable.to_string() == "nonmoveable");
         auto someMovedNonMoveable = std::move(someNonmoveable);
         REQUIRE(someMovedNonMoveable.to_string() == "nonmoveable");
 
         any noneAny;
+#if ICHOR_EXCEPTIONS_ENABLED
         REQUIRE_THROWS_MATCHES(any_cast<float>(noneAny), bad_any_cast, ExceptionMatcher());
+#endif
         REQUIRE(noneAny.to_string() == "Unprintable value");
 
         auto movedNoneAny = std::move(noneAny);
+#if ICHOR_EXCEPTIONS_ENABLED
         REQUIRE_THROWS_MATCHES(any_cast<float>(noneAny), bad_any_cast, ExceptionMatcher());
         REQUIRE_THROWS_MATCHES(any_cast<float>(movedNoneAny), bad_any_cast, ExceptionMatcher());
+#endif
         REQUIRE(movedNoneAny.to_string() == "Unprintable value");
         REQUIRE(noneAny.to_string() == "Unprintable value");
 
 
         const auto someNonmoveableSboBuster = make_unformattable_any<nonmoveable_sbo_buster>();
+#if ICHOR_EXCEPTIONS_ENABLED
         REQUIRE_NOTHROW(any_cast<nonmoveable_sbo_buster>(someNonmoveableSboBuster));
+#else
+        (void)any_cast<nonmoveable_sbo_buster>(someNonmoveableSboBuster);
+#endif
         auto someMovedNonmoveableSboBuster = std::move(someNonmoveableSboBuster);
         auto someMoveConstructedNonmoveableSboBuster = Ichor::v1::any(std::move(someNonmoveableSboBuster));
 

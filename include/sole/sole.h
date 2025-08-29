@@ -69,6 +69,10 @@
 #define SOLE_VERSION "1.0.1" // (2017/05/16): Improve UUID4 and base62 performance; fix warnings
 #define SOLE_VERSION "1.0.0" // (2016/02/03): Initial semver adherence; Switch to header-only; Remove warnings */
 
+#if defined(__cpp_exceptions) || defined(__EXCEPTIONS) || defined(_CPPUNWIND)
+#define SOLE_EXCEPTIONS_ENABLED
+#endif
+
 namespace sole
 {
     // 128-bit basic UUID type that allows comparison and sorting.
@@ -292,7 +296,9 @@ namespace sole {
 
     inline std::string printftime( uint64_t timestamp_secs = 0, const std::string &locale = std::string() ) {
         std::string timef;
+#ifdef SOLE_EXCEPTIONS_ENABLED
         try {
+#endif
             // Taken from parameter
             //std::string locale; // = "es-ES", "Chinese_China.936", "en_US.UTF8", etc...
             std::time_t t = timestamp_secs;
@@ -313,10 +319,12 @@ namespace sole {
             ss << std::put_time( &tm, "\"%c\"" );
 
             timef = ss.str();
+#ifdef SOLE_EXCEPTIONS_ENABLED
         }
         catch(...) {
             timef = "\"\"";
         }
+#endif
         return timef;
     }
 

@@ -59,7 +59,8 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::v1::TcpConnectionServi
         if(_socket == -1) {
             _socket = socket(AF_INET, SOCK_STREAM | SOCK_CLOEXEC, 0);
             if (_socket == -1) {
-                throw std::runtime_error("Couldn't create socket: errno = " + std::to_string(errno));
+                fmt::println("Couldn't create socket: errno = {}", std::to_string(errno));
+                co_return tl::unexpected(Ichor::StartError::FAILED);
             }
         }
 
@@ -75,9 +76,9 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::v1::TcpConnectionServi
         address.sin_port = htons(Ichor::v1::any_cast<uint16_t>(portIt->second));
 
         int ret = inet_pton(AF_INET, Ichor::v1::any_cast<std::string&>(addrIt->second).c_str(), &address.sin_addr);
-        if(ret == 0)
-        {
-            throw std::runtime_error("inet_pton invalid address for given address family (has to be ipv4-valid address)");
+        if(ret == 0) {
+            fmt::println("inet_pton invalid address for given address family (has to be ipv4-valid address)");
+            co_return tl::unexpected(Ichor::StartError::FAILED);
         }
 
         bool connected = connect(_socket, (struct sockaddr *)&address, sizeof(address)) < 0;
@@ -114,7 +115,8 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::v1::TcpConnectionServi
                     ret = getsockopt(_socket, SOL_SOCKET, SO_ERROR, &connect_result, &result_len);
 
                     if(ret < 0) {
-                        throw std::runtime_error("getsocketopt error: Couldn't connect");
+                        fmt::println("getsocketopt error: Couldn't connect");
+                        co_return tl::unexpected(StartError::FAILED);
                     }
 
                     // connect failed, retry

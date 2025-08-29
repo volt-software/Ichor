@@ -16,11 +16,15 @@
 //#include <spdlog/sinks/stdout_color_sinks.h>
 
 int main(int argc, char *argv[]) {
+#if ICHOR_EXCEPTIONS_ENABLED
     try {
+#endif
         std::locale::global(std::locale("en_US.UTF-8"));
+#if ICHOR_EXCEPTIONS_ENABLED
     } catch(std::runtime_error const &e) {
         fmt::println("Couldn't set locale to en_US.UTF-8: {}", e.what());
     }
+#endif
 //    auto new_logger = spdlog::stdout_color_mt("default_logger");
 //    new_logger->set_pattern("[%H:%M:%S.%f] [%t] [%l] %v");
 //    spdlog::set_default_logger(new_logger);

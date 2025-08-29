@@ -39,8 +39,11 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::Boost::v1::WsHostServi
 
     net::spawn(*_strand, [this, address = std::move(address), port](net::yield_context yield) {
         Ichor::v1::ScopeGuardAtomicCount const guard{_finishedListenAndRead};
+#if ICHOR_EXCEPTIONS_ENABLED
         try {
+#endif
             listen(tcp::endpoint{address, port}, std::move(yield));
+#if ICHOR_EXCEPTIONS_ENABLED
         } catch (std::runtime_error &e) {
             ICHOR_LOG_ERROR(_logger, "caught std runtime_error {}", e.what());
             _queue->pushEvent<StopServiceEvent>(getServiceId(), getServiceId());
@@ -48,6 +51,7 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::Boost::v1::WsHostServi
             ICHOR_LOG_ERROR(_logger, "caught unknown error");
             _queue->pushEvent<StopServiceEvent>(getServiceId(), getServiceId());
         }
+#endif
     }ASIO_SPAWN_COMPLETION_TOKEN);
 
     co_return {};

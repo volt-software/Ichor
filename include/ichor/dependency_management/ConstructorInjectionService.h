@@ -212,8 +212,12 @@ namespace Ichor {
         }
         template <typename... CO_ARGS>
         void createServiceSpecialSauce(tl::optional<std::variant<CO_ARGS...>> = {}) {
+
+#if ICHOR_EXCEPTIONS_ENABLED
             try {
+#endif
                 new(buf) T(std::get<CO_ARGS>(_deps[typeNameHash<std::remove_pointer_t<CO_ARGS>>()])...);
+#if ICHOR_EXCEPTIONS_ENABLED
             } catch (std::exception const &e) {
                 fmt::print("Std exception while starting svc {}:{} : \"{}\".\n\nLikely user error, but printing extra information anyway: Stored dependencies:\n", getServiceId(), getServiceName(), e.what());
                 for(auto &[key, _] : _deps) {
@@ -225,7 +229,19 @@ namespace Ichor {
                 (fmt::print("{}:{} ", typeNameHash<std::remove_pointer_t<CO_ARGS>>(), typeName<std::remove_pointer_t<CO_ARGS>>()), ...);
                 fmt::print("\n");
                 std::terminate();
+            } catch (...) {
+                fmt::print("Unknown exception while starting svc {}:{}.\n\nLikely user error, but printing extra information anyway: Stored dependencies:\n", getServiceId(), getServiceName());
+                for(auto &[key, _] : _deps) {
+                    fmt::print("{} ", key);
+                }
+                fmt::print("\n");
+
+                fmt::print("Requested deps:\n");
+                (fmt::print("{}:{} ", typeNameHash<std::remove_pointer_t<CO_ARGS>>(), typeName<std::remove_pointer_t<CO_ARGS>>()), ...);
+                fmt::print("\n");
+                std::terminate();
             }
+#endif
         }
 
         ///

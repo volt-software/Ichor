@@ -147,13 +147,18 @@ bool Ichor::BoostAsioQueue::start(bool captureSigInt) {
     }ASIO_SPAWN_COMPLETION_TOKEN);
 
     while (!shouldQuit()) {
+#if ICHOR_EXCEPTIONS_ENABLED
         try {
+#endif
             _context.run();
+
+#if ICHOR_EXCEPTIONS_ENABLED
         } catch (boost::system::system_error const &e) {
             fmt::println("io context {} system error {}", _dm->getId(), e.what());
         } catch (std::exception const &e) {
             fmt::println("io context {} std error {}", _dm->getId(), e.what());
         }
+#endif
     }
 
     return true;

@@ -148,7 +148,8 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::v1::IOUringTcpConnecti
         int ret = inet_pton(AF_INET, Ichor::v1::any_cast<std::string const &>(addrIt->second).c_str(), &address.sin_addr);
         if(ret == 0)
         {
-            throw std::runtime_error("inet_pton invalid address for given address family (has to be ipv4-valid address)");
+            fmt::println("inet_pton invalid address for given address family (has to be ipv4-valid address)");
+            co_return tl::unexpected(Ichor::StartError::FAILED);
         }
 
         int res = 0;
