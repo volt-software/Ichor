@@ -21,11 +21,18 @@
 #define TL_OPTIONAL_VERSION_MINOR 1
 #define TL_OPTIONAL_VERSION_PATCH 0
 
-#include <exception>
 #include <functional>
 #include <new>
 #include <type_traits>
 #include <utility>
+
+#if defined(__cpp_exceptions) || defined(__EXCEPTIONS) || defined(_CPPUNWIND)
+#define TL_OPTIONAL_EXCEPTIONS_ENABLED
+#endif
+
+#ifdef TL_OPTIONAL_EXCEPTIONS_ENABLED
+#include <exception>
+#endif
 
 #if (defined(_MSC_VER) && _MSC_VER == 1900)
 #define TL_OPTIONAL_MSVC2015
@@ -663,12 +670,13 @@ template <class T, class U = T> struct is_nothrow_swappable : std::true_type {};
 /// Represents an empty optional
     static constexpr nullopt_t nullopt{nullopt_t::do_not_use{},
                                        nullopt_t::do_not_use{}};
-
+#ifdef TL_OPTIONAL_EXCEPTIONS_ENABLED
     class bad_optional_access : public std::exception {
     public:
         bad_optional_access() = default;
         const char *what() const noexcept { return "Optional has no value"; }
     };
+#endif
 
 /// An optional object is an object that contains the storage for another
 /// object and manages the lifetime of this contained object, if any. The
@@ -1289,24 +1297,40 @@ template <class T, class U = T> struct is_nothrow_swappable : std::true_type {};
         TL_OPTIONAL_11_CONSTEXPR T &value() & {
             if (has_value())
                 return this->m_value;
+#ifdef TL_OPTIONAL_EXCEPTIONS_ENABLED
             throw bad_optional_access();
+#else
+            std::terminate();
+#endif
         }
         TL_OPTIONAL_11_CONSTEXPR const T &value() const & {
             if (has_value())
                 return this->m_value;
+#ifdef TL_OPTIONAL_EXCEPTIONS_ENABLED
             throw bad_optional_access();
+#else
+            std::terminate();
+#endif
         }
         TL_OPTIONAL_11_CONSTEXPR T &&value() && {
             if (has_value())
                 return std::move(this->m_value);
+#ifdef TL_OPTIONAL_EXCEPTIONS_ENABLED
             throw bad_optional_access();
+#else
+            std::terminate();
+#endif
         }
 
 #ifndef TL_OPTIONAL_NO_CONSTRR
         TL_OPTIONAL_11_CONSTEXPR const T &&value() const && {
             if (has_value())
                 return std::move(this->m_value);
+#ifdef TL_OPTIONAL_EXCEPTIONS_ENABLED
             throw bad_optional_access();
+#else
+            std::terminate();
+#endif
         }
 #endif
 
@@ -2012,12 +2036,20 @@ auto optional_map_impl(Opt &&opt, F &&f) -> optional<monostate> {
         TL_OPTIONAL_11_CONSTEXPR T &value() {
             if (has_value())
                 return *m_value;
+#ifdef TL_OPTIONAL_EXCEPTIONS_ENABLED
             throw bad_optional_access();
+#else
+            std::terminate();
+#endif
         }
         TL_OPTIONAL_11_CONSTEXPR const T &value() const {
             if (has_value())
                 return *m_value;
+#ifdef TL_OPTIONAL_EXCEPTIONS_ENABLED
             throw bad_optional_access();
+#else
+            std::terminate();
+#endif
         }
 
         /// Returns the stored value if there is one, otherwise returns `u`

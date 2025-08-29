@@ -260,14 +260,18 @@ Ichor::Task<tl::expected<void, Ichor::v1::IOError>> Ichor::v1::SharedOverThreads
 
     auto submission = std::make_shared<io_operation_submission>();
     submission->fn = [&file, contents](decltype(io_operation_submission::result) &res) {
+#if ICHOR_EXCEPTIONS_ENABLED
         try {
+#endif
             auto out = fmt::output_file(file.string());
             out.print("{}", contents);
+#if ICHOR_EXCEPTIONS_ENABLED
         } catch (const std::system_error &e) {
             INTERNAL_IO_DEBUG("writeFile failed: {} {}", e.code().value(), e.code().message());
             int err = e.code().value();
             res = tl::unexpected(mapErrnoToError(err));
         }
+#endif
     };
     {
         std::unique_lock lg{_io_mutex};
@@ -290,15 +294,19 @@ Ichor::Task<tl::expected<void, Ichor::v1::IOError>> Ichor::v1::SharedOverThreads
 
     auto submission = std::make_shared<io_operation_submission>();
     submission->fn = [&file, contents](decltype(io_operation_submission::result) &res) {
+#if ICHOR_EXCEPTIONS_ENABLED
         try {
+#endif
             // TODO fmt default permissions are S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH. Maybe make it consistent accross AsyncFileIO impl?
             auto out = fmt::output_file(file.string(), fmt::file::WRONLY | fmt::file::CREATE | fmt::file::APPEND);
             out.print("{}", contents);
+#if ICHOR_EXCEPTIONS_ENABLED
         } catch (const std::system_error &e) {
             INTERNAL_IO_DEBUG("appendFile failed: {} {}", e.code().value(), e.code().message());
             int err = e.code().value();
             res = tl::unexpected(mapErrnoToError(err));
         }
+#endif
     };
     {
         std::unique_lock lg{_io_mutex};

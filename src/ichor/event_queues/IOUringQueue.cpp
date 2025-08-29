@@ -214,64 +214,64 @@ static inline std::vector<std::pair<io_uring_op, Ichor::Event*>> getToBeSubmitte
 
 static int io_uring_ring_dontdump(struct io_uring *ring)
 {
-	size_t len;
-	int ret;
+    size_t len;
+    int ret;
 
-	if (!ring->sq.ring_ptr || !ring->sq.sqes || !ring->cq.ring_ptr)
-		return -EINVAL;
+    if (!ring->sq.ring_ptr || !ring->sq.sqes || !ring->cq.ring_ptr)
+        return -EINVAL;
 
-	len = sizeof(struct io_uring_sqe);
-	if (ring->flags & IORING_SETUP_SQE128)
-		len += 64;
-	len *= ring->sq.ring_entries;
-	ret = madvise(ring->sq.sqes, len, MADV_DONTDUMP);
-	if (ret < 0)
-		return ret;
+    len = sizeof(struct io_uring_sqe);
+    if (ring->flags & IORING_SETUP_SQE128)
+        len += 64;
+    len *= ring->sq.ring_entries;
+    ret = madvise(ring->sq.sqes, len, MADV_DONTDUMP);
+    if (ret < 0)
+        return ret;
 
-	len = ring->sq.ring_sz;
-	ret = madvise(ring->sq.ring_ptr, len, MADV_DONTDUMP);
-	if (ret < 0)
-		return ret;
+    len = ring->sq.ring_sz;
+    ret = madvise(ring->sq.ring_ptr, len, MADV_DONTDUMP);
+    if (ret < 0)
+        return ret;
 
-	if (ring->cq.ring_ptr != ring->sq.ring_ptr) {
-		len = ring->cq.ring_sz;
-		ret = madvise(ring->cq.ring_ptr, len, MADV_DONTDUMP);
-		if (ret < 0)
-			return ret;
-	}
+    if (ring->cq.ring_ptr != ring->sq.ring_ptr) {
+        len = ring->cq.ring_sz;
+        ret = madvise(ring->cq.ring_ptr, len, MADV_DONTDUMP);
+        if (ret < 0)
+            return ret;
+    }
 
-	return 0;
+    return 0;
 }
 
 static int io_uring_ring_mlock(struct io_uring *ring)
 {
-	size_t len;
-	int ret;
+    size_t len;
+    int ret;
 
-	if (!ring->sq.ring_ptr || !ring->sq.sqes || !ring->cq.ring_ptr)
-		return -EINVAL;
+    if (!ring->sq.ring_ptr || !ring->sq.sqes || !ring->cq.ring_ptr)
+        return -EINVAL;
 
-	len = sizeof(struct io_uring_sqe);
-	if (ring->flags & IORING_SETUP_SQE128)
-		len += 64;
-	len *= ring->sq.ring_entries;
-	ret = mlock(ring->sq.sqes, len);
-	if (ret < 0)
-		return ret;
+    len = sizeof(struct io_uring_sqe);
+    if (ring->flags & IORING_SETUP_SQE128)
+        len += 64;
+    len *= ring->sq.ring_entries;
+    ret = mlock(ring->sq.sqes, len);
+    if (ret < 0)
+        return ret;
 
-	len = ring->sq.ring_sz;
-	ret = mlock(ring->sq.ring_ptr, len);
-	if (ret < 0)
-		return ret;
+    len = ring->sq.ring_sz;
+    ret = mlock(ring->sq.ring_ptr, len);
+    if (ret < 0)
+        return ret;
 
-	if (ring->cq.ring_ptr != ring->sq.ring_ptr) {
-		len = ring->cq.ring_sz;
-		ret = mlock(ring->cq.ring_ptr, len);
-		if (ret < 0)
-			return ret;
-	}
+    if (ring->cq.ring_ptr != ring->sq.ring_ptr) {
+        len = ring->cq.ring_sz;
+        ret = mlock(ring->cq.ring_ptr, len);
+        if (ret < 0)
+            return ret;
+    }
 
-	return 0;
+    return 0;
 }
 
 namespace Ichor {
@@ -318,7 +318,7 @@ namespace Ichor {
         }
 #endif
         io_uring_buf_ring_add(_bufRing, _entriesBuf + _entryBufferSize * entry, _entryBufferSize, entry, _mask, entry);
-		io_uring_buf_ring_advance(_bufRing, 1);
+        io_uring_buf_ring_advance(_bufRing, 1);
     }
 
     struct UringResponseEvent final : public Event {
@@ -361,16 +361,16 @@ namespace Ichor {
             fmt::println("WARNING! Kernel version {} is too old to support inserting events from other threads, use at least 5.18.0 or newer.", *version);
         }
 
-		if(emulateKernelVersion && *version < emulateKernelVersion) {
-			fmt::println("Kernel version {} is too old to emulate given version {}", *version, *emulateKernelVersion);
-			std::terminate();
-		}
+        if(emulateKernelVersion && *version < emulateKernelVersion) {
+            fmt::println("Kernel version {} is too old to emulate given version {}", *version, *emulateKernelVersion);
+            std::terminate();
+        }
 
-		if(emulateKernelVersion) {
-			_kernelVersion = *emulateKernelVersion;
-		} else {
-			_kernelVersion = *version;
-		}
+        if(emulateKernelVersion) {
+            _kernelVersion = *emulateKernelVersion;
+        } else {
+            _kernelVersion = *version;
+        }
 
         _pageSize = sysconf(_SC_PAGESIZE);
         if (_pageSize < 0) {
@@ -463,17 +463,20 @@ namespace Ichor {
             auto ret = io_uring_queue_init_params(4, &tempQueue, &p);
             if(ret == -ENOSYS) [[unlikely]] {
                 // TODO replace all throws with prints + terminates
-                throw std::system_error(-ret, std::generic_category(), "io_uring_queue_init_params() with WQ failed, probably not enabled in the kernel.");
+                fmt::println("io_uring_queue_init_params() with WQ failed, ret {}, probably not enabled in the kernel.", -ret);
+                std::terminate();
             }
             if(ret < 0) [[unlikely]] {
                 if(p.flags == IORING_SETUP_ATTACH_WQ) { // no use in retrying
-                    throw std::system_error(-ret, std::generic_category(), "io_uring_queue_init_params() failed");
+                    fmt::println("io_uring_queue_init_params() failed, ret {}", -ret);
+                    std::terminate();
                 }
                 fmt::println("Couldn't set queue params 0x{:X}, retrying without. Expect reduced performance.", p.flags);
                 p.flags = IORING_SETUP_ATTACH_WQ;
                 ret = io_uring_queue_init_params(4, &tempQueue, &p);
                 if(ret < 0) [[unlikely]] {
-                    throw std::system_error(-ret, std::generic_category(), "io_uring_queue_init_params() for tempQueue failed");
+                    fmt::println("io_uring_queue_init_params() for tempQueue failed, ret {}", -ret);
+                    std::terminate();
                 }
             }
             ScopeGuard sg{[&tempQueue]() {
@@ -516,7 +519,8 @@ namespace Ichor {
                 if(ret < 0) {
                     auto space = io_uring_sq_space_left(_eventQueuePtr);
                     fmt::println("pushEventInternal() error waiting for available slots in ring {} {} {}", ret, _entriesCount, space);
-                    throw std::system_error(-ret, std::generic_category(), "io_uring_submit_and_wait() failed.");
+                    fmt::println("io_uring_submit_and_wait() failed, ret {}", -ret);
+                    std::terminate();
                 }
 
                 sqe = io_uring_get_sqe(_eventQueuePtr);
@@ -595,17 +599,20 @@ namespace Ichor {
         p.sq_thread_idle = 50;
         auto ret = io_uring_queue_init_params(entriesCount, _eventQueuePtr, &p);
         if(ret == -ENOSYS) [[unlikely]] {
-            throw std::system_error(-ret, std::generic_category(), "io_uring_queue_init_params() failed, probably not enabled in the kernel.");
+            fmt::println("io_uring_queue_init_params() failed, ret {}, probably not enabled in the kernel.", -ret);
+            std::terminate();
         }
         if(ret < 0) [[unlikely]] {
             if(p.flags == 0) { // no use in retrying
-                throw std::system_error(-ret, std::generic_category(), "io_uring_queue_init_params() failed");
+                fmt::println("io_uring_queue_init_params() failed, ret {}", -ret);
+                std::terminate();
             }
             fmt::println("Couldn't set queue params 0x{:X}, retrying without. Expect reduced performance.", p.flags);
             p.flags = 0;
             ret = io_uring_queue_init_params(entriesCount, _eventQueuePtr, &p);
             if(ret < 0) [[unlikely]] {
-                throw std::system_error(-ret, std::generic_category(), "io_uring_queue_init_params() failed");
+                fmt::println("io_uring_queue_init_params() failed, ret {}", -ret);
+                std::terminate();
             }
         }
         if(!checkRingFlags(_eventQueuePtr)) {
@@ -617,16 +624,19 @@ namespace Ichor {
         }
         ret = io_uring_ring_dontfork(_eventQueuePtr);
         if(ret < 0) [[unlikely]] {
-            throw std::system_error(-ret, std::generic_category(), "io_uring_ring_dontfork() failed");
+            fmt::println("io_uring_ring_dontfork() failed, ret {}", -ret);
+            std::terminate();
         }
-		ret = io_uring_ring_dontdump(_eventQueuePtr);
-		if(ret < 0) [[unlikely]] {
-			throw std::system_error(errno, std::generic_category(), "io_uring_ring_dontdump() failed");
-		}
-		ret = io_uring_ring_mlock(_eventQueuePtr);
-		if(ret < 0) [[unlikely]] {
-			fmt::println("warning: io_uring_ring_mlock() failed: {}", errno);
-		}
+        ret = io_uring_ring_dontdump(_eventQueuePtr);
+        if(ret < 0) [[unlikely]] {
+            fmt::println("io_uring_ring_dontdump() failed, ret {}", -ret);
+            std::terminate();
+        }
+        ret = io_uring_ring_mlock(_eventQueuePtr);
+        if(ret < 0) [[unlikely]] {
+            fmt::println("warning: io_uring_ring_mlock() failed: {}", errno);
+            std::terminate();
+        }
 
         _threadId = std::this_thread::get_id();
         _initializedQueue.store(true, std::memory_order_release);
@@ -681,7 +691,8 @@ namespace Ichor {
 #endif
 
             if(ret < 0) [[unlikely]] {
-                throw std::system_error(-ret, std::generic_category(), "io_uring_submit() failed.");
+                fmt::println("io_uring_submit() failed, ret {}.", -ret);
+                std::terminate();
             }
             if((unsigned)ret != _entriesCount - space) [[unlikely]] {
 //                fmt::println("io_uring_submit {}", ret);
@@ -702,10 +713,11 @@ namespace Ichor {
 //            fmt::println("io_uring_wait_cqe_timeout {} {}", ret, reinterpret_cast<void*>(cqe));
             if(ret < 0 && ret != -ETIME) [[unlikely]] {
                 if(ret == -EBADF) {
-                    throw std::system_error(-ret, std::generic_category(), "io_uring_wait_cqes() failed. Did you create the event loop on the same thread as you started the queue?");
+                    fmt::println("io_uring_wait_cqes() failed, ret {}. Did you create the event loop on the same thread as you started the queue?", -ret);
                 } else {
-                    throw std::system_error(-ret, std::generic_category(), "io_uring_wait_cqes() failed");
+                    fmt::println("io_uring_wait_cqes() failed, ret {}", -ret);
                 }
+                std::terminate();
             }
 
             unsigned int handled{};
@@ -745,7 +757,8 @@ namespace Ichor {
                         INTERNAL_IO_DEBUG("submit end of loop {}", _entriesCount - space);
                         ret = io_uring_submit_and_get_events(_eventQueuePtr);
                         if(ret < 0) [[unlikely]] {
-                            throw std::system_error(-ret, std::generic_category(), "io_uring_submit_and_get_events() failed.");
+                            fmt::println("io_uring_submit_and_get_events() failed, ret {}", -ret);
+                            std::terminate();
                         }
                         if((unsigned int)ret != _entriesCount - space) [[unlikely]] {
                             fmt::println("submit wrong amount2 {} {} {}", ret, _entriesCount, space);
@@ -775,11 +788,13 @@ namespace Ichor {
 
             auto ret = io_uring_wait_cqes(_eventQueuePtr, &cqe, 1, &ts, nullptr);
             if(ret < 0 && ret != -ETIME) [[unlikely]] {
-                throw std::system_error(-ret, std::generic_category(), "io_uring_wait_cqes() failed.");
+                fmt::println("io_uring_wait_cqes() failed, ret {}", -ret);
+                std::terminate();
             }
             ret = io_uring_get_events(_eventQueuePtr);
             if(ret < 0) {
-                throw std::system_error(-ret, std::generic_category(), "io_uring_get_events() failed.");
+                fmt::println("io_uring_get_events() failed, ret {}", -ret);
+                std::terminate();
             }
             io_uring_for_each_cqe(_eventQueuePtr, head, cqe) {
                 TSAN_ANNOTATE_HAPPENS_AFTER(cqe->user_data);
@@ -840,7 +855,7 @@ namespace Ichor {
                 std::terminate();
             }
         }
-		sqe->user_data = 0;
+        sqe->user_data = 0;
         return sqe;
     }
 
@@ -867,7 +882,8 @@ namespace Ichor {
 #endif
             auto ret = io_uring_submit(_eventQueuePtr);
             if(ret < 0) [[unlikely]] {
-                throw std::system_error(-ret, std::generic_category(), "io_uring_submit() failed.");
+                fmt::println("io_uring_submit() failed, ret {}", -ret);
+                std::terminate();
             }
             if((unsigned int)ret != _entriesCount) [[unlikely]] {
                 fmt::println("submit wrong amount3 {} {} {}", ret, _entriesCount, space);
@@ -886,7 +902,8 @@ namespace Ichor {
 #endif
         auto ret = io_uring_submit(_eventQueuePtr);
         if(ret < 0) [[unlikely]] {
-            throw std::system_error(-ret, std::generic_category(), "io_uring_submit() failed.");
+            fmt::println("io_uring_submit() failed, ret {}", -ret);
+            std::terminate();
         }
         if((unsigned int)ret != _entriesCount - space) [[unlikely]] {
             fmt::println("submit wrong amount4 {} {} {}", ret, _entriesCount, space);
@@ -907,7 +924,8 @@ namespace Ichor {
 
         if(ret < 0) [[unlikely]] {
             fmt::println("pushEventInternal() error waiting for available slots in ring {} {} {}", ret, _entriesCount, space);
-            throw std::system_error(-ret, std::generic_category(), "io_uring_submit_and_wait() failed");
+            fmt::println("io_uring_submit_and_wait() failed, ret {}", -ret);
+            std::terminate();
         }
 
         if((unsigned int)ret != _entriesCount - space) [[unlikely]] {
@@ -962,7 +980,7 @@ namespace Ichor {
 
     tl::expected<IOUringBuf, v1::IOError> IOUringQueue::createProvidedBuffer(unsigned short entries, unsigned int entryBufferSize) noexcept {
         if(entries == 0) {
-			fmt::println("createProvidedBuffer entries == 0.");
+            fmt::println("createProvidedBuffer entries == 0.");
             return tl::unexpected(v1::IOError::NOT_SUPPORTED);
         }
 
@@ -971,7 +989,7 @@ namespace Ichor {
         }
 
         if((entries & (entries - 1)) != 0) {
-			fmt::println("createProvidedBuffer entries not a power of two.");
+            fmt::println("createProvidedBuffer entries not a power of two.");
             return tl::unexpected(v1::IOError::NOT_SUPPORTED);
         }
 
@@ -983,14 +1001,14 @@ namespace Ichor {
         if(entriesBuf == nullptr) {
             return tl::unexpected(v1::IOError::NO_MEMORY_AVAILABLE);
         }
-		if(madvise(entriesBuf, entries * entryBufferSize, MADV_DONTDUMP) != 0) {
-			fmt::println("createProvidedBuffer madvise entriesBuf MADV_DONTDUMP failed.");
-			return tl::unexpected(v1::IOError::NOT_SUPPORTED);
-		}
-		if(madvise(entriesBuf, entries * entryBufferSize, MADV_DONTFORK) != 0) {
-			fmt::println("createProvidedBuffer madvise entriesBuf MADV_DONTFORK failed.");
-			return tl::unexpected(v1::IOError::NOT_SUPPORTED);
-		}
+        if(madvise(entriesBuf, entries * entryBufferSize, MADV_DONTDUMP) != 0) {
+            fmt::println("createProvidedBuffer madvise entriesBuf MADV_DONTDUMP failed.");
+            return tl::unexpected(v1::IOError::NOT_SUPPORTED);
+        }
+        if(madvise(entriesBuf, entries * entryBufferSize, MADV_DONTFORK) != 0) {
+            fmt::println("createProvidedBuffer madvise entriesBuf MADV_DONTFORK failed.");
+            return tl::unexpected(v1::IOError::NOT_SUPPORTED);
+        }
 
         int ret;
         auto id = _uringBufIdCounter++;
@@ -998,14 +1016,14 @@ namespace Ichor {
         if(bufRing == nullptr) {
             return tl::unexpected(v1::mapErrnoToError(-ret));
         }
-		if(madvise(bufRing, entries * sizeof(struct io_uring_buf), MADV_DONTDUMP) != 0) {
-			fmt::println("createProvidedBuffer madvise bufRing MADV_DONTDUMP failed.");
-			return tl::unexpected(v1::IOError::NOT_SUPPORTED);
-		}
-		if(madvise(bufRing, entries * sizeof(struct io_uring_buf), MADV_DONTFORK) != 0) {
-			fmt::println("createProvidedBuffer madvise bufRing MADV_DONTFORK failed.");
-			return tl::unexpected(v1::IOError::NOT_SUPPORTED);
-		}
+        if(madvise(bufRing, entries * sizeof(struct io_uring_buf), MADV_DONTDUMP) != 0) {
+            fmt::println("createProvidedBuffer madvise bufRing MADV_DONTDUMP failed.");
+            return tl::unexpected(v1::IOError::NOT_SUPPORTED);
+        }
+        if(madvise(bufRing, entries * sizeof(struct io_uring_buf), MADV_DONTFORK) != 0) {
+            fmt::println("createProvidedBuffer madvise bufRing MADV_DONTFORK failed.");
+            return tl::unexpected(v1::IOError::NOT_SUPPORTED);
+        }
 
         char *ptr = entriesBuf;
         auto mask = io_uring_buf_ring_mask(entries);

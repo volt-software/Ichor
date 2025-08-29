@@ -1,13 +1,17 @@
 #pragma once
 
+#include <ichor/Defines.h>
 #include <ichor/ConstevalHash.h>
 #include <typeinfo>
 #include <array>
 #include <string>
 #include <string_view>
 #include <fmt/base.h>
-#include <exception>
 #include <iterator>
+
+#if ICHOR_EXCEPTIONS_ENABLED
+#include <exception>
+#endif
 
 // Differs from std::any by not needing RTTI (no typeid()) and still able to compare types
 // e.g my_any_var.type_hash() == Ichor::typeNameHash<int>()
@@ -15,6 +19,7 @@
 // Probably doesn't work in some situations where std::any would, as compiler support is missing.
 namespace Ichor::v1 {
 
+#if ICHOR_EXCEPTIONS_ENABLED
     struct bad_any_cast final : public std::bad_cast {
         bad_any_cast(std::string_view type, std::string_view cast);
 
@@ -22,6 +27,7 @@ namespace Ichor::v1 {
 
         std::string _error;
     };
+#endif
 
     enum class any_op {
         CLONE,
@@ -203,7 +209,11 @@ namespace Ichor::v1 {
             if(_ptr != nullptr && _typeHash == typeNameHash<Up>()) {
                 return static_cast<ValueType>(*static_cast<Up*>(_ptr));
             }
+#if ICHOR_EXCEPTIONS_ENABLED
             throw bad_any_cast{_typeName, typeName<Up>()};
+#else
+            std::terminate();
+#endif
         }
 
         template<typename ValueType>
@@ -214,7 +224,11 @@ namespace Ichor::v1 {
             if(_ptr != nullptr && _typeHash == typeNameHash<Up>()) {
                 return static_cast<ValueType>(*static_cast<Up*>(_ptr));
             }
+#if ICHOR_EXCEPTIONS_ENABLED
             throw bad_any_cast{_typeName, typeName<Up>()};
+#else
+            std::terminate();
+#endif
         }
 
         template<typename ValueType>
@@ -225,7 +239,11 @@ namespace Ichor::v1 {
             if(_ptr != nullptr && _typeHash == comparison) {
                 return static_cast<ValueType>(_ptr);
             }
+#if ICHOR_EXCEPTIONS_ENABLED
             throw bad_any_cast{_typeName, typeName<Up>()};
+#else
+            std::terminate();
+#endif
         }
 
     private:

@@ -54,11 +54,15 @@ void* run_example(void*) {
 }
 
 int main(int argc, char *argv[]) {
+#if ICHOR_EXCEPTIONS_ENABLED
     try {
+#endif
         std::locale::global(std::locale("en_US.UTF-8"));
+#if ICHOR_EXCEPTIONS_ENABLED
     } catch(std::runtime_error const &e) {
         fmt::println("Couldn't set locale to en_US.UTF-8: {}", e.what());
     }
+#endif
     progName = argv[0];
 
 #if (defined(WIN32) || defined(_WIN32) || defined(__WIN32) || defined(__APPLE__)) && !defined(__CYGWIN__)
@@ -69,8 +73,8 @@ int main(int argc, char *argv[]) {
     uid_t euid = geteuid();
 
     if (uid !=0 || uid!=euid) {
-        fmt::print("This example requires running under sudo/root.");
-        throw std::runtime_error("This example requires running under sudo/root.");
+        fmt::println("This example requires running under sudo/root.");
+        std::terminate();
     }
 #endif
 
@@ -93,8 +97,8 @@ int main(int argc, char *argv[]) {
     auto ret = pthread_create (&thread, &attr, run_example, nullptr);
 
     if(ret == EPERM) {
-        fmt::print("No permissions to set realtime thread scheduling. Consider running under sudo/root.");
-        throw std::runtime_error("No permissions to set realtime thread scheduling. Consider running under sudo/root.");
+        fmt::println("No permissions to set realtime thread scheduling. Consider running under sudo/root.");
+        std::terminate();
     }
 
     if(ret == 0) {

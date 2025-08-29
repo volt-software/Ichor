@@ -53,7 +53,7 @@ namespace Ichor::v1 {
         requires Derived<T, Event>
         [[nodiscard]] T *getT() {
             if (_empty) {
-                throw std::runtime_error("empty");
+                std::terminate();
             }
 
             return reinterpret_cast<T *>(_buffer.data());
@@ -61,7 +61,7 @@ namespace Ichor::v1 {
 
         [[nodiscard]] Event *get() {
             if (_empty) {
-                throw std::runtime_error("empty");
+                std::terminate();
             }
 
             return reinterpret_cast<Event *>(_buffer.data());

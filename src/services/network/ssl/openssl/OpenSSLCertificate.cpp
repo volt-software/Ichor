@@ -21,7 +21,7 @@ OpenSSLCertificate::~OpenSSLCertificate() {
 }
 
 
-tl::expected<OpenSSLCertificate, OpenSSLMakeCertificateError> OpenSSLCertificate::makeOpenSSLCertificate(tl::optional<ILogger*> logger, NeverNull<const char *> data, uint64_t dataLength, TLSCertificateIdType id) {
+tl::expected<OpenSSLCertificate, OpenSSLMakeCertificateError> OpenSSLCertificate::makeOpenSSLCertificate(tl::optional<ILogger*> logger, NeverNull<const char *> data, uint64_t dataLength, TLSCertificateIdType id) noexcept {
     BIO *bio = BIO_new_mem_buf(data, dataLength);
 
     if(bio == nullptr) {
@@ -56,7 +56,7 @@ TLSCertificateTypeType OpenSSLCertificate::getType() const noexcept {
 }
 #endif
 
-std::string_view OpenSSLCertificate::asn1StringAsView(const ASN1_STRING* s) {
+std::string_view OpenSSLCertificate::asn1StringAsView(const ASN1_STRING* s) noexcept {
     if(!s) {
         return {};
     }
@@ -71,7 +71,7 @@ std::string_view OpenSSLCertificate::asn1StringAsView(const ASN1_STRING* s) {
     return std::string_view{reinterpret_cast<const char*>(p), static_cast<long unsigned int>(n)};
 }
 
-std::string_view OpenSSLCertificate::getFirstAttribute(NeverNull<X509_NAME*> name, int nid) {
+std::string_view OpenSSLCertificate::getFirstAttribute(NeverNull<X509_NAME*> name, int nid) noexcept {
     int idx = X509_NAME_get_index_by_NID(name, nid, -1);
 
     if(idx < 0) {
@@ -89,7 +89,7 @@ std::string_view OpenSSLCertificate::getFirstAttribute(NeverNull<X509_NAME*> nam
     return asn1StringAsView(s);
 }
 
-std::vector<std::string_view> OpenSSLCertificate::getAllAttributes(const X509_NAME* name, int nid) {
+std::vector<std::string_view> OpenSSLCertificate::getAllAttributes(const X509_NAME* name, int nid) noexcept {
     std::vector<std::string_view> ret{};
     int last = -1;
     for(;;) {
@@ -117,7 +117,7 @@ std::vector<std::string_view> OpenSSLCertificate::getAllAttributes(const X509_NA
     return ret;
 }
 
-tl::optional<std::chrono::sys_seconds> OpenSSLCertificate::convertASN1tmUTCtoTimepoint(tm &tm_utc) {
+tl::optional<std::chrono::sys_seconds> OpenSSLCertificate::convertASN1tmUTCtoTimepoint(tm &tm_utc) noexcept {
     const std::chrono::year  y{tm_utc.tm_year + 1900};
     const std::chrono::month m{static_cast<unsigned>(tm_utc.tm_mon + 1)};
     const std::chrono::day   d{static_cast<unsigned>(tm_utc.tm_mday)};

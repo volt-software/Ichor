@@ -32,7 +32,12 @@ namespace Ichor {
     template <typename COMPARE>
     void TemplatePriorityQueue<COMPARE>::pushEventInternal(uint64_t priority, std::unique_ptr<Event> &&event) {
         if(!event) [[unlikely]] {
+#if ICHOR_EXCEPTIONS_ENABLED
             throw std::runtime_error("Pushing nullptr");
+#else
+            fmt::println("Pushing nullptr");
+            std::terminate();
+#endif
         }
 
 //        INTERNAL_DEBUG("inserted event of type {} priority {} into manager {}", event->get_name(), event->priority, _dm->getId());

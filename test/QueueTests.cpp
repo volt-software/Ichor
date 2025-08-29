@@ -23,13 +23,19 @@ TEST_CASE("QueueTests") {
         auto queue = std::make_unique<PriorityQueue>();
         auto &dm = queue->createManager();
 
+#if ICHOR_EXCEPTIONS_ENABLED
         REQUIRE_THROWS(queue->pushEventInternal(0, nullptr));
+#endif
 
         REQUIRE(queue->empty());
         REQUIRE(queue->size() == 0);
         REQUIRE(!queue->shouldQuit());
 
+#if ICHOR_EXCEPTIONS_ENABLED
         REQUIRE_NOTHROW(queue->pushEventInternal(10, std::make_unique<TestEvent>(0, 0, 10)));
+#else
+        queue->pushEventInternal(10, std::make_unique<TestEvent>(0, 0, 10));
+#endif
 
         REQUIRE(!queue->empty());
         REQUIRE(queue->size() == 1);
@@ -45,13 +51,19 @@ TEST_CASE("QueueTests") {
         auto queue = std::make_unique<OrderedPriorityQueue>();
         auto &dm = queue->createManager();
 
+#if ICHOR_EXCEPTIONS_ENABLED
         REQUIRE_THROWS(queue->pushEventInternal(0, nullptr));
+#endif
 
         REQUIRE(queue->empty());
         REQUIRE(queue->size() == 0);
         REQUIRE(!queue->shouldQuit());
 
+#if ICHOR_EXCEPTIONS_ENABLED
         REQUIRE_NOTHROW(queue->pushEventInternal(10, std::make_unique<TestEvent>(0, 0, 10)));
+#else
+        queue->pushEventInternal(10, std::make_unique<TestEvent>(0, 0, 10));
+#endif
 
         REQUIRE(!queue->empty());
         REQUIRE(queue->size() == 1);
@@ -67,7 +79,11 @@ TEST_CASE("QueueTests") {
         auto f = []() {
             std::array<PriorityQueue, 8> queues{};
         };
+#if ICHOR_EXCEPTIONS_ENABLED
         REQUIRE_NOTHROW(f());
+#else
+        f();
+#endif
     }
 
 #ifdef ICHOR_USE_SDEVENT
@@ -77,9 +93,11 @@ TEST_CASE("QueueTests") {
 
         Ichor::Detail::_local_dm = &dm;
 
+#if ICHOR_EXCEPTIONS_ENABLED
         REQUIRE_THROWS(queue->pushEventInternal(0, nullptr));
         REQUIRE_THROWS(queue->empty());
         REQUIRE_THROWS(queue->size());
+#endif
 
         auto loop = queue->createEventLoop();
 
@@ -117,12 +135,16 @@ TEST_CASE("QueueTests") {
 
         REQUIRE(dm->isRunning());
 
+#if ICHOR_EXCEPTIONS_ENABLED
         try {
+#endif
             dm->getEventQueue().pushEvent<QuitEvent>(0);
+#if ICHOR_EXCEPTIONS_ENABLED
         } catch(const std::exception &e) {
             fmt::print("exception: {}\n", e.what());
             throw;
         }
+#endif
 
         t.join();
     }
@@ -169,12 +191,16 @@ TEST_CASE("QueueTests") {
 
         REQUIRE(dm->isRunning());
 
+#if ICHOR_EXCEPTIONS_ENABLED
         try {
+#endif
             dm->getEventQueue().pushEvent<QuitEvent>(0);
+#if ICHOR_EXCEPTIONS_ENABLED
         } catch(const std::exception &e) {
             fmt::print("exception: {}\n", e.what());
             throw;
         }
+#endif
 
         t.join();
     }
@@ -227,12 +253,16 @@ TEST_CASE("QueueTests") {
 
         REQUIRE(dm->isRunning());
 
+#if ICHOR_EXCEPTIONS_ENABLED
         try {
+#endif
             dm->getEventQueue().pushEvent<QuitEvent>(0);
+#if ICHOR_EXCEPTIONS_ENABLED
         } catch(const std::exception &e) {
             fmt::print("exception: {}\n", e.what());
             throw;
         }
+#endif
 
         auto start = std::chrono::steady_clock::now();
         while(queue->is_running()) {

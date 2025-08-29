@@ -104,7 +104,8 @@ namespace Ichor {
         fmt::format_to(std::back_inserter(buf), "SET {} {}", key, value);
         uint32_t timeOptsSet{};
         if(opts.NX && opts.XX) [[unlikely]] {
-            throw std::runtime_error("Cannot set NX and XX together");
+            fmt::println("Cannot set NX and XX together");
+            std::terminate();
         }
         if(opts.NX) {
             fmt::format_to(std::back_inserter(buf), " NX");
@@ -136,7 +137,8 @@ namespace Ichor {
             fmt::format_to(std::back_inserter(buf), " EX {}", *opts.PXAT);
         }
         if(timeOptsSet > 1) [[unlikely]] {
-            throw std::runtime_error("Can only set one of EX, PX, EXAT, PXAT and KEEPTTL");
+            fmt::println("Can only set one of EX, PX, EXAT, PXAT and KEEPTTL");
+            std::terminate();
         }
         return buf;
     }
@@ -150,10 +152,12 @@ Ichor::v1::HiredisService::HiredisService(DependencyRegister &reg, Properties pr
 
 Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::v1::HiredisService::start() {
     if(auto propIt = getProperties().find("Address"); propIt == getProperties().end()) [[unlikely]] {
-        throw std::runtime_error("Missing address when starting HiredisService");
+        fmt::println("Missing address when starting HiredisService");
+        std::terminate();
     }
     if(auto propIt = getProperties().find("Port"); propIt == getProperties().end()) [[unlikely]] {
-        throw std::runtime_error("Missing port when starting HiredisService");
+        fmt::println("Missing port when starting HiredisService");
+        std::terminate();
     }
 
     if(auto propIt = getProperties().find("TimeoutMs"); propIt != getProperties().end()) {
@@ -298,7 +302,8 @@ Ichor::Task<tl::expected<Ichor::v1::RedisAuthReply, Ichor::v1::RedisError>> Icho
     evt.origCommand = fmt::format("AUTH {} password of size {}", user, password.size());
     auto ret = redisAsyncCommand(_redisContext, _onAsyncReply, &evt, "AUTH %b %b", user.data(), user.size(), password.data(), password.size());
     if(ret == REDIS_ERR) [[unlikely]] {
-        throw std::runtime_error("couldn't run async command auth");
+        fmt::println("couldn't run async command auth");
+        std::terminate();
     }
     co_await evt.evt;
 
@@ -323,7 +328,8 @@ Ichor::Task<tl::expected<Ichor::v1::RedisSetReply, Ichor::v1::RedisError>> Ichor
     evt.origCommand = fmt::format("SET {} {}", key, value);
     auto ret = redisAsyncCommand(_redisContext, _onAsyncReply, &evt, "SET %b %b", key.data(), key.size(), value.data(), value.size());
     if(ret == REDIS_ERR) [[unlikely]] {
-        throw std::runtime_error("couldn't run async command set");
+        fmt::println("couldn't run async command set");
+        std::terminate();
     }
     co_await evt.evt;
 
@@ -350,7 +356,8 @@ Ichor::Task<tl::expected<Ichor::v1::RedisSetReply, Ichor::v1::RedisError>> Ichor
     evt.origCommand = fmt::format("{}", buf.data());
     auto ret = redisAsyncCommand(_redisContext, _onAsyncReply, &evt, buf.data());
     if(ret == REDIS_ERR) [[unlikely]] {
-        throw std::runtime_error("couldn't run async command set opts");
+        fmt::println("couldn't run async command set opts");
+        std::terminate();
     }
     co_await evt.evt;
 
@@ -375,7 +382,8 @@ Ichor::Task<tl::expected<Ichor::v1::RedisGetReply, Ichor::v1::RedisError>> Ichor
     evt.origCommand = fmt::format("GET {}", key);
     auto ret = redisAsyncCommand(_redisContext, _onAsyncReply, &evt, "GET %b", key.data(), key.size());
     if(ret == REDIS_ERR) [[unlikely]] {
-        throw std::runtime_error("couldn't run async command get");
+        fmt::println("couldn't run async command get");
+        std::terminate();
     }
     co_await evt.evt;
 
@@ -408,7 +416,8 @@ Ichor::Task<tl::expected<Ichor::v1::RedisGetReply, Ichor::v1::RedisError>> Ichor
     evt.origCommand = fmt::format("GETDEL {}", key);
     auto ret = redisAsyncCommand(_redisContext, _onAsyncReply, &evt, "GETDEL %b", key.data(), key.size());
     if(ret == REDIS_ERR) [[unlikely]] {
-        throw std::runtime_error("couldn't run async command getdel");
+        fmt::println("couldn't run async command getdel");
+        std::terminate();
     }
     co_await evt.evt;
 
@@ -433,7 +442,8 @@ Ichor::Task<tl::expected<Ichor::v1::RedisIntegerReply, Ichor::v1::RedisError>> I
     evt.origCommand = fmt::format("DEL {}", keys);
     auto ret = redisAsyncCommand(_redisContext, _onAsyncReply, &evt, "DEL %b", keys.data(), keys.size());
     if(ret == REDIS_ERR) [[unlikely]] {
-        throw std::runtime_error("couldn't run async command del");
+        fmt::println("couldn't run async command del");
+        std::terminate();
     }
     co_await evt.evt;
 
@@ -458,7 +468,8 @@ Ichor::Task<tl::expected<Ichor::v1::RedisIntegerReply, Ichor::v1::RedisError>> I
     evt.origCommand = fmt::format("INCR {}", keys);
     auto ret = redisAsyncCommand(_redisContext, _onAsyncReply, &evt, "INCR %b", keys.data(), keys.size());
     if(ret == REDIS_ERR) [[unlikely]] {
-        throw std::runtime_error("couldn't run async command incr");
+        fmt::println("couldn't run async command incr");
+        std::terminate();
     }
     co_await evt.evt;
 
@@ -483,7 +494,8 @@ Ichor::Task<tl::expected<Ichor::v1::RedisIntegerReply, Ichor::v1::RedisError>> I
     evt.origCommand = fmt::format("INCRBY {} {}", keys, incr);
     auto ret = redisAsyncCommand(_redisContext, _onAsyncReply, &evt, "INCRBY %b %i", keys.data(), keys.size(), incr);
     if(ret == REDIS_ERR) [[unlikely]] {
-        throw std::runtime_error("couldn't run async command incrBy");
+        fmt::println("couldn't run async command incrBy");
+        std::terminate();
     }
     co_await evt.evt;
 
@@ -512,7 +524,8 @@ Ichor::Task<tl::expected<Ichor::v1::RedisIntegerReply, Ichor::v1::RedisError>> I
     evt.origCommand = fmt::format("INCRBYFLOAT {} {}", keys, incr);
     auto ret = redisAsyncCommand(_redisContext, _onAsyncReply, &evt, "INCRBYFLOAT %b %f", keys.data(), keys.size(), incr);
     if(ret == REDIS_ERR) [[unlikely]] {
-        throw std::runtime_error("couldn't run async command incrByFloat");
+        fmt::println("couldn't run async command incrByFloat");
+        std::terminate();
     }
     co_await evt.evt;
 
@@ -537,7 +550,8 @@ Ichor::Task<tl::expected<Ichor::v1::RedisIntegerReply, Ichor::v1::RedisError>> I
     evt.origCommand = fmt::format("DECR {}", keys);
     auto ret = redisAsyncCommand(_redisContext, _onAsyncReply, &evt, "DECR %b", keys.data(), keys.size());
     if(ret == REDIS_ERR) [[unlikely]] {
-        throw std::runtime_error("couldn't run async command decr");
+        fmt::println("couldn't run async command decr");
+        std::terminate();
     }
     co_await evt.evt;
 
@@ -562,7 +576,8 @@ Ichor::Task<tl::expected<Ichor::v1::RedisIntegerReply, Ichor::v1::RedisError>> I
     evt.origCommand = fmt::format("DECRBY {} {}", keys, decr);
     auto ret = redisAsyncCommand(_redisContext, _onAsyncReply, &evt, "DECRBY %b %i", keys.data(), keys.size(), decr);
     if(ret == REDIS_ERR) [[unlikely]] {
-        throw std::runtime_error("couldn't run async command decrBy");
+        fmt::println("couldn't run async command decrBy");
+        std::terminate();
     }
     co_await evt.evt;
 
@@ -591,7 +606,8 @@ Ichor::Task<tl::expected<Ichor::v1::RedisIntegerReply, Ichor::v1::RedisError>> I
     evt.origCommand = fmt::format("STRLEN {}", key);
     auto ret = redisAsyncCommand(_redisContext, _onAsyncReply, &evt, "STRLEN %b", key.data(), key.size());
     if(ret == REDIS_ERR) [[unlikely]] {
-        throw std::runtime_error("couldn't run async command strlen");
+        fmt::println("couldn't run async command strlen");
+        std::terminate();
     }
     co_await evt.evt;
 
@@ -620,7 +636,8 @@ Ichor::Task<tl::expected<void, Ichor::v1::RedisError>> Ichor::v1::HiredisService
     evt.origCommand = fmt::format("MULTI");
     auto ret = redisAsyncCommand(_redisContext, _onAsyncReply, &evt, "MULTI");
     if(ret == REDIS_ERR) [[unlikely]] {
-        throw std::runtime_error("couldn't run async command strlen");
+        fmt::println("couldn't run async command strlen");
+        std::terminate();
     }
     co_await evt.evt;
 
@@ -649,7 +666,8 @@ Ichor::Task<tl::expected<std::vector<std::variant<Ichor::v1::RedisGetReply, Icho
     evt.origCommand = fmt::format("EXEC");
     auto redisRet = redisAsyncCommand(_redisContext, _onAsyncReply, &evt, "EXEC");
     if(redisRet == REDIS_ERR) [[unlikely]] {
-        throw std::runtime_error("couldn't run async command strlen");
+        fmt::println("couldn't run async command strlen");
+        std::terminate();
     }
     co_await evt.evt;
 
@@ -724,7 +742,8 @@ Ichor::Task<tl::expected<void, Ichor::v1::RedisError>> Ichor::v1::HiredisService
     evt.origCommand = fmt::format("DISCARD");
     auto ret = redisAsyncCommand(_redisContext, _onAsyncReply, &evt, "DISCARD");
     if(ret == REDIS_ERR) [[unlikely]] {
-        throw std::runtime_error("couldn't run async command strlen");
+        fmt::println("couldn't run async command strlen");
+        std::terminate();
     }
     co_await evt.evt;
 
@@ -745,7 +764,8 @@ Ichor::Task<tl::expected<std::unordered_map<std::string, std::string>, Ichor::v1
     evt.origCommand = fmt::format("INFO");
     auto commandRet = redisAsyncCommand(_redisContext, _onAsyncReply, &evt, "INFO");
     if(commandRet == REDIS_ERR) [[unlikely]] {
-        throw std::runtime_error("couldn't run async command info");
+        fmt::println("couldn't run async command info");
+        std::terminate();
     }
     co_await evt.evt;
 

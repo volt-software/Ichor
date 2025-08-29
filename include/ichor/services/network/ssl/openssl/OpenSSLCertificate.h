@@ -26,11 +26,11 @@ namespace Ichor::v1 {
 #endif
 
 
-        static tl::expected<OpenSSLCertificate, OpenSSLMakeCertificateError> makeOpenSSLCertificate(tl::optional<ILogger*> logger, NeverNull<const char *> data, uint64_t dataLength, TLSCertificateIdType id);
-        static std::string_view asn1StringAsView(const ASN1_STRING* s);
-        static std::string_view getFirstAttribute(NeverNull<X509_NAME*> name, int nid);
-        static std::vector<std::string_view> getAllAttributes(const X509_NAME* name, int nid);
-        static tl::optional<std::chrono::sys_seconds> convertASN1tmUTCtoTimepoint(tm &tm_utc);
+        static tl::expected<OpenSSLCertificate, OpenSSLMakeCertificateError> makeOpenSSLCertificate(tl::optional<ILogger*> logger, NeverNull<const char *> data, uint64_t dataLength, TLSCertificateIdType id) noexcept;
+        static std::string_view asn1StringAsView(const ASN1_STRING* s) noexcept;
+        static std::string_view getFirstAttribute(NeverNull<X509_NAME*> name, int nid) noexcept;
+        static std::vector<std::string_view> getAllAttributes(const X509_NAME* name, int nid) noexcept;
+        static tl::optional<std::chrono::sys_seconds> convertASN1tmUTCtoTimepoint(tm &tm_utc) noexcept;
 
         [[nodiscard]] TLSCertificateNameViews getCommonNameViews(bool includeVectorViews) const noexcept final;
         [[nodiscard]] TLSCertificateNameViews getIssuerNameViews(bool includeVectorViews) const noexcept final;

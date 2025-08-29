@@ -50,7 +50,11 @@ namespace Ichor {
             auto manager = _managers.find(id);
 
             if(manager == end(_managers)) {
+#if ICHOR_EXCEPTIONS_ENABLED
                 throw std::runtime_error("Couldn't find manager");
+#else
+                std::terminate();
+#endif
             }
 
             manager->second->getEventQueue().pushEvent<EventT>(std::forward<Args>(args)...);

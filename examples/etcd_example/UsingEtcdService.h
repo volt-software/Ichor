@@ -61,7 +61,7 @@ public:
             // Note that this does not block the thread, just this event.
             auto getReply = co_await EtcdV2Service->get("watch", false, false, true, {});
             if(!getReply) {
-                throw std::runtime_error("");
+                std::terminate();
             }
 
             if(getReply.value().node->value != "4") {

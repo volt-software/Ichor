@@ -50,7 +50,19 @@ namespace {
         ICHOR_LOG_DEBUG(logger, "cert default verify failed, using custom callback: {} (subject: {})", err_msg, subject);
 
         if(sslContext->certificateVerifyCallback) {
-            return sslContext->certificateVerifyCallback(Ichor::v1::OpenSSLCertificateStore{storeCtx, Ichor::v1::TLSCertificateStoreIdType{1}}); // TODO maybe id here is not necessary (and who is responsible for the counter??)
+#if ICHOR_EXCEPTIONS_ENABLED
+            try {
+#endif
+                return sslContext->certificateVerifyCallback(Ichor::v1::OpenSSLCertificateStore{storeCtx, Ichor::v1::TLSCertificateStoreIdType{1}}); // TODO maybe id here is not necessary (and who is responsible for the counter??)
+#if ICHOR_EXCEPTIONS_ENABLED
+            } catch (std::exception const &e) {
+                ICHOR_LOG_ERROR(logger, "certificateVerifyCallback throw exception {}", e.what());
+                return 0;
+            } catch (...) {
+                ICHOR_LOG_ERROR(logger, "certificateVerifyCallback throw unknown exception");
+                return 0;
+            }
+#endif
         }
 
         return 0;
@@ -348,7 +360,8 @@ void Ichor::v1::OpenSSLService::printAllSslErrors(TLSObjectT const &obj, int lin
         } else if constexpr (std::is_same_v<TLSObjectT, NullStruct>) {
             ICHOR_LOG_ERROR(_logger, "Called from [{}] OpenSSL error {}: {}", line_in, errCode, buf);
         } else {
-            static_assert(false, "TLSObjectT has to be either OpenSSLContext, OpenSSLConnection or NullStruct");
+            []<bool flag = false>() { static_assert(flag, "TLSObjectT has to be either OpenSSLContext, OpenSSLConnection or NullStruct"); }();
+
         }
         errCode = ERR_get_error();
     }

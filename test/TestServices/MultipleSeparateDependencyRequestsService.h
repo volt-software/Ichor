@@ -36,11 +36,11 @@ struct MultipleSeparateDependencyRequestsService final : public AdvancedService<
     }
 
     void addDependencyInstance(INotUsed&, IService&) {
-        throw std::runtime_error("INotUsed should never be injected");
+        std::terminate();
     }
 
     void removeDependencyInstance(INotUsed&, IService&) {
-        throw std::runtime_error("INotUsed should never be injected");
+        std::terminate();
     }
 
     uint64_t _depCount{};
