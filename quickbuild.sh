@@ -102,7 +102,7 @@ while [[ $# -gt 0 ]]; do
       ;;
     --32)
       FORCE_32=1
-      FORCE_32_TOOLCHAIN=-DCMAKE_TOOLCHAIN_FILE=toolchain-i386.cmake
+      FORCE_32_TOOLCHAIN=-DCMAKE_TOOLCHAIN_FILE=../toolchain-i386.cmake
       shift # past value
       ;;
     -*|--*)
