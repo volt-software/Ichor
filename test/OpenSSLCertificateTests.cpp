@@ -13,38 +13,9 @@ using namespace Ichor;
 using namespace Ichor::v1;
 
 TEST_CASE("OpenSSLCertificate basic properties") {
-    const char *test_cert;
-    uint64_t test_cert_size;
-    std::string expectedSubjectC;
-    std::string expectedSubjectST;
-    std::string expectedSubjectL;
-    std::string expectedSubjectO;
-    std::string expectedSubjectCN;
-    std::string expectedIssuerC;
-    std::string expectedIssuerST;
-    std::string expectedIssuerL;
-    std::string expectedIssuerO;
-    std::string expectedIssuerCN;
-    std::string expectedSerial;
-    std::string expectedSigAlg;
-
-    int expectedBeforeYear;
-    unsigned expectedBeforeMonth;
-    unsigned expectedBeforeDay;
-    int expectedBeforeHour;
-    int expectedBeforeMinute;
-    int expectedBeforeSecond;
-
-    int expectedAfterYear;
-    unsigned expectedAfterMonth;
-    unsigned expectedAfterDay;
-    int expectedAfterHour;
-    int expectedAfterMinute;
-    int expectedAfterSecond;
-
-    std::tie(test_cert, test_cert_size, expectedSubjectC, expectedSubjectST, expectedSubjectL, expectedSubjectO, expectedSubjectCN, expectedIssuerC, expectedIssuerST, expectedIssuerL, expectedIssuerO, expectedIssuerCN, expectedSerial, expectedSigAlg,
-             expectedBeforeYear, expectedBeforeMonth, expectedBeforeDay, expectedBeforeHour, expectedBeforeMinute, expectedBeforeSecond,
-             expectedAfterYear, expectedAfterMonth, expectedAfterDay, expectedAfterHour, expectedAfterMinute, expectedAfterSecond) =
+    auto [test_cert, test_cert_size, expectedSubjectC, expectedSubjectST, expectedSubjectL, expectedSubjectO, expectedSubjectCN, expectedIssuerC, expectedIssuerST, expectedIssuerL, expectedIssuerO, expectedIssuerCN, expectedSerial, expectedSigAlg,
+          expectedBeforeYear, expectedBeforeMonth, expectedBeforeDay, expectedBeforeHour, expectedBeforeMinute, expectedBeforeSecond,
+          expectedAfterYear, expectedAfterMonth, expectedAfterDay, expectedAfterHour, expectedAfterMinute, expectedAfterSecond] =
         GENERATE( table<const char*, uint64_t, std::string, std::string, std::string, std::string, std::string, std::string, std::string, std::string, std::string, std::string, std::string, std::string, int, unsigned, unsigned, int, int, int, int, unsigned, unsigned, int, int, int>({
             std::make_tuple(generic_test_cert, sizeof(generic_test_cert), "US", "CA", "Los AngelesO=BeastCN=www.example.com", "", "", "US", "CA", "Los AngelesO=BeastCN=www.example.com", "", "", std::string{"\xEF\x2F\x06\xEF\x22\xF1\xEC\x56", 8}, "RSA-SHA256", 2017, 5, 3, 18, 39, 12, 2044, 9, 18, 18, 39, 12),
             std::make_tuple(rsa2048_cert, sizeof(rsa2048_cert), "", "", "", "", "RSA-2048", "", "", "", "", "RSA-2048", std::string{"\x28\x1A\x3F\xF9\x95\x90\x40\xD6\x4B\xDE\xCF\x63\x7B\xFB\x4D\x85\x49\xBD\x27\xBF", 20}, "RSA-SHA256", 2025, 8, 23, 16, 8, 5, 3024, 12, 24, 16, 8, 5),
@@ -143,11 +114,7 @@ TEST_CASE("OpenSSLCertificate basic properties") {
 
 
 TEST_CASE("OpenSSLCertificate incorrect certificates") {
-    const char *test_cert;
-    uint64_t test_cert_size;
-    std::string certName;
-
-    std::tie(test_cert, test_cert_size, certName) =
+    auto [test_cert, test_cert_size, certName] =
         GENERATE( table<const char*, uint64_t, std::string>({
             std::make_tuple(rsa2048_no_begin_cert, sizeof(rsa2048_no_begin_cert), NAMEOF(rsa2048_no_begin_cert)),
             std::make_tuple(rsa2048_no_end_cert, sizeof(rsa2048_no_end_cert), NAMEOF(rsa2048_no_end_cert)),
@@ -170,11 +137,7 @@ TEST_CASE("OpenSSLCertificate incorrect certificates") {
 
 
 TEST_CASE("OpenSSLCertificate incorrect combo certificates") {
-    const char *test_cert;
-    uint64_t test_cert_size;
-    std::string certName;
-
-    std::tie(test_cert, test_cert_size, certName) =
+    auto [test_cert, test_cert_size, certName] =
         GENERATE( table<const char*, uint64_t, std::string>({
             std::make_tuple(rsa2048_combo_good_then_bad_cert, sizeof(rsa2048_combo_good_then_bad_cert), NAMEOF(rsa2048_combo_good_then_bad_cert)),
         } ) );
