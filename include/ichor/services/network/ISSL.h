@@ -117,6 +117,13 @@ namespace Ichor::v1 {
         UNKNOWN
     };
 
+    enum class TLSHandshakeStatus {
+        WANT_READ,
+        WANT_WRITE,
+        NEITHER,
+        UNKNOWN
+    };
+
     enum class TLSContextSecurityLevel {
         DEFAULT,
         WEAKER_THAN_DEFAULT_IF_AVAILABLE_DO_NOT_USE_UNLESS_YOU_KNOW_WHAT_YOURE_DOING, // really, this usually means wanting to use certificates which use weak protection, leaving your server vulnerable. Please just create a new certificate with modern level of encryption, like ed25519 or rsa3072/rsa4096
@@ -141,6 +148,7 @@ namespace Ichor::v1 {
         [[nodiscard]] virtual tl::expected<std::unique_ptr<TLSConnection>, TLSConnectionError> createTLSConnection(TLSContext&, TLSCreateConnectionOptions) = 0;
         [[nodiscard]] virtual tl::expected<void, bool> TLSWrite(TLSConnection&, const std::vector<uint8_t> &) = 0;
         [[nodiscard]] virtual tl::expected<std::vector<uint8_t>, bool> TLSRead(TLSConnection&) = 0;
+        [[nodiscard]] virtual TLSHandshakeStatus TLSDoHandshake(TLSConnection&) = 0;
 
     protected:
         ~ISSL() = default;
