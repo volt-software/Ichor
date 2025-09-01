@@ -77,7 +77,7 @@ option(ICHOR_USE_HIREDIS "Add hiredis dependency" OFF)
 option(ICHOR_MUSL "Use when building for musl instead of glibc" OFF)
 option(ICHOR_AARCH64 "Use when building for aarch64. Turns off some x86-specific compiler flags." OFF)
 
-find_package(OpenSSL 3.0.0 REQUIRED)
+find_package(OpenSSL 3.0.0)
 
 cmake_dependent_option(ICHOR_USE_OPENSSL "Support using OpenSSL for TLS" ON "OpenSSL_FOUND" OFF)
 cmake_dependent_option(ICHOR_USE_BOOST_BEAST "Add boost asio and boost BEAST as dependencies" OFF "NOT ICHOR_USE_SANITIZERS AND NOT ICHOR_USE_THREAD_SANITIZER AND ICHOR_USE_OPENSSL" OFF)
@@ -249,8 +249,11 @@ if(NOT WIN32)
         target_compile_options(ichor PUBLIC -fstrict-vtable-pointers)
     endif()
 
-    if(ICHOR_FORCE_32_BIT)
+    if(CMAKE_TOOLCHAIN_FILE)
         message(STATUS "Toolchain file: ${CMAKE_TOOLCHAIN_FILE}")
+    endif()
+
+    if(ICHOR_FORCE_32_BIT)
         if(NOT CMAKE_TOOLCHAIN_FILE)
             message(FATAL_ERROR "Not using the toolchain-i386.cmake toolchain")
         elseif(NOT CMAKE_TOOLCHAIN_FILE MATCHES "toolchain-i386.cmake$")
@@ -259,8 +262,6 @@ if(NOT WIN32)
     endif()
 
     if(ICHOR_FORCE_32_BIT OR CMAKE_SIZEOF_VOID_P EQUAL 4)
-        target_compile_options(ichor PUBLIC -m32)
-        target_link_options(ichor PUBLIC -m32)
         target_compile_definitions(ichor PUBLIC ICHOR_32_BIT)
     endif()
 
@@ -619,7 +620,7 @@ if(ICHOR_USE_BOOST_BEAST) #beast
 endif()
 
 if(ICHOR_USE_HIREDIS)
-    find_package(hiredis REQUIRED)
+    find_package(Hiredis REQUIRED)
     target_link_libraries(ichor PUBLIC hiredis)
     target_compile_definitions(ichor PUBLIC ICHOR_USE_HIREDIS)
 
@@ -852,14 +853,6 @@ if(ICHOR_BUILD_TESTING)
         target_compile_options(Catch2WithMain PRIVATE -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=3)
         target_compile_definitions(Catch2 PRIVATE _GLIBCXX_ASSERTIONS _LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_FAST)
         target_compile_definitions(Catch2WithMain PRIVATE _GLIBCXX_ASSERTIONS _LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_FAST)
-    endif()
-
-
-    if(ICHOR_FORCE_32_BIT)
-        target_compile_options(Catch2 PUBLIC -m32)
-        target_compile_options(Catch2WithMain PUBLIC -m32)
-        target_link_options(Catch2 PUBLIC -m32)
-        target_link_options(Catch2WithMain PUBLIC -m32)
     endif()
 
     if(ICHOR_USE_LIBCPP)
