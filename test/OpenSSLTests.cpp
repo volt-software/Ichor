@@ -18,14 +18,7 @@ TEST_CASE("OpenSSL Handshake Tests - supported server certificate only") {
     Ichor::Detail::DependencyLifecycleManager<LoggerMock, ILogger> logger{{}};
     Ichor::Detail::DependencyLifecycleManager<OpenSSLService, ISSL> sslService{std::move(props)};
 
-    const char *test_cert;
-    const char *test_private_key;
-    uint64_t test_cert_size;
-    uint64_t test_private_key_size;
-    std::string certName;
-    TLSContextSecurityLevel security_level;
-
-    std::tie(test_cert, test_cert_size, test_private_key, test_private_key_size, certName, security_level) =
+    auto [test_cert, test_cert_size, test_private_key, test_private_key_size, certName, security_level] =
         GENERATE( table<const char*, uint64_t, const char*, uint64_t, std::string, TLSContextSecurityLevel>({
             std::make_tuple(rsa2048_cert, sizeof(rsa2048_cert), rsa2048_private_key, sizeof(rsa2048_private_key), NAMEOF(rsa2048_cert), TLSContextSecurityLevel::DEFAULT),
             std::make_tuple(rsa3072_cert, sizeof(rsa3072_cert), rsa3072_private_key, sizeof(rsa3072_private_key), NAMEOF(rsa3072_cert), TLSContextSecurityLevel::DEFAULT),
@@ -195,14 +188,7 @@ TEST_CASE("OpenSSL Handshake Tests - rejects weaker certificates") {
     Ichor::Detail::DependencyLifecycleManager<LoggerMock, ILogger> logger{{}};
     Ichor::Detail::DependencyLifecycleManager<OpenSSLService, ISSL> sslService{std::move(props)};
 
-    const char *test_cert;
-    const char *test_private_key;
-    uint64_t test_cert_size;
-    uint64_t test_private_key_size;
-    std::string certName;
-    TLSContextSecurityLevel security_level;
-
-    std::tie(test_cert, test_cert_size, test_private_key, test_private_key_size, certName, security_level) =
+    auto [test_cert, test_cert_size, test_private_key, test_private_key_size, certName, security_level] =
         GENERATE( table<const char*, uint64_t, const char*, uint64_t, std::string, TLSContextSecurityLevel>({
             std::make_tuple(rsa2048_cert, sizeof(rsa2048_cert), rsa2048_private_key, sizeof(rsa2048_private_key), NAMEOF(rsa2048_cert), TLSContextSecurityLevel::STRONGER_THAN_DEFAULT_IF_AVAILABLE),
             std::make_tuple(rsa2048_sha1_cert, sizeof(rsa2048_sha1_cert), rsa2048_sha1_private_key, sizeof(rsa2048_sha1_private_key), NAMEOF(rsa2048_sha1_cert), TLSContextSecurityLevel::STRONGER_THAN_DEFAULT_IF_AVAILABLE), // Should fail at openssl default, but doesn't with openssl 3.0.2 for some reason.
