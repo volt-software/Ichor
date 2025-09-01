@@ -340,8 +340,8 @@ namespace Ichor {
     };
 
     IOUringQueue::IOUringQueue(uint64_t quitTimeoutMs, long long pollTimeoutNs, tl::optional<v1::Version> emulateKernelVersion) : _quitTimeoutMs(quitTimeoutMs), _pollTimeoutNs(pollTimeoutNs) {
-        if(io_uring_major_version() != 2 || io_uring_minor_version() != 10) {
-            fmt::println("io_uring version is {}.{}, but expected 2.10. Ichor is not compiled correctly.", io_uring_major_version(), io_uring_minor_version());
+        if(io_uring_major_version() != 2 || io_uring_minor_version() != 12) {
+            fmt::println("io_uring version is {}.{}, but expected 2.12. Ichor is not compiled correctly.", io_uring_major_version(), io_uring_minor_version());
             std::terminate();
         }
         _threadId = std::this_thread::get_id(); // re-set in functions below, because adding events when the queue isn't running yet cannot be done from another thread.
