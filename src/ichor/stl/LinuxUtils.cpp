@@ -14,6 +14,9 @@ tl::optional<Ichor::v1::Version> Ichor::v1::kernelVersion() {
     if(auto pos = release.find('-'); pos != std::string_view::npos) {
         release = release.substr(0, pos);
     }
+    if(auto pos = release.find('+'); pos != std::string_view::npos) {
+        release = release.substr(0, pos);
+    }
 
     auto version = parseStringAsVersion(release);
 
