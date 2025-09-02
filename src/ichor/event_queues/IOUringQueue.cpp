@@ -178,6 +178,8 @@ struct fmt::formatter<io_uring_op> {
                 return fmt::format_to(ctx.out(), "io_uring_op::IORING_OP_READV_FIXED");
             case io_uring_op::IORING_OP_WRITEV_FIXED:
                 return fmt::format_to(ctx.out(), "io_uring_op::IORING_OP_WRITEV_FIXED");
+            case io_uring_op::IORING_OP_PIPE:
+                return fmt::format_to(ctx.out(), "io_uring_op::IORING_OP_PIPE");
             case io_uring_op::IORING_OP_LAST:
                 return fmt::format_to(ctx.out(), "io_uring_op::IORING_OP_LAST");
         }
