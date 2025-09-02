@@ -65,6 +65,7 @@ cmake_dependent_option(ICHOR_USE_SDEVENT "Add sd-event based queue/integration" 
 option(ICHOR_DISABLE_RTTI "Disable RTTI. Reduces memory usage, disables dynamic_cast<>()" ON)
 option(ICHOR_DISABLE_EXCEPTIONS "Disable exceptions" OFF)
 option(ICHOR_USE_HARDENING "Uses compiler-specific flags which add stack protection and similar features, as well as adding safety checks in Ichor itself." ON)
+option(ICHOR_ENABLE_DEPENDENCY_DEPRECATED_FUNCTIONS "If this option is enabled, dependencies such as openssl and boost will not have their deprecated functions disabled. Handy when using openssl 3.0.x with boost 1.75 or older." OFF)
 cmake_dependent_option(ICHOR_USE_LIBCPP "Uses clang's libc++ stdlib if compiling with clang" ON "ICHOR_COMPILER_ID STREQUAL \"clang\"" OFF)
 cmake_dependent_option(ICHOR_USE_MIMALLOC "Use mimalloc for significant performance improvements" ON "NOT ICHOR_USE_SANITIZERS AND NOT ICHOR_USE_THREAD_SANITIZER" OFF)
 cmake_dependent_option(ICHOR_USE_SYSTEM_MIMALLOC "Use system or vendored mimalloc" OFF "NOT ICHOR_USE_SANITIZERS AND NOT ICHOR_USE_THREAD_SANITIZER" OFF)
@@ -607,8 +608,11 @@ if(ICHOR_USE_BOOST_BEAST) #beast
     target_include_directories(ichor PUBLIC ${Boost_INCLUDE_DIRS})
     target_link_directories(ichor PUBLIC ${Boost_LIBRARY_DIRS})
     target_link_libraries(ichor PUBLIC ${Boost_LIBRARIES})
-    #_SILENCE_ALL_CXX23_DEPRECATION_WARNINGS -> MSVC gives warnings on things like std::aligned_storage, which is still valid in C++20.
-    target_compile_definitions(ichor PUBLIC BOOST_ASIO_NO_DEPRECATED _SILENCE_ALL_CXX23_DEPRECATION_WARNINGS)
+
+    if(NOT ICHOR_ENABLE_DEPENDENCY_DEPRECATED_FUNCTIONS)
+        #_SILENCE_ALL_CXX23_DEPRECATION_WARNINGS -> MSVC gives warnings on things like std::aligned_storage, which is still valid in C++20.
+        target_compile_definitions(ichor PUBLIC BOOST_ASIO_NO_DEPRECATED _SILENCE_ALL_CXX23_DEPRECATION_WARNINGS)
+    endif()
 
     if(Boost_VERSION_STRING VERSION_LESS "1.81.0")
         target_compile_definitions(ichor PUBLIC BOOST_BEAST_USE_STD_STRING_VIEW)
@@ -632,7 +636,11 @@ if(ICHOR_USE_OPENSSL)
 
     target_include_directories(ichor PUBLIC ${OPENSSL_INCLUDE_DIR})
     target_link_libraries(ichor PUBLIC OpenSSL::SSL OpenSSL::Crypto)
-    target_compile_definitions(ichor PUBLIC ICHOR_USE_OPENSSL OPENSSL_NO_DEPRECATED OPENSSL_API_COMPAT=30000)
+    target_compile_definitions(ichor PUBLIC ICHOR_USE_OPENSSL OPENSSL_API_COMPAT=30000)
+
+    if(NOT ICHOR_ENABLE_DEPENDENCY_DEPRECATED_FUNCTIONS)
+        target_compile_definitions(ichor PUBLIC OPENSSL_NO_DEPRECATED)
+    endif()
 
     target_sources(ichor PRIVATE ${ICHOR_OPENSSL_SOURCES})
 endif()
