@@ -64,7 +64,7 @@ namespace Ichor::v1 {
         bool _quit;
         ILogger *_logger{};
         ITimerFactory *_timerFactory{};
-        ITimer *_timer{};
+        tl::optional<TimerRef> _timer{};
         std::vector<ServiceIdType> _connections;
         EventHandlerRegistration _newSocketEventHandlerRegistration{};
     };

@@ -625,7 +625,7 @@ if(ICHOR_USE_BOOST_BEAST) #beast
 endif()
 
 if(ICHOR_USE_HIREDIS)
-    find_package(Hiredis REQUIRED)
+    find_package(hiredis REQUIRED)
     target_link_libraries(ichor PUBLIC hiredis)
     target_compile_definitions(ichor PUBLIC ICHOR_USE_HIREDIS)
 

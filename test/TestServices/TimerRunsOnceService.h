@@ -1,7 +1,6 @@
 #pragma once
 
 #include <ichor/services/timer/ITimerFactory.h>
-#include <ichor/dependency_management/AdvancedService.h>
 
 using namespace Ichor;
 using namespace Ichor::v1;
@@ -18,9 +17,9 @@ protected:
 class TimerRunsOnceService final : public ITimerRunsOnceService {
 public:
     TimerRunsOnceService(ITimerFactory *factory) {
-        auto &timer = factory->createTimer();
+        auto timer = factory->createTimer();
         timer.setChronoInterval(std::chrono::seconds(1));
-        timer.setCallback([this, &timer = timer]() {
+        timer.setCallback([this, timer]() mutable {
             evtGate++;
             count++;
             timer.stopTimer({});

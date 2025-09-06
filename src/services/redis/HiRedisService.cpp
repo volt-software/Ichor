@@ -174,7 +174,7 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::v1::HiredisService::st
     }
 
     _timeWhenDisconnected = static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch()).count());
-    _timeoutTimer = &_timerFactory->createTimer();
+    _timeoutTimer = _timerFactory->createTimer();
     _timeoutTimer->setCallbackAsync([this]() -> AsyncGenerator<IchorBehaviour> {
         ICHOR_LOG_INFO(_logger, "Trying to (re)connect");
 
@@ -242,7 +242,7 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::v1::HiredisService::st
     });
     _timeoutTimer->setChronoInterval(std::chrono::milliseconds(_tryConnectIntervalMs));
 
-    auto &pollTimer = _timerFactory->createTimer();
+    auto pollTimer = _timerFactory->createTimer();
     pollTimer.setCallback([this]() {
         if(_redisContext != nullptr) {
             redisPollTick(_redisContext, 0);
@@ -265,6 +265,7 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::v1::HiredisService::st
 
 Ichor::Task<void> Ichor::v1::HiredisService::stop() {
     redisAsyncDisconnect(_redisContext);
+    _timeoutTimer.reset();
 
     INTERNAL_DEBUG("HiredisService::stop() co_return");
 

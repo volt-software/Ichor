@@ -17,7 +17,7 @@ class SigIntService final {
 public:
     SigIntService(ITimerFactory *factory) {
         // Setup a timer that fires every 100 milliseconds
-        auto &timer = factory->createTimer();
+        auto timer = factory->createTimer();
         timer.setChronoInterval(100ms);
 
         timer.setCallback([]() {

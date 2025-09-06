@@ -17,9 +17,9 @@ public:
 
     Task<tl::expected<void, Ichor::StartError>> start() final {
         fmt::print("start\n");
-        auto &timer = _timerFactory->createTimer();
+        auto timer = _timerFactory->createTimer();
         timer.setChronoInterval(100ms);
-        timer.setCallbackAsync([this, &timer = timer]() -> AsyncGenerator<IchorBehaviour> {
+        timer.setCallbackAsync([this, timer]() mutable -> AsyncGenerator<IchorBehaviour> {
             fmt::print("timer 1\n");
             co_await _awaitSvc->await_something();
             fmt::print("timer 2\n");

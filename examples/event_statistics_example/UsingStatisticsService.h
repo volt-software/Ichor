@@ -12,8 +12,8 @@ class UsingStatisticsService final {
 public:
     UsingStatisticsService(IService *self, IEventQueue *queue, ILogger *logger, ITimerFactory *timerFactory) : _logger(logger) {
         ICHOR_LOG_INFO(_logger, "UsingStatisticsService started");
-        auto &quitTimer = timerFactory->createTimer();
-        auto &bogusTimer = timerFactory->createTimer();
+        auto quitTimer = timerFactory->createTimer();
+        auto bogusTimer = timerFactory->createTimer();
         quitTimer.setChronoInterval(1s);
         bogusTimer.setChronoInterval(50ms);
 

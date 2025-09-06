@@ -76,7 +76,7 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::v1::TcpHostService::st
         co_return tl::unexpected(StartError::FAILED);
     }
 
-    _timer = &_timerFactory->createTimer();
+    _timer = _timerFactory->createTimer();
     _timer->setFireOnce(true);
     _timer->setChronoInterval(20ms);
     _timer->setCallback([this]() {
@@ -96,6 +96,7 @@ Ichor::Task<void> Ichor::v1::TcpHostService::stop() {
     }
 
     _newSocketEventHandlerRegistration.reset();
+    _timer.reset();
 
     co_return;
 }

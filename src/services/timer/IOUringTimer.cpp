@@ -21,7 +21,7 @@ static std::function<void(io_uring_cqe *)> createNewStopHandler(Ichor::IIOUringQ
     };
 }
 
-Ichor::v1::IOUringTimer::IOUringTimer(IIOUringQueue& queue, uint64_t timerId, uint64_t svcId) noexcept : _q(queue), _timerId(timerId), _requestingServiceId(svcId) {
+Ichor::v1::IOUringTimer::IOUringTimer(IIOUringQueue& queue, uint64_t timerId, uint64_t svcId) noexcept : _q(&queue), _timerId(timerId), _requestingServiceId(svcId) {
     INTERNAL_IO_DEBUG("[{:L}][{}] IOUringTimer for {}", std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now().time_since_epoch()).count(), __LINE__, _requestingServiceId);
 
     if constexpr(DO_INTERNAL_DEBUG || DO_HARDENING) {
@@ -31,7 +31,7 @@ Ichor::v1::IOUringTimer::IOUringTimer(IIOUringQueue& queue, uint64_t timerId, ui
         }
     }
 
-    _multishotCapable = _q.getKernelVersion() >= Version{6, 4, 0};
+    _multishotCapable = _q->getKernelVersion() >= Version{6, 4, 0};
 }
 
 bool Ichor::v1::IOUringTimer::startTimer() {
@@ -47,7 +47,7 @@ bool Ichor::v1::IOUringTimer::startTimer(bool fireImmediately) {
     if(_state == TimerState::STOPPED) {
         INTERNAL_IO_DEBUG("[{:L}][{}] Starting IOUringTimer {} for {} with {} s {} ns timeout", std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now().time_since_epoch()).count(), __LINE__, _timerId, _requestingServiceId, _timespec.tv_sec, _timespec.tv_nsec);
         if(!fireImmediately || !_fireOnce) {
-            auto *sqe = _q.getSqeWithData(_requestingServiceId, createNewHandler());
+            auto *sqe = _q->getSqeWithData(_requestingServiceId, createNewHandler());
             unsigned flags{};
             if (!_fireOnce && _multishotCapable) {
                 flags = IORING_TIMEOUT_MULTISHOT;
@@ -61,7 +61,7 @@ bool Ichor::v1::IOUringTimer::startTimer(bool fireImmediately) {
 
         if(fireImmediately) {
             if(_fnAsync) {
-                _q.pushPrioritisedEvent<RunFunctionEventAsync>(_requestingServiceId, getPriority(), _fnAsync);
+                _q->pushPrioritisedEvent<RunFunctionEventAsync>(_requestingServiceId, getPriority(), _fnAsync);
             } else {
                 _fn();
             }
@@ -74,7 +74,7 @@ bool Ichor::v1::IOUringTimer::startTimer(bool fireImmediately) {
 bool Ichor::v1::IOUringTimer::stopTimer(std::function<void(void)> cb) {
     INTERNAL_IO_DEBUG("Stopping timer {} for {} _uringTimerId 0x{:X} state {}", _timerId, _requestingServiceId, _uringTimerId, _state);
     if(_state == TimerState::RUNNING) {
-        auto *sqe = _q.getSqeWithData(_requestingServiceId, createNewStopHandler(&_q, _requestingServiceId, _timerId, _uringTimerId));
+        auto *sqe = _q->getSqeWithData(_requestingServiceId, createNewStopHandler(_q, _requestingServiceId, _timerId, _uringTimerId));
         io_uring_prep_timeout_remove(sqe, _uringTimerId, 0);
         if(cb) {
             _quitCbs.emplace_back(std::move(cb));
@@ -121,7 +121,7 @@ void Ichor::v1::IOUringTimer::setInterval(uint64_t nanoseconds) noexcept {
 
     if(_state == TimerState::RUNNING) {
         INTERNAL_IO_DEBUG("Updating timer {} for {} _uringTimerId {:X}", _timerId, _requestingServiceId, _uringTimerId);
-        auto *sqe = _q.getSqeWithData(_requestingServiceId, createNewUpdateHandler());
+        auto *sqe = _q->getSqeWithData(_requestingServiceId, createNewUpdateHandler());
         io_uring_prep_timeout_update(sqe, &_timespec, _uringTimerId, 0);
     }
 }
@@ -172,13 +172,13 @@ std::function<void(io_uring_cqe *)> Ichor::v1::IOUringTimer::createNewHandler() 
 
         // Make copy of function, in case setCallback() gets called during async stuff.
         if(_fnAsync) {
-            _q.pushPrioritisedEvent<RunFunctionEventAsync>(_requestingServiceId, getPriority(), _fnAsync);
+            _q->pushPrioritisedEvent<RunFunctionEventAsync>(_requestingServiceId, getPriority(), _fnAsync);
         } else {
             _fn();
         }
 
         if (!_fireOnce && !_multishotCapable) {
-            auto *sqe = _q.getSqeWithData(_requestingServiceId, createNewHandler());
+            auto *sqe = _q->getSqeWithData(_requestingServiceId, createNewHandler());
             io_uring_prep_timeout(sqe, &_timespec, 0, 0);
             _uringTimerId = sqe->user_data;
             INTERNAL_IO_DEBUG("IOUringTimer {} for {} _uringTimerId2 0x{:X}", _timerId, _requestingServiceId, _uringTimerId);
@@ -192,7 +192,7 @@ std::function<void(io_uring_cqe *)> Ichor::v1::IOUringTimer::createNewUpdateHand
         if(cqe->res < 0) {
             INTERNAL_IO_DEBUG("Couldn't update timer {} for {} because {} uringTimerId 0x{:X}", _timerId, _requestingServiceId, cqe->res, _uringTimerId);
             if(cqe->res == -ENOENT || cqe->res == -EALREADY) {
-                auto *sqe = _q.getSqeWithData(_requestingServiceId, createNewUpdateHandler());
+                auto *sqe = _q->getSqeWithData(_requestingServiceId, createNewUpdateHandler());
                 io_uring_prep_timeout_update(sqe, &_timespec, _uringTimerId, 0);
             } else {
                 std::terminate();

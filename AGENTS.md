@@ -1,1 +1,1 @@
-Use "../quickbuild.sh --nosan --sdevent --examples --spdlog --boost" in a build directory inside of the checked out repository to start cmake, "ninja" from the same directory to build and "ninja test" from the same directory to run tests. 
+Use "../quickbuild.sh --nosan --sdevent --examples --spdlog" in a build directory inside of the checked out repository to build and run the tests (everything is included in the script)

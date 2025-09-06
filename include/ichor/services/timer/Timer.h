@@ -12,7 +12,17 @@ namespace Ichor::v1 {
     // Rather shoddy implementation, setting the interval does not reset the insertEventLoop function and the sleep_for is sketchy at best.
     class Timer final : public ITimer {
     public:
+        ///
+        /// \param timerId unique identifier for timer
+        /// \param svcId unique identifier for svc using this timer
+        Timer(IEventQueue& queue, uint64_t timerId, ServiceIdType svcId) noexcept;
+        Timer(Timer const &) = delete;
+        Timer(Timer &&) noexcept = default;
+
         ~Timer() noexcept;
+
+        Timer& operator=(Timer const &) = delete;
+        Timer& operator=(Timer &&o) noexcept = default;
 
         /// Thread-safe.
         bool startTimer() final;
@@ -48,17 +58,13 @@ namespace Ichor::v1 {
         [[nodiscard]] ServiceIdType getRequestingServiceId() const noexcept final;
 
     private:
-        ///
-        /// \param timerId unique identifier for timer
-        /// \param svcId unique identifier for svc using this timer
-        Timer(IEventQueue& queue, uint64_t timerId, ServiceIdType svcId) noexcept;
 
         void insertEventLoop(bool fireImmediately);
 
-        template <typename TIMER, typename QUEUE>
-        friend class TimerFactory;
+        // template <typename TIMER, typename QUEUE>
+        // friend class TimerFactory;
 
-        IEventQueue& _queue;
+        NeverNull<IEventQueue*> _queue;
         uint64_t _timerId{};
         TimerState _state{};
         bool _fireOnce{};

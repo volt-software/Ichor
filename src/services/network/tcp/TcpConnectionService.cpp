@@ -147,7 +147,7 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::v1::TcpConnectionServi
         ICHOR_LOG_DEBUG(_logger, "[{}] Starting TCP connection for {}:{}", AdvancedService<TcpConnectionService>::getServiceId(), ip, ::ntohs(address.sin_port));
     }
 
-    _timer = &_timerFactory->createTimer();
+    _timer = _timerFactory->createTimer();
     _timer->setFireOnce(true);
     _timer->setChronoInterval(20ms);
     _timer->setCallback([this]() {
@@ -167,6 +167,8 @@ Ichor::Task<void> Ichor::v1::TcpConnectionService<InterfaceT>::stop() {
         ::shutdown(_socket, SHUT_RDWR);
         ::close(_socket);
     }
+
+    _timer.reset();
 
     co_return;
 }
