@@ -16,6 +16,7 @@ ASAN=1
 TSAN=0
 BUILDTYPE="Debug"
 RUN_EXAMPLES=0
+RUN_BENCHMARKS=0
 IODEBUG=0
 DEBUG=0
 CCOMP=clang-19
@@ -29,6 +30,7 @@ MOLD=1
 LD_PATH=
 FORCE_32=0
 FORCE_32_TOOLCHAIN=
+NO_BUILD=0
 
 while [[ $# -gt 0 ]]; do
   case $1 in
@@ -76,6 +78,10 @@ while [[ $# -gt 0 ]]; do
       RUN_EXAMPLES=1
       shift # past value
       ;;
+    --benchmarks)
+      RUN_BENCHMARKS=1
+      shift # past value
+      ;;
     --boost)
       BOOST=1
       shift # past value
@@ -105,6 +111,10 @@ while [[ $# -gt 0 ]]; do
       FORCE_32_TOOLCHAIN=-DCMAKE_TOOLCHAIN_FILE=../toolchain-i386.cmake
       shift # past value
       ;;
+    --no-build)
+      NO_BUILD=1
+      shift # past value
+      ;;
     -*|--*)
       echo "Unknown option $1"
       exit 1
@@ -118,17 +128,31 @@ done
 
 set -- "${POSITIONAL_ARGS[@]}" # restore positional parameters
 
-export LD_LIBRARY_PATH=$LD_PATH:$LD_LIBRARY_PATH
-rm -rf ./*
-rm -rf ../bin/*
+if [[ -n "$LD_PATH" ]]; then
+  if [[ -n "$LD_LIBRARY_PATH" ]]; then
+    export LD_LIBRARY_PATH=$LD_PATH:$LD_LIBRARY_PATH
+  else
+    export LD_LIBRARY_PATH=$LD_PATH
+  fi
+fi
 
-CC=${CCOMP} CXX=${CXXCOMP} cmake -DCMAKE_BUILD_TYPE=${BUILDTYPE} -DICHOR_REMOVE_SOURCE_NAMES=0 -DICHOR_ENABLE_INTERNAL_DEBUGGING=${DEBUG} -DICHOR_ENABLE_INTERNAL_IO_DEBUGGING=${IODEBUG} -DICHOR_ARCH_OPTIMIZATION=X86_64_AVX2 -DICHOR_USE_BACKWARD=0 -DICHOR_USE_BOOST_BEAST=${BOOST} -DICHOR_USE_HIREDIS=${HIREDIS} -DICHOR_USE_LIBCPP=0 -DICHOR_USE_SANITIZERS=${ASAN} -DICHOR_USE_THREAD_SANITIZER=${TSAN} -DICHOR_USE_MOLD=${MOLD} -DICHOR_USE_SDEVENT=${SDEVENT} -DICHOR_USE_SPDLOG=${SPDLOG} -DICHOR_USE_LIBURING=${URING} -DICHOR_FORCE_32_BIT=${FORCE_32} ${FORCE_32_TOOLCHAIN} -GNinja .. || exit 1
+if [[ "$NO_BUILD" -ne 1 ]]; then
+  rm -rf ./*
+  rm -rf ../bin/*
 
-ninja || exit 1
+  CC=${CCOMP} CXX=${CXXCOMP} cmake -DCMAKE_BUILD_TYPE=${BUILDTYPE} -DICHOR_REMOVE_SOURCE_NAMES=0 -DICHOR_ENABLE_INTERNAL_DEBUGGING=${DEBUG} -DICHOR_ENABLE_INTERNAL_IO_DEBUGGING=${IODEBUG} -DICHOR_ARCH_OPTIMIZATION=X86_64_AVX2 -DICHOR_USE_BACKWARD=0 -DICHOR_USE_BOOST_BEAST=${BOOST} -DICHOR_USE_HIREDIS=${HIREDIS} -DICHOR_USE_LIBCPP=0 -DICHOR_USE_SANITIZERS=${ASAN} -DICHOR_USE_THREAD_SANITIZER=${TSAN} -DICHOR_USE_MOLD=${MOLD} -DICHOR_USE_SDEVENT=${SDEVENT} -DICHOR_USE_SPDLOG=${SPDLOG} -DICHOR_USE_LIBURING=${URING} -DICHOR_FORCE_32_BIT=${FORCE_32} ${FORCE_32_TOOLCHAIN} -GNinja .. || exit 1
+
+  ninja || exit 1
+fi
+
 ninja test || exit 1
 
 if [[ $RUN_EXAMPLES -eq 1 ]]; then
-  run_examples $BOOST 1 0
+  run_examples $BOOST $URING $SDEVENT
+fi
+
+if [[ $RUN_BENCHMARKS -eq 1 ]]; then
+  run_benchmarks
 fi
 
 if command -v checksec --help &> /dev/null
