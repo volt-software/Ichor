@@ -17,7 +17,7 @@ public:
     ~DebugService() final = default;
 private:
     Task<tl::expected<void, Ichor::StartError>> start() final {
-        auto &_timer = _timerFactory->createTimer();
+        auto _timer = _timerFactory->createTimer();
         _timer.setCallback([this]() {
             printServices();
             std::terminate();

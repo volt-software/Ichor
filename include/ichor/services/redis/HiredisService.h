@@ -73,7 +73,7 @@ namespace Ichor::v1 {
         AsyncManualResetEvent _disconnectEvt{};
         ITimerFactory *_timerFactory{};
         IEventQueue *_queue{};
-        ITimer *_timeoutTimer{};
+        tl::optional<TimerRef> _timeoutTimer{};
         std::vector<NameHashType> _queuedResponseTypes{};
         bool _timeoutTimerRunning{};
         bool _debug{};

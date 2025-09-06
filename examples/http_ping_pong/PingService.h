@@ -29,7 +29,7 @@ private:
     Task<tl::expected<void, Ichor::StartError>> start() final {
         ICHOR_LOG_INFO(_logger, "PingService started");
 
-        auto &timer = _timerFactory->createTimer();
+        auto timer = _timerFactory->createTimer();
         timer.setCallbackAsync([this, &timer = timer]() -> AsyncGenerator<IchorBehaviour> {
             auto toSendMsg = _serializer->serialize(PingMsg{_sequence});
 

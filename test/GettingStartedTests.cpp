@@ -39,7 +39,7 @@ struct IMyTimerService {};
 
 struct MyTimerService final : public IMyTimerService {
     MyTimerService(ITimerFactory *factory) {
-        auto &timer = factory->createTimer();
+        auto timer = factory->createTimer();
         timer.setChronoInterval(std::chrono::seconds(1));
         timer.setCallback([]() {
             fmt::print("Timer fired\n");

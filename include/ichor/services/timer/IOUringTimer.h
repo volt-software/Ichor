@@ -14,7 +14,17 @@ namespace Ichor::v1 {
 
     class IOUringTimer final : public ITimer {
     public:
+        ///
+        /// \param timerId unique identifier for timer
+        /// \param svcId unique identifier for svc using this timer
+        IOUringTimer(IIOUringQueue& queue, uint64_t timerId, ServiceIdType svcId) noexcept;
+        IOUringTimer(IOUringTimer const &) = delete;
+        IOUringTimer(IOUringTimer &&) noexcept = default;
+
         ~IOUringTimer() noexcept = default;
+
+        IOUringTimer& operator=(IOUringTimer const &) = delete;
+        IOUringTimer& operator=(IOUringTimer &&o) noexcept = default;
 
         /// Thread-safe.
         bool startTimer() final;
@@ -50,17 +60,13 @@ namespace Ichor::v1 {
         [[nodiscard]] ServiceIdType getRequestingServiceId() const noexcept final;
 
     private:
-        ///
-        /// \param timerId unique identifier for timer
-        /// \param svcId unique identifier for svc using this timer
-        IOUringTimer(IIOUringQueue& queue, uint64_t timerId, ServiceIdType svcId) noexcept;
         std::function<void(io_uring_cqe*)> createNewHandler() noexcept;
         std::function<void(io_uring_cqe*)> createNewUpdateHandler() noexcept;
 
         template <typename TIMER, typename QUEUE>
         friend class TimerFactory;
 
-        IIOUringQueue& _q;
+        NeverNull<IIOUringQueue*> _q;
         uint64_t _timerId{};
         TimerState _state{};
         bool _fireOnce{};

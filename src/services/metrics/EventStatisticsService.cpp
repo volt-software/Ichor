@@ -17,7 +17,7 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::v1::EventStatisticsSer
 
 //    fmt::print("evt stats {}:{} {} {}\n", getServiceId(), getServiceName(), _showStatisticsOnStop, _averagingIntervalMs);
 
-    auto &timer = _timerFactory->createTimer();
+    auto timer = _timerFactory->createTimer();
     timer.setChronoInterval(std::chrono::milliseconds(_averagingIntervalMs));
 
     timer.setCallbackAsync([this]() -> AsyncGenerator<IchorBehaviour> {

@@ -273,7 +273,7 @@ Before we get to the point where we are able to start and stop the program, let'
 
 struct MyTimerService final {
     MyTimerService(ITimerFactory *factory) {
-        auto &timer = factory->createTimer();
+        auto timer = factory->createTimer();
         timer.setChronoInterval(std::chrono::seconds(1));
         timer.setCallback([this]() {
             fmt::print("Timer callback\n"); // this line gets executed once every second
@@ -353,7 +353,7 @@ struct AwaitService final : public IAwaitService {
 
 struct MyCoroutineTimerService final {
     MyCoroutineTimerService(ITimerFactory *factory, IAwaitService *awaitService) {
-        auto &timer = factory->createTimer();
+        auto timer = factory->createTimer();
         timer.setChronoInterval(std::chrono::seconds(1));
         timer.setCallbackAsync([awaitService]() {
             fmt::print("Timer callback\n");
@@ -363,7 +363,7 @@ struct MyCoroutineTimerService final {
         });
         timer.startTimer();
         
-        auto &timer2 = factory->createTimer();
+        auto timer2 = factory->createTimer();
         timer2.setChronoInterval(std::chrono::milliseconds(500));
         timer2.setCallbackAsync([]() {
             fmt::print("Timer2 callback\n"); // this will print a couple times until 
@@ -406,7 +406,7 @@ At some point in your program, the only thing left to do is tell Ichor to stop. 
 
 struct MyQuittingTimerService final {
     MyQuittingTimerService(ITimerFactory *factory, IEventQueue *queue) {
-        auto &timer = factory->createTimer();
+        auto timer = factory->createTimer();
         timer.setChronoInterval(std::chrono::seconds(1));
         timer.setCallback([queue]() {
             queue->pushEvent<QuitEvent>(0);

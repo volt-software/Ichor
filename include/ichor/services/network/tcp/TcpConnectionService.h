@@ -55,7 +55,7 @@ namespace Ichor::v1 {
         bool _quit;
         ILogger *_logger{};
         ITimerFactory *_timerFactory{};
-        ITimer *_timer{};
+        tl::optional<TimerRef> _timer{};
         std::vector<std::vector<uint8_t>> _queuedMessages{};
         std::function<void(std::span<uint8_t const>)> _recvHandler;
     };

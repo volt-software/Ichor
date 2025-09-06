@@ -5,6 +5,7 @@
 #include "TestServices/DependencyService.h"
 #include "TestServices/MixingInterfacesService.h"
 #include "TestServices/TimerRunsOnceService.h"
+#include "TestServices/CreateTimerService.h"
 #include "TestServices/AddEventHandlerDuringEventHandlingService.h"
 #include "TestServices/RequestsLoggingService.h"
 #include "TestServices/ConstructorInjectionTestServices.h"
@@ -90,6 +91,7 @@ TEST_CASE("ServicesTests") {
 #endif
 
     _evt.reset();
+    evtGate.store(0, std::memory_order_release);
 
     SECTION("QuitOnQuitEvent") {
 #if defined(TEST_URING)
@@ -563,6 +565,92 @@ TEST_CASE("ServicesTests") {
             REQUIRE(ret->first->getCount() == 1);
 
             dm.getEventQueue().pushEvent<QuitEvent>(svcId);
+         });
+
+         t.join();
+    }
+
+    SECTION("Created timers can be requested") {
+#if defined(TEST_URING)
+        auto queue = std::make_unique<QIMPL>(500, 100'000'000, emulateKernelVersion);
+#else
+        auto queue = std::make_unique<QIMPL>(500);
+#endif
+        auto &dm = queue->createManager();
+        uint64_t creatingSvcId1{};
+        uint64_t creatingSvcId2{};
+        uint64_t creatingSvcId3{};
+        uint64_t tffSvcId{};
+
+        std::thread t([&]() {
+#if defined(TEST_URING)
+            REQUIRE(queue->createEventLoop());
+#elif defined(TEST_SDEVENT)
+            auto *loop = queue->createEventLoop();
+            REQUIRE(loop);
+#endif
+            dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>();
+            creatingSvcId1 = dm.createServiceManager<CreateTimerService<1>>()->getServiceId();
+            creatingSvcId2 = dm.createServiceManager<CreateTimerService<2>>()->getServiceId();
+            creatingSvcId3 = dm.createServiceManager<CreateTimerService<3>>()->getServiceId();
+            tffSvcId = dm.createServiceManager<TFFIMPL, ITimerTimerFactory>()->getServiceId();
+            queue->start(CaptureSigInt);
+#if defined(TEST_SDEVENT)
+            int r = sd_event_loop(loop);
+            REQUIRE(r >= 0);
+#endif
+        });
+
+        waitForRunning(dm);
+
+        runForOrQueueEmpty(dm);
+
+        auto start = std::chrono::steady_clock::now();
+        while(evtGate.load(std::memory_order_acquire) < 6) {
+            std::this_thread::sleep_for(500us);
+            auto now = std::chrono::steady_clock::now();
+            REQUIRE(now - start < 1s);
+        }
+
+        queue->pushEvent<RunFunctionEvent>(0, [&]() {
+            auto ret = dm.getService<ITimerTimerFactory>(tffSvcId);
+            REQUIRE(ret);
+            auto factoryIds = ret->first->getCreatedTimerFactoryIds();
+            REQUIRE(factoryIds.size() == 3);
+            auto getCorrectFactory = [](auto &dm, auto &ids, ServiceIdType id) -> tl::optional<std::pair<ITimerFactory*, IService*>> {
+                auto factory = dm.template getService<ITimerFactory>(ids[0]);
+                if(factory->first->getRequestingServiceId() == id) {
+                    return factory;
+                }
+                factory = dm.template getService<ITimerFactory>(ids[1]);
+                if(factory->first->getRequestingServiceId() == id) {
+                    return factory;
+                }
+                factory = dm.template getService<ITimerFactory>(ids[2]);
+                if(factory->first->getRequestingServiceId() == id) {
+                    return factory;
+                }
+                REQUIRE(false);
+                return {};
+            };
+
+            auto factory1 = getCorrectFactory(dm, factoryIds, creatingSvcId1);
+            auto factory2 = getCorrectFactory(dm, factoryIds, creatingSvcId2);
+            auto factory3 = getCorrectFactory(dm, factoryIds, creatingSvcId3);
+
+            auto timers1 = factory1->first->getCreatedTimers();
+            auto timers2 = factory2->first->getCreatedTimers();
+            auto timers3 = factory3->first->getCreatedTimers();
+
+            auto reqTimer = factory1->first->getTimerById(timers1[0]->getTimerId());
+            REQUIRE(reqTimer);
+            REQUIRE((*reqTimer)->getTimerId() == timers1[0]->getTimerId());
+
+            REQUIRE(timers1.size() == 1);
+            REQUIRE(timers2.size() == 2);
+            REQUIRE(timers3.size() == 3);
+
+            dm.getEventQueue().pushEvent<QuitEvent>(tffSvcId);
         });
 
         t.join();

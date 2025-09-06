@@ -1,7 +1,10 @@
 #pragma once
 
 #include <ichor/services/timer/ITimer.h>
+#include <ichor/services/timer/TimerRef.h>
 #include <ichor/services/timer/IInternalTimerFactory.h>
+#include <iterator>
+#include <algorithm>
 
 namespace Ichor::v1 {
     extern std::atomic<uint64_t> _timerIdCounter;
@@ -28,16 +31,38 @@ namespace Ichor::v1 {
             co_return;
         }
 
-        [[nodiscard]] ITimer& createTimer() final {
+        [[nodiscard]] TimerRef createTimer() final {
             if constexpr (DO_INTERNAL_DEBUG || DO_HARDENING) {
-                if (!AdvancedService<TimerFactory<TIMER, QUEUE>>::isStarted()) {
+                if(!AdvancedService<TimerFactory<TIMER, QUEUE>>::isStarted()) {
                     std::terminate();
                 }
-                if (_stoppingTimers) {
+                if(_stoppingTimers) {
                     std::terminate();
                 }
             }
-            return *(_timers.emplace_back(new TIMER(*_q, _timerIdCounter.fetch_add(1, std::memory_order_relaxed), _requestingSvcId)));
+            auto id = _timerIdCounter.fetch_add(1, std::memory_order_relaxed);
+            _timers.emplace_back(*_q, id, _requestingSvcId);
+            return TimerRef{*this, id};
+        }
+
+        [[nodiscard]] tl::optional<NeverNull<ITimer*>> getTimerById(uint64_t timerId) noexcept final {
+            if constexpr (DO_INTERNAL_DEBUG || DO_HARDENING) {
+                if(!AdvancedService<TimerFactory<TIMER, QUEUE>>::isStarted()) {
+                    std::terminate();
+                }
+                if(_stoppingTimers) {
+                    std::terminate();
+                }
+            }
+
+            auto it = std::find_if(_timers.begin(), _timers.end(), [timerId](TIMER &timer) {
+                return timer.getTimerId() == timerId;
+            });
+
+            if(it == _timers.end()) {
+                return {};
+            }
+            return &(*it);
         }
 
         bool destroyTimerIfStopped(uint64_t timerId) final {
@@ -47,23 +72,19 @@ namespace Ichor::v1 {
                 }
             }
 
-            auto erased = std::erase_if(_timers, [timerId](std::unique_ptr<TIMER> const &timer) {
-                return timer->getTimerId() == timerId && timer->getState() != TimerState::RUNNING;
+            auto erased = std::erase_if(_timers, [timerId](TIMER const &timer) {
+                return timer.getTimerId() == timerId && timer.getState() != TimerState::RUNNING;
             });
 
             return erased > 0;
         }
 
-        // TODO create a wrapper of iterator class to create a non-allocating version of this.
-        [[nodiscard]] std::vector<NeverNull<ITimer*>> getCreatedTimers() const noexcept final {
-            std::vector<NeverNull<ITimer*>> ret;
-            ret.reserve(_timers.size());
+        [[nodiscard]] VectorView<ITimer> getCreatedTimers() const noexcept final {
+            return VectorView<ITimer>{_timers};
+        }
 
-            for(auto &tmr : _timers) {
-                ret.emplace_back(tmr.get());
-            }
-
-            return ret;
+        [[nodiscard]] virtual ServiceIdType getRequestingServiceId() const noexcept final {
+            return _requestingSvcId;
         }
 
         Task<void> stopAllTimers() noexcept final {
@@ -78,7 +99,7 @@ namespace Ichor::v1 {
             _stoppedTimers = 0;
 
             for(auto& timer : _timers) {
-                timer->stopTimer([this]() {
+                timer.stopTimer([this]() {
                     _stoppedTimers++;
                     INTERNAL_IO_DEBUG("TimerFactory<{}, {}> {} for {} _stoppedTimers {} {}", typeName<TIMER>(), typeName<QUEUE>(), AdvancedService<TimerFactory<TIMER, QUEUE>>::getServiceId(), _requestingSvcId, _stoppedTimers, _timers.size());
                     if(_stoppedTimers == _timers.size()) {
@@ -106,7 +127,7 @@ namespace Ichor::v1 {
             _q = nullptr;
         }
 
-        std::vector<std::unique_ptr<TIMER>> _timers;
+        std::vector<TIMER> _timers;
         ServiceIdType _requestingSvcId{};
         QUEUE *_q;
         std::size_t _stoppedTimers{};

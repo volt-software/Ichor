@@ -395,7 +395,9 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &uniqueEvt) {
                     }
                 }
 
-                // TODO if service does not request dependencies, skip next part
+                if(cmpMgr->getDependencyRegistry() == nullptr || cmpMgr->getDependencyRegistry()->empty()) {
+                    break;
+                }
 
                 // loop over all services, check if cmpMgr is interested in the active ones and inject them if so
                 for (auto &[key, mgr] : _services) {
