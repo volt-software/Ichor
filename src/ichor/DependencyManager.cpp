@@ -1439,7 +1439,7 @@ std::vector<Ichor::Dependency> Ichor::DependencyManager::getDependencyRequestsFo
     return ret;
 }
 
-std::vector<Ichor::v1::NeverNull<Ichor::IService const *>> Ichor::DependencyManager::getDependentsForService(ServiceIdType svcId) const noexcept {
+Ichor::DependencyManager::DependentServicesView Ichor::DependencyManager::getDependentsForService(ServiceIdType svcId) const noexcept {
     if constexpr (DO_INTERNAL_DEBUG || DO_HARDENING) {
         if (this != Detail::_local_dm) [[unlikely]] {
             ICHOR_EMERGENCY_LOG1(_logger, "Function called from wrong thread.");
@@ -1450,24 +1450,10 @@ std::vector<Ichor::v1::NeverNull<Ichor::IService const *>> Ichor::DependencyMana
     auto const svc = _services.find(svcId);
 
     if(svc == _services.end()) {
-        return {};
+        return Ichor::DependencyManager::DependentServicesView{this, nullptr};
     }
 
-    auto deps = svc->second->getDependees();
-
-    std::vector<Ichor::v1::NeverNull<Ichor::IService const *>> ret;
-
-    for(auto &dep : deps) {
-        auto isvc = getIService(dep);
-
-        if(!isvc) {
-            continue;
-        }
-
-        ret.emplace_back(*isvc);
-    }
-
-    return ret;
+    return Ichor::DependencyManager::DependentServicesView{this, &svc->second->getDependees()};
 }
 
 std::span<Ichor::Dependency const> Ichor::DependencyManager::getProvidedInterfacesForService(ServiceIdType svcId) const noexcept {
@@ -1487,7 +1473,7 @@ std::span<Ichor::Dependency const> Ichor::DependencyManager::getProvidedInterfac
     return svc->second->getInterfaces();
 }
 
-std::vector<Ichor::DependencyTrackerKey> Ichor::DependencyManager::getTrackersForService(ServiceIdType svcId) const noexcept {
+Ichor::DependencyManager::TrackersView Ichor::DependencyManager::getTrackersForService(ServiceIdType svcId) const noexcept {
     if constexpr (DO_INTERNAL_DEBUG || DO_HARDENING) {
         if (this != Detail::_local_dm) [[unlikely]] {
             ICHOR_EMERGENCY_LOG1(_logger, "Function called from wrong thread.");
@@ -1495,21 +1481,10 @@ std::vector<Ichor::DependencyTrackerKey> Ichor::DependencyManager::getTrackersFo
         }
     }
 
-    std::vector<Ichor::DependencyTrackerKey> trackers{};
-
-    for(auto const &[dtk, trackerList] : _dependencyRequestTrackers) {
-        for(auto const &dti : trackerList) {
-            if(dti.svcId == svcId) {
-                trackers.emplace_back(dtk);
-                break;
-            }
-        }
-    }
-
-    return trackers;
+    return TrackersView{&_dependencyRequestTrackers, svcId};
 }
 
-Ichor::unordered_map<Ichor::ServiceIdType, Ichor::v1::NeverNull<Ichor::IService const *>> Ichor::DependencyManager::getAllServices() const noexcept {
+Ichor::DependencyManager::ServicesView Ichor::DependencyManager::getAllServices() const noexcept {
     if constexpr (DO_INTERNAL_DEBUG || DO_HARDENING) {
         if (this != Detail::_local_dm) [[unlikely]] {
             ICHOR_EMERGENCY_LOG1(_logger, "Function called from wrong thread.");
@@ -1517,11 +1492,7 @@ Ichor::unordered_map<Ichor::ServiceIdType, Ichor::v1::NeverNull<Ichor::IService 
         }
     }
 
-    unordered_map<uint64_t, v1::NeverNull<IService const *>> svcs{};
-    for(auto const &[svcId, svc] : _services) {
-        svcs.emplace(svcId, svc->getIService());
-    }
-    return svcs;
+    return ServicesView{&_services};
 }
 
 tl::optional<std::string_view> Ichor::DependencyManager::getImplementationNameFor(ServiceIdType serviceId) const noexcept {

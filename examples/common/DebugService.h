@@ -58,13 +58,13 @@ private:
 
             auto dependants = GetThreadLocalManager().getDependentsForService(svc->getServiceId());
             ICHOR_LOG_INFO(_logger, "\tUsed by:");
-            for(auto &dep : dependants) {
+            for(auto dep : dependants) {
                 ICHOR_LOG_INFO(_logger, "\t\tDependant {}:{}", dep->getServiceId(), dep->getServiceName());
             }
 
             auto trackers = GetThreadLocalManager().getTrackersForService(svc->getServiceId());
             ICHOR_LOG_INFO(_logger, "\tTrackers:");
-            for(auto &tracker : trackers) {
+            for(auto tracker : trackers) {
                 ICHOR_LOG_INFO(_logger, "\t\tTracker for interface {} hash {}", tracker.interfaceName, tracker.interfaceNameHash);
             }
 

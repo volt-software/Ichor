@@ -1,7 +1,7 @@
 #pragma once
 
 #include <ichor/services/timer/ITimer.h>
-#include <ichor/stl/VectorView.h>
+#include <ichor/stl/Spans.h>
 
 namespace Ichor::v1 {
     class TimerRef; // forward declaration to avoid circular include
