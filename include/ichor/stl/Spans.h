@@ -10,18 +10,18 @@ namespace Ichor::v1 {
     // arithmetic across derived arrays by indexing via the original element type).
     template <typename VecT>
     struct VectorView final {
-        using value_type = NeverNull<const VecT*>;
+        using value_type = NeverNull<VecT const *>;
 
         // Function pointer used to retrieve an element as VecT* from erased storage
-        using GetFn = const VecT* (*)(const void* data, std::size_t idx) noexcept;
+        using GetFn = VecT const * (*)(void const * data, std::size_t idx) noexcept;
 
         struct iterator {
-            using value_type = NeverNull<const VecT*>;
+            using value_type = NeverNull<VecT const *>;
             using difference_type = std::ptrdiff_t;
             using iterator_category = std::random_access_iterator_tag;
 
             constexpr iterator() noexcept : _data(nullptr), _get(nullptr), _idx(0) {}
-            constexpr iterator(const void* data, GetFn get, std::size_t idx) noexcept
+            constexpr iterator(void const * data, GetFn get, std::size_t idx) noexcept
                     : _data(data), _get(get), _idx(idx) {}
 
             constexpr value_type operator*() const noexcept {
@@ -32,20 +32,20 @@ namespace Ichor::v1 {
             constexpr iterator& operator--() noexcept { --_idx; return *this; }
             constexpr iterator operator--(int) noexcept { auto tmp = *this; --_idx; return tmp; }
 
-            friend constexpr bool operator==(const iterator& a, const iterator& b) noexcept { return a._idx == b._idx && a._data == b._data; }
-            friend constexpr bool operator!=(const iterator& a, const iterator& b) noexcept { return !(a == b); }
-            friend constexpr bool operator<(const iterator& a, const iterator& b) noexcept { return a._idx < b._idx; }
-            friend constexpr bool operator>(const iterator& a, const iterator& b) noexcept { return b < a; }
-            friend constexpr bool operator<=(const iterator& a, const iterator& b) noexcept { return !(b < a); }
-            friend constexpr bool operator>=(const iterator& a, const iterator& b) noexcept { return !(a < b); }
-            friend constexpr difference_type operator-(const iterator& a, const iterator& b) noexcept { return static_cast<difference_type>(a._idx) - static_cast<difference_type>(b._idx); }
+            friend constexpr bool operator==(iterator const& a, iterator const& b) noexcept { return a._idx == b._idx && a._data == b._data; }
+            friend constexpr bool operator!=(iterator const& a, iterator const& b) noexcept { return !(a == b); }
+            friend constexpr bool operator<(iterator const& a, iterator const& b) noexcept { return a._idx < b._idx; }
+            friend constexpr bool operator>(iterator const& a, iterator const& b) noexcept { return b < a; }
+            friend constexpr bool operator<=(iterator const& a, iterator const& b) noexcept { return !(b < a); }
+            friend constexpr bool operator>=(iterator const& a, iterator const& b) noexcept { return !(a < b); }
+            friend constexpr difference_type operator-(iterator const& a, iterator const& b) noexcept { return static_cast<difference_type>(a._idx) - static_cast<difference_type>(b._idx); }
             constexpr iterator operator+(difference_type n) const noexcept { return iterator{_data, _get, static_cast<std::size_t>(_idx + n)}; }
             constexpr iterator operator-(difference_type n) const noexcept { return iterator{_data, _get, static_cast<std::size_t>(_idx - n)}; }
             constexpr iterator& operator+=(difference_type n) noexcept { _idx = static_cast<std::size_t>(_idx + n); return *this; }
             constexpr iterator& operator-=(difference_type n) noexcept { _idx = static_cast<std::size_t>(_idx - n); return *this; }
 
         private:
-            const void* _data;
+            void const * _data;
             GetFn _get;
             std::size_t _idx;
         };
@@ -53,7 +53,7 @@ namespace Ichor::v1 {
         constexpr VectorView() noexcept : _data(nullptr), _get(nullptr), _size(0) {}
 
         template <typename T, typename = std::enable_if_t<std::is_base_of_v<VecT, T>>>
-        explicit constexpr VectorView(const std::vector<T>& v) noexcept
+        explicit constexpr VectorView(std::vector<T> const &v) noexcept
                 : _data(v.data()), _get(&VectorView::template getAt<T>), _size(v.size()) {}
 
         [[nodiscard]] constexpr iterator begin() const noexcept { return iterator{_data, _get, 0}; }
@@ -66,11 +66,11 @@ namespace Ichor::v1 {
 
     private:
         template <typename T>
-        static constexpr const VecT* getAt(const void* data, std::size_t idx) noexcept {
-            return static_cast<const VecT*>(static_cast<const T*>(data) + idx);
+        static constexpr VecT const * getAt(void const * data, std::size_t idx) noexcept {
+            return static_cast<VecT const *>(static_cast<T const *>(data) + idx);
         }
 
-        const void* _data;
+        void const * _data;
         GetFn _get;
         std::size_t _size;
     };

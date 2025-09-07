@@ -63,6 +63,235 @@ namespace Ichor {
     private:
         explicit DependencyManager(IEventQueue *eventQueue);
     public:
+        // Non-allocating view over dependents of a service (IService const*), resolved lazily from IDs.
+        struct DependentServicesView {
+            using value_type = v1::NeverNull<IService const *>;
+
+            struct iterator {
+                using value_type = v1::NeverNull<IService const *>;
+                using difference_type = std::ptrdiff_t;
+                using iterator_category = std::forward_iterator_tag;
+
+                iterator() noexcept : _dm(nullptr), _dependees(nullptr) {}
+                iterator(DependencyManager const *dm,
+                            unordered_set<ServiceIdType> const *dependees,
+                            unordered_set<ServiceIdType>::const_iterator it) noexcept
+                        : _dm(dm), _dependees(dependees), _it(it) {
+                    advanceToValid();
+                }
+
+                value_type operator*() const noexcept {
+                    // assume valid (advanceToValid guarantees _it points to existing service)
+                    auto svc = _dm->getIService(*_it);
+                    // never-null because advanceToValid filtered missing entries
+                    return *svc;
+                }
+
+                iterator &operator++() noexcept {
+                    if (_it != _dependees->cend()) {
+                        ++_it;
+                        advanceToValid();
+                    }
+                    return *this;
+                }
+
+                friend bool operator==(iterator const &a, iterator const &b) noexcept {
+                    return a._it == b._it && a._dependees == b._dependees && a._dm == b._dm;
+                }
+                friend bool operator!=(iterator const &a, iterator const &b) noexcept { return !(a == b); }
+
+            private:
+                void advanceToValid() noexcept {
+                    if(_dependees == nullptr) {
+                        return;
+                    }
+                    while (_it != _dependees->cend()) {
+                        auto maybe = _dm->getIService(*_it);
+                        if (maybe) {
+                            break;
+                        }
+                        ++_it;
+                    }
+                }
+
+                DependencyManager const *_dm;
+                unordered_set<ServiceIdType> const *_dependees;
+                unordered_set<ServiceIdType>::const_iterator _it{};
+            };
+
+            [[nodiscard]] iterator begin() const noexcept {
+                if(_dependees == nullptr) {
+                    return iterator{}; // default equals default end
+                }
+                return iterator{_dm, _dependees, _dependees->cbegin()};
+            }
+            [[nodiscard]] iterator end() const noexcept {
+                if(_dependees == nullptr) {
+                    return iterator{};
+                }
+                return iterator{_dm, _dependees, _dependees->cend()};
+            }
+            [[nodiscard]] bool empty() const noexcept { return begin() == end(); }
+
+            DependencyManager const *_dm{};
+            unordered_set<ServiceIdType> const *_dependees{};
+        };
+
+        // Non-allocating view over dependency trackers (DependencyTrackerKey) for a given service id.
+        struct TrackersView {
+            using value_type = DependencyTrackerKey;
+            using map_type = unordered_map<DependencyTrackerKey, std::vector<DependencyTrackerInfo>, DependencyTrackerKeyHash, std::equal_to<>>;
+
+            struct iterator {
+                using value_type = DependencyTrackerKey;
+                using difference_type = std::ptrdiff_t;
+                using iterator_category = std::forward_iterator_tag;
+
+                iterator() noexcept : _map(nullptr), _svcId(0) {}
+                iterator(map_type const *map,
+                         ServiceIdType svcId,
+                         map_type::const_iterator it) noexcept
+                        : _map(map), _svcId(svcId), _it(it) {
+                    advanceToValid();
+                }
+
+                value_type operator*() const noexcept {
+                    return _it->first; // copy lightweight key
+                }
+
+                iterator &operator++() noexcept {
+                    if (_it != _map->cend()) {
+                        ++_it;
+                        advanceToValid();
+                    }
+                    return *this;
+                }
+
+                friend bool operator==(iterator const &a, iterator const &b) noexcept {
+                    return a._it == b._it && a._map == b._map && a._svcId == b._svcId;
+                }
+                friend bool operator!=(iterator const &a, iterator const &b) noexcept { return !(a == b); }
+
+            private:
+                void advanceToValid() noexcept {
+                    if(_map == nullptr) {
+                        return;
+                    }
+                    while (_it != _map->cend()) {
+                        auto const &vec = _it->second;
+                        bool found = false;
+                        for (auto const &dti : vec) {
+                            if (dti.svcId == _svcId) { found = true; break; }
+                        }
+                        if (found) {
+                            break;
+                        }
+                        ++_it;
+                    }
+                }
+
+                map_type const *_map;
+                ServiceIdType _svcId;
+                map_type::const_iterator _it{};
+            };
+
+            [[nodiscard]] iterator begin() const noexcept {
+                if(_map == nullptr) {
+                    return iterator{};
+                }
+                return iterator{_map, _svcId, _map->cbegin()};
+            }
+            [[nodiscard]] iterator end() const noexcept {
+                if(_map == nullptr) {
+                    return iterator{};
+                }
+                return iterator{_map, _svcId, _map->cend()};
+            }
+            [[nodiscard]] bool empty() const noexcept { return begin() == end(); }
+
+            const map_type *_map{};
+            ServiceIdType _svcId{};
+        };
+
+        // Non-allocating view over all services in the manager.
+        // Iterates over (serviceId, IService const*) pairs without copying.
+        struct ServicesView {
+            struct value_type {
+                ServiceIdType first{};   // service id
+                IService const *second{}; // non-owning; never-null when dereferenced via iterator
+            };
+
+            using map_type = unordered_map<ServiceIdType, std::unique_ptr<ILifecycleManager>>;
+
+            struct iterator {
+                using difference_type = std::ptrdiff_t;
+                using iterator_category = std::forward_iterator_tag;
+                using value_type = ServicesView::value_type;
+
+                iterator() noexcept : _map(nullptr) {}
+                iterator(map_type const *map, map_type::const_iterator it) noexcept : _map(map), _it(it) {
+                    advance();
+                }
+
+                value_type &operator*() noexcept { return _current; }
+                value_type const &operator*() const noexcept { return _current; }
+                value_type *operator->() noexcept { return &_current; }
+                value_type const *operator->() const noexcept { return &_current; }
+
+                iterator &operator++() noexcept {
+                    if (_map != nullptr && _it != _map->cend()) {
+                        ++_it;
+                        advance();
+                    }
+                    return *this;
+                }
+
+                friend bool operator==(iterator const &a, iterator const &b) noexcept {
+                    return a._map == b._map && a._it == b._it;
+                }
+                friend bool operator!=(iterator const &a, iterator const &b) noexcept { return !(a == b); }
+
+            private:
+                void advance() noexcept {
+                    if (_map == nullptr) {
+                        return;
+                    }
+                    if (_it != _map->cend()) {
+                        _current.first = _it->first;
+                        _current.second = _it->second->getIService();
+                    }
+                }
+
+                map_type const *_map;
+                map_type::const_iterator _it{};
+                value_type _current{};
+            };
+
+            [[nodiscard]] iterator begin() const noexcept {
+                if (_map == nullptr) {
+                    return iterator{};
+                }
+                return iterator{_map, _map->cbegin()};
+            }
+            [[nodiscard]] iterator end() const noexcept {
+                if (_map == nullptr) {
+                    return iterator{};
+                }
+                return iterator{_map, _map->cend()};
+            }
+            [[nodiscard]] bool empty() const noexcept { return begin() == end(); }
+
+            [[nodiscard]] size_t size() const noexcept { return _map == nullptr ? 0 : _map->size(); }
+            [[nodiscard]] iterator find(ServiceIdType id) const noexcept {
+                if (_map == nullptr) {
+                    return iterator{};
+                }
+                return iterator{_map, _map->find(id)};
+            }
+
+            map_type const *_map{};
+        };
+
         /// DANGEROUS COPY, EFFECTIVELY MAKES A NEW MANAGER AND STARTS OVER!!
         /// Only implemented so that the manager can be easily used in STL containers before anything is using it.
         [[deprecated("DANGEROUS COPY, EFFECTIVELY MAKES A NEW MANAGER AND STARTS OVER!! The moved-from manager cannot be registered with a CommunicationChannel, or UB occurs.")]]
@@ -443,15 +672,14 @@ namespace Ichor {
         }
 
         [[nodiscard]] std::vector<Dependency> getDependencyRequestsForService(ServiceIdType svcId) const noexcept;
-        [[nodiscard]] std::vector<v1::NeverNull<IService const *>> getDependentsForService(ServiceIdType svcId) const noexcept;
+        [[nodiscard]] DependentServicesView getDependentsForService(ServiceIdType svcId) const noexcept;
         [[nodiscard]] std::span<Dependency const> getProvidedInterfacesForService(ServiceIdType svcId) const noexcept;
-        [[nodiscard]] std::vector<DependencyTrackerKey> getTrackersForService(ServiceIdType svcId) const noexcept;
+        [[nodiscard]] TrackersView getTrackersForService(ServiceIdType svcId) const noexcept;
 
-        /// Returns a list of currently known services and their status.
-        /// Do not use in coroutines or other threads.
-        /// Not thread-safe.
-        /// \return map of [serviceId, service]
-        [[nodiscard]] unordered_map<ServiceIdType, v1::NeverNull<IService const *>> getAllServices() const noexcept;
+        /// Returns a non-allocating view of currently known services and their status.
+        /// Do not use in coroutines or other threads. Not thread-safe.
+        /// \return view of [serviceId, service]
+        [[nodiscard]] ServicesView getAllServices() const noexcept;
 
         /// Blocks until the queue is empty or the specified timeout has passed.
         /// Mainly useful for tests
