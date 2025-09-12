@@ -7,13 +7,14 @@
 
 #pragma once
 
-#include <exception>
+#include <ichor/Defines.h>
+#include <ichor/stl/CompilerSpecific.h>
 #include <cstdint>
 #include <cassert>
 #include <coroutine>
 #include <new>
 #include <type_traits>
-#include <ichor/stl/CompilerSpecific.h>
+#include <exception>
 
 namespace Ichor
 {
@@ -81,9 +82,11 @@ namespace Ichor
                     case result_type::value:
                         m_value.~T();
                         break;
+#ifdef ICHOR_EXCEPTIONS_ENABLED
                     case result_type::exception:
                         m_exception.~exception_ptr();
                         break;
+#endif
                     default:
                         break;
                 }
@@ -96,8 +99,10 @@ namespace Ichor
             Task<T> get_return_object() noexcept;
 
             constexpr void unhandled_exception() noexcept {
+#ifdef ICHOR_EXCEPTIONS_ENABLED
                 ::new (static_cast<void*>(std::addressof(m_exception))) std::exception_ptr(
                         std::current_exception());
+#endif
                 m_resultType = result_type::exception;
             }
 
@@ -121,7 +126,11 @@ namespace Ichor
 #endif
             T& result() & {
                 if (m_resultType == result_type::exception) {
+#ifdef ICHOR_EXCEPTIONS_ENABLED
                     std::rethrow_exception(m_exception);
+#else
+                    std::terminate();
+#endif
                 }
 
                 assert(m_resultType == result_type::value);
@@ -146,7 +155,11 @@ namespace Ichor
 #endif
             rvalue_type result() && {
                 if (m_resultType == result_type::exception) {
+#ifdef ICHOR_EXCEPTIONS_ENABLED
                     std::rethrow_exception(m_exception);
+#else
+                    std::terminate();
+#endif
                 }
 
                 assert(m_resultType == result_type::value);
@@ -162,7 +175,9 @@ namespace Ichor
 
             union {
                 T m_value;
+#ifdef ICHOR_EXCEPTIONS_ENABLED
                 std::exception_ptr m_exception;
+#endif
             };
 
         };
@@ -183,7 +198,9 @@ namespace Ichor
             {}
 
             void unhandled_exception() noexcept {
+#ifdef ICHOR_EXCEPTIONS_ENABLED
                 m_exception = std::current_exception();
+#endif
             }
 
 #if __cpp_constexpr >= 202207L
@@ -191,14 +208,18 @@ namespace Ichor
 #endif
             void result() {
                 if (m_exception) {
+#ifdef ICHOR_EXCEPTIONS_ENABLED
                     std::rethrow_exception(m_exception);
+#else
+                    std::terminate();
+#endif
                 }
             }
 
         private:
-
+#ifdef ICHOR_EXCEPTIONS_ENABLED
             std::exception_ptr m_exception;
-
+#endif
         };
 
         template<typename T>
@@ -214,7 +235,9 @@ namespace Ichor
             Task<T&> get_return_object() noexcept;
 
             constexpr void unhandled_exception() noexcept {
+#ifdef ICHOR_EXCEPTIONS_ENABLED
                 m_exception = std::current_exception();
+#endif
             }
 
             constexpr void return_value(T& value) noexcept {
@@ -227,7 +250,11 @@ namespace Ichor
 #endif
             T& result() {
                 if (m_exception) {
+#ifdef ICHOR_EXCEPTIONS_ENABLED
                     std::rethrow_exception(m_exception);
+#else
+                    std::terminate();
+#endif
                 }
 
                 return *m_value;
@@ -236,7 +263,9 @@ namespace Ichor
         private:
 
             T* m_value = nullptr;
+#ifdef ICHOR_EXCEPTIONS_ENABLED
             std::exception_ptr m_exception;
+#endif
 
         };
     }

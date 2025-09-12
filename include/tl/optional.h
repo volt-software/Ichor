@@ -30,9 +30,7 @@
 #define TL_OPTIONAL_EXCEPTIONS_ENABLED
 #endif
 
-#ifdef TL_OPTIONAL_EXCEPTIONS_ENABLED
 #include <exception>
-#endif
 
 #if (defined(_MSC_VER) && _MSC_VER == 1900)
 #define TL_OPTIONAL_MSVC2015
