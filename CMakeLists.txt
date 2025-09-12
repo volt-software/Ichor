@@ -81,7 +81,7 @@ option(ICHOR_AARCH64 "Use when building for aarch64. Turns off some x86-specific
 find_package(OpenSSL 3.0.0)
 
 cmake_dependent_option(ICHOR_USE_OPENSSL "Support using OpenSSL for TLS" ON "OpenSSL_FOUND" OFF)
-cmake_dependent_option(ICHOR_USE_BOOST_BEAST "Add boost asio and boost BEAST as dependencies" OFF "NOT ICHOR_USE_SANITIZERS AND NOT ICHOR_USE_THREAD_SANITIZER AND ICHOR_USE_OPENSSL" OFF)
+cmake_dependent_option(ICHOR_USE_BOOST_BEAST "Add boost asio and boost BEAST as dependencies" OFF "NOT ICHOR_USE_SANITIZERS AND NOT ICHOR_USE_THREAD_SANITIZER AND NOT ICHOR_DISABLE_EXCEPTIONS AND ICHOR_USE_OPENSSL" OFF)
 
 
 # see https://github.com/llvm/llvm-project/issues/121704
@@ -811,6 +811,8 @@ if(ICHOR_BUILD_TESTING)
     #enable string_view support in catch2
     target_compile_features(Catch2 PRIVATE cxx_std_20)
     target_compile_features(Catch2WithMain PRIVATE cxx_std_20)
+    target_compile_definitions(Catch2 PRIVATE CATCH_CONFIG_EXPERIMENTAL_THREAD_SAFE_ASSERTIONS)
+    target_compile_definitions(Catch2WithMain PRIVATE CATCH_CONFIG_EXPERIMENTAL_THREAD_SAFE_ASSERTIONS)
     list(APPEND CMAKE_MODULE_PATH "${ICHOR_EXTERNAL_DIR}/Catch2/extras")
 
     enable_testing()
