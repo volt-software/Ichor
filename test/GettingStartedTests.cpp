@@ -113,3 +113,8 @@ int communication() {
 
     return 0;
 }
+
+
+TEST_CASE("GettingStartedTests") {
+    REQUIRE(true); // cannot have empty tests with latest catch in combination with thread safe keywords.
+}
