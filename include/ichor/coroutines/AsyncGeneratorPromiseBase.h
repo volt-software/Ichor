@@ -11,8 +11,10 @@
 #include <cassert>
 #include <functional>
 #include <memory>
+#include <exception>
 #include <tl/optional.h>
 #include <utility>
+#include <ichor/Defines.h>
 #include <ichor/Enums.h>
 #include <ichor/Common.h>
 #include <ichor/stl/ReferenceCountedPointer.h>
@@ -47,7 +49,9 @@ namespace Ichor::Detail {
         AsyncGeneratorPromiseBase() noexcept
                 : _state(state::value_ready_producer_suspended)
 
+#ifdef ICHOR_EXCEPTIONS_ENABLED
                 , _exception(nullptr)
+#endif
                 , _id(_idCounter++)
         {
             // 0 has a special meaning. Maybe eventually turn this into an optional?
@@ -76,9 +80,12 @@ namespace Ichor::Detail {
             // as there is no consumer that will see it.
             if (_state != state::cancelled)
             {
-//                std::terminate();
+#ifdef ICHOR_EXCEPTIONS_ENABLED
                 _exception = std::current_exception();
                 std::rethrow_exception(std::move(_exception));
+#else
+                std::terminate();
+#endif
             }
         }
 
@@ -94,10 +101,12 @@ namespace Ichor::Detail {
         constexpr
 #endif
         void rethrow_if_unhandled_exception() {
+#ifdef ICHOR_EXCEPTIONS_ENABLED
             if (_exception)
             {
                 std::rethrow_exception(std::move(_exception));
             }
+#endif
         }
 
         /// Request that the generator cancel generation of new items.
@@ -154,7 +163,9 @@ namespace Ichor::Detail {
         // Ichor forces everything to be on the same thread (or terminates the program)
         // Therefore, we don't need atomic state, like is used in cppcoro
         state _state;
+#ifdef ICHOR_EXCEPTIONS_ENABLED
         std::exception_ptr _exception;
+#endif
         std::coroutine_handle<> _consumerCoroutine;
         uint64_t _id;
         uint64_t _priority{100}; // TODO: use INTERNAL_DEPENDENCY_EVENT_PRIORITY by refactoring headers
@@ -242,11 +253,16 @@ namespace Ichor::Detail {
 
 #ifdef ICHOR_USE_HARDENING
             if(!_currentValue) [[unlikely]] {
+
+#ifdef ICHOR_EXCEPTIONS_ENABLED
                 if(_exception) {
                     std::rethrow_exception(std::move(_exception));
                 } else {
                     std::terminate();
                 }
+#else
+                std::terminate();
+#endif
             }
 #endif
             _finished = true;

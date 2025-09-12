@@ -20,13 +20,13 @@
 #define TL_EXPECTED_VERSION_MINOR 0
 #define TL_EXPECTED_VERSION_PATCH 1
 
-#include <exception>
 #include <functional>
 #include <type_traits>
 #include <utility>
 
 #if defined(__EXCEPTIONS) || defined(_CPPUNWIND)
 #define TL_EXPECTED_EXCEPTIONS_ENABLED
+#include <exception>
 #endif
 
 #if (defined(_MSC_VER) && _MSC_VER == 1900)

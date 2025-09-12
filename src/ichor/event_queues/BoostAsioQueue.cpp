@@ -4,8 +4,13 @@
 
 #include <boost/asio/steady_timer.hpp>
 #include <ichor/event_queues/BoostAsioQueue.h>
+#include <ichor/Defines.h>
 #include <ichor/DependencyManager.h>
 #include <ichor/dependency_management/InternalServiceLifecycleManager.h>
+
+#ifndef ICHOR_EXCEPTIONS_ENABLED
+static_assert(false, "exceptions have to be enabled to work with boost");
+#endif
 
 namespace Ichor::Detail {
     extern std::atomic<bool> sigintQuit;
