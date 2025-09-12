@@ -4,6 +4,7 @@
 #include <ichor/services/network/ssl/openssl/OpenSSLContext.h>
 #include <ichor/services/network/ssl/openssl/OpenSSLConnection.h>
 #include <ichor/ScopeGuard.h>
+#include <ichor/stl/TypeTraits.h>
 #include <openssl/ssl.h>
 #include <openssl/bio.h>
 #include <openssl/err.h>
@@ -360,8 +361,7 @@ void Ichor::v1::OpenSSLService::printAllSslErrors(TLSObjectT const &obj, int lin
         } else if constexpr (std::is_same_v<TLSObjectT, NullStruct>) {
             ICHOR_LOG_ERROR(_logger, "Called from [{}] OpenSSL error {}: {}", line_in, errCode, buf);
         } else {
-            []<bool flag = false>() { static_assert(flag, "TLSObjectT has to be either OpenSSLContext, OpenSSLConnection or NullStruct"); }();
-
+            static_assert(AlwaysFalse_v<TLSObjectT>, "TLSObjectT has to be either OpenSSLContext, OpenSSLConnection or NullStruct");
         }
         errCode = ERR_get_error();
     }
