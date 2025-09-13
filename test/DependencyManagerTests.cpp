@@ -221,7 +221,7 @@ TEST_CASE("DependencyManager") {
             }
             REQUIRE(queue->size() == 2);
             {
-                EventInterceptorRegistration reg{CallbackKey{234, 345}, 123};
+                EventInterceptorRegistration reg{234, 345, 456, 567};
                 REQUIRE(queue->size() == 2);
                 reg.reset();
                 REQUIRE(queue->size() == 3);
@@ -267,8 +267,8 @@ TEST_CASE("DependencyManager") {
             }
             REQUIRE(queue->size() == 3);
             {
-                EventInterceptorRegistration reg{CallbackKey{234, 345}, 123};
-                reg = EventInterceptorRegistration{CallbackKey{345, 456}, 234};
+                EventInterceptorRegistration reg{234, 345, 456, 567};
+                reg = EventInterceptorRegistration{432, 543, 654, 765};
                 REQUIRE(queue->size() == 4);
             }
             REQUIRE(queue->size() == 5);
@@ -305,7 +305,7 @@ TEST_CASE("DependencyManager") {
             }
             REQUIRE(queue->size() == 2);
             {
-                EventInterceptorRegistration reg{EventInterceptorRegistration{CallbackKey{345, 456}, 234}};
+                EventInterceptorRegistration reg{EventInterceptorRegistration{234, 345, 456, 567}};
             }
             REQUIRE(queue->size() == 3);
             {
@@ -313,6 +313,38 @@ TEST_CASE("DependencyManager") {
             }
             REQUIRE(queue->size() == 4);
 
+            queue->pushEvent<QuitEvent>(0);
+        });
+
+        t.join();
+    }
+
+    SECTION("DependencyManager", "Global Interceptor") {
+        auto queue = std::make_unique<PriorityQueue>();
+        auto &dm = queue->createManager();
+        uint64_t preIntercepted{};
+        uint64_t postIntercepted{};
+        auto evtInterceptor = dm.registerGlobalEventInterceptor<StartServiceEvent>([&](StartServiceEvent const &evt) -> bool {
+            preIntercepted++;
+            return true;
+        }, [&](StartServiceEvent const &evt, bool processed) {
+            postIntercepted++;
+        });
+        std::thread t([&]() {
+            dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>();
+            dm.createServiceManager<UselessService>();
+            queue->start(CaptureSigInt);
+        });
+
+        runForOrQueueEmpty(dm);
+
+        REQUIRE(dm.isRunning());
+
+        REQUIRE(preIntercepted == 2);
+        REQUIRE(postIntercepted == 2);
+
+        queue->pushEvent<RunFunctionEvent>(0, [&]() {
+            evtInterceptor.reset();
             queue->pushEvent<QuitEvent>(0);
         });
 

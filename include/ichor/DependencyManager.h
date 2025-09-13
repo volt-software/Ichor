@@ -524,19 +524,59 @@ namespace Ichor {
             if constexpr (!std::is_same_v<EventT, Event>) {
                 targetEventId = EventT::TYPE;
             }
+            uint64_t interceptorId = _intercepterIdCounter++;
             auto existingHandlers = _eventInterceptors.find(targetEventId);
             if(existingHandlers == end(_eventInterceptors)) {
                 std::vector<EventInterceptInfo> v{};
-                v.template emplace_back<>(EventInterceptInfo{self->getServiceId(), targetEventId,
+                v.template emplace_back<>(EventInterceptInfo{interceptorId, self->getServiceId(),
                                    std::function<bool(Event const &)>{[impl](Event const &evt){ return impl->preInterceptEvent(static_cast<EventT const &>(evt)); }},
                                    std::function<void(Event const &, bool)>{[impl](Event const &evt, bool processed){ impl->postInterceptEvent(static_cast<EventT const &>(evt), processed); }}});
                 _eventInterceptors.emplace(targetEventId, std::move(v));
             } else {
-                existingHandlers->second.template emplace_back<>(EventInterceptInfo{self->getServiceId(), targetEventId,
+                existingHandlers->second.template emplace_back<>(EventInterceptInfo{interceptorId, self->getServiceId(),
                                                       std::function<bool(Event const &)>{[impl](Event const &evt){ return impl->preInterceptEvent(static_cast<EventT const &>(evt)); }},
                                                       std::function<void(Event const &, bool)>{[impl](Event const &evt, bool processed){ impl->postInterceptEvent(static_cast<EventT const &>(evt), processed); }}});
             }
-            return EventInterceptorRegistration(CallbackKey{self->getServiceId(), targetEventId}, self->getServicePriority());
+            return {self->getServiceId(), interceptorId, targetEventId, self->getServicePriority()};
+        }
+
+        template <typename EventT>
+#if (!defined(WIN32) && !defined(_WIN32) && !defined(__WIN32)) || defined(__CYGWIN__)
+        requires Derived<EventT, Event>
+#endif
+        [[nodiscard]]
+        /// Register an event interceptor that is not coupled to a service. If EventT equals Event, intercept all events. Otherwise only intercept given event.
+        /// \tparam EventT type of event (has to derive from Event)
+        /// \tparam Impl type of class registering handler (auto-deducible)
+        /// \param serviceId id of service registering handler
+        /// \param impl class that is registering handler
+        /// \return RAII handler, removes registration upon destruction
+        EventInterceptorRegistration registerGlobalEventInterceptor(std::function<bool(EventT const &)> preInterceptFn, std::function<void(EventT const &, bool)> postInterceptFn) {
+            if constexpr (DO_INTERNAL_DEBUG || DO_HARDENING) {
+                if (_started.load(std::memory_order_acquire) && this != Detail::_local_dm) [[unlikely]] {
+                    ICHOR_EMERGENCY_LOG1(_logger, "Function called from wrong thread.");
+                    std::terminate();
+                }
+            }
+
+            uint64_t targetEventId = 0;
+            if constexpr (!std::is_same_v<EventT, Event>) {
+                targetEventId = EventT::TYPE;
+            }
+            uint64_t interceptorId = _intercepterIdCounter++;
+            auto existingHandlers = _eventInterceptors.find(targetEventId);
+            if(existingHandlers == end(_eventInterceptors)) {
+                std::vector<EventInterceptInfo> v{};
+                v.template emplace_back<>(EventInterceptInfo{interceptorId, 0,
+                    [fn = std::move(preInterceptFn)](const Event &evt) -> bool { return fn(static_cast<EventT const &>(evt)); },
+                    [fn = std::move(postInterceptFn)](const Event &evt, bool processed) -> void { fn(static_cast<EventT const &>(evt), processed); }});
+                _eventInterceptors.emplace(targetEventId, std::move(v));
+            } else {
+                existingHandlers->second.template emplace_back<>(EventInterceptInfo{interceptorId, 0,
+                    [fn = std::move(preInterceptFn)](const Event &evt) -> bool { return fn(static_cast<EventT const &>(evt)); },
+                    [fn = std::move(postInterceptFn)](const Event &evt, bool processed) -> void { fn(static_cast<EventT const &>(evt), processed); }});
+            }
+            return {0, interceptorId, targetEventId, INTERNAL_EVENT_PRIORITY};
         }
 
         /// Get manager id. Thread-safe.
@@ -882,6 +922,7 @@ namespace Ichor {
         std::atomic<bool> _started{false};
         CommunicationChannel *_communicationChannel{};
         uint64_t _id{_managerIdCounter.fetch_add(1, std::memory_order_relaxed)};
+        uint64_t _intercepterIdCounter{1};
         bool _quitEventReceived{};
         bool _quitDone{};
         static std::atomic<uint64_t> _managerIdCounter;

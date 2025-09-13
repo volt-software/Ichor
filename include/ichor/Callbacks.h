@@ -20,8 +20,8 @@ namespace Ichor {
 
     class [[nodiscard]] EventInterceptInfo final {
     public:
+        uint64_t interceptorId;
         uint64_t listeningServiceId;
-        tl::optional<uint64_t> filterEventId;
         std::function<bool(Event const &)> preIntercept;
         std::function<void(Event const &, bool)> postIntercept;
     };

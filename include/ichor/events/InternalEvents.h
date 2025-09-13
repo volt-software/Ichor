@@ -178,7 +178,7 @@ namespace Ichor {
     };
 
     struct RemoveEventInterceptorEvent final : public Event {
-        RemoveEventInterceptorEvent(uint64_t _id, ServiceIdType _originatingService, uint64_t _priority, CallbackKey _key) noexcept : Event(_id, _originatingService, _priority), key(_key) {}
+        RemoveEventInterceptorEvent(uint64_t _id, ServiceIdType _originatingService, uint64_t _priority, uint64_t _interceptorId, uint64_t _eventType) noexcept : Event(_id, _originatingService, _priority), interceptorId(_interceptorId), eventType(_eventType) {}
         ~RemoveEventInterceptorEvent() final = default;
 
         [[nodiscard]] std::string_view get_name() const noexcept final {
@@ -188,7 +188,8 @@ namespace Ichor {
             return TYPE;
         }
 
-        CallbackKey key;
+        uint64_t interceptorId;
+        uint64_t eventType;
         static constexpr NameHashType TYPE = typeNameHash<RemoveEventInterceptorEvent>();
         static constexpr std::string_view NAME = typeName<RemoveEventInterceptorEvent>();
     };

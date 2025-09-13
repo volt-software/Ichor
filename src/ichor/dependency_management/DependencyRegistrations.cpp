@@ -1,6 +1,10 @@
 #include <ichor/dependency_management/DependencyRegistrations.h>
 #include <ichor/event_queues/IEventQueue.h>
 
+namespace Ichor::Detail {
+    constinit thread_local extern DependencyManager *_local_dm;
+}
+
 Ichor::EventHandlerRegistration::~EventHandlerRegistration() {
     reset();
 }
@@ -17,9 +21,9 @@ Ichor::EventInterceptorRegistration::~EventInterceptorRegistration() {
 }
 
 void Ichor::EventInterceptorRegistration::reset() {
-    if(_key.type != 0) {
-        Ichor::GetThreadLocalEventQueue().pushPrioritisedEvent<RemoveEventInterceptorEvent>(_key.id, _priority, _key);
-        _key.type = 0;
+    if(Detail::_local_dm != nullptr && _interceptorId != 0) {
+        Ichor::GetThreadLocalEventQueue().pushPrioritisedEvent<RemoveEventInterceptorEvent>(_listeningServiceId, _priority, _interceptorId, _eventType);
+        _interceptorId = 0;
     }
 }
 
