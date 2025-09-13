@@ -668,10 +668,10 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &uniqueEvt) {
                 auto *removeEventHandlerEvt = static_cast<RemoveEventInterceptorEvent *>(evt);
 
                 // key.id = service id, key.type == event id
-                auto const existingHandlers = _eventInterceptors.find(removeEventHandlerEvt->key.type);
+                auto const existingHandlers = _eventInterceptors.find(removeEventHandlerEvt->eventType);
                 if (existingHandlers != end(_eventInterceptors)) [[likely]] {
                     std::erase_if(existingHandlers->second, [removeEventHandlerEvt](const EventInterceptInfo &info) noexcept {
-                        return info.listeningServiceId == removeEventHandlerEvt->key.id;
+                        return info.interceptorId == removeEventHandlerEvt->interceptorId;
                     });
                 }
             }
@@ -1074,7 +1074,7 @@ void Ichor::DependencyManager::clearServiceRegistrations(std::vector<EventInterc
         if(trackers->second.empty()) {
             trackers = _dependencyRequestTrackers.erase(trackers);
         } else {
-            trackers++;
+            ++trackers;
         }
     }
 
@@ -1085,7 +1085,7 @@ void Ichor::DependencyManager::clearServiceRegistrations(std::vector<EventInterc
         if(callbacks->second.empty()) {
             callbacks = _eventCallbacks.erase(callbacks);
         } else {
-            callbacks++;
+            ++callbacks;
         }
     }
 
@@ -1096,7 +1096,7 @@ void Ichor::DependencyManager::clearServiceRegistrations(std::vector<EventInterc
         if(interceptors->second.empty()) {
             interceptors = _eventInterceptors.erase(interceptors);
         } else {
-            interceptors++;
+            ++interceptors;
         }
     }
 

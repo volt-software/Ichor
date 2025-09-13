@@ -10,10 +10,7 @@ namespace Ichor {
         ~EventHandlerRegistration();
 
         EventHandlerRegistration(const EventHandlerRegistration&) = delete;
-        EventHandlerRegistration(EventHandlerRegistration&& o) noexcept {
-            reset();
-            _key = o._key;
-            _priority = o._priority;
+        EventHandlerRegistration(EventHandlerRegistration&& o) noexcept : _key(o._key), _priority(o._priority) {
             o._key.type = 0;
         }
         EventHandlerRegistration& operator=(const EventHandlerRegistration&) = delete;
@@ -33,29 +30,29 @@ namespace Ichor {
 
     class [[nodiscard]] EventInterceptorRegistration final {
     public:
-        EventInterceptorRegistration(CallbackKey key, uint64_t priority) noexcept : _key(key), _priority(priority) {}
+        EventInterceptorRegistration(uint64_t listeningServiceId, uint64_t interceptorId, uint64_t eventType, uint64_t priority) noexcept : _listeningServiceId(listeningServiceId), _interceptorId(interceptorId), _eventType(eventType), _priority(priority) {}
         EventInterceptorRegistration() noexcept = default;
         ~EventInterceptorRegistration();
 
         EventInterceptorRegistration(const EventInterceptorRegistration&) = delete;
-        EventInterceptorRegistration(EventInterceptorRegistration&& o) noexcept {
-            reset();
-            _key = o._key;
-            _priority = o._priority;
-            o._key.type = 0;
+        EventInterceptorRegistration(EventInterceptorRegistration&& o) noexcept : _listeningServiceId(o._listeningServiceId), _interceptorId(o._interceptorId), _eventType(o._eventType), _priority(o._priority) {
+            o._interceptorId = 0;
         }
         EventInterceptorRegistration& operator=(const EventInterceptorRegistration&) = delete;
         EventInterceptorRegistration& operator=(EventInterceptorRegistration&& o) noexcept {
             reset();
-            _key = o._key;
+            _interceptorId = o._interceptorId;
+            _eventType = o._eventType;
             _priority = o._priority;
-            o._key.type = 0;
+            o._interceptorId = 0;
             return *this;
         }
 
         void reset();
     private:
-        CallbackKey _key{0, 0};
+        uint64_t _listeningServiceId{0};
+        uint64_t _interceptorId{0};
+        uint64_t _eventType{0};
         uint64_t _priority{0};
     };
 
@@ -68,11 +65,7 @@ namespace Ichor {
         ~DependencyTrackerRegistration();
 
         DependencyTrackerRegistration(const DependencyTrackerRegistration&) = delete;
-        DependencyTrackerRegistration(DependencyTrackerRegistration&& o) noexcept {
-            reset();
-            _serviceId = o._serviceId;
-            _interfaceNameHash = o._interfaceNameHash;
-            _priority = o._priority;
+        DependencyTrackerRegistration(DependencyTrackerRegistration&& o) noexcept : _serviceId(o._serviceId), _interfaceNameHash(o._interfaceNameHash), _priority(o._priority) {
             o._interfaceNameHash = 0;
         }
         DependencyTrackerRegistration& operator=(const DependencyTrackerRegistration&) = delete;
