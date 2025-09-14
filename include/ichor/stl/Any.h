@@ -134,7 +134,7 @@ namespace Ichor::v1 {
                     if(op == any_op::CLONE) {
                         return new(buffer.data()) T(*static_cast<T *>(value));
                     } else if(op == any_op::DELETE_) {
-                        if constexpr (!std::is_trivial_v<T>) {
+                        if constexpr (!std::is_trivially_destructible_v<T>) {
                             static_cast<T *>(value)->~T();
                         }
                         return nullptr;
