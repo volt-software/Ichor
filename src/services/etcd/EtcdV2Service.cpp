@@ -18,6 +18,7 @@
 #include <base64/base64.h>
 #include <ichor/glaze.h>
 #include <glaze/util/type_traits.hpp>
+#include <ichor/ServiceExecutionScope.h>
 
 using namespace Ichor::Etcdv2::v1;
 using namespace Ichor::v1;
@@ -227,20 +228,20 @@ Ichor::Task<void> EtcdService::stop() {
     co_return;
 }
 
-void EtcdService::addDependencyInstance(ILogger &logger, IService &) {
-    _logger = &logger;
+void EtcdService::addDependencyInstance(Ichor::ScopedServiceProxy<ILogger*> logger, IService &) {
+    _logger = std::move(logger);
     ICHOR_LOG_TRACE(_logger, "Added logger");
 }
 
-void EtcdService::removeDependencyInstance(ILogger&, IService&) {
+void EtcdService::removeDependencyInstance(Ichor::ScopedServiceProxy<ILogger*>, IService&) {
     ICHOR_LOG_TRACE(_logger, "Removed logger");
     _logger = nullptr;
 }
 
-void EtcdService::addDependencyInstance(IHttpConnectionService &conn, IService &) {
+void EtcdService::addDependencyInstance(Ichor::ScopedServiceProxy<IHttpConnectionService*> conn, IService &) {
     if(_mainConn == nullptr) {
         ICHOR_LOG_TRACE(_logger, "Added MainCon");
-        _mainConn = &conn;
+        _mainConn = std::move(conn);
         return;
     }
 
@@ -251,12 +252,12 @@ void EtcdService::addDependencyInstance(IHttpConnectionService &conn, IService &
 
     ICHOR_LOG_TRACE(_logger, "Added conn, triggering coroutine");
 
-    _connRequests.top().conn = &conn;
+    _connRequests.top().conn = std::move(conn);
     _connRequests.top().event.set();
 }
 
-void EtcdService::removeDependencyInstance(IHttpConnectionService &conn, IService &) {
-    if(_mainConn == &conn) {
+void EtcdService::removeDependencyInstance(Ichor::ScopedServiceProxy<IHttpConnectionService*> conn, IService &) {
+    if(_mainConn == conn) {
         ICHOR_LOG_TRACE(_logger, "Removing MainCon");
         _mainConn = nullptr;
     }
@@ -270,12 +271,12 @@ void EtcdService::removeDependencyInstance(IHttpConnectionService &conn, IServic
     }
 }
 
-void EtcdService::addDependencyInstance(IClientFactory<IHttpConnectionService> &factory, IService &) {
+void EtcdService::addDependencyInstance(Ichor::ScopedServiceProxy<IClientFactory<IHttpConnectionService>*> factory, IService &) {
     ICHOR_LOG_TRACE(_logger, "Added clientFactory");
-    _clientFactory = &factory;
+    _clientFactory = std::move(factory);
 }
 
-void EtcdService::removeDependencyInstance(IClientFactory<IHttpConnectionService>&, IService&) {
+void EtcdService::removeDependencyInstance(Ichor::ScopedServiceProxy<IClientFactory<IHttpConnectionService>*>, IService&) {
     ICHOR_LOG_TRACE(_logger, "Removed clientFactory");
     _clientFactory = nullptr;
 }
@@ -369,7 +370,7 @@ Ichor::Task<tl::expected<EtcdReply, EtcdError>> EtcdService::get(std::string_vie
 
     // using watches blocks the connection and thus blocks every other call
     // This implementation requests a new HttpConnection specifically for this and cleans it up afterwards
-    IHttpConnectionService *connToUse = _mainConn;
+    Ichor::ScopedServiceProxy<IHttpConnectionService*> connToUse = _mainConn;
     tl::optional<uint64_t> connIdToClean{};
     ScopeGuard sg{[this, &connIdToClean]() {
         if(connIdToClean && _clientFactory != nullptr) {

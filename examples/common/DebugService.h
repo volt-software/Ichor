@@ -4,11 +4,16 @@
 #include <ichor/services/timer/ITimerFactory.h>
 #include <ichor/services/logging/Logger.h>
 #include <ichor/dependency_management/AdvancedService.h>
+#include <ichor/ServiceExecutionScope.h>
 
 using namespace Ichor;
 using namespace Ichor::v1;
 
-class DebugService final : public AdvancedService<DebugService> {
+struct IDebugService {
+    virtual void printServices() = 0;
+};
+
+class DebugService final : public IDebugService, public AdvancedService<DebugService> {
 public:
     DebugService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {
         reg.registerDependency<ILogger>(this, DependencyFlags::REQUIRED, Properties{{"LogLevel", Ichor::v1::make_any<LogLevel>(LogLevel::LOG_INFO)}});
@@ -35,64 +40,82 @@ private:
         co_return;
     }
 
-    void printServices() {
+    void printServices() final {
         auto svcs = GetThreadLocalManager().getAllServices();
         for(auto &[id, svc] : svcs) {
-            ICHOR_LOG_INFO(_logger, "Svc {}:{} {}", svc->getServiceId(), svc->getServiceName(), svc->getServiceState());
+            ICHOR_EMERGENCY_LOG2(_logger, "Svc {}:{} {}", svc->getServiceId(), svc->getServiceName(), svc->getServiceState());
 
-            ICHOR_LOG_INFO(_logger, "\tInterfaces:");
+            ICHOR_EMERGENCY_LOG1(_logger, "\tInterfaces:");
             for(auto &iface : GetThreadLocalManager().getProvidedInterfacesForService(svc->getServiceId())) {
-                ICHOR_LOG_INFO(_logger, "\t\tInterface {} hash {}", iface.getInterfaceName(), iface.interfaceNameHash);
+                ICHOR_EMERGENCY_LOG2(_logger, "\t\tInterface {} hash {}", iface.getInterfaceName(), iface.interfaceNameHash);
             }
 
-            ICHOR_LOG_INFO(_logger, "\tProperties:");
+            ICHOR_EMERGENCY_LOG1(_logger, "\tProperties:");
             for(auto &[key, val] : svc->getProperties()) {
-                ICHOR_LOG_INFO(_logger, "\t\tProperty {} value {} size {} type {}", key, val, val.get_size(), val.type_name());
+                ICHOR_EMERGENCY_LOG2(_logger, "\t\tProperty {} value {} size {} type {}", key, val, val.get_size(), val.type_name());
             }
 
             auto deps = GetThreadLocalManager().getDependencyRequestsForService(svc->getServiceId());
-            ICHOR_LOG_INFO(_logger, "\tDependencies:");
+            ICHOR_EMERGENCY_LOG1(_logger, "\tDependencies:");
             for(auto &dep : deps) {
-                ICHOR_LOG_INFO(_logger, "\t\tDependency {} flags {} satisfied {}", dep.getInterfaceName(), dep.flags, dep.satisfied);
+                ICHOR_EMERGENCY_LOG2(_logger, "\t\tDependency {} flags {} satisfied {}", dep.getInterfaceName(), dep.flags, dep.satisfied);
             }
 
             auto dependants = GetThreadLocalManager().getDependentsForService(svc->getServiceId());
-            ICHOR_LOG_INFO(_logger, "\tUsed by:");
+            ICHOR_EMERGENCY_LOG1(_logger, "\tUsed by:");
             for(auto dep : dependants) {
-                ICHOR_LOG_INFO(_logger, "\t\tDependant {}:{}", dep->getServiceId(), dep->getServiceName());
+                ICHOR_EMERGENCY_LOG2(_logger, "\t\tDependant {}:{}", dep->getServiceId(), dep->getServiceName());
             }
 
             auto trackers = GetThreadLocalManager().getTrackersForService(svc->getServiceId());
-            ICHOR_LOG_INFO(_logger, "\tTrackers:");
+            ICHOR_EMERGENCY_LOG1(_logger, "\tTrackers:");
             for(auto tracker : trackers) {
-                ICHOR_LOG_INFO(_logger, "\t\tTracker for interface {} hash {}", tracker.interfaceName, tracker.interfaceNameHash);
+                ICHOR_EMERGENCY_LOG2(_logger, "\t\tTracker for interface {} hash {}", tracker.interfaceName, tracker.interfaceNameHash);
             }
 
-            ICHOR_LOG_INFO(_logger, "");
+            ICHOR_EMERGENCY_LOG1(_logger, "");
         }
 
-        ICHOR_LOG_INFO(_logger, "\n===================================\n");
+        ICHOR_EMERGENCY_LOG1(_logger, "\n===================================\n");
+
+        auto serviceIdsWithActiveCoroutines = GetThreadLocalManager().getServiceIdsWhichHaveActiveCoroutines();
+        ICHOR_EMERGENCY_LOG1(_logger, "Services With Active Coroutines:");
+        for(auto const &[evt, svcIds] : serviceIdsWithActiveCoroutines) {
+            ICHOR_EMERGENCY_LOG2(_logger, "\tevent {}:{}", evt.get_name(), evt.originatingService);
+            for(auto const svcId : svcIds) {
+                auto svc = GetThreadLocalManager().getIService(svcId);
+
+                if(!svc) {
+                    ICHOR_EMERGENCY_LOG2(_logger, "\t\tSvc {} but missing from manager", svcId);
+                } else {
+                    ICHOR_EMERGENCY_LOG2(_logger, "\t\tSvc {}:{} {}", (*svc)->getServiceId(), (*svc)->getServiceName(), (*svc)->getServiceState());
+                }
+            }
+        }
+
+
+        ICHOR_EMERGENCY_LOG1(_logger, "\n===================================\n");
     }
 
-    void addDependencyInstance(ILogger &logger, IService &) {
-        _logger = &logger;
+    void addDependencyInstance(Ichor::ScopedServiceProxy<ILogger*> logger, IService &) {
+        _logger = std::move(logger);
     }
 
-    void removeDependencyInstance(ILogger &logger, IService&) {
-        _logger = nullptr;
+    void removeDependencyInstance(Ichor::ScopedServiceProxy<ILogger*> logger, IService&) {
+        _logger.reset();
     }
 
-    void addDependencyInstance(ITimerFactory &factory, IService &) {
-        _timerFactory = &factory;
+    void addDependencyInstance(Ichor::ScopedServiceProxy<ITimerFactory*> factory, IService &) {
+        _timerFactory = std::move(factory);
     }
 
-    void removeDependencyInstance(ITimerFactory &factory, IService&) {
-        _timerFactory = nullptr;
+    void removeDependencyInstance(Ichor::ScopedServiceProxy<ITimerFactory*> factory, IService&) {
+        _timerFactory.reset();
     }
 
     friend DependencyRegister;
 
-    ILogger *_logger{};
-    ITimerFactory *_timerFactory{};
+    Ichor::ScopedServiceProxy<ILogger*> _logger {};
+    Ichor::ScopedServiceProxy<ITimerFactory*> _timerFactory {};
 
 };

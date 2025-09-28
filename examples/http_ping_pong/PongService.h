@@ -12,7 +12,7 @@ using namespace Ichor::v1;
 
 class PongService final {
 public:
-    PongService(ILogger *logger, ISerializer<PingMsg> *serializer, IHttpHostService *hostService) : _logger(logger) {
+    PongService(ScopedServiceProxy<ILogger> logger, ScopedServiceProxy<ISerializer<PingMsg>> serializer, ScopedServiceProxy<IHttpHostService> hostService) : _logger(logger) {
         _routeRegistration = hostService->addRoute(HttpMethod::post, "/ping", [this, serializer](HttpRequest &req) -> Task<HttpResponse> {
             ICHOR_LOG_INFO(_logger, "received request from {} with body {} ", req.address, std::string_view{reinterpret_cast<char*>(req.body.data()), req.body.size()});
             auto msg = serializer->deserialize(req.body);
@@ -27,6 +27,6 @@ public:
     }
 
 private:
-    ILogger *_logger{};
+    ScopedServiceProxy<ILogger> _logger{};
     HttpRouteRegistration _routeRegistration{};
 };

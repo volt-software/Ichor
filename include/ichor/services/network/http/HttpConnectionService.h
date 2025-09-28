@@ -9,6 +9,7 @@
 #include <ichor/event_queues/IEventQueue.h>
 #include <tl/expected.h>
 #include <deque>
+#include <ichor/ServiceExecutionScope.h>
 
 namespace Ichor::v1 {
     /**
@@ -41,14 +42,14 @@ namespace Ichor::v1 {
         Task<tl::expected<void, Ichor::StartError>> start() final;
         Task<void> stop() final;
 
-        void addDependencyInstance(ILogger &logger, IService &isvc);
-        void removeDependencyInstance(ILogger &logger, IService &isvc);
+        void addDependencyInstance(Ichor::ScopedServiceProxy<ILogger*> logger, IService &isvc);
+        void removeDependencyInstance(Ichor::ScopedServiceProxy<ILogger*> logger, IService &isvc);
 
-        void addDependencyInstance(IEventQueue &q, IService &isvc);
-        void removeDependencyInstance(IEventQueue &q, IService &isvc);
+        void addDependencyInstance(Ichor::ScopedServiceProxy<IEventQueue*> q, IService &isvc);
+        void removeDependencyInstance(Ichor::ScopedServiceProxy<IEventQueue*> q, IService &isvc);
 
-        void addDependencyInstance(IClientConnectionService &c, IService &isvc);
-        void removeDependencyInstance(IClientConnectionService &c, IService &isvc);
+        void addDependencyInstance(Ichor::ScopedServiceProxy<IClientConnectionService*> c, IService &isvc);
+        void removeDependencyInstance(Ichor::ScopedServiceProxy<IClientConnectionService*> c, IService &isvc);
 
         tl::expected<HttpResponse, HttpParseError> parseResponse(std::string_view complete, size_t& len) const;
 
@@ -56,9 +57,9 @@ namespace Ichor::v1 {
 
         uint64_t _priority{INTERNAL_EVENT_PRIORITY};
         bool _debug{};
-        ILogger* _logger{};
-        IEventQueue *_queue{};
-        IClientConnectionService *_connection{};
+        Ichor::ScopedServiceProxy<ILogger*> _logger {};
+        Ichor::ScopedServiceProxy<IEventQueue*> _queue {};
+        Ichor::ScopedServiceProxy<IClientConnectionService*> _connection {};
         std::deque<AsyncReturningManualResetEvent<tl::expected<HttpResponse, HttpParseError>>> _events;
         std::string _buffer;
         std::string const *_address;

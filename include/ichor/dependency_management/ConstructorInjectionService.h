@@ -4,6 +4,7 @@
 #include <ichor/coroutines/Task.h>
 #include <ichor/dependency_management/DependencyRegister.h>
 #include <ichor/dependency_management/IService.h>
+#include <ichor/ServiceExecutionScope.h>
 #include <utility>
 #include <variant>
 
@@ -16,6 +17,96 @@ namespace Ichor {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wnon-template-friend"
 #endif
+        template <typename T>
+        struct unwrap_dependency;
+
+        template <typename U>
+        struct unwrap_dependency<Ichor::ScopedServiceProxy<U>> {
+            using type = U*;
+        };
+
+        template <>
+        struct unwrap_dependency<IService*> {
+            using type = IService*;
+        };
+
+        // template <>
+        // struct unwrap_dependency<IService> {
+        //     using type = IService;
+        // };
+
+        template <>
+        struct unwrap_dependency<IEventQueue*> {
+            using type = IEventQueue*;
+        };
+
+        // template <>
+        // struct unwrap_dependency<IEventQueue> {
+        //     using type = IEventQueue;
+        // };
+
+        template <>
+        struct unwrap_dependency<DependencyManager*> {
+            using type = DependencyManager*;
+        };
+
+        // template <>
+        // struct unwrap_dependency<DependencyManager> {
+        //     using type = DependencyManager;
+        // };
+
+        template <typename T>
+        using unwrap_dependency_t = typename unwrap_dependency<T>::type;
+
+        template <typename T>
+        struct wrap_only_if_not_known_types {
+            using type = ScopedServiceProxy<std::remove_pointer_t<T>>;
+        };
+
+        template <>
+        struct wrap_only_if_not_known_types<IService*> {
+            using type = IService*;
+        };
+
+        template <>
+        struct wrap_only_if_not_known_types<IService> {
+            using type = IService*;
+        };
+
+        template <>
+        struct wrap_only_if_not_known_types<IEventQueue*> {
+            using type = IEventQueue*;
+        };
+
+        template <>
+        struct wrap_only_if_not_known_types<IEventQueue> {
+            using type = IEventQueue*;
+        };
+
+        template <>
+        struct wrap_only_if_not_known_types<DependencyManager*> {
+            using type = DependencyManager*;
+        };
+
+        template <>
+        struct wrap_only_if_not_known_types<DependencyManager> {
+            using type = DependencyManager*;
+        };
+
+        template <typename T>
+        using wrap_only_if_not_known_types_t = typename wrap_only_if_not_known_types<T>::type;
+
+        template <typename T>
+        struct rewrap_dependencies;
+
+        template <typename... Ts>
+        struct rewrap_dependencies<std::variant<Ts...>> {
+            using type = std::variant<wrap_only_if_not_known_types_t<Ts>...>;
+        };
+
+        template <typename T>
+        using rewrap_dependencies_t = typename rewrap_dependencies<T>::type;
+
         // Based on
         // * http://alexpolt.github.io/type-loophole.html
         //   https://github.com/alexpolt/luple/blob/master/type-loophole.h
@@ -86,26 +177,13 @@ namespace Ichor {
             return fields_number_ctor<T, Ns..., sizeof...(Ns)>(0);
         }
 
-        // This is a helper to turn a ctor into a tuple type.
-        // Usage is: refl::as_tuple<data_t>
-        template <typename T, typename U> struct loophole_tuple;
-
-        template <typename T, int... Ns>
-        struct loophole_tuple<T, std::integer_sequence<int, Ns...>> {
-            using type = std::tuple<decltype(loophole(tag<T, Ns>{}))...>;
-        };
-
-        template <typename T>
-        using as_tuple =
-                typename loophole_tuple<T, std::make_integer_sequence<int, fields_number_ctor<T>(0)>>::type;
-
         // This is a helper to turn a ctor into a variant type.
         // Usage is: refl::as_variant<data_t>
         template <typename T, typename U> struct loophole_variant;
 
         template <typename T, int... Ns>
         struct loophole_variant<T, std::integer_sequence<int, Ns...>> {
-            using type = std::variant<decltype(loophole(tag<T, Ns>{}))...>;
+            using type = std::variant<refl::unwrap_dependency_t<decltype(loophole(tag<T, Ns>{}))>...>;
         };
 
         template <typename T>
@@ -216,7 +294,7 @@ namespace Ichor {
 #if ICHOR_EXCEPTIONS_ENABLED
             try {
 #endif
-                new(buf) T(std::get<CO_ARGS>(_deps[typeNameHash<std::remove_pointer_t<CO_ARGS>>()])...);
+                new(buf) T((std::get<refl::wrap_only_if_not_known_types_t<CO_ARGS>>(_deps[typeNameHash<CO_ARGS>()]))...);
 #if ICHOR_EXCEPTIONS_ENABLED
             } catch (std::exception const &e) {
                 fmt::print("Std exception while starting svc {}:{} : \"{}\".\n\nLikely user error, but printing extra information anyway: Stored dependencies:\n", getServiceId(), getServiceName(), e.what());
@@ -226,7 +304,7 @@ namespace Ichor {
                 fmt::print("\n");
 
                 fmt::print("Requested deps:\n");
-                (fmt::print("{}:{} ", typeNameHash<std::remove_pointer_t<CO_ARGS>>(), typeName<std::remove_pointer_t<CO_ARGS>>()), ...);
+                (fmt::print("{}:{} ", typeNameHash<CO_ARGS>(), typeName<CO_ARGS>()), ...);
                 fmt::print("\n");
                 std::terminate();
             } catch (...) {
@@ -237,7 +315,7 @@ namespace Ichor {
                 fmt::print("\n");
 
                 fmt::print("Requested deps:\n");
-                (fmt::print("{}:{} ", typeNameHash<std::remove_pointer_t<CO_ARGS>>(), typeName<std::remove_pointer_t<CO_ARGS>>()), ...);
+                (fmt::print("{}:{} ", typeNameHash<CO_ARGS>(), typeName<CO_ARGS>()), ...);
                 fmt::print("\n");
                 std::terminate();
             }
@@ -309,13 +387,37 @@ namespace Ichor {
         }
 
         template <typename depT>
-        void addDependencyInstance(v1::NeverNull<depT*> dep, v1::NeverNull<IService*>) {
-            _deps.emplace(typeNameHash<depT>(), dep);
+        void addDependencyInstance(Ichor::ScopedServiceProxy<depT> dep, v1::NeverNull<IService*>) {
+            _deps.emplace(std::pair<unsigned long, refl::rewrap_dependencies_t<refl::as_variant<T>>>{typeNameHash<depT>(), dep});
+        }
+
+        void addDependencyInstance(DependencyManager *dep, v1::NeverNull<IService*>) {
+            _deps.emplace(std::pair<unsigned long, refl::rewrap_dependencies_t<refl::as_variant<T>>>{typeNameHash<DependencyManager>(), dep});
+        }
+
+        void addDependencyInstance(IService *dep, v1::NeverNull<IService*>) {
+            _deps.emplace(std::pair<unsigned long, refl::rewrap_dependencies_t<refl::as_variant<T>>>{typeNameHash<IService>(), dep});
+        }
+
+        void addDependencyInstance(IEventQueue *dep, v1::NeverNull<IService*>) {
+            _deps.emplace(std::pair<unsigned long, refl::rewrap_dependencies_t<refl::as_variant<T>>>{typeNameHash<IEventQueue>(), dep});
         }
 
         template <typename depT>
-        void removeDependencyInstance(v1::NeverNull<depT*>, v1::NeverNull<IService*>) {
+        void removeDependencyInstance(Ichor::ScopedServiceProxy<depT>, v1::NeverNull<IService*>) {
             _deps.erase(typeNameHash<depT>());
+        }
+
+        void removeDependencyInstance(DependencyManager *, v1::NeverNull<IService*>) {
+            _deps.erase(typeNameHash<DependencyManager>());
+        }
+
+        void removeDependencyInstance(IService *, v1::NeverNull<IService*>) {
+            _deps.erase(typeNameHash<IService>());
+        }
+
+        void removeDependencyInstance(IEventQueue *, v1::NeverNull<IService*>) {
+            _deps.erase(typeNameHash<IEventQueue>());
         }
 
         [[nodiscard]] T* getImplementation() noexcept {
@@ -330,7 +432,7 @@ namespace Ichor {
         uint64_t _servicePriority;
         sole::uuid _serviceGid;
         ServiceState _serviceState;
-        unordered_map<uint64_t, refl::as_variant<T>> _deps{};
+        unordered_map<uint64_t, refl::rewrap_dependencies_t<refl::as_variant<T>>> _deps{};
         alignas(T) std::byte buf[sizeof(T)];
 
         friend struct DependencyRegister;

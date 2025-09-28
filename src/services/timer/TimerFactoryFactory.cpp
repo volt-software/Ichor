@@ -85,18 +85,21 @@ Ichor::AsyncGenerator<Ichor::IchorBehaviour> Ichor::v1::TimerFactoryFactory::han
         co_return {};
     }
 
-    auto factory = _factories.find(evt.originatingService);
+    auto const factoryIt = _factories.find(evt.originatingService);
 
-    if(factory == _factories.cend()) {
+    if(factoryIt == _factories.cend()) {
         INTERNAL_IO_DEBUG("TimerFactoryFactory {} handleDependencyUndoRequest for {} done2", getServiceId(), evt.originatingService, _quitting);
         co_return {};
     }
 
     INTERNAL_IO_DEBUG("TimerFactoryFactory {} handleDependencyUndoRequest for {} pre-co_await", getServiceId(), evt.originatingService, _quitting);
 
-    co_await pushStopEventForTimerFactory(factory->first, factory->second);
+    auto const requestingSvcId = factoryIt->first;
+    auto const factorySvcId = factoryIt->second;
 
-    _factories.erase(evt.originatingService);
+    co_await pushStopEventForTimerFactory(requestingSvcId, factorySvcId);
+
+    _factories.erase(requestingSvcId);
 
     INTERNAL_IO_DEBUG("TimerFactoryFactory {} handleDependencyUndoRequest for {} done3", getServiceId(), evt.originatingService, _quitting);
 

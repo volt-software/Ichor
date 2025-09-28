@@ -7,6 +7,7 @@
 #include <ichor/ScopeGuard.h>
 #include <ichor/Filter.h>
 #include <thread>
+#include <ichor/ServiceExecutionScope.h>
 
 template<class NextLayer>
 void setup_stream(std::shared_ptr<websocket::stream<NextLayer>>& ws)
@@ -104,31 +105,31 @@ Ichor::Task<void> Ichor::Boost::v1::WsConnectionService<InterfaceT>::stop() {
 }
 
 template <typename InterfaceT> requires Ichor::DerivedAny<InterfaceT, Ichor::v1::IConnectionService, Ichor::v1::IHostConnectionService, Ichor::v1::IClientConnectionService>
-void Ichor::Boost::v1::WsConnectionService<InterfaceT>::addDependencyInstance(Ichor::v1::ILogger &logger, IService &) {
-    _logger = &logger;
+void Ichor::Boost::v1::WsConnectionService<InterfaceT>::addDependencyInstance(Ichor::ScopedServiceProxy<Ichor::v1::ILogger*> logger, IService &) {
+    _logger = std::move(logger);
 }
 
 template <typename InterfaceT> requires Ichor::DerivedAny<InterfaceT, Ichor::v1::IConnectionService, Ichor::v1::IHostConnectionService, Ichor::v1::IClientConnectionService>
-void Ichor::Boost::v1::WsConnectionService<InterfaceT>::removeDependencyInstance(Ichor::v1::ILogger &logger, IService&) {
+void Ichor::Boost::v1::WsConnectionService<InterfaceT>::removeDependencyInstance(Ichor::ScopedServiceProxy<Ichor::v1::ILogger*> logger, IService&) {
     _logger = nullptr;
 }
 
 template <typename InterfaceT> requires Ichor::DerivedAny<InterfaceT, Ichor::v1::IConnectionService, Ichor::v1::IHostConnectionService, Ichor::v1::IClientConnectionService>
-void Ichor::Boost::v1::WsConnectionService<InterfaceT>::addDependencyInstance(Ichor::v1::IHostService&, IService&) {
+void Ichor::Boost::v1::WsConnectionService<InterfaceT>::addDependencyInstance(Ichor::ScopedServiceProxy<Ichor::v1::IHostService*>, IService&) {
 
 }
 
 template <typename InterfaceT> requires Ichor::DerivedAny<InterfaceT, Ichor::v1::IConnectionService, Ichor::v1::IHostConnectionService, Ichor::v1::IClientConnectionService>
-void Ichor::Boost::v1::WsConnectionService<InterfaceT>::removeDependencyInstance(Ichor::v1::IHostService& host, IService&) {
+void Ichor::Boost::v1::WsConnectionService<InterfaceT>::removeDependencyInstance(Ichor::ScopedServiceProxy<Ichor::v1::IHostService*> host, IService&) {
 }
 
 template <typename InterfaceT> requires Ichor::DerivedAny<InterfaceT, Ichor::v1::IConnectionService, Ichor::v1::IHostConnectionService, Ichor::v1::IClientConnectionService>
-void Ichor::Boost::v1::WsConnectionService<InterfaceT>::addDependencyInstance(IBoostAsioQueue &q, IService&) {
-    _queue = &q;
+void Ichor::Boost::v1::WsConnectionService<InterfaceT>::addDependencyInstance(Ichor::ScopedServiceProxy<IBoostAsioQueue*> q, IService&) {
+    _queue = std::move(q);
 }
 
 template <typename InterfaceT> requires Ichor::DerivedAny<InterfaceT, Ichor::v1::IConnectionService, Ichor::v1::IHostConnectionService, Ichor::v1::IClientConnectionService>
-void Ichor::Boost::v1::WsConnectionService<InterfaceT>::removeDependencyInstance(IBoostAsioQueue&, IService&) {
+void Ichor::Boost::v1::WsConnectionService<InterfaceT>::removeDependencyInstance(Ichor::ScopedServiceProxy<IBoostAsioQueue*>, IService&) {
     if(AdvancedService<WsConnectionService<InterfaceT>>::getServiceState() != ServiceState::INSTALLED) {
         std::terminate();
     }

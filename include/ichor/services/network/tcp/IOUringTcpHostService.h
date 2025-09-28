@@ -7,6 +7,7 @@
 #include <ichor/services/network/IHostService.h>
 #include <ichor/services/logging/Logger.h>
 #include <ichor/event_queues/IIOUringQueue.h>
+#include <ichor/ServiceExecutionScope.h>
 
 namespace Ichor::v1 {
     /**
@@ -34,11 +35,11 @@ namespace Ichor::v1 {
         Task<tl::expected<void, Ichor::StartError>> start() final;
         Task<void> stop() final;
 
-        void addDependencyInstance(ILogger &logger, IService &isvc) noexcept;
-        void removeDependencyInstance(ILogger &logger, IService &isvc) noexcept;
+        void addDependencyInstance(Ichor::ScopedServiceProxy<ILogger*> logger, IService &isvc) noexcept;
+        void removeDependencyInstance(Ichor::ScopedServiceProxy<ILogger*> logger, IService &isvc) noexcept;
 
-        void addDependencyInstance(IIOUringQueue &, IService&) noexcept;
-        void removeDependencyInstance(IIOUringQueue &, IService&) noexcept;
+        void addDependencyInstance(Ichor::ScopedServiceProxy<IIOUringQueue*>, IService&) noexcept;
+        void removeDependencyInstance(Ichor::ScopedServiceProxy<IIOUringQueue*>, IService&) noexcept;
 
         std::function<void(io_uring_cqe*)> createAcceptHandler() noexcept;
 
@@ -54,8 +55,8 @@ namespace Ichor::v1 {
 		tl::optional<uint32_t> _bufferEntries{};
 		tl::optional<uint32_t> _bufferEntrySize{};
         bool _quit;
-        IIOUringQueue *_q{};
-        ILogger *_logger{};
+        Ichor::ScopedServiceProxy<IIOUringQueue*> _q {};
+        Ichor::ScopedServiceProxy<ILogger*> _logger {};
         std::vector<ServiceIdType> _connections;
         AsyncManualResetEvent _quitEvt;
     };

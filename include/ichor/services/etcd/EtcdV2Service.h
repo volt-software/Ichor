@@ -7,11 +7,12 @@
 #include <ichor/services/network/http/IHttpConnectionService.h>
 #include <ichor/services/network/IClientFactory.h>
 #include <stack>
+#include <ichor/ServiceExecutionScope.h>
 
 namespace Ichor::Etcdv2::v1 {
 
     struct ConnRequest final {
-        Ichor::v1::IHttpConnectionService *conn{};
+        Ichor::ScopedServiceProxy<Ichor::v1::IHttpConnectionService*> conn {};
         AsyncManualResetEvent event{};
     };
 
@@ -66,20 +67,20 @@ namespace Ichor::Etcdv2::v1 {
         Task<tl::expected<void, Ichor::StartError>> start() final;
         Task<void> stop() final;
 
-        void addDependencyInstance(Ichor::v1::ILogger &logger, IService &isvc);
-        void removeDependencyInstance(Ichor::v1::ILogger &logger, IService &isvc);
+        void addDependencyInstance(Ichor::ScopedServiceProxy<Ichor::v1::ILogger*> logger, IService &isvc);
+        void removeDependencyInstance(Ichor::ScopedServiceProxy<Ichor::v1::ILogger*> logger, IService &isvc);
 
-        void addDependencyInstance(Ichor::v1::IHttpConnectionService &conn, IService &isvc);
-        void removeDependencyInstance(Ichor::v1::IHttpConnectionService &conn, IService &isvc);
+        void addDependencyInstance(Ichor::ScopedServiceProxy<Ichor::v1::IHttpConnectionService*> conn, IService &isvc);
+        void removeDependencyInstance(Ichor::ScopedServiceProxy<Ichor::v1::IHttpConnectionService*> conn, IService &isvc);
 
-        void addDependencyInstance(Ichor::v1::IClientFactory<Ichor::v1::IHttpConnectionService> &conn, IService &isvc);
-        void removeDependencyInstance(Ichor::v1::IClientFactory<Ichor::v1::IHttpConnectionService> &conn, IService &isvc);
+        void addDependencyInstance(Ichor::ScopedServiceProxy<Ichor::v1::IClientFactory<Ichor::v1::IHttpConnectionService>*> conn, IService &isvc);
+        void removeDependencyInstance(Ichor::ScopedServiceProxy<Ichor::v1::IClientFactory<Ichor::v1::IHttpConnectionService>*> conn, IService &isvc);
 
         friend DependencyRegister;
 
-        Ichor::v1::ILogger *_logger{};
-        Ichor::v1::IHttpConnectionService* _mainConn{};
-        Ichor::v1::IClientFactory<Ichor::v1::IHttpConnectionService> *_clientFactory{};
+        Ichor::ScopedServiceProxy<Ichor::v1::ILogger*> _logger {};
+        Ichor::ScopedServiceProxy<Ichor::v1::IHttpConnectionService*> _mainConn {};
+        Ichor::ScopedServiceProxy<Ichor::v1::IClientFactory<Ichor::v1::IHttpConnectionService>*> _clientFactory {};
         std::stack<ConnRequest> _connRequests{};
         tl::optional<std::string> _auth;
     };

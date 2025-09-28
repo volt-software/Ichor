@@ -3,6 +3,7 @@
 #include <ichor/services/timer/ITimerFactory.h>
 #include <ichor/dependency_management/AdvancedService.h>
 #include "AwaitService.h"
+#include <ichor/ServiceExecutionScope.h>
 
 using namespace Ichor;
 using namespace Ichor::v1;
@@ -36,25 +37,25 @@ public:
         co_return;
     }
 
-    void addDependencyInstance(IAwaitService &svc, IService&) {
-        _awaitSvc = &svc;
+    void addDependencyInstance(Ichor::ScopedServiceProxy<IAwaitService*> svc, IService&) {
+        _awaitSvc = std::move(svc);
     }
 
-    void removeDependencyInstance(IAwaitService&, IService&) {
-        _awaitSvc = nullptr;
+    void removeDependencyInstance(Ichor::ScopedServiceProxy<IAwaitService*>, IService&) {
+        _awaitSvc.reset();
     }
 
-    void addDependencyInstance(ITimerFactory &factory, IService &) {
-        _timerFactory = &factory;
+    void addDependencyInstance(Ichor::ScopedServiceProxy<ITimerFactory*> factory, IService &) {
+        _timerFactory = std::move(factory);
     }
 
-    void removeDependencyInstance(ITimerFactory &factory, IService&) {
-        _timerFactory = nullptr;
+    void removeDependencyInstance(Ichor::ScopedServiceProxy<ITimerFactory*> factory, IService&) {
+        _timerFactory.reset();
     }
 
 private:
-    IAwaitService* _awaitSvc{};
-    ITimerFactory *_timerFactory{};
+    Ichor::ScopedServiceProxy<IAwaitService*> _awaitSvc {};
+    Ichor::ScopedServiceProxy<ITimerFactory*> _timerFactory {};
 
     friend DependencyRegister;
 };

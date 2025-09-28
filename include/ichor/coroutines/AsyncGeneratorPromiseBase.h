@@ -16,9 +16,10 @@
 #include <utility>
 #include <ichor/Defines.h>
 #include <ichor/Enums.h>
-#include <ichor/Common.h>
+// #include <ichor/Common.h>
 #include <ichor/stl/ReferenceCountedPointer.h>
 #include <ichor/stl/CompilerSpecific.h>
+#include <ichor/ServiceExecutionScope.h>
 
 namespace Ichor {
     template<typename T>
@@ -145,12 +146,12 @@ namespace Ichor::Detail {
             _priority = priority;
         }
 
-        [[nodiscard]] constexpr ServiceIdType get_service_id() const noexcept {
-            return _svcId;
+        [[nodiscard]] constexpr const std::vector<ServiceExecutionScopeContents> &get_service_id_stack() const noexcept {
+            return _svcIdStack;
         }
 
-        constexpr void set_service_id(ServiceIdType svcId) noexcept {
-            _svcId = svcId;
+        constexpr void set_service_id_stack(std::vector<ServiceExecutionScopeContents> svcIdStack) noexcept {
+            _svcIdStack = std::move(svcIdStack);
         }
 
     protected:
@@ -169,7 +170,7 @@ namespace Ichor::Detail {
         std::coroutine_handle<> _consumerCoroutine;
         uint64_t _id;
         uint64_t _priority{100}; // TODO: use INTERNAL_DEPENDENCY_EVENT_PRIORITY by refactoring headers
-        ServiceIdType _svcId{};
+        std::vector<ServiceExecutionScopeContents> _svcIdStack{};
 #ifdef ICHOR_USE_HARDENING
         DependencyManager *_dmAtTimeOfCreation{_local_dm};
 #endif

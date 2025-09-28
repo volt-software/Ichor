@@ -12,6 +12,7 @@
 #include <unistd.h>
 #include <netdb.h>
 #include <fcntl.h>
+#include <ichor/ServiceExecutionScope.h>
 
 Ichor::v1::TcpHostService::TcpHostService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)), _socket(-1), _bindFd(), _priority(INTERNAL_EVENT_PRIORITY), _quit() {
     reg.registerDependency<ILogger>(this, DependencyFlags::REQUIRED);
@@ -101,19 +102,19 @@ Ichor::Task<void> Ichor::v1::TcpHostService::stop() {
     co_return;
 }
 
-void Ichor::v1::TcpHostService::addDependencyInstance(ILogger &logger, IService &) {
-    _logger = &logger;
+void Ichor::v1::TcpHostService::addDependencyInstance(Ichor::ScopedServiceProxy<ILogger*> logger, IService &) {
+    _logger = std::move(logger);
 }
 
-void Ichor::v1::TcpHostService::removeDependencyInstance(ILogger &, IService&) {
+void Ichor::v1::TcpHostService::removeDependencyInstance(Ichor::ScopedServiceProxy<ILogger*>, IService&) {
     _logger = nullptr;
 }
 
-void Ichor::v1::TcpHostService::addDependencyInstance(ITimerFactory &timerFactory, IService &) {
-    _timerFactory = &timerFactory;
+void Ichor::v1::TcpHostService::addDependencyInstance(Ichor::ScopedServiceProxy<ITimerFactory*> timerFactory, IService &) {
+    _timerFactory = std::move(timerFactory);
 }
 
-void Ichor::v1::TcpHostService::removeDependencyInstance(ITimerFactory &, IService&) {
+void Ichor::v1::TcpHostService::removeDependencyInstance(Ichor::ScopedServiceProxy<ITimerFactory*>, IService&) {
     _timerFactory = nullptr;
 }
 

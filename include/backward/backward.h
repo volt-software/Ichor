@@ -4183,7 +4183,7 @@ public:
             _stack_content.reset(static_cast<char *>(malloc(stack_size)));
             if (_stack_content) {
                 stack_t ss;
-                ss.ss_sp = _stack_content.get();
+                ss.ss_sp = std::move(_stack_content);
                 ss.ss_size = stack_size;
                 ss.ss_flags = 0;
                 if (sigaltstack(&ss, nullptr) < 0) {

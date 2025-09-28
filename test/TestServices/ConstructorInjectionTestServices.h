@@ -11,7 +11,7 @@ struct IConstructorInjectionTestService {
 };
 
 struct ConstructorInjectionTestService final : public IConstructorInjectionTestService {
-    ConstructorInjectionTestService(IEventQueue *q, ILogger *logSvc, ICountService *countSvc, IService *self) {
+    ConstructorInjectionTestService(IEventQueue *q, ScopedServiceProxy<ILogger> logSvc, ScopedServiceProxy<ICountService> countSvc, IService *self) {
         if(q == nullptr) {
             std::terminate();
         }

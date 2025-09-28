@@ -2,6 +2,7 @@
 
 #include <ichor/dependency_management/AdvancedService.h>
 #include "UselessService.h"
+#include <ichor/ServiceExecutionScope.h>
 
 extern std::unique_ptr<Ichor::AsyncManualResetEvent> _evt;
 
@@ -25,7 +26,7 @@ namespace Ichor {
             co_return;
         }
 
-        void addDependencyInstance(IUselessService&, IService &svc) {
+        void addDependencyInstance(Ichor::ScopedServiceProxy<IUselessService*>, IService &svc) {
             GetThreadLocalEventQueue().pushEvent<StopServiceEvent>(getServiceId(), svc.getServiceId());
             if(getServiceState() != ServiceState::INSTALLED) {
                 fmt::print("addDependencyInstance {}\n", getServiceState());
@@ -33,7 +34,7 @@ namespace Ichor {
             }
         }
 
-        void removeDependencyInstance(IUselessService&, IService&) {
+        void removeDependencyInstance(Ichor::ScopedServiceProxy<IUselessService*>, IService&) {
             if(getServiceState() != ServiceState::INSTALLED) {
                 fmt::print("removeDependencyInstance {}\n", getServiceState());
                 std::terminate();

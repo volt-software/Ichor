@@ -3,6 +3,7 @@
 #include <ichor/dependency_management/AdvancedService.h>
 #include <ichor/services/etcd/IEtcdV3.h>
 #include <ichor/events/RunFunctionEvent.h>
+#include <ichor/ServiceExecutionScope.h>
 
 using namespace Ichor::v1;
 
@@ -27,20 +28,20 @@ namespace Ichor {
             co_return {};
         }
 
-        void addDependencyInstance(Etcdv3::v1::IEtcd &Etcd, IService&) {
-            _etcd = &Etcd;
+        void addDependencyInstance(Ichor::ScopedServiceProxy<Etcdv3::v1::IEtcd*> Etcd, IService&) {
+            _etcd = std::move(Etcd);
         }
 
-        void removeDependencyInstance(Etcdv3::v1::IEtcd&, IService&) {
-            _etcd = nullptr;
+        void removeDependencyInstance(Ichor::ScopedServiceProxy<Etcdv3::v1::IEtcd*>, IService&) {
+            _etcd.reset();
         }
 
-        void addDependencyInstance(ILogger &logger, IService&) {
-            _logger = &logger;
+        void addDependencyInstance(Ichor::ScopedServiceProxy<ILogger*> logger, IService&) {
+            _logger = std::move(logger);
         }
 
-        void removeDependencyInstance(ILogger &, IService&) {
-            _logger = nullptr;
+        void removeDependencyInstance(Ichor::ScopedServiceProxy<ILogger*>, IService&) {
+            _logger.reset();
         }
 
         Task<void> put_get_delete_test() const {
@@ -499,8 +500,8 @@ namespace Ichor {
             }
         }
 
-        Etcdv3::v1::IEtcd *_etcd;
-        ILogger *_logger{};
+        Ichor::ScopedServiceProxy<Etcdv3::v1::IEtcd*> _etcd ;
+        Ichor::ScopedServiceProxy<ILogger*> _logger {};
         Version _v{};
     };
 }

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "UselessService.h"
+#include <ichor/ServiceExecutionScope.h>
 
 using namespace Ichor;
 using namespace Ichor::v1;
@@ -15,9 +16,9 @@ struct QuitOnStartWithDependenciesService final : public AdvancedService<QuitOnS
         co_return {};
     }
 
-    void addDependencyInstance(IUselessService&, IService&) {
+    void addDependencyInstance(Ichor::ScopedServiceProxy<IUselessService*>, IService&) {
     }
 
-    void removeDependencyInstance(IUselessService&, IService&) {
+    void removeDependencyInstance(Ichor::ScopedServiceProxy<IUselessService*>, IService&) {
     }
 };

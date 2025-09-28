@@ -4,6 +4,7 @@
 #include <ichor/services/network/http/HttpScopeGuards.h>
 #include <ichor/ScopeGuard.h>
 #include <fmt/format.h>
+#include <ichor/ServiceExecutionScope.h>
 
 Ichor::Boost::v1::HttpConnectionService::HttpConnectionService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {
     reg.registerDependency<Ichor::v1::ILogger>(this, DependencyFlags::REQUIRED);
@@ -83,19 +84,19 @@ Ichor::Task<void> Ichor::Boost::v1::HttpConnectionService::stop() {
     co_return;
 }
 
-void Ichor::Boost::v1::HttpConnectionService::addDependencyInstance(Ichor::v1::ILogger &logger, IService &) {
-    _logger = &logger;
+void Ichor::Boost::v1::HttpConnectionService::addDependencyInstance(Ichor::ScopedServiceProxy<Ichor::v1::ILogger*> logger, IService &) {
+    _logger = std::move(logger);
 }
 
-void Ichor::Boost::v1::HttpConnectionService::removeDependencyInstance(Ichor::v1::ILogger &logger, IService&) {
+void Ichor::Boost::v1::HttpConnectionService::removeDependencyInstance(Ichor::ScopedServiceProxy<Ichor::v1::ILogger*> logger, IService&) {
     _logger = nullptr;
 }
 
-void Ichor::Boost::v1::HttpConnectionService::addDependencyInstance(IBoostAsioQueue &q, IService&) {
-    _queue = &q;
+void Ichor::Boost::v1::HttpConnectionService::addDependencyInstance(Ichor::ScopedServiceProxy<IBoostAsioQueue*> q, IService&) {
+    _queue = std::move(q);
 }
 
-void Ichor::Boost::v1::HttpConnectionService::removeDependencyInstance(IBoostAsioQueue&, IService&) {
+void Ichor::Boost::v1::HttpConnectionService::removeDependencyInstance(Ichor::ScopedServiceProxy<IBoostAsioQueue*>, IService&) {
     _queue = nullptr;
 }
 

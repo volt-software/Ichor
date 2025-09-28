@@ -3,6 +3,7 @@
 #include <spdlog/spdlog.h>
 #include <ichor/dependency_management/DependencyRegister.h>
 #include <ichor/services/logging/SpdlogLogger.h>
+#include <ichor/ServiceExecutionScope.h>
 
 Ichor::v1::SpdlogLogger::SpdlogLogger(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {
     reg.registerDependency<ISpdlogSharedService>(this, DependencyFlags::REQUIRED);
@@ -117,11 +118,11 @@ Ichor::Task<void> Ichor::v1::SpdlogLogger::stop() {
     co_return;
 }
 
-void Ichor::v1::SpdlogLogger::addDependencyInstance(ISpdlogSharedService &shared, IService&) noexcept {
-    _sharedService = &shared;
+void Ichor::v1::SpdlogLogger::addDependencyInstance(Ichor::ScopedServiceProxy<ISpdlogSharedService*> shared, IService&) noexcept {
+    _sharedService = std::move(shared);
 }
 
-void Ichor::v1::SpdlogLogger::removeDependencyInstance(ISpdlogSharedService&, IService&) noexcept {
+void Ichor::v1::SpdlogLogger::removeDependencyInstance(Ichor::ScopedServiceProxy<ISpdlogSharedService*>, IService&) noexcept {
     _sharedService = nullptr;
 }
 

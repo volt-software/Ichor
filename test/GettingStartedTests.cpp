@@ -10,27 +10,28 @@
 #include <ichor/events/RunFunctionEvent.h>
 #include <iostream>
 #include <thread>
+#include <ichor/ServiceExecutionScope.h>
 
 using namespace Ichor;
 
 struct IMyService {}; // the interface
 
-struct MyService final : public IMyService, public Ichor::AdvancedService<MyService> {
+struct MyService final : public IMyService, public AdvancedService<MyService> {
     MyService() = default;
 }; // a minimal implementation
 
 struct IMyDependencyService {};
 
-struct MyDependencyService final : public IMyDependencyService, public Ichor::AdvancedService<MyDependencyService> {
-    MyDependencyService(Ichor::DependencyRegister &reg, Ichor::Properties props) : Ichor::AdvancedService<MyDependencyService>(std::move(props)) {
+struct MyDependencyService final : public IMyDependencyService, public AdvancedService<MyDependencyService> {
+    MyDependencyService(DependencyRegister &reg, Properties props) : AdvancedService<MyDependencyService>(std::move(props)) {
         reg.registerDependency<IMyService>(this, DependencyFlags::REQUIRED);
     }
     ~MyDependencyService() final = default;
 
-    void addDependencyInstance(IMyService&, Ichor::IService&) {
+    void addDependencyInstance(ScopedServiceProxy<IMyService*>, IService&) {
         std::cout << "Got MyService!" << std::endl;
     }
-    void removeDependencyInstance(IMyService&, Ichor::IService&) {
+    void removeDependencyInstance(ScopedServiceProxy<IMyService*>, IService&) {
         std::cout << "Removed MyService!" << std::endl;
     }
 };
@@ -38,7 +39,7 @@ struct MyDependencyService final : public IMyDependencyService, public Ichor::Ad
 struct IMyTimerService {};
 
 struct MyTimerService final : public IMyTimerService {
-    MyTimerService(ITimerFactory *factory) {
+    MyTimerService(ScopedServiceProxy<ITimerFactory> factory) {
         auto timer = factory->createTimer();
         timer.setChronoInterval(std::chrono::seconds(1));
         timer.setCallback([]() {
@@ -47,7 +48,7 @@ struct MyTimerService final : public IMyTimerService {
         timer.startTimer();
     }
 
-    Ichor::EventHandlerRegistration _timerEventRegistration{};
+    EventHandlerRegistration _timerEventRegistration{};
 };
 
 int example() {
@@ -61,13 +62,13 @@ int example() {
     return 0;
 }
 
-struct ServiceWithoutInterface final : public Ichor::AdvancedService<ServiceWithoutInterface> {
+struct ServiceWithoutInterface final : public AdvancedService<ServiceWithoutInterface> {
     ServiceWithoutInterface() = default;
 };
 
-struct MyInterceptorService final : public Ichor::AdvancedService<MyInterceptorService> {
-    Task<tl::expected<void, Ichor::StartError>> start() final {
-        _interceptor = GetThreadLocalManager().template registerEventInterceptor<Ichor::RunFunctionEventAsync>(this, this); // Can change TimerEvent to just Event if you want to intercept *all* events
+struct MyInterceptorService final : public AdvancedService<MyInterceptorService> {
+    Task<tl::expected<void, StartError>> start() final {
+        _interceptor = GetThreadLocalManager().template registerEventInterceptor<RunFunctionEventAsync>(this, this); // Can change TimerEvent to just Event if you want to intercept *all* events
         co_return {};
     }
 
@@ -76,19 +77,19 @@ struct MyInterceptorService final : public Ichor::AdvancedService<MyInterceptorS
         co_return;
     }
 
-    bool preInterceptEvent(Ichor::RunFunctionEventAsync const &) {
+    bool preInterceptEvent(RunFunctionEventAsync const &) {
         return AllowOthersHandling; //PreventOthersHandling if this event should be discarded
     }
 
-    void postInterceptEvent(Ichor::RunFunctionEventAsync const &, bool processed) {
+    void postInterceptEvent(RunFunctionEventAsync const &, bool processed) {
         // Can use this to track how long the processing took
     }
 
-    Ichor::EventInterceptorRegistration _interceptor{};
+    EventInterceptorRegistration _interceptor{};
 };
 
 int communication() {
-    Ichor::CommunicationChannel channel{};
+    CommunicationChannel channel{};
     auto queueOne = std::make_unique<PriorityQueue>();
     auto &dmOne = queueOne->createManager(); // ID = 0
     auto queueTwo = std::make_unique<PriorityQueue>();

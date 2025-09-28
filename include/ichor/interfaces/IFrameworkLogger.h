@@ -1,7 +1,7 @@
 #pragma once
 
 #include <fmt/base.h>
-#include <ichor/Common.h>
+#include <ichor/Defines.h>
 #include <ichor/Enums.h>
 
 #ifndef ICHOR_REMOVE_SOURCE_NAMES_FROM_LOGGING
@@ -45,7 +45,7 @@ namespace Ichor {
 #define ICHOR_LOG_WARN(logger, str, ...) { if(logger != nullptr && logger->getLogLevel() <= Ichor::LogLevel::LOG_WARN) logger->warn(nullptr, 0, nullptr, str, make_args(__VA_ARGS__)); }; static_assert(true, "")
 #define ICHOR_LOG_ERROR(logger, str, ...) { if(logger != nullptr) logger->error(nullptr, 0, nullptr, str, make_args(__VA_ARGS__)); }; static_assert(true, "")
 
-#define ICHOR_EMERGENCY_LOG1(logger, str, ...) { if(logger != nullptr) { logger->error(nullptr, 0, nullptr, str, make_args()); } fmt::println(str); }; static_assert(true, "")
+#define ICHOR_EMERGENCY_LOG1(logger, str) { if(logger != nullptr) { logger->error(nullptr, 0, nullptr, str, make_args()); } fmt::println(str); }; static_assert(true, "")
 #define ICHOR_EMERGENCY_LOG2(logger, str, ...) { if(logger != nullptr) { logger->error(nullptr, 0, nullptr, str, make_args(__VA_ARGS__)); } fmt::println(str, __VA_ARGS__); }; static_assert(true, "")
 #endif
 

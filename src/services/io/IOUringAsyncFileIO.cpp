@@ -3,6 +3,7 @@
 #include <ichor/ichor_liburing.h>
 #include <fcntl.h>
 #include <sys/stat.h>
+#include <ichor/ServiceExecutionScope.h>
 
 
 Ichor::v1::IOUringAsyncFileIO::IOUringAsyncFileIO(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {
@@ -24,19 +25,19 @@ Ichor::Task<void> Ichor::v1::IOUringAsyncFileIO::stop() {
     co_return;
 }
 
-void Ichor::v1::IOUringAsyncFileIO::addDependencyInstance(IIOUringQueue &q, IService&) noexcept {
-    _q = &q;
+void Ichor::v1::IOUringAsyncFileIO::addDependencyInstance(Ichor::ScopedServiceProxy<IIOUringQueue*> q, IService&) noexcept {
+    _q = std::move(q);
 }
 
-void Ichor::v1::IOUringAsyncFileIO::removeDependencyInstance(IIOUringQueue&, IService&) noexcept {
+void Ichor::v1::IOUringAsyncFileIO::removeDependencyInstance(Ichor::ScopedServiceProxy<IIOUringQueue*>, IService&) noexcept {
     _q = nullptr;
 }
 
-void Ichor::v1::IOUringAsyncFileIO::addDependencyInstance(ILogger &logger, IService&) noexcept {
-    _logger = &logger;
+void Ichor::v1::IOUringAsyncFileIO::addDependencyInstance(Ichor::ScopedServiceProxy<ILogger*> logger, IService&) noexcept {
+    _logger = std::move(logger);
 }
 
-void Ichor::v1::IOUringAsyncFileIO::removeDependencyInstance(ILogger&, IService&) noexcept {
+void Ichor::v1::IOUringAsyncFileIO::removeDependencyInstance(Ichor::ScopedServiceProxy<ILogger*>, IService&) noexcept {
     _logger = nullptr;
 }
 

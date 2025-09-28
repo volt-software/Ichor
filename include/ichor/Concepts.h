@@ -3,7 +3,9 @@
 #include <ichor/Common.h>
 #include <ichor/events/InternalEvents.h>
 #include <ichor/stl/NeverAlwaysNull.h>
+#include <ichor/ServiceExecutionScope.h>
 #include <concepts>
+#include <utility>
 
 #include "Concepts.h"
 
@@ -60,9 +62,9 @@ namespace Ichor {
     };
 
     template <class ImplT, class Interface>
-    concept ImplementsDependencyInjection = requires(ImplT impl, Interface& svc, IService& isvc) {
-        { impl.addDependencyInstance(svc, isvc) } -> std::same_as<void>;
-        { impl.removeDependencyInstance(svc, isvc) } -> std::same_as<void>;
+    concept ImplementsDependencyInjection = requires(ImplT impl, ScopedServiceProxy<Interface*> proxy, IService& isvc) {
+        { impl.addDependencyInstance(std::move(proxy), isvc) } -> std::same_as<void>;
+        { impl.removeDependencyInstance(std::move(proxy), isvc) } -> std::same_as<void>;
     };
 
     template <class ImplT, class EventT>

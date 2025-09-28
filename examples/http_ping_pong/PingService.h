@@ -11,6 +11,7 @@
 #include <ichor/dependency_management/DependencyRegister.h>
 #include <ichor/services/serialization/ISerializer.h>
 #include "PingMsg.h"
+#include <ichor/ServiceExecutionScope.h>
 
 using namespace Ichor;
 using namespace Ichor::v1;
@@ -65,39 +66,39 @@ private:
         co_return;
     }
 
-    void addDependencyInstance(ILogger &logger, IService &) {
-        _logger = &logger;
+    void addDependencyInstance(Ichor::ScopedServiceProxy<ILogger*> logger, IService &) {
+        _logger = std::move(logger);
     }
 
-    void removeDependencyInstance(ILogger&, IService&) {
-        _logger = nullptr;
+    void removeDependencyInstance(Ichor::ScopedServiceProxy<ILogger*>, IService&) {
+        _logger.reset();
     }
 
-    void addDependencyInstance(ISerializer<PingMsg> &serializer, IService&) {
-        _serializer = &serializer;
+    void addDependencyInstance(Ichor::ScopedServiceProxy<ISerializer<PingMsg>*> serializer, IService&) {
+        _serializer = std::move(serializer);
         ICHOR_LOG_INFO(_logger, "Inserted serializer");
     }
 
-    void removeDependencyInstance(ISerializer<PingMsg>&, IService&) {
+    void removeDependencyInstance(Ichor::ScopedServiceProxy<ISerializer<PingMsg>*>, IService&) {
         _serializer = nullptr;
         ICHOR_LOG_INFO(_logger, "Removed serializer");
     }
 
-    void addDependencyInstance(IHttpConnectionService &connectionService, IService&) {
-        _connectionService = &connectionService;
+    void addDependencyInstance(Ichor::ScopedServiceProxy<IHttpConnectionService*> connectionService, IService&) {
+        _connectionService = std::move(connectionService);
         ICHOR_LOG_INFO(_logger, "Inserted IHttpConnectionService");
     }
 
-    void removeDependencyInstance(IHttpConnectionService&, IService&) {
+    void removeDependencyInstance(Ichor::ScopedServiceProxy<IHttpConnectionService*>, IService&) {
         ICHOR_LOG_INFO(_logger, "Removed IHttpConnectionService");
     }
 
-    void addDependencyInstance(ITimerFactory &factory, IService &) {
-        _timerFactory = &factory;
+    void addDependencyInstance(Ichor::ScopedServiceProxy<ITimerFactory*> factory, IService &) {
+        _timerFactory = std::move(factory);
     }
 
-    void removeDependencyInstance(ITimerFactory &factory, IService&) {
-        _timerFactory = nullptr;
+    void removeDependencyInstance(Ichor::ScopedServiceProxy<ITimerFactory*> factory, IService&) {
+        _timerFactory.reset();
     }
 
     friend DependencyRegister;
@@ -125,10 +126,10 @@ private:
         }
     }
 
-    ILogger *_logger{};
-    ITimerFactory *_timerFactory{};
-    ISerializer<PingMsg> *_serializer{};
-    IHttpConnectionService *_connectionService{};
+    Ichor::ScopedServiceProxy<ILogger*> _logger {};
+    Ichor::ScopedServiceProxy<ITimerFactory*> _timerFactory {};
+    Ichor::ScopedServiceProxy<ISerializer<PingMsg>*> _serializer {};
+    Ichor::ScopedServiceProxy<IHttpConnectionService*> _connectionService {};
     uint64_t _sequence{};
     uint64_t _failed{};
     std::chrono::milliseconds _timerTimeout{10ms};

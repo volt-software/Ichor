@@ -4,6 +4,7 @@
 #include <ichor/dependency_management/AdvancedService.h>
 #include <ichor/dependency_management/DependencyRegister.h>
 #include <ichor/event_queues/IEventQueue.h>
+#include <ichor/ServiceExecutionScope.h>
 #if defined(ICHOR_ENABLE_INTERNAL_DEBUGGING) || (defined(ICHOR_BUILDING_DEBUG) && (defined(__SANITIZE_ADDRESS__) || defined(__SANITIZE_THREAD__)))
 constexpr uint32_t SERVICES_COUNT = 100;
 #elif defined(__SANITIZE_ADDRESS__) || defined(__SANITIZE_THREAD__)
@@ -36,15 +37,15 @@ private:
         co_return;
     }
 
-    void addDependencyInstance(ILogger &logger, IService &) {
-        _logger = &logger;
+    void addDependencyInstance(Ichor::ScopedServiceProxy<ILogger*> logger, IService &) {
+        _logger = std::move(logger);
     }
 
-    void removeDependencyInstance(ILogger&, IService&) {
-        _logger = nullptr;
+    void removeDependencyInstance(Ichor::ScopedServiceProxy<ILogger*>, IService&) {
+        _logger.reset();
     }
 
     friend DependencyRegister;
 
-    ILogger *_logger{};
+    Ichor::ScopedServiceProxy<ILogger*> _logger {};
 };

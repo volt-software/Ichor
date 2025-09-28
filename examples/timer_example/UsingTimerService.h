@@ -9,7 +9,7 @@ using namespace Ichor::v1;
 
 class UsingTimerService final {
 public:
-    UsingTimerService(DependencyManager *dm, IService *self, ILogger *logger, ITimerFactory *timerFactory) : _dm(dm), _self(self), _logger(logger), _timer(timerFactory->createTimer()) {
+    UsingTimerService(DependencyManager *dm, IService *self, ScopedServiceProxy<ILogger> logger, ScopedServiceProxy<ITimerFactory> timerFactory) : _dm(dm), _self(self), _logger(logger), _timer(timerFactory->createTimer()) {
         ICHOR_LOG_INFO(_logger, "UsingTimerService started");
         _timer.setChronoInterval(std::chrono::milliseconds(50));
         _timer.setCallback([this]() {
@@ -33,7 +33,7 @@ private:
 
     DependencyManager *_dm{};
     IService *_self{};
-    ILogger *_logger{};
+    ScopedServiceProxy<ILogger> _logger{};
     TimerRef _timer;
     uint64_t _timerTriggerCount{0};
 };

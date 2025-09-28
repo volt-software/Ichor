@@ -4,7 +4,7 @@
 #include <ichor/stl/ConditionVariableAny.h>
 #include <ichor/stl/SectionalPriorityQueue.h>
 #include <ichor/event_queues/IEventQueue.h>
-#include <ichor/Common.h>
+#include <ichor/ConstevalHash.h>
 #include <atomic>
 
 namespace Ichor {

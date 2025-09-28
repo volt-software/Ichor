@@ -8,7 +8,7 @@ using namespace Ichor;
 
 class OtherService final {
 public:
-    OtherService(DependencyManager *dm, IService *self, ILogger *logger) : _dm(dm), _self(self), _logger(logger) {
+    OtherService(DependencyManager *dm, IService *self, ScopedServiceProxy<ILogger> logger) : _dm(dm), _self(self), _logger(logger) {
         ICHOR_LOG_INFO(_logger, "OtherService started with dependency");
         _customEventHandler = dm->registerEventHandler<CustomEvent, OtherService>(this, self);
     }
@@ -26,6 +26,6 @@ public:
 private:
     DependencyManager *_dm{};
     IService *_self{};
-    ILogger *_logger{};
+    ScopedServiceProxy<ILogger> _logger{};
     EventHandlerRegistration _customEventHandler{};
 };

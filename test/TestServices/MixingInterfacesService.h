@@ -2,6 +2,7 @@
 
 #include <variant>
 #include <ichor/dependency_management/AdvancedService.h>
+#include <ichor/ServiceExecutionScope.h>
 
 using namespace Ichor;
 
@@ -52,7 +53,7 @@ struct MixServiceSix final : public IMixOne, public AdvancedService<MixServiceSi
 
 struct Handle {
     IService *isvc{};
-    std::variant<IMixOne*, IMixTwo*> iface{};
+    std::variant<Ichor::ScopedServiceProxy<IMixOne*>, Ichor::ScopedServiceProxy<IMixTwo*>> iface{};
 };
 
 struct CheckMixService final : public ICountService, public AdvancedService<CheckMixService> {
@@ -61,8 +62,8 @@ struct CheckMixService final : public ICountService, public AdvancedService<Chec
         reg.registerDependency<IMixTwo>(this, DependencyFlags::ALLOW_MULTIPLE);
     }
 
-    static void check(IMixOne &one, IMixTwo &two) {
-        REQUIRE(one.one() != two.two());
+    static void check(Ichor::ScopedServiceProxy<IMixOne*> &one, Ichor::ScopedServiceProxy<IMixTwo*> &two) {
+        REQUIRE(one->one() != two->two());
     }
 
     void remove(IService &svc) {
@@ -71,7 +72,7 @@ struct CheckMixService final : public ICountService, public AdvancedService<Chec
         _services.erase(svc.getServiceId());
     }
 
-    void addDependencyInstance(IMixOne &svc, IService &isvc) {
+    void addDependencyInstance(Ichor::ScopedServiceProxy<IMixOne*> svc, IService &isvc) {
         svcCount++;
 
         auto existing = _services.find(isvc.getServiceId());
@@ -81,11 +82,11 @@ struct CheckMixService final : public ICountService, public AdvancedService<Chec
             REQUIRE(existing->second.isvc->getServicePriority() == isvc.getServicePriority());
             REQUIRE(existing->second.isvc == &isvc);
 
-            auto *existingMixTwo = std::get<IMixTwo*>(existing->second.iface);
+            auto existingMixTwo = std::get<Ichor::ScopedServiceProxy<IMixTwo*>>(existing->second.iface);
 
-            check(svc, *existingMixTwo);
+            check(svc, existingMixTwo);
         } else {
-            _services.emplace(isvc.getServiceId(), Handle{&isvc, &svc});
+            _services.emplace(isvc.getServiceId(), Handle{&isvc, svc});
         }
 
         if(svcCount == 12) {
@@ -93,11 +94,11 @@ struct CheckMixService final : public ICountService, public AdvancedService<Chec
         }
     }
 
-    void removeDependencyInstance(IMixOne&, IService &isvc) {
+    void removeDependencyInstance(Ichor::ScopedServiceProxy<IMixOne*>, IService &isvc) {
         remove(isvc);
     }
 
-    void addDependencyInstance(IMixTwo &svc, IService &isvc) {
+    void addDependencyInstance(Ichor::ScopedServiceProxy<IMixTwo*> svc, IService &isvc) {
         svcCount++;
 
         auto existing = _services.find(isvc.getServiceId());
@@ -107,11 +108,11 @@ struct CheckMixService final : public ICountService, public AdvancedService<Chec
             REQUIRE(existing->second.isvc->getServicePriority() == isvc.getServicePriority());
             REQUIRE(existing->second.isvc == &isvc);
 
-            auto *existingMixOne = std::get<IMixOne*>(existing->second.iface);
+            auto existingMixOne = std::get<Ichor::ScopedServiceProxy<IMixOne*>>(existing->second.iface);
 
-            check(*existingMixOne, svc);
+            check(existingMixOne, svc);
         } else {
-            _services.emplace(isvc.getServiceId(), Handle{&isvc, &svc});
+            _services.emplace(isvc.getServiceId(), Handle{&isvc, svc});
         }
 
         if(svcCount == 12) {
@@ -119,7 +120,7 @@ struct CheckMixService final : public ICountService, public AdvancedService<Chec
         }
     }
 
-    void removeDependencyInstance(IMixTwo&, IService &isvc) {
+    void removeDependencyInstance(Ichor::ScopedServiceProxy<IMixTwo*>, IService &isvc) {
         remove(isvc);
     }
 

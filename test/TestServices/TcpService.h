@@ -6,6 +6,7 @@
 #include <ichor/dependency_management/AdvancedService.h>
 #include <ichor/services/network/IConnectionService.h>
 #include <thread>
+#include <ichor/ServiceExecutionScope.h>
 
 using namespace Ichor;
 using namespace Ichor::v1;
@@ -31,13 +32,13 @@ public:
     }
     ~TcpService() final = default;
 
-    void addDependencyInstance(IConnectionService &connectionService, IService &svc) {
-        fmt::println("{} svc injected {} {} {} {} {}", getServiceId(), svc.getServiceId(), connectionService.isClient(), evtGate.load(std::memory_order_acquire), _clientService == nullptr, _hostService == nullptr);
-        if(connectionService.isClient()) {
-            _clientService = &connectionService;
+    void addDependencyInstance(Ichor::ScopedServiceProxy<IConnectionService*> connectionService, IService &svc) {
+        fmt::println("{} svc injected {} {} {} {} {}", getServiceId(), svc.getServiceId(), connectionService->isClient(), evtGate.load(std::memory_order_acquire), _clientService == nullptr, _hostService == nullptr);
+        if(connectionService->isClient()) {
+            _clientService = std::move(connectionService);
             _clientId = svc.getServiceId();
         } else {
-            _hostService = &connectionService;
+            _hostService = std::move(connectionService);
             _hostService->setReceiveHandler([this](std::span<uint8_t const> data) {
                 fmt::println("svc recv {}", data.size());
                 std::string_view fullMsg{reinterpret_cast<char const*>(data.data()), data.size()};
@@ -60,7 +61,7 @@ public:
         }
     }
 
-    void removeDependencyInstance(IConnectionService&, IService&) {
+    void removeDependencyInstance(Ichor::ScopedServiceProxy<IConnectionService*>, IService&) {
         evtGate.fetch_add(1, std::memory_order_acq_rel);
     }
 
@@ -92,8 +93,8 @@ public:
         return msgs;
     }
 
-    IConnectionService *_clientService{};
-    IConnectionService *_hostService{};
+    Ichor::ScopedServiceProxy<IConnectionService*> _clientService {};
+    Ichor::ScopedServiceProxy<IConnectionService*> _hostService {};
     std::vector<std::vector<uint8_t>> msgs;
     ServiceIdType _clientId{};
     ServiceIdType _hostId{};

@@ -9,6 +9,7 @@
 #include <boost/beast/ssl.hpp>
 #include <boost/asio/spawn.hpp>
 #include <boost/circular_buffer.hpp>
+#include <ichor/ServiceExecutionScope.h>
 
 namespace beast = boost::beast;         // from <boost/beast.hpp>
 namespace http = beast::http;           // from <boost/beast/http.hpp>
@@ -56,10 +57,10 @@ namespace Ichor::Boost::v1 {
         Task<tl::expected<void, Ichor::StartError>> start() final;
         Task<void> stop() final;
 
-        void addDependencyInstance(Ichor::v1::ILogger &logger, IService &);
-        void removeDependencyInstance(Ichor::v1::ILogger &logger, IService&);
-        void addDependencyInstance(IBoostAsioQueue &q, IService&);
-        void removeDependencyInstance(IBoostAsioQueue &q, IService&);
+        void addDependencyInstance(Ichor::ScopedServiceProxy<Ichor::v1::ILogger*> logger, IService &);
+        void removeDependencyInstance(Ichor::ScopedServiceProxy<Ichor::v1::ILogger*> logger, IService&);
+        void addDependencyInstance(Ichor::ScopedServiceProxy<IBoostAsioQueue*> q, IService&);
+        void removeDependencyInstance(Ichor::ScopedServiceProxy<IBoostAsioQueue*> q, IService&);
 
         void fail(beast::error_code, char const* what);
         void connect(tcp::endpoint endpoint, net::yield_context yield);
@@ -76,10 +77,10 @@ namespace Ichor::Boost::v1 {
         bool _tcpNoDelay{};
         bool _useSsl{};
         std::atomic<int64_t> _finishedListenAndRead{};
-        Ichor::v1::ILogger* _logger{};
+        Ichor::ScopedServiceProxy<Ichor::v1::ILogger*> _logger {};
         boost::circular_buffer<Detail::ConnectionOutboxMessage> _outbox{10};
         AsyncManualResetEvent _startStopEvent{};
-        IBoostAsioQueue *_queue;
+        Ichor::ScopedServiceProxy<IBoostAsioQueue*> _queue ;
         bool _debug{};
         uint64_t _tryConnectIntervalMs{100};
         uint64_t _timeoutMs{10'000};

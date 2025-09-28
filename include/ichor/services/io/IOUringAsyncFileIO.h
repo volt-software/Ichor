@@ -8,6 +8,7 @@
 #include <ichor/dependency_management/AdvancedService.h>
 #include <ichor/services/logging/Logger.h>
 #include <ichor/coroutines/AsyncManualResetEvent.h>
+#include <ichor/ServiceExecutionScope.h>
 
 struct io_uring;
 
@@ -22,10 +23,10 @@ namespace Ichor::v1 {
         Task<tl::expected<void, IOError>> writeFile(std::filesystem::path const &file, std::string_view contents) final;
         Task<tl::expected<void, IOError>> appendFile(std::filesystem::path const &file, std::string_view contents) final;
 
-        void addDependencyInstance(IIOUringQueue &, IService&) noexcept;
-        void removeDependencyInstance(IIOUringQueue &, IService&) noexcept;
-        void addDependencyInstance(ILogger &, IService&) noexcept;
-        void removeDependencyInstance(ILogger &, IService&) noexcept;
+        void addDependencyInstance(Ichor::ScopedServiceProxy<IIOUringQueue*>, IService&) noexcept;
+        void removeDependencyInstance(Ichor::ScopedServiceProxy<IIOUringQueue*>, IService&) noexcept;
+        void addDependencyInstance(Ichor::ScopedServiceProxy<ILogger*>, IService&) noexcept;
+        void removeDependencyInstance(Ichor::ScopedServiceProxy<ILogger*>, IService&) noexcept;
 
     private:
         Task<tl::expected<void, Ichor::StartError>> start() final;
@@ -37,8 +38,8 @@ namespace Ichor::v1 {
         std::function<void(io_uring_cqe*)> createNewEventHandlerCopyFileReadPart(AsyncManualResetEvent &evt, int &res, uint64_t &sizeLeft, uint64_t fileSize, int fromFd, int toFd, uint32_t maxSubmissions, uint64_t offset, char *buf, bool isLastInBatch);
         std::function<void(io_uring_cqe*)> createNewEventHandlerCopyFileWritePart(Ichor::AsyncManualResetEvent &evt, int &res, char *buf, bool isLastInBatch);
 
-        IIOUringQueue *_q{};
-        ILogger *_logger{};
+        Ichor::ScopedServiceProxy<IIOUringQueue*> _q {};
+        Ichor::ScopedServiceProxy<ILogger*> _logger {};
         uint32_t _bufferSize{64*1024};
         uint32_t _bufferBatchSize{64};
         bool _shouldStop{};

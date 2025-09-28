@@ -17,7 +17,7 @@ namespace Ichor::v1 {
         ///
         /// \param timerId unique identifier for timer
         /// \param svcId unique identifier for svc using this timer
-        IOUringTimer(IIOUringQueue& queue, uint64_t timerId, ServiceIdType svcId) noexcept;
+        IOUringTimer(Ichor::ScopedServiceProxy<IIOUringQueue*> queue, uint64_t timerId, ServiceIdType svcId) noexcept;
         IOUringTimer(IOUringTimer const &) = delete;
         IOUringTimer(IOUringTimer &&) noexcept = default;
 
@@ -66,7 +66,7 @@ namespace Ichor::v1 {
         template <typename TIMER, typename QUEUE>
         friend class TimerFactory;
 
-        NeverNull<IIOUringQueue*> _q;
+        Ichor::ScopedServiceProxy<IIOUringQueue*> _q;
         uint64_t _timerId{};
         TimerState _state{};
         bool _fireOnce{};

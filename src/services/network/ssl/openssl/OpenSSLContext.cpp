@@ -18,7 +18,7 @@ SSL_CTX* OpenSSLContext::getHandle() const {
     return static_cast<SSL_CTX *>(_ctx);
 }
 
-ILogger* OpenSSLContext::getLogger() const {
+Ichor::ScopedServiceProxy<ILogger*> OpenSSLContext::getLogger() const {
     return _svc.getLogger();
 }
 

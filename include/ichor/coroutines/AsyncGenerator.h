@@ -440,9 +440,14 @@ namespace Ichor {
             _coroutine.promise().set_priority(priority);
         }
 
-        ICHOR_COROUTINE_CONSTEXPR void set_service_id(ServiceIdType svcId) noexcept {
-            INTERNAL_COROUTINE_DEBUG("AsyncGenerator<{}>::set_service_id({}) {} {}", typeName<T>(), svcId, *_destroyed, _coroutine.promise()._state);
-            _coroutine.promise().set_service_id(svcId);
+        ICHOR_COROUTINE_CONSTEXPR const std::vector<ServiceExecutionScopeContents> &get_service_id_stack() noexcept final {
+            INTERNAL_COROUTINE_DEBUG("AsyncGenerator<{}>::set_service_id_stack() {} {}", typeName<T>(), *_destroyed, _coroutine.promise()._state);
+            return _coroutine.promise().get_service_id_stack();
+        }
+
+        ICHOR_COROUTINE_CONSTEXPR void set_service_id_stack(std::vector<ServiceExecutionScopeContents> svcIdStack) noexcept {
+            INTERNAL_COROUTINE_DEBUG("AsyncGenerator<{}>::set_service_id_stack({}) {} {}", typeName<T>(), svcIdStack[0], *_destroyed, _coroutine.promise()._state);
+            _coroutine.promise().set_service_id_stack(svcIdStack);
         }
 
     private:

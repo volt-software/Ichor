@@ -5,6 +5,7 @@
 #include <ichor/services/timer/IInternalTimerFactory.h>
 #include <iterator>
 #include <algorithm>
+#include <ichor/ServiceExecutionScope.h>
 
 namespace Ichor::v1 {
     extern std::atomic<uint64_t> _timerIdCounter;
@@ -41,7 +42,7 @@ namespace Ichor::v1 {
                 }
             }
             auto id = _timerIdCounter.fetch_add(1, std::memory_order_relaxed);
-            _timers.emplace_back(*_q, id, _requestingSvcId);
+            _timers.emplace_back(_q, id, _requestingSvcId);
             return TimerRef{*this, id};
         }
 
@@ -119,17 +120,17 @@ namespace Ichor::v1 {
             co_return;
         }
 
-        void addDependencyInstance(QUEUE &q, IService&) noexcept {
-            _q = &q;
+        void addDependencyInstance(Ichor::ScopedServiceProxy<QUEUE*> q, IService&) noexcept {
+            _q = std::move(q);
         }
 
-        void removeDependencyInstance(QUEUE&, IService&) noexcept {
-            _q = nullptr;
+        void removeDependencyInstance(Ichor::ScopedServiceProxy<QUEUE*>, IService&) noexcept {
+            _q.reset();
         }
 
         std::vector<TIMER> _timers;
         ServiceIdType _requestingSvcId{};
-        QUEUE *_q;
+        Ichor::ScopedServiceProxy<QUEUE*> _q;
         std::size_t _stoppedTimers{};
         AsyncManualResetEvent _quitEvt;
         bool _stoppingTimers{};

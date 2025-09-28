@@ -16,7 +16,7 @@ protected:
 
 class TimerRunsOnceService final : public ITimerRunsOnceService {
 public:
-    TimerRunsOnceService(ITimerFactory *factory) {
+    TimerRunsOnceService(ScopedServiceProxy<ITimerFactory> factory) {
         auto timer = factory->createTimer();
         timer.setChronoInterval(std::chrono::seconds(1));
         timer.setCallback([this, timer]() mutable {

@@ -2,6 +2,7 @@
 
 #include "UselessService.h"
 #include "ICountService.h"
+#include <ichor/ServiceExecutionScope.h>
 
 using namespace Ichor;
 using namespace Ichor::v1;
@@ -21,11 +22,11 @@ struct DependencyService final : public ICountService, public AdvancedService<De
         co_return;
     }
 
-    void addDependencyInstance(DependencyType&, IService&) {
+    void addDependencyInstance(Ichor::ScopedServiceProxy<DependencyType*>, IService&) {
         svcCount++;
     }
 
-    void removeDependencyInstance(DependencyType&, IService&) {
+    void removeDependencyInstance(Ichor::ScopedServiceProxy<DependencyType*>, IService&) {
         svcCount--;
     }
 

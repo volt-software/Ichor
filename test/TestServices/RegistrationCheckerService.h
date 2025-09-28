@@ -2,6 +2,7 @@
 
 #include "UselessService.h"
 #include <ichor/dependency_management/DependencyRegister.h>
+#include <ichor/ServiceExecutionScope.h>
 
 using namespace Ichor;
 using namespace Ichor::v1;
@@ -20,7 +21,7 @@ struct RegistrationCheckerService final : public AdvancedService<RegistrationChe
         co_return {};
     }
 
-    void addDependencyInstance(IUselessService&, IService&) {
+    void addDependencyInstance(Ichor::ScopedServiceProxy<IUselessService*>, IService&) {
         _depCount++;
 
         fmt::print("registrations requests: {}\n", _depCount);
@@ -30,7 +31,7 @@ struct RegistrationCheckerService final : public AdvancedService<RegistrationChe
         }
     }
 
-    void removeDependencyInstance(IUselessService&, IService&) {
+    void removeDependencyInstance(Ichor::ScopedServiceProxy<IUselessService*>, IService&) {
     }
 
     uint64_t _depCount{};

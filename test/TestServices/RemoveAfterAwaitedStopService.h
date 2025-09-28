@@ -3,6 +3,7 @@
 #include <ichor/dependency_management/AdvancedService.h>
 #include <ichor/events/RunFunctionEvent.h>
 #include "UselessService.h"
+#include <ichor/ServiceExecutionScope.h>
 
 using namespace Ichor::v1;
 
@@ -34,10 +35,10 @@ namespace Ichor {
 			co_return;
 		}
 
-		void addDependencyInstance(IUselessService&, IService &) {
+		void addDependencyInstance(Ichor::ScopedServiceProxy<IUselessService*>, IService &) {
 		}
 
-		void removeDependencyInstance(IUselessService&, IService&) {
+		void removeDependencyInstance(Ichor::ScopedServiceProxy<IUselessService*>, IService&) {
 		}
 
 		Ichor::AsyncManualResetEvent _evt;
@@ -62,11 +63,11 @@ namespace Ichor {
 			co_return;
 		}
 
-		void addDependencyInstance(IRemoveAfterAwaitedStopService&, IService &svc) {
+		void addDependencyInstance(Ichor::ScopedServiceProxy<IRemoveAfterAwaitedStopService*>, IService &svc) {
 			_svcId = svc.getServiceId();
 		}
 
-		void removeDependencyInstance(IRemoveAfterAwaitedStopService&, IService&) {
+		void removeDependencyInstance(Ichor::ScopedServiceProxy<IRemoveAfterAwaitedStopService*>, IService&) {
 		}
 
 		ServiceIdType _svcId{};

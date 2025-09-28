@@ -2,6 +2,7 @@
 
 #include "UselessService.h"
 #include <ichor/dependency_management/DependencyRegister.h>
+#include <ichor/ServiceExecutionScope.h>
 
 using namespace Ichor;
 using namespace Ichor::v1;
@@ -26,20 +27,20 @@ struct MultipleSeparateDependencyRequestsService final : public AdvancedService<
         co_return {};
     }
 
-    void addDependencyInstance(IUselessService&, IService&) {
+    void addDependencyInstance(Ichor::ScopedServiceProxy<IUselessService*>, IService&) {
         _depCount++;
 
         fmt::print("multiple requests: {}\n", _depCount);
     }
 
-    void removeDependencyInstance(IUselessService&, IService&) {
+    void removeDependencyInstance(Ichor::ScopedServiceProxy<IUselessService*>, IService&) {
     }
 
-    void addDependencyInstance(INotUsed&, IService&) {
+    void addDependencyInstance(Ichor::ScopedServiceProxy<INotUsed*>, IService&) {
         std::terminate();
     }
 
-    void removeDependencyInstance(INotUsed&, IService&) {
+    void removeDependencyInstance(Ichor::ScopedServiceProxy<INotUsed*>, IService&) {
         std::terminate();
     }
 

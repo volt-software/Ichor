@@ -1,5 +1,6 @@
 #include <ichor/services/network/http/HttpConnectionService.h>
 #include <ichor/stl/StringUtils.h>
+#include <ichor/ServiceExecutionScope.h>
 
 namespace {
     enum class ChunkParseStatus {
@@ -133,32 +134,32 @@ Ichor::Task<void> Ichor::v1::HttpConnectionService::stop() {
     co_return;
 }
 
-void Ichor::v1::HttpConnectionService::addDependencyInstance(ILogger &logger, IService &) {
-    _logger = &logger;
+void Ichor::v1::HttpConnectionService::addDependencyInstance(Ichor::ScopedServiceProxy<ILogger*> logger, IService &) {
+    _logger = std::move(logger);
     ICHOR_LOG_TRACE(_logger, "HttpConnection {} got logger", getServiceId());
 }
 
-void Ichor::v1::HttpConnectionService::removeDependencyInstance(ILogger &, IService &) {
+void Ichor::v1::HttpConnectionService::removeDependencyInstance(Ichor::ScopedServiceProxy<ILogger*>, IService &) {
     _logger = nullptr;
 }
 
-void Ichor::v1::HttpConnectionService::addDependencyInstance(IEventQueue &q, IService &) {
-    _queue = &q;
+void Ichor::v1::HttpConnectionService::addDependencyInstance(Ichor::ScopedServiceProxy<IEventQueue*> q, IService &) {
+    _queue = std::move(q);
     ICHOR_LOG_TRACE(_logger, "HttpConnection {} got queue", getServiceId());
 }
 
-void Ichor::v1::HttpConnectionService::removeDependencyInstance(IEventQueue &, IService &) {
+void Ichor::v1::HttpConnectionService::removeDependencyInstance(Ichor::ScopedServiceProxy<IEventQueue*>, IService &) {
     _queue = nullptr;
 }
 
-void Ichor::v1::HttpConnectionService::addDependencyInstance(IClientConnectionService &client, IService &s) {
+void Ichor::v1::HttpConnectionService::addDependencyInstance(Ichor::ScopedServiceProxy<IClientConnectionService*> client, IService &s) {
     ICHOR_LOG_TRACE(_logger, "HttpConnection {} got connection {}", getServiceId(), s.getServiceId());
-    if(!client.isClient()) {
+    if(!client->isClient()) {
         ICHOR_LOG_TRACE(_logger, "connection {} is not a client connection", s.getServiceId());
         return;
     }
 
-    _connection = &client;
+    _connection = std::move(client);
     _connection->setReceiveHandler([this](std::span<uint8_t const> buffer) {
         std::string_view msg{reinterpret_cast<char const*>(buffer.data()), buffer.size()};
         _buffer.append(msg.data(), msg.size());
@@ -234,8 +235,8 @@ void Ichor::v1::HttpConnectionService::addDependencyInstance(IClientConnectionSe
     });
 }
 
-void Ichor::v1::HttpConnectionService::removeDependencyInstance(IClientConnectionService &client, IService &) {
-    if(&client != _connection) {
+void Ichor::v1::HttpConnectionService::removeDependencyInstance(Ichor::ScopedServiceProxy<IClientConnectionService*> client, IService &) {
+    if(client != _connection) {
         return;
     }
 

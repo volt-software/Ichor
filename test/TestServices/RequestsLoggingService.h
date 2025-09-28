@@ -2,6 +2,7 @@
 
 #include <ichor/dependency_management/AdvancedService.h>
 #include <ichor/services/logging/Logger.h>
+#include <ichor/ServiceExecutionScope.h>
 
 namespace Ichor {
     struct IRequestsLoggingService {
@@ -14,10 +15,10 @@ namespace Ichor {
 
         ~RequestsLoggingService() = default;
 
-        void addDependencyInstance(ILogger&, IService&) {
+        void addDependencyInstance(Ichor::ScopedServiceProxy<ILogger*>, IService&) {
         }
 
-        void removeDependencyInstance(ILogger&, IService&) {
+        void removeDependencyInstance(Ichor::ScopedServiceProxy<ILogger*>, IService&) {
         }
     };
 }

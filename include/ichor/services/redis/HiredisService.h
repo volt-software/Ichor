@@ -7,6 +7,7 @@
 #include <ichor/services/timer/ITimerFactory.h>
 #include <ichor/stl/StringUtils.h>
 #include <hiredis/hiredis.h>
+#include <ichor/ServiceExecutionScope.h>
 
 namespace Ichor::v1 {
     /**
@@ -54,25 +55,25 @@ namespace Ichor::v1 {
         Task<tl::expected<void, Ichor::StartError>> start() final;
         Task<void> stop() final;
 
-        void addDependencyInstance(ILogger &logger, IService&);
-        void removeDependencyInstance(ILogger &logger, IService&);
+        void addDependencyInstance(Ichor::ScopedServiceProxy<ILogger*> logger, IService&);
+        void removeDependencyInstance(Ichor::ScopedServiceProxy<ILogger*> logger, IService&);
 
-        void addDependencyInstance(ITimerFactory &logger, IService&);
-        void removeDependencyInstance(ITimerFactory &logger, IService&);
+        void addDependencyInstance(Ichor::ScopedServiceProxy<ITimerFactory*> logger, IService&);
+        void removeDependencyInstance(Ichor::ScopedServiceProxy<ITimerFactory*> logger, IService&);
 
-        void addDependencyInstance(IEventQueue &queue, IService&);
-        void removeDependencyInstance(IEventQueue &queue, IService&);
+        void addDependencyInstance(Ichor::ScopedServiceProxy<IEventQueue*> queue, IService&);
+        void removeDependencyInstance(Ichor::ScopedServiceProxy<IEventQueue*> queue, IService&);
 
         tl::expected<void, Ichor::StartError> connect(std::string const &addr, uint16_t port);
 
         friend DependencyRegister;
 
-        ILogger *_logger{};
+        Ichor::ScopedServiceProxy<ILogger*> _logger {};
         redisAsyncContext *_redisContext{};
         AsyncManualResetEvent _startEvt{};
         AsyncManualResetEvent _disconnectEvt{};
-        ITimerFactory *_timerFactory{};
-        IEventQueue *_queue{};
+        Ichor::ScopedServiceProxy<ITimerFactory*> _timerFactory {};
+        Ichor::ScopedServiceProxy<IEventQueue*> _queue {};
         tl::optional<TimerRef> _timeoutTimer{};
         std::vector<NameHashType> _queuedResponseTypes{};
         bool _timeoutTimerRunning{};

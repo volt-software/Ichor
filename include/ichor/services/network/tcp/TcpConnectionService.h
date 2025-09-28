@@ -6,6 +6,7 @@
 #include <ichor/services/logging/Logger.h>
 #include <ichor/services/timer/ITimerFactory.h>
 #include <ichor/Concepts.h>
+#include <ichor/ServiceExecutionScope.h>
 
 namespace Ichor::v1 {
 
@@ -38,11 +39,11 @@ namespace Ichor::v1 {
         Task<tl::expected<void, Ichor::StartError>> start() final;
         Task<void> stop() final;
 
-        void addDependencyInstance(ILogger &logger, IService &isvc);
-        void removeDependencyInstance(ILogger &logger, IService &isvc);
+        void addDependencyInstance(Ichor::ScopedServiceProxy<ILogger*> logger, IService &isvc);
+        void removeDependencyInstance(Ichor::ScopedServiceProxy<ILogger*> logger, IService &isvc);
 
-        void addDependencyInstance(ITimerFactory &logger, IService &isvc);
-        void removeDependencyInstance(ITimerFactory &logger, IService &isvc);
+        void addDependencyInstance(Ichor::ScopedServiceProxy<ITimerFactory*> logger, IService &isvc);
+        void removeDependencyInstance(Ichor::ScopedServiceProxy<ITimerFactory*> logger, IService &isvc);
 
         void recvHandler();
 
@@ -53,8 +54,8 @@ namespace Ichor::v1 {
         uint64_t _priority;
         int64_t _sendTimeout{250'000};
         bool _quit;
-        ILogger *_logger{};
-        ITimerFactory *_timerFactory{};
+        Ichor::ScopedServiceProxy<ILogger*> _logger {};
+        Ichor::ScopedServiceProxy<ITimerFactory*> _timerFactory {};
         tl::optional<TimerRef> _timer{};
         std::vector<std::vector<uint8_t>> _queuedMessages{};
         std::function<void(std::span<uint8_t const>)> _recvHandler;

@@ -11,7 +11,7 @@ using namespace Ichor::v1;
 
 class OneService final {
 public:
-    OneService(DependencyManager *dm, IService *self, ILogger *logger) : _logger(logger) {
+    OneService(DependencyManager *dm, IService *self, ScopedServiceProxy<ILogger> logger) : _logger(logger) {
         ICHOR_LOG_INFO(_logger, "OneService started with dependency");
         // this component sometimes starts up before the other thread has started the OtherService
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
@@ -22,5 +22,5 @@ public:
     }
 
 private:
-    ILogger *_logger{};
+    ScopedServiceProxy<ILogger> _logger{};
 };

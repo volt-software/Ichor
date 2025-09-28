@@ -2,6 +2,7 @@
 
 #include <ichor/dependency_management/AdvancedService.h>
 #include "UselessService.h"
+#include <ichor/ServiceExecutionScope.h>
 
 namespace Ichor {
     struct IFailOnStartService {
@@ -45,11 +46,11 @@ namespace Ichor {
             co_return;
         }
 
-        void addDependencyInstance(IUselessService&, IService&) {
+        void addDependencyInstance(Ichor::ScopedServiceProxy<IUselessService*>, IService&) {
             svcCount++;
         }
 
-        void removeDependencyInstance(IUselessService&, IService&) {
+        void removeDependencyInstance(Ichor::ScopedServiceProxy<IUselessService*>, IService&) {
             svcCount--;
         }
 

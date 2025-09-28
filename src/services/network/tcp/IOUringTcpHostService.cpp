@@ -10,6 +10,7 @@
 #include <unistd.h>
 #include <netdb.h>
 #include <ichor/ichor_liburing.h>
+#include <ichor/ServiceExecutionScope.h>
 
 Ichor::v1::IOUringTcpHostService::IOUringTcpHostService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)), _socket(-1), _bindFd(), _priority(INTERNAL_EVENT_PRIORITY), _quit() {
     reg.registerDependency<ILogger>(this, DependencyFlags::REQUIRED);
@@ -198,19 +199,19 @@ Ichor::Task<void> Ichor::v1::IOUringTcpHostService::stop() {
     co_return;
 }
 
-void Ichor::v1::IOUringTcpHostService::addDependencyInstance(ILogger &logger, IService &) noexcept {
-    _logger = &logger;
+void Ichor::v1::IOUringTcpHostService::addDependencyInstance(Ichor::ScopedServiceProxy<ILogger*> logger, IService &) noexcept {
+    _logger = std::move(logger);
 }
 
-void Ichor::v1::IOUringTcpHostService::removeDependencyInstance(ILogger &, IService&) noexcept {
+void Ichor::v1::IOUringTcpHostService::removeDependencyInstance(Ichor::ScopedServiceProxy<ILogger*>, IService&) noexcept {
     _logger = nullptr;
 }
 
-void Ichor::v1::IOUringTcpHostService::addDependencyInstance(IIOUringQueue &q, IService &) noexcept {
-    _q = &q;
+void Ichor::v1::IOUringTcpHostService::addDependencyInstance(Ichor::ScopedServiceProxy<IIOUringQueue*> q, IService &) noexcept {
+    _q = std::move(q);
 }
 
-void Ichor::v1::IOUringTcpHostService::removeDependencyInstance(IIOUringQueue &, IService&) noexcept {
+void Ichor::v1::IOUringTcpHostService::removeDependencyInstance(Ichor::ScopedServiceProxy<IIOUringQueue*>, IService&) noexcept {
     _q = nullptr;
 }
 

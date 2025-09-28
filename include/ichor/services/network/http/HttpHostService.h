@@ -7,6 +7,7 @@
 #include <ichor/services/logging/Logger.h>
 #include <ichor/event_queues/IEventQueue.h>
 #include <tl/expected.h>
+#include <ichor/ServiceExecutionScope.h>
 
 namespace Ichor::v1 {
     /**
@@ -39,17 +40,17 @@ namespace Ichor::v1 {
         Task<tl::expected<void, Ichor::StartError>> start() final;
         Task<void> stop() final;
 
-        void addDependencyInstance(ILogger &logger, IService &isvc);
-        void removeDependencyInstance(ILogger &logger, IService &isvc);
+        void addDependencyInstance(Ichor::ScopedServiceProxy<ILogger*> logger, IService &isvc);
+        void removeDependencyInstance(Ichor::ScopedServiceProxy<ILogger*> logger, IService &isvc);
 
-        void addDependencyInstance(IEventQueue &q, IService &isvc);
-        void removeDependencyInstance(IEventQueue &q, IService &isvc);
+        void addDependencyInstance(Ichor::ScopedServiceProxy<IEventQueue*> q, IService &isvc);
+        void removeDependencyInstance(Ichor::ScopedServiceProxy<IEventQueue*> q, IService &isvc);
 
-        void addDependencyInstance(IHostService &c, IService &isvc);
-        void removeDependencyInstance(IHostService &c, IService &isvc);
+        void addDependencyInstance(Ichor::ScopedServiceProxy<IHostService*> c, IService &isvc);
+        void removeDependencyInstance(Ichor::ScopedServiceProxy<IHostService*> c, IService &isvc);
 
-        void addDependencyInstance(IHostConnectionService &c, IService &isvc);
-        void removeDependencyInstance(IHostConnectionService &c, IService &isvc);
+        void addDependencyInstance(Ichor::ScopedServiceProxy<IHostConnectionService*> c, IService &isvc);
+        void removeDependencyInstance(Ichor::ScopedServiceProxy<IHostConnectionService*> c, IService &isvc);
 
         tl::expected<HttpRequest, HttpParseError> parseRequest(std::string_view complete, size_t& len) const;
         Task<void> receiveRequestHandler(ServiceIdType id);
@@ -63,10 +64,10 @@ namespace Ichor::v1 {
         bool _sendServerHeader{true};
         bool _debug{};
         unordered_map<HttpMethod, unordered_map<std::unique_ptr<RouteMatcher>, std::function<Task<HttpResponse>(HttpRequest&)>>> _handlers{};
-        ILogger* _logger{};
-        IEventQueue *_queue;
+        Ichor::ScopedServiceProxy<ILogger*> _logger {};
+        Ichor::ScopedServiceProxy<IEventQueue*> _queue ;
         unordered_set<ServiceIdType> _hostServiceIds;
-        unordered_map<ServiceIdType, IHostConnectionService*> _connections;
+        unordered_map<ServiceIdType, Ichor::ScopedServiceProxy<IHostConnectionService*>> _connections;
         unordered_map<ServiceIdType, std::string> _connectionBuffers;
     };
 }

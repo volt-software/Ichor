@@ -1,5 +1,6 @@
 #pragma once
 
+#include <ichor/ServiceExecutionScope.h>
 #include <ichor/services/logging/Logger.h>
 
 using namespace Ichor;
@@ -10,7 +11,7 @@ struct IRuntimeCreatedService {
 
 class RuntimeCreatedService final : public IRuntimeCreatedService {
 public:
-    RuntimeCreatedService(IService *self, ILogger *logger) : _logger(logger) {
+    RuntimeCreatedService(IService *self, ScopedServiceProxy<ILogger> logger) : _logger(logger) {
         auto const& scope = Ichor::v1::any_cast<std::string&>(self->getProperties()["scope"]);
         ICHOR_LOG_INFO(_logger, "RuntimeCreatedService started with scope {}", scope);
     }
@@ -20,5 +21,5 @@ public:
     }
 
 private:
-    ILogger *_logger{};
+    ScopedServiceProxy<ILogger> _logger{};
 };

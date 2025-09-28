@@ -1,6 +1,8 @@
 #pragma once
 
-#include <ichor/Common.h>
+#include <cstdint>
+#include <string_view>
+#include <fmt/format.h>
 
 namespace Ichor {
 

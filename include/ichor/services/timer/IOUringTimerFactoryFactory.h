@@ -9,6 +9,7 @@
 #include <ichor/dependency_management/AdvancedService.h>
 #include <ichor/event_queues/IIOUringQueue.h>
 #include <ichor/DependencyManager.h>
+#include <ichor/ServiceExecutionScope.h>
 
 namespace Ichor::v1 {
     /// This class creates timer factories for requesting services, providing the requesting services' serviceId to the factory/timers
@@ -17,8 +18,8 @@ namespace Ichor::v1 {
         IOUringTimerFactoryFactory(DependencyRegister &reg, Properties props);
         ~IOUringTimerFactoryFactory() final = default;
 
-        void addDependencyInstance(IIOUringQueue &, IService&) noexcept;
-        void removeDependencyInstance(IIOUringQueue &, IService&) noexcept;
+        void addDependencyInstance(Ichor::ScopedServiceProxy<IIOUringQueue*>, IService&) noexcept;
+        void removeDependencyInstance(Ichor::ScopedServiceProxy<IIOUringQueue*>, IService&) noexcept;
 
         std::vector<ServiceIdType> getCreatedTimerFactoryIds() const noexcept final;
 
@@ -31,7 +32,7 @@ namespace Ichor::v1 {
 
         friend DependencyManager;
 
-        IIOUringQueue *_q{};
+        Ichor::ScopedServiceProxy<IIOUringQueue*> _q {};
         DependencyTrackerRegistration _trackerRegistration{};
         unordered_map<ServiceIdType, ServiceIdType> _factories;
         bool _quitting{};

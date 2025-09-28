@@ -5,6 +5,7 @@
 #include <ichor/services/logging/Logger.h>
 #include <ichor/services/timer/ITimerFactory.h>
 #include <chrono>
+#include <ichor/ServiceExecutionScope.h>
 
 namespace Ichor::v1 {
 
@@ -47,11 +48,11 @@ namespace Ichor::v1 {
         bool preInterceptEvent(Event const &evt);
         void postInterceptEvent(Event const &evt, bool processed);
 
-        void addDependencyInstance(ILogger &logger, IService &);
-        void removeDependencyInstance(ILogger &logger, IService&);
+        void addDependencyInstance(Ichor::ScopedServiceProxy<ILogger*> logger, IService &);
+        void removeDependencyInstance(Ichor::ScopedServiceProxy<ILogger*> logger, IService&);
 
-        void addDependencyInstance(ITimerFactory &factory, IService &);
-        void removeDependencyInstance(ITimerFactory &factory, IService&);
+        void addDependencyInstance(Ichor::ScopedServiceProxy<ITimerFactory*> factory, IService &);
+        void removeDependencyInstance(Ichor::ScopedServiceProxy<ITimerFactory*> factory, IService&);
 
         void calculateAverage();
 
@@ -68,7 +69,7 @@ namespace Ichor::v1 {
         bool _showStatisticsOnStop{false};
         uint64_t _averagingIntervalMs{500};
         EventInterceptorRegistration _interceptorRegistration{};
-        ILogger *_logger{};
-        ITimerFactory *_timerFactory{};
+        Ichor::ScopedServiceProxy<ILogger*> _logger {};
+        Ichor::ScopedServiceProxy<ITimerFactory*> _timerFactory {};
     };
 }

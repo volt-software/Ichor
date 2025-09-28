@@ -2,6 +2,7 @@
 
 #include <ichor/dependency_management/AdvancedService.h>
 #include <ichor/services/redis/IRedis.h>
+#include <ichor/ServiceExecutionScope.h>
 
 using namespace Ichor::v1;
 
@@ -29,20 +30,20 @@ namespace Ichor {
             co_return {};
         }
 
-        void addDependencyInstance(IRedis &redis, IService&) {
-            _redis = &redis;
+        void addDependencyInstance(Ichor::ScopedServiceProxy<IRedis*> redis, IService&) {
+            _redis = std::move(redis);
         }
 
-        void removeDependencyInstance(IRedis&, IService&) {
-            _redis = nullptr;
+        void removeDependencyInstance(Ichor::ScopedServiceProxy<IRedis*>, IService&) {
+            _redis.reset();
         }
 
-        void addDependencyInstance(ILogger &logger, IService&) {
-            _logger = &logger;
+        void addDependencyInstance(Ichor::ScopedServiceProxy<ILogger*> logger, IService&) {
+            _logger = std::move(logger);
         }
 
-        void removeDependencyInstance(ILogger &, IService&) {
-            _logger = nullptr;
+        void removeDependencyInstance(Ichor::ScopedServiceProxy<ILogger*>, IService&) {
+            _logger.reset();
         }
 
         Task<void> version_test() {
@@ -263,8 +264,8 @@ namespace Ichor {
         }
 
 
-        IRedis *_redis{};
-        ILogger *_logger{};
+        Ichor::ScopedServiceProxy<IRedis*> _redis {};
+        Ichor::ScopedServiceProxy<ILogger*> _logger {};
         Version _v{};
     };
 }
