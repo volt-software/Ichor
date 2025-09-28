@@ -163,7 +163,7 @@ void SomeDependency::hello_world() {
 // MyService.h
 #include "SomeDependency.h"
 struct MyService final { // Don't need an interface here, nothing has a dependency on MyService
-    MyService(ISomeDependency *dependency) {
+    MyService(ScopedServiceProxy<ISomeDependency> dependency) {
         dependency->hello_world();
     }
 }; // a minimal implementation
@@ -204,7 +204,7 @@ The following, however, is completely fine:
 
 ```c++
 struct MyService final {
-    MyService(IService1 *, IService2 *, IService3 *, IService4 * /* and so on */) {
+    MyService(ScopedServiceProxy<IService1>, ScopedServiceProxy<IService2>, ScopedServiceProxy<IService3>, ScopedServiceProxy<IService4> /* and so on */) {
     }
 };
 ```
@@ -272,7 +272,7 @@ Before we get to the point where we are able to start and stop the program, let'
 #include <ichor/services/timer/ITimerFactory.h>
 
 struct MyTimerService final {
-    MyTimerService(ITimerFactory *factory) {
+    MyTimerService(ScopedServiceProxy<ITimerFactory> factory) {
         auto timer = factory->createTimer();
         timer.setChronoInterval(std::chrono::seconds(1));
         timer.setCallback([this]() {
@@ -352,7 +352,7 @@ struct AwaitService final : public IAwaitService {
 #include "AwaitService.h"
 
 struct MyCoroutineTimerService final {
-    MyCoroutineTimerService(ITimerFactory *factory, IAwaitService *awaitService) {
+    MyCoroutineTimerService(ScopedServiceProxy<ITimerFactory> factory, ScopedServiceProxy<IAwaitService> awaitService) {
         auto timer = factory->createTimer();
         timer.setChronoInterval(std::chrono::seconds(1));
         timer.setCallbackAsync([awaitService]() {
@@ -405,7 +405,7 @@ At some point in your program, the only thing left to do is tell Ichor to stop. 
 #include <ichor/event_queues/IEventQueue.h>
 
 struct MyQuittingTimerService final {
-    MyQuittingTimerService(ITimerFactory *factory, IEventQueue *queue) {
+    MyQuittingTimerService(ScopedServiceProxy<ITimerFactory> factory, IEventQueue *queue) {
         auto timer = factory->createTimer();
         timer.setChronoInterval(std::chrono::seconds(1));
         timer.setCallback([queue]() {
@@ -478,7 +478,7 @@ struct LoggerFactory final {
 };
 
 struct SomeServiceUsingLogger final {
-    SomeServiceUsingLogger(ILogger *logger) {
+    SomeServiceUsingLogger(ScopedServiceProxy<ILogger> logger) {
         logger->Log("Logged!");
     }
 };

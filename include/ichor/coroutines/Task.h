@@ -7,6 +7,7 @@
 
 #pragma once
 
+// #include <ichor/Common.h>
 #include <ichor/Defines.h>
 #include <ichor/stl/CompilerSpecific.h>
 #include <cstdint>

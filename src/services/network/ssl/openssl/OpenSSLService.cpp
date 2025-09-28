@@ -9,6 +9,7 @@
 #include <openssl/bio.h>
 #include <openssl/err.h>
 #include <openssl/x509_vfy.h>
+#include <ichor/ServiceExecutionScope.h>
 
 namespace {
     struct NullStruct {};
@@ -85,11 +86,11 @@ Ichor::Task<> Ichor::v1::OpenSSLService::stop() {
     co_return;
 }
 
-void Ichor::v1::OpenSSLService::addDependencyInstance(ILogger &logger, IService &isvc) {
-    _logger = &logger;
+void Ichor::v1::OpenSSLService::addDependencyInstance(Ichor::ScopedServiceProxy<ILogger*> logger, IService &isvc) {
+    _logger = std::move(logger);
 }
 
-void Ichor::v1::OpenSSLService::removeDependencyInstance(ILogger &logger, IService &isvc) {
+void Ichor::v1::OpenSSLService::removeDependencyInstance(Ichor::ScopedServiceProxy<ILogger*> logger, IService &isvc) {
     _logger = nullptr;
 }
 
@@ -367,6 +368,6 @@ void Ichor::v1::OpenSSLService::printAllSslErrors(TLSObjectT const &obj, int lin
     }
 }
 
-Ichor::v1::ILogger * Ichor::v1::OpenSSLService::getLogger() const {
+Ichor::ScopedServiceProxy<Ichor::v1::ILogger*> Ichor::v1::OpenSSLService::getLogger() const {
     return _logger;
 }

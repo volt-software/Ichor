@@ -2,6 +2,7 @@
 #include <ichor/services/network/boost/HttpHostService.h>
 #include <ichor/services/network/http/HttpScopeGuards.h>
 #include <ichor/events/RunFunctionEvent.h>
+#include <ichor/ServiceExecutionScope.h>
 
 Ichor::Boost::v1::HttpHostService::HttpHostService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {
     reg.registerDependency<Ichor::v1::ILogger>(this, DependencyFlags::REQUIRED);
@@ -100,19 +101,19 @@ Ichor::Task<void> Ichor::Boost::v1::HttpHostService::stop() {
     co_return;
 }
 
-void Ichor::Boost::v1::HttpHostService::addDependencyInstance(Ichor::v1::ILogger &logger, IService &) {
-    _logger = &logger;
+void Ichor::Boost::v1::HttpHostService::addDependencyInstance(Ichor::ScopedServiceProxy<Ichor::v1::ILogger*> logger, IService &) {
+    _logger = std::move(logger);
 }
 
-void Ichor::Boost::v1::HttpHostService::removeDependencyInstance(Ichor::v1::ILogger &, IService&) {
+void Ichor::Boost::v1::HttpHostService::removeDependencyInstance(Ichor::ScopedServiceProxy<Ichor::v1::ILogger*>, IService&) {
     _logger = nullptr;
 }
 
-void Ichor::Boost::v1::HttpHostService::addDependencyInstance(IBoostAsioQueue &q, IService&) {
-    _queue = &q;
+void Ichor::Boost::v1::HttpHostService::addDependencyInstance(Ichor::ScopedServiceProxy<IBoostAsioQueue*> q, IService&) {
+    _queue = std::move(q);
 }
 
-void Ichor::Boost::v1::HttpHostService::removeDependencyInstance(IBoostAsioQueue&, IService&) {
+void Ichor::Boost::v1::HttpHostService::removeDependencyInstance(Ichor::ScopedServiceProxy<IBoostAsioQueue*>, IService&) {
     _queue = nullptr;
 }
 

@@ -1,1 +1,1 @@
-Use "../quickbuild.sh --nosan --sdevent --examples --spdlog" in a build directory inside of the checked out repository to build and run the tests (everything is included in the script)
+Use "../quickbuild.sh --nosan --sdevent --examples --spdlog" in a build directory inside of the checked out repository to build and run the tests (everything is included in the script). Default timeout for commands should be 10 minutes.

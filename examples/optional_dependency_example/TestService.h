@@ -4,6 +4,7 @@
 #include <ichor/dependency_management/AdvancedService.h>
 #include <ichor/event_queues/IEventQueue.h>
 #include "OptionalService.h"
+#include <ichor/ServiceExecutionScope.h>
 
 using namespace Ichor;
 using namespace Ichor::v1;
@@ -31,17 +32,17 @@ private:
         co_return;
     }
 
-    void addDependencyInstance(ILogger &logger, IService &isvc) {
-        _logger = &logger;
+    void addDependencyInstance(Ichor::ScopedServiceProxy<ILogger*> logger, IService &isvc) {
+        _logger = std::move(logger);
 
         ICHOR_LOG_INFO(_logger, "Inserted logger svcid {} for svcid {}", isvc.getServiceId(), getServiceId());
     }
 
-    void removeDependencyInstance(ILogger&, IService&) {
-        _logger = nullptr;
+    void removeDependencyInstance(Ichor::ScopedServiceProxy<ILogger*>, IService&) {
+        _logger.reset();
     }
 
-    void addDependencyInstance(IOptionalService&, IService &isvc) {
+    void addDependencyInstance(Ichor::ScopedServiceProxy<IOptionalService*>, IService &isvc) {
         ICHOR_LOG_INFO(_logger, "Inserted IOptionalService svcid {}", isvc.getServiceId());
 
         _injectionCount++;
@@ -50,12 +51,12 @@ private:
         }
     }
 
-    void removeDependencyInstance(IOptionalService&, IService&) {
+    void removeDependencyInstance(Ichor::ScopedServiceProxy<IOptionalService*>, IService&) {
     }
 
     friend DependencyRegister;
 
-    ILogger *_logger{};
+    Ichor::ScopedServiceProxy<ILogger*> _logger {};
     bool _started{false};
     int _injectionCount{0};
 };

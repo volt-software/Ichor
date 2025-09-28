@@ -5,6 +5,7 @@
 #include <ichor/services/logging/Logger.h>
 #include <ichor/dependency_management/AdvancedService.h>
 #include <ichor/dependency_management/DependencyRegister.h>
+#include <ichor/ServiceExecutionScope.h>
 
 #if defined(ICHOR_ENABLE_INTERNAL_DEBUGGING) || (defined(ICHOR_BUILDING_DEBUG) && (defined(__SANITIZE_ADDRESS__) || defined(__SANITIZE_THREAD__)))
 constexpr uint32_t START_STOP_COUNT = 100;
@@ -49,33 +50,33 @@ private:
         co_return;
     }
 
-    void addDependencyInstance(ILogger &logger, IService &) {
-        _logger = &logger;
+    void addDependencyInstance(Ichor::ScopedServiceProxy<ILogger*> logger, IService &) {
+        _logger = std::move(logger);
     }
 
-    void removeDependencyInstance(ILogger &logger, IService&) {
-        _logger = nullptr;
+    void removeDependencyInstance(Ichor::ScopedServiceProxy<ILogger*> logger, IService&) {
+        _logger.reset();
     }
 
-    void addDependencyInstance(ITestService&, IService &isvc) {
+    void addDependencyInstance(Ichor::ScopedServiceProxy<ITestService*>, IService &isvc) {
         _testServiceId = isvc.getServiceId();
     }
 
-    void removeDependencyInstance(ITestService&, IService&) {
+    void removeDependencyInstance(Ichor::ScopedServiceProxy<ITestService*>, IService&) {
     }
 
-    void addDependencyInstance(DependencyManager &dm, IService&) {
-        _dm = &dm;
+    void addDependencyInstance(Ichor::ScopedServiceProxy<DependencyManager*> dm, IService&) {
+        _dm = std::move(dm);
     }
 
-    void removeDependencyInstance(DependencyManager&, IService&) {
+    void removeDependencyInstance(Ichor::ScopedServiceProxy<DependencyManager*>, IService&) {
     }
 
     friend DependencyRegister;
     friend DependencyManager;
 
-    ILogger *_logger{};
-    DependencyManager *_dm{};
+    Ichor::ScopedServiceProxy<ILogger*> _logger {};
+    Ichor::ScopedServiceProxy<DependencyManager*> _dm {};
     uint64_t _testServiceId{0};
     std::chrono::steady_clock::time_point _start{};
     uint64_t startCount{0};

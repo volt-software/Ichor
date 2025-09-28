@@ -8,6 +8,7 @@
 #include <ichor/coroutines/AsyncManualResetEvent.h>
 #include <boost/beast.hpp>
 #include <boost/asio/spawn.hpp>
+#include <ichor/ServiceExecutionScope.h>
 
 namespace beast = boost::beast;         // from <boost/beast.hpp>
 namespace http = beast::http;           // from <boost/beast/http.hpp>
@@ -28,10 +29,10 @@ namespace Ichor::Boost::v1 {
         Task<tl::expected<void, Ichor::StartError>> start() final;
         Task<void> stop() final;
 
-        void addDependencyInstance(Ichor::v1::ILogger &logger, IService &isvc);
-        void removeDependencyInstance(Ichor::v1::ILogger &logger, IService &isvc);
-        void addDependencyInstance(IBoostAsioQueue &q, IService&);
-        void removeDependencyInstance(IBoostAsioQueue &q, IService&);
+        void addDependencyInstance(Ichor::ScopedServiceProxy<Ichor::v1::ILogger*> logger, IService &isvc);
+        void removeDependencyInstance(Ichor::ScopedServiceProxy<Ichor::v1::ILogger*> logger, IService &isvc);
+        void addDependencyInstance(Ichor::ScopedServiceProxy<IBoostAsioQueue*> q, IService&);
+        void removeDependencyInstance(Ichor::ScopedServiceProxy<IBoostAsioQueue*> q, IService&);
 
         AsyncGenerator<IchorBehaviour> handleEvent(Ichor::v1::NewWsConnectionEvent const &evt);
 
@@ -47,10 +48,10 @@ namespace Ichor::Boost::v1 {
         bool _quit{};
         bool _tcpNoDelay{};
         std::atomic<int64_t> _finishedListenAndRead{};
-        Ichor::v1::ILogger *_logger{};
+        Ichor::ScopedServiceProxy<Ichor::v1::ILogger*> _logger {};
         std::vector<ServiceIdType> _connections{};
         EventHandlerRegistration _eventRegistration{};
         AsyncManualResetEvent _startStopEvent{};
-        IBoostAsioQueue *_queue{};
+        Ichor::ScopedServiceProxy<IBoostAsioQueue*> _queue {};
     };
 }

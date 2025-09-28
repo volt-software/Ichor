@@ -2,6 +2,7 @@
 
 #include <ichor/coroutines/AsyncGenerator.h>
 #include <functional>
+#include <chrono>
 
 namespace Ichor::v1 {
     enum class TimerState : uint_fast16_t {

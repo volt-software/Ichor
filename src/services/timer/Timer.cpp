@@ -11,7 +11,7 @@
 
 using namespace std::chrono_literals;
 
-Ichor::v1::Timer::Timer(IEventQueue& queue, uint64_t timerId, uint64_t svcId) noexcept : _queue(&queue), _timerId(timerId), _requestingServiceId(svcId) {
+Ichor::v1::Timer::Timer(Ichor::ScopedServiceProxy<IEventQueue*> queue, uint64_t timerId, uint64_t svcId) noexcept : _queue(queue), _timerId(timerId), _requestingServiceId(svcId) {
     INTERNAL_IO_DEBUG("Timer for {}", _requestingServiceId);
 }
 

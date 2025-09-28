@@ -2,6 +2,7 @@
 
 #include <tl/optional.h>
 #include <vector>
+#include <ichor/Common.h>
 
 namespace Ichor::v1 {
     // Copied/modified from Boost.BEAST
@@ -186,13 +187,13 @@ namespace Ichor::v1 {
         std::string_view route;
         std::vector<std::string> regex_params;
         std::string_view address;
-        unordered_map<std::string, std::string> headers;
+        Ichor::unordered_map<std::string, std::string> headers;
     };
 
     struct HttpResponse {
         HttpStatus status;
         tl::optional<std::string> contentType;
         std::vector<uint8_t> body;
-        unordered_map<std::string, std::string> headers;
+        Ichor::unordered_map<std::string, std::string> headers;
     };
 }

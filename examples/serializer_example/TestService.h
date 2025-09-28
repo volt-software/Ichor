@@ -3,6 +3,7 @@
 #include <ichor/DependencyManager.h>
 #include <ichor/services/logging/Logger.h>
 #include <ichor/services/serialization/ISerializer.h>
+#include <ichor/ServiceExecutionScope.h>
 #include "../common/TestMsg.h"
 
 using namespace Ichor;
@@ -10,7 +11,7 @@ using namespace Ichor::v1;
 
 class TestService final {
 public:
-    TestService(DependencyManager *dm, IService *self, ILogger *logger, ISerializer<TestMsg> *serializer) : _dm(dm), _self(self), _logger(logger), _serializer(serializer) {
+    TestService(DependencyManager *dm, IService *self, ScopedServiceProxy<ILogger> logger, ScopedServiceProxy<ISerializer<TestMsg>> serializer) : _dm(dm), _self(self), _logger(logger), _serializer(serializer) {
         ICHOR_LOG_INFO(_logger, "TestService started with dependency");
         _doWorkRegistration = dm->registerEventHandler<DoWorkEvent>(this, self);
         dm->getEventQueue().pushEvent<DoWorkEvent>(self->getServiceId());
@@ -37,7 +38,7 @@ private:
 
     DependencyManager *_dm{};
     IService *_self{};
-    ILogger *_logger{};
-    ISerializer<TestMsg> *_serializer{};
+    ScopedServiceProxy<ILogger> _logger{};
+    ScopedServiceProxy<ISerializer<TestMsg>> _serializer{};
     EventHandlerRegistration _doWorkRegistration{};
 };

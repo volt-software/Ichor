@@ -76,8 +76,8 @@ namespace Ichor {
             return TYPE;
         }
 
-        Dependency const &dependency;
-        tl::optional<Properties> const &properties;
+        Dependency dependency;
+        tl::optional<Properties> properties;
         static constexpr NameHashType TYPE = typeNameHash<DependencyUndoRequestEvent>();
         static constexpr std::string_view NAME = typeName<DependencyUndoRequestEvent>();
     };

@@ -4,7 +4,7 @@
 
 using namespace std::chrono_literals;
 
-static std::function<void(io_uring_cqe *)> createNewStopHandler(Ichor::IIOUringQueue *q, Ichor::ServiceIdType requestingServiceId, uint64_t timerId, uint64_t uringTimerId) noexcept {
+static std::function<void(io_uring_cqe *)> createNewStopHandler(Ichor::ScopedServiceProxy<Ichor::IIOUringQueue*> q, Ichor::ServiceIdType requestingServiceId, uint64_t timerId, uint64_t uringTimerId) noexcept {
     INTERNAL_IO_DEBUG("IOUringTimer {} for {} createNewStopHandler", timerId, requestingServiceId);
     return [q, requestingServiceId, timerId, uringTimerId](io_uring_cqe *cqe) {
         if(cqe->res < 0) {
@@ -21,7 +21,7 @@ static std::function<void(io_uring_cqe *)> createNewStopHandler(Ichor::IIOUringQ
     };
 }
 
-Ichor::v1::IOUringTimer::IOUringTimer(IIOUringQueue& queue, uint64_t timerId, uint64_t svcId) noexcept : _q(&queue), _timerId(timerId), _requestingServiceId(svcId) {
+Ichor::v1::IOUringTimer::IOUringTimer(Ichor::ScopedServiceProxy<IIOUringQueue*> queue, uint64_t timerId, uint64_t svcId) noexcept : _q(queue), _timerId(timerId), _requestingServiceId(svcId) {
     INTERNAL_IO_DEBUG("[{:L}][{}] IOUringTimer for {}", std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now().time_since_epoch()).count(), __LINE__, _requestingServiceId);
 
     if constexpr(DO_INTERNAL_DEBUG || DO_HARDENING) {

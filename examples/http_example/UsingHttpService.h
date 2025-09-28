@@ -10,6 +10,7 @@
 #include <ichor/dependency_management/DependencyRegister.h>
 #include <ichor/services/serialization/ISerializer.h>
 #include "../common/TestMsg.h"
+#include <ichor/ServiceExecutionScope.h>
 
 using namespace Ichor;
 using namespace Ichor::v1;
@@ -46,41 +47,41 @@ private:
         co_return;
     }
 
-    void addDependencyInstance(ILogger &logger, IService &) {
-        _logger = &logger;
+    void addDependencyInstance(Ichor::ScopedServiceProxy<ILogger*> logger, IService &) {
+        _logger = std::move(logger);
     }
 
-    void removeDependencyInstance(ILogger&, IService&) {
-        _logger = nullptr;
+    void removeDependencyInstance(Ichor::ScopedServiceProxy<ILogger*>, IService&) {
+        _logger.reset();
     }
 
-    void addDependencyInstance(ISerializer<TestMsg> &serializer, IService&) {
-        _serializer = &serializer;
+    void addDependencyInstance(Ichor::ScopedServiceProxy<ISerializer<TestMsg>*> serializer, IService&) {
+        _serializer = std::move(serializer);
         ICHOR_LOG_INFO(_logger, "Inserted serializer");
     }
 
-    void removeDependencyInstance(ISerializer<TestMsg>&, IService&) {
+    void removeDependencyInstance(Ichor::ScopedServiceProxy<ISerializer<TestMsg>*>, IService&) {
         _serializer = nullptr;
         ICHOR_LOG_INFO(_logger, "Removed serializer");
     }
 
-    void addDependencyInstance(IHttpConnectionService &connectionService, IService&) {
-        _connectionService = &connectionService;
+    void addDependencyInstance(Ichor::ScopedServiceProxy<IHttpConnectionService*> connectionService, IService&) {
+        _connectionService = std::move(connectionService);
         ICHOR_LOG_INFO(_logger, "Inserted IHttpConnectionService");
     }
 
-    void removeDependencyInstance(IHttpConnectionService&, IService&) {
+    void removeDependencyInstance(Ichor::ScopedServiceProxy<IHttpConnectionService*>, IService&) {
         ICHOR_LOG_INFO(_logger, "Removed IHttpConnectionService");
     }
 
-    void addDependencyInstance(IHttpHostService &svc, IService&) {
+    void addDependencyInstance(Ichor::ScopedServiceProxy<IHttpHostService*> svc, IService&) {
         ICHOR_LOG_INFO(_logger, "Inserted IHttpHostService");
-        _routeRegistrations.emplace_back(svc.addRoute(HttpMethod::post, "/test", [this](HttpRequest &req) -> Task<HttpResponse> {
+        _routeRegistrations.emplace_back(svc->addRoute(HttpMethod::post, "/test", [this](HttpRequest &req) -> Task<HttpResponse> {
             auto msg = _serializer->deserialize(req.body);
             ICHOR_LOG_WARN(_logger, "received request on route {} {} with testmsg {} - {}", (int)req.method, req.route, msg->id, msg->val);
             co_return HttpResponse{HttpStatus::ok, "application/json", _serializer->serialize(TestMsg{11, "hello"}), {}};
         }));
-        _routeRegistrations.emplace_back(svc.addRoute(HttpMethod::get, std::make_unique<RegexRouteMatch<R"(\/regex_test\/([a-zA-Z0-9]*)\?*([a-zA-Z0-9]+=[a-zA-Z0-9]+)*&*([a-zA-Z0-9]+=[a-zA-Z0-9]+)*)">>(), [this](HttpRequest &req) -> Task<HttpResponse> {
+        _routeRegistrations.emplace_back(svc->addRoute(HttpMethod::get, std::make_unique<RegexRouteMatch<R"(\/regex_test\/([a-zA-Z0-9]*)\?*([a-zA-Z0-9]+=[a-zA-Z0-9]+)*&*([a-zA-Z0-9]+=[a-zA-Z0-9]+)*)">>(), [this](HttpRequest &req) -> Task<HttpResponse> {
             ICHOR_LOG_WARN(_logger, "received request on route {} {} with params:", (int)req.method, req.route);
             for(auto const &param : req.regex_params) {
                 ICHOR_LOG_WARN(_logger, "{}", param);
@@ -89,7 +90,7 @@ private:
         }));
     }
 
-    void removeDependencyInstance(IHttpHostService&, IService&) {
+    void removeDependencyInstance(Ichor::ScopedServiceProxy<IHttpHostService*>, IService&) {
         ICHOR_LOG_INFO(_logger, "Removed IHttpHostService");
         _routeRegistrations.clear();
     }
@@ -128,8 +129,8 @@ private:
         co_return;
     }
 
-    ILogger *_logger{};
-    ISerializer<TestMsg> *_serializer{};
-    IHttpConnectionService *_connectionService{};
+    Ichor::ScopedServiceProxy<ILogger*> _logger {};
+    Ichor::ScopedServiceProxy<ISerializer<TestMsg>*> _serializer {};
+    Ichor::ScopedServiceProxy<IHttpConnectionService*> _connectionService {};
     std::vector<HttpRouteRegistration> _routeRegistrations{};
 };

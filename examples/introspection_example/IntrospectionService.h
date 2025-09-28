@@ -11,7 +11,7 @@ using namespace Ichor::v1;
 
 class IntrospectionService final {
 public:
-    IntrospectionService(IService *self, IEventQueue *queue, DependencyManager *dm, ILogger *logger, ITimerFactory *) : _logger(logger) {
+    IntrospectionService(IService *self, IEventQueue *queue, DependencyManager *dm, ScopedServiceProxy<ILogger> logger, ScopedServiceProxy<ITimerFactory>) : _logger(logger) {
         ICHOR_LOG_INFO(_logger, "IntrospectionService started");
 
         auto svcs = dm->getAllServices();
@@ -60,5 +60,5 @@ public:
     }
 
 private:
-    ILogger *_logger;
+    ScopedServiceProxy<ILogger> _logger;
 };

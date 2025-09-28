@@ -12,7 +12,7 @@ using namespace Ichor::Etcdv2::v1;
 
 class UsingEtcdV2Service final {
 public:
-    UsingEtcdV2Service(IService *self, IEventQueue *queue, ILogger *logger, IEtcd *EtcdV2Service) {
+    UsingEtcdV2Service(IService *self, IEventQueue *queue, ScopedServiceProxy<ILogger> logger, ScopedServiceProxy<IEtcd> EtcdV2Service) {
         ICHOR_LOG_INFO(logger, "UsingEtcdV2Service started");
 
         // standard put/get

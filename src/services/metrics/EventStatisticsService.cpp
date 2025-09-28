@@ -1,6 +1,7 @@
 #include <ichor/services/metrics/EventStatisticsService.h>
 #include <ichor/DependencyManager.h>
 #include <numeric>
+#include <ichor/ServiceExecutionScope.h>
 
 Ichor::v1::EventStatisticsService::EventStatisticsService(DependencyRegister &reg, Properties props) : AdvancedService<EventStatisticsService>(std::move(props)) {
     reg.registerDependency<ITimerFactory>(this, DependencyFlags::REQUIRED);
@@ -10,6 +11,8 @@ Ichor::v1::EventStatisticsService::EventStatisticsService(DependencyRegister &re
 Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::v1::EventStatisticsService::start() {
     if(auto propIt = getProperties().find("ShowStatisticsOnStop"); propIt != getProperties().end()) {
         _showStatisticsOnStop = Ichor::v1::any_cast<bool>(propIt->second);
+    } else {
+        std::terminate();
     }
     if(auto propIt = getProperties().find("AveragingIntervalMs"); propIt != getProperties().end()) {
         _averagingIntervalMs = Ichor::v1::any_cast<uint64_t>(propIt->second);
@@ -96,21 +99,28 @@ void Ichor::v1::EventStatisticsService::postInterceptEvent(Event const &evt, boo
                 std::chrono::duration_cast<std::chrono::nanoseconds>(now.time_since_epoch()).count(),
                 std::chrono::duration_cast<std::chrono::nanoseconds>(processingTime).count());
     }
+
+    if(processingTime > 1ms) {
+        fmt::println("LONG EVENT {} {}", evt.get_name(), evt.originatingService);
+        auto &dm = GetThreadLocalManager();
+        auto svc = dm.getIService(evt.originatingService);
+        fmt::println("SVC {}", (*svc)->getServiceName());
+    }
 }
 
-void Ichor::v1::EventStatisticsService::addDependencyInstance(ILogger &logger, IService &) {
-    _logger = &logger;
+void Ichor::v1::EventStatisticsService::addDependencyInstance(Ichor::ScopedServiceProxy<ILogger*> logger, IService &) {
+    _logger = std::move(logger);
 }
 
-void Ichor::v1::EventStatisticsService::removeDependencyInstance(ILogger &, IService &) {
+void Ichor::v1::EventStatisticsService::removeDependencyInstance(Ichor::ScopedServiceProxy<ILogger*>, IService &) {
     _logger = nullptr;
 }
 
-void Ichor::v1::EventStatisticsService::addDependencyInstance(ITimerFactory &factory, IService &) {
-    _timerFactory = &factory;
+void Ichor::v1::EventStatisticsService::addDependencyInstance(Ichor::ScopedServiceProxy<ITimerFactory*> factory, IService &) {
+    _timerFactory = std::move(factory);
 }
 
-void Ichor::v1::EventStatisticsService::removeDependencyInstance(ITimerFactory &, IService &) {
+void Ichor::v1::EventStatisticsService::removeDependencyInstance(Ichor::ScopedServiceProxy<ITimerFactory*>, IService &) {
     _timerFactory = nullptr;
 }
 

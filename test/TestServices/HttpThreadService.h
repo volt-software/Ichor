@@ -10,6 +10,7 @@
 #include <ichor/services/serialization/ISerializer.h>
 #include "../examples/common/TestMsg.h"
 #include "../serialization/RegexJsonMsg.h"
+#include <ichor/ServiceExecutionScope.h>
 
 using namespace Ichor;
 using namespace Ichor::v1;
@@ -66,28 +67,28 @@ private:
         co_return;
     }
 
-    void addDependencyInstance(ISerializer<TestMsg> &serializer, IService &) {
-        _testSerializer = &serializer;
+    void addDependencyInstance(Ichor::ScopedServiceProxy<ISerializer<TestMsg>*> serializer, IService &) {
+        _testSerializer = std::move(serializer);
     }
 
-    void removeDependencyInstance(ISerializer<TestMsg> &, IService&) {
+    void removeDependencyInstance(Ichor::ScopedServiceProxy<ISerializer<TestMsg>*>, IService&) {
         _testSerializer = nullptr;
     }
 
-    void addDependencyInstance(ISerializer<RegexJsonMsg> &serializer, IService &) {
-        _regexSerializer = &serializer;
+    void addDependencyInstance(Ichor::ScopedServiceProxy<ISerializer<RegexJsonMsg>*> serializer, IService &) {
+        _regexSerializer = std::move(serializer);
     }
 
-    void removeDependencyInstance(ISerializer<RegexJsonMsg> &, IService&) {
+    void removeDependencyInstance(Ichor::ScopedServiceProxy<ISerializer<RegexJsonMsg>*>, IService&) {
         _regexSerializer = nullptr;
     }
 
-    void addDependencyInstance(IHttpConnectionService &connectionService, IService&) {
-        _connectionService = &connectionService;
+    void addDependencyInstance(Ichor::ScopedServiceProxy<IHttpConnectionService*> connectionService, IService&) {
+        _connectionService = std::move(connectionService);
     }
 
-    void addDependencyInstance(IHttpHostService &svc, IService&) {
-        _routeRegistration = svc.addRoute(HttpMethod::post, "/test", [this](HttpRequest &req) -> Task<HttpResponse> {
+    void addDependencyInstance(Ichor::ScopedServiceProxy<IHttpHostService*> svc, IService&) {
+        _routeRegistration = svc->addRoute(HttpMethod::post, "/test", [this](HttpRequest &req) -> Task<HttpResponse> {
             fmt::println("/test POST");
             if(dmThreadId != std::this_thread::get_id()) {
                 fmt::println("dmThreadId id incorrect");
@@ -114,7 +115,7 @@ private:
 
             co_return HttpResponse{HttpStatus::ok, "application/json", _testSerializer->serialize(TestMsg{11, "hello"}), {}};
         });
-        _regexRouteRegistration = svc.addRoute(HttpMethod::get, std::make_unique<RegexRouteMatch<R"(\/regex_test\/([a-zA-Z0-9]*)\?*([a-zA-Z0-9]+=[a-zA-Z0-9]+)*&*([a-zA-Z0-9]+=[a-zA-Z0-9]+)*)">>(), [this](HttpRequest &req) -> Task<HttpResponse> {
+        _regexRouteRegistration = svc->addRoute(HttpMethod::get, std::make_unique<RegexRouteMatch<R"(\/regex_test\/([a-zA-Z0-9]*)\?*([a-zA-Z0-9]+=[a-zA-Z0-9]+)*&*([a-zA-Z0-9]+=[a-zA-Z0-9]+)*)">>(), [this](HttpRequest &req) -> Task<HttpResponse> {
             fmt::println("/regex_test POST");
             if(dmThreadId != std::this_thread::get_id()) {
                 fmt::println("dmThreadId id incorrect");
@@ -129,12 +130,12 @@ private:
         });
     }
 
-    void removeDependencyInstance(IHttpHostService&, IService&) {
+    void removeDependencyInstance(Ichor::ScopedServiceProxy<IHttpHostService*>, IService&) {
         _routeRegistration.reset();
         _regexRouteRegistration.reset();
     }
 
-    void removeDependencyInstance(IHttpConnectionService&, IService&) {
+    void removeDependencyInstance(Ichor::ScopedServiceProxy<IHttpConnectionService*>, IService&) {
     }
 
     friend DependencyRegister;
@@ -331,9 +332,9 @@ private:
         co_return;
     }
 
-    ISerializer<TestMsg> *_testSerializer{};
-    ISerializer<RegexJsonMsg> *_regexSerializer{};
-    IHttpConnectionService *_connectionService{};
+    Ichor::ScopedServiceProxy<ISerializer<TestMsg>*> _testSerializer {};
+    Ichor::ScopedServiceProxy<ISerializer<RegexJsonMsg>*> _regexSerializer {};
+    Ichor::ScopedServiceProxy<IHttpConnectionService*> _connectionService {};
     HttpRouteRegistration _routeRegistration{};
     HttpRouteRegistration _regexRouteRegistration{};
 };

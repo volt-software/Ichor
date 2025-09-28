@@ -1,6 +1,6 @@
 #pragma once
 
-#include <ichor/Common.h>
+#include <ichor/Defines.h>
 #include <ichor/services/timer/ITimer.h>
 #include <ichor/services/timer/ITimerFactory.h>
 

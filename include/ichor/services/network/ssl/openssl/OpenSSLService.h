@@ -3,6 +3,7 @@
 #include <ichor/services/network/ISSL.h>
 #include <ichor/services/logging/Logger.h>
 #include <ichor/dependency_management/AdvancedService.h>
+#include <ichor/ServiceExecutionScope.h>
 
 namespace Ichor::v1 {
     class OpenSSLContext;
@@ -30,15 +31,15 @@ namespace Ichor::v1 {
         Task<tl::expected<void, StartError>> start() final;
         Task<void> stop() final;
 
-        void addDependencyInstance(ILogger &logger, IService &isvc);
-        void removeDependencyInstance(ILogger &logger, IService &isvc);
+        void addDependencyInstance(Ichor::ScopedServiceProxy<ILogger*> logger, IService &isvc);
+        void removeDependencyInstance(Ichor::ScopedServiceProxy<ILogger*> logger, IService &isvc);
 
         template <typename TLSObjectT>
         void printAllSslErrors(TLSObjectT const &obj, int line_in) const;
 
-        ILogger* getLogger() const;
+        Ichor::ScopedServiceProxy<ILogger*> getLogger () const;
 
-        ILogger *_logger{};
+        Ichor::ScopedServiceProxy<ILogger*> _logger {};
         TLSContextIdType _contextIdCounter{};
         TLSConnectionIdType _connectionIdCounter{};
         uint64_t _currentlyActiveContexts{};

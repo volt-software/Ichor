@@ -26,7 +26,7 @@ namespace Ichor::v1 {
         ~OpenSSLContext() final;
 
         SSL_CTX* getHandle() const;
-        ILogger* getLogger() const;
+        Ichor::ScopedServiceProxy<ILogger*> getLogger() const;
 
 #if defined(ICHOR_USE_HARDENING) || defined(ICHOR_ENABLE_INTERNAL_DEBUGGING)
         [[nodiscard]] TLSContextTypeType getType() const noexcept final;

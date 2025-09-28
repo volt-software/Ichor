@@ -11,6 +11,7 @@
 #include <fcntl.h>
 #include <poll.h>
 #include <thread>
+#include <ichor/ServiceExecutionScope.h>
 
 
 template <typename InterfaceT> requires Ichor::DerivedAny<InterfaceT, Ichor::v1::IConnectionService, Ichor::v1::IHostConnectionService, Ichor::v1::IClientConnectionService>
@@ -174,22 +175,22 @@ Ichor::Task<void> Ichor::v1::TcpConnectionService<InterfaceT>::stop() {
 }
 
 template <typename InterfaceT> requires Ichor::DerivedAny<InterfaceT, Ichor::v1::IConnectionService, Ichor::v1::IHostConnectionService, Ichor::v1::IClientConnectionService>
-void Ichor::v1::TcpConnectionService<InterfaceT>::addDependencyInstance(ILogger &logger, IService &) {
-    _logger = &logger;
+void Ichor::v1::TcpConnectionService<InterfaceT>::addDependencyInstance(Ichor::ScopedServiceProxy<ILogger*> logger, IService &) {
+    _logger = std::move(logger);
 }
 
 template <typename InterfaceT> requires Ichor::DerivedAny<InterfaceT, Ichor::v1::IConnectionService, Ichor::v1::IHostConnectionService, Ichor::v1::IClientConnectionService>
-void Ichor::v1::TcpConnectionService<InterfaceT>::removeDependencyInstance(ILogger &, IService&) {
+void Ichor::v1::TcpConnectionService<InterfaceT>::removeDependencyInstance(Ichor::ScopedServiceProxy<ILogger*>, IService&) {
     _logger = nullptr;
 }
 
 template <typename InterfaceT> requires Ichor::DerivedAny<InterfaceT, Ichor::v1::IConnectionService, Ichor::v1::IHostConnectionService, Ichor::v1::IClientConnectionService>
-void Ichor::v1::TcpConnectionService<InterfaceT>::addDependencyInstance(ITimerFactory &timerFactory, IService &) {
-    _timerFactory = &timerFactory;
+void Ichor::v1::TcpConnectionService<InterfaceT>::addDependencyInstance(Ichor::ScopedServiceProxy<ITimerFactory*> timerFactory, IService &) {
+    _timerFactory = std::move(timerFactory);
 }
 
 template <typename InterfaceT> requires Ichor::DerivedAny<InterfaceT, Ichor::v1::IConnectionService, Ichor::v1::IHostConnectionService, Ichor::v1::IClientConnectionService>
-void Ichor::v1::TcpConnectionService<InterfaceT>::removeDependencyInstance(ITimerFactory &, IService&) {
+void Ichor::v1::TcpConnectionService<InterfaceT>::removeDependencyInstance(Ichor::ScopedServiceProxy<ITimerFactory*>, IService&) {
     _timerFactory = nullptr;
 }
 

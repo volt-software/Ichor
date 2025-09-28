@@ -8,6 +8,7 @@
 #include <boost/beast.hpp>
 #include <boost/asio/spawn.hpp>
 #include <boost/circular_buffer.hpp>
+#include <ichor/ServiceExecutionScope.h>
 
 namespace beast = boost::beast;         // from <boost/beast.hpp>
 namespace http = beast::http;           // from <boost/beast/http.hpp>
@@ -42,14 +43,14 @@ namespace Ichor::Boost::v1 {
         Task<tl::expected<void, StartError>> start() final;
         Task<void> stop() final;
 
-        void addDependencyInstance(Ichor::v1::ILogger &logger, IService &isvc);
-        void removeDependencyInstance(Ichor::v1::ILogger &logger, IService &isvc);
+        void addDependencyInstance(Ichor::ScopedServiceProxy<Ichor::v1::ILogger*> logger, IService &isvc);
+        void removeDependencyInstance(Ichor::ScopedServiceProxy<Ichor::v1::ILogger*> logger, IService &isvc);
 
-        void addDependencyInstance(Ichor::v1::IHostService&, IService &isvc);
-        void removeDependencyInstance(Ichor::v1::IHostService&, IService &isvc);
+        void addDependencyInstance(Ichor::ScopedServiceProxy<Ichor::v1::IHostService*>, IService &isvc);
+        void removeDependencyInstance(Ichor::ScopedServiceProxy<Ichor::v1::IHostService*>, IService &isvc);
 
-        void addDependencyInstance(IBoostAsioQueue &q, IService&);
-        void removeDependencyInstance(IBoostAsioQueue &q, IService&);
+        void addDependencyInstance(Ichor::ScopedServiceProxy<IBoostAsioQueue*> q, IService&);
+        void removeDependencyInstance(Ichor::ScopedServiceProxy<IBoostAsioQueue*> q, IService&);
 
         friend DependencyRegister;
         friend DependencyManager;
@@ -63,8 +64,8 @@ namespace Ichor::Boost::v1 {
         uint64_t _priority{};
         bool _connected{};
         bool _quit{};
-        Ichor::v1::ILogger *_logger{};
-        IBoostAsioQueue *_queue{};
+        Ichor::ScopedServiceProxy<Ichor::v1::ILogger*> _logger {};
+        Ichor::ScopedServiceProxy<IBoostAsioQueue*> _queue {};
         std::unique_ptr<net::strand<net::io_context::executor_type>> _strand{};
         std::atomic<int64_t> _finishedListenAndRead{};
         AsyncManualResetEvent _startStopEvent{};

@@ -1,3 +1,4 @@
+#include <ichor/ServiceExecutionScope.h>
 # Dependency Injection (DI)
 
 Ichor heavily uses Dependency Injection to ensure easier long term maintainability as well as make it easier to modify Ichor to suit the users use-cases.
@@ -89,19 +90,19 @@ private:
         co_return;
     }
 
-    void addDependencyInstance(ILogger &, IService &) {
+    void addDependencyInstance(Ichor::ScopedServiceProxy<ILogger*>, IService &) {
         // This function has this exact signature (so non-const reference parameters) and is called every time an ILogger instance is succesfully started.
     }
 
-    void removeDependencyInstance(ILogger&, IService&) {
+    void removeDependencyInstance(Ichor::ScopedServiceProxy<ILogger*>, IService&) {
         // This function has this exact signature (so non-const reference parameters) and is called every time an ILogger instance is stopping.
     }
 
-    void addDependencyInstance(IOptionalService&, IService &isvc) {
+    void addDependencyInstance(Ichor::ScopedServiceProxy<IOptionalService*>, IService &isvc) {
         // This function has this exact signature (so non-const reference parameters) and is called every time an IOptionalService instance is succesfully started.
     }
 
-    void removeDependencyInstance(IOptionalService&, IService&) {
+    void removeDependencyInstance(Ichor::ScopedServiceProxy<IOptionalService*>, IService&) {
         // This function has this exact signature (so non-const reference parameters) and is called every time an IOptionalService instance is stopping.
     }
 

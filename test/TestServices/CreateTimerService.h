@@ -10,7 +10,7 @@ extern std::atomic<uint64_t> evtGate;
 template<uint64_t requestAmount>
 class CreateTimerService final {
 public:
-    CreateTimerService(ITimerFactory *factory) {
+    CreateTimerService(ScopedServiceProxy<ITimerFactory> factory) {
         constexpr_for<(size_t)0, requestAmount, (size_t)1>([factory](auto i) {
             auto timer = factory->createTimer();
             evtGate++;

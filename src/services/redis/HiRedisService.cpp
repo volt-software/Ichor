@@ -5,6 +5,7 @@
 #include <hiredis/async.h>
 #include <hiredis/adapters/poll.h>
 #include <fmt/format.h>
+#include <ichor/ServiceExecutionScope.h>
 
 using namespace std::literals;
 
@@ -272,27 +273,27 @@ Ichor::Task<void> Ichor::v1::HiredisService::stop() {
     co_return;
 }
 
-void Ichor::v1::HiredisService::addDependencyInstance(ILogger &logger, IService&) {
-    _logger = &logger;
+void Ichor::v1::HiredisService::addDependencyInstance(Ichor::ScopedServiceProxy<ILogger*> logger, IService&) {
+    _logger = std::move(logger);
 }
 
-void Ichor::v1::HiredisService::removeDependencyInstance(ILogger &, IService&) {
+void Ichor::v1::HiredisService::removeDependencyInstance(Ichor::ScopedServiceProxy<ILogger*>, IService&) {
     _logger = nullptr;
 }
 
-void Ichor::v1::HiredisService::addDependencyInstance(ITimerFactory &factory, IService&) {
-    _timerFactory = &factory;
+void Ichor::v1::HiredisService::addDependencyInstance(Ichor::ScopedServiceProxy<ITimerFactory*> factory, IService&) {
+    _timerFactory = std::move(factory);
 }
 
-void Ichor::v1::HiredisService::removeDependencyInstance(ITimerFactory &, IService&) {
+void Ichor::v1::HiredisService::removeDependencyInstance(Ichor::ScopedServiceProxy<ITimerFactory*>, IService&) {
     _timerFactory = nullptr;
 }
 
-void Ichor::v1::HiredisService::addDependencyInstance(IEventQueue &queue, IService&) {
-    _queue = &queue;
+void Ichor::v1::HiredisService::addDependencyInstance(Ichor::ScopedServiceProxy<IEventQueue*> queue, IService&) {
+    _queue = std::move(queue);
 }
 
-void Ichor::v1::HiredisService::removeDependencyInstance(IEventQueue &, IService&) {
+void Ichor::v1::HiredisService::removeDependencyInstance(Ichor::ScopedServiceProxy<IEventQueue*>, IService&) {
     _queue = nullptr;
 }
 

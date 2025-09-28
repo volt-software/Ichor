@@ -6,6 +6,7 @@
 #include <ichor/event_queues/IEventQueue.h>
 #include <ichor/events/RunFunctionEvent.h>
 #include <ichor/coroutines/AsyncAutoResetEvent.h>
+#include <ichor/ServiceExecutionScope.h>
 
 #if defined(ICHOR_ENABLE_INTERNAL_DEBUGGING) || (defined(ICHOR_BUILDING_DEBUG) && (defined(__SANITIZE_ADDRESS__) || defined(__SANITIZE_THREAD__)))
 constexpr uint32_t EVENT_COUNT = 100;
@@ -66,25 +67,25 @@ private:
         co_return;
     }
 
-    void addDependencyInstance(ILogger &logger, IService &) {
-        _logger = &logger;
+    void addDependencyInstance(Ichor::ScopedServiceProxy<ILogger*> logger, IService &) {
+        _logger = std::move(logger);
     }
 
-    void removeDependencyInstance(ILogger &, IService&) {
-        _logger = nullptr;
+    void removeDependencyInstance(Ichor::ScopedServiceProxy<ILogger*>, IService&) {
+        _logger.reset();
     }
 
-    void addDependencyInstance(IEventQueue &q, IService&) {
-        _q = &q;
+    void addDependencyInstance(Ichor::ScopedServiceProxy<IEventQueue*> q, IService&) {
+        _q = std::move(q);
     }
 
-    void removeDependencyInstance(IEventQueue &, IService&) {
-        _q = nullptr;
+    void removeDependencyInstance(Ichor::ScopedServiceProxy<IEventQueue*>, IService&) {
+        _q.reset();
     }
 
     friend DependencyRegister;
 
-    ILogger *_logger{};
-    IEventQueue *_q{};
+    Ichor::ScopedServiceProxy<ILogger*> _logger {};
+    Ichor::ScopedServiceProxy<IEventQueue*> _q {};
     AsyncAutoResetEvent _evt{};
 };

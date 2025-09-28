@@ -3,6 +3,7 @@
 #include <ichor/services/timer/IOUringTimer.h>
 #include <ichor/events/RunFunctionEvent.h>
 #include <ichor/Filter.h>
+#include <ichor/ServiceExecutionScope.h>
 
 Ichor::v1::IOUringTimerFactoryFactory::IOUringTimerFactoryFactory(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {
     reg.registerDependency<IIOUringQueue>(this, DependencyFlags::REQUIRED);
@@ -46,11 +47,11 @@ Ichor::Task<void> Ichor::v1::IOUringTimerFactoryFactory::stop() {
     co_return;
 }
 
-void Ichor::v1::IOUringTimerFactoryFactory::addDependencyInstance(IIOUringQueue &q, IService&) noexcept {
-    _q = &q;
+void Ichor::v1::IOUringTimerFactoryFactory::addDependencyInstance(Ichor::ScopedServiceProxy<IIOUringQueue*> q, IService&) noexcept {
+    _q = std::move(q);
 }
 
-void Ichor::v1::IOUringTimerFactoryFactory::removeDependencyInstance(IIOUringQueue&, IService&) noexcept {
+void Ichor::v1::IOUringTimerFactoryFactory::removeDependencyInstance(Ichor::ScopedServiceProxy<IIOUringQueue*>, IService&) noexcept {
     _q = nullptr;
 }
 
@@ -86,15 +87,18 @@ Ichor::AsyncGenerator<Ichor::IchorBehaviour> Ichor::v1::IOUringTimerFactoryFacto
         co_return {};
     }
 
-    auto factory = _factories.find(evt.originatingService);
+    auto const factoryIt = _factories.find(evt.originatingService);
 
-    if(factory == _factories.cend()) {
+    if(factoryIt == _factories.cend()) {
         co_return {};
     }
 
-    co_await pushStopEventForTimerFactory(factory->first, factory->second);
+    auto const requestingSvcId = factoryIt->first;
+    auto const factorySvcId = factoryIt->second;
 
-    _factories.erase(evt.originatingService);
+    co_await pushStopEventForTimerFactory(requestingSvcId, factorySvcId);
+
+    _factories.erase(requestingSvcId);
 
     co_return {};
 }

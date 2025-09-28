@@ -5,6 +5,7 @@
 #include <ichor/services/logging/Logger.h>
 #include <ichor/DependencyManager.h>
 #include <ichor/Filter.h>
+#include <ichor/ServiceExecutionScope.h>
 
 namespace Ichor::v1 {
     using ConnectionCounterType = uint64_t;
@@ -116,18 +117,18 @@ namespace Ichor::v1 {
             co_return {};
         }
 
-        void addDependencyInstance(ILogger &logger, IService &) {
-            _logger = &logger;
+        void addDependencyInstance(Ichor::ScopedServiceProxy<ILogger*> logger, IService &) {
+            _logger = std::move(logger);
 
         }
-        void removeDependencyInstance(ILogger &, IService &) {
-            _logger = nullptr;
+        void removeDependencyInstance(Ichor::ScopedServiceProxy<ILogger*>, IService &) {
+            _logger.reset();
         }
 
         friend DependencyRegister;
         friend DependencyManager;
 
-        ILogger *_logger{};
+        Ichor::ScopedServiceProxy<ILogger*> _logger {};
         uint64_t _connectionCounter{};
         unordered_map<ServiceIdType, unordered_map<ConnectionCounterType, ServiceIdType>> _connections{};
         DependencyTrackerRegistration _trackerRegistration{};

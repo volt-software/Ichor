@@ -4,6 +4,7 @@
 #include <ichor/services/etcd/IEtcdV2.h>
 #include <ichor/events/RunFunctionEvent.h>
 #include <thread>
+#include <ichor/ServiceExecutionScope.h>
 
 namespace Ichor {
     struct Etcdv2UsingService final : public AdvancedService<Etcdv2UsingService> {
@@ -859,14 +860,14 @@ namespace Ichor {
             co_return {};
         }
 
-        void addDependencyInstance(Etcdv2::v1::IEtcd &Etcd, IService&) {
-            _etcd = &Etcd;
+        void addDependencyInstance(Ichor::ScopedServiceProxy<Etcdv2::v1::IEtcd*> Etcd, IService&) {
+            _etcd = std::move(Etcd);
         }
 
-        void removeDependencyInstance(Etcdv2::v1::IEtcd&, IService&) {
-            _etcd = nullptr;
+        void removeDependencyInstance(Ichor::ScopedServiceProxy<Etcdv2::v1::IEtcd*>, IService&) {
+            _etcd.reset();
         }
 
-        Etcdv2::v1::IEtcd *_etcd;
+        Ichor::ScopedServiceProxy<Etcdv2::v1::IEtcd*> _etcd ;
     };
 }

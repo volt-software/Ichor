@@ -8,6 +8,7 @@
 #include <ichor/services/logging/Logger.h>
 #include <ichor/event_queues/IIOUringQueue.h>
 #include <vector>
+#include <ichor/ServiceExecutionScope.h>
 
 namespace Ichor::v1 {
 
@@ -44,11 +45,11 @@ namespace Ichor::v1 {
         Task<tl::expected<void, Ichor::StartError>> start() final;
         Task<void> stop() final;
 
-        void addDependencyInstance(ILogger &logger, IService &isvc) noexcept;
-        void removeDependencyInstance(ILogger &logger, IService &isvc) noexcept;
+        void addDependencyInstance(Ichor::ScopedServiceProxy<ILogger*> logger, IService &isvc) noexcept;
+        void removeDependencyInstance(Ichor::ScopedServiceProxy<ILogger*> logger, IService &isvc) noexcept;
 
-        void addDependencyInstance(IIOUringQueue &, IService&) noexcept;
-        void removeDependencyInstance(IIOUringQueue &, IService&) noexcept;
+        void addDependencyInstance(Ichor::ScopedServiceProxy<IIOUringQueue*>, IService&) noexcept;
+        void removeDependencyInstance(Ichor::ScopedServiceProxy<IIOUringQueue*>, IService&) noexcept;
 
         std::function<void(io_uring_cqe*)> createRecvHandler() noexcept;
 
@@ -61,8 +62,8 @@ namespace Ichor::v1 {
         uint32_t _bufferEntrySize{8192};
         tl::optional<IOUringBuf> _buffer{};
         bool _quit{};
-        IIOUringQueue *_q{};
-        ILogger *_logger{};
+        Ichor::ScopedServiceProxy<IIOUringQueue*> _q {};
+        Ichor::ScopedServiceProxy<ILogger*> _logger {};
         std::vector<uint8_t> _recvBuf{};
         std::vector<decltype(_recvBuf)> _queuedMessages{};
         std::function<void(std::span<uint8_t const>)> _recvHandler;

@@ -5,6 +5,7 @@
 #include <ichor/services/network/ws/WsEvents.h>
 #include <ichor/services/network/http/HttpScopeGuards.h>
 #include <ichor/events/RunFunctionEvent.h>
+#include <ichor/ServiceExecutionScope.h>
 
 Ichor::Boost::v1::WsHostService::WsHostService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {
     reg.registerDependency<Ichor::v1::ILogger>(this, DependencyFlags::REQUIRED);
@@ -85,19 +86,19 @@ Ichor::Task<void> Ichor::Boost::v1::WsHostService::stop() {
     co_return;
 }
 
-void Ichor::Boost::v1::WsHostService::addDependencyInstance(Ichor::v1::ILogger &logger, IService &) {
-    _logger = &logger;
+void Ichor::Boost::v1::WsHostService::addDependencyInstance(Ichor::ScopedServiceProxy<Ichor::v1::ILogger*> logger, IService &) {
+    _logger = std::move(logger);
 }
 
-void Ichor::Boost::v1::WsHostService::removeDependencyInstance(Ichor::v1::ILogger &logger, IService&) {
+void Ichor::Boost::v1::WsHostService::removeDependencyInstance(Ichor::ScopedServiceProxy<Ichor::v1::ILogger*> logger, IService&) {
     _logger = nullptr;
 }
 
-void Ichor::Boost::v1::WsHostService::addDependencyInstance(IBoostAsioQueue &q, IService&) {
-    _queue = &q;
+void Ichor::Boost::v1::WsHostService::addDependencyInstance(Ichor::ScopedServiceProxy<IBoostAsioQueue*> q, IService&) {
+    _queue = std::move(q);
 }
 
-void Ichor::Boost::v1::WsHostService::removeDependencyInstance(IBoostAsioQueue&, IService&) {
+void Ichor::Boost::v1::WsHostService::removeDependencyInstance(Ichor::ScopedServiceProxy<IBoostAsioQueue*>, IService&) {
     _queue = nullptr;
 }
 

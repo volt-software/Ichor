@@ -10,7 +10,7 @@ using namespace Ichor::v1;
 
 class UsingStatisticsService final {
 public:
-    UsingStatisticsService(IService *self, IEventQueue *queue, ILogger *logger, ITimerFactory *timerFactory) : _logger(logger) {
+    UsingStatisticsService(IService *self, IEventQueue *queue, ScopedServiceProxy<ILogger> logger, ScopedServiceProxy<ITimerFactory> timerFactory) : _logger(logger) {
         ICHOR_LOG_INFO(_logger, "UsingStatisticsService started");
         auto quitTimer = timerFactory->createTimer();
         auto bogusTimer = timerFactory->createTimer();
@@ -34,7 +34,7 @@ public:
     }
 
 private:
-    ILogger *_logger;
+    ScopedServiceProxy<ILogger> _logger;
     std::random_device _rd{};
     std::mt19937 _mt{_rd()};
     std::uniform_int_distribution<> _dist{1, 10};

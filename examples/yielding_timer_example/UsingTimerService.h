@@ -15,7 +15,7 @@ struct IUsingTimerService {
 
 class UsingTimerService final : public IUsingTimerService {
 public:
-    UsingTimerService(IService *self, IEventQueue *queue, ILogger *logger, ITimerFactory *timerFactory) : _logger(logger) {
+    UsingTimerService(IService *self, IEventQueue *queue, ScopedServiceProxy<ILogger> logger, ScopedServiceProxy<ITimerFactory> timerFactory) : _logger(logger) {
             ICHOR_LOG_INFO(_logger, "UsingTimerService started");
             auto timer = timerFactory->createTimer();
             timer.setChronoInterval(std::chrono::milliseconds(250));
@@ -45,6 +45,6 @@ public:
     }
 
 private:
-    ILogger *_logger{};
+    ScopedServiceProxy<ILogger> _logger{};
     uint64_t _timerTriggerCount{0};
 };

@@ -33,7 +33,7 @@ public:
 
 class FactoryService final {
 public:
-    FactoryService(DependencyManager *dm, IService *self, ILogger *logger) : _self(self), _logger(logger) {
+    FactoryService(DependencyManager *dm, IService *self, ScopedServiceProxy<ILogger> logger) : _self(self), _logger(logger) {
         ICHOR_LOG_INFO(_logger, "FactoryService started");
         _trackerRegistration = dm->registerDependencyTracker<IRuntimeCreatedService>(this, self);
     }
@@ -110,7 +110,7 @@ private:
     friend DependencyManager;
 
     IService *_self{};
-    ILogger *_logger{};
+    ScopedServiceProxy<ILogger> _logger{};
     DependencyTrackerRegistration _trackerRegistration{};
     std::unordered_map<std::string, ServiceIdType> _scopedRuntimeServices{};
 };

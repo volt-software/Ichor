@@ -9,6 +9,7 @@
 #include <ichor/services/serialization/ISerializer.h>
 #include <ichor/events/RunFunctionEvent.h>
 #include "../common/TestMsg.h"
+#include <ichor/ServiceExecutionScope.h>
 
 using namespace Ichor;
 using namespace Ichor::v1;
@@ -33,30 +34,30 @@ private:
         co_return;
     }
 
-    void addDependencyInstance(ILogger &logger, IService &) {
-        _logger = &logger;
+    void addDependencyInstance(Ichor::ScopedServiceProxy<ILogger*> logger, IService &) {
+        _logger = std::move(logger);
     }
 
-    void removeDependencyInstance(ILogger&, IService&) {
-        _logger = nullptr;
+    void removeDependencyInstance(Ichor::ScopedServiceProxy<ILogger*>, IService&) {
+        _logger.reset();
     }
 
-    void addDependencyInstance(ISerializer<TestMsg> &serializer, IService&) {
-        _serializer = &serializer;
+    void addDependencyInstance(Ichor::ScopedServiceProxy<ISerializer<TestMsg>*> serializer, IService&) {
+        _serializer = std::move(serializer);
         ICHOR_LOG_INFO(_logger, "Inserted serializer");
     }
 
-    void removeDependencyInstance(ISerializer<TestMsg>&, IService&) {
+    void removeDependencyInstance(Ichor::ScopedServiceProxy<ISerializer<TestMsg>*>, IService&) {
         _serializer = nullptr;
         ICHOR_LOG_INFO(_logger, "Removed serializer");
     }
 
-    void addDependencyInstance(IConnectionService &connectionService, IService&) {
-        if(connectionService.isClient()) {
-            _clientService = &connectionService;
+    void addDependencyInstance(Ichor::ScopedServiceProxy<IConnectionService*> connectionService, IService&) {
+        if(connectionService->isClient()) {
+            _clientService = std::move(connectionService);
             ICHOR_LOG_INFO(_logger, "Inserted clientService");
         } else {
-            _hostService = &connectionService;
+            _hostService = std::move(connectionService);
             ICHOR_LOG_INFO(_logger, "Inserted _hostService");
             _hostService->setReceiveHandler([this](std::span<uint8_t const> data) {
                 auto msg = _serializer->deserialize(data);
@@ -83,15 +84,15 @@ private:
         }
     }
 
-    void removeDependencyInstance(IConnectionService&, IService&) {
+    void removeDependencyInstance(Ichor::ScopedServiceProxy<IConnectionService*>, IService&) {
         ICHOR_LOG_INFO(_logger, "Removed connectionService");
     }
 
     friend DependencyRegister;
     friend DependencyManager;
 
-    ILogger *_logger{};
-    ISerializer<TestMsg> *_serializer{};
-	IConnectionService *_clientService{};
-	IConnectionService *_hostService{};
+    Ichor::ScopedServiceProxy<ILogger*> _logger {};
+    Ichor::ScopedServiceProxy<ISerializer<TestMsg>*> _serializer {};
+	Ichor::ScopedServiceProxy<IConnectionService*> _clientService {};
+	Ichor::ScopedServiceProxy<IConnectionService*> _hostService {};
 };

@@ -7,6 +7,7 @@
 #include "gsm_enc/gsm_enc.h"
 #include <array>
 #include <numeric>
+#include <ichor/ServiceExecutionScope.h>
 
 using namespace Ichor;
 
@@ -57,17 +58,17 @@ private:
         co_return;
     }
 
-    void addDependencyInstance(ILogger &logger, IService &isvc) {
-        _logger = &logger;
+    void addDependencyInstance(Ichor::ScopedServiceProxy<ILogger*> logger, IService &isvc) {
+        _logger = std::move(logger);
 
         ICHOR_LOG_INFO(_logger, "Inserted logger svcid {} for svcid {}", isvc.getServiceId(), getServiceId());
     }
 
-    void removeDependencyInstance(ILogger&, IService&) {
-        _logger = nullptr;
+    void removeDependencyInstance(Ichor::ScopedServiceProxy<ILogger*>, IService&) {
+        _logger.reset();
     }
 
-    void addDependencyInstance(IOptionalService&, IService &isvc) {
+    void addDependencyInstance(Ichor::ScopedServiceProxy<IOptionalService*>, IService &isvc) {
         ICHOR_LOG_INFO(_logger, "Inserted IOptionalService svcid {} {}", isvc.getServiceId(), _injectionCount);
 
         _injectionCount++;
@@ -76,7 +77,7 @@ private:
         }
     }
 
-    void removeDependencyInstance(IOptionalService&, IService&) {
+    void removeDependencyInstance(Ichor::ScopedServiceProxy<IOptionalService*>, IService&) {
     }
 
     void enqueueWorkload() {
@@ -111,7 +112,7 @@ private:
     friend DependencyRegister;
     friend DependencyManager;
 
-    ILogger *_logger{};
+    Ichor::ScopedServiceProxy<ILogger*> _logger {};
     bool _started{false};
     size_t _injectionCount{0};
     size_t _finishedWorkloads{0};

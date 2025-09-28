@@ -6,6 +6,7 @@
 #include <ichor/dependency_management/AdvancedService.h>
 #include <ichor/services/logging/Logger.h>
 #include <ichor/services/logging/SpdlogSharedService.h>
+#include <ichor/ServiceExecutionScope.h>
 
 namespace Ichor::v1 {
     class SpdlogLogger final : public ILogger, public AdvancedService<SpdlogLogger> {
@@ -19,8 +20,8 @@ namespace Ichor::v1 {
         void warn(const char *filename_in, int line_in, const char *funcname_in, std::string_view format_str, fmt::format_args args) final;
         void error(const char *filename_in, int line_in, const char *funcname_in, std::string_view format_str, fmt::format_args args) final;
 
-        void addDependencyInstance(ISpdlogSharedService &shared, IService &isvc) noexcept;
-        void removeDependencyInstance(ISpdlogSharedService &shared, IService &isvc) noexcept;
+        void addDependencyInstance(Ichor::ScopedServiceProxy<ISpdlogSharedService*> shared, IService &isvc) noexcept;
+        void removeDependencyInstance(Ichor::ScopedServiceProxy<ISpdlogSharedService*> shared, IService &isvc) noexcept;
 
         void setLogLevel(LogLevel level) noexcept final;
         [[nodiscard]] LogLevel getLogLevel() const noexcept final;
@@ -33,7 +34,7 @@ namespace Ichor::v1 {
 
         void* _logger{};
         LogLevel _level{LogLevel::LOG_TRACE};
-        ISpdlogSharedService* _sharedService{};
+        Ichor::ScopedServiceProxy<ISpdlogSharedService*> _sharedService {};
     };
 }
 

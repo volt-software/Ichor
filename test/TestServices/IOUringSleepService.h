@@ -3,6 +3,7 @@
 #include <ichor/dependency_management/AdvancedService.h>
 #include <ichor/event_queues/IIOUringQueue.h>
 #include <ichor/ichor_liburing.h>
+#include <ichor/ServiceExecutionScope.h>
 
 namespace Ichor {
     struct IOUringSleepService final : public AdvancedService<IOUringSleepService> {
@@ -46,15 +47,15 @@ namespace Ichor {
             co_return;
         }
 
-        void addDependencyInstance(IIOUringQueue& q, IService&) {
-            _q = &q;
+        void addDependencyInstance(Ichor::ScopedServiceProxy<IIOUringQueue*> q, IService&) {
+            _q = std::move(q);
         }
 
-        void removeDependencyInstance(IIOUringQueue&, IService&) {
-            _q = nullptr;
+        void removeDependencyInstance(Ichor::ScopedServiceProxy<IIOUringQueue*>, IService&) {
+            _q.reset();
         }
 
-        IIOUringQueue *_q;
+        Ichor::ScopedServiceProxy<IIOUringQueue*> _q ;
         __kernel_timespec timespec{};
     };
 }

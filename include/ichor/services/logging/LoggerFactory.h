@@ -4,6 +4,7 @@
 #include <ichor/dependency_management/AdvancedService.h>
 #include <ichor/services/logging/Logger.h>
 #include <ichor/Filter.h>
+#include <ichor/ServiceExecutionScope.h>
 
 namespace Ichor::v1 {
     struct ILoggerFactory {
@@ -46,12 +47,12 @@ namespace Ichor::v1 {
             co_return;
         }
 
-        void addDependencyInstance(IFrameworkLogger &logger, IService&) noexcept {
-            _logger = &logger;
+        void addDependencyInstance(Ichor::ScopedServiceProxy<IFrameworkLogger*> logger, IService&) noexcept {
+            _logger = std::move(logger);
         }
 
-        void removeDependencyInstance(IFrameworkLogger&, IService&) noexcept {
-            _logger = nullptr;
+        void removeDependencyInstance(Ichor::ScopedServiceProxy<IFrameworkLogger*>, IService&) noexcept {
+            _logger.reset();
         }
 
         AsyncGenerator<IchorBehaviour> handleDependencyRequest(v1::AlwaysNull<ILogger*>, DependencyRequestEvent const &evt) {
@@ -92,7 +93,7 @@ namespace Ichor::v1 {
         friend DependencyRegister;
         friend DependencyManager;
 
-        IFrameworkLogger *_logger{};
+        Ichor::ScopedServiceProxy<IFrameworkLogger*> _logger {};
         DependencyTrackerRegistration _loggerTrackerRegistration{};
         unordered_map<ServiceIdType, ServiceIdType> _loggers;
         LogLevel _defaultLevel{LogLevel::LOG_ERROR};

@@ -3,6 +3,7 @@
 #include <ichor/services/network/http/HttpHostService.h>
 #include <ichor/services/network/tcp/TcpHostService.h>
 #include <fmt/format.h>
+#include <ichor/ServiceExecutionScope.h>
 
 
 template <>
@@ -64,36 +65,36 @@ Ichor::Task<void> Ichor::v1::HttpHostService::stop() {
     co_return;
 }
 
-void Ichor::v1::HttpHostService::addDependencyInstance(ILogger &logger, IService &) {
-    _logger = &logger;
+void Ichor::v1::HttpHostService::addDependencyInstance(Ichor::ScopedServiceProxy<ILogger*> logger, IService &) {
+    _logger = std::move(logger);
     ICHOR_LOG_TRACE(_logger, "HttpHost {} got logger", getServiceId());
 }
 
-void Ichor::v1::HttpHostService::removeDependencyInstance(ILogger &, IService &) {
+void Ichor::v1::HttpHostService::removeDependencyInstance(Ichor::ScopedServiceProxy<ILogger*>, IService &) {
     _logger = nullptr;
 }
 
-void Ichor::v1::HttpHostService::addDependencyInstance(IEventQueue &q, IService &) {
+void Ichor::v1::HttpHostService::addDependencyInstance(Ichor::ScopedServiceProxy<IEventQueue*> q, IService &) {
     ICHOR_LOG_TRACE(_logger, "HttpHost {} got queue", getServiceId());
-    _queue = &q;
+    _queue = std::move(q);
 }
 
-void Ichor::v1::HttpHostService::removeDependencyInstance(IEventQueue &, IService &) {
+void Ichor::v1::HttpHostService::removeDependencyInstance(Ichor::ScopedServiceProxy<IEventQueue*>, IService &) {
     _queue = nullptr;
 }
 
-void Ichor::v1::HttpHostService::addDependencyInstance(IHostService &, IService &s) {
+void Ichor::v1::HttpHostService::addDependencyInstance(Ichor::ScopedServiceProxy<IHostService*>, IService &s) {
     ICHOR_LOG_TRACE(_logger, "HttpHost {} got host service {}", getServiceId(), s.getServiceId());
     _hostServiceIds.emplace(s.getServiceId());
 }
 
-void Ichor::v1::HttpHostService::removeDependencyInstance(IHostService &, IService &s) {
+void Ichor::v1::HttpHostService::removeDependencyInstance(Ichor::ScopedServiceProxy<IHostService*>, IService &s) {
     _hostServiceIds.erase(s.getServiceId());
 }
 
-void Ichor::v1::HttpHostService::addDependencyInstance(IHostConnectionService &client, IService &s) {
+void Ichor::v1::HttpHostService::addDependencyInstance(Ichor::ScopedServiceProxy<IHostConnectionService*> client, IService &s) {
     ICHOR_LOG_TRACE(_logger, "HttpHost {} got connection {}", getServiceId(), s.getServiceId());
-    if(client.isClient()) {
+    if(client->isClient()) {
         ICHOR_LOG_TRACE(_logger, "connection {} is not a host connection", s.getServiceId());
         return;
     }
@@ -109,7 +110,7 @@ void Ichor::v1::HttpHostService::addDependencyInstance(IHostConnectionService &c
         return;
     }
 
-    client.setReceiveHandler([this, id = s.getServiceId()](std::span<uint8_t const> buffer) {
+    client->setReceiveHandler([this, id = s.getServiceId()](std::span<uint8_t const> buffer) {
         std::string_view msg{reinterpret_cast<char const*>(buffer.data()), buffer.size()};
         auto &string = _connectionBuffers[id];
         string.append(msg.data(), msg.size());
@@ -119,10 +120,10 @@ void Ichor::v1::HttpHostService::addDependencyInstance(IHostConnectionService &c
         });
     });
 
-    _connections.emplace(s.getServiceId(), &client);
+    _connections.emplace(s.getServiceId(), client);
 }
 
-void Ichor::v1::HttpHostService::removeDependencyInstance(IHostConnectionService &, IService &s) {
+void Ichor::v1::HttpHostService::removeDependencyInstance(Ichor::ScopedServiceProxy<IHostConnectionService*>, IService &s) {
     _connections.erase(s.getServiceId());
     _connectionBuffers.erase(s.getServiceId());
 }

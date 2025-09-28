@@ -9,6 +9,7 @@
 #include <boost/asio/spawn.hpp>
 #include <boost/circular_buffer.hpp>
 #include <memory>
+#include <ichor/ServiceExecutionScope.h>
 
 namespace beast = boost::beast;         // from <boost/beast.hpp>
 namespace http = beast::http;           // from <boost/beast/http.hpp>
@@ -59,10 +60,10 @@ namespace Ichor::Boost::v1 {
         Task<tl::expected<void, Ichor::StartError>> start() final;
         Task<void> stop() final;
 
-        void addDependencyInstance(Ichor::v1::ILogger &logger, IService &isvc);
-        void removeDependencyInstance(Ichor::v1::ILogger &logger, IService &isvc);
-        void addDependencyInstance(IBoostAsioQueue &q, IService&);
-        void removeDependencyInstance(IBoostAsioQueue &q, IService&);
+        void addDependencyInstance(Ichor::ScopedServiceProxy<Ichor::v1::ILogger*> logger, IService &isvc);
+        void removeDependencyInstance(Ichor::ScopedServiceProxy<Ichor::v1::ILogger*> logger, IService &isvc);
+        void addDependencyInstance(Ichor::ScopedServiceProxy<IBoostAsioQueue*> q, IService&);
+        void removeDependencyInstance(Ichor::ScopedServiceProxy<IBoostAsioQueue*> q, IService&);
 
         void fail(beast::error_code, char const* what, bool stopSelf);
         void listen(tcp::endpoint endpoint, net::yield_context yield);
@@ -89,9 +90,9 @@ namespace Ichor::Boost::v1 {
         uint64_t _matchersIdCounter{};
         bool _sendServerHeader{true};
         bool _debug{};
-        Ichor::v1::ILogger* _logger{};
+        Ichor::ScopedServiceProxy<Ichor::v1::ILogger*> _logger {};
         unordered_map<Ichor::v1::HttpMethod, unordered_map<std::unique_ptr<Ichor::v1::RouteMatcher>, std::function<Task<Ichor::v1::HttpResponse>(Ichor::v1::HttpRequest&)>>> _handlers{};
         AsyncManualResetEvent _startStopEvent{};
-        IBoostAsioQueue *_queue{};
+        Ichor::ScopedServiceProxy<IBoostAsioQueue*> _queue {};
     };
 }

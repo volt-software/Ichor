@@ -8,6 +8,7 @@
 #include <unistd.h>
 #include <thread>
 #include <ichor/ichor_liburing.h>
+#include <ichor/ServiceExecutionScope.h>
 
 template <typename InterfaceT> requires Ichor::DerivedAny<InterfaceT, Ichor::v1::IConnectionService, Ichor::v1::IHostConnectionService, Ichor::v1::IClientConnectionService>
 Ichor::v1::IOUringTcpConnectionService<InterfaceT>::IOUringTcpConnectionService(DependencyRegister &reg, Properties props) : AdvancedService<IOUringTcpConnectionService>(std::move(props)), _socket(-1) {
@@ -255,22 +256,22 @@ Ichor::Task<void> Ichor::v1::IOUringTcpConnectionService<InterfaceT>::stop() {
 }
 
 template <typename InterfaceT> requires Ichor::DerivedAny<InterfaceT, Ichor::v1::IConnectionService, Ichor::v1::IHostConnectionService, Ichor::v1::IClientConnectionService>
-void Ichor::v1::IOUringTcpConnectionService<InterfaceT>::addDependencyInstance(ILogger &logger, IService &) noexcept {
-    _logger = &logger;
+void Ichor::v1::IOUringTcpConnectionService<InterfaceT>::addDependencyInstance(Ichor::ScopedServiceProxy<ILogger*> logger, IService &) noexcept {
+    _logger = std::move(logger);
 }
 
 template <typename InterfaceT> requires Ichor::DerivedAny<InterfaceT, Ichor::v1::IConnectionService, Ichor::v1::IHostConnectionService, Ichor::v1::IClientConnectionService>
-void Ichor::v1::IOUringTcpConnectionService<InterfaceT>::removeDependencyInstance(ILogger &, IService&) noexcept {
+void Ichor::v1::IOUringTcpConnectionService<InterfaceT>::removeDependencyInstance(Ichor::ScopedServiceProxy<ILogger*>, IService&) noexcept {
     _logger = nullptr;
 }
 
 template <typename InterfaceT> requires Ichor::DerivedAny<InterfaceT, Ichor::v1::IConnectionService, Ichor::v1::IHostConnectionService, Ichor::v1::IClientConnectionService>
-void Ichor::v1::IOUringTcpConnectionService<InterfaceT>::addDependencyInstance(IIOUringQueue &q, IService&) noexcept {
-    _q = &q;
+void Ichor::v1::IOUringTcpConnectionService<InterfaceT>::addDependencyInstance(Ichor::ScopedServiceProxy<IIOUringQueue*> q, IService&) noexcept {
+    _q = std::move(q);
 }
 
 template <typename InterfaceT> requires Ichor::DerivedAny<InterfaceT, Ichor::v1::IConnectionService, Ichor::v1::IHostConnectionService, Ichor::v1::IClientConnectionService>
-void Ichor::v1::IOUringTcpConnectionService<InterfaceT>::removeDependencyInstance(IIOUringQueue&, IService&) noexcept {
+void Ichor::v1::IOUringTcpConnectionService<InterfaceT>::removeDependencyInstance(Ichor::ScopedServiceProxy<IIOUringQueue*>, IService&) noexcept {
     _q = nullptr;
 }
 

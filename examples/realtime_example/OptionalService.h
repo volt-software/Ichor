@@ -3,6 +3,7 @@
 #include <ichor/services/logging/Logger.h>
 #include <ichor/dependency_management/AdvancedService.h>
 #include <ichor/dependency_management/DependencyRegister.h>
+#include <ichor/ServiceExecutionScope.h>
 
 using namespace Ichor;
 using namespace Ichor::v1;
@@ -30,16 +31,16 @@ private:
         co_return;
     }
 
-    void addDependencyInstance(ILogger &logger, IService &isvc) {
-        _logger = &logger;
+    void addDependencyInstance(Ichor::ScopedServiceProxy<ILogger*> logger, IService &isvc) {
+        _logger = std::move(logger);
         ICHOR_LOG_INFO(_logger, "Inserted logger svcid {} for svcid {}", isvc.getServiceId(), getServiceId());
     }
 
-    void removeDependencyInstance(ILogger&, IService&) {
-        _logger = nullptr;
+    void removeDependencyInstance(Ichor::ScopedServiceProxy<ILogger*>, IService&) {
+        _logger.reset();
     }
 
     friend DependencyRegister;
 
-    ILogger *_logger{};
+    Ichor::ScopedServiceProxy<ILogger*> _logger {};
 };

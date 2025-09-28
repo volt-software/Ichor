@@ -5,6 +5,7 @@
 #include <ichor/services/network/IHostService.h>
 #include <ichor/services/logging/Logger.h>
 #include <ichor/services/timer/ITimerFactory.h>
+#include <ichor/ServiceExecutionScope.h>
 
 namespace Ichor::v1 {
     struct NewSocketEvent final : public Ichor::Event {
@@ -44,11 +45,11 @@ namespace Ichor::v1 {
         Task<tl::expected<void, Ichor::StartError>> start() final;
         Task<void> stop() final;
 
-        void addDependencyInstance(ILogger &logger, IService &isvc);
-        void removeDependencyInstance(ILogger &logger, IService &isvc);
+        void addDependencyInstance(Ichor::ScopedServiceProxy<ILogger*> logger, IService &isvc);
+        void removeDependencyInstance(Ichor::ScopedServiceProxy<ILogger*> logger, IService &isvc);
 
-        void addDependencyInstance(ITimerFactory &logger, IService &isvc);
-        void removeDependencyInstance(ITimerFactory &logger, IService &isvc);
+        void addDependencyInstance(Ichor::ScopedServiceProxy<ITimerFactory*> logger, IService &isvc);
+        void removeDependencyInstance(Ichor::ScopedServiceProxy<ITimerFactory*> logger, IService &isvc);
 
         AsyncGenerator<IchorBehaviour> handleEvent(NewSocketEvent const &evt);
         void acceptHandler();
@@ -62,8 +63,8 @@ namespace Ichor::v1 {
         int64_t _sendTimeout{250'000};
         int64_t _recvTimeout{250'000};
         bool _quit;
-        ILogger *_logger{};
-        ITimerFactory *_timerFactory{};
+        Ichor::ScopedServiceProxy<ILogger*> _logger {};
+        Ichor::ScopedServiceProxy<ITimerFactory*> _timerFactory {};
         tl::optional<TimerRef> _timer{};
         std::vector<ServiceIdType> _connections;
         EventHandlerRegistration _newSocketEventHandlerRegistration{};

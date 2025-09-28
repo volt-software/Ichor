@@ -8,6 +8,7 @@
 #include "TestServices/DependencyOfflineWhileStartingService.h"
 #include "TestServices/DependencyOnlineWhileStoppingService.h"
 #include <ichor/events/RunFunctionEvent.h>
+#include "../examples/common/DebugService.h"
 #include <memory>
 
 std::unique_ptr<Ichor::AsyncManualResetEvent> _evt;
@@ -289,6 +290,7 @@ TEST_CASE("CoroutineTests") {
         auto queue = std::make_unique<QIMPL>(500);
 #endif
         auto &dm = queue->createManager();
+        ServiceIdType dbgSvcId{};
 
         std::thread t([&]() {
 #if defined(TEST_URING)
@@ -300,6 +302,7 @@ TEST_CASE("CoroutineTests") {
             dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>();
             dm.createServiceManager<AwaitService, IAwaitService>();
             dm.createServiceManager<AsyncUsingTimerService>();
+            dbgSvcId = dm.createServiceManager<DebugService, IDebugService>()->getServiceId();
             dm.createServiceManager<TFFIMPL>();
             queue->start(CaptureSigInt);
 #if defined(TEST_SDEVENT)
@@ -316,6 +319,34 @@ TEST_CASE("CoroutineTests") {
             INTERNAL_DEBUG("set");
             _evt->set();
         });
+
+
+        auto start = std::chrono::steady_clock::now();
+        while(queue->is_running()) {
+            std::this_thread::sleep_for(10ms);
+            auto now = std::chrono::steady_clock::now();
+            if(now - start >= 1s) {
+                break;
+            }
+        }
+
+        queue->pushEvent<RunFunctionEvent>(0, [&]() {
+            auto dbgSvc = dm.getService<IDebugService>(dbgSvcId);
+            REQUIRE(dbgSvc);
+            dbgSvc->first->printServices();
+        });
+
+        start = std::chrono::steady_clock::now();
+        while(queue->is_running()) {
+            std::this_thread::sleep_for(10ms);
+            auto now = std::chrono::steady_clock::now();
+            if(now - start >= 1s) {
+                break;
+            }
+        }
+
+        auto now = std::chrono::steady_clock::now();
+        REQUIRE(now - start < 1s);
 
         t.join();
 
