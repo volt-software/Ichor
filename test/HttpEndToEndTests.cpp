@@ -101,8 +101,11 @@ TEST_CASE("HttpEndToEndTests_boost") {
             queue->start(CaptureSigInt);
         });
 
+        auto start = std::chrono::steady_clock::now();
         while(!evtGate) {
             std::this_thread::sleep_for(500us);
+            auto now = std::chrono::steady_clock::now();
+            REQUIRE(now - start <= 1s);
         }
 
         queue->pushEvent<RunFunctionEvent>(0, [&]() {
@@ -224,8 +227,11 @@ TEST_CASE("HttpEndToEndTests_boost") {
             queue->start(CaptureSigInt);
         });
 
+        auto start = std::chrono::steady_clock::now();
         while(!evtGate) {
             std::this_thread::sleep_for(500us);
+            auto now = std::chrono::steady_clock::now();
+            REQUIRE(now - start <= 1s);
         }
 
         queue->pushEvent<RunFunctionEvent>(0, [&]() {
