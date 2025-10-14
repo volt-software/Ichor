@@ -12,8 +12,28 @@ namespace Ichor::v1 {
     template <typename T>
     class ReferenceCountedPointer;
 
+    namespace Detail {
+        template<typename T, typename = void>
+        struct IsComplete : std::false_type {};
+
+        template<typename T>
+        struct IsComplete<T, std::void_t<decltype(sizeof(T))>> : std::true_type {};
+
+        template<bool Complete, typename T, typename... U>
+        struct ConstructibleHelperSelector;
+
+        template<typename T, typename... U>
+        struct ConstructibleHelperSelector<true, T, U...> : std::bool_constant<std::is_constructible_v<T, U...>> {};
+
+        template<typename T, typename... U>
+        struct ConstructibleHelperSelector<false, T, U...> : std::true_type {};
+
+        template<typename T, typename... U>
+        struct ConstructibleHelper : ConstructibleHelperSelector<IsComplete<T>::value, T, U...> {};
+    }
+
     template <typename T, typename... U>
-    concept Constructible = std::is_constructible_v<T, U...>;
+    concept Constructible = Detail::ConstructibleHelper<T, U...>::value;
 
 
 #ifdef ICHOR_ENABLE_INTERNAL_STL_DEBUGGING
@@ -94,7 +114,8 @@ namespace Ichor::v1 {
         template <typename... U> requires Constructible<T, U...>
         ICHOR_CXX23_CONSTEXPR explicit ReferenceCountedPointer(U&&... args) : _ptr(new Detail::ReferenceCountedPointerDeleter(new T(std::forward<U>(args)...), [](void *ptr) { delete static_cast<T*>(ptr); })) {
             if constexpr (std::is_same_v<T, bool>) {
-                static_assert(std::is_same_v<T, U...>);
+                static_assert(sizeof...(U) == 1, "ReferenceCountedPointer<bool> expects a single bool value");
+                static_assert((std::is_same_v<bool, std::remove_cvref_t<U>> && ...), "ReferenceCountedPointer<bool> expects bool-compatible argument");
                 INTERNAL_STL_DEBUG("ReferenceCountedPointer<{}>(U&&... args) {} {} bool! {}", typeName<T>(), RFP_ID _ptr == nullptr, *static_cast<T*>(_ptr->ptr.get()));
             } else {
                 INTERNAL_STL_DEBUG("ReferenceCountedPointer<{}>(U&&... args) {} {} {}", typeName<T>(), RFP_ID _ptr == nullptr, sizeof(T));
