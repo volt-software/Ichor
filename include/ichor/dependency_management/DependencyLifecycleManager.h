@@ -33,7 +33,7 @@ namespace Ichor::Detail {
 
             for(auto const &interface : dependentService->getInterfaces()) {
                 auto dep = _registry.find(interface, true);
-                INTERNAL_DEBUG("interestedInDependencyGoingOffline() svc {}:{} {} dependent {}:{}", serviceId(), implementationName(), getServiceState(), dependentService->serviceId(), dependentService->implementationName());
+                INTERNAL_DEBUG("interestedInDependencyGoingOffline() svc {}:{} interface {} {} dependent {}:{}", serviceId(), implementationName(), interface.getInterfaceName(), getServiceState(), dependentService->serviceId(), dependentService->implementationName());
 
                 if(dep == _registry.end()) {
                     INTERNAL_DEBUG("interestedInDependencyGoingOffline() not found");
@@ -122,12 +122,14 @@ namespace Ichor::Detail {
                 }
 #endif
 
-                if((dep->flags & DependencyFlags::REQUIRED) == DependencyFlags::REQUIRED && dep->satisfied == 0 && (getServiceState() == ServiceState::STARTING || getServiceState() == ServiceState::INJECTING)) {
+                bool requiredDep = (dep->flags & DependencyFlags::REQUIRED) == DependencyFlags::REQUIRED;
+
+                if(requiredDep && dep->satisfied == 0 && (getServiceState() == ServiceState::STARTING || getServiceState() == ServiceState::INJECTING)) {
                     INTERNAL_DEBUG("{}:{}:{} dependencyOffline waitForService {} {} {} {}", serviceId(), _service.getServiceName(), getServiceState(), interested, dep->satisfied, dep->flags, getDependees().size());
                     co_await waitForService(serviceId(), DependencyOnlineEvent::TYPE);
                 }
 
-                if ((dep->flags & DependencyFlags::REQUIRED) == DependencyFlags::REQUIRED && dep->satisfied == 0 && interested != DependencyChange::FOUND_AND_STOP_ME && getServiceState() == ServiceState::ACTIVE) {
+                if (requiredDep && dep->satisfied == 0 && interested != DependencyChange::FOUND_AND_STOP_ME && getServiceState() == ServiceState::ACTIVE) {
                     INTERNAL_DEBUG("{}:{}:{} dependencyOffline stopping {}", serviceId(), _service.getServiceName(), getServiceState(), interested);
 
                     GetThreadLocalEventQueue().template pushPrioritisedEvent<DependencyOfflineEvent>(serviceId(), INTERNAL_DEPENDENCY_EVENT_PRIORITY - 1, false);
@@ -167,13 +169,13 @@ namespace Ichor::Detail {
                     interested = DependencyChange::FOUND;
                 }
 
-                if((dep->flags & DependencyFlags::REQUIRED) == DependencyFlags::REQUIRED && dep->satisfied == 0 && (getServiceState() == ServiceState::UNINJECTING || getServiceState() == ServiceState::STOPPING)) {
+                if(requiredDep && dep->satisfied == 0 && interested == DependencyChange::FOUND_AND_STOP_ME && (getServiceState() == ServiceState::UNINJECTING || getServiceState() == ServiceState::STOPPING)) {
                     INTERNAL_DEBUG("{}:{}:{} dependencyOffline waitForService {} {} {} {}", serviceId(), _service.getServiceName(), getServiceState(), interested, dep->satisfied, dep->flags, getDependees().size());
                     co_await waitForService(serviceId(), StopServiceEvent::TYPE);
                 }
 
 #ifdef ICHOR_USE_HARDENING
-                if((dep->flags & DependencyFlags::REQUIRED) == DependencyFlags::REQUIRED && dep->satisfied == 0 && getServiceState() >= ServiceState::INJECTING) [[unlikely]] {
+                if(requiredDep && dep->satisfied == 0 && interested == DependencyChange::FOUND_AND_STOP_ME && getServiceState() >= ServiceState::INJECTING) [[unlikely]] {
                     INTERNAL_DEBUG("{}:{}:{} dependencyOffline terminating {} {} {} {}", serviceId(), _service.getServiceName(), getServiceState(), interested, dep->satisfied, dep->flags, getDependees().size());
                     std::terminate();
                 }
