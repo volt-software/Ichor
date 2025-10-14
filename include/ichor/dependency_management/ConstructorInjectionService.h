@@ -284,17 +284,50 @@ namespace Ichor {
     protected:
         Properties _properties;
     private:
+#ifdef ICHOR_ENABLE_INTERNAL_DEBUGGING
+        template <typename CO_ARG>
+        void logSingleService(std::string &out) {
+            if constexpr(std::is_same_v<CO_ARG, IService*>) {
+                fmt::format_to(std::back_inserter(out), " IService:{}:{}", typeNameHash<IService>(), typeNameHash<IService*>());
+            } else if constexpr(std::is_same_v<CO_ARG, DependencyManager*>) {
+                fmt::format_to(std::back_inserter(out), " DependencyManager:{}:{}", typeNameHash<DependencyManager>(), typeNameHash<DependencyManager*>());
+            } else if constexpr(std::is_same_v<CO_ARG, IEventQueue*>) {
+                fmt::format_to(std::back_inserter(out), " IEventQueue:{}:{}", typeNameHash<IEventQueue>(), typeNameHash<IEventQueue*>());
+            } else {
+                fmt::format_to(std::back_inserter(out), " {}:{}:{}:{}",
+                    typeName<refl::wrap_only_if_not_known_types_t<CO_ARG>>(),
+                    typeNameHash<refl::wrap_only_if_not_known_types_t<CO_ARG>>(),
+                    std::get<refl::wrap_only_if_not_known_types_t<CO_ARG>>(_deps.at(typeNameHash<refl::wrap_only_if_not_known_types_t<CO_ARG>>()))._serviceId,
+                    static_cast<void*>(std::get<refl::wrap_only_if_not_known_types_t<CO_ARG>>(_deps.at(typeNameHash<refl::wrap_only_if_not_known_types_t<CO_ARG>>()))._service));
+            }
+        }
+        template <typename... CO_ARGS>
+        void logEmplaceService() {
+            std::string out;
+            fmt::format_to(std::back_inserter(out), "Emplacing service {} {}", typeName<T>(), typeName<refl::rewrap_dependencies_t<refl::as_variant<T>>>());
+            (logSingleService<CO_ARGS>(out), ...);
+            for(auto const &[hash, dep] : _deps) {
+                fmt::format_to(std::back_inserter(out), "\nrequested dep {}", hash);
+            }
+            INTERNAL_DEBUG("{}", out.data());
+        }
+#endif
+
         template <typename... CO_ARGS>
         void registerDependenciesSpecialSauce(DependencyRegister &reg, tl::optional<std::variant<CO_ARGS...>> = {}) {
             (reg.registerDependencyConstructor<std::remove_pointer_t<CO_ARGS>>(this), ...);
         }
+
         template <typename... CO_ARGS>
         void createServiceSpecialSauce(tl::optional<std::variant<CO_ARGS...>> = {}) {
 
 #if ICHOR_EXCEPTIONS_ENABLED
             try {
 #endif
-                new(buf) T((std::get<refl::wrap_only_if_not_known_types_t<CO_ARGS>>(_deps[typeNameHash<CO_ARGS>()]))...);
+#ifdef ICHOR_ENABLE_INTERNAL_DEBUGGING
+                logEmplaceService<CO_ARGS...>();
+#endif
+                new(buf) T((std::get<refl::wrap_only_if_not_known_types_t<CO_ARGS>>(_deps.at(typeNameHash<refl::wrap_only_if_not_known_types_t<CO_ARGS>>())))...);
 #if ICHOR_EXCEPTIONS_ENABLED
             } catch (std::exception const &e) {
                 fmt::print("Std exception while starting svc {}:{} : \"{}\".\n\nLikely user error, but printing extra information anyway: Stored dependencies:\n", getServiceId(), getServiceName(), e.what());
@@ -387,37 +420,45 @@ namespace Ichor {
         }
 
         template <typename depT>
-        void addDependencyInstance(Ichor::ScopedServiceProxy<depT> dep, v1::NeverNull<IService*>) {
-            _deps.emplace(std::pair<unsigned long, refl::rewrap_dependencies_t<refl::as_variant<T>>>{typeNameHash<depT>(), dep});
+        void addDependencyInstance(Ichor::ScopedServiceProxy<depT> dep, [[maybe_unused]] v1::NeverNull<IService*> isvc) {
+            INTERNAL_DEBUG("Adding service {}:{}:{} {}", isvc->getServiceId(), typeName<depT>(), typeNameHash<Ichor::ScopedServiceProxy<depT>>(), typeName<refl::rewrap_dependencies_t<refl::as_variant<T>>>());
+            _deps.emplace(std::pair<unsigned long, refl::rewrap_dependencies_t<refl::as_variant<T>>>{typeNameHash<Ichor::ScopedServiceProxy<depT>>(), dep});
         }
 
-        void addDependencyInstance(DependencyManager *dep, v1::NeverNull<IService*>) {
-            _deps.emplace(std::pair<unsigned long, refl::rewrap_dependencies_t<refl::as_variant<T>>>{typeNameHash<DependencyManager>(), dep});
+        void addDependencyInstance(DependencyManager *dep, [[maybe_unused]] v1::NeverNull<IService*> isvc) {
+            INTERNAL_DEBUG("Adding service {}:DependencyManager", isvc->getServiceId());
+            _deps.emplace(std::pair<unsigned long, refl::rewrap_dependencies_t<refl::as_variant<T>>>{typeNameHash<DependencyManager*>(), dep});
         }
 
-        void addDependencyInstance(IService *dep, v1::NeverNull<IService*>) {
-            _deps.emplace(std::pair<unsigned long, refl::rewrap_dependencies_t<refl::as_variant<T>>>{typeNameHash<IService>(), dep});
+        void addDependencyInstance(IService *dep, [[maybe_unused]] v1::NeverNull<IService*> isvc) {
+            INTERNAL_DEBUG("Adding service {}:IService", isvc->getServiceId());
+            _deps.emplace(std::pair<unsigned long, refl::rewrap_dependencies_t<refl::as_variant<T>>>{typeNameHash<IService*>(), dep});
         }
 
-        void addDependencyInstance(IEventQueue *dep, v1::NeverNull<IService*>) {
-            _deps.emplace(std::pair<unsigned long, refl::rewrap_dependencies_t<refl::as_variant<T>>>{typeNameHash<IEventQueue>(), dep});
+        void addDependencyInstance(IEventQueue *dep, [[maybe_unused]] v1::NeverNull<IService*> isvc) {
+            INTERNAL_DEBUG("Adding service {}:IEventQueue", isvc->getServiceId());
+            _deps.emplace(std::pair<unsigned long, refl::rewrap_dependencies_t<refl::as_variant<T>>>{typeNameHash<IEventQueue*>(), dep});
         }
 
         template <typename depT>
-        void removeDependencyInstance(Ichor::ScopedServiceProxy<depT>, v1::NeverNull<IService*>) {
-            _deps.erase(typeNameHash<depT>());
+        void removeDependencyInstance(Ichor::ScopedServiceProxy<depT>, [[maybe_unused]] v1::NeverNull<IService*> isvc) {
+            INTERNAL_DEBUG("Removing service {}:{}", isvc->getServiceId(), typeName<Ichor::ScopedServiceProxy<depT>>());
+            _deps.erase(typeNameHash<Ichor::ScopedServiceProxy<depT>>());
         }
 
-        void removeDependencyInstance(DependencyManager *, v1::NeverNull<IService*>) {
-            _deps.erase(typeNameHash<DependencyManager>());
+        void removeDependencyInstance(DependencyManager *, [[maybe_unused]] v1::NeverNull<IService*> isvc) {
+            INTERNAL_DEBUG("Removing service {}:DependencyManager", isvc->getServiceId());
+            _deps.erase(typeNameHash<DependencyManager*>());
         }
 
-        void removeDependencyInstance(IService *, v1::NeverNull<IService*>) {
-            _deps.erase(typeNameHash<IService>());
+        void removeDependencyInstance(IService *, [[maybe_unused]] v1::NeverNull<IService*> isvc) {
+            INTERNAL_DEBUG("Removing service {}:IService", isvc->getServiceId());
+            _deps.erase(typeNameHash<IService*>());
         }
 
-        void removeDependencyInstance(IEventQueue *, v1::NeverNull<IService*>) {
-            _deps.erase(typeNameHash<IEventQueue>());
+        void removeDependencyInstance(IEventQueue *, [[maybe_unused]] v1::NeverNull<IService*> isvc) {
+            INTERNAL_DEBUG("Removing service {}:IEventQueue", isvc->getServiceId());
+            _deps.erase(typeNameHash<IEventQueue*>());
         }
 
         [[nodiscard]] T* getImplementation() noexcept {
