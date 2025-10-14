@@ -100,6 +100,14 @@ static constexpr bool DO_HARDENING = false;
 #define ICHOR_EXCEPTIONS_ENABLED 0
 #endif
 
+#ifdef ICHOR_HAVE_CONSTEXPR_VECTOR
+#define ICHOR_CONSTEXPR_VECTOR constexpr
+#define ICHOR_CONSTINIT_VECTOR constinit
+#else
+#define ICHOR_CONSTEXPR_VECTOR
+#define ICHOR_CONSTINIT_VECTOR
+#endif
+
 namespace Ichor {
     using ServiceIdType = uint64_t;
 }
