@@ -20,9 +20,13 @@ namespace Ichor::Detail {
 
     struct ServiceExecutionScopeContents final {
         ServiceIdType id;
+#if ICHOR_DEBUG_PROXIES_CALLSTACK
         std::stacktrace trace;
 
         ServiceExecutionScopeContents(ServiceIdType _id) : id(_id), trace(std::stacktrace::current()) {}
+#else
+        ServiceExecutionScopeContents(ServiceIdType _id) : id(_id) {}
+#endif
 
         friend bool operator==(ServiceExecutionScopeContents const &content, ServiceIdType _id) noexcept {
             return content.id == _id;
@@ -63,7 +67,7 @@ namespace Ichor::Detail {
 
     private:
         [[nodiscard]] static std::vector<ServiceExecutionScopeContents> &current() noexcept {
-            constinit thread_local std::vector<ServiceExecutionScopeContents> stack;
+            ICHOR_CONSTINIT_VECTOR thread_local std::vector<ServiceExecutionScopeContents> stack;
             return stack;
         }
     };

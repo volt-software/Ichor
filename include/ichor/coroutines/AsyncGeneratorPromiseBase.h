@@ -146,11 +146,11 @@ namespace Ichor::Detail {
             _priority = priority;
         }
 
-        [[nodiscard]] constexpr const std::vector<ServiceExecutionScopeContents> &get_service_id_stack() const noexcept {
+        [[nodiscard]] ICHOR_CONSTEXPR_VECTOR const std::vector<ServiceExecutionScopeContents> &get_service_id_stack() const noexcept {
             return _svcIdStack;
         }
 
-        constexpr void set_service_id_stack(std::vector<ServiceExecutionScopeContents> svcIdStack) noexcept {
+        ICHOR_CONSTEXPR_VECTOR void set_service_id_stack(std::vector<ServiceExecutionScopeContents> svcIdStack) noexcept {
             _svcIdStack = std::move(svcIdStack);
         }
 
