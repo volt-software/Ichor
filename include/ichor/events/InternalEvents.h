@@ -5,7 +5,9 @@
 #include <ichor/dependency_management/Dependency.h>
 #include <ichor/Callbacks.h>
 #include <ichor/stl/NeverAlwaysNull.h>
+#include <ichor/stl/ReferenceCountedPointer.h>
 #include <tl/optional.h>
+#include <utility>
 
 namespace Ichor {
     /// When a service has successfully started, this event gets added to inject it into other services
@@ -65,8 +67,8 @@ namespace Ichor {
     /// Similar to DependencyRequestEvent, but when a service gets destroyed/removed entirely
     /// Properties needs to be a copy as this event will be picked up after the service has been deleted from memory
     struct DependencyUndoRequestEvent final : public Event {
-        explicit DependencyUndoRequestEvent(uint64_t _id, ServiceIdType _originatingService, uint64_t _priority, Dependency const &_dependency, tl::optional<Properties> const &_properties) noexcept :
-                Event(_id, _originatingService, _priority), dependency(_dependency), properties{_properties} {}
+        explicit DependencyUndoRequestEvent(uint64_t _id, ServiceIdType _originatingService, uint64_t _priority, Dependency const &_dependency, tl::optional<Properties> const &_properties, v1::ReferenceCountedPointer<DependencyUndoRequestEvent> _originalRequest = {}) noexcept :
+                Event(_id, _originatingService, _priority), dependency(_dependency), properties{_properties}, originalRequest(std::move(_originalRequest)) {}
         ~DependencyUndoRequestEvent() final = default;
 
         [[nodiscard]] std::string_view get_name() const noexcept final {
@@ -78,6 +80,7 @@ namespace Ichor {
 
         Dependency dependency;
         tl::optional<Properties> properties;
+        v1::ReferenceCountedPointer<DependencyUndoRequestEvent> originalRequest;
         static constexpr NameHashType TYPE = typeNameHash<DependencyUndoRequestEvent>();
         static constexpr std::string_view NAME = typeName<DependencyUndoRequestEvent>();
     };

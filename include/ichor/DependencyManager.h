@@ -59,6 +59,12 @@ namespace Ichor {
         uint64_t eventType;
     };
 
+    struct WaitingStopService final {
+        ServiceIdType originatingServiceId;
+        uint64_t priority;
+        bool removeAfter;
+    };
+
     class [[nodiscard]] DependencyManager final {
     private:
         explicit DependencyManager(IEventQueue *eventQueue);
@@ -715,7 +721,7 @@ namespace Ichor {
         [[nodiscard]] DependentServicesView getDependentsForService(ServiceIdType svcId) const noexcept;
         [[nodiscard]] std::span<Dependency const> getProvidedInterfacesForService(ServiceIdType svcId) const noexcept;
         [[nodiscard]] TrackersView getTrackersForService(ServiceIdType svcId) const noexcept;
-        [[nodiscard]] std::vector<std::tuple<Ichor::Event const &, std::span<Ichor::ServiceIdType const>>> getServiceIdsWhichHaveActiveCoroutines() const noexcept;
+        [[nodiscard]] std::vector<std::tuple<Ichor::Event const &, std::span<Ichor::Detail::ServiceExecutionScopeContents const>>> getServiceIdsWhichHaveActiveCoroutines() const noexcept;
 
         /// Returns a non-allocating view of currently known services and their status.
         /// Do not use in coroutines or other threads. Not thread-safe.
@@ -909,6 +915,7 @@ namespace Ichor {
         /// \param eventName
         /// \return
         bool finishWaitingService(ServiceIdType serviceId, uint64_t eventType, [[maybe_unused]] std::string_view eventName) noexcept;
+        void checkIfCanQuit(std::vector<EventInterceptInfo> &allEventInterceptorsCopy, std::vector<EventInterceptInfo> &eventInterceptorsCopy) noexcept;
 
         unordered_map<ServiceIdType, std::unique_ptr<ILifecycleManager>> _services{}; // key = service id
         unordered_map<DependencyTrackerKey, std::vector<DependencyTrackerInfo>, DependencyTrackerKeyHash, std::equal_to<>> _dependencyRequestTrackers{}; // key = interface name hash
@@ -918,6 +925,7 @@ namespace Ichor {
         unordered_map<uint64_t, v1::ReferenceCountedPointer<Event>> _scopedEvents{}; // key = promise id
         unordered_map<uint64_t, EventWaiter> _eventWaiters{}; // key = event id
         unordered_map<ServiceIdType, EventWaiter> _dependencyWaiters{}; // key = service id
+        unordered_map<ServiceIdType, WaitingStopService> _pendingStops{}; // key = service id
         IEventQueue *_eventQueue;
         IFrameworkLogger *_logger{};
         std::atomic<bool> _started{false};
@@ -926,7 +934,7 @@ namespace Ichor {
         uint64_t _intercepterIdCounter{1};
         bool _quitEventReceived{};
         bool _quitDone{};
-        static std::atomic<uint64_t> _managerIdCounter;
+        constinit static std::atomic<uint64_t> _managerIdCounter;
 
         friend class IEventQueue;
         friend class ILifecycleManager;

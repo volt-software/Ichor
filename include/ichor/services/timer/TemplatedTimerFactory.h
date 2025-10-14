@@ -18,7 +18,6 @@ namespace Ichor::v1 {
         }
         ~TimerFactory() final = default;
 
-
         Task<void> stop() {
             INTERNAL_IO_DEBUG("TimerFactory<{}, {}> {} stopping {}", typeName<TIMER>(), typeName<QUEUE>(), AdvancedService<TimerFactory<TIMER, QUEUE>>::getServiceId(), _stoppingTimers);
             if(!_stoppingTimers) {
