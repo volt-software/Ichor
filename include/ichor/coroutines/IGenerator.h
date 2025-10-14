@@ -3,6 +3,7 @@
 #include <memory>
 #include <vector>
 #include <ichor/Defines.h>
+#include <ichor/ServiceExecutionScope.h>
 
 namespace Ichor {
     class IAsyncGeneratorBeginOperation {

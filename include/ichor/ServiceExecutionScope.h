@@ -1,11 +1,16 @@
 #pragma once
 
 #include <ichor/Defines.h>
+#include <ichor/stl/NeverAlwaysNull.h>
 #include <type_traits>
 #include <cstddef>
 #include <utility>
 
+#ifdef ICHOR_HAVE_STD_STACKTRACE
 #define ICHOR_DEBUG_PROXIES_CALLSTACK 1
+#else
+#define ICHOR_DEBUG_PROXIES_CALLSTACK 0
+#endif
 
 #if ICHOR_DEBUG_PROXIES_CALLSTACK
 #include <stacktrace>
@@ -15,23 +20,28 @@ namespace Ichor::Detail {
 
     struct ServiceExecutionScopeContents final {
         ServiceIdType id;
-#if ICHOR_DEBUG_PROXIES_CALLSTACK
         std::stacktrace trace;
 
         ServiceExecutionScopeContents(ServiceIdType _id) : id(_id), trace(std::stacktrace::current()) {}
-#else
-        ServiceExecutionScopeContents(ServiceIdType _id) : id(_id) {}
-#endif
+
+        friend bool operator==(ServiceExecutionScopeContents const &content, ServiceIdType _id) noexcept {
+            return content.id == _id;
+        }
+        friend bool operator==(ServiceIdType _id, ServiceExecutionScopeContents const &content) noexcept {
+            return content.id == _id;
+        }
     };
 
     class ServiceExecutionScope final {
     public:
         explicit ServiceExecutionScope(ServiceIdType id) noexcept {
+            // fmt::println("ServiceExecutionScope pushing {}", id);
             current().push_back(id);
         }
         ~ServiceExecutionScope() noexcept {
             auto &stack = current();
             if(!stack.empty()) {
+            // fmt::println("ServiceExecutionScope popping {}", stack.back().id);
                 stack.pop_back();
             }
         }
@@ -67,7 +77,9 @@ namespace Ichor::Detail {
         struct CallScopeProxy {
             Pointer service;
             mutable ServiceExecutionScope scope;
-            Pointer operator->() const noexcept { return service; }
+            Pointer operator->() const noexcept {
+                return service;
+             }
         };
 
         ScopedServiceProxy() noexcept = default;
@@ -131,8 +143,9 @@ namespace Ichor::Detail {
         friend bool operator!=(std::nullptr_t, ScopedServiceProxy const &proxy) noexcept {
             return proxy._service != nullptr;
         }
-
+#ifndef ICHOR_ENABLE_INTERNAL_DEBUGGING
     private:
+#endif
         Pointer _service{};
         ServiceIdType _serviceId{};
     };

@@ -5,6 +5,7 @@
 #include <ichor/services/logging/Logger.h>
 #include <ichor/dependency_management/AdvancedService.h>
 #include <ichor/ServiceExecutionScope.h>
+#include <ichor/stl/StringUtils.h>
 
 using namespace Ichor;
 using namespace Ichor::v1;
@@ -80,15 +81,24 @@ private:
 
         auto serviceIdsWithActiveCoroutines = GetThreadLocalManager().getServiceIdsWhichHaveActiveCoroutines();
         ICHOR_EMERGENCY_LOG1(_logger, "Services With Active Coroutines:");
-        for(auto const &[evt, svcIds] : serviceIdsWithActiveCoroutines) {
-            ICHOR_EMERGENCY_LOG2(_logger, "\tevent {}:{}", evt.get_name(), evt.originatingService);
-            for(auto const svcId : svcIds) {
-                auto svc = GetThreadLocalManager().getIService(svcId);
+        for(auto const &[evt, scopes] : serviceIdsWithActiveCoroutines) {
+            ICHOR_EMERGENCY_LOG2(_logger, "\tevent {}:{}:{}", evt.id, evt.get_name(), evt.originatingService);
+            for(auto const &scope : scopes) {
+                auto svc = GetThreadLocalManager().getIService(scope.id);
 
                 if(!svc) {
-                    ICHOR_EMERGENCY_LOG2(_logger, "\t\tSvc {} but missing from manager", svcId);
+                    ICHOR_EMERGENCY_LOG2(_logger, "\t\tSvc {} but missing from manager", scope.id);
                 } else {
                     ICHOR_EMERGENCY_LOG2(_logger, "\t\tSvc {}:{} {}", (*svc)->getServiceId(), (*svc)->getServiceName(), (*svc)->getServiceState());
+#ifdef ICHOR_HAVE_STD_STACKTRACE
+                    for(auto const &traceEntry : scope.trace) {
+                        auto filename = traceEntry.source_file();
+                        if(!filename.empty()) {
+                            filename = v1::basename(filename.c_str());
+                        }
+                        ICHOR_EMERGENCY_LOG2(_logger, "\t\t\t{}:{}", filename, traceEntry.source_line());
+                    }
+#endif
                 }
             }
         }

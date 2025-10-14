@@ -16,7 +16,7 @@ static constexpr bool DO_INTERNAL_DEBUG = true;
 #define INTERNAL_DEBUG(...)      \
     if constexpr(DO_INTERNAL_DEBUG) { \
         std::thread::id this_id = std::this_thread::get_id();                         \
-        fmt::print("[{:L}] [{}] ", std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now().time_since_epoch()).count(), this_id);    \
+        fmt::print("[time:{:L}] [thread:{}] ", std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now().time_since_epoch()).count(), this_id);    \
         const char *base = Ichor::v1::basename(__FILE__); \
         fmt::print("[{}:{}] ", base, __LINE__);    \
         fmt::println(__VA_ARGS__);    \
