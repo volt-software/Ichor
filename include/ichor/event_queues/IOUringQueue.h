@@ -69,6 +69,7 @@ namespace Ichor {
         std::thread::id _threadId{};
         uint64_t _quitTimeoutMs{};
         unsigned int _entriesCount{};
+        std::atomic<uint64_t> _pendingEvents{0};
         int _uringBufIdCounter{1};
         long long _pollTimeoutNs{};
         std::chrono::steady_clock::time_point _whenQuitEventWasSent{};

@@ -423,6 +423,7 @@ namespace Ichor {
 //#endif
 
 
+        _pendingEvents.fetch_add(1, std::memory_order_acq_rel);
         Event *procEvent = event.release();
 //        fmt::println("pushEventInternal {} {}", procEvent->get_name(), reinterpret_cast<void*>(procEvent));
         if(std::this_thread::get_id() != _threadId) [[unlikely]] {
@@ -546,8 +547,7 @@ namespace Ichor {
             std::terminate();
         }
 
-        // TODO
-        return !_dm || !_dm->isRunning();
+        return _pendingEvents.load(std::memory_order_acquire) == 0;
     }
 
     uint64_t IOUringQueue::size() const {
@@ -556,8 +556,7 @@ namespace Ichor {
             std::terminate();
         }
 
-        // TODO
-        return (_dm && _dm->isRunning()) ? 1 : 0;
+        return _pendingEvents.load(std::memory_order_acquire);
     }
 
     bool IOUringQueue::is_running() const noexcept {
@@ -742,6 +741,10 @@ namespace Ichor {
                         } else {
                             processEvent(uniqueEvt);
                         }
+
+                        if(uniqueEvt) {
+                            _pendingEvents.fetch_sub(1, std::memory_order_acq_rel);
+                        }
                     }
                     handled++;
                 }
@@ -803,6 +806,9 @@ namespace Ichor {
                 auto *evt = reinterpret_cast<Event *>(io_uring_cqe_get_data(cqe));
                 std::unique_ptr<Event> uniqueEvt{evt};
 //                fmt::println("last loop processing {}", evt->get_name());
+                if(uniqueEvt) {
+                    _pendingEvents.fetch_sub(1, std::memory_order_acq_rel);
+                }
                 handled++;
             }
 
@@ -865,6 +871,7 @@ namespace Ichor {
         INTERNAL_IO_DEBUG("getSqeWithData");
         auto sqe = getSqe();
         io_uring_sqe_set_data(sqe, new UringResponseEvent{getNextEventId(), self->getServiceId(), INTERNAL_EVENT_PRIORITY, std::move(fun)});
+        _pendingEvents.fetch_add(1, std::memory_order_acq_rel);
         return sqe;
     }
 
@@ -872,6 +879,7 @@ namespace Ichor {
         INTERNAL_IO_DEBUG("getSqeWithData");
         auto sqe = getSqe();
         io_uring_sqe_set_data(sqe, new UringResponseEvent{getNextEventId(), serviceId, INTERNAL_EVENT_PRIORITY, std::move(fun)});
+        _pendingEvents.fetch_add(1, std::memory_order_acq_rel);
         return sqe;
     }
 
