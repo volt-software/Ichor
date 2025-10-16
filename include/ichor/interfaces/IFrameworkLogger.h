@@ -38,6 +38,8 @@ namespace Ichor {
 
 #define ICHOR_EMERGENCY_LOG1(logger, str) { if(logger != nullptr) { logger->error(__FILE__, __LINE__, static_cast<const char *>(__FUNCTION__), str, Ichor::make_args()); } const char *base = Ichor::v1::basename(__FILE__); fmt::print("[{}:{}] ", base, __LINE__); fmt::println(str); }; static_assert(true, "")
 #define ICHOR_EMERGENCY_LOG2(logger, str, ...) { if(logger != nullptr) { logger->error(__FILE__, __LINE__, static_cast<const char *>(__FUNCTION__), str, Ichor::make_args(__VA_ARGS__)); } const char *base = Ichor::v1::basename(__FILE__); fmt::print("[{}:{}] ", base, __LINE__); fmt::println(str, __VA_ARGS__); }; static_assert(true, "")
+#define ICHOR_EMERGENCY_NO_LOGGER_LOG1(str) { const char *base = Ichor::v1::basename(__FILE__); fmt::print("[{}:{}] ", base, __LINE__); fmt::println(str); }; static_assert(true, "")
+#define ICHOR_EMERGENCY_NO_LOGGER_LOG2(str, ...) { const char *base = Ichor::v1::basename(__FILE__); fmt::print("[{}:{}] ", base, __LINE__); fmt::println(str, __VA_ARGS__); }; static_assert(true, "")
 #else
 #define ICHOR_LOG_TRACE(logger, str, ...) { if(logger != nullptr && logger->getLogLevel() <= Ichor::LogLevel::LOG_TRACE) logger->trace(nullptr, 0, nullptr, str, make_args(__VA_ARGS__)); }; static_assert(true, "")
 #define ICHOR_LOG_DEBUG(logger, str, ...) { if(logger != nullptr && logger->getLogLevel() <= Ichor::LogLevel::LOG_DEBUG) logger->debug(nullptr, 0, nullptr, str, make_args(__VA_ARGS__)); }; static_assert(true, "")
@@ -47,6 +49,8 @@ namespace Ichor {
 
 #define ICHOR_EMERGENCY_LOG1(logger, str) { if(logger != nullptr) { logger->error(nullptr, 0, nullptr, str, make_args()); } fmt::println(str); }; static_assert(true, "")
 #define ICHOR_EMERGENCY_LOG2(logger, str, ...) { if(logger != nullptr) { logger->error(nullptr, 0, nullptr, str, make_args(__VA_ARGS__)); } fmt::println(str, __VA_ARGS__); }; static_assert(true, "")
+#define ICHOR_EMERGENCY_NO_LOGGER_LOG1(str) { fmt::println(str); }; static_assert(true, "")
+#define ICHOR_EMERGENCY_NO_LOGGER_LOG2(str, ...) { fmt::println(str, __VA_ARGS__); }; static_assert(true, "")
 #endif
 
 #define ICHOR_OUT_OF_MEM_LOG(bufContainingLog) { std::fwrite(bufContainingLog, 1, sizeof(bufContainingLog) - 1, stdout); std::fflush(nullptr); }
