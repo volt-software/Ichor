@@ -26,7 +26,7 @@ namespace Ichor {
         constexpr virtual ~IGenerator() = 0;
         [[nodiscard]] constexpr virtual bool done() const noexcept = 0;
         [[nodiscard]] constexpr virtual std::unique_ptr<IAsyncGeneratorBeginOperation> begin_interface() noexcept = 0;
-        [[nodiscard]] constexpr virtual const std::vector<Detail::ServiceExecutionScopeContents> &get_service_id_stack() noexcept = 0;
+        [[nodiscard]] constexpr virtual const std::vector<ServiceExecutionScopeContents> &get_service_id_stack() noexcept = 0;
     };
 
     constexpr inline IGenerator::~IGenerator() = default;

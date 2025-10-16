@@ -721,7 +721,7 @@ namespace Ichor {
         [[nodiscard]] DependentServicesView getDependentsForService(ServiceIdType svcId) const noexcept;
         [[nodiscard]] std::span<Dependency const> getProvidedInterfacesForService(ServiceIdType svcId) const noexcept;
         [[nodiscard]] TrackersView getTrackersForService(ServiceIdType svcId) const noexcept;
-        [[nodiscard]] std::vector<std::tuple<Ichor::Event const &, std::span<Ichor::Detail::ServiceExecutionScopeContents const>>> getServiceIdsWhichHaveActiveCoroutines() const noexcept;
+        [[nodiscard]] std::vector<std::tuple<Ichor::Event const &, std::span<Ichor::ServiceExecutionScopeContents const>>> getServiceIdsWhichHaveActiveCoroutines() const noexcept;
 
         /// Returns a non-allocating view of currently known services and their status.
         /// Do not use in coroutines or other threads. Not thread-safe.

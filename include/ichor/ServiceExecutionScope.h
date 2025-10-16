@@ -16,7 +16,12 @@
 #include <stacktrace>
 #endif
 
-namespace Ichor::Detail {
+#if defined(ICHOR_ENABLE_INTERNAL_DEBUGGING) || defined(ICHOR_USE_HARDENING)
+#include <ichor/interfaces/IFrameworkLogger.h>
+#include <ichor/ConstevalHash.h>
+#endif
+
+namespace Ichor {
 
     struct ServiceExecutionScopeContents final {
         ServiceIdType id;
@@ -100,11 +105,23 @@ namespace Ichor::Detail {
         }
 
         CallScopeProxy operator->() const noexcept {
-            return CallScopeProxy{_service, Detail::ServiceExecutionScope{_serviceId}};
+            if constexpr(DO_INTERNAL_DEBUG || DO_HARDENING) {
+                if(_service == nullptr) [[unlikely]] {
+                    ICHOR_EMERGENCY_NO_LOGGER_LOG2("attempt to use a nullptr service of type {}, perhaps this is a use-after-coroutine?", typeName<Service>());
+                    std::terminate();
+                }
+            }
+            return CallScopeProxy{_service, ServiceExecutionScope{_serviceId}};
         }
 
         CallScopeProxy operator*() const noexcept {
-            return CallScopeProxy{_service, Detail::ServiceExecutionScope{_serviceId}};
+            if constexpr(DO_INTERNAL_DEBUG || DO_HARDENING) {
+                if(_service == nullptr) [[unlikely]] {
+                    ICHOR_EMERGENCY_NO_LOGGER_LOG2("attempt to use a nullptr service of type {}, perhaps this is a use-after-coroutine?", typeName<Service>());
+                    std::terminate();
+                }
+            }
+            return CallScopeProxy{_service, ServiceExecutionScope{_serviceId}};
         }
 
         explicit operator bool() const noexcept {
@@ -155,9 +172,3 @@ namespace Ichor::Detail {
     };
 
 } // namespace Ichor::Detail
-
-namespace Ichor {
-    template<typename Service>
-    using ScopedServiceProxy = Detail::ScopedServiceProxy<Service>;
-}
-
