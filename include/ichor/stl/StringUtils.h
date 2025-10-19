@@ -200,6 +200,17 @@ namespace Ichor::v1 {
         return rv != nullptr ? rv + 1 : filename;
 #endif
     }
+
+    // inserter to use with fmt and inserting into an uint8_t vector
+    struct FmtU8Inserter {
+        std::vector<uint8_t>* v;
+        using iterator_category = std::output_iterator_tag;
+        FmtU8Inserter(std::vector<uint8_t>& vv) : v(&vv) {}
+        FmtU8Inserter& operator=(char c) { v->push_back(static_cast<uint8_t>(c)); return *this; }
+        FmtU8Inserter& operator*()  { return *this; }
+        FmtU8Inserter& operator++() { return *this; }
+        FmtU8Inserter  operator++(int) { return *this; }
+    };
 }
 
 

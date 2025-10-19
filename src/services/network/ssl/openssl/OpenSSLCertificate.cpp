@@ -22,7 +22,11 @@ OpenSSLCertificate::~OpenSSLCertificate() {
 
 
 tl::expected<OpenSSLCertificate, OpenSSLMakeCertificateError> OpenSSLCertificate::makeOpenSSLCertificate(tl::optional<ILogger*> logger, NeverNull<const char *> data, uint64_t dataLength, TLSCertificateIdType id) noexcept {
-    BIO *bio = BIO_new_mem_buf(data, dataLength);
+    if(dataLength > std::numeric_limits<int>::max()) [[unlikely]] {
+        return tl::unexpected{OpenSSLMakeCertificateError::CERTIFICATE_SIZE_TOO_BIG};
+    }
+
+    BIO *bio = BIO_new_mem_buf(data, static_cast<int>(dataLength));
 
     if(bio == nullptr) {
         return tl::unexpected{OpenSSLMakeCertificateError::OUT_OF_MEMORY};

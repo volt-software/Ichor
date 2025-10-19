@@ -10,7 +10,9 @@ Ichor::v1::CoutFrameworkLogger::CoutFrameworkLogger() : IFrameworkLogger(), Adva
         setLogLevel(Ichor::v1::any_cast<LogLevel>(logLevelProp->second));
     }
 
-    ICHOR_LOG_TRACE(this, "CoutFrameworkLogger constructor");
+    // preventing a warnig on -Wnonnull-compare
+    CoutFrameworkLogger *logger = this;
+    ICHOR_LOG_TRACE(logger, "CoutFrameworkLogger constructor");
 }
 
 void Ichor::v1::CoutFrameworkLogger::trace(const char *filename_in, int line_in, const char *funcname_in,

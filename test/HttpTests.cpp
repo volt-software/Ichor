@@ -2,11 +2,12 @@
 #include <ichor/dependency_management/InternalService.h>
 #include <ichor/services/network/http/HttpConnectionService.h>
 
-#include "FakeLifecycleManager.h"
+// #include "FakeLifecycleManager.h"
 // #include "Mocks/ServiceMock.h"
 #include <ichor/services/network/http/HttpHostService.h>
 
-#include "ichor/events/RunFunctionEvent.h"
+#include <ichor/dependency_management/InternalServiceLifecycleManager.h>
+#include <ichor/events/RunFunctionEvent.h>
 #include "Mocks/QueueMock.h"
 #include "Mocks/LoggerMock.h"
 #include "Mocks/ConnectionServiceMock.h"
@@ -17,7 +18,8 @@ TEST_CASE("HttpConnectionTests") {
     Properties props{};
     props.emplace("Address", Ichor::v1::make_any<std::string>("192.168.10.10"));
     props.emplace("Port", Ichor::v1::make_any<std::string>("8080"));
-    Ichor::Detail::DependencyLifecycleManager<QueueMock, IEventQueue> q{{}};
+    QueueMock qm{};
+    Ichor::Detail::InternalServiceLifecycleManager<QueueMock> q{&qm};
     Ichor::Detail::DependencyLifecycleManager<LoggerMock, ILogger> logger{{}};
     Ichor::Detail::DependencyLifecycleManager<ConnectionServiceMock<IClientConnectionService>, IClientConnectionService> conn{{}};
     Ichor::Detail::DependencyLifecycleManager<HttpConnectionService, IHttpConnectionService> svc{std::move(props)};
@@ -34,7 +36,7 @@ TEST_CASE("HttpConnectionTests") {
     auto gen = svc.start();
     auto it = gen.begin();
     REQUIRE(it.get_finished());
-    REQUIRE(q.getService().events.empty());
+    REQUIRE(qm.events.empty());
     // REQUIRE(logger.getService().logs.empty());
     REQUIRE(conn.getService().rcvHandler);
 
@@ -351,7 +353,8 @@ TEST_CASE("HttpHostTests Missing properties") {
     Properties props{};
     props.emplace("Address", Ichor::v1::make_any<std::string>("192.168.10.10"));
     props.emplace("Port", Ichor::v1::make_any<std::string>("8080"));
-    Ichor::Detail::DependencyLifecycleManager<QueueMock, IEventQueue> q{{}};
+    QueueMock qm{};
+    Ichor::Detail::InternalServiceLifecycleManager<QueueMock> q{&qm};
     Ichor::Detail::DependencyLifecycleManager<LoggerMock, ILogger> logger{{}};
     Ichor::Detail::DependencyLifecycleManager<ConnectionServiceMock<IHostConnectionService>, IHostConnectionService> conn{{}};
     Ichor::Detail::DependencyLifecycleManager<HostServiceMock, IHostService> host{Properties{props}};
@@ -371,7 +374,7 @@ TEST_CASE("HttpHostTests Missing properties") {
     auto gen = svc.start();
     auto it = gen.begin();
     REQUIRE(it.get_finished());
-    REQUIRE(q.getService().events.empty());
+    REQUIRE(qm.events.empty());
     REQUIRE(!conn.getService().rcvHandler);
 }
 
@@ -380,7 +383,8 @@ TEST_CASE("HttpHostTests") {
     Properties props{};
     props.emplace("Address", Ichor::v1::make_any<std::string>("192.168.10.10"));
     props.emplace("Port", Ichor::v1::make_any<std::string>("8080"));
-    Ichor::Detail::DependencyLifecycleManager<QueueMock, IEventQueue> q{{}};
+    QueueMock qm{};
+    Ichor::Detail::InternalServiceLifecycleManager<QueueMock> q{&qm};
     Ichor::Detail::DependencyLifecycleManager<LoggerMock, ILogger> logger{{}};
     Ichor::Detail::DependencyLifecycleManager<HostServiceMock, IHostService> host{Properties{props}};
     Ichor::Detail::DependencyLifecycleManager<ConnectionServiceMock<IHostConnectionService>, IHostConnectionService> conn{{{"TcpHostService", Ichor::v1::make_any<ServiceIdType>(host.getService().getServiceId())}}};
@@ -400,7 +404,7 @@ TEST_CASE("HttpHostTests") {
     auto gen = svc.start();
     auto it = gen.begin();
     REQUIRE(it.get_finished());
-    REQUIRE(q.getService().events.empty());
+    REQUIRE(qm.events.empty());
     REQUIRE(conn.getService().rcvHandler);
 
     SECTION("GET basic") {
@@ -413,9 +417,9 @@ TEST_CASE("HttpHostTests") {
         });
         std::string req{"GET /some/route HTTP/1.1\r\ntestheader: test\r\nHost: 192.168.10.10\r\n\r\n"};
         conn.getService().rcvHandler(std::span<uint8_t const>{reinterpret_cast<uint8_t*>(req.data()), req.size()});
-        REQUIRE(q.getService().events.size() == 1);
-        REQUIRE(q.getService().events[0]->get_type() == RunFunctionEventAsync::TYPE);
-        auto *evt = q.getService().events[0].get();
+        REQUIRE(qm.events.size() == 1);
+        REQUIRE(qm.events[0]->get_type() == RunFunctionEventAsync::TYPE);
+        auto *evt = qm.events[0].get();
         auto gen2 = static_cast<RunFunctionEventAsync*>(evt)->fun();
         auto it2 = gen2.begin();
         REQUIRE(it2.get_finished());
@@ -449,10 +453,10 @@ TEST_CASE("HttpHostTests") {
         });
         std::string req{"GET /some/route HTTP/1.1\r\ntestheader: test\r\n"};
         conn.getService().rcvHandler(std::span<uint8_t const>{reinterpret_cast<uint8_t*>(req.data()), req.size()});
-        REQUIRE(q.getService().events.size() == 1);
-        REQUIRE(q.getService().events[0]->get_type() == RunFunctionEventAsync::TYPE);
+        REQUIRE(qm.events.size() == 1);
+        REQUIRE(qm.events[0]->get_type() == RunFunctionEventAsync::TYPE);
         {
-            auto *evt = q.getService().events[0].get();
+            auto *evt = qm.events[0].get();
             auto gen2 = static_cast<RunFunctionEventAsync*>(evt)->fun();
             auto it2 = gen2.begin();
             REQUIRE(it2.get_finished());
@@ -461,9 +465,9 @@ TEST_CASE("HttpHostTests") {
         }
         req = "Host: 192.168.10.10\r\n\r\n";
         conn.getService().rcvHandler(std::span<uint8_t const>{reinterpret_cast<uint8_t*>(req.data()), req.size()});
-        REQUIRE(q.getService().events.size() == 2);
-        REQUIRE(q.getService().events[1]->get_type() == RunFunctionEventAsync::TYPE);
-        auto *evt = q.getService().events[1].get();
+        REQUIRE(qm.events.size() == 2);
+        REQUIRE(qm.events[1]->get_type() == RunFunctionEventAsync::TYPE);
+        auto *evt = qm.events[1].get();
         auto gen2 = static_cast<RunFunctionEventAsync*>(evt)->fun();
         auto it2 = gen2.begin();
         REQUIRE(it2.get_finished());
@@ -504,9 +508,9 @@ TEST_CASE("HttpHostTests") {
         });
         std::string req{"GET /some/route HTTP/1.1\r\ntestheader: test\r\nHost: 192.168.10.10\r\n\r\nGET /some/route2 HTTP/1.1\r\ntestheader: test2\r\nHost: 192.168.10.11\r\n\r\n"};
         conn.getService().rcvHandler(std::span<uint8_t const>{reinterpret_cast<uint8_t*>(req.data()), req.size()});
-        REQUIRE(q.getService().events.size() == 1);
-        REQUIRE(q.getService().events[0]->get_type() == RunFunctionEventAsync::TYPE);
-        auto *evt = q.getService().events[0].get();
+        REQUIRE(qm.events.size() == 1);
+        REQUIRE(qm.events[0]->get_type() == RunFunctionEventAsync::TYPE);
+        auto *evt = qm.events[0].get();
         auto gen2 = static_cast<RunFunctionEventAsync*>(evt)->fun();
         auto it2 = gen2.begin();
         REQUIRE(it2.get_finished());
@@ -563,9 +567,9 @@ TEST_CASE("HttpHostTests") {
         });
         std::string req{"GET /some/route HTTP/1.1\r\ntestheader: test\r\nHost: 192.168.10.10\r\n\r\n"};
         conn.getService().rcvHandler(std::span<uint8_t const>{reinterpret_cast<uint8_t*>(req.data()), req.size()});
-        REQUIRE(q.getService().events.size() == 1);
-        REQUIRE(q.getService().events[0]->get_type() == RunFunctionEventAsync::TYPE);
-        auto *evt = q.getService().events[0].get();
+        REQUIRE(qm.events.size() == 1);
+        REQUIRE(qm.events[0]->get_type() == RunFunctionEventAsync::TYPE);
+        auto *evt = qm.events[0].get();
         auto gen2 = static_cast<RunFunctionEventAsync*>(evt)->fun();
         auto it2 = gen2.begin();
         REQUIRE(it2.get_finished());
@@ -599,9 +603,9 @@ TEST_CASE("HttpHostTests") {
         });
         std::string req{"POST /some/route HTTP/1.1\r\ntestheader: test\r\nContent-Length: 50\r\nHost: 192.168.10.10\r\n\r\n<html><body>This is my basic webpage</body></html>"};
         conn.getService().rcvHandler(std::span<uint8_t const>{reinterpret_cast<uint8_t*>(req.data()), req.size()});
-        REQUIRE(q.getService().events.size() == 1);
-        REQUIRE(q.getService().events[0]->get_type() == RunFunctionEventAsync::TYPE);
-        auto *evt = q.getService().events[0].get();
+        REQUIRE(qm.events.size() == 1);
+        REQUIRE(qm.events[0]->get_type() == RunFunctionEventAsync::TYPE);
+        auto *evt = qm.events[0].get();
         auto gen2 = static_cast<RunFunctionEventAsync*>(evt)->fun();
         auto it2 = gen2.begin();
         REQUIRE(it2.get_finished());
@@ -639,9 +643,9 @@ TEST_CASE("HttpHostTests") {
         });
         std::string req{"POST /some/route HTTP/1.1\r\ntestheader: test\r\nHost: 192.168.10.10\r\nContent-Length: 50\r\n\r\n<html><body>This is my basic webpa\r\n</body></html>"};
         conn.getService().rcvHandler(std::span<uint8_t const>{reinterpret_cast<uint8_t*>(req.data()), req.size()});
-        REQUIRE(q.getService().events.size() == 1);
-        REQUIRE(q.getService().events[0]->get_type() == RunFunctionEventAsync::TYPE);
-        auto *evt = q.getService().events[0].get();
+        REQUIRE(qm.events.size() == 1);
+        REQUIRE(qm.events[0]->get_type() == RunFunctionEventAsync::TYPE);
+        auto *evt = qm.events[0].get();
         auto gen2 = static_cast<RunFunctionEventAsync*>(evt)->fun();
         auto it2 = gen2.begin();
         REQUIRE(it2.get_finished());
@@ -679,10 +683,10 @@ TEST_CASE("HttpHostTests") {
         });
         std::string req{"POST /some/route HTTP/1.1\r\ntestheader: test\r\nHost: 192.168.10.10\r\nContent-Length: 50\r\n\r\n<html><body>This"};
         conn.getService().rcvHandler(std::span<uint8_t const>{reinterpret_cast<uint8_t*>(req.data()), req.size()});
-        REQUIRE(q.getService().events.size() == 1);
-        REQUIRE(q.getService().events[0]->get_type() == RunFunctionEventAsync::TYPE);
+        REQUIRE(qm.events.size() == 1);
+        REQUIRE(qm.events[0]->get_type() == RunFunctionEventAsync::TYPE);
         {
-            auto *evt = q.getService().events[0].get();
+            auto *evt = qm.events[0].get();
             auto gen2 = static_cast<RunFunctionEventAsync*>(evt)->fun();
             auto it2 = gen2.begin();
             REQUIRE(it2.get_finished());
@@ -691,11 +695,11 @@ TEST_CASE("HttpHostTests") {
         }
         req = " is my basic webpage</body></html>";
         conn.getService().rcvHandler(std::span<uint8_t const>{reinterpret_cast<uint8_t*>(req.data()), req.size()});
-        REQUIRE(q.getService().events.size() == 2);
-        REQUIRE(q.getService().events[0]->get_type() == RunFunctionEventAsync::TYPE);
-        REQUIRE(q.getService().events[1]->get_type() == RunFunctionEventAsync::TYPE);
+        REQUIRE(qm.events.size() == 2);
+        REQUIRE(qm.events[0]->get_type() == RunFunctionEventAsync::TYPE);
+        REQUIRE(qm.events[1]->get_type() == RunFunctionEventAsync::TYPE);
         {
-            auto *evt = q.getService().events[1].get();
+            auto *evt = qm.events[1].get();
             auto gen2 = static_cast<RunFunctionEventAsync*>(evt)->fun();
             auto it2 = gen2.begin();
             REQUIRE(it2.get_finished());
@@ -732,9 +736,9 @@ TEST_CASE("HttpHostTests") {
         });
         std::string req{"POST /some/route HTTP/1.1\r\ntestheader: test\r\nContent-Length: 50\r\nContent-Length: 50\r\nHost: 192.168.10.10\r\n\r\n<html><body>This is my basic webpage</body></html>"};
         conn.getService().rcvHandler(std::span<uint8_t const>{reinterpret_cast<uint8_t*>(req.data()), req.size()});
-        REQUIRE(q.getService().events.size() == 1);
-        REQUIRE(q.getService().events[0]->get_type() == RunFunctionEventAsync::TYPE);
-        auto *evt = q.getService().events[0].get();
+        REQUIRE(qm.events.size() == 1);
+        REQUIRE(qm.events[0]->get_type() == RunFunctionEventAsync::TYPE);
+        auto *evt = qm.events[0].get();
         auto gen2 = static_cast<RunFunctionEventAsync*>(evt)->fun();
         auto it2 = gen2.begin();
         REQUIRE(it2.get_finished());

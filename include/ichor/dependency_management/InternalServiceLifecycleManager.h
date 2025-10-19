@@ -13,7 +13,7 @@ namespace Ichor::Detail {
     template<class ServiceType>
     class InternalServiceLifecycleManager final : public ILifecycleManager {
     public:
-        explicit InternalServiceLifecycleManager(ServiceType *q) : _q(q) {
+        explicit InternalServiceLifecycleManager(v1::NeverNull<ServiceType*> q) : _q(q) {
             _interfaces.emplace_back(typeNameHash<ServiceType>(), typeName<ServiceType>(), DependencyFlags::NONE, false);
             _service.setState(ServiceState::ACTIVE);
         }
@@ -119,6 +119,10 @@ namespace Ichor::Detail {
             return nullptr;
         }
 
+        [[nodiscard]] v1::NeverNull<ServiceType*> getService() const noexcept {
+            return _q;
+        }
+
         /// Someone is interested in us, inject ourself into them
         /// \param keyOfInterfaceToInject
         /// \param serviceIdOfOther
@@ -129,7 +133,7 @@ namespace Ichor::Detail {
             }
 
             INTERNAL_DEBUG("insertSelfInto() svc {} telling svc {} to add us", serviceId(), serviceIdOfOther);
-            fn(_q, _service);
+            fn(_q.get(), _service);
             _serviceIdsOfDependees.insert(serviceIdOfOther);
         }
 
@@ -143,12 +147,12 @@ namespace Ichor::Detail {
             }
 
             INTERNAL_DEBUG("removeSelfInto() svc {} removing svc {}", serviceId(), serviceIdOfOther);
-            fn(_q, _service);
+            fn(_q.get(), _service);
             _serviceIdsOfDependees.erase(serviceIdOfOther);
         }
 
     private:
-        ServiceType *_q;
+        v1::NeverNull<ServiceType*> _q;
         unordered_set<uint64_t> _serviceIdsOfDependees; // services that depend on this service
         v1::StaticVector<Dependency, 1> _interfaces;
         InternalService<ServiceType> _service;

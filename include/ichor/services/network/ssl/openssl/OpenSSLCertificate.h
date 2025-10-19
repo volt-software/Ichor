@@ -9,7 +9,8 @@
 namespace Ichor::v1 {
     enum class OpenSSLMakeCertificateError {
         OUT_OF_MEMORY,
-        ERROR_WITH_CERTIFICATE
+        ERROR_WITH_CERTIFICATE,
+        CERTIFICATE_SIZE_TOO_BIG
     };
 
     class OpenSSLCertificate final : public TLSCertificate {

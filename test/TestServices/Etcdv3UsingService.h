@@ -5,6 +5,11 @@
 #include <ichor/events/RunFunctionEvent.h>
 #include <ichor/ServiceExecutionScope.h>
 
+#if defined( __GNUC__ )
+#    pragma GCC diagnostic push
+#    pragma GCC diagnostic ignored "-Wmissing-field-initializers"
+#endif
+
 using namespace Ichor::v1;
 
 namespace Ichor {
@@ -328,7 +333,7 @@ namespace Ichor {
                 std::terminate();
             }
 
-            Etcdv3::v1::AuthUserChangePasswordRequest authChangePassReq{"v3_test_user", "v3_test_password2"};
+            Etcdv3::v1::AuthUserChangePasswordRequest authChangePassReq{"v3_test_user", "v3_test_password2", {}};
             auto authChangePassReply = co_await _etcd->userChangePassword(authChangePassReq);
             if(!authChangePassReply) {
                 fmt::println("auth change pass");
@@ -430,7 +435,7 @@ namespace Ichor {
                 std::terminate();
             }
 
-            Etcdv3::v1::AuthRoleGrantPermissionRequest roleGrantPermissionReq{"v3_test_role", Etcdv3::v1::AuthPermission{Etcdv3::v1::EtcdAuthPermissionType::WRITE, "v3_test_role_permission"}};
+            Etcdv3::v1::AuthRoleGrantPermissionRequest roleGrantPermissionReq{"v3_test_role", Etcdv3::v1::AuthPermission{Etcdv3::v1::EtcdAuthPermissionType::WRITE, "v3_test_role_permission", {}}};
             auto roleGrantPermissionReply = co_await _etcd->roleGrantPermission(roleGrantPermissionReq);
             if(!roleGrantPermissionReply) {
                 fmt::println("role grant permission");
@@ -450,7 +455,7 @@ namespace Ichor {
                 std::terminate();
             }
 
-            Etcdv3::v1::AuthRoleRevokePermissionRequest roleRevokePermissionReq{"v3_test_role", "v3_test_role_permission"};
+            Etcdv3::v1::AuthRoleRevokePermissionRequest roleRevokePermissionReq{"v3_test_role", "v3_test_role_permission", {}};
             auto roleRevokeRoleReply = co_await _etcd->roleRevokePermission(roleRevokePermissionReq);
             if(!roleRevokeRoleReply) {
                 fmt::println("role revoke permission");
@@ -505,3 +510,7 @@ namespace Ichor {
         Version _v{};
     };
 }
+
+#if defined( __GNUC__ )
+#    pragma GCC diagnostic pop
+#endif

@@ -2,9 +2,7 @@
 
 #include <ichor/event_queues/IEventQueue.h>
 
-struct QueueMock final : public IEventQueue, public AdvancedService<QueueMock> {
-    QueueMock(DependencyRegister &reg, Properties props) : AdvancedService<QueueMock>(std::move(props)) {}
-
+struct QueueMock final : public IEventQueue {
     ~QueueMock() final = default;
     [[nodiscard]] bool empty() const override {
         return events.empty();

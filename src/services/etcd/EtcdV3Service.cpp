@@ -1,14 +1,5 @@
-// We're doing some naughty stuff where we tell fmt to insert char's into a vector<uint8_t>.
-// Since we have most warnings turned on and -Werror, this turns into compile errors that are actually harmless.
 #include <iterator>
-#if defined( __GNUC__ )
-#    pragma GCC diagnostic push
-#    pragma GCC diagnostic ignored "-Wsign-conversion"
-#endif
-#include <fmt/core.h>
-#if defined( __GNUC__ )
-#    pragma GCC diagnostic pop
-#endif
+#include <fmt/base.h>
 
 #include <ichor/services/etcd/EtcdV3Service.h>
 #include <ichor/dependency_management/DependencyRegister.h>
