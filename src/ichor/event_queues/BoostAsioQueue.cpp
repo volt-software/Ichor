@@ -58,7 +58,7 @@ bool Ichor::BoostAsioQueue::is_running() const noexcept {
     return !_quit.load(std::memory_order_acquire);
 }
 
-Ichor::NameHashType Ichor::BoostAsioQueue::get_queue_name_hash() const noexcept {
+ICHOR_CONST_FUNC_ATTR Ichor::NameHashType Ichor::BoostAsioQueue::get_queue_name_hash() const noexcept {
     return typeNameHash<BoostAsioQueue>();
 }
 

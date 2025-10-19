@@ -47,3 +47,15 @@
 #else
 #define ICHOR_CXX23_CONSTEXPR
 #endif
+
+#if __has_cpp_attribute(gnu::pure)
+#define ICHOR_PURE_FUNC_ATTR [[gnu::pure]]
+#else
+#define ICHOR_PURE_FUNC_ATTR
+#endif
+
+#if __has_cpp_attribute(gnu::const)
+#define ICHOR_CONST_FUNC_ATTR [[gnu::const]]
+#else
+#define ICHOR_CONST_FUNC_ATTR
+#endif

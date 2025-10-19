@@ -5,6 +5,7 @@
 #include <sole/sole.h>
 #include <ichor/Common.h>
 #include <ichor/Enums.h>
+#include <ichor/stl/CompilerSpecific.h>
 
 namespace Ichor {
     class IService {
@@ -13,15 +14,15 @@ namespace Ichor {
 
         /// Process-local unique service id
         /// \return id
-        [[nodiscard]] virtual ServiceIdType getServiceId() const noexcept = 0;
+        [[nodiscard]] ICHOR_PURE_FUNC_ATTR virtual ServiceIdType getServiceId() const noexcept = 0;
 
         /// Global unique service id
         /// \return gid
-        [[nodiscard]] virtual sole::uuid getServiceGid() const noexcept = 0;
+        [[nodiscard]] ICHOR_PURE_FUNC_ATTR virtual sole::uuid getServiceGid() const noexcept = 0;
 
         /// Name of the user-specified service (e.g. CoutFrameworkLogger)
         /// \return
-        [[nodiscard]] virtual std::string_view getServiceName() const noexcept = 0;
+        [[nodiscard]] ICHOR_PURE_FUNC_ATTR virtual std::string_view getServiceName() const noexcept = 0;
 
         [[nodiscard]] virtual ServiceState getServiceState() const noexcept = 0;
 

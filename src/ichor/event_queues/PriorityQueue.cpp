@@ -74,7 +74,7 @@ namespace Ichor {
     }
 
     template <typename COMPARE>
-    NameHashType TemplatePriorityQueue<COMPARE>::get_queue_name_hash() const noexcept {
+    ICHOR_CONST_FUNC_ATTR NameHashType TemplatePriorityQueue<COMPARE>::get_queue_name_hash() const noexcept {
         return typeNameHash<TemplatePriorityQueue<COMPARE>>();
     }
 

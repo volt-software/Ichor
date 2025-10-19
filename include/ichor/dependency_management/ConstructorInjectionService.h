@@ -220,14 +220,13 @@ namespace Ichor {
     class ConstructorInjectionService;
 
     template <HasConstructorInjectionDependencies T>
-    class ConstructorInjectionService<T> : public IService {
+    class ConstructorInjectionService<T> final : public IService {
     public:
         ConstructorInjectionService(DependencyRegister &reg, Properties props) noexcept : IService(), _properties(std::move(props)), _serviceId(Detail::_serviceIdCounter.fetch_add(1, std::memory_order_relaxed)), _servicePriority(INTERNAL_EVENT_PRIORITY), _serviceGid(sole::uuid4()), _serviceState(ServiceState::INSTALLED) {
             registerDependenciesSpecialSauce(reg, tl::optional<refl::as_variant<T>>());
         }
 
-        ~ConstructorInjectionService() noexcept override {
-            _serviceId = 0;
+        ~ConstructorInjectionService() noexcept final {
             _serviceState = ServiceState::UNINSTALLED;
         }
 
@@ -238,19 +237,19 @@ namespace Ichor {
 
         /// Process-local unique service id
         /// \return id
-        [[nodiscard]] ServiceIdType getServiceId() const noexcept final {
+        [[nodiscard]] ICHOR_PURE_FUNC_ATTR ServiceIdType getServiceId() const noexcept final {
             return _serviceId;
         }
 
         /// Global unique service id
         /// \return gid
-        [[nodiscard]] sole::uuid getServiceGid() const noexcept final {
+        [[nodiscard]] ICHOR_PURE_FUNC_ATTR sole::uuid getServiceGid() const noexcept final {
             return _serviceGid;
         }
 
         /// Name of the user-specified service (e.g. CoutFrameworkLogger)
         /// \return
-        [[nodiscard]] std::string_view getServiceName() const noexcept final {
+        [[nodiscard]] ICHOR_PURE_FUNC_ATTR std::string_view getServiceName() const noexcept final {
             return typeName<T>();
         }
 
@@ -469,9 +468,9 @@ namespace Ichor {
         }
 
 
-        ServiceIdType _serviceId;
+        ServiceIdType const _serviceId;
         uint64_t _servicePriority;
-        sole::uuid _serviceGid;
+        sole::uuid const _serviceGid;
         ServiceState _serviceState;
         unordered_map<uint64_t, refl::rewrap_dependencies_t<refl::as_variant<T>>> _deps{};
         alignas(T) std::byte buf[sizeof(T)];
@@ -487,12 +486,12 @@ namespace Ichor {
     };
 
     template <DoesNotHaveConstructorInjectionDependencies T>
-    class ConstructorInjectionService<T> : public IService {
+    class ConstructorInjectionService<T> final : public IService {
     public:
         ConstructorInjectionService(Properties props) noexcept : IService(), _properties(std::move(props)), _serviceId(Detail::_serviceIdCounter.fetch_add(1, std::memory_order_relaxed)), _servicePriority(INTERNAL_EVENT_PRIORITY), _serviceGid(sole::uuid4()), _serviceState(ServiceState::INSTALLED) {
         }
 
-        ~ConstructorInjectionService() noexcept override {
+        ~ConstructorInjectionService() noexcept final {
             _serviceId = 0;
             _serviceState = ServiceState::UNINSTALLED;
         }
@@ -504,19 +503,19 @@ namespace Ichor {
 
         /// Process-local unique service id
         /// \return id
-        [[nodiscard]] ServiceIdType getServiceId() const noexcept final {
+        [[nodiscard]] ICHOR_PURE_FUNC_ATTR ServiceIdType getServiceId() const noexcept final {
             return _serviceId;
         }
 
         /// Global unique service id
         /// \return gid
-        [[nodiscard]] sole::uuid getServiceGid() const noexcept final {
+        [[nodiscard]] ICHOR_PURE_FUNC_ATTR sole::uuid getServiceGid() const noexcept final {
             return _serviceGid;
         }
 
         /// Name of the user-specified service (e.g. CoutFrameworkLogger)
         /// \return
-        [[nodiscard]] std::string_view getServiceName() const noexcept final {
+        [[nodiscard]] ICHOR_PURE_FUNC_ATTR std::string_view getServiceName() const noexcept final {
             return typeName<T>();
         }
 

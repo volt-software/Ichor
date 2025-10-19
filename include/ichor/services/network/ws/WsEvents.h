@@ -16,10 +16,10 @@ namespace Ichor::v1 {
                 Event(_id, _originatingService, _priority), _socket(std::move(socket)) {}
         ~NewWsConnectionEvent() final = default;
 
-        [[nodiscard]] std::string_view get_name() const noexcept final {
+        [[nodiscard]] ICHOR_CONST_FUNC_ATTR std::string_view get_name() const noexcept final {
             return NAME;
         }
-        [[nodiscard]] NameHashType get_type() const noexcept final {
+        [[nodiscard]] ICHOR_CONST_FUNC_ATTR NameHashType get_type() const noexcept final {
             return TYPE;
         }
 

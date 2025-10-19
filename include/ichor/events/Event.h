@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <string_view>
+#include <ichor/stl/CompilerSpecific.h>
 
 namespace Ichor {
     constexpr uint64_t INTERNAL_EVENT_PRIORITY = 1000;
@@ -16,10 +17,10 @@ namespace Ichor {
         Event &operator=(const Event &) = default;
         Event &operator=(Event &&) noexcept = default;
         virtual ~Event() noexcept = default;
-        [[nodiscard]] virtual std::string_view get_name() const noexcept {
+        [[nodiscard]] ICHOR_CONST_FUNC_ATTR virtual std::string_view get_name() const noexcept {
             return "BaseEvent";
         }
-        [[nodiscard]] virtual uint64_t get_type() const noexcept {
+        [[nodiscard]] ICHOR_CONST_FUNC_ATTR virtual uint64_t get_type() const noexcept {
             return 0;
         }
         uint64_t id;

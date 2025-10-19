@@ -66,15 +66,15 @@ namespace Ichor::Detail {
             std::terminate();
         }
 
-        [[nodiscard]] std::string_view implementationName() const noexcept final {
+        [[nodiscard]] ICHOR_PURE_FUNC_ATTR std::string_view implementationName() const noexcept final {
             return typeName<IService>();
         }
 
-        [[nodiscard]] uint64_t type() const noexcept final {
+        [[nodiscard]] ICHOR_PURE_FUNC_ATTR uint64_t type() const noexcept final {
             return typeNameHash<IService>();
         }
 
-        [[nodiscard]] uint64_t serviceId() const noexcept final {
+        [[nodiscard]] ICHOR_PURE_FUNC_ATTR uint64_t serviceId() const noexcept final {
             return SELF_SERVICE_ID;
         }
 

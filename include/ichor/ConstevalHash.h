@@ -3,6 +3,7 @@
 #include <string_view>
 #include <cstdint>
 #include <array>
+#include <ichor/stl/CompilerSpecific.h>
 
 // Adapted from wyhash v3
 
@@ -14,9 +15,9 @@
 #endif
 
 const	uint64_t	_wyp0 = 0xa0761d6478bd642full, _wyp1 = 0xe7037ed1a0b428dbull, _wyp2 = 0x8ebc6af09c88c6e3ull, _wyp3 = 0x589965cc75374cc3ull, _wyp4 = 0x1d8e4e27c47d124full;
-static consteval uint64_t consteval_wyrotr(uint64_t v, unsigned k) { return (v >> k) | (v << (64 - k)); }
+ICHOR_CONST_FUNC_ATTR static consteval uint64_t consteval_wyrotr(uint64_t v, unsigned k) { return (v >> k) | (v << (64 - k)); }
 
-static consteval uint64_t consteval_wymum(uint64_t A, uint64_t B) {
+ICHOR_CONST_FUNC_ATTR static consteval uint64_t consteval_wymum(uint64_t A, uint64_t B) {
 #ifdef    WYHASH32
     uint64_t	hh=(A>>32)*(B>>32),	hl=(A>>32)*(unsigned)B,	lh=(unsigned)A*(B>>32),	ll=(uint64_t)(unsigned)A*(unsigned)B;
         return	consteval_wyrotr(hl,32)^consteval_wyrotr(lh,32)^hh^ll;
@@ -34,7 +35,7 @@ static consteval uint64_t consteval_wymum(uint64_t A, uint64_t B) {
 }
 
 template<typename T>
-static consteval uint64_t consteval_wyr8(const T *p) {
+ICHOR_CONST_FUNC_ATTR static consteval uint64_t consteval_wyr8(const T *p) {
     uint64_t v = 0;
     v = ((uint64_t) p[0] << 56U) | ((uint64_t) p[1] << 48U) | ((uint64_t) p[2] << 40U) | ((uint64_t) p[3] << 32U) |
         (p[4] << 24U) | (p[5] << 16U) | (p[6] << 8U) | p[7];
@@ -42,19 +43,19 @@ static consteval uint64_t consteval_wyr8(const T *p) {
 }
 
 template<typename T>
-static consteval uint64_t consteval_wyr4(const T *p) {
+ICHOR_CONST_FUNC_ATTR static consteval uint64_t consteval_wyr4(const T *p) {
     uint32_t v = 0;
     v = (p[0] << 24U) | (p[1] << 16U) | (p[2] << 8U) | p[3];
     return v;
 }
 
 template<typename T>
-static consteval uint64_t consteval_wyr3(const T *p, uint64_t k) {
+ICHOR_CONST_FUNC_ATTR static consteval uint64_t consteval_wyr3(const T *p, uint64_t k) {
     return (((uint64_t) p[0]) << 16U) | (((uint64_t) p[k >> 1U]) << 8U) | p[k - 1];
 }
 
 template<typename T>
-static consteval uint64_t consteval_wyhash(const T *key, uint64_t len, uint64_t seed) {
+ICHOR_CONST_FUNC_ATTR static consteval uint64_t consteval_wyhash(const T *key, uint64_t len, uint64_t seed) {
     static_assert(sizeof(T) == 1, "T must be a char or uint8_t kind type");
 #if defined(__GNUC__) || defined(__INTEL_COMPILER)
     if (__builtin_expect(!len, 0)) return 0;
@@ -124,13 +125,13 @@ static consteval uint64_t consteval_wyhash(const T *key, uint64_t len, uint64_t 
 
 // Taken from https://bitwizeshift.github.io/posts/2021/03/09/getting-an-unmangled-type-name-at-compile-time/
 template <std::size_t...Idxs>
-[[nodiscard]] constexpr auto ichor_internal_substring_as_array(std::string_view str, std::index_sequence<Idxs...>)
+[[nodiscard]] ICHOR_CONST_FUNC_ATTR constexpr auto ichor_internal_substring_as_array(std::string_view str, std::index_sequence<Idxs...>)
 {
     return std::array{str[Idxs]...};
 }
 
 template <typename T>
-[[nodiscard]] constexpr auto ichor_internal_type_name_array()
+[[nodiscard]] ICHOR_CONST_FUNC_ATTR constexpr auto ichor_internal_type_name_array()
 {
 #if defined(__clang__)
     constexpr auto prefix   = std::string_view{"[T = "};
@@ -178,7 +179,7 @@ struct ichor_internal_type_name_holder {
 
 // Do not define this inside a namespace, as gcc then removes the namespace part from the __PRETTY_FUNCTION__
 template <typename T>
-[[nodiscard]] constexpr auto ichor_internal_type_name() -> std::string_view
+[[nodiscard]] ICHOR_CONST_FUNC_ATTR constexpr auto ichor_internal_type_name() -> std::string_view
 {
     constexpr auto& value = ichor_internal_type_name_holder<T>::value;
     return std::string_view{value.data(), value.size()};
@@ -188,12 +189,12 @@ namespace Ichor {
     using NameHashType = uint64_t;
 
     template<typename INTERFACE_TYPENAME>
-    [[nodiscard]] consteval auto typeName() {
+    [[nodiscard]] ICHOR_CONST_FUNC_ATTR consteval auto typeName() {
         return ichor_internal_type_name<INTERFACE_TYPENAME>();
     }
 
     template<typename INTERFACE_TYPENAME>
-    [[nodiscard]] consteval NameHashType typeNameHash() {
+    [[nodiscard]] ICHOR_CONST_FUNC_ATTR consteval NameHashType typeNameHash() {
         constexpr std::string_view name = typeName<INTERFACE_TYPENAME>();
         constexpr NameHashType ret = consteval_wyhash(name.data(), name.size(), 0);
 

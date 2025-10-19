@@ -9,10 +9,10 @@ namespace Ichor {
         ContinuableEvent(uint64_t _id, uint64_t _originatingService, uint64_t _priority, uint64_t _promiseId) noexcept : Event(_id, _originatingService, _priority), promiseId(_promiseId) {}
         ~ContinuableEvent() final = default;
 
-        [[nodiscard]] std::string_view get_name() const noexcept final {
+        [[nodiscard]] ICHOR_CONST_FUNC_ATTR std::string_view get_name() const noexcept final {
             return NAME;
         }
-        [[nodiscard]] NameHashType get_type() const noexcept final {
+        [[nodiscard]] ICHOR_CONST_FUNC_ATTR NameHashType get_type() const noexcept final {
             return TYPE;
         }
 
@@ -25,10 +25,10 @@ namespace Ichor {
         ContinuableStartEvent(uint64_t _id, uint64_t _originatingService, uint64_t _priority, uint64_t _promiseId) noexcept : Event(_id, _originatingService, _priority), promiseId(_promiseId) {}
         ~ContinuableStartEvent() final = default;
 
-        [[nodiscard]] std::string_view get_name() const noexcept final {
+        [[nodiscard]] ICHOR_CONST_FUNC_ATTR std::string_view get_name() const noexcept final {
             return NAME;
         }
-        [[nodiscard]] NameHashType get_type() const noexcept final {
+        [[nodiscard]] ICHOR_CONST_FUNC_ATTR NameHashType get_type() const noexcept final {
             return TYPE;
         }
 
@@ -42,10 +42,10 @@ namespace Ichor {
                 Event(_id, _originatingService, _priority), originatingOfflineServiceId(_originatingOfflineServiceId), removeOriginatingOfflineServiceAfterStop(_removeOriginatingOfflineServiceAfterStop) {}
         ~ContinuableDependencyOfflineEvent() final = default;
 
-        [[nodiscard]] std::string_view get_name() const noexcept final {
+        [[nodiscard]] ICHOR_CONST_FUNC_ATTR std::string_view get_name() const noexcept final {
             return NAME;
         }
-        [[nodiscard]] NameHashType get_type() const noexcept final {
+        [[nodiscard]] ICHOR_CONST_FUNC_ATTR NameHashType get_type() const noexcept final {
             return TYPE;
         }
 

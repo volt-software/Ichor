@@ -23,9 +23,9 @@ namespace Ichor {
         [[nodiscard]] virtual AsyncGenerator<StartBehaviour> stop() = 0;
         [[nodiscard]] virtual bool setInjected() = 0;
         [[nodiscard]] virtual bool setUninjected() = 0;
-        [[nodiscard]] virtual std::string_view implementationName() const noexcept = 0;
-        [[nodiscard]] virtual uint64_t type() const noexcept = 0;
-        [[nodiscard]] virtual ServiceIdType serviceId() const noexcept = 0;
+        [[nodiscard]] ICHOR_PURE_FUNC_ATTR virtual std::string_view implementationName() const noexcept = 0;
+        [[nodiscard]] ICHOR_PURE_FUNC_ATTR virtual uint64_t type() const noexcept = 0;
+        [[nodiscard]] ICHOR_PURE_FUNC_ATTR virtual ServiceIdType serviceId() const noexcept = 0;
         [[nodiscard]] virtual uint64_t getPriority() const noexcept = 0;
         [[nodiscard]] virtual ServiceState getServiceState() const noexcept = 0;
         [[nodiscard]] virtual v1::NeverNull<IService*> getIService() noexcept = 0;

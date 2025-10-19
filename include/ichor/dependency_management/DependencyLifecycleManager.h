@@ -301,15 +301,15 @@ namespace Ichor::Detail {
             return _service.internalSetUninjected();
         }
 
-        [[nodiscard]] std::string_view implementationName() const noexcept final {
+        [[nodiscard]] ICHOR_PURE_FUNC_ATTR std::string_view implementationName() const noexcept final {
             return _service.getServiceName();
         }
 
-        [[nodiscard]] uint64_t type() const noexcept final {
+        [[nodiscard]] ICHOR_PURE_FUNC_ATTR uint64_t type() const noexcept final {
             return typeNameHash<ServiceType>();
         }
 
-        [[nodiscard]] ServiceIdType serviceId() const noexcept final {
+        [[nodiscard]] ICHOR_PURE_FUNC_ATTR ServiceIdType serviceId() const noexcept final {
             return _service.getServiceId();
         }
 

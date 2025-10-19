@@ -15,7 +15,7 @@ struct QueueMock final : public IEventQueue, public AdvancedService<QueueMock> {
     [[nodiscard]] bool is_running() const noexcept override {
         return isRunning;
     }
-    [[nodiscard]] NameHashType get_queue_name_hash() const noexcept override {
+    [[nodiscard]] ICHOR_CONST_FUNC_ATTR NameHashType get_queue_name_hash() const noexcept override {
         return typeNameHash<QueueMock>();
     }
 
