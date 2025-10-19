@@ -9,13 +9,13 @@
 
 namespace Ichor::v1 {
     struct NewSocketEvent final : public Ichor::Event {
-        NewSocketEvent(uint64_t _id, uint64_t _originatingService, uint64_t _priority, int _socket) noexcept : Event(_id, _originatingService, _priority), socket(_socket) {}
-        ~NewSocketEvent() final = default;
+        constexpr NewSocketEvent(uint64_t _id, uint64_t _originatingService, uint64_t _priority, int _socket) noexcept : Event(_id, _originatingService, _priority), socket(_socket) {}
+        constexpr ~NewSocketEvent() final = default;
 
-        [[nodiscard]] ICHOR_CONST_FUNC_ATTR std::string_view get_name() const noexcept final {
+        [[nodiscard]] ICHOR_CONST_FUNC_ATTR constexpr std::string_view get_name() const noexcept final {
             return NAME;
         }
-        [[nodiscard]] ICHOR_CONST_FUNC_ATTR NameHashType get_type() const noexcept final {
+        [[nodiscard]] ICHOR_CONST_FUNC_ATTR constexpr NameHashType get_type() const noexcept final {
             return TYPE;
         }
 

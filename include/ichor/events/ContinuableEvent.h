@@ -6,13 +6,13 @@
 
 namespace Ichor {
     struct ContinuableEvent final : public Event {
-        ContinuableEvent(uint64_t _id, uint64_t _originatingService, uint64_t _priority, uint64_t _promiseId) noexcept : Event(_id, _originatingService, _priority), promiseId(_promiseId) {}
-        ~ContinuableEvent() final = default;
+        constexpr ContinuableEvent(uint64_t _id, uint64_t _originatingService, uint64_t _priority, uint64_t _promiseId) noexcept : Event(_id, _originatingService, _priority), promiseId(_promiseId) {}
+        constexpr ~ContinuableEvent() final = default;
 
-        [[nodiscard]] ICHOR_CONST_FUNC_ATTR std::string_view get_name() const noexcept final {
+        [[nodiscard]] ICHOR_CONST_FUNC_ATTR constexpr std::string_view get_name() const noexcept final {
             return NAME;
         }
-        [[nodiscard]] ICHOR_CONST_FUNC_ATTR NameHashType get_type() const noexcept final {
+        [[nodiscard]] ICHOR_CONST_FUNC_ATTR constexpr NameHashType get_type() const noexcept final {
             return TYPE;
         }
 
@@ -22,13 +22,13 @@ namespace Ichor {
     };
 
     struct ContinuableStartEvent final : public Event {
-        ContinuableStartEvent(uint64_t _id, uint64_t _originatingService, uint64_t _priority, uint64_t _promiseId) noexcept : Event(_id, _originatingService, _priority), promiseId(_promiseId) {}
-        ~ContinuableStartEvent() final = default;
+        constexpr ContinuableStartEvent(uint64_t _id, uint64_t _originatingService, uint64_t _priority, uint64_t _promiseId) noexcept : Event(_id, _originatingService, _priority), promiseId(_promiseId) {}
+        constexpr ~ContinuableStartEvent() final = default;
 
-        [[nodiscard]] ICHOR_CONST_FUNC_ATTR std::string_view get_name() const noexcept final {
+        [[nodiscard]] ICHOR_CONST_FUNC_ATTR constexpr std::string_view get_name() const noexcept final {
             return NAME;
         }
-        [[nodiscard]] ICHOR_CONST_FUNC_ATTR NameHashType get_type() const noexcept final {
+        [[nodiscard]] ICHOR_CONST_FUNC_ATTR constexpr NameHashType get_type() const noexcept final {
             return TYPE;
         }
 
@@ -38,14 +38,14 @@ namespace Ichor {
     };
 
     struct ContinuableDependencyOfflineEvent final : public Event {
-        explicit ContinuableDependencyOfflineEvent(uint64_t _id, uint64_t _originatingService, uint64_t _priority, uint64_t _originatingOfflineServiceId, bool _removeOriginatingOfflineServiceAfterStop) noexcept :
+        constexpr explicit ContinuableDependencyOfflineEvent(uint64_t _id, uint64_t _originatingService, uint64_t _priority, uint64_t _originatingOfflineServiceId, bool _removeOriginatingOfflineServiceAfterStop) noexcept :
                 Event(_id, _originatingService, _priority), originatingOfflineServiceId(_originatingOfflineServiceId), removeOriginatingOfflineServiceAfterStop(_removeOriginatingOfflineServiceAfterStop) {}
-        ~ContinuableDependencyOfflineEvent() final = default;
+        constexpr ~ContinuableDependencyOfflineEvent() final = default;
 
-        [[nodiscard]] ICHOR_CONST_FUNC_ATTR std::string_view get_name() const noexcept final {
+        [[nodiscard]] ICHOR_CONST_FUNC_ATTR constexpr std::string_view get_name() const noexcept final {
             return NAME;
         }
-        [[nodiscard]] ICHOR_CONST_FUNC_ATTR NameHashType get_type() const noexcept final {
+        [[nodiscard]] ICHOR_CONST_FUNC_ATTR constexpr NameHashType get_type() const noexcept final {
             return TYPE;
         }
 

@@ -30,13 +30,13 @@ namespace Ichor {
     // Moved here from InternalEvents.h to prevent circular includes
     /// Used to prevent modifying the _services container while iterating over it through f.e. DependencyOnline()
     struct InsertServiceEvent final : public Event {
-        InsertServiceEvent(uint64_t _id, ServiceIdType _originatingService, uint64_t _priority, std::unique_ptr<ILifecycleManager> _mgr) noexcept : Event(_id, _originatingService, _priority), mgr(std::move(_mgr)) {}
-        ~InsertServiceEvent() final = default;
+        constexpr InsertServiceEvent(uint64_t _id, ServiceIdType _originatingService, uint64_t _priority, std::unique_ptr<ILifecycleManager> _mgr) noexcept : Event(_id, _originatingService, _priority), mgr(std::move(_mgr)) {}
+        constexpr ~InsertServiceEvent() final = default;
 
-        [[nodiscard]] ICHOR_CONST_FUNC_ATTR std::string_view get_name() const noexcept final {
+        [[nodiscard]] ICHOR_CONST_FUNC_ATTR constexpr std::string_view get_name() const noexcept final {
             return NAME;
         }
-        [[nodiscard]] ICHOR_CONST_FUNC_ATTR NameHashType get_type() const noexcept final {
+        [[nodiscard]] ICHOR_CONST_FUNC_ATTR constexpr NameHashType get_type() const noexcept final {
             return TYPE;
         }
 

@@ -18,14 +18,14 @@ using namespace Ichor;
 using namespace Ichor::v1;
 
 struct UselessEvent final : public Event {
-    explicit UselessEvent(uint64_t _id, uint64_t _originatingService, uint64_t _priority) noexcept :
+    constexpr explicit UselessEvent(uint64_t _id, uint64_t _originatingService, uint64_t _priority) noexcept :
             Event(_id, _originatingService, _priority) {}
-    ~UselessEvent() final = default;
+    constexpr ~UselessEvent() final = default;
 
-    [[nodiscard]] ICHOR_CONST_FUNC_ATTR std::string_view get_name() const noexcept final {
+    [[nodiscard]] ICHOR_CONST_FUNC_ATTR constexpr std::string_view get_name() const noexcept final {
         return NAME;
     }
-    [[nodiscard]] ICHOR_CONST_FUNC_ATTR NameHashType get_type() const noexcept final {
+    [[nodiscard]] ICHOR_CONST_FUNC_ATTR constexpr NameHashType get_type() const noexcept final {
         return TYPE;
     }
 
