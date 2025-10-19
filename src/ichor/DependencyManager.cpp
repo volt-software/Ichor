@@ -1645,7 +1645,7 @@ tl::optional<std::string_view> Ichor::DependencyManager::getImplementationNameFo
     return service->second->implementationName();
 }
 
-Ichor::IEventQueue& Ichor::DependencyManager::getEventQueue() const noexcept {
+ICHOR_PURE_FUNC_ATTR Ichor::IEventQueue& Ichor::DependencyManager::getEventQueue() const noexcept {
     return *_eventQueue;
 }
 

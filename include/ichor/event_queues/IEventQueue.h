@@ -26,7 +26,7 @@ namespace Ichor {
         [[nodiscard]] virtual bool is_running() const noexcept = 0;
 
         /// Thread-safe
-        [[nodiscard]] virtual NameHashType get_queue_name_hash() const noexcept = 0;
+        [[nodiscard]] ICHOR_CONST_FUNC_ATTR virtual NameHashType get_queue_name_hash() const noexcept = 0;
 
         /// Starts the event loop, consumes the current thread until a QuitEvent occurs
         /// \param captureSigInt If true, exit on CTRL+C/SigInt

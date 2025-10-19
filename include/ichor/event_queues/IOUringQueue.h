@@ -22,7 +22,7 @@ namespace Ichor {
         [[nodiscard]] bool empty() const final;
         [[nodiscard]] uint64_t size() const final;
         [[nodiscard]] bool is_running() const noexcept final;
-        [[nodiscard]] NameHashType get_queue_name_hash() const noexcept final;
+        [[nodiscard]] ICHOR_CONST_FUNC_ATTR NameHashType get_queue_name_hash() const noexcept final;
 
         /// Creates an io_uring event loop with a standard flagset.
         /// \param entriesCount

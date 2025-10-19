@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <cerrno>
 #include <fmt/base.h>
+#include <ichor/stl/CompilerSpecific.h>
 
 namespace Ichor::v1 {
     enum class IOError : uint_fast16_t {
@@ -45,7 +46,7 @@ namespace Ichor::v1 {
     /*
      * Function to make an errno indicator to an Ichor IOError. Returns IOError::FAILED if it doesn't recognize the number.
      */
-    [[nodiscard]] static constexpr IOError mapErrnoToError(std::remove_cvref_t<decltype(errno)> err) noexcept {
+    [[nodiscard]] ICHOR_CONST_FUNC_ATTR static constexpr IOError mapErrnoToError(std::remove_cvref_t<decltype(errno)> err) noexcept {
         if(err == EACCES || err == EFAULT || err == EPERM) {
             return IOError::NO_PERMISSION;
         } else if(err == EINTR) {

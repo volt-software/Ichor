@@ -7,6 +7,7 @@
 #include <limits>
 #include <memory>
 #include <algorithm>
+#include <ichor/stl/CompilerSpecific.h>
 
 // An implementation that is close to the StaticVector proposal: https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2023/p0843r6.html
 // Difference being that this implementation also supports type-erasure
@@ -138,8 +139,8 @@ namespace Ichor::v1 {
 
         [[nodiscard]] virtual constexpr bool empty() const noexcept = 0;
         [[nodiscard]] virtual constexpr size_type size() const noexcept = 0;
-        [[nodiscard]] virtual constexpr size_type max_size() noexcept = 0;
-        [[nodiscard]] virtual constexpr size_type capacity() noexcept = 0;
+        [[nodiscard]] ICHOR_CONST_FUNC_ATTR virtual constexpr size_type max_size() noexcept = 0;
+        [[nodiscard]] ICHOR_CONST_FUNC_ATTR virtual constexpr size_type capacity() noexcept = 0;
 
         constexpr void resize(size_type sz) requires(std::is_default_constructible_v<T>) {
             assert(sz <= max_size());
@@ -341,10 +342,10 @@ namespace Ichor::v1 {
         [[nodiscard]] constexpr size_type size() const noexcept final {
             return _size;
         }
-        [[nodiscard]] constexpr size_type max_size() noexcept final {
+        [[nodiscard]] ICHOR_CONST_FUNC_ATTR constexpr size_type max_size() noexcept final {
             return N;
         }
-        [[nodiscard]] constexpr size_type capacity() noexcept final {
+        [[nodiscard]] ICHOR_CONST_FUNC_ATTR constexpr size_type capacity() noexcept final {
             return N;
         }
 

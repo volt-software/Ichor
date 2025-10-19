@@ -530,10 +530,10 @@ struct MyEvent final : public Event {
     MyEvent(uint64_t _id, uint64_t _originatingService, uint64_t _priority, uint64_t _someData) noexcept : Event(_id, _originatingService, _priority), someData(_someData) {}
     ~MyEvent() final = default;
 
-    [[nodiscard]] std::string_view get_name() const noexcept final {
+    [[nodiscard]] ICHOR_CONST_FUNC_ATTR std::string_view get_name() const noexcept final {
         return NAME;
     }
-    [[nodiscard]] NameHashType get_type() const noexcept final {
+    [[nodiscard]] ICHOR_CONST_FUNC_ATTR NameHashType get_type() const noexcept final {
         return TYPE;
     }
 

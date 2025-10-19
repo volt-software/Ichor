@@ -25,19 +25,19 @@ namespace Ichor::Detail {
 
         /// Process-local unique service id
         /// \return id
-        [[nodiscard]] ServiceIdType getServiceId() const noexcept final {
+        [[nodiscard]] ICHOR_PURE_FUNC_ATTR ServiceIdType getServiceId() const noexcept final {
             return _serviceId;
         }
 
         /// Global unique service id
         /// \return gid
-        [[nodiscard]] sole::uuid getServiceGid() const noexcept final {
+        [[nodiscard]] ICHOR_PURE_FUNC_ATTR sole::uuid getServiceGid() const noexcept final {
             return _serviceGid;
         }
 
         /// Name of the user-specified service (e.g. CoutFrameworkLogger)
         /// \return
-        [[nodiscard]] std::string_view getServiceName() const noexcept final {
+        [[nodiscard]] ICHOR_PURE_FUNC_ATTR std::string_view getServiceName() const noexcept final {
             return typeName<OriginalType>();
         }
 

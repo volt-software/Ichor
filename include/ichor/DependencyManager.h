@@ -33,10 +33,10 @@ namespace Ichor {
         InsertServiceEvent(uint64_t _id, ServiceIdType _originatingService, uint64_t _priority, std::unique_ptr<ILifecycleManager> _mgr) noexcept : Event(_id, _originatingService, _priority), mgr(std::move(_mgr)) {}
         ~InsertServiceEvent() final = default;
 
-        [[nodiscard]] std::string_view get_name() const noexcept final {
+        [[nodiscard]] ICHOR_CONST_FUNC_ATTR std::string_view get_name() const noexcept final {
             return NAME;
         }
-        [[nodiscard]] NameHashType get_type() const noexcept final {
+        [[nodiscard]] ICHOR_CONST_FUNC_ATTR NameHashType get_type() const noexcept final {
             return TYPE;
         }
 
@@ -125,19 +125,19 @@ namespace Ichor {
                 unordered_set<ServiceIdType>::const_iterator _it{};
             };
 
-            [[nodiscard]] iterator begin() const noexcept {
+            [[nodiscard]] ICHOR_PURE_FUNC_ATTR iterator begin() const noexcept {
                 if(_dependees == nullptr) {
                     return iterator{}; // default equals default end
                 }
                 return iterator{_dm, _dependees, _dependees->cbegin()};
             }
-            [[nodiscard]] iterator end() const noexcept {
+            [[nodiscard]] ICHOR_PURE_FUNC_ATTR iterator end() const noexcept {
                 if(_dependees == nullptr) {
                     return iterator{};
                 }
                 return iterator{_dm, _dependees, _dependees->cend()};
             }
-            [[nodiscard]] bool empty() const noexcept { return begin() == end(); }
+            [[nodiscard]] ICHOR_PURE_FUNC_ATTR bool empty() const noexcept { return begin() == end(); }
 
             DependencyManager const *_dm{};
             unordered_set<ServiceIdType> const *_dependees{};
@@ -201,22 +201,22 @@ namespace Ichor {
                 map_type::const_iterator _it{};
             };
 
-            [[nodiscard]] iterator begin() const noexcept {
+            [[nodiscard]] ICHOR_PURE_FUNC_ATTR iterator begin() const noexcept {
                 if(_map == nullptr) {
                     return iterator{};
                 }
                 return iterator{_map, _svcId, _map->cbegin()};
             }
-            [[nodiscard]] iterator end() const noexcept {
+            [[nodiscard]] ICHOR_PURE_FUNC_ATTR iterator end() const noexcept {
                 if(_map == nullptr) {
                     return iterator{};
                 }
                 return iterator{_map, _svcId, _map->cend()};
             }
-            [[nodiscard]] bool empty() const noexcept { return begin() == end(); }
+            [[nodiscard]] ICHOR_PURE_FUNC_ATTR bool empty() const noexcept { return begin() == end(); }
 
-            const map_type *_map{};
-            ServiceIdType _svcId{};
+            map_type const *_map{};
+            ServiceIdType const _svcId{};
         };
 
         // Non-allocating view over all services in the manager.
@@ -273,22 +273,22 @@ namespace Ichor {
                 value_type _current{};
             };
 
-            [[nodiscard]] iterator begin() const noexcept {
+            [[nodiscard]] ICHOR_PURE_FUNC_ATTR iterator begin() const noexcept {
                 if (_map == nullptr) {
                     return iterator{};
                 }
                 return iterator{_map, _map->cbegin()};
             }
-            [[nodiscard]] iterator end() const noexcept {
+            [[nodiscard]] ICHOR_PURE_FUNC_ATTR iterator end() const noexcept {
                 if (_map == nullptr) {
                     return iterator{};
                 }
                 return iterator{_map, _map->cend()};
             }
-            [[nodiscard]] bool empty() const noexcept { return begin() == end(); }
+            [[nodiscard]] ICHOR_PURE_FUNC_ATTR bool empty() const noexcept { return begin() == end(); }
 
-            [[nodiscard]] size_t size() const noexcept { return _map == nullptr ? 0 : _map->size(); }
-            [[nodiscard]] iterator find(ServiceIdType id) const noexcept {
+            [[nodiscard]] ICHOR_PURE_FUNC_ATTR size_t size() const noexcept { return _map == nullptr ? 0 : _map->size(); }
+            [[nodiscard]] ICHOR_PURE_FUNC_ATTR iterator find(ServiceIdType id) const noexcept {
                 if (_map == nullptr) {
                     return iterator{};
                 }
@@ -587,7 +587,7 @@ namespace Ichor {
 
         /// Get manager id. Thread-safe.
         /// \return id
-        [[nodiscard]] uint64_t getId() const noexcept {
+        [[nodiscard]] ICHOR_PURE_FUNC_ATTR uint64_t getId() const noexcept {
             return _id;
         }
 
@@ -738,7 +738,7 @@ namespace Ichor {
         [[nodiscard]] tl::optional<std::string_view> getImplementationNameFor(ServiceIdType serviceId) const noexcept;
 
         /// Gets the associated event queue
-        [[nodiscard]] IEventQueue& getEventQueue() const noexcept;
+        [[nodiscard]] ICHOR_PURE_FUNC_ATTR IEventQueue& getEventQueue() const noexcept;
 
         /// Async method to wait until a service is started
         /// \param svc
@@ -926,7 +926,7 @@ namespace Ichor {
         unordered_map<uint64_t, EventWaiter> _eventWaiters{}; // key = event id
         unordered_map<ServiceIdType, EventWaiter> _dependencyWaiters{}; // key = service id
         unordered_map<ServiceIdType, WaitingStopService> _pendingStops{}; // key = service id
-        IEventQueue *_eventQueue;
+        IEventQueue * const _eventQueue;
         IFrameworkLogger *_logger{};
         std::atomic<bool> _started{false};
         CommunicationChannel *_communicationChannel{};

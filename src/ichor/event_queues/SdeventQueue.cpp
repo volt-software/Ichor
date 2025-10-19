@@ -168,7 +168,7 @@ namespace Ichor {
         return !_quit.load(std::memory_order_acquire);
     }
 
-    NameHashType SdeventQueue::get_queue_name_hash() const noexcept {
+    ICHOR_CONST_FUNC_ATTR NameHashType SdeventQueue::get_queue_name_hash() const noexcept {
         return typeNameHash<SdeventQueue>();
     }
 

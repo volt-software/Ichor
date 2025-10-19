@@ -9,10 +9,10 @@ namespace Ichor {
         RunFunctionEventAsync(uint64_t _id, uint64_t _originatingService, uint64_t _priority, std::function<AsyncGenerator<IchorBehaviour>()> _fun) noexcept : Event(_id, _originatingService, _priority), fun(std::move(_fun)) {}
         ~RunFunctionEventAsync() final = default;
 
-        [[nodiscard]] std::string_view get_name() const noexcept final {
+        [[nodiscard]] ICHOR_CONST_FUNC_ATTR std::string_view get_name() const noexcept final {
             return NAME;
         }
-        [[nodiscard]] NameHashType get_type() const noexcept final {
+        [[nodiscard]] ICHOR_CONST_FUNC_ATTR NameHashType get_type() const noexcept final {
             return TYPE;
         }
 
@@ -25,10 +25,10 @@ namespace Ichor {
         RunFunctionEvent(uint64_t _id, uint64_t _originatingService, uint64_t _priority, std::function<void()> _fun) noexcept : Event(_id, _originatingService, _priority), fun(std::move(_fun)) {}
         ~RunFunctionEvent() final = default;
 
-        [[nodiscard]] std::string_view get_name() const noexcept final {
+        [[nodiscard]] ICHOR_CONST_FUNC_ATTR std::string_view get_name() const noexcept final {
             return NAME;
         }
-        [[nodiscard]] NameHashType get_type() const noexcept final {
+        [[nodiscard]] ICHOR_CONST_FUNC_ATTR NameHashType get_type() const noexcept final {
             return TYPE;
         }
 
