@@ -368,7 +368,7 @@ template <class T, class U = T> struct is_nothrow_swappable : std::true_type {};
             TL_OPTIONAL_11_CONSTEXPR optional_storage_base(in_place_t, U &&... u)
                     : m_value(std::forward<U>(u)...), m_has_value(true) {}
 
-            ~optional_storage_base() {
+            TL_OPTIONAL_11_CONSTEXPR ~optional_storage_base() {
                 if (m_has_value) {
                     m_value.~T();
                     m_has_value = false;
@@ -409,17 +409,17 @@ template <class T, class U = T> struct is_nothrow_swappable : std::true_type {};
         template <class T> struct optional_operations_base : optional_storage_base<T> {
             using optional_storage_base<T>::optional_storage_base;
 
-            void hard_reset() noexcept {
+            TL_OPTIONAL_11_CONSTEXPR void hard_reset() noexcept {
                 get().~T();
                 this->m_has_value = false;
             }
 
-            template <class... Args> void construct(Args &&... args) {
+            template <class... Args> TL_OPTIONAL_11_CONSTEXPR void construct(Args &&... args) {
                 new (std::addressof(this->m_value)) T(std::forward<Args>(args)...);
                 this->m_has_value = true;
             }
 
-            template <class Opt> void assign(Opt &&rhs) {
+            template <class Opt> TL_OPTIONAL_11_CONSTEXPR void assign(Opt &&rhs) {
                 if (this->has_value()) {
                     if (rhs.has_value()) {
                         this->m_value = std::forward<Opt>(rhs).get();
@@ -434,7 +434,7 @@ template <class T, class U = T> struct is_nothrow_swappable : std::true_type {};
                 }
             }
 
-            bool has_value() const { return this->m_has_value; }
+            TL_OPTIONAL_11_CONSTEXPR bool has_value() const { return this->m_has_value; }
 
             TL_OPTIONAL_11_CONSTEXPR T &get() & { return this->m_value; }
             TL_OPTIONAL_11_CONSTEXPR const T &get() const & { return this->m_value; }
@@ -456,8 +456,8 @@ template <class T, class U = T> struct is_nothrow_swappable : std::true_type {};
         struct optional_copy_base<T, false> : optional_operations_base<T> {
             using optional_operations_base<T>::optional_operations_base;
 
-            optional_copy_base() = default;
-            optional_copy_base(const optional_copy_base &rhs)
+            TL_OPTIONAL_11_CONSTEXPR optional_copy_base() = default;
+            TL_OPTIONAL_11_CONSTEXPR optional_copy_base(const optional_copy_base &rhs)
                     : optional_operations_base<T>() {
                 if (rhs.has_value()) {
                     this->construct(rhs.get());
@@ -466,9 +466,9 @@ template <class T, class U = T> struct is_nothrow_swappable : std::true_type {};
                 }
             }
 
-            optional_copy_base(optional_copy_base &&rhs) = default;
-            optional_copy_base &operator=(const optional_copy_base &rhs) = default;
-            optional_copy_base &operator=(optional_copy_base &&rhs) = default;
+            TL_OPTIONAL_11_CONSTEXPR optional_copy_base(optional_copy_base &&rhs) = default;
+            TL_OPTIONAL_11_CONSTEXPR optional_copy_base &operator=(const optional_copy_base &rhs) = default;
+            TL_OPTIONAL_11_CONSTEXPR optional_copy_base &operator=(optional_copy_base &&rhs) = default;
         };
 
 // This class manages conditionally having a trivial move constructor
@@ -487,10 +487,10 @@ template <class T, class U = T> struct is_nothrow_swappable : std::true_type {};
         template <class T> struct optional_move_base<T, false> : optional_copy_base<T> {
             using optional_copy_base<T>::optional_copy_base;
 
-            optional_move_base() = default;
-            optional_move_base(const optional_move_base &rhs) = default;
+            TL_OPTIONAL_11_CONSTEXPR optional_move_base() = default;
+            TL_OPTIONAL_11_CONSTEXPR optional_move_base(const optional_move_base &rhs) = default;
 
-            optional_move_base(optional_move_base &&rhs) noexcept(
+            TL_OPTIONAL_11_CONSTEXPR optional_move_base(optional_move_base &&rhs) noexcept(
             std::is_nothrow_move_constructible<T>::value) {
                 if (rhs.has_value()) {
                     this->construct(std::move(rhs.get()));
@@ -498,8 +498,8 @@ template <class T, class U = T> struct is_nothrow_swappable : std::true_type {};
                     this->m_has_value = false;
                 }
             }
-            optional_move_base &operator=(const optional_move_base &rhs) = default;
-            optional_move_base &operator=(optional_move_base &&rhs) = default;
+            TL_OPTIONAL_11_CONSTEXPR optional_move_base &operator=(const optional_move_base &rhs) = default;
+            TL_OPTIONAL_11_CONSTEXPR optional_move_base &operator=(optional_move_base &&rhs) = default;
         };
 
 // This class manages conditionally having a trivial copy assignment operator
@@ -514,15 +514,15 @@ template <class T, class U = T> struct is_nothrow_swappable : std::true_type {};
         struct optional_copy_assign_base<T, false> : optional_move_base<T> {
             using optional_move_base<T>::optional_move_base;
 
-            optional_copy_assign_base() = default;
-            optional_copy_assign_base(const optional_copy_assign_base &rhs) = default;
+            TL_OPTIONAL_11_CONSTEXPR optional_copy_assign_base() = default;
+            TL_OPTIONAL_11_CONSTEXPR optional_copy_assign_base(const optional_copy_assign_base &rhs) = default;
 
-            optional_copy_assign_base(optional_copy_assign_base &&rhs) = default;
-            optional_copy_assign_base &operator=(const optional_copy_assign_base &rhs) {
+            TL_OPTIONAL_11_CONSTEXPR optional_copy_assign_base(optional_copy_assign_base &&rhs) = default;
+            TL_OPTIONAL_11_CONSTEXPR optional_copy_assign_base &operator=(const optional_copy_assign_base &rhs) {
                 this->assign(rhs);
                 return *this;
             }
-            optional_copy_assign_base &
+            TL_OPTIONAL_11_CONSTEXPR optional_copy_assign_base &
             operator=(optional_copy_assign_base &&rhs) = default;
         };
 
@@ -546,15 +546,15 @@ template <class T, class U = T> struct is_nothrow_swappable : std::true_type {};
         struct optional_move_assign_base<T, false> : optional_copy_assign_base<T> {
             using optional_copy_assign_base<T>::optional_copy_assign_base;
 
-            optional_move_assign_base() = default;
-            optional_move_assign_base(const optional_move_assign_base &rhs) = default;
+            TL_OPTIONAL_11_CONSTEXPR optional_move_assign_base() = default;
+            TL_OPTIONAL_11_CONSTEXPR optional_move_assign_base(const optional_move_assign_base &rhs) = default;
 
-            optional_move_assign_base(optional_move_assign_base &&rhs) = default;
+            TL_OPTIONAL_11_CONSTEXPR optional_move_assign_base(optional_move_assign_base &&rhs) = default;
 
-            optional_move_assign_base &
+            TL_OPTIONAL_11_CONSTEXPR optional_move_assign_base &
             operator=(const optional_move_assign_base &rhs) = default;
 
-            optional_move_assign_base &
+            TL_OPTIONAL_11_CONSTEXPR optional_move_assign_base &
             operator=(optional_move_assign_base &&rhs) noexcept(
             std::is_nothrow_move_constructible<T>::value
             &&std::is_nothrow_move_assignable<T>::value) {
@@ -568,42 +568,42 @@ template <class T, class U = T> struct is_nothrow_swappable : std::true_type {};
         template <class T, bool EnableCopy = std::is_copy_constructible<T>::value,
                 bool EnableMove = std::is_move_constructible<T>::value>
         struct optional_delete_ctor_base {
-            optional_delete_ctor_base() = default;
-            optional_delete_ctor_base(const optional_delete_ctor_base &) = default;
-            optional_delete_ctor_base(optional_delete_ctor_base &&) noexcept = default;
-            optional_delete_ctor_base &
+            TL_OPTIONAL_11_CONSTEXPR optional_delete_ctor_base() = default;
+            TL_OPTIONAL_11_CONSTEXPR optional_delete_ctor_base(const optional_delete_ctor_base &) = default;
+            TL_OPTIONAL_11_CONSTEXPR optional_delete_ctor_base(optional_delete_ctor_base &&) noexcept = default;
+            TL_OPTIONAL_11_CONSTEXPR optional_delete_ctor_base &
             operator=(const optional_delete_ctor_base &) = default;
-            optional_delete_ctor_base &
+            TL_OPTIONAL_11_CONSTEXPR optional_delete_ctor_base &
             operator=(optional_delete_ctor_base &&) noexcept = default;
         };
 
         template <class T> struct optional_delete_ctor_base<T, true, false> {
-            optional_delete_ctor_base() = default;
-            optional_delete_ctor_base(const optional_delete_ctor_base &) = default;
-            optional_delete_ctor_base(optional_delete_ctor_base &&) noexcept = delete;
-            optional_delete_ctor_base &
+            TL_OPTIONAL_11_CONSTEXPR optional_delete_ctor_base() = default;
+            TL_OPTIONAL_11_CONSTEXPR optional_delete_ctor_base(const optional_delete_ctor_base &) = default;
+            TL_OPTIONAL_11_CONSTEXPR optional_delete_ctor_base(optional_delete_ctor_base &&) noexcept = delete;
+            TL_OPTIONAL_11_CONSTEXPR optional_delete_ctor_base &
             operator=(const optional_delete_ctor_base &) = default;
-            optional_delete_ctor_base &
+            TL_OPTIONAL_11_CONSTEXPR optional_delete_ctor_base &
             operator=(optional_delete_ctor_base &&) noexcept = default;
         };
 
         template <class T> struct optional_delete_ctor_base<T, false, true> {
-            optional_delete_ctor_base() = default;
-            optional_delete_ctor_base(const optional_delete_ctor_base &) = delete;
-            optional_delete_ctor_base(optional_delete_ctor_base &&) noexcept = default;
-            optional_delete_ctor_base &
+            TL_OPTIONAL_11_CONSTEXPR optional_delete_ctor_base() = default;
+            TL_OPTIONAL_11_CONSTEXPR optional_delete_ctor_base(const optional_delete_ctor_base &) = delete;
+            TL_OPTIONAL_11_CONSTEXPR optional_delete_ctor_base(optional_delete_ctor_base &&) noexcept = default;
+            TL_OPTIONAL_11_CONSTEXPR optional_delete_ctor_base &
             operator=(const optional_delete_ctor_base &) = default;
-            optional_delete_ctor_base &
+            TL_OPTIONAL_11_CONSTEXPR optional_delete_ctor_base &
             operator=(optional_delete_ctor_base &&) noexcept = default;
         };
 
         template <class T> struct optional_delete_ctor_base<T, false, false> {
-            optional_delete_ctor_base() = default;
-            optional_delete_ctor_base(const optional_delete_ctor_base &) = delete;
-            optional_delete_ctor_base(optional_delete_ctor_base &&) noexcept = delete;
-            optional_delete_ctor_base &
+            TL_OPTIONAL_11_CONSTEXPR optional_delete_ctor_base() = default;
+            TL_OPTIONAL_11_CONSTEXPR optional_delete_ctor_base(const optional_delete_ctor_base &) = delete;
+            TL_OPTIONAL_11_CONSTEXPR optional_delete_ctor_base(optional_delete_ctor_base &&) noexcept = delete;
+            TL_OPTIONAL_11_CONSTEXPR optional_delete_ctor_base &
             operator=(const optional_delete_ctor_base &) = default;
-            optional_delete_ctor_base &
+            TL_OPTIONAL_11_CONSTEXPR optional_delete_ctor_base &
             operator=(optional_delete_ctor_base &&) noexcept = default;
         };
 
@@ -615,46 +615,46 @@ template <class T, class U = T> struct is_nothrow_swappable : std::true_type {};
                 bool EnableMove = (std::is_move_constructible<T>::value &&
                                    std::is_move_assignable<T>::value)>
         struct optional_delete_assign_base {
-            optional_delete_assign_base() = default;
-            optional_delete_assign_base(const optional_delete_assign_base &) = default;
-            optional_delete_assign_base(optional_delete_assign_base &&) noexcept =
+            TL_OPTIONAL_11_CONSTEXPR optional_delete_assign_base() = default;
+            TL_OPTIONAL_11_CONSTEXPR optional_delete_assign_base(const optional_delete_assign_base &) = default;
+            TL_OPTIONAL_11_CONSTEXPR optional_delete_assign_base(optional_delete_assign_base &&) noexcept =
             default;
-            optional_delete_assign_base &
+            TL_OPTIONAL_11_CONSTEXPR optional_delete_assign_base &
             operator=(const optional_delete_assign_base &) = default;
-            optional_delete_assign_base &
+            TL_OPTIONAL_11_CONSTEXPR optional_delete_assign_base &
             operator=(optional_delete_assign_base &&) noexcept = default;
         };
 
         template <class T> struct optional_delete_assign_base<T, true, false> {
-            optional_delete_assign_base() = default;
-            optional_delete_assign_base(const optional_delete_assign_base &) = default;
-            optional_delete_assign_base(optional_delete_assign_base &&) noexcept =
+            TL_OPTIONAL_11_CONSTEXPR optional_delete_assign_base() = default;
+            TL_OPTIONAL_11_CONSTEXPR optional_delete_assign_base(const optional_delete_assign_base &) = default;
+            TL_OPTIONAL_11_CONSTEXPR optional_delete_assign_base(optional_delete_assign_base &&) noexcept =
             default;
-            optional_delete_assign_base &
+            TL_OPTIONAL_11_CONSTEXPR optional_delete_assign_base &
             operator=(const optional_delete_assign_base &) = default;
-            optional_delete_assign_base &
+            TL_OPTIONAL_11_CONSTEXPR optional_delete_assign_base &
             operator=(optional_delete_assign_base &&) noexcept = delete;
         };
 
         template <class T> struct optional_delete_assign_base<T, false, true> {
-            optional_delete_assign_base() = default;
-            optional_delete_assign_base(const optional_delete_assign_base &) = default;
-            optional_delete_assign_base(optional_delete_assign_base &&) noexcept =
+            TL_OPTIONAL_11_CONSTEXPR optional_delete_assign_base() = default;
+            TL_OPTIONAL_11_CONSTEXPR optional_delete_assign_base(const optional_delete_assign_base &) = default;
+            TL_OPTIONAL_11_CONSTEXPR optional_delete_assign_base(optional_delete_assign_base &&) noexcept =
             default;
-            optional_delete_assign_base &
+            TL_OPTIONAL_11_CONSTEXPR optional_delete_assign_base &
             operator=(const optional_delete_assign_base &) = delete;
-            optional_delete_assign_base &
+            TL_OPTIONAL_11_CONSTEXPR optional_delete_assign_base &
             operator=(optional_delete_assign_base &&) noexcept = default;
         };
 
         template <class T> struct optional_delete_assign_base<T, false, false> {
-            optional_delete_assign_base() = default;
-            optional_delete_assign_base(const optional_delete_assign_base &) = default;
-            optional_delete_assign_base(optional_delete_assign_base &&) noexcept =
+            TL_OPTIONAL_11_CONSTEXPR optional_delete_assign_base() = default;
+            TL_OPTIONAL_11_CONSTEXPR optional_delete_assign_base(const optional_delete_assign_base &) = default;
+            TL_OPTIONAL_11_CONSTEXPR optional_delete_assign_base(optional_delete_assign_base &&) noexcept =
             default;
-            optional_delete_assign_base &
+            TL_OPTIONAL_11_CONSTEXPR optional_delete_assign_base &
             operator=(const optional_delete_assign_base &) = delete;
-            optional_delete_assign_base &
+            TL_OPTIONAL_11_CONSTEXPR optional_delete_assign_base &
             operator=(optional_delete_assign_base &&) noexcept = delete;
         };
 
@@ -1134,7 +1134,7 @@ template <class T, class U = T> struct is_nothrow_swappable : std::true_type {};
         }
 
         /// Destroys the stored value if there is one.
-        ~optional() = default;
+        TL_OPTIONAL_11_CONSTEXPR ~optional() = default;
 
         /// Assignment to empty.
         ///
@@ -1969,7 +1969,7 @@ auto optional_map_impl(Opt &&opt, F &&f) -> optional<monostate> {
         constexpr explicit optional(const optional<U> &rhs) noexcept : optional(*rhs) {}
 
         /// No-op
-        ~optional() = default;
+        TL_OPTIONAL_11_CONSTEXPR ~optional() = default;
 
         /// Assignment to empty.
         ///
