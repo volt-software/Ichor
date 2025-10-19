@@ -11,13 +11,13 @@ using namespace Ichor::v1;
 extern std::unique_ptr<Ichor::AsyncManualResetEvent> _evt;
 
 struct AwaitEvent final : public Event {
-    AwaitEvent(uint64_t _id, uint64_t _originatingService, uint64_t _priority) noexcept : Event(_id, _originatingService, _priority) {}
-    ~AwaitEvent() final = default;
+    constexpr AwaitEvent(uint64_t _id, uint64_t _originatingService, uint64_t _priority) noexcept : Event(_id, _originatingService, _priority) {}
+    constexpr ~AwaitEvent() final = default;
 
-    [[nodiscard]] ICHOR_CONST_FUNC_ATTR std::string_view get_name() const noexcept final {
+    [[nodiscard]] ICHOR_CONST_FUNC_ATTR constexpr std::string_view get_name() const noexcept final {
         return NAME;
     }
-    [[nodiscard]] ICHOR_CONST_FUNC_ATTR NameHashType get_type() const noexcept final {
+    [[nodiscard]] ICHOR_CONST_FUNC_ATTR constexpr NameHashType get_type() const noexcept final {
         return TYPE;
     }
 

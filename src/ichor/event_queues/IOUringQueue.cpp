@@ -328,10 +328,10 @@ namespace Ichor {
                 Event(_id, _originatingService, _priority), fun(std::move(_fun)) {}
         ~UringResponseEvent() final = default;
 
-        [[nodiscard]] ICHOR_CONST_FUNC_ATTR std::string_view get_name() const noexcept final {
+        [[nodiscard]] ICHOR_CONST_FUNC_ATTR constexpr std::string_view get_name() const noexcept final {
             return NAME;
         }
-        [[nodiscard]] ICHOR_CONST_FUNC_ATTR NameHashType get_type() const noexcept final {
+        [[nodiscard]] ICHOR_CONST_FUNC_ATTR constexpr NameHashType get_type() const noexcept final {
             return TYPE;
         }
 

@@ -7,13 +7,13 @@ extern std::unique_ptr<Ichor::AsyncManualResetEvent> _evt;
 extern std::atomic<uint64_t> evtGate;
 
 struct CustomDoWorkEvent final : public Event {
-    CustomDoWorkEvent(uint64_t _id, ServiceIdType _originatingService, uint64_t _priority) noexcept : Event(_id, _originatingService, _priority) {}
-    ~CustomDoWorkEvent() final = default;
+    constexpr CustomDoWorkEvent(uint64_t _id, ServiceIdType _originatingService, uint64_t _priority) noexcept : Event(_id, _originatingService, _priority) {}
+    constexpr ~CustomDoWorkEvent() final = default;
 
-    [[nodiscard]] ICHOR_CONST_FUNC_ATTR std::string_view get_name() const noexcept final {
+    [[nodiscard]] ICHOR_CONST_FUNC_ATTR constexpr std::string_view get_name() const noexcept final {
         return NAME;
     }
-    [[nodiscard]] ICHOR_CONST_FUNC_ATTR NameHashType get_type() const noexcept final {
+    [[nodiscard]] ICHOR_CONST_FUNC_ATTR constexpr NameHashType get_type() const noexcept final {
         return TYPE;
     }
 

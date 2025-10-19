@@ -12,14 +12,14 @@
 namespace Ichor {
     /// When a service has successfully started, this event gets added to inject it into other services
     struct DependencyOnlineEvent final : public Event {
-        explicit DependencyOnlineEvent(uint64_t _id, ServiceIdType _originatingService, uint64_t _priority) noexcept :
+        constexpr explicit DependencyOnlineEvent(uint64_t _id, ServiceIdType _originatingService, uint64_t _priority) noexcept :
                 Event(_id, _originatingService, _priority) {}
-        ~DependencyOnlineEvent() final = default;
+        constexpr ~DependencyOnlineEvent() final = default;
 
-        [[nodiscard]] ICHOR_CONST_FUNC_ATTR std::string_view get_name() const noexcept final {
+        [[nodiscard]] ICHOR_CONST_FUNC_ATTR constexpr std::string_view get_name() const noexcept final {
             return NAME;
         }
-        [[nodiscard]] ICHOR_CONST_FUNC_ATTR NameHashType get_type() const noexcept final {
+        [[nodiscard]] ICHOR_CONST_FUNC_ATTR constexpr NameHashType get_type() const noexcept final {
             return TYPE;
         }
 
@@ -29,14 +29,14 @@ namespace Ichor {
 
     /// When a service should stop but before it has actually stopped, this event gets added to uninject it from other services
     struct DependencyOfflineEvent final : public Event {
-        explicit DependencyOfflineEvent(uint64_t _id, ServiceIdType _originatingService, uint64_t _priority, bool _removeOriginatingServiceAfterStop) noexcept :
+        constexpr explicit DependencyOfflineEvent(uint64_t _id, ServiceIdType _originatingService, uint64_t _priority, bool _removeOriginatingServiceAfterStop) noexcept :
                 Event(_id, _originatingService, _priority), removeOriginatingServiceAfterStop(_removeOriginatingServiceAfterStop) {}
-        ~DependencyOfflineEvent() final = default;
+        constexpr ~DependencyOfflineEvent() final = default;
 
-        [[nodiscard]] ICHOR_CONST_FUNC_ATTR std::string_view get_name() const noexcept final {
+        [[nodiscard]] ICHOR_CONST_FUNC_ATTR constexpr std::string_view get_name() const noexcept final {
             return NAME;
         }
-        [[nodiscard]] ICHOR_CONST_FUNC_ATTR NameHashType get_type() const noexcept final {
+        [[nodiscard]] ICHOR_CONST_FUNC_ATTR constexpr NameHashType get_type() const noexcept final {
             return TYPE;
         }
 
@@ -47,14 +47,14 @@ namespace Ichor {
 
     /// When a new service gets created that requests dependencies, each dependency it requests adds this event
     struct DependencyRequestEvent final : public Event {
-        explicit DependencyRequestEvent(uint64_t _id, ServiceIdType _originatingService, uint64_t _priority, Dependency _dependency, tl::optional<v1::NeverNull<Properties const *>> _properties) noexcept :
+        constexpr explicit DependencyRequestEvent(uint64_t _id, ServiceIdType _originatingService, uint64_t _priority, Dependency _dependency, tl::optional<v1::NeverNull<Properties const *>> _properties) noexcept :
                 Event(_id, _originatingService, _priority), dependency(_dependency), properties{_properties} {}
-        ~DependencyRequestEvent() final = default;
+        constexpr ~DependencyRequestEvent() final = default;
 
-        [[nodiscard]] ICHOR_CONST_FUNC_ATTR std::string_view get_name() const noexcept final {
+        [[nodiscard]] ICHOR_CONST_FUNC_ATTR constexpr std::string_view get_name() const noexcept final {
             return NAME;
         }
-        [[nodiscard]] ICHOR_CONST_FUNC_ATTR NameHashType get_type() const noexcept final {
+        [[nodiscard]] ICHOR_CONST_FUNC_ATTR constexpr NameHashType get_type() const noexcept final {
             return TYPE;
         }
 
@@ -67,14 +67,14 @@ namespace Ichor {
     /// Similar to DependencyRequestEvent, but when a service gets destroyed/removed entirely
     /// Properties needs to be a copy as this event will be picked up after the service has been deleted from memory
     struct DependencyUndoRequestEvent final : public Event {
-        explicit DependencyUndoRequestEvent(uint64_t _id, ServiceIdType _originatingService, uint64_t _priority, Dependency const &_dependency, tl::optional<Properties> const &_properties, v1::ReferenceCountedPointer<DependencyUndoRequestEvent> _originalRequest = {}) noexcept :
+        constexpr explicit DependencyUndoRequestEvent(uint64_t _id, ServiceIdType _originatingService, uint64_t _priority, Dependency const &_dependency, tl::optional<Properties> const &_properties, v1::ReferenceCountedPointer<DependencyUndoRequestEvent> _originalRequest = {}) noexcept :
                 Event(_id, _originatingService, _priority), dependency(_dependency), properties{_properties}, originalRequest(std::move(_originalRequest)) {}
-        ~DependencyUndoRequestEvent() final = default;
+        constexpr ~DependencyUndoRequestEvent() final = default;
 
-        [[nodiscard]] ICHOR_CONST_FUNC_ATTR std::string_view get_name() const noexcept final {
+        [[nodiscard]] ICHOR_CONST_FUNC_ATTR constexpr std::string_view get_name() const noexcept final {
             return NAME;
         }
-        [[nodiscard]] ICHOR_CONST_FUNC_ATTR NameHashType get_type() const noexcept final {
+        [[nodiscard]] ICHOR_CONST_FUNC_ATTR constexpr NameHashType get_type() const noexcept final {
             return TYPE;
         }
 
@@ -86,13 +86,13 @@ namespace Ichor {
     };
 
     struct QuitEvent final : public Event {
-        QuitEvent(uint64_t _id, ServiceIdType _originatingService, uint64_t _priority) noexcept : Event(_id, _originatingService, _priority) {}
-        ~QuitEvent() final = default;
+        constexpr QuitEvent(uint64_t _id, ServiceIdType _originatingService, uint64_t _priority) noexcept : Event(_id, _originatingService, _priority) {}
+        constexpr ~QuitEvent() final = default;
 
-        [[nodiscard]] ICHOR_CONST_FUNC_ATTR std::string_view get_name() const noexcept final {
+        [[nodiscard]] ICHOR_CONST_FUNC_ATTR constexpr std::string_view get_name() const noexcept final {
             return NAME;
         }
-        [[nodiscard]] ICHOR_CONST_FUNC_ATTR NameHashType get_type() const noexcept final {
+        [[nodiscard]] ICHOR_CONST_FUNC_ATTR constexpr NameHashType get_type() const noexcept final {
             return TYPE;
         }
 
@@ -101,13 +101,13 @@ namespace Ichor {
     };
 
     struct StopServiceEvent final : public Event {
-        StopServiceEvent(uint64_t _id, ServiceIdType _originatingService, uint64_t _priority, uint64_t _serviceId, bool _removeAfter = false) noexcept : Event(_id, _originatingService, _priority), serviceId(_serviceId), removeAfter(_removeAfter) {}
-        ~StopServiceEvent() final = default;
+        constexpr StopServiceEvent(uint64_t _id, ServiceIdType _originatingService, uint64_t _priority, uint64_t _serviceId, bool _removeAfter = false) noexcept : Event(_id, _originatingService, _priority), serviceId(_serviceId), removeAfter(_removeAfter) {}
+        constexpr ~StopServiceEvent() final = default;
 
-        [[nodiscard]] ICHOR_CONST_FUNC_ATTR std::string_view get_name() const noexcept final {
+        [[nodiscard]] ICHOR_CONST_FUNC_ATTR constexpr std::string_view get_name() const noexcept final {
             return NAME;
         }
-        [[nodiscard]] ICHOR_CONST_FUNC_ATTR NameHashType get_type() const noexcept final {
+        [[nodiscard]] ICHOR_CONST_FUNC_ATTR constexpr NameHashType get_type() const noexcept final {
             return TYPE;
         }
 
@@ -118,13 +118,13 @@ namespace Ichor {
     };
 
     struct StartServiceEvent final : public Event {
-        StartServiceEvent(uint64_t _id, ServiceIdType _originatingService, uint64_t _priority, uint64_t _serviceId) noexcept : Event(_id, _originatingService, _priority), serviceId(_serviceId) {}
-        ~StartServiceEvent() final = default;
+        constexpr StartServiceEvent(uint64_t _id, ServiceIdType _originatingService, uint64_t _priority, uint64_t _serviceId) noexcept : Event(_id, _originatingService, _priority), serviceId(_serviceId) {}
+        constexpr ~StartServiceEvent() final = default;
 
-        [[nodiscard]] ICHOR_CONST_FUNC_ATTR std::string_view get_name() const noexcept final {
+        [[nodiscard]] ICHOR_CONST_FUNC_ATTR constexpr std::string_view get_name() const noexcept final {
             return NAME;
         }
-        [[nodiscard]] ICHOR_CONST_FUNC_ATTR NameHashType get_type() const noexcept final {
+        [[nodiscard]] ICHOR_CONST_FUNC_ATTR constexpr NameHashType get_type() const noexcept final {
             return TYPE;
         }
 
@@ -134,13 +134,13 @@ namespace Ichor {
     };
 
     struct RemoveServiceEvent final : public Event {
-        RemoveServiceEvent(uint64_t _id, ServiceIdType _originatingService, uint64_t _priority, uint64_t _serviceId) noexcept : Event(_id, _originatingService, _priority), serviceId(_serviceId) {}
-        ~RemoveServiceEvent() final = default;
+        constexpr RemoveServiceEvent(uint64_t _id, ServiceIdType _originatingService, uint64_t _priority, uint64_t _serviceId) noexcept : Event(_id, _originatingService, _priority), serviceId(_serviceId) {}
+        constexpr ~RemoveServiceEvent() final = default;
 
-        [[nodiscard]] ICHOR_CONST_FUNC_ATTR std::string_view get_name() const noexcept final {
+        [[nodiscard]] ICHOR_CONST_FUNC_ATTR constexpr std::string_view get_name() const noexcept final {
             return NAME;
         }
-        [[nodiscard]] ICHOR_CONST_FUNC_ATTR NameHashType get_type() const noexcept final {
+        [[nodiscard]] ICHOR_CONST_FUNC_ATTR constexpr NameHashType get_type() const noexcept final {
             return TYPE;
         }
 
@@ -150,13 +150,13 @@ namespace Ichor {
     };
 
     struct DoWorkEvent final : public Event {
-        DoWorkEvent(uint64_t _id, ServiceIdType _originatingService, uint64_t _priority) noexcept : Event(_id, _originatingService, _priority) {}
-        ~DoWorkEvent() final = default;
+        constexpr DoWorkEvent(uint64_t _id, ServiceIdType _originatingService, uint64_t _priority) noexcept : Event(_id, _originatingService, _priority) {}
+        constexpr ~DoWorkEvent() final = default;
 
-        [[nodiscard]] ICHOR_CONST_FUNC_ATTR std::string_view get_name() const noexcept final {
+        [[nodiscard]] ICHOR_CONST_FUNC_ATTR constexpr std::string_view get_name() const noexcept final {
             return NAME;
         }
-        [[nodiscard]] ICHOR_CONST_FUNC_ATTR NameHashType get_type() const noexcept final {
+        [[nodiscard]] ICHOR_CONST_FUNC_ATTR constexpr NameHashType get_type() const noexcept final {
             return TYPE;
         }
 
@@ -168,10 +168,10 @@ namespace Ichor {
         RemoveEventHandlerEvent(uint64_t _id, ServiceIdType _originatingService, uint64_t _priority, CallbackKey _key) noexcept : Event(_id, _originatingService, _priority), key(_key) {}
         ~RemoveEventHandlerEvent() final = default;
 
-        [[nodiscard]] ICHOR_CONST_FUNC_ATTR std::string_view get_name() const noexcept final {
+        [[nodiscard]] ICHOR_CONST_FUNC_ATTR constexpr std::string_view get_name() const noexcept final {
             return NAME;
         }
-        [[nodiscard]] ICHOR_CONST_FUNC_ATTR NameHashType get_type() const noexcept final {
+        [[nodiscard]] ICHOR_CONST_FUNC_ATTR constexpr NameHashType get_type() const noexcept final {
             return TYPE;
         }
 
@@ -181,13 +181,13 @@ namespace Ichor {
     };
 
     struct RemoveEventInterceptorEvent final : public Event {
-        RemoveEventInterceptorEvent(uint64_t _id, ServiceIdType _originatingService, uint64_t _priority, uint64_t _interceptorId, uint64_t _eventType) noexcept : Event(_id, _originatingService, _priority), interceptorId(_interceptorId), eventType(_eventType) {}
-        ~RemoveEventInterceptorEvent() final = default;
+        constexpr RemoveEventInterceptorEvent(uint64_t _id, ServiceIdType _originatingService, uint64_t _priority, uint64_t _interceptorId, uint64_t _eventType) noexcept : Event(_id, _originatingService, _priority), interceptorId(_interceptorId), eventType(_eventType) {}
+        constexpr ~RemoveEventInterceptorEvent() final = default;
 
-        [[nodiscard]] ICHOR_CONST_FUNC_ATTR std::string_view get_name() const noexcept final {
+        [[nodiscard]] ICHOR_CONST_FUNC_ATTR constexpr std::string_view get_name() const noexcept final {
             return NAME;
         }
-        [[nodiscard]] ICHOR_CONST_FUNC_ATTR NameHashType get_type() const noexcept final {
+        [[nodiscard]] ICHOR_CONST_FUNC_ATTR constexpr NameHashType get_type() const noexcept final {
             return TYPE;
         }
 
@@ -198,13 +198,13 @@ namespace Ichor {
     };
 
     struct AddTrackerEvent final : public Event {
-        AddTrackerEvent(uint64_t _id, ServiceIdType _originatingService, uint64_t _priority, NameHashType _interfaceNameHash) noexcept : Event(_id, _originatingService, _priority), interfaceNameHash(_interfaceNameHash) {}
-        ~AddTrackerEvent() final = default;
+        constexpr AddTrackerEvent(uint64_t _id, ServiceIdType _originatingService, uint64_t _priority, NameHashType _interfaceNameHash) noexcept : Event(_id, _originatingService, _priority), interfaceNameHash(_interfaceNameHash) {}
+        constexpr ~AddTrackerEvent() final = default;
 
-        [[nodiscard]] ICHOR_CONST_FUNC_ATTR std::string_view get_name() const noexcept final {
+        [[nodiscard]] ICHOR_CONST_FUNC_ATTR constexpr std::string_view get_name() const noexcept final {
             return NAME;
         }
-        [[nodiscard]] ICHOR_CONST_FUNC_ATTR NameHashType get_type() const noexcept final {
+        [[nodiscard]] ICHOR_CONST_FUNC_ATTR constexpr NameHashType get_type() const noexcept final {
             return TYPE;
         }
 
@@ -214,13 +214,13 @@ namespace Ichor {
     };
 
     struct RemoveTrackerEvent final : public Event {
-        RemoveTrackerEvent(uint64_t _id, ServiceIdType _originatingService, uint64_t _priority, NameHashType _interfaceNameHash) noexcept : Event(_id, _originatingService, _priority), interfaceNameHash(_interfaceNameHash) {}
-        ~RemoveTrackerEvent() final = default;
+        constexpr RemoveTrackerEvent(uint64_t _id, ServiceIdType _originatingService, uint64_t _priority, NameHashType _interfaceNameHash) noexcept : Event(_id, _originatingService, _priority), interfaceNameHash(_interfaceNameHash) {}
+        constexpr ~RemoveTrackerEvent() final = default;
 
-        [[nodiscard]] ICHOR_CONST_FUNC_ATTR std::string_view get_name() const noexcept final {
+        [[nodiscard]] ICHOR_CONST_FUNC_ATTR constexpr std::string_view get_name() const noexcept final {
             return NAME;
         }
-        [[nodiscard]] ICHOR_CONST_FUNC_ATTR NameHashType get_type() const noexcept final {
+        [[nodiscard]] ICHOR_CONST_FUNC_ATTR constexpr NameHashType get_type() const noexcept final {
             return TYPE;
         }
 
