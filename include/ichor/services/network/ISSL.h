@@ -110,7 +110,9 @@ namespace Ichor::v1 {
     };
 
     enum class TLSContextError {
-        UNKNOWN
+        UNKNOWN,
+        CERTIFICATE_SIZE_TOO_BIG,
+        KEY_SIZE_TOO_BIG
     };
 
     enum class TLSConnectionError {

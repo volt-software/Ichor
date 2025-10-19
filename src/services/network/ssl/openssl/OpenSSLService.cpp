@@ -95,6 +95,14 @@ void Ichor::v1::OpenSSLService::removeDependencyInstance(Ichor::ScopedServicePro
 }
 
 tl::expected<std::unique_ptr<Ichor::v1::TLSContext>, Ichor::v1::TLSContextError> Ichor::v1::OpenSSLService::createServerTLSContext(std::vector<uint8_t> cert, std::vector<uint8_t> key, TLSCreateContextOptions opts) {
+    if(cert.size() > std::numeric_limits<int32_t>::max()) [[unlikely]] {
+        return tl::unexpected(TLSContextError::CERTIFICATE_SIZE_TOO_BIG);
+    }
+
+    if(key.size() > std::numeric_limits<int32_t>::max()) [[unlikely]] {
+        return tl::unexpected(TLSContextError::KEY_SIZE_TOO_BIG);
+    }
+
     auto ctx_handle = ::SSL_CTX_new(SSLv23_server_method());
     bool error{true};
 
@@ -110,7 +118,7 @@ tl::expected<std::unique_ptr<Ichor::v1::TLSContext>, Ichor::v1::TLSContextError>
     }};
 
     SSL_CTX_set_min_proto_version(ctx_handle, TLS1_3_VERSION);
-    BIO *cert_bio = ::BIO_new_mem_buf(cert.data(), cert.size());
+    BIO *cert_bio = ::BIO_new_mem_buf(cert.data(), static_cast<int>(cert.size()));
 
     if(cert_bio == nullptr) {
         printAllSslErrors(NullStruct{}, __LINE__);
@@ -147,7 +155,7 @@ tl::expected<std::unique_ptr<Ichor::v1::TLSContext>, Ichor::v1::TLSContextError>
         return tl::unexpected(TLSContextError::UNKNOWN);
     }
 
-    BIO *key_bio = ::BIO_new_mem_buf(key.data(), key.size());
+    BIO *key_bio = ::BIO_new_mem_buf(key.data(), static_cast<int>(key.size()));
 
     if(key_bio == nullptr) {
         printAllSslErrors(NullStruct{}, __LINE__);
@@ -261,19 +269,21 @@ tl::expected<void, bool> Ichor::v1::OpenSSLService::TLSWrite(TLSConnection &conn
         return tl::unexpected(false);
     }
 
+    int data_size = static_cast<int>(data.size());
+
     OpenSSLConnection &sslConn = static_cast<OpenSSLConnection &>(conn);
     char *out{};
     int chunk = BIO_nwrite0(sslConn.externalBio, &out);
 
-    if(chunk < data.size()) {
+    if(chunk < data_size) {
         ICHOR_LOG_ERROR(_logger, "Connection {} tried to send data of length {} with chunk {} supported.", conn.getId().value, data.size(), chunk);
         return tl::unexpected(false);
     }
 
     std::memcpy(out, data.data(), data.size());
-    int actual = BIO_nwrite(sslConn.externalBio, &out, data.size());
+    int actual = BIO_nwrite(sslConn.externalBio, &out, data_size);
 
-    if(actual != data.size()) {
+    if(actual != data_size) {
         ICHOR_LOG_ERROR(_logger, "Connection {} should have written {} but actually wrote {}", conn.getId().value, data.size(), actual);
         return tl::unexpected(false);
     }
@@ -302,8 +312,8 @@ tl::expected<std::vector<uint8_t>, bool> Ichor::v1::OpenSSLService::TLSRead(TLSC
         return tl::unexpected(false);
     }
 
-    ret.resize(len);
-    std::memcpy(ret.data(), buf, len);
+    ret.resize(static_cast<unsigned int>(len));
+    std::memcpy(ret.data(), buf, static_cast<unsigned int>(len));
     int actual = BIO_nread(sslConn.externalBio, &buf, len);
 
     if(actual != len) {

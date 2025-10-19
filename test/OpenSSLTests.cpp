@@ -4,6 +4,7 @@
 #include <ichor/services/network/ssl/openssl/OpenSSLCertificate.h>
 #include <ichor/services/network/ssl/openssl/OpenSSLContext.h>
 #include <ichor/services/network/ssl/openssl/OpenSSLConnection.h>
+#include <ichor/dependency_management/InternalServiceLifecycleManager.h>
 #include <fstream>
 #include <catch2/generators/catch_generators.hpp>
 
@@ -14,7 +15,8 @@
 
 TEST_CASE("OpenSSL Handshake Tests - supported server certificate only") {
     Properties props{};
-    Ichor::Detail::DependencyLifecycleManager<QueueMock, IEventQueue> q{{}};
+    QueueMock qm{};
+    Ichor::Detail::InternalServiceLifecycleManager<QueueMock> q{&qm};
     Ichor::Detail::DependencyLifecycleManager<LoggerMock, ILogger> logger{{}};
     Ichor::Detail::DependencyLifecycleManager<OpenSSLService, ISSL> sslService{std::move(props)};
 
@@ -184,7 +186,8 @@ TEST_CASE("OpenSSL Handshake Tests - supported server certificate only") {
 
 TEST_CASE("OpenSSL Handshake Tests - rejects weaker certificates") {
     Properties props{};
-    Ichor::Detail::DependencyLifecycleManager<QueueMock, IEventQueue> q{{}};
+    QueueMock qm{};
+    Ichor::Detail::InternalServiceLifecycleManager<QueueMock> q{&qm};
     Ichor::Detail::DependencyLifecycleManager<LoggerMock, ILogger> logger{{}};
     Ichor::Detail::DependencyLifecycleManager<OpenSSLService, ISSL> sslService{std::move(props)};
 

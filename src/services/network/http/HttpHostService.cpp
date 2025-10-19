@@ -347,18 +347,18 @@ Ichor::Task<void> Ichor::v1::HttpHostService::sendResponse(ServiceIdType id, con
     std::vector<uint8_t> resp;
     resp.reserve(8192);
     auto statusText = ICHOR_STATUS_MATCHING.find(response.status);
-    fmt::format_to(std::back_inserter(resp), "HTTP/1.1 {} {}\r\n", static_cast<uint_fast16_t>(response.status), statusText == ICHOR_STATUS_MATCHING.end() ? "Unknown"sv : statusText->second);
+    fmt::format_to(FmtU8Inserter(resp), "HTTP/1.1 {} {}\r\n", static_cast<uint_fast16_t>(response.status), statusText == ICHOR_STATUS_MATCHING.end() ? "Unknown"sv : statusText->second);
     for(auto const &[k, v] : response.headers) {
-        fmt::format_to(std::back_inserter(resp), "{}: {}\r\n", k, v);
+        fmt::format_to(FmtU8Inserter(resp), "{}: {}\r\n", k, v);
     }
     if(response.contentType) {
-        fmt::format_to(std::back_inserter(resp), "Content-Type: {}\r\n", *response.contentType);
+        fmt::format_to(FmtU8Inserter(resp), "Content-Type: {}\r\n", *response.contentType);
     }
     if(!response.body.empty()) {
-        fmt::format_to(std::back_inserter(resp), "Content-Length: {}\r\n\r\n", response.body.size());
+        fmt::format_to(FmtU8Inserter(resp), "Content-Length: {}\r\n\r\n", response.body.size());
         resp.insert(resp.end(), response.body.begin(), response.body.end());
     } else {
-        fmt::format_to(std::back_inserter(resp), "\r\n");
+        fmt::format_to(FmtU8Inserter(resp), "\r\n");
     }
 
     auto client = _connections.find(id);

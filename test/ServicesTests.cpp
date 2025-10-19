@@ -617,16 +617,16 @@ TEST_CASE("ServicesTests") {
             REQUIRE(ret);
             auto factoryIds = ret->first->getCreatedTimerFactoryIds();
             REQUIRE(factoryIds.size() == 3);
-            auto getCorrectFactory = [](auto &dm, auto &ids, ServiceIdType id) -> tl::optional<std::pair<ITimerFactory*, IService*>> {
-                auto factory = dm.template getService<ITimerFactory>(ids[0]);
+            auto getCorrectFactory = [](auto &dm2, auto &ids, ServiceIdType id) -> tl::optional<std::pair<ITimerFactory*, IService*>> {
+                auto factory = dm2.template getService<ITimerFactory>(ids[0]);
                 if(factory->first->getRequestingServiceId() == id) {
                     return factory;
                 }
-                factory = dm.template getService<ITimerFactory>(ids[1]);
+                factory = dm2.template getService<ITimerFactory>(ids[1]);
                 if(factory->first->getRequestingServiceId() == id) {
                     return factory;
                 }
-                factory = dm.template getService<ITimerFactory>(ids[2]);
+                factory = dm2.template getService<ITimerFactory>(ids[2]);
                 if(factory->first->getRequestingServiceId() == id) {
                     return factory;
                 }

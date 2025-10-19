@@ -1,14 +1,5 @@
-// We're doing some naughty stuff where we tell fmt to insert char's into a vector<uint8_t>.
-// Since we have most warnings turned on and -Werror, this turns into compile errors that are actually harmless.
 #include <iterator>
-#if defined( __GNUC__ )
-#    pragma GCC diagnostic push
-#    pragma GCC diagnostic ignored "-Wsign-conversion"
-#endif
-#include <fmt/core.h>
-#if defined( __GNUC__ )
-#    pragma GCC diagnostic pop
-#endif
+#include <fmt/base.h>
 
 #include <ichor/services/etcd/EtcdV2Service.h>
 #include <ichor/dependency_management/DependencyRegister.h>
@@ -283,24 +274,24 @@ void EtcdService::removeDependencyInstance(Ichor::ScopedServiceProxy<IClientFact
 
 Ichor::Task<tl::expected<EtcdReply, EtcdError>> EtcdService::put(std::string_view key, std::string_view value, tl::optional<std::string_view> previous_value, tl::optional<uint64_t> previous_index, tl::optional<bool> previous_exists, tl::optional<uint64_t> ttl_second, bool refresh, bool dir, bool in_order) {
     std::vector<uint8_t> msg_buf;
-    fmt::format_to(std::back_inserter(msg_buf), "value={}", value);
+    fmt::format_to(FmtU8Inserter(msg_buf), "value={}", value);
     if(ttl_second) {
-        fmt::format_to(std::back_inserter(msg_buf), "&ttl={}", *ttl_second);
+        fmt::format_to(FmtU8Inserter(msg_buf), "&ttl={}", *ttl_second);
     }
     if(refresh) {
-        fmt::format_to(std::back_inserter(msg_buf), "&refresh=true");
+        fmt::format_to(FmtU8Inserter(msg_buf), "&refresh=true");
     }
     if(previous_value) {
-        fmt::format_to(std::back_inserter(msg_buf), "&prevValue={}", *previous_value);
+        fmt::format_to(FmtU8Inserter(msg_buf), "&prevValue={}", *previous_value);
     }
     if(previous_index) {
-        fmt::format_to(std::back_inserter(msg_buf), "&prevIndex={}", *previous_index);
+        fmt::format_to(FmtU8Inserter(msg_buf), "&prevIndex={}", *previous_index);
     }
     if(previous_exists) {
-        fmt::format_to(std::back_inserter(msg_buf), "&prevExist={}", (*previous_exists) ? "true" : "false");
+        fmt::format_to(FmtU8Inserter(msg_buf), "&prevExist={}", (*previous_exists) ? "true" : "false");
     }
     if(dir) {
-        fmt::format_to(std::back_inserter(msg_buf), "&dir=true");
+        fmt::format_to(FmtU8Inserter(msg_buf), "&dir=true");
     }
     ICHOR_LOG_TRACE(_logger, "put body {}", std::string_view{(char*)msg_buf.data(), msg_buf.size()});
     unordered_map<std::string, std::string> headers{{"Content-Type", "application/x-www-form-urlencoded"}};

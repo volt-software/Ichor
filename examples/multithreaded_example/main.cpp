@@ -68,7 +68,7 @@ int main(int argc, char *argv[]) {
 
     std::thread t1([&] {
 #if defined(URING_EXAMPLE)
-        queueOne->createEventLoop();
+        std::ignore = queueOne->createEventLoop();
 #elif defined(SDEVENT_EXAMPLE)
         auto *loop = queue->createEventLoop();
 #endif
@@ -86,7 +86,7 @@ int main(int argc, char *argv[]) {
 
     std::thread t2([&] {
 #if defined(URING_EXAMPLE)
-        queueTwo->createEventLoop();
+        std::ignore = queueTwo->createEventLoop();
 #elif defined(SDEVENT_EXAMPLE)
         auto *loop = queue->createEventLoop();
 #endif

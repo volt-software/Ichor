@@ -55,7 +55,7 @@ Ichor::Task<tl::expected<Ichor::v1::HttpResponse, Ichor::v1::HttpError>> Ichor::
     if (methodText == ICHOR_REVERSE_METHOD_MATCHING.end()) {
         co_return tl::unexpected(HttpError::WRONG_METHOD);
     }
-    fmt::format_to(std::back_inserter(resp), "{} {} HTTP/1.1\r\n", methodText->second, route);
+    fmt::format_to(FmtU8Inserter(resp), "{} {} HTTP/1.1\r\n", methodText->second, route);
     for (auto const &[k, v] : headers) {
         if(k.empty() || k.front() == ' ' || k.back() == ' ') {
         co_return tl::unexpected(HttpError::UNABLE_TO_PARSE_HEADER);
@@ -63,15 +63,15 @@ Ichor::Task<tl::expected<Ichor::v1::HttpResponse, Ichor::v1::HttpError>> Ichor::
         if(v.empty() || v.front() == ' ' || v.back() == ' ') {
         co_return tl::unexpected(HttpError::UNABLE_TO_PARSE_HEADER);
         }
-        fmt::format_to(std::back_inserter(resp), "{}: {}\r\n", k, v);
+        fmt::format_to(FmtU8Inserter(resp), "{}: {}\r\n", k, v);
     }
     if (headers.find("Host") == headers.end() && _address != nullptr) {
-        fmt::format_to(std::back_inserter(resp), "Host: {}\r\n", *_address);
+        fmt::format_to(FmtU8Inserter(resp), "Host: {}\r\n", *_address);
     }
     if(!msg.empty()) {
-        fmt::format_to(std::back_inserter(resp), "Content-Length: {}\r\n", msg.size());
+        fmt::format_to(FmtU8Inserter(resp), "Content-Length: {}\r\n", msg.size());
     }
-    fmt::format_to(std::back_inserter(resp), "\r\n");
+    fmt::format_to(FmtU8Inserter(resp), "\r\n");
     if(!msg.empty()) {
         resp.insert(resp.end(), msg.begin(), msg.end());
     }
