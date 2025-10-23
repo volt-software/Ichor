@@ -22,14 +22,14 @@ TEST_CASE("AsyncSingleThreadedMutexTests") {
 
         waitForRunning(dm);
 
-        queue->pushEvent<RunFunctionEvent>(0, [&]() {
+        queue->pushEvent<RunFunctionEvent>(ServiceIdType{0}, [&]() {
             auto val = m.non_blocking_lock();
             REQUIRE(!val);
         });
 
         runForOrQueueEmpty(dm);
 
-        queue->pushEvent<RunFunctionEventAsync>(0, [&]() -> AsyncGenerator<IchorBehaviour> {
+        queue->pushEvent<RunFunctionEventAsync>(ServiceIdType{0}, [&]() -> AsyncGenerator<IchorBehaviour> {
             started_async_func = true;
             AsyncSingleThreadedLockGuard lg3 = co_await m.lock();
             unlocked = true;
@@ -40,7 +40,7 @@ TEST_CASE("AsyncSingleThreadedMutexTests") {
         REQUIRE(started_async_func);
         REQUIRE(!unlocked);
 
-        queue->pushEvent<RunFunctionEvent>(0, [&]() {
+        queue->pushEvent<RunFunctionEvent>(ServiceIdType{0}, [&]() {
             lg->unlock();
         });
 
@@ -48,7 +48,7 @@ TEST_CASE("AsyncSingleThreadedMutexTests") {
 
         REQUIRE(unlocked);
 
-        queue->pushEvent<QuitEvent>(0);
+        queue->pushEvent<QuitEvent>(ServiceIdType{0});
 
         t.join();
     }

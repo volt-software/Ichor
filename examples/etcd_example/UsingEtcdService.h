@@ -16,7 +16,7 @@ public:
         ICHOR_LOG_INFO(logger, "UsingEtcdV2Service started");
 
         // standard put/get
-        queue->pushEvent<RunFunctionEventAsync>(0, [logger, EtcdV2Service]() -> AsyncGenerator<IchorBehaviour> {
+        queue->pushEvent<RunFunctionEventAsync>(ServiceIdType{0}, [logger, EtcdV2Service]() -> AsyncGenerator<IchorBehaviour> {
             auto ret = co_await EtcdV2Service->put("test", "2", 10u); // put with a TTL of 10 seconds
             if(ret) {
                 ICHOR_LOG_INFO(logger, "Successfully put key/value into etcd");
@@ -34,7 +34,7 @@ public:
         });
 
         // wait for update and set
-        queue->pushEvent<RunFunctionEventAsync>(0, [logger, EtcdV2Service, queue, self]() -> AsyncGenerator<IchorBehaviour> {
+        queue->pushEvent<RunFunctionEventAsync>(ServiceIdType{0}, [logger, EtcdV2Service, queue, self]() -> AsyncGenerator<IchorBehaviour> {
             auto ret = co_await EtcdV2Service->put("watch", "3", 10u); // set value
             if(!ret) {
                 std::terminate();
@@ -42,7 +42,7 @@ public:
 
             // update the "test" key in 250 ms
             auto start = std::chrono::steady_clock::now();
-            queue->pushEvent<RunFunctionEventAsync>(0, [EtcdV2Service, start]() -> AsyncGenerator<IchorBehaviour> {
+            queue->pushEvent<RunFunctionEventAsync>(ServiceIdType{0}, [EtcdV2Service, start]() -> AsyncGenerator<IchorBehaviour> {
                 auto now = std::chrono::steady_clock::now();
                 while(now - start < std::chrono::milliseconds(250)) {
                     co_yield IchorBehaviour::DONE;

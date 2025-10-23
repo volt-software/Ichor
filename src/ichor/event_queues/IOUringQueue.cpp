@@ -324,7 +324,7 @@ namespace Ichor {
     }
 
     struct UringResponseEvent final : public Event {
-        explicit UringResponseEvent(uint64_t _id, uint64_t _originatingService, uint64_t _priority, std::function<void(io_uring_cqe*)> _fun) noexcept :
+        explicit UringResponseEvent(uint64_t _id, ServiceIdType _originatingService, uint64_t _priority, std::function<void(io_uring_cqe*)> _fun) noexcept :
                 Event(_id, _originatingService, _priority), fun(std::move(_fun)) {}
         ~UringResponseEvent() final = default;
 
@@ -982,7 +982,7 @@ namespace Ichor {
         bool const shouldQuit = Detail::sigintQuit.load(std::memory_order_acquire);
 
         if(shouldQuit && !_quitEventSent.load(std::memory_order_acquire)) {
-            pushEventInternal(INTERNAL_EVENT_PRIORITY, std::make_unique<QuitEvent>(getNextEventId(), 0, INTERNAL_EVENT_PRIORITY));
+            pushEventInternal(INTERNAL_EVENT_PRIORITY, std::make_unique<QuitEvent>(getNextEventId(), ServiceIdType{0}, INTERNAL_EVENT_PRIORITY));
             _quitEventSent.store(true, std::memory_order_release);
             _whenQuitEventWasSent = std::chrono::steady_clock::now();
         }

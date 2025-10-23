@@ -6,7 +6,7 @@
 
 namespace Ichor {
     struct RunFunctionEventAsync final : public Event {
-        RunFunctionEventAsync(uint64_t _id, uint64_t _originatingService, uint64_t _priority, std::function<AsyncGenerator<IchorBehaviour>()> _fun) noexcept : Event(_id, _originatingService, _priority), fun(std::move(_fun)) {}
+        RunFunctionEventAsync(uint64_t _id, ServiceIdType _originatingService, uint64_t _priority, std::function<AsyncGenerator<IchorBehaviour>()> _fun) noexcept : Event(_id, _originatingService, _priority), fun(std::move(_fun)) {}
         ~RunFunctionEventAsync() final = default;
 
         [[nodiscard]] ICHOR_CONST_FUNC_ATTR constexpr std::string_view get_name() const noexcept final {
@@ -22,7 +22,7 @@ namespace Ichor {
     };
 
     struct RunFunctionEvent final : public Event {
-        RunFunctionEvent(uint64_t _id, uint64_t _originatingService, uint64_t _priority, std::function<void()> _fun) noexcept : Event(_id, _originatingService, _priority), fun(std::move(_fun)) {}
+        RunFunctionEvent(uint64_t _id, ServiceIdType _originatingService, uint64_t _priority, std::function<void()> _fun) noexcept : Event(_id, _originatingService, _priority), fun(std::move(_fun)) {}
         ~RunFunctionEvent() final = default;
 
         [[nodiscard]] ICHOR_CONST_FUNC_ATTR constexpr std::string_view get_name() const noexcept final {

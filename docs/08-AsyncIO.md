@@ -33,7 +33,7 @@ std::thread t([&]() {
 }
 
 // Simulate running an important task manually for this example. Normally one would use dependency injection.
-queue->pushEvent<RunFunctionEventAsync>(0, [&]() -> AsyncGenerator<IchorBehaviour> {
+queue->pushEvent<RunFunctionEventAsync>(ServiceIdType{0}, [&]() -> AsyncGenerator<IchorBehaviour> {
     // get a handle to the AsyncFileIO implementation
     auto async_io_svc = dm.getService<IAsyncFileIO>(ioSvcId);
 
@@ -62,7 +62,7 @@ queue->pushEvent<RunFunctionEventAsync>(0, [&]() -> AsyncGenerator<IchorBehaviou
     }
 
     // Quit Ichor thread
-    queue->pushEvent<QuitEvent>(0);
+    queue->pushEvent<QuitEvent>(ServiceIdType{0});
     co_return {};
 });
 

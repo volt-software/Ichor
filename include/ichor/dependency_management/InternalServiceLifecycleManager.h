@@ -4,7 +4,7 @@
 #include <ichor/stl/StaticVector.h>
 
 namespace Ichor::Detail {
-    extern thread_local unordered_set<uint64_t> emptyDependencies;
+    extern thread_local unordered_set<ServiceIdType, ServiceIdHash> emptyDependencies;
 
     /// InternalServiceLifecycleManager is meant to be used for Ichor internal services. This service does not actually own a service like the regular (Dependency)LifecycleManager, but "pretends" to be a LifecycleManager.
     /// This is especially useful for queues and the DM itself, as they are created outside of the regular dependency mechanism, but we still want services to request these as dependencies.
@@ -34,12 +34,12 @@ namespace Ichor::Detail {
         }
 
         [[nodiscard]]
-        unordered_set<uint64_t> &getDependencies() noexcept final {
+        unordered_set<ServiceIdType, ServiceIdHash> &getDependencies() noexcept final {
             return emptyDependencies;
         }
 
         [[nodiscard]]
-        unordered_set<uint64_t> &getDependees() noexcept final {
+        unordered_set<ServiceIdType, ServiceIdHash> &getDependees() noexcept final {
             return _serviceIdsOfDependees;
         }
 
@@ -127,7 +127,7 @@ namespace Ichor::Detail {
         /// \param keyOfInterfaceToInject
         /// \param serviceIdOfOther
         /// \param fn
-        void insertSelfInto(uint64_t keyOfInterfaceToInject, uint64_t serviceIdOfOther, std::function<void(v1::NeverNull<void*>, IService&)> &fn) final {
+        void insertSelfInto(uint64_t keyOfInterfaceToInject, ServiceIdType serviceIdOfOther, std::function<void(v1::NeverNull<void*>, IService&)> &fn) final {
             if(keyOfInterfaceToInject != typeNameHash<ServiceType>()) {
                 return;
             }
@@ -141,7 +141,7 @@ namespace Ichor::Detail {
         /// \param keyOfInterfaceToInject
         /// \param serviceIdOfOther
         /// \param fn
-        void removeSelfInto(uint64_t keyOfInterfaceToInject, uint64_t serviceIdOfOther, std::function<void(v1::NeverNull<void*>, IService&)> &fn) final {
+        void removeSelfInto(uint64_t keyOfInterfaceToInject, ServiceIdType serviceIdOfOther, std::function<void(v1::NeverNull<void*>, IService&)> &fn) final {
             if(keyOfInterfaceToInject != typeNameHash<ServiceType>()) {
                 return;
             }
@@ -153,7 +153,7 @@ namespace Ichor::Detail {
 
     private:
         v1::NeverNull<ServiceType*> _q;
-        unordered_set<uint64_t> _serviceIdsOfDependees; // services that depend on this service
+        unordered_set<ServiceIdType, ServiceIdHash> _serviceIdsOfDependees; // services that depend on this service
         v1::StaticVector<Dependency, 1> _interfaces;
         InternalService<ServiceType> _service;
     };

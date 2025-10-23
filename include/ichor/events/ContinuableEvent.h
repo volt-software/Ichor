@@ -6,7 +6,7 @@
 
 namespace Ichor {
     struct ContinuableEvent final : public Event {
-        constexpr ContinuableEvent(uint64_t _id, uint64_t _originatingService, uint64_t _priority, uint64_t _promiseId) noexcept : Event(_id, _originatingService, _priority), promiseId(_promiseId) {}
+        constexpr ContinuableEvent(uint64_t _id, ServiceIdType _originatingService, uint64_t _priority, uint64_t _promiseId) noexcept : Event(_id, _originatingService, _priority), promiseId(_promiseId) {}
         constexpr ~ContinuableEvent() final = default;
 
         [[nodiscard]] ICHOR_CONST_FUNC_ATTR constexpr std::string_view get_name() const noexcept final {
@@ -22,7 +22,7 @@ namespace Ichor {
     };
 
     struct ContinuableStartEvent final : public Event {
-        constexpr ContinuableStartEvent(uint64_t _id, uint64_t _originatingService, uint64_t _priority, uint64_t _promiseId) noexcept : Event(_id, _originatingService, _priority), promiseId(_promiseId) {}
+        constexpr ContinuableStartEvent(uint64_t _id, ServiceIdType _originatingService, uint64_t _priority, uint64_t _promiseId) noexcept : Event(_id, _originatingService, _priority), promiseId(_promiseId) {}
         constexpr ~ContinuableStartEvent() final = default;
 
         [[nodiscard]] ICHOR_CONST_FUNC_ATTR constexpr std::string_view get_name() const noexcept final {
@@ -38,7 +38,7 @@ namespace Ichor {
     };
 
     struct ContinuableDependencyOfflineEvent final : public Event {
-        constexpr explicit ContinuableDependencyOfflineEvent(uint64_t _id, uint64_t _originatingService, uint64_t _priority, uint64_t _originatingOfflineServiceId, bool _removeOriginatingOfflineServiceAfterStop) noexcept :
+        constexpr explicit ContinuableDependencyOfflineEvent(uint64_t _id, ServiceIdType _originatingService, uint64_t _priority, ServiceIdType _originatingOfflineServiceId, bool _removeOriginatingOfflineServiceAfterStop) noexcept :
                 Event(_id, _originatingService, _priority), originatingOfflineServiceId(_originatingOfflineServiceId), removeOriginatingOfflineServiceAfterStop(_removeOriginatingOfflineServiceAfterStop) {}
         constexpr ~ContinuableDependencyOfflineEvent() final = default;
 
@@ -49,7 +49,7 @@ namespace Ichor {
             return TYPE;
         }
 
-        uint64_t originatingOfflineServiceId;
+        ServiceIdType originatingOfflineServiceId;
         bool removeOriginatingOfflineServiceAfterStop;
         static constexpr NameHashType TYPE = typeNameHash<ContinuableDependencyOfflineEvent>();
         static constexpr std::string_view NAME = typeName<ContinuableDependencyOfflineEvent>();

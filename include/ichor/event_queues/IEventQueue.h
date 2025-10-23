@@ -47,12 +47,12 @@ namespace Ichor {
 #if (!defined(WIN32) && !defined(_WIN32) && !defined(__WIN32)) || defined(__CYGWIN__)
         requires Derived<EventT, Event>
 #endif
-        uint64_t pushEvent(uint64_t originatingServiceId, Args&&... args) {
+        uint64_t pushEvent(ServiceIdType originatingServiceId, Args&&... args) {
             static_assert(EventT::TYPE == typeNameHash<EventT>(), "Event typeNameHash wrong");
             static_assert(EventT::NAME == typeName<EventT>(), "Event typeName wrong");
 
             uint64_t eventId = getNextEventId();
-            pushEventInternal(INTERNAL_EVENT_PRIORITY, std::unique_ptr<Event>{new EventT(std::forward<uint64_t>(eventId), std::forward<uint64_t>(originatingServiceId), INTERNAL_EVENT_PRIORITY, std::forward<Args>(args)...)});
+            pushEventInternal(INTERNAL_EVENT_PRIORITY, std::unique_ptr<Event>{new EventT(std::forward<uint64_t>(eventId), std::forward<ServiceIdType>(originatingServiceId), INTERNAL_EVENT_PRIORITY, std::forward<Args>(args)...)});
             return eventId;
         }
 
@@ -66,12 +66,12 @@ namespace Ichor {
 #if (!defined(WIN32) && !defined(_WIN32) && !defined(__WIN32)) || defined(__CYGWIN__)
         requires Derived<EventT, Event>
 #endif
-        uint64_t pushPrioritisedEvent(uint64_t originatingServiceId, uint64_t priority, Args&&... args) {
+        uint64_t pushPrioritisedEvent(ServiceIdType originatingServiceId, uint64_t priority, Args&&... args) {
             static_assert(EventT::TYPE == typeNameHash<EventT>(), "Event typeNameHash wrong");
             static_assert(EventT::NAME == typeName<EventT>(), "Event typeName wrong");
 
             uint64_t eventId = getNextEventId();
-            pushEventInternal(priority, std::unique_ptr<Event>{new EventT(std::forward<uint64_t>(eventId), std::forward<uint64_t>(originatingServiceId), std::forward<uint64_t>(priority), std::forward<Args>(args)...)});
+            pushEventInternal(priority, std::unique_ptr<Event>{new EventT(std::forward<uint64_t>(eventId), std::forward<ServiceIdType>(originatingServiceId), std::forward<uint64_t>(priority), std::forward<Args>(args)...)});
             return eventId;
         }
 

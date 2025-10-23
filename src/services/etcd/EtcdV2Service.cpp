@@ -362,7 +362,7 @@ Ichor::Task<tl::expected<EtcdReply, EtcdError>> EtcdService::get(std::string_vie
     // using watches blocks the connection and thus blocks every other call
     // This implementation requests a new HttpConnection specifically for this and cleans it up afterwards
     Ichor::ScopedServiceProxy<IHttpConnectionService*> connToUse = _mainConn;
-    tl::optional<uint64_t> connIdToClean{};
+    tl::optional<ConnectionIdType> connIdToClean{};
     ScopeGuard sg{[this, &connIdToClean]() {
         if(connIdToClean && _clientFactory != nullptr) {
             _clientFactory->removeConnection(this, *connIdToClean);

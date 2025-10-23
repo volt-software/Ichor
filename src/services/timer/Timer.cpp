@@ -11,7 +11,7 @@
 
 using namespace std::chrono_literals;
 
-Ichor::v1::Timer::Timer(Ichor::ScopedServiceProxy<IEventQueue*> queue, uint64_t timerId, uint64_t svcId) noexcept : _queue(queue), _timerId(timerId), _requestingServiceId(svcId) {
+Ichor::v1::Timer::Timer(Ichor::ScopedServiceProxy<IEventQueue*> queue, uint64_t timerId, ServiceIdType svcId) noexcept : _queue(queue), _timerId(timerId), _requestingServiceId(svcId) {
     INTERNAL_IO_DEBUG("Timer for {}", _requestingServiceId);
 }
 
@@ -156,7 +156,7 @@ void Ichor::v1::Timer::insertEventLoop(bool fireImmediately) {
 
     ScopeGuard sg{[this]() {
         std::unique_lock l{_m};
-        _queue->pushPrioritisedEvent<RunFunctionEvent>(0, _priority, [quitCbs = std::move(_quitCbs)](){
+        _queue->pushPrioritisedEvent<RunFunctionEvent>(ServiceIdType{0}, _priority, [quitCbs = std::move(_quitCbs)](){
             for(auto &cb : quitCbs) {
                 cb();
             }

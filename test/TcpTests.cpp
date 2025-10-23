@@ -95,7 +95,7 @@ TEST_CASE("TcpTests") {
 
         evtGate.store(0, std::memory_order_release);
 
-        queue->pushEvent<RunFunctionEventAsync>(0, [&]() -> AsyncGenerator<IchorBehaviour> {
+        queue->pushEvent<RunFunctionEventAsync>(ServiceIdType{0}, [&]() -> AsyncGenerator<IchorBehaviour> {
             auto &dm = GetThreadLocalManager();
             auto svc = dm.getService<ITcpService>(tcpClientId);
             REQUIRE(svc);
@@ -116,7 +116,7 @@ TEST_CASE("TcpTests") {
 
         evtGate.store(0, std::memory_order_release);
 
-        queue->pushEvent<RunFunctionEventAsync>(0, [&]() -> AsyncGenerator<IchorBehaviour> {
+        queue->pushEvent<RunFunctionEventAsync>(ServiceIdType{0}, [&]() -> AsyncGenerator<IchorBehaviour> {
             auto &dm = GetThreadLocalManager();
             auto svc = dm.getService<ITcpService>(tcpClientId);
             REQUIRE(svc);
@@ -126,7 +126,7 @@ TEST_CASE("TcpTests") {
             std::string_view str{reinterpret_cast<char*>(msg.data()), msg.size()};
             REQUIRE(str == "This is a message\n");
 
-            queue->pushEvent<QuitEvent>(0);
+            queue->pushEvent<QuitEvent>(ServiceIdType{0});
             co_return {};
         });
 
@@ -178,7 +178,7 @@ TEST_CASE("TcpTests") {
 
         evtGate.store(0, std::memory_order_release);
 
-        queue->pushEvent<RunFunctionEventAsync>(0, [&]() -> AsyncGenerator<IchorBehaviour> {
+        queue->pushEvent<RunFunctionEventAsync>(ServiceIdType{0}, [&]() -> AsyncGenerator<IchorBehaviour> {
             auto &dm = GetThreadLocalManager();
             auto svc = dm.getService<ITcpService>(tcpClientId);
             REQUIRE(svc);
@@ -201,7 +201,7 @@ TEST_CASE("TcpTests") {
 
         evtGate.store(0, std::memory_order_release);
 
-        queue->pushEvent<RunFunctionEventAsync>(0, [&]() -> AsyncGenerator<IchorBehaviour> {
+        queue->pushEvent<RunFunctionEventAsync>(ServiceIdType{0}, [&]() -> AsyncGenerator<IchorBehaviour> {
             auto &dm = GetThreadLocalManager();
             auto svc = dm.getService<ITcpService>(tcpClientId);
             REQUIRE(svc);
@@ -209,7 +209,7 @@ TEST_CASE("TcpTests") {
             REQUIRE(msgs.size() == 2);
             REQUIRE(msgs[0] == data);
 
-            queue->pushEvent<QuitEvent>(0);
+            queue->pushEvent<QuitEvent>(ServiceIdType{0});
             co_return {};
         });
 
@@ -249,7 +249,7 @@ TEST_CASE("TcpTests") {
 
         evtGate.store(0, std::memory_order_release);
 
-        queue->pushEvent<RunFunctionEventAsync>(0, [&]() -> AsyncGenerator<IchorBehaviour> {
+        queue->pushEvent<RunFunctionEventAsync>(ServiceIdType{0}, [&]() -> AsyncGenerator<IchorBehaviour> {
             auto &dm = GetThreadLocalManager();
             auto svc = dm.getService<ITcpService>(tcpClientId);
             REQUIRE(svc);
@@ -279,7 +279,7 @@ TEST_CASE("TcpTests") {
 
         evtGate.store(0, std::memory_order_release);
 
-        queue->pushEvent<RunFunctionEventAsync>(0, [&]() -> AsyncGenerator<IchorBehaviour> {
+        queue->pushEvent<RunFunctionEventAsync>(ServiceIdType{0}, [&]() -> AsyncGenerator<IchorBehaviour> {
             auto &dm = GetThreadLocalManager();
             auto svc = dm.getService<ITcpService>(tcpClientId);
             REQUIRE(svc);
@@ -296,7 +296,7 @@ TEST_CASE("TcpTests") {
                 REQUIRE(str == "This is a message\n");
             }
 
-            queue->pushEvent<QuitEvent>(0);
+            queue->pushEvent<QuitEvent>(ServiceIdType{0});
             co_return {};
         });
 
@@ -336,7 +336,7 @@ TEST_CASE("TcpTests") {
 
         evtGate.store(0, std::memory_order_release);
 
-        queue->pushEvent<RunFunctionEventAsync>(0, [&]() -> AsyncGenerator<IchorBehaviour> {
+        queue->pushEvent<RunFunctionEventAsync>(ServiceIdType{0}, [&]() -> AsyncGenerator<IchorBehaviour> {
             auto &dm = GetThreadLocalManager();
             auto svc = dm.getService<ITcpService>(tcpClientId);
             REQUIRE(svc);
@@ -362,7 +362,7 @@ TEST_CASE("TcpTests") {
 
         evtGate.store(0, std::memory_order_release);
 
-        queue->pushEvent<RunFunctionEventAsync>(0, [&]() -> AsyncGenerator<IchorBehaviour> {
+        queue->pushEvent<RunFunctionEventAsync>(ServiceIdType{0}, [&]() -> AsyncGenerator<IchorBehaviour> {
             auto &dm = GetThreadLocalManager();
             auto svc = dm.getService<ITcpService>(tcpClientId);
             REQUIRE(svc);
@@ -372,7 +372,7 @@ TEST_CASE("TcpTests") {
             std::string_view str{reinterpret_cast<char *>(msg.data()), msg.size()};
             REQUIRE(str == "This is a messageThis is a message\n");
 
-            queue->pushEvent<QuitEvent>(0);
+            queue->pushEvent<QuitEvent>(ServiceIdType{0});
             co_return {};
         });
 
@@ -413,7 +413,7 @@ TEST_CASE("TcpTests") {
         evtGate.store(0, std::memory_order_release);
 #define TEST_SIZE 128'00
 
-        queue->pushEvent<RunFunctionEventAsync>(0, [&]() -> AsyncGenerator<IchorBehaviour> {
+        queue->pushEvent<RunFunctionEventAsync>(ServiceIdType{0}, [&]() -> AsyncGenerator<IchorBehaviour> {
             auto &dm = GetThreadLocalManager();
             auto svc = dm.getService<ITcpService>(tcpClientId);
             REQUIRE(svc);
@@ -446,7 +446,7 @@ TEST_CASE("TcpTests") {
 
         evtGate.store(0, std::memory_order_release);
 
-        queue->pushEvent<RunFunctionEventAsync>(0, [&]() -> AsyncGenerator<IchorBehaviour> {
+        queue->pushEvent<RunFunctionEventAsync>(ServiceIdType{0}, [&]() -> AsyncGenerator<IchorBehaviour> {
             auto &dm = GetThreadLocalManager();
             auto svc = dm.getService<ITcpService>(tcpClientId);
             REQUIRE(svc);
@@ -455,7 +455,7 @@ TEST_CASE("TcpTests") {
             REQUIRE(msgs[0].size() > TEST_SIZE);
             REQUIRE(msgs[0].back() == '\n');
 
-            queue->pushEvent<QuitEvent>(0);
+            queue->pushEvent<QuitEvent>(ServiceIdType{0});
             co_return {};
         });
 
@@ -495,7 +495,7 @@ TEST_CASE("TcpTests") {
 
         evtGate.store(0, std::memory_order_release);
 
-        queue->pushEvent<RunFunctionEventAsync>(0, [&]() -> AsyncGenerator<IchorBehaviour> {
+        queue->pushEvent<RunFunctionEventAsync>(ServiceIdType{0}, [&]() -> AsyncGenerator<IchorBehaviour> {
             auto &dm = GetThreadLocalManager();
             auto svc = dm.getService<ITcpService>(tcpClientId);
             REQUIRE(svc);
@@ -514,11 +514,11 @@ TEST_CASE("TcpTests") {
 
         std::this_thread::sleep_for(50ms);
 
-        queue->pushEvent<RunFunctionEventAsync>(0, [&]() -> AsyncGenerator<IchorBehaviour> {
+        queue->pushEvent<RunFunctionEventAsync>(ServiceIdType{0}, [&]() -> AsyncGenerator<IchorBehaviour> {
             auto &dm = GetThreadLocalManager();
             auto svcs = dm.getAllServicesOfType<IConnectionService>();
             REQUIRE(svcs.empty());
-            queue->pushEvent<QuitEvent>(0);
+            queue->pushEvent<QuitEvent>(ServiceIdType{0});
             co_return {};
         });
 

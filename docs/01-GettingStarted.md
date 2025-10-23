@@ -334,7 +334,7 @@ struct AwaitService final : public IAwaitService {
             std::this_thread::sleep_for(1s);
             // If we want coroutines waiting on this function to resume on the same thread,
             // we have to call the `set` function from the queue, not our current thread.
-            _queue->pushEvent<RunFunctionEvent>(0, [&]() {
+            _queue->pushEvent<RunFunctionEvent>(ServiceIdType{0}, [&]() {
                 evt.set(); // resume waiting coroutines
             });
         });
@@ -409,7 +409,7 @@ struct MyQuittingTimerService final {
         auto timer = factory->createTimer();
         timer.setChronoInterval(std::chrono::seconds(1));
         timer.setCallback([queue]() {
-            queue->pushEvent<QuitEvent>(0);
+            queue->pushEvent<QuitEvent>(ServiceIdType{0});
         });
         timer.startTimer();
     }
@@ -473,7 +473,7 @@ struct LoggerFactory final {
     }
     
     DependencyTrackerRegistration _loggerTrackerRegistration{};
-    unordered_map<ServiceIdType, ServiceIdType> _loggers;
+    unordered_map<ServiceIdType, ServiceIdType, ServiceIdHash> _loggers;
     DependencyManager *_dm;
 };
 
@@ -527,7 +527,7 @@ Your events can then be inserted, intercepted or handled as you would e.g. a `Qu
 
 ```c++
 struct MyEvent final : public Event {
-    constexpr MyEvent(uint64_t _id, uint64_t _originatingService, uint64_t _priority, uint64_t _someData) noexcept : Event(_id, _originatingService, _priority), someData(_someData) {}
+    constexpr MyEvent(uint64_t _id, ServiceIdType _originatingService, uint64_t _priority, uint64_t _someData) noexcept : Event(_id, _originatingService, _priority), someData(_someData) {}
     constexpr ~MyEvent() final = default;
 
     [[nodiscard]] ICHOR_CONST_FUNC_ATTR constexpr std::string_view get_name() const noexcept final {

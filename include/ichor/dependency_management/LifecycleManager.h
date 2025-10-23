@@ -3,7 +3,7 @@
 #include <ichor/stl/StaticVector.h>
 
 namespace Ichor::Detail {
-    extern thread_local unordered_set<uint64_t> emptyDependencies;
+    extern thread_local unordered_set<ServiceIdType, ServiceIdHash> emptyDependencies;
 
     /// This lifecycle manager is created when the underlying service requests 0 dependencies
     /// It contains optimizations for dealing with dependencies.
@@ -48,12 +48,12 @@ namespace Ichor::Detail {
         }
 
         [[nodiscard]]
-        unordered_set<uint64_t> &getDependencies() noexcept final {
+        unordered_set<ServiceIdType, ServiceIdHash> &getDependencies() noexcept final {
             return emptyDependencies;
         }
 
         [[nodiscard]]
-        unordered_set<uint64_t> &getDependees() noexcept final {
+        unordered_set<ServiceIdType, ServiceIdHash> &getDependees() noexcept final {
             return _serviceIdsOfDependees;
         }
 
@@ -96,7 +96,7 @@ namespace Ichor::Detail {
             return typeNameHash<ServiceType>();
         }
 
-        [[nodiscard]] ICHOR_PURE_FUNC_ATTR uint64_t serviceId() const noexcept final {
+        [[nodiscard]] ICHOR_PURE_FUNC_ATTR ServiceIdType serviceId() const noexcept final {
             return _service.getServiceId();
         }
 
@@ -136,7 +136,7 @@ namespace Ichor::Detail {
         /// \param keyOfInterfaceToInject
         /// \param serviceIdOfOther
         /// \param fn
-        void insertSelfInto(uint64_t keyOfInterfaceToInject, uint64_t serviceIdOfOther, std::function<void(v1::NeverNull<void*>, IService&)> &fn) final {
+        void insertSelfInto(uint64_t keyOfInterfaceToInject, ServiceIdType serviceIdOfOther, std::function<void(v1::NeverNull<void*>, IService&)> &fn) final {
             if constexpr (sizeof...(IFaces) > 0) {
                 insertSelfInto2<sizeof...(IFaces), IFaces...>(keyOfInterfaceToInject, fn);
                 _serviceIdsOfDependees.insert(serviceIdOfOther);
@@ -162,7 +162,7 @@ namespace Ichor::Detail {
         /// \param keyOfInterfaceToInject
         /// \param serviceIdOfOther
         /// \param fn
-        void removeSelfInto(uint64_t keyOfInterfaceToInject, uint64_t serviceIdOfOther, std::function<void(v1::NeverNull<void*>, IService&)> &fn) final {
+        void removeSelfInto(uint64_t keyOfInterfaceToInject, ServiceIdType serviceIdOfOther, std::function<void(v1::NeverNull<void*>, IService&)> &fn) final {
             INTERNAL_DEBUG("removeSelfInto2() svc {} removing svc {}", serviceId(), serviceIdOfOther);
             if constexpr (sizeof...(IFaces) > 0) {
                 insertSelfInto2<sizeof...(IFaces), IFaces...>(keyOfInterfaceToInject, fn);
@@ -174,6 +174,6 @@ namespace Ichor::Detail {
     private:
         v1::StaticVector<Dependency, sizeof...(IFaces)> _interfaces;
         ServiceType _service;
-        unordered_set<uint64_t> _serviceIdsOfDependees; // services that depend on this service
+        unordered_set<ServiceIdType, ServiceIdHash> _serviceIdsOfDependees; // services that depend on this service
     };
 }

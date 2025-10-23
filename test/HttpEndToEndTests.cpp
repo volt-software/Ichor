@@ -108,7 +108,7 @@ TEST_CASE("HttpEndToEndTests_boost") {
             REQUIRE(now - start <= 1s);
         }
 
-        queue->pushEvent<RunFunctionEvent>(0, [&]() {
+        queue->pushEvent<RunFunctionEvent>(ServiceIdType{0}, [&]() {
             REQUIRE(Ichor::Detail::_local_dm == &dm);
             REQUIRE(testThreadId != std::this_thread::get_id());
             REQUIRE(dmThreadId == std::this_thread::get_id());
@@ -234,7 +234,7 @@ TEST_CASE("HttpEndToEndTests_boost") {
             REQUIRE(now - start <= 1s);
         }
 
-        queue->pushEvent<RunFunctionEvent>(0, [&]() {
+        queue->pushEvent<RunFunctionEvent>(ServiceIdType{0}, [&]() {
             REQUIRE(Ichor::Detail::_local_dm == &dm);
             REQUIRE(testThreadId != std::this_thread::get_id());
             REQUIRE(dmThreadId == std::this_thread::get_id());

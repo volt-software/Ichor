@@ -1,30 +1,32 @@
 #pragma once
 
+#include <compare>
+
 namespace Ichor {
     template <typename ValueType, typename Tag>
     struct StrongTypedef {
         auto operator<=>(const StrongTypedef&) const = default;
 
-        StrongTypedef& operator++() {
+        Tag& operator++() {
             ++value;
-            return *this;
+            return static_cast<Tag&>(*this);
         }
 
-        StrongTypedef operator++(int) {
-            ValueType old = value;
+        Tag operator++(int) {
+            Tag old = Tag{value};
             ++value;
-            return StrongTypedef{old};
+            return old;
         }
 
-        StrongTypedef& operator--() {
+        Tag& operator--() {
             --value;
-            return *this;
+            return static_cast<Tag&>(*this);
         }
 
-        StrongTypedef operator--(int) {
-            ValueType old = value;
+        Tag operator--(int) {
+            Tag old = Tag{value};
             --value;
-            return StrongTypedef{old};
+            return old;
         }
 
         ValueType value;

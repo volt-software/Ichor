@@ -46,7 +46,7 @@ namespace Ichor {
             }
         }
 
-        uint64_t svcId{};
+        ServiceIdType svcId{};
         bool cycled{};
     };
 }

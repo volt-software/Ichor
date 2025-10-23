@@ -25,13 +25,13 @@ namespace Ichor::Detail {
         }
 
         [[nodiscard]]
-        unordered_set<uint64_t> &getDependencies() noexcept final {
+        unordered_set<ServiceIdType, ServiceIdHash> &getDependencies() noexcept final {
             // this function should never be called
             std::terminate();
         }
 
         [[nodiscard]]
-        unordered_set<uint64_t> &getDependees() noexcept final {
+        unordered_set<ServiceIdType, ServiceIdHash> &getDependees() noexcept final {
             // this function should never be called
             std::terminate();
         }
@@ -74,7 +74,7 @@ namespace Ichor::Detail {
             return typeNameHash<IService>();
         }
 
-        [[nodiscard]] ICHOR_PURE_FUNC_ATTR uint64_t serviceId() const noexcept final {
+        [[nodiscard]] ICHOR_PURE_FUNC_ATTR ServiceIdType serviceId() const noexcept final {
             return SELF_SERVICE_ID;
         }
 
@@ -116,7 +116,7 @@ namespace Ichor::Detail {
         /// \param keyOfInterfaceToInject
         /// \param serviceIdOfOther
         /// \param fn
-        void insertSelfInto(uint64_t keyOfInterfaceToInject, uint64_t serviceIdOfOther, std::function<void(v1::NeverNull<void*>, IService&)> &fn) final {
+        void insertSelfInto(uint64_t keyOfInterfaceToInject, ServiceIdType serviceIdOfOther, std::function<void(v1::NeverNull<void*>, IService&)> &fn) final {
             if(keyOfInterfaceToInject != typeNameHash<IService>()) {
                 return;
             }
@@ -129,7 +129,7 @@ namespace Ichor::Detail {
         /// \param keyOfInterfaceToInject
         /// \param serviceIdOfOther
         /// \param fn
-        void removeSelfInto(uint64_t keyOfInterfaceToInject, uint64_t serviceIdOfOther, std::function<void(v1::NeverNull<void*>, IService&)> &fn) final {
+        void removeSelfInto(uint64_t keyOfInterfaceToInject, ServiceIdType serviceIdOfOther, std::function<void(v1::NeverNull<void*>, IService&)> &fn) final {
             if(keyOfInterfaceToInject != typeNameHash<IService>()) {
                 return;
             }

@@ -32,9 +32,9 @@ TEST_CASE("QueueTests") {
         REQUIRE(!queue->shouldQuit());
 
 #if ICHOR_EXCEPTIONS_ENABLED
-        REQUIRE_NOTHROW(queue->pushEventInternal(10, std::make_unique<TestEvent>(0, 0, 10)));
+        REQUIRE_NOTHROW(queue->pushEventInternal(10, std::make_unique<TestEvent>(0, ServiceIdType{0}, 10)));
 #else
-        queue->pushEventInternal(10, std::make_unique<TestEvent>(0, 0, 10));
+        queue->pushEventInternal(10, std::make_unique<TestEvent>(0, ServiceIdType{0}, 10));
 #endif
 
         REQUIRE(!queue->empty());
@@ -60,9 +60,9 @@ TEST_CASE("QueueTests") {
         REQUIRE(!queue->shouldQuit());
 
 #if ICHOR_EXCEPTIONS_ENABLED
-        REQUIRE_NOTHROW(queue->pushEventInternal(10, std::make_unique<TestEvent>(0, 0, 10)));
+        REQUIRE_NOTHROW(queue->pushEventInternal(10, std::make_unique<TestEvent>(0, ServiceIdType{0}, 10)));
 #else
-        queue->pushEventInternal(10, std::make_unique<TestEvent>(0, 0, 10));
+        queue->pushEventInternal(10, std::make_unique<TestEvent>(0, ServiceIdType{0}, 10));
 #endif
 
         REQUIRE(!queue->empty());
@@ -138,7 +138,7 @@ TEST_CASE("QueueTests") {
 #if ICHOR_EXCEPTIONS_ENABLED
         try {
 #endif
-            dm->getEventQueue().pushEvent<QuitEvent>(0);
+            dm->getEventQueue().pushEvent<QuitEvent>(ServiceIdType{0});
 #if ICHOR_EXCEPTIONS_ENABLED
         } catch(const std::exception &e) {
             fmt::print("exception: {}\n", e.what());
@@ -194,7 +194,7 @@ TEST_CASE("QueueTests") {
 #if ICHOR_EXCEPTIONS_ENABLED
         try {
 #endif
-            dm->getEventQueue().pushEvent<QuitEvent>(0);
+            dm->getEventQueue().pushEvent<QuitEvent>(ServiceIdType{0});
 #if ICHOR_EXCEPTIONS_ENABLED
         } catch(const std::exception &e) {
             fmt::print("exception: {}\n", e.what());
@@ -256,7 +256,7 @@ TEST_CASE("QueueTests") {
 #if ICHOR_EXCEPTIONS_ENABLED
         try {
 #endif
-            dm->getEventQueue().pushEvent<QuitEvent>(0);
+            dm->getEventQueue().pushEvent<QuitEvent>(ServiceIdType{0});
 #if ICHOR_EXCEPTIONS_ENABLED
         } catch(const std::exception &e) {
             fmt::print("exception: {}\n", e.what());

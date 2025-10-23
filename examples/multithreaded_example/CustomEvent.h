@@ -4,7 +4,7 @@
 
 namespace Ichor {
     struct CustomEvent final : public Event {
-        constexpr explicit CustomEvent(uint64_t _id, uint64_t _originatingService, uint64_t _priority) noexcept :
+        constexpr explicit CustomEvent(uint64_t _id, ServiceIdType _originatingService, uint64_t _priority) noexcept :
                 Event(_id, _originatingService, _priority) {}
         constexpr ~CustomEvent() final = default;
 

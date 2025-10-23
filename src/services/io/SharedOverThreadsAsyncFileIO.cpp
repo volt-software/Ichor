@@ -47,7 +47,7 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::v1::SharedOverThreadsA
                         _evts.pop();
                         lg.unlock();
                         submission->fn(submission->result);
-                        queue.pushEvent<RunFunctionEvent>(0, [submission = std::move(submission)]() mutable {
+                        queue.pushEvent<RunFunctionEvent>(ServiceIdType{0}, [submission = std::move(submission)]() mutable {
                             submission->evt.set();
                         });
                         lg.lock();

@@ -63,7 +63,7 @@ namespace Ichor {
 
         [[nodiscard]] static ServiceIdType currentServiceId() noexcept {
             auto &stack = current();
-            return stack.empty() ? 0 : stack.back().id;
+            return stack.empty() ? ServiceIdType{0} : stack.back().id;
         }
 
         [[nodiscard]] std::vector<ServiceExecutionScopeContents> &getServiceIdStack() noexcept {
@@ -138,7 +138,7 @@ namespace Ichor {
 
         void reset() noexcept {
             _service = nullptr;
-            _serviceId = 0;
+            _serviceId = ServiceIdType{0};
         }
 
         friend bool operator==(ScopedServiceProxy const &proxyA, ScopedServiceProxy const &proxyB) noexcept {

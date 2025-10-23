@@ -90,14 +90,14 @@ Ichor provides a co_yield and co_await capable generator for use in conjunction 
 
 ```c++
 AsyncManualResetEvent evt;
-dm.pushEvent<RunFunctionEventAsync>(0, [&](DependencyManager& mng) -> AsyncGenerator<IchorBehaviour> {
+dm.pushEvent<RunFunctionEventAsync>(ServiceIdType{0}, [&](DependencyManager& mng) -> AsyncGenerator<IchorBehaviour> {
     co_await evt;
     co_return;
 });
 
 // ... Sometime Later ...
 
-dm.pushEvent<RunFunctionEvent>(0, [&](DependencyManager& mng) {
+dm.pushEvent<RunFunctionEvent>(ServiceIdType{0}, [&](DependencyManager& mng) {
     evt.set();
 });
 ```

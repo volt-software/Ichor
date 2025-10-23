@@ -19,7 +19,7 @@ constinit std::atomic<uint64_t> Ichor::DependencyManager::_managerIdCounter = 0;
 #ifdef ICHOR_ENABLE_INTERNAL_STL_DEBUGGING
 std::atomic<uint64_t> Ichor::v1::_rfpCounter = 0;
 #endif
-thread_local Ichor::unordered_set<uint64_t> Ichor::Detail::emptyDependencies{}; // TODO modify ankerl's implementation to have enough constexpr functions to have this be constinit as well.
+thread_local Ichor::unordered_set<Ichor::ServiceIdType, Ichor::ServiceIdHash> Ichor::Detail::emptyDependencies{}; // TODO modify ankerl's implementation to have enough constexpr functions to have this be constinit as well.
 
 constinit thread_local Ichor::DependencyManager *Ichor::Detail::_local_dm = nullptr;
 
@@ -640,7 +640,7 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &uniqueEvt) {
                 auto const existingHandlers = _eventCallbacks.find(removeEventHandlerEvt->key.type);
                 if (existingHandlers != end(_eventCallbacks)) [[likely]] {
                     std::erase_if(existingHandlers->second, [removeEventHandlerEvt](const EventCallbackInfo &info) noexcept {
-                        return info.listeningServiceId == removeEventHandlerEvt->key.id;
+                        return info.listeningServiceId == ServiceIdType{removeEventHandlerEvt->key.id};
                     });
                 }
             }
@@ -981,7 +981,7 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &uniqueEvt) {
                 auto *runFunctionEvt = static_cast<RunFunctionEvent *>(evt);
 
                 // Do not handle stale run function events
-                if(runFunctionEvt->originatingService != 0) {
+                if(runFunctionEvt->originatingService != ServiceIdType{0}) {
                     auto const requestingServiceIt = _services.find(runFunctionEvt->originatingService);
                     if(requestingServiceIt == end(_services)) {
                         INTERNAL_DEBUG("Service {} not found", runFunctionEvt->originatingService);
@@ -1002,7 +1002,7 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &uniqueEvt) {
                 auto *runFunctionEvt = static_cast<RunFunctionEventAsync *>(evt);
 
                 // Do not handle stale run function events
-                if(runFunctionEvt->originatingService != 0) {
+                if(runFunctionEvt->originatingService != ServiceIdType{0}) {
                     auto const requestingServiceIt = _services.find(runFunctionEvt->originatingService);
                     if(requestingServiceIt == end(_services)) {
                         INTERNAL_DEBUG("Service {} not found", runFunctionEvt->originatingService);
@@ -1482,7 +1482,7 @@ void Ichor::DependencyManager::runForOrQueueEmpty(std::chrono::milliseconds ms) 
 /// Get IService by local ID
 /// \param id service id
 /// \return optional
-[[nodiscard]] tl::optional<Ichor::v1::NeverNull<const Ichor::IService*>> Ichor::DependencyManager::getIService(uint64_t id) const noexcept {
+[[nodiscard]] tl::optional<Ichor::v1::NeverNull<const Ichor::IService*>> Ichor::DependencyManager::getIService(ServiceIdType id) const noexcept {
     if constexpr (DO_INTERNAL_DEBUG || DO_HARDENING) {
         if (this != Detail::_local_dm) [[unlikely]] {
             ICHOR_EMERGENCY_LOG1(_logger, "Function called from wrong thread.");

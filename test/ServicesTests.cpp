@@ -151,7 +151,7 @@ TEST_CASE("ServicesTests") {
 
         runForOrQueueEmpty(dm);
 
-        queue->pushEvent<RunFunctionEvent>(0, [&]() {
+        queue->pushEvent<RunFunctionEvent>(ServiceIdType{0}, [&]() {
             auto services = dm.getStartedServices<IFailOnStartService>();
 
             REQUIRE(services.empty());
@@ -161,7 +161,7 @@ TEST_CASE("ServicesTests") {
             REQUIRE(svcs.size() == 1);
             REQUIRE(svcs[0].first.getStartCount() == 1);
 
-            dm.getEventQueue().pushEvent<QuitEvent>(0);
+            dm.getEventQueue().pushEvent<QuitEvent>(ServiceIdType{0});
         });
 
         t.join();
@@ -198,7 +198,7 @@ TEST_CASE("ServicesTests") {
 
         runForOrQueueEmpty(dm);
 
-        queue->pushEvent<RunFunctionEvent>(0, [&]() {
+        queue->pushEvent<RunFunctionEvent>(ServiceIdType{0}, [&]() {
             auto services = dm.getStartedServices<IFailOnStartService>();
 
             REQUIRE(services.empty());
@@ -208,7 +208,7 @@ TEST_CASE("ServicesTests") {
             REQUIRE(svcs.size() == 1);
             REQUIRE(svcs[0].first.getStartCount() == 1);
 
-            dm.getEventQueue().pushEvent<QuitEvent>(0);
+            dm.getEventQueue().pushEvent<QuitEvent>(ServiceIdType{0});
         });
 
         t.join();
@@ -223,7 +223,7 @@ TEST_CASE("ServicesTests") {
         auto queue = std::make_unique<QIMPL>(500);
 #endif
         auto &dm = queue->createManager();
-        uint64_t secondUselessServiceId{};
+        ServiceIdType secondUselessServiceId{};
 
         std::thread t([&]() {
 #if defined(TEST_URING)
@@ -247,26 +247,26 @@ TEST_CASE("ServicesTests") {
 
         runForOrQueueEmpty(dm);
 
-        queue->pushEvent<RunFunctionEvent>(0, [&]() {
+        queue->pushEvent<RunFunctionEvent>(ServiceIdType{0}, [&]() {
             auto services = dm.getStartedServices<ICountService>();
 
             REQUIRE(services.size() == 1);
             REQUIRE(services[0]->isRunning());
             REQUIRE(services[0]->getSvcCount() == 2);
 
-            dm.getEventQueue().pushEvent<StopServiceEvent>(0, secondUselessServiceId);
+            dm.getEventQueue().pushEvent<StopServiceEvent>(ServiceIdType{0}, secondUselessServiceId);
         });
 
         runForOrQueueEmpty(dm);
 
-        queue->pushEvent<RunFunctionEvent>(0, [&]() {
+        queue->pushEvent<RunFunctionEvent>(ServiceIdType{0}, [&]() {
             auto services = dm.getStartedServices<ICountService>();
 
             REQUIRE(services.size() == 1);
             REQUIRE(services[0]->isRunning());
             REQUIRE(services[0]->getSvcCount() == 1);
 
-            dm.getEventQueue().pushEvent<QuitEvent>(0);
+            dm.getEventQueue().pushEvent<QuitEvent>(ServiceIdType{0});
         });
 
         t.join();
@@ -281,8 +281,8 @@ TEST_CASE("ServicesTests") {
         auto queue = std::make_unique<QIMPL>(500);
 #endif
         auto &dm = queue->createManager();
-        uint64_t firstUselessServiceId{};
-        uint64_t secondUselessServiceId{};
+        ServiceIdType firstUselessServiceId{};
+        ServiceIdType secondUselessServiceId{};
 
         std::thread t([&]() {
 #if defined(TEST_URING)
@@ -305,7 +305,7 @@ TEST_CASE("ServicesTests") {
 
         runForOrQueueEmpty(dm);
 
-        queue->pushEvent<RunFunctionEvent>(0, [&]() {
+        queue->pushEvent<RunFunctionEvent>(ServiceIdType{0}, [&]() {
             auto services = dm.getStartedServices<ICountService>();
 
             REQUIRE(services.size() == 1);
@@ -317,36 +317,36 @@ TEST_CASE("ServicesTests") {
 
         runForOrQueueEmpty(dm);
 
-        queue->pushEvent<RunFunctionEvent>(0, [&]() {
+        queue->pushEvent<RunFunctionEvent>(ServiceIdType{0}, [&]() {
             auto services = dm.getStartedServices<ICountService>();
 
             REQUIRE(services.size() == 1);
             REQUIRE(services[0]->isRunning());
             REQUIRE(services[0]->getSvcCount() == 2);
 
-            dm.getEventQueue().pushEvent<StopServiceEvent>(0, firstUselessServiceId);
+            dm.getEventQueue().pushEvent<StopServiceEvent>(ServiceIdType{0}, firstUselessServiceId);
         });
 
         runForOrQueueEmpty(dm);
 
-        queue->pushEvent<RunFunctionEvent>(0, [&]() {
+        queue->pushEvent<RunFunctionEvent>(ServiceIdType{0}, [&]() {
             auto services = dm.getStartedServices<ICountService>();
 
             REQUIRE(services.size() == 1);
             REQUIRE(services[0]->isRunning());
             REQUIRE(services[0]->getSvcCount() == 1);
 
-            dm.getEventQueue().pushEvent<StopServiceEvent>(0, secondUselessServiceId);
+            dm.getEventQueue().pushEvent<StopServiceEvent>(ServiceIdType{0}, secondUselessServiceId);
         });
 
         runForOrQueueEmpty(dm);
 
-        queue->pushEvent<RunFunctionEvent>(0, [&]() {
+        queue->pushEvent<RunFunctionEvent>(ServiceIdType{0}, [&]() {
             auto services = dm.getStartedServices<ICountService>();
 
             REQUIRE(services.size() == 0);
 
-            dm.getEventQueue().pushEvent<QuitEvent>(0);
+            dm.getEventQueue().pushEvent<QuitEvent>(ServiceIdType{0});
         });
 
         t.join();
@@ -361,8 +361,8 @@ TEST_CASE("ServicesTests") {
         auto queue = std::make_unique<QIMPL>(500);
 #endif
         auto &dm = queue->createManager();
-        uint64_t firstUselessServiceId{};
-        uint64_t secondUselessServiceId{};
+        ServiceIdType firstUselessServiceId{};
+        ServiceIdType secondUselessServiceId{};
 
         std::thread t([&]() {
 #if defined(TEST_URING)
@@ -385,7 +385,7 @@ TEST_CASE("ServicesTests") {
 
         runForOrQueueEmpty(dm);
 
-        queue->pushEvent<RunFunctionEvent>(0, [&]() {
+        queue->pushEvent<RunFunctionEvent>(ServiceIdType{0}, [&]() {
             auto services = dm.getStartedServices<ICountService>();
 
             REQUIRE(services.size() == 0);
@@ -395,34 +395,34 @@ TEST_CASE("ServicesTests") {
 
         runForOrQueueEmpty(dm);
 
-        queue->pushEvent<RunFunctionEvent>(0, [&]() {
+        queue->pushEvent<RunFunctionEvent>(ServiceIdType{0}, [&]() {
             auto services = dm.getStartedServices<ICountService>();
 
             REQUIRE(services.size() == 1);
             REQUIRE(services[0]->isRunning());
             REQUIRE(services[0]->getSvcCount() == 2);
 
-            dm.getEventQueue().pushEvent<StopServiceEvent>(0, firstUselessServiceId);
+            dm.getEventQueue().pushEvent<StopServiceEvent>(ServiceIdType{0}, firstUselessServiceId);
         });
 
         runForOrQueueEmpty(dm);
 
-        queue->pushEvent<RunFunctionEvent>(0, [&]() {
+        queue->pushEvent<RunFunctionEvent>(ServiceIdType{0}, [&]() {
             auto services = dm.getStartedServices<ICountService>();
 
             REQUIRE(services.size() == 0);
 
-            dm.getEventQueue().pushEvent<StopServiceEvent>(0, secondUselessServiceId);
+            dm.getEventQueue().pushEvent<StopServiceEvent>(ServiceIdType{0}, secondUselessServiceId);
         });
 
         runForOrQueueEmpty(dm);
 
-        queue->pushEvent<RunFunctionEvent>(0, [&]() {
+        queue->pushEvent<RunFunctionEvent>(ServiceIdType{0}, [&]() {
             auto services = dm.getStartedServices<ICountService>();
 
             REQUIRE(services.size() == 0);
 
-            dm.getEventQueue().pushEvent<QuitEvent>(0);
+            dm.getEventQueue().pushEvent<QuitEvent>(ServiceIdType{0});
         });
 
         t.join();
@@ -437,7 +437,7 @@ TEST_CASE("ServicesTests") {
         auto queue = std::make_unique<QIMPL>(500);
 #endif
         auto &dm = queue->createManager();
-        uint64_t secondUselessServiceId{};
+        ServiceIdType secondUselessServiceId{};
 
         std::thread t([&]() {
 #if defined(TEST_URING)
@@ -461,7 +461,7 @@ TEST_CASE("ServicesTests") {
 
         runForOrQueueEmpty(dm);
 
-        queue->pushEvent<RunFunctionEvent>(0, [&]() {
+        queue->pushEvent<RunFunctionEvent>(ServiceIdType{0}, [&]() {
             auto services = dm.getStartedServices<ICountService>();
 
             REQUIRE(services.size() == 1);
@@ -471,18 +471,18 @@ TEST_CASE("ServicesTests") {
 
         runForOrQueueEmpty(dm);
 
-        queue->pushEvent<StopServiceEvent>(0, secondUselessServiceId);
+        queue->pushEvent<StopServiceEvent>(ServiceIdType{0}, secondUselessServiceId);
 
         runForOrQueueEmpty(dm);
 
-        queue->pushEvent<RunFunctionEvent>(0, [&]() {
+        queue->pushEvent<RunFunctionEvent>(ServiceIdType{0}, [&]() {
             auto services = dm.getStartedServices<ICountService>();
 
             REQUIRE(services.size() == 1);
 
             REQUIRE(services[0]->getSvcCount() == 1);
 
-            dm.getEventQueue().pushEvent<QuitEvent>(0);
+            dm.getEventQueue().pushEvent<QuitEvent>(ServiceIdType{0});
         });
 
         t.join();
@@ -530,7 +530,7 @@ TEST_CASE("ServicesTests") {
         auto queue = std::make_unique<QIMPL>(500);
 #endif
         auto &dm = queue->createManager();
-        uint64_t svcId{};
+        ServiceIdType svcId{};
 
         std::thread t([&]() {
 #if defined(TEST_URING)
@@ -560,7 +560,7 @@ TEST_CASE("ServicesTests") {
             REQUIRE(now - start < 1s);
         }
 
-        queue->pushEvent<RunFunctionEvent>(0, [&]() {
+        queue->pushEvent<RunFunctionEvent>(ServiceIdType{0}, [&]() {
             auto ret = dm.getService<ITimerRunsOnceService>(svcId);
             REQUIRE(ret->first->getCount() == 1);
 
@@ -577,10 +577,10 @@ TEST_CASE("ServicesTests") {
         auto queue = std::make_unique<QIMPL>(500);
 #endif
         auto &dm = queue->createManager();
-        uint64_t creatingSvcId1{};
-        uint64_t creatingSvcId2{};
-        uint64_t creatingSvcId3{};
-        uint64_t tffSvcId{};
+        ServiceIdType creatingSvcId1{};
+        ServiceIdType creatingSvcId2{};
+        ServiceIdType creatingSvcId3{};
+        ServiceIdType tffSvcId{};
 
         std::thread t([&]() {
 #if defined(TEST_URING)
@@ -612,7 +612,7 @@ TEST_CASE("ServicesTests") {
             REQUIRE(now - start < 1s);
         }
 
-        queue->pushEvent<RunFunctionEvent>(0, [&]() {
+        queue->pushEvent<RunFunctionEvent>(ServiceIdType{0}, [&]() {
             auto ret = dm.getService<ITimerTimerFactory>(tffSvcId);
             REQUIRE(ret);
             auto factoryIds = ret->first->getCreatedTimerFactoryIds();
@@ -685,11 +685,11 @@ TEST_CASE("ServicesTests") {
 
         runForOrQueueEmpty(dm);
 
-        queue->pushEvent<TestEvent>(0);
+        queue->pushEvent<TestEvent>(ServiceIdType{0});
 
         runForOrQueueEmpty(dm);
 
-        queue->pushEvent<QuitEvent>(0);
+        queue->pushEvent<QuitEvent>(ServiceIdType{0});
 
         t.join();
     }
@@ -701,7 +701,7 @@ TEST_CASE("ServicesTests") {
         auto queue = std::make_unique<QIMPL>(500);
 #endif
         auto &dm = queue->createManager();
-        uint64_t svcId{};
+        ServiceIdType svcId{};
 
         std::thread t([&]() {
 #if defined(TEST_URING)
@@ -724,7 +724,7 @@ TEST_CASE("ServicesTests") {
 
         runForOrQueueEmpty(dm);
 
-        queue->pushEvent<RunFunctionEvent>(0, [&]() {
+        queue->pushEvent<RunFunctionEvent>(ServiceIdType{0}, [&]() {
             DisplayServices(dm);
 #if defined(TEST_URING) || defined(TEST_SDEVENT)
             REQUIRE(dm.getServiceCount() == 7);
@@ -732,12 +732,12 @@ TEST_CASE("ServicesTests") {
             REQUIRE(dm.getServiceCount() == 6);
 #endif
 
-            dm.getEventQueue().pushEvent<StopServiceEvent>(0, svcId, true);
+            dm.getEventQueue().pushEvent<StopServiceEvent>(ServiceIdType{0}, svcId, true);
         });
 
         runForOrQueueEmpty(dm);
 
-        queue->pushEvent<RunFunctionEvent>(0, [&]() {
+        queue->pushEvent<RunFunctionEvent>(ServiceIdType{0}, [&]() {
             DisplayServices(dm);
 #if defined(TEST_URING) || defined(TEST_SDEVENT)
             REQUIRE(dm.getServiceCount() == 5);
@@ -745,7 +745,7 @@ TEST_CASE("ServicesTests") {
             REQUIRE(dm.getServiceCount() == 4);
 #endif
 
-            dm.getEventQueue().pushEvent<QuitEvent>(0);
+            dm.getEventQueue().pushEvent<QuitEvent>(ServiceIdType{0});
         });
 
         t.join();
@@ -758,7 +758,7 @@ TEST_CASE("ServicesTests") {
         auto queue = std::make_unique<QIMPL>(500);
 #endif
         auto &dm = queue->createManager();
-        uint64_t svcId{};
+        ServiceIdType svcId{};
 
         std::thread t([&]() {
 #if defined(TEST_URING)
@@ -784,7 +784,7 @@ TEST_CASE("ServicesTests") {
 
         runForOrQueueEmpty(dm);
 
-        queue->pushEvent<RunFunctionEvent>(0, [&]() {
+        queue->pushEvent<RunFunctionEvent>(ServiceIdType{0}, [&]() {
             DisplayServices(dm);
 
             DisplayServices(dm);
@@ -797,7 +797,7 @@ TEST_CASE("ServicesTests") {
             REQUIRE(svcs.size() == 1);
             REQUIRE(svcs[0].second.getServiceId() == svcId);
 
-            dm.getEventQueue().pushEvent<StopServiceEvent>(0, svcId, true);
+            dm.getEventQueue().pushEvent<StopServiceEvent>(ServiceIdType{0}, svcId, true);
         });
 
         runForOrQueueEmpty(dm);
@@ -807,7 +807,7 @@ TEST_CASE("ServicesTests") {
         std::this_thread::sleep_for(std::chrono::milliseconds(500));
 #endif
 
-        queue->pushEvent<RunFunctionEvent>(0, [&]() {
+        queue->pushEvent<RunFunctionEvent>(ServiceIdType{0}, [&]() {
             DisplayServices(dm);
             DisplayServices(dm);
 #if defined(TEST_URING) || defined(TEST_SDEVENT)
@@ -816,7 +816,7 @@ TEST_CASE("ServicesTests") {
             REQUIRE(dm.getServiceCount() == 5);
 #endif
 
-            dm.getEventQueue().pushEvent<QuitEvent>(0);
+            dm.getEventQueue().pushEvent<QuitEvent>(ServiceIdType{0});
         });
 
         t.join();
@@ -923,7 +923,7 @@ TEST_CASE("ServicesTests") {
 
         runForOrQueueEmpty(dm);
 
-        queue->pushEvent<RunFunctionEvent>(0, [&]() {
+        queue->pushEvent<RunFunctionEvent>(ServiceIdType{0}, [&]() {
             DisplayServices(dm);
 #if defined(TEST_URING) || defined(TEST_SDEVENT)
             REQUIRE(dm.getServiceCount() == 4);
@@ -931,7 +931,7 @@ TEST_CASE("ServicesTests") {
             REQUIRE(dm.getServiceCount() == 3);
 #endif
 
-            dm.getEventQueue().pushEvent<QuitEvent>(0);
+            dm.getEventQueue().pushEvent<QuitEvent>(ServiceIdType{0});
         });
 
         t.join();
@@ -967,7 +967,7 @@ TEST_CASE("ServicesTests") {
 
         runForOrQueueEmpty(dm);
 
-        queue->pushEvent<RunFunctionEvent>(0, [&]() {
+        queue->pushEvent<RunFunctionEvent>(ServiceIdType{0}, [&]() {
             DisplayServices(dm);
 #if defined(TEST_URING) || defined(TEST_SDEVENT)
             REQUIRE(dm.getServiceCount() == 8);
@@ -981,12 +981,12 @@ TEST_CASE("ServicesTests") {
             REQUIRE(services[0]->getSvcCount() == 2);
 
 
-            queue->pushEvent<StopServiceEvent>(0, depSvcId, true);
+            queue->pushEvent<StopServiceEvent>(ServiceIdType{0}, depSvcId, true);
         });
 
         runForOrQueueEmpty(dm);
 
-        queue->pushEvent<RunFunctionEvent>(0, [&]() {
+        queue->pushEvent<RunFunctionEvent>(ServiceIdType{0}, [&]() {
             DisplayServices(dm);
 #if defined(TEST_URING) || defined(TEST_SDEVENT)
             REQUIRE(dm.getServiceCount() == 5);
@@ -997,12 +997,12 @@ TEST_CASE("ServicesTests") {
 
             REQUIRE(services.size() == 0);
 
-            queue->pushEvent<StopServiceEvent>(0, trackerSvcId, true);
+            queue->pushEvent<StopServiceEvent>(ServiceIdType{0}, trackerSvcId, true);
         });
 
         runForOrQueueEmpty(dm);
 
-        queue->pushEvent<RunFunctionEvent>(0, [&]() {
+        queue->pushEvent<RunFunctionEvent>(ServiceIdType{0}, [&]() {
             DisplayServices(dm);
             DisplayServices(dm);
 #if defined(TEST_URING) || defined(TEST_SDEVENT)
@@ -1019,7 +1019,7 @@ TEST_CASE("ServicesTests") {
 
         runForOrQueueEmpty(dm);
 
-        queue->pushEvent<RunFunctionEvent>(0, [&]() {
+        queue->pushEvent<RunFunctionEvent>(ServiceIdType{0}, [&]() {
             DisplayServices(dm);
             DisplayServices(dm);
 #if defined(TEST_URING) || defined(TEST_SDEVENT)
@@ -1033,7 +1033,7 @@ TEST_CASE("ServicesTests") {
             REQUIRE(services[0]->isRunning());
             REQUIRE(services[0]->getSvcCount() == 1);
 
-            queue->pushEvent<QuitEvent>(0);
+            queue->pushEvent<QuitEvent>(ServiceIdType{0});
         });
 
         t.join();
@@ -1066,7 +1066,7 @@ TEST_CASE("ServicesTests") {
 
         runForOrQueueEmpty(dm);
 
-        queue->pushEvent<RunFunctionEvent>(0, [&]() {
+        queue->pushEvent<RunFunctionEvent>(ServiceIdType{0}, [&]() {
             DisplayServices(dm);
 #if defined(TEST_URING) || defined(TEST_SDEVENT)
             REQUIRE(dm.getServiceCount() == 6);
@@ -1084,7 +1084,7 @@ TEST_CASE("ServicesTests") {
 
         runForOrQueueEmpty(dm);
 
-        queue->pushEvent<RunFunctionEvent>(0, [&]() {
+        queue->pushEvent<RunFunctionEvent>(ServiceIdType{0}, [&]() {
             DisplayServices(dm);
 #if defined(TEST_URING) || defined(TEST_SDEVENT)
             REQUIRE(dm.getServiceCount() == 8);
@@ -1099,12 +1099,12 @@ TEST_CASE("ServicesTests") {
 
             _evt->reset();
 
-            queue->pushEvent<StopServiceEvent>(0, depSvcId, true);
+            queue->pushEvent<StopServiceEvent>(ServiceIdType{0}, depSvcId, true);
         });
 
         runForOrQueueEmpty(dm);
 
-        queue->pushEvent<RunFunctionEvent>(0, [&]() {
+        queue->pushEvent<RunFunctionEvent>(ServiceIdType{0}, [&]() {
             DisplayServices(dm);
 #if defined(TEST_URING) || defined(TEST_SDEVENT)
             REQUIRE(dm.getServiceCount() == 7);
@@ -1120,7 +1120,7 @@ TEST_CASE("ServicesTests") {
 
         runForOrQueueEmpty(dm);
 
-        queue->pushEvent<RunFunctionEvent>(0, [&]() {
+        queue->pushEvent<RunFunctionEvent>(ServiceIdType{0}, [&]() {
             DisplayServices(dm);
 #if defined(TEST_URING) || defined(TEST_SDEVENT)
             REQUIRE(dm.getServiceCount() == 5);
@@ -1131,12 +1131,12 @@ TEST_CASE("ServicesTests") {
 
             REQUIRE(services.size() == 0);
 
-            queue->pushEvent<StopServiceEvent>(0, trackerSvcId, true);
+            queue->pushEvent<StopServiceEvent>(ServiceIdType{0}, trackerSvcId, true);
         });
 
         runForOrQueueEmpty(dm);
 
-        queue->pushEvent<RunFunctionEvent>(0, [&]() {
+        queue->pushEvent<RunFunctionEvent>(ServiceIdType{0}, [&]() {
             DisplayServices(dm);
             DisplayServices(dm);
 #if defined(TEST_URING) || defined(TEST_SDEVENT)
@@ -1153,7 +1153,7 @@ TEST_CASE("ServicesTests") {
 
         runForOrQueueEmpty(dm);
 
-        queue->pushEvent<RunFunctionEvent>(0, [&]() {
+        queue->pushEvent<RunFunctionEvent>(ServiceIdType{0}, [&]() {
             DisplayServices(dm);
             DisplayServices(dm);
 #if defined(TEST_URING) || defined(TEST_SDEVENT)
@@ -1167,7 +1167,7 @@ TEST_CASE("ServicesTests") {
             REQUIRE(services[0]->isRunning());
             REQUIRE(services[0]->getSvcCount() == 1);
 
-            queue->pushEvent<QuitEvent>(0);
+            queue->pushEvent<QuitEvent>(ServiceIdType{0});
         });
 
         t.join();
@@ -1198,7 +1198,7 @@ TEST_CASE("ServicesTests") {
 
         runForOrQueueEmpty(dm);
 
-        queue->pushEvent<RunFunctionEventAsync>(0, [&]() -> AsyncGenerator<IchorBehaviour> {
+        queue->pushEvent<RunFunctionEventAsync>(ServiceIdType{0}, [&]() -> AsyncGenerator<IchorBehaviour> {
             DisplayServices(dm);
             auto services = dm.getStartedServices<IAsyncBroadcastService>();
 
@@ -1217,7 +1217,7 @@ TEST_CASE("ServicesTests") {
 
         runForOrQueueEmpty(dm);
 
-        queue->pushEvent<RunFunctionEvent>(0, [&]() {
+        queue->pushEvent<RunFunctionEvent>(ServiceIdType{0}, [&]() {
             DisplayServices(dm);
             auto services = dm.getStartedServices<IAsyncBroadcastService>();
 
@@ -1236,7 +1236,7 @@ TEST_CASE("ServicesTests") {
 
         runForOrQueueEmpty(dm);
 
-        queue->pushEvent<RunFunctionEvent>(0, [&]() {
+        queue->pushEvent<RunFunctionEvent>(ServiceIdType{0}, [&]() {
             DisplayServices(dm);
             auto services = dm.getStartedServices<IAsyncBroadcastService>();
 
@@ -1245,7 +1245,7 @@ TEST_CASE("ServicesTests") {
                 REQUIRE(svc->getFinishedPosts() == 1);
             }
 
-            dm.getEventQueue().pushEvent<QuitEvent>(0);
+            dm.getEventQueue().pushEvent<QuitEvent>(ServiceIdType{0});
         });
 
         t.join();

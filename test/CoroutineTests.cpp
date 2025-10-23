@@ -103,7 +103,7 @@ TEST_CASE("CoroutineTests") {
 
         runForOrQueueEmpty(dm);
 
-        queue->pushEvent<RunFunctionEventAsync>(0, [&]() -> AsyncGenerator<IchorBehaviour>{
+        queue->pushEvent<RunFunctionEventAsync>(ServiceIdType{0}, [&]() -> AsyncGenerator<IchorBehaviour>{
             auto services = dm.getStartedServices<IGeneratorService>();
 
             REQUIRE(services.size() == 1);
@@ -123,7 +123,7 @@ TEST_CASE("CoroutineTests") {
             REQUIRE(*it.await_resume() == 2);
             INTERNAL_DEBUG("resume3");
 
-            dm.getEventQueue().pushEvent<QuitEvent>(0);
+            dm.getEventQueue().pushEvent<QuitEvent>(ServiceIdType{0});
             INTERNAL_DEBUG("quit");
 
             co_return {};
@@ -162,7 +162,7 @@ TEST_CASE("CoroutineTests") {
 
         runForOrQueueEmpty(dm);
 
-        queue->pushEvent<RunFunctionEventAsync>(0, [&]() -> AsyncGenerator<IchorBehaviour> {
+        queue->pushEvent<RunFunctionEventAsync>(ServiceIdType{0}, [&]() -> AsyncGenerator<IchorBehaviour> {
             auto services = dm.getStartedServices<IAwaitService>();
 
             REQUIRE(services.size() == 1);
@@ -177,7 +177,7 @@ TEST_CASE("CoroutineTests") {
 
             INTERNAL_DEBUG("quit");
 
-            dm.getEventQueue().pushEvent<QuitEvent>(0);
+            dm.getEventQueue().pushEvent<QuitEvent>(ServiceIdType{0});
 
             INTERNAL_DEBUG("after2");
 
@@ -186,7 +186,7 @@ TEST_CASE("CoroutineTests") {
 
         runForOrQueueEmpty(dm);
 
-        queue->pushEvent<RunFunctionEvent>(0, []() {
+        queue->pushEvent<RunFunctionEvent>(ServiceIdType{0}, []() {
             INTERNAL_DEBUG("set");
             _evt->set();
         });
@@ -224,11 +224,11 @@ TEST_CASE("CoroutineTests") {
 
         runForOrQueueEmpty(dm);
 
-        queue->pushEvent<AwaitEvent>(0);
+        queue->pushEvent<AwaitEvent>(ServiceIdType{0});
 
         runForOrQueueEmpty(dm);
 
-        queue->pushEvent<RunFunctionEvent>(0, []() {
+        queue->pushEvent<RunFunctionEvent>(ServiceIdType{0}, []() {
             INTERNAL_DEBUG("set");
             _evt->set();
         });
@@ -268,13 +268,13 @@ TEST_CASE("CoroutineTests") {
 
         runForOrQueueEmpty(dm);
 
-        queue->pushEvent<RunFunctionEvent>(0, [&]() {
+        queue->pushEvent<RunFunctionEvent>(ServiceIdType{0}, [&]() {
             INTERNAL_DEBUG("set");
             auto svc = dm.getService<IMultipleAwaitService>(svcId);
             REQUIRE(svc);
             _autoEvt->set_all();
             REQUIRE((*svc).first->getCount() == 2);
-            dm.getEventQueue().pushEvent<QuitEvent>(0);
+            dm.getEventQueue().pushEvent<QuitEvent>(ServiceIdType{0});
         });
 
         t.join();
@@ -315,7 +315,7 @@ TEST_CASE("CoroutineTests") {
 
         runForOrQueueEmpty(dm);
 
-        queue->pushEvent<RunFunctionEvent>(0, []() {
+        queue->pushEvent<RunFunctionEvent>(ServiceIdType{0}, []() {
             INTERNAL_DEBUG("set");
             _evt->set();
         });
@@ -330,7 +330,7 @@ TEST_CASE("CoroutineTests") {
             }
         }
 
-        queue->pushEvent<RunFunctionEvent>(0, [&]() {
+        queue->pushEvent<RunFunctionEvent>(ServiceIdType{0}, [&]() {
             auto dbgSvc = dm.getService<IDebugService>(dbgSvcId);
             REQUIRE(dbgSvc);
             dbgSvc->first->printServices();
@@ -385,7 +385,7 @@ TEST_CASE("CoroutineTests") {
 
         runForOrQueueEmpty(dm);
 
-        queue->pushEvent<RunFunctionEventAsync>(0, [&]() -> AsyncGenerator<IchorBehaviour> {
+        queue->pushEvent<RunFunctionEventAsync>(ServiceIdType{0}, [&]() -> AsyncGenerator<IchorBehaviour> {
             auto svc = dm.getService<IAwaitReturnService>(svcId);
             REQUIRE(svc);
             auto &await = *co_await (*svc).first->Await().begin();
@@ -394,10 +394,10 @@ TEST_CASE("CoroutineTests") {
 
         runForOrQueueEmpty(dm);
 
-        queue->pushEvent<RunFunctionEvent>(0, [&dm = dm]() {
+        queue->pushEvent<RunFunctionEvent>(ServiceIdType{0}, [&dm = dm]() {
             INTERNAL_DEBUG("set");
             _evt->set();
-            dm.getEventQueue().pushEvent<QuitEvent>(0);
+            dm.getEventQueue().pushEvent<QuitEvent>(ServiceIdType{0});
         });
 
         t.join();
@@ -441,7 +441,7 @@ TEST_CASE("CoroutineTests") {
 
         runForOrQueueEmpty(dm);
 
-        queue->pushEvent<RunFunctionEventAsync>(0, [&]() -> AsyncGenerator<IchorBehaviour> {
+        queue->pushEvent<RunFunctionEventAsync>(ServiceIdType{0}, [&]() -> AsyncGenerator<IchorBehaviour> {
             auto svc = dm.getService<IAwaitReturnService>(svcId);
             REQUIRE(svc);
             auto await = co_await (*svc).first->AwaitTask();
@@ -451,10 +451,10 @@ TEST_CASE("CoroutineTests") {
 
         runForOrQueueEmpty(dm);
 
-        queue->pushEvent<RunFunctionEvent>(0, [&dm = dm]() {
+        queue->pushEvent<RunFunctionEvent>(ServiceIdType{0}, [&dm = dm]() {
             INTERNAL_DEBUG("set");
             _evt->set();
-            dm.getEventQueue().pushEvent<QuitEvent>(0);
+            dm.getEventQueue().pushEvent<QuitEvent>(ServiceIdType{0});
         });
 
         t.join();
@@ -502,7 +502,7 @@ TEST_CASE("CoroutineTests") {
         auto queue = std::make_unique<QIMPL>(500);
 #endif
         auto &dm = queue->createManager();
-        uint64_t svcId{};
+        ServiceIdType svcId{};
 
         std::thread t([&]() {
 #if defined(TEST_URING)
@@ -524,7 +524,7 @@ TEST_CASE("CoroutineTests") {
 
         runForOrQueueEmpty(dm);
 
-        queue->pushEvent<RunFunctionEvent>(0, [&dm = dm, svcId]() {
+        queue->pushEvent<RunFunctionEvent>(ServiceIdType{0}, [&dm = dm, svcId]() {
             auto services = dm.getStartedServices<IDependencyOfflineWhileStartingService>();
 
             REQUIRE(services.empty());
@@ -546,7 +546,7 @@ TEST_CASE("CoroutineTests") {
 
         runForOrQueueEmpty(dm);
 
-        queue->pushEvent<RunFunctionEvent>(0, [&dm = dm, svcId]() {
+        queue->pushEvent<RunFunctionEvent>(ServiceIdType{0}, [&dm = dm, svcId]() {
             auto svcs = dm.getAllServices();
 
             REQUIRE(svcs.find(svcId)->second->getServiceState() == Ichor::ServiceState::INSTALLED);
@@ -555,7 +555,7 @@ TEST_CASE("CoroutineTests") {
 
             REQUIRE(services.empty());
 
-            dm.getEventQueue().pushEvent<QuitEvent>(0);
+            dm.getEventQueue().pushEvent<QuitEvent>(ServiceIdType{0});
         });
 
         t.join();
@@ -570,7 +570,7 @@ TEST_CASE("CoroutineTests") {
         auto queue = std::make_unique<QIMPL>(500);
 #endif
         auto &dm = queue->createManager();
-        uint64_t svcId{};
+        ServiceIdType svcId{};
 
         std::thread t([&]() {
 #if defined(TEST_URING)
@@ -592,7 +592,7 @@ TEST_CASE("CoroutineTests") {
 
         runForOrQueueEmpty(dm);
 
-        queue->pushEvent<RunFunctionEvent>(0, [&dm = dm, svcId]() {
+        queue->pushEvent<RunFunctionEvent>(ServiceIdType{0}, [&dm = dm, svcId]() {
             auto services = dm.getStartedServices<IDependencyOnlineWhileStoppingService>();
 
             REQUIRE(services.empty());
@@ -614,7 +614,7 @@ TEST_CASE("CoroutineTests") {
 
         runForOrQueueEmpty(dm);
 
-        queue->pushEvent<RunFunctionEvent>(0, [&dm = dm, svcId]() {
+        queue->pushEvent<RunFunctionEvent>(ServiceIdType{0}, [&dm = dm, svcId]() {
             auto services = dm.getStartedServices<IDependencyOnlineWhileStoppingService>();
 
             REQUIRE(services.empty());
@@ -628,7 +628,7 @@ TEST_CASE("CoroutineTests") {
 #endif
             REQUIRE(svcs.find(svcId)->second->getServiceState() == Ichor::ServiceState::INSTALLED);
 
-            dm.getEventQueue().pushEvent<QuitEvent>(0);
+            dm.getEventQueue().pushEvent<QuitEvent>(ServiceIdType{0});
         });
 
         t.join();

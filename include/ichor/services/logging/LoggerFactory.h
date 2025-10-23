@@ -95,7 +95,7 @@ namespace Ichor::v1 {
 
         Ichor::ScopedServiceProxy<IFrameworkLogger*> _logger {};
         DependencyTrackerRegistration _loggerTrackerRegistration{};
-        unordered_map<ServiceIdType, ServiceIdType> _loggers;
+        unordered_map<ServiceIdType, ServiceIdType, ServiceIdHash> _loggers;
         LogLevel _defaultLevel{LogLevel::LOG_ERROR};
     };
 }

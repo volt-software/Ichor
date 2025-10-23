@@ -1,7 +1,5 @@
 #pragma once
 
-#include <cstdint>
-
 #if defined(ICHOR_ENABLE_INTERNAL_DEBUGGING) || defined(ICHOR_ENABLE_INTERNAL_COROUTINE_DEBUGGING) || defined(ICHOR_ENABLE_INTERNAL_IO_DEBUGGING) || defined(ICHOR_ENABLE_INTERNAL_STL_DEBUGGING)
 #include <chrono>
 #include <fmt/base.h>
@@ -107,7 +105,3 @@ static constexpr bool DO_HARDENING = false;
 #define ICHOR_CONSTEXPR_VECTOR
 #define ICHOR_CONSTINIT_VECTOR
 #endif
-
-namespace Ichor {
-    using ServiceIdType = uint64_t;
-}

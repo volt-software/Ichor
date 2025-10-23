@@ -25,7 +25,7 @@ namespace Ichor::v1 {
         friend DependencyManager;
 
         DependencyTrackerRegistration _trackerRegistration{};
-        unordered_map<ServiceIdType, ServiceIdType> _factories;
+        unordered_map<ServiceIdType, ServiceIdType, ServiceIdHash> _factories;
         bool _quitting{};
 
         Task<void> pushStopEventForTimerFactory(ServiceIdType requestingSvcId, ServiceIdType factoryId) noexcept;
