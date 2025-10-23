@@ -84,7 +84,7 @@ namespace Ichor {
 
     class ServiceIdFilterEntry final {
     public:
-        explicit ServiceIdFilterEntry(uint64_t _id) noexcept : id(_id) {}
+        explicit ServiceIdFilterEntry(ServiceIdType _id) noexcept : id(_id) {}
 
         [[nodiscard]] bool matches(ILifecycleManager const &manager) const noexcept {
             return manager.serviceId() == id;
@@ -96,7 +96,7 @@ namespace Ichor {
             return s;
         }
 
-        uint64_t id;
+        ServiceIdType id;
     };
 
     class ITemplatedFilter {

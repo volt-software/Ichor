@@ -261,12 +261,12 @@ namespace Ichor::Detail {
         }
 
         [[nodiscard]]
-        unordered_set<ServiceIdType> &getDependencies() noexcept final {
+        unordered_set<ServiceIdType, ServiceIdHash> &getDependencies() noexcept final {
             return _serviceIdsOfInjectedDependencies;
         }
 
         [[nodiscard]]
-        unordered_set<ServiceIdType> &getDependees() noexcept final {
+        unordered_set<ServiceIdType, ServiceIdHash> &getDependees() noexcept final {
             return _serviceIdsOfDependees;
         }
 
@@ -349,7 +349,7 @@ namespace Ichor::Detail {
         v1::StaticVector<Dependency, sizeof...(IFaces)> _interfaces;
         DependencyRegister _registry;
         ServiceType _service;
-        unordered_set<ServiceIdType> _serviceIdsOfInjectedDependencies; // Services that this service depends on.
-        unordered_set<ServiceIdType> _serviceIdsOfDependees; // services that depend on this service
+        unordered_set<ServiceIdType, ServiceIdHash> _serviceIdsOfInjectedDependencies; // Services that this service depends on.
+        unordered_set<ServiceIdType, ServiceIdHash> _serviceIdsOfDependees; // services that depend on this service
     };
 }

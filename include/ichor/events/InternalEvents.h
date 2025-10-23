@@ -40,7 +40,7 @@ namespace Ichor {
             return TYPE;
         }
 
-        bool removeOriginatingServiceAfterStop;
+        bool const removeOriginatingServiceAfterStop;
         static constexpr NameHashType TYPE = typeNameHash<DependencyOfflineEvent>();
         static constexpr std::string_view NAME = typeName<DependencyOfflineEvent>();
     };
@@ -58,8 +58,8 @@ namespace Ichor {
             return TYPE;
         }
 
-        Dependency dependency;
-        tl::optional<v1::NeverNull<Properties const *>> properties;
+        Dependency const dependency;
+        tl::optional<v1::NeverNull<Properties const *>> const properties;
         static constexpr NameHashType TYPE = typeNameHash<DependencyRequestEvent>();
         static constexpr std::string_view NAME = typeName<DependencyRequestEvent>();
     };
@@ -78,9 +78,9 @@ namespace Ichor {
             return TYPE;
         }
 
-        Dependency dependency;
-        tl::optional<Properties> properties;
-        v1::ReferenceCountedPointer<DependencyUndoRequestEvent> originalRequest;
+        Dependency const dependency;
+        tl::optional<Properties> const properties;
+        v1::ReferenceCountedPointer<DependencyUndoRequestEvent> const originalRequest;
         static constexpr NameHashType TYPE = typeNameHash<DependencyUndoRequestEvent>();
         static constexpr std::string_view NAME = typeName<DependencyUndoRequestEvent>();
     };
@@ -101,7 +101,7 @@ namespace Ichor {
     };
 
     struct StopServiceEvent final : public Event {
-        constexpr StopServiceEvent(uint64_t _id, ServiceIdType _originatingService, uint64_t _priority, uint64_t _serviceId, bool _removeAfter = false) noexcept : Event(_id, _originatingService, _priority), serviceId(_serviceId), removeAfter(_removeAfter) {}
+        constexpr StopServiceEvent(uint64_t _id, ServiceIdType _originatingService, uint64_t _priority, ServiceIdType _serviceId, bool _removeAfter = false) noexcept : Event(_id, _originatingService, _priority), serviceId(_serviceId), removeAfter(_removeAfter) {}
         constexpr ~StopServiceEvent() final = default;
 
         [[nodiscard]] ICHOR_CONST_FUNC_ATTR constexpr std::string_view get_name() const noexcept final {
@@ -111,14 +111,14 @@ namespace Ichor {
             return TYPE;
         }
 
-        ServiceIdType serviceId;
-        bool removeAfter;
+        ServiceIdType const serviceId;
+        bool const removeAfter;
         static constexpr NameHashType TYPE = typeNameHash<StopServiceEvent>();
         static constexpr std::string_view NAME = typeName<StopServiceEvent>();
     };
 
     struct StartServiceEvent final : public Event {
-        constexpr StartServiceEvent(uint64_t _id, ServiceIdType _originatingService, uint64_t _priority, uint64_t _serviceId) noexcept : Event(_id, _originatingService, _priority), serviceId(_serviceId) {}
+        constexpr StartServiceEvent(uint64_t _id, ServiceIdType _originatingService, uint64_t _priority, ServiceIdType _serviceId) noexcept : Event(_id, _originatingService, _priority), serviceId(_serviceId) {}
         constexpr ~StartServiceEvent() final = default;
 
         [[nodiscard]] ICHOR_CONST_FUNC_ATTR constexpr std::string_view get_name() const noexcept final {
@@ -128,13 +128,13 @@ namespace Ichor {
             return TYPE;
         }
 
-        ServiceIdType serviceId;
+        ServiceIdType const serviceId;
         static constexpr NameHashType TYPE = typeNameHash<StartServiceEvent>();
         static constexpr std::string_view NAME = typeName<StartServiceEvent>();
     };
 
     struct RemoveServiceEvent final : public Event {
-        constexpr RemoveServiceEvent(uint64_t _id, ServiceIdType _originatingService, uint64_t _priority, uint64_t _serviceId) noexcept : Event(_id, _originatingService, _priority), serviceId(_serviceId) {}
+        constexpr RemoveServiceEvent(uint64_t _id, ServiceIdType _originatingService, uint64_t _priority, ServiceIdType _serviceId) noexcept : Event(_id, _originatingService, _priority), serviceId(_serviceId) {}
         constexpr ~RemoveServiceEvent() final = default;
 
         [[nodiscard]] ICHOR_CONST_FUNC_ATTR constexpr std::string_view get_name() const noexcept final {
@@ -144,7 +144,7 @@ namespace Ichor {
             return TYPE;
         }
 
-        ServiceIdType serviceId;
+        ServiceIdType const serviceId;
         static constexpr NameHashType TYPE = typeNameHash<RemoveServiceEvent>();
         static constexpr std::string_view NAME = typeName<RemoveServiceEvent>();
     };
@@ -175,7 +175,7 @@ namespace Ichor {
             return TYPE;
         }
 
-        CallbackKey key;
+        CallbackKey const key;
         static constexpr NameHashType TYPE = typeNameHash<RemoveEventHandlerEvent>();
         static constexpr std::string_view NAME = typeName<RemoveEventHandlerEvent>();
     };
@@ -191,8 +191,8 @@ namespace Ichor {
             return TYPE;
         }
 
-        uint64_t interceptorId;
-        uint64_t eventType;
+        uint64_t const interceptorId;
+        uint64_t const eventType;
         static constexpr NameHashType TYPE = typeNameHash<RemoveEventInterceptorEvent>();
         static constexpr std::string_view NAME = typeName<RemoveEventInterceptorEvent>();
     };
@@ -208,7 +208,7 @@ namespace Ichor {
             return TYPE;
         }
 
-        NameHashType interfaceNameHash;
+        NameHashType const interfaceNameHash;
         static constexpr NameHashType TYPE = typeNameHash<AddTrackerEvent>();
         static constexpr std::string_view NAME = typeName<AddTrackerEvent>();
     };
@@ -224,7 +224,7 @@ namespace Ichor {
             return TYPE;
         }
 
-        NameHashType interfaceNameHash;
+        NameHashType const interfaceNameHash;
         static constexpr NameHashType TYPE = typeNameHash<RemoveTrackerEvent>();
         static constexpr std::string_view NAME = typeName<RemoveTrackerEvent>();
     };

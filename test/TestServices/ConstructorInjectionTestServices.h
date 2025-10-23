@@ -7,7 +7,7 @@ using namespace Ichor::v1;
 
 struct IConstructorInjectionTestService {
     virtual ~IConstructorInjectionTestService() {}
-    [[nodiscard]] virtual uint64_t getServiceId() const noexcept = 0;
+    [[nodiscard]] virtual ServiceIdType getServiceId() const noexcept = 0;
 };
 
 struct ConstructorInjectionTestService final : public IConstructorInjectionTestService {
@@ -33,11 +33,11 @@ struct ConstructorInjectionTestService final : public IConstructorInjectionTestS
         _serviceId = self->getServiceId();
     }
 
-    [[nodiscard]] uint64_t getServiceId() const noexcept final {
+    [[nodiscard]] ServiceIdType getServiceId() const noexcept final {
         return _serviceId;
     }
 
-    uint64_t _serviceId{};
+    ServiceIdType _serviceId{};
 };
 
 struct ConstructorInjectionQuitService final {
@@ -60,7 +60,7 @@ struct ConstructorInjectionQuitService2 final {
         if(q == nullptr) {
             std::terminate();
         }
-        q->pushEvent<QuitEvent>(0);
+        q->pushEvent<QuitEvent>(ServiceIdType{0});
     }
 };
 
@@ -69,7 +69,7 @@ struct ConstructorInjectionQuitService3 final {
         if(dm == nullptr) {
             std::terminate();
         }
-        dm->getEventQueue().pushEvent<QuitEvent>(0);
+        dm->getEventQueue().pushEvent<QuitEvent>(ServiceIdType{0});
     }
 };
 

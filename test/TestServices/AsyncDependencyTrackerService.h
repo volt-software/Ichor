@@ -6,7 +6,7 @@ using namespace Ichor::v1;
 extern std::unique_ptr<Ichor::AsyncManualResetEvent> _evt;
 
 struct IAsyncDependencyTrackerService {
-    [[nodiscard]] virtual unordered_map<uint64_t, ServiceIdType> getCreatedServices() noexcept = 0;
+    [[nodiscard]] virtual unordered_map<ServiceIdType, ServiceIdType, ServiceIdHash> getCreatedServices() noexcept = 0;
 protected:
     ~IAsyncDependencyTrackerService() = default;
 };
@@ -54,11 +54,11 @@ struct AsyncDependencyTrackerService final : public IAsyncDependencyTrackerServi
         co_return {};
     }
 
-    [[nodiscard]] unordered_map<uint64_t, ServiceIdType> getCreatedServices() noexcept final {
+    [[nodiscard]] unordered_map<ServiceIdType, ServiceIdType, ServiceIdHash> getCreatedServices() noexcept final {
         return _services;
     }
 
     DependencyTrackerRegistration _trackerRegistration{};
-    unordered_map<uint64_t, ServiceIdType> _services;
+    unordered_map<ServiceIdType, ServiceIdType, ServiceIdHash> _services;
     bool running{};
 };

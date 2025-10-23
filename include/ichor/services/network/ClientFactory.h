@@ -8,8 +8,6 @@
 #include <ichor/ServiceExecutionScope.h>
 
 namespace Ichor::v1 {
-    using ConnectionCounterType = uint64_t;
-
     template <typename NetworkType, typename NetworkInterfaceType = IConnectionService>
     class ClientFactory final : public IClientFactory<NetworkInterfaceType>, public AdvancedService<ClientFactory<NetworkType, NetworkInterfaceType>> {
     public:
@@ -18,35 +16,35 @@ namespace Ichor::v1 {
         }
         ~ClientFactory() final = default;
 
-        uint64_t createNewConnection(NeverNull<IService*> requestingSvc, Properties properties) final {
+        ConnectionIdType createNewConnection(NeverNull<IService*> requestingSvc, Properties properties) final {
             properties.erase("Filter");
             properties.emplace("Filter", Ichor::v1::make_any<Filter>(ServiceIdFilterEntry{requestingSvc->getServiceId()}));
-            ConnectionCounterType count = _connectionCounter++;
+            ConnectionIdType count = ++_connectionCounter;
 
-            ICHOR_LOG_TRACE(_logger, "Creating new connection {}", count);
+            ICHOR_LOG_TRACE(_logger, "Creating new connection {}", count.value);
 
             auto existingConnections = _connections.find(requestingSvc->getServiceId());
 
             if(existingConnections == _connections.end()) {
-                unordered_map<ConnectionCounterType, ServiceIdType> newMap;
+                unordered_map<ConnectionIdType, ServiceIdType, ConnectionIdHash> newMap;
                 newMap.emplace(count, GetThreadLocalManager().template createServiceManager<NetworkType, NetworkInterfaceType>(std::move(properties), requestingSvc->getServicePriority())->getServiceId());
                 _connections.emplace(requestingSvc->getServiceId(), std::move(newMap));
                 return count;
             }
 
-            existingConnections->second.emplace(requestingSvc->getServiceId(), GetThreadLocalManager().template createServiceManager<NetworkType, NetworkInterfaceType>(std::move(properties), requestingSvc->getServicePriority())->getServiceId());
+            existingConnections->second.emplace(count, GetThreadLocalManager().template createServiceManager<NetworkType, NetworkInterfaceType>(std::move(properties), requestingSvc->getServicePriority())->getServiceId());
             return count;
         }
 
-        void removeConnection(NeverNull<IService*> requestingSvc, uint64_t connectionId) final {
-            ICHOR_LOG_TRACE(_logger, "Removing connection {}", connectionId);
+        void removeConnection(NeverNull<IService*> requestingSvc, ConnectionIdType connectionId) final {
+            ICHOR_LOG_TRACE(_logger, "Removing connection {}", connectionId.value);
             auto existingConnections = _connections.find(requestingSvc->getServiceId());
 
             if(existingConnections != end(_connections)) {
                 auto connection = existingConnections->second.find(connectionId);
 
                 if(connection == end(existingConnections->second)) {
-                    ICHOR_LOG_TRACE(_logger, "Connection {} not found", connectionId);
+                    ICHOR_LOG_TRACE(_logger, "Connection {} not found", connectionId.value);
                     return;
                 }
 
@@ -58,7 +56,7 @@ namespace Ichor::v1 {
                 }
             }
 
-            ICHOR_LOG_TRACE(_logger, "Connection {} not found", connectionId);
+            ICHOR_LOG_TRACE(_logger, "Connection {} not found", connectionId.value);
         }
 
     private:
@@ -96,7 +94,7 @@ namespace Ichor::v1 {
                 newProps.erase("Filter");
                 newProps.emplace("Filter", Ichor::v1::make_any<Filter>(ServiceIdFilterEntry{evt.originatingService}));
 
-                unordered_map<ConnectionCounterType, ServiceIdType> newMap;
+                unordered_map<ConnectionIdType, ServiceIdType, ConnectionIdHash> newMap;
                 newMap.emplace(_connectionCounter++, GetThreadLocalManager().template createServiceManager<NetworkType, NetworkInterfaceType>(std::move(newProps), evt.priority)->getServiceId());
                 _connections.emplace(evt.originatingService, std::move(newMap));
             }
@@ -129,8 +127,8 @@ namespace Ichor::v1 {
         friend DependencyManager;
 
         Ichor::ScopedServiceProxy<ILogger*> _logger {};
-        uint64_t _connectionCounter{};
-        unordered_map<ServiceIdType, unordered_map<ConnectionCounterType, ServiceIdType>> _connections{};
+        ConnectionIdType _connectionCounter{};
+        unordered_map<ServiceIdType, unordered_map<ConnectionIdType, ServiceIdType, ConnectionIdHash>, ServiceIdHash> _connections{};
         DependencyTrackerRegistration _trackerRegistration{};
     };
 }

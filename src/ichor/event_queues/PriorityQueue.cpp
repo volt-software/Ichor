@@ -154,7 +154,7 @@ namespace Ichor {
 
         if(shouldQuit && !_quitEventSent) {
             // assume _eventQueueMutex is locked
-            _eventQueue.push(std::make_unique<QuitEvent>(getNextEventId(), 0, INTERNAL_EVENT_PRIORITY));
+            _eventQueue.push(std::make_unique<QuitEvent>(getNextEventId(), ServiceIdType{0}, INTERNAL_EVENT_PRIORITY));
             _quitEventSent = true;
             _whenQuitEventWasSent = std::chrono::steady_clock::now();
         }

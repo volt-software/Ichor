@@ -25,19 +25,19 @@ namespace Ichor {
 #endif
         class DependencyLifecycleManager;
 
-        extern std::atomic<ServiceIdType> _serviceIdCounter;
+        extern std::atomic<uint64_t> _serviceIdCounter;
     }
 
     template <typename T>
     class AdvancedService : public IService {
     public:
         template <typename U = T> requires (!RequestsProperties<U> && !RequestsDependencies<U>)
-        AdvancedService() noexcept : IService(), _serviceId(Detail::_serviceIdCounter.fetch_add(1, std::memory_order_relaxed)), _servicePriority(INTERNAL_EVENT_PRIORITY), _serviceGid(sole::uuid4()), _serviceState(ServiceState::INSTALLED) {
+        AdvancedService() noexcept : IService(), _serviceId(ServiceIdType{Detail::_serviceIdCounter.fetch_add(1, std::memory_order_relaxed)}), _servicePriority(INTERNAL_EVENT_PRIORITY), _serviceGid(sole::uuid4()), _serviceState(ServiceState::INSTALLED) {
 
         }
 
         template <typename U = T> requires (RequestsProperties<U> || RequestsDependencies<U>)
-        AdvancedService(Properties&& props) noexcept : IService(), _properties(std::move(props)), _serviceId(Detail::_serviceIdCounter.fetch_add(1, std::memory_order_relaxed)), _servicePriority(INTERNAL_EVENT_PRIORITY), _serviceGid(sole::uuid4()), _serviceState(ServiceState::INSTALLED) {
+        AdvancedService(Properties&& props) noexcept : IService(), _properties(std::move(props)), _serviceId(ServiceIdType{Detail::_serviceIdCounter.fetch_add(1, std::memory_order_relaxed)}), _servicePriority(INTERNAL_EVENT_PRIORITY), _serviceGid(sole::uuid4()), _serviceState(ServiceState::INSTALLED) {
 
         }
 

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <ichor/Callbacks.h>
+#include <ichor/Defines.h>
 
 namespace Ichor {
     class [[nodiscard]] EventHandlerRegistration final {
@@ -24,13 +25,13 @@ namespace Ichor {
 
         void reset();
     private:
-        CallbackKey _key{0, 0};
+        CallbackKey _key{ServiceIdType{0}, 0};
         uint64_t _priority{0};
     };
 
     class [[nodiscard]] EventInterceptorRegistration final {
     public:
-        EventInterceptorRegistration(uint64_t listeningServiceId, uint64_t interceptorId, uint64_t eventType, uint64_t priority) noexcept : _listeningServiceId(listeningServiceId), _interceptorId(interceptorId), _eventType(eventType), _priority(priority) {}
+        EventInterceptorRegistration(ServiceIdType listeningServiceId, uint64_t interceptorId, uint64_t eventType, uint64_t priority) noexcept : _listeningServiceId(listeningServiceId), _interceptorId(interceptorId), _eventType(eventType), _priority(priority) {}
         EventInterceptorRegistration() noexcept = default;
         ~EventInterceptorRegistration();
 
@@ -50,7 +51,7 @@ namespace Ichor {
 
         void reset();
     private:
-        uint64_t _listeningServiceId{0};
+        ServiceIdType _listeningServiceId{0};
         uint64_t _interceptorId{0};
         uint64_t _eventType{0};
         uint64_t _priority{0};
@@ -60,7 +61,7 @@ namespace Ichor {
 
     class [[nodiscard]] DependencyTrackerRegistration final {
     public:
-        DependencyTrackerRegistration(uint64_t serviceId, uint64_t interfaceNameHash, uint64_t priority) noexcept : _serviceId(serviceId), _interfaceNameHash(interfaceNameHash), _priority(priority) {}
+        DependencyTrackerRegistration(ServiceIdType serviceId, uint64_t interfaceNameHash, uint64_t priority) noexcept : _serviceId(serviceId), _interfaceNameHash(interfaceNameHash), _priority(priority) {}
         DependencyTrackerRegistration() noexcept = default;
         ~DependencyTrackerRegistration();
 
@@ -80,7 +81,7 @@ namespace Ichor {
 
         void reset();
     private:
-        uint64_t _serviceId{0};
+        ServiceIdType _serviceId{0};
         uint64_t _interfaceNameHash{0};
         uint64_t _priority{0};
     };

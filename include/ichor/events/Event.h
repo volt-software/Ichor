@@ -1,9 +1,8 @@
 #pragma once
 
-#include <cstdint>
 #include <string_view>
-#include <ichor/Defines.h>
 #include <ichor/stl/CompilerSpecific.h>
+#include <ichor/CoreTypes.h>
 
 namespace Ichor {
     constexpr uint64_t INTERNAL_EVENT_PRIORITY = 1000;

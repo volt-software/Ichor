@@ -1629,17 +1629,19 @@ TEST_CASE("STL Tests") {
         REQUIRE(!SafeHexToUint("DEADBEEFDEADBEEFDEADBEEFDEADBEEF")); // overflow stuff happened, but it's defined behaviour
     }
 
+    struct StrongTypeTest : StrongTypedef<uint64_t, StrongTypeTest> {};
+
     SECTION("StrongTypedef") {
-        StrongTypedef<uint64_t, uint64_t> sul{};
+        StrongTypeTest sul{};
         ++sul;
         REQUIRE(sul.value == 1);
-        REQUIRE(sul++ == StrongTypedef<uint64_t, uint64_t>{1});
+        REQUIRE(sul++ == StrongTypeTest{1});
         REQUIRE(sul.value == 2);
         --sul;
         REQUIRE(sul.value == 1);
-        REQUIRE(sul-- == StrongTypedef<uint64_t, uint64_t>{1});
+        REQUIRE(sul-- == StrongTypeTest{1});
         REQUIRE(sul.value == 0);
-        REQUIRE(StrongTypedef<uint64_t, uint64_t>{1} > sul);
+        REQUIRE(StrongTypeTest{1} > sul);
 
     }
 }

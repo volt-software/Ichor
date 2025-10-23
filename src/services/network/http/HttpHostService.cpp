@@ -7,13 +7,13 @@
 
 
 template <>
-struct fmt::formatter<Ichor::unordered_set<Ichor::ServiceIdType>> {
+struct fmt::formatter<Ichor::unordered_set<Ichor::ServiceIdType, Ichor::ServiceIdHash>> {
     constexpr auto parse(format_parse_context& ctx) {
         return ctx.end();
     }
 
     template <typename FormatContext>
-    auto format(const Ichor::unordered_set<Ichor::ServiceIdType>& s, FormatContext& ctx) const {
+    auto format(const Ichor::unordered_set<Ichor::ServiceIdType, Ichor::ServiceIdHash>& s, FormatContext& ctx) const {
         bool first = true;
         fmt::format_to(ctx.out(), "(");
         for(const auto& id : s) {

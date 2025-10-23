@@ -72,7 +72,7 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests") {
         auto queue = std::make_unique<QIMPL>(500);
 #endif
         auto &dm = queue->createManager();
-        uint64_t ioSvcId{};
+        ServiceIdType ioSvcId{};
 
         std::thread t([&]() {
 #ifdef TEST_URING
@@ -87,7 +87,7 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests") {
 
         runForOrQueueEmpty(dm);
 
-        queue->pushEvent<RunFunctionEventAsync>(0, [&]() -> AsyncGenerator<IchorBehaviour> {
+        queue->pushEvent<RunFunctionEventAsync>(ServiceIdType{0}, [&]() -> AsyncGenerator<IchorBehaviour> {
             fmt::print("run function co_await\n");
             auto async_io_svc = dm.getService<IAsyncFileIO>(ioSvcId);
             REQUIRE(async_io_svc);
@@ -99,7 +99,7 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests") {
             }
             REQUIRE(!ret);
             REQUIRE(ret.error() == IOError::FILE_DOES_NOT_EXIST);
-            queue->pushEvent<QuitEvent>(0);
+            queue->pushEvent<QuitEvent>(ServiceIdType{0});
             co_return {};
         });
 
@@ -121,7 +121,7 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests") {
         auto queue = std::make_unique<QIMPL>(500);
 #endif
         auto &dm = queue->createManager();
-        uint64_t ioSvcId{};
+        ServiceIdType ioSvcId{};
 
         std::thread t([&]() {
             // moved to inside thread, because REQUIRE() isn't thread-safe -.-
@@ -149,7 +149,7 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests") {
 
         runForOrQueueEmpty(dm);
 
-        queue->pushEvent<RunFunctionEventAsync>(0, [&]() -> AsyncGenerator<IchorBehaviour> {
+        queue->pushEvent<RunFunctionEventAsync>(ServiceIdType{0}, [&]() -> AsyncGenerator<IchorBehaviour> {
             fmt::print("run function co_await\n");
             auto async_io_svc = dm.getService<IAsyncFileIO>(ioSvcId);
             tl::expected<std::string, Ichor::v1::IOError> ret = co_await async_io_svc->first->readWholeFile("NoPermIO.txt");
@@ -160,7 +160,7 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests") {
             }
             REQUIRE(!ret);
             REQUIRE(ret.error() == IOError::NO_PERMISSION);
-            queue->pushEvent<QuitEvent>(0);
+            queue->pushEvent<QuitEvent>(ServiceIdType{0});
             co_return {};
         });
 
@@ -184,7 +184,7 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests") {
         auto queue = std::make_unique<QIMPL>(500);
 #endif
         auto &dm = queue->createManager();
-        uint64_t ioSvcId{};
+        ServiceIdType ioSvcId{};
 
         std::thread t([&]() {
 #ifdef TEST_URING
@@ -205,13 +205,13 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests") {
 
         runForOrQueueEmpty(dm);
 
-        queue->pushEvent<RunFunctionEventAsync>(0, [&]() -> AsyncGenerator<IchorBehaviour> {
+        queue->pushEvent<RunFunctionEventAsync>(ServiceIdType{0}, [&]() -> AsyncGenerator<IchorBehaviour> {
             fmt::print("run function co_await\n");
             auto async_io_svc = dm.getService<IAsyncFileIO>(ioSvcId);
             tl::expected<std::string, Ichor::v1::IOError> ret = co_await async_io_svc->first->readWholeFile("AsyncFileIO.txt");
             fmt::print("require\n");
             REQUIRE(ret == "This is a test");
-            queue->pushEvent<QuitEvent>(0);
+            queue->pushEvent<QuitEvent>(ServiceIdType{0});
             co_return {};
         });
 
@@ -232,7 +232,7 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests") {
         auto queue = std::make_unique<QIMPL>(500);
 #endif
         auto &dm = queue->createManager();
-        uint64_t ioSvcId{};
+        ServiceIdType ioSvcId{};
 
         std::thread t([&]() {
 #ifdef TEST_URING
@@ -247,7 +247,7 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests") {
 
         runForOrQueueEmpty(dm);
 
-        queue->pushEvent<RunFunctionEventAsync>(0, [&]() -> AsyncGenerator<IchorBehaviour> {
+        queue->pushEvent<RunFunctionEventAsync>(ServiceIdType{0}, [&]() -> AsyncGenerator<IchorBehaviour> {
             fmt::println("run function co_await");
             auto async_io_svc = dm.getService<IAsyncFileIO>(ioSvcId);
             tl::expected<std::string, Ichor::v1::IOError> ret = co_await async_io_svc->first->readWholeFile("BigFile.txt");
@@ -258,7 +258,7 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests") {
             }
             REQUIRE(ret);
             REQUIRE((*ret).size() == (uint64_t)bigFilefilesize);
-            queue->pushEvent<QuitEvent>(0);
+            queue->pushEvent<QuitEvent>(ServiceIdType{0});
             co_return {};
         });
 
@@ -280,7 +280,7 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests") {
         auto queue = std::make_unique<QIMPL>(500);
 #endif
         auto &dm = queue->createManager();
-        uint64_t ioSvcId{};
+        ServiceIdType ioSvcId{};
 
         std::thread t([&]() {
 #ifdef TEST_URING
@@ -295,14 +295,14 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests") {
 
         runForOrQueueEmpty(dm);
 
-        queue->pushEvent<RunFunctionEventAsync>(0, [&]() -> AsyncGenerator<IchorBehaviour> {
+        queue->pushEvent<RunFunctionEventAsync>(ServiceIdType{0}, [&]() -> AsyncGenerator<IchorBehaviour> {
             fmt::print("run function co_await\n");
             auto async_io_svc = dm.getService<IAsyncFileIO>(ioSvcId);
             tl::expected<void, Ichor::v1::IOError> ret = co_await async_io_svc->first->copyFile("NonExistentFile.txt", "DestinationNull.txt");
             fmt::print("require\n");
             REQUIRE(!ret);
             REQUIRE(ret.error() == IOError::FILE_DOES_NOT_EXIST);
-            queue->pushEvent<QuitEvent>(0);
+            queue->pushEvent<QuitEvent>(ServiceIdType{0});
             co_return {};
         });
 
@@ -324,7 +324,7 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests") {
         auto queue = std::make_unique<QIMPL>(500);
 #endif
         auto &dm = queue->createManager();
-        uint64_t ioSvcId{};
+        ServiceIdType ioSvcId{};
 
         std::thread t([&]() {
 #ifdef TEST_URING
@@ -347,7 +347,7 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests") {
 
         runForOrQueueEmpty(dm);
 
-        queue->pushEvent<RunFunctionEventAsync>(0, [&]() -> AsyncGenerator<IchorBehaviour> {
+        queue->pushEvent<RunFunctionEventAsync>(ServiceIdType{0}, [&]() -> AsyncGenerator<IchorBehaviour> {
             fmt::print("run function co_await\n");
             auto async_io_svc = dm.getService<IAsyncFileIO>(ioSvcId);
             {
@@ -357,7 +357,7 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests") {
             }
             tl::expected<std::string, Ichor::v1::IOError> ret = co_await async_io_svc->first->readWholeFile("Destination.txt");
             REQUIRE(ret == "This is a test");
-            queue->pushEvent<QuitEvent>(0);
+            queue->pushEvent<QuitEvent>(ServiceIdType{0});
             co_return {};
         });
 
@@ -379,7 +379,7 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests") {
         auto queue = std::make_unique<QIMPL>(500);
 #endif
         auto &dm = queue->createManager();
-        uint64_t ioSvcId{};
+        ServiceIdType ioSvcId{};
 
         std::thread t([&]() {
 #ifdef TEST_URING
@@ -396,7 +396,7 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests") {
 
         runForOrQueueEmpty(dm);
 
-        queue->pushEvent<RunFunctionEventAsync>(0, [&]() -> AsyncGenerator<IchorBehaviour> {
+        queue->pushEvent<RunFunctionEventAsync>(ServiceIdType{0}, [&]() -> AsyncGenerator<IchorBehaviour> {
             fmt::print("run function co_await\n");
             auto async_io_svc = dm.getService<IAsyncFileIO>(ioSvcId);
             {
@@ -407,7 +407,7 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests") {
             tl::expected<std::string, Ichor::v1::IOError> ret = co_await async_io_svc->first->readWholeFile("Destination.txt");
             REQUIRE(ret);
             REQUIRE((*ret).size() == (uint64_t)bigFilefilesize);
-            queue->pushEvent<QuitEvent>(0);
+            queue->pushEvent<QuitEvent>(ServiceIdType{0});
             co_return {};
         });
 
@@ -429,7 +429,7 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests") {
         auto queue = std::make_unique<QIMPL>(500);
 #endif
         auto &dm = queue->createManager();
-        uint64_t ioSvcId{};
+        ServiceIdType ioSvcId{};
 
         std::thread t([&]() {
 #ifdef TEST_URING
@@ -444,13 +444,13 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests") {
 
         runForOrQueueEmpty(dm);
 
-        queue->pushEvent<RunFunctionEventAsync>(0, [&]() -> AsyncGenerator<IchorBehaviour> {
+        queue->pushEvent<RunFunctionEventAsync>(ServiceIdType{0}, [&]() -> AsyncGenerator<IchorBehaviour> {
             fmt::print("run function co_await\n");
             auto async_io_svc = dm.getService<IAsyncFileIO>(ioSvcId);
             tl::expected<void, Ichor::v1::IOError> ret = co_await async_io_svc->first->removeFile("MissingFile.txt");
             REQUIRE(!ret);
             REQUIRE(ret.error() == IOError::FILE_DOES_NOT_EXIST);
-            queue->pushEvent<QuitEvent>(0);
+            queue->pushEvent<QuitEvent>(ServiceIdType{0});
             co_return {};
         });
 
@@ -472,7 +472,7 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests") {
         auto queue = std::make_unique<QIMPL>(500);
 #endif
         auto &dm = queue->createManager();
-        uint64_t ioSvcId{};
+        ServiceIdType ioSvcId{};
 
         std::thread t([&]() {
 #ifdef TEST_URING
@@ -493,7 +493,7 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests") {
 
         runForOrQueueEmpty(dm);
 
-        queue->pushEvent<RunFunctionEventAsync>(0, [&]() -> AsyncGenerator<IchorBehaviour> {
+        queue->pushEvent<RunFunctionEventAsync>(ServiceIdType{0}, [&]() -> AsyncGenerator<IchorBehaviour> {
             fmt::print("run function co_await\n");
             auto async_io_svc = dm.getService<IAsyncFileIO>(ioSvcId);
             {
@@ -504,7 +504,7 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests") {
             tl::expected<std::string, Ichor::v1::IOError> ret = co_await async_io_svc->first->readWholeFile("AsyncFileIO.txt");
             REQUIRE(!ret);
             REQUIRE(ret.error() == IOError::FILE_DOES_NOT_EXIST);
-            queue->pushEvent<QuitEvent>(0);
+            queue->pushEvent<QuitEvent>(ServiceIdType{0});
             co_return {};
         });
 
@@ -526,7 +526,7 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests") {
         auto queue = std::make_unique<QIMPL>(500);
 #endif
         auto &dm = queue->createManager();
-        uint64_t ioSvcId{};
+        ServiceIdType ioSvcId{};
 
         std::thread t([&]() {
 #ifdef TEST_URING
@@ -545,7 +545,7 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests") {
 
         runForOrQueueEmpty(dm);
 
-        queue->pushEvent<RunFunctionEventAsync>(0, [&]() -> AsyncGenerator<IchorBehaviour> {
+        queue->pushEvent<RunFunctionEventAsync>(ServiceIdType{0}, [&]() -> AsyncGenerator<IchorBehaviour> {
             fmt::print("run function co_await\n");
             auto async_io_svc = dm.getService<IAsyncFileIO>(ioSvcId);
             {
@@ -556,7 +556,7 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests") {
             tl::expected<std::string, Ichor::v1::IOError> ret = co_await async_io_svc->first->readWholeFile("AsyncFileIO.txt");
             REQUIRE(ret);
             REQUIRE(ret == "This is a test");
-            queue->pushEvent<QuitEvent>(0);
+            queue->pushEvent<QuitEvent>(ServiceIdType{0});
             co_return {};
         });
 
@@ -578,7 +578,7 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests") {
         auto queue = std::make_unique<QIMPL>(500);
 #endif
         auto &dm = queue->createManager();
-        uint64_t ioSvcId{};
+        ServiceIdType ioSvcId{};
 
         std::thread t([&]() {
 #ifdef TEST_URING
@@ -599,7 +599,7 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests") {
 
         runForOrQueueEmpty(dm);
 
-        queue->pushEvent<RunFunctionEventAsync>(0, [&]() -> AsyncGenerator<IchorBehaviour> {
+        queue->pushEvent<RunFunctionEventAsync>(ServiceIdType{0}, [&]() -> AsyncGenerator<IchorBehaviour> {
             fmt::print("run function co_await\n");
             auto async_io_svc = dm.getService<IAsyncFileIO>(ioSvcId);
             tl::expected<std::string, Ichor::v1::IOError> ret = co_await async_io_svc->first->readWholeFile("AsyncFileIO.txt");
@@ -612,7 +612,7 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests") {
             ret = co_await async_io_svc->first->readWholeFile("AsyncFileIO.txt");
             REQUIRE(ret);
             REQUIRE(ret == "Overwrite");
-            queue->pushEvent<QuitEvent>(0);
+            queue->pushEvent<QuitEvent>(ServiceIdType{0});
             co_return {};
         });
 
@@ -634,7 +634,7 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests") {
         auto queue = std::make_unique<QIMPL>(500);
 #endif
         auto &dm = queue->createManager();
-        uint64_t ioSvcId{};
+        ServiceIdType ioSvcId{};
 
         std::thread t([&]() {
 #ifdef TEST_URING
@@ -655,7 +655,7 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests") {
 
         runForOrQueueEmpty(dm);
 
-        queue->pushEvent<RunFunctionEventAsync>(0, [&]() -> AsyncGenerator<IchorBehaviour> {
+        queue->pushEvent<RunFunctionEventAsync>(ServiceIdType{0}, [&]() -> AsyncGenerator<IchorBehaviour> {
             fmt::print("run function co_await\n");
             auto async_io_svc = dm.getService<IAsyncFileIO>(ioSvcId);
             tl::expected<std::string, Ichor::v1::IOError> ret = co_await async_io_svc->first->readWholeFile("AsyncFileIO.txt");
@@ -668,7 +668,7 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests") {
             ret = co_await async_io_svc->first->readWholeFile("AsyncFileIO.txt");
             REQUIRE(ret);
             REQUIRE(ret == "This is a testOverwrite");
-            queue->pushEvent<QuitEvent>(0);
+            queue->pushEvent<QuitEvent>(ServiceIdType{0});
             co_return {};
         });
 

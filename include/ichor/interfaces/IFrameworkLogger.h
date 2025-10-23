@@ -2,6 +2,7 @@
 
 #include <fmt/base.h>
 #include <ichor/Defines.h>
+#include <ichor/CoreTypes.h>
 #include <ichor/Enums.h>
 
 #ifndef ICHOR_REMOVE_SOURCE_NAMES_FROM_LOGGING

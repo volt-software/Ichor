@@ -53,18 +53,18 @@ TEST_CASE("AsyncReturningManualResetEvent") {
         runForOrQueueEmpty(dm);
         NoCopyNoMove nocopy;
 
-        queue->pushEvent<RunFunctionEventAsync>(0, [&]() -> AsyncGenerator<IchorBehaviour> {
+        queue->pushEvent<RunFunctionEventAsync>(ServiceIdType{0}, [&]() -> AsyncGenerator<IchorBehaviour> {
             auto svc = dm.getService<IAwaitReturningManualResetService>(id);
             REQUIRE(svc);
 
-            queue->pushEvent<RunFunctionEvent>(0, [&]() {
+            queue->pushEvent<RunFunctionEvent>(ServiceIdType{0}, [&]() {
                 _evtInt.set(5);
             });
 
             auto intRet = co_await _evtInt;
             REQUIRE(intRet == 5);
 
-            queue->pushEvent<RunFunctionEvent>(0, [&]() {
+            queue->pushEvent<RunFunctionEvent>(ServiceIdType{0}, [&]() {
                 _evtNoCopyNoMove.set(nocopy);
             });
 
@@ -72,7 +72,7 @@ TEST_CASE("AsyncReturningManualResetEvent") {
             REQUIRE(awaitedNocopy.countConstructed == 1);
             REQUIRE(awaitedNocopy.countDestructed == 0);
 
-            queue->pushEvent<QuitEvent>(0);
+            queue->pushEvent<QuitEvent>(ServiceIdType{0});
 
             co_return {};
         });

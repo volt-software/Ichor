@@ -66,8 +66,8 @@ namespace Ichor::v1 {
         unordered_map<HttpMethod, unordered_map<std::unique_ptr<RouteMatcher>, std::function<Task<HttpResponse>(HttpRequest&)>>> _handlers{};
         Ichor::ScopedServiceProxy<ILogger*> _logger {};
         Ichor::ScopedServiceProxy<IEventQueue*> _queue ;
-        unordered_set<ServiceIdType> _hostServiceIds;
-        unordered_map<ServiceIdType, Ichor::ScopedServiceProxy<IHostConnectionService*>> _connections;
-        unordered_map<ServiceIdType, std::string> _connectionBuffers;
+        unordered_set<ServiceIdType, ServiceIdHash> _hostServiceIds;
+        unordered_map<ServiceIdType, Ichor::ScopedServiceProxy<IHostConnectionService*>, ServiceIdHash> _connections;
+        unordered_map<ServiceIdType, std::string, ServiceIdHash> _connectionBuffers;
     };
 }

@@ -2,7 +2,7 @@
 
 #include <ichor/dependency_management/LifecycleManager.h>
 
-extern thread_local Ichor::unordered_set<uint64_t> Ichor::Detail::emptyDependencies;
+extern thread_local Ichor::unordered_set<ServiceIdType, ServiceIdHash> Ichor::Detail::emptyDependencies;
 
 class FakeLifecycleManager final : public ILifecycleManager {
 public:
@@ -16,10 +16,10 @@ public:
     AsyncGenerator<StartBehaviour> dependencyOffline(v1::NeverNull<ILifecycleManager *> dependentService, std::vector<Dependency *> deps) override {
         return {};
     }
-    unordered_set<ServiceIdType> &getDependencies() noexcept override {
+    unordered_set<ServiceIdType, ServiceIdHash> &getDependencies() noexcept override {
         return Ichor::Detail::emptyDependencies;
     }
-    unordered_set<ServiceIdType> &getDependees() noexcept override {
+    unordered_set<ServiceIdType, ServiceIdHash> &getDependees() noexcept override {
         return _serviceIdsOfDependees;
     }
     AsyncGenerator<StartBehaviour> startAfterDependencyOnline() override {
@@ -44,7 +44,7 @@ public:
         return 0;
     }
     ServiceIdType serviceId() const noexcept override {
-        return 0;
+        return ServiceIdType{0};
     }
     uint64_t getPriority() const noexcept override {
         return 0;
@@ -74,7 +74,7 @@ public:
 
     }
 
-    unordered_set<uint64_t> _serviceIdsOfDependees; // services that depend on this service
+    unordered_set<ServiceIdType, ServiceIdHash> _serviceIdsOfDependees; // services that depend on this service
     Properties _properties;
     DependencyRegister *_dependencyRegistry{};
 };

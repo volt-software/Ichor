@@ -6,6 +6,7 @@
 #include <ichor/Common.h>
 #include <ichor/Enums.h>
 #include <ichor/stl/CompilerSpecific.h>
+#include <ichor/CoreTypes.h>
 
 namespace Ichor {
     class IService {

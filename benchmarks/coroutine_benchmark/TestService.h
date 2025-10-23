@@ -20,7 +20,7 @@ using namespace Ichor;
 using namespace Ichor::v1;
 
 struct UselessEvent final : public Event {
-    constexpr explicit UselessEvent(uint64_t _id, uint64_t _originatingService, uint64_t _priority) noexcept :
+    constexpr explicit UselessEvent(uint64_t _id, ServiceIdType _originatingService, uint64_t _priority) noexcept :
             Event(_id, _originatingService, _priority) {}
     constexpr ~UselessEvent() final = default;
 

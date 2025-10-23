@@ -77,7 +77,7 @@ private:
 
     Ichor::ScopedServiceProxy<ILogger*> _logger {};
     Ichor::ScopedServiceProxy<DependencyManager*> _dm {};
-    uint64_t _testServiceId{0};
+    ServiceIdType _testServiceId{0};
     std::chrono::steady_clock::time_point _start{};
     uint64_t startCount{0};
 };

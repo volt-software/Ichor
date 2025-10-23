@@ -90,7 +90,7 @@ struct CheckMixService final : public ICountService, public AdvancedService<Chec
         }
 
         if(svcCount == 12) {
-            GetThreadLocalEventQueue().pushEvent<QuitEvent>(0);
+            GetThreadLocalEventQueue().pushEvent<QuitEvent>(ServiceIdType{0});
         }
     }
 
@@ -116,7 +116,7 @@ struct CheckMixService final : public ICountService, public AdvancedService<Chec
         }
 
         if(svcCount == 12) {
-            GetThreadLocalEventQueue().pushEvent<QuitEvent>(0);
+            GetThreadLocalEventQueue().pushEvent<QuitEvent>(ServiceIdType{0});
         }
     }
 
@@ -133,5 +133,5 @@ struct CheckMixService final : public ICountService, public AdvancedService<Chec
     }
 
     uint64_t svcCount{};
-    std::unordered_map<uint64_t, Handle> _services;
+    std::unordered_map<ServiceIdType, Handle, ServiceIdHash> _services;
 };

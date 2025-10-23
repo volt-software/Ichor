@@ -571,7 +571,7 @@ namespace Ichor {
                 }
 
                 auto start = std::chrono::steady_clock::now();
-                GetThreadLocalEventQueue().pushEvent<RunFunctionEventAsync>(0, [this, start]() -> AsyncGenerator<IchorBehaviour> {
+                GetThreadLocalEventQueue().pushEvent<RunFunctionEventAsync>(ServiceIdType{0}, [this, start]() -> AsyncGenerator<IchorBehaviour> {
                     auto now = std::chrono::steady_clock::now();
                     while(now - start < std::chrono::milliseconds(250)) {
                         co_yield IchorBehaviour::DONE;

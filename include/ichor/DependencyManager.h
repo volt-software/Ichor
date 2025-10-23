@@ -80,8 +80,8 @@ namespace Ichor {
 
                 iterator() noexcept : _dm(nullptr), _dependees(nullptr) {}
                 iterator(DependencyManager const *dm,
-                            unordered_set<ServiceIdType> const *dependees,
-                            unordered_set<ServiceIdType>::const_iterator it) noexcept
+                            unordered_set<ServiceIdType, ServiceIdHash> const *dependees,
+                            unordered_set<ServiceIdType, ServiceIdHash>::const_iterator it) noexcept
                         : _dm(dm), _dependees(dependees), _it(it) {
                     advanceToValid();
                 }
@@ -121,8 +121,8 @@ namespace Ichor {
                 }
 
                 DependencyManager const *_dm;
-                unordered_set<ServiceIdType> const *_dependees;
-                unordered_set<ServiceIdType>::const_iterator _it{};
+                unordered_set<ServiceIdType, ServiceIdHash> const *_dependees;
+                unordered_set<ServiceIdType, ServiceIdHash>::const_iterator _it{};
             };
 
             [[nodiscard]] ICHOR_PURE_FUNC_ATTR iterator begin() const noexcept {
@@ -140,7 +140,7 @@ namespace Ichor {
             [[nodiscard]] ICHOR_PURE_FUNC_ATTR bool empty() const noexcept { return begin() == end(); }
 
             DependencyManager const *_dm{};
-            unordered_set<ServiceIdType> const *_dependees{};
+            unordered_set<ServiceIdType, ServiceIdHash> const *_dependees{};
         };
 
         // Non-allocating view over dependency trackers (DependencyTrackerKey) for a given service id.
@@ -153,7 +153,7 @@ namespace Ichor {
                 using difference_type = std::ptrdiff_t;
                 using iterator_category = std::forward_iterator_tag;
 
-                iterator() noexcept : _map(nullptr), _svcId(0) {}
+                iterator() noexcept : _map(nullptr), _svcId(ServiceIdType{0}) {}
                 iterator(map_type const *map,
                          ServiceIdType svcId,
                          map_type::const_iterator it) noexcept
@@ -227,7 +227,7 @@ namespace Ichor {
                 IService const *second{}; // non-owning; never-null when dereferenced via iterator
             };
 
-            using map_type = unordered_map<ServiceIdType, std::unique_ptr<ILifecycleManager>>;
+            using map_type = unordered_map<ServiceIdType, std::unique_ptr<ILifecycleManager>, ServiceIdHash>;
 
             struct iterator {
                 using difference_type = std::ptrdiff_t;
@@ -393,7 +393,7 @@ namespace Ichor {
             static_assert(!std::is_same_v<EventT, DependencyOfflineEvent>, "DependencyOfflineEvent cannot be used in an async manner");
 
             if constexpr (DO_INTERNAL_DEBUG || DO_HARDENING) {
-                if (originatingServiceId != 0 && _services.find(originatingServiceId) == _services.end()) [[unlikely]] {
+                if (originatingServiceId != ServiceIdType{0} && _services.find(originatingServiceId) == _services.end()) [[unlikely]] {
                     ICHOR_EMERGENCY_LOG2(_logger, "Trying to push event with unknown service id {}.", originatingServiceId);
                     std::terminate();
                 }
@@ -573,16 +573,16 @@ namespace Ichor {
             auto existingHandlers = _eventInterceptors.find(targetEventId);
             if(existingHandlers == end(_eventInterceptors)) {
                 std::vector<EventInterceptInfo> v{};
-                v.template emplace_back<>(EventInterceptInfo{interceptorId, 0,
+                v.template emplace_back<>(EventInterceptInfo{interceptorId, {},
                     [fn = std::move(preInterceptFn)](const Event &evt) -> bool { return fn(static_cast<EventT const &>(evt)); },
                     [fn = std::move(postInterceptFn)](const Event &evt, bool processed) -> void { fn(static_cast<EventT const &>(evt), processed); }});
                 _eventInterceptors.emplace(targetEventId, std::move(v));
             } else {
-                existingHandlers->second.template emplace_back<>(EventInterceptInfo{interceptorId, 0,
+                existingHandlers->second.template emplace_back<>(EventInterceptInfo{interceptorId, {},
                     [fn = std::move(preInterceptFn)](const Event &evt) -> bool { return fn(static_cast<EventT const &>(evt)); },
                     [fn = std::move(postInterceptFn)](const Event &evt, bool processed) -> void { fn(static_cast<EventT const &>(evt), processed); }});
             }
-            return {0, interceptorId, targetEventId, INTERNAL_EVENT_PRIORITY};
+            return {ServiceIdType{0}, interceptorId, targetEventId, INTERNAL_EVENT_PRIORITY};
         }
 
         /// Get manager id. Thread-safe.
@@ -661,8 +661,8 @@ namespace Ichor {
             Interface* ret{};
             IService* retIsvc{};
             std::function<void(v1::NeverNull<void*>, IService&)> f{[&ret, &retIsvc](v1::NeverNull<void*> svc2, IService& isvc){ ret = reinterpret_cast<Interface*>(svc2.get()); retIsvc = &isvc; }};
-            svc->second->insertSelfInto(typeNameHash<Interface>(), 0, f);
-            svc->second->getDependees().erase(0);
+            svc->second->insertSelfInto(typeNameHash<Interface>(), ServiceIdType{0}, f);
+            svc->second->getDependees().erase(ServiceIdType{0});
 
             return std::pair<Interface*, IService*>(ret, retIsvc);
         }
@@ -681,8 +681,8 @@ namespace Ichor {
                 if(svc->getServiceState() != ServiceState::ACTIVE) {
                     continue;
                 }
-                svc->insertSelfInto(typeNameHash<Interface>(), 0, f);
-                svc->getDependees().erase(0);
+                svc->insertSelfInto(typeNameHash<Interface>(), ServiceIdType{0}, f);
+                svc->getDependees().erase(ServiceIdType{0});
             }
 
             return ret;
@@ -710,8 +710,8 @@ namespace Ichor {
                 if(intf == svc->getInterfaces().end()) {
                     continue;
                 }
-                svc->insertSelfInto(typeNameHash<Interface>(), 0, f);
-                svc->getDependees().erase(0);
+                svc->insertSelfInto(typeNameHash<Interface>(), ServiceIdType{0}, f);
+                svc->getDependees().erase(ServiceIdType{0});
             }
 
             return ret;
@@ -917,15 +917,15 @@ namespace Ichor {
         bool finishWaitingService(ServiceIdType serviceId, uint64_t eventType, [[maybe_unused]] std::string_view eventName) noexcept;
         void checkIfCanQuit(std::vector<EventInterceptInfo> &allEventInterceptorsCopy, std::vector<EventInterceptInfo> &eventInterceptorsCopy) noexcept;
 
-        unordered_map<ServiceIdType, std::unique_ptr<ILifecycleManager>> _services{}; // key = service id
+        unordered_map<ServiceIdType, std::unique_ptr<ILifecycleManager>, ServiceIdHash> _services{}; // key = service id
         unordered_map<DependencyTrackerKey, std::vector<DependencyTrackerInfo>, DependencyTrackerKeyHash, std::equal_to<>> _dependencyRequestTrackers{}; // key = interface name hash
         unordered_map<uint64_t, std::vector<EventCallbackInfo>> _eventCallbacks{}; // key = event id
         unordered_map<uint64_t, std::vector<EventInterceptInfo>> _eventInterceptors{}; // key = event id
         unordered_map<uint64_t, std::unique_ptr<IGenerator>> _scopedGenerators{}; // key = promise id
         unordered_map<uint64_t, v1::ReferenceCountedPointer<Event>> _scopedEvents{}; // key = promise id
         unordered_map<uint64_t, EventWaiter> _eventWaiters{}; // key = event id
-        unordered_map<ServiceIdType, EventWaiter> _dependencyWaiters{}; // key = service id
-        unordered_map<ServiceIdType, WaitingStopService> _pendingStops{}; // key = service id
+        unordered_map<ServiceIdType, EventWaiter, ServiceIdHash> _dependencyWaiters{}; // key = service id
+        unordered_map<ServiceIdType, WaitingStopService, ServiceIdHash> _pendingStops{}; // key = service id
         IEventQueue * const _eventQueue;
         IFrameworkLogger *_logger{};
         std::atomic<bool> _started{false};

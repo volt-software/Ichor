@@ -5,7 +5,7 @@
 using namespace Ichor;
 
 struct TestEvent final : public Event {
-    constexpr explicit TestEvent(uint64_t _id, uint64_t _originatingService, uint64_t _priority) noexcept :
+    constexpr explicit TestEvent(uint64_t _id, ServiceIdType _originatingService, uint64_t _priority) noexcept :
             Event(_id, _originatingService, _priority) {}
     constexpr ~TestEvent() final = default;
 
@@ -21,7 +21,7 @@ struct TestEvent final : public Event {
 };
 
 struct TestEvent2 final : public Event {
-    constexpr explicit TestEvent2(uint64_t _id, uint64_t _originatingService, uint64_t _priority) noexcept :
+    constexpr explicit TestEvent2(uint64_t _id, ServiceIdType _originatingService, uint64_t _priority) noexcept :
             Event(_id, _originatingService, _priority) {}
     constexpr ~TestEvent2() final = default;
 

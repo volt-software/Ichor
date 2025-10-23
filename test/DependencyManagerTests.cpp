@@ -64,7 +64,7 @@ TEST_CASE("DependencyManager") {
 
         REQUIRE(dm.isRunning());
 
-        queue->pushEvent<QuitEvent>(0);
+        queue->pushEvent<QuitEvent>(ServiceIdType{0});
 
         t.join();
 
@@ -105,7 +105,7 @@ TEST_CASE("DependencyManager") {
     SECTION("DependencyManager", "Get services functions") {
         auto queue = std::make_unique<PriorityQueue>();
         auto &dm = queue->createManager();
-        uint64_t uselessSvcId{};
+        ServiceIdType uselessSvcId{};
         sole::uuid loggerUuid{};
 
         std::thread t([&]() {
@@ -119,7 +119,7 @@ TEST_CASE("DependencyManager") {
 
         runForOrQueueEmpty(dm);
 
-        queue->pushEvent<RunFunctionEvent>(0, [&]() {
+        queue->pushEvent<RunFunctionEvent>(ServiceIdType{0}, [&]() {
             REQUIRE(dm.getServiceCount() == 5);
 
             auto svc = dm.getIService(uselessSvcId);
@@ -137,7 +137,7 @@ TEST_CASE("DependencyManager") {
             auto startedSvc = dm.getStartedServices<IUselessService>();
             REQUIRE(startedSvc.size() == 2);
 
-            queue->pushEvent<QuitEvent>(0);
+            queue->pushEvent<QuitEvent>(ServiceIdType{0});
         });
 
         t.join();
@@ -168,7 +168,7 @@ TEST_CASE("DependencyManager") {
 
         AsyncManualResetEvent evt;
 
-        queue->pushEvent<RunFunctionEventAsync>(0, [&]() -> AsyncGenerator<IchorBehaviour> {
+        queue->pushEvent<RunFunctionEventAsync>(ServiceIdType{0}, [&]() -> AsyncGenerator<IchorBehaviour> {
             REQUIRE(Ichor::Detail::_local_dm == &dm);
             REQUIRE(testThreadId != std::this_thread::get_id());
             REQUIRE(dmThreadId == std::this_thread::get_id());
@@ -176,7 +176,7 @@ TEST_CASE("DependencyManager") {
             REQUIRE(Ichor::Detail::_local_dm == &dm);
             REQUIRE(testThreadId != std::this_thread::get_id());
             REQUIRE(dmThreadId == std::this_thread::get_id());
-            queue->pushEvent<QuitEvent>(0);
+            queue->pushEvent<QuitEvent>(ServiceIdType{0});
             co_return {};
         });
 
@@ -184,7 +184,7 @@ TEST_CASE("DependencyManager") {
 
         REQUIRE(Ichor::Detail::_local_dm == nullptr);
 
-        queue->pushEvent<RunFunctionEvent>(0, [&]() {
+        queue->pushEvent<RunFunctionEvent>(ServiceIdType{0}, [&]() {
             REQUIRE(Ichor::Detail::_local_dm == &dm);
             REQUIRE(testThreadId != std::this_thread::get_id());
             REQUIRE(dmThreadId == std::this_thread::get_id());
@@ -209,10 +209,10 @@ TEST_CASE("DependencyManager") {
 
         REQUIRE(dm.isRunning());
 
-        queue->pushEvent<RunFunctionEvent>(0, [&]() {
+        queue->pushEvent<RunFunctionEvent>(ServiceIdType{0}, [&]() {
             REQUIRE(queue->size() == 1);
             {
-                EventHandlerRegistration reg{CallbackKey{234, 345}, 123};
+                EventHandlerRegistration reg{CallbackKey{ServiceIdType{234}, 345}, 123};
                 REQUIRE(queue->size() == 1);
                 reg.reset();
                 REQUIRE(queue->size() == 2);
@@ -221,7 +221,7 @@ TEST_CASE("DependencyManager") {
             }
             REQUIRE(queue->size() == 2);
             {
-                EventInterceptorRegistration reg{234, 345, 456, 567};
+                EventInterceptorRegistration reg{ServiceIdType{234}, 345, 456, 567};
                 REQUIRE(queue->size() == 2);
                 reg.reset();
                 REQUIRE(queue->size() == 3);
@@ -230,7 +230,7 @@ TEST_CASE("DependencyManager") {
             }
             REQUIRE(queue->size() == 3);
             {
-                DependencyTrackerRegistration reg{234, 345, 123};
+                DependencyTrackerRegistration reg{ServiceIdType{234}, 345, 123};
                 REQUIRE(queue->size() == 3);
                 reg.reset();
                 REQUIRE(queue->size() == 4);
@@ -239,7 +239,7 @@ TEST_CASE("DependencyManager") {
             }
             REQUIRE(queue->size() == 4);
 
-            queue->pushEvent<QuitEvent>(0);
+            queue->pushEvent<QuitEvent>(ServiceIdType{0});
         });
 
         t.join();
@@ -258,28 +258,28 @@ TEST_CASE("DependencyManager") {
 
         REQUIRE(dm.isRunning());
 
-        queue->pushEvent<RunFunctionEvent>(0, [&]() {
+        queue->pushEvent<RunFunctionEvent>(ServiceIdType{0}, [&]() {
             REQUIRE(queue->size() == 1);
             {
-                EventHandlerRegistration reg{CallbackKey{234, 345}, 123};
-                reg = EventHandlerRegistration{CallbackKey{345, 456}, 234};
+                EventHandlerRegistration reg{CallbackKey{ServiceIdType{234}, 345}, 123};
+                reg = EventHandlerRegistration{CallbackKey{ServiceIdType{345}, 456}, 234};
                 REQUIRE(queue->size() == 2);
             }
             REQUIRE(queue->size() == 3);
             {
-                EventInterceptorRegistration reg{234, 345, 456, 567};
-                reg = EventInterceptorRegistration{432, 543, 654, 765};
+                EventInterceptorRegistration reg{ServiceIdType{234}, 345, 456, 567};
+                reg = EventInterceptorRegistration{ServiceIdType{432}, 543, 654, 765};
                 REQUIRE(queue->size() == 4);
             }
             REQUIRE(queue->size() == 5);
             {
-                DependencyTrackerRegistration reg{234, 345, 123};
-                reg = DependencyTrackerRegistration{345, 456, 234};
+                DependencyTrackerRegistration reg{ServiceIdType{234}, 345, 123};
+                reg = DependencyTrackerRegistration{ServiceIdType{345}, 456, 234};
                 REQUIRE(queue->size() == 6);
             }
             REQUIRE(queue->size() == 7);
 
-            queue->pushEvent<QuitEvent>(0);
+            queue->pushEvent<QuitEvent>(ServiceIdType{0});
         });
 
         t.join();
@@ -298,22 +298,22 @@ TEST_CASE("DependencyManager") {
 
         REQUIRE(dm.isRunning());
 
-        queue->pushEvent<RunFunctionEvent>(0, [&]() {
+        queue->pushEvent<RunFunctionEvent>(ServiceIdType{0}, [&]() {
             REQUIRE(queue->size() == 1);
             {
-                EventHandlerRegistration reg{EventHandlerRegistration{CallbackKey{345, 456}, 234}};
+                EventHandlerRegistration reg{EventHandlerRegistration{CallbackKey{ServiceIdType{345}, 456}, 234}};
             }
             REQUIRE(queue->size() == 2);
             {
-                EventInterceptorRegistration reg{EventInterceptorRegistration{234, 345, 456, 567}};
+                EventInterceptorRegistration reg{EventInterceptorRegistration{ServiceIdType{234}, 345, 456, 567}};
             }
             REQUIRE(queue->size() == 3);
             {
-                DependencyTrackerRegistration reg{DependencyTrackerRegistration{345, 456, 234}};
+                DependencyTrackerRegistration reg{DependencyTrackerRegistration{ServiceIdType{345}, 456, 234}};
             }
             REQUIRE(queue->size() == 4);
 
-            queue->pushEvent<QuitEvent>(0);
+            queue->pushEvent<QuitEvent>(ServiceIdType{0});
         });
 
         t.join();
@@ -343,9 +343,9 @@ TEST_CASE("DependencyManager") {
         REQUIRE(preIntercepted == 2);
         REQUIRE(postIntercepted == 2);
 
-        queue->pushEvent<RunFunctionEvent>(0, [&]() {
+        queue->pushEvent<RunFunctionEvent>(ServiceIdType{0}, [&]() {
             evtInterceptor.reset();
-            queue->pushEvent<QuitEvent>(0);
+            queue->pushEvent<QuitEvent>(ServiceIdType{0});
         });
 
         t.join();
