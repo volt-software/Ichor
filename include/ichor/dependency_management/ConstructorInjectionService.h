@@ -174,8 +174,8 @@ namespace Ichor {
 
         template <typename T, int... Ns>
         constexpr int fields_number_ctor(...) {
-            static_assert(sizeof...(Ns) < 128,
-                  "Constructor injection supports at most 128 dependencies");
+            static_assert(sizeof...(Ns) < 64,
+                  "Constructor injection supports at most 64 dependencies");
             return fields_number_ctor<T, Ns..., sizeof...(Ns)>(0);
         }
 
