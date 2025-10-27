@@ -111,7 +111,7 @@ void Ichor::BoostAsioQueue::shouldAddQuitEvent() {
     bool const shouldQuit = Detail::sigintQuit.load(std::memory_order_acquire);
 
     if(shouldQuit && !_quitEventSent.load(std::memory_order_acquire)) {
-        pushEventInternal(INTERNAL_EVENT_PRIORITY, std::make_unique<QuitEvent>(getNextEventId(), 0, INTERNAL_EVENT_PRIORITY));
+        pushEventInternal(INTERNAL_EVENT_PRIORITY, std::make_unique<QuitEvent>(getNextEventId(), ServiceIdType{0}, INTERNAL_EVENT_PRIORITY));
         _quitEventSent.store(true, std::memory_order_release);
         _whenQuitEventWasSent = std::chrono::steady_clock::now();
     }

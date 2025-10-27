@@ -19,7 +19,7 @@ TEST_CASE("HttpConnectionTests") {
     props.emplace("Address", Ichor::v1::make_any<std::string>("192.168.10.10"));
     props.emplace("Port", Ichor::v1::make_any<std::string>("8080"));
     QueueMock qm{};
-    Ichor::Detail::InternalServiceLifecycleManager<QueueMock> q{&qm};
+    Ichor::Detail::InternalServiceLifecycleManager<IEventQueue> q{&qm};
     Ichor::Detail::DependencyLifecycleManager<LoggerMock, ILogger> logger{{}};
     Ichor::Detail::DependencyLifecycleManager<ConnectionServiceMock<IClientConnectionService>, IClientConnectionService> conn{{}};
     Ichor::Detail::DependencyLifecycleManager<HttpConnectionService, IHttpConnectionService> svc{std::move(props)};
@@ -354,7 +354,7 @@ TEST_CASE("HttpHostTests Missing properties") {
     props.emplace("Address", Ichor::v1::make_any<std::string>("192.168.10.10"));
     props.emplace("Port", Ichor::v1::make_any<std::string>("8080"));
     QueueMock qm{};
-    Ichor::Detail::InternalServiceLifecycleManager<QueueMock> q{&qm};
+    Ichor::Detail::InternalServiceLifecycleManager<IEventQueue> q{&qm};
     Ichor::Detail::DependencyLifecycleManager<LoggerMock, ILogger> logger{{}};
     Ichor::Detail::DependencyLifecycleManager<ConnectionServiceMock<IHostConnectionService>, IHostConnectionService> conn{{}};
     Ichor::Detail::DependencyLifecycleManager<HostServiceMock, IHostService> host{Properties{props}};
@@ -384,7 +384,7 @@ TEST_CASE("HttpHostTests") {
     props.emplace("Address", Ichor::v1::make_any<std::string>("192.168.10.10"));
     props.emplace("Port", Ichor::v1::make_any<std::string>("8080"));
     QueueMock qm{};
-    Ichor::Detail::InternalServiceLifecycleManager<QueueMock> q{&qm};
+    Ichor::Detail::InternalServiceLifecycleManager<IEventQueue> q{&qm};
     Ichor::Detail::DependencyLifecycleManager<LoggerMock, ILogger> logger{{}};
     Ichor::Detail::DependencyLifecycleManager<HostServiceMock, IHostService> host{Properties{props}};
     Ichor::Detail::DependencyLifecycleManager<ConnectionServiceMock<IHostConnectionService>, IHostConnectionService> conn{{{"TcpHostService", Ichor::v1::make_any<ServiceIdType>(host.getService().getServiceId())}}};

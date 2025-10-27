@@ -446,7 +446,7 @@ namespace Ichor {
         }
 
         ICHOR_CONSTEXPR_VECTOR void set_service_id_stack(std::vector<ServiceExecutionScopeContents> svcIdStack) noexcept {
-            INTERNAL_COROUTINE_DEBUG("AsyncGenerator<{}>::set_service_id_stack({}) {} {}", typeName<T>(), svcIdStack[0], *_destroyed, _coroutine.promise()._state);
+            INTERNAL_COROUTINE_DEBUG("AsyncGenerator<{}>::set_service_id_stack({}) {} {}", typeName<T>(), svcIdStack[0].id.value, *_destroyed, _coroutine.promise()._state);
             if(svcIdStack.empty()) {
                 std::terminate();
             }

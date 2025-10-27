@@ -30,7 +30,7 @@ Ichor::Boost::v1::WsConnectionService<InterfaceT>::WsConnectionService(Dependenc
     reg.registerDependency<IBoostAsioQueue>(this, DependencyFlags::REQUIRED);
     if(auto propIt = AdvancedService<WsConnectionService<InterfaceT>>::getProperties().find("WsHostServiceId"); propIt != AdvancedService<WsConnectionService<InterfaceT>>::getProperties().end()) {
         reg.registerDependency<Ichor::v1::IHostService>(this, DependencyFlags::REQUIRED,
-                                             Properties{{"Filter", Ichor::v1::make_any<Filter>(ServiceIdFilterEntry{Ichor::v1::any_cast<uint64_t>(propIt->second)})}});
+                                             Properties{{"Filter", Ichor::v1::make_any<Filter>(ServiceIdFilterEntry{Ichor::v1::any_cast<ServiceIdType>(propIt->second)})}});
     }
 }
 
