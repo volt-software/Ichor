@@ -244,7 +244,10 @@ namespace Ichor {
             std::terminate();
         }
 #endif
-        _quit.store(true, std::memory_order_release);
+        bool expected{};
+        if(!_quit.compare_exchange_strong(expected, true, std::memory_order_acq_rel)) {
+            return; // already handled
+        }
 
         sd_event_source *src;
         int ret = sd_event_add_defer(_eventQueue, &src, [](sd_event_source *source, void *userdata) {
