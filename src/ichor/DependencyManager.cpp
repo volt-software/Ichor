@@ -182,6 +182,11 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &uniqueEvt) {
                         }
                     }
                 }
+
+                // If we're quitting, ensure newly started services are also stopped
+                if(_quitEventReceived) {
+                    _eventQueue->pushPrioritisedEvent<StopServiceEvent>(manager->serviceId(), std::min(INTERNAL_DEPENDENCY_EVENT_PRIORITY, evt->priority), manager->serviceId(), true);
+                }
             }
                 break;
             case DependencyOfflineEvent::TYPE: {
@@ -769,8 +774,6 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &uniqueEvt) {
                             }
 
                             _scopedGenerators.erase(genIt);
-
-                            checkIfCanQuit(allEventInterceptorsCopy, eventInterceptorsCopy);
                         }
                     } else {
                         INTERNAL_DEBUG("removed2 {} size {}", continuableEvt->promiseId, _scopedGenerators.size() - 1);
@@ -801,6 +804,7 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &uniqueEvt) {
 
                         _scopedGenerators.erase(genIt);
                     }
+                    checkIfCanQuit(allEventInterceptorsCopy, eventInterceptorsCopy);
                 }
             }
                 break;
