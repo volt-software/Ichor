@@ -16,7 +16,7 @@
 TEST_CASE("OpenSSL Handshake Tests - supported server certificate only") {
     Properties props{};
     QueueMock qm{};
-    Ichor::Detail::InternalServiceLifecycleManager<QueueMock> q{&qm};
+    Ichor::Detail::InternalServiceLifecycleManager<IEventQueue> q{&qm};
     Ichor::Detail::DependencyLifecycleManager<LoggerMock, ILogger> logger{{}};
     Ichor::Detail::DependencyLifecycleManager<OpenSSLService, ISSL> sslService{std::move(props)};
 
@@ -187,7 +187,7 @@ TEST_CASE("OpenSSL Handshake Tests - supported server certificate only") {
 TEST_CASE("OpenSSL Handshake Tests - rejects weaker certificates") {
     Properties props{};
     QueueMock qm{};
-    Ichor::Detail::InternalServiceLifecycleManager<QueueMock> q{&qm};
+    Ichor::Detail::InternalServiceLifecycleManager<IEventQueue> q{&qm};
     Ichor::Detail::DependencyLifecycleManager<LoggerMock, ILogger> logger{{}};
     Ichor::Detail::DependencyLifecycleManager<OpenSSLService, ISSL> sslService{std::move(props)};
 
