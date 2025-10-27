@@ -345,6 +345,10 @@ namespace Ichor::Detail {
             return &_registry;
         }
 
+        [[nodiscard]] bool isInternalManager() const noexcept final {
+            return false;
+        }
+
     private:
         v1::StaticVector<Dependency, sizeof...(IFaces)> _interfaces;
         DependencyRegister _registry;

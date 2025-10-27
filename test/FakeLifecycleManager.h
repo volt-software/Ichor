@@ -67,6 +67,9 @@ public:
     DependencyRegister const *getDependencyRegistry() const noexcept override {
         return _dependencyRegistry;
     }
+    bool isInternalManager() const noexcept final {
+        return false;
+    }
     void insertSelfInto(uint64_t keyOfInterfaceToInject, ServiceIdType serviceIdOfOther, std::function<void(v1::NeverNull<void *>, IService &)> &) override {
 
     }

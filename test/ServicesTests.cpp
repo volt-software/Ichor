@@ -18,6 +18,7 @@
 #include <ichor/services/logging/LoggerFactory.h>
 #include <ichor/services/logging/CoutLogger.h>
 #include <ichor/services/logging/CoutFrameworkLogger.h>
+#include "../examples/common/DebugService.h"
 
 
 #if defined(TEST_URING)
@@ -823,26 +824,47 @@ TEST_CASE("ServicesTests") {
     }
 
     SECTION("ConstructorInjectionQuitService") {
-        std::thread t([]() {
+        ServiceIdType dbgSvcId{};
 #if defined(TEST_URING)
-            auto queue = std::make_unique<QIMPL>(500, 100'000'000, emulateKernelVersion);
+        auto queue = std::make_unique<QIMPL>(500, 100'000'000, emulateKernelVersion);
 #else
-            auto queue = std::make_unique<QIMPL>(500);
+        auto queue = std::make_unique<QIMPL>(500);
 #endif
+        auto &dm = queue->createManager();
+
+        std::thread t([&]() {
 #if defined(TEST_URING)
             REQUIRE(queue->createEventLoop());
 #elif defined(TEST_SDEVENT)
             auto *loop = queue->createEventLoop();
             REQUIRE(loop);
 #endif
-            auto &dm = queue->createManager();
             dm.createServiceManager<ConstructorInjectionQuitService>();
+            dbgSvcId = dm.createServiceManager<DebugService, IDebugService>()->getServiceId();
             queue->start(CaptureSigInt);
 #if defined(TEST_SDEVENT)
             int r = sd_event_loop(loop);
             REQUIRE(r >= 0);
 #endif
         });
+
+        auto start = std::chrono::steady_clock::now();
+        while(queue->is_running()) {
+            std::this_thread::sleep_for(10ms);
+            auto now = std::chrono::steady_clock::now();
+            if(now - start >= 1s) {
+                queue->pushEvent<RunFunctionEvent>(ServiceIdType{0}, [&]() {
+                    auto dbgSvc = dm.getService<IDebugService>(dbgSvcId);
+                    REQUIRE(dbgSvc);
+                    dbgSvc->first->printServices();
+                });
+                std::this_thread::sleep_for(10ms);
+                break;
+            }
+        }
+
+        auto now = std::chrono::steady_clock::now();
+        REQUIRE(now - start < 1s);
 
         t.join();
     }
