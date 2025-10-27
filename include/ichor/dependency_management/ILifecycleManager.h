@@ -33,6 +33,7 @@ namespace Ichor {
         [[nodiscard]] virtual std::span<Dependency const> getInterfaces() const noexcept = 0;
         [[nodiscard]] virtual Properties const & getProperties() const noexcept = 0;
         [[nodiscard]] virtual DependencyRegister const * getDependencyRegistry() const noexcept = 0;
+        [[nodiscard]] virtual bool isInternalManager() const noexcept = 0;
         virtual void insertSelfInto(uint64_t keyOfInterfaceToInject, ServiceIdType serviceIdOfOther, std::function<void(v1::NeverNull<void*>, IService&)>&) = 0;
         virtual void removeSelfInto(uint64_t keyOfInterfaceToInject, ServiceIdType serviceIdOfOther, std::function<void(v1::NeverNull<void*>, IService&)>&) = 0;
 

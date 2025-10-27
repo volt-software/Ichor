@@ -14,7 +14,7 @@ namespace Ichor::v1 {
     struct NewWsConnectionEvent final : public Event {
         constexpr explicit NewWsConnectionEvent(uint64_t _id, ServiceIdType _originatingService, uint64_t _priority, std::shared_ptr<websocket::stream<beast::tcp_stream>> &&socket) noexcept :
                 Event(_id, _originatingService, _priority), _socket(std::move(socket)) {}
-        constexpr ~NewWsConnectionEvent() final = default;
+        ~NewWsConnectionEvent() final = default;
 
         [[nodiscard]] ICHOR_CONST_FUNC_ATTR constexpr std::string_view get_name() const noexcept final {
             return NAME;

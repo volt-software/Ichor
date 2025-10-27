@@ -112,6 +112,10 @@ namespace Ichor::Detail {
             std::terminate();
         }
 
+        [[nodiscard]] bool isInternalManager() const noexcept final {
+            return true;
+        }
+
         /// Someone is interested in us, inject ourself into them
         /// \param keyOfInterfaceToInject
         /// \param serviceIdOfOther

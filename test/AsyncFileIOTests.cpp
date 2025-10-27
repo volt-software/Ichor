@@ -5,6 +5,7 @@
 #include <ichor/services/logging/CoutLogger.h>
 #include <fstream>
 #include <filesystem>
+#include "../examples/common/DebugService.h"
 
 #ifdef TEST_URING
 #include <ichor/event_queues/IOUringQueue.h>
@@ -66,6 +67,7 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests") {
 
     SECTION("Reading non-existent file should error") {
         fmt::print("section 1\n");
+        ServiceIdType dbgSvcId{};
 #if defined(TEST_URING)
         auto queue = std::make_unique<QIMPL>(500, 100'000'000, emulateKernelVersion);
 #else
@@ -79,6 +81,7 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests") {
             REQUIRE(queue->createEventLoop());
 #endif
             dm.createServiceManager<LoggerFactory<CoutLogger>, ILoggerFactory>(Properties{{"DefaultLogLevel", Ichor::v1::make_any<LogLevel>(LogLevel::LOG_TRACE)}});
+            dbgSvcId = dm.createServiceManager<DebugService, IDebugService>()->getServiceId();
             ioSvcId = dm.createServiceManager<IOIMPL, IAsyncFileIO>()->getServiceId();
             queue->start(CaptureSigInt);
         });
@@ -107,8 +110,19 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests") {
         while(queue->is_running()) {
             std::this_thread::sleep_for(10ms);
             auto now = std::chrono::steady_clock::now();
-            REQUIRE(now - start < 20s);
+            if(now - start >= 20s) {
+                queue->pushEvent<RunFunctionEvent>(ServiceIdType{0}, [&]() {
+                    auto dbgSvc = dm.getService<IDebugService>(dbgSvcId);
+                    REQUIRE(dbgSvc);
+                    dbgSvc->first->printServices();
+                });
+                std::this_thread::sleep_for(10ms);
+                break;
+            }
         }
+
+        auto now = std::chrono::steady_clock::now();
+        REQUIRE(now - start < 20s);
 
         t.join();
     }

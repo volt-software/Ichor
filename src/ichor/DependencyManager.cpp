@@ -261,10 +261,7 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &uniqueEvt) {
                 }
                 if(allDependeesFinished) {
                     finishWaitingService(depOfflineEvt->originatingService, DependencyOfflineEvent::TYPE, DependencyOfflineEvent::NAME);
-                    _eventQueue->pushPrioritisedEvent<StopServiceEvent>(depOfflineEvt->originatingService,
-                                                                        std::min(INTERNAL_DEPENDENCY_EVENT_PRIORITY, evt->priority),
-                                                                        depOfflineEvt->originatingService,
-                                                                        depOfflineEvt->removeOriginatingServiceAfterStop);
+                    _eventQueue->pushPrioritisedEvent<StopServiceEvent>(depOfflineEvt->originatingService, std::min(INTERNAL_DEPENDENCY_EVENT_PRIORITY, evt->priority), depOfflineEvt->originatingService, depOfflineEvt->removeOriginatingServiceAfterStop);
                 }
             }
                 break;
@@ -306,6 +303,10 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &uniqueEvt) {
 
                 for (auto const &[key, possibleManager]: _services) {
                     if (possibleManager->getServiceState() == ServiceState::ACTIVE) {
+                        if(possibleManager->isInternalManager()) {
+                            continue;
+                        }
+
                         auto &dependees = possibleManager->getDependees();
 
                         auto priority = std::max(possibleManager->getPriority(), INTERNAL_DEPENDENCY_EVENT_PRIORITY);
@@ -608,10 +609,7 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &uniqueEvt) {
                 _eventQueue->pushPrioritisedEvent<DependencyOnlineEvent>(toStartService->serviceId(), std::min(INTERNAL_DEPENDENCY_EVENT_PRIORITY, evt->priority));
                 // If we're quitting, ensure newly started services are also stopped
                 if(_quitEventReceived) {
-                    _eventQueue->pushPrioritisedEvent<StopServiceEvent>(toStartService->serviceId(),
-                                                                       std::min(INTERNAL_DEPENDENCY_EVENT_PRIORITY, evt->priority),
-                                                                       toStartService->serviceId(),
-                                                                       true);
+                    _eventQueue->pushPrioritisedEvent<StopServiceEvent>(toStartService->serviceId(), std::min(INTERNAL_DEPENDENCY_EVENT_PRIORITY, evt->priority), toStartService->serviceId(), true);
                 }
             }
                 break;
@@ -857,10 +855,7 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &uniqueEvt) {
                         _eventQueue->pushPrioritisedEvent<DependencyOnlineEvent>(origEvt->serviceId, std::min(INTERNAL_COROUTINE_EVENT_PRIORITY, evt->priority));
                         // If we're quitting, ensure newly started services are also stopped
                         if(_quitEventReceived) {
-                            _eventQueue->pushPrioritisedEvent<StopServiceEvent>(origEvt->serviceId,
-                                                                               std::min(INTERNAL_DEPENDENCY_EVENT_PRIORITY, evt->priority),
-                                                                               origEvt->serviceId,
-                                                                               true);
+                            _eventQueue->pushPrioritisedEvent<StopServiceEvent>(origEvt->serviceId, std::min(INTERNAL_DEPENDENCY_EVENT_PRIORITY, evt->priority), origEvt->serviceId, true);
                         }
                         handleEventCompletion(*origEvt);
                     } else if(origEvtType == StopServiceEvent::TYPE) {
@@ -1352,6 +1347,10 @@ void Ichor::DependencyManager::checkIfCanQuit(std::vector<EventInterceptInfo> &a
     if(_quitEventReceived && !_quitDone && _scopedEvents.empty()) {
         bool allServicesStopped{true};
         for (auto const &svcPair : _services) {
+            if(svcPair.second->isInternalManager()) {
+                continue;
+            }
+
             if (svcPair.second->getServiceState() != ServiceState::INSTALLED) {
                 allServicesStopped = false;
                 break;
