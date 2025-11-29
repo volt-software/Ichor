@@ -13,8 +13,10 @@ public:
     StartBehaviour dependencyOnline(v1::NeverNull<ILifecycleManager *> dependentService) override {
         return {};
     }
-    AsyncGenerator<StartBehaviour> dependencyOffline(v1::NeverNull<ILifecycleManager *> dependentService, std::vector<Dependency *> deps) override {
+    AsyncGenerator<StartBehaviour> dependencyOffline(v1::NeverNull<ILifecycleManager *> dependentService, std::vector<Dependency *> const &deps) override {
         return {};
+    }
+    void finishDependencyOffline(v1::NeverNull<ILifecycleManager*> dependentService, std::vector<Dependency*> const &deps) override {
     }
     unordered_set<ServiceIdType, ServiceIdHash> &getDependencies() noexcept override {
         return Ichor::Detail::emptyDependencies;

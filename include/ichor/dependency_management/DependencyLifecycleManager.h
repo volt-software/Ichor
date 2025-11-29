@@ -27,7 +27,12 @@ namespace Ichor::Detail {
             std::vector<Dependency*> ret;
 
             if(!_serviceIdsOfInjectedDependencies.contains(dependentService->serviceId())) {
-                fmt::print("interestedInDependencyGoingOffline() svc {}:{} already injected\n", serviceId(), implementationName());
+                INTERNAL_DEBUG("interestedInDependencyGoingOffline() svc {}:{} already injected/removed\n", serviceId(), implementationName());
+                return ret;
+            }
+
+            if(_serviceIdsOfInjectedDependenciesButGoingAway.contains(dependentService->serviceId())) {
+                INTERNAL_DEBUG("interestedInDependencyGoingOffline() svc {}:{} already uninjecting\n", serviceId(), implementationName());
                 return ret;
             }
 
@@ -50,7 +55,7 @@ namespace Ichor::Detail {
             INTERNAL_DEBUG("dependencyOnline() svc {}:{} {} dependent {}:{}", serviceId(), implementationName(), getServiceState(), dependentService->serviceId(), dependentService->implementationName());
 
             if(_serviceIdsOfInjectedDependencies.contains(dependentService->serviceId())) {
-                fmt::print("dependencyOnline() svc {}:{} already injected\n", serviceId(), implementationName());
+                INTERNAL_DEBUG("dependencyOnline() svc {}:{} already injected\n", serviceId(), implementationName());
                 return StartBehaviour::DONE;
             }
 
@@ -91,12 +96,46 @@ namespace Ichor::Detail {
             return StartBehaviour::DONE;
         }
 
-        AsyncGenerator<StartBehaviour> dependencyOffline(v1::NeverNull<ILifecycleManager*> dependentService, std::vector<Dependency*> deps) final {
+        /// @brief Removes a dependency registered with this lifecycle manager. Requires the dependencies returned from interestedInDependencyGoingOffline. It is forbidden to call this function if the dependency is hasn't first gone through dependencyOnline.
+        ///        The following situations can occur:
+        ///        - The dependency going away is an optional dependency and does not require stopping this service and returns DONE.
+        ///        - The dependency going away is a required dependency, but there are multiple inserted and is not the last one (precondition dep->satisfied > 1) so it does not require stopping this service and returns DONE.
+        ///        - The dependency going away is a required dependency and is the only one of its type, so stopping this service is required. In that case, there are several sub options:
+        ///            - This service is in the INSTALLED state and does not requiring stopping this service and returns DONE.
+        ///            - This service is in the STARTING or INJECTING state, so we need to wait until the DependencyOnlineEvent is finished, after which this service should be in the ACTIVE state and continue with the next sub option:
+        ///            - This service is in the ACTIVE state and has not yet pushed a DependencyOfflineEvent: push a DependencyOfflineEvent and wait for that to finish and continue with the first UNINJECTING sub option
+        ///            - This service is in the ACTIVE state and a previous required dependency has already pushed a DependencyOfflineEvent and that one is waiting for it to finish, then this call also needs to wait for the DependencyOfflineEvent and continue with the first UNINJECTION sub option
+        ///            - This service is in the UNINJECTING state (precondition all previous dependencyOffline from the two ACTIVE states described above are done waiting on the DependencyOfflineEvent) and doesn't wait for any event but simply returns STOP_ME     
+        /// @param dependentService The service going away, which is a dependency of this service
+        /// @param depInterfaces returned from interestedInDependencyGoingOffline
+        /// @return 
+        AsyncGenerator<StartBehaviour> dependencyOffline(v1::NeverNull<ILifecycleManager*> dependentService, std::vector<Dependency*> const &depInterfaces) final {
             INTERNAL_DEBUG("dependencyOffline() svc {}:{} {} dependent {}:{}", serviceId(), implementationName(), getServiceState(), dependentService->serviceId(), dependentService->implementationName());
 
-            if(!_serviceIdsOfInjectedDependencies.contains(dependentService->serviceId())) {
-                fmt::print("dependencyOffline() svc {}:{} not injected\n", serviceId(), implementationName());
-                co_return StartBehaviour::DONE;
+            if constexpr(DO_INTERNAL_DEBUG) {
+                if(depInterfaces.empty()) [[unlikely]] {
+                    std::terminate();
+                }
+
+                if(!_serviceIdsOfInjectedDependencies.contains(dependentService->serviceId())) [[unlikely]] {
+                    INTERNAL_DEBUG("dependencyOffline() svc {}:{} not injected\n", serviceId(), implementationName());
+                    std::terminate();
+                }
+
+                if(_serviceIdsOfInjectedDependenciesButGoingAway.contains(dependentService->serviceId())) [[unlikely]] {
+                    INTERNAL_DEBUG("dependencyOffline() svc {}:{} already uninjecting\n", serviceId(), implementationName());
+                    std::terminate();
+                }
+
+                if(getServiceState() == ServiceState::UNINSTALLED) [[unlikely]] {
+                    INTERNAL_DEBUG("dependencyOffline() svc {}:{} UNINSTALLED?\n", serviceId(), implementationName());
+                    std::terminate();
+                }
+
+                if(getServiceState() == ServiceState::STOPPING) [[unlikely]] {
+                    INTERNAL_DEBUG("dependencyOffline() svc {}:{} STOPPING?\n", serviceId(), implementationName());
+                    std::terminate();
+                }
             }
 
             auto interested = DependencyChange::NOT_FOUND;
@@ -111,56 +150,59 @@ namespace Ichor::Detail {
                 }
             }
 
-            for(auto *dep : deps) {
+            _serviceIdsOfInjectedDependenciesButGoingAway.insert(dependentService->serviceId());
+
+            for(auto *dep : depInterfaces) {
                 // dependency should not be marked as unsatisfied if there is at least one other of the same type present
                 dep->satisfied--;
-                _serviceIdsOfInjectedDependencies.erase(dependentService->serviceId());
 
-#ifdef ICHOR_USE_HARDENING
-                if(dep->satisfied == std::numeric_limits<decltype(dep->satisfied)>::max()) [[unlikely]] {
-                    std::terminate();
-                }
-#endif
-
-                bool requiredDep = (dep->flags & DependencyFlags::REQUIRED) == DependencyFlags::REQUIRED;
-
-                if(requiredDep && dep->satisfied == 0 && (getServiceState() == ServiceState::STARTING || getServiceState() == ServiceState::INJECTING)) {
-                    INTERNAL_DEBUG("{}:{}:{} dependencyOffline waitForService {} {} {} {}", serviceId(), _service.getServiceName(), getServiceState(), interested, dep->satisfied, dep->flags, getDependees().size());
-                    co_await waitForService(serviceId(), DependencyOnlineEvent::TYPE);
-                }
-
-                if (requiredDep && dep->satisfied == 0 && interested != DependencyChange::FOUND_AND_STOP_ME && getServiceState() == ServiceState::ACTIVE) {
-                    INTERNAL_DEBUG("{}:{}:{} dependencyOffline stopping {}", serviceId(), _service.getServiceName(), getServiceState(), interested);
-
-                    GetThreadLocalEventQueue().template pushPrioritisedEvent<DependencyOfflineEvent>(serviceId(), INTERNAL_DEPENDENCY_EVENT_PRIORITY - 1, false);
-                    co_await waitForService(serviceId(), DependencyOfflineEvent::TYPE);
-                    INTERNAL_DEBUG("{}:{}:{} dependencyOffline stopping {} pushPrioritisedEventAsync done", serviceId(), _service.getServiceName(), getServiceState(), interested);
-
-#ifdef ICHOR_USE_HARDENING
-                    if(!_serviceIdsOfDependees.empty()) [[unlikely]] {
-                        for(auto d : _serviceIdsOfDependees) {
-                            fmt::print("{}\n", d);
-                        }
+                if constexpr(DO_INTERNAL_DEBUG || DO_HARDENING) {
+                    if(dep->satisfied == std::numeric_limits<decltype(dep->satisfied)>::max()) [[unlikely]] {
                         std::terminate();
                     }
-#endif
+                }
+
+                bool const requiredDepWentAway = (dep->flags & DependencyFlags::REQUIRED) == DependencyFlags::REQUIRED && dep->satisfied == 0;
+
+                if(requiredDepWentAway && (getServiceState() == ServiceState::STARTING || getServiceState() == ServiceState::INJECTING)) {
+                    INTERNAL_DEBUG("{}:{}:{} dependencyOffline waitForService {} {} {} {}", serviceId(), _service.getServiceName(), getServiceState(), interested, dep->satisfied, dep->flags, getDependees().size());
+                    co_await waitForService(serviceId(), DependencyOnlineEvent::TYPE);
+
+
+                    if(getServiceState() != ServiceState::ACTIVE) [[unlikely]] {
+                        INTERNAL_DEBUG("dependencyOffline() svc {}:{} not ACTIVE?\n", serviceId(), implementationName());
+                        std::terminate();
+                    }
+                }
+
+                if(requiredDepWentAway && interested != DependencyChange::FOUND_AND_STOP_ME && (getServiceState() == ServiceState::ACTIVE || getServiceState() == ServiceState::UNINJECTING)) {
+                    INTERNAL_DEBUG("{}:{}:{} dependencyOffline stopping {}", serviceId(), _service.getServiceName(), getServiceState(), interested);
+
+                    if(getServiceState() == ServiceState::ACTIVE) {
+                        if(!hasDependencyWaiter(serviceId(), DependencyOfflineEvent::TYPE)) {
+                            GetThreadLocalEventQueue().template pushPrioritisedEvent<DependencyOfflineEvent>(serviceId(), INTERNAL_DEPENDENCY_EVENT_PRIORITY - 1, false);
+                        }
+                        co_await waitForService(serviceId(), DependencyOfflineEvent::TYPE);
+                        INTERNAL_DEBUG("{}:{}:{} dependencyOffline stopping {} pushPrioritisedEventAsync done", serviceId(), _service.getServiceName(), getServiceState(), interested);
+
+                        if constexpr(DO_INTERNAL_DEBUG || DO_HARDENING) {
+                            if(!_serviceIdsOfDependees.empty()) [[unlikely]] {
+                                for(auto d : _serviceIdsOfDependees) {
+                                    fmt::print("{}\n", d);
+                                }
+                                std::terminate();
+                            }
+                        }
+                    } else {
+                        if(hasDependencyWaiter(serviceId(), DependencyOfflineEvent::TYPE)) {
+                            co_await waitForService(serviceId(), DependencyOfflineEvent::TYPE);
+                        }
+                    }
 
                     if(getServiceState() == ServiceState::UNINJECTING) {
                         interested = DependencyChange::FOUND_AND_STOP_ME;
-                        auto gen = stop();
-                        auto it = gen.begin();
-                        co_await it;
 
-#ifdef ICHOR_USE_HARDENING
-                        if (!it.get_finished()) [[unlikely]] {
-                            std::terminate();
-                        }
-                        if (getServiceState() != ServiceState::INSTALLED) [[unlikely]] {
-                            std::terminate();
-                        }
-#endif
-
-                        ret = StartBehaviour::STOPPED;
+                        ret = StartBehaviour::STOP_ME;
                         INTERNAL_DEBUG("{}:{}:{} dependencyOffline stopped {}", serviceId(), _service.getServiceName(), getServiceState(), interested);
                     } else {
                         interested = DependencyChange::FOUND;
@@ -168,24 +210,38 @@ namespace Ichor::Detail {
                 } else if(interested != DependencyChange::FOUND_AND_STOP_ME) {
                     interested = DependencyChange::FOUND;
                 }
-
-                if(requiredDep && dep->satisfied == 0 && interested == DependencyChange::FOUND_AND_STOP_ME && (getServiceState() == ServiceState::UNINJECTING || getServiceState() == ServiceState::STOPPING)) {
-                    INTERNAL_DEBUG("{}:{}:{} dependencyOffline waitForService {} {} {} {}", serviceId(), _service.getServiceName(), getServiceState(), interested, dep->satisfied, dep->flags, getDependees().size());
-                    co_await waitForService(serviceId(), StopServiceEvent::TYPE);
-                }
-
-#ifdef ICHOR_USE_HARDENING
-                if(requiredDep && dep->satisfied == 0 && interested == DependencyChange::FOUND_AND_STOP_ME && getServiceState() >= ServiceState::INJECTING) [[unlikely]] {
-                    INTERNAL_DEBUG("{}:{}:{} dependencyOffline terminating {} {} {} {}", serviceId(), _service.getServiceName(), getServiceState(), interested, dep->satisfied, dep->flags, getDependees().size());
-                    std::terminate();
-                }
-#endif
-
-                INTERNAL_DEBUG("{}:{}:{} dependencyOffline interested {} {} {}", serviceId(), _service.getServiceName(), getServiceState(), interested, dep->satisfied, dep->flags);
-                removeSelfIntoDoubleDispatch(dep->interfaceNameHash, dependentService);
             }
 
             co_return ret;
+        }
+
+
+        void finishDependencyOffline(v1::NeverNull<ILifecycleManager*> dependentService, std::vector<Dependency*> const &depInterfaces) final {
+            INTERNAL_DEBUG("finishDependencyOffline() svc {}:{} {} dependent {}:{}", serviceId(), implementationName(), getServiceState(), dependentService->serviceId(), dependentService->implementationName());
+
+            if constexpr(DO_INTERNAL_DEBUG) {
+                if(!_serviceIdsOfInjectedDependenciesButGoingAway.contains(dependentService->serviceId())) [[unlikely]] {
+                    std::terminate();
+                }
+                //
+                // if(getServiceState() < ServiceState::INJECTING) [[unlikely]] {
+                //     INTERNAL_DEBUG("{}:{}:{} finishDependencyOffline tried to finish dependency offline but the service itself is already (un)installed. If this is a ConstructorInjectionService, it will have no implementation in this case.", serviceId(), _service.getServiceName(), getServiceState());
+                //     std::terminate();
+                // }
+                //
+                // if(dependentService->getServiceState() < ServiceState::INJECTING) [[unlikely]] {
+                //     INTERNAL_DEBUG("{}:{}:{} finishDependencyOffline tried to finish dependency offline but the dependentService {}:{}:{} is already (un)installed. If this is a ConstructorInjectionService, it will have no implementation in this case.", serviceId(), _service.getServiceName(), getServiceState(), dependentService->serviceId(), dependentService->implementationName(), dependentService->getServiceState());
+                //     std::terminate();
+                // }
+            }
+
+            for(auto *dep : depInterfaces) {
+                INTERNAL_DEBUG("{}:{}:{} finishDependencyOffline {} {}", serviceId(), _service.getServiceName(), getServiceState(), dep->satisfied, dep->flags);
+                removeSelfIntoDoubleDispatch(dep->interfaceNameHash, dependentService);
+            }
+
+            _serviceIdsOfInjectedDependenciesButGoingAway.erase(dependentService->serviceId());
+            _serviceIdsOfInjectedDependencies.erase(dependentService->serviceId());
         }
 
         /// We found a dependency that we're interested in, tell that dependency to inject itself into us
@@ -196,11 +252,11 @@ namespace Ichor::Detail {
             INTERNAL_DEBUG("injectIntoSelfDoubleDispatch() svc {} adding dependency {}", serviceId(), dependentService->serviceId());
             auto dep = _registry._registrations.find(keyOfInterfaceToInject);
 
-#ifdef ICHOR_USE_HARDENING
-            if(dep == end(_registry._registrations)) [[unlikely]] {
-                std::terminate();
+            if constexpr(DO_INTERNAL_DEBUG || DO_HARDENING) {
+                if(dep == end(_registry._registrations)) [[unlikely]] {
+                    std::terminate();
+                }
             }
-#endif
 
             dependentService->insertSelfInto(keyOfInterfaceToInject, serviceId(), std::get<1>(dep->second));
         }
@@ -238,11 +294,11 @@ namespace Ichor::Detail {
             INTERNAL_DEBUG("removeSelfIntoDoubleDispatch() svc {} removing dependency {}", serviceId(), dependentService->serviceId());
             auto dep = _registry._registrations.find(keyOfInterfaceToInject);
 
-#ifdef ICHOR_USE_HARDENING
-            if(dep == end(_registry._registrations)) [[unlikely]] {
-                std::terminate();
+            if constexpr(DO_INTERNAL_DEBUG || DO_HARDENING) {
+                if(dep == end(_registry._registrations)) [[unlikely]] {
+                    std::terminate();
+                }
             }
-#endif
 
             dependentService->removeSelfInto(keyOfInterfaceToInject, serviceId(), std::get<2>(dep->second));
         }
@@ -354,6 +410,7 @@ namespace Ichor::Detail {
         DependencyRegister _registry;
         ServiceType _service;
         unordered_set<ServiceIdType, ServiceIdHash> _serviceIdsOfInjectedDependencies; // Services that this service depends on.
+        unordered_set<ServiceIdType, ServiceIdHash> _serviceIdsOfInjectedDependenciesButGoingAway; // Services that this service depends on.
         unordered_set<ServiceIdType, ServiceIdHash> _serviceIdsOfDependees; // services that depend on this service
     };
 }

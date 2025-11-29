@@ -104,7 +104,7 @@ namespace Ichor {
         Properties _properties;
     private:
         ///
-        /// \return true if started
+        /// \return
         [[nodiscard]] Task<StartBehaviour> internal_start(DependencyRegister const *_dependencies) {
             if(_serviceState != ServiceState::INSTALLED || (_dependencies != nullptr && !_dependencies->allSatisfied())) {
                 INTERNAL_DEBUG("internal_start service {}:{} state {} dependencies {} {}", getServiceId(), typeName<T>(), getState(), _dependencies != nullptr ? _dependencies->size() : (size_t)-1, _dependencies != nullptr ? _dependencies->allSatisfied() : false);

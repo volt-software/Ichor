@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <string_view>
+#include <iterator>
 #include <fmt/format.h>
 
 namespace Ichor {

@@ -69,7 +69,8 @@ namespace Ichor
     enum class StartBehaviour : uint_fast16_t {
         DONE,
         STARTED,
-        STOPPED
+        STOPPED,
+        STOP_ME
     };
 
     enum class WaitError : uint_fast16_t {
@@ -179,6 +180,8 @@ struct fmt::formatter<Ichor::StartBehaviour> {
                 return fmt::format_to(ctx.out(), "STARTED");
             case Ichor::StartBehaviour::STOPPED:
                 return fmt::format_to(ctx.out(), "STOPPED");
+            case Ichor::StartBehaviour::STOP_ME:
+                return fmt::format_to(ctx.out(), "STOP_ME");
         }
         return fmt::format_to(ctx.out(), "error, please file a bug in Ichor");
     }

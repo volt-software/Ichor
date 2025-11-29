@@ -60,9 +60,14 @@ namespace Ichor {
     };
 
     struct WaitingStopService final {
+        WaitingStopService() = default;
+        WaitingStopService(ServiceIdType _originatingServiceId, uint64_t _priority, bool _removeAfter, std::vector<Dependency*> _deps) : originatingServiceId(_originatingServiceId), priority(_priority), removeAfter(_removeAfter), deps(std::move(_deps)) {}
+
         ServiceIdType originatingServiceId;
-        uint64_t priority;
-        bool removeAfter;
+        uint64_t priority{};
+        bool removeAfter{};
+        std::vector<Dependency*> deps;
+
     };
 
     class [[nodiscard]] DependencyManager final {
@@ -916,6 +921,7 @@ namespace Ichor {
         /// \return
         bool finishWaitingService(ServiceIdType serviceId, uint64_t eventType, [[maybe_unused]] std::string_view eventName) noexcept;
         void checkIfCanQuit(std::vector<EventInterceptInfo> &allEventInterceptorsCopy, std::vector<EventInterceptInfo> &eventInterceptorsCopy) noexcept;
+        bool hasDependencyWaiter(ServiceIdType serviceId, uint64_t eventType) noexcept;
 
         unordered_map<ServiceIdType, std::unique_ptr<ILifecycleManager>, ServiceIdHash> _services{}; // key = service id
         unordered_map<DependencyTrackerKey, std::vector<DependencyTrackerInfo>, DependencyTrackerKeyHash, std::equal_to<>> _dependencyRequestTrackers{}; // key = interface name hash
@@ -925,7 +931,8 @@ namespace Ichor {
         unordered_map<uint64_t, v1::ReferenceCountedPointer<Event>> _scopedEvents{}; // key = promise id
         unordered_map<uint64_t, EventWaiter> _eventWaiters{}; // key = event id
         unordered_map<ServiceIdType, EventWaiter, ServiceIdHash> _dependencyWaiters{}; // key = service id
-        unordered_map<ServiceIdType, WaitingStopService, ServiceIdHash> _pendingStops{}; // key = service id
+        unordered_map<ServiceIdType, WaitingStopService, ServiceIdHash> _pendingStopsDueToCoroutine{}; // key = service which has to be stopped but has existing coroutines
+        unordered_map<ServiceIdType, std::vector<WaitingStopService>, ServiceIdHash> _pendingStopsDueToDependencies{}; // key = service which others are waiting on to be stopped
         IEventQueue * const _eventQueue;
         IFrameworkLogger *_logger{};
         std::atomic<bool> _started{false};

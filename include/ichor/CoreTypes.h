@@ -5,7 +5,6 @@
 #include <fmt/format.h>
 
 namespace Ichor {
-    // using ServiceIdType = uint64_t;
     struct ServiceIdType : StrongTypedef<uint64_t, ServiceIdType> {};
 
     struct ServiceIdHash final {
