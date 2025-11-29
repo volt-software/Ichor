@@ -82,6 +82,8 @@ namespace Ichor::v1 {
         AsyncGenerator<IchorBehaviour> handleDependencyUndoRequest(v1::AlwaysNull<ILogger*>, DependencyUndoRequestEvent const &evt) {
             auto service = _loggers.find(evt.originatingService);
 
+            ICHOR_LOG_ERROR(_logger, "svcid {} removing {}", evt.originatingService, service == end(_loggers));
+
             if(service != end(_loggers)) {
                 GetThreadLocalEventQueue().template pushPrioritisedEvent<StopServiceEvent>(AdvancedService<LoggerFactory<LogT>>::getServiceId(), INTERNAL_DEPENDENCY_EVENT_PRIORITY, service->second, true);
                 _loggers.erase(service);

@@ -2,9 +2,10 @@
 
 #include <ichor/events/Event.h>
 #include <ichor/ConstevalHash.h>
-#include <tl/optional.h>
 
 namespace Ichor {
+    struct Dependency;
+
     struct ContinuableEvent final : public Event {
         constexpr ContinuableEvent(uint64_t _id, ServiceIdType _originatingService, uint64_t _priority, uint64_t _promiseId) noexcept : Event(_id, _originatingService, _priority), promiseId(_promiseId) {}
         constexpr ~ContinuableEvent() final = default;
@@ -38,9 +39,9 @@ namespace Ichor {
     };
 
     struct ContinuableDependencyOfflineEvent final : public Event {
-        constexpr explicit ContinuableDependencyOfflineEvent(uint64_t _id, ServiceIdType _originatingService, uint64_t _priority, ServiceIdType _originatingOfflineServiceId, bool _removeOriginatingOfflineServiceAfterStop) noexcept :
-                Event(_id, _originatingService, _priority), originatingOfflineServiceId(_originatingOfflineServiceId), removeOriginatingOfflineServiceAfterStop(_removeOriginatingOfflineServiceAfterStop) {}
-        constexpr ~ContinuableDependencyOfflineEvent() final = default;
+        explicit ContinuableDependencyOfflineEvent(uint64_t _id, ServiceIdType _originatingService, uint64_t _priority, ServiceIdType _originatingOfflineServiceId, bool _removeOriginatingOfflineServiceAfterStop, std::vector<Dependency *> _dependencyIterators) noexcept :
+                Event(_id, _originatingService, _priority), originatingOfflineServiceId(_originatingOfflineServiceId), removeOriginatingOfflineServiceAfterStop(_removeOriginatingOfflineServiceAfterStop), dependencyIterators(std::move(_dependencyIterators)) {}
+        ~ContinuableDependencyOfflineEvent() final = default;
 
         [[nodiscard]] ICHOR_CONST_FUNC_ATTR constexpr std::string_view get_name() const noexcept final {
             return NAME;
@@ -51,6 +52,7 @@ namespace Ichor {
 
         ServiceIdType originatingOfflineServiceId;
         bool removeOriginatingOfflineServiceAfterStop;
+        std::vector<Dependency *> dependencyIterators;
         static constexpr NameHashType TYPE = typeNameHash<ContinuableDependencyOfflineEvent>();
         static constexpr std::string_view NAME = typeName<ContinuableDependencyOfflineEvent>();
     };

@@ -14,8 +14,9 @@ namespace Ichor {
         virtual ~ILifecycleManager() = default;
         virtual std::vector<Dependency*> interestedInDependencyGoingOffline(ILifecycleManager *dependentService) noexcept = 0;
         virtual StartBehaviour dependencyOnline(v1::NeverNull<ILifecycleManager*> dependentService) = 0;
-        // iterators come from interestedInDependency() and have to be moved as using coroutines might end up clearing it.
-        virtual AsyncGenerator<StartBehaviour> dependencyOffline(v1::NeverNull<ILifecycleManager*> dependentService, std::vector<Dependency*> deps) = 0;
+        // iterators come from interestedInDependencyGoingOffline() and have to be moved as using coroutines might end up clearing it.
+        virtual AsyncGenerator<StartBehaviour> dependencyOffline(v1::NeverNull<ILifecycleManager*> dependentService, std::vector<Dependency*> const &deps) = 0;
+        virtual void finishDependencyOffline(v1::NeverNull<ILifecycleManager*> dependentService, std::vector<Dependency*> const &deps) = 0;
         [[nodiscard]] virtual unordered_set<ServiceIdType, ServiceIdHash> &getDependencies() noexcept = 0;
         [[nodiscard]] virtual unordered_set<ServiceIdType, ServiceIdHash> &getDependees() noexcept = 0;
         [[nodiscard]] virtual AsyncGenerator<StartBehaviour> startAfterDependencyOnline() = 0;
@@ -39,5 +40,6 @@ namespace Ichor {
 
     protected:
         static Task<void> waitForService(ServiceIdType serviceId, uint64_t eventType) noexcept;
+        static bool hasDependencyWaiter(ServiceIdType serviceId, uint64_t eventType) noexcept;
     };
 }

@@ -14,6 +14,7 @@
 #include "TestServices/AsyncDependencyTrackerService.h"
 #include "TestServices/AsyncBroadcastService.h"
 #include "TestServices/RemoveAfterAwaitedStopService.h"
+#include "TestServices/AwaitingDependencyService.h"
 #include <ichor/events/RunFunctionEvent.h>
 #include <ichor/services/logging/LoggerFactory.h>
 #include <ichor/services/logging/CoutLogger.h>
@@ -49,6 +50,9 @@
 bool AddEventHandlerDuringEventHandlingService::_addedReg{};
 std::atomic<uint64_t> evtGate;
 std::unique_ptr<Ichor::AsyncManualResetEvent> _evt;
+std::atomic<bool> constructorInjectedTargetDestroyed{false};
+std::atomic<bool> removeCalled{false};
+std::atomic<ServiceIdType> svcIdToPassAround{ServiceIdType{0}};
 
 static void DisplayServices(DependencyManager &dm) {
     auto svcs = dm.getAllServices();
@@ -1322,6 +1326,65 @@ TEST_CASE("ServicesTests") {
             REQUIRE(r >= 0);
 #endif
         });
+
+        t.join();
+    }
+
+    SECTION("Dependency retains dependees while async dependencyOffline runs") {
+        using namespace std::chrono_literals;
+
+        ServiceIdType providerId{};
+        _evt = std::make_unique<AsyncManualResetEvent>();
+
+#if defined(TEST_URING)
+        auto queue = std::make_unique<QIMPL>(500, 100'000'000, emulateKernelVersion);
+#else
+        auto queue = std::make_unique<QIMPL>(500);
+#endif
+        auto &dm = queue->createManager();
+        std::thread t([&]() {
+#if defined(TEST_URING)
+            REQUIRE(queue->createEventLoop());
+#elif defined(TEST_SDEVENT)
+            auto *loop = queue->createEventLoop();
+            REQUIRE(loop);
+#endif
+            dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>();
+            providerId = dm.createServiceManager<UselessService, IUselessService>()->getServiceId();
+            dm.createServiceManager<AwaitingDependencyService>();
+            queue->start(CaptureSigInt);
+#if defined(TEST_SDEVENT)
+            int r = sd_event_loop(loop);
+            REQUIRE(r >= 0);
+#endif
+        });
+
+        waitForRunning(dm);
+
+        runForOrQueueEmpty(dm);
+
+        queue->pushEvent<RunFunctionEvent>(ServiceIdType{0}, [&]() {
+            dm.getEventQueue().pushEvent<StopServiceEvent>(ServiceIdType{0}, providerId, true);
+        });
+
+        auto start = std::chrono::steady_clock::now();
+        while(evtGate.load(std::memory_order_acquire) == 0) {
+            std::this_thread::sleep_for(100us);
+            REQUIRE(std::chrono::steady_clock::now() - start < 1s);
+        }
+
+        queue->pushEvent<RunFunctionEvent>(ServiceIdType{0}, [&]() {
+            auto deps = dm.getDependentsForService(providerId);
+            REQUIRE_FALSE(deps.empty());
+            _evt->set();
+
+            queue->pushEvent<RunFunctionEvent>(ServiceIdType{0}, [&dm, providerId]() {
+                auto deps2 = dm.getDependentsForService(providerId);
+                REQUIRE(deps2.empty());
+            });
+        });
+
+        queue->pushEvent<QuitEvent>(ServiceIdType{0});
 
         t.join();
     }

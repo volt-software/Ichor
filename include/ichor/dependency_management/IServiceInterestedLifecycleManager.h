@@ -19,7 +19,12 @@ namespace Ichor::Detail {
             return StartBehaviour::DONE;
         }
 
-        AsyncGenerator<StartBehaviour> dependencyOffline(v1::NeverNull<ILifecycleManager*> dependentService, std::vector<Dependency*> deps) final {
+        AsyncGenerator<StartBehaviour> dependencyOffline(v1::NeverNull<ILifecycleManager*> dependentService, std::vector<Dependency*> const &deps) final {
+            // this function should never be called
+            std::terminate();
+        }
+
+        void finishDependencyOffline(v1::NeverNull<ILifecycleManager*> dependentService, std::vector<Dependency*> const &deps) final {
             // this function should never be called
             std::terminate();
         }

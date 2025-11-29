@@ -1,5 +1,7 @@
 #pragma once
 
+#include <ichor/ConstevalHash.h>
+#include <ichor/CoreTypes.h>
 #include <ichor/Defines.h>
 #include <ichor/stl/NeverAlwaysNull.h>
 #include <type_traits>
@@ -7,7 +9,7 @@
 #include <utility>
 
 #ifdef ICHOR_HAVE_STD_STACKTRACE
-#define ICHOR_DEBUG_PROXIES_CALLSTACK 1
+#define ICHOR_DEBUG_PROXIES_CALLSTACK 1 
 #else
 #define ICHOR_DEBUG_PROXIES_CALLSTACK 0
 #endif

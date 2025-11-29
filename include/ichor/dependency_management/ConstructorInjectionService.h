@@ -357,7 +357,7 @@ namespace Ichor {
         }
 
         ///
-        /// \return true if started
+        /// \return
         [[nodiscard]] Task<StartBehaviour> internal_start(DependencyRegister const *_dependencies) {
             if(_serviceState != ServiceState::INSTALLED || (_dependencies != nullptr && !_dependencies->allSatisfied())) {
                 INTERNAL_DEBUG("internal_start service {}:{} state {} dependencies {} {}", getServiceId(), typeName<T>(), getState(), _dependencies->size(), _dependencies->allSatisfied());
@@ -374,13 +374,17 @@ namespace Ichor {
             co_return {};
         }
         ///
-        /// \return true if stopped or already stopped
+        /// \return
         [[nodiscard]] Task<StartBehaviour> internal_stop() {
-#ifdef ICHOR_USE_HARDENING
-            if(_serviceState != ServiceState::UNINJECTING) [[unlikely]] {
-                std::terminate();
+            if(_serviceState == ServiceState::INSTALLED) [[unlikely]] {
+                co_return {};
             }
-#endif
+
+            if constexpr (DO_INTERNAL_DEBUG || DO_HARDENING) {
+                if(_serviceState != ServiceState::UNINJECTING) [[unlikely]] {
+                    std::terminate();
+                }
+            }
 
             INTERNAL_DEBUG("internal_stop service {}:{} state {} -> {}", getServiceId(), typeName<T>(), getState(), ServiceState::STOPPING);
             _serviceState = ServiceState::STOPPING;
@@ -423,42 +427,90 @@ namespace Ichor {
         template <typename depT>
         void addDependencyInstance(Ichor::ScopedServiceProxy<depT> dep, [[maybe_unused]] v1::NeverNull<IService*> isvc) {
             INTERNAL_DEBUG("Adding service {}:{}:{} {}", isvc->getServiceId(), typeName<depT>(), typeNameHash<Ichor::ScopedServiceProxy<depT>>(), typeName<refl::rewrap_dependencies_t<refl::as_variant<T>>>());
-            _deps.emplace(std::pair<unsigned long, refl::rewrap_dependencies_t<refl::as_variant<T>>>{typeNameHash<Ichor::ScopedServiceProxy<depT>>(), dep});
+            _deps.emplace(std::pair<uint64_t, refl::rewrap_dependencies_t<refl::as_variant<T>>>{typeNameHash<Ichor::ScopedServiceProxy<depT>>(), dep});
         }
 
         void addDependencyInstance(DependencyManager *dep, [[maybe_unused]] v1::NeverNull<IService*> isvc) {
             INTERNAL_DEBUG("Adding service {}:DependencyManager", isvc->getServiceId());
-            _deps.emplace(std::pair<unsigned long, refl::rewrap_dependencies_t<refl::as_variant<T>>>{typeNameHash<DependencyManager*>(), dep});
+            _deps.emplace(std::pair<uint64_t, refl::rewrap_dependencies_t<refl::as_variant<T>>>{typeNameHash<DependencyManager*>(), dep});
         }
 
         void addDependencyInstance(IService *dep, [[maybe_unused]] v1::NeverNull<IService*> isvc) {
             INTERNAL_DEBUG("Adding service {}:IService", isvc->getServiceId());
-            _deps.emplace(std::pair<unsigned long, refl::rewrap_dependencies_t<refl::as_variant<T>>>{typeNameHash<IService*>(), dep});
+            _deps.emplace(std::pair<uint64_t, refl::rewrap_dependencies_t<refl::as_variant<T>>>{typeNameHash<IService*>(), dep});
         }
 
         void addDependencyInstance(IEventQueue *dep, [[maybe_unused]] v1::NeverNull<IService*> isvc) {
             INTERNAL_DEBUG("Adding service {}:IEventQueue", isvc->getServiceId());
-            _deps.emplace(std::pair<unsigned long, refl::rewrap_dependencies_t<refl::as_variant<T>>>{typeNameHash<IEventQueue*>(), dep});
+            _deps.emplace(std::pair<uint64_t, refl::rewrap_dependencies_t<refl::as_variant<T>>>{typeNameHash<IEventQueue*>(), dep});
         }
 
         template <typename depT>
         void removeDependencyInstance(Ichor::ScopedServiceProxy<depT>, [[maybe_unused]] v1::NeverNull<IService*> isvc) {
             INTERNAL_DEBUG("Removing service {}:{}", isvc->getServiceId(), typeName<Ichor::ScopedServiceProxy<depT>>());
+            // if(_serviceState == ServiceState::UNINJECTING) {
+            //     auto gen = [this]() -> AsyncGenerator<StartBehaviour> {
+            //         co_return co_await internal_stop();
+            //     }();
+            //     auto it = gen.begin();
+            //     if constexpr (DO_INTERNAL_DEBUG || DO_HARDENING) {
+            //         if (!it.get_finished()) {
+            //             INTERNAL_DEBUG("service {}:{} state {} failed to run internal_stop to completion", getServiceId(), typeName<T>(), getState());
+            //             std::terminate();
+            //         }
+            //     }
+            // }
             _deps.erase(typeNameHash<Ichor::ScopedServiceProxy<depT>>());
         }
 
         void removeDependencyInstance(DependencyManager *, [[maybe_unused]] v1::NeverNull<IService*> isvc) {
             INTERNAL_DEBUG("Removing service {}:DependencyManager", isvc->getServiceId());
+            // if(_serviceState == ServiceState::UNINJECTING) {
+            //     auto gen = [this]() -> AsyncGenerator<StartBehaviour> {
+            //         co_return co_await internal_stop();
+            //     }();
+            //     auto it = gen.begin();
+            //     if constexpr (DO_INTERNAL_DEBUG || DO_HARDENING) {
+            //         if (!it.get_finished()) {
+            //             INTERNAL_DEBUG("service {}:{} state {} failed to run internal_stop to completion", getServiceId(), typeName<T>(), getState());
+            //             std::terminate();
+            //         }
+            //     }
+            // }
             _deps.erase(typeNameHash<DependencyManager*>());
         }
 
         void removeDependencyInstance(IService *, [[maybe_unused]] v1::NeverNull<IService*> isvc) {
             INTERNAL_DEBUG("Removing service {}:IService", isvc->getServiceId());
+            // if(_serviceState == ServiceState::UNINJECTING) {
+            //     auto gen = [this]() -> AsyncGenerator<StartBehaviour> {
+            //         co_return co_await internal_stop();
+            //     }();
+            //     auto it = gen.begin();
+            //     if constexpr (DO_INTERNAL_DEBUG || DO_HARDENING) {
+            //         if (!it.get_finished()) {
+            //             INTERNAL_DEBUG("service {}:{} state {} failed to run internal_stop to completion", getServiceId(), typeName<T>(), getState());
+            //             std::terminate();
+            //         }
+            //     }
+            // }
             _deps.erase(typeNameHash<IService*>());
         }
 
         void removeDependencyInstance(IEventQueue *, [[maybe_unused]] v1::NeverNull<IService*> isvc) {
             INTERNAL_DEBUG("Removing service {}:IEventQueue", isvc->getServiceId());
+            // if(_serviceState == ServiceState::UNINJECTING) {
+            //     auto gen = [this]() -> AsyncGenerator<StartBehaviour> {
+            //         co_return co_await internal_stop();
+            //     }();
+            //     auto it = gen.begin();
+            //     if constexpr (DO_INTERNAL_DEBUG || DO_HARDENING) {
+            //         if (!it.get_finished()) {
+            //             INTERNAL_DEBUG("service {}:{} state {} failed to run internal_stop to completion", getServiceId(), typeName<T>(), getState());
+            //             std::terminate();
+            //         }
+            //     }
+            // }
             _deps.erase(typeNameHash<IEventQueue*>());
         }
 
@@ -558,7 +610,7 @@ namespace Ichor {
         Properties _properties;
     private:
         ///
-        /// \return true if started
+        /// \return
         [[nodiscard]] Task<StartBehaviour> internal_start(DependencyRegister const *_dependencies) {
             if(_serviceState != ServiceState::INSTALLED || (_dependencies != nullptr && !_dependencies->allSatisfied())) {
                 INTERNAL_DEBUG("internal_start service {}:{} state {} dependencies {} {}", getServiceId(), typeName<T>(), getState(), _dependencies->size(), _dependencies->allSatisfied());
