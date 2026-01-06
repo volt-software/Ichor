@@ -102,9 +102,11 @@ void Ichor::v1::EventStatisticsService::postInterceptEvent(Event const &evt, boo
 
     if(processingTime > 1ms) {
         fmt::println("LONG EVENT {} {}", evt.get_name(), evt.originatingService);
-        auto &dm = GetThreadLocalManager();
-        auto svc = dm.getIService(evt.originatingService);
-        fmt::println("SVC {}", (*svc)->getServiceName());
+        if(evt.originatingService != ServiceIdType{0}) {
+            auto &dm = GetThreadLocalManager();
+            auto svc = dm.getIService(evt.originatingService);
+            fmt::println("SVC {}", (*svc)->getServiceName());
+        }
     }
 }
 
