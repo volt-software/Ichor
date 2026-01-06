@@ -61,7 +61,8 @@ public:
         }
     }
 
-    void removeDependencyInstance(Ichor::ScopedServiceProxy<IConnectionService*>, IService&) {
+    void removeDependencyInstance(Ichor::ScopedServiceProxy<IConnectionService*> connectionService, IService& svc) {
+        fmt::println("{} svc removed {} {} {} {} {}", getServiceId(), svc.getServiceId(), connectionService->isClient(), evtGate.load(std::memory_order_acquire), _clientService == nullptr, _hostService == nullptr);
         evtGate.fetch_add(1, std::memory_order_acq_rel);
     }
 
