@@ -7,6 +7,7 @@
 #include <ichor/stl/StaticVector.h>
 #include <ichor/stl/SectionalPriorityQueue.h>
 #include <ichor/stl/StrongTypedef.h>
+#include <ichor/stl/Spans.h>
 #include <memory>
 #include <string_view>
 #include "TestServices/UselessService.h"
@@ -1644,4 +1645,7 @@ TEST_CASE("STL Tests") {
         REQUIRE(StrongTypeTest{1} > sul);
 
     }
+
+    static_assert(std::random_access_iterator<VectorView<int>::iterator>, "VectorView iterator not random access");
+    static_assert(std::random_access_iterator<VectorView<sufficiently_non_trivial>::iterator>, "VectorView iterator not random access");
 }
