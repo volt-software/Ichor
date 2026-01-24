@@ -6,6 +6,7 @@
 
 namespace Ichor::v1 {
     // Span-like, non-allocating view over a vector.
+    // Used in situations where you have a vector<CHILD> but want to return a span<PARENT>.
     // Safe for vectors of any type derived from T (avoids base-pointer
     // arithmetic across derived arrays by indexing via the original element type).
     template <typename VecT>
@@ -31,6 +32,7 @@ namespace Ichor::v1 {
             constexpr iterator operator++(int) noexcept { auto tmp = *this; ++_idx; return tmp; }
             constexpr iterator& operator--() noexcept { --_idx; return *this; }
             constexpr iterator operator--(int) noexcept { auto tmp = *this; --_idx; return tmp; }
+            constexpr value_type operator[](difference_type n) const noexcept { return _get(_data, _idx + n); }
 
             friend constexpr bool operator==(iterator const& a, iterator const& b) noexcept { return a._idx == b._idx && a._data == b._data; }
             friend constexpr bool operator!=(iterator const& a, iterator const& b) noexcept { return !(a == b); }
@@ -39,6 +41,7 @@ namespace Ichor::v1 {
             friend constexpr bool operator<=(iterator const& a, iterator const& b) noexcept { return !(b < a); }
             friend constexpr bool operator>=(iterator const& a, iterator const& b) noexcept { return !(a < b); }
             friend constexpr difference_type operator-(iterator const& a, iterator const& b) noexcept { return static_cast<difference_type>(a._idx) - static_cast<difference_type>(b._idx); }
+            friend constexpr iterator operator+(difference_type n, iterator const& a) noexcept { return iterator{a._data, a._get, static_cast<std::size_t>(a._idx + n)}; }
             constexpr iterator operator+(difference_type n) const noexcept { return iterator{_data, _get, static_cast<std::size_t>(_idx + n)}; }
             constexpr iterator operator-(difference_type n) const noexcept { return iterator{_data, _get, static_cast<std::size_t>(_idx - n)}; }
             constexpr iterator& operator+=(difference_type n) noexcept { _idx = static_cast<std::size_t>(_idx + n); return *this; }
