@@ -926,12 +926,19 @@ namespace Ichor {
         void checkIfCanQuit(std::vector<EventInterceptInfo> &allEventInterceptorsCopy, std::vector<EventInterceptInfo> &eventInterceptorsCopy) noexcept;
         bool hasDependencyWaiter(ServiceIdType serviceId, uint64_t eventType) noexcept;
 
+        struct [[nodiscard]] ScopedGenerator final {
+            std::unique_ptr<IGenerator> generator;
+            v1::ReferenceCountedPointer<Event> event;
+
+            ScopedGenerator(std::unique_ptr<IGenerator> _generator, v1::ReferenceCountedPointer<Event> _event) : generator(std::move(_generator)), event(_event) {}
+        };
+
         unordered_map<ServiceIdType, std::unique_ptr<ILifecycleManager>, ServiceIdHash> _services{}; // key = service id
         unordered_map<DependencyTrackerKey, std::vector<DependencyTrackerInfo>, DependencyTrackerKeyHash, std::equal_to<>> _dependencyRequestTrackers{}; // key = interface name hash
         unordered_map<uint64_t, std::vector<EventCallbackInfo>> _eventCallbacks{}; // key = event id
         unordered_map<uint64_t, std::vector<EventInterceptInfo>> _eventInterceptors{}; // key = event id
-        unordered_map<uint64_t, std::unique_ptr<IGenerator>> _scopedGenerators{}; // key = promise id
-        unordered_map<uint64_t, v1::ReferenceCountedPointer<Event>> _scopedEvents{}; // key = promise id
+        unordered_map<uint64_t, ScopedGenerator> _scopedGenerators{}; // key = promise id
+        // unordered_map<uint64_t, v1::ReferenceCountedPointer<Event>> _scopedEvents{}; // key = promise id
         unordered_map<uint64_t, EventWaiter> _eventWaiters{}; // key = event id
         unordered_map<ServiceIdType, EventWaiter, ServiceIdHash> _dependencyWaiters{}; // key = service id
         unordered_map<ServiceIdType, WaitingStopService, ServiceIdHash> _pendingStopsDueToCoroutine{}; // key = service which has to be stopped but has existing coroutines
