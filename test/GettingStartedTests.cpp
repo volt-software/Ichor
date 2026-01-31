@@ -10,7 +10,7 @@
 #include <ichor/events/RunFunctionEvent.h>
 #include <iostream>
 #include <thread>
-#include <ichor/ServiceExecutionScope.h>
+#include <ichor/ScopedServiceProxy.h>
 
 using namespace Ichor;
 

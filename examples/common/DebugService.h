@@ -4,7 +4,7 @@
 #include <ichor/services/timer/ITimerFactory.h>
 #include <ichor/services/logging/Logger.h>
 #include <ichor/dependency_management/AdvancedService.h>
-#include <ichor/ServiceExecutionScope.h>
+#include <ichor/ScopedServiceProxy.h>
 #include <ichor/stl/StringUtils.h>
 
 using namespace Ichor;
@@ -77,32 +77,30 @@ private:
             ICHOR_EMERGENCY_LOG1(_logger, "");
         }
 
+#ifdef ICHOR_HAVE_STD_STACKTRACE
         ICHOR_EMERGENCY_LOG1(_logger, "\n===================================\n");
-
         auto serviceIdsWithActiveCoroutines = GetThreadLocalManager().getServiceIdsWhichHaveActiveCoroutines();
         ICHOR_EMERGENCY_LOG1(_logger, "Services With Active Coroutines:");
-        for(auto const &[evt, scopes] : serviceIdsWithActiveCoroutines) {
+        for(auto const &[evt, svcId, stacktrace] : serviceIdsWithActiveCoroutines) {
             ICHOR_EMERGENCY_LOG2(_logger, "\tevent {}:{}:{}", evt.id, evt.get_name(), evt.originatingService);
-            for(auto const &scope : scopes) {
-                auto svc = GetThreadLocalManager().getIService(scope.id);
+            auto svc = GetThreadLocalManager().getIService(svcId);
 
-                if(!svc) {
-                    ICHOR_EMERGENCY_LOG2(_logger, "\t\tSvc {} but missing from manager", scope.id);
-                } else {
-                    ICHOR_EMERGENCY_LOG2(_logger, "\t\tSvc {}:{} {}", (*svc)->getServiceId(), (*svc)->getServiceName(), (*svc)->getServiceState());
-#ifdef ICHOR_HAVE_STD_STACKTRACE
-                    for(auto const &traceEntry : scope.trace) {
-                        auto filename = traceEntry.source_file();
-                        if(!filename.empty()) {
-                            filename = v1::basename(filename.c_str());
-                        }
-                        ICHOR_EMERGENCY_LOG2(_logger, "\t\t\t{}:{}", filename, traceEntry.source_line());
+            if(!svc) {
+                ICHOR_EMERGENCY_LOG2(_logger, "\t\tSvc {} but missing from manager", svcId);
+            } else {
+                ICHOR_EMERGENCY_LOG2(_logger, "\t\tSvc {}:{} {}", (*svc)->getServiceId(), (*svc)->getServiceName(), (*svc)->getServiceState());
+
+                for(auto const &traceEntry : stacktrace) {
+                    auto filename = traceEntry.source_file();
+                    if(!filename.empty()) {
+                        filename = v1::basename(filename.c_str());
                     }
-#endif
+                    ICHOR_EMERGENCY_LOG2(_logger, "\t\t\t{}:{}", filename, traceEntry.source_line());
                 }
+
             }
         }
-
+#endif
 
         ICHOR_EMERGENCY_LOG1(_logger, "\n===================================\n");
     }

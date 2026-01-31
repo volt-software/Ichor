@@ -7,7 +7,7 @@
 #include <ichor/ScopeGuard.h>
 #include <ichor/Filter.h>
 #include <thread>
-#include <ichor/ServiceExecutionScope.h>
+#include <ichor/ScopedServiceProxy.h>
 
 template<class NextLayer>
 void setup_stream(std::shared_ptr<websocket::stream<NextLayer>>& ws)

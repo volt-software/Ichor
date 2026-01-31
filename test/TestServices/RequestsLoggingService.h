@@ -2,7 +2,7 @@
 
 #include <ichor/dependency_management/AdvancedService.h>
 #include <ichor/services/logging/Logger.h>
-#include <ichor/ServiceExecutionScope.h>
+#include <ichor/ScopedServiceProxy.h>
 
 namespace Ichor {
     struct IRequestsLoggingService {

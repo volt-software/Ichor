@@ -11,7 +11,7 @@
 #include <fcntl.h>
 #include <poll.h>
 #include <thread>
-#include <ichor/ServiceExecutionScope.h>
+#include <ichor/ScopedServiceProxy.h>
 
 
 template <typename InterfaceT> requires Ichor::DerivedAny<InterfaceT, Ichor::v1::IConnectionService, Ichor::v1::IHostConnectionService, Ichor::v1::IClientConnectionService>

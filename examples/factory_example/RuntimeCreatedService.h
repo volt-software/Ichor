@@ -1,6 +1,6 @@
 #pragma once
 
-#include <ichor/ServiceExecutionScope.h>
+#include <ichor/ScopedServiceProxy.h>
 #include <ichor/services/logging/Logger.h>
 
 using namespace Ichor;

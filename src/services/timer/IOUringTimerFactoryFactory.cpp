@@ -3,7 +3,7 @@
 #include <ichor/services/timer/IOUringTimer.h>
 #include <ichor/events/RunFunctionEvent.h>
 #include <ichor/Filter.h>
-#include <ichor/ServiceExecutionScope.h>
+#include <ichor/ScopedServiceProxy.h>
 
 Ichor::v1::IOUringTimerFactoryFactory::IOUringTimerFactoryFactory(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {
     reg.registerDependency<IIOUringQueue>(this, DependencyFlags::REQUIRED);

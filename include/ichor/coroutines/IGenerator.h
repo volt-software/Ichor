@@ -3,7 +3,10 @@
 #include <memory>
 #include <vector>
 #include <ichor/Defines.h>
-#include <ichor/ServiceExecutionScope.h>
+#include <ichor/CoreTypes.h>
+#ifdef ICHOR_HAVE_STD_STACKTRACE
+#include <stacktrace>
+#endif
 
 namespace Ichor {
     class IAsyncGeneratorBeginOperation {
@@ -26,7 +29,12 @@ namespace Ichor {
         constexpr virtual ~IGenerator() = 0;
         [[nodiscard]] constexpr virtual bool done() const noexcept = 0;
         [[nodiscard]] constexpr virtual std::unique_ptr<IAsyncGeneratorBeginOperation> begin_interface() noexcept = 0;
-        [[nodiscard]] constexpr virtual const std::vector<ServiceExecutionScopeContents> &get_service_id_stack() noexcept = 0;
+        constexpr virtual void set_service_id(ServiceIdType svcId) noexcept = 0;
+        [[nodiscard]] constexpr virtual ServiceIdType const get_service_id() const noexcept = 0;
+
+#ifdef ICHOR_HAVE_STD_STACKTRACE
+        [[nodiscard]] constexpr virtual std::stacktrace const &get_stacktrace() const noexcept = 0;
+#endif
     };
 
     constexpr inline IGenerator::~IGenerator() = default;

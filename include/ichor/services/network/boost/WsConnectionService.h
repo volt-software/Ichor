@@ -8,7 +8,7 @@
 #include <boost/beast.hpp>
 #include <boost/asio/spawn.hpp>
 #include <boost/circular_buffer.hpp>
-#include <ichor/ServiceExecutionScope.h>
+#include <ichor/ScopedServiceProxy.h>
 
 namespace beast = boost::beast;         // from <boost/beast.hpp>
 namespace http = beast::http;           // from <boost/beast/http.hpp>

@@ -9,7 +9,7 @@
 #include <base64/base64.h>
 #include <ichor/glaze.h>
 #include <glaze/util/type_traits.hpp>
-#include <ichor/ServiceExecutionScope.h>
+#include <ichor/ScopedServiceProxy.h>
 
 using namespace Ichor::Etcdv3::v1;
 using namespace Ichor::v1;

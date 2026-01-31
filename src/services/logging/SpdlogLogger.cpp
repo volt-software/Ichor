@@ -3,7 +3,7 @@
 #include <spdlog/spdlog.h>
 #include <ichor/dependency_management/DependencyRegister.h>
 #include <ichor/services/logging/SpdlogLogger.h>
-#include <ichor/ServiceExecutionScope.h>
+#include <ichor/ScopedServiceProxy.h>
 
 Ichor::v1::SpdlogLogger::SpdlogLogger(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {
     reg.registerDependency<ISpdlogSharedService>(this, DependencyFlags::REQUIRED);

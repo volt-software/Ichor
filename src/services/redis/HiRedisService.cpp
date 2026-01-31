@@ -5,7 +5,7 @@
 #include <hiredis/async.h>
 #include <hiredis/adapters/poll.h>
 #include <fmt/format.h>
-#include <ichor/ServiceExecutionScope.h>
+#include <ichor/ScopedServiceProxy.h>
 
 using namespace std::literals;
 

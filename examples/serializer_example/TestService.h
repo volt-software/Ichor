@@ -3,7 +3,7 @@
 #include <ichor/DependencyManager.h>
 #include <ichor/services/logging/Logger.h>
 #include <ichor/services/serialization/ISerializer.h>
-#include <ichor/ServiceExecutionScope.h>
+#include <ichor/ScopedServiceProxy.h>
 #include "../common/TestMsg.h"
 
 using namespace Ichor;

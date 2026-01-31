@@ -2,7 +2,7 @@
 #include <ichor/services/network/boost/HttpHostService.h>
 #include <ichor/services/network/http/HttpScopeGuards.h>
 #include <ichor/events/RunFunctionEvent.h>
-#include <ichor/ServiceExecutionScope.h>
+#include <ichor/ScopedServiceProxy.h>
 
 Ichor::Boost::v1::HttpHostService::HttpHostService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {
     reg.registerDependency<Ichor::v1::ILogger>(this, DependencyFlags::REQUIRED);

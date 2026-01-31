@@ -2,7 +2,7 @@
 
 #include <type_traits>
 
-#include <ichor/ServiceExecutionScope.h>
+#include <ichor/ScopedServiceProxy.h>
 
 // When creating services, the returned pointer is not meant to be stored in a container nor used beyond the scope of that code block.
 // So by deleting the copy/move constructors/operators, hopefully force users to store only the service ID.

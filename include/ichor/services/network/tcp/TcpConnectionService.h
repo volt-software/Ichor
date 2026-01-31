@@ -6,7 +6,7 @@
 #include <ichor/services/logging/Logger.h>
 #include <ichor/services/timer/ITimerFactory.h>
 #include <ichor/Concepts.h>
-#include <ichor/ServiceExecutionScope.h>
+#include <ichor/ScopedServiceProxy.h>
 
 namespace Ichor::v1 {
 

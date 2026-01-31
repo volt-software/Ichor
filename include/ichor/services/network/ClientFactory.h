@@ -5,7 +5,7 @@
 #include <ichor/services/logging/Logger.h>
 #include <ichor/DependencyManager.h>
 #include <ichor/Filter.h>
-#include <ichor/ServiceExecutionScope.h>
+#include <ichor/ScopedServiceProxy.h>
 
 namespace Ichor::v1 {
     template <typename NetworkType, typename NetworkInterfaceType = IConnectionService>

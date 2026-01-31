@@ -5,7 +5,7 @@
 #include <ichor/services/timer/IInternalTimerFactory.h>
 #include <iterator>
 #include <algorithm>
-#include <ichor/ServiceExecutionScope.h>
+#include <ichor/ScopedServiceProxy.h>
 
 namespace Ichor::v1 {
     extern std::atomic<uint64_t> _timerIdCounter;

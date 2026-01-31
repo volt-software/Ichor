@@ -8,7 +8,7 @@
 #include <ichor/services/logging/Logger.h>
 #include <ichor/event_queues/IIOUringQueue.h>
 #include <vector>
-#include <ichor/ServiceExecutionScope.h>
+#include <ichor/ScopedServiceProxy.h>
 
 namespace Ichor::v1 {
 

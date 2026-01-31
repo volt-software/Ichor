@@ -14,7 +14,7 @@ public:
         return {};
     }
     AsyncGenerator<StartBehaviour> dependencyOffline(v1::NeverNull<ILifecycleManager *> dependentService, std::vector<Dependency *> const &deps) override {
-        return {};
+        co_return {};
     }
     void finishDependencyOffline(v1::NeverNull<ILifecycleManager*> dependentService, std::vector<Dependency*> const &deps) override {
     }

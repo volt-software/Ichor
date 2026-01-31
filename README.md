@@ -3,15 +3,30 @@
 
 # What is this?
 
-Ichor, [Greek Mythos for ethereal fluid that is the blood of the gods/immortals](https://en.wikipedia.org/wiki/Ichor), is a C++ framework/middleware for microservices. Ichor allows re-usable services and components to be used in multiple microservices, greatly supporting the workflow for large teams. It also supports reasoning in multithreaded environments, reducing the chances for data races.
+Ichor is mainly my own personal project to achieve the following things:
+* Abstracting modern submission/completion queue approaches like io_uring and windows' IoRing, swapping approaches without needing to modify user code at all
+* Add lifetimes and settings to individual instances of classes 
+* Using modern C++ features like coroutines but provide very detailed control of debugging 
+* Performance matching at least Boost Beast
+* Memory and thread safety as much as possible using modern compiler flags and software approaches
 
-TL;DR: Node.js-style event loops with coroutines and dependency injection, except it's C++.
-
-Ichor borrows from the concept of [Fearless Concurrency](https://doc.rust-lang.org/book/ch16-00-concurrency.html) and offers thread confinement.
+Because I want to minimise coupling between classes and the underlying used technologies as much as possible, dependency injection is at the heart of Ichor. Second, because I want instances to have a lifetime, because I want to use coroutines and because I want to use io_uring, event queueing is the second heart of Ichor. Without either of the two, most of the framework will not form a cohesive whole.
 
 ### Boost supports event loops, dependency injection, networking, can do all of that, and more. Any reason i'd want to use your lib instead?
 
-Excellent question! Please see [this page](./docs/04-WhyUseIchor.md) to get a more in-depth answer.
+I've personally found Boost to have too many breaking changes. The approach I have with Ichor is to reduce the refactoring necessary when upgrading libraries as well as to have versioned code API, to support bridging old and new API without breaking existing code. Moreover, there's a strong vendor locking as the boost types will end up being present through your entire codebase. Ichor doesn't completely remove that, but reduces it as much as possible.
+
+Second, although Boost provides an impressive amount of supported compilers and has tests, there's a couple of indicators I use that I want to score better on than Boost (currently not achieved yet). Code coverage provides a skewed perspective on quality, model based coverage such as states or risk based testing provides a better perspective, as such these are the metrics I want Ichor to score better no:
+
+* API stability and ease of use
+* State based coverage model
+* Risk based testing
+* Differential tests (comparing e.g. Ichor's redis implementation vs hiredis)
+* Fuzzing (boost does this currently, Ichor does not)
+* Compiler warnings treated as errors, using f.e. [Jason Turner's best practices](https://github.com/cpp-best-practices/cppbestpractices/blob/master/02-Use_the_Tools_Available.md#gcc%E2%80%94clang) and the most most [recent compiler hardening flags](https://best.openssf.org/Compiler-Hardening-Guides/Compiler-Options-Hardening-Guide-for-C-and-C++.html). Boost doesn't enable many by default, which in my eyes makes boost more error-prone and less secure.
+* Performance: especially Boost.BEAST is not very performant in comparison to other libraries such as Lithium or Drogon. See [the techempowered benchmark](https://www.techempower.com/benchmarks/#hw=ph&test=fortune&section=data-r23&l=ziimf3-pa7) or [Ichor's own benchmarks](./benchmarks/README.md) to see how easy it is to beat Boost.BEAST performance-wise.
+
+However, these all tell you more about what I find important. It's great to have options and if you find Boost working for you, then you should continue using it.
 
 ### Thread confinement? Fearless Concurrency?
 
@@ -79,8 +94,8 @@ The framework provides several core features and optional services behind cmake 
 
 Optional services:
 * Websocket service through Boost.BEAST
-* HTTP/HTTPS client and server services through Boost.BEAST
-* Spdlog logging service
+* HTTP client and server services, partial implementation of HTTP/1.1, HTTPS only through boost Beast
+* logging services
 * TCP communication service through io_uring and Boost.ASIO
 * JSON serialization services examples
 * Timer service
@@ -89,8 +104,6 @@ Optional services:
 
 # Roadmap
 
-* Safe CPP proposal support
-* Custom HTTP server implementation for usage with io_uring
 * EDF scheduling / WCET measurements
 * Pubsub interfaces
     * Kafka? Pulsar? Ecal?
@@ -128,6 +141,8 @@ Instead, Ichor now recommends usage with [mimalloc](https://github.com/microsoft
 
 ### FreeRTOS? VxWorks Wind River? Baremetal?
 
+I'm only one guy, time is my most limited resource. But if anyone wants to open a PR:
+
 What is necessary to implement before using Ichor on these platforms:
 * Ichor [STL](include/ichor/stl) functionality, namely the RealtimeMutex and ConditionVariable.
 * Compiler support for C++20 may not be adequate yet.
@@ -137,9 +152,14 @@ The same goes for Wind River. Freestanding implementations might be necessary fo
 
 ### Why re-implement parts of the STL?
 
-To add support for `-fno-rtti` while providing the functionality of `std::any` and realtime mutexes (at least on linux).
-
-The real-time extensions to mutexes (PTHREAD_MUTEX_ADAPTIVE_NP/PTHREAD_PRIO_INHERIT/PTHREAD_RWLOCK_PREFER_WRITER_NONRECURSIVE_NP) are either not a standard extension or not exposed by the standard library equivalents.
+* To add support for `-fno-rtti` while providing the functionality of `std::any` and realtime mutexes (at least on linux).
+* The real-time extensions to mutexes (PTHREAD_MUTEX_ADAPTIVE_NP/PTHREAD_PRIO_INHERIT/PTHREAD_RWLOCK_PREFER_WRITER_NONRECURSIVE_NP) are either not a standard extension or not exposed by the standard library equivalents.
+* To support coroutines on mutexes
+* To eliminate redundant checks when using unique_ptrs and priority queues
+* VectorView allowing to return a span<PARENT>-like when you have a vector<CHILD>
+* StaticVector implementation for C++20
+* Some string conversion and split functions that are faster than std implementations
+* StrongTypes-lite such as possible in libraries like [type_safe](https://github.com/foonathan/type_safe/tree/main) 
 
 # License
 

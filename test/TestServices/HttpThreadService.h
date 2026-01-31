@@ -10,7 +10,7 @@
 #include <ichor/services/serialization/ISerializer.h>
 #include "../examples/common/TestMsg.h"
 #include "../serialization/RegexJsonMsg.h"
-#include <ichor/ServiceExecutionScope.h>
+#include <ichor/ScopedServiceProxy.h>
 
 using namespace Ichor;
 using namespace Ichor::v1;

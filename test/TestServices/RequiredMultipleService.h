@@ -2,7 +2,7 @@
 
 #include "UselessService.h"
 #include "ICountService.h"
-#include <ichor/ServiceExecutionScope.h>
+#include <ichor/ScopedServiceProxy.h>
 
 using namespace Ichor;
 using namespace Ichor::v1;

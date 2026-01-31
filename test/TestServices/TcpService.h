@@ -6,7 +6,7 @@
 #include <ichor/dependency_management/AdvancedService.h>
 #include <ichor/services/network/IConnectionService.h>
 #include <thread>
-#include <ichor/ServiceExecutionScope.h>
+#include <ichor/ScopedServiceProxy.h>
 
 using namespace Ichor;
 using namespace Ichor::v1;

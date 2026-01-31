@@ -9,7 +9,7 @@
 #include <ichor/dependency_management/AdvancedService.h>
 #include <ichor/event_queues/IIOUringQueue.h>
 #include <ichor/DependencyManager.h>
-#include <ichor/ServiceExecutionScope.h>
+#include <ichor/ScopedServiceProxy.h>
 
 namespace Ichor::v1 {
     /// This class creates timer factories for requesting services, providing the requesting services' serviceId to the factory/timers

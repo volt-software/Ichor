@@ -4,7 +4,7 @@
 #include <ichor/services/network/http/HttpScopeGuards.h>
 #include <ichor/ScopeGuard.h>
 #include <fmt/format.h>
-#include <ichor/ServiceExecutionScope.h>
+#include <ichor/ScopedServiceProxy.h>
 
 Ichor::Boost::v1::HttpConnectionService::HttpConnectionService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {
     reg.registerDependency<Ichor::v1::ILogger>(this, DependencyFlags::REQUIRED);

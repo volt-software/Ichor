@@ -7,7 +7,7 @@
 #include <ichor/services/timer/ITimerFactory.h>
 #include <ichor/stl/StringUtils.h>
 #include <hiredis/hiredis.h>
-#include <ichor/ServiceExecutionScope.h>
+#include <ichor/ScopedServiceProxy.h>
 
 namespace Ichor::v1 {
     /**

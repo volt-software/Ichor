@@ -1,7 +1,7 @@
 #include <ichor/services/metrics/EventStatisticsService.h>
 #include <ichor/DependencyManager.h>
 #include <numeric>
-#include <ichor/ServiceExecutionScope.h>
+#include <ichor/ScopedServiceProxy.h>
 
 Ichor::v1::EventStatisticsService::EventStatisticsService(DependencyRegister &reg, Properties props) : AdvancedService<EventStatisticsService>(std::move(props)) {
     reg.registerDependency<ITimerFactory>(this, DependencyFlags::REQUIRED);

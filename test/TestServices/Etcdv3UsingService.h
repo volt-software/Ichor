@@ -3,7 +3,7 @@
 #include <ichor/dependency_management/AdvancedService.h>
 #include <ichor/services/etcd/IEtcdV3.h>
 #include <ichor/events/RunFunctionEvent.h>
-#include <ichor/ServiceExecutionScope.h>
+#include <ichor/ScopedServiceProxy.h>
 
 #if defined( __GNUC__ )
 #    pragma GCC diagnostic push

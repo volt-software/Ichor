@@ -4,7 +4,7 @@
 #include <ichor/coroutines/Task.h>
 #include <ichor/dependency_management/DependencyRegister.h>
 #include <ichor/dependency_management/IService.h>
-#include <ichor/ServiceExecutionScope.h>
+#include <ichor/ScopedServiceProxy.h>
 #include <utility>
 #include <variant>
 

@@ -4,7 +4,7 @@
 #include <ichor/dependency_management/AdvancedService.h>
 #include <ichor/event_queues/IEventQueue.h>
 #include "OptionalService.h"
-#include <ichor/ServiceExecutionScope.h>
+#include <ichor/ScopedServiceProxy.h>
 
 using namespace Ichor;
 using namespace Ichor::v1;
