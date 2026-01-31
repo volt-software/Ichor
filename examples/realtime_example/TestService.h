@@ -7,7 +7,7 @@
 #include "gsm_enc/gsm_enc.h"
 #include <array>
 #include <numeric>
-#include <ichor/ServiceExecutionScope.h>
+#include <ichor/ScopedServiceProxy.h>
 
 using namespace Ichor;
 

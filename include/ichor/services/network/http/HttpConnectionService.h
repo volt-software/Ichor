@@ -9,7 +9,7 @@
 #include <ichor/event_queues/IEventQueue.h>
 #include <tl/expected.h>
 #include <deque>
-#include <ichor/ServiceExecutionScope.h>
+#include <ichor/ScopedServiceProxy.h>
 
 namespace Ichor::v1 {
     /**

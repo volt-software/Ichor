@@ -3,7 +3,7 @@
 #include <ichor/dependency_management/AdvancedService.h>
 #include <ichor/event_queues/IIOUringQueue.h>
 #include <ichor/ichor_liburing.h>
-#include <ichor/ServiceExecutionScope.h>
+#include <ichor/ScopedServiceProxy.h>
 
 namespace Ichor {
     struct IOUringSleepService final : public AdvancedService<IOUringSleepService> {

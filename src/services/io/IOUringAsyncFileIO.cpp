@@ -3,7 +3,7 @@
 #include <ichor/ichor_liburing.h>
 #include <fcntl.h>
 #include <sys/stat.h>
-#include <ichor/ServiceExecutionScope.h>
+#include <ichor/ScopedServiceProxy.h>
 
 
 Ichor::v1::IOUringAsyncFileIO::IOUringAsyncFileIO(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {

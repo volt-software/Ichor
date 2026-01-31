@@ -6,7 +6,7 @@
 #include <ichor/dependency_management/AdvancedService.h>
 #include <ichor/services/logging/Logger.h>
 #include <ichor/services/logging/SpdlogSharedService.h>
-#include <ichor/ServiceExecutionScope.h>
+#include <ichor/ScopedServiceProxy.h>
 
 namespace Ichor::v1 {
     class SpdlogLogger final : public ILogger, public AdvancedService<SpdlogLogger> {

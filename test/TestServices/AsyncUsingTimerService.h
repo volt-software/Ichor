@@ -3,7 +3,7 @@
 #include <ichor/services/timer/ITimerFactory.h>
 #include <ichor/dependency_management/AdvancedService.h>
 #include "AwaitService.h"
-#include <ichor/ServiceExecutionScope.h>
+#include <ichor/ScopedServiceProxy.h>
 
 using namespace Ichor;
 using namespace Ichor::v1;

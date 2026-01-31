@@ -2,7 +2,7 @@
 
 #include <ichor/dependency_management/AdvancedService.h>
 #include "UselessService.h"
-#include <ichor/ServiceExecutionScope.h>
+#include <ichor/ScopedServiceProxy.h>
 
 extern std::unique_ptr<Ichor::AsyncManualResetEvent> _evt;
 

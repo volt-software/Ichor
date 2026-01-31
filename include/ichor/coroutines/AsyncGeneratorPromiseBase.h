@@ -16,10 +16,9 @@
 #include <utility>
 #include <ichor/Defines.h>
 #include <ichor/Enums.h>
-// #include <ichor/Common.h>
+#include <ichor/ConstevalHash.h>
 #include <ichor/stl/ReferenceCountedPointer.h>
 #include <ichor/stl/CompilerSpecific.h>
-#include <ichor/ServiceExecutionScope.h>
 
 namespace Ichor {
     template<typename T>
@@ -42,6 +41,7 @@ namespace Ichor::Detail {
     template<typename T>
     class AsyncGeneratorIterator;
     class AsyncGeneratorYieldOperation;
+    template<typename T>
     class AsyncGeneratorAdvanceOperation;
 
     class AsyncGeneratorPromiseBase {
@@ -146,19 +146,30 @@ namespace Ichor::Detail {
             _priority = priority;
         }
 
-        [[nodiscard]] ICHOR_CONSTEXPR_VECTOR const std::vector<ServiceExecutionScopeContents> &get_service_id_stack() const noexcept {
-            return _svcIdStack;
+        [[nodiscard]] ICHOR_CONSTEXPR_VECTOR const ServiceIdType &get_service_id() const noexcept {
+            return _svcId;
         }
 
-        ICHOR_CONSTEXPR_VECTOR void set_service_id_stack(std::vector<ServiceExecutionScopeContents> svcIdStack) noexcept {
-            _svcIdStack = std::move(svcIdStack);
+        ICHOR_CONSTEXPR_VECTOR void set_service_id(ServiceIdType svcId) noexcept {
+            _svcId = svcId;
         }
+
+#ifdef ICHOR_HAVE_STD_STACKTRACE
+        [[nodiscard]] ICHOR_CONSTEXPR_VECTOR const std::stacktrace &get_stacktrace() const noexcept {
+            return _trace;
+        }
+
+        ICHOR_CONSTEXPR_VECTOR void set_stacktrace(std::stacktrace trace) noexcept {
+            _trace = std::move(trace);
+        }
+#endif
 
     protected:
         constexpr AsyncGeneratorYieldOperation internal_yield_value() noexcept;
 
     public:
         friend class AsyncGeneratorYieldOperation;
+        template <typename T>
         friend class AsyncGeneratorAdvanceOperation;
 
         // Ichor forces everything to be on the same thread (or terminates the program)
@@ -170,7 +181,10 @@ namespace Ichor::Detail {
         std::coroutine_handle<> _consumerCoroutine;
         uint64_t _id;
         uint64_t _priority{100}; // TODO: use INTERNAL_DEPENDENCY_EVENT_PRIORITY by refactoring headers
-        std::vector<ServiceExecutionScopeContents> _svcIdStack{};
+#ifdef ICHOR_HAVE_STD_STACKTRACE
+        std::stacktrace _trace;
+#endif
+        ServiceIdType _svcId{};
 #ifdef ICHOR_USE_HARDENING
         DependencyManager *_dmAtTimeOfCreation{_local_dm};
 #endif

@@ -1,6 +1,6 @@
 #include <ichor/services/network/http/HttpConnectionService.h>
 #include <ichor/stl/StringUtils.h>
-#include <ichor/ServiceExecutionScope.h>
+#include <ichor/ScopedServiceProxy.h>
 
 namespace {
     enum class ChunkParseStatus {

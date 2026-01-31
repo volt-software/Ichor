@@ -3,7 +3,7 @@
 #include <ichor/dependency_management/AdvancedService.h>
 #include <ichor/events/RunFunctionEvent.h>
 #include "UselessService.h"
-#include <ichor/ServiceExecutionScope.h>
+#include <ichor/ScopedServiceProxy.h>
 
 using namespace Ichor::v1;
 

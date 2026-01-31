@@ -3,7 +3,7 @@
 #include <ichor/Common.h>
 #include <ichor/events/InternalEvents.h>
 #include <ichor/stl/NeverAlwaysNull.h>
-#include <ichor/ServiceExecutionScope.h>
+#include <ichor/ScopedServiceProxy.h>
 #include <concepts>
 #include <utility>
 

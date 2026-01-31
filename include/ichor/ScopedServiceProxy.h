@@ -8,90 +8,17 @@
 #include <cstddef>
 #include <utility>
 
-#ifdef ICHOR_HAVE_STD_STACKTRACE
-#define ICHOR_DEBUG_PROXIES_CALLSTACK 1 
-#else
-#define ICHOR_DEBUG_PROXIES_CALLSTACK 0
-#endif
-
-#if ICHOR_DEBUG_PROXIES_CALLSTACK
-#include <stacktrace>
-#endif
-
 #if defined(ICHOR_ENABLE_INTERNAL_DEBUGGING) || defined(ICHOR_USE_HARDENING)
 #include <ichor/interfaces/IFrameworkLogger.h>
 #include <ichor/ConstevalHash.h>
 #endif
 
 namespace Ichor {
-
-    struct ServiceExecutionScopeContents final {
-        ServiceIdType id;
-#if ICHOR_DEBUG_PROXIES_CALLSTACK
-        std::stacktrace trace;
-
-        ServiceExecutionScopeContents(ServiceIdType _id) : id(_id), trace(std::stacktrace::current()) {}
-#else
-        ServiceExecutionScopeContents(ServiceIdType _id) : id(_id) {}
-#endif
-
-        friend bool operator==(ServiceExecutionScopeContents const &content, ServiceIdType _id) noexcept {
-            return content.id == _id;
-        }
-        friend bool operator==(ServiceIdType _id, ServiceExecutionScopeContents const &content) noexcept {
-            return content.id == _id;
-        }
-    };
-
-    class ServiceExecutionScope final {
-    public:
-        explicit ServiceExecutionScope(ServiceIdType id) noexcept {
-            // fmt::println("ServiceExecutionScope pushing {}", id);
-            current().push_back(id);
-        }
-        ~ServiceExecutionScope() noexcept {
-            auto &stack = current();
-            if(!stack.empty()) {
-            // fmt::println("ServiceExecutionScope popping {}", stack.back().id);
-                stack.pop_back();
-            }
-        }
-
-        ServiceExecutionScope(ServiceExecutionScope const &) = delete;
-        ServiceExecutionScope &operator=(ServiceExecutionScope const &) = delete;
-
-        ServiceExecutionScope(ServiceExecutionScope &&other) noexcept = delete;
-        ServiceExecutionScope &operator=(ServiceExecutionScope &&other) noexcept = delete;
-
-        [[nodiscard]] static ServiceIdType currentServiceId() noexcept {
-            auto &stack = current();
-            return stack.empty() ? ServiceIdType{0} : stack.back().id;
-        }
-
-        [[nodiscard]] std::vector<ServiceExecutionScopeContents> &getServiceIdStack() noexcept {
-            return current();
-        }
-
-    private:
-        [[nodiscard]] static std::vector<ServiceExecutionScopeContents> &current() noexcept {
-            ICHOR_CONSTINIT_VECTOR thread_local std::vector<ServiceExecutionScopeContents> stack;
-            return stack;
-        }
-    };
-
     template<typename Service>
     class ScopedServiceProxy final {
     public:
         using Element = std::remove_pointer_t<Service>;
         using Pointer = Element*;
-
-        struct CallScopeProxy {
-            Pointer service;
-            mutable ServiceExecutionScope scope;
-            Pointer operator->() const noexcept {
-                return service;
-             }
-        };
 
         ScopedServiceProxy() noexcept = default;
         explicit ScopedServiceProxy(Ichor::v1::NeverNull<Pointer> svc, ServiceIdType id) noexcept : _service(svc), _serviceId(id) {}
@@ -106,24 +33,24 @@ namespace Ichor {
             return *this;
         }
 
-        CallScopeProxy operator->() const noexcept {
+        Pointer operator->() const noexcept {
             if constexpr(DO_INTERNAL_DEBUG || DO_HARDENING) {
                 if(_service == nullptr) [[unlikely]] {
                     ICHOR_EMERGENCY_NO_LOGGER_LOG2("attempt to use a nullptr service of type {}, perhaps this is a use-after-coroutine?", typeName<Service>());
                     std::terminate();
                 }
             }
-            return CallScopeProxy{_service, ServiceExecutionScope{_serviceId}};
+            return _service;
         }
 
-        CallScopeProxy operator*() const noexcept {
+        Pointer operator*() const noexcept {
             if constexpr(DO_INTERNAL_DEBUG || DO_HARDENING) {
                 if(_service == nullptr) [[unlikely]] {
                     ICHOR_EMERGENCY_NO_LOGGER_LOG2("attempt to use a nullptr service of type {}, perhaps this is a use-after-coroutine?", typeName<Service>());
                     std::terminate();
                 }
             }
-            return CallScopeProxy{_service, ServiceExecutionScope{_serviceId}};
+            return _service;
         }
 
         explicit operator bool() const noexcept {

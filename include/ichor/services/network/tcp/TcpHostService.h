@@ -5,7 +5,7 @@
 #include <ichor/services/network/IHostService.h>
 #include <ichor/services/logging/Logger.h>
 #include <ichor/services/timer/ITimerFactory.h>
-#include <ichor/ServiceExecutionScope.h>
+#include <ichor/ScopedServiceProxy.h>
 
 namespace Ichor::v1 {
     struct NewSocketEvent final : public Ichor::Event {

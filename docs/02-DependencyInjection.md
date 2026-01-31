@@ -1,4 +1,4 @@
-#include <ichor/ServiceExecutionScope.h>
+#include <ichor/ScopedServiceProxy.h>
 # Dependency Injection (DI)
 
 Ichor heavily uses Dependency Injection to ensure easier long term maintainability as well as make it easier to modify Ichor to suit the users use-cases.

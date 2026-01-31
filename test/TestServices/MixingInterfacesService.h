@@ -2,7 +2,7 @@
 
 #include <variant>
 #include <ichor/dependency_management/AdvancedService.h>
-#include <ichor/ServiceExecutionScope.h>
+#include <ichor/ScopedServiceProxy.h>
 
 using namespace Ichor;
 

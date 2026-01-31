@@ -7,7 +7,7 @@
 #include <ichor/services/network/http/IHttpConnectionService.h>
 #include <ichor/services/network/IClientFactory.h>
 #include <stack>
-#include <ichor/ServiceExecutionScope.h>
+#include <ichor/ScopedServiceProxy.h>
 
 namespace Ichor::Etcdv3::v1 {
 

@@ -4,7 +4,7 @@
 #include <ichor/services/etcd/IEtcdV2.h>
 #include <ichor/events/RunFunctionEvent.h>
 #include <thread>
-#include <ichor/ServiceExecutionScope.h>
+#include <ichor/ScopedServiceProxy.h>
 
 namespace Ichor {
     struct Etcdv2UsingService final : public AdvancedService<Etcdv2UsingService> {
@@ -550,8 +550,13 @@ namespace Ichor {
                     std::terminate();
                 }
 
-                if (!getReply.value().errorCode || getReply.value().errorCode != Etcdv2::v1::EtcdErrorCodes::KEY_DOES_NOT_EXIST) {
-                    fmt::println("Incorrect ttl node errorCode");
+                if (!getReply.value().errorCode) {
+                    fmt::println("missing ttl node errorCode");
+                    std::terminate();
+                }
+
+                if (getReply.value().errorCode != Etcdv2::v1::EtcdErrorCodes::KEY_DOES_NOT_EXIST) {
+                    fmt::println("Incorrect ttl node errorCode {}", getReply.value().errorCode.value());
                     std::terminate();
                 }
             }

@@ -3,7 +3,7 @@
 #include <ichor/services/network/http/HttpHostService.h>
 #include <ichor/services/network/tcp/TcpHostService.h>
 #include <fmt/format.h>
-#include <ichor/ServiceExecutionScope.h>
+#include <ichor/ScopedServiceProxy.h>
 
 
 template <>
