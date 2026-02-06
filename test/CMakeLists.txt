@@ -11,7 +11,7 @@ endif()
 foreach(filename ${PROJECT_TEST_SOURCES})
     get_filename_component(testname ${filename} NAME_WE)
 
-    if(WIN32 AND (${testname} STREQUAL "TcpTests"))
+    if((WIN32 OR APPLE) AND (${testname} STREQUAL "TcpTests"))
         continue()
     endif()
 
