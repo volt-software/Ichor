@@ -410,9 +410,11 @@ TEST_CASE("HttpHostTests") {
     SECTION("GET basic") {
         HttpRequest reqCopy{};
         std::string address{};
-        auto reg = svc.getService().addRoute(HttpMethod::get, "/some/route", [&reqCopy, &address](HttpRequest &req) -> Task<HttpResponse> {
+        std::string route{};
+        auto reg = svc.getService().addRoute(HttpMethod::get, "/some/route", [&reqCopy, &address, &route](HttpRequest &req) -> Task<HttpResponse> {
             reqCopy = req;
             address = req.address;
+            route = req.route;
             co_return HttpResponse{HttpStatus::ok, "text/plain", {}, {}};
         });
         std::string req{"GET /some/route HTTP/1.1\r\ntestheader: test\r\nHost: 192.168.10.10\r\n\r\n"};
@@ -436,7 +438,7 @@ TEST_CASE("HttpHostTests") {
         REQUIRE(hostheader != reqCopy.headers.end());
         REQUIRE(hostheader->second == "192.168.10.10");
 
-        REQUIRE(reqCopy.route == "/some/route");
+        REQUIRE(route == "/some/route");
         REQUIRE(reqCopy.method == HttpMethod::get);
         REQUIRE(address == "");
         REQUIRE(reqCopy.body.size() == 1);
@@ -446,9 +448,11 @@ TEST_CASE("HttpHostTests") {
     SECTION("GET host basic in multiple receives") {
         HttpRequest reqCopy{};
         std::string address{};
-        auto reg = svc.getService().addRoute(HttpMethod::get, "/some/route", [&reqCopy, &address](HttpRequest &req) -> Task<HttpResponse> {
+        std::string route{};
+        auto reg = svc.getService().addRoute(HttpMethod::get, "/some/route", [&reqCopy, &address, &route](HttpRequest &req) -> Task<HttpResponse> {
             reqCopy = req;
             address = req.address;
+            route = req.route;
             co_return HttpResponse{HttpStatus::ok, "text/plain", {}, {}};
         });
         std::string req{"GET /some/route HTTP/1.1\r\ntestheader: test\r\n"};
@@ -484,7 +488,7 @@ TEST_CASE("HttpHostTests") {
         REQUIRE(hostheader != reqCopy.headers.end());
         REQUIRE(hostheader->second == "192.168.10.10");
 
-        REQUIRE(reqCopy.route == "/some/route");
+        REQUIRE(route == "/some/route");
         REQUIRE(reqCopy.method == HttpMethod::get);
         REQUIRE(address == "");
         REQUIRE(reqCopy.body.size() == 1);
@@ -496,14 +500,18 @@ TEST_CASE("HttpHostTests") {
         HttpRequest reqCopy2{};
         std::string address{};
         std::string address2{};
-        auto reg = svc.getService().addRoute(HttpMethod::get, "/some/route", [&reqCopy, &address](HttpRequest &req) -> Task<HttpResponse> {
+        std::string route{};
+        std::string route2{};
+        auto reg = svc.getService().addRoute(HttpMethod::get, "/some/route", [&reqCopy, &address, &route](HttpRequest &req) -> Task<HttpResponse> {
             reqCopy = req;
             address = req.address;
+            route = req.route;
             co_return HttpResponse{HttpStatus::ok, "text/plain", {}, {}};
         });
-        auto reg2 = svc.getService().addRoute(HttpMethod::get, "/some/route2", [&reqCopy2, &address2](HttpRequest &req) -> Task<HttpResponse> {
+        auto reg2 = svc.getService().addRoute(HttpMethod::get, "/some/route2", [&reqCopy2, &address2, &route2](HttpRequest &req) -> Task<HttpResponse> {
             reqCopy2 = req;
             address2 = req.address;
+            route2 = req.route;
             co_return HttpResponse{HttpStatus::ok, "text/plain", {}, {}};
         });
         std::string req{"GET /some/route HTTP/1.1\r\ntestheader: test\r\nHost: 192.168.10.10\r\n\r\nGET /some/route2 HTTP/1.1\r\ntestheader: test2\r\nHost: 192.168.10.11\r\n\r\n"};
@@ -528,7 +536,7 @@ TEST_CASE("HttpHostTests") {
             REQUIRE(hostheader != reqCopy.headers.end());
             REQUIRE(hostheader->second == "192.168.10.10");
 
-            REQUIRE(reqCopy.route == "/some/route");
+            REQUIRE(route == "/some/route");
             REQUIRE(reqCopy.method == HttpMethod::get);
             REQUIRE(address == "");
             REQUIRE(reqCopy.body.size() == 1);
@@ -546,7 +554,7 @@ TEST_CASE("HttpHostTests") {
             REQUIRE(hostheader != reqCopy2.headers.end());
             REQUIRE(hostheader->second == "192.168.10.11");
 
-            REQUIRE(reqCopy2.route == "/some/route2");
+            REQUIRE(route2 == "/some/route2");
             REQUIRE(reqCopy2.method == HttpMethod::get);
             REQUIRE(address2 == "");
             REQUIRE(reqCopy2.body.size() == 1);
@@ -557,10 +565,12 @@ TEST_CASE("HttpHostTests") {
     SECTION("GET advanced") {
         HttpRequest reqCopy{};
         std::string address{};
-        auto reg = svc.getService().addRoute(HttpMethod::get, "/some/route", [&reqCopy, &address](HttpRequest &req) -> Task<HttpResponse> {
+        std::string route{};
+        auto reg = svc.getService().addRoute(HttpMethod::get, "/some/route", [&reqCopy, &address, &route](HttpRequest &req) -> Task<HttpResponse> {
             unordered_map<std::string, std::string> resHeaders{{"testres", "buzz"}};
             reqCopy = req;
             address = req.address;
+            route = req.route;
             std::string_view body_view = "<html><body>This is my basic webpage</body></html>";
             std::vector<uint8_t> body{body_view.begin(), body_view.end()};
             co_return HttpResponse{HttpStatus::ok, "text/plain", std::move(body), std::move(resHeaders)};
@@ -586,7 +596,7 @@ TEST_CASE("HttpHostTests") {
         REQUIRE(hostheader != reqCopy.headers.end());
         REQUIRE(hostheader->second == "192.168.10.10");
 
-        REQUIRE(reqCopy.route == "/some/route");
+        REQUIRE(route == "/some/route");
         REQUIRE(reqCopy.method == HttpMethod::get);
         REQUIRE(address == "");
         REQUIRE(reqCopy.body.size() == 1);
@@ -596,9 +606,11 @@ TEST_CASE("HttpHostTests") {
     SECTION("POST basic") {
         HttpRequest reqCopy{};
         std::string address{};
-        auto reg = svc.getService().addRoute(HttpMethod::post, "/some/route", [&reqCopy, &address](HttpRequest &req) -> Task<HttpResponse> {
+        std::string route{};
+        auto reg = svc.getService().addRoute(HttpMethod::post, "/some/route", [&reqCopy, &address, &route](HttpRequest &req) -> Task<HttpResponse> {
             reqCopy = req;
             address = req.address;
+            route = req.route;
             co_return HttpResponse{HttpStatus::ok, "text/plain", {}, {}};
         });
         std::string req{"POST /some/route HTTP/1.1\r\ntestheader: test\r\nContent-Length: 50\r\nHost: 192.168.10.10\r\n\r\n<html><body>This is my basic webpage</body></html>"};
@@ -625,7 +637,7 @@ TEST_CASE("HttpHostTests") {
         REQUIRE(hostheader != reqCopy.headers.end());
         REQUIRE(hostheader->second == "192.168.10.10");
 
-        REQUIRE(reqCopy.route == "/some/route");
+        REQUIRE(route == "/some/route");
         REQUIRE(reqCopy.method == HttpMethod::post);
         REQUIRE(address == "");
         REQUIRE(reqCopy.body.size() == 51);
@@ -636,9 +648,11 @@ TEST_CASE("HttpHostTests") {
     SECTION("POST body with crlf") {
         HttpRequest reqCopy{};
         std::string address{};
-        auto reg = svc.getService().addRoute(HttpMethod::post, "/some/route", [&reqCopy, &address](HttpRequest &req) -> Task<HttpResponse> {
+        std::string route{};
+        auto reg = svc.getService().addRoute(HttpMethod::post, "/some/route", [&reqCopy, &address, &route](HttpRequest &req) -> Task<HttpResponse> {
             reqCopy = req;
             address = req.address;
+            route = req.route;
             co_return HttpResponse{HttpStatus::ok, "text/plain", {}, {}};
         });
         std::string req{"POST /some/route HTTP/1.1\r\ntestheader: test\r\nHost: 192.168.10.10\r\nContent-Length: 50\r\n\r\n<html><body>This is my basic webpa\r\n</body></html>"};
@@ -665,7 +679,7 @@ TEST_CASE("HttpHostTests") {
         REQUIRE(hostheader != reqCopy.headers.end());
         REQUIRE(hostheader->second == "192.168.10.10");
 
-        REQUIRE(reqCopy.route == "/some/route");
+        REQUIRE(route == "/some/route");
         REQUIRE(reqCopy.method == HttpMethod::post);
         REQUIRE(address == "");
         REQUIRE(reqCopy.body.size() == 51);
@@ -676,9 +690,11 @@ TEST_CASE("HttpHostTests") {
     SECTION("POST basic in two packets") {
         HttpRequest reqCopy{};
         std::string address{};
-        auto reg = svc.getService().addRoute(HttpMethod::post, "/some/route", [&reqCopy, &address](HttpRequest &req) -> Task<HttpResponse> {
+        std::string route{};
+        auto reg = svc.getService().addRoute(HttpMethod::post, "/some/route", [&reqCopy, &address, &route](HttpRequest &req) -> Task<HttpResponse> {
             reqCopy = req;
             address = req.address;
+            route = req.route;
             co_return HttpResponse{HttpStatus::ok, "text/plain", {}, {}};
         });
         std::string req{"POST /some/route HTTP/1.1\r\ntestheader: test\r\nHost: 192.168.10.10\r\nContent-Length: 50\r\n\r\n<html><body>This"};
@@ -719,7 +735,7 @@ TEST_CASE("HttpHostTests") {
             REQUIRE(hostheader != reqCopy.headers.end());
             REQUIRE(hostheader->second == "192.168.10.10");
 
-            REQUIRE(reqCopy.route == "/some/route");
+            REQUIRE(route == "/some/route");
             REQUIRE(reqCopy.method == HttpMethod::post);
             REQUIRE(address == "");
             REQUIRE(reqCopy.body.size() == 51);
