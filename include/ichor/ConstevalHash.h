@@ -1,11 +1,36 @@
+/*
+* rapidhash V3 - Very fast, high quality, platform-independent hashing algorithm.
+*
+* Based on 'wyhash', by Wang Yi <godspeed_china@yeah.net>
+*
+* Copyright (C) 2025 Nicolas De Carli
+*
+* Permission is hereby granted, free of charge, to any person obtaining a copy
+* of this software and associated documentation files (the "Software"), to deal
+* in the Software without restriction, including without limitation the rights
+* to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+* copies of the Software, and to permit persons to whom the Software is
+* furnished to do so, subject to the following conditions:
+*
+* The above copyright notice and this permission notice shall be included in all
+* copies or substantial portions of the Software.
+*
+* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+* IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+* FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+* AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+* LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+* OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+* SOFTWARE.
+*
+* You can contact the author at:
+*   - rapidhash source repository: https://github.com/Nicoshev/rapidhash
+*/
+
+
+// Contains custom modifications specifically for ichor
+
 #pragma once
-
-#include <string_view>
-#include <cstdint>
-#include <array>
-#include <ichor/stl/CompilerSpecific.h>
-
-// Adapted from wyhash v3
 
 
 #if (!defined(WIN32) && !defined(_WIN32) && !defined(__WIN32)) || defined(__CYGWIN__)
@@ -14,179 +39,741 @@
 #pragma GCC diagnostic ignored "-Wconversion"
 #endif
 
-const	uint64_t	_wyp0 = 0xa0761d6478bd642full, _wyp1 = 0xe7037ed1a0b428dbull, _wyp2 = 0x8ebc6af09c88c6e3ull, _wyp3 = 0x589965cc75374cc3ull, _wyp4 = 0x1d8e4e27c47d124full;
-ICHOR_CONST_FUNC_ATTR static consteval uint64_t consteval_wyrotr(uint64_t v, unsigned k) { return (v >> k) | (v << (64 - k)); }
+/*
+*  Includes.
+*/
+#include <stdint.h>
+#include <string.h>
 
-ICHOR_CONST_FUNC_ATTR static consteval uint64_t consteval_wymum(uint64_t A, uint64_t B) {
-#ifdef    WYHASH32
-    uint64_t	hh=(A>>32)*(B>>32),	hl=(A>>32)*(unsigned)B,	lh=(unsigned)A*(B>>32),	ll=(uint64_t)(unsigned)A*(unsigned)B;
-        return	consteval_wyrotr(hl,32)^consteval_wyrotr(lh,32)^hh^ll;
-#else
-#ifdef __SIZEOF_INT128__
-    __uint128_t r = A;
-    r *= B;
-    return (r >> 64U) ^ r;
-#else
-        uint64_t	ha=A>>32,	hb=B>>32,	la=(uint32_t)A,	lb=(uint32_t)B,	hi, lo;
-        uint64_t	rh=ha*hb,	rm0=ha*lb,	rm1=hb*la,	rl=la*lb,	t=rl+(rm0<<32),	c=t<rl;
-        lo=t+(rm1<<32);	c+=lo<t;hi=rh+(rm0>>32)+(rm1>>32)+c;	return hi^lo;
+#include <string_view>
+#include <cstdint>
+#include <array>
+#include <type_traits>
+#include <ichor/stl/CompilerSpecific.h>
+#if defined(_MSC_VER)
+# include <intrin.h>
+# if defined(_M_X64) && !defined(_M_ARM64EC)
+#   pragma intrinsic(_umul128)
+# endif
 #endif
+
+/*
+ *  C/C++ macros.
+ */
+
+#ifdef _MSC_VER
+# define RAPIDHASH_ALWAYS_INLINE __forceinline
+#elif defined(__GNUC__)
+# define RAPIDHASH_ALWAYS_INLINE inline __attribute__((__always_inline__))
+#else
+# define RAPIDHASH_ALWAYS_INLINE inline
+#endif
+
+#ifdef __cplusplus
+# define RAPIDHASH_NOEXCEPT noexcept
+# define RAPIDHASH_CONSTEXPR constexpr
+# ifndef RAPIDHASH_INLINE
+#   define RAPIDHASH_INLINE RAPIDHASH_ALWAYS_INLINE
+# endif
+# if __cplusplus >= 201402L && !defined(_MSC_VER)
+#   define RAPIDHASH_INLINE_CONSTEXPR RAPIDHASH_ALWAYS_INLINE constexpr
+# else
+#   define RAPIDHASH_INLINE_CONSTEXPR RAPIDHASH_ALWAYS_INLINE
+# endif
+#else
+# define RAPIDHASH_NOEXCEPT
+# define RAPIDHASH_CONSTEXPR static const
+# ifndef RAPIDHASH_INLINE
+#   define RAPIDHASH_INLINE static RAPIDHASH_ALWAYS_INLINE
+# endif
+# define RAPIDHASH_INLINE_CONSTEXPR RAPIDHASH_INLINE
+#endif
+
+/*
+ *  Unrolled macro.
+ *  Improves large input speed, but increases code size and worsens small input speed.
+ *
+ *  RAPIDHASH_COMPACT: Normal behavior.
+ *  RAPIDHASH_UNROLLED:
+ *
+ */
+#ifndef RAPIDHASH_UNROLLED
+# define RAPIDHASH_COMPACT
+#elif defined(RAPIDHASH_COMPACT)
+# error "cannot define RAPIDHASH_COMPACT and RAPIDHASH_UNROLLED simultaneously."
+#endif
+
+/*
+ *  Protection macro, alters behaviour of rapid_mum multiplication function.
+ *
+ *  RAPIDHASH_FAST: Normal behavior, max speed.
+ *  RAPIDHASH_PROTECTED: Extra protection against entropy loss.
+ */
+#ifndef RAPIDHASH_PROTECTED
+# define RAPIDHASH_FAST
+#elif defined(RAPIDHASH_FAST)
+# error "cannot define RAPIDHASH_PROTECTED and RAPIDHASH_FAST simultaneously."
+#endif
+
+/*
+ *  Likely and unlikely macros.
+ */
+#if defined(__GNUC__) || defined(__INTEL_COMPILER) || defined(__clang__)
+# define _likely_(x)  __builtin_expect(x,1)
+# define _unlikely_(x)  __builtin_expect(x,0)
+#else
+# define _likely_(x) (x)
+# define _unlikely_(x) (x)
+#endif
+
+/*
+ *  Endianness macros.
+ */
+#ifndef RAPIDHASH_LITTLE_ENDIAN
+# if defined(_WIN32) || defined(__LITTLE_ENDIAN__) || (defined(__BYTE_ORDER__) && __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__)
+#   define RAPIDHASH_LITTLE_ENDIAN
+# elif defined(__BIG_ENDIAN__) || (defined(__BYTE_ORDER__) && __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__)
+#   define RAPIDHASH_BIG_ENDIAN
+# else
+#   warning "could not determine endianness! Falling back to little endian."
+#   define RAPIDHASH_LITTLE_ENDIAN
+# endif
+#endif
+
+/*
+ *  Default secret parameters.
+ */
+  RAPIDHASH_CONSTEXPR uint64_t rapid_secret[8] = {
+    0x2d358dccaa6c78a5ull,
+    0x8bb84b93962eacc9ull,
+    0x4b33a62ed433d4a3ull,
+    0x4d5a2da51de1aa47ull,
+    0xa0761d6478bd642full,
+    0xe7037ed1a0b428dbull,
+    0x90ed1765281c388cull,
+    0xaaaaaaaaaaaaaaaaull};
+
+/*
+ *  64*64 -> 128bit multiply function.
+ *
+ *  @param A  Address of 64-bit number.
+ *  @param B  Address of 64-bit number.
+ *
+ *  Calculates 128-bit C = *A * *B.
+ *
+ *  When RAPIDHASH_FAST is defined:
+ *  Overwrites A contents with C's low 64 bits.
+ *  Overwrites B contents with C's high 64 bits.
+ *
+ *  When RAPIDHASH_PROTECTED is defined:
+ *  Xors and overwrites A contents with C's low 64 bits.
+ *  Xors and overwrites B contents with C's high 64 bits.
+ */
+RAPIDHASH_INLINE_CONSTEXPR void rapid_mum(uint64_t *A, uint64_t *B) RAPIDHASH_NOEXCEPT {
+#if defined(__SIZEOF_INT128__)
+  __uint128_t r=*A; r*=*B;
+  #ifdef RAPIDHASH_PROTECTED
+  *A^=(uint64_t)r; *B^=(uint64_t)(r>>64);
+  #else
+  *A=(uint64_t)r; *B=(uint64_t)(r>>64);
+  #endif
+#elif defined(_MSC_VER) && (defined(_WIN64) || defined(_M_HYBRID_CHPE_ARM64))
+  #if defined(_M_X64)
+    #ifdef RAPIDHASH_PROTECTED
+    uint64_t a, b;
+    a=_umul128(*A,*B,&b);
+    *A^=a;  *B^=b;
+    #else
+    *A=_umul128(*A,*B,B);
+    #endif
+  #else
+    #ifdef RAPIDHASH_PROTECTED
+    uint64_t a, b;
+    b = __umulh(*A, *B);
+    a = *A * *B;
+    *A^=a;  *B^=b;
+    #else
+    uint64_t c = __umulh(*A, *B);
+    *A = *A * *B;
+    *B = c;
+    #endif
+  #endif
+#else
+  uint64_t ha=*A>>32, hb=*B>>32, la=(uint32_t)*A, lb=(uint32_t)*B;
+  uint64_t rh=ha*hb, rm0=ha*lb, rm1=hb*la, rl=la*lb, t=rl+(rm0<<32), c=t<rl;
+  uint64_t lo=t+(rm1<<32);
+  c+=lo<t;
+  uint64_t hi=rh+(rm0>>32)+(rm1>>32)+c;
+  #ifdef RAPIDHASH_PROTECTED
+  *A^=lo;  *B^=hi;
+  #else
+  *A=lo;  *B=hi;
+  #endif
 #endif
 }
 
-template<typename T>
-ICHOR_CONST_FUNC_ATTR static consteval uint64_t consteval_wyr8(const T *p) {
-    uint64_t v = 0;
-    v = ((uint64_t) p[0] << 56U) | ((uint64_t) p[1] << 48U) | ((uint64_t) p[2] << 40U) | ((uint64_t) p[3] << 32U) |
-        (p[4] << 24U) | (p[5] << 16U) | (p[6] << 8U) | p[7];
+/*
+ *  Multiply and xor mix function.
+ *
+ *  @param A  64-bit number.
+ *  @param B  64-bit number.
+ *
+ *  Calculates 128-bit C = A * B.
+ *  Returns 64-bit xor between high and low 64 bits of C.
+ */
+ RAPIDHASH_INLINE_CONSTEXPR uint64_t rapid_mix(uint64_t A, uint64_t B) RAPIDHASH_NOEXCEPT { rapid_mum(&A,&B); return A^B; }
+
+/*
+ *  Read functions.
+ */
+
+RAPIDHASH_INLINE_CONSTEXPR uint64_t rapid_read64(const uint8_t *p) RAPIDHASH_NOEXCEPT {
+#if defined(RAPIDHASH_LITTLE_ENDIAN)
+  if (std::is_constant_evaluated()) { // TODO __cpp_if_consteval
+    return (uint64_t)p[0]
+         | ((uint64_t)p[1] << 8)
+         | ((uint64_t)p[2] << 16)
+         | ((uint64_t)p[3] << 24)
+         | ((uint64_t)p[4] << 32)
+         | ((uint64_t)p[5] << 40)
+         | ((uint64_t)p[6] << 48)
+         | ((uint64_t)p[7] << 56);
+  } else {
+    uint64_t v;
+    memcpy(&v, p, sizeof(uint64_t));
     return v;
-}
-
-template<typename T>
-ICHOR_CONST_FUNC_ATTR static consteval uint64_t consteval_wyr4(const T *p) {
-    uint32_t v = 0;
-    v = (p[0] << 24U) | (p[1] << 16U) | (p[2] << 8U) | p[3];
-    return v;
-}
-
-template<typename T>
-ICHOR_CONST_FUNC_ATTR static consteval uint64_t consteval_wyr3(const T *p, uint64_t k) {
-    return (((uint64_t) p[0]) << 16U) | (((uint64_t) p[k >> 1U]) << 8U) | p[k - 1];
-}
-
-template<typename T>
-ICHOR_CONST_FUNC_ATTR static consteval uint64_t consteval_wyhash(const T *key, uint64_t len, uint64_t seed) {
-    static_assert(sizeof(T) == 1, "T must be a char or uint8_t kind type");
-#if defined(__GNUC__) || defined(__INTEL_COMPILER)
-    if (__builtin_expect(!len, 0)) return 0;
+  }
+#elif defined(__GNUC__) || defined(__INTEL_COMPILER) || defined(__clang__)
+  if (std::is_constant_evaluated()) {
+    uint64_t v = (uint64_t)p[0]
+               | ((uint64_t)p[1] << 8)
+               | ((uint64_t)p[2] << 16)
+               | ((uint64_t)p[3] << 24)
+               | ((uint64_t)p[4] << 32)
+               | ((uint64_t)p[5] << 40)
+               | ((uint64_t)p[6] << 48)
+               | ((uint64_t)p[7] << 56);
+    return __builtin_bswap64(v);
+  } else {
+    uint64_t v;
+    memcpy(&v, p, sizeof(uint64_t));
+    return __builtin_bswap64(v);
+  }
+#elif defined(_MSC_VER)
+  if (std::is_constant_evaluated()) {
+    uint64_t v = (uint64_t)p[0]
+               | ((uint64_t)p[1] << 8)
+               | ((uint64_t)p[2] << 16)
+               | ((uint64_t)p[3] << 24)
+               | ((uint64_t)p[4] << 32)
+               | ((uint64_t)p[5] << 40)
+               | ((uint64_t)p[6] << 48)
+               | ((uint64_t)p[7] << 56);
+    return _byteswap_uint64(v);
+  } else {
+    uint64_t v;
+    memcpy(&v, p, sizeof(uint64_t));
+    return _byteswap_uint64(v);
+  }
 #else
-    if(!len)	return	0;
+  if (std::is_constant_evaluated()) {
+    uint64_t v = (uint64_t)p[0]
+                   | ((uint64_t)p[1] << 8)
+                   | ((uint64_t)p[2] << 16)
+                   | ((uint64_t)p[3] << 24)
+                   | ((uint64_t)p[4] << 32)
+                   | ((uint64_t)p[5] << 40)
+                   | ((uint64_t)p[6] << 48)
+                   | ((uint64_t)p[7] << 56);
+    return (((v >> 56) & 0xff)| ((v >> 40) & 0xff00)| ((v >> 24) & 0xff0000)| ((v >>  8) & 0xff000000)| ((v <<  8) & 0xff00000000)| ((v << 24) & 0xff0000000000)| ((v << 40) & 0xff000000000000)| ((v << 56) & 0xff00000000000000));
+  } else {
+    uint64_t v; memcpy(&v, p, 8);
+    return (((v >> 56) & 0xff)| ((v >> 40) & 0xff00)| ((v >> 24) & 0xff0000)| ((v >>  8) & 0xff000000)| ((v <<  8) & 0xff00000000)| ((v << 24) & 0xff0000000000)| ((v << 40) & 0xff000000000000)| ((v << 56) & 0xff00000000000000));
+  }
 #endif
-    const T *p = key;
-    if (len < 4)
-        return consteval_wymum(consteval_wymum(consteval_wyr3(p, len) ^ seed ^ _wyp0, seed ^ _wyp1), len ^ _wyp4);
-    else if (len <= 8)
-        return consteval_wymum(
-                consteval_wymum(consteval_wyr4(p) ^ seed ^ _wyp0, consteval_wyr4(p + len - 4) ^ seed ^ _wyp1),
-                len ^ _wyp4);
-    else if (len <= 16)
-        return consteval_wymum(
-                consteval_wymum(consteval_wyr8(p) ^ seed ^ _wyp0, consteval_wyr8(p + len - 8) ^ seed ^ _wyp1),
-                len ^ _wyp4);
-    else if (len <= 24)
-        return consteval_wymum(
-                consteval_wymum(consteval_wyr8(p) ^ seed ^ _wyp0, consteval_wyr8(p + 8) ^ seed ^ _wyp1) ^
-                consteval_wymum(consteval_wyr8(p + len - 8) ^ seed ^ _wyp2, seed ^ _wyp3), len ^ _wyp4);
-    else if (len <= 32)
-        return consteval_wymum(
-                consteval_wymum(consteval_wyr8(p) ^ seed ^ _wyp0, consteval_wyr8(p + 8) ^ seed ^ _wyp1) ^
-                consteval_wymum(consteval_wyr8(p + 16) ^ seed ^ _wyp2, consteval_wyr8(p + len - 8) ^ seed ^ _wyp3),
-                len ^ _wyp4);
-    uint64_t see1 = seed, i = len;
-    if (i >= 256)
-        for (; i >= 256; i -= 256, p += 256) {
-            seed = consteval_wymum(consteval_wyr8(p) ^ seed ^ _wyp0, consteval_wyr8(p + 8) ^ seed ^ _wyp1) ^
-                   consteval_wymum(consteval_wyr8(p + 16) ^ seed ^ _wyp2, consteval_wyr8(p + 24) ^ seed ^ _wyp3);
-            see1 = consteval_wymum(consteval_wyr8(p + 32) ^ see1 ^ _wyp1, consteval_wyr8(p + 40) ^ see1 ^ _wyp2) ^
-                   consteval_wymum(consteval_wyr8(p + 48) ^ see1 ^ _wyp3, consteval_wyr8(p + 56) ^ see1 ^ _wyp0);
-            seed = consteval_wymum(consteval_wyr8(p + 64) ^ seed ^ _wyp0, consteval_wyr8(p + 72) ^ seed ^ _wyp1) ^
-                   consteval_wymum(consteval_wyr8(p + 80) ^ seed ^ _wyp2, consteval_wyr8(p + 88) ^ seed ^ _wyp3);
-            see1 = consteval_wymum(consteval_wyr8(p + 96) ^ see1 ^ _wyp1, consteval_wyr8(p + 104) ^ see1 ^ _wyp2) ^
-                   consteval_wymum(consteval_wyr8(p + 112) ^ see1 ^ _wyp3, consteval_wyr8(p + 120) ^ see1 ^ _wyp0);
-            seed = consteval_wymum(consteval_wyr8(p + 128) ^ seed ^ _wyp0, consteval_wyr8(p + 136) ^ seed ^ _wyp1) ^
-                   consteval_wymum(consteval_wyr8(p + 144) ^ seed ^ _wyp2, consteval_wyr8(p + 152) ^ seed ^ _wyp3);
-            see1 = consteval_wymum(consteval_wyr8(p + 160) ^ see1 ^ _wyp1, consteval_wyr8(p + 168) ^ see1 ^ _wyp2) ^
-                   consteval_wymum(consteval_wyr8(p + 176) ^ see1 ^ _wyp3, consteval_wyr8(p + 184) ^ see1 ^ _wyp0);
-            seed = consteval_wymum(consteval_wyr8(p + 192) ^ seed ^ _wyp0, consteval_wyr8(p + 200) ^ seed ^ _wyp1) ^
-                   consteval_wymum(consteval_wyr8(p + 208) ^ seed ^ _wyp2, consteval_wyr8(p + 216) ^ seed ^ _wyp3);
-            see1 = consteval_wymum(consteval_wyr8(p + 224) ^ see1 ^ _wyp1, consteval_wyr8(p + 232) ^ see1 ^ _wyp2) ^
-                   consteval_wymum(consteval_wyr8(p + 240) ^ see1 ^ _wyp3, consteval_wyr8(p + 248) ^ see1 ^ _wyp0);
-        }
-    for (; i >= 32; i -= 32, p += 32) {
-        seed = consteval_wymum(consteval_wyr8(p) ^ seed ^ _wyp0, consteval_wyr8(p + 8) ^ seed ^ _wyp1);
-        see1 = consteval_wymum(consteval_wyr8(p + 16) ^ see1 ^ _wyp2, consteval_wyr8(p + 24) ^ see1 ^ _wyp3);
-    }
-    if (!i) {}
-    else if (i < 4) seed = consteval_wymum(consteval_wyr3(p, i) ^ seed ^ _wyp0, seed ^ _wyp1);
-    else if (i <= 8)
-        seed = consteval_wymum(consteval_wyr4(p) ^ seed ^ _wyp0, consteval_wyr4(p + i - 4) ^ seed ^ _wyp1);
-    else if (i <= 16)
-        seed = consteval_wymum(consteval_wyr8(p) ^ seed ^ _wyp0, consteval_wyr8(p + i - 8) ^ seed ^ _wyp1);
-    else if (i <= 24) {
-        seed = consteval_wymum(consteval_wyr8(p) ^ seed ^ _wyp0, consteval_wyr8(p + 8) ^ seed ^ _wyp1);
-        see1 = consteval_wymum(consteval_wyr8(p + i - 8) ^ see1 ^ _wyp2, see1 ^ _wyp3);
-    }
-    else {
-        seed = consteval_wymum(consteval_wyr8(p) ^ seed ^ _wyp0, consteval_wyr8(p + 8) ^ seed ^ _wyp1);
-        see1 = consteval_wymum(consteval_wyr8(p + 16) ^ see1 ^ _wyp2, consteval_wyr8(p + i - 8) ^ see1 ^ _wyp3);
-    }
-    return consteval_wymum(seed ^ see1, len ^ _wyp4);
 }
+
+
+RAPIDHASH_INLINE_CONSTEXPR uint64_t rapid_read32(const uint8_t *p) RAPIDHASH_NOEXCEPT {
+#if defined(RAPIDHASH_LITTLE_ENDIAN)
+  if (std::is_constant_evaluated()) {
+    return (uint32_t)p[0]
+         | ((uint32_t)p[1] << 8)
+         | ((uint32_t)p[2] << 16)
+         | ((uint32_t)p[3] << 24);
+  } else {
+    uint32_t v;
+    memcpy(&v, p, sizeof(uint32_t));
+    return v;
+  }
+#elif defined(__GNUC__) || defined(__INTEL_COMPILER) || defined(__clang__)
+  if (std::is_constant_evaluated()) {
+    uint32_t v = (uint32_t)p[0]
+               | ((uint32_t)p[1] << 8)
+               | ((uint32_t)p[2] << 16)
+               | ((uint32_t)p[3] << 24);
+    return __builtin_bswap32(v);
+  } else {
+    uint32_t v;
+    memcpy(&v, p, sizeof(uint32_t));
+    return __builtin_bswap32(v);
+  }
+#elif defined(_MSC_VER)
+  if (std::is_constant_evaluated()) {
+    uint32_t v = (uint32_t)p[0]
+               | ((uint32_t)p[1] << 8)
+               | ((uint32_t)p[2] << 16)
+               | ((uint32_t)p[3] << 24);
+    return _byteswap_ulong(v);
+  } else {
+    uint32_t v;
+    memcpy(&v, p, sizeof(uint32_t));
+    return _byteswap_ulong(v);
+  }
+#else
+  if (std::is_constant_evaluated()) {
+    uint32_t v = (uint32_t)p[0]
+                   | ((uint32_t)p[1] << 8)
+                   | ((uint32_t)p[2] << 16)
+                   | ((uint32_t)p[3] << 24);
+    return (((v >> 24) & 0xff)| ((v >>  8) & 0xff00)| ((v <<  8) & 0xff0000)| ((v << 24) & 0xff000000));
+  } else {
+    uint32_t v; memcpy(&v, p, 4);
+    return (((v >> 24) & 0xff)| ((v >>  8) & 0xff00)| ((v <<  8) & 0xff0000)| ((v << 24) & 0xff000000));
+  }
+#endif
+}
+
+// #ifdef RAPIDHASH_LITTLE_ENDIAN
+// RAPIDHASH_INLINE_CONSTEXPR uint64_t rapid_read64(const uint8_t *p) RAPIDHASH_NOEXCEPT { uint64_t v; memcpy(&v, p, sizeof(uint64_t)); return v;}
+// RAPIDHASH_INLINE_CONSTEXPR uint64_t rapid_read32(const uint8_t *p) RAPIDHASH_NOEXCEPT { uint32_t v; memcpy(&v, p, sizeof(uint32_t)); return v;}
+// #elif defined(__GNUC__) || defined(__INTEL_COMPILER) || defined(__clang__)
+// RAPIDHASH_INLINE_CONSTEXPR uint64_t rapid_read64(const uint8_t *p) RAPIDHASH_NOEXCEPT { uint64_t v; memcpy(&v, p, sizeof(uint64_t)); return __builtin_bswap64(v);}
+// RAPIDHASH_INLINE_CONSTEXPR uint64_t rapid_read32(const uint8_t *p) RAPIDHASH_NOEXCEPT { uint32_t v; memcpy(&v, p, sizeof(uint32_t)); return __builtin_bswap32(v);}
+// #elif defined(_MSC_VER)
+// RAPIDHASH_INLINE_CONSTEXPR uint64_t rapid_read64(const uint8_t *p) RAPIDHASH_NOEXCEPT { uint64_t v; memcpy(&v, p, sizeof(uint64_t)); return _byteswap_uint64(v);}
+// RAPIDHASH_INLINE_CONSTEXPR uint64_t rapid_read32(const uint8_t *p) RAPIDHASH_NOEXCEPT { uint32_t v; memcpy(&v, p, sizeof(uint32_t)); return _byteswap_ulong(v);}
+// #else
+// RAPIDHASH_INLINE_CONSTEXPR uint64_t rapid_read64(const uint8_t *p) RAPIDHASH_NOEXCEPT {
+//   uint64_t v; memcpy(&v, p, 8);
+//   return (((v >> 56) & 0xff)| ((v >> 40) & 0xff00)| ((v >> 24) & 0xff0000)| ((v >>  8) & 0xff000000)| ((v <<  8) & 0xff00000000)| ((v << 24) & 0xff0000000000)| ((v << 40) & 0xff000000000000)| ((v << 56) & 0xff00000000000000));
+// }
+// RAPIDHASH_INLINE_CONSTEXPR uint64_t rapid_read32(const uint8_t *p) RAPIDHASH_NOEXCEPT {
+//   uint32_t v; memcpy(&v, p, 4);
+//   return (((v >> 24) & 0xff)| ((v >>  8) & 0xff00)| ((v <<  8) & 0xff0000)| ((v << 24) & 0xff000000));
+// }
+// #endif
+
+/*
+ *  rapidhash main function.
+ *
+ *  @param key     Buffer to be hashed.
+ *  @param len     @key length, in bytes.
+ *  @param seed    64-bit seed used to alter the hash result predictably.
+ *  @param secret  Triplet of 64-bit secrets used to alter hash result predictably.
+ *
+ *  Returns a 64-bit hash.
+ */
+RAPIDHASH_INLINE_CONSTEXPR uint64_t rapidhash_internal(const uint8_t *key, size_t len, uint64_t seed, const uint64_t* secret) RAPIDHASH_NOEXCEPT {
+   const uint8_t *p = key;
+   seed ^= rapid_mix(seed ^ secret[2], secret[1]);
+   uint64_t a=0, b=0;
+   size_t i = len;
+   if (_likely_(len <= 16)) {
+     if (len >= 4) {
+       seed ^= len;
+       if (len >= 8) {
+         const uint8_t* plast = p + len - 8;
+         a = rapid_read64(p);
+         b = rapid_read64(plast);
+       } else {
+         const uint8_t* plast = p + len - 4;
+         a = rapid_read32(p);
+         b = rapid_read32(plast);
+       }
+     } else if (len > 0) {
+       a = (((uint64_t)p[0])<<45)|p[len-1];
+       b = p[len>>1];
+     } else
+       a = b = 0;
+   } else {
+     if (len > 112) {
+       uint64_t see1 = seed, see2 = seed;
+       uint64_t see3 = seed, see4 = seed;
+       uint64_t see5 = seed, see6 = seed;
+#ifdef RAPIDHASH_COMPACT
+       do {
+         seed = rapid_mix(rapid_read64(p) ^ secret[0], rapid_read64(p + 8) ^ seed);
+         see1 = rapid_mix(rapid_read64(p + 16) ^ secret[1], rapid_read64(p + 24) ^ see1);
+         see2 = rapid_mix(rapid_read64(p + 32) ^ secret[2], rapid_read64(p + 40) ^ see2);
+         see3 = rapid_mix(rapid_read64(p + 48) ^ secret[3], rapid_read64(p + 56) ^ see3);
+         see4 = rapid_mix(rapid_read64(p + 64) ^ secret[4], rapid_read64(p + 72) ^ see4);
+         see5 = rapid_mix(rapid_read64(p + 80) ^ secret[5], rapid_read64(p + 88) ^ see5);
+         see6 = rapid_mix(rapid_read64(p + 96) ^ secret[6], rapid_read64(p + 104) ^ see6);
+         p += 112;
+         i -= 112;
+       } while(i > 112);
+#else
+       while (i > 224) {
+         seed = rapid_mix(rapid_read64(p) ^ secret[0], rapid_read64(p + 8) ^ seed);
+         see1 = rapid_mix(rapid_read64(p + 16) ^ secret[1], rapid_read64(p + 24) ^ see1);
+         see2 = rapid_mix(rapid_read64(p + 32) ^ secret[2], rapid_read64(p + 40) ^ see2);
+         see3 = rapid_mix(rapid_read64(p + 48) ^ secret[3], rapid_read64(p + 56) ^ see3);
+         see4 = rapid_mix(rapid_read64(p + 64) ^ secret[4], rapid_read64(p + 72) ^ see4);
+         see5 = rapid_mix(rapid_read64(p + 80) ^ secret[5], rapid_read64(p + 88) ^ see5);
+         see6 = rapid_mix(rapid_read64(p + 96) ^ secret[6], rapid_read64(p + 104) ^ see6);
+         seed = rapid_mix(rapid_read64(p + 112) ^ secret[0], rapid_read64(p + 120) ^ seed);
+         see1 = rapid_mix(rapid_read64(p + 128) ^ secret[1], rapid_read64(p + 136) ^ see1);
+         see2 = rapid_mix(rapid_read64(p + 144) ^ secret[2], rapid_read64(p + 152) ^ see2);
+         see3 = rapid_mix(rapid_read64(p + 160) ^ secret[3], rapid_read64(p + 168) ^ see3);
+         see4 = rapid_mix(rapid_read64(p + 176) ^ secret[4], rapid_read64(p + 184) ^ see4);
+         see5 = rapid_mix(rapid_read64(p + 192) ^ secret[5], rapid_read64(p + 200) ^ see5);
+         see6 = rapid_mix(rapid_read64(p + 208) ^ secret[6], rapid_read64(p + 216) ^ see6);
+         p += 224;
+         i -= 224;
+       }
+       if (i > 112) {
+         seed = rapid_mix(rapid_read64(p) ^ secret[0], rapid_read64(p + 8) ^ seed);
+         see1 = rapid_mix(rapid_read64(p + 16) ^ secret[1], rapid_read64(p + 24) ^ see1);
+         see2 = rapid_mix(rapid_read64(p + 32) ^ secret[2], rapid_read64(p + 40) ^ see2);
+         see3 = rapid_mix(rapid_read64(p + 48) ^ secret[3], rapid_read64(p + 56) ^ see3);
+         see4 = rapid_mix(rapid_read64(p + 64) ^ secret[4], rapid_read64(p + 72) ^ see4);
+         see5 = rapid_mix(rapid_read64(p + 80) ^ secret[5], rapid_read64(p + 88) ^ see5);
+         see6 = rapid_mix(rapid_read64(p + 96) ^ secret[6], rapid_read64(p + 104) ^ see6);
+         p += 112;
+         i -= 112;
+       }
+#endif
+       seed ^= see1;
+       see2 ^= see3;
+       see4 ^= see5;
+       seed ^= see6;
+       see2 ^= see4;
+       seed ^= see2;
+     }
+     if (i > 16) {
+       seed = rapid_mix(rapid_read64(p) ^ secret[2], rapid_read64(p + 8) ^ seed);
+       if (i > 32) {
+           seed = rapid_mix(rapid_read64(p + 16) ^ secret[2], rapid_read64(p + 24) ^ seed);
+           if (i > 48) {
+               seed = rapid_mix(rapid_read64(p + 32) ^ secret[1], rapid_read64(p + 40) ^ seed);
+               if (i > 64) {
+                   seed = rapid_mix(rapid_read64(p + 48) ^ secret[1], rapid_read64(p + 56) ^ seed);
+                   if (i > 80) {
+                       seed = rapid_mix(rapid_read64(p + 64) ^ secret[2], rapid_read64(p + 72) ^ seed);
+                       if (i > 96) {
+                           seed = rapid_mix(rapid_read64(p + 80) ^ secret[1], rapid_read64(p + 88) ^ seed);
+                       }
+                   }
+               }
+           }
+       }
+     }
+     a=rapid_read64(p+i-16) ^ i;  b=rapid_read64(p+i-8);
+   }
+   a ^= secret[1];
+   b ^= seed;
+   rapid_mum(&a, &b);
+   return rapid_mix(a ^ secret[7], b ^ secret[1] ^ i);
+}
+
+/*
+ *  rapidhashMicro main function.
+ *
+ *  @param key     Buffer to be hashed.
+ *  @param len     @key length, in bytes.
+ *  @param seed    64-bit seed used to alter the hash result predictably.
+ *  @param secret  Triplet of 64-bit secrets used to alter hash result predictably.
+ *
+ *  Returns a 64-bit hash.
+ */
+ RAPIDHASH_INLINE_CONSTEXPR uint64_t rapidhashMicro_internal(const uint8_t *key, size_t len, uint64_t seed, const uint64_t* secret) RAPIDHASH_NOEXCEPT {
+   const uint8_t *p=(const uint8_t *)key;
+   seed ^= rapid_mix(seed ^ secret[2], secret[1]);
+   uint64_t a=0, b=0;
+   size_t i = len;
+   if (_likely_(len <= 16)) {
+     if (len >= 4) {
+       seed ^= len;
+       if (len >= 8) {
+         const uint8_t* plast = p + len - 8;
+         a = rapid_read64(p);
+         b = rapid_read64(plast);
+       } else {
+         const uint8_t* plast = p + len - 4;
+         a = rapid_read32(p);
+         b = rapid_read32(plast);
+       }
+     } else if (len > 0) {
+       a = (((uint64_t)p[0])<<45)|p[len-1];
+       b = p[len>>1];
+     } else
+       a = b = 0;
+   } else {
+     if (i > 80) {
+       uint64_t see1 = seed, see2 = seed;
+       uint64_t see3 = seed, see4 = seed;
+       do {
+         seed = rapid_mix(rapid_read64(p) ^ secret[0], rapid_read64(p + 8) ^ seed);
+         see1 = rapid_mix(rapid_read64(p + 16) ^ secret[1], rapid_read64(p + 24) ^ see1);
+         see2 = rapid_mix(rapid_read64(p + 32) ^ secret[2], rapid_read64(p + 40) ^ see2);
+         see3 = rapid_mix(rapid_read64(p + 48) ^ secret[3], rapid_read64(p + 56) ^ see3);
+         see4 = rapid_mix(rapid_read64(p + 64) ^ secret[4], rapid_read64(p + 72) ^ see4);
+         p += 80;
+         i -= 80;
+       } while(i > 80);
+       seed ^= see1;
+       see2 ^= see3;
+       seed ^= see4;
+       seed ^= see2;
+     }
+     if (i > 16) {
+       seed = rapid_mix(rapid_read64(p) ^ secret[2], rapid_read64(p + 8) ^ seed);
+       if (i > 32) {
+           seed = rapid_mix(rapid_read64(p + 16) ^ secret[2], rapid_read64(p + 24) ^ seed);
+           if (i > 48) {
+               seed = rapid_mix(rapid_read64(p + 32) ^ secret[1], rapid_read64(p + 40) ^ seed);
+               if (i > 64) {
+                   seed = rapid_mix(rapid_read64(p + 48) ^ secret[1], rapid_read64(p + 56) ^ seed);
+               }
+           }
+       }
+     }
+     a=rapid_read64(p+i-16) ^ i;  b=rapid_read64(p+i-8);
+   }
+   a ^= secret[1];
+   b ^= seed;
+   rapid_mum(&a, &b);
+   return rapid_mix(a ^ secret[7], b ^ secret[1] ^ i);
+ }
+
+ /*
+ *  rapidhashNano main function.
+ *
+ *  @param key     Buffer to be hashed.
+ *  @param len     @key length, in bytes.
+ *  @param seed    64-bit seed used to alter the hash result predictably.
+ *  @param secret  Triplet of 64-bit secrets used to alter hash result predictably.
+ *
+ *  Returns a 64-bit hash.
+ */
+ RAPIDHASH_INLINE_CONSTEXPR uint64_t rapidhashNano_internal(const uint8_t *key, size_t len, uint64_t seed, const uint64_t* secret) RAPIDHASH_NOEXCEPT {
+   const uint8_t *p=(const uint8_t *)key;
+   seed ^= rapid_mix(seed ^ secret[2], secret[1]);
+   uint64_t a=0, b=0;
+   size_t i = len;
+   if (_likely_(len <= 16)) {
+     if (len >= 4) {
+       seed ^= len;
+       if (len >= 8) {
+         const uint8_t* plast = p + len - 8;
+         a = rapid_read64(p);
+         b = rapid_read64(plast);
+       } else {
+         const uint8_t* plast = p + len - 4;
+         a = rapid_read32(p);
+         b = rapid_read32(plast);
+       }
+     } else if (len > 0) {
+       a = (((uint64_t)p[0])<<45)|p[len-1];
+       b = p[len>>1];
+     } else
+       a = b = 0;
+   } else {
+     if (i > 48) {
+       uint64_t see1 = seed, see2 = seed;
+       do {
+         seed = rapid_mix(rapid_read64(p) ^ secret[0], rapid_read64(p + 8) ^ seed);
+         see1 = rapid_mix(rapid_read64(p + 16) ^ secret[1], rapid_read64(p + 24) ^ see1);
+         see2 = rapid_mix(rapid_read64(p + 32) ^ secret[2], rapid_read64(p + 40) ^ see2);
+         p += 48;
+         i -= 48;
+       } while(i > 48);
+       seed ^= see1;
+       seed ^= see2;
+     }
+     if (i > 16) {
+       seed = rapid_mix(rapid_read64(p) ^ secret[2], rapid_read64(p + 8) ^ seed);
+       if (i > 32) {
+           seed = rapid_mix(rapid_read64(p + 16) ^ secret[2], rapid_read64(p + 24) ^ seed);
+       }
+     }
+     a=rapid_read64(p+i-16) ^ i;  b=rapid_read64(p+i-8);
+   }
+   a ^= secret[1];
+   b ^= seed;
+   rapid_mum(&a, &b);
+   return rapid_mix(a ^ secret[7], b ^ secret[1] ^ i);
+ }
+
+/*
+*  rapidhash seeded hash function.
+*
+*  @param key     Buffer to be hashed.
+*  @param len     @key length, in bytes.
+*  @param seed    64-bit seed used to alter the hash result predictably.
+*
+*  Calls rapidhash_internal using provided parameters and default secrets.
+*
+*  Returns a 64-bit hash.
+*/
+RAPIDHASH_INLINE_CONSTEXPR uint64_t rapidhash_withSeed(const uint8_t *key, size_t len, uint64_t seed) RAPIDHASH_NOEXCEPT {
+ return rapidhash_internal(key, len, seed, rapid_secret);
+}
+
+/*
+*  rapidhash general purpose hash function.
+*
+*  @param key     Buffer to be hashed.
+*  @param len     @key length, in bytes.
+*
+*  Calls rapidhash_withSeed using provided parameters and the default seed.
+*
+*  Returns a 64-bit hash.
+*/
+RAPIDHASH_INLINE_CONSTEXPR uint64_t rapidhash(const uint8_t *key, size_t len) RAPIDHASH_NOEXCEPT {
+  return rapidhash_withSeed(key, len, 0);
+}
+RAPIDHASH_INLINE uint64_t rapidhash(const char *key, size_t len) RAPIDHASH_NOEXCEPT {
+  return rapidhash_withSeed(reinterpret_cast<const uint8_t *>(key), len, 0);
+}
+
+/*
+*  rapidhashMicro seeded hash function.
+*
+*  Designed for HPC and server applications, where cache misses make a noticeable performance detriment.
+*  Clang-18+ compiles it to ~140 instructions without stack usage, both on x86-64 and aarch64.
+*  Faster for sizes up to 512 bytes, just 15%-20% slower for inputs above 1kb.
+*
+*  @param key     Buffer to be hashed.
+*  @param len     @key length, in bytes.
+*  @param seed    64-bit seed used to alter the hash result predictably.
+*
+*  Calls rapidhash_internal using provided parameters and default secrets.
+*
+*  Returns a 64-bit hash.
+*/
+RAPIDHASH_INLINE_CONSTEXPR uint64_t rapidhashMicro_withSeed(const uint8_t *key, size_t len, uint64_t seed) RAPIDHASH_NOEXCEPT {
+ return rapidhashMicro_internal(key, len, seed, rapid_secret);
+}
+
+/*
+*  rapidhashMicro hash function.
+*
+*  @param key     Buffer to be hashed.
+*  @param len     @key length, in bytes.
+*
+*  Calls rapidhash_withSeed using provided parameters and the default seed.
+*
+*  Returns a 64-bit hash.
+*/
+RAPIDHASH_INLINE_CONSTEXPR uint64_t rapidhashMicro(const uint8_t *key, size_t len) RAPIDHASH_NOEXCEPT {
+ return rapidhashMicro_withSeed(key, len, 0);
+}
+
+/*
+*  rapidhashNano seeded hash function.
+*
+*  @param key     Buffer to be hashed.
+*  @param len     @key length, in bytes.
+*  @param seed    64-bit seed used to alter the hash result predictably.
+*
+*  Calls rapidhash_internal using provided parameters and default secrets.
+*
+*  Returns a 64-bit hash.
+*/
+RAPIDHASH_INLINE_CONSTEXPR uint64_t rapidhashNano_withSeed(const uint8_t *key, size_t len, uint64_t seed) RAPIDHASH_NOEXCEPT {
+ return rapidhashNano_internal(key, len, seed, rapid_secret);
+}
+
+/*
+*  rapidhashNano hash function.
+*
+*  Designed for Mobile and embedded applications, where keeping a small code size is a top priority.
+*  Clang-18+ compiles it to less than 100 instructions without stack usage, both on x86-64 and aarch64.
+*  The fastest for sizes up to 48 bytes, but may be considerably slower for larger inputs.
+*
+*  @param key     Buffer to be hashed.
+*  @param len     @key length, in bytes.
+*
+*  Calls rapidhash_withSeed using provided parameters and the default seed.
+*
+*  Returns a 64-bit hash.
+*/
+RAPIDHASH_INLINE_CONSTEXPR uint64_t rapidhashNano(const uint8_t *key, size_t len) RAPIDHASH_NOEXCEPT {
+ return rapidhashNano_withSeed(key, len, 0);
+}
+
 
 // Taken from https://bitwizeshift.github.io/posts/2021/03/09/getting-an-unmangled-type-name-at-compile-time/
 template <std::size_t...Idxs>
 [[nodiscard]] ICHOR_CONST_FUNC_ATTR constexpr auto ichor_internal_substring_as_array(std::string_view str, std::index_sequence<Idxs...>)
 {
-    return std::array{str[Idxs]...};
+   return std::array{str[Idxs]...};
 }
 
 template <typename T>
 [[nodiscard]] ICHOR_CONST_FUNC_ATTR constexpr auto ichor_internal_type_name_array()
 {
 #if defined(__clang__)
-    constexpr auto prefix   = std::string_view{"[T = "};
-    constexpr auto suffix   = std::string_view{"]"};
-    constexpr auto function = std::string_view{__PRETTY_FUNCTION__};
+   constexpr auto prefix   = std::string_view{"[T = "};
+   constexpr auto suffix   = std::string_view{"]"};
+   constexpr auto function = std::string_view{__PRETTY_FUNCTION__};
 #elif defined(__GNUC__)
-    constexpr auto prefix   = std::string_view{"with T = "};
-    constexpr auto suffix   = std::string_view{"]"};
-    constexpr auto function = std::string_view{__PRETTY_FUNCTION__};
+   constexpr auto prefix   = std::string_view{"with T = "};
+   constexpr auto suffix   = std::string_view{"]"};
+   constexpr auto function = std::string_view{__PRETTY_FUNCTION__};
 #elif defined(_MSC_VER)
-    constexpr auto prefix   = std::string_view{"type_name_array<"};
-    constexpr auto suffix   = std::string_view{">(void)"};
-    constexpr auto function = std::string_view{__FUNCSIG__};
+   constexpr auto prefix   = std::string_view{"type_name_array<"};
+   constexpr auto suffix   = std::string_view{">(void)"};
+   constexpr auto function = std::string_view{__FUNCSIG__};
 #else
 # error Unsupported compiler
 #endif
 
-    constexpr auto start = function.find(prefix) + prefix.size();
-    constexpr auto end = function.rfind(suffix);
+   constexpr auto start = function.find(prefix) + prefix.size();
+   constexpr auto end = function.rfind(suffix);
 
-    static_assert(start < end);
-    static_assert(start != std::string_view::npos);
-    static_assert(end != std::string_view::npos);
+   static_assert(start < end);
+   static_assert(start != std::string_view::npos);
+   static_assert(end != std::string_view::npos);
 
 #if defined(_MSC_VER)
-    constexpr auto structFind = function.substr(start, (end - start)).starts_with("struct ");
-    constexpr auto structPos = (structFind == std::string_view::npos || structFind == 0) ? 0Ui64 : 7Ui64;
-    constexpr auto clasFind = function.substr(start, (end - start)).starts_with("class ");
-    constexpr auto clasPos = (clasFind == std::string_view::npos || clasFind == 0) ? 0Ui64 : 6Ui64;
+   constexpr auto structFind = function.substr(start, (end - start)).starts_with("struct ");
+   constexpr auto structPos = (structFind == std::string_view::npos || structFind == 0) ? 0Ui64 : 7Ui64;
+   constexpr auto clasFind = function.substr(start, (end - start)).starts_with("class ");
+   constexpr auto clasPos = (clasFind == std::string_view::npos || clasFind == 0) ? 0Ui64 : 6Ui64;
 
-    static_assert(start + structPos + clasPos < end);
+   static_assert(start + structPos + clasPos < end);
 
-    constexpr auto name = function.substr(start + structPos + clasPos, (end - start - structPos - clasPos));
+   constexpr auto name = function.substr(start + structPos + clasPos, (end - start - structPos - clasPos));
 #else
-    constexpr auto name = function.substr(start, (end - start));
+   constexpr auto name = function.substr(start, (end - start));
 #endif
 
-    return ichor_internal_substring_as_array(name, std::make_index_sequence<name.size()>{});
+   return ichor_internal_substring_as_array(name, std::make_index_sequence<name.size()>{});
 }
 
 template <typename T>
 struct ichor_internal_type_name_holder {
-    static inline constexpr auto value = ichor_internal_type_name_array<T>();
+   static inline constexpr auto value = ichor_internal_type_name_array<T>();
 };
 
 // Do not define this inside a namespace, as gcc then removes the namespace part from the __PRETTY_FUNCTION__
 template <typename T>
 [[nodiscard]] ICHOR_CONST_FUNC_ATTR constexpr auto ichor_internal_type_name() -> std::string_view
 {
-    constexpr auto& value = ichor_internal_type_name_holder<T>::value;
-    return std::string_view{value.data(), value.size()};
+   constexpr auto& value = ichor_internal_type_name_holder<T>::value;
+   return std::string_view{value.data(), value.size()};
 }
 
 namespace Ichor {
     using NameHashType = uint64_t;
+
+    template <std::size_t...Idxs>
+    [[nodiscard]] ICHOR_CONST_FUNC_ATTR constexpr auto ichor_internal_substring_as_u8_array(std::string_view str, std::index_sequence<Idxs...>) {
+        return std::array<uint8_t, sizeof...(Idxs)>{static_cast<uint8_t>(str[Idxs])...};
+    }
 
     template<typename INTERFACE_TYPENAME>
     [[nodiscard]] ICHOR_CONST_FUNC_ATTR consteval auto typeName() {
@@ -196,7 +783,8 @@ namespace Ichor {
     template<typename INTERFACE_TYPENAME>
     [[nodiscard]] ICHOR_CONST_FUNC_ATTR consteval NameHashType typeNameHash() {
         constexpr std::string_view name = typeName<INTERFACE_TYPENAME>();
-        constexpr NameHashType ret = consteval_wyhash(name.data(), name.size(), 0);
+        constexpr auto bytes = ichor_internal_substring_as_u8_array(name, std::make_index_sequence<name.size()>{});
+        constexpr NameHashType ret = rapidhash(bytes.data(), bytes.size());
 
         static_assert(ret != 0, "typeNameHash cannot be 0");
 
