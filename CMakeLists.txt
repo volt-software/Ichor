@@ -158,7 +158,13 @@ file(GLOB_RECURSE ICHOR_TIMER_SOURCES ${ICHOR_TOP_DIR}/src/services/timer/Timer.
 file(GLOB_RECURSE ICHOR_HIREDIS_SOURCES ${ICHOR_TOP_DIR}/src/services/redis/*.cpp)
 file(GLOB_RECURSE ICHOR_OPENSSL_SOURCES ${ICHOR_TOP_DIR}/src/services/network/ssl/openssl/*.cpp)
 file(GLOB_RECURSE ICHOR_BASE64_SOURCES ${ICHOR_TOP_DIR}/src/base64/*.cpp)
-set(ICHOR_STL_SOURCES ${ICHOR_TOP_DIR}/src/ichor/stl/AsyncSingleThreadedMutex.cpp ${ICHOR_TOP_DIR}/src/ichor/stl/LinuxUtils.cpp ${ICHOR_TOP_DIR}/src/ichor/stl/StringUtils.cpp)
+set(ICHOR_STL_SOURCES ${ICHOR_TOP_DIR}/src/ichor/stl/AsyncSingleThreadedMutex.cpp ${ICHOR_TOP_DIR}/src/ichor/stl/StringUtils.cpp)
+
+if(UNIX AND NOT APPLE)
+    list(APPEND ICHOR_STL_SOURCES
+        ${ICHOR_TOP_DIR}/src/ichor/stl/LinuxUtils.cpp
+    )
+endif()
 
 if(NOT ICHOR_DISABLE_EXCEPTIONS)
     set(ICHOR_STL_SOURCES ${ICHOR_STL_SOURCES} ${ICHOR_TOP_DIR}/src/ichor/stl/Any.cpp)

@@ -2,6 +2,7 @@
 #error "Boost not enabled."
 #endif
 
+#include <csignal>
 #include <boost/asio/steady_timer.hpp>
 #include <ichor/event_queues/BoostAsioQueue.h>
 #include <ichor/Defines.h>

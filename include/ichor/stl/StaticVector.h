@@ -98,10 +98,10 @@ namespace Ichor::v1 {
         [[nodiscard]] friend constexpr bool operator>  (SVIterator const & a, SVIterator const & b) noexcept { return a._ptr >  b._ptr; };
         [[nodiscard]] friend constexpr bool operator>= (SVIterator const & a, SVIterator const & b) noexcept { return a._ptr >= b._ptr; };
         [[nodiscard]] friend constexpr difference_type operator- (SVIterator const & a, SVIterator const & b) noexcept { return a._ptr - b._ptr; };
-        [[nodiscard]] friend constexpr SVIterator operator- (SVIterator const & a, difference_type b) noexcept { return a._ptr - b; };
+        [[nodiscard]] friend constexpr SVIterator operator- (SVIterator const& a, difference_type b) noexcept { return SVIterator{ a._ptr - b }; };
         [[nodiscard]] friend constexpr difference_type operator+ (SVIterator const & a, SVIterator const & b) noexcept { return a._ptr + b._ptr; };
-        [[nodiscard]] friend constexpr SVIterator operator+ (SVIterator const & a, difference_type b) noexcept { return a._ptr + b; };
-        [[nodiscard]] friend constexpr SVIterator operator+ (difference_type a, SVIterator const & b) noexcept { return a + b._ptr; };
+        [[nodiscard]] friend constexpr SVIterator operator+ (SVIterator const& a, difference_type b) noexcept { return SVIterator{ a._ptr + b }; };
+        [[nodiscard]] friend constexpr SVIterator operator+ (difference_type a, SVIterator const& b) noexcept { return SVIterator{ a + b._ptr }; };
 
     private:
         pointer _ptr;

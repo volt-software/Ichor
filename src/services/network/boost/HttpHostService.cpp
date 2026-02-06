@@ -321,7 +321,7 @@ void Ichor::Boost::v1::HttpHostService::read(tcp::socket socket, net::yield_cont
 #if (defined(WIN32) || defined(_WIN32) || defined(__WIN32)) && !defined(__CYGWIN__)
         auto version = req.version();
         auto keep_alive = req.keep_alive();
-        _queue->pushEvent<RunFunctionEventAsync>(getServiceId(), [this, connection, httpReq, version, keep_alive]() mutable -> AsyncGenerator<IchorBehaviour> {
+        _queue->pushEvent<RunFunctionEventAsync>(getServiceId(), [this, connection, target, httpReq, version, keep_alive]() mutable -> AsyncGenerator<IchorBehaviour> {
 #else
         _queue->pushEvent<RunFunctionEventAsync>(getServiceId(), [this, connection, target = std::move(target), httpReq = std::move(httpReq), version = req.version(), keep_alive = req.keep_alive()]() mutable -> AsyncGenerator<IchorBehaviour> {
 #endif

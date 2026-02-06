@@ -48,6 +48,7 @@
 #define ICHOR_CXX23_CONSTEXPR
 #endif
 
+#if (!defined(WIN32) && !defined(_WIN32) && !defined(__WIN32)) || defined(__CYGWIN__)
 #if __has_cpp_attribute(gnu::pure)
 #define ICHOR_PURE_FUNC_ATTR [[gnu::pure]]
 #else
@@ -57,5 +58,10 @@
 #if __has_cpp_attribute(gnu::const)
 #define ICHOR_CONST_FUNC_ATTR [[gnu::const]]
 #else
+#define ICHOR_CONST_FUNC_ATTR
+#endif
+#else
+// vs 2022 isn't able to handle the gnu::const attribute check above.
+#define ICHOR_PURE_FUNC_ATTR
 #define ICHOR_CONST_FUNC_ATTR
 #endif

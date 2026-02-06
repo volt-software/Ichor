@@ -102,7 +102,6 @@ namespace Ichor::v1 {
                 return tl::nullopt;
             }
 
-            auto prev = ret;
             ret += static_cast<uint64_t>(digittoval[static_cast<unsigned char>(*it)]) << shift;
             shift += 4;
             ++it;
@@ -187,14 +186,19 @@ namespace Ichor::v1 {
     }
 
     // Copied and modified from spdlog
-    ICHOR_PURE_FUNC_ATTR static constexpr const char *basename(const char *filename) {
+    ICHOR_PURE_FUNC_ATTR static constexpr const char* basename(const char* filename) {
 #ifdef _WIN32
-        const std::reverse_iterator<const char *> begin(filename + std::strlen(filename));
-        const std::reverse_iterator<const char *> end(filename);
-        const std::string_view seperator{"\\/"};
+        const char* last = filename;
+        for (const char* p = filename; *p != '\0'; ++p) {
+            if (*p == '/' || *p == '\\') last = p + 1;
+        }
+        return last;
+        //const std::reverse_iterator<const char *> begin(filename + std::strlen(filename));
+        //const std::reverse_iterator<const char *> end(filename);
+        //const std::string_view seperator{"\\/"};
 
-        const auto it = std::find_first_of(begin, end, std::begin(seperator), std::end(seperator));
-        return it != end ? it.base() : filename;
+        //const auto it = std::find_first_of(begin, end, std::begin(seperator), std::end(seperator));
+        //return it != end ? it.base() : filename;
 #else
         const char *rv = std::strrchr(filename, '/');
         return rv != nullptr ? rv + 1 : filename;

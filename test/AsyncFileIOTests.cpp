@@ -128,6 +128,11 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests") {
     }
 
     SECTION("Reading file without permissions should error") {
+#if (defined(WIN32) || defined(_WIN32) || defined(__WIN32)) && !defined(__CYGWIN__)
+        // skip requires exceptions to be enabled
+        SUCCEED("Windows doesn't properly implement std::filesystem::permissions, so we're skipping this one.");
+        return;
+#endif
         fmt::print("section 1\n");
 #if defined(TEST_URING)
         auto queue = std::make_unique<QIMPL>(500, 100'000'000, emulateKernelVersion);

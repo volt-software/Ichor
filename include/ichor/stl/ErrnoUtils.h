@@ -6,6 +6,14 @@
 #include <fmt/base.h>
 #include <ichor/stl/CompilerSpecific.h>
 
+// windows headers defined SERVICE_STOPPED as a macro
+#if (defined(WIN32) || defined(_WIN32) || defined(__WIN32)) && !defined(__CYGWIN__)
+#pragma push_macro("SERVICE_STOPPED")
+#ifdef SERVICE_STOPPED
+#  undef SERVICE_STOPPED
+#endif
+#endif
+
 namespace Ichor::v1 {
     enum class IOError : uint_fast16_t {
         // catch-all error
@@ -67,8 +75,12 @@ namespace Ichor::v1 {
             return IOError::IS_FILE_SHOULD_BE_DIR;
         } else if(err == EROFS) {
             return IOError::READ_ONLY_FS;
+
+// not available on windows
+#if (!defined(WIN32) && !defined(_WIN32) && !defined(__WIN32)) || defined(__CYGWIN__)
         } else if(err == EDQUOT) {
             return IOError::USER_QUOTA_REACHED;
+#endif
         } else if(err == ENOSPC) {
             return IOError::NO_SPACE_LEFT;
         } else if(err == EBADF) {
@@ -172,3 +184,7 @@ struct fmt::formatter<Ichor::v1::IOError> {
         return fmt::format_to(ctx.out(), "error, please file a bug in Ichor");
     }
 };
+
+#if (defined(WIN32) || defined(_WIN32) || defined(__WIN32)) && !defined(__CYGWIN__)
+#pragma pop_macro("SERVICE_STOPPED")
+#endif
