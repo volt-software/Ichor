@@ -50,6 +50,7 @@
 #include <array>
 #include <type_traits>
 #include <ichor/stl/CompilerSpecific.h>
+#include <ichor/Defines.h>
 #if defined(_MSC_VER)
 # include <intrin.h>
 # if defined(_M_X64) && !defined(_M_ARM64EC)
@@ -169,7 +170,12 @@
  *  Xors and overwrites A contents with C's low 64 bits.
  *  Xors and overwrites B contents with C's high 64 bits.
  */
-RAPIDHASH_INLINE_CONSTEXPR void rapid_mum(uint64_t *A, uint64_t *B) RAPIDHASH_NOEXCEPT {
+RAPIDHASH_INLINE_CONSTEXPR void rapid_mum(uint64_t * ICHOR_RESTRICT A, uint64_t * ICHOR_RESTRICT B) RAPIDHASH_NOEXCEPT {
+  if constexpr (DO_INTERNAL_DEBUG) {
+    if (A == B) [[unlikely]] {
+      std::terminate();
+    }
+  }
 #if defined(__SIZEOF_INT128__)
   __uint128_t r=*A; r*=*B;
   #ifdef RAPIDHASH_PROTECTED
@@ -374,7 +380,7 @@ RAPIDHASH_INLINE_CONSTEXPR uint64_t rapid_read32(const uint8_t *p) RAPIDHASH_NOE
  *
  *  Returns a 64-bit hash.
  */
-RAPIDHASH_INLINE_CONSTEXPR uint64_t rapidhash_internal(const uint8_t *key, size_t len, uint64_t seed, const uint64_t* secret) RAPIDHASH_NOEXCEPT {
+RAPIDHASH_INLINE_CONSTEXPR uint64_t rapidhash_internal(const uint8_t * ICHOR_RESTRICT key, size_t len, uint64_t seed, const uint64_t * ICHOR_RESTRICT secret) RAPIDHASH_NOEXCEPT {
    const uint8_t *p = key;
    seed ^= rapid_mix(seed ^ secret[2], secret[1]);
    uint64_t a=0, b=0;
@@ -487,7 +493,7 @@ RAPIDHASH_INLINE_CONSTEXPR uint64_t rapidhash_internal(const uint8_t *key, size_
  *
  *  Returns a 64-bit hash.
  */
- RAPIDHASH_INLINE_CONSTEXPR uint64_t rapidhashMicro_internal(const uint8_t *key, size_t len, uint64_t seed, const uint64_t* secret) RAPIDHASH_NOEXCEPT {
+ RAPIDHASH_INLINE_CONSTEXPR uint64_t rapidhashMicro_internal(const uint8_t * ICHOR_RESTRICT key, size_t len, uint64_t seed, const uint64_t * ICHOR_RESTRICT secret) RAPIDHASH_NOEXCEPT {
    const uint8_t *p=(const uint8_t *)key;
    seed ^= rapid_mix(seed ^ secret[2], secret[1]);
    uint64_t a=0, b=0;
@@ -557,7 +563,7 @@ RAPIDHASH_INLINE_CONSTEXPR uint64_t rapidhash_internal(const uint8_t *key, size_
  *
  *  Returns a 64-bit hash.
  */
- RAPIDHASH_INLINE_CONSTEXPR uint64_t rapidhashNano_internal(const uint8_t *key, size_t len, uint64_t seed, const uint64_t* secret) RAPIDHASH_NOEXCEPT {
+ RAPIDHASH_INLINE_CONSTEXPR uint64_t rapidhashNano_internal(const uint8_t * ICHOR_RESTRICT key, size_t len, uint64_t seed, const uint64_t * ICHOR_RESTRICT secret) RAPIDHASH_NOEXCEPT {
    const uint8_t *p=(const uint8_t *)key;
    seed ^= rapid_mix(seed ^ secret[2], secret[1]);
    uint64_t a=0, b=0;

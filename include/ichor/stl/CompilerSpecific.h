@@ -48,6 +48,17 @@
 #define ICHOR_CXX23_CONSTEXPR
 #endif
 
+#if defined(_MSC_VER)
+#define ICHOR_RESTRICT __restrict
+#define ICHOR_RESTRICT_THIS
+#elif defined(__clang__) || defined(__GNUC__)
+#define ICHOR_RESTRICT __restrict__
+#define ICHOR_RESTRICT_THIS __restrict__
+#else
+#define ICHOR_RESTRICT
+#define ICHOR_RESTRICT_THIS
+#endif
+
 #if (!defined(WIN32) && !defined(_WIN32) && !defined(__WIN32)) || defined(__CYGWIN__)
 #if __has_cpp_attribute(gnu::pure)
 #define ICHOR_PURE_FUNC_ATTR [[gnu::pure]]
