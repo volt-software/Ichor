@@ -48,6 +48,7 @@
 #include <string_view>
 #include <cstdint>
 #include <array>
+#include <exception>
 #include <type_traits>
 #include <ichor/stl/CompilerSpecific.h>
 #include <ichor/Defines.h>
