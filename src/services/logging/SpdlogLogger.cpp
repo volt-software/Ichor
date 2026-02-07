@@ -19,8 +19,8 @@ Ichor::v1::SpdlogLogger::~SpdlogLogger() {
     _logger = nullptr;
 }
 
-void Ichor::v1::SpdlogLogger::trace(const char *filename_in, int line_in, const char *funcname_in,
-                                std::string_view format_str, fmt::format_args args) {
+void Ichor::v1::SpdlogLogger::trace(const char * ICHOR_RESTRICT filename_in, int line_in, const char * ICHOR_RESTRICT funcname_in,
+                                std::string_view format_str, fmt::format_args args) ICHOR_RESTRICT_THIS {
     ICHOR_CONTRACT_ASSERT(_level <= LogLevel::LOG_TRACE);
 
 #if defined(ICHOR_USE_HARDENING) || defined(ICHOR_ENABLE_INTERNAL_DEBUGGING)
@@ -32,8 +32,8 @@ void Ichor::v1::SpdlogLogger::trace(const char *filename_in, int line_in, const 
     static_cast<spdlog::logger*>(_logger)->log(spdlog::source_loc{filename_in, line_in, funcname_in}, spdlog::level::trace, fmt::vformat(format_str, args));
 }
 
-void Ichor::v1::SpdlogLogger::debug(const char *filename_in, int line_in, const char *funcname_in,
-                                           std::string_view format_str, fmt::format_args args) {
+void Ichor::v1::SpdlogLogger::debug(const char * ICHOR_RESTRICT filename_in, int line_in, const char * ICHOR_RESTRICT funcname_in,
+                                           std::string_view format_str, fmt::format_args args) ICHOR_RESTRICT_THIS {
     ICHOR_CONTRACT_ASSERT(_level <= LogLevel::LOG_DEBUG);
 
 #if defined(ICHOR_USE_HARDENING) || defined(ICHOR_ENABLE_INTERNAL_DEBUGGING)
@@ -45,8 +45,8 @@ void Ichor::v1::SpdlogLogger::debug(const char *filename_in, int line_in, const 
     static_cast<spdlog::logger*>(_logger)->log(spdlog::source_loc{filename_in, line_in, funcname_in}, spdlog::level::debug, fmt::vformat(format_str, args));
 }
 
-void Ichor::v1::SpdlogLogger::info(const char *filename_in, int line_in, const char *funcname_in,
-                                          std::string_view format_str, fmt::format_args args) {
+void Ichor::v1::SpdlogLogger::info(const char * ICHOR_RESTRICT filename_in, int line_in, const char * ICHOR_RESTRICT funcname_in,
+                                          std::string_view format_str, fmt::format_args args) ICHOR_RESTRICT_THIS {
     ICHOR_CONTRACT_ASSERT(_level <= LogLevel::LOG_INFO);
 
 #if defined(ICHOR_USE_HARDENING) || defined(ICHOR_ENABLE_INTERNAL_DEBUGGING)
@@ -58,8 +58,8 @@ void Ichor::v1::SpdlogLogger::info(const char *filename_in, int line_in, const c
     static_cast<spdlog::logger*>(_logger)->log(spdlog::source_loc{filename_in, line_in, funcname_in}, spdlog::level::info, fmt::vformat(format_str, args));
 }
 
-void Ichor::v1::SpdlogLogger::warn(const char *filename_in, int line_in, const char *funcname_in,
-                                          std::string_view format_str, fmt::format_args args) {
+void Ichor::v1::SpdlogLogger::warn(const char * ICHOR_RESTRICT filename_in, int line_in, const char * ICHOR_RESTRICT funcname_in,
+                                          std::string_view format_str, fmt::format_args args) ICHOR_RESTRICT_THIS {
     ICHOR_CONTRACT_ASSERT(_level <= LogLevel::LOG_WARN);
 
 #if defined(ICHOR_USE_HARDENING) || defined(ICHOR_ENABLE_INTERNAL_DEBUGGING)
@@ -71,8 +71,8 @@ void Ichor::v1::SpdlogLogger::warn(const char *filename_in, int line_in, const c
     static_cast<spdlog::logger*>(_logger)->log(spdlog::source_loc{filename_in, line_in, funcname_in}, spdlog::level::warn, fmt::vformat(format_str, args));
 }
 
-void Ichor::v1::SpdlogLogger::error(const char *filename_in, int line_in, const char *funcname_in,
-                                           std::string_view format_str, fmt::format_args args) {
+void Ichor::v1::SpdlogLogger::error(const char * ICHOR_RESTRICT filename_in, int line_in, const char * ICHOR_RESTRICT funcname_in,
+                                           std::string_view format_str, fmt::format_args args) ICHOR_RESTRICT_THIS {
     ICHOR_CONTRACT_ASSERT(_level <= LogLevel::LOG_ERROR);
 
 #if defined(ICHOR_USE_HARDENING) || defined(ICHOR_ENABLE_INTERNAL_DEBUGGING)

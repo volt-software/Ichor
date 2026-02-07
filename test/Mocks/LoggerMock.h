@@ -6,7 +6,7 @@
 
 struct LoggerMock : public ILogger, public AdvancedService<LoggerMock> {
     LoggerMock(DependencyRegister &reg, Properties props) : AdvancedService<LoggerMock>(std::move(props)) {}
-    void trace(const char *filename_in, int line_in, const char *funcname_in, std::string_view format_str, fmt::format_args args) override {
+    void trace(const char * ICHOR_RESTRICT filename_in, int line_in, const char * ICHOR_RESTRICT funcname_in, std::string_view format_str, fmt::format_args args) override {
         if(level <= LogLevel::LOG_TRACE) {
             fmt::basic_memory_buffer<char> buf{};
             fmt::vformat_to(std::back_inserter(buf), format_str, args);
@@ -20,7 +20,7 @@ struct LoggerMock : public ILogger, public AdvancedService<LoggerMock> {
         }
     }
 
-    void debug(const char *filename_in, int line_in, const char *funcname_in, std::string_view format_str, fmt::format_args args) override {
+    void debug(const char * ICHOR_RESTRICT filename_in, int line_in, const char * ICHOR_RESTRICT funcname_in, std::string_view format_str, fmt::format_args args) override {
         if(level <= LogLevel::LOG_DEBUG) {
             fmt::basic_memory_buffer<char> buf{};
             fmt::vformat_to(std::back_inserter(buf), format_str, args);
@@ -34,7 +34,7 @@ struct LoggerMock : public ILogger, public AdvancedService<LoggerMock> {
         }
     }
 
-    void info(const char *filename_in, int line_in, const char *funcname_in, std::string_view format_str, fmt::format_args args) override {
+    void info(const char * ICHOR_RESTRICT filename_in, int line_in, const char * ICHOR_RESTRICT funcname_in, std::string_view format_str, fmt::format_args args) override {
         if(level <= LogLevel::LOG_INFO) {
             fmt::basic_memory_buffer<char> buf{};
             fmt::vformat_to(std::back_inserter(buf), format_str, args);
@@ -48,7 +48,7 @@ struct LoggerMock : public ILogger, public AdvancedService<LoggerMock> {
         }
     }
 
-    void warn(const char *filename_in, int line_in, const char *funcname_in, std::string_view format_str, fmt::format_args args) override {
+    void warn(const char * ICHOR_RESTRICT filename_in, int line_in, const char * ICHOR_RESTRICT funcname_in, std::string_view format_str, fmt::format_args args) override {
         if(level <= LogLevel::LOG_WARN) {
             fmt::basic_memory_buffer<char> buf{};
             fmt::vformat_to(std::back_inserter(buf), format_str, args);
@@ -62,7 +62,7 @@ struct LoggerMock : public ILogger, public AdvancedService<LoggerMock> {
         }
     }
 
-    void error(const char *filename_in, int line_in, const char *funcname_in, std::string_view format_str, fmt::format_args args) override {
+    void error(const char * ICHOR_RESTRICT filename_in, int line_in, const char * ICHOR_RESTRICT funcname_in, std::string_view format_str, fmt::format_args args) override {
         if(level <= LogLevel::LOG_ERROR) {
             fmt::basic_memory_buffer<char> buf{};
             fmt::vformat_to(std::back_inserter(buf), format_str, args);

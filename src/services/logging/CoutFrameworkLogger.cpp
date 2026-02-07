@@ -15,8 +15,8 @@ Ichor::v1::CoutFrameworkLogger::CoutFrameworkLogger() : IFrameworkLogger(), Adva
     ICHOR_LOG_TRACE(logger, "CoutFrameworkLogger constructor");
 }
 
-void Ichor::v1::CoutFrameworkLogger::trace(const char *filename_in, int line_in, const char *funcname_in,
-                                           std::string_view format_str, fmt::format_args args) {
+void Ichor::v1::CoutFrameworkLogger::trace(const char * ICHOR_RESTRICT filename_in, int line_in, const char * ICHOR_RESTRICT funcname_in,
+                                           std::string_view format_str, fmt::format_args args) ICHOR_RESTRICT_THIS {
     ICHOR_CONTRACT_ASSERT(_level <= LogLevel::LOG_TRACE);
 
     fmt::basic_memory_buffer<char, FMT_INLINE_BUFFER_SIZE> buf{};
@@ -30,8 +30,8 @@ void Ichor::v1::CoutFrameworkLogger::trace(const char *filename_in, int line_in,
     std::cout.write(buf.data(), static_cast<ptrdiff_t>(buf.size())) << "\n";
 }
 
-void Ichor::v1::CoutFrameworkLogger::debug(const char *filename_in, int line_in, const char *funcname_in,
-                                           std::string_view format_str, fmt::format_args args) {
+void Ichor::v1::CoutFrameworkLogger::debug(const char * ICHOR_RESTRICT filename_in, int line_in, const char * ICHOR_RESTRICT funcname_in,
+                                           std::string_view format_str, fmt::format_args args) ICHOR_RESTRICT_THIS {
     ICHOR_CONTRACT_ASSERT(_level <= LogLevel::LOG_DEBUG);
 
     fmt::basic_memory_buffer<char, FMT_INLINE_BUFFER_SIZE> buf{};
@@ -45,8 +45,8 @@ void Ichor::v1::CoutFrameworkLogger::debug(const char *filename_in, int line_in,
     std::cout.write(buf.data(), static_cast<ptrdiff_t>(buf.size())) << "\n";
 }
 
-void Ichor::v1::CoutFrameworkLogger::info(const char *filename_in, int line_in, const char *funcname_in,
-                                          std::string_view format_str, fmt::format_args args) {
+void Ichor::v1::CoutFrameworkLogger::info(const char * ICHOR_RESTRICT filename_in, int line_in, const char * ICHOR_RESTRICT funcname_in,
+                                          std::string_view format_str, fmt::format_args args) ICHOR_RESTRICT_THIS {
     ICHOR_CONTRACT_ASSERT(_level <= LogLevel::LOG_INFO);
 
     fmt::basic_memory_buffer<char, FMT_INLINE_BUFFER_SIZE> buf{};
@@ -60,8 +60,8 @@ void Ichor::v1::CoutFrameworkLogger::info(const char *filename_in, int line_in, 
     std::cout.write(buf.data(), static_cast<ptrdiff_t>(buf.size())) << "\n";
 }
 
-void Ichor::v1::CoutFrameworkLogger::warn(const char *filename_in, int line_in, const char *funcname_in,
-                                          std::string_view format_str, fmt::format_args args) {
+void Ichor::v1::CoutFrameworkLogger::warn(const char * ICHOR_RESTRICT filename_in, int line_in, const char * ICHOR_RESTRICT funcname_in,
+                                          std::string_view format_str, fmt::format_args args) ICHOR_RESTRICT_THIS {
     ICHOR_CONTRACT_ASSERT(_level <= LogLevel::LOG_WARN);
 
     fmt::basic_memory_buffer<char, FMT_INLINE_BUFFER_SIZE> buf{};
@@ -75,8 +75,8 @@ void Ichor::v1::CoutFrameworkLogger::warn(const char *filename_in, int line_in, 
     std::cout.write(buf.data(), static_cast<ptrdiff_t>(buf.size())) << "\n";
 }
 
-void Ichor::v1::CoutFrameworkLogger::error(const char *filename_in, int line_in, const char *funcname_in,
-                                           std::string_view format_str, fmt::format_args args) {
+void Ichor::v1::CoutFrameworkLogger::error(const char * ICHOR_RESTRICT filename_in, int line_in, const char * ICHOR_RESTRICT funcname_in,
+                                           std::string_view format_str, fmt::format_args args) ICHOR_RESTRICT_THIS {
     ICHOR_CONTRACT_ASSERT(_level <= LogLevel::LOG_ERROR);
 
     fmt::basic_memory_buffer<char, FMT_INLINE_BUFFER_SIZE> buf{};

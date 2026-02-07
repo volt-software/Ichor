@@ -11,8 +11,8 @@ Ichor::v1::CoutLogger::CoutLogger(Properties props) : AdvancedService(std::move(
     }
 }
 
-void Ichor::v1::CoutLogger::trace(const char *filename_in, int line_in, const char *funcname_in,
-                                         std::string_view format_str, fmt::format_args args) {
+void Ichor::v1::CoutLogger::trace(const char * ICHOR_RESTRICT filename_in, int line_in, const char * ICHOR_RESTRICT funcname_in,
+                                         std::string_view format_str, fmt::format_args args) ICHOR_RESTRICT_THIS {
     ICHOR_CONTRACT_ASSERT(_level <= LogLevel::LOG_TRACE);
 
     fmt::basic_memory_buffer<char, FMT_INLINE_BUFFER_SIZE> buf{};
@@ -26,8 +26,8 @@ void Ichor::v1::CoutLogger::trace(const char *filename_in, int line_in, const ch
     std::cout.write(buf.data(), static_cast<ptrdiff_t>(buf.size())) << "\n";
 }
 
-void Ichor::v1::CoutLogger::debug(const char *filename_in, int line_in, const char *funcname_in,
-                                         std::string_view format_str, fmt::format_args args) {
+void Ichor::v1::CoutLogger::debug(const char * ICHOR_RESTRICT filename_in, int line_in, const char * ICHOR_RESTRICT funcname_in,
+                                         std::string_view format_str, fmt::format_args args) ICHOR_RESTRICT_THIS {
     ICHOR_CONTRACT_ASSERT(_level <= LogLevel::LOG_DEBUG);
 
     fmt::basic_memory_buffer<char, FMT_INLINE_BUFFER_SIZE> buf{};
@@ -41,8 +41,8 @@ void Ichor::v1::CoutLogger::debug(const char *filename_in, int line_in, const ch
     std::cout.write(buf.data(), static_cast<ptrdiff_t>(buf.size())) << "\n";
 }
 
-void Ichor::v1::CoutLogger::info(const char *filename_in, int line_in, const char *funcname_in,
-                                        std::string_view format_str, fmt::format_args args) {
+void Ichor::v1::CoutLogger::info(const char * ICHOR_RESTRICT filename_in, int line_in, const char * ICHOR_RESTRICT funcname_in,
+                                        std::string_view format_str, fmt::format_args args) ICHOR_RESTRICT_THIS {
     ICHOR_CONTRACT_ASSERT(_level <= LogLevel::LOG_INFO);
 
     fmt::basic_memory_buffer<char, FMT_INLINE_BUFFER_SIZE> buf{};
@@ -56,8 +56,8 @@ void Ichor::v1::CoutLogger::info(const char *filename_in, int line_in, const cha
     std::cout.write(buf.data(), static_cast<ptrdiff_t>(buf.size())) << "\n";
 }
 
-void Ichor::v1::CoutLogger::warn(const char *filename_in, int line_in, const char *funcname_in,
-                                        std::string_view format_str, fmt::format_args args) {
+void Ichor::v1::CoutLogger::warn(const char * ICHOR_RESTRICT filename_in, int line_in, const char * ICHOR_RESTRICT funcname_in,
+                                        std::string_view format_str, fmt::format_args args) ICHOR_RESTRICT_THIS {
     ICHOR_CONTRACT_ASSERT(_level <= LogLevel::LOG_WARN);
 
     fmt::basic_memory_buffer<char, FMT_INLINE_BUFFER_SIZE> buf{};
@@ -71,8 +71,8 @@ void Ichor::v1::CoutLogger::warn(const char *filename_in, int line_in, const cha
     std::cout.write(buf.data(), static_cast<ptrdiff_t>(buf.size())) << "\n";
 }
 
-void Ichor::v1::CoutLogger::error(const char *filename_in, int line_in, const char *funcname_in,
-                                         std::string_view format_str, fmt::format_args args) {
+void Ichor::v1::CoutLogger::error(const char * ICHOR_RESTRICT filename_in, int line_in, const char * ICHOR_RESTRICT funcname_in,
+                                         std::string_view format_str, fmt::format_args args) ICHOR_RESTRICT_THIS {
     ICHOR_CONTRACT_ASSERT(_level <= LogLevel::LOG_ERROR);
 
     fmt::basic_memory_buffer<char, FMT_INLINE_BUFFER_SIZE> buf{};
