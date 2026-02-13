@@ -5,11 +5,14 @@
 #include <ichor/services/logging/CoutLogger.h>
 #include <fstream>
 #include <filesystem>
-#include <ichor/services/io/SharedOverThreadsAsyncFileIO.h>
+#include <ichor/event_queues/IOUringQueue.h>
+#include <ichor/services/io/IOUringAsyncFileIO.h>
+#include <ichor/stl/LinuxUtils.h>
+#include <catch2/generators/catch_generators.hpp>
 #include "../examples/common/DebugService.h"
 
-#define IOIMPL SharedOverThreadsAsyncFileIO
-#define QIMPL PriorityQueue
+#define IOIMPL IOUringAsyncFileIO
+#define QIMPL IOUringQueue
 
 struct AsyncFileIOExpensiveSetup {
     AsyncFileIOExpensiveSetup() {
@@ -27,13 +30,36 @@ struct AsyncFileIOExpensiveSetup {
     int64_t bigFileFilesize{};
 };
 
-TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests: Reading non-existent file should error") {fmt::print("section 1\n");
+namespace {
+    tl::optional<Version> emulateKernelVersion;
+}
+
+TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests_uring: Reading non-existent file should error") {
+    auto version = Ichor::v1::kernelVersion();
+
+    REQUIRE(version);
+    if(version < v1::Version{5, 18, 0}) {
+        SKIP("Kernel version too old to run test.");
+        return;
+    }
+
+    auto gen_i = GENERATE(1, 2);
+
+    if(gen_i == 2) {
+        emulateKernelVersion = v1::Version{5, 18, 0};
+        fmt::println("emulating kernel version {}", *emulateKernelVersion);
+    } else {
+        fmt::println("kernel version {}", *version);
+    }
+
+    fmt::print("section 1\n");
     ServiceIdType dbgSvcId{};
-    auto queue = std::make_unique<QIMPL>(500);
+    auto queue = std::make_unique<QIMPL>(500, 100'000'000, emulateKernelVersion);
     auto &dm = queue->createManager();
     ServiceIdType ioSvcId{};
 
     std::thread t([&]() {
+        REQUIRE(queue->createEventLoop());
         dm.createServiceManager<LoggerFactory<CoutLogger>, ILoggerFactory>(Properties{{"DefaultLogLevel", Ichor::v1::make_any<LogLevel>(LogLevel::LOG_TRACE)}});
         dbgSvcId = dm.createServiceManager<DebugService, IDebugService>()->getServiceId();
         ioSvcId = dm.createServiceManager<IOIMPL, IAsyncFileIO>()->getServiceId();
@@ -81,8 +107,26 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests: Reading non-exist
     t.join();
 }
 
-TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests: Reading file without permissions should error") {fmt::print("section 1\n");
-    auto queue = std::make_unique<QIMPL>(500);
+TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests_uring: Reading file without permissions should error") {
+    auto version = Ichor::v1::kernelVersion();
+
+    REQUIRE(version);
+    if(version < v1::Version{5, 18, 0}) {
+        SKIP("Kernel version too old to run test.");
+        return;
+    }
+
+    auto gen_i = GENERATE(1, 2);
+
+    if(gen_i == 2) {
+        emulateKernelVersion = v1::Version{5, 18, 0};
+        fmt::println("emulating kernel version {}", *emulateKernelVersion);
+    } else {
+        fmt::println("kernel version {}", *version);
+    }
+
+    fmt::print("section 1\n");
+    auto queue = std::make_unique<QIMPL>(500, 100'000'000, emulateKernelVersion);
     auto &dm = queue->createManager();
     ServiceIdType ioSvcId{};
 
@@ -100,6 +144,7 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests: Reading file with
             REQUIRE(!ec); // if running tests as root, this will fail
         }
 
+        REQUIRE(queue->createEventLoop());
         dm.createServiceManager<LoggerFactory<CoutLogger>, ILoggerFactory>(Properties{{"DefaultLogLevel", Ichor::v1::make_any<LogLevel>(LogLevel::LOG_TRACE)}});
         ioSvcId = dm.createServiceManager<IOIMPL, IAsyncFileIO>()->getServiceId();
         queue->start(CaptureSigInt);
@@ -136,12 +181,31 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests: Reading file with
     std::remove("NoPermIO.txt"); // ignore error, each OS handles this differently and most of the time it's just because it didn't exist in the first place
 }
 
-TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests: Read whole file Small") {fmt::print("section 2a\n");
-    auto queue = std::make_unique<QIMPL>(500);
+TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests_uring: Read whole file Small") {
+    auto version = Ichor::v1::kernelVersion();
+
+    REQUIRE(version);
+    if(version < v1::Version{5, 18, 0}) {
+        SKIP("Kernel version too old to run test.");
+        return;
+    }
+
+    auto gen_i = GENERATE(1, 2);
+
+    if(gen_i == 2) {
+        emulateKernelVersion = v1::Version{5, 18, 0};
+        fmt::println("emulating kernel version {}", *emulateKernelVersion);
+    } else {
+        fmt::println("kernel version {}", *version);
+    }
+
+    fmt::print("section 2a\n");
+    auto queue = std::make_unique<QIMPL>(500, 100'000'000, emulateKernelVersion);
     auto &dm = queue->createManager();
     ServiceIdType ioSvcId{};
 
     std::thread t([&]() {
+        REQUIRE(queue->createEventLoop());
         dm.createServiceManager<LoggerFactory<CoutLogger>, ILoggerFactory>(Properties{{"DefaultLogLevel", Ichor::v1::make_any<LogLevel>(LogLevel::LOG_TRACE)}});
         ioSvcId = dm.createServiceManager<IOIMPL, IAsyncFileIO>()->getServiceId();
         queue->start(CaptureSigInt);
@@ -177,12 +241,31 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests: Read whole file S
     t.join();
 }
 
-TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests: Read whole file large") {fmt::println("section 2b");
-    auto queue = std::make_unique<QIMPL>(500);
+TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests_uring: Read whole file large") {
+    auto version = Ichor::v1::kernelVersion();
+
+    REQUIRE(version);
+    if(version < v1::Version{5, 18, 0}) {
+        SKIP("Kernel version too old to run test.");
+        return;
+    }
+
+    auto gen_i = GENERATE(1, 2);
+
+    if(gen_i == 2) {
+        emulateKernelVersion = v1::Version{5, 18, 0};
+        fmt::println("emulating kernel version {}", *emulateKernelVersion);
+    } else {
+        fmt::println("kernel version {}", *version);
+    }
+
+    fmt::println("section 2b");
+    auto queue = std::make_unique<QIMPL>(500, 100'000'000, emulateKernelVersion);
     auto &dm = queue->createManager();
     ServiceIdType ioSvcId{};
 
     std::thread t([&]() {
+        REQUIRE(queue->createEventLoop());
         dm.createServiceManager<LoggerFactory<CoutLogger>, ILoggerFactory>(Properties{{"DefaultLogLevel", Ichor::v1::make_any<LogLevel>(LogLevel::LOG_TRACE)}});
         ioSvcId = dm.createServiceManager<IOIMPL, IAsyncFileIO>()->getServiceId();
         queue->start(CaptureSigInt);
@@ -217,12 +300,31 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests: Read whole file l
     t.join();
 }
 
-TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests: Copying non-existent file should error") {fmt::print("section 3\n");
-    auto queue = std::make_unique<QIMPL>(500);
+TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests_uring: Copying non-existent file should error") {
+    auto version = Ichor::v1::kernelVersion();
+
+    REQUIRE(version);
+    if(version < v1::Version{5, 18, 0}) {
+        SKIP("Kernel version too old to run test.");
+        return;
+    }
+
+    auto gen_i = GENERATE(1, 2);
+
+    if(gen_i == 2) {
+        emulateKernelVersion = v1::Version{5, 18, 0};
+        fmt::println("emulating kernel version {}", *emulateKernelVersion);
+    } else {
+        fmt::println("kernel version {}", *version);
+    }
+
+    fmt::print("section 3\n");
+    auto queue = std::make_unique<QIMPL>(500, 100'000'000, emulateKernelVersion);
     auto &dm = queue->createManager();
     ServiceIdType ioSvcId{};
 
     std::thread t([&]() {
+        REQUIRE(queue->createEventLoop());
         dm.createServiceManager<LoggerFactory<CoutLogger>, ILoggerFactory>(Properties{{"DefaultLogLevel", Ichor::v1::make_any<LogLevel>(LogLevel::LOG_TRACE)}});
         ioSvcId = dm.createServiceManager<IOIMPL, IAsyncFileIO>()->getServiceId();
         queue->start(CaptureSigInt);
@@ -253,12 +355,31 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests: Copying non-exist
     t.join();
 }
 
-TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests: Copying file") {fmt::print("section 4\n");
-    auto queue = std::make_unique<QIMPL>(500);
+TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests_uring: Copying file") {
+    auto version = Ichor::v1::kernelVersion();
+
+    REQUIRE(version);
+    if(version < v1::Version{5, 18, 0}) {
+        SKIP("Kernel version too old to run test.");
+        return;
+    }
+
+    auto gen_i = GENERATE(1, 2);
+
+    if(gen_i == 2) {
+        emulateKernelVersion = v1::Version{5, 18, 0};
+        fmt::println("emulating kernel version {}", *emulateKernelVersion);
+    } else {
+        fmt::println("kernel version {}", *version);
+    }
+
+    fmt::print("section 4\n");
+    auto queue = std::make_unique<QIMPL>(500, 100'000'000, emulateKernelVersion);
     auto &dm = queue->createManager();
     ServiceIdType ioSvcId{};
 
     std::thread t([&]() {
+        REQUIRE(queue->createEventLoop());
         dm.createServiceManager<LoggerFactory<CoutLogger>, ILoggerFactory>(Properties{{"DefaultLogLevel", Ichor::v1::make_any<LogLevel>(LogLevel::LOG_TRACE)}});
         ioSvcId = dm.createServiceManager<IOIMPL, IAsyncFileIO>()->getServiceId();
         queue->start(CaptureSigInt);
@@ -300,12 +421,31 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests: Copying file") {f
     t.join();
 }
 
-TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests: Copying large file") {fmt::print("section 5\n");
-    auto queue = std::make_unique<QIMPL>(500);
+TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests_uring: Copying large file") {
+    auto version = Ichor::v1::kernelVersion();
+
+    REQUIRE(version);
+    if(version < v1::Version{5, 18, 0}) {
+        SKIP("Kernel version too old to run test.");
+        return;
+    }
+
+    auto gen_i = GENERATE(1, 2);
+
+    if(gen_i == 2) {
+        emulateKernelVersion = v1::Version{5, 18, 0};
+        fmt::println("emulating kernel version {}", *emulateKernelVersion);
+    } else {
+        fmt::println("kernel version {}", *version);
+    }
+
+    fmt::print("section 5\n");
+    auto queue = std::make_unique<QIMPL>(500, 100'000'000, emulateKernelVersion);
     auto &dm = queue->createManager();
     ServiceIdType ioSvcId{};
 
     std::thread t([&]() {
+        REQUIRE(queue->createEventLoop());
         dm.createServiceManager<LoggerFactory<CoutLogger>, ILoggerFactory>(Properties{{"DefaultLogLevel", Ichor::v1::make_any<LogLevel>(LogLevel::LOG_TRACE)}});
         ioSvcId = dm.createServiceManager<IOIMPL, IAsyncFileIO>()->getServiceId();
         queue->start(CaptureSigInt);
@@ -342,12 +482,31 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests: Copying large fil
     t.join();
 }
 
-TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests: Removing non-existing file should error") {fmt::print("section 6\n");
-    auto queue = std::make_unique<QIMPL>(500);
+TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests_uring: Removing non-existing file should error") {
+    auto version = Ichor::v1::kernelVersion();
+
+    REQUIRE(version);
+    if(version < v1::Version{5, 18, 0}) {
+        SKIP("Kernel version too old to run test.");
+        return;
+    }
+
+    auto gen_i = GENERATE(1, 2);
+
+    if(gen_i == 2) {
+        emulateKernelVersion = v1::Version{5, 18, 0};
+        fmt::println("emulating kernel version {}", *emulateKernelVersion);
+    } else {
+        fmt::println("kernel version {}", *version);
+    }
+
+    fmt::print("section 6\n");
+    auto queue = std::make_unique<QIMPL>(500, 100'000'000, emulateKernelVersion);
     auto &dm = queue->createManager();
     ServiceIdType ioSvcId{};
 
     std::thread t([&]() {
+        REQUIRE(queue->createEventLoop());
         dm.createServiceManager<LoggerFactory<CoutLogger>, ILoggerFactory>(Properties{{"DefaultLogLevel", Ichor::v1::make_any<LogLevel>(LogLevel::LOG_TRACE)}});
         ioSvcId = dm.createServiceManager<IOIMPL, IAsyncFileIO>()->getServiceId();
         queue->start(CaptureSigInt);
@@ -377,12 +536,31 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests: Removing non-exis
     t.join();
 }
 
-TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests: Removing file") {fmt::print("section 7\n");
-    auto queue = std::make_unique<QIMPL>(500);
+TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests_uring: Removing file") {
+    auto version = Ichor::v1::kernelVersion();
+
+    REQUIRE(version);
+    if(version < v1::Version{5, 18, 0}) {
+        SKIP("Kernel version too old to run test.");
+        return;
+    }
+
+    auto gen_i = GENERATE(1, 2);
+
+    if(gen_i == 2) {
+        emulateKernelVersion = v1::Version{5, 18, 0};
+        fmt::println("emulating kernel version {}", *emulateKernelVersion);
+    } else {
+        fmt::println("kernel version {}", *version);
+    }
+
+    fmt::print("section 7\n");
+    auto queue = std::make_unique<QIMPL>(500, 100'000'000, emulateKernelVersion);
     auto &dm = queue->createManager();
     ServiceIdType ioSvcId{};
 
     std::thread t([&]() {
+        REQUIRE(queue->createEventLoop());
         dm.createServiceManager<LoggerFactory<CoutLogger>, ILoggerFactory>(Properties{{"DefaultLogLevel", Ichor::v1::make_any<LogLevel>(LogLevel::LOG_TRACE)}});
         ioSvcId = dm.createServiceManager<IOIMPL, IAsyncFileIO>()->getServiceId();
         queue->start(CaptureSigInt);
@@ -423,12 +601,31 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests: Removing file") {
     t.join();
 }
 
-TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests: Writing file") {fmt::print("section 8\n");
-    auto queue = std::make_unique<QIMPL>(500);
+TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests_uring: Writing file") {
+    auto version = Ichor::v1::kernelVersion();
+
+    REQUIRE(version);
+    if(version < v1::Version{5, 18, 0}) {
+        SKIP("Kernel version too old to run test.");
+        return;
+    }
+
+    auto gen_i = GENERATE(1, 2);
+
+    if(gen_i == 2) {
+        emulateKernelVersion = v1::Version{5, 18, 0};
+        fmt::println("emulating kernel version {}", *emulateKernelVersion);
+    } else {
+        fmt::println("kernel version {}", *version);
+    }
+
+    fmt::print("section 8\n");
+    auto queue = std::make_unique<QIMPL>(500, 100'000'000, emulateKernelVersion);
     auto &dm = queue->createManager();
     ServiceIdType ioSvcId{};
 
     std::thread t([&]() {
+        REQUIRE(queue->createEventLoop());
         dm.createServiceManager<LoggerFactory<CoutLogger>, ILoggerFactory>(Properties{{"DefaultLogLevel", Ichor::v1::make_any<LogLevel>(LogLevel::LOG_TRACE)}});
         ioSvcId = dm.createServiceManager<IOIMPL, IAsyncFileIO>()->getServiceId();
         queue->start(CaptureSigInt);
@@ -467,12 +664,31 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests: Writing file") {f
     t.join();
 }
 
-TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests: Writing file - overwrite") {fmt::print("section 9\n");
-    auto queue = std::make_unique<QIMPL>(500);
+TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests_uring: Writing file - overwrite") {
+    auto version = Ichor::v1::kernelVersion();
+
+    REQUIRE(version);
+    if(version < v1::Version{5, 18, 0}) {
+        SKIP("Kernel version too old to run test.");
+        return;
+    }
+
+    auto gen_i = GENERATE(1, 2);
+
+    if(gen_i == 2) {
+        emulateKernelVersion = v1::Version{5, 18, 0};
+        fmt::println("emulating kernel version {}", *emulateKernelVersion);
+    } else {
+        fmt::println("kernel version {}", *version);
+    }
+
+    fmt::print("section 9\n");
+    auto queue = std::make_unique<QIMPL>(500, 100'000'000, emulateKernelVersion);
     auto &dm = queue->createManager();
     ServiceIdType ioSvcId{};
 
     std::thread t([&]() {
+        REQUIRE(queue->createEventLoop());
         dm.createServiceManager<LoggerFactory<CoutLogger>, ILoggerFactory>(Properties{{"DefaultLogLevel", Ichor::v1::make_any<LogLevel>(LogLevel::LOG_TRACE)}});
         ioSvcId = dm.createServiceManager<IOIMPL, IAsyncFileIO>()->getServiceId();
         queue->start(CaptureSigInt);
@@ -515,12 +731,31 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests: Writing file - ov
     t.join();
 }
 
-TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests: appending file") {fmt::print("section 10\n");
-    auto queue = std::make_unique<QIMPL>(500);
+TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests_uring: appending file") {
+    auto version = Ichor::v1::kernelVersion();
+
+    REQUIRE(version);
+    if(version < v1::Version{5, 18, 0}) {
+        SKIP("Kernel version too old to run test.");
+        return;
+    }
+
+    auto gen_i = GENERATE(1, 2);
+
+    if(gen_i == 2) {
+        emulateKernelVersion = v1::Version{5, 18, 0};
+        fmt::println("emulating kernel version {}", *emulateKernelVersion);
+    } else {
+        fmt::println("kernel version {}", *version);
+    }
+
+    fmt::print("section 10\n");
+    auto queue = std::make_unique<QIMPL>(500, 100'000'000, emulateKernelVersion);
     auto &dm = queue->createManager();
     ServiceIdType ioSvcId{};
 
     std::thread t([&]() {
+        REQUIRE(queue->createEventLoop());
         dm.createServiceManager<LoggerFactory<CoutLogger>, ILoggerFactory>(Properties{{"DefaultLogLevel", Ichor::v1::make_any<LogLevel>(LogLevel::LOG_TRACE)}});
         ioSvcId = dm.createServiceManager<IOIMPL, IAsyncFileIO>()->getServiceId();
         queue->start(CaptureSigInt);
