@@ -180,6 +180,10 @@ struct fmt::formatter<io_uring_op> {
                 return fmt::format_to(ctx.out(), "io_uring_op::IORING_OP_WRITEV_FIXED");
             case io_uring_op::IORING_OP_PIPE:
                 return fmt::format_to(ctx.out(), "io_uring_op::IORING_OP_PIPE");
+            case io_uring_op::IORING_OP_NOP128:
+                return fmt::format_to(ctx.out(), "io_uring_op::IORING_OP_NOP128");
+            case io_uring_op::IORING_OP_URING_CMD128:
+                return fmt::format_to(ctx.out(), "io_uring_op::IORING_OP_URING_CMD128");
             case io_uring_op::IORING_OP_LAST:
                 return fmt::format_to(ctx.out(), "io_uring_op::IORING_OP_LAST");
         }
@@ -342,8 +346,8 @@ namespace Ichor {
     };
 
     IOUringQueue::IOUringQueue(uint64_t quitTimeoutMs, long long pollTimeoutNs, tl::optional<v1::Version> emulateKernelVersion) : _quitTimeoutMs(quitTimeoutMs), _pollTimeoutNs(pollTimeoutNs) {
-        if(io_uring_major_version() != 2 || io_uring_minor_version() != 12) {
-            fmt::println("io_uring version is {}.{}, but expected 2.12. Ichor is not compiled correctly.", io_uring_major_version(), io_uring_minor_version());
+        if(io_uring_major_version() != 2 || io_uring_minor_version() != 14) {
+            fmt::println("io_uring version is {}.{}, but expected 2.14. Ichor is not compiled correctly.", io_uring_major_version(), io_uring_minor_version());
             std::terminate();
         }
         _threadId = std::this_thread::get_id(); // re-set in functions below, because adding events when the queue isn't running yet cannot be done from another thread.
