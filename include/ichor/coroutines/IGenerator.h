@@ -28,7 +28,7 @@ namespace Ichor {
     public:
         constexpr virtual ~IGenerator() = 0;
         [[nodiscard]] constexpr virtual bool done() const noexcept = 0;
-        [[nodiscard]] constexpr virtual std::unique_ptr<IAsyncGeneratorBeginOperation> begin_interface() noexcept = 0;
+        [[nodiscard]] ICHOR_COROUTINE_UNIQUE_PTR_CONSTEXPR virtual std::unique_ptr<IAsyncGeneratorBeginOperation> begin_interface() noexcept = 0;
         constexpr virtual void set_service_id(ServiceIdType svcId) noexcept = 0;
         [[nodiscard]] constexpr virtual ServiceIdType const get_service_id() const noexcept = 0;
 

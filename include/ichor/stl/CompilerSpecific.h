@@ -1,6 +1,6 @@
 #pragma once
 
-#if defined(__has_cpp_attribute) && __has_cpp_attribute(assume)
+#if __cplusplus >= 202302L && defined(__has_cpp_attribute) && __has_cpp_attribute(assume)
 #define ICHOR_ASSUME(...) [[assume(__VA_ARGS__)]];
 #else
 #define ICHOR_ASSUME(...) static_assert(true, "")

@@ -422,7 +422,7 @@ namespace Ichor {
         }
 
         // TODO replace unique_ptr with a value-type with SBO
-        [[nodiscard]] ICHOR_COROUTINE_CONSTEXPR std::unique_ptr<IAsyncGeneratorBeginOperation> begin_interface() noexcept final {
+        [[nodiscard]] ICHOR_COROUTINE_UNIQUE_PTR_CONSTEXPR std::unique_ptr<IAsyncGeneratorBeginOperation> begin_interface() noexcept final {
             INTERNAL_COROUTINE_DEBUG("AsyncGenerator<{}>::begin_interface() {} {}", typeName<T>(), *_destroyed, _coroutine == nullptr);
             if ((*_destroyed) || !_coroutine) {
                 return std::make_unique<Detail::AsyncGeneratorBeginOperation<T>>(nullptr);

@@ -187,22 +187,11 @@ namespace Ichor::v1 {
 
     // Copied and modified from spdlog
     ICHOR_PURE_FUNC_ATTR static constexpr const char* basename(const char* filename) {
-#ifdef _WIN32
         const char* last = filename;
         for (const char* p = filename; *p != '\0'; ++p) {
             if (*p == '/' || *p == '\\') last = p + 1;
         }
         return last;
-        //const std::reverse_iterator<const char *> begin(filename + std::strlen(filename));
-        //const std::reverse_iterator<const char *> end(filename);
-        //const std::string_view seperator{"\\/"};
-
-        //const auto it = std::find_first_of(begin, end, std::begin(seperator), std::end(seperator));
-        //return it != end ? it.base() : filename;
-#else
-        const char *rv = std::strrchr(filename, '/');
-        return rv != nullptr ? rv + 1 : filename;
-#endif
     }
 
     // inserter to use with fmt and inserting into an uint8_t vector

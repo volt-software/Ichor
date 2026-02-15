@@ -29,12 +29,6 @@ namespace Ichor {
     struct Empty;
 }
 
-#ifdef ICHOR_ENABLE_INTERNAL_COROUTINE_DEBUGGING
-#define ICHOR_COROUTINE_CONSTEXPR
-#else
-#define ICHOR_COROUTINE_CONSTEXPR constexpr
-#endif
-
 namespace Ichor::Detail {
     constinit thread_local extern DependencyManager *_local_dm;
 
