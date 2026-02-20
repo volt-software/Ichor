@@ -1,16 +1,15 @@
 #pragma once
 
-#ifdef ICHOR_USE_SPDLOG
-
 #include <ichor/interfaces/IFrameworkLogger.h>
 #include <ichor/dependency_management/AdvancedService.h>
+#include <spdlog/spdlog.h>
 
 namespace Ichor::v1 {
 
-    class SpdlogFrameworkLogger final : public IFrameworkLogger, public AdvancedService<SpdlogFrameworkLogger> {
+    class SpdlogSeparateFrameworkLogger final : public IFrameworkLogger, public AdvancedService<SpdlogSeparateFrameworkLogger> {
     public:
-        SpdlogFrameworkLogger(Properties props);
-        ~SpdlogFrameworkLogger() final = default;
+        SpdlogSeparateFrameworkLogger(Properties props);
+        ~SpdlogSeparateFrameworkLogger() final = default;
 
         void trace(const char * ICHOR_RESTRICT filename_in, int line_in, const char * ICHOR_RESTRICT funcname_in, std::string_view format_str, fmt::format_args args) ICHOR_RESTRICT_THIS final;
         void debug(const char * ICHOR_RESTRICT filename_in, int line_in, const char * ICHOR_RESTRICT funcname_in, std::string_view format_str, fmt::format_args args) ICHOR_RESTRICT_THIS final;
@@ -28,7 +27,6 @@ namespace Ichor::v1 {
         friend DependencyRegister;
 
         LogLevel _level;
+        ReferenceCountedPointer<spdlog::logger> _logger{};
     };
 }
-
-#endif //ICHOR_USE_SPDLOG

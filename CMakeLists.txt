@@ -166,7 +166,7 @@ set(FMT_SOURCES ${ICHOR_EXTERNAL_DIR}/fmt/src/format.cc ${ICHOR_EXTERNAL_DIR}/fm
 file(GLOB_RECURSE ICHOR_FRAMEWORK_SOURCES ${ICHOR_TOP_DIR}/src/ichor/coroutines/*.cpp ${ICHOR_TOP_DIR}/src/ichor/dependency_management/*.cpp ${ICHOR_TOP_DIR}/src/ichor/DependencyManager.cpp ${ICHOR_TOP_DIR}/src/ichor/LifecycleManager.cpp ${ICHOR_TOP_DIR}/src/ichor/Service.cpp)
 set(ICHOR_FRAMEWORK_QUEUE_SOURCES ${ICHOR_TOP_DIR}/src/ichor/event_queues/PriorityQueue.cpp ${ICHOR_TOP_DIR}/src/ichor/event_queues/EventQueue.cpp)
 file(GLOB_RECURSE ICHOR_ETCD_SOURCES ${ICHOR_TOP_DIR}/src/services/etcd/*.cpp)
-file(GLOB_RECURSE ICHOR_LOGGING_SOURCES ${ICHOR_TOP_DIR}/src/services/logging/*.cpp)
+file(GLOB_RECURSE ICHOR_LOGGING_SOURCES ${ICHOR_TOP_DIR}/src/services/logging/CoutFrameworkLogger.cpp ${ICHOR_TOP_DIR}/src/services/logging/CoutLogger.cpp)
 file(GLOB_RECURSE ICHOR_HTTP_SOURCES ${ICHOR_TOP_DIR}/src/services/network/http/*.cpp)
 file(GLOB_RECURSE ICHOR_BOOST_BEAST_SOURCES ${ICHOR_TOP_DIR}/src/services/network/boost/*.cpp)
 file(GLOB_RECURSE ICHOR_METRICS_SOURCES ${ICHOR_TOP_DIR}/src/services/metrics/*.cpp)
@@ -201,7 +201,7 @@ if(ICHOR_USE_BOOST_BEAST)
     set(ICHOR_FRAMEWORK_QUEUE_SOURCES ${ICHOR_FRAMEWORK_QUEUE_SOURCES} ${ICHOR_TOP_DIR}/src/ichor/event_queues/BoostAsioQueue.cpp)
 endif()
 
-file(GLOB SPDLOG_SOURCES ${ICHOR_EXTERNAL_DIR}/spdlog/src/*.cpp)
+file(GLOB SPDLOG_SOURCES ${ICHOR_EXTERNAL_DIR}/spdlog/src/*.cpp ${ICHOR_TOP_DIR}/src/services/logging/SpdlogLogger.cpp ${ICHOR_TOP_DIR}/src/services/logging/SpdlogSharedService.cpp ${ICHOR_TOP_DIR}/src/services/logging/SpdlogSharedFrameworkLogger.cpp ${ICHOR_TOP_DIR}/src/services/logging/SpdlogSeparateFrameworkLogger.cpp)
 
 if(ICHOR_USE_MIMALLOC AND NOT ICHOR_USE_SYSTEM_MIMALLOC)
     set(ICHOR_FRAMEWORK_SOURCES ${ICHOR_FRAMEWORK_SOURCES} ${ICHOR_TOP_DIR}/external/mimalloc/src/static.c)

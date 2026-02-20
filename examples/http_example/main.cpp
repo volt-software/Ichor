@@ -8,9 +8,9 @@
 
 // Some compile time logic to instantiate a regular cout logger or to use the spdlog logger, if Ichor has been compiled with it.
 #ifdef ICHOR_USE_SPDLOG
-#include <ichor/services/logging/SpdlogFrameworkLogger.h>
+#include <ichor/services/logging/SpdlogSharedFrameworkLogger.h>
 #include <ichor/services/logging/SpdlogLogger.h>
-#define FRAMEWORK_LOGGER_TYPE SpdlogFrameworkLogger
+#define FRAMEWORK_LOGGER_TYPE SpdlogSharedFrameworkLogger
 #define LOGGER_TYPE SpdlogLogger
 #else
 #include <ichor/services/logging/CoutFrameworkLogger.h>
@@ -113,7 +113,7 @@ int main(int argc, char *argv[]) {
     // Create the JSON serializer for the TestMsg class
     dm.createServiceManager<TestMsgGlazeSerializer, ISerializer<TestMsg>>();
 #ifdef URING_EXAMPLE
-    dm.createServiceManager<HOSTIMPL, IHostService>(Properties{{"Address", Ichor::v1::make_any<std::string>("127.0.0.1"s)}, {"Port", Ichor::v1::make_any<uint16_t>(static_cast<uint16_t>(8001))}});
+    dm.createServiceManager<HOSTIMPL, IHostService>(Properties{{"Address", Ichor::v1::make_any<std::string>(address)}, {"Port", Ichor::v1::make_any<uint16_t>(static_cast<uint16_t>(8001))}});
     dm.createServiceManager<ClientFactory<CONNIMPL<IClientConnectionService>, IClientConnectionService>, IClientFactory<IClientConnectionService>>();
 #endif
     // Create the HTTP server binding to the given address

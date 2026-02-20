@@ -1,10 +1,7 @@
-#ifdef ICHOR_USE_SPDLOG
-
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/sinks/basic_file_sink.h>
-#include <ichor/services/logging/SpdlogFrameworkLogger.h>
-
+#include <ichor/services/logging/SpdlogSharedFrameworkLogger.h>
 
 namespace Ichor {
     std::atomic<bool> _setting_logger{false};
@@ -35,7 +32,7 @@ namespace Ichor {
     }
 }
 
-Ichor::v1::SpdlogFrameworkLogger::SpdlogFrameworkLogger(Properties props) : AdvancedService(std::move(props)), _level(LogLevel::LOG_WARN) {
+Ichor::v1::SpdlogSharedFrameworkLogger::SpdlogSharedFrameworkLogger(Properties props) : AdvancedService(std::move(props)), _level(LogLevel::LOG_WARN) {
     _setup_spdlog();
 
     while(!_logger_set.load(std::memory_order_acquire)) {
@@ -47,65 +44,62 @@ Ichor::v1::SpdlogFrameworkLogger::SpdlogFrameworkLogger(Properties props) : Adva
         setLogLevel(Ichor::v1::any_cast<LogLevel>(logLevelProp->second));
     }
 
-    SPDLOG_TRACE("SpdlogFrameworkLogger constructor");
+    SPDLOG_TRACE("SpdlogSharedFrameworkLogger constructor");
 }
 
-void Ichor::v1::SpdlogFrameworkLogger::trace(const char * ICHOR_RESTRICT filename_in, int line_in, const char * ICHOR_RESTRICT funcname_in,
+void Ichor::v1::SpdlogSharedFrameworkLogger::trace(const char * ICHOR_RESTRICT filename_in, int line_in, const char * ICHOR_RESTRICT funcname_in,
                                           std::string_view format_str, fmt::format_args args) ICHOR_RESTRICT_THIS {
     ICHOR_CONTRACT_ASSERT(_level <= LogLevel::LOG_TRACE);
 
     spdlog::log(spdlog::source_loc{filename_in, line_in, funcname_in}, spdlog::level::trace, fmt::vformat(format_str, args));
 }
 
-void Ichor::v1::SpdlogFrameworkLogger::debug(const char * ICHOR_RESTRICT filename_in, int line_in, const char * ICHOR_RESTRICT funcname_in,
+void Ichor::v1::SpdlogSharedFrameworkLogger::debug(const char * ICHOR_RESTRICT filename_in, int line_in, const char * ICHOR_RESTRICT funcname_in,
                                           std::string_view format_str, fmt::format_args args) ICHOR_RESTRICT_THIS {
     ICHOR_CONTRACT_ASSERT(_level <= LogLevel::LOG_DEBUG);
 
     spdlog::log(spdlog::source_loc{filename_in, line_in, funcname_in}, spdlog::level::debug, fmt::vformat(format_str, args));
 }
 
-void Ichor::v1::SpdlogFrameworkLogger::info(const char * ICHOR_RESTRICT filename_in, int line_in, const char * ICHOR_RESTRICT funcname_in,
+void Ichor::v1::SpdlogSharedFrameworkLogger::info(const char * ICHOR_RESTRICT filename_in, int line_in, const char * ICHOR_RESTRICT funcname_in,
                                           std::string_view format_str, fmt::format_args args) ICHOR_RESTRICT_THIS {
     ICHOR_CONTRACT_ASSERT(_level <= LogLevel::LOG_INFO);
 
     spdlog::log(spdlog::source_loc{filename_in, line_in, funcname_in}, spdlog::level::info, fmt::vformat(format_str, args));
 }
 
-void Ichor::v1::SpdlogFrameworkLogger::warn(const char * ICHOR_RESTRICT filename_in, int line_in, const char * ICHOR_RESTRICT funcname_in,
+void Ichor::v1::SpdlogSharedFrameworkLogger::warn(const char * ICHOR_RESTRICT filename_in, int line_in, const char * ICHOR_RESTRICT funcname_in,
                                           std::string_view format_str, fmt::format_args args) ICHOR_RESTRICT_THIS {
     ICHOR_CONTRACT_ASSERT(_level <= LogLevel::LOG_WARN);
 
     spdlog::log(spdlog::source_loc{filename_in, line_in, funcname_in}, spdlog::level::warn, fmt::vformat(format_str, args));
 }
 
-void Ichor::v1::SpdlogFrameworkLogger::error(const char * ICHOR_RESTRICT filename_in, int line_in, const char * ICHOR_RESTRICT funcname_in,
+void Ichor::v1::SpdlogSharedFrameworkLogger::error(const char * ICHOR_RESTRICT filename_in, int line_in, const char * ICHOR_RESTRICT funcname_in,
                                           std::string_view format_str, fmt::format_args args) ICHOR_RESTRICT_THIS {
     ICHOR_CONTRACT_ASSERT(_level <= LogLevel::LOG_ERROR);
 
     spdlog::log(spdlog::source_loc{filename_in, line_in, funcname_in}, spdlog::level::err, fmt::vformat(format_str, args));
 }
 
-Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::v1::SpdlogFrameworkLogger::start() {
-    SPDLOG_TRACE("SpdlogFrameworkLogger started");
+Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::v1::SpdlogSharedFrameworkLogger::start() {
+    SPDLOG_TRACE("SpdlogSharedFrameworkLogger started");
     co_return {};
 }
 
-Ichor::Task<void> Ichor::v1::SpdlogFrameworkLogger::stop() {
-    SPDLOG_TRACE("SpdlogFrameworkLogger stopped");
+Ichor::Task<void> Ichor::v1::SpdlogSharedFrameworkLogger::stop() {
+    SPDLOG_TRACE("SpdlogSharedFrameworkLogger stopped");
     co_return;
 }
 
-void Ichor::v1::SpdlogFrameworkLogger::setLogLevel(LogLevel level) noexcept {
+void Ichor::v1::SpdlogSharedFrameworkLogger::setLogLevel(LogLevel level) noexcept {
     _level = level;
 }
 
-Ichor::LogLevel Ichor::v1::SpdlogFrameworkLogger::getLogLevel() const noexcept {
+Ichor::LogLevel Ichor::v1::SpdlogSharedFrameworkLogger::getLogLevel() const noexcept {
     return _level;
 }
 
-Ichor::ServiceIdType Ichor::v1::SpdlogFrameworkLogger::getFrameworkServiceId() const noexcept {
+Ichor::ServiceIdType Ichor::v1::SpdlogSharedFrameworkLogger::getFrameworkServiceId() const noexcept {
     return getServiceId();
 }
-
-
-#endif //ICHOR_USE_SPDLOG

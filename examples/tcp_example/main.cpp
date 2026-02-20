@@ -7,9 +7,9 @@
 
 // Some compile time logic to instantiate a regular cout logger or to use the spdlog logger, if Ichor has been compiled with it.
 #ifdef ICHOR_USE_SPDLOG
-#include <ichor/services/logging/SpdlogFrameworkLogger.h>
+#include <ichor/services/logging/SpdlogSeparateFrameworkLogger.h>
 #include <ichor/services/logging/SpdlogLogger.h>
-#define FRAMEWORK_LOGGER_TYPE SpdlogFrameworkLogger
+#define FRAMEWORK_LOGGER_TYPE SpdlogSeparateFrameworkLogger
 #define LOGGER_TYPE SpdlogLogger
 #else
 #include <ichor/services/logging/CoutFrameworkLogger.h>
