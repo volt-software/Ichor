@@ -23,18 +23,18 @@ namespace Ichor::v1 {
 
         constexpr void push(T const &t) {
             c.push_back(t);
-            std::push_heap(c.begin(), c.end(), Compare{});
+            std::push_heap(c.begin(), c.end(), comp);
         }
 
         constexpr void push(T &&t) {
             c.push_back(std::forward<T>(t));
-            std::push_heap(c.begin(), c.end(), Compare{});
+            std::push_heap(c.begin(), c.end(), comp);
         }
 
         template <typename... Args>
         constexpr void emplace(Args&&... args) {
             c.emplace_back(std::forward<Args>(args)...);
-            std::push_heap(c.begin(), c.end(), Compare{});
+            std::push_heap(c.begin(), c.end(), comp);
         }
 
         /**
@@ -42,7 +42,7 @@ namespace Ichor::v1 {
          * @return
          */
         constexpr T pop() {
-            std::pop_heap(c.begin(), c.end(), Compare{});
+            std::pop_heap(c.begin(), c.end(), comp);
             T t = std::move(c.back());
             c.pop_back();
             return t;
@@ -54,5 +54,6 @@ namespace Ichor::v1 {
 
     private:
         std::vector<T> c;
+        [[no_unique_address]] Compare comp{};
     };
 }
