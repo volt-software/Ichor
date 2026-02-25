@@ -11,7 +11,7 @@ Ichor::v1::SpdlogSeparateFrameworkLogger::SpdlogSeparateFrameworkLogger(Properti
 
         auto time_since_epoch = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch());
         auto file_sink = make_shared<spdlog::sinks::basic_file_sink_mt>(
-                fmt::format("logs/framework-log-{}.txt", time_since_epoch.count()), true);
+                fmt::format("logs/framework-log-{}-{}.txt", GetThreadLocalManager().getId(), time_since_epoch.count()), true);
 
         _logger = make_reference_counted<spdlog::logger>("multi_sink", spdlog::sinks_init_list{console_sink, file_sink});
 
