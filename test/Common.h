@@ -41,3 +41,7 @@ public:
 };
 
 #define NAMEOF(x) #x
+
+namespace Ichor::Detail {
+    constinit thread_local extern DependencyManager *_local_dm;
+}

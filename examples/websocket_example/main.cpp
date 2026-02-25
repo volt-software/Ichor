@@ -91,7 +91,7 @@ int main(int argc, char *argv[]) {
 
     auto start = std::chrono::steady_clock::now();
     auto queue = std::make_unique<QIMPL>(500);
-    auto &dm = queue->createManager();
+    auto &dm = queue->getManager();
 #ifdef URING_EXAMPLE
     if(!queue->createEventLoop()) {
         fmt::println("Couldn't create io_uring event loop");

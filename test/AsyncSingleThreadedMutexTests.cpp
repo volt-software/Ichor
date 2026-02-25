@@ -7,11 +7,12 @@ TEST_CASE("AsyncSingleThreadedMutexTests: Lock/unlock") {
     AsyncSingleThreadedMutex m;
     AsyncSingleThreadedLockGuard *lg{};
     auto queue = std::make_unique<PriorityQueue>();
-    auto &dm = queue->createManager();
+    auto &dm = queue->getManager();
     bool started_async_func{};
     bool unlocked{};
 
     std::thread t([&]() {
+        Ichor::Detail::_local_dm = &dm;
         AsyncSingleThreadedLockGuard lg2 = m.non_blocking_lock().value();
         lg = &lg2;
         queue->start(CaptureSigInt);

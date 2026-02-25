@@ -14,7 +14,7 @@ The Boost HttpHostService implementation requires a logger, the AsioContextServi
 
 int main(int argc, char *argv[]) {
     auto queue = std::make_unique<PriorityQueue>();
-    auto &dm = queue->createManager();
+    auto &dm = queue->getManager();
     dm.createServiceManager<LoggerFactory<NullLogger>, ILoggerFactory>();
     dm.createServiceManager<AsioContextService, IAsioContextService>(Properties{{"Threads", Ichor::v1::make_any<uint64_t>(2)}});
     dm.createServiceManager<HttpHostService, IHttpHostService>(Properties{{"Address", Ichor::v1::make_any<std::string>("localhost")}, {"Port", Ichor::v1::make_any<uint16_t>(static_cast<uint16_t>(8001))}});

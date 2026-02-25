@@ -21,7 +21,7 @@ TEST_CASE("QueueTests") {
 
     SECTION("PriorityQueue") {
         auto queue = std::make_unique<PriorityQueue>();
-        auto &dm = queue->createManager();
+        auto &dm = queue->getManager();
 
 #if ICHOR_EXCEPTIONS_ENABLED
         REQUIRE_THROWS(queue->pushEventInternal(0, nullptr));
@@ -49,7 +49,7 @@ TEST_CASE("QueueTests") {
 
     SECTION("OrderedPriorityQueue") {
         auto queue = std::make_unique<OrderedPriorityQueue>();
-        auto &dm = queue->createManager();
+        auto &dm = queue->getManager();
 
 #if ICHOR_EXCEPTIONS_ENABLED
         REQUIRE_THROWS(queue->pushEventInternal(0, nullptr));
@@ -75,21 +75,21 @@ TEST_CASE("QueueTests") {
         REQUIRE(queue->shouldQuit());
     }
 
-    SECTION("Delete of uninitialized queues") {
-        auto f = []() {
-            std::array<PriorityQueue, 8> queues{};
-        };
-#if ICHOR_EXCEPTIONS_ENABLED
-        REQUIRE_NOTHROW(f());
-#else
-        f();
-#endif
-    }
+//     SECTION("Delete of uninitialized queues") {
+//         auto f = []() {
+//             std::array<PriorityQueue, 8> queues{};
+//         };
+// #if ICHOR_EXCEPTIONS_ENABLED
+//         REQUIRE_NOTHROW(f());
+// #else
+//         f();
+// #endif
+//     }
 
 #ifdef ICHOR_USE_SDEVENT
     SECTION("SdeventQueue") {
         auto queue = std::make_unique<SdeventQueue>();
-        auto &dm = queue->createManager();
+        auto &dm = queue->getManager();
 
         Ichor::Detail::_local_dm = &dm;
 
@@ -114,7 +114,7 @@ TEST_CASE("QueueTests") {
         std::atomic<DependencyManager*> _dm{};
         std::thread t([&] {
             auto queue = std::make_unique<SdeventQueue>();
-            auto &dm = queue->createManager();
+            auto &dm = queue->getManager();
             _dm.store(&dm, std::memory_order_release);
 
             auto *loop = queue->createEventLoop();
@@ -153,7 +153,7 @@ TEST_CASE("QueueTests") {
 #ifdef ICHOR_USE_BOOST_BEAST
     SECTION("BoostAsioQueue") {
         auto queue = std::make_unique<BoostAsioQueue>();
-        auto &dm = queue->createManager();
+        auto &dm = queue->getManager();
 
         Ichor::Detail::_local_dm = &dm;
 
@@ -174,7 +174,7 @@ TEST_CASE("QueueTests") {
         std::atomic<DependencyManager*> _dm{};
         std::thread t([&] {
             auto queue = std::make_unique<BoostAsioQueue>();
-            auto &dm = queue->createManager();
+            auto &dm = queue->getManager();
             _dm.store(&dm, std::memory_order_release);
 
             dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>();
@@ -210,7 +210,7 @@ TEST_CASE("QueueTests") {
 #if defined(ICHOR_USE_LIBURING) && !(defined(ICHOR_SKIP_EXTERNAL_TESTS) && defined(ICHOR_AARCH64))
     SECTION("IOUringQueue") {
         auto queue = std::make_unique<IOUringQueue>();
-        auto &dm = queue->createManager();
+        auto &dm = queue->getManager();
 
         Ichor::Detail::_local_dm = &dm;
 
@@ -234,9 +234,11 @@ TEST_CASE("QueueTests") {
 
         auto queue = std::make_unique<IOUringQueue>(10, 10'000);
         std::atomic<DependencyManager*> _dm{};
+        Ichor::Detail::_local_dm = nullptr;
         std::thread t([&] {
             REQUIRE(queue->createEventLoop());
-            auto &dm = queue->createManager();
+            auto &dm = queue->getManager();
+            Ichor::Detail::_local_dm = &dm;
             _dm.store(&dm, std::memory_order_release);
 
             dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>();
@@ -277,9 +279,11 @@ TEST_CASE("QueueTests") {
     SECTION("IOUringQueue Sleep") {
         auto queue = std::make_unique<IOUringQueue>(10, 10'000);
         std::atomic<DependencyManager*> _dm{};
+        Ichor::Detail::_local_dm = nullptr;
         std::thread t([&] {
             REQUIRE(queue->createEventLoop());
-            auto &dm = queue->createManager();
+            auto &dm = queue->getManager();
+            Ichor::Detail::_local_dm = &dm;
             _dm.store(&dm, std::memory_order_release);
             dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>();
             dm.createServiceManager<IOUringSleepService>();

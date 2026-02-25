@@ -1,8 +1,8 @@
 #pragma once
 
-#include <ichor/event_queues/IEventQueue.h>
+#include <ichor/event_queues/BaseEventQueue.h>
 
-struct QueueMock final : public IEventQueue {
+struct QueueMock final : public BaseEventQueue {
     ~QueueMock() final = default;
     [[nodiscard]] bool empty() const override {
         return events.empty();

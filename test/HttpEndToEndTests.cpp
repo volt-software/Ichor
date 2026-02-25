@@ -77,10 +77,12 @@ TEST_CASE("HttpEndToEndTests_boost") {
 #else
         auto queue = std::make_unique<QIMPL>(500);
 #endif
-        auto &dm = queue->createManager();
+        auto &dm = queue->getManager();
         evtGate = false;
+        Ichor::Detail::_local_dm = nullptr;
 
         std::thread t([&]() {
+            Ichor::Detail::_local_dm = &dm;
 #ifdef TEST_URING
             REQUIRE(queue->createEventLoop());
 #endif
@@ -124,10 +126,12 @@ TEST_CASE("HttpEndToEndTests_boost") {
         testThreadId = std::this_thread::get_id();
         _evt = std::make_unique<Ichor::AsyncManualResetEvent>();
         auto queue = std::make_unique<BoostAsioQueue>(true);
-        auto &dm = queue->createManager();
+        auto &dm = queue->getManager();
         evtGate = false;
+        Ichor::Detail::_local_dm = nullptr;
 
         std::thread t([&]() {
+            Ichor::Detail::_local_dm = &dm;
             dmThreadId = std::this_thread::get_id();
 
             std::string key = "-----BEGIN PRIVATE KEY-----\n"

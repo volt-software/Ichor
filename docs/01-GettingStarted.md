@@ -128,7 +128,7 @@ Starting a dependency manager is quite easy. Instantiate it, tell it which servi
 
 int main() {
     auto queue = std::make_unique<PriorityQueue>(); // use a priority queue based on std::priority_queue
-    auto &dm = queue->createManager(); // create the dependency manager
+    auto &dm = queue->getManager(); // get the dependency manager
     dm.start(CaptureSigInt);
     
     return 0;
@@ -178,7 +178,7 @@ struct MyService final { // Don't need an interface here, nothing has a dependen
 
 int main() {
     auto queue = std::make_unique<PriorityQueue>();
-    auto &dm = queue->createManager();
+    auto &dm = queue->getManager();
     dm.createServiceManager<SomeDependency, ISomeDependency>(); // register SomeDependency as providing an ISomeDependency
     dm.createServiceManager<MyService>(); // register MyService (requested dependencies get registered automatically)
     dm.start(CaptureSigInt);
@@ -253,7 +253,7 @@ struct EventManipulationService final { // Don't need an interface here, nothing
 
 int main() {
     auto queue = std::make_unique<PriorityQueue>();
-    auto &dm = queue->createManager();
+    auto &dm = queue->getManager();
     dm.createServiceManager<EventManipulationService>();
     dm.start(CaptureSigInt);
     
@@ -294,7 +294,7 @@ struct MyTimerService final {
 
 int main() {
     auto queue = std::make_unique<PriorityQueue>();
-    auto &dm = queue->createManager();
+    auto &dm = queue->getManager();
     dm.createServiceManager<MyService, IMyService>();
     dm.createServiceManager<MyDependencyService, IMyDependencyService>();
     dm.createServiceManager<MyTimerService>(); // Add this
@@ -384,7 +384,7 @@ struct MyCoroutineTimerService final {
 
 int main() {
     auto queue = std::make_unique<PriorityQueue>();
-    auto &dm = queue->createManager();
+    auto &dm = queue->getManager();
     dm.createServiceManager<AwaitService, IAwaitService>();
     dm.createServiceManager<MyCoroutineTimerService>();
     dm.createServiceManager<TimerFactoryFactory>();
@@ -485,7 +485,7 @@ struct SomeServiceUsingLogger final {
 
 int main() {
     auto queue = std::make_unique<PriorityQueue>();
-    auto &dm = queue->createManager();
+    auto &dm = queue->getManager();
     dm.createServiceManager<LoggerFactory>(); // LoggerFactory will end up resolving the ILogger request from SomeServiceUsingLogger
     dm.createServiceManager<SomeServiceUsingLogger>();
     queue->start(CaptureSigInt);
@@ -590,9 +590,9 @@ Starting up two manager is easy, but allowing services to communicate to service
 int main() {
     Ichor::CommunicationChannel channel{};
     auto queueOne = std::make_unique<PriorityQueue>();
-    auto &dmOne = queue->createManager(); // ID = 0
+    auto &dmOne = queue->getManager(); // ID = 0
     auto queueTwo = std::make_unique<PriorityQueue>();
-    auto &dmTwo = queue->createManager(); // ID = 1
+    auto &dmTwo = queue->getManager(); // ID = 1
     
     // Register the manager to the channel
     channel.addManager(&dmOne);

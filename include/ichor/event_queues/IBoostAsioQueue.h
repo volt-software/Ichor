@@ -10,13 +10,13 @@
 #define ASIO_SPAWN_COMPLETION_TOKEN
 #endif
 
-#include <ichor/event_queues/IEventQueue.h>
+#include <ichor/event_queues/BaseEventQueue.h>
 #include <boost/asio/spawn.hpp>
 
 namespace net = boost::asio;            // from <boost/asio.hpp>
 
 namespace Ichor {
-    class IBoostAsioQueue : public IEventQueue {
+    class IBoostAsioQueue : public BaseEventQueue {
     public:
         ~IBoostAsioQueue() override = default;
         virtual net::io_context& getContext() noexcept = 0;

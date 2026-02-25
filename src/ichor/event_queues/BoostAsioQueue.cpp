@@ -28,9 +28,7 @@ Ichor::BoostAsioQueue::BoostAsioQueue(uint64_t unused) : _context(BOOST_ASIO_CON
 }
 
 Ichor::BoostAsioQueue::~BoostAsioQueue() {
-    if(_dm) {
-        stopDm();
-    }
+    stopDm();
 
     if(Detail::registeredSignalHandler) {
         if(::signal(SIGINT, SIG_DFL) == SIG_ERR) {
@@ -48,11 +46,11 @@ bool Ichor::BoostAsioQueue::fibersShouldStop() const noexcept {
 }
 
 bool Ichor::BoostAsioQueue::empty() const {
-    return !_dm || !_dm->isRunning();
+    return !_dm.isRunning();
 }
 
 uint64_t Ichor::BoostAsioQueue::size() const {
-    return (_dm && _dm->isRunning()) ? 1 : 0;
+    return _dm.isRunning() ? 1 : 0;
 }
 
 bool Ichor::BoostAsioQueue::is_running() const noexcept {
@@ -119,11 +117,6 @@ void Ichor::BoostAsioQueue::shouldAddQuitEvent() {
 }
 
 bool Ichor::BoostAsioQueue::start(bool captureSigInt) {
-    if(!_dm) [[unlikely]] {
-        fmt::println("Please create a manager first!");
-        return false;
-    }
-
     if(captureSigInt && !Ichor::Detail::registeredSignalHandler.exchange(true)) {
         if(::signal(SIGINT, Ichor::Detail::on_sigint) == SIG_ERR) {
             fmt::println("Couldn't set signal");
@@ -160,9 +153,9 @@ bool Ichor::BoostAsioQueue::start(bool captureSigInt) {
 
 #if ICHOR_EXCEPTIONS_ENABLED
         } catch (boost::system::system_error const &e) {
-            fmt::println("io context {} system error {}", _dm->getId(), e.what());
+            fmt::println("io context {} system error {}", _dm.getId(), e.what());
         } catch (std::exception const &e) {
-            fmt::println("io context {} std error {}", _dm->getId(), e.what());
+            fmt::println("io context {} std error {}", _dm.getId(), e.what());
         }
 #endif
     }

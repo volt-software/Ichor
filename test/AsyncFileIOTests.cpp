@@ -30,10 +30,11 @@ struct AsyncFileIOExpensiveSetup {
 TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests: Reading non-existent file should error") {fmt::print("section 1\n");
     ServiceIdType dbgSvcId{};
     auto queue = std::make_unique<QIMPL>(500);
-    auto &dm = queue->createManager();
+    auto &dm = queue->getManager();
     ServiceIdType ioSvcId{};
 
     std::thread t([&]() {
+        Ichor::Detail::_local_dm = &dm;
         dm.createServiceManager<LoggerFactory<CoutLogger>, ILoggerFactory>(Properties{{"DefaultLogLevel", Ichor::v1::make_any<LogLevel>(LogLevel::LOG_TRACE)}});
         dbgSvcId = dm.createServiceManager<DebugService, IDebugService>()->getServiceId();
         ioSvcId = dm.createServiceManager<IOIMPL, IAsyncFileIO>()->getServiceId();
@@ -83,10 +84,11 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests: Reading non-exist
 
 TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests: Reading file without permissions should error") {fmt::print("section 1\n");
     auto queue = std::make_unique<QIMPL>(500);
-    auto &dm = queue->createManager();
+    auto &dm = queue->getManager();
     ServiceIdType ioSvcId{};
 
     std::thread t([&]() {
+        Ichor::Detail::_local_dm = &dm;
         // moved to inside thread, because REQUIRE() isn't thread-safe -.-
         {
             std::remove("NoPermIO.txt"); // ignore error, each OS handles this differently and most of the time it's just because it didn't exist in the first place
@@ -138,10 +140,11 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests: Reading file with
 
 TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests: Read whole file Small") {fmt::print("section 2a\n");
     auto queue = std::make_unique<QIMPL>(500);
-    auto &dm = queue->createManager();
+    auto &dm = queue->getManager();
     ServiceIdType ioSvcId{};
 
     std::thread t([&]() {
+        Ichor::Detail::_local_dm = &dm;
         dm.createServiceManager<LoggerFactory<CoutLogger>, ILoggerFactory>(Properties{{"DefaultLogLevel", Ichor::v1::make_any<LogLevel>(LogLevel::LOG_TRACE)}});
         ioSvcId = dm.createServiceManager<IOIMPL, IAsyncFileIO>()->getServiceId();
         queue->start(CaptureSigInt);
@@ -179,10 +182,11 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests: Read whole file S
 
 TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests: Read whole file large") {fmt::println("section 2b");
     auto queue = std::make_unique<QIMPL>(500);
-    auto &dm = queue->createManager();
+    auto &dm = queue->getManager();
     ServiceIdType ioSvcId{};
 
     std::thread t([&]() {
+        Ichor::Detail::_local_dm = &dm;
         dm.createServiceManager<LoggerFactory<CoutLogger>, ILoggerFactory>(Properties{{"DefaultLogLevel", Ichor::v1::make_any<LogLevel>(LogLevel::LOG_TRACE)}});
         ioSvcId = dm.createServiceManager<IOIMPL, IAsyncFileIO>()->getServiceId();
         queue->start(CaptureSigInt);
@@ -219,10 +223,11 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests: Read whole file l
 
 TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests: Copying non-existent file should error") {fmt::print("section 3\n");
     auto queue = std::make_unique<QIMPL>(500);
-    auto &dm = queue->createManager();
+    auto &dm = queue->getManager();
     ServiceIdType ioSvcId{};
 
     std::thread t([&]() {
+        Ichor::Detail::_local_dm = &dm;
         dm.createServiceManager<LoggerFactory<CoutLogger>, ILoggerFactory>(Properties{{"DefaultLogLevel", Ichor::v1::make_any<LogLevel>(LogLevel::LOG_TRACE)}});
         ioSvcId = dm.createServiceManager<IOIMPL, IAsyncFileIO>()->getServiceId();
         queue->start(CaptureSigInt);
@@ -255,10 +260,11 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests: Copying non-exist
 
 TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests: Copying file") {fmt::print("section 4\n");
     auto queue = std::make_unique<QIMPL>(500);
-    auto &dm = queue->createManager();
+    auto &dm = queue->getManager();
     ServiceIdType ioSvcId{};
 
     std::thread t([&]() {
+        Ichor::Detail::_local_dm = &dm;
         dm.createServiceManager<LoggerFactory<CoutLogger>, ILoggerFactory>(Properties{{"DefaultLogLevel", Ichor::v1::make_any<LogLevel>(LogLevel::LOG_TRACE)}});
         ioSvcId = dm.createServiceManager<IOIMPL, IAsyncFileIO>()->getServiceId();
         queue->start(CaptureSigInt);
@@ -302,10 +308,11 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests: Copying file") {f
 
 TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests: Copying large file") {fmt::print("section 5\n");
     auto queue = std::make_unique<QIMPL>(500);
-    auto &dm = queue->createManager();
+    auto &dm = queue->getManager();
     ServiceIdType ioSvcId{};
 
     std::thread t([&]() {
+        Ichor::Detail::_local_dm = &dm;
         dm.createServiceManager<LoggerFactory<CoutLogger>, ILoggerFactory>(Properties{{"DefaultLogLevel", Ichor::v1::make_any<LogLevel>(LogLevel::LOG_TRACE)}});
         ioSvcId = dm.createServiceManager<IOIMPL, IAsyncFileIO>()->getServiceId();
         queue->start(CaptureSigInt);
@@ -344,10 +351,11 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests: Copying large fil
 
 TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests: Removing non-existing file should error") {fmt::print("section 6\n");
     auto queue = std::make_unique<QIMPL>(500);
-    auto &dm = queue->createManager();
+    auto &dm = queue->getManager();
     ServiceIdType ioSvcId{};
 
     std::thread t([&]() {
+        Ichor::Detail::_local_dm = &dm;
         dm.createServiceManager<LoggerFactory<CoutLogger>, ILoggerFactory>(Properties{{"DefaultLogLevel", Ichor::v1::make_any<LogLevel>(LogLevel::LOG_TRACE)}});
         ioSvcId = dm.createServiceManager<IOIMPL, IAsyncFileIO>()->getServiceId();
         queue->start(CaptureSigInt);
@@ -379,10 +387,11 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests: Removing non-exis
 
 TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests: Removing file") {fmt::print("section 7\n");
     auto queue = std::make_unique<QIMPL>(500);
-    auto &dm = queue->createManager();
+    auto &dm = queue->getManager();
     ServiceIdType ioSvcId{};
 
     std::thread t([&]() {
+        Ichor::Detail::_local_dm = &dm;
         dm.createServiceManager<LoggerFactory<CoutLogger>, ILoggerFactory>(Properties{{"DefaultLogLevel", Ichor::v1::make_any<LogLevel>(LogLevel::LOG_TRACE)}});
         ioSvcId = dm.createServiceManager<IOIMPL, IAsyncFileIO>()->getServiceId();
         queue->start(CaptureSigInt);
@@ -425,10 +434,11 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests: Removing file") {
 
 TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests: Writing file") {fmt::print("section 8\n");
     auto queue = std::make_unique<QIMPL>(500);
-    auto &dm = queue->createManager();
+    auto &dm = queue->getManager();
     ServiceIdType ioSvcId{};
 
     std::thread t([&]() {
+        Ichor::Detail::_local_dm = &dm;
         dm.createServiceManager<LoggerFactory<CoutLogger>, ILoggerFactory>(Properties{{"DefaultLogLevel", Ichor::v1::make_any<LogLevel>(LogLevel::LOG_TRACE)}});
         ioSvcId = dm.createServiceManager<IOIMPL, IAsyncFileIO>()->getServiceId();
         queue->start(CaptureSigInt);
@@ -469,10 +479,11 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests: Writing file") {f
 
 TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests: Writing file - overwrite") {fmt::print("section 9\n");
     auto queue = std::make_unique<QIMPL>(500);
-    auto &dm = queue->createManager();
+    auto &dm = queue->getManager();
     ServiceIdType ioSvcId{};
 
     std::thread t([&]() {
+        Ichor::Detail::_local_dm = &dm;
         dm.createServiceManager<LoggerFactory<CoutLogger>, ILoggerFactory>(Properties{{"DefaultLogLevel", Ichor::v1::make_any<LogLevel>(LogLevel::LOG_TRACE)}});
         ioSvcId = dm.createServiceManager<IOIMPL, IAsyncFileIO>()->getServiceId();
         queue->start(CaptureSigInt);
@@ -517,10 +528,11 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests: Writing file - ov
 
 TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests: appending file") {fmt::print("section 10\n");
     auto queue = std::make_unique<QIMPL>(500);
-    auto &dm = queue->createManager();
+    auto &dm = queue->getManager();
     ServiceIdType ioSvcId{};
 
     std::thread t([&]() {
+        Ichor::Detail::_local_dm = &dm;
         dm.createServiceManager<LoggerFactory<CoutLogger>, ILoggerFactory>(Properties{{"DefaultLogLevel", Ichor::v1::make_any<LogLevel>(LogLevel::LOG_TRACE)}});
         ioSvcId = dm.createServiceManager<IOIMPL, IAsyncFileIO>()->getServiceId();
         queue->start(CaptureSigInt);

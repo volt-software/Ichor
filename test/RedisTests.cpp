@@ -20,9 +20,10 @@ using namespace Ichor;
 TEST_CASE("RedisTests") {
     SECTION("Set/get") {
         auto queue = std::make_unique<PriorityQueue>();
-        auto &dm = queue->createManager();
+        auto &dm = queue->getManager();
 
         std::thread t([&]() {
+            Ichor::Detail::_local_dm = &dm;
             dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>(Properties{{"LogLevel", Ichor::v1::make_any<LogLevel>(LogLevel::LOG_TRACE)}}, 10);
 #ifdef ICHOR_USE_SPDLOG
             dm.createServiceManager<SpdlogSharedService, ISpdlogSharedService>();

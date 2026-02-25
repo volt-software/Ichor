@@ -37,7 +37,7 @@ void* run_example(void*) {
 
     {
         auto queue = std::make_unique<PriorityQueue>();
-        auto &dm = queue->createManager();
+        auto &dm = queue->getManager();
         dm.createServiceManager<NullFrameworkLogger, IFrameworkLogger>();
         dm.createServiceManager<LoggerFactory<LOGGER_TYPE>, ILoggerFactory>(Properties{{"DefaultLogLevel", Ichor::v1::make_any<LogLevel>(LogLevel::LOG_INFO)}});
         dm.createServiceManager<OptionalService, IOptionalService>();

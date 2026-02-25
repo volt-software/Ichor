@@ -9,7 +9,7 @@
 #include <ichor/stl/ErrnoUtils.h>
 #include <ichor/stl/StringUtils.h>
 #include <ichor/dependency_management/IService.h>
-#include <ichor/event_queues/IEventQueue.h>
+#include <ichor/event_queues/BaseEventQueue.h>
 #include <tl/expected.h>
 #include <functional>
 
@@ -53,7 +53,7 @@ namespace Ichor {
     static_assert(std::is_move_constructible_v<IOUringBuf>, "IOUringBuf is required to be move constructible");
     static_assert(std::is_move_assignable_v<IOUringBuf>, "IOUringBuf is required to be move assignable");
 
-    class IIOUringQueue : public IEventQueue {
+    class IIOUringQueue : public BaseEventQueue {
     public:
         ~IIOUringQueue() override = default;
         [[nodiscard]] virtual v1::NeverNull<io_uring*> getRing() noexcept = 0;

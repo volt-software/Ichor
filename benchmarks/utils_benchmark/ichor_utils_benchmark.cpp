@@ -90,7 +90,7 @@ private:
 
 #if defined(ICHOR_ENABLE_INTERNAL_DEBUGGING) || (defined(ICHOR_BUILDING_DEBUG) && (defined(__SANITIZE_ADDRESS__) || defined(__SANITIZE_THREAD__)))
 const uint64_t ITERATION_COUNT = 100;
-#elif defined(__SANITIZE_ADDRESS__) || defined(ICHOR_ENABLE_INTERNAL_DEBUGGING)
+#elif defined(__SANITIZE_ADDRESS__) || defined(__SANITIZE_THREAD__) || defined(ICHOR_BUILDING_DEBUG)
 const uint64_t ITERATION_COUNT = 5'000;
 #else
 const uint64_t ITERATION_COUNT = 500'000;

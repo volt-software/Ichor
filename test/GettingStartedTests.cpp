@@ -53,7 +53,7 @@ struct MyTimerService final : public IMyTimerService {
 
 int example() {
     auto queue = std::make_unique<PriorityQueue>();
-    auto &dm = queue->createManager();
+    auto &dm = queue->getManager();
     dm.createServiceManager<MyService, IMyService>();
     dm.createServiceManager<MyDependencyService, IMyDependencyService>();
     dm.createServiceManager<MyTimerService, IMyTimerService>(); // Add this
@@ -91,9 +91,9 @@ struct MyInterceptorService final : public AdvancedService<MyInterceptorService>
 int communication() {
     CommunicationChannel channel{};
     auto queueOne = std::make_unique<PriorityQueue>();
-    auto &dmOne = queueOne->createManager(); // ID = 0
+    auto &dmOne = queueOne->getManager(); // ID = 0
     auto queueTwo = std::make_unique<PriorityQueue>();
-    auto &dmTwo = queueTwo->createManager(); // ID = 1
+    auto &dmTwo = queueTwo->getManager(); // ID = 1
 
     // Register the manager to the channel
     channel.addManager(&dmOne);

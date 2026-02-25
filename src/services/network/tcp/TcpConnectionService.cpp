@@ -82,9 +82,9 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::v1::TcpConnectionServi
             co_return tl::unexpected(Ichor::StartError::FAILED);
         }
 
-        bool connected = connect(_socket, (struct sockaddr *)&address, sizeof(address)) < 0;
-        while(!connected && _attempts < 5) {
-            connected = connect(_socket, (struct sockaddr *)&address, sizeof(address)) < 0;
+        bool connected = connect(_socket, (struct sockaddr *)&address, sizeof(address)) == 0;
+        while(!connected && _attempts < 50) {
+            connected = connect(_socket, (struct sockaddr *)&address, sizeof(address)) == 0;
             if(connected) {
                 break;
             }

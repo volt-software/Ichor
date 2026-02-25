@@ -67,7 +67,7 @@ Now we need to get these into the code. We can do this by reading a file using s
 
 ```c++
 auto queue = std::make_unique<PriorityQueue>();
-auto &dm = queue->createManager();
+auto &dm = queue->getManager();
 
 std::string key = "-----BEGIN PRIVATE KEY-----\n"
                   "MIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQDIisWpB9FSc/OI\n"
@@ -138,7 +138,7 @@ Connecting to a Https webserver is somewhat similar. Using the same certificate 
 
 ```c++
 auto queue = std::make_unique<PriorityQueue>();
-auto &dm = queue->createManager();
+auto &dm = queue->getManager();
 
 std::string cert = "-----BEGIN CERTIFICATE-----\n"
                    "MIIDdzCCAl+gAwIBAgIUQEtUTmX2HbHwOpDPgFkYx66ei/swDQYJKoZIhvcNAQEL\n"

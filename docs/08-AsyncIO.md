@@ -16,7 +16,7 @@ Here's an example showcasing reading and writing a file:
 
 ```c++
 auto queue = std::make_unique<PriorityQueue>();
-auto &dm = queue->createManager();
+auto &dm = queue->getManager();
 uint64_t ioSvcId{};
 
 // set up and run the Ichor Thread

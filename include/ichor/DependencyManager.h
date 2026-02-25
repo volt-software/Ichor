@@ -18,7 +18,6 @@
 #include <ichor/dependency_management/DependencyRegistrations.h>
 #include <ichor/dependency_management/ConstructorInjectionService.h>
 #include <ichor/dependency_management/DependencyTrackers.h>
-#include <ichor/event_queues/IEventQueue.h>
 #include <ichor/stl/ServiceProtectedPointer.h>
 #include <fmt/base.h>
 
@@ -26,6 +25,7 @@ using namespace std::chrono_literals;
 
 namespace Ichor {
     class CommunicationChannel;
+    class BaseEventQueue;
 
     // Moved here from InternalEvents.h to prevent circular includes
     /// Used to prevent modifying the _services container while iterating over it through f.e. DependencyOnline()
@@ -72,7 +72,7 @@ namespace Ichor {
 
     class [[nodiscard]] DependencyManager final {
     private:
-        explicit DependencyManager(IEventQueue *eventQueue);
+        explicit DependencyManager(IEventQueue &eventQueue);
     public:
         // Non-allocating view over dependents of a service (IService const*), resolved lazily from IDs.
         struct DependentServicesView {
@@ -417,8 +417,8 @@ namespace Ichor {
                 }
             }
 
-            uint64_t eventId = _eventQueue->getNextEventId();
-            _eventQueue->pushEventInternal(priority, std::unique_ptr<Event>{new EventT(std::forward<uint64_t>(eventId), std::forward<ServiceIdType>(originatingServiceId), std::forward<uint64_t>(priority), std::forward<Args>(args)...)});
+            uint64_t eventId = _eventQueue.getNextEventId();
+            _eventQueue.pushEventInternal(priority, std::unique_ptr<Event>{new EventT(std::forward<uint64_t>(eventId), std::forward<ServiceIdType>(originatingServiceId), std::forward<uint64_t>(priority), std::forward<Args>(args)...)});
             auto it = _eventWaiters.emplace(eventId, EventWaiter(originatingServiceId, EventT::TYPE));
             INTERNAL_DEBUG("pushPrioritisedEventAsync {}:{} {} events.size {}", eventId, typeName<EventT>(), originatingServiceId, it.first->second.events.size());
             co_await *it.first->second.events.begin()->second.get();
@@ -464,7 +464,7 @@ namespace Ichor {
                 requestTrackersForType->second.emplace_back(std::move(requestInfo));
             }
 
-            _eventQueue->pushPrioritisedEvent<AddTrackerEvent>(self->getServiceId(), std::min(INTERNAL_INSERT_SERVICE_EVENT_PRIORITY, self->getServicePriority()), typeNameHash<Interface>());
+            _eventQueue.pushPrioritisedEvent<AddTrackerEvent>(self->getServiceId(), std::min(INTERNAL_INSERT_SERVICE_EVENT_PRIORITY, self->getServicePriority()), typeNameHash<Interface>());
 
             return DependencyTrackerRegistration(self->getServiceId(), typeNameHash<Interface>(), self->getServicePriority());
         }
@@ -793,7 +793,7 @@ namespace Ichor {
                 Impl* impl = &cmpMgr->getService();
                 DependencyRegister const *reg = cmpMgr->getDependencyRegistry();
                 // Can't directly emplace mgr into _services as that would result into modifying the container while iterating.
-                _eventQueue->pushPrioritisedEvent<InsertServiceEvent>(serviceId, std::min(INTERNAL_INSERT_SERVICE_EVENT_PRIORITY, priority), std::move(cmpMgr));
+                _eventQueue.pushPrioritisedEvent<InsertServiceEvent>(serviceId, std::min(INTERNAL_INSERT_SERVICE_EVENT_PRIORITY, priority), std::move(cmpMgr));
 
                 bool startImmediately = true;
                 for (auto const &[key, registration] : reg->_registrations) {
@@ -801,11 +801,11 @@ namespace Ichor {
                     if((std::get<Dependency>(registration).flags & DependencyFlags::REQUIRED) == DependencyFlags::REQUIRED) {
                         startImmediately = false;
                     }
-                    _eventQueue->pushPrioritisedEvent<DependencyRequestEvent>(serviceId, event_priority, std::get<Dependency>(registration), props.has_value() ? &props.value() : tl::optional<Properties const *>{});
+                    _eventQueue.pushPrioritisedEvent<DependencyRequestEvent>(serviceId, event_priority, std::get<Dependency>(registration), props.has_value() ? &props.value() : tl::optional<Properties const *>{});
                 }
 
                 if(startImmediately) {
-                    _eventQueue->pushPrioritisedEvent<StartServiceEvent>(serviceId, event_priority, serviceId);
+                    _eventQueue.pushPrioritisedEvent<StartServiceEvent>(serviceId, event_priority, serviceId);
                 }
 
                 if constexpr(IsConstructorInjector<Impl>) {
@@ -837,10 +837,10 @@ namespace Ichor {
                 }
 
                 Impl* impl = &cmpMgr->getService();
-                _eventQueue->pushPrioritisedEvent<InsertServiceEvent>(serviceId, std::min(INTERNAL_INSERT_SERVICE_EVENT_PRIORITY, priority), std::move(cmpMgr));
+                _eventQueue.pushPrioritisedEvent<InsertServiceEvent>(serviceId, std::min(INTERNAL_INSERT_SERVICE_EVENT_PRIORITY, priority), std::move(cmpMgr));
 
                 auto event_priority = std::min(INTERNAL_DEPENDENCY_EVENT_PRIORITY, priority);
-                _eventQueue->pushPrioritisedEvent<StartServiceEvent>(serviceId, event_priority, serviceId);
+                _eventQueue.pushPrioritisedEvent<StartServiceEvent>(serviceId, event_priority, serviceId);
 
                 if constexpr(IsConstructorInjector<Impl>) {
                     return v1::ServiceProtectedPointer{static_cast<IService*>(impl)};
@@ -943,7 +943,7 @@ namespace Ichor {
         unordered_map<ServiceIdType, EventWaiter, ServiceIdHash> _dependencyWaiters{}; // key = service id
         unordered_map<ServiceIdType, WaitingStopService, ServiceIdHash> _pendingStopsDueToCoroutine{}; // key = service which has to be stopped but has existing coroutines
         unordered_map<ServiceIdType, std::vector<WaitingStopService>, ServiceIdHash> _pendingStopsDueToDependencies{}; // key = service which others are waiting on to be stopped
-        IEventQueue * const _eventQueue;
+        IEventQueue &_eventQueue;
         IFrameworkLogger *_logger{};
         std::atomic<bool> _started{false};
         CommunicationChannel *_communicationChannel{};
@@ -954,6 +954,7 @@ namespace Ichor {
         constinit static std::atomic<uint64_t> _managerIdCounter;
 
         friend class IEventQueue;
+        friend class BaseEventQueue;
         friend class ILifecycleManager;
         friend class CommunicationChannel;
     };

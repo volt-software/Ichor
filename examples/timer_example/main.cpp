@@ -50,7 +50,7 @@ int main(int argc, char *argv[]) {
         return -1;
     }
 #endif
-    auto &dm = queue->createManager();
+    auto &dm = queue->getManager();
 #ifdef ICHOR_USE_SPDLOG
     dm.createServiceManager<SpdlogSharedService, ISpdlogSharedService>();
 #endif

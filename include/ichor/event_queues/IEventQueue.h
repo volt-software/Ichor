@@ -12,7 +12,7 @@ namespace Ichor {
 
     class IEventQueue {
     public:
-        virtual ~IEventQueue();
+        virtual ~IEventQueue() = default;
 
         /// Thread-safe
         /// \return
@@ -33,9 +33,9 @@ namespace Ichor {
         /// \return true if started, false if there was a problem
         virtual bool start(bool captureSigInt) = 0;
 
-        /// Create manager associated with this queue. Terminates the program if called twice.
+        /// Get manager associated with this queue.
         /// \return
-        DependencyManager& createManager();
+        virtual DependencyManager& getManager() = 0;
 
         /// Thread-safe. Push event into event loop with the default priority (1000)
         /// \tparam EventT Type of event to push, has to derive from Event
@@ -77,7 +77,7 @@ namespace Ichor {
 
         /// Thread-safe. Get the next event ID for this queue (not a global counter)
         /// \return next event id
-            [[nodiscard]] uint64_t getNextEventId() noexcept {
+        [[nodiscard]] uint64_t getNextEventId() noexcept {
             return _eventIdCounter.fetch_add(1, std::memory_order_relaxed);
         }
 
@@ -86,12 +86,7 @@ namespace Ichor {
         [[nodiscard]] virtual bool shouldQuit() = 0;
         virtual void quit() = 0;
         virtual void pushEventInternal(uint64_t priority, std::unique_ptr<Event> &&event) = 0;
-        void startDm();
-        void processEvent(std::unique_ptr<Event> &evt);
-        void stopDm();
-        void addInternalServiceManager(std::unique_ptr<ILifecycleManager> svc);
 
-        std::unique_ptr<DependencyManager> _dm;
         std::atomic<uint64_t> _eventIdCounter{0};
     };
 
@@ -99,7 +94,6 @@ namespace Ichor {
     /// \return Event queue
     [[nodiscard]] IEventQueue& GetThreadLocalEventQueue() noexcept;
 
-    //
     inline constexpr bool DoNotCaptureSigInt = false;
     inline constexpr bool CaptureSigInt = true;
 }

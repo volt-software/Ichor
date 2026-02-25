@@ -18,9 +18,7 @@ namespace Ichor {
 
     template <typename COMPARE>
     TemplatePriorityQueue<COMPARE>::~TemplatePriorityQueue() {
-        if(_dm) {
-            stopDm();
-        }
+        BaseEventQueue::stopDm();
 
         if(Detail::registeredSignalHandler) {
             if (::signal(SIGINT, SIG_DFL) == SIG_ERR) {
@@ -80,11 +78,6 @@ namespace Ichor {
 
     template <typename COMPARE>
     bool TemplatePriorityQueue<COMPARE>::start(bool captureSigInt) {
-        if(!_dm) [[unlikely]] {
-            fmt::println("Please create a manager first!");
-            return false;
-        }
-
         if(captureSigInt && !Ichor::Detail::registeredSignalHandler.exchange(true)) {
             if (::signal(SIGINT, Ichor::Detail::on_sigint) == SIG_ERR) {
                 fmt::println("Couldn't set signal");

@@ -50,7 +50,7 @@ int main(int argc, char *argv[]) {
 #endif
 
     auto queue = std::make_unique<PriorityQueue>();
-    auto &dm = queue->createManager();
+    auto &dm = queue->getManager();
 
     dm.createServiceManager<SigIntService>();
     dm.createServiceManager<TimerFactoryFactory>();

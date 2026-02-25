@@ -203,11 +203,6 @@ namespace Ichor {
             return false;
         }
 
-        if(!_dm) [[unlikely]] {
-            fmt::println("Please create a manager first!");
-            return false;
-        }
-
         if(std::this_thread::get_id() != _threadId) [[unlikely]] {
             fmt::println("Creation of ring and start() have to be on the same thread.");
             std::terminate();
@@ -240,7 +235,7 @@ namespace Ichor {
 
     void SdeventQueue::quit() {
 #ifdef ICHOR_USE_HARDENING
-        if(_dm.get() != Detail::_local_dm) [[unlikely]] { // are we on the right thread?
+        if(&_dm != Detail::_local_dm) [[unlikely]] { // are we on the right thread?
             std::terminate();
         }
 #endif

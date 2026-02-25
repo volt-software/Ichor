@@ -42,7 +42,7 @@ int main(int argc, char *argv[]) {
     {
         auto start = std::chrono::steady_clock::now();
         auto queue = std::make_unique<PriorityQueue>();
-        auto &dm = queue->createManager();
+        auto &dm = queue->getManager();
         dm.createServiceManager<LoggerFactory<NullLogger>, ILoggerFactory>();
         dm.createServiceManager<NullFrameworkLogger, IFrameworkLogger>();
         dm.createServiceManager<TestService>(Properties{{"LogLevel", Ichor::v1::make_any<LogLevel>(LogLevel::LOG_WARN)}});
@@ -55,17 +55,17 @@ int main(int argc, char *argv[]) {
     if(!singleOnly) {
         auto start = std::chrono::steady_clock::now();
         std::array<std::thread, 8> threads{};
-        std::array<PriorityQueue, threads.size()> queues{};
-        for (uint_fast32_t i = 0, j = 0; i < queues.size(); i++, j += 2) {
-            threads[i] = std::thread([&queues, i] {
-                auto &dm = queues[i].createManager();
+        for (uint_fast32_t i = 0, j = 0; i < threads.size(); i++, j += 2) {
+            threads[i] = std::thread([] {
+                PriorityQueue q;
+                auto &dm = q.getManager();
                 dm.createServiceManager<LoggerFactory<NullLogger>, ILoggerFactory>();
                 dm.createServiceManager<NullFrameworkLogger, IFrameworkLogger>();
                 dm.createServiceManager<TestService>(Properties{{"LogLevel", Ichor::v1::make_any<LogLevel>(LogLevel::LOG_WARN)}});
-                queues[i].start(CaptureSigInt);
+                q.start(CaptureSigInt);
             });
         }
-        for (uint_fast32_t i = 0; i < queues.size(); i++) {
+        for (uint_fast32_t i = 0; i < threads.size(); i++) {
             threads[i].join();
         }
         auto end = std::chrono::steady_clock::now();

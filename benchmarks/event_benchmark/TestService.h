@@ -6,10 +6,10 @@
 #include <ichor/event_queues/IEventQueue.h>
 #include <ichor/ScopedServiceProxy.h>
 
-#if defined(ICHOR_ENABLE_INTERNAL_DEBUGGING) || (defined(ICHOR_BUILDING_DEBUG) && (defined(__SANITIZE_ADDRESS__) || defined(__SANITIZE_THREAD__)))
+#if defined(ICHOR_ENABLE_INTERNAL_DEBUGGING) || (defined(ICHOR_BUILDING_DEBUG) && (defined(__SANITIZE_ADDRESS__) || defined(__SANITIZE_THREAD__) || defined(_GLIBCXX_DEBUG)))
 constexpr uint32_t EVENT_COUNT = 100;
-#elif defined(__SANITIZE_ADDRESS__) || defined(__SANITIZE_THREAD__)
-constexpr uint32_t EVENT_COUNT = 500'000;
+#elif defined(__SANITIZE_ADDRESS__) || defined(__SANITIZE_THREAD__) || defined(ICHOR_BUILDING_DEBUG)
+constexpr uint32_t EVENT_COUNT = 50'000;
 #else
 constexpr uint32_t EVENT_COUNT = 5'000'000;
 #endif

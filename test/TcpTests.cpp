@@ -67,12 +67,14 @@ TEST_CASE("TcpTests") {
 #endif
         ServiceIdType tcpClientId;
         evtGate = 0;
+        Ichor::Detail::_local_dm = nullptr;
 
         std::thread t([&]() {
 #ifdef TEST_URING
             REQUIRE(queue->createEventLoop());
 #endif
-            auto &dm = queue->createManager();
+            auto &dm = queue->getManager();
+            Ichor::Detail::_local_dm = &dm;
             uint64_t priorityToEnsureHostStartingFirst = 51;
             dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>(Properties{{"DefaultLogLevel", Ichor::v1::make_any<LogLevel>(LogLevel::LOG_TRACE)}}, priorityToEnsureHostStartingFirst);
             dm.createServiceManager<LoggerFactory<CoutLogger>, ILoggerFactory>(Properties{{"DefaultLogLevel", Ichor::v1::make_any<LogLevel>(LogLevel::LOG_TRACE)}}, priorityToEnsureHostStartingFirst);
@@ -145,12 +147,14 @@ TEST_CASE("TcpTests") {
         auto queue = std::make_unique<QIMPL>(true);
         ServiceIdType tcpClientId;
         evtGate = 0;
+        Ichor::Detail::_local_dm = nullptr;
 
         std::thread t([&]() {
 #ifdef TEST_URING
             REQUIRE(queue->createEventLoop());
 #endif
-            auto &dm = queue->createManager();
+            auto &dm = queue->getManager();
+            Ichor::Detail::_local_dm = &dm;
             uint64_t priorityToEnsureHostStartingFirst = 51;
             dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>(Properties{{"DefaultLogLevel", Ichor::v1::make_any<LogLevel>(LogLevel::LOG_DEBUG)}}, priorityToEnsureHostStartingFirst);
             dm.createServiceManager<LoggerFactory<CoutLogger>, ILoggerFactory>(Properties{{"DefaultLogLevel", Ichor::v1::make_any<LogLevel>(LogLevel::LOG_DEBUG)}}, priorityToEnsureHostStartingFirst);
@@ -221,12 +225,14 @@ TEST_CASE("TcpTests") {
         auto queue = std::make_unique<QIMPL>(true);
         ServiceIdType tcpClientId;
         evtGate = 0;
+        Ichor::Detail::_local_dm = nullptr;
 
         std::thread t([&]() {
 #ifdef TEST_URING
             REQUIRE(queue->createEventLoop());
 #endif
-            auto &dm = queue->createManager();
+            auto &dm = queue->getManager();
+            Ichor::Detail::_local_dm = &dm;
             uint64_t priorityToEnsureHostStartingFirst = 51;
             dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>(Properties{{"DefaultLogLevel", Ichor::v1::make_any<LogLevel>(LogLevel::LOG_TRACE)}}, priorityToEnsureHostStartingFirst);
             dm.createServiceManager<LoggerFactory<CoutLogger>, ILoggerFactory>(Properties{{"DefaultLogLevel", Ichor::v1::make_any<LogLevel>(LogLevel::LOG_TRACE)}}, priorityToEnsureHostStartingFirst);
@@ -308,12 +314,14 @@ TEST_CASE("TcpTests") {
         auto queue = std::make_unique<QIMPL>(true);
         ServiceIdType tcpClientId;
         evtGate = 0;
+        Ichor::Detail::_local_dm = nullptr;
 
         std::thread t([&]() {
 #ifdef TEST_URING
             REQUIRE(queue->createEventLoop());
 #endif
-            auto &dm = queue->createManager();
+            auto &dm = queue->getManager();
+            Ichor::Detail::_local_dm = &dm;
             uint64_t priorityToEnsureHostStartingFirst = 51;
             dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>(Properties{{"DefaultLogLevel", Ichor::v1::make_any<LogLevel>(LogLevel::LOG_TRACE)}}, priorityToEnsureHostStartingFirst);
             dm.createServiceManager<LoggerFactory<CoutLogger>, ILoggerFactory>(Properties{{"DefaultLogLevel", Ichor::v1::make_any<LogLevel>(LogLevel::LOG_TRACE)}}, priorityToEnsureHostStartingFirst);
@@ -384,12 +392,14 @@ TEST_CASE("TcpTests") {
         auto queue = std::make_unique<QIMPL>(true);
         ServiceIdType tcpClientId;
         evtGate = 0;
+        Ichor::Detail::_local_dm = nullptr;
 
         std::thread t([&]() {
 #ifdef TEST_URING
             REQUIRE(queue->createEventLoop());
 #endif
-            auto &dm = queue->createManager();
+            auto &dm = queue->getManager();
+            Ichor::Detail::_local_dm = &dm;
             uint64_t priorityToEnsureHostStartingFirst = 51;
             dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>(Properties{{"DefaultLogLevel", Ichor::v1::make_any<LogLevel>(LogLevel::LOG_TRACE)}}, priorityToEnsureHostStartingFirst);
             dm.createServiceManager<LoggerFactory<CoutLogger>, ILoggerFactory>(Properties{{"DefaultLogLevel", Ichor::v1::make_any<LogLevel>(LogLevel::LOG_TRACE)}}, priorityToEnsureHostStartingFirst);
@@ -467,12 +477,14 @@ TEST_CASE("TcpTests") {
         auto queue = std::make_unique<QIMPL>(true);
         ServiceIdType tcpClientId;
         evtGate = 0;
+        Ichor::Detail::_local_dm = nullptr;
 
         std::thread t([&]() {
 #ifdef TEST_URING
             REQUIRE(queue->createEventLoop());
 #endif
-            auto &dm = queue->createManager();
+            auto &dm = queue->getManager();
+            Ichor::Detail::_local_dm = &dm;
             uint64_t priorityToEnsureHostStartingFirst = 51;
             dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>(Properties{{"DefaultLogLevel", Ichor::v1::make_any<LogLevel>(LogLevel::LOG_TRACE)}}, priorityToEnsureHostStartingFirst);
             dm.createServiceManager<LoggerFactory<CoutLogger>, ILoggerFactory>(Properties{{"DefaultLogLevel", Ichor::v1::make_any<LogLevel>(LogLevel::LOG_TRACE)}}, priorityToEnsureHostStartingFirst);

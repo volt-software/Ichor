@@ -40,7 +40,7 @@ int main(int argc, char *argv[]) {
 
     auto start = std::chrono::steady_clock::now();
     auto queue = std::make_unique<PriorityQueue>();
-    auto &dm = queue->createManager();
+    auto &dm = queue->getManager();
 
     unordered_map<uint64_t, GlobalEventStatistics> globalEventStatistics;
     unordered_map<uint64_t, std::string_view> eventTypeToNameMapper;

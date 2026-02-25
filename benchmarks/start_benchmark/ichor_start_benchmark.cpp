@@ -59,7 +59,7 @@ int main(int argc, char *argv[]) {
         {
             auto start = std::chrono::steady_clock::now();
             auto queue = std::make_unique<PriorityQueue>();
-            auto &dm = queue->createManager();
+            auto &dm = queue->getManager();
             dm.createServiceManager<LoggerFactory<NullLogger>, ILoggerFactory>();
             dm.createServiceManager<NullFrameworkLogger, IFrameworkLogger>();
             for (uint64_t i = 0; i < SERVICES_COUNT; i++) {
@@ -74,16 +74,16 @@ int main(int argc, char *argv[]) {
         if(!singleOnly) {
             auto start = std::chrono::steady_clock::now();
             std::array<std::thread, 8> threads{};
-            std::array<PriorityQueue, 8> queues{};
             for (uint_fast32_t i = 0, j = 0; i < 8; i++, j += 2) {
-                threads[i] = std::thread([&queues, i] {
-                    auto &dm = queues[i].createManager();
+                threads[i] = std::thread([] {
+                    PriorityQueue q;
+                    auto &dm = q.getManager();
                     dm.createServiceManager<LoggerFactory<NullLogger>, ILoggerFactory>();
                     dm.createServiceManager<NullFrameworkLogger, IFrameworkLogger>();
                     for (uint64_t z = 0; z < SERVICES_COUNT; z++) {
                         dm.createServiceManager<TestService>(Properties{{"Iteration", Ichor::v1::make_any<uint64_t>(z)}, {"LogLevel", Ichor::v1::make_any<LogLevel>(LogLevel::LOG_WARN)}});
                     }
-                    queues[i].start(CaptureSigInt);
+                    q.start(CaptureSigInt);
                 });
             }
             for (uint_fast32_t i = 0; i < 8; i++) {
@@ -99,7 +99,7 @@ int main(int argc, char *argv[]) {
         {
             auto start = std::chrono::steady_clock::now();
             auto queue = std::make_unique<PriorityQueue>();
-            auto &dm = queue->createManager();
+            auto &dm = queue->getManager();
 
             unordered_map<uint64_t, GlobalEventStatistics> globalEventStatistics;
             unordered_map<uint64_t, std::string_view> eventTypeToNameMapper;
@@ -159,16 +159,16 @@ int main(int argc, char *argv[]) {
         if(!singleOnly) {
             auto start = std::chrono::steady_clock::now();
             std::array<std::thread, 8> threads{};
-            std::array<PriorityQueue, 8> queues{};
             for (uint_fast32_t i = 0, j = 0; i < 8; i++, j += 2) {
-                threads[i] = std::thread([&queues, i] {
-                    auto &dm = queues[i].createManager();
+                threads[i] = std::thread([] {
+                    PriorityQueue q;
+                    auto &dm = q.getManager();
                     dm.createServiceManager<LoggerFactory<NullLogger>, ILoggerFactory>();
                     dm.createServiceManager<NullFrameworkLogger, IFrameworkLogger>();
                     for (uint64_t z = 0; z < SERVICES_COUNT; z++) {
                         dm.createServiceManager<ConstructorInjectionTestService>(Properties{{"Iteration", Ichor::v1::make_any<uint64_t>(z)}, {"LogLevel", Ichor::v1::make_any<LogLevel>(LogLevel::LOG_WARN)}});
                     }
-                    queues[i].start(CaptureSigInt);
+                    q.start(CaptureSigInt);
                 });
             }
             for (uint_fast32_t i = 0; i < 8; i++) {

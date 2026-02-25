@@ -46,7 +46,7 @@ int main(int argc, char *argv[]) {
     {
         auto start = std::chrono::steady_clock::now();
         auto queue = std::make_unique<PriorityQueue>();
-        auto &dm = queue->createManager();
+        auto &dm = queue->getManager();
         dm.createServiceManager<LoggerFactory<NullLogger>, ILoggerFactory>();
         dm.createServiceManager<NullFrameworkLogger, IFrameworkLogger>();
         dm.createServiceManager<TestMsgGlazeSerializer, ISerializer<TestMsg>>();
@@ -60,15 +60,15 @@ int main(int argc, char *argv[]) {
     if(!singleOnly) {
         auto start = std::chrono::steady_clock::now();
         std::array<std::thread, threadCount> threads{};
-        std::array<PriorityQueue, threadCount> queues{};
         for (uint_fast32_t i = 0, j = 0; i < threadCount; i++, j += 2) {
-            threads[i] = std::thread([&queues, i] {
-                auto &dm = queues[i].createManager();
+            threads[i] = std::thread([] {
+                PriorityQueue q;
+                auto &dm = q.getManager();
                 dm.createServiceManager<LoggerFactory<NullLogger>, ILoggerFactory>();
                 dm.createServiceManager<NullFrameworkLogger, IFrameworkLogger>();
                 dm.createServiceManager<TestMsgGlazeSerializer, ISerializer<TestMsg>>();
                 dm.createServiceManager<TestService>();
-                queues[i].start(CaptureSigInt);
+                q.start(CaptureSigInt);
             });
         }
         for (uint_fast32_t i = 0; i < threadCount; i++) {

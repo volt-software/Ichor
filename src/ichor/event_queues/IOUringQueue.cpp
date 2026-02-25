@@ -387,9 +387,7 @@ namespace Ichor {
 
     IOUringQueue::~IOUringQueue() {
         if(_initializedQueue.load(std::memory_order_acquire)) {
-            if(_dm) {
-                stopDm();
-            }
+            stopDm();
             TSAN_ANNOTATE_HAPPENS_AFTER(_eventQueuePtr);
             if(_eventQueue) {
                 io_uring_queue_exit(_eventQueue.get());
@@ -662,11 +660,6 @@ namespace Ichor {
     bool IOUringQueue::start(bool captureSigInt) {
         if(!_initializedQueue.load(std::memory_order_acquire)) [[unlikely]] {
             fmt::println("IOUringQueue not initialized. Call createEventLoop or useEventLoop first.");
-            return false;
-        }
-
-        if(!_dm) [[unlikely]] {
-            fmt::println("Please create a manager first!");
             return false;
         }
 

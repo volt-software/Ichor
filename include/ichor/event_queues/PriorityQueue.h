@@ -3,7 +3,7 @@
 #include <ichor/stl/RealtimeReadWriteMutex.h>
 #include <ichor/stl/ConditionVariableAny.h>
 #include <ichor/stl/SectionalPriorityQueue.h>
-#include <ichor/event_queues/IEventQueue.h>
+#include <ichor/event_queues/BaseEventQueue.h>
 #include <ichor/ConstevalHash.h>
 #include <atomic>
 
@@ -29,7 +29,7 @@ namespace Ichor {
     };
 
     template <typename COMPARE = PriorityQueueCompare>
-    class TemplatePriorityQueue final : public IEventQueue {
+    class TemplatePriorityQueue final : public BaseEventQueue {
     public:
         /// Construct a std::priority_queue based queue, supporting priorities
         /// \param spinlock Spinlock 10ms before going to sleep, improves latency in high workload cases at the expense of CPU usage

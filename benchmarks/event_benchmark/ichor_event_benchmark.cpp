@@ -66,7 +66,7 @@ int main(int argc, char *argv[]) {
             queue = std::make_unique<PriorityQueue>();
         }
 //        spdlog::info("start");
-        auto &dm = queue->createManager();
+        auto &dm = queue->getManager();
         dm.createServiceManager<LoggerFactory<NullLogger>, ILoggerFactory>();
         dm.createServiceManager<NullFrameworkLogger, IFrameworkLogger>();
         dm.createServiceManager<TestService>(Properties{{"LogLevel", Ichor::v1::make_any<LogLevel>(LogLevel::LOG_WARN)}});
@@ -95,7 +95,7 @@ int main(int argc, char *argv[]) {
                 } else {
                     queue = std::make_unique<PriorityQueue>();
                 }
-                auto &dm = queue->createManager();
+                auto &dm = queue->getManager();
                 dm.createServiceManager<LoggerFactory<NullLogger>, ILoggerFactory>();
                 dm.createServiceManager<NullFrameworkLogger, IFrameworkLogger>();
                 dm.createServiceManager<TestService>(Properties{{"LogLevel", Ichor::v1::make_any<LogLevel>(LogLevel::LOG_WARN)}});

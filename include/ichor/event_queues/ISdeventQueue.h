@@ -5,12 +5,12 @@
 #endif
 
 #include <ichor/stl/NeverAlwaysNull.h>
-#include <ichor/event_queues/IEventQueue.h>
+#include <ichor/event_queues/BaseEventQueue.h>
 
 struct sd_event;
 
 namespace Ichor {
-    class ISdeventQueue : public IEventQueue {
+    class ISdeventQueue : public BaseEventQueue {
     public:
         ~ISdeventQueue() override = default;
         [[nodiscard]] virtual v1::NeverNull<sd_event*> getLoop() noexcept = 0;

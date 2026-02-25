@@ -38,9 +38,10 @@ TEST_CASE("AsyncReturningManualResetEvent: awaiting a no copy/no move class shou
     _evtInt.reset();
     _evtNoCopyNoMove.reset();
     auto queue = std::make_unique<PriorityQueue>();
-    auto &dm = queue->createManager();
+    auto &dm = queue->getManager();
     ServiceIdType id{};
     std::thread t([&] {
+        Ichor::Detail::_local_dm = &dm;
         id = dm.createServiceManager<AwaitReturningManualResetService, IAwaitReturningManualResetService>()->getServiceId();
         queue->start(DoNotCaptureSigInt);
     });

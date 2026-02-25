@@ -59,14 +59,11 @@ int main(int argc, char *argv[]) {
     auto start = std::chrono::steady_clock::now();
 
     CommunicationChannel channel{};
-    auto queueOne = std::make_unique<QIMPL>();
-    auto &dmOne = queueOne->createManager();
-    auto queueTwo = std::make_unique<QIMPL>();
-    auto &dmTwo = queueTwo->createManager();
-    channel.addManager(&dmOne);
-    channel.addManager(&dmTwo);
 
     std::thread t1([&] {
+        auto queueOne = std::make_unique<QIMPL>();
+        auto &dmOne = queueOne->getManager();
+        channel.addManager(&dmOne);
 #if defined(URING_EXAMPLE)
         std::ignore = queueOne->createEventLoop();
 #elif defined(SDEVENT_EXAMPLE)
@@ -85,6 +82,9 @@ int main(int argc, char *argv[]) {
     });
 
     std::thread t2([&] {
+        auto queueTwo = std::make_unique<QIMPL>();
+        auto &dmTwo = queueTwo->getManager();
+        channel.addManager(&dmTwo);
 #if defined(URING_EXAMPLE)
         std::ignore = queueTwo->createEventLoop();
 #elif defined(SDEVENT_EXAMPLE)
