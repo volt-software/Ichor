@@ -187,7 +187,7 @@ if(UNIX AND NOT APPLE)
 endif()
 
 if(NOT ICHOR_DISABLE_EXCEPTIONS)
-    set(ICHOR_STL_SOURCES ${ICHOR_STL_SOURCES} ${ICHOR_TOP_DIR}/src/ichor/stl/Any.cpp)
+    list(APPEND ICHOR_STL_SOURCES ${ICHOR_TOP_DIR}/src/ichor/stl/Any.cpp)
 endif()
 
 set(ICHOR_IO_SOURCES ${ICHOR_TOP_DIR}/src/services/io/SharedOverThreadsAsyncFileIO.cpp)
