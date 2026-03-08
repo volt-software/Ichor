@@ -86,6 +86,7 @@ option(ICHOR_USE_BACKWARD "Use backward-cpp to print stacktraces on crashes or w
 option(ICHOR_USE_HIREDIS "Add hiredis dependency" OFF)
 option(ICHOR_MUSL "Use when building for musl instead of glibc" OFF)
 option(ICHOR_AARCH64 "Use when building for aarch64. Turns off some x86-specific compiler flags." OFF)
+option(ICHOR_OPTIMIZE_FMT_FOR_SIZE "Remove support for things such as locale and apply optimizations to reduce binary size" OFF)
 
 find_package(OpenSSL 3.0.0)
 
@@ -163,6 +164,11 @@ if(ICHOR_COMPILER_ID STREQUAL "clang" AND ICHOR_RUN_CLANG_TIDY)
 endif()
 
 set(FMT_SOURCES ${ICHOR_EXTERNAL_DIR}/fmt/src/format.cc ${ICHOR_EXTERNAL_DIR}/fmt/src/os.cc)
+
+#if(NOT ICHOR_OPTIMIZE_FMT_FOR_SIZE)
+#    list(APPEND FMT_SOURCES ${ICHOR_EXTERNAL_DIR}/fmt/src/os.cc)
+#endif()
+
 file(GLOB_RECURSE ICHOR_FRAMEWORK_SOURCES ${ICHOR_TOP_DIR}/src/ichor/coroutines/*.cpp ${ICHOR_TOP_DIR}/src/ichor/dependency_management/*.cpp ${ICHOR_TOP_DIR}/src/ichor/DependencyManager.cpp ${ICHOR_TOP_DIR}/src/ichor/LifecycleManager.cpp ${ICHOR_TOP_DIR}/src/ichor/Service.cpp)
 set(ICHOR_FRAMEWORK_QUEUE_SOURCES ${ICHOR_TOP_DIR}/src/ichor/event_queues/PriorityQueue.cpp ${ICHOR_TOP_DIR}/src/ichor/event_queues/IEventQueue.cpp ${ICHOR_TOP_DIR}/src/ichor/event_queues/BaseEventQueue.cpp)
 file(GLOB_RECURSE ICHOR_ETCD_SOURCES ${ICHOR_TOP_DIR}/src/services/etcd/*.cpp)
@@ -177,9 +183,7 @@ file(GLOB_RECURSE ICHOR_BASE64_SOURCES ${ICHOR_TOP_DIR}/src/base64/*.cpp)
 set(ICHOR_STL_SOURCES ${ICHOR_TOP_DIR}/src/ichor/stl/AsyncSingleThreadedMutex.cpp ${ICHOR_TOP_DIR}/src/ichor/stl/StringUtils.cpp)
 
 if(UNIX AND NOT APPLE)
-    list(APPEND ICHOR_STL_SOURCES
-        ${ICHOR_TOP_DIR}/src/ichor/stl/LinuxUtils.cpp
-    )
+    list(APPEND ICHOR_STL_SOURCES ${ICHOR_TOP_DIR}/src/ichor/stl/LinuxUtils.cpp)
 endif()
 
 if(NOT ICHOR_DISABLE_EXCEPTIONS)
@@ -250,6 +254,10 @@ endif()
 
 if(ICHOR_USE_SPDLOG)
     target_compile_definitions(ichor PUBLIC SPDLOG_COMPILED_LIB SPDLOG_NO_EXCEPTIONS SPDLOG_FMT_EXTERNAL SPDLOG_NO_ATOMIC_LEVELS ICHOR_USE_SPDLOG SPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_TRACE)
+endif()
+
+if(ICHOR_OPTIMIZE_FMT_FOR_SIZE)
+    target_compile_definitions(ichor PUBLIC FMT_OPTIMIZE_SIZE=2)
 endif()
 
 if(ICHOR_REMOVE_SOURCE_NAMES)
