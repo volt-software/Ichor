@@ -585,7 +585,7 @@ endif()
 if(NOT WIN32 AND NOT ICHOR_BUILD_COVERAGE)
     # gcc uses gdwarf-4 by default, which messes up using the coz profiler, add "-gdwarf-3" if using coz
     set(CMAKE_CXX_FLAGS_DEBUG "-ggdb")
-    set(CMAKE_CXX_FLAGS_RELEASE "-O3 -ggdb3 -DNDEBUG")
+    set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG")
     set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-ggdb -Og -DNDEBUG")
     set(CMAKE_CXX_FLAGS_MINSIZEREL "-Os -DNDEBUG")
 endif()
