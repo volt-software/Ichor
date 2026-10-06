@@ -189,6 +189,7 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &uniqueEvt) {
                 break;
             case DependencyOfflineEvent::TYPE: {
                 auto *depOfflineEvt = static_cast<DependencyOfflineEvent *>(evt);
+                _pendingDependencyOfflines.erase(depOfflineEvt->originatingService);
                 auto const managerIt = _services.find(depOfflineEvt->originatingService);
 
                 if (managerIt == end(_services)) [[unlikely]] {
@@ -327,18 +328,13 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &uniqueEvt) {
                             continue;
                         }
 
-                        auto &dependees = possibleManager->getDependees();
-
                         auto priority = std::max(possibleManager->getPriority(), INTERNAL_DEPENDENCY_EVENT_PRIORITY);
 
                         if(priority > lowest_priority) {
                             lowest_priority = priority;
                         }
 
-                        for(auto const &serviceId : dependees) {
-                            _eventQueue.pushPrioritisedEvent<StopServiceEvent>(_quitEvt->originatingService, priority, serviceId, true);
-                        }
-
+                        // Dependees are not stopped here explicitly: they get stopped through the DependencyOfflineEvent (STOP_ME) or their own StopServiceEvent.
                         _eventQueue.pushPrioritisedEvent<StopServiceEvent>(_quitEvt->originatingService, priority, possibleManager->serviceId(), true);
                     }
 
@@ -571,6 +567,8 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &uniqueEvt) {
                     }
                     dependencies.clear();
                     clearServiceRegistrations(allEventInterceptorsCopy, eventInterceptorsCopy, stopServiceEvt->serviceId);
+                    // service is stopped, a stop that was postponed due to existing coroutines is no longer relevant
+                    _pendingStopsDueToCoroutine.erase(stopServiceEvt->serviceId);
 
                     //finishWaitingService(stopServiceEvt->serviceId, StopServiceEvent::TYPE, StopServiceEvent::NAME);
 
@@ -583,7 +581,10 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &uniqueEvt) {
                 } else if(toStopService->getServiceState() != ServiceState::UNINJECTING) {
                     // Trigger dependency offline handling once; StopServiceEvent will be (re)scheduled
                     // after all DependencyOfflineEvents have completed to avoid event storms.
-                    _eventQueue.pushPrioritisedEvent<DependencyOfflineEvent>(stopServiceEvt->serviceId, evt->priority, stopServiceEvt->removeAfter);
+                    // Multiple StopServiceEvents may be queued for the same service, only push one DependencyOfflineEvent for them.
+                    if(_pendingDependencyOfflines.emplace(stopServiceEvt->serviceId).second) {
+                        _eventQueue.pushPrioritisedEvent<DependencyOfflineEvent>(stopServiceEvt->serviceId, evt->priority, stopServiceEvt->removeAfter);
+                    }
                 }
             }
                 break;
@@ -798,6 +799,7 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &uniqueEvt) {
                                     INTERNAL_DEBUG("removed1 {} re-triggering StopServiceEvent for {}", continuableEvt->promiseId, id);
 
                                     _eventQueue.pushPrioritisedEvent<StopServiceEvent>(pendingStopIt->second.originatingServiceId, std::min(INTERNAL_DEPENDENCY_EVENT_PRIORITY, pendingStopIt->second.priority), id, pendingStopIt->second.removeAfter);
+                                    _pendingStopsDueToCoroutine.erase(pendingStopIt);
                                 }
                             }
 
@@ -819,6 +821,7 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &uniqueEvt) {
                                 INTERNAL_DEBUG("removed2 {} re-triggering StopServiceEvent for {}", continuableEvt->promiseId, id);
 
                                 _eventQueue.pushPrioritisedEvent<StopServiceEvent>(pendingStopIt->second.originatingServiceId, std::min(INTERNAL_DEPENDENCY_EVENT_PRIORITY, pendingStopIt->second.priority), id, pendingStopIt->second.removeAfter);
+                                _pendingStopsDueToCoroutine.erase(pendingStopIt);
                             }
                         }
 
@@ -935,6 +938,8 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &uniqueEvt) {
                         dependencies.clear();
 
                         clearServiceRegistrations(allEventInterceptorsCopy, eventInterceptorsCopy, origEvt->serviceId);
+                        // service is stopped, a stop that was postponed due to existing coroutines is no longer relevant
+                        _pendingStopsDueToCoroutine.erase(origEvt->serviceId);
                         if(origEvt->removeAfter) {
                             removeInternalService(allEventInterceptorsCopy, eventInterceptorsCopy, origEvt->serviceId);
                         }

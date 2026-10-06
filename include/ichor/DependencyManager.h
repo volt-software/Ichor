@@ -942,6 +942,7 @@ namespace Ichor {
         unordered_map<uint64_t, EventWaiter> _eventWaiters{}; // key = event id
         unordered_map<ServiceIdType, EventWaiter, ServiceIdHash> _dependencyWaiters{}; // key = service id
         unordered_map<ServiceIdType, WaitingStopService, ServiceIdHash> _pendingStopsDueToCoroutine{}; // key = service which has to be stopped but has existing coroutines
+        unordered_set<ServiceIdType, ServiceIdHash> _pendingDependencyOfflines{}; // key = service which has a DependencyOfflineEvent queued due to a StopServiceEvent
         unordered_map<ServiceIdType, std::vector<WaitingStopService>, ServiceIdHash> _pendingStopsDueToDependencies{}; // key = service which others are waiting on to be stopped
         IEventQueue &_eventQueue;
         IFrameworkLogger *_logger{};
