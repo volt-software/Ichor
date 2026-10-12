@@ -11,6 +11,7 @@
 #include <unistd.h>
 #include <sys/mman.h>
 #include <cstdlib>
+#include <memory>
 #include <ichor/event_queues/IIOUringQueue.h>
 #include <ichor/stl/LinuxUtils.h>
 #include <ichor/stl/CompilerSpecific.h>
@@ -326,26 +327,14 @@ namespace Ichor {
         io_uring_buf_ring_add(_bufRing, _entriesBuf + _entryBufferSize * entry, _entryBufferSize, entry, _mask, entry);
         io_uring_buf_ring_advance(_bufRing, 1);
     }
+}
 
-    struct UringResponseEvent final : public Event {
-        explicit UringResponseEvent(uint64_t _id, ServiceIdType _originatingService, uint64_t _priority, std::function<void(io_uring_cqe*)> _fun) noexcept :
-                Event(_id, _originatingService, _priority), fun(std::move(_fun)) {}
-        ~UringResponseEvent() final = default;
-
-        [[nodiscard]] ICHOR_CONST_FUNC_ATTR constexpr std::string_view get_name() const noexcept final {
-            return NAME;
-        }
-        [[nodiscard]] ICHOR_CONST_FUNC_ATTR constexpr NameHashType get_type() const noexcept final {
-            return TYPE;
+namespace Ichor::Detail {
+    IOUringQueueBase::IOUringQueueBase(std::span<UringResponseEvent> responseEvents, uint64_t quitTimeoutMs, long long pollTimeoutNs, tl::optional<v1::Version> emulateKernelVersion) : _quitTimeoutMs(quitTimeoutMs), _entriesCount(static_cast<unsigned int>(responseEvents.size())), _pollTimeoutNs(pollTimeoutNs) {
+        for(auto &evt : responseEvents) {
+            releaseResponseEvent(&evt);
         }
 
-        std::function<void(io_uring_cqe*)> fun;
-        int32_t res{};
-        static constexpr NameHashType TYPE = typeNameHash<UringResponseEvent>();
-        static constexpr std::string_view NAME = typeName<UringResponseEvent>();
-    };
-
-    IOUringQueue::IOUringQueue(uint64_t quitTimeoutMs, long long pollTimeoutNs, tl::optional<v1::Version> emulateKernelVersion) : _quitTimeoutMs(quitTimeoutMs), _pollTimeoutNs(pollTimeoutNs) {
         if(io_uring_major_version() != 2 || io_uring_minor_version() != 14) {
             fmt::println("io_uring version is {}.{}, but expected 2.14. Ichor is not compiled correctly.", io_uring_major_version(), io_uring_minor_version());
             std::terminate();
@@ -385,7 +374,7 @@ namespace Ichor {
         }
     }
 
-    IOUringQueue::~IOUringQueue() {
+    IOUringQueueBase::~IOUringQueueBase() {
         if(_initializedQueue.load(std::memory_order_acquire)) {
             stopDm();
             TSAN_ANNOTATE_HAPPENS_AFTER(_eventQueuePtr);
@@ -401,7 +390,7 @@ namespace Ichor {
         }
     }
 
-    void IOUringQueue::pushEventInternal(uint64_t priority, std::unique_ptr<Event> &&event) {
+    void IOUringQueueBase::pushEventInternal(uint64_t priority, std::unique_ptr<Event> &&event) {
         if(!_initializedQueue.load(std::memory_order_acquire)) [[unlikely]] {
             fmt::println("IOUringQueue not initialized. Call createEventLoop or useEventLoop first.");
             std::terminate();
@@ -439,7 +428,7 @@ namespace Ichor {
             if(HasThreadLocalManager()) {
                 auto &q = GetThreadLocalEventQueue();
                 if(q.get_queue_name_hash() == get_queue_name_hash()) {
-                    auto &ioq = static_cast<IOUringQueue&>(q);
+                    auto &ioq = static_cast<IOUringQueueBase&>(q);
                     auto sqe = ioq.getSqe();
                     io_uring_prep_msg_ring(sqe, _eventQueuePtr->ring_fd, 0, reinterpret_cast<uintptr_t>(reinterpret_cast<void*>(procEvent)), 0);
                     return;
@@ -543,7 +532,7 @@ namespace Ichor {
         }
     }
 
-    bool IOUringQueue::empty() const {
+    bool IOUringQueueBase::empty() const {
         if(!_initializedQueue.load(std::memory_order_acquire)) [[unlikely]] {
             fmt::println("IOUringQueue not initialized. Call createEventLoop or useEventLoop first.");
             std::terminate();
@@ -552,7 +541,7 @@ namespace Ichor {
         return _pendingEvents.load(std::memory_order_acquire) == 0;
     }
 
-    uint64_t IOUringQueue::size() const {
+    uint64_t IOUringQueueBase::size() const {
         if(!_initializedQueue.load(std::memory_order_acquire)) [[unlikely]] {
             fmt::println("IOUringQueue not initialized. Call createEventLoop or useEventLoop first.");
             std::terminate();
@@ -561,28 +550,21 @@ namespace Ichor {
         return _pendingEvents.load(std::memory_order_acquire);
     }
 
-    bool IOUringQueue::is_running() const noexcept {
+    bool IOUringQueueBase::is_running() const noexcept {
         return !_quit.load(std::memory_order_acquire);
     }
 
-    ICHOR_CONST_FUNC_ATTR NameHashType IOUringQueue::get_queue_name_hash() const noexcept {
-        return typeNameHash<IOUringQueue>();
+    ICHOR_CONST_FUNC_ATTR NameHashType IOUringQueueBase::get_queue_name_hash() const noexcept {
+        return typeNameHash<IOUringQueueBase>();
     }
 
-    tl::optional<v1::NeverNull<io_uring*>> IOUringQueue::createEventLoop(unsigned entriesCount) {
-        if(entriesCount == 0) {
-            fmt::println("Cannot create an event loop with 0 entries.");
-            return {};
-        }
-        if(entriesCount < 32) {
+    tl::optional<v1::NeverNull<io_uring*>> IOUringQueueBase::createEventLoop() {
+        if(_entriesCount < 32) {
             fmt::println("entriesCount < 32, expect reduced queue performance.");
         }
 
-        ICHOR_ASSUME(entriesCount > 0);
-
         _eventQueue = std::make_unique<io_uring>();
         _eventQueuePtr = _eventQueue.get();
-        _entriesCount = entriesCount;
         io_uring_params p{};
         if(_kernelVersion >= v1::Version{5, 19, 0}) {
             p.flags |= IORING_SETUP_COOP_TASKRUN;
@@ -600,7 +582,7 @@ namespace Ichor {
             fmt::println("IORING_SETUP_DEFER_TASKRUN not supported, requires kernel >= 6.1.0, expect reduced performance.");
         }
         p.sq_thread_idle = 50;
-        auto ret = io_uring_queue_init_params(entriesCount, _eventQueuePtr, &p);
+        auto ret = io_uring_queue_init_params(_entriesCount, _eventQueuePtr, &p);
         if(ret == -ENOSYS) [[unlikely]] {
             fmt::println("io_uring_queue_init_params() failed, ret {}, probably not enabled in the kernel.", -ret);
             std::terminate();
@@ -612,7 +594,7 @@ namespace Ichor {
             }
             fmt::println("Couldn't set queue params 0x{:X}, retrying without. Expect reduced performance.", p.flags);
             p.flags = 0;
-            ret = io_uring_queue_init_params(entriesCount, _eventQueuePtr, &p);
+            ret = io_uring_queue_init_params(_entriesCount, _eventQueuePtr, &p);
             if(ret < 0) [[unlikely]] {
                 fmt::println("io_uring_queue_init_params() failed, ret {}", -ret);
                 std::terminate();
@@ -646,18 +628,21 @@ namespace Ichor {
         return _eventQueuePtr;
     }
 
-    bool IOUringQueue::useEventLoop(v1::NeverNull<io_uring*> event, unsigned entriesCount) {
+    bool IOUringQueueBase::useEventLoop(v1::NeverNull<io_uring*> event) {
+        if(event->sq.ring_entries != _entriesCount) {
+            fmt::println("useEventLoop() ring has {} entries, but queue expects {}.", event->sq.ring_entries, _entriesCount);
+            return false;
+        }
         if(!checkRingFlags(event)) {
             return false;
         }
         _threadId = std::this_thread::get_id();
         _eventQueuePtr = event;
-        _entriesCount = entriesCount;
         _initializedQueue.store(true, std::memory_order_release);
         return true;
     }
 
-    bool IOUringQueue::start(bool captureSigInt) {
+    bool IOUringQueueBase::start(bool captureSigInt) {
         if(!_initializedQueue.load(std::memory_order_acquire)) [[unlikely]] {
             fmt::println("IOUringQueue not initialized. Call createEventLoop or useEventLoop first.");
             return false;
@@ -727,19 +712,19 @@ namespace Ichor {
                     auto *evt = reinterpret_cast<Event *>(io_uring_cqe_get_data(cqe));
                     if(evt != nullptr) {
 //                        INTERNAL_IO_DEBUG("processing {}", evt->get_name());
-                        std::unique_ptr<Event> uniqueEvt{evt};
                         if(evt->get_type() == UringResponseEvent::TYPE) {
-                            auto *resEvt = reinterpret_cast<UringResponseEvent*>(evt);
+                            auto *resEvt = static_cast<UringResponseEvent*>(evt);
                             resEvt->fun(cqe);
-                            if((cqe->flags & IORING_CQE_F_MORE) == IORING_CQE_F_MORE) {
-//                                fmt::println("F_MORE {}", evt->id);
-                                uniqueEvt.release();
+                            if((cqe->flags & IORING_CQE_F_MORE) != IORING_CQE_F_MORE) {
+                                releaseResponseEvent(resEvt);
+                                _pendingEvents.fetch_sub(1, std::memory_order_acq_rel);
                             }
+//                            else {
+//                                fmt::println("F_MORE {}", evt->id);
+//                            }
                         } else {
+                            std::unique_ptr<Event> uniqueEvt{evt};
                             processEvent(uniqueEvt);
-                        }
-
-                        if(uniqueEvt) {
                             _pendingEvents.fetch_sub(1, std::memory_order_acq_rel);
                         }
                     }
@@ -801,10 +786,17 @@ namespace Ichor {
             io_uring_for_each_cqe(_eventQueuePtr, head, cqe) {
                 TSAN_ANNOTATE_HAPPENS_AFTER(cqe->user_data);
                 auto *evt = reinterpret_cast<Event *>(io_uring_cqe_get_data(cqe));
-                std::unique_ptr<Event> uniqueEvt{evt};
 //                fmt::println("last loop processing {}", evt->get_name());
-                if(uniqueEvt) {
-                    _pendingEvents.fetch_sub(1, std::memory_order_acq_rel);
+                if(evt != nullptr) {
+                    if(evt->get_type() == UringResponseEvent::TYPE) {
+                        if((cqe->flags & IORING_CQE_F_MORE) != IORING_CQE_F_MORE) {
+                            releaseResponseEvent(static_cast<UringResponseEvent*>(evt));
+                            _pendingEvents.fetch_sub(1, std::memory_order_acq_rel);
+                        }
+                    } else {
+                        delete evt;
+                        _pendingEvents.fetch_sub(1, std::memory_order_acq_rel);
+                    }
                 }
                 handled++;
             }
@@ -820,7 +812,7 @@ namespace Ichor {
         return true;
     }
 
-    bool IOUringQueue::shouldQuit() {
+    bool IOUringQueueBase::shouldQuit() {
         if(_quitEventSent.load(std::memory_order_acquire) && std::chrono::steady_clock::now() - _whenQuitEventWasSent >= std::chrono::milliseconds(_quitTimeoutMs)) [[unlikely]] {
             _quit.store(true, std::memory_order_release);
         }
@@ -828,11 +820,11 @@ namespace Ichor {
         return _quit.load(std::memory_order_acquire);
     }
 
-    void IOUringQueue::quit() {
+    void IOUringQueueBase::quit() {
         _quit.store(true, std::memory_order_release);
     }
 
-    v1::NeverNull<io_uring*> IOUringQueue::getRing() noexcept {
+    v1::NeverNull<io_uring*> IOUringQueueBase::getRing() noexcept {
         if constexpr (DO_INTERNAL_DEBUG || DO_HARDENING) {
             if(_eventQueuePtr == nullptr) [[unlikely]] {
                 std::terminate();
@@ -841,15 +833,15 @@ namespace Ichor {
         return _eventQueuePtr;
     }
 
-    unsigned int IOUringQueue::getMaxEntriesCount() const noexcept {
+    unsigned int IOUringQueueBase::getMaxEntriesCount() const noexcept {
         return _entriesCount;
     }
 
-    uint32_t IOUringQueue::sqeSpaceLeft() const noexcept {
+    uint32_t IOUringQueueBase::sqeSpaceLeft() const noexcept {
         return io_uring_sq_space_left(_eventQueuePtr);
     }
 
-    io_uring_sqe *IOUringQueue::getSqe() noexcept {
+    io_uring_sqe *IOUringQueueBase::getSqe() noexcept {
         INTERNAL_IO_DEBUG("getSqe");
         auto sqe = io_uring_get_sqe(_eventQueuePtr);
         if(sqe == nullptr) {
@@ -864,23 +856,23 @@ namespace Ichor {
         return sqe;
     }
 
-    io_uring_sqe* IOUringQueue::getSqeWithData(IService *self, std::function<void(io_uring_cqe*)> fun) noexcept {
+    io_uring_sqe* IOUringQueueBase::getSqeWithData(IService *self, std::function<void(io_uring_cqe*)> fun) noexcept {
         INTERNAL_IO_DEBUG("getSqeWithData");
         auto sqe = getSqe();
-        io_uring_sqe_set_data(sqe, new UringResponseEvent{getNextEventId(), self->getServiceId(), INTERNAL_EVENT_PRIORITY, std::move(fun)});
+        io_uring_sqe_set_data(sqe, acquireResponseEvent(self->getServiceId(), std::move(fun)));
         _pendingEvents.fetch_add(1, std::memory_order_acq_rel);
         return sqe;
     }
 
-    io_uring_sqe* IOUringQueue::getSqeWithData(ServiceIdType serviceId, std::function<void(io_uring_cqe*)> fun) noexcept {
+    io_uring_sqe* IOUringQueueBase::getSqeWithData(ServiceIdType serviceId, std::function<void(io_uring_cqe*)> fun) noexcept {
         INTERNAL_IO_DEBUG("getSqeWithData");
         auto sqe = getSqe();
-        io_uring_sqe_set_data(sqe, new UringResponseEvent{getNextEventId(), serviceId, INTERNAL_EVENT_PRIORITY, std::move(fun)});
+        io_uring_sqe_set_data(sqe, acquireResponseEvent(serviceId, std::move(fun)));
         _pendingEvents.fetch_add(1, std::memory_order_acq_rel);
         return sqe;
     }
 
-    void IOUringQueue::submitIfNeeded() {
+    void IOUringQueueBase::submitIfNeeded() {
         auto space = io_uring_sq_space_left(_eventQueuePtr);
         if(space == 0) {
 //            fmt::println("submit {}", _entriesCount);
@@ -902,7 +894,7 @@ namespace Ichor {
         }
     }
 
-    void IOUringQueue::forceSubmit() {
+    void IOUringQueueBase::forceSubmit() {
         auto space = io_uring_sq_space_left(_eventQueuePtr);
 #ifdef ICHOR_ENABLE_INTERNAL_URING_DEBUGGING
         beforeSubmitDebug(space);
@@ -921,7 +913,7 @@ namespace Ichor {
         }
     }
 
-    void IOUringQueue::submitAndWait(uint32_t waitNr) {
+    void IOUringQueueBase::submitAndWait(uint32_t waitNr) {
         auto space = io_uring_sq_space_left(_eventQueuePtr);
 //        fmt::println("submit and wait {}", toSubmit);
 #ifdef ICHOR_ENABLE_INTERNAL_URING_DEBUGGING
@@ -944,11 +936,11 @@ namespace Ichor {
         }
     }
 
-    v1::Version IOUringQueue::getKernelVersion() const noexcept {
+    v1::Version IOUringQueueBase::getKernelVersion() const noexcept {
         return _kernelVersion;
     }
 
-    bool IOUringQueue::checkRingFlags(io_uring *ring) {
+    bool IOUringQueueBase::checkRingFlags(io_uring *ring) {
         if(!(ring->features & IORING_FEAT_FAST_POLL)) {
             fmt::println("IORING_FEAT_FAST_POLL not supported, requires kernel >= 5.7.0, expect reduced queue performance.");
         }
@@ -975,7 +967,7 @@ namespace Ichor {
         return true;
     }
 
-    void IOUringQueue::shouldAddQuitEvent() {
+    void IOUringQueueBase::shouldAddQuitEvent() {
         bool const shouldQuit = Detail::sigintQuit.load(std::memory_order_acquire);
 
         if(shouldQuit && !_quitEventSent.load(std::memory_order_acquire)) {
@@ -985,7 +977,34 @@ namespace Ichor {
         }
     }
 
-    tl::expected<IOUringBuf, v1::IOError> IOUringQueue::createProvidedBuffer(unsigned short entries, unsigned int entryBufferSize) noexcept {
+    UringResponseEvent *IOUringQueueBase::acquireResponseEvent(ServiceIdType serviceId, std::function<void(io_uring_cqe*)> &&fun) noexcept {
+        auto *evt = _freeResponseEventsHead;
+        if(evt == nullptr) [[unlikely]] {
+            fmt::println("No free UringResponseEvents left, too many in-flight requests. Increase the RingSize template parameter of TemplateIOUringQueue (currently {}).", _entriesCount);
+            std::terminate();
+        }
+        _freeResponseEventsHead = evt->nextFree;
+        if(_freeResponseEventsHead == nullptr) {
+            _freeResponseEventsTail = nullptr;
+        }
+        // Event has const members, so re-construct instead of assigning
+        std::destroy_at(evt);
+        return std::construct_at(evt, getNextEventId(), serviceId, INTERNAL_EVENT_PRIORITY, std::move(fun));
+    }
+
+    void IOUringQueueBase::releaseResponseEvent(UringResponseEvent *evt) noexcept {
+        // release resources held by the callback early
+        evt->fun = {};
+        evt->nextFree = nullptr;
+        if(_freeResponseEventsTail == nullptr) {
+            _freeResponseEventsHead = evt;
+        } else {
+            _freeResponseEventsTail->nextFree = evt;
+        }
+        _freeResponseEventsTail = evt;
+    }
+
+    tl::expected<IOUringBuf, v1::IOError> IOUringQueueBase::createProvidedBuffer(unsigned short entries, unsigned int entryBufferSize) noexcept {
         if(entries == 0) {
             fmt::println("createProvidedBuffer entries == 0.");
             return tl::unexpected(v1::IOError::NOT_SUPPORTED);
@@ -1045,7 +1064,7 @@ namespace Ichor {
 }
 
 #ifdef ICHOR_ENABLE_INTERNAL_URING_DEBUGGING
-    void Ichor::IOUringQueue::beforeSubmitDebug(unsigned int space) {
+    void Ichor::Detail::IOUringQueueBase::beforeSubmitDebug(unsigned int space) {
         fmt::println("going to submit {} {}", _entriesCount, space);
         _debugOpcodes = getToBeSubmittedOpcodes(_eventQueuePtr);
         for(auto &op : _debugOpcodes) {
@@ -1058,7 +1077,7 @@ namespace Ichor {
         }
     }
 
-    void Ichor::IOUringQueue::afterSubmitDebug(int ret, unsigned int space) {
+    void Ichor::Detail::IOUringQueueBase::afterSubmitDebug(int ret, unsigned int space) {
         fmt::println("still left in queue {} {} {}", ret, _entriesCount, space);
         auto newSubmitLog = getToBeSubmittedOpcodes(_eventQueuePtr);
         for(auto &op : newSubmitLog) {
