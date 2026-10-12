@@ -728,7 +728,10 @@ namespace Ichor::Detail {
                         } else {
                             std::unique_ptr<Event> uniqueEvt{evt};
                             processEvent(uniqueEvt);
-                            _pendingEvents.fetch_sub(1, std::memory_order_acq_rel);
+                            // processEvent may take ownership of the event, in which case it is not finished yet
+                            if(uniqueEvt) {
+                                _pendingEvents.fetch_sub(1, std::memory_order_acq_rel);
+                            }
                         }
                     }
                     handled++;
