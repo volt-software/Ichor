@@ -8,6 +8,7 @@
 #include <ichor/events/Event.h>
 #include <ichor/stl/ErrnoUtils.h>
 #include <ichor/stl/StringUtils.h>
+#include <ichor/stl/InplaceFunction.h>
 #include <ichor/dependency_management/IService.h>
 #include <ichor/event_queues/BaseEventQueue.h>
 #include <tl/expected.h>
@@ -20,6 +21,8 @@ struct io_uring_buf_ring;
 
 namespace Ichor {
     using ProvidedBufferIdType = int;
+    /// Callback invoked for each completion of a request created through IIOUringQueue::getSqeWithData. Stored inline, never heap allocates.
+    using UringCallback = v1::InplaceFunction<void(io_uring_cqe*), 80>;
     struct IOUringBuf final {
         IOUringBuf() = default;
         IOUringBuf(io_uring *eventQueue, io_uring_buf_ring *bufRing, char *entriesBuf, unsigned short entries, unsigned int entryBufferSize, ProvidedBufferIdType id);
@@ -63,8 +66,8 @@ namespace Ichor {
         virtual void forceSubmit() = 0;
         virtual void submitAndWait(uint32_t waitNr) = 0;
         [[nodiscard]] virtual io_uring_sqe* getSqe() noexcept = 0;
-        virtual io_uring_sqe* getSqeWithData(IService *self, std::function<void(io_uring_cqe*)> fun) noexcept = 0;
-        virtual io_uring_sqe* getSqeWithData(ServiceIdType serviceId, std::function<void(io_uring_cqe*)> fun) noexcept = 0;
+        virtual io_uring_sqe* getSqeWithData(IService *self, UringCallback fun) noexcept = 0;
+        virtual io_uring_sqe* getSqeWithData(ServiceIdType serviceId, UringCallback fun) noexcept = 0;
         [[nodiscard]] virtual v1::Version getKernelVersion() const noexcept = 0;
         ///
         /// \param entries no. of entries in the to-be-created buffer. Cannot be 0, cannot be larger than 32768 and has to be a power of two

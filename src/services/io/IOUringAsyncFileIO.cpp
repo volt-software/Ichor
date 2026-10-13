@@ -377,7 +377,7 @@ void Ichor::v1::IOUringAsyncFileIO::recursiveSubmitReadWholeFile(AsyncManualRese
     }
 }
 
-std::function<void(io_uring_cqe*)> Ichor::v1::IOUringAsyncFileIO::createNewEventHandlerReadWholeFile(AsyncManualResetEvent &evt, int &res, std::string &contents, uint64_t &sizeLeft, uint64_t fileSize, int fd, uint32_t maxSubmissions, uint64_t offset, char *buf, bool isLastInBatch) {
+Ichor::UringCallback Ichor::v1::IOUringAsyncFileIO::createNewEventHandlerReadWholeFile(AsyncManualResetEvent &evt, int &res, std::string &contents, uint64_t &sizeLeft, uint64_t fileSize, int fd, uint32_t maxSubmissions, uint64_t offset, char *buf, bool isLastInBatch) {
     return [this, &evt, &res, &contents, &sizeLeft, fileSize, fd, buf, offset, isLastInBatch, maxSubmissions](io_uring_cqe *cqe) {
         std::unique_ptr<char[]> uniqueBuf{buf};
         INTERNAL_IO_DEBUG("read response {} {} {} {} {} {}", cqe->res, cqe->res < 0 ? strerror(-cqe->res) : "", _shouldStop, evt.is_set(), contents.size(), fileSize);
@@ -455,7 +455,7 @@ void Ichor::v1::IOUringAsyncFileIO::recursiveSubmitCopyFile(AsyncManualResetEven
     }
 }
 
-std::function<void(io_uring_cqe*)> Ichor::v1::IOUringAsyncFileIO::createNewEventHandlerCopyFileReadPart(AsyncManualResetEvent &evt, int &res, uint64_t &sizeLeft, uint64_t fileSize, int fromFd, int toFd, uint32_t maxSubmissions, uint64_t offset, char *buf, bool isLastInBatch) {
+Ichor::UringCallback Ichor::v1::IOUringAsyncFileIO::createNewEventHandlerCopyFileReadPart(AsyncManualResetEvent &evt, int &res, uint64_t &sizeLeft, uint64_t fileSize, int fromFd, int toFd, uint32_t maxSubmissions, uint64_t offset, char *buf, bool isLastInBatch) {
     return [this, &evt, &res, &sizeLeft, fileSize, fromFd, toFd, buf, offset, isLastInBatch, maxSubmissions](io_uring_cqe *cqe) {
         std::unique_ptr<char[]> uniqueBuf{buf};
         INTERNAL_IO_DEBUG("read response {} {} {} {} {}", cqe->res, cqe->res < 0 ? strerror(-cqe->res) : "", _shouldStop, evt.is_set(), fileSize);
@@ -500,7 +500,7 @@ std::function<void(io_uring_cqe*)> Ichor::v1::IOUringAsyncFileIO::createNewEvent
     };
 }
 
-std::function<void(io_uring_cqe*)> Ichor::v1::IOUringAsyncFileIO::createNewEventHandlerCopyFileWritePart(AsyncManualResetEvent &evt, int &res, char *buf, bool isLastInBatch) {
+Ichor::UringCallback Ichor::v1::IOUringAsyncFileIO::createNewEventHandlerCopyFileWritePart(AsyncManualResetEvent &evt, int &res, char *buf, bool isLastInBatch) {
     return [this, &evt, &res, buf, isLastInBatch](io_uring_cqe *cqe) {
         std::unique_ptr<char[]> uniqueBuf{buf};
         INTERNAL_IO_DEBUG("write response {} {} {} {}", cqe->res, cqe->res < 0 ? strerror(-cqe->res) : "", _shouldStop, evt.is_set());

@@ -11,6 +11,7 @@
 #include <unistd.h>
 #include <sys/mman.h>
 #include <cstdlib>
+#include <algorithm>
 #include <memory>
 #include <ichor/event_queues/IIOUringQueue.h>
 #include <ichor/stl/LinuxUtils.h>
@@ -330,6 +331,90 @@ namespace Ichor {
 }
 
 namespace Ichor::Detail {
+    namespace {
+        constexpr unsigned int CROSS_THREAD_RING_ENTRIES = 64;
+        constexpr unsigned int CQ_ENTRIES_MULTIPLIER = 4;
+        constexpr unsigned int MAX_CQ_ENTRIES = 65536; // IORING_MAX_CQ_ENTRIES
+
+        /// io_uring used to send events with IORING_OP_MSG_RING to queues running on other threads, when the sending thread does not run an IOUringQueue itself.
+        /// Created once per thread instead of once per event.
+        struct CrossThreadRing final {
+            CrossThreadRing() = default;
+            CrossThreadRing(CrossThreadRing const &) = delete;
+            CrossThreadRing& operator=(CrossThreadRing const &) = delete;
+            ~CrossThreadRing() {
+                if(initialized) {
+                    // make sure all messages have been sent before tearing down the ring
+                    while(inFlight > 0) {
+                        io_uring_cqe *cqe{};
+                        auto ret = io_uring_wait_cqe(&ring, &cqe);
+                        if(ret < 0) {
+                            break;
+                        }
+                        if(cqe->res < 0) {
+                            fmt::println("cross thread msg_ring completion event failure {}, dropped event", cqe->res);
+                        }
+                        io_uring_cqe_seen(&ring, cqe);
+                        inFlight--;
+                    }
+                    io_uring_queue_exit(&ring);
+                }
+            }
+
+            io_uring ring{};
+            uint32_t inFlight{};
+            bool initialized{};
+        };
+
+        thread_local CrossThreadRing crossThreadRing{};
+
+        CrossThreadRing &getCrossThreadRing(v1::Version const &kernelVersion) {
+            auto &r = crossThreadRing;
+            if(r.initialized) [[likely]] {
+                return r;
+            }
+
+            io_uring_params p{};
+            // no IORING_SETUP_DEFER_TASKRUN, as completions are reaped without entering the kernel
+            if(kernelVersion >= v1::Version{5, 19, 0}) {
+                p.flags |= IORING_SETUP_COOP_TASKRUN;
+            }
+            if(kernelVersion >= v1::Version{6, 0, 0}) {
+                p.flags |= IORING_SETUP_SINGLE_ISSUER;
+            }
+            auto ret = io_uring_queue_init_params(CROSS_THREAD_RING_ENTRIES, &r.ring, &p);
+            if(ret == -ENOSYS) [[unlikely]] {
+                fmt::println("io_uring_queue_init_params() for cross thread ring failed, ret {}, probably not enabled in the kernel.", -ret);
+                std::terminate();
+            }
+            if(ret < 0) [[unlikely]] {
+                p = {};
+                ret = io_uring_queue_init_params(CROSS_THREAD_RING_ENTRIES, &r.ring, &p);
+                if(ret < 0) [[unlikely]] {
+                    fmt::println("io_uring_queue_init_params() for cross thread ring failed, ret {}", -ret);
+                    std::terminate();
+                }
+            }
+            r.initialized = true;
+            return r;
+        }
+
+        void reapCrossThreadRing(CrossThreadRing &r) {
+            io_uring_cqe *cqe{};
+            unsigned int head{};
+            unsigned int handled{};
+            io_uring_for_each_cqe(&r.ring, head, cqe) {
+                if(cqe->res < 0) [[unlikely]] {
+                    fmt::println("cross thread msg_ring completion event failure {}, dropped event", cqe->res);
+                    std::terminate();
+                }
+                handled++;
+            }
+            io_uring_cq_advance(&r.ring, handled);
+            r.inFlight -= handled;
+        }
+    }
+
     IOUringQueueBase::IOUringQueueBase(std::span<UringResponseEvent> responseEvents, uint64_t quitTimeoutMs, long long pollTimeoutNs, tl::optional<v1::Version> emulateKernelVersion) : _quitTimeoutMs(quitTimeoutMs), _entriesCount(static_cast<unsigned int>(responseEvents.size())), _pollTimeoutNs(pollTimeoutNs) {
         for(auto &evt : responseEvents) {
             releaseResponseEvent(&evt);
@@ -435,71 +520,36 @@ namespace Ichor::Detail {
                 }
             }
 
-            io_uring tempQueue{};
-            io_uring_params p{};
-            p.flags = IORING_SETUP_ATTACH_WQ;
-            if(_kernelVersion >= v1::Version{5, 19, 0}) {
-                p.flags |= IORING_SETUP_COOP_TASKRUN;
-            } else {
-                fmt::println("IORING_SETUP_COOP_TASKRUN not supported, requires kernel >= 5.19.0, expect reduced performance.");
-            }
-            if(_kernelVersion >= v1::Version{6, 0, 0}) {
-                p.flags |= IORING_SETUP_SINGLE_ISSUER;
-            } else {
-                fmt::println("IORING_SETUP_SINGLE_ISSUER not supported, requires kernel >= 6.0.0, expect reduced performance.");
-            }
-            if(_kernelVersion >= v1::Version{6, 1, 0}) {
-                p.flags |= IORING_SETUP_DEFER_TASKRUN;
-            } else {
-                fmt::println("IORING_SETUP_DEFER_TASKRUN not supported, requires kernel >= 6.1.0, expect reduced performance.");
-            }
-            p.wq_fd = static_cast<__u32>(_eventQueuePtr->ring_fd);
-            auto ret = io_uring_queue_init_params(4, &tempQueue, &p);
-            if(ret == -ENOSYS) [[unlikely]] {
-                // TODO replace all throws with prints + terminates
-                fmt::println("io_uring_queue_init_params() with WQ failed, ret {}, probably not enabled in the kernel.", -ret);
-                std::terminate();
-            }
-            if(ret < 0) [[unlikely]] {
-                if(p.flags == IORING_SETUP_ATTACH_WQ) { // no use in retrying
-                    fmt::println("io_uring_queue_init_params() failed, ret {}", -ret);
-                    std::terminate();
-                }
-                fmt::println("Couldn't set queue params 0x{:X}, retrying without. Expect reduced performance.", p.flags);
-                p.flags = IORING_SETUP_ATTACH_WQ;
-                ret = io_uring_queue_init_params(4, &tempQueue, &p);
-                if(ret < 0) [[unlikely]] {
-                    fmt::println("io_uring_queue_init_params() for tempQueue failed, ret {}", -ret);
-                    std::terminate();
-                }
-            }
-            ScopeGuard sg{[&tempQueue]() {
-                io_uring_queue_exit(&tempQueue);
-            }};
+            auto &tempQueue = getCrossThreadRing(_kernelVersion);
+            reapCrossThreadRing(tempQueue);
 
-            auto sqe = io_uring_get_sqe(&tempQueue);
+            auto *sqe = io_uring_get_sqe(&tempQueue.ring);
+            if(sqe == nullptr) [[unlikely]] {
+                // all slots in use by msg_rings that haven't completed yet, wait for one
+                auto ret = io_uring_submit_and_wait(&tempQueue.ring, 1);
+                if(ret < 0) [[unlikely]] {
+                    fmt::println("io_uring_submit_and_wait() for cross thread ring failed, ret {}", -ret);
+                    std::terminate();
+                }
+                reapCrossThreadRing(tempQueue);
+                sqe = io_uring_get_sqe(&tempQueue.ring);
+                if(sqe == nullptr) [[unlikely]] {
+                    fmt::println("Couldn't get sqe for cross thread ring");
+                    std::terminate();
+                }
+            }
             io_uring_prep_msg_ring(sqe, _eventQueuePtr->ring_fd, 0, reinterpret_cast<uintptr_t>(reinterpret_cast<void*>(procEvent)), 0);
+            io_uring_sqe_set_data64(sqe, 0);
             TSAN_ANNOTATE_HAPPENS_BEFORE(_eventQueuePtr);
-            ret = io_uring_submit_and_wait(&tempQueue, 1);
+            // msg_ring generally completes inline, the completion is checked for errors on the next push from this thread or when the thread exits
+            auto ret = io_uring_submit(&tempQueue.ring);
             if(ret != 1) [[unlikely]] {
-                fmt::println("io_uring_submit_and_get_events {}", ret);
+                fmt::println("io_uring_submit() for cross thread ring {}", ret);
                 fmt::println("submit wrong amount, would result in dropping event");
                 std::terminate();
             }
-
-            io_uring_cqe *cqe;
-            ret = io_uring_wait_cqe(&tempQueue, &cqe);
-            if(ret < 0) {
-                fmt::println("io_uring_wait_cqe {}", ret);
-                fmt::println("couldn't get completion event, would result in dropping event");
-                std::terminate();
-            }
-            if(cqe->res < 0) {
-                fmt::println("completion event {}", cqe->res);
-                fmt::println("Completion event failure, would result in dropping event");
-                std::terminate();
-            }
-            io_uring_cqe_seen(&tempQueue, cqe);
+            tempQueue.inFlight++;
+            reapCrossThreadRing(tempQueue);
 
 //            fmt::println("pushEventInternal() {} {}", std::hash<std::thread::id>{}(std::this_thread::get_id()), std::hash<std::thread::id>{}(_threadId));
 
@@ -580,6 +630,11 @@ namespace Ichor::Detail {
             p.flags |= IORING_SETUP_DEFER_TASKRUN;
         } else {
             fmt::println("IORING_SETUP_DEFER_TASKRUN not supported, requires kernel >= 6.1.0, expect reduced performance.");
+        }
+        if(_kernelVersion >= v1::Version{5, 5, 0}) {
+            // A larger completion queue avoids the (slow) kernel overflow list when bursts of completions exceed the default of 2 * _entriesCount
+            p.flags |= IORING_SETUP_CQSIZE;
+            p.cq_entries = std::min(_entriesCount * CQ_ENTRIES_MULTIPLIER, MAX_CQ_ENTRIES);
         }
         p.sq_thread_idle = 50;
         auto ret = io_uring_queue_init_params(_entriesCount, _eventQueuePtr, &p);
@@ -692,75 +747,64 @@ namespace Ichor::Detail {
             __kernel_timespec ts{};
             ts.tv_nsec = _pollTimeoutNs;
 
-            auto ret = io_uring_wait_cqes(_eventQueuePtr, &cqe, 1, &ts, nullptr);
-//            fmt::println("io_uring_wait_cqe_timeout {} {}", ret, reinterpret_cast<void*>(cqe));
+            auto space = io_uring_sq_space_left(_eventQueuePtr);
+#ifdef ICHOR_ENABLE_INTERNAL_URING_DEBUGGING
+            if(space < _entriesCount) {
+                beforeSubmitDebug(space);
+            }
+#endif
+            // Submit everything queued up while handling the previous batch and wait for new completions in one syscall
+            auto ret = io_uring_submit_and_wait_timeout(_eventQueuePtr, &cqe, 1, &ts, nullptr);
+//            fmt::println("io_uring_submit_and_wait_timeout {} {}", ret, reinterpret_cast<void*>(cqe));
             if(ret < 0 && ret != -ETIME) [[unlikely]] {
                 if(ret == -EBADF) {
-                    fmt::println("io_uring_wait_cqes() failed, ret {}. Did you create the event loop on the same thread as you started the queue?", -ret);
+                    fmt::println("io_uring_submit_and_wait_timeout() failed, ret {}. Did you create the event loop on the same thread as you started the queue?", -ret);
                 } else {
-                    fmt::println("io_uring_wait_cqes() failed, ret {}", -ret);
+                    fmt::println("io_uring_submit_and_wait_timeout() failed, ret {}", -ret);
                 }
+                std::terminate();
+            }
+            // The return value is not always the amount of submitted sqes (e.g. when a cqe was already available), so check that the kernel consumed everything instead.
+            if(auto spaceAfter = io_uring_sq_space_left(_eventQueuePtr); spaceAfter != _entriesCount) [[unlikely]] {
+                fmt::println("submit wrong amount2 {} {} {} {}", ret, _entriesCount, space, spaceAfter);
+#ifdef ICHOR_ENABLE_INTERNAL_URING_DEBUGGING
+                afterSubmitDebug(ret, space);
+#endif
                 std::terminate();
             }
 
             unsigned int handled{};
+            uint64_t finished{};
             unsigned int head{};
-            if(ret != -ETIME) {
-
-                io_uring_for_each_cqe(_eventQueuePtr, head, cqe) {
-                    TSAN_ANNOTATE_HAPPENS_AFTER(cqe->user_data);
-                    auto *evt = reinterpret_cast<Event *>(io_uring_cqe_get_data(cqe));
-                    if(evt != nullptr) {
-//                        INTERNAL_IO_DEBUG("processing {}", evt->get_name());
-                        if(evt->get_type() == UringResponseEvent::TYPE) {
-                            auto *resEvt = static_cast<UringResponseEvent*>(evt);
-                            resEvt->fun(cqe);
-                            if((cqe->flags & IORING_CQE_F_MORE) != IORING_CQE_F_MORE) {
-                                releaseResponseEvent(resEvt);
-                                _pendingEvents.fetch_sub(1, std::memory_order_acq_rel);
-                            }
-//                            else {
-//                                fmt::println("F_MORE {}", evt->id);
-//                            }
-                        } else {
-                            std::unique_ptr<Event> uniqueEvt{evt};
-                            processEvent(uniqueEvt);
-                            // processEvent may take ownership of the event, in which case it is not finished yet
-                            if(uniqueEvt) {
-                                _pendingEvents.fetch_sub(1, std::memory_order_acq_rel);
-                            }
+            io_uring_for_each_cqe(_eventQueuePtr, head, cqe) {
+                TSAN_ANNOTATE_HAPPENS_AFTER(cqe->user_data);
+                auto *evt = reinterpret_cast<Event *>(io_uring_cqe_get_data(cqe));
+                if(evt != nullptr) {
+//                    INTERNAL_IO_DEBUG("processing {}", evt->get_name());
+                    if(evt->get_type() == UringResponseEvent::TYPE) {
+                        auto *resEvt = static_cast<UringResponseEvent*>(evt);
+                        resEvt->fun(cqe);
+                        if((cqe->flags & IORING_CQE_F_MORE) != IORING_CQE_F_MORE) {
+                            releaseResponseEvent(resEvt);
+                            finished++;
                         }
-                    }
-                    handled++;
-                }
-                io_uring_cq_advance(_eventQueuePtr, handled);
-
-                {
-                    auto space = io_uring_sq_space_left(_eventQueuePtr);
-                    auto ready = io_uring_cq_ready(_eventQueuePtr);
-                    if(space < _entriesCount && ready == 0u) {
-
-#ifdef ICHOR_ENABLE_INTERNAL_URING_DEBUGGING
-                        beforeSubmitDebug(space);
-#endif
-
-                        INTERNAL_IO_DEBUG("submit end of loop {}", _entriesCount - space);
-                        ret = io_uring_submit_and_get_events(_eventQueuePtr);
-                        if(ret < 0) [[unlikely]] {
-                            fmt::println("io_uring_submit_and_get_events() failed, ret {}", -ret);
-                            std::terminate();
-                        }
-                        if((unsigned int)ret != _entriesCount - space) [[unlikely]] {
-                            fmt::println("submit wrong amount2 {} {} {}", ret, _entriesCount, space);
-
-#ifdef ICHOR_ENABLE_INTERNAL_URING_DEBUGGING
-                            afterSubmitDebug(ret, space);
-#endif
-
-                            std::terminate();
+//                        else {
+//                            fmt::println("F_MORE {}", evt->id);
+//                        }
+                    } else {
+                        std::unique_ptr<Event> uniqueEvt{evt};
+                        processEvent(uniqueEvt);
+                        // processEvent may take ownership of the event, in which case it is not finished yet
+                        if(uniqueEvt) {
+                            finished++;
                         }
                     }
                 }
+                handled++;
+            }
+            io_uring_cq_advance(_eventQueuePtr, handled);
+            if(finished > 0) {
+                _pendingEvents.fetch_sub(finished, std::memory_order_acq_rel);
             }
 
             shouldAddQuitEvent();
@@ -859,7 +903,7 @@ namespace Ichor::Detail {
         return sqe;
     }
 
-    io_uring_sqe* IOUringQueueBase::getSqeWithData(IService *self, std::function<void(io_uring_cqe*)> fun) noexcept {
+    io_uring_sqe* IOUringQueueBase::getSqeWithData(IService *self, UringCallback fun) noexcept {
         INTERNAL_IO_DEBUG("getSqeWithData");
         auto sqe = getSqe();
         io_uring_sqe_set_data(sqe, acquireResponseEvent(self->getServiceId(), std::move(fun)));
@@ -867,7 +911,7 @@ namespace Ichor::Detail {
         return sqe;
     }
 
-    io_uring_sqe* IOUringQueueBase::getSqeWithData(ServiceIdType serviceId, std::function<void(io_uring_cqe*)> fun) noexcept {
+    io_uring_sqe* IOUringQueueBase::getSqeWithData(ServiceIdType serviceId, UringCallback fun) noexcept {
         INTERNAL_IO_DEBUG("getSqeWithData");
         auto sqe = getSqe();
         io_uring_sqe_set_data(sqe, acquireResponseEvent(serviceId, std::move(fun)));
@@ -980,7 +1024,7 @@ namespace Ichor::Detail {
         }
     }
 
-    UringResponseEvent *IOUringQueueBase::acquireResponseEvent(ServiceIdType serviceId, std::function<void(io_uring_cqe*)> &&fun) noexcept {
+    UringResponseEvent *IOUringQueueBase::acquireResponseEvent(ServiceIdType serviceId, UringCallback &&fun) noexcept {
         auto *evt = _freeResponseEventsHead;
         if(evt == nullptr) [[unlikely]] {
             fmt::println("No free UringResponseEvents left, too many in-flight requests. Increase the RingSize template parameter of TemplateIOUringQueue (currently {}).", _entriesCount);
@@ -997,7 +1041,7 @@ namespace Ichor::Detail {
 
     void IOUringQueueBase::releaseResponseEvent(UringResponseEvent *evt) noexcept {
         // release resources held by the callback early
-        evt->fun = {};
+        evt->fun.reset();
         evt->nextFree = nullptr;
         if(_freeResponseEventsTail == nullptr) {
             _freeResponseEventsHead = evt;

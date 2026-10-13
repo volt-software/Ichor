@@ -223,7 +223,7 @@ uint64_t Ichor::v1::IOUringTcpHostService::getPriority() {
     return _priority;
 }
 
-std::function<void(io_uring_cqe *)> Ichor::v1::IOUringTcpHostService::createAcceptHandler() noexcept {
+Ichor::UringCallback Ichor::v1::IOUringTcpHostService::createAcceptHandler() noexcept {
     return [this](io_uring_cqe *cqe) {
         INTERNAL_IO_DEBUG("accept res: {} {}", cqe->res, cqe->res < 0 ? strerror(-cqe->res) : "");
 

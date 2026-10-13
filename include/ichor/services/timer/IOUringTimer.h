@@ -66,9 +66,9 @@ namespace Ichor::v1 {
         void submitRemove();
         void submitUpdate();
         void dispatchCallback();
-        std::function<void(io_uring_cqe*)> createNewHandler() noexcept;
-        std::function<void(io_uring_cqe*)> createNewStopHandler() noexcept;
-        std::function<void(io_uring_cqe*)> createNewUpdateHandler() noexcept;
+        UringCallback createNewHandler() noexcept;
+        UringCallback createNewStopHandler() noexcept;
+        UringCallback createNewUpdateHandler() noexcept;
         /// Calls the callbacks given to stopTimer and marks the timer as stopped.
         void finishStopping();
 
