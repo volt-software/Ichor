@@ -276,7 +276,7 @@ void Ichor::v1::IOUringTcpConnectionService<InterfaceT>::removeDependencyInstanc
 }
 
 template <typename InterfaceT> requires Ichor::DerivedAny<InterfaceT, Ichor::v1::IConnectionService, Ichor::v1::IHostConnectionService, Ichor::v1::IClientConnectionService>
-std::function<void(io_uring_cqe*)> Ichor::v1::IOUringTcpConnectionService<InterfaceT>::createRecvHandler() noexcept {
+Ichor::UringCallback Ichor::v1::IOUringTcpConnectionService<InterfaceT>::createRecvHandler() noexcept {
     return [this](io_uring_cqe *cqe) {
         INTERNAL_IO_DEBUG("recv res: {} {}", cqe->res, cqe->res < 0 ? strerror(-cqe->res) : "");
 

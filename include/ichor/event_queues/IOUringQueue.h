@@ -18,7 +18,7 @@ namespace Ichor {
         /// Event used as user_data for sqe's requested through IIOUringQueue::getSqeWithData. Instances are pooled by TemplateIOUringQueue and never heap allocated.
         struct UringResponseEvent final : public Event {
             UringResponseEvent() noexcept : Event(0, ServiceIdType{0}, INTERNAL_EVENT_PRIORITY) {}
-            UringResponseEvent(uint64_t _id, ServiceIdType _originatingService, uint64_t _priority, std::function<void(io_uring_cqe*)> _fun) noexcept :
+            UringResponseEvent(uint64_t _id, ServiceIdType _originatingService, uint64_t _priority, UringCallback _fun) noexcept :
                     Event(_id, _originatingService, _priority), fun(std::move(_fun)) {}
             ~UringResponseEvent() final = default;
 
@@ -29,8 +29,7 @@ namespace Ichor {
                 return TYPE;
             }
 
-            std::function<void(io_uring_cqe*)> fun;
-            int32_t res{};
+            UringCallback fun;
             UringResponseEvent *nextFree{};
             static constexpr NameHashType TYPE = typeNameHash<UringResponseEvent>();
             static constexpr std::string_view NAME = typeName<UringResponseEvent>();
@@ -70,8 +69,8 @@ namespace Ichor {
 
             [[nodiscard]] uint32_t sqeSpaceLeft() const noexcept final;
             [[nodiscard]] io_uring_sqe *getSqe() noexcept final;
-            io_uring_sqe* getSqeWithData(IService *self, std::function<void(io_uring_cqe*)> fun) noexcept final;
-            io_uring_sqe* getSqeWithData(ServiceIdType serviceId, std::function<void(io_uring_cqe*)> fun) noexcept final;
+            io_uring_sqe* getSqeWithData(IService *self, UringCallback fun) noexcept final;
+            io_uring_sqe* getSqeWithData(ServiceIdType serviceId, UringCallback fun) noexcept final;
 
             void submitIfNeeded() final;
             void forceSubmit() final;
@@ -86,7 +85,7 @@ namespace Ichor {
         private:
             bool checkRingFlags(io_uring* ring);
             void shouldAddQuitEvent();
-            [[nodiscard]] UringResponseEvent *acquireResponseEvent(ServiceIdType serviceId, std::function<void(io_uring_cqe*)> &&fun) noexcept;
+            [[nodiscard]] UringResponseEvent *acquireResponseEvent(ServiceIdType serviceId, UringCallback &&fun) noexcept;
             void releaseResponseEvent(UringResponseEvent *evt) noexcept;
 
 #ifdef ICHOR_ENABLE_INTERNAL_URING_DEBUGGING

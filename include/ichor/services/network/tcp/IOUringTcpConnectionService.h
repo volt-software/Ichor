@@ -51,7 +51,7 @@ namespace Ichor::v1 {
         void addDependencyInstance(Ichor::ScopedServiceProxy<IIOUringQueue*>, IService&) noexcept;
         void removeDependencyInstance(Ichor::ScopedServiceProxy<IIOUringQueue*>, IService&) noexcept;
 
-        std::function<void(io_uring_cqe*)> createRecvHandler() noexcept;
+        UringCallback createRecvHandler() noexcept;
 
         friend DependencyRegister;
 

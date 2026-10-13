@@ -60,8 +60,8 @@ namespace Ichor::v1 {
         [[nodiscard]] ServiceIdType getRequestingServiceId() const noexcept final;
 
     private:
-        std::function<void(io_uring_cqe*)> createNewHandler() noexcept;
-        std::function<void(io_uring_cqe*)> createNewUpdateHandler() noexcept;
+        UringCallback createNewHandler() noexcept;
+        UringCallback createNewUpdateHandler() noexcept;
 
         template <typename TIMER, typename QUEUE>
         friend class TimerFactory;

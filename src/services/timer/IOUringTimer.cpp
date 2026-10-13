@@ -4,7 +4,7 @@
 
 using namespace std::chrono_literals;
 
-static std::function<void(io_uring_cqe *)> createNewStopHandler(Ichor::ScopedServiceProxy<Ichor::IIOUringQueue*> q, Ichor::ServiceIdType requestingServiceId, uint64_t timerId, uint64_t uringTimerId) noexcept {
+static Ichor::UringCallback createNewStopHandler(Ichor::ScopedServiceProxy<Ichor::IIOUringQueue*> q, Ichor::ServiceIdType requestingServiceId, uint64_t timerId, uint64_t uringTimerId) noexcept {
     INTERNAL_IO_DEBUG("IOUringTimer {} for {} createNewStopHandler", timerId, requestingServiceId);
     return [q, requestingServiceId, timerId, uringTimerId](io_uring_cqe *cqe) {
         if(cqe->res < 0) {
@@ -151,7 +151,7 @@ Ichor::ServiceIdType Ichor::v1::IOUringTimer::getRequestingServiceId() const noe
     return _requestingServiceId;
 }
 
-std::function<void(io_uring_cqe *)> Ichor::v1::IOUringTimer::createNewHandler() noexcept {
+Ichor::UringCallback Ichor::v1::IOUringTimer::createNewHandler() noexcept {
     INTERNAL_IO_DEBUG("IOUringTimer {} for {} createNewHandler", _timerId, _requestingServiceId);
     return [this](io_uring_cqe *cqe) {
         if((cqe->res <= 0 && cqe->res != -ETIME)) {
@@ -186,7 +186,7 @@ std::function<void(io_uring_cqe *)> Ichor::v1::IOUringTimer::createNewHandler() 
     };
 }
 
-std::function<void(io_uring_cqe *)> Ichor::v1::IOUringTimer::createNewUpdateHandler() noexcept {
+Ichor::UringCallback Ichor::v1::IOUringTimer::createNewUpdateHandler() noexcept {
     INTERNAL_IO_DEBUG("IOUringTimer {} for {} createNewUpdateHandler", _timerId, _requestingServiceId);
     return [this](io_uring_cqe *cqe) {
         if(cqe->res < 0) {
