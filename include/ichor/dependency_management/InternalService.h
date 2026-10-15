@@ -1,5 +1,7 @@
 #pragma once
 
+#include <ichor/events/Event.h>
+#include <ichor/dependency_management/AdvancedService.h>
 #include <ichor/dependency_management/IService.h>
 
 namespace Ichor::Detail {

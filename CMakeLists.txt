@@ -76,6 +76,7 @@ cmake_dependent_option(ICHOR_ENABLE_INTERNAL_URING_DEBUGGING "Add verbose loggin
 option(ICHOR_USE_BACKWARD "Use backward-cpp to print stacktraces on crashes or when the user wants to. Useful for debugging." $ICHOR_BUILDING_DEBUG)
 option(ICHOR_USE_HIREDIS "Add hiredis dependency" OFF)
 option(ICHOR_MUSL "Use when building for musl instead of glibc" OFF)
+cmake_dependent_option(ICHOR_VERIFY_INTERFACE_HEADERS "Verify that all public headers are self-contained, build target all_verify_interface_header_sets to check. Requires CMake 3.24+" OFF "CMAKE_VERSION VERSION_GREATER_EQUAL 3.24" OFF)
 option(ICHOR_AARCH64 "Use when building for aarch64. Turns off some x86-specific compiler flags." OFF)
 
 find_package(OpenSSL 3.0.0)
@@ -705,6 +706,44 @@ target_include_directories(ichor PUBLIC
         $<BUILD_INTERFACE:${ICHOR_EXTERNAL_DIR}/glaze/include>
         $<INSTALL_INTERFACE:include/ichor/external>)
 
+# Header file set so that CMake can verify that every public header compiles on its own (self-contained headers).
+# Build the `all_verify_interface_header_sets` target to run the verification.
+if(ICHOR_VERIFY_INTERFACE_HEADERS)
+    file(GLOB_RECURSE ICHOR_PUBLIC_HEADERS ${ICHOR_TOP_DIR}/include/ichor/*.h)
+
+    # Filter out headers that depend on optional features that are not enabled
+    if(NOT ICHOR_USE_BOOST_BEAST)
+        list(FILTER ICHOR_PUBLIC_HEADERS EXCLUDE REGEX "/include/ichor/(event_queues/I?BoostAsioQueue\\.h|services/network/boost/)")
+    endif()
+    if(NOT ICHOR_USE_LIBURING)
+        list(FILTER ICHOR_PUBLIC_HEADERS EXCLUDE REGEX "/include/ichor/(ichor_liburing\\.h|event_queues/I?IOUringQueue\\.h|services/io/IOUringAsyncFileIO\\.h|services/network/tcp/IOUring|services/timer/IOUring)")
+    endif()
+    if(NOT ICHOR_USE_SDEVENT)
+        list(FILTER ICHOR_PUBLIC_HEADERS EXCLUDE REGEX "/include/ichor/event_queues/I?SdeventQueue\\.h")
+    endif()
+    if(NOT ICHOR_USE_SPDLOG)
+        list(FILTER ICHOR_PUBLIC_HEADERS EXCLUDE REGEX "/include/ichor/services/logging/Spdlog")
+    endif()
+    if(NOT ICHOR_USE_OPENSSL)
+        list(FILTER ICHOR_PUBLIC_HEADERS EXCLUDE REGEX "/include/ichor/services/network/ssl/openssl/")
+    endif()
+    if(NOT ICHOR_USE_HIREDIS)
+        list(FILTER ICHOR_PUBLIC_HEADERS EXCLUDE REGEX "/include/ichor/services/redis/HiredisService\\.h")
+    endif()
+    if(NOT ICHOR_USE_MIMALLOC)
+        list(FILTER ICHOR_PUBLIC_HEADERS EXCLUDE REGEX "/include/ichor/ichor-mimalloc\\.h")
+    endif()
+    if(NOT UNIX OR APPLE)
+        list(FILTER ICHOR_PUBLIC_HEADERS EXCLUDE REGEX "/include/ichor/stl/LinuxUtils\\.h")
+    endif()
+
+    target_sources(ichor PUBLIC
+            FILE_SET ichor_public_headers TYPE HEADERS
+            BASE_DIRS ${ICHOR_TOP_DIR}/include
+            FILES ${ICHOR_PUBLIC_HEADERS})
+    set_target_properties(ichor PROPERTIES VERIFY_INTERFACE_HEADER_SETS ON)
+endif()
+
 # Detection for backward-cpp, works without external libraries on windows and apple
 # On linux, it still works without these libraries (on gcc + glibc at least), but provides less functionality.
 if(ICHOR_USE_BACKWARD AND NOT ICHOR_MUSL)
@@ -808,11 +847,17 @@ install(DIRECTORY "${CMAKE_SOURCE_DIR}/external/glaze/include/glaze" # source di
         PATTERN "*.h" # select header files
         )
 
+if(ICHOR_VERIFY_INTERFACE_HEADERS)
+    # headers are already installed through install(DIRECTORY) above, but install(TARGETS) requires every file set to be mentioned
+    set(ICHOR_FILE_SET_INSTALL FILE_SET ichor_public_headers DESTINATION include)
+endif()
+
 install(TARGETS ichor ${MIMALLOC_TARGET}
         EXPORT IchorTargets
         LIBRARY DESTINATION lib
         ARCHIVE DESTINATION lib
         RUNTIME DESTINATION bin
+        ${ICHOR_FILE_SET_INSTALL}
         INCLUDES DESTINATION include
 )
 

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <ichor/stl/NeverAlwaysNull.h>
 #include <ichor/dependency_management/IService.h>
 #include <ichor/stl/StrongTypedef.h>
 

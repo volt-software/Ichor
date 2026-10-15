@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cstdint>
+#include <ichor/Enums.h>
 #include <memory>
 #include <vector>
 #include <ichor/Defines.h>

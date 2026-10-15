@@ -1,5 +1,9 @@
 #pragma once
 
+#include <cstdint>
+#include <ichor/Concepts.h>
+#include <ichor/events/Event.h>
+
 
 namespace Ichor::v1 {
     class [[nodiscard]] EventStackUniquePtr final {

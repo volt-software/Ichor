@@ -1,5 +1,8 @@
 #pragma once
 
+#include <ichor/CoreTypes.h>
+#include <ichor/dependency_management/ILifecycleManager.h>
+#include <tl/optional.h>
 #include <ichor/Common.h>
 #include <ichor/stl/ReferenceCountedPointer.h>
 #include <string>

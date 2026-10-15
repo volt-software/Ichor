@@ -1,5 +1,6 @@
 #pragma once
 
+#include <ichor/Common.h>
 #include <ichor/events/Event.h>
 #include <ichor/ConstevalHash.h>
 #include <ichor/dependency_management/Dependency.h>

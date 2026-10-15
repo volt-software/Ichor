@@ -1,5 +1,8 @@
 #pragma once
 
+#include <ichor/coroutines/Task.h>
+#include <ichor/dependency_management/AdvancedService.h>
+
 #if (!defined(WIN32) && !defined(_WIN32) && !defined(__WIN32) && !defined(__APPLE__)) || defined(__CYGWIN__)
 
 #include <ichor/services/network/IConnectionService.h>

@@ -1,5 +1,8 @@
 #pragma once
 
+#include <ichor/coroutines/AsyncGenerator.h>
+#include <ichor/stl/NeverAlwaysNull.h>
+#include <ichor/dependency_management/ILifecycleManager.h>
 #include <ichor/dependency_management/InternalService.h>
 #include <ichor/stl/StaticVector.h>
 

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cstdint>
+#include <ichor/coroutines/Task.h>
 #include <ichor/stl/ErrnoUtils.h>
 #include <tl/expected.h>
 #include <vector>

@@ -7,6 +7,7 @@
 
 #pragma once
 
+#include <ichor/CoreTypes.h>
 #include <coroutine>
 #include <cassert>
 #include <functional>
@@ -19,6 +20,9 @@
 #include <ichor/ConstevalHash.h>
 #include <ichor/stl/ReferenceCountedPointer.h>
 #include <ichor/stl/CompilerSpecific.h>
+#ifdef ICHOR_HAVE_STD_STACKTRACE
+#include <stacktrace>
+#endif
 
 namespace Ichor {
     template<typename T>
@@ -159,7 +163,7 @@ namespace Ichor::Detail {
             return _trace;
         }
 
-        ICHOR_CONSTEXPR_VECTOR void set_stacktrace(std::stacktrace trace) noexcept {
+        void set_stacktrace(std::stacktrace trace) noexcept {
             _trace = std::move(trace);
         }
 #endif

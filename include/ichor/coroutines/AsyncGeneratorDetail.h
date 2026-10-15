@@ -7,6 +7,8 @@
 
 #pragma once
 
+#include <ichor/DependencyManager.h>
+
 namespace Ichor::Detail {
     template <typename T>
     template <typename U> requires(!std::is_same_v<U, StartBehaviour>)

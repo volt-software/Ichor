@@ -1,5 +1,7 @@
 #pragma once
 
+#include <ichor/Defines.h>
+#include <ichor/ConstevalHash.h>
 #include <cstdint>
 #include <type_traits>
 #include <memory>
