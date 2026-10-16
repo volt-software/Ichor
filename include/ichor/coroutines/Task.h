@@ -118,7 +118,7 @@ namespace Ichor
                 m_resultType = result_type::value;
             }
 
-            constexpr void return_value(T&& value) noexcept {
+            constexpr void return_value(T&& value) noexcept(std::is_nothrow_move_constructible_v<T>) {
                 ::new (static_cast<void*>(std::addressof(m_value))) T(std::forward<T>(value));
                 m_resultType = result_type::value;
             }

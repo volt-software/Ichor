@@ -3,6 +3,17 @@
 #include <ichor/events/RunFunctionEvent.h>
 #include <ichor/event_queues/PriorityQueue.h>
 #include "TestServices/AsyncReturningManualResetEventService.h"
+#include <vector>
+
+static_assert(!std::is_copy_constructible_v<AsyncReturningManualResetEvent<int>>);
+static_assert(!std::is_move_constructible_v<AsyncReturningManualResetEvent<int>>);
+
+namespace {
+    EagerCoroutine awaitAndRecord(AsyncReturningManualResetEvent<int> &evt, std::vector<std::pair<int, int>> &order, int id) {
+        int const &value = co_await evt;
+        order.emplace_back(id, value);
+    }
+}
 
 AsyncReturningManualResetEvent<int> _evtInt;
 AsyncReturningManualResetEvent<NoCopyNoMove> _evtNoCopyNoMove;
@@ -22,6 +33,21 @@ TEST_CASE("AsyncReturningManualResetEvent") {
     SECTION("construct event initially set") {
         AsyncReturningManualResetEvent<int> event{true};
         CHECK(event.is_set());
+    }
+
+    SECTION("set resumes all waiters in FIFO order with the value") {
+        AsyncReturningManualResetEvent<int> event;
+        std::vector<std::pair<int, int>> order;
+        awaitAndRecord(event, order, 1);
+        awaitAndRecord(event, order, 2);
+        REQUIRE(order.empty());
+
+        int const value = 42;
+        event.set(value);
+        REQUIRE(order == std::vector<std::pair<int, int>>{{1, 42}, {2, 42}});
+
+        awaitAndRecord(event, order, 3);
+        REQUIRE(order == std::vector<std::pair<int, int>>{{1, 42}, {2, 42}, {3, 42}});
     }
 
     SECTION("set and reset") {
