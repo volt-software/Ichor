@@ -185,7 +185,6 @@ namespace Ichor {
             if (this->_promise->finished()) {
                 // Update iterator to end()
                 _iterator = AsyncGeneratorIterator<T>{ nullptr };
-                this->_promise->rethrow_if_unhandled_exception();
             }
 
             return _iterator;
@@ -267,8 +266,6 @@ namespace Ichor {
                     INTERNAL_COROUTINE_DEBUG("AsyncGeneratorIterator<{}>::await_resume NULL", typeName<T>());
                     // Called begin() on the empty generator.
                     return AsyncGeneratorIterator<T>{ nullptr };
-                } else if (this->_promise->finished()) {
-                    this->_promise->rethrow_if_unhandled_exception();
                 }
                 INTERNAL_COROUTINE_DEBUG("AsyncGeneratorIterator<{}>::await_resume {}", typeName<T>(), this->_promise->_id);
 
