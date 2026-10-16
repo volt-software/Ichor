@@ -45,3 +45,14 @@ public:
 namespace Ichor::Detail {
     constinit thread_local extern DependencyManager *_local_dm;
 }
+
+// Minimal coroutine type that starts eagerly and destroys itself when done, to test awaitables without a DependencyManager.
+struct EagerCoroutine {
+    struct promise_type {
+        EagerCoroutine get_return_object() noexcept { return {}; }
+        std::suspend_never initial_suspend() noexcept { return {}; }
+        std::suspend_never final_suspend() noexcept { return {}; }
+        void return_void() noexcept {}
+        void unhandled_exception() noexcept { std::terminate(); }
+    };
+};

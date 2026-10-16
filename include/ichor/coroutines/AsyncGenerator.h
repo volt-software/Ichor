@@ -13,7 +13,6 @@
 #include <ichor/Enums.h>
 #include <ichor/coroutines/IGenerator.h>
 #include <ichor/coroutines/AsyncGeneratorPromiseBase.h>
-#include <ichor/stl/ReferenceCountedPointer.h>
 #include <ichor/stl/CompilerSpecific.h>
 
 #ifdef ICHOR_HAVE_STD_STACKTRACE
@@ -47,6 +46,12 @@ namespace Ichor {
                     producerCoroutine.resume();
 
                     initialState = promise._state;
+
+                    // Neither yielded nor finished: the producer suspended on something else (e.g. an event or a Task)
+                    // and will be resumed asynchronously. When it then finishes, it needs to notify the DependencyManager.
+                    if (initialState == state::value_not_ready_consumer_active && !promise.finished()) {
+                        promise._hasSuspended = true;
+                    }
                 }
 
                 _initialState = initialState;
@@ -372,36 +377,32 @@ namespace Ichor {
         using iterator = Detail::AsyncGeneratorIterator<T>;
 
         explicit ICHOR_COROUTINE_CONSTEXPR AsyncGenerator(promise_type& promise) noexcept
-            : IGenerator(), _coroutine(std::coroutine_handle<promise_type>::from_promise(promise)), _destroyed(promise.get_destroyed()) {
-            INTERNAL_COROUTINE_DEBUG("AsyncGenerator<{}>(promise_type& promise) {} {}", typeName<T>(), _coroutine.promise().get_id(), *_destroyed);
+            : IGenerator(), _coroutine(std::coroutine_handle<promise_type>::from_promise(promise)) {
+            INTERNAL_COROUTINE_DEBUG("AsyncGenerator<{}>(promise_type& promise) {}", typeName<T>(), debug_id());
+            promise.set_owner(this);
         }
 
         ICHOR_COROUTINE_CONSTEXPR AsyncGenerator(AsyncGenerator&& other) noexcept
-            : IGenerator(), _coroutine(std::move(other._coroutine)), _destroyed(other._destroyed) {
-            INTERNAL_COROUTINE_DEBUG("AsyncGenerator<{}>(AsyncGenerator&& other) {} {}", typeName<T>(), _coroutine.promise().get_id(), *_destroyed);
-            other._coroutine = nullptr;
-            if(_coroutine != nullptr) {
-                // Assume we're moving because an iterator has not finished and has suspended
-                _coroutine.promise()._hasSuspended = true;
+            : IGenerator(), _coroutine(std::exchange(other._coroutine, nullptr)) {
+            INTERNAL_COROUTINE_DEBUG("AsyncGenerator<{}>(AsyncGenerator&& other) {}", typeName<T>(), debug_id());
+            if(_coroutine) {
+                _coroutine.promise().set_owner(this);
             }
         }
 
         ICHOR_COROUTINE_CONSTEXPR ~AsyncGenerator() final {
-            INTERNAL_COROUTINE_DEBUG("~AsyncGenerator<{}>() {} {} {}", typeName<T>(), *_destroyed, _coroutine == nullptr, !(*_destroyed) && _coroutine != nullptr ? _coroutine.promise().get_id() : 0);
-            if (!(*_destroyed) && _coroutine) {
-                if (_coroutine.promise().request_cancellation()) {
-                    _coroutine.destroy();
-                    *_destroyed = true;
-                }
-            }
+            INTERNAL_COROUTINE_DEBUG("~AsyncGenerator<{}>() {}", typeName<T>(), debug_id());
+            release();
         }
 
         ICHOR_COROUTINE_CONSTEXPR AsyncGenerator& operator=(AsyncGenerator&& other) noexcept {
-            INTERNAL_COROUTINE_DEBUG("operator=(AsyncGenerator<{}>&& other) {} {} {}", typeName<T>(), other._coroutine.promise().get_id(), *_destroyed, *other._destroyed);
-            swap(other);
-            if(_coroutine != nullptr) {
-                // Assume we're moving because an iterator has not finished and has suspended
-                _coroutine.promise()._hasSuspended = true;
+            INTERNAL_COROUTINE_DEBUG("operator=(AsyncGenerator<{}>&& other) {} {}", typeName<T>(), debug_id(), other.debug_id());
+            if(this != std::addressof(other)) {
+                release();
+                _coroutine = std::exchange(other._coroutine, nullptr);
+                if(_coroutine) {
+                    _coroutine.promise().set_owner(this);
+                }
             }
             return *this;
         }
@@ -410,22 +411,21 @@ namespace Ichor {
         AsyncGenerator& operator=(const AsyncGenerator&) = delete;
 
         [[nodiscard]] ICHOR_COROUTINE_CONSTEXPR auto begin() noexcept {
-            INTERNAL_COROUTINE_DEBUG("AsyncGenerator<{}>::begin() {} {}", typeName<T>(), *_destroyed, _coroutine == nullptr);
-            if ((*_destroyed) || !_coroutine) {
+            INTERNAL_COROUTINE_DEBUG("AsyncGenerator<{}>::begin() {}", typeName<T>(), debug_id());
+            if (!_coroutine) {
                 return Detail::AsyncGeneratorBeginOperation<T>{ nullptr };
             }
 
             return Detail::AsyncGeneratorBeginOperation<T>{ _coroutine };
         }
 
-        // TODO replace unique_ptr with a value-type with SBO
-        [[nodiscard]] ICHOR_COROUTINE_UNIQUE_PTR_CONSTEXPR std::unique_ptr<IAsyncGeneratorBeginOperation> begin_interface() noexcept final {
-            INTERNAL_COROUTINE_DEBUG("AsyncGenerator<{}>::begin_interface() {} {}", typeName<T>(), *_destroyed, _coroutine == nullptr);
-            if ((*_destroyed) || !_coroutine) {
-                return std::make_unique<Detail::AsyncGeneratorBeginOperation<T>>(nullptr);
+        [[nodiscard]] AsyncGeneratorBeginOperationHolder begin_interface() noexcept final {
+            INTERNAL_COROUTINE_DEBUG("AsyncGenerator<{}>::begin_interface() {}", typeName<T>(), debug_id());
+            if (!_coroutine) {
+                return AsyncGeneratorBeginOperationHolder{ std::in_place_type<Detail::AsyncGeneratorBeginOperation<T>>, nullptr };
             }
 
-            return std::make_unique<Detail::AsyncGeneratorBeginOperation<T>>(_coroutine);
+            return AsyncGeneratorBeginOperationHolder{ std::in_place_type<Detail::AsyncGeneratorBeginOperation<T>>, _coroutine };
         }
 
         constexpr auto end() noexcept {
@@ -433,54 +433,112 @@ namespace Ichor {
         }
 
         [[nodiscard]] ICHOR_COROUTINE_CONSTEXPR bool done() const noexcept final {
-            INTERNAL_COROUTINE_DEBUG("AsyncGenerator<{}>::done() {} {}", typeName<T>(), *_destroyed, _coroutine == nullptr ? state::unknown : _coroutine.promise()._state);
-            return (*_destroyed) || _coroutine == nullptr || _coroutine.done();
+            INTERNAL_COROUTINE_DEBUG("AsyncGenerator<{}>::done() {} {}", typeName<T>(), debug_id(), debug_state());
+            return _coroutine == nullptr || _coroutine.done();
         }
 
         ICHOR_COROUTINE_CONSTEXPR void swap(AsyncGenerator& other) noexcept {
-            INTERNAL_COROUTINE_DEBUG("AsyncGenerator<{}>::swap() {} {} {}", typeName<T>(), *_destroyed, _coroutine.promise()._state, *other._destroyed);
+            INTERNAL_COROUTINE_DEBUG("AsyncGenerator<{}>::swap() {} {}", typeName<T>(), debug_id(), other.debug_id());
             using std::swap;
             swap(_coroutine, other._coroutine);
-            swap(_destroyed, other._destroyed);
+            if(_coroutine) {
+                _coroutine.promise().set_owner(this);
+            }
+            if(other._coroutine) {
+                other._coroutine.promise().set_owner(std::addressof(other));
+            }
         }
 
         template <typename U = T> requires (!std::is_same_v<U, void>)
         [[nodiscard]] ICHOR_COROUTINE_CONSTEXPR U& get_value() noexcept {
-            INTERNAL_COROUTINE_DEBUG("AsyncGenerator<{}>::get_value() {} {} {}", typeName<T>(), typeName<U>(), *_destroyed, _coroutine.promise()._state);
-            return _coroutine.promise().value();
+            INTERNAL_COROUTINE_DEBUG("AsyncGenerator<{}>::get_value() {} {} {}", typeName<T>(), typeName<U>(), debug_id(), debug_state());
+            return promise().value();
         }
 
         ICHOR_COROUTINE_CONSTEXPR void set_priority(uint64_t priority) noexcept {
-            INTERNAL_COROUTINE_DEBUG("AsyncGenerator<{}>::set_priority({}) {} {}", typeName<T>(), priority, *_destroyed, _coroutine.promise()._state);
-            _coroutine.promise().set_priority(priority);
+            INTERNAL_COROUTINE_DEBUG("AsyncGenerator<{}>::set_priority({}) {} {}", typeName<T>(), priority, debug_id(), debug_state());
+            promise().set_priority(priority);
         }
 
         constexpr const ServiceIdType get_service_id() const noexcept final {
-            INTERNAL_COROUTINE_DEBUG("AsyncGenerator<{}>::get_service_id() {} {}", typeName<T>(), *_destroyed, _coroutine.promise()._state);
-            return _coroutine.promise().get_service_id();
+            INTERNAL_COROUTINE_DEBUG("AsyncGenerator<{}>::get_service_id() {} {}", typeName<T>(), debug_id(), debug_state());
+            return promise().get_service_id();
         }
 
         constexpr void set_service_id(ServiceIdType svcId) noexcept final {
-            INTERNAL_COROUTINE_DEBUG("AsyncGenerator<{}>::set_service_id() {} {}", typeName<T>(), *_destroyed, _coroutine.promise()._state);
-            return _coroutine.promise().set_service_id(svcId);
+            INTERNAL_COROUTINE_DEBUG("AsyncGenerator<{}>::set_service_id() {} {}", typeName<T>(), debug_id(), debug_state());
+            return promise().set_service_id(svcId);
         }
 
 #ifdef ICHOR_HAVE_STD_STACKTRACE
         [[nodiscard]] constexpr virtual std::stacktrace const &get_stacktrace() const noexcept final {
-            return _coroutine.promise().get_stacktrace();
+            return promise().get_stacktrace();
         }
 #endif
 
     private:
-        std::coroutine_handle<promise_type> _coroutine;
+        friend class Detail::AsyncGeneratorPromise<T>;
 
-        // _destroyed is shared with the underlying promise, because the promise cam get destroyed before the AsyncGenerator.
-        // Therefore AsyncGenerator constantly needs to check if we still have a live coroutine.
-        v1::ReferenceCountedPointer<bool> _destroyed;
+        /// Called by the promise when the coroutine gets destroyed.
+        constexpr void on_coroutine_destroyed() noexcept {
+            _coroutine = nullptr;
+        }
+
+        /// Cancels the coroutine. If it is suspended at a co_yield/co_return it is destroyed right away,
+        /// otherwise it is detached and destroys itself when it reaches the next co_yield/co_return.
+        ICHOR_COROUTINE_CONSTEXPR void release() noexcept {
+            if (!_coroutine) {
+                return;
+            }
+
+            auto coroutine = std::exchange(_coroutine, nullptr);
+            coroutine.promise().set_owner(nullptr);
+            if (coroutine.promise().request_cancellation()) {
+                coroutine.destroy();
+            }
+        }
+
+        [[nodiscard]] constexpr promise_type& promise() const noexcept {
+            assert(_coroutine);
+#ifdef ICHOR_USE_HARDENING
+            if(!_coroutine) [[unlikely]] {
+                std::terminate();
+            }
+#endif
+            return _coroutine.promise();
+        }
+
+        [[nodiscard]] constexpr uint64_t debug_id() const noexcept {
+            return _coroutine ? _coroutine.promise().get_id() : 0;
+        }
+
+        [[nodiscard]] constexpr state debug_state() const noexcept {
+            return _coroutine ? _coroutine.promise()._state : state::unknown;
+        }
+
+        // Reset to nullptr by the promise if the coroutine gets destroyed before this AsyncGenerator.
+        std::coroutine_handle<promise_type> _coroutine;
     };
 
     template<typename T>
     constexpr void swap(AsyncGenerator<T>& a, AsyncGenerator<T>& b) noexcept {
         a.swap(b);
+    }
+
+    namespace Detail {
+        template<typename T>
+        inline AsyncGeneratorPromise<T>::~AsyncGeneratorPromise() {
+            INTERNAL_COROUTINE_DEBUG("~AsyncGeneratorPromise<{}>()", typeName<T>());
+            if(_owner != nullptr) {
+                _owner->on_coroutine_destroyed();
+            }
+        }
+
+        inline AsyncGeneratorPromise<void>::~AsyncGeneratorPromise() {
+            INTERNAL_COROUTINE_DEBUG("~AsyncGeneratorPromise<>()");
+            if(_owner != nullptr) {
+                _owner->on_coroutine_destroyed();
+            }
+        }
     }
 }

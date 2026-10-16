@@ -29,7 +29,7 @@ namespace Ichor {
         friend class AsyncManualResetEvent;
 
         const AsyncManualResetEvent& _event;
-        AsyncManualResetEventOperation* _next;
+        AsyncManualResetEventOperation* _next{};
         std::coroutine_handle<> _awaiter;
 
     };
@@ -59,6 +59,13 @@ namespace Ichor {
             assert(_state == nullptr || _state == static_cast<void*>(this));
         }
 
+        // The 'set' state is a pointer to this object and waiters store a reference to it,
+        // so copying or moving an event would leave dangling pointers behind.
+        AsyncManualResetEvent(const AsyncManualResetEvent&) = delete;
+        AsyncManualResetEvent(AsyncManualResetEvent&&) = delete;
+        AsyncManualResetEvent& operator=(const AsyncManualResetEvent&) = delete;
+        AsyncManualResetEvent& operator=(AsyncManualResetEvent&&) = delete;
+
         /// Wait for the event to enter the 'set' state.
         ///
         /// If the event is already 'set' then the coroutine continues without
@@ -79,7 +86,7 @@ namespace Ichor {
         /// Set the state of the event to 'set'.
         ///
         /// If there are pending coroutines awaiting the event then all
-        /// pending coroutines are resumed within this call.
+        /// pending coroutines are resumed within this call, in the order they started waiting.
         /// Any coroutines that subsequently await the event will continue
         /// without suspending.
         ///
@@ -87,15 +94,18 @@ namespace Ichor {
         constexpr void set() noexcept {
             void* const setState = static_cast<void*>(this);
 
-            // Needs 'release' semantics so that prior writes are visible to event awaiters
-            // that synchronise either via 'is_set()' or 'operator co_await()'.
-            // Needs 'acquire' semantics in case there are any waiters so that we see
-            // prior writes to the waiting coroutine's state and to the contents of
-            // the queued AsyncManualResetEventOperation objects.
             void* oldState = _state;
             _state = setState;
             if (oldState != setState) {
-                auto* current = static_cast<AsyncManualResetEventOperation*>(oldState);
+                // Waiters are pushed onto the front of the list, reverse it to resume them in FIFO order.
+                AsyncManualResetEventOperation* current{};
+                auto* waiter = static_cast<AsyncManualResetEventOperation*>(oldState);
+                while (waiter != nullptr) {
+                    auto* next = waiter->_next;
+                    waiter->_next = current;
+                    current = waiter;
+                    waiter = next;
+                }
                 while (current != nullptr) {
                     auto* next = current->_next;
                     current->_awaiter.resume();

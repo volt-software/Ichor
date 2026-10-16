@@ -10,6 +10,8 @@
 #include <cstdint>
 #include <coroutine>
 #include <cassert>
+#include <exception>
+#include <ichor/Defines.h>
 
 namespace Ichor {
     template <typename T>
@@ -44,6 +46,13 @@ namespace Ichor {
             return true;
         }
         constexpr T const & await_resume() const noexcept {
+            // An event constructed as initially set has no value to return.
+            assert(_event._ret != nullptr);
+#ifdef ICHOR_USE_HARDENING
+            if(_event._ret == nullptr) [[unlikely]] {
+                std::terminate();
+            }
+#endif
             return *_event._ret;
         }
 
@@ -52,7 +61,7 @@ namespace Ichor {
         friend class AsyncReturningManualResetEvent<T>;
 
         const AsyncReturningManualResetEvent<T>& _event;
-        AsyncReturningManualResetEventOperation* _next;
+        AsyncReturningManualResetEventOperation* _next{};
         std::coroutine_handle<> _awaiter;
 
     };
@@ -71,6 +80,7 @@ namespace Ichor {
     public:
 
         /// Initialise the event to either 'set' or 'not set' state.
+        /// An event that is initially set has no value, awaiting it before calling set() is an error.
         ///
         /// \param initiallySet
         /// If 'true' then initialises the event to the 'set' state, otherwise
@@ -82,6 +92,13 @@ namespace Ichor {
             // There should be no coroutines still awaiting the event.
             assert(_state == nullptr || _state == static_cast<void*>(this));
         }
+
+        // The 'set' state is a pointer to this object and waiters store a reference to it,
+        // so copying or moving an event would leave dangling pointers behind.
+        AsyncReturningManualResetEvent(const AsyncReturningManualResetEvent&) = delete;
+        AsyncReturningManualResetEvent(AsyncReturningManualResetEvent&&) = delete;
+        AsyncReturningManualResetEvent& operator=(const AsyncReturningManualResetEvent&) = delete;
+        AsyncReturningManualResetEvent& operator=(AsyncReturningManualResetEvent&&) = delete;
 
         /// Wait for the event to enter the 'set' state.
         ///
@@ -103,24 +120,29 @@ namespace Ichor {
         /// Set the state of the event to 'set'.
         ///
         /// If there are pending coroutines awaiting the event then all
-        /// pending coroutines are resumed within this call.
+        /// pending coroutines are resumed within this call, in the order they started waiting.
         /// Any coroutines that subsequently await the event will continue
         /// without suspending.
         ///
-        /// This operation is a no-op if the event was already 'set'.
+        /// Only a pointer to t is stored: t has to outlive every co_await on this event until
+        /// reset() is called or the event is destroyed. Waiters that are pending during this
+        /// call are resumed before it returns, so for them a temporary is fine.
         constexpr void set(T const &t) noexcept {
             _ret = &t;
             void* const setState = static_cast<void*>(this);
 
-            // Needs 'release' semantics so that prior writes are visible to event awaiters
-            // that synchronise either via 'is_set()' or 'operator co_await()'.
-            // Needs 'acquire' semantics in case there are any waiters so that we see
-            // prior writes to the waiting coroutine's state and to the contents of
-            // the queued AsyncReturningManualResetEventOperation objects.
             void* oldState = _state;
             _state = setState;
             if (oldState != setState) {
-                auto* current = static_cast<AsyncReturningManualResetEventOperation<T>*>(oldState);
+                // Waiters are pushed onto the front of the list, reverse it to resume them in FIFO order.
+                AsyncReturningManualResetEventOperation<T>* current{};
+                auto* waiter = static_cast<AsyncReturningManualResetEventOperation<T>*>(oldState);
+                while (waiter != nullptr) {
+                    auto* next = waiter->_next;
+                    waiter->_next = current;
+                    current = waiter;
+                    waiter = next;
+                }
                 while (current != nullptr) {
                     auto* next = current->_next;
 
@@ -154,6 +176,6 @@ namespace Ichor {
         //             Points to an 'AsyncReturningManualResetEventOperation' that is
         //             the head of a linked-list of waiters.
         mutable void* _state;
-        mutable T const * _ret;
+        mutable T const * _ret{};
     };
 }

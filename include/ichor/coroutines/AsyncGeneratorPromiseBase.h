@@ -17,7 +17,6 @@
 #include <ichor/Defines.h>
 #include <ichor/Enums.h>
 #include <ichor/ConstevalHash.h>
-#include <ichor/stl/ReferenceCountedPointer.h>
 #include <ichor/stl/CompilerSpecific.h>
 
 namespace Ichor {
@@ -140,6 +139,7 @@ namespace Ichor::Detail {
 
     protected:
         constexpr AsyncGeneratorYieldOperation internal_yield_value() noexcept;
+        void terminate_if_on_wrong_thread() const noexcept;
 
     public:
         friend class AsyncGeneratorYieldOperation;
@@ -197,27 +197,27 @@ namespace Ichor::Detail {
         using value_type = std::remove_reference_t<T>;
 
     public:
-        AsyncGeneratorPromise() noexcept : _destroyed(new bool(false)) {
-            INTERNAL_COROUTINE_DEBUG("AsyncGeneratorPromise<{}>() {}", typeName<T>(), *_destroyed);
+        AsyncGeneratorPromise() noexcept {
+            INTERNAL_COROUTINE_DEBUG("AsyncGeneratorPromise<{}>()", typeName<T>());
         }
-        ~AsyncGeneratorPromise() final {
-            INTERNAL_COROUTINE_DEBUG("~AsyncGeneratorPromise<{}>()", typeName<T>());
-            *_destroyed = true;
-        };
+        // Defined in AsyncGenerator.h, as it needs the complete AsyncGenerator type.
+        ~AsyncGeneratorPromise() final;
 
         ICHOR_COROUTINE_CONSTEXPR AsyncGenerator<T> get_return_object() noexcept {
             return AsyncGenerator<T>{ *this };
         }
 
-        template <typename U = T> requires(!std::is_same_v<U, StartBehaviour>)
-        AsyncGeneratorYieldOperation yield_value(value_type& value) noexcept(std::is_nothrow_constructible_v<T, T&&>);
+        // Yielding and returning push events onto the queue, which may allocate, hence these are not noexcept.
+        // Lvalues are copied, use std::move to yield/return move-only types.
+        template <typename U = T> requires(!std::is_same_v<U, StartBehaviour> && std::is_copy_constructible_v<U>)
+        AsyncGeneratorYieldOperation yield_value(value_type const & value);
 
         template <typename U = T> requires(!std::is_same_v<U, StartBehaviour>)
-        AsyncGeneratorYieldOperation yield_value(value_type&& value) noexcept(std::is_nothrow_constructible_v<T, T&&>);
+        AsyncGeneratorYieldOperation yield_value(value_type&& value);
 
-        void return_value(value_type &value) noexcept(std::is_nothrow_constructible_v<T, T&&>);
+        void return_value(value_type const &value) requires std::is_copy_constructible_v<T>;
 
-        void return_value(value_type &&value) noexcept(std::is_nothrow_constructible_v<T, T&&>);
+        void return_value(value_type &&value);
 
         ICHOR_COROUTINE_CONSTEXPR T& value() noexcept {
             INTERNAL_COROUTINE_DEBUG("request value {}, {}", _id, _currentValue.has_value());
@@ -228,12 +228,14 @@ namespace Ichor::Detail {
             return _finished;
         }
 
-        ICHOR_COROUTINE_CONSTEXPR v1::ReferenceCountedPointer<bool>& get_destroyed() noexcept  {
-            INTERNAL_COROUTINE_DEBUG("AsyncGeneratorPromise<{}>::get_destroyed {}, {}", typeName<T>(), _id, *_destroyed);
-            return _destroyed;
+        /// The AsyncGenerator owning this coroutine, which is notified when the coroutine is destroyed. nullptr if detached.
+        constexpr void set_owner(AsyncGenerator<T> *owner) noexcept {
+            _owner = owner;
         }
 
     private:
+        void push_continuable_if_suspended();
+
         ICHOR_COROUTINE_CONSTEXPR void set_finished() noexcept final {
             INTERNAL_COROUTINE_DEBUG("set_finished {} {}", _id, typeName<T>());
 
@@ -247,20 +249,18 @@ namespace Ichor::Detail {
 
         tl::optional<T> _currentValue{};
         bool _finished{};
-        v1::ReferenceCountedPointer<bool> _destroyed;
+        AsyncGenerator<T> *_owner{};
     };
 
     template<>
     class AsyncGeneratorPromise<void> final : public AsyncGeneratorPromiseBase
     {
     public:
-        AsyncGeneratorPromise() noexcept : _destroyed(new bool(false)) {
+        AsyncGeneratorPromise() noexcept {
             INTERNAL_COROUTINE_DEBUG("AsyncGeneratorPromise<>()");
         }
-        ~AsyncGeneratorPromise() final {
-            INTERNAL_COROUTINE_DEBUG("~AsyncGeneratorPromise<>()");
-            *_destroyed = true;
-        };
+        // Defined in AsyncGenerator.h, as it needs the complete AsyncGenerator type.
+        ~AsyncGeneratorPromise() final;
 
         ICHOR_COROUTINE_CONSTEXPR AsyncGenerator<void> get_return_object() noexcept;
 
@@ -272,8 +272,9 @@ namespace Ichor::Detail {
             return _finished;
         }
 
-        constexpr v1::ReferenceCountedPointer<bool>& get_destroyed() noexcept  {
-            return _destroyed;
+        /// The AsyncGenerator owning this coroutine, which is notified when the coroutine is destroyed. nullptr if detached.
+        constexpr void set_owner(AsyncGenerator<void> *owner) noexcept {
+            _owner = owner;
         }
 
     private:
@@ -283,7 +284,7 @@ namespace Ichor::Detail {
         }
 
         bool _finished{};
-        v1::ReferenceCountedPointer<bool> _destroyed;
+        AsyncGenerator<void> *_owner{};
     };
 }
 
