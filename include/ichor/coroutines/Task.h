@@ -31,9 +31,11 @@ namespace Ichor
             {
                 constexpr bool await_ready() const noexcept { return false; }
 
+                // Symmetric transfer: returning the continuation instead of calling resume() on it
+                // prevents the stack from growing when tasks complete synchronously in a loop.
                 template<typename PROMISE>
-                constexpr void await_suspend(std::coroutine_handle<PROMISE> coroutine) noexcept {
-                    coroutine.promise().m_continuation.resume();
+                constexpr std::coroutine_handle<> await_suspend(std::coroutine_handle<PROMISE> coroutine) noexcept {
+                    return coroutine.promise().m_continuation;
                 }
 
                 constexpr void await_resume() noexcept {}
@@ -83,7 +85,7 @@ namespace Ichor
                     case result_type::value:
                         m_value.~T();
                         break;
-#ifdef ICHOR_EXCEPTIONS_ENABLED
+#if ICHOR_EXCEPTIONS_ENABLED
                     case result_type::exception:
                         m_exception.~exception_ptr();
                         break;
@@ -100,7 +102,7 @@ namespace Ichor
             Task<T> get_return_object() noexcept;
 
             constexpr void unhandled_exception() noexcept {
-#ifdef ICHOR_EXCEPTIONS_ENABLED
+#if ICHOR_EXCEPTIONS_ENABLED
                 ::new (static_cast<void*>(std::addressof(m_exception))) std::exception_ptr(
                         std::current_exception());
 #endif
@@ -127,7 +129,7 @@ namespace Ichor
 #endif
             T& result() & {
                 if (m_resultType == result_type::exception) {
-#ifdef ICHOR_EXCEPTIONS_ENABLED
+#if ICHOR_EXCEPTIONS_ENABLED
                     std::rethrow_exception(m_exception);
 #else
                     std::terminate();
@@ -156,7 +158,7 @@ namespace Ichor
 #endif
             rvalue_type result() && {
                 if (m_resultType == result_type::exception) {
-#ifdef ICHOR_EXCEPTIONS_ENABLED
+#if ICHOR_EXCEPTIONS_ENABLED
                     std::rethrow_exception(m_exception);
 #else
                     std::terminate();
@@ -176,7 +178,7 @@ namespace Ichor
 
             union {
                 T m_value;
-#ifdef ICHOR_EXCEPTIONS_ENABLED
+#if ICHOR_EXCEPTIONS_ENABLED
                 std::exception_ptr m_exception;
 #endif
             };
@@ -199,7 +201,7 @@ namespace Ichor
             {}
 
             void unhandled_exception() noexcept {
-#ifdef ICHOR_EXCEPTIONS_ENABLED
+#if ICHOR_EXCEPTIONS_ENABLED
                 m_exception = std::current_exception();
 #endif
             }
@@ -208,17 +210,15 @@ namespace Ichor
             constexpr
 #endif
             void result() {
+#if ICHOR_EXCEPTIONS_ENABLED
                 if (m_exception) {
-#ifdef ICHOR_EXCEPTIONS_ENABLED
                     std::rethrow_exception(m_exception);
-#else
-                    std::terminate();
-#endif
                 }
+#endif
             }
 
         private:
-#ifdef ICHOR_EXCEPTIONS_ENABLED
+#if ICHOR_EXCEPTIONS_ENABLED
             std::exception_ptr m_exception;
 #endif
         };
@@ -236,7 +236,7 @@ namespace Ichor
             Task<T&> get_return_object() noexcept;
 
             constexpr void unhandled_exception() noexcept {
-#ifdef ICHOR_EXCEPTIONS_ENABLED
+#if ICHOR_EXCEPTIONS_ENABLED
                 m_exception = std::current_exception();
 #endif
             }
@@ -250,13 +250,11 @@ namespace Ichor
             constexpr
 #endif
             T& result() {
+#if ICHOR_EXCEPTIONS_ENABLED
                 if (m_exception) {
-#ifdef ICHOR_EXCEPTIONS_ENABLED
                     std::rethrow_exception(m_exception);
-#else
-                    std::terminate();
-#endif
                 }
+#endif
 
                 return *m_value;
             }
@@ -264,7 +262,7 @@ namespace Ichor
         private:
 
             T* m_value = nullptr;
-#ifdef ICHOR_EXCEPTIONS_ENABLED
+#if ICHOR_EXCEPTIONS_ENABLED
             std::exception_ptr m_exception;
 #endif
 
@@ -303,9 +301,9 @@ namespace Ichor
             }
 
             template <typename PROMISE>
-            constexpr void await_suspend(std::coroutine_handle<PROMISE> awaitingCoroutine) noexcept {
+            constexpr std::coroutine_handle<> await_suspend(std::coroutine_handle<PROMISE> awaitingCoroutine) noexcept {
                 m_coroutine.promise().set_continuation(awaitingCoroutine);
-                m_coroutine.resume();
+                return m_coroutine;
             }
         };
 

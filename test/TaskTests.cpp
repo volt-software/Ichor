@@ -31,6 +31,22 @@ Ichor::Task<void> task_waiting_on_evt_task() {
     co_return;
 }
 
+Ichor::Task<uint64_t> task_return_value(uint64_t i) {
+    co_return i;
+}
+
+uint64_t deepSum{};
+
+// Awaits many synchronously completing tasks in a row. Without symmetric transfer every iteration adds stack frames.
+Ichor::Task<void> task_awaiting_many_immediate_return_tasks() {
+    uint64_t sum{};
+    for(uint64_t i = 0; i < 1'000'000; ++i) {
+        sum += co_await task_return_value(i);
+    }
+    deepSum = sum;
+    co_return;
+}
+
 template<typename LAMBDA>
 Ichor::AsyncGenerator<void> start_task(LAMBDA *l) {
     co_await l();
@@ -89,6 +105,15 @@ TEST_CASE("TaskTests") {
         CHECK(gen.done());
         CHECK(started == true);
         CHECK(ran == true);
+    }
+
+    SECTION("awaiting many immediate return tasks does not grow the stack") {
+        deepSum = 0;
+        auto gen = start_task(task_awaiting_many_immediate_return_tasks);
+        auto it = gen.begin();
+        CHECK(it.get_finished());
+        CHECK(gen.done());
+        CHECK(deepSum == 499'999'500'000ull);
     }
 
     _evt.reset();
