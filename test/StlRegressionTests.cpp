@@ -154,8 +154,8 @@ static_assert(std::contiguous_iterator<StaticVector<int, 4>::iterator>);
 static_assert(!std::is_constructible_v<VectorView<BaseA>, std::vector<Multi>&&>);
 static_assert(std::is_constructible_v<VectorView<BaseA>, std::vector<Multi> const &>);
 
-TEST_CASE("STL regression tests") {
-    SECTION("StaticVector postfix increment/decrement return the old position") {
+TEST_CASE("STL regression tests: StaticVector postfix increment/decrement return the old position") {
+    {
         StaticVector<int, 4> v{1, 2, 3};
         auto it = v.begin();
         auto old = it++;
@@ -170,7 +170,11 @@ TEST_CASE("STL regression tests") {
         REQUIRE(*cit == 2);
     }
 
-    SECTION("StaticVector ordering is lexicographical") {
+    REQUIRE(liveTracked.empty());
+}
+
+TEST_CASE("STL regression tests: StaticVector ordering is lexicographical") {
+    {
         StaticVector<int, 4> a{1, 2};
         StaticVector<int, 4> b{2};
         REQUIRE(a < b);
@@ -192,7 +196,11 @@ TEST_CASE("STL regression tests") {
         REQUIRE(std::equal(x.begin(), x.end(), y.begin()));
     }
 
-    SECTION("StaticVector self assignment keeps the contents") {
+    REQUIRE(liveTracked.empty());
+}
+
+TEST_CASE("STL regression tests: StaticVector self assignment keeps the contents") {
+    {
         StaticVector<Tracked, 4> v{1, 2, 3};
         auto &ref = v;
         v = ref;
@@ -203,7 +211,11 @@ TEST_CASE("STL regression tests") {
         REQUIRE(toInts(v) == std::vector<int>{1, 2, 3});
     }
 
-    SECTION("StaticVector assign replaces the contents") {
+    REQUIRE(liveTracked.empty());
+}
+
+TEST_CASE("STL regression tests: StaticVector assign replaces the contents") {
+    {
         StaticVector<int, 4> v{1, 2, 3};
         v.assign(1, 9); // int arguments used to pick the iterator overload
         REQUIRE(v.size() == 1);
@@ -224,7 +236,11 @@ TEST_CASE("STL regression tests") {
         REQUIRE(toInts(t) == std::vector<int>{9});
     }
 
-    SECTION("StaticVector constructors with integral arguments") {
+    REQUIRE(liveTracked.empty());
+}
+
+TEST_CASE("STL regression tests: StaticVector constructors with integral arguments") {
+    {
         StaticVector<int, 10> v(3, 5);
         REQUIRE(v.size() == 3);
         REQUIRE(std::all_of(v.begin(), v.end(), [](int i) { return i == 5; }));
@@ -234,7 +250,11 @@ TEST_CASE("STL regression tests") {
         REQUIRE(big.size() == 260);
     }
 
-    SECTION("StaticVector insert/emplace construct into raw storage and assign into live objects") {
+    REQUIRE(liveTracked.empty());
+}
+
+TEST_CASE("STL regression tests: StaticVector insert/emplace construct into raw storage and assign into live objects") {
+    {
         StaticVector<Tracked, 10> v{1, 2, 3};
         Tracked const five{5};
         v.insert(v.cbegin() + 1, five);
@@ -263,7 +283,11 @@ TEST_CASE("STL regression tests") {
         REQUIRE(toInts(w) == std::vector<int>{1, 3, 4, 5, 6, 6, 6, 6, 2});
     }
 
-    SECTION("StaticVector insert/emplace with values aliasing elements") {
+    REQUIRE(liveTracked.empty());
+}
+
+TEST_CASE("STL regression tests: StaticVector insert/emplace with values aliasing elements") {
+    {
         StaticVector<Tracked, 8> v{1, 2, 3};
         v.insert(v.cbegin(), v[2]);
         REQUIRE(toInts(v) == std::vector<int>{3, 1, 2, 3});
@@ -277,14 +301,22 @@ TEST_CASE("STL regression tests") {
         REQUIRE(toInts(v) == std::vector<int>{2, 1, 3, 3});
     }
 
-    SECTION("StaticVector insert from single pass iterators") {
+    REQUIRE(liveTracked.empty());
+}
+
+TEST_CASE("STL regression tests: StaticVector insert from single pass iterators") {
+    {
         StaticVector<int, 8> v{1, 2};
         std::istringstream in("7 8 9");
         v.insert(v.cbegin() + 1, std::istream_iterator<int>{in}, std::istream_iterator<int>{});
         REQUIRE(v == StaticVector<int, 8>{1, 7, 8, 9, 2});
     }
 
-    SECTION("StaticVector with copy-only types") {
+    REQUIRE(liveTracked.empty());
+}
+
+TEST_CASE("STL regression tests: StaticVector with copy-only types") {
+    {
         StaticVector<CopyOnly, 6> v{1, 2, 3};
         CopyOnly const four{4};
         v.insert(v.cbegin() + 1, four);
@@ -297,7 +329,11 @@ TEST_CASE("STL regression tests") {
         REQUIRE(w == StaticVector<CopyOnly, 6>{0, 1, 2, 3});
     }
 
-    SECTION("StaticVector swap between different sizes") {
+    REQUIRE(liveTracked.empty());
+}
+
+TEST_CASE("STL regression tests: StaticVector swap between different sizes") {
+    {
         StaticVector<Tracked, 8> a{1, 2, 3, 4, 5};
         StaticVector<Tracked, 8> b{6};
         a.swap(b);
@@ -312,7 +348,11 @@ TEST_CASE("STL regression tests") {
         REQUIRE(toInts(empty) == std::vector<int>{1, 2, 3, 4, 5});
     }
 
-    SECTION("StaticVector erase/resize/const access") {
+    REQUIRE(liveTracked.empty());
+}
+
+TEST_CASE("STL regression tests: StaticVector erase/resize/const access") {
+    {
         StaticVector<Tracked, 8> v{1, 2, 3, 4};
         v.erase(v.begin()); // iterator converts to const_iterator
         REQUIRE(toInts(v) == std::vector<int>{2, 3, 4});
@@ -334,7 +374,11 @@ TEST_CASE("STL regression tests") {
         REQUIRE(zero.empty());
     }
 
-    SECTION("All StaticVector elements are destroyed") {
+    REQUIRE(liveTracked.empty());
+}
+
+TEST_CASE("STL regression tests: All StaticVector elements are destroyed") {
+    {
         {
             StaticVector<Tracked, 8> v{1, 2, 3};
             v.insert(v.cbegin() + 1, Tracked{4});
@@ -346,7 +390,11 @@ TEST_CASE("STL regression tests") {
         REQUIRE(liveTracked.empty());
     }
 
-    SECTION("ReferenceCountedPointer copies of empty pointers") {
+    REQUIRE(liveTracked.empty());
+}
+
+TEST_CASE("STL regression tests: ReferenceCountedPointer copies of empty pointers") {
+    {
         ReferenceCountedPointer<int> empty;
         ReferenceCountedPointer<int> copy{empty}; // used to dereference nullptr
         REQUIRE(!copy.has_value());
@@ -361,7 +409,11 @@ TEST_CASE("STL regression tests") {
         REQUIRE(!base.has_value());
     }
 
-    SECTION("ReferenceCountedPointer adjusts pointers for multiple inheritance") {
+    REQUIRE(liveTracked.empty());
+}
+
+TEST_CASE("STL regression tests: ReferenceCountedPointer adjusts pointers for multiple inheritance") {
+    {
         ReferenceCountedPointer<BaseB> b{new Multi()};
         REQUIRE(b->b == 2);
         auto multi = make_reference_counted<Multi>();
@@ -384,7 +436,11 @@ TEST_CASE("STL regression tests") {
         REQUIRE(moved.use_count() == 2);
     }
 
-    SECTION("make_reference_counted without arguments constructs a value") {
+    REQUIRE(liveTracked.empty());
+}
+
+TEST_CASE("STL regression tests: make_reference_counted without arguments constructs a value") {
+    {
         auto i = make_reference_counted<int>(); // used to select the default constructor, returning an empty pointer
         REQUIRE(i.has_value());
         REQUIRE(*i == 0);
@@ -394,7 +450,11 @@ TEST_CASE("STL regression tests") {
         REQUIRE(s->empty());
     }
 
-    SECTION("ReferenceCountedPointer from null pointers is empty") {
+    REQUIRE(liveTracked.empty());
+}
+
+TEST_CASE("STL regression tests: ReferenceCountedPointer from null pointers is empty") {
+    {
         ReferenceCountedPointer<int> raw{static_cast<int*>(nullptr)};
         REQUIRE(!raw.has_value());
         REQUIRE(raw == nullptr);
@@ -407,7 +467,11 @@ TEST_CASE("STL regression tests") {
         REQUIRE(!assigned.has_value());
     }
 
-    SECTION("ReferenceCountedPointer assignment from an object owned by the target") {
+    REQUIRE(liveTracked.empty());
+}
+
+TEST_CASE("STL regression tests: ReferenceCountedPointer assignment from an object owned by the target") {
+    {
         nodesDestroyed = 0;
         {
             auto head = make_reference_counted<Node>();
@@ -425,7 +489,11 @@ TEST_CASE("STL regression tests") {
         REQUIRE(nodesDestroyed == 3);
     }
 
-    SECTION("ReferenceCountedPointer swap and bool") {
+    REQUIRE(liveTracked.empty());
+}
+
+TEST_CASE("STL regression tests: ReferenceCountedPointer swap and bool") {
+    {
         auto a = make_reference_counted<int>(1);
         auto b = make_reference_counted<int>(2);
         swap(a, b);
@@ -441,7 +509,11 @@ TEST_CASE("STL regression tests") {
         REQUIRE(*copy);
     }
 
-    SECTION("AsyncSingleThreadedMutex lock guard move assignment releases the held lock") {
+    REQUIRE(liveTracked.empty());
+}
+
+TEST_CASE("STL regression tests: AsyncSingleThreadedMutex lock guard move assignment releases the held lock") {
+    {
         AsyncSingleThreadedMutex m1;
         AsyncSingleThreadedMutex m2;
         auto g1 = m1.non_blocking_lock();
@@ -455,7 +527,11 @@ TEST_CASE("STL regression tests") {
         REQUIRE(m2.non_blocking_lock());
     }
 
-    SECTION("Any moves destroy the moved-from inline object") {
+    REQUIRE(liveTracked.empty());
+}
+
+TEST_CASE("STL regression tests: Any moves destroy the moved-from inline object") {
+    {
         {
             auto a = make_unformattable_any<SmallNonTrivial>();
             auto c = make_unformattable_any<SmallNonTrivial>();
@@ -481,7 +557,11 @@ TEST_CASE("STL regression tests") {
         REQUIRE(!movedBig.has_value());
     }
 
-    SECTION("Any emplace returns a reference to the stored value and pointer casts are like std::any_cast") {
+    REQUIRE(liveTracked.empty());
+}
+
+TEST_CASE("STL regression tests: Any emplace returns a reference to the stored value and pointer casts are like std::any_cast") {
+    {
         any a;
         auto &i = a.emplace<true, int>(5);
         i = 7;
@@ -503,7 +583,11 @@ TEST_CASE("STL regression tests") {
         REQUIRE(!(a == copy));
     }
 
-    SECTION("EventStackUniquePtr moves events properly") {
+    REQUIRE(liveTracked.empty());
+}
+
+TEST_CASE("STL regression tests: EventStackUniquePtr moves events properly") {
+    {
         {
             EventStackUniquePtr empty;
             EventStackUniquePtr fromEmpty{std::move(empty)};
@@ -534,14 +618,22 @@ TEST_CASE("STL regression tests") {
         REQUIRE(StringEvent::destroyed == 4);
     }
 
-    SECTION("NeverNull") {
+    REQUIRE(liveTracked.empty());
+}
+
+TEST_CASE("STL regression tests: NeverNull") {
+    {
         int i{};
         NeverNull<int*> nn{&i};
         REQUIRE(nn.get() == &i);
         REQUIRE(std::hash<NeverNull<int*>>{}(nn) == std::hash<int*>{}(&i));
     }
 
-    SECTION("String utilities") {
+    REQUIRE(liveTracked.empty());
+}
+
+TEST_CASE("STL regression tests: String utilities") {
+    {
         REQUIRE(FastAtoi(std::to_string(std::numeric_limits<int64_t>::min()).c_str()) == std::numeric_limits<int64_t>::min());
         REQUIRE(FastAtoi("-1234567891011") == -1234567891011);
         REQUIRE(FastAtoi("-") == 0);
@@ -568,7 +660,11 @@ TEST_CASE("STL regression tests") {
         REQUIRE(SafeHexToUint("0") == 0u);
     }
 
-    SECTION("errno mapping") {
+    REQUIRE(liveTracked.empty());
+}
+
+TEST_CASE("STL regression tests: errno mapping") {
+    {
         REQUIRE(mapErrnoToError(EFAULT) == IOError::BAD_ADDRESS);
         REQUIRE(mapErrnoToError(EACCES) == IOError::NO_PERMISSION);
         REQUIRE(mapErrnoToError(EINVAL) == IOError::INVALID_ARGUMENT);
@@ -586,7 +682,11 @@ TEST_CASE("STL regression tests") {
         REQUIRE(fmt::format("{}", IOError::BAD_ADDRESS) == "BAD_ADDRESS");
     }
 
-    SECTION("ConditionVariable wait_for doesn't extend its timeout on every notify") {
+    REQUIRE(liveTracked.empty());
+}
+
+TEST_CASE("STL regression tests: ConditionVariable wait_for doesn't extend its timeout on every notify") {
+    {
         RealtimeMutex m;
         ConditionVariable cv;
         std::atomic<bool> stop{};
@@ -612,7 +712,11 @@ TEST_CASE("STL regression tests") {
         REQUIRE(elapsed < 900ms); // used to wait until the notifications stopped
     }
 
-    SECTION("ConditionVariableAny wait_for doesn't extend its timeout on every notify") {
+    REQUIRE(liveTracked.empty());
+}
+
+TEST_CASE("STL regression tests: ConditionVariableAny wait_for doesn't extend its timeout on every notify") {
+    {
         RealtimeReadWriteMutex m;
         ConditionVariableAny<RealtimeReadWriteMutex> cv;
         std::atomic<bool> stop{};
@@ -640,7 +744,11 @@ TEST_CASE("STL regression tests") {
         REQUIRE(status == cv_status::timeout);
     }
 
-    SECTION("RealtimeReadWriteMutex shared locking") {
+    REQUIRE(liveTracked.empty());
+}
+
+TEST_CASE("STL regression tests: RealtimeReadWriteMutex shared locking") {
+    {
         RealtimeReadWriteMutex m;
         m.lock_shared();
         REQUIRE(!m.try_lock());
@@ -652,7 +760,11 @@ TEST_CASE("STL regression tests") {
         m.unlock_shared();
     }
 
-    SECTION("SectionalPriorityQueue pop returns the top element") {
+    REQUIRE(liveTracked.empty());
+}
+
+TEST_CASE("STL regression tests: SectionalPriorityQueue pop returns the top element") {
+    {
         SectionalPriorityQueue<std::unique_ptr<int>, decltype([](auto const &a, auto const &b) { return *a < *b; })> q;
         q.push(std::make_unique<int>(2));
         q.push(std::make_unique<int>(5));
@@ -663,7 +775,11 @@ TEST_CASE("STL regression tests") {
         REQUIRE(q.empty());
     }
 
-    SECTION("VectorView iterators") {
+    REQUIRE(liveTracked.empty());
+}
+
+TEST_CASE("STL regression tests: VectorView iterators") {
+    {
         std::vector<Multi> vec(3);
         VectorView<BaseB> view{vec};
         REQUIRE(view.size() == 3);
@@ -676,4 +792,27 @@ TEST_CASE("STL regression tests") {
     }
 
     REQUIRE(liveTracked.empty());
+}
+
+TEST_CASE("STL regression tests: StaticVector inserting nothing keeps the elements") {
+    // long enough to not fit in the small string buffer, a self-move-assignment would empty them
+    std::string const longStr(64, 'a');
+    StaticVector<std::string, 8> v{longStr, longStr + "b", longStr + "c"};
+    std::vector<std::string> const empty;
+    v.insert(v.begin(), 0, longStr);
+    v.insert(v.begin() + 1, empty.begin(), empty.end());
+    REQUIRE(v.size() == 3);
+    REQUIRE(v[0] == longStr);
+    REQUIRE(v[1] == longStr + "b");
+    REQUIRE(v[2] == longStr + "c");
+}
+
+TEST_CASE("STL regression tests: VectorView over a vector of unique_ptrs") {
+    std::vector<std::unique_ptr<Multi>> vec;
+    vec.emplace_back(std::make_unique<Multi>());
+    vec.emplace_back(std::make_unique<Multi>());
+    VectorView<BaseB> view{vec};
+    REQUIRE(view.size() == 2);
+    REQUIRE(view[0].get() == static_cast<BaseB const*>(vec[0].get()));
+    REQUIRE((*(view.begin() + 1)).get() == static_cast<BaseB const*>(vec[1].get()));
 }

@@ -608,6 +608,10 @@ namespace Ichor::v1 {
             assert(_size + n <= N);
             assert(const_position >= cbegin() && const_position <= cend());
             auto const idx = static_cast<size_type>(const_position - cbegin());
+            if(n == 0) {
+                // nothing to insert, shifting would self-move-assign every element after idx
+                return begin() + static_cast<difference_type>(idx);
+            }
             auto const origSize = static_cast<size_type>(_size);
             T *d = _data.data();
 

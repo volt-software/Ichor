@@ -4,6 +4,7 @@
 #include <ichor/stl/CompilerSpecific.h>
 #include <cstddef>
 #include <iterator>
+#include <memory>
 #include <vector>
 #include <type_traits>
 
@@ -69,6 +70,13 @@ namespace Ichor::v1 {
         template <typename T, typename = std::enable_if_t<std::is_base_of_v<VecT, T>>>
         explicit VectorView(std::vector<T> const &&v) = delete;
 
+        /// View over the objects owned by a vector of unique_ptrs. Invalidated when v is destroyed or reallocates.
+        template <typename T, typename = std::enable_if_t<std::is_base_of_v<VecT, T>>>
+        explicit constexpr VectorView(std::vector<std::unique_ptr<T>> const &v ICHOR_LIFETIME_BOUND) noexcept
+                : _data(v.data()), _get(&VectorView::template getAtUniquePtr<T>), _size(v.size()) {}
+        template <typename T, typename = std::enable_if_t<std::is_base_of_v<VecT, T>>>
+        explicit VectorView(std::vector<std::unique_ptr<T>> const &&v) = delete;
+
         [[nodiscard]] constexpr iterator begin() const noexcept { return iterator{_data, _get, 0}; }
         [[nodiscard]] constexpr iterator end() const noexcept { return iterator{_data, _get, _size}; }
 
@@ -81,6 +89,11 @@ namespace Ichor::v1 {
         template <typename T>
         static constexpr VecT const * getAt(void const * data, std::size_t idx) noexcept {
             return static_cast<VecT const *>(static_cast<T const *>(data) + idx);
+        }
+
+        template <typename T>
+        static constexpr VecT const * getAtUniquePtr(void const * data, std::size_t idx) noexcept {
+            return static_cast<VecT const *>((static_cast<std::unique_ptr<T> const *>(data) + idx)->get());
         }
 
         void const * _data;
