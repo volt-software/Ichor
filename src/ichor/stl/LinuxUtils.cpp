@@ -1,6 +1,8 @@
 #include <ichor/stl/LinuxUtils.h>
 #include <sys/utsname.h>
 #include <cerrno>
+#include <cstring>
+#include <fmt/base.h>
 
 
 ICHOR_CONST_FUNC_ATTR tl::optional<Ichor::v1::Version> Ichor::v1::kernelVersion() {

@@ -2,9 +2,9 @@
 
 #include <type_traits> // for false_type, is_convertible etc
 #include <utility> // for forward, move
-#include <system_error> // for hash
+#include <functional> // for hash
 #include <cstddef> // for ptrdiff_t, etc
-#include <cassert>
+#include <exception> // for terminate
 
 // Copied from Microsoft GSL: https://github.com/microsoft/GSL/blob/main/include/gsl/pointers
 namespace Ichor::v1 {
@@ -35,13 +35,13 @@ namespace Ichor::v1 {
         template <typename U, typename = std::enable_if_t<std::is_convertible<U, T>::value>>
         constexpr NeverNull(U&& u) : ptr_(std::forward<U>(u))
         {
-            assert(ptr_ != nullptr);
+            ensureNotNull();
         }
 
         template <typename = std::enable_if_t<!std::is_same<std::nullptr_t, T>::value>>
         constexpr NeverNull(T u) : ptr_(std::move(u))
         {
-            assert(ptr_ != nullptr);
+            ensureNotNull();
         }
 
         template <typename U, typename = std::enable_if_t<std::is_convertible<U, T>::value>>
@@ -72,6 +72,13 @@ namespace Ichor::v1 {
         NeverNull& operator-=(std::ptrdiff_t) = delete;
         void operator[](std::ptrdiff_t) const = delete;
     private:
+        // Like GSL's Expects: the guarantee holds in release builds too, so violating it terminates instead of being compiled out like assert.
+        constexpr void ensureNotNull() const noexcept {
+            if(ptr_ == nullptr) [[unlikely]] {
+                std::terminate();
+            }
+        }
+
         T ptr_;
     };
 

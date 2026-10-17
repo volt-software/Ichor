@@ -1,12 +1,16 @@
 #pragma once
 
+#include <ichor/Defines.h>
+#include <exception>
+
 #if (defined(WIN32) || defined(_WIN32) || defined(__WIN32)) && !defined(__CYGWIN__)
+#include <windows.h>
 #include <synchapi.h>
 #else
 #include <pthread.h>
 #endif
 
-// Differs from std::mutex by setting some extra properties when creating the mutex
+// Differs from std::mutex by setting some extra properties when creating the mutex (priority inheritance, adaptive spinning)
 namespace Ichor::v1 {
     class RealtimeMutex final {
     public:
@@ -21,14 +25,19 @@ namespace Ichor::v1 {
             ::InitializeCriticalSectionAndSpinCount(native_handle(), 100);
 #else
             ::pthread_mutexattr_t attr;
-            ::pthread_mutexattr_init(&attr);
-            ::pthread_mutexattr_setprotocol(&attr, PTHREAD_PRIO_INHERIT);
+            if(::pthread_mutexattr_init(&attr) != 0) [[unlikely]] {
+                std::terminate();
+            }
+            // Priority inheritance is best-effort, not all platforms support it.
+            static_cast<void>(::pthread_mutexattr_setprotocol(&attr, PTHREAD_PRIO_INHERIT));
 
 #if !defined(__APPLE__) && !defined(ICHOR_MUSL)
-            ::pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_ADAPTIVE_NP);
+            static_cast<void>(::pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_ADAPTIVE_NP));
 #endif
 
-            ::pthread_mutex_init(native_handle(), &attr);
+            if(::pthread_mutex_init(native_handle(), &attr) != 0) [[unlikely]] {
+                std::terminate();
+            }
             ::pthread_mutexattr_destroy(&attr);
 #endif
         }
@@ -41,11 +50,22 @@ namespace Ichor::v1 {
 #endif
         }
 
+        // The native mutex may not be copied or moved
+        RealtimeMutex(const RealtimeMutex&) = delete;
+        RealtimeMutex(RealtimeMutex&&) = delete;
+        RealtimeMutex& operator=(const RealtimeMutex&) = delete;
+        RealtimeMutex& operator=(RealtimeMutex&&) = delete;
+
         void lock() noexcept {
 #if (defined(WIN32) || defined(_WIN32) || defined(__WIN32)) && !defined(__CYGWIN__)
             ::EnterCriticalSection(native_handle());
 #else
-            ::pthread_mutex_lock(native_handle());
+            [[maybe_unused]] auto const ret = ::pthread_mutex_lock(native_handle());
+            if constexpr (DO_HARDENING) {
+                if(ret != 0) [[unlikely]] {
+                    std::terminate();
+                }
+            }
 #endif
         }
 
@@ -61,7 +81,12 @@ namespace Ichor::v1 {
 #if (defined(WIN32) || defined(_WIN32) || defined(__WIN32)) && !defined(__CYGWIN__)
             ::LeaveCriticalSection(native_handle());
 #else
-            ::pthread_mutex_unlock(native_handle());
+            [[maybe_unused]] auto const ret = ::pthread_mutex_unlock(native_handle());
+            if constexpr (DO_HARDENING) {
+                if(ret != 0) [[unlikely]] {
+                    std::terminate();
+                }
+            }
 #endif
         }
 

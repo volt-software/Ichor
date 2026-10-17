@@ -50,6 +50,7 @@ endif()
 option(ICHOR_BUILD_EXAMPLES "Build examples" ON)
 option(ICHOR_BUILD_BENCHMARKS "Build benchmarks" ON)
 option(ICHOR_BUILD_TESTING "Build tests" ON)
+cmake_dependent_option(ICHOR_VERIFY_HEADERS "Compile every public STL header on its own (CMake VERIFY_INTERFACE_HEADER_SETS), verifying that they are self-contained" ON "ICHOR_BUILD_TESTING;CMAKE_VERSION VERSION_GREATER_EQUAL 3.24" OFF)
 option(ICHOR_ENABLE_INTERNAL_DEBUGGING "Add verbose logging of Ichor internals" OFF)
 option(ICHOR_ENABLE_INTERNAL_COROUTINE_DEBUGGING "Add verbose logging of Ichor coroutine internals" OFF)
 option(ICHOR_ENABLE_INTERNAL_IO_DEBUGGING "Add verbose logging of Ichor I/O internals" OFF)
@@ -705,6 +706,20 @@ target_include_directories(ichor PUBLIC
         $<BUILD_INTERFACE:${ICHOR_EXTERNAL_DIR}/glaze/include>
         $<INSTALL_INTERFACE:include/ichor/external>)
 
+# Lets CMake generate a translation unit per header that only includes that header, compiled with ichor's public usage requirements.
+# This catches headers that only compile thanks to whatever happened to be included before them.
+# Build the verification on its own with the `all_verify_interface_header_sets` target, it is part of the default build as well.
+set(ICHOR_HEADER_FILE_SET_INSTALL)
+if(ICHOR_VERIFY_HEADERS)
+    file(GLOB ICHOR_STL_HEADERS CONFIGURE_DEPENDS "${ICHOR_TOP_DIR}/include/ichor/stl/*.h")
+    target_sources(ichor PUBLIC FILE_SET ichor_stl_headers TYPE HEADERS BASE_DIRS "${ICHOR_TOP_DIR}/include" FILES ${ICHOR_STL_HEADERS})
+    # The headers are C++ only, don't try to verify them as C.
+    set_source_files_properties(${ICHOR_STL_HEADERS} PROPERTIES LANGUAGE CXX)
+    set_target_properties(ichor PROPERTIES VERIFY_INTERFACE_HEADER_SETS ON)
+    # Exported targets have to install their file sets. The headers are also installed by the install(DIRECTORY) for include/ichor below, this is the same destination.
+    set(ICHOR_HEADER_FILE_SET_INSTALL FILE_SET ichor_stl_headers DESTINATION include)
+endif()
+
 # Detection for backward-cpp, works without external libraries on windows and apple
 # On linux, it still works without these libraries (on gcc + glibc at least), but provides less functionality.
 if(ICHOR_USE_BACKWARD AND NOT ICHOR_MUSL)
@@ -814,6 +829,7 @@ install(TARGETS ichor ${MIMALLOC_TARGET}
         ARCHIVE DESTINATION lib
         RUNTIME DESTINATION bin
         INCLUDES DESTINATION include
+        ${ICHOR_HEADER_FILE_SET_INSTALL}
 )
 
 if(ICHOR_USE_MIMALLOC AND NOT ICHOR_USE_SYSTEM_MIMALLOC)

@@ -27,21 +27,39 @@ Ichor::v1::Timer::~Timer() noexcept {
     }
 }
 
-// Ichor::v1::Timer& Ichor::v1::Timer::operator=(Ichor::v1::Timer &&o) noexcept {
-//     _queue = o._queue;
-//     _timerId = o._timerId;
-//     _state = o._state;
-//     _fireOnce = o._fireOnce;
-//     _intervalNanosec = o._intervalNanosec;
-//     _eventInsertionThread = std::move(o._eventInsertionThread);
-//     _fnAsync = std::move(o._fnAsync);
-//     _fn = std::move(o._fn);
-//     _priority = o._priority;
-//     _requestingServiceId = o._requestingServiceId;
-//     _quitCbs = std::move(o._quitCbs);
-//     _m = std::move(o._m);
-//     return *this;
-// }
+Ichor::v1::Timer::Timer(Ichor::v1::Timer &&o) noexcept {
+    std::unique_lock l{o._m};
+    _queue = o._queue;
+    _timerId = o._timerId;
+    _state = o._state;
+    _fireOnce = o._fireOnce;
+    _intervalNanosec = o._intervalNanosec;
+    _eventInsertionThread = std::move(o._eventInsertionThread);
+    _fnAsync = std::move(o._fnAsync);
+    _fn = std::move(o._fn);
+    _priority = o._priority;
+    _requestingServiceId = o._requestingServiceId;
+    _quitCbs = std::move(o._quitCbs);
+}
+
+Ichor::v1::Timer& Ichor::v1::Timer::operator=(Ichor::v1::Timer &&o) noexcept {
+    if(this == &o) [[unlikely]] {
+        return *this;
+    }
+    std::scoped_lock l{_m, o._m};
+    _queue = o._queue;
+    _timerId = o._timerId;
+    _state = o._state;
+    _fireOnce = o._fireOnce;
+    _intervalNanosec = o._intervalNanosec;
+    _eventInsertionThread = std::move(o._eventInsertionThread);
+    _fnAsync = std::move(o._fnAsync);
+    _fn = std::move(o._fn);
+    _priority = o._priority;
+    _requestingServiceId = o._requestingServiceId;
+    _quitCbs = std::move(o._quitCbs);
+    return *this;
+}
 
 bool Ichor::v1::Timer::startTimer() {
     return startTimer(false);

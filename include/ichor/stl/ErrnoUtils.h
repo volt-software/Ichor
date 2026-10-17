@@ -48,19 +48,49 @@ namespace Ichor::v1 {
         NETWORK_INTERFACE_OUTPUT_QUEUE_FULL,
         NO_MEMORY_AVAILABLE,
         NOT_SUPPORTED,
-        KERNEL_TOO_OLD
+        KERNEL_TOO_OLD,
+        // generic
+        BAD_ADDRESS,
+        INVALID_ARGUMENT,
+        TRY_AGAIN,
+        ALREADY_EXISTS,
+        // sockets/pipes
+        BROKEN_PIPE,
+        CONNECTION_REFUSED,
+        TIMED_OUT
     };
 
     /*
      * Function to make an errno indicator to an Ichor IOError. Returns IOError::FAILED if it doesn't recognize the number.
      */
-    [[nodiscard]] ICHOR_CONST_FUNC_ATTR static constexpr IOError mapErrnoToError(std::remove_cvref_t<decltype(errno)> err) noexcept {
-        if(err == EACCES || err == EFAULT || err == EPERM) {
+    [[nodiscard]] ICHOR_CONST_FUNC_ATTR inline constexpr IOError mapErrnoToError(std::remove_cvref_t<decltype(errno)> err) noexcept {
+        if(err == EACCES || err == EPERM) {
             return IOError::NO_PERMISSION;
+        } else if(err == EFAULT) {
+            return IOError::BAD_ADDRESS;
         } else if(err == EINTR) {
             return IOError::INTERRUPTED_BY_SIGNAL;
         } else if(err == EINVAL) {
-            return IOError::BASENAME_CONTAINS_INVALID_CHARACTERS;
+            // EINVAL is returned by a lot of calls (sockets, io_uring, file I/O), so it cannot be narrowed down further here.
+            return IOError::INVALID_ARGUMENT;
+        } else if(err == EAGAIN) {
+            return IOError::TRY_AGAIN;
+#if EAGAIN != EWOULDBLOCK
+        } else if(err == EWOULDBLOCK) {
+            return IOError::TRY_AGAIN;
+#endif
+        } else if(err == EEXIST) {
+            return IOError::ALREADY_EXISTS;
+        } else if(err == EFBIG) {
+            return IOError::FILE_SIZE_TOO_BIG;
+        } else if(err == ENOSYS) {
+            return IOError::KERNEL_TOO_OLD;
+        } else if(err == EPIPE) {
+            return IOError::BROKEN_PIPE;
+        } else if(err == ECONNREFUSED) {
+            return IOError::CONNECTION_REFUSED;
+        } else if(err == ETIMEDOUT) {
+            return IOError::TIMED_OUT;
         } else if(err == ELOOP) {
             return IOError::TOO_MANY_SYMBOLIC_LINKS;
         } else if(err == EMFILE) {
@@ -180,6 +210,20 @@ struct fmt::formatter<Ichor::v1::IOError> {
                 return fmt::format_to(ctx.out(), "NOT_SUPPORTED");
             case Ichor::v1::IOError::KERNEL_TOO_OLD:
                 return fmt::format_to(ctx.out(), "KERNEL_TOO_OLD");
+            case Ichor::v1::IOError::BAD_ADDRESS:
+                return fmt::format_to(ctx.out(), "BAD_ADDRESS");
+            case Ichor::v1::IOError::INVALID_ARGUMENT:
+                return fmt::format_to(ctx.out(), "INVALID_ARGUMENT");
+            case Ichor::v1::IOError::TRY_AGAIN:
+                return fmt::format_to(ctx.out(), "TRY_AGAIN");
+            case Ichor::v1::IOError::ALREADY_EXISTS:
+                return fmt::format_to(ctx.out(), "ALREADY_EXISTS");
+            case Ichor::v1::IOError::BROKEN_PIPE:
+                return fmt::format_to(ctx.out(), "BROKEN_PIPE");
+            case Ichor::v1::IOError::CONNECTION_REFUSED:
+                return fmt::format_to(ctx.out(), "CONNECTION_REFUSED");
+            case Ichor::v1::IOError::TIMED_OUT:
+                return fmt::format_to(ctx.out(), "TIMED_OUT");
         }
         return fmt::format_to(ctx.out(), "error, please file a bug in Ichor");
     }

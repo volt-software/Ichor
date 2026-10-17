@@ -17,12 +17,13 @@ namespace Ichor::v1 {
         /// \param svcId unique identifier for svc using this timer
         Timer(Ichor::ScopedServiceProxy<IEventQueue*> queue, uint64_t timerId, ServiceIdType svcId) noexcept;
         Timer(Timer const &) = delete;
-        Timer(Timer &&) noexcept = default;
+        // The mutex itself is not moved (native mutexes cannot be), the new Timer gets its own.
+        Timer(Timer &&) noexcept;
 
         ~Timer() noexcept;
 
         Timer& operator=(Timer const &) = delete;
-        Timer& operator=(Timer &&o) noexcept = default;
+        Timer& operator=(Timer &&o) noexcept;
 
         /// Thread-safe.
         bool startTimer() final;

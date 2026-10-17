@@ -140,7 +140,7 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &uniqueEvt) {
                     auto const filterProp = manager->getProperties().find("Filter");
                     const Filter *filter = nullptr;
                     if (filterProp != cend(manager->getProperties())) {
-                        filter = Ichor::v1::any_cast<Filter *const>(&filterProp->second);
+                        filter = Ichor::v1::any_cast<Filter const *>(&filterProp->second);
                     }
 
                     for (auto const &[serviceId, possibleDependentLifecycleManager] : _services) {
@@ -401,7 +401,7 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &uniqueEvt) {
                     auto const filterProp = mgr->getProperties().find("Filter");
                     const Filter *filter = nullptr;
                     if (filterProp != cend(mgr->getProperties())) {
-                        filter = Ichor::v1::any_cast<Filter * const>(&filterProp->second);
+                        filter = Ichor::v1::any_cast<Filter const *>(&filterProp->second);
                     }
 
                     if (filter != nullptr && !filter->compareTo(*cmpMgr.get())) {

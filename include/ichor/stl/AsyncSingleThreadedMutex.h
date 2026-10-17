@@ -6,6 +6,7 @@
 #include <memory>
 #include <tl/optional.h>
 #include <thread>
+#include <exception>
 
 // Mutex that prevents access between coroutines on the same thread
 
@@ -22,6 +23,11 @@ namespace Ichor::v1 {
         }
         AsyncSingleThreadedLockGuard& operator=(const AsyncSingleThreadedLockGuard &o) = delete;
         AsyncSingleThreadedLockGuard& operator=(AsyncSingleThreadedLockGuard &&o) noexcept {
+            if(this == &o) [[unlikely]] {
+                return *this;
+            }
+            // release the lock we currently hold, if any, before taking over o's.
+            unlock();
             _m = o._m;
             _has_lock = o._has_lock;
             o._has_lock = false;
@@ -48,7 +54,8 @@ namespace Ichor::v1 {
 #endif
             if(_locked) {
                 _evts.push(std::make_unique<AsyncManualResetEvent>());
-                auto *evt = _evts.front().get();
+                // wait on our own event, which is the one we just pushed to the back of the queue.
+                auto *evt = _evts.back().get();
                 co_await *evt;
             }
 

@@ -1,11 +1,17 @@
 #pragma once
 
 #include <cstdint>
+#include <exception>
 #include <type_traits>
 #include <memory>
-#include <ichor/stl/NeverAlwaysNull.h>
+#include <utility>
+#include <ichor/Defines.h>
+#include <ichor/ConstevalHash.h>
 #include <ichor/stl/CompilerSpecific.h>
-// #include <ichor/Common.h>
+
+#ifdef ICHOR_ENABLE_INTERNAL_STL_DEBUGGING
+#include <atomic>
+#endif
 
 namespace Ichor::v1 {
 
@@ -30,54 +36,76 @@ namespace Ichor::v1 {
 
         template<typename T, typename... U>
         struct ConstructibleHelper : ConstructibleHelperSelector<IsComplete<T>::value, T, U...> {};
+
+        template <typename T>
+        struct IsReferenceCountedPointer : std::false_type {};
+
+        template <typename T>
+        struct IsReferenceCountedPointer<ReferenceCountedPointer<T>> : std::true_type {};
     }
 
     template <typename T, typename... U>
     concept Constructible = Detail::ConstructibleHelper<T, U...>::value;
 
+    /// A ReferenceCountedPointer<U> can be converted into a ReferenceCountedPointer<T> if a U* can be converted into a T*, e.g. when T is a base of U.
+    template <typename U, typename T>
+    concept PointerConvertible = std::is_convertible_v<U*, T*>;
+
 
 #ifdef ICHOR_ENABLE_INTERNAL_STL_DEBUGGING
-#include <atomic>
     extern std::atomic<uint64_t> _rfpCounter;
-#define RFP_ID _id,
+#define ICHOR_RFP_ID _id,
 #else
-#define RFP_ID
+#define ICHOR_RFP_ID
 #endif
 
 
 
     namespace Detail {
+        /// Control block, only holds the reference count. Destroying it destroys the owned object.
         struct [[nodiscard]] ReferenceCountedPointerBase {
             ReferenceCountedPointerBase(const ReferenceCountedPointerBase &) = delete;
-            constexpr ReferenceCountedPointerBase(ReferenceCountedPointerBase &&) = default;
+            ReferenceCountedPointerBase(ReferenceCountedPointerBase &&) = delete;
             ReferenceCountedPointerBase &operator=(const ReferenceCountedPointerBase &) = delete;
-            constexpr ReferenceCountedPointerBase &operator=(ReferenceCountedPointerBase &&) = default;
+            ReferenceCountedPointerBase &operator=(ReferenceCountedPointerBase &&) = delete;
             constexpr virtual ~ReferenceCountedPointerBase() noexcept = default;
-            NeverNull<void*> ptr;
-            uint64_t useCount{};
+            uint64_t useCount{1};
 
         protected:
-            constexpr ReferenceCountedPointerBase(void* _ptr, uint64_t _useCount) noexcept : ptr(_ptr), useCount(_useCount) {
-            }
+            constexpr ReferenceCountedPointerBase() noexcept = default;
         };
 
-        template <typename DeleterType>
+        /// Control block for an object that was allocated separately and needs a deleter.
+        template <typename U, typename DeleterType>
         struct [[nodiscard]] ReferenceCountedPointerDeleter final : public ReferenceCountedPointerBase {
-            ReferenceCountedPointerDeleter(const ReferenceCountedPointerDeleter &) = delete;
-            constexpr ReferenceCountedPointerDeleter(ReferenceCountedPointerDeleter &&) = default;
-            ReferenceCountedPointerDeleter &operator=(const ReferenceCountedPointerDeleter &) = delete;
-            constexpr ReferenceCountedPointerDeleter &operator=(ReferenceCountedPointerDeleter &&) = default;
-
-            template<typename U>
-            constexpr explicit ReferenceCountedPointerDeleter(U *p, DeleterType fn) noexcept : ReferenceCountedPointerBase(p, 1), deleteFn(fn) {
-
+            constexpr explicit ReferenceCountedPointerDeleter(U *p, DeleterType fn) noexcept(std::is_nothrow_move_constructible_v<DeleterType>) : ptr(p), deleteFn(std::move(fn)) {
             }
 
             constexpr ~ReferenceCountedPointerDeleter() noexcept final {
                 deleteFn(ptr);
             }
 
+            U *ptr;
             DeleterType deleteFn;
+        };
+
+        /// Control block that contains the object itself, saving an allocation.
+        template <typename T>
+        struct [[nodiscard]] ReferenceCountedPointerInline final : public ReferenceCountedPointerBase {
+            template <typename... Args>
+            constexpr explicit ReferenceCountedPointerInline(Args&&... args) : value(std::forward<Args>(args)...) {
+            }
+
+            constexpr ~ReferenceCountedPointerInline() noexcept final = default;
+
+            T value;
+        };
+
+        struct DefaultReferenceCountedDeleter final {
+            template <typename U>
+            constexpr void operator()(U *p) const noexcept {
+                delete p;
+            }
         };
     }
 
@@ -86,70 +114,88 @@ namespace Ichor::v1 {
     class [[nodiscard]] ReferenceCountedPointer final {
     public:
         constexpr ReferenceCountedPointer() noexcept = default;
-        constexpr ReferenceCountedPointer(const ReferenceCountedPointer &o) noexcept : _ptr(o._ptr) {
-            _ptr->useCount++;
+        constexpr ReferenceCountedPointer(decltype(nullptr)) noexcept {}
+        constexpr ReferenceCountedPointer(const ReferenceCountedPointer &o) noexcept : _ptr(o._ptr), _block(o._block) {
+            increment();
         }
-        template <typename U> requires Constructible<T, U>
-        constexpr ReferenceCountedPointer(const ReferenceCountedPointer<U> &o) noexcept : _ptr(o._ptr) {
-            INTERNAL_STL_DEBUG("ReferenceCountedPointer<{}>(const ReferenceCountedPointer<{}> &o) {} {}", typeName<T>(), typeName<U>(), RFP_ID _ptr == nullptr);
-            _ptr->useCount++;
+        template <typename U> requires (!std::is_same_v<T, U> && PointerConvertible<U, T>)
+        constexpr ReferenceCountedPointer(const ReferenceCountedPointer<U> &o) noexcept : _ptr(o._ptr), _block(o._block) {
+            INTERNAL_STL_DEBUG("ReferenceCountedPointer<{}>(const ReferenceCountedPointer<{}> &o) {} {}", typeName<T>(), typeName<U>(), ICHOR_RFP_ID _block == nullptr);
+            increment();
         }
-        constexpr ReferenceCountedPointer(ReferenceCountedPointer &&o) noexcept : _ptr(o._ptr) {
+        constexpr ReferenceCountedPointer(ReferenceCountedPointer &&o) noexcept : _ptr(o._ptr), _block(o._block) {
             o._ptr = nullptr;
+            o._block = nullptr;
         }
-        template <typename U> requires Constructible<T, U>
-        constexpr ReferenceCountedPointer(ReferenceCountedPointer<U> &&o) noexcept : _ptr(o._ptr) {
-            INTERNAL_STL_DEBUG("ReferenceCountedPointer<{}>(ReferenceCountedPointer<{}> &&o) {} {}", typeName<T>(), typeName<U>(), RFP_ID _ptr == nullptr);
+        template <typename U> requires (!std::is_same_v<T, U> && PointerConvertible<U, T>)
+        constexpr ReferenceCountedPointer(ReferenceCountedPointer<U> &&o) noexcept : _ptr(o._ptr), _block(o._block) {
+            INTERNAL_STL_DEBUG("ReferenceCountedPointer<{}>(ReferenceCountedPointer<{}> &&o) {} {}", typeName<T>(), typeName<U>(), ICHOR_RFP_ID _block == nullptr);
             o._ptr = nullptr;
+            o._block = nullptr;
         }
 
-        explicit constexpr ReferenceCountedPointer(T* p) : _ptr(new Detail::ReferenceCountedPointerDeleter(p, [](void *ptr) { delete static_cast<T*>(ptr); })) {
-            INTERNAL_STL_DEBUG("ReferenceCountedPointer<{}>(T* p) {} {}", typeName<T>(), RFP_ID _ptr == nullptr);
+        /// Takes ownership of p. A nullptr results in an empty ReferenceCountedPointer.
+        template <typename U> requires PointerConvertible<U, T>
+        explicit constexpr ReferenceCountedPointer(U* p) {
+            INTERNAL_STL_DEBUG("ReferenceCountedPointer<{}>({}* p) {} {}", typeName<T>(), typeName<U>(), ICHOR_RFP_ID p == nullptr);
+            adopt(p, Detail::DefaultReferenceCountedDeleter{});
         }
 
-        template <typename U> requires Constructible<T, U>
-        explicit constexpr ReferenceCountedPointer(U* p) : _ptr(new Detail::ReferenceCountedPointerDeleter(p, [](void *ptr) { delete static_cast<U*>(ptr); })) {
-            INTERNAL_STL_DEBUG("ReferenceCountedPointer<{}>({}* p) {} {}", typeName<T>(), typeName<U>(), RFP_ID _ptr == nullptr);
+        /// Constructs a T in place, using a single allocation for both the reference count and the T.
+        template <typename... U> requires (Constructible<T, U...> && !(sizeof...(U) == 1 && (Detail::IsReferenceCountedPointer<std::remove_cvref_t<U>>::value && ...)))
+        ICHOR_CXX23_CONSTEXPR explicit ReferenceCountedPointer(U&&... args) : ReferenceCountedPointer(std::in_place, std::forward<U>(args)...) {
         }
+
+        /// Constructs a T in place, using a single allocation for both the reference count and the T. Also works without arguments, unlike the constructor above.
         template <typename... U> requires Constructible<T, U...>
-        ICHOR_CXX23_CONSTEXPR explicit ReferenceCountedPointer(U&&... args) : _ptr(new Detail::ReferenceCountedPointerDeleter(new T(std::forward<U>(args)...), [](void *ptr) { delete static_cast<T*>(ptr); })) {
+        ICHOR_CXX23_CONSTEXPR explicit ReferenceCountedPointer(std::in_place_t, U&&... args) {
             if constexpr (std::is_same_v<T, bool>) {
                 static_assert(sizeof...(U) == 1, "ReferenceCountedPointer<bool> expects a single bool value");
                 static_assert((std::is_same_v<bool, std::remove_cvref_t<U>> && ...), "ReferenceCountedPointer<bool> expects bool-compatible argument");
-                INTERNAL_STL_DEBUG("ReferenceCountedPointer<{}>(U&&... args) {} {} bool! {}", typeName<T>(), RFP_ID _ptr == nullptr, *static_cast<T*>(_ptr->ptr.get()));
+            }
+            auto *block = new Detail::ReferenceCountedPointerInline<T>(std::forward<U>(args)...);
+            _block = block;
+            _ptr = std::addressof(block->value);
+            if constexpr (std::is_same_v<T, bool>) {
+                INTERNAL_STL_DEBUG("ReferenceCountedPointer<{}>(U&&... args) {} {} bool! {}", typeName<T>(), ICHOR_RFP_ID _block == nullptr, *_ptr);
             } else {
-                INTERNAL_STL_DEBUG("ReferenceCountedPointer<{}>(U&&... args) {} {} {}", typeName<T>(), RFP_ID _ptr == nullptr, sizeof(T));
+                INTERNAL_STL_DEBUG("ReferenceCountedPointer<{}>(U&&... args) {} {} {}", typeName<T>(), ICHOR_RFP_ID _block == nullptr, sizeof(T));
             }
         }
-        template <typename UniqueDeleter>
-        ICHOR_CXX23_CONSTEXPR ReferenceCountedPointer(std::unique_ptr<T, UniqueDeleter> unique) : _ptr(new Detail::ReferenceCountedPointerDeleter(unique.get(), [deleter = unique.get_deleter()](void *ptr) { deleter(static_cast<T*>(ptr)); })) {
-            INTERNAL_STL_DEBUG("ReferenceCountedPointer<{}>(unique) {} {}", typeName<T>(), RFP_ID _ptr == nullptr);
-            unique.release();
+
+        /// Takes ownership of the unique_ptr. An empty unique_ptr results in an empty ReferenceCountedPointer.
+        template <typename U, typename UniqueDeleter> requires PointerConvertible<U, T>
+        ICHOR_CXX23_CONSTEXPR ReferenceCountedPointer(std::unique_ptr<U, UniqueDeleter> unique) {
+            INTERNAL_STL_DEBUG("ReferenceCountedPointer<{}>(unique) {} {}", typeName<T>(), ICHOR_RFP_ID unique == nullptr);
+            adoptUnique(std::move(unique));
         }
 
         constexpr ~ReferenceCountedPointer() noexcept {
-            INTERNAL_STL_DEBUG("~ReferenceCountedPointer<{}>() {} {}", typeName<T>(), RFP_ID _ptr == nullptr);
+            INTERNAL_STL_DEBUG("~ReferenceCountedPointer<{}>() {} {}", typeName<T>(), ICHOR_RFP_ID _block == nullptr);
             decrement();
         }
 
         constexpr ReferenceCountedPointer& operator=(const ReferenceCountedPointer &o) noexcept {
-            if(this == &o) [[unlikely]] {
-                return *this;
-            }
-
+            // o might be owned by the object we're releasing (e.g. node = node->next), so copy and increment before decrementing, o may be gone afterwards.
+            auto *ptr = o._ptr;
+            auto *block = o._block;
+            o.increment();
             decrement();
-            _ptr = o._ptr;
-            _ptr->useCount++;
+            _ptr = ptr;
+            _block = block;
 
             return *this;
         }
 
-        template <typename U> requires Constructible<T, U>
+        template <typename U> requires (!std::is_same_v<T, U> && PointerConvertible<U, T>)
         constexpr ReferenceCountedPointer& operator=(const ReferenceCountedPointer<U> &o) noexcept {
-            INTERNAL_STL_DEBUG("ReferenceCountedPointer<{}> operator=(const ReferenceCountedPointer<{}> &o) {} {}", typeName<T>(), typeName<U>(), RFP_ID _ptr == nullptr);
+            INTERNAL_STL_DEBUG("ReferenceCountedPointer<{}> operator=(const ReferenceCountedPointer<{}> &o) {} {}", typeName<T>(), typeName<U>(), ICHOR_RFP_ID _block == nullptr);
+            T *ptr = o._ptr;
+            auto *block = o._block;
+            o.increment();
             decrement();
-            _ptr = o._ptr;
-            _ptr->useCount++;
+            _ptr = ptr;
+            _block = block;
 
             return *this;
         }
@@ -159,132 +205,176 @@ namespace Ichor::v1 {
                 return *this;
             }
 
-            decrement();
-            _ptr = o._ptr;
+            // Take ownership before releasing, o might be owned by the object we're releasing.
+            auto *ptr = o._ptr;
+            auto *block = o._block;
             o._ptr = nullptr;
+            o._block = nullptr;
+            decrement();
+            _ptr = ptr;
+            _block = block;
 
             return *this;
         }
 
-        template <typename U> requires Constructible<T, U>
+        template <typename U> requires (!std::is_same_v<T, U> && PointerConvertible<U, T>)
         constexpr ReferenceCountedPointer& operator=(ReferenceCountedPointer<U> &&o) noexcept {
-            INTERNAL_STL_DEBUG("ReferenceCountedPointer<{}> operator=(ReferenceCountedPointer<{}> &&o) {} {}", typeName<T>(), typeName<U>(), RFP_ID _ptr == nullptr);
-            decrement();
-            _ptr = o._ptr;
+            INTERNAL_STL_DEBUG("ReferenceCountedPointer<{}> operator=(ReferenceCountedPointer<{}> &&o) {} {}", typeName<T>(), typeName<U>(), ICHOR_RFP_ID _block == nullptr);
+            T *ptr = o._ptr;
+            auto *block = o._block;
             o._ptr = nullptr;
+            o._block = nullptr;
+            decrement();
+            _ptr = ptr;
+            _block = block;
 
             return *this;
         }
 
-        template <typename U> requires Constructible<T, U>
-        constexpr ReferenceCountedPointer& operator=(U *p) noexcept {
-            INTERNAL_STL_DEBUG("ReferenceCountedPointer<{}> operator=({}* p) {} {}", typeName<T>(), typeName<U>(), RFP_ID _ptr == nullptr);
-            decrement();
-            _ptr = new Detail::ReferenceCountedPointerDeleter(p, [](void *ptr) { delete static_cast<U*>(ptr); });
+        /// Takes ownership of p. A nullptr results in an empty ReferenceCountedPointer.
+        template <typename U> requires PointerConvertible<U, T>
+        constexpr ReferenceCountedPointer& operator=(U *p) {
+            INTERNAL_STL_DEBUG("ReferenceCountedPointer<{}> operator=({}* p) {} {}", typeName<T>(), typeName<U>(), ICHOR_RFP_ID _block == nullptr);
+            ReferenceCountedPointer tmp{p};
+            swap(tmp);
 
             return *this;
         }
 
-        template <typename UniqueDeleter>
-        constexpr ReferenceCountedPointer& operator=(std::unique_ptr<T, UniqueDeleter> unique) noexcept {
-            INTERNAL_STL_DEBUG("ReferenceCountedPointer<{}> operator=(unique) {} {}", typeName<T>(), RFP_ID _ptr == nullptr);
-            decrement();
-            _ptr = new Detail::ReferenceCountedPointerDeleter(unique.get(), [deleter = unique.get_deleter()](void *ptr) { deleter(static_cast<T*>(ptr)); });
-            unique.release();
+        /// Takes ownership of the unique_ptr. An empty unique_ptr results in an empty ReferenceCountedPointer.
+        template <typename U, typename UniqueDeleter> requires PointerConvertible<U, T>
+        constexpr ReferenceCountedPointer& operator=(std::unique_ptr<U, UniqueDeleter> unique) {
+            INTERNAL_STL_DEBUG("ReferenceCountedPointer<{}> operator=(unique) {} {}", typeName<T>(), ICHOR_RFP_ID _block == nullptr);
+            ReferenceCountedPointer tmp{std::move(unique)};
+            swap(tmp);
 
             return *this;
         }
 
         constexpr ReferenceCountedPointer& operator=(decltype(nullptr)) noexcept {
-            INTERNAL_STL_DEBUG("ReferenceCountedPointer<{}> operator=(nullptr) {} {}", typeName<T>(), RFP_ID _ptr == nullptr);
+            INTERNAL_STL_DEBUG("ReferenceCountedPointer<{}> operator=(nullptr) {} {}", typeName<T>(), ICHOR_RFP_ID _block == nullptr);
             decrement();
             _ptr = nullptr;
+            _block = nullptr;
 
             return *this;
         }
 
         [[nodiscard]] constexpr T& operator*() const noexcept ICHOR_LIFETIME_BOUND {
             if constexpr (std::is_same_v<T, bool>) {
-                INTERNAL_STL_DEBUG("ReferenceCountedPointer<{}> operator*() {} {} bool! {}", typeName<T>(), RFP_ID _ptr == nullptr, *static_cast<T*>(_ptr->ptr.get()));
+                INTERNAL_STL_DEBUG("ReferenceCountedPointer<{}> operator*() {} {} bool! {}", typeName<T>(), ICHOR_RFP_ID _block == nullptr, *_ptr);
             } else {
-                INTERNAL_STL_DEBUG("ReferenceCountedPointer<{}> operator*() {} {}", typeName<T>(), RFP_ID _ptr == nullptr);
+                INTERNAL_STL_DEBUG("ReferenceCountedPointer<{}> operator*() {} {}", typeName<T>(), ICHOR_RFP_ID _block == nullptr);
             }
             if constexpr (DO_INTERNAL_STL_DEBUG || DO_HARDENING) {
                 if (_ptr == nullptr) [[unlikely]] {
                     std::terminate();
                 }
             }
-            return *static_cast<T*>(_ptr->ptr.get());
+            return *_ptr;
         }
 
         [[nodiscard]] constexpr T* operator->() const noexcept ICHOR_LIFETIME_BOUND {
-            INTERNAL_STL_DEBUG("ReferenceCountedPointer<{}> operator->() {} {}", typeName<T>(), RFP_ID _ptr == nullptr);
+            INTERNAL_STL_DEBUG("ReferenceCountedPointer<{}> operator->() {} {}", typeName<T>(), ICHOR_RFP_ID _block == nullptr);
             if constexpr (DO_INTERNAL_STL_DEBUG || DO_HARDENING) {
                 if (_ptr == nullptr) [[unlikely]] {
                     std::terminate();
                 }
             }
-            return static_cast<T*>(_ptr->ptr.get());
+            return _ptr;
         }
 
         // TODO enabling this function causes function overloading to fail for ReferenceCountedPointer<bool>(const &ReferenceCountedPointer<bool> o).
         // causing it to construct a new bool from a ReferenceCountedPointer<bool> instead of the underlying bool.
         // Maybe try https://www.artima.com/articles/the-safe-bool-idiom ?
 //        [[nodiscard]] explicit operator bool() const noexcept {
-//            INTERNAL_STL_DEBUG("ReferenceCountedPointer<{}> operator bool() {} {}", typeName<T>(), RFP_ID _ptr == nullptr);
-//            return _ptr != nullptr;
+//            INTERNAL_STL_DEBUG("ReferenceCountedPointer<{}> operator bool() {} {}", typeName<T>(), ICHOR_RFP_ID _block == nullptr);
+//            return _block != nullptr;
 //        }
 
         [[nodiscard]] constexpr bool operator==(decltype(nullptr)) const noexcept {
-            INTERNAL_STL_DEBUG("ReferenceCountedPointer<{}> operator==(nullptr) {} {}", typeName<T>(), RFP_ID _ptr == nullptr);
-            return _ptr == nullptr;
+            INTERNAL_STL_DEBUG("ReferenceCountedPointer<{}> operator==(nullptr) {} {}", typeName<T>(), ICHOR_RFP_ID _block == nullptr);
+            return _block == nullptr;
         }
 
         template <typename U>
         [[nodiscard]] constexpr bool operator==(const ReferenceCountedPointer<U> &o) const noexcept {
-            INTERNAL_STL_DEBUG("ReferenceCountedPointer<{}> operator==(const ReferenceCountedPointer<{}> &) {} {}", typeName<T>(), typeName<U>(), RFP_ID _ptr == nullptr);
-            return _ptr == o._ptr;
+            INTERNAL_STL_DEBUG("ReferenceCountedPointer<{}> operator==(const ReferenceCountedPointer<{}> &) {} {}", typeName<T>(), typeName<U>(), ICHOR_RFP_ID _block == nullptr);
+            return _block == o._block;
         }
 
         [[nodiscard]] constexpr uint64_t use_count() const noexcept {
-            if(_ptr == nullptr) {
+            if(_block == nullptr) {
                 return 0;
             }
 
-            return _ptr->useCount;
+            return _block->useCount;
         }
 
         [[nodiscard]] constexpr bool has_value() const noexcept {
-            return _ptr != nullptr;
+            return _block != nullptr;
         }
 
         [[nodiscard]] constexpr T* get() const noexcept ICHOR_LIFETIME_BOUND {
-            INTERNAL_STL_DEBUG("ReferenceCountedPointer<{}> get() {} {}", typeName<T>(), RFP_ID _ptr == nullptr);
+            INTERNAL_STL_DEBUG("ReferenceCountedPointer<{}> get() {} {}", typeName<T>(), ICHOR_RFP_ID _block == nullptr);
             if constexpr (DO_INTERNAL_STL_DEBUG || DO_HARDENING) {
                 if (_ptr == nullptr) [[unlikely]] {
                     std::terminate();
                 }
             }
-            return static_cast<T*>(_ptr->ptr.get());
+            return _ptr;
         }
 
         constexpr void swap(ReferenceCountedPointer<T> &o) noexcept {
-            auto *ptr = _ptr;
-            _ptr = o._ptr;
-            o._ptr = ptr;
+            std::swap(_ptr, o._ptr);
+            std::swap(_block, o._block);
+        }
+
+        friend constexpr void swap(ReferenceCountedPointer<T> &a, ReferenceCountedPointer<T> &b) noexcept {
+            a.swap(b);
         }
 
     private:
+        template <typename U, typename Deleter>
+        constexpr void adopt(U *p, Deleter deleter) {
+            if(p == nullptr) {
+                return;
+            }
+            // Own p before allocating the control block, so that p gets cleaned up if the allocation throws.
+            std::unique_ptr<U, Deleter> guard{p, deleter};
+            adoptUnique(std::move(guard));
+        }
+
+        template <typename U, typename UniqueDeleter>
+        constexpr void adoptUnique(std::unique_ptr<U, UniqueDeleter> unique) {
+            if(unique == nullptr) {
+                return;
+            }
+            auto *p = unique.get();
+            auto deleteFn = [deleter = unique.get_deleter()](U *ptr) mutable noexcept { deleter(ptr); };
+            _block = new Detail::ReferenceCountedPointerDeleter<U, decltype(deleteFn)>(p, std::move(deleteFn));
+            _ptr = p;
+            static_cast<void>(unique.release());
+        }
+
+        constexpr void increment() const noexcept {
+            if(_block != nullptr) {
+                _block->useCount++;
+            }
+        }
+
         constexpr void decrement() const noexcept {
-            if(_ptr != nullptr) {
-                _ptr->useCount--;
-                if(_ptr->useCount == 0) {
-                    delete _ptr;
+            if(_block != nullptr) {
+                _block->useCount--;
+                if(_block->useCount == 0) {
+                    delete _block;
                 }
             }
         }
 
-        Detail::ReferenceCountedPointerBase *_ptr{};
+        // Pointer to the object, adjusted to T. Stored separately from the control block so that conversions between base and derived classes adjust the pointer correctly.
+        T *_ptr{};
+        Detail::ReferenceCountedPointerBase *_block{};
 #ifdef ICHOR_ENABLE_INTERNAL_STL_DEBUGGING
         uint64_t _id{_rfpCounter.fetch_add(1, std::memory_order_relaxed)};
 #endif
@@ -295,13 +385,9 @@ namespace Ichor::v1 {
 
     template <typename T, typename... Args>
     constexpr ReferenceCountedPointer<T> make_reference_counted(Args&&... args) {
-        return ReferenceCountedPointer<T>(std::forward<Args>(args)...);
+        // in_place, otherwise calling this without arguments would select the default constructor and return an empty pointer.
+        return ReferenceCountedPointer<T>(std::in_place, std::forward<Args>(args)...);
     }
 }
 
-namespace std {
-    template<typename T>
-    inline constexpr void swap(Ichor::v1::ReferenceCountedPointer<T>& a, Ichor::v1::ReferenceCountedPointer<T>& b) noexcept {
-        a.swap(b);
-    }
-}
+#undef ICHOR_RFP_ID
