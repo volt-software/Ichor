@@ -52,7 +52,7 @@ namespace Ichor::v1 {
         // generic
         BAD_ADDRESS,
         INVALID_ARGUMENT,
-        TRY_AGAIN,
+        WOULD_BLOCK, // EAGAIN/EWOULDBLOCK. Not TRY_AGAIN, which <netdb.h> defines as a macro
         ALREADY_EXISTS,
         // sockets/pipes
         BROKEN_PIPE,
@@ -74,10 +74,10 @@ namespace Ichor::v1 {
             // EINVAL is returned by a lot of calls (sockets, io_uring, file I/O), so it cannot be narrowed down further here.
             return IOError::INVALID_ARGUMENT;
         } else if(err == EAGAIN) {
-            return IOError::TRY_AGAIN;
+            return IOError::WOULD_BLOCK;
 #if EAGAIN != EWOULDBLOCK
         } else if(err == EWOULDBLOCK) {
-            return IOError::TRY_AGAIN;
+            return IOError::WOULD_BLOCK;
 #endif
         } else if(err == EEXIST) {
             return IOError::ALREADY_EXISTS;
@@ -214,8 +214,8 @@ struct fmt::formatter<Ichor::v1::IOError> {
                 return fmt::format_to(ctx.out(), "BAD_ADDRESS");
             case Ichor::v1::IOError::INVALID_ARGUMENT:
                 return fmt::format_to(ctx.out(), "INVALID_ARGUMENT");
-            case Ichor::v1::IOError::TRY_AGAIN:
-                return fmt::format_to(ctx.out(), "TRY_AGAIN");
+            case Ichor::v1::IOError::WOULD_BLOCK:
+                return fmt::format_to(ctx.out(), "WOULD_BLOCK");
             case Ichor::v1::IOError::ALREADY_EXISTS:
                 return fmt::format_to(ctx.out(), "ALREADY_EXISTS");
             case Ichor::v1::IOError::BROKEN_PIPE:

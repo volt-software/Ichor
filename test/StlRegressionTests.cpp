@@ -1,4 +1,8 @@
 // Regression tests for bugs found while reviewing the Ichor STL implementations.
+// System headers that define macros clashing with names in Ichor headers come first, as they do through e.g. Boost.Asio.
+#if __has_include(<netdb.h>)
+#include <netdb.h> // defines TRY_AGAIN, HOST_NOT_FOUND, NO_DATA, ...
+#endif
 #include "Common.h"
 #include <ichor/stl/Any.h>
 #include <ichor/stl/AsyncSingleThreadedMutex.h>
@@ -668,8 +672,8 @@ TEST_CASE("STL regression tests: errno mapping") {
         REQUIRE(mapErrnoToError(EFAULT) == IOError::BAD_ADDRESS);
         REQUIRE(mapErrnoToError(EACCES) == IOError::NO_PERMISSION);
         REQUIRE(mapErrnoToError(EINVAL) == IOError::INVALID_ARGUMENT);
-        REQUIRE(mapErrnoToError(EAGAIN) == IOError::TRY_AGAIN);
-        REQUIRE(mapErrnoToError(EWOULDBLOCK) == IOError::TRY_AGAIN);
+        REQUIRE(mapErrnoToError(EAGAIN) == IOError::WOULD_BLOCK);
+        REQUIRE(mapErrnoToError(EWOULDBLOCK) == IOError::WOULD_BLOCK);
         REQUIRE(mapErrnoToError(EEXIST) == IOError::ALREADY_EXISTS);
         REQUIRE(mapErrnoToError(EFBIG) == IOError::FILE_SIZE_TOO_BIG);
         REQUIRE(mapErrnoToError(ENOSYS) == IOError::KERNEL_TOO_OLD);
