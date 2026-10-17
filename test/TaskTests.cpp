@@ -19,6 +19,13 @@ using CopyablePromise = Ichor::Detail::AsyncGeneratorPromise<std::string>;
 static_assert(CanYield<CopyablePromise, std::string const &>);
 static_assert(CanReturn<CopyablePromise, std::string const &>);
 
+// Symmetric transfer: awaiting a Task and finishing one return the coroutine to resume next instead of resuming it themselves.
+// Checked at compile time, because GCC without optimizations doesn't turn it into a tail call, so the stack test can't show it there.
+using TaskAwaitable = decltype(std::declval<Ichor::Task<uint64_t>>().operator co_await());
+static_assert(std::is_same_v<decltype(std::declval<TaskAwaitable&>().await_suspend(std::coroutine_handle<>{})), std::coroutine_handle<>>);
+using TaskFinalAwaitable = decltype(std::declval<Ichor::Detail::TaskPromise<uint64_t>&>().final_suspend());
+static_assert(std::is_same_v<decltype(std::declval<TaskFinalAwaitable&>().await_suspend(std::coroutine_handle<Ichor::Detail::TaskPromise<uint64_t>>{})), std::coroutine_handle<>>);
+
 namespace {
     std::unique_ptr<Ichor::AsyncManualResetEvent> _evt = std::make_unique<Ichor::AsyncManualResetEvent>();
     bool started{};
@@ -53,14 +60,30 @@ namespace {
 
     uint64_t deepSum{};
 
+#if defined(__GNUC__) && !defined(__clang__) && !defined(__OPTIMIZE__)
+    // GCC (checked 12 and 15) only turns the symmetric transfer into a tail call with optimizations enabled (GCC PR100897),
+    // so without them every iteration still adds a stack frame, no matter how Task is implemented.
+    // Still run the symmetric transfer path, but with a depth that fits on the stack.
+    constexpr uint64_t manyIterations = 1'000;
+#else
+    constexpr uint64_t manyIterations = 1'000'000;
+#endif
+
     // Awaits many synchronously completing tasks in a row. Without symmetric transfer every iteration adds stack frames.
     Ichor::Task<void> task_awaiting_many_immediate_return_tasks() {
         uint64_t sum{};
-        for(uint64_t i = 0; i < 1'000'000; ++i) {
+        for(uint64_t i = 0; i < manyIterations; ++i) {
             sum += co_await task_return_value(i);
         }
         deepSum = sum;
         co_return;
+    }
+
+    // TEST_CASEs share this state, reset it so they also pass when run in one process
+    void resetState() {
+        _evt = std::make_unique<Ichor::AsyncManualResetEvent>();
+        started = false;
+        ran = false;
     }
 
     template<typename LAMBDA>
@@ -76,6 +99,7 @@ TEST_CASE("TaskTests: default constructor initially not ready") {
 }
 
 TEST_CASE("TaskTests: resumes on evt") {
+    resetState();
     auto gen = start_task(task_waiting_on_evt);
     auto it = gen.begin();
     REQUIRE(!it.get_finished());
@@ -89,6 +113,7 @@ TEST_CASE("TaskTests: resumes on evt") {
 }
 
 TEST_CASE("TaskTests: done on immediate return") {
+    resetState();
     auto gen = start_task(task_immediate_return);
     auto it = gen.begin();
     CHECK(it.get_finished());
@@ -98,6 +123,7 @@ TEST_CASE("TaskTests: done on immediate return") {
 }
 
 TEST_CASE("TaskTests: done on nested resume on evt") {
+    resetState();
     auto gen = start_task(task_waiting_on_evt_task);
     auto it = gen.begin();
     REQUIRE(!it.get_finished());
@@ -111,6 +137,7 @@ TEST_CASE("TaskTests: done on nested resume on evt") {
 }
 
 TEST_CASE("TaskTests: done on nested immediate return") {
+    resetState();
     auto gen = start_task(task_waiting_on_immediate_return_task);
     auto it = gen.begin();
     CHECK(it.get_finished());
@@ -125,13 +152,11 @@ TEST_CASE("TaskTests: awaiting many immediate return tasks does not grow the sta
     auto it = gen.begin();
     CHECK(it.get_finished());
     CHECK(gen.done());
-    CHECK(deepSum == 499'999'500'000ull);
+    CHECK(deepSum == manyIterations * (manyIterations - 1) / 2);
 }
 
 TEST_CASE("TaskTests: moving a suspended generator transfers ownership") {
-    _evt = std::make_unique<Ichor::AsyncManualResetEvent>();
-    started = false;
-    ran = false;
+    resetState();
     auto gen = start_task(task_waiting_on_evt);
     auto it = gen.begin();
     REQUIRE(!it.get_finished());
@@ -153,9 +178,7 @@ TEST_CASE("TaskTests: moving a suspended generator transfers ownership") {
 }
 
 TEST_CASE("TaskTests: destroying a generator while its coroutine is suspended elsewhere detaches it") {
-    _evt = std::make_unique<Ichor::AsyncManualResetEvent>();
-    started = false;
-    ran = false;
+    resetState();
     {
         auto gen = start_task(task_waiting_on_evt);
         auto it = gen.begin();
