@@ -300,5 +300,41 @@ TEST_CASE("QueueTests") {
         t.join();
     }
 
+    SECTION("IOUringQueue more in-flight requests than pooled events") {
+        constexpr uint32_t ringSize = 32;
+        constexpr uint32_t requests = ringSize * 4;
+        auto queue = std::make_unique<TemplateIOUringQueue<ringSize>>(10, 10'000);
+        __kernel_timespec ts{};
+        ts.tv_nsec = 1'000'000;
+        uint32_t completed{};
+        uint32_t timedOut{};
+        Ichor::Detail::_local_dm = nullptr;
+        std::thread t([&] {
+            REQUIRE(queue->createEventLoop());
+            auto &dm = queue->getManager();
+            Ichor::Detail::_local_dm = &dm;
+            dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>();
+
+            // all timeouts are in flight at the same time, so the pool of ringSize events is exhausted
+            for(uint32_t i = 0; i < requests; ++i) {
+                auto *sqe = queue->getSqeWithData(ServiceIdType{0}, [&](io_uring_cqe *cqe) {
+                    if(cqe->res == -ETIME) {
+                        timedOut++;
+                    }
+                    if(++completed == requests) {
+                        queue->pushEvent<QuitEvent>(ServiceIdType{0});
+                    }
+                });
+                io_uring_prep_timeout(sqe, &ts, 0, 0);
+            }
+            queue->start(DoNotCaptureSigInt);
+        });
+
+        t.join();
+
+        REQUIRE(completed == requests);
+        REQUIRE(timedOut == requests);
+    }
+
 #endif
 }
