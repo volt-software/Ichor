@@ -76,7 +76,8 @@ namespace Ichor::v1 {
             }
 
             auto erased = std::erase_if(_timers, [timerId](std::unique_ptr<TIMER> const &timer) {
-                return timer->getTimerId() == timerId && timer->getState() != TimerState::RUNNING;
+                // not while STOPPING, requests of the timer can still be in flight
+                return timer->getTimerId() == timerId && timer->getState() == TimerState::STOPPED;
             });
 
             return erased > 0;

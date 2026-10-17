@@ -61,7 +61,9 @@ namespace Ichor::v1 {
         [[nodiscard]] ServiceIdType getRequestingServiceId() const noexcept final;
 
     private:
+        void armTimeout();
         std::function<void(io_uring_cqe*)> createNewHandler() noexcept;
+        std::function<void(io_uring_cqe*)> createNewStopHandler() noexcept;
         std::function<void(io_uring_cqe*)> createNewUpdateHandler() noexcept;
         /// Calls the callbacks given to stopTimer and marks the timer as stopped.
         void finishStopping();
@@ -81,7 +83,8 @@ namespace Ichor::v1 {
         ServiceIdType _requestingServiceId{};
         uint64_t _uringTimerId{};
         std::vector<std::function<void(void)>> _quitCbs;
-        // Shared with in-flight timeout_remove requests, which can outlive the timer. Set once the current timeout has completed for good.
-        ReferenceCountedPointer<bool> _timerStopped;
+        // Shared with the handlers of in-flight requests, which can outlive the timer. Set when the timer stops, after which
+        // it can be destroyed. Every startTimer() creates a new one, so handlers of a previous run never touch the timer.
+        ReferenceCountedPointer<bool> _runFinished;
     };
 }

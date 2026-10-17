@@ -6,6 +6,7 @@
 #include "TestServices/MixingInterfacesService.h"
 #include "TestServices/TimerRunsOnceService.h"
 #include "TestServices/TimerWhileCreatingTimersService.h"
+#include "TestServices/TimerStateTransitionsService.h"
 #include "TestServices/CreateTimerService.h"
 #include "TestServices/AddEventHandlerDuringEventHandlingService.h"
 #include "TestServices/RequestsLoggingService.h"
@@ -636,6 +637,79 @@ TEST_CASE("ServicesTests") {
         queue->pushEvent<RunFunctionEvent>(ServiceIdType{0}, [&]() {
             auto ret = dm.getService<ITimerRunsOnceService>(svcId);
             REQUIRE(ret->first->getCount() >= 5);
+
+            dm.getEventQueue().pushEvent<QuitEvent>(svcId);
+        });
+
+        t.join();
+    }
+
+    SECTION("Timers stopping themselves and fire-once timers end up stopped") {
+#if defined(TEST_URING)
+        auto queue = std::make_unique<QIMPL>(500, 100'000'000, emulateKernelVersion);
+#else
+        auto queue = std::make_unique<QIMPL>(500);
+#endif
+        auto &dm = queue->getManager();
+        ServiceIdType svcId{};
+        Ichor::Detail::_local_dm = nullptr;
+
+        std::thread t([&]() {
+            Ichor::Detail::_local_dm = &dm;
+#if defined(TEST_URING)
+            REQUIRE(queue->createEventLoop());
+#elif defined(TEST_SDEVENT)
+            auto *loop = queue->createEventLoop();
+            REQUIRE(loop);
+#endif
+            dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>();
+            svcId = dm.createServiceManager<TimerStateTransitionsService, ITimerStateTransitionsService>()->getServiceId();
+            dm.createServiceManager<TFFIMPL>();
+            queue->start(CaptureSigInt);
+#if defined(TEST_SDEVENT)
+            int r = sd_event_loop(loop);
+            REQUIRE(r >= 0);
+#endif
+        });
+
+        waitForRunning(dm);
+
+        runForOrQueueEmpty(dm);
+
+        // both stop callbacks of the self stopping timer and the fire-once timer
+        auto start = std::chrono::steady_clock::now();
+        while(evtGate.load(std::memory_order_acquire) < 3) {
+            std::this_thread::sleep_for(500us);
+            auto now = std::chrono::steady_clock::now();
+            REQUIRE(now - start < 1s);
+        }
+
+        std::atomic<bool> stopped{};
+        while(!stopped.load(std::memory_order_acquire)) {
+            queue->pushEvent<RunFunctionEvent>(ServiceIdType{0}, [&]() {
+                auto svc = dm.getService<ITimerStateTransitionsService>(svcId);
+                // the thread based timer reaches STOPPED asynchronously
+                if(svc->first->getSelfStoppingTimer().getState() == TimerState::STOPPED && svc->first->getFireOnceTimer().getState() == TimerState::STOPPED) {
+                    stopped.store(true, std::memory_order_release);
+                }
+            });
+            std::this_thread::sleep_for(1ms);
+            auto now = std::chrono::steady_clock::now();
+            REQUIRE(now - start < 1s);
+        }
+
+        queue->pushEvent<RunFunctionEvent>(ServiceIdType{0}, [&]() {
+            auto svc = dm.getService<ITimerStateTransitionsService>(svcId);
+            REQUIRE(svc->first->getSelfStoppedCallbacks() == 2);
+            REQUIRE(svc->first->getFireOnceFired() == 1);
+            REQUIRE(svc->first->getEarlyStopCallbacks() == 0);
+
+            // a stopped timer calls the stop callback right away
+            bool called{};
+            REQUIRE(!svc->first->getFireOnceTimer().stopTimer([&called]() { called = true; }));
+            REQUIRE(called);
+            // updating the interval of a timer that already fired must not keep the queue busy
+            svc->first->getFireOnceTimer().setInterval(1'000'000);
 
             dm.getEventQueue().pushEvent<QuitEvent>(svcId);
         });
