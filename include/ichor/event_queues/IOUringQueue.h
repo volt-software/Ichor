@@ -15,7 +15,8 @@
 
 namespace Ichor {
     namespace Detail {
-        /// Event used as user_data for sqe's requested through IIOUringQueue::getSqeWithData. Instances are pooled by TemplateIOUringQueue and never heap allocated.
+        /// Event used as user_data for sqe's requested through IIOUringQueue::getSqeWithData. Instances are pooled by TemplateIOUringQueue,
+        /// only when the pool is exhausted they are heap allocated.
         struct UringResponseEvent final : public Event {
             UringResponseEvent() noexcept : Event(0, ServiceIdType{0}, INTERNAL_EVENT_PRIORITY) {}
             UringResponseEvent(uint64_t _id, ServiceIdType _originatingService, uint64_t _priority, UringCallback _fun) noexcept :
@@ -31,6 +32,7 @@ namespace Ichor {
 
             UringCallback fun;
             UringResponseEvent *nextFree{};
+            bool heapAllocated{};
             static constexpr NameHashType TYPE = typeNameHash<UringResponseEvent>();
             static constexpr std::string_view NAME = typeName<UringResponseEvent>();
         };
@@ -117,7 +119,7 @@ namespace Ichor {
     }
 
     /// Provides an io_uring based queue, expects the running OS to have at least kernel 5.4, but multithreading support is only available from 5.18 and later.
-    /// \tparam RingSize amount of entries in the submission queue of the ring. Also the maximum amount of in-flight requests created through getSqeWithData, as the events for these are allocated up-front.
+    /// \tparam RingSize amount of entries in the submission queue of the ring. Also the amount of in-flight requests created through getSqeWithData that use pre-allocated events, more in-flight requests fall back to heap allocations.
     template <uint32_t RingSize>
     class TemplateIOUringQueue final : private Detail::UringResponseEventStorage<RingSize>, public Detail::IOUringQueueBase {
         static_assert(RingSize > 0, "RingSize cannot be 0");

@@ -344,25 +344,11 @@ namespace Ichor::Detail {
             CrossThreadRing& operator=(CrossThreadRing const &) = delete;
             ~CrossThreadRing() {
                 if(initialized) {
-                    // make sure all messages have been sent before tearing down the ring
-                    while(inFlight > 0) {
-                        io_uring_cqe *cqe{};
-                        auto ret = io_uring_wait_cqe(&ring, &cqe);
-                        if(ret < 0) {
-                            break;
-                        }
-                        if(cqe->res < 0) {
-                            fmt::println("cross thread msg_ring completion event failure {}, dropped event", cqe->res);
-                        }
-                        io_uring_cqe_seen(&ring, cqe);
-                        inFlight--;
-                    }
                     io_uring_queue_exit(&ring);
                 }
             }
 
             io_uring ring{};
-            uint32_t inFlight{};
             bool initialized{};
         };
 
@@ -375,7 +361,6 @@ namespace Ichor::Detail {
             }
 
             io_uring_params p{};
-            // no IORING_SETUP_DEFER_TASKRUN, as completions are reaped without entering the kernel
             if(kernelVersion >= v1::Version{5, 19, 0}) {
                 p.flags |= IORING_SETUP_COOP_TASKRUN;
             }
@@ -397,21 +382,6 @@ namespace Ichor::Detail {
             }
             r.initialized = true;
             return r;
-        }
-
-        void reapCrossThreadRing(CrossThreadRing &r) {
-            io_uring_cqe *cqe{};
-            unsigned int head{};
-            unsigned int handled{};
-            io_uring_for_each_cqe(&r.ring, head, cqe) {
-                if(cqe->res < 0) [[unlikely]] {
-                    fmt::println("cross thread msg_ring completion event failure {}, dropped event", cqe->res);
-                    std::terminate();
-                }
-                handled++;
-            }
-            io_uring_cq_advance(&r.ring, handled);
-            r.inFlight -= handled;
         }
     }
 
@@ -521,35 +491,38 @@ namespace Ichor::Detail {
             }
 
             auto &tempQueue = getCrossThreadRing(_kernelVersion);
-            reapCrossThreadRing(tempQueue);
 
+            // Every push waits for its own completion, so the ring is always empty here.
             auto *sqe = io_uring_get_sqe(&tempQueue.ring);
             if(sqe == nullptr) [[unlikely]] {
-                // all slots in use by msg_rings that haven't completed yet, wait for one
-                auto ret = io_uring_submit_and_wait(&tempQueue.ring, 1);
-                if(ret < 0) [[unlikely]] {
-                    fmt::println("io_uring_submit_and_wait() for cross thread ring failed, ret {}", -ret);
-                    std::terminate();
-                }
-                reapCrossThreadRing(tempQueue);
-                sqe = io_uring_get_sqe(&tempQueue.ring);
-                if(sqe == nullptr) [[unlikely]] {
-                    fmt::println("Couldn't get sqe for cross thread ring");
-                    std::terminate();
-                }
+                fmt::println("Couldn't get sqe for cross thread ring");
+                std::terminate();
             }
             io_uring_prep_msg_ring(sqe, _eventQueuePtr->ring_fd, 0, reinterpret_cast<uintptr_t>(reinterpret_cast<void*>(procEvent)), 0);
             io_uring_sqe_set_data64(sqe, 0);
             TSAN_ANNOTATE_HAPPENS_BEFORE(_eventQueuePtr);
-            // msg_ring generally completes inline, the completion is checked for errors on the next push from this thread or when the thread exits
-            auto ret = io_uring_submit(&tempQueue.ring);
+            // Wait for the completion before returning. When the target ring uses IORING_SETUP_DEFER_TASKRUN, the message is delivered
+            // through task_work on the target thread and the completion is only posted after delivery. Not waiting would let
+            // messages from the same thread overtake each other (task_work runs newest-first on kernels 6.2 - 6.10) and removes back-pressure.
+            auto ret = io_uring_submit_and_wait(&tempQueue.ring, 1);
             if(ret != 1) [[unlikely]] {
-                fmt::println("io_uring_submit() for cross thread ring {}", ret);
+                fmt::println("io_uring_submit_and_wait() for cross thread ring {}", ret);
                 fmt::println("submit wrong amount, would result in dropping event");
                 std::terminate();
             }
-            tempQueue.inFlight++;
-            reapCrossThreadRing(tempQueue);
+
+            io_uring_cqe *cqe{};
+            ret = io_uring_wait_cqe(&tempQueue.ring, &cqe);
+            if(ret < 0) [[unlikely]] {
+                fmt::println("io_uring_wait_cqe() for cross thread ring {}", ret);
+                fmt::println("couldn't get completion event, would result in dropping event");
+                std::terminate();
+            }
+            if(cqe->res < 0) [[unlikely]] {
+                fmt::println("cross thread msg_ring completion event failure {}, would result in dropping event", cqe->res);
+                std::terminate();
+            }
+            io_uring_cqe_seen(&tempQueue.ring, cqe);
 
 //            fmt::println("pushEventInternal() {} {}", std::hash<std::thread::id>{}(std::this_thread::get_id()), std::hash<std::thread::id>{}(_threadId));
 
@@ -765,7 +738,8 @@ namespace Ichor::Detail {
                 std::terminate();
             }
             // The return value is not always the amount of submitted sqes (e.g. when a cqe was already available), so check that the kernel consumed everything instead.
-            if(auto spaceAfter = io_uring_sq_space_left(_eventQueuePtr); spaceAfter != _entriesCount) [[unlikely]] {
+            // Not possible with IORING_SETUP_SQPOLL (only possible through useEventLoop), where the kernel thread consumes sqes asynchronously.
+            if(auto spaceAfter = io_uring_sq_space_left(_eventQueuePtr); spaceAfter != _entriesCount && (_eventQueuePtr->flags & IORING_SETUP_SQPOLL) == 0) [[unlikely]] {
                 fmt::println("submit wrong amount2 {} {} {} {}", ret, _entriesCount, space, spaceAfter);
 #ifdef ICHOR_ENABLE_INTERNAL_URING_DEBUGGING
                 afterSubmitDebug(ret, space);
@@ -1027,8 +1001,11 @@ namespace Ichor::Detail {
     UringResponseEvent *IOUringQueueBase::acquireResponseEvent(ServiceIdType serviceId, UringCallback &&fun) noexcept {
         auto *evt = _freeResponseEventsHead;
         if(evt == nullptr) [[unlikely]] {
-            fmt::println("No free UringResponseEvents left, too many in-flight requests. Increase the RingSize template parameter of TemplateIOUringQueue (currently {}).", _entriesCount);
-            std::terminate();
+            // More requests in flight than pooled events (e.g. many open connections each with a pending recv), fall back to the heap.
+            // Pending requests are not limited by the ring size, so this must not be fatal.
+            auto *heapEvt = new UringResponseEvent(getNextEventId(), serviceId, INTERNAL_EVENT_PRIORITY, std::move(fun));
+            heapEvt->heapAllocated = true;
+            return heapEvt;
         }
         _freeResponseEventsHead = evt->nextFree;
         if(_freeResponseEventsHead == nullptr) {
@@ -1040,6 +1017,10 @@ namespace Ichor::Detail {
     }
 
     void IOUringQueueBase::releaseResponseEvent(UringResponseEvent *evt) noexcept {
+        if(evt->heapAllocated) [[unlikely]] {
+            delete evt;
+            return;
+        }
         // release resources held by the callback early
         evt->fun.reset();
         evt->nextFree = nullptr;
