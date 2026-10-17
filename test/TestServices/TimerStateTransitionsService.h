@@ -49,7 +49,12 @@ public:
         _fireOnce.startTimer();
 
         // fires faster than the event loop goes around, stopping it must still finish
+#if defined(TEST_URING)
+        _fast.setInterval(1'000);
+#else
+        // the thread based Timer pushes an event per expiry and catches up when behind, a shorter interval mostly floods the queue
         _fast.setInterval(100'000);
+#endif
         _fast.setCallback([this]() {
             if(++_fastFired == 10) {
                 _fast.stopTimer([]() {

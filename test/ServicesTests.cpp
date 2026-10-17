@@ -7,6 +7,7 @@
 #include "TestServices/TimerRunsOnceService.h"
 #include "TestServices/TimerWhileCreatingTimersService.h"
 #include "TestServices/TimerStateTransitionsService.h"
+#include "TestServices/TimerFactoryEdgeCaseServices.h"
 #include "TestServices/CreateTimerService.h"
 #include "TestServices/AddEventHandlerDuringEventHandlingService.h"
 #include "TestServices/RequestsLoggingService.h"
@@ -27,6 +28,7 @@
 #if defined(TEST_URING)
 #include <ichor/event_queues/IOUringQueue.h>
 #include <ichor/services/timer/IOUringTimerFactoryFactory.h>
+#include <ichor/services/timer/IOUringTimer.h>
 #include <ichor/stl/LinuxUtils.h>
 #include <catch2/generators/catch_generators.hpp>
 
@@ -717,6 +719,160 @@ TEST_CASE("ServicesTests") {
 
         t.join();
     }
+
+    SECTION("Timer callbacks don't run anymore once the requesting service stopped") {
+#if defined(TEST_URING)
+        auto queue = std::make_unique<QIMPL>(500, 100'000'000, emulateKernelVersion);
+#else
+        auto queue = std::make_unique<QIMPL>(500);
+#endif
+        auto &dm = queue->getManager();
+        ServiceIdType svcId{};
+        Ichor::Detail::_local_dm = nullptr;
+
+        std::thread t([&]() {
+            Ichor::Detail::_local_dm = &dm;
+#if defined(TEST_URING)
+            REQUIRE(queue->createEventLoop());
+#elif defined(TEST_SDEVENT)
+            auto *loop = queue->createEventLoop();
+            REQUIRE(loop);
+#endif
+            dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>();
+            svcId = dm.createServiceManager<CountingTimerService>()->getServiceId();
+            dm.createServiceManager<TFFIMPL>();
+            queue->start(CaptureSigInt);
+#if defined(TEST_SDEVENT)
+            int r = sd_event_loop(loop);
+            REQUIRE(r >= 0);
+#endif
+        });
+
+        waitForRunning(dm);
+
+        countingTimerCallbacks = 0;
+        auto start = std::chrono::steady_clock::now();
+        while(countingTimerCallbacks.load(std::memory_order_acquire) < 3) {
+            std::this_thread::sleep_for(500us);
+            REQUIRE(std::chrono::steady_clock::now() - start < 1s);
+        }
+
+        // stopped, not removed: its timer keeps running, but the callbacks shouldn't be called anymore
+        queue->pushEvent<StopServiceEvent>(ServiceIdType{0}, svcId);
+        std::atomic<bool> stopped{};
+        while(!stopped.load(std::memory_order_acquire)) {
+            queue->pushEvent<RunFunctionEvent>(ServiceIdType{0}, [&]() {
+                if(dm.getIService(svcId).value()->getServiceState() == ServiceState::INSTALLED) {
+                    stopped.store(true, std::memory_order_release);
+                }
+            });
+            std::this_thread::sleep_for(1ms);
+            REQUIRE(std::chrono::steady_clock::now() - start < 1s);
+        }
+        // callbacks pushed before the service stopped
+        std::this_thread::sleep_for(10ms);
+        auto const callbacksWhenStopped = countingTimerCallbacks.load(std::memory_order_acquire);
+        std::this_thread::sleep_for(50ms);
+        REQUIRE(countingTimerCallbacks.load(std::memory_order_acquire) == callbacksWhenStopped);
+
+        queue->pushEvent<QuitEvent>(ServiceIdType{0});
+
+        t.join();
+    }
+
+    SECTION("Fire-once timers can restart themselves and stop callbacks can destroy their timer") {
+#if defined(TEST_URING)
+        auto queue = std::make_unique<QIMPL>(2'000, 100'000'000, emulateKernelVersion);
+#else
+        auto queue = std::make_unique<QIMPL>(2'000);
+#endif
+        auto &dm = queue->getManager();
+        ServiceIdType svcId{};
+        Ichor::Detail::_local_dm = nullptr;
+
+        std::thread t([&]() {
+            Ichor::Detail::_local_dm = &dm;
+#if defined(TEST_URING)
+            REQUIRE(queue->createEventLoop());
+#elif defined(TEST_SDEVENT)
+            auto *loop = queue->createEventLoop();
+            REQUIRE(loop);
+#endif
+            dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>();
+            svcId = dm.createServiceManager<TimerEdgeCaseService, ITimerEdgeCaseService>()->getServiceId();
+            dm.createServiceManager<TFFIMPL>();
+            queue->start(CaptureSigInt);
+#if defined(TEST_SDEVENT)
+            int r = sd_event_loop(loop);
+            REQUIRE(r >= 0);
+#endif
+        });
+
+        waitForRunning(dm);
+
+        runForOrQueueEmpty(dm);
+
+        auto start = std::chrono::steady_clock::now();
+        while(evtGate.load(std::memory_order_acquire) < 1) {
+            std::this_thread::sleep_for(500us);
+            REQUIRE(std::chrono::steady_clock::now() - start < 1s);
+        }
+
+        queue->pushEvent<RunFunctionEvent>(ServiceIdType{0}, [&]() {
+            auto svc = dm.getService<ITimerEdgeCaseService>(svcId);
+            REQUIRE(svc->first->getRestarts() == 3);
+            // stopAllTimers runs while this timer is (likely) still stopping. The timer's own stop callback destroying it must not make
+            // the factory miscount its stopped timers: quitting would then hang until the quit timeout.
+            svc->first->stopTimerAndDestroyItWhenStopped();
+            dm.getEventQueue().pushEvent<QuitEvent>(svcId);
+        });
+
+        auto quitStart = std::chrono::steady_clock::now();
+        while(queue->is_running()) {
+            std::this_thread::sleep_for(1ms);
+            // well below the 2 second quit timeout of the queue
+            REQUIRE(std::chrono::steady_clock::now() - quitStart < 1s);
+        }
+
+        t.join();
+    }
+
+#if defined(TEST_URING)
+    SECTION("Destroying a running IOUringTimer") {
+        auto queue = std::make_unique<QIMPL>(500, 100'000'000, emulateKernelVersion);
+        auto &dm = queue->getManager();
+        Ichor::Detail::_local_dm = nullptr;
+        std::atomic<uint64_t> fired{};
+
+        std::thread t([&]() {
+            Ichor::Detail::_local_dm = &dm;
+            REQUIRE(queue->createEventLoop());
+            dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>();
+            queue->start(CaptureSigInt);
+        });
+
+        waitForRunning(dm);
+
+        queue->pushEvent<RunFunctionEvent>(ServiceIdType{0}, [&]() {
+            auto timer = std::make_unique<IOUringTimer>(ScopedServiceProxy<IIOUringQueue*>{queue.get(), ServiceIdType{0}}, 1, ServiceIdType{0});
+            timer->setChronoInterval(std::chrono::milliseconds(1));
+            timer->setCallback([&fired]() {
+                fired++;
+            });
+            REQUIRE(timer->startTimer());
+            // its timeout and handler are still in flight, they must not touch the destroyed timer (detected by ASan)
+            timer.reset();
+        });
+
+        std::this_thread::sleep_for(20ms);
+        // the timeout got removed when the timer was destroyed
+        REQUIRE(fired.load(std::memory_order_acquire) <= 1);
+
+        queue->pushEvent<QuitEvent>(ServiceIdType{0});
+
+        t.join();
+    }
+#endif
 
     SECTION("Created timers can be requested") {
 #if defined(TEST_URING)

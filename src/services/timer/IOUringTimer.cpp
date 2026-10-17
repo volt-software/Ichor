@@ -14,7 +14,6 @@ Ichor::v1::IOUringTimer::IOUringTimer(Ichor::ScopedServiceProxy<IIOUringQueue*> 
         }
     }
 
-    _multishotCapable = _q->getKernelVersion() >= Version{6, 4, 0};
 }
 
 Ichor::v1::IOUringTimer::~IOUringTimer() noexcept {
@@ -22,6 +21,8 @@ Ichor::v1::IOUringTimer::~IOUringTimer() noexcept {
         // Destroyed while running (e.g. restarted while its factory stops). Make the handlers of in-flight requests ignore their completions
         // and cancel the timeout, with a handler that doesn't reference the timer.
         *_runFinished = true;
+        // The timeout (or a timeout_update) can still be waiting to be submitted, and the kernel reads _timespec when submitting.
+        _q->forceSubmit();
         auto *sqe = _q->getSqeWithData(_requestingServiceId, [](io_uring_cqe *) {});
         io_uring_prep_timeout_remove(sqe, _uringTimerId, 0);
     }
@@ -58,7 +59,6 @@ bool Ichor::v1::IOUringTimer::startTimer(bool fireImmediately) {
 bool Ichor::v1::IOUringTimer::stopTimer(std::function<void(void)> cb) {
     INTERNAL_IO_DEBUG("Stopping timer {} for {} _uringTimerId 0x{:X} state {}", _timerId, _requestingServiceId, _uringTimerId, _state);
     if(_state == TimerState::RUNNING) {
-        _removeNeeded = false;
         submitRemove();
         _state = TimerState::STOPPING;
     }
@@ -110,7 +110,6 @@ void Ichor::v1::IOUringTimer::setInterval(uint64_t nanoseconds) noexcept {
 
     if(_state == TimerState::RUNNING) {
         INTERNAL_IO_DEBUG("Updating timer {} for {} _uringTimerId {:X}", _timerId, _requestingServiceId, _uringTimerId);
-        _updateNeeded = false;
         submitUpdate();
     }
 }
@@ -141,14 +140,13 @@ Ichor::ServiceIdType Ichor::v1::IOUringTimer::getRequestingServiceId() const noe
 }
 
 void Ichor::v1::IOUringTimer::armTimeout() {
-    // a new timeout uses the current interval
-    _updateNeeded = false;
+    // Always one-shot timeouts, re-armed after every expiry, instead of IORING_TIMEOUT_MULTISHOT on kernels >= 6.4: a multishot timeout is
+    // off the kernel's timeout list between expiring and being re-armed (in the task_work that posts its completion, which runs after
+    // submitting). With an interval shorter than an event loop iteration, timeout_remove could then keep missing it and stopping never finish.
+    // Before kernel 6.13 (or the 6.6.72/6.12.10 backports), timeout_update on a multishot timeout also only changed its next expiry.
+    // For one-shot timeouts a timeout_remove/timeout_update that misses means it expired, and its completion ends the stop / re-arms.
     auto *sqe = _q->getSqeWithData(_requestingServiceId, createNewHandler());
-    unsigned flags{};
-    if (!_fireOnce && _multishotCapable) {
-        flags = IORING_TIMEOUT_MULTISHOT;
-    }
-    io_uring_prep_timeout(sqe, &_timespec, 0, flags);
+    io_uring_prep_timeout(sqe, &_timespec, 0, 0);
     _uringTimerId = sqe->user_data;
     INTERNAL_IO_DEBUG("IOUringTimer {} for {} _uringTimerId 0x{:X}", _timerId, _requestingServiceId, _uringTimerId);
 }
@@ -160,46 +158,25 @@ std::function<void(io_uring_cqe *)> Ichor::v1::IOUringTimer::createNewHandler() 
             // the timer may not exist anymore
             return;
         }
-        bool const lastCompletion = (cqe->flags & IORING_CQE_F_MORE) == 0;
 
         if(cqe->res != -ETIME) {
             // removed by stopTimer (-ECANCELED) or an error, the timeout has ended
             if(cqe->res != -ECANCELED) {
                 INTERNAL_IO_DEBUG("IOUringTimer {} for {} error {}", _timerId, _requestingServiceId, cqe->res);
             }
-            if(lastCompletion) {
-                finishStopping();
-            }
+            finishStopping();
             return;
         }
         INTERNAL_IO_DEBUG("IOUringTimer {} for {} cqe->res {}", _timerId, _requestingServiceId, cqe->res);
 
         if(_state == TimerState::STOPPING) {
-            if(lastCompletion) {
-                // Fired before the timeout_remove was processed, which then fails with -ENOENT.
-                finishStopping();
-            } else if(_removeNeeded) {
-                // A multishot timeout that the remove didn't find, because it had fired and wasn't re-armed yet.
-                // It is re-armed when this completion gets posted, so retrying now finds it.
-                _removeNeeded = false;
-                submitRemove();
-            }
+            // Expired before the timeout_remove was processed, which then fails with -ENOENT.
+            finishStopping();
             return;
         }
 
         dispatchCallback();
 
-        if(!lastCompletion) {
-            // multishot timeout, keeps firing
-            if(_updateNeeded) {
-                // same as for _removeNeeded
-                _updateNeeded = false;
-                submitUpdate();
-            }
-            return;
-        }
-
-        // The timeout ended: one-shot timeouts (fire-once timers, kernels < 6.4), or a multishot timeout that ended early.
         if(_fireOnce) {
             finishStopping();
         } else {
@@ -217,10 +194,7 @@ std::function<void(io_uring_cqe *)> Ichor::v1::IOUringTimer::createNewStopHandle
         }
         INTERNAL_IO_DEBUG("Couldn't stop timer {} for {} because {} uringTimerId 0x{:X}", _timerId, _requestingServiceId, cqe->res, _uringTimerId);
         if(cqe->res == -ENOENT || cqe->res == -EALREADY) {
-            // -ENOENT: the timeout fired and its completion hasn't been posted yet. Either that is its last completion, which then finishes stopping,
-            // or it is a multishot timeout that gets re-armed when the completion is posted, after which the fire handler retries.
-            // -EALREADY: it is firing right now, same thing. Retrying right away could keep missing a timeout with a short interval.
-            _removeNeeded = true;
+            // The timeout expired (-ENOENT) or is expiring right now (-EALREADY), its -ETIME completion finishes stopping.
             return;
         }
         std::terminate();
@@ -236,10 +210,7 @@ std::function<void(io_uring_cqe *)> Ichor::v1::IOUringTimer::createNewUpdateHand
         }
         INTERNAL_IO_DEBUG("Couldn't update timer {} for {} because {} uringTimerId 0x{:X}", _timerId, _requestingServiceId, cqe->res, _uringTimerId);
         if(cqe->res == -ENOENT || cqe->res == -EALREADY) {
-            // Same as for stopping. One-shot timeouts are re-armed with the new interval anyway.
-            if(_state == TimerState::RUNNING) {
-                _updateNeeded = true;
-            }
+            // The timeout expired (or is expiring), it gets re-armed with the new interval.
             return;
         }
         std::terminate();

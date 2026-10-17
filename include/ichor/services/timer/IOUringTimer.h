@@ -79,7 +79,6 @@ namespace Ichor::v1 {
         uint64_t _timerId{};
         TimerState _state{};
         bool _fireOnce{};
-        bool _multishotCapable{};
         // same default as Timer
         __kernel_timespec _timespec{1, 0};
         std::function<AsyncGenerator<IchorBehaviour>()> _fnAsync{};
@@ -91,8 +90,6 @@ namespace Ichor::v1 {
         // Shared with the handlers of in-flight requests, which can outlive the timer. Set when the timer stops, after which
         // it can be destroyed. Every startTimer() creates a new one, so handlers of a previous run never touch the timer.
         ReferenceCountedPointer<bool> _runFinished{make_reference_counted<bool>(true)};
-        // A timeout_remove/timeout_update didn't find the multishot timeout because it was being re-armed, retry on its next completion.
-        bool _removeNeeded{};
-        bool _updateNeeded{};
+
     };
 }

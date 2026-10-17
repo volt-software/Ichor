@@ -69,15 +69,16 @@ namespace Ichor::v1 {
         }
 
         bool destroyTimerIfStopped(uint64_t timerId) final {
+            if(_stoppingTimers) {
+                // E.g. from a stop callback while the factory stops. stopAllTimers counts on the timers staying around until they all
+                // stopped, they get destroyed together with the factory.
+                return false;
+            }
+
             if constexpr (DO_INTERNAL_DEBUG || DO_HARDENING) {
                 if(!AdvancedService<TimerFactory<TIMER, QUEUE>>::isStarted()) {
                     std::terminate();
                 }
-            }
-
-            if(_stoppingTimers) {
-                // stopAllTimers counts on the timers staying around until they all stopped, they get destroyed together with the factory
-                return false;
             }
 
             auto erased = std::erase_if(_timers, [timerId](std::unique_ptr<TIMER> const &timer) {
