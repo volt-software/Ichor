@@ -1,5 +1,12 @@
 #pragma once
 
+#include <ichor/stl/StaticVector.h>
+#include <ichor/coroutines/AsyncGenerator.h>
+#include <limits>
+#include <ichor/CoreTypes.h>
+#include <ichor/dependency_management/IService.h>
+#include <ichor/dependency_management/ILifecycleManager.h>
+
 #define SELF_SERVICE_ID std::numeric_limits<ServiceIdType>::max();
 
 namespace Ichor::Detail {

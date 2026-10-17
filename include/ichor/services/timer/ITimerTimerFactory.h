@@ -1,5 +1,6 @@
 #pragma once
 
+#include <ichor/CoreTypes.h>
 #include <vector>
 
 namespace Ichor::v1 {

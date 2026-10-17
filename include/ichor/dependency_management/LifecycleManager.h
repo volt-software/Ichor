@@ -1,5 +1,11 @@
 #pragma once
 
+#include <ichor/coroutines/AsyncGenerator.h>
+#include <ichor/CoreTypes.h>
+#include <ichor/Concepts.h>
+#include <ichor/dependency_management/ILifecycleManager.h>
+#include <ichor/dependency_management/AdvancedService.h>
+#include <ichor/dependency_management/ConstructorInjectionService.h>
 #include <ichor/stl/StaticVector.h>
 
 namespace Ichor::Detail {

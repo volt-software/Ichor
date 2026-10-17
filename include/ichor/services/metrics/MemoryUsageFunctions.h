@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cstddef>
+
 /*
  * Author:  David Robert Nadeau
  * Site:    http://NadeauSoftware.com/

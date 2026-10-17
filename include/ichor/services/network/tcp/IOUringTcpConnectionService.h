@@ -1,5 +1,8 @@
 #pragma once
 
+#include <ichor/dependency_management/AdvancedService.h>
+#include <ichor/coroutines/AsyncManualResetEvent.h>
+
 #ifndef ICHOR_USE_LIBURING
 #error "Ichor has not been compiled with io_uring support"
 #endif

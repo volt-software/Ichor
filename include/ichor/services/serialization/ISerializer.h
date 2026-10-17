@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cstdint>
+#include <tl/optional.h>
 #include <vector>
 #include <span>
 

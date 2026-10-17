@@ -7,6 +7,8 @@
 
 #pragma once
 
+#include <ichor/DependencyManager.h>
+
 namespace Ichor::Detail {
     inline void AsyncGeneratorPromiseBase::terminate_if_on_wrong_thread() const noexcept {
 #ifdef ICHOR_USE_HARDENING

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <atomic>
 #include <ichor/Concepts.h>
 #include <ichor/coroutines/Task.h>
 #include <ichor/dependency_management/DependencyRegister.h>

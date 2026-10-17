@@ -1,6 +1,8 @@
 #pragma once
 
 #include <cstddef>
+#include <cstdint>
+#include <ichor/Enums.h>
 #include <memory>
 #include <new>
 #include <type_traits>

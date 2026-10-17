@@ -1,5 +1,7 @@
 #pragma once
 
+#include <ichor/coroutines/AsyncGenerator.h>
+#include <ichor/dependency_management/ILifecycleManager.h>
 #include <ichor/event_queues/IEventQueue.h>
 #include <ichor/stl/StaticVector.h>
 

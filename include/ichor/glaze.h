@@ -1,5 +1,7 @@
 #pragma once
 
+#include <fmt/format.h>
+
 // Glaze uses different conventions than Ichor, ignore them to prevent being spammed by warnings
 #if defined( __GNUC__ )
 #    pragma GCC diagnostic push

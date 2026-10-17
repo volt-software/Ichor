@@ -1,5 +1,6 @@
 #pragma once
 
+#include <variant>
 #include <ichor/coroutines/Task.h>
 #include <ichor/stl/StringUtils.h>
 #include <string_view>

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <ichor/coroutines/AsyncManualResetEvent.h>
+#include <ichor/dependency_management/AdvancedService.h>
 #include <ichor/services/timer/ITimer.h>
 #include <ichor/services/timer/TimerRef.h>
 #include <ichor/services/timer/IInternalTimerFactory.h>

@@ -7,6 +7,7 @@
 
 #pragma once
 
+#include <ichor/CoreTypes.h>
 #include <coroutine>
 #include <cassert>
 #include <functional>
@@ -18,6 +19,9 @@
 #include <ichor/Enums.h>
 #include <ichor/ConstevalHash.h>
 #include <ichor/stl/CompilerSpecific.h>
+#ifdef ICHOR_HAVE_STD_STACKTRACE
+#include <stacktrace>
+#endif
 
 namespace Ichor {
     template<typename T>

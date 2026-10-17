@@ -1,5 +1,13 @@
 #pragma once
 
+#include <functional>
+#include <string_view>
+#include <ichor/ConstevalHash.h>
+#include <ichor/CoreTypes.h>
+#include <ichor/Enums.h>
+#include <ichor/events/Event.h>
+#include <ichor/coroutines/AsyncGenerator.h>
+
 namespace Ichor {
     struct DependencyTrackerInfo final {
         explicit DependencyTrackerInfo(ServiceIdType _svcId, std::function<AsyncGenerator<IchorBehaviour>(Event const &)> _trackFunc, std::function<AsyncGenerator<IchorBehaviour>(Event const &)> _untrackFunc) noexcept : svcId(_svcId), trackFunc(std::move(_trackFunc)), untrackFunc(std::move(_untrackFunc)) {}

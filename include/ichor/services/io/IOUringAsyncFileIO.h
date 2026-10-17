@@ -1,5 +1,7 @@
 #pragma once
 
+#include <ichor/event_queues/IIOUringQueue.h>
+
 #ifndef ICHOR_USE_LIBURING
 #error "Ichor has not been compiled with io_uring support"
 #endif
