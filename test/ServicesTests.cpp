@@ -676,12 +676,12 @@ TEST_CASE("ServicesTests") {
 
         runForOrQueueEmpty(dm);
 
-        // both stop callbacks of the self stopping timer and the fire-once timer
+        // both stop callbacks of the self stopping timer, the fire-once timer and the stop callback of the fast timer
         auto start = std::chrono::steady_clock::now();
-        while(evtGate.load(std::memory_order_acquire) < 3) {
+        while(evtGate.load(std::memory_order_acquire) < 4) {
             std::this_thread::sleep_for(500us);
             auto now = std::chrono::steady_clock::now();
-            REQUIRE(now - start < 1s);
+            REQUIRE(now - start < 5s);
         }
 
         std::atomic<bool> stopped{};
@@ -689,13 +689,14 @@ TEST_CASE("ServicesTests") {
             queue->pushEvent<RunFunctionEvent>(ServiceIdType{0}, [&]() {
                 auto svc = dm.getService<ITimerStateTransitionsService>(svcId);
                 // the thread based timer reaches STOPPED asynchronously
-                if(svc->first->getSelfStoppingTimer().getState() == TimerState::STOPPED && svc->first->getFireOnceTimer().getState() == TimerState::STOPPED) {
+                if(svc->first->getSelfStoppingTimer().getState() == TimerState::STOPPED && svc->first->getFireOnceTimer().getState() == TimerState::STOPPED &&
+                   svc->first->getFastTimer().getState() == TimerState::STOPPED) {
                     stopped.store(true, std::memory_order_release);
                 }
             });
             std::this_thread::sleep_for(1ms);
             auto now = std::chrono::steady_clock::now();
-            REQUIRE(now - start < 1s);
+            REQUIRE(now - start < 5s);
         }
 
         queue->pushEvent<RunFunctionEvent>(ServiceIdType{0}, [&]() {

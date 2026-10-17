@@ -19,13 +19,14 @@ namespace Ichor::v1 {
         /// \param timerId unique identifier for timer
         /// \param svcId unique identifier for svc using this timer
         IOUringTimer(Ichor::ScopedServiceProxy<IIOUringQueue*> queue, uint64_t timerId, ServiceIdType svcId) noexcept;
+        // Not movable: handlers of in-flight requests reference the timer.
         IOUringTimer(IOUringTimer const &) = delete;
-        IOUringTimer(IOUringTimer &&) noexcept = default;
+        IOUringTimer(IOUringTimer &&) = delete;
 
-        ~IOUringTimer() noexcept = default;
+        ~IOUringTimer() noexcept;
 
         IOUringTimer& operator=(IOUringTimer const &) = delete;
-        IOUringTimer& operator=(IOUringTimer &&o) noexcept = default;
+        IOUringTimer& operator=(IOUringTimer &&o) = delete;
 
         /// Thread-safe.
         bool startTimer() final;
@@ -62,6 +63,9 @@ namespace Ichor::v1 {
 
     private:
         void armTimeout();
+        void submitRemove();
+        void submitUpdate();
+        void dispatchCallback();
         std::function<void(io_uring_cqe*)> createNewHandler() noexcept;
         std::function<void(io_uring_cqe*)> createNewStopHandler() noexcept;
         std::function<void(io_uring_cqe*)> createNewUpdateHandler() noexcept;
@@ -76,7 +80,8 @@ namespace Ichor::v1 {
         TimerState _state{};
         bool _fireOnce{};
         bool _multishotCapable{};
-        __kernel_timespec _timespec{};
+        // same default as Timer
+        __kernel_timespec _timespec{1, 0};
         std::function<AsyncGenerator<IchorBehaviour>()> _fnAsync{};
         std::function<void()> _fn{};
         uint64_t _priority{INTERNAL_EVENT_PRIORITY};
@@ -85,6 +90,9 @@ namespace Ichor::v1 {
         std::vector<std::function<void(void)>> _quitCbs;
         // Shared with the handlers of in-flight requests, which can outlive the timer. Set when the timer stops, after which
         // it can be destroyed. Every startTimer() creates a new one, so handlers of a previous run never touch the timer.
-        ReferenceCountedPointer<bool> _runFinished;
+        ReferenceCountedPointer<bool> _runFinished{make_reference_counted<bool>(true)};
+        // A timeout_remove/timeout_update didn't find the multishot timeout because it was being re-armed, retry on its next completion.
+        bool _removeNeeded{};
+        bool _updateNeeded{};
     };
 }

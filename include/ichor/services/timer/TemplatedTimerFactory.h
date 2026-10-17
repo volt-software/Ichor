@@ -75,6 +75,11 @@ namespace Ichor::v1 {
                 }
             }
 
+            if(_stoppingTimers) {
+                // stopAllTimers counts on the timers staying around until they all stopped, they get destroyed together with the factory
+                return false;
+            }
+
             auto erased = std::erase_if(_timers, [timerId](std::unique_ptr<TIMER> const &timer) {
                 // not while STOPPING, requests of the timer can still be in flight
                 return timer->getTimerId() == timerId && timer->getState() == TimerState::STOPPED;
