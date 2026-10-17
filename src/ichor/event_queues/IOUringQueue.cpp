@@ -790,6 +790,13 @@ namespace Ichor::Detail {
             shouldAddQuitEvent();
         }
 
+        // The loop above only submits at the start of an iteration, so events pushed while handling the last batch are still in the
+        // submission queue. Submit them, so that the loop below reaps and de-allocates them.
+        if(auto ret = io_uring_submit(_eventQueuePtr); ret < 0) [[unlikely]] {
+            fmt::println("io_uring_submit() before final loop failed, ret {}", -ret);
+            std::terminate();
+        }
+
         // one last loop to de-allocate any potentially unhandled events
 //        fmt::println("One last loop");
         bool somethingHandled{true};
