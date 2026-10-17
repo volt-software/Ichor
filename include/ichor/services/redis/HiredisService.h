@@ -3,6 +3,9 @@
 #ifdef ICHOR_USE_HIREDIS
 
 #include <ichor/services/redis/IRedis.h>
+#include <ichor/dependency_management/AdvancedService.h>
+#include <ichor/coroutines/AsyncManualResetEvent.h>
+#include <ichor/event_queues/IEventQueue.h>
 #include <ichor/services/logging/Logger.h>
 #include <ichor/services/timer/ITimerFactory.h>
 #include <ichor/stl/StringUtils.h>
