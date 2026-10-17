@@ -3,12 +3,15 @@
 #include <cassert>
 #include <cstddef>
 #include <type_traits>
+#include <initializer_list>
 #include <iterator>
 #include <array>
 #include <limits>
 #include <memory>
+#include <utility>
 #include <algorithm>
 #include <exception>
+#include <functional>
 #include <ichor/stl/CompilerSpecific.h>
 
 // An implementation that is close to the StaticVector proposal: https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2023/p0843r6.html
@@ -18,7 +21,7 @@ namespace Ichor::v1 {
 
     namespace Detail {
         template <typename T>
-        static constexpr auto is_sufficiently_trivial = std::is_trivially_default_constructible_v<T> && std::is_trivially_destructible_v<T>;
+        inline constexpr auto is_sufficiently_trivial = std::is_trivially_default_constructible_v<T> && std::is_trivially_destructible_v<T>;
 
         template <typename T, std::size_t N>
         struct AlignedByteArray {
@@ -62,35 +65,47 @@ namespace Ichor::v1 {
 
         template <std::size_t N>
         struct SizeType {
-            using type = std::conditional_t<N <= std::numeric_limits<unsigned char>::max(), unsigned char, std::conditional_t<N <= std::numeric_limits<unsigned short>::max(), unsigned short, std::conditional_t<N <= std::numeric_limits<unsigned int>::max(), unsigned int, size_t>>>;
+            using type = std::conditional_t<N <= std::numeric_limits<unsigned char>::max(), unsigned char, std::conditional_t<N <= std::numeric_limits<unsigned short>::max(), unsigned short, std::conditional_t<N <= std::numeric_limits<unsigned int>::max(), unsigned int, std::size_t>>>;
         };
+
+        // Moves if T supports moving, copies otherwise. Used when shifting elements around, so that copy-only types keep working.
+        template <typename T>
+        [[nodiscard]] constexpr decltype(auto) moveOrCopy(T &t) noexcept {
+            if constexpr (std::is_move_constructible_v<T> && std::is_move_assignable_v<T>) {
+                return std::move(t);
+            } else {
+                return static_cast<T const &>(t);
+            }
+        }
     }
 
     template <typename T, bool Const>
     struct SVIterator {
     public:
         using iterator_category = std::contiguous_iterator_tag;
+        using iterator_concept  = std::contiguous_iterator_tag;
         using difference_type   = std::ptrdiff_t;
         using value_type        = T;
         using element_type      = std::conditional_t<Const, T const, T>;
         using pointer           = std::conditional_t<Const, T const *, T *>;
         using reference         = std::conditional_t<Const, value_type const &, value_type &>;
 
-        constexpr explicit SVIterator() noexcept : _ptr() {}
+        constexpr SVIterator() noexcept : _ptr() {}
         constexpr explicit SVIterator(pointer ptr ICHOR_LIFETIME_BOUND) noexcept : _ptr(ptr) {}
+        // iterator -> const_iterator conversion, like every std container offers
+        template <bool OtherConst> requires (Const && !OtherConst)
+        constexpr SVIterator(SVIterator<T, OtherConst> const &o) noexcept : _ptr(o.operator->()) {}
 
         constexpr reference operator*() const noexcept ICHOR_LIFETIME_BOUND { return *_ptr; }
         constexpr pointer operator->() const noexcept ICHOR_LIFETIME_BOUND { return _ptr; }
         constexpr reference operator[](difference_type n) const noexcept ICHOR_LIFETIME_BOUND { return _ptr[n]; }
 
         constexpr SVIterator& operator++() noexcept { ++_ptr; return *this; }
-        constexpr SVIterator operator++(int) noexcept { return SVIterator{++_ptr}; }
-        constexpr SVIterator operator+(difference_type n) noexcept { return SVIterator{_ptr + n}; }
+        constexpr SVIterator operator++(int) noexcept { return SVIterator{_ptr++}; }
         constexpr SVIterator& operator+=(difference_type n) noexcept { _ptr += n; return *this; }
 
         constexpr SVIterator& operator--() noexcept { --_ptr; return *this; }
-        constexpr SVIterator operator--(int) noexcept { return SVIterator{--_ptr}; }
-        constexpr SVIterator operator-(difference_type n) noexcept { return SVIterator{_ptr - n}; }
+        constexpr SVIterator operator--(int) noexcept { return SVIterator{_ptr--}; }
         constexpr SVIterator& operator-=(difference_type n) noexcept { _ptr -= n; return *this; }
 
         [[nodiscard]] friend constexpr bool operator== (SVIterator const & a, SVIterator const & b) noexcept { return a._ptr == b._ptr; };
@@ -101,7 +116,6 @@ namespace Ichor::v1 {
         [[nodiscard]] friend constexpr bool operator>= (SVIterator const & a, SVIterator const & b) noexcept { return a._ptr >= b._ptr; };
         [[nodiscard]] friend constexpr difference_type operator- (SVIterator const & a, SVIterator const & b) noexcept { return a._ptr - b._ptr; };
         [[nodiscard]] friend constexpr SVIterator operator- (SVIterator const& a, difference_type b) noexcept { return SVIterator{ a._ptr - b }; };
-        [[nodiscard]] friend constexpr difference_type operator+ (SVIterator const & a, SVIterator const & b) noexcept { return a._ptr + b._ptr; };
         [[nodiscard]] friend constexpr SVIterator operator+ (SVIterator const& a, difference_type b) noexcept { return SVIterator{ a._ptr + b }; };
         [[nodiscard]] friend constexpr SVIterator operator+ (difference_type a, SVIterator const& b) noexcept { return SVIterator{ a + b._ptr }; };
 
@@ -141,8 +155,8 @@ namespace Ichor::v1 {
 
         [[nodiscard]] virtual constexpr bool empty() const noexcept = 0;
         [[nodiscard]] virtual constexpr size_type size() const noexcept = 0;
-        [[nodiscard]] ICHOR_CONST_FUNC_ATTR virtual constexpr size_type max_size() noexcept = 0;
-        [[nodiscard]] ICHOR_CONST_FUNC_ATTR virtual constexpr size_type capacity() noexcept = 0;
+        [[nodiscard]] ICHOR_CONST_FUNC_ATTR virtual constexpr size_type max_size() const noexcept = 0;
+        [[nodiscard]] ICHOR_CONST_FUNC_ATTR virtual constexpr size_type capacity() const noexcept = 0;
 
         constexpr void resize(size_type sz) requires(std::is_default_constructible_v<T>) {
             assert(sz <= max_size());
@@ -182,7 +196,7 @@ namespace Ichor::v1 {
 
         [[nodiscard]] friend constexpr bool operator== (IStaticVector<T> const & a, IStaticVector<T> const & b) noexcept { return a.size() == b.size() && std::equal(a.begin(), a.end(), b.begin(), b.end()); };
         [[nodiscard]] friend constexpr bool operator!= (IStaticVector<T> const & a, IStaticVector<T> const & b) noexcept { return !(a == b); };
-        [[nodiscard]] friend constexpr bool operator<  (IStaticVector<T> const & a, IStaticVector<T> const & b) noexcept { return a.size() <  b.size() && std::lexicographical_compare(a.begin(), a.end(), b.begin(), b.end()); };
+        [[nodiscard]] friend constexpr bool operator<  (IStaticVector<T> const & a, IStaticVector<T> const & b) noexcept { return std::lexicographical_compare(a.begin(), a.end(), b.begin(), b.end()); };
         [[nodiscard]] friend constexpr bool operator<= (IStaticVector<T> const & a, IStaticVector<T> const & b) noexcept { return !(b < a); };
         [[nodiscard]] friend constexpr bool operator>  (IStaticVector<T> const & a, IStaticVector<T> const & b) noexcept { return   b < a; };
         [[nodiscard]] friend constexpr bool operator>= (IStaticVector<T> const & a, IStaticVector<T> const & b) noexcept { return !(a < b); };
@@ -209,19 +223,19 @@ namespace Ichor::v1 {
         using IStaticVector<T>::resize;
 
         constexpr StaticVector() noexcept = default;
-        constexpr explicit StaticVector(storage_size_type n) noexcept(Detail::is_sufficiently_trivial<T>) {
+        constexpr explicit StaticVector(size_type n) noexcept(Detail::is_sufficiently_trivial<T>) {
             assert(n <= N);
-            for(storage_size_type i = 0; i < n; ++i) {
+            for(size_type i = 0; i < n; ++i) {
                 emplace_back();
             }
         }
-        constexpr StaticVector(storage_size_type n, const_reference value) {
+        constexpr StaticVector(size_type n, const_reference value) {
             assert(n <= N);
-            for(storage_size_type i = 0; i < n; ++i) {
+            for(size_type i = 0; i < n; ++i) {
                 push_back(value);
             }
         }
-        template <class InputIterator>
+        template <std::input_iterator InputIterator>
         constexpr StaticVector(InputIterator first, InputIterator last) {
             while(first != last) {
                 push_back(*first);
@@ -234,14 +248,8 @@ namespace Ichor::v1 {
                 std::copy(list.begin(), list.end(), begin());
                 _size = static_cast<storage_size_type>(list.size());
             } else {
-                auto pos = list.begin();
-                while (pos != list.end()) {
-                    if constexpr (std::is_move_constructible_v<T>) {
-                        emplace_back(std::move(*pos));
-                    } else {
-                        push_back(*pos);
-                    }
-                    ++pos;
+                for(auto const &t : list) {
+                    push_back(t);
                 }
             }
         }
@@ -254,50 +262,68 @@ namespace Ichor::v1 {
         constexpr StaticVector(StaticVector&& other) noexcept(std::is_nothrow_move_constructible_v<value_type>) {
             assert(other._size <= N);
             for(auto &t : other) {
-                emplace_back(std::move(t));
+                emplace_back(Detail::moveOrCopy(t));
             }
             other.clear();
         }
 
-        constexpr StaticVector& operator=(StaticVector const & other) noexcept(std::is_nothrow_copy_assignable_v<value_type>) {
-            assert(other._size <= N);
+        constexpr StaticVector& operator=(StaticVector const & other) noexcept(std::is_nothrow_copy_constructible_v<value_type>) {
+            if(this == &other) [[unlikely]] {
+                return *this;
+            }
             clear();
             for(auto const &t : other) {
                 push_back(t);
             }
             return *this;
         }
-        constexpr StaticVector& operator=(StaticVector&& other) noexcept(std::is_nothrow_move_assignable_v<value_type>) {
-            assert(other._size <= N);
+        constexpr StaticVector& operator=(StaticVector&& other) noexcept(std::is_nothrow_move_constructible_v<value_type>) {
+            if(this == &other) [[unlikely]] {
+                return *this;
+            }
             clear();
             for(auto &t : other) {
-                emplace_back(std::move(t));
+                emplace_back(Detail::moveOrCopy(t));
             }
             other.clear();
             return *this;
         }
-        template <class InputIterator>
+
+        /// Replaces the contents with [first, last). Like std::vector, the range must not point into this vector.
+        template <std::input_iterator InputIterator>
         constexpr void assign(InputIterator first, InputIterator last) {
             size_type i = 0;
-            while(first != last) {
-                assert(i <= N);
-                _size = std::max(_size, static_cast<storage_size_type>(i + 1));
-                this->operator[](i) = *first;
+            // re-use already constructed elements, then either construct the remainder or destroy the leftovers
+            while(first != last && i < _size) {
+                _data.data()[i] = *first;
                 ++i;
+                ++first;
+            }
+            if(first == last) {
+                truncate(i);
+                return;
+            }
+            while(first != last) {
+                push_back(*first);
                 ++first;
             }
         }
         constexpr void assign(size_type n, const_reference u) final {
             assert(n <= N);
-            _size = std::max(_size, static_cast<storage_size_type>(n));
-            for(size_type i = 0; i < n; ++i) {
-                this->operator[](i) = u;
+            // u may refer to an element of this vector, so first overwrite, then grow and only shrink at the very end.
+            size_type const overlap = std::min(n, static_cast<size_type>(_size));
+            for(size_type i = 0; i < overlap; ++i) {
+                _data.data()[i] = u;
             }
+            while(_size < n) {
+                push_back(u);
+            }
+            truncate(n);
         }
 
-        ~StaticVector() = default;
+        constexpr ~StaticVector() = default;
 
-        ~StaticVector() requires (!Detail::is_sufficiently_trivial<T>) {
+        constexpr ~StaticVector() requires (!Detail::is_sufficiently_trivial<T>) {
             clear();
         }
 
@@ -344,42 +370,20 @@ namespace Ichor::v1 {
         [[nodiscard]] constexpr size_type size() const noexcept final {
             return _size;
         }
-        [[nodiscard]] ICHOR_CONST_FUNC_ATTR constexpr size_type max_size() noexcept final {
+        [[nodiscard]] ICHOR_CONST_FUNC_ATTR constexpr size_type max_size() const noexcept final {
             return N;
         }
-        [[nodiscard]] ICHOR_CONST_FUNC_ATTR constexpr size_type capacity() noexcept final {
+        [[nodiscard]] ICHOR_CONST_FUNC_ATTR constexpr size_type capacity() const noexcept final {
             return N;
         }
 
         constexpr void resize(size_type sz, const_reference c) final {
-            assert(sz <= std::numeric_limits<storage_size_type>::max());
             assert(sz <= N);
-            if constexpr (Detail::is_sufficiently_trivial<T>) {
-                if(sz > _size) {
-                    for(storage_size_type i = _size; i < sz; ++i) {
-                        if constexpr (std::is_move_constructible_v<T>) {
-                            emplace_back(c);
-                        } else {
-                            push_back(c);
-                        }
-                    }
-                }
-            } else {
-                if(sz > _size) {
-                    for(storage_size_type i = _size; i < sz; ++i) {
-                        if constexpr (std::is_move_constructible_v<T>) {
-                            emplace_back(c);
-                        } else {
-                            push_back(c);
-                        }
-                    }
-                } else if(sz < _size) {
-                    for(storage_size_type i = static_cast<storage_size_type>(sz); i < _size; ++i) {
-                        std::destroy_at(_data.data() + i);
-                    }
-                }
+            // c may refer to an element of this vector, growing never invalidates it and shrinking doesn't read it.
+            while(_size < sz) {
+                push_back(c);
             }
-            _size = static_cast<storage_size_type>(sz);
+            truncate(sz);
         }
 
         constexpr reference       operator[](size_type n) ICHOR_LIFETIME_BOUND final {
@@ -391,114 +395,89 @@ namespace Ichor::v1 {
             return *(_data.data() + n);
         }
         constexpr reference       front() ICHOR_LIFETIME_BOUND final {
+            assert(_size > 0);
             return *_data.data();
         }
         constexpr const_reference front() const ICHOR_LIFETIME_BOUND final {
+            assert(_size > 0);
             return *_data.data();
         }
         constexpr reference       back() ICHOR_LIFETIME_BOUND final {
+            assert(_size > 0);
             return *(_data.data() + (_size - 1));
         }
         constexpr const_reference back() const ICHOR_LIFETIME_BOUND final {
+            assert(_size > 0);
             return *(_data.data() + (_size - 1));
         }
         constexpr pointer         data()       noexcept ICHOR_LIFETIME_BOUND final {
-            return std::addressof(front());
+            return _data.data();
         }
         constexpr const_pointer   data() const noexcept ICHOR_LIFETIME_BOUND final {
-            return std::addressof(front());
+            return _data.data();
         }
 
         constexpr iterator insert(const_iterator const_position, const_reference x) ICHOR_LIFETIME_BOUND final {
-            assert(_size < N);
-            auto position = iterator{const_cast<pointer>(const_position.operator->())};
-            ++_size;
-            if constexpr (std::is_move_constructible_v<T>) {
-                std::move_backward(position, end() - 1, end());
-            } else {
-                std::copy_backward(position, end() - 1, end());
-            }
-
-            std::construct_at(position.operator->(), x);
-
-            return position;
+            return insert(const_position, 1, x);
         }
 
         constexpr iterator insert(const_iterator const_position, value_type&& x) ICHOR_LIFETIME_BOUND final {
-            assert(_size < N);
-            auto position = iterator{const_cast<pointer>(const_position.operator->())};
-            ++_size;
             if constexpr (std::is_move_constructible_v<T>) {
-                std::move_backward(position, end() - 1, end());
+                if(isElement(std::addressof(x))) {
+                    T tmp(std::move(x));
+                    return insertWith(const_position, 1, [&tmp](T *slot, bool alive, size_type) { fillSlot(slot, alive, std::move(tmp)); });
+                }
+                return insertWith(const_position, 1, [&x](T *slot, bool alive, size_type) { fillSlot(slot, alive, std::move(x)); });
             } else {
                 std::terminate(); // should never be called because value_type&& is impossible for non-moveable types
             }
-
-            if constexpr (std::is_move_constructible_v<T>) {
-                std::construct_at(position.operator->(), std::move(x));
-            }
-
-            return position;
         }
 
         constexpr iterator insert(const_iterator const_position, size_type n, const_reference x) ICHOR_LIFETIME_BOUND final {
-            assert(_size + n <= N);
-            auto position = iterator{const_cast<pointer>(const_position.operator->())};
-            _size += static_cast<storage_size_type>(n);
-            if constexpr (std::is_move_constructible_v<T>) {
-                std::move_backward(position, end() - static_cast<difference_type>(n), end());
-            } else {
-                std::copy_backward(position, end() - static_cast<difference_type>(n), end());
+            if(isElement(std::addressof(x))) {
+                // x would be moved around while making space for it, so take a copy first.
+                T const tmp(x);
+                return insertWith(const_position, n, [&tmp](T *slot, bool alive, size_type) { fillSlot(slot, alive, tmp); });
             }
-
-            for(difference_type i = 0; i < static_cast<difference_type>(n); ++i) {
-                std::construct_at((position + i).operator->(), x);
-            }
-
-            return position;
+            return insertWith(const_position, n, [&x](T *slot, bool alive, size_type) { fillSlot(slot, alive, x); });
         }
-        template <class InputIterator>
+
+        /// Inserts [first, last) before const_position. Like std::vector, the range must not point into this vector.
+        template <std::input_iterator InputIterator>
         constexpr iterator insert(const_iterator const_position, InputIterator first, InputIterator last) ICHOR_LIFETIME_BOUND {
-            difference_type n = std::distance(first, last);
-            assert(n >= 0);
-            assert(_size + (std::size_t)n <= N);
-            auto position = iterator{const_cast<pointer>(const_position.operator->())};
-            _size += static_cast<decltype(_size)>(n);
-            if constexpr (std::is_move_constructible_v<T>) {
-                std::move_backward(position, end() - n, end());
+            if constexpr (std::forward_iterator<InputIterator>) {
+                auto const n = static_cast<size_type>(std::distance(first, last));
+                return insertWith(const_position, n, [&first](T *slot, bool alive, size_type) {
+                    fillSlot(slot, alive, *first);
+                    ++first;
+                });
             } else {
-                std::copy_backward(position, end() - n, end());
+                // single-pass iterators: append everything and rotate it into place
+                auto const idx = static_cast<size_type>(const_position - cbegin());
+                auto const origSize = static_cast<difference_type>(_size);
+                while(first != last) {
+                    push_back(*first);
+                    ++first;
+                }
+                std::rotate(begin() + static_cast<difference_type>(idx), begin() + origSize, end());
+                return begin() + static_cast<difference_type>(idx);
             }
-
-            difference_type i = 0;
-            while(first != last) {
-                std::construct_at((position + i).operator->(), *first);
-                ++i;
-                ++first;
-            }
-
-            return position;
         }
 
         template <class... Args>
         constexpr iterator emplace(const_iterator const_position, Args&&... args) ICHOR_LIFETIME_BOUND {
             assert(_size < N);
-            auto position = iterator{const_cast<pointer>(const_position.operator->())};
-            ++_size;
-            if constexpr (std::is_move_constructible_v<T>) {
-                std::move_backward(position, end() - 1, end());
-            } else {
-                std::copy_backward(position, end() - 1, end());
+            if(const_position == cend()) {
+                emplace_back(std::forward<Args>(args)...);
+                return end() - 1;
             }
-
-            std::construct_at(position.operator->(), std::forward<Args>(args)...);
-
-            return position;
+            // args may refer to elements of this vector, construct the value before shifting anything.
+            T tmp(std::forward<Args>(args)...);
+            return insertWith(const_position, 1, [&tmp](T *slot, bool alive, size_type) { fillSlot(slot, alive, Detail::moveOrCopy(tmp)); });
         }
         template <class... Args>
         constexpr reference emplace_back(Args&&... args) noexcept(Detail::is_sufficiently_trivial<T>) ICHOR_LIFETIME_BOUND {
             assert(_size < N);
-            //fmt::print("emplace_back {} {}\n", _size, (void*)(data() + size()));
             std::construct_at(data() + size(), std::forward<Args>(args)...);
             ++_size;
             return back();
@@ -511,7 +490,7 @@ namespace Ichor::v1 {
         constexpr void push_back(value_type&& x) final {
             assert(_size < N);
             if constexpr (std::is_move_constructible_v<T>) {
-                std::construct_at(data() + size(), std::forward<T>(x));
+                std::construct_at(data() + size(), std::move(x));
             } else {
                 std::terminate(); // should never be called because value_type&& is impossible for non-moveable types
             }
@@ -521,21 +500,20 @@ namespace Ichor::v1 {
         constexpr void pop_back() noexcept(Detail::is_sufficiently_trivial<T>) final {
             assert(_size > 0);
             if constexpr (!Detail::is_sufficiently_trivial<T>) {
-                //fmt::print("pop_back destroy_at {} {}\n", (void*)begin().operator->(), (void*)&back());
                 std::destroy_at(std::addressof(back()));
             }
             --_size;
         }
         constexpr iterator erase(const_iterator const_position) ICHOR_LIFETIME_BOUND final {
+            assert(const_position >= cbegin() && const_position < cend());
             auto position = iterator{const_cast<pointer>(const_position.operator->())};
             if(position + 1 != end()) {
-                if constexpr (std::is_move_constructible_v<T>) {
+                if constexpr (std::is_move_assignable_v<T>) {
                     std::move(position + 1, end(), position);
                 } else {
                     std::copy(position + 1, end(), position);
                 }
             }
-            //fmt::print("erase pop_back {} {}\n", (void*)begin().operator->(), (void*)position.operator->());
             pop_back();
             return position;
         }
@@ -543,108 +521,116 @@ namespace Ichor::v1 {
             auto first = iterator{const_cast<pointer>(const_first.operator->())};
             if(const_first != const_last) {
                 auto last = iterator{const_cast<pointer>(const_last.operator->())};
-                SVIterator<T, false> position;
+                iterator position;
 
-                if constexpr (std::is_move_constructible_v<T>) {
+                if constexpr (std::is_move_assignable_v<T>) {
                     position = std::move(last, end(), first);
                 } else {
                     position = std::copy(last, end(), first);
                 }
 
-                if constexpr (!Detail::is_sufficiently_trivial<T>) {
-                    while(position != end()) {
-                        std::destroy_at(position.operator->());
-                        ++position;
-                    }
-                }
-                _size -= static_cast<storage_size_type>(std::distance(first, last));
+                truncate(static_cast<size_type>(position - begin()));
             }
 
             return first;
         }
 
         constexpr void clear() noexcept final {
-            if constexpr (!Detail::is_sufficiently_trivial<T>) {
-                for(storage_size_type i = 0; i < _size; ++i) {
-                    std::destroy_at(_data.data() + i);
-                }
-            }
-            _size = 0;
+            truncate(0);
         }
 
         constexpr void swap(StaticVector &x) noexcept(std::is_nothrow_swappable_v<T> && std::is_nothrow_move_constructible_v<T>) {
-            assert(x.size() <= N);
-            assert(size() <= x.max_size());
             static_assert(std::is_swappable_v<T>, "T is not swappable, implement swap on the type");
-            auto greater = static_cast<difference_type>(std::max(size(), x.size()));
-
-            for(difference_type i = 0; i < greater; ++i) {
-                using std::swap;
-                swap((begin() + i).operator*(), (x.begin() + i).operator*());
+            if(this == &x) [[unlikely]] {
+                return;
             }
 
-            std::swap(_size, x._size);
+            StaticVector &smaller = _size <= x._size ? *this : x;
+            StaticVector &larger = _size <= x._size ? x : *this;
+            auto const common = static_cast<size_type>(smaller._size);
+
+            for(size_type i = 0; i < common; ++i) {
+                using std::swap;
+                swap(smaller._data.data()[i], larger._data.data()[i]);
+            }
+
+            // the remainder only exists in the larger vector, move it over into raw storage of the smaller one
+            for(size_type i = common; i < larger._size; ++i) {
+                smaller.emplace_back(Detail::moveOrCopy(larger._data.data()[i]));
+            }
+            larger.truncate(common);
+        }
+
+        friend constexpr void swap(StaticVector &a, StaticVector &b) noexcept(noexcept(a.swap(b))) {
+            a.swap(b);
         }
 
     private:
+        /// Destroys all elements from newSize onwards
+        constexpr void truncate(size_type newSize) noexcept {
+            if constexpr (!Detail::is_sufficiently_trivial<T>) {
+                for(size_type i = newSize; i < _size; ++i) {
+                    std::destroy_at(_data.data() + i);
+                }
+            }
+            if(newSize < _size) {
+                _size = static_cast<storage_size_type>(newSize);
+            }
+        }
+
+        /// Whether p points to one of the live elements of this vector.
+        [[nodiscard]] constexpr bool isElement(T const *p) const noexcept {
+            if (std::is_constant_evaluated()) {
+                // comparing unrelated pointers is not a constant expression, so walk the elements instead.
+                for(size_type i = 0; i < _size; ++i) {
+                    if(_data.data() + i == p) {
+                        return true;
+                    }
+                }
+                return false;
+            }
+            return std::less_equal<T const *>{}(_data.data(), p) && std::less<T const *>{}(p, _data.data() + _size);
+        }
+
+        /// Puts a value into a slot that either contains a live (moved-from) object or raw storage.
+        template <typename U>
+        static constexpr void fillSlot(T *slot, bool alive, U &&value) {
+            if(alive) {
+                *slot = std::forward<U>(value);
+            } else {
+                std::construct_at(slot, std::forward<U>(value));
+            }
+        }
+
+        /// Opens a gap of n elements before const_position and calls fill(slot, alive, index) for each slot of the gap.
+        template <typename Fill>
+        constexpr iterator insertWith(const_iterator const_position, size_type n, Fill &&fill) {
+            assert(_size + n <= N);
+            assert(const_position >= cbegin() && const_position <= cend());
+            auto const idx = static_cast<size_type>(const_position - cbegin());
+            auto const origSize = static_cast<size_type>(_size);
+            T *d = _data.data();
+
+            // Shift [idx, origSize) right by n, back to front. Destinations beyond the old end are raw storage and need constructing.
+            for(size_type i = origSize; i > idx; --i) {
+                size_type const src = i - 1;
+                size_type const dst = src + n;
+                if(dst >= origSize) {
+                    std::construct_at(d + dst, Detail::moveOrCopy(d[src]));
+                } else {
+                    d[dst] = Detail::moveOrCopy(d[src]);
+                }
+            }
+
+            for(size_type k = 0; k < n; ++k) {
+                fill(d + idx + k, idx + k < origSize, k);
+            }
+
+            _size = static_cast<storage_size_type>(origSize + n);
+            return begin() + static_cast<difference_type>(idx);
+        }
+
         Detail::UninitializedArray<T, N> _data;
         storage_size_type _size{};
     };
-}
-
-namespace std {
-    template <typename T, size_t N>
-    constexpr bool operator==(const Ichor::v1::StaticVector<T, N>& a, const Ichor::v1::StaticVector<T, N>& b) {
-        return a == b;
-    }
-    template <typename T, size_t N>
-    constexpr bool operator!=(const Ichor::v1::StaticVector<T, N>& a, const Ichor::v1::StaticVector<T, N>& b) {
-        return a != b;
-    }
-    template <typename T, size_t N>
-    constexpr bool operator<(const Ichor::v1::StaticVector<T, N>& a, const Ichor::v1::StaticVector<T, N>& b) {
-        return a < b;
-    }
-    template <typename T, size_t N>
-    constexpr bool operator<=(const Ichor::v1::StaticVector<T, N>& a, const Ichor::v1::StaticVector<T, N>& b) {
-        return a <= b;
-    }
-    template <typename T, size_t N>
-    constexpr bool operator>(const Ichor::v1::StaticVector<T, N>& a, const Ichor::v1::StaticVector<T, N>& b) {
-        return a > b;
-    }
-    template <typename T, size_t N>
-    constexpr bool operator>=(const Ichor::v1::StaticVector<T, N>& a, const Ichor::v1::StaticVector<T, N>& b) {
-        return a >= b;
-    }
-    template <typename T>
-    constexpr bool operator==(const Ichor::v1::IStaticVector<T>& a, const Ichor::v1::IStaticVector<T>& b) {
-        return a == b;
-    }
-    template <typename T>
-    constexpr bool operator!=(const Ichor::v1::IStaticVector<T>& a, const Ichor::v1::IStaticVector<T>& b) {
-        return a != b;
-    }
-    template <typename T>
-    constexpr bool operator<(const Ichor::v1::IStaticVector<T>& a, const Ichor::v1::IStaticVector<T>& b) {
-        return a < b;
-    }
-    template <typename T>
-    constexpr bool operator<=(const Ichor::v1::IStaticVector<T>& a, const Ichor::v1::IStaticVector<T>& b) {
-        return a <= b;
-    }
-    template <typename T>
-    constexpr bool operator>(const Ichor::v1::IStaticVector<T>& a, const Ichor::v1::IStaticVector<T>& b) {
-        return a > b;
-    }
-    template <typename T>
-    constexpr bool operator>=(const Ichor::v1::IStaticVector<T>& a, const Ichor::v1::IStaticVector<T>& b) {
-        return a >= b;
-    }
-
-    template<typename T, size_t N>
-    constexpr void swap(Ichor::v1::StaticVector<T, N> &x, Ichor::v1::StaticVector<T, N> &y)
-    noexcept(noexcept(x.swap(y))) {
-        x.swap(y);
-    }
 }

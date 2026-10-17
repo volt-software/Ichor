@@ -2,6 +2,8 @@
 
 #include <vector>
 #include <algorithm>
+#include <cassert>
+#include <utility>
 
 // The SectionalPriorityQueue is specialized for one purpose only: an ordered, vector-mapped queue for unique_ptr's, which only gets pushed/popped to.
 // This ensures that the compare function never gets un-set unique_ptrs. (except when they get pushed, which this queue considers a user-mistake, for performance reasons)
@@ -27,7 +29,7 @@ namespace Ichor::v1 {
         }
 
         constexpr void push(T &&t) {
-            c.push_back(std::forward<T>(t));
+            c.push_back(std::move(t));
             std::push_heap(c.begin(), c.end(), comp);
         }
 
@@ -38,10 +40,12 @@ namespace Ichor::v1 {
         }
 
         /**
-         * pops the last element in the vector and returns it (note: different than std::priority_queue!)
-         * @return
+         * removes the top element (the one ordered first by Compare) and returns it (note: different than std::priority_queue, which returns void!)
+         * The queue must not be empty.
+         * @return the former top element
          */
         constexpr T pop() {
+            assert(!c.empty());
             std::pop_heap(c.begin(), c.end(), comp);
             T t = std::move(c.back());
             c.pop_back();

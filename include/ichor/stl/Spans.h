@@ -1,11 +1,14 @@
 #pragma once
 
 #include <ichor/stl/NeverAlwaysNull.h>
+#include <ichor/stl/CompilerSpecific.h>
+#include <cstddef>
+#include <iterator>
 #include <vector>
 #include <type_traits>
 
 namespace Ichor::v1 {
-    // Span-like, non-allocating view over a vector.
+    // VectorView: span-like, non-allocating view over a vector.
     // Used in situations where you have a vector<CHILD> but want to return a span<PARENT>.
     // Safe for vectors of any type derived from T (avoids base-pointer
     // arithmetic across derived arrays by indexing via the original element type).
@@ -19,7 +22,9 @@ namespace Ichor::v1 {
         struct iterator {
             using value_type = NeverNull<VecT const *>;
             using difference_type = std::ptrdiff_t;
-            using iterator_category = std::random_access_iterator_tag;
+            // operator* returns by value (a proxy), which C++20 random access iterators allow but legacy (C++17) forward iterators don't.
+            using iterator_concept = std::random_access_iterator_tag;
+            using iterator_category = std::input_iterator_tag;
 
             constexpr iterator() noexcept : _data(nullptr), _get(nullptr), _idx(0) {}
             constexpr iterator(void const * data, GetFn get, std::size_t idx) noexcept
@@ -34,7 +39,8 @@ namespace Ichor::v1 {
             constexpr iterator operator--(int) noexcept { auto tmp = *this; --_idx; return tmp; }
             constexpr value_type operator[](difference_type n) const noexcept { return _get(_data, _idx + n); }
 
-            friend constexpr bool operator==(iterator const& a, iterator const& b) noexcept { return a._idx == b._idx && a._data == b._data; }
+            // Like std iterators, only iterators into the same view may be compared, so comparing the index is enough and consistent with operator<.
+            friend constexpr bool operator==(iterator const& a, iterator const& b) noexcept { return a._idx == b._idx; }
             friend constexpr bool operator!=(iterator const& a, iterator const& b) noexcept { return !(a == b); }
             friend constexpr bool operator<(iterator const& a, iterator const& b) noexcept { return a._idx < b._idx; }
             friend constexpr bool operator>(iterator const& a, iterator const& b) noexcept { return b < a; }
@@ -55,9 +61,13 @@ namespace Ichor::v1 {
 
         constexpr VectorView() noexcept : _data(nullptr), _get(nullptr), _size(0) {}
 
+        /// The view refers to v's storage, it is invalidated when v is destroyed or reallocates.
         template <typename T, typename = std::enable_if_t<std::is_base_of_v<VecT, T>>>
-        explicit constexpr VectorView(std::vector<T> const &v) noexcept
+        explicit constexpr VectorView(std::vector<T> const &v ICHOR_LIFETIME_BOUND) noexcept
                 : _data(v.data()), _get(&VectorView::template getAt<T>), _size(v.size()) {}
+        // A view over a temporary would dangle immediately.
+        template <typename T, typename = std::enable_if_t<std::is_base_of_v<VecT, T>>>
+        explicit VectorView(std::vector<T> const &&v) = delete;
 
         [[nodiscard]] constexpr iterator begin() const noexcept { return iterator{_data, _get, 0}; }
         [[nodiscard]] constexpr iterator end() const noexcept { return iterator{_data, _get, _size}; }

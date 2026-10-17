@@ -781,7 +781,7 @@ target_include_directories(ichor PUBLIC
 # Header file set so that CMake can verify that every public header compiles on its own (self-contained headers).
 # Build the `all_verify_interface_header_sets` target to run the verification.
 if(ICHOR_VERIFY_INTERFACE_HEADERS)
-    file(GLOB_RECURSE ICHOR_PUBLIC_HEADERS ${ICHOR_TOP_DIR}/include/ichor/*.h)
+    file(GLOB_RECURSE ICHOR_PUBLIC_HEADERS CONFIGURE_DEPENDS ${ICHOR_TOP_DIR}/include/ichor/*.h)
 
     # Filter out headers that depend on optional features that are not enabled
     if(NOT ICHOR_USE_BOOST_BEAST)

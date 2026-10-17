@@ -1,8 +1,12 @@
 #pragma once
 
-#if __cplusplus >= 202302L && defined(__has_cpp_attribute) && __has_cpp_attribute(assume)
-#define ICHOR_ASSUME(...) [[assume(__VA_ARGS__)]];
-#else
+// Both variants require a trailing semicolon at the call site: ICHOR_ASSUME(x > 0);
+#if __cplusplus >= 202302L && defined(__has_cpp_attribute)
+#if __has_cpp_attribute(assume)
+#define ICHOR_ASSUME(...) [[assume(__VA_ARGS__)]]
+#endif
+#endif
+#ifndef ICHOR_ASSUME
 #define ICHOR_ASSUME(...) static_assert(true, "")
 #endif
 

@@ -8,10 +8,12 @@
 #include <string_view>
 #include <fmt/base.h>
 #include <iterator>
-
-#if ICHOR_EXCEPTIONS_ENABLED
+#include <cstddef>
+#include <cstdint>
 #include <exception>
-#endif
+#include <new>
+#include <type_traits>
+#include <utility>
 
 // Differs from std::any by not needing RTTI (no typeid()) and still able to compare types
 // e.g my_any_var.type_hash() == Ichor::typeNameHash<int>()
@@ -58,10 +60,12 @@ namespace Ichor::v1 {
 
             if(o._ptr == static_cast<void*>(o._buffer.data())) {
                 _ptr = _opFn(any_op::MOVE, _buffer, o._ptr);
+                // o.reset() destroys the moved-from object that still lives in o's buffer
             } else {
+                // heap allocated, steal the pointer
                 _ptr = o._ptr;
+                o._ptr = nullptr;
             }
-            o._ptr = nullptr;
             o.reset();
         }
 
@@ -94,15 +98,18 @@ namespace Ichor::v1 {
             _size = o._size;
             if(o._ptr == static_cast<void*>(o._buffer.data())) {
                 _ptr = o._opFn(any_op::MOVE, _buffer, o._ptr);
+                // o.reset() destroys the moved-from object that still lives in o's buffer
             } else {
+                // heap allocated (or empty), steal the pointer
                 _ptr = o._ptr;
+                o._ptr = nullptr;
             }
             _typeHash = o._typeHash;
             _opFn = o._opFn;
             _formatFn = o._formatFn;
             _typeName = o._typeName;
 
-            o._ptr = nullptr;
+            o.reset();
 
             return *this;
         }
@@ -111,12 +118,14 @@ namespace Ichor::v1 {
             reset();
         }
 
+        /// Identity comparison: true only if both refer to the very same stored object, which is only the case when comparing an any with itself.
+        /// Copies of an any never compare equal, as the stored values are not compared.
         constexpr bool operator==(const any& other) const noexcept {
             return _typeHash == other._typeHash && _ptr != nullptr && _ptr == other._ptr;
         }
 
         template <bool FORMATTABLE, typename T, typename... Args>
-        constexpr std::decay<T>& emplace(Args&&... args) noexcept {
+        constexpr std::decay_t<T>& emplace(Args&&... args) noexcept {
             static_assert(std::is_copy_constructible_v<T>, "Template argument must be copy constructible.");
             static_assert(!std::is_pointer_v<T>, "Template argument must not be a pointer");
 
@@ -164,7 +173,7 @@ namespace Ichor::v1 {
             }
             _typeName = typeName<std::remove_cvref_t<T>>();
 
-            return *static_cast<std::decay<T>*>(_ptr);
+            return *static_cast<std::decay_t<T>*>(_ptr);
         }
 
         constexpr void reset() noexcept {
@@ -231,19 +240,27 @@ namespace Ichor::v1 {
 #endif
         }
 
+        /// Like std::any_cast on a pointer: returns nullptr if the any is empty or contains a different type.
         template<typename ValueType>
-        [[nodiscard]] constexpr ValueType any_cast_ptr() const {
-            using Up = typename std::remove_pointer_t<std::remove_cvref_t<ValueType>>;
-            static_assert((std::is_pointer_v<ValueType> ), "Template argument must be a pointer type");
-            auto comparison = typeNameHash<Up>();
-            if(_ptr != nullptr && _typeHash == comparison) {
+        [[nodiscard]] constexpr ValueType any_cast_ptr() noexcept {
+            static_assert(std::is_pointer_v<ValueType>, "Template argument must be a pointer type");
+            using Up = std::remove_cv_t<std::remove_pointer_t<ValueType>>;
+            if(_ptr != nullptr && _typeHash == typeNameHash<Up>()) {
                 return static_cast<ValueType>(_ptr);
             }
-#if ICHOR_EXCEPTIONS_ENABLED
-            throw bad_any_cast{_typeName, typeName<Up>()};
-#else
-            std::terminate();
-#endif
+            return nullptr;
+        }
+
+        /// Like std::any_cast on a pointer: returns nullptr if the any is empty or contains a different type.
+        template<typename ValueType>
+        [[nodiscard]] constexpr ValueType any_cast_ptr() const noexcept {
+            static_assert(std::is_pointer_v<ValueType>, "Template argument must be a pointer type");
+            static_assert(std::is_const_v<std::remove_pointer_t<ValueType>>, "Casting a const any requires a pointer to const");
+            using Up = std::remove_cv_t<std::remove_pointer_t<ValueType>>;
+            if(_ptr != nullptr && _typeHash == typeNameHash<Up>()) {
+                return static_cast<ValueType>(_ptr);
+            }
+            return nullptr;
         }
 
     private:
@@ -266,8 +283,21 @@ namespace Ichor::v1 {
         return a.template any_cast<ValueType>();
     }
 
+    /// Returns nullptr if a is nullptr, empty or contains a different type. ValueType has to be a pointer to const.
     template<typename ValueType>
-    [[nodiscard]] constexpr ValueType any_cast(any const *a) {
+    [[nodiscard]] constexpr ValueType any_cast(any const *a) noexcept {
+        if(a == nullptr) {
+            return nullptr;
+        }
+        return a->template any_cast_ptr<ValueType>();
+    }
+
+    /// Returns nullptr if a is nullptr, empty or contains a different type.
+    template<typename ValueType>
+    [[nodiscard]] constexpr ValueType any_cast(any *a) noexcept {
+        if(a == nullptr) {
+            return nullptr;
+        }
         return a->template any_cast_ptr<ValueType>();
     }
 
