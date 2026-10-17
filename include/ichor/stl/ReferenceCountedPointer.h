@@ -116,7 +116,6 @@ namespace Ichor::v1 {
     class [[nodiscard]] ReferenceCountedPointer final {
     public:
         constexpr ReferenceCountedPointer() noexcept = default;
-        constexpr ReferenceCountedPointer(decltype(nullptr)) noexcept {}
         constexpr ReferenceCountedPointer(const ReferenceCountedPointer &o) noexcept : _ptr(o._ptr), _block(o._block) {
             increment();
         }
