@@ -125,8 +125,10 @@ fi
 
 # Quick libcpp compile check
 rm -rf ./* ../bin/*
-CC=clang-19 CXX=clang++-19 cmake -GNinja -DCMAKE_BUILD_TYPE=Debug -DICHOR_USE_SANITIZERS=0 -DICHOR_ENABLE_INTERNAL_DEBUGGING=0 -DICHOR_USE_MOLD=1 -DICHOR_USE_BOOST_BEAST=1 -DICHOR_USE_SPDLOG=1 -DICHOR_USE_HIREDIS=1 -DICHOR_USE_LIBURING=1 -DICHOR_USE_SDEVENT=1 .. || exit 1
+# Also verifies that all public headers are self-contained, with most optional features enabled
+CC=clang-19 CXX=clang++-19 cmake -GNinja -DCMAKE_BUILD_TYPE=Debug -DICHOR_USE_SANITIZERS=0 -DICHOR_ENABLE_INTERNAL_DEBUGGING=0 -DICHOR_USE_MOLD=1 -DICHOR_USE_BOOST_BEAST=1 -DICHOR_USE_SPDLOG=1 -DICHOR_USE_HIREDIS=1 -DICHOR_USE_LIBURING=1 -DICHOR_USE_SDEVENT=1 -DICHOR_VERIFY_INTERFACE_HEADERS=1 .. || exit 1
 ninja || exit 1
+ninja all_verify_interface_header_sets || exit 1
 ninja test || exit 1
 run_examples 1 1 1
 

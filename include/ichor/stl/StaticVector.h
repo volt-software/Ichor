@@ -8,6 +8,7 @@
 #include <limits>
 #include <memory>
 #include <algorithm>
+#include <exception>
 #include <ichor/stl/CompilerSpecific.h>
 
 // An implementation that is close to the StaticVector proposal: https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2023/p0843r6.html
