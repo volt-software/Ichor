@@ -708,7 +708,7 @@ target_include_directories(ichor PUBLIC
 
 # Lets CMake generate a translation unit per header that only includes that header, compiled with ichor's public usage requirements.
 # This catches headers that only compile thanks to whatever happened to be included before them.
-# Build the verification on its own with the `all_verify_interface_header_sets` target, it is part of the default build as well.
+# Build the verification on its own with the `ichor_verify_interface_header_sets` target, it is part of the default build as well.
 set(ICHOR_HEADER_FILE_SET_INSTALL)
 if(ICHOR_VERIFY_HEADERS)
     file(GLOB ICHOR_STL_HEADERS CONFIGURE_DEPENDS "${ICHOR_TOP_DIR}/include/ichor/stl/*.h")
