@@ -145,6 +145,8 @@ void Ichor::v1::IOUringTimer::armTimeout() {
     // submitting). With an interval shorter than an event loop iteration, timeout_remove could then keep missing it and stopping never finish.
     // Before kernel 6.13 (or the 6.6.72/6.12.10 backports), timeout_update on a multishot timeout also only changed its next expiry.
     // For one-shot timeouts a timeout_remove/timeout_update that misses means it expired, and its completion ends the stop / re-arms.
+    // TODO: use IORING_TIMEOUT_MULTISHOT again for performance (saves an sqe + submit per expiry). Needs a stop that is guaranteed to
+    //  finish for short intervals, e.g. a finite multishot count that gets re-armed, and a fallback for timeout_update before 6.13.
     auto *sqe = _q->getSqeWithData(_requestingServiceId, createNewHandler());
     io_uring_prep_timeout(sqe, &_timespec, 0, 0);
     _uringTimerId = sqe->user_data;
