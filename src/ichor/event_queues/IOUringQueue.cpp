@@ -512,7 +512,9 @@ namespace Ichor::Detail {
             }
 
             io_uring_cqe *cqe{};
-            ret = io_uring_wait_cqe(&tempQueue.ring, &cqe);
+            do {
+                ret = io_uring_wait_cqe(&tempQueue.ring, &cqe);
+            } while(ret == -EINTR);
             if(ret < 0) [[unlikely]] {
                 fmt::println("io_uring_wait_cqe() for cross thread ring {}", ret);
                 fmt::println("couldn't get completion event, would result in dropping event");
@@ -661,6 +663,11 @@ namespace Ichor::Detail {
             fmt::println("useEventLoop() ring has {} entries, but queue expects {}.", event->sq.ring_entries, _entriesCount);
             return false;
         }
+        if(event->flags & IORING_SETUP_SQPOLL) {
+            // The kernel thread consumes sqes asynchronously, while the queue assumes they are consumed when submitting.
+            fmt::println("useEventLoop() rings with IORING_SETUP_SQPOLL are not supported.");
+            return false;
+        }
         if(!checkRingFlags(event)) {
             return false;
         }
@@ -738,8 +745,7 @@ namespace Ichor::Detail {
                 std::terminate();
             }
             // The return value is not always the amount of submitted sqes (e.g. when a cqe was already available), so check that the kernel consumed everything instead.
-            // Not possible with IORING_SETUP_SQPOLL (only possible through useEventLoop), where the kernel thread consumes sqes asynchronously.
-            if(auto spaceAfter = io_uring_sq_space_left(_eventQueuePtr); spaceAfter != _entriesCount && (_eventQueuePtr->flags & IORING_SETUP_SQPOLL) == 0) [[unlikely]] {
+            if(auto spaceAfter = io_uring_sq_space_left(_eventQueuePtr); spaceAfter != _entriesCount) [[unlikely]] {
                 fmt::println("submit wrong amount2 {} {} {} {}", ret, _entriesCount, space, spaceAfter);
 #ifdef ICHOR_ENABLE_INTERNAL_URING_DEBUGGING
                 afterSubmitDebug(ret, space);
@@ -1001,11 +1007,9 @@ namespace Ichor::Detail {
     UringResponseEvent *IOUringQueueBase::acquireResponseEvent(ServiceIdType serviceId, UringCallback &&fun) noexcept {
         auto *evt = _freeResponseEventsHead;
         if(evt == nullptr) [[unlikely]] {
-            // More requests in flight than pooled events (e.g. many open connections each with a pending recv), fall back to the heap.
+            // More requests in flight than pooled events (e.g. many open connections each with a pending recv), grow the pool.
             // Pending requests are not limited by the ring size, so this must not be fatal.
-            auto *heapEvt = new UringResponseEvent(getNextEventId(), serviceId, INTERNAL_EVENT_PRIORITY, std::move(fun));
-            heapEvt->heapAllocated = true;
-            return heapEvt;
+            return _overflowResponseEvents.emplace_back(std::make_unique<UringResponseEvent>(getNextEventId(), serviceId, INTERNAL_EVENT_PRIORITY, std::move(fun))).get();
         }
         _freeResponseEventsHead = evt->nextFree;
         if(_freeResponseEventsHead == nullptr) {
@@ -1017,10 +1021,6 @@ namespace Ichor::Detail {
     }
 
     void IOUringQueueBase::releaseResponseEvent(UringResponseEvent *evt) noexcept {
-        if(evt->heapAllocated) [[unlikely]] {
-            delete evt;
-            return;
-        }
         // release resources held by the callback early
         evt->fun.reset();
         evt->nextFree = nullptr;

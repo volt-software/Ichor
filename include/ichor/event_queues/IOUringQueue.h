@@ -8,6 +8,8 @@
 #include <ichor/ichor_liburing.h>
 #include <ichor/ConstevalHash.h>
 #include <array>
+#include <memory>
+#include <vector>
 #include <atomic>
 #include <span>
 #include <thread>
@@ -16,7 +18,7 @@
 namespace Ichor {
     namespace Detail {
         /// Event used as user_data for sqe's requested through IIOUringQueue::getSqeWithData. Instances are pooled by TemplateIOUringQueue,
-        /// only when the pool is exhausted they are heap allocated.
+        /// when the pool is exhausted the queue allocates more, which are then re-used through the same free list.
         struct UringResponseEvent final : public Event {
             UringResponseEvent() noexcept : Event(0, ServiceIdType{0}, INTERNAL_EVENT_PRIORITY) {}
             UringResponseEvent(uint64_t _id, ServiceIdType _originatingService, uint64_t _priority, UringCallback _fun) noexcept :
@@ -32,7 +34,6 @@ namespace Ichor {
 
             UringCallback fun;
             UringResponseEvent *nextFree{};
-            bool heapAllocated{};
             static constexpr NameHashType TYPE = typeNameHash<UringResponseEvent>();
             static constexpr std::string_view NAME = typeName<UringResponseEvent>();
         };
@@ -112,6 +113,9 @@ namespace Ichor {
             // FIFO free list of response events, to make re-use of the same user_data for different requests as unlikely as possible
             UringResponseEvent *_freeResponseEventsHead{};
             UringResponseEvent *_freeResponseEventsTail{};
+            // Events allocated when the pool ran out. Owned here and put on the free list when released, instead of being freed,
+            // so that their address (the user_data of a request) isn't handed out again right away, see _freeResponseEventsHead.
+            std::vector<std::unique_ptr<UringResponseEvent>> _overflowResponseEvents;
 #ifdef ICHOR_ENABLE_INTERNAL_URING_DEBUGGING
             std::vector<std::pair<io_uring_op, Ichor::Event*>> _debugOpcodes;
 #endif
@@ -119,7 +123,7 @@ namespace Ichor {
     }
 
     /// Provides an io_uring based queue, expects the running OS to have at least kernel 5.4, but multithreading support is only available from 5.18 and later.
-    /// \tparam RingSize amount of entries in the submission queue of the ring. Also the amount of in-flight requests created through getSqeWithData that use pre-allocated events, more in-flight requests fall back to heap allocations.
+    /// \tparam RingSize amount of entries in the submission queue of the ring. Also the amount of in-flight requests created through getSqeWithData that use pre-allocated events, more in-flight requests allocate additional events.
     template <uint32_t RingSize>
     class TemplateIOUringQueue final : private Detail::UringResponseEventStorage<RingSize>, public Detail::IOUringQueueBase {
         static_assert(RingSize > 0, "RingSize cannot be 0");
