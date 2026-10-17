@@ -13,6 +13,7 @@
 #include <cstdlib>
 #include <algorithm>
 #include <memory>
+#include <mutex>
 #include <ichor/event_queues/IIOUringQueue.h>
 #include <ichor/stl/LinuxUtils.h>
 #include <ichor/stl/CompilerSpecific.h>
@@ -333,6 +334,8 @@ namespace Ichor {
 namespace Ichor::Detail {
     namespace {
         constexpr unsigned int CROSS_THREAD_RING_ENTRIES = 64;
+        // user_data of the IORING_OP_MSG_RING completions that wake up a queue for events pushed from other threads. Never a valid Event*.
+        constexpr uint64_t CROSS_THREAD_WAKEUP_DATA = 1;
         constexpr unsigned int CQ_ENTRIES_MULTIPLIER = 4;
         constexpr unsigned int MAX_CQ_ENTRIES = 65536; // IORING_MAX_CQ_ENTRIES
 
@@ -479,13 +482,24 @@ namespace Ichor::Detail {
             }
 
             TSAN_ANNOTATE_HAPPENS_BEFORE(procEvent);
+            {
+                std::lock_guard const l{_crossThreadEventsMutex};
+                _crossThreadEvents.push_back(procEvent);
+            }
+
+            if(_crossThreadWakeupPending.exchange(true, std::memory_order_acq_rel)) {
+                // a wake-up for the events pushed so far is already on its way
+                return;
+            }
 
             if(HasThreadLocalManager()) {
                 auto &q = GetThreadLocalEventQueue();
                 if(q.get_queue_name_hash() == get_queue_name_hash()) {
+                    // From another IOUringQueue's thread: send the wake-up through its own ring. Not waiting for the completion,
+                    // two queue threads waiting on messages to each other would deadlock.
                     auto &ioq = static_cast<IOUringQueueBase&>(q);
                     auto sqe = ioq.getSqe();
-                    io_uring_prep_msg_ring(sqe, _eventQueuePtr->ring_fd, 0, reinterpret_cast<uintptr_t>(reinterpret_cast<void*>(procEvent)), 0);
+                    io_uring_prep_msg_ring(sqe, _eventQueuePtr->ring_fd, 0, CROSS_THREAD_WAKEUP_DATA, 0);
                     return;
                 }
             }
@@ -498,16 +512,14 @@ namespace Ichor::Detail {
                 fmt::println("Couldn't get sqe for cross thread ring");
                 std::terminate();
             }
-            io_uring_prep_msg_ring(sqe, _eventQueuePtr->ring_fd, 0, reinterpret_cast<uintptr_t>(reinterpret_cast<void*>(procEvent)), 0);
+            io_uring_prep_msg_ring(sqe, _eventQueuePtr->ring_fd, 0, CROSS_THREAD_WAKEUP_DATA, 0);
             io_uring_sqe_set_data64(sqe, 0);
             TSAN_ANNOTATE_HAPPENS_BEFORE(_eventQueuePtr);
-            // Wait for the completion before returning. When the target ring uses IORING_SETUP_DEFER_TASKRUN, the message is delivered
-            // through task_work on the target thread and the completion is only posted after delivery. Not waiting would let
-            // messages from the same thread overtake each other (task_work runs newest-first on kernels 6.2 - 6.10) and removes back-pressure.
+            // Wait for the completion, which gives back-pressure and reports errors on the push that caused them.
             auto ret = io_uring_submit_and_wait(&tempQueue.ring, 1);
             if(ret != 1) [[unlikely]] {
                 fmt::println("io_uring_submit_and_wait() for cross thread ring {}", ret);
-                fmt::println("submit wrong amount, would result in dropping event");
+                fmt::println("submit wrong amount, would result in not waking up the queue");
                 std::terminate();
             }
 
@@ -517,18 +529,14 @@ namespace Ichor::Detail {
             } while(ret == -EINTR);
             if(ret < 0) [[unlikely]] {
                 fmt::println("io_uring_wait_cqe() for cross thread ring {}", ret);
-                fmt::println("couldn't get completion event, would result in dropping event");
+                fmt::println("couldn't get completion event, would result in not waking up the queue");
                 std::terminate();
             }
             if(cqe->res < 0) [[unlikely]] {
-                fmt::println("cross thread msg_ring completion event failure {}, would result in dropping event", cqe->res);
+                fmt::println("cross thread msg_ring completion event failure {}, would result in not waking up the queue", cqe->res);
                 std::terminate();
             }
             io_uring_cqe_seen(&tempQueue.ring, cqe);
-
-//            fmt::println("pushEventInternal() {} {}", std::hash<std::thread::id>{}(std::this_thread::get_id()), std::hash<std::thread::id>{}(_threadId));
-
-//            std::terminate();
         } else {
             auto *sqe = io_uring_get_sqe(_eventQueuePtr);
 
@@ -758,6 +766,11 @@ namespace Ichor::Detail {
             unsigned int head{};
             io_uring_for_each_cqe(_eventQueuePtr, head, cqe) {
                 TSAN_ANNOTATE_HAPPENS_AFTER(cqe->user_data);
+                if(io_uring_cqe_get_data64(cqe) == CROSS_THREAD_WAKEUP_DATA) {
+                    // handled below, after this batch
+                    handled++;
+                    continue;
+                }
                 auto *evt = reinterpret_cast<Event *>(io_uring_cqe_get_data(cqe));
                 if(evt != nullptr) {
 //                    INTERNAL_IO_DEBUG("processing {}", evt->get_name());
@@ -783,6 +796,10 @@ namespace Ichor::Detail {
                 handled++;
             }
             io_uring_cq_advance(_eventQueuePtr, handled);
+            // Checked every iteration instead of only on a wake-up completion, so that events can't get stuck if a wake-up got lost.
+            if(_crossThreadWakeupPending.load(std::memory_order_acquire)) {
+                finished += processCrossThreadEvents();
+            }
             if(finished > 0) {
                 _pendingEvents.fetch_sub(finished, std::memory_order_acq_rel);
             }
@@ -797,15 +814,31 @@ namespace Ichor::Detail {
             std::terminate();
         }
 
-        // one last loop to de-allocate any potentially unhandled events
+        // Cancel everything still in flight (e.g. multishot recvs/accepts that keep completing), otherwise the loop below wouldn't end.
+        auto cancelAllInFlight = [this]() {
+            if(_kernelVersion < v1::Version{5, 19, 0}) {
+                return;
+            }
+            auto *sqe = getSqe();
+            io_uring_prep_cancel64(sqe, 0, IORING_ASYNC_CANCEL_ALL | IORING_ASYNC_CANCEL_ANY);
+            if(auto ret = io_uring_submit(_eventQueuePtr); ret < 0) [[unlikely]] {
+                fmt::println("io_uring_submit() of cancel before final loop failed, ret {}", -ret);
+                std::terminate();
+            }
+        };
+        cancelAllInFlight();
+
+        // one last loop to de-allocate any potentially unhandled events. Bounded, in case requests keep completing anyway (e.g. kernels < 5.19).
+        auto const drainDeadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(_quitTimeoutMs);
 //        fmt::println("One last loop");
         bool somethingHandled{true};
-        while(somethingHandled) {
+        while(somethingHandled && std::chrono::steady_clock::now() < drainDeadline) {
             io_uring_cqe *cqe{};
             __kernel_timespec ts{};
             ts.tv_nsec = 500'000;
             unsigned int handled{};
             unsigned int head{};
+            bool stillInFlight{};
 
             auto ret = io_uring_wait_cqes(_eventQueuePtr, &cqe, 1, &ts, nullptr);
             if(ret < 0 && ret != -ETIME) [[unlikely]] {
@@ -819,6 +852,10 @@ namespace Ichor::Detail {
             }
             io_uring_for_each_cqe(_eventQueuePtr, head, cqe) {
                 TSAN_ANNOTATE_HAPPENS_AFTER(cqe->user_data);
+                if(io_uring_cqe_get_data64(cqe) == CROSS_THREAD_WAKEUP_DATA) {
+                    handled++;
+                    continue;
+                }
                 auto *evt = reinterpret_cast<Event *>(io_uring_cqe_get_data(cqe));
 //                fmt::println("last loop processing {}", evt->get_name());
                 if(evt != nullptr) {
@@ -826,6 +863,8 @@ namespace Ichor::Detail {
                         if((cqe->flags & IORING_CQE_F_MORE) != IORING_CQE_F_MORE) {
                             releaseResponseEvent(static_cast<UringResponseEvent*>(evt));
                             _pendingEvents.fetch_sub(1, std::memory_order_acq_rel);
+                        } else {
+                            stillInFlight = true;
                         }
                     } else {
                         delete evt;
@@ -839,6 +878,20 @@ namespace Ichor::Detail {
                 somethingHandled = false;
             }
             io_uring_cq_advance(_eventQueuePtr, handled);
+            if(stillInFlight) {
+                // The cancel can miss a multishot request, e.g. a multishot timeout between expiring and being re-armed. It was just re-armed.
+                cancelAllInFlight();
+            }
+        }
+
+        {
+            // events pushed from other threads that weren't processed anymore
+            std::lock_guard const l{_crossThreadEventsMutex};
+            for(auto *evt : _crossThreadEvents) {
+                delete evt;
+                _pendingEvents.fetch_sub(1, std::memory_order_acq_rel);
+            }
+            _crossThreadEvents.clear();
         }
 
         stopDm();
@@ -1009,6 +1062,28 @@ namespace Ichor::Detail {
             _quitEventSent.store(true, std::memory_order_release);
             _whenQuitEventWasSent = std::chrono::steady_clock::now();
         }
+    }
+
+    uint64_t IOUringQueueBase::processCrossThreadEvents() {
+        // Cleared before taking the events: a push after this sends a new wake-up, a push before it is taken below.
+        _crossThreadWakeupPending.store(false, std::memory_order_release);
+        {
+            std::lock_guard const l{_crossThreadEventsMutex};
+            std::swap(_crossThreadEvents, _crossThreadEventsProcessing);
+        }
+
+        uint64_t finished{};
+        for(auto *evt : _crossThreadEventsProcessing) {
+            TSAN_ANNOTATE_HAPPENS_AFTER(evt);
+            std::unique_ptr<Event> uniqueEvt{evt};
+            processEvent(uniqueEvt);
+            // processEvent may take ownership of the event, in which case it is not finished yet
+            if(uniqueEvt) {
+                finished++;
+            }
+        }
+        _crossThreadEventsProcessing.clear();
+        return finished;
     }
 
     UringResponseEvent *IOUringQueueBase::acquireResponseEvent(ServiceIdType serviceId, UringCallback &&fun) noexcept {

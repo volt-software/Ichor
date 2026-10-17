@@ -462,6 +462,104 @@ TEST_CASE("QueueTests") {
         REQUIRE(std::is_sorted(order.begin(), order.end()));
     }
 
+    SECTION("IOUringQueue keeps the order of events pushed from another IOUringQueue's thread") {
+        // Same as above, from another IOUringQueue's thread, which can't wait for the delivery (two queues pushing to each other would
+        // deadlock). Events go through a FIFO, msg_ring only wakes up the target. Only reorders on kernels 6.2 - 6.10 without that.
+        constexpr uint32_t events = 1'000;
+        // a queue's manager registers itself for the thread constructing it, each queue's thread sets its own below
+        auto source = std::make_unique<IOUringQueue>(10, 10'000);
+        Ichor::Detail::_local_dm = nullptr;
+        auto target = std::make_unique<IOUringQueue>(10, 10'000);
+        Ichor::Detail::_local_dm = nullptr;
+        std::vector<uint32_t> order;
+        std::atomic<DependencyManager*> sourceDm{};
+        std::atomic<DependencyManager*> targetDm{};
+        std::thread targetThread([&] {
+            REQUIRE(target->createEventLoop());
+            auto &dm = target->getManager();
+            Ichor::Detail::_local_dm = &dm;
+            dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>();
+            targetDm.store(&dm, std::memory_order_release);
+            target->start(DoNotCaptureSigInt);
+        });
+        std::thread sourceThread([&] {
+            REQUIRE(source->createEventLoop());
+            auto &dm = source->getManager();
+            Ichor::Detail::_local_dm = &dm;
+            dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>();
+            sourceDm.store(&dm, std::memory_order_release);
+            source->start(DoNotCaptureSigInt);
+        });
+
+        while(sourceDm.load(std::memory_order_acquire) == nullptr || targetDm.load(std::memory_order_acquire) == nullptr) {
+            std::this_thread::sleep_for(1ms);
+        }
+        waitForRunning(*sourceDm.load(std::memory_order_acquire));
+        waitForRunning(*targetDm.load(std::memory_order_acquire));
+
+        source->pushEvent<RunFunctionEvent>(ServiceIdType{0}, [&]() {
+            for(uint32_t i = 0; i < events; ++i) {
+                target->pushEvent<RunFunctionEvent>(ServiceIdType{0}, [&order, i]() {
+                    order.push_back(i);
+                });
+            }
+            target->pushEvent<QuitEvent>(ServiceIdType{0});
+            source->pushEvent<QuitEvent>(ServiceIdType{0});
+        });
+
+        targetThread.join();
+        sourceThread.join();
+
+        REQUIRE(order.size() == events);
+        REQUIRE(std::is_sorted(order.begin(), order.end()));
+    }
+
+    SECTION("IOUringQueue quits while a multishot request keeps completing") {
+        auto version = Ichor::v1::kernelVersion();
+        REQUIRE(version);
+        if(version < Version{6, 4, 0}) {
+            SKIP("multishot timeouts require kernel 6.4");
+        }
+        // a long quit timeout, so that only cancelling the request on quit can make it quit quickly
+        auto queue = std::make_unique<IOUringQueue>(10'000, 10'000);
+        __kernel_timespec ts{};
+        ts.tv_nsec = 50'000;
+        std::atomic<uint64_t> completions{};
+        Ichor::Detail::_local_dm = nullptr;
+        std::atomic<DependencyManager*> dmPtr{};
+        std::thread t([&] {
+            REQUIRE(queue->createEventLoop());
+            auto &dm = queue->getManager();
+            Ichor::Detail::_local_dm = &dm;
+            dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>();
+            // keeps completing every 50 us, faster than the final loop's wait for no more completions (500 us)
+            auto *sqe = queue->getSqeWithData(ServiceIdType{0}, [&completions](io_uring_cqe *) {
+                completions++;
+            });
+            io_uring_prep_timeout(sqe, &ts, 0, IORING_TIMEOUT_MULTISHOT);
+            dmPtr.store(&dm, std::memory_order_release);
+            queue->start(DoNotCaptureSigInt);
+        });
+
+        while(dmPtr.load(std::memory_order_acquire) == nullptr) {
+            std::this_thread::sleep_for(1ms);
+        }
+        waitForRunning(*dmPtr.load(std::memory_order_acquire));
+        while(completions.load(std::memory_order_acquire) < 10) {
+            std::this_thread::sleep_for(1ms);
+        }
+
+        auto const start = std::chrono::steady_clock::now();
+        queue->pushEvent<QuitEvent>(ServiceIdType{0});
+        while(queue->is_running() || dmPtr.load(std::memory_order_acquire)->isRunning()) {
+            std::this_thread::sleep_for(1ms);
+            REQUIRE(std::chrono::steady_clock::now() - start < 2s);
+        }
+        t.join();
+        // well below the 10 second quit timeout: the final loop must not wait for the multishot request to stop by itself
+        REQUIRE(std::chrono::steady_clock::now() - start < 2s);
+    }
+
     SECTION("IOUringQueue rejects SQPOLL rings") {
         io_uring ring{};
         io_uring_params p{};

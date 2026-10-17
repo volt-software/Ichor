@@ -7,6 +7,7 @@
 #include <ichor/event_queues/IIOUringQueue.h>
 #include <ichor/ichor_liburing.h>
 #include <ichor/ConstevalHash.h>
+#include <ichor/stl/RealtimeMutex.h>
 #include <array>
 #include <memory>
 #include <vector>
@@ -89,6 +90,8 @@ namespace Ichor {
             bool checkRingFlags(io_uring* ring);
             void shouldAddQuitEvent();
             [[nodiscard]] UringResponseEvent *acquireResponseEvent(ServiceIdType serviceId, UringCallback &&fun) noexcept;
+            /// Processes the events pushed from other threads, in the order they were pushed. Returns how many finished.
+            uint64_t processCrossThreadEvents();
             void releaseResponseEvent(UringResponseEvent *evt) noexcept;
 
 #ifdef ICHOR_ENABLE_INTERNAL_URING_DEBUGGING
@@ -116,6 +119,14 @@ namespace Ichor {
             // Events allocated when the pool ran out. Owned here and put on the free list when released, instead of being freed,
             // so that their address (the user_data of a request) isn't handed out again right away, see _freeResponseEventsHead.
             std::vector<std::unique_ptr<UringResponseEvent>> _overflowResponseEvents;
+            // Events pushed from other threads, in push order. IORING_OP_MSG_RING only wakes up the queue's thread instead of carrying
+            // the event itself: with an IORING_SETUP_DEFER_TASKRUN target, messages are delivered through task_work, which runs
+            // newest-first on kernels 6.2 - 6.10, so events sent as separate messages could be processed out of order.
+            v1::RealtimeMutex _crossThreadEventsMutex{};
+            std::vector<Event*> _crossThreadEvents;
+            std::vector<Event*> _crossThreadEventsProcessing;
+            // Set by the first push after the queue's thread took the pending events, so that only that push sends a wake-up message.
+            std::atomic<bool> _crossThreadWakeupPending{false};
 #ifdef ICHOR_ENABLE_INTERNAL_URING_DEBUGGING
             std::vector<std::pair<io_uring_op, Ichor::Event*>> _debugOpcodes;
 #endif
