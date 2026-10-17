@@ -25,6 +25,11 @@ public:
     TimerStateTransitionsService(ScopedServiceProxy<ITimerFactory> factory) : _selfStopping(factory->createTimer()), _fireOnce(factory->createTimer()), _fast(factory->createTimer()) {
         _selfStopping.setChronoInterval(std::chrono::milliseconds(1));
         _selfStopping.setCallback([this]() {
+            // Expiries queued before the timer stopped can still run (a slow queue, e.g. with internal debug logging), only stop once.
+            if(_stopRequested) {
+                return;
+            }
+            _stopRequested = true;
             // A long interval, so that waiting on a re-armed timeout or on stale requests would take longer than the test allows.
             _selfStopping.setChronoInterval(std::chrono::seconds(10));
             // stopping twice: the second callback also has to wait until the timer actually stopped
@@ -52,8 +57,9 @@ public:
 #if defined(TEST_URING)
         _fast.setInterval(1'000);
 #else
-        // the thread based Timer pushes an event per expiry and catches up when behind, a shorter interval mostly floods the queue
-        _fast.setInterval(100'000);
+        // The thread based Timer pushes an event per expiry and catches up when it falls behind, so a short interval floods the queue
+        // (too slow to stop within the time limit with ICHOR_ENABLE_INTERNAL_DEBUGGING logging every event). What this checks is io_uring specific.
+        _fast.setInterval(10'000'000);
 #endif
         _fast.setCallback([this]() {
             if(++_fastFired == 10) {
@@ -97,4 +103,5 @@ private:
     uint64_t _selfStoppedCallbacks{};
     uint64_t _fireOnceFired{};
     uint64_t _earlyStopCallbacks{};
+    bool _stopRequested{};
 };
