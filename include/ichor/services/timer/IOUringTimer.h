@@ -7,6 +7,7 @@
 #include <ichor/services/timer/ITimer.h>
 #include <ichor/event_queues/IIOUringQueue.h>
 #include <ichor/ichor_liburing.h>
+#include <ichor/stl/ReferenceCountedPointer.h>
 
 namespace Ichor::v1 {
     template <typename TIMER, typename QUEUE>
@@ -62,6 +63,8 @@ namespace Ichor::v1 {
     private:
         std::function<void(io_uring_cqe*)> createNewHandler() noexcept;
         std::function<void(io_uring_cqe*)> createNewUpdateHandler() noexcept;
+        /// Calls the callbacks given to stopTimer and marks the timer as stopped.
+        void finishStopping();
 
         template <typename TIMER, typename QUEUE>
         friend class TimerFactory;
@@ -78,5 +81,7 @@ namespace Ichor::v1 {
         ServiceIdType _requestingServiceId{};
         uint64_t _uringTimerId{};
         std::vector<std::function<void(void)>> _quitCbs;
+        // Shared with in-flight timeout_remove requests, which can outlive the timer. Set once the current timeout has completed for good.
+        ReferenceCountedPointer<bool> _timerStopped;
     };
 }

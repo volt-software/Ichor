@@ -7,6 +7,7 @@
 #include <ichor/services/timer/IInternalTimerFactory.h>
 #include <iterator>
 #include <algorithm>
+#include <memory>
 #include <ichor/ScopedServiceProxy.h>
 
 namespace Ichor::v1 {
@@ -43,7 +44,7 @@ namespace Ichor::v1 {
                 }
             }
             auto id = _timerIdCounter.fetch_add(1, std::memory_order_relaxed);
-            _timers.emplace_back(_q, id, _requestingSvcId);
+            _timers.emplace_back(std::make_unique<TIMER>(_q, id, _requestingSvcId));
             return TimerRef{*this, id};
         }
 
@@ -57,14 +58,14 @@ namespace Ichor::v1 {
                 }
             }
 
-            auto it = std::find_if(_timers.begin(), _timers.end(), [timerId](TIMER &timer) {
-                return timer.getTimerId() == timerId;
+            auto it = std::find_if(_timers.begin(), _timers.end(), [timerId](std::unique_ptr<TIMER> &timer) {
+                return timer->getTimerId() == timerId;
             });
 
             if(it == _timers.end()) {
                 return {};
             }
-            return &(*it);
+            return it->get();
         }
 
         bool destroyTimerIfStopped(uint64_t timerId) final {
@@ -74,8 +75,8 @@ namespace Ichor::v1 {
                 }
             }
 
-            auto erased = std::erase_if(_timers, [timerId](TIMER const &timer) {
-                return timer.getTimerId() == timerId && timer.getState() != TimerState::RUNNING;
+            auto erased = std::erase_if(_timers, [timerId](std::unique_ptr<TIMER> const &timer) {
+                return timer->getTimerId() == timerId && timer->getState() != TimerState::RUNNING;
             });
 
             return erased > 0;
@@ -101,7 +102,7 @@ namespace Ichor::v1 {
             _stoppedTimers = 0;
 
             for(auto& timer : _timers) {
-                timer.stopTimer([this]() {
+                timer->stopTimer([this]() {
                     _stoppedTimers++;
                     INTERNAL_IO_DEBUG("TimerFactory<{}, {}> {} for {} _stoppedTimers {} {}", typeName<TIMER>(), typeName<QUEUE>(), AdvancedService<TimerFactory<TIMER, QUEUE>>::getServiceId(), _requestingSvcId, _stoppedTimers, _timers.size());
                     if(_stoppedTimers == _timers.size()) {
@@ -129,7 +130,8 @@ namespace Ichor::v1 {
             _q.reset();
         }
 
-        std::vector<TIMER> _timers;
+        // Timers are referenced by their own threads/in-flight requests while running, so they need stable addresses.
+        std::vector<std::unique_ptr<TIMER>> _timers;
         ServiceIdType _requestingSvcId{};
         Ichor::ScopedServiceProxy<QUEUE*> _q;
         std::size_t _stoppedTimers{};

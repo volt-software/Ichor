@@ -4,14 +4,21 @@
 
 using namespace std::chrono_literals;
 
-static std::function<void(io_uring_cqe *)> createNewStopHandler(Ichor::ScopedServiceProxy<Ichor::IIOUringQueue*> q, Ichor::ServiceIdType requestingServiceId, uint64_t timerId, uint64_t uringTimerId) noexcept {
+// Doesn't capture the timer, the timer can be destroyed before the completion of the timeout_remove arrives.
+// timerStopped is set by the timer once its timeout has completed for good.
+static std::function<void(io_uring_cqe *)> createNewStopHandler(Ichor::ScopedServiceProxy<Ichor::IIOUringQueue*> q, Ichor::ServiceIdType requestingServiceId, uint64_t timerId, uint64_t uringTimerId, Ichor::v1::ReferenceCountedPointer<bool> timerStopped) noexcept {
     INTERNAL_IO_DEBUG("IOUringTimer {} for {} createNewStopHandler", timerId, requestingServiceId);
-    return [q, requestingServiceId, timerId, uringTimerId](io_uring_cqe *cqe) {
+    return [q, requestingServiceId, timerId, uringTimerId, timerStopped = std::move(timerStopped)](io_uring_cqe *cqe) {
         if(cqe->res < 0) {
-            INTERNAL_IO_DEBUG("Couldn't stop timer {} for {} because {} uringTimerId 0x{:X}", timerId, requestingServiceId, cqe->res, uringTimerId);
+            INTERNAL_IO_DEBUG("Couldn't stop timer {} for {} because {} uringTimerId 0x{:X} stopped {}", timerId, requestingServiceId, cqe->res, uringTimerId, *timerStopped);
             if(cqe->res == -ENOENT || cqe->res == -EALREADY) {
-                auto *sqe = q->getSqeWithData(requestingServiceId, createNewStopHandler(q, requestingServiceId, timerId, uringTimerId));
-                io_uring_prep_timeout_remove(sqe, uringTimerId, 0);
+                // -ENOENT: either the timeout already completed, in which case its final completion stops the timer,
+                // or it is a multishot timeout that fired and is not re-armed yet. -EALREADY: it is firing right now.
+                // Only retry while the timeout hasn't completed, otherwise this would retry forever.
+                if(!*timerStopped) {
+                    auto *sqe = q->getSqeWithData(requestingServiceId, createNewStopHandler(q, requestingServiceId, timerId, uringTimerId, timerStopped));
+                    io_uring_prep_timeout_remove(sqe, uringTimerId, 0);
+                }
             } else {
                 std::terminate();
             }
@@ -46,7 +53,10 @@ bool Ichor::v1::IOUringTimer::startTimer(bool fireImmediately) {
 
     if(_state == TimerState::STOPPED) {
         INTERNAL_IO_DEBUG("[{:L}][{}] Starting IOUringTimer {} for {} with {} s {} ns timeout", std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now().time_since_epoch()).count(), __LINE__, _timerId, _requestingServiceId, _timespec.tv_sec, _timespec.tv_nsec);
-        if(!fireImmediately || !_fireOnce) {
+        // A fire-once timer that fires immediately has nothing left to wait for, so it doesn't start running.
+        bool const needsTimeout = !fireImmediately || !_fireOnce;
+        if(needsTimeout) {
+            _timerStopped = make_reference_counted<bool>(false);
             auto *sqe = _q->getSqeWithData(_requestingServiceId, createNewHandler());
             unsigned flags{};
             if (!_fireOnce && _multishotCapable) {
@@ -57,7 +67,9 @@ bool Ichor::v1::IOUringTimer::startTimer(bool fireImmediately) {
             INTERNAL_IO_DEBUG("IOUringTimer {} for {} _uringTimerId 0x{:X}", _timerId, _requestingServiceId, _uringTimerId);
         }
 
-        _state = TimerState::RUNNING;
+        if(needsTimeout) {
+            _state = TimerState::RUNNING;
+        }
 
         if(fireImmediately) {
             if(_fnAsync) {
@@ -74,7 +86,7 @@ bool Ichor::v1::IOUringTimer::startTimer(bool fireImmediately) {
 bool Ichor::v1::IOUringTimer::stopTimer(std::function<void(void)> cb) {
     INTERNAL_IO_DEBUG("Stopping timer {} for {} _uringTimerId 0x{:X} state {}", _timerId, _requestingServiceId, _uringTimerId, _state);
     if(_state == TimerState::RUNNING) {
-        auto *sqe = _q->getSqeWithData(_requestingServiceId, createNewStopHandler(_q, _requestingServiceId, _timerId, _uringTimerId));
+        auto *sqe = _q->getSqeWithData(_requestingServiceId, createNewStopHandler(_q, _requestingServiceId, _timerId, _uringTimerId, _timerStopped));
         io_uring_prep_timeout_remove(sqe, _uringTimerId, 0);
         if(cb) {
             _quitCbs.emplace_back(std::move(cb));
@@ -158,16 +170,25 @@ std::function<void(io_uring_cqe *)> Ichor::v1::IOUringTimer::createNewHandler() 
             if(cqe->res != -ECANCELED) {
                 INTERNAL_IO_DEBUG("IOUringTimer {} for {} error {}", _timerId, _requestingServiceId, cqe->res);
             }
-            for(auto &cb : _quitCbs) {
-                cb();
-            }
-            _state = TimerState::STOPPED;
+            finishStopping();
             return;
         }
         INTERNAL_IO_DEBUG("IOUringTimer {} for {} cqe->res {}", _timerId, _requestingServiceId, cqe->res);
 
+        bool const lastCompletion = (cqe->flags & IORING_CQE_F_MORE) == 0;
         if(_state == TimerState::STOPPING) {
+            // Fired before the timeout_remove was processed. If this was the last completion for the timeout, the remove
+            // fails with -ENOENT, so finish stopping here.
+            if(lastCompletion) {
+                finishStopping();
+            }
             return;
+        }
+
+        if(_fireOnce && lastCompletion) {
+            // Before calling the callback, so that it can restart the timer.
+            _state = TimerState::STOPPED;
+            *_timerStopped = true;
         }
 
         // Make copy of function, in case setCallback() gets called during async stuff.
@@ -184,6 +205,16 @@ std::function<void(io_uring_cqe *)> Ichor::v1::IOUringTimer::createNewHandler() 
             INTERNAL_IO_DEBUG("IOUringTimer {} for {} _uringTimerId2 0x{:X}", _timerId, _requestingServiceId, _uringTimerId);
         }
     };
+}
+
+void Ichor::v1::IOUringTimer::finishStopping() {
+    auto quitCbs = std::move(_quitCbs);
+    _quitCbs.clear();
+    _state = TimerState::STOPPED;
+    *_timerStopped = true;
+    for(auto &cb : quitCbs) {
+        cb();
+    }
 }
 
 std::function<void(io_uring_cqe *)> Ichor::v1::IOUringTimer::createNewUpdateHandler() noexcept {
