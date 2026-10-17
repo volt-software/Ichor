@@ -153,7 +153,7 @@ namespace Ichor::Detail {
             return _trace;
         }
 
-        ICHOR_CONSTEXPR_VECTOR void set_stacktrace(std::stacktrace trace) noexcept {
+        ICHOR_CONSTEXPR_VECTOR void set_stacktrace(std::stacktrace &&trace) noexcept {
             _trace = std::move(trace);
         }
 #endif

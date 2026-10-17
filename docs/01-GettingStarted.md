@@ -2,7 +2,7 @@
 
 ## Compiling Ichor
 
-Compiling is done through the help of CMake. Ichor requires at least gcc 12, clang 15 or MSVC 2022, and is tested with gcc 12.4, clang 15, clang 18 and MSVC 2022.
+Compiling is done through the help of CMake. Ichor requires at least gcc 12, clang 16 or MSVC 2022, and is tested with gcc 12.4, clang 16, clang 18 and MSVC 2022.
 
 The easiest is to build it with the provided Dockerfile:
 
@@ -572,7 +572,7 @@ The default priority for events is 1000. For dependency related things (like sta
 
 ### Memory allocation
 
-Ichor used to provide `std::pmr::memory_resource` based allocation, however that had a big impact on the ergonomy of the code. Moreover, clang 15 does not support `<memory_resource>` at all. Instead, Ichor recommends using mimalloc to reduce the resource contention when using multiple threads.
+Ichor used to provide `std::pmr::memory_resource` based allocation, however that had a big impact on the ergonomy of the code. Moreover, clang 15 (at the time this was written, clang-15 was still supported) does not support `<memory_resource>` at all. Instead, Ichor recommends using mimalloc to reduce the resource contention when using multiple threads.
 
 ### Multiple Threads
 

@@ -53,8 +53,8 @@ while [[ $# -gt 0 ]]; do
       shift # past value
       ;;
     --oldclang)
-      CCOMP=clang-15
-      CXXCOMP=clang++-15
+      CCOMP=clang-16
+      CXXCOMP=clang++-16
       shift # past value
       ;;
     --tsan)

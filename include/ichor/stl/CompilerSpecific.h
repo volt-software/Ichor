@@ -51,6 +51,10 @@
 #if defined(_MSC_VER)
 #define ICHOR_RESTRICT __restrict
 #define ICHOR_RESTRICT_THIS
+#elif defined(__clang__) && __clang_major__ < 17
+#define ICHOR_RESTRICT __restrict__
+// clang < 17 propagates a restrict-qualified this to members, making calls to their non-restrict member functions ill-formed
+#define ICHOR_RESTRICT_THIS
 #elif defined(__clang__) || defined(__GNUC__)
 #define ICHOR_RESTRICT __restrict__
 #define ICHOR_RESTRICT_THIS __restrict__

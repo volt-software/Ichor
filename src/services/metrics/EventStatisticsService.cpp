@@ -105,7 +105,10 @@ void Ichor::v1::EventStatisticsService::postInterceptEvent(Event const &evt, boo
         if(evt.originatingService != ServiceIdType{0}) {
             auto &dm = GetThreadLocalManager();
             auto svc = dm.getIService(evt.originatingService);
-            fmt::println("SVC {}", (*svc)->getServiceName());
+            // originating service may already have been removed, e.g. when quitting
+            if(svc) {
+                fmt::println("SVC {}", (*svc)->getServiceName());
+            }
         }
     }
 }

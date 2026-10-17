@@ -544,7 +544,12 @@ namespace Ichor {
 
                 std::this_thread::sleep_for(std::chrono::milliseconds(1500));
 
+                // etcd only removes expired keys on its periodic (500ms) sync, so poll for a while
                 auto getReply = co_await _etcd->get("ttl_key", false, false, false, {});
+                for(uint32_t attempt = 0; attempt < 20 && getReply && !getReply.value().errorCode; ++attempt) {
+                    std::this_thread::sleep_for(std::chrono::milliseconds(250));
+                    getReply = co_await _etcd->get("ttl_key", false, false, false, {});
+                }
                 if(!getReply) {
                     fmt::println("");
                     std::terminate();

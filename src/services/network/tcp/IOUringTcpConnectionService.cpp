@@ -154,14 +154,39 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::v1::IOUringTcpConnecti
         }
 
         int res = 0;
-        AsyncManualResetEvent evt;
-        auto *sqe = _q->getSqeWithData(this, [&evt, &res](io_uring_cqe *cqe) {
-            INTERNAL_IO_DEBUG("connect res: {} {}", cqe->res, cqe->res < 0 ? strerror(-cqe->res) : "");
-            res = cqe->res;
-            evt.set();
-        });
-        io_uring_prep_connect(sqe, _socket, (struct sockaddr *)&address, sizeof(address));
-        co_await evt;
+        // the host may not be listening yet (e.g. when started in the same application), retry a couple of times
+        for(uint32_t attempt = 0; attempt < 50; ++attempt) {
+            if(attempt > 0) {
+                ICHOR_LOG_TRACE(_logger, "[{}] connect error {}, retrying", AdvancedService<IOUringTcpConnectionService>::getServiceId(), mapErrnoToError(-res));
+                AsyncManualResetEvent timeoutEvt;
+                __kernel_timespec ts{.tv_sec = 0, .tv_nsec = 10'000'000};
+                auto *sqe = _q->getSqeWithData(this, [&timeoutEvt](io_uring_cqe *) {
+                    timeoutEvt.set();
+                });
+                io_uring_prep_timeout(sqe, &ts, 0, 0);
+                co_await timeoutEvt;
+            }
+
+            AsyncManualResetEvent evt;
+            auto *sqe = _q->getSqeWithData(this, [&evt, &res](io_uring_cqe *cqe) {
+                INTERNAL_IO_DEBUG("connect res: {} {}", cqe->res, cqe->res < 0 ? strerror(-cqe->res) : "");
+                res = cqe->res;
+                evt.set();
+            });
+            io_uring_prep_connect(sqe, _socket, (struct sockaddr *)&address, sizeof(address));
+            co_await evt;
+
+            if(res != -ECONNREFUSED) {
+                break;
+            }
+        }
+
+        if(res < 0) {
+            ICHOR_LOG_ERROR(_logger, "[{}] Couldn't connect to {}:{}: {}", AdvancedService<IOUringTcpConnectionService>::getServiceId(), Ichor::v1::any_cast<std::string const &>(addrIt->second), Ichor::v1::any_cast<uint16_t>(portIt->second), mapErrnoToError(-res));
+            close(_socket);
+            _socket = -1;
+            co_return tl::unexpected(StartError::FAILED);
+        }
 
         ICHOR_LOG_TRACE(_logger, "[{}] Starting TCP connection for {}:{}", AdvancedService<IOUringTcpConnectionService>::getServiceId(), Ichor::v1::any_cast<std::string const &>(addrIt->second), Ichor::v1::any_cast<uint16_t>(portIt->second));
     }
