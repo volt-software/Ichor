@@ -707,9 +707,12 @@ TEST_CASE("ServicesTests") {
             REQUIRE(svc->first->getFireOnceFired() == 1);
             REQUIRE(svc->first->getEarlyStopCallbacks() == 0);
 
-            // a stopped timer calls the stop callback right away
+            // a stopped timer calls the stop callback right away, which may use the timer (the thread based Timer used to deadlock on its lock)
             bool called{};
-            REQUIRE(!svc->first->getFireOnceTimer().stopTimer([&called]() { called = true; }));
+            auto &fireOnce = svc->first->getFireOnceTimer();
+            REQUIRE(!fireOnce.stopTimer([&called, &fireOnce]() {
+                called = fireOnce.getState() == TimerState::STOPPED;
+            }));
             REQUIRE(called);
             // updating the interval of a timer that already fired must not keep the queue busy
             svc->first->getFireOnceTimer().setInterval(1'000'000);

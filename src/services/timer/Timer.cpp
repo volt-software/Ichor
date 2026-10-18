@@ -99,6 +99,8 @@ bool Ichor::v1::Timer::stopTimer(std::function<void(void)> cb) {
         _state = TimerState::STOPPING;
         return true;
     } else if(cb) {
+        // Not while holding the lock, the callback may use the timer (e.g. getState() or destroying it)
+        l.unlock();
         cb();
     }
     return false;
