@@ -10,6 +10,54 @@
 #    pragma GCC diagnostic ignored "-Wconversion"
 #    pragma GCC diagnostic ignored "-Wmissing-braces"
 #endif
+#include <glaze/util/compare.hpp>
+
+// glaze 2.9.5 compares keys of 3, 5, 6 and 7 characters by memcpy'ing them into a zeroed buffer and then loading the
+// buffer as a whole. The load then cannot be forwarded from the preceding partial stores, which costs a pipeline resync
+// on e.g. Zen 4 and made the serializer benchmark up to 36% slower, depending on the per thread memory layout.
+// These are the implementations of newer glaze versions, which only use full width loads. Remove when updating glaze.
+// Every translation unit using glaze has to include this header instead of glaze directly, as the specializations
+// have to be declared before their first use.
+namespace glz {
+    template <>
+    inline bool compare<3, char>(const char *lhs, const char *rhs) noexcept {
+        uint16_t l, r;
+        std::memcpy(&l, lhs, 2);
+        std::memcpy(&r, rhs, 2);
+        return (l == r) & (lhs[2] == rhs[2]);
+    }
+
+    template <>
+    inline bool compare<5, char>(const char *lhs, const char *rhs) noexcept {
+        uint32_t l, r;
+        std::memcpy(&l, lhs, 4);
+        std::memcpy(&r, rhs, 4);
+        return (l == r) & (lhs[4] == rhs[4]);
+    }
+
+    template <>
+    inline bool compare<6, char>(const char *lhs, const char *rhs) noexcept {
+        uint32_t l, r;
+        std::memcpy(&l, lhs, 4);
+        std::memcpy(&r, rhs, 4);
+        uint16_t l2, r2;
+        std::memcpy(&l2, lhs + 4, 2);
+        std::memcpy(&r2, rhs + 4, 2);
+        return (l == r) & (l2 == r2);
+    }
+
+    template <>
+    inline bool compare<7, char>(const char *lhs, const char *rhs) noexcept {
+        uint32_t l, r;
+        std::memcpy(&l, lhs, 4);
+        std::memcpy(&r, rhs, 4);
+        uint32_t l2, r2;
+        std::memcpy(&l2, lhs + 3, 4);
+        std::memcpy(&r2, rhs + 3, 4);
+        return (l == r) & (l2 == r2);
+    }
+}
+
 #include <glaze/glaze.hpp>
 #if defined( __GNUC__ )
 #    pragma GCC diagnostic pop

@@ -9,6 +9,7 @@
 #include <iostream>
 #include <thread>
 #include <array>
+#include <algorithm>
 #include "../../examples/common/TestMsgGlazeSerializer.h"
 #include "../../examples/common/lyra.hpp"
 
@@ -58,10 +59,11 @@ int main(int argc, char *argv[]) {
     }
 
     if(!singleOnly) {
-        auto start = std::chrono::steady_clock::now();
         std::array<std::thread, threadCount> threads{};
+        std::array<int64_t, threadCount> threadDurations{};
         for (uint_fast32_t i = 0, j = 0; i < threadCount; i++, j += 2) {
-            threads[i] = std::thread([] {
+            threads[i] = std::thread([&threadDurations, i] {
+                auto start = std::chrono::steady_clock::now();
                 PriorityQueue q;
                 auto &dm = q.getManager();
                 dm.createServiceManager<LoggerFactory<NullLogger>, ILoggerFactory>();
@@ -69,15 +71,21 @@ int main(int argc, char *argv[]) {
                 dm.createServiceManager<TestMsgGlazeSerializer, ISerializer<TestMsg>>();
                 dm.createServiceManager<TestService>();
                 q.start(CaptureSigInt);
+                auto end = std::chrono::steady_clock::now();
+                threadDurations[i] = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
             });
         }
         for (uint_fast32_t i = 0; i < threadCount; i++) {
             threads[i].join();
         }
-        auto end = std::chrono::steady_clock::now();
-        fmt::println("{} multi threaded glaze ran for {:L} µs with {:L} peak memory usage {:L} MB/s",
-                     argv[0], std::chrono::duration_cast<std::chrono::microseconds>(end - start).count(), getPeakRSS(),
-                     std::floor(1'000'000. / static_cast<double>(std::chrono::duration_cast<std::chrono::microseconds>(end - start).count()) * SERDE_COUNT * threadCount * static_cast<double>(sizeof_test) / 1'000'000.));
+        // Report the median thread instead of the wall time of all threads. How fast a thread runs depends on where its
+        // stack and heap end up in memory (e.g. Zen 4 L1D/store forwarding address hashes colliding), which is random
+        // per thread and per run. The wall time is that of the slowest thread, which made the results bimodal.
+        std::sort(threadDurations.begin(), threadDurations.end());
+        auto median = (threadDurations[threadCount / 2 - 1] + threadDurations[threadCount / 2]) / 2;
+        fmt::println("{} multi threaded glaze ran for {:L} µs (median thread, fastest {:L} µs, slowest {:L} µs) with {:L} peak memory usage {:L} MB/s",
+                     argv[0], median, threadDurations.front(), threadDurations.back(), getPeakRSS(),
+                     std::floor(1'000'000. / static_cast<double>(median) * SERDE_COUNT * threadCount * static_cast<double>(sizeof_test) / 1'000'000.));
     }
 
     return 0;
