@@ -13,7 +13,7 @@
 static_assert(false, "exceptions have to be enabled to work with boost");
 #endif
 
-namespace Ichor::Detail {
+namespace Ichor::v1::Detail {
     extern std::atomic<bool> sigintQuit;
     extern std::atomic<bool> registeredSignalHandler;
     void on_sigint([[maybe_unused]] int sig);
@@ -30,7 +30,7 @@ Ichor::BoostAsioQueue::BoostAsioQueue(uint64_t unused) : _context(BOOST_ASIO_CON
 Ichor::BoostAsioQueue::~BoostAsioQueue() {
     stopDm();
 
-    if(Detail::registeredSignalHandler) {
+    if(Ichor::v1::Detail::registeredSignalHandler) {
         if(::signal(SIGINT, SIG_DFL) == SIG_ERR) {
             //                fmt::println("Couldn't unset signal handler");
         }
@@ -107,7 +107,7 @@ void Ichor::BoostAsioQueue::quit() {
 }
 
 void Ichor::BoostAsioQueue::shouldAddQuitEvent() {
-    bool const shouldQuit = Detail::sigintQuit.load(std::memory_order_acquire);
+    bool const shouldQuit = Ichor::v1::Detail::sigintQuit.load(std::memory_order_acquire);
 
     if(shouldQuit && !_quitEventSent.load(std::memory_order_acquire)) {
         pushEventInternal(INTERNAL_EVENT_PRIORITY, std::make_unique<QuitEvent>(getNextEventId(), ServiceIdType{0}, INTERNAL_EVENT_PRIORITY));
@@ -117,15 +117,15 @@ void Ichor::BoostAsioQueue::shouldAddQuitEvent() {
 }
 
 bool Ichor::BoostAsioQueue::start(bool captureSigInt) {
-    if(captureSigInt && !Ichor::Detail::registeredSignalHandler.exchange(true)) {
-        if(::signal(SIGINT, Ichor::Detail::on_sigint) == SIG_ERR) {
+    if(captureSigInt && !Ichor::v1::Detail::registeredSignalHandler.exchange(true)) {
+        if(::signal(SIGINT, Ichor::v1::Detail::on_sigint) == SIG_ERR) {
             fmt::println("Couldn't set signal");
             return false;
         }
     }
     _threadId = std::this_thread::get_id();
 
-    addInternalServiceManager(std::make_unique<Detail::InternalServiceLifecycleManager<IBoostAsioQueue>>(this));
+    addInternalServiceManager(std::make_unique<Ichor::v1::Detail::InternalServiceLifecycleManager<IBoostAsioQueue>>(this));
 
     startDm();
 

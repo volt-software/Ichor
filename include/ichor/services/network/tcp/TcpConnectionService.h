@@ -35,6 +35,7 @@ namespace Ichor::v1 {
         uint64_t getPriority() final;
 
         [[nodiscard]] bool isClient() const noexcept final;
+        void shutdownSend() final;
 
         void setReceiveHandler(std::function<void(std::span<uint8_t const>)>) final;
 

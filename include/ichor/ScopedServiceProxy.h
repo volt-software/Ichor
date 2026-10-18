@@ -100,4 +100,4 @@ namespace Ichor {
         ServiceIdType _serviceId{};
     };
 
-} // namespace Ichor::Detail
+} // namespace Ichor

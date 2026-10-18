@@ -70,10 +70,10 @@ TEST_CASE("EtcdTests_boost") {
         auto queue = std::make_unique<QIMPL>(500);
 #endif
         auto &dm = queue->getManager();
-        Ichor::Detail::_local_dm = nullptr;
+        Ichor::v1::Detail::_local_dm = nullptr;
 
         std::thread t([&]() {
-            Ichor::Detail::_local_dm = &dm;
+            Ichor::v1::Detail::_local_dm = &dm;
 #ifdef TEST_URING
             REQUIRE(queue->createEventLoop());
 #endif
@@ -103,10 +103,10 @@ TEST_CASE("EtcdTests_boost") {
         auto queue = std::make_unique<QIMPL>(500);
 #endif
         auto &dm = queue->getManager();
-        Ichor::Detail::_local_dm = nullptr;
+        Ichor::v1::Detail::_local_dm = nullptr;
 
         std::thread t([&]() {
-            Ichor::Detail::_local_dm = &dm;
+            Ichor::v1::Detail::_local_dm = &dm;
 #ifdef TEST_URING
             REQUIRE(queue->createEventLoop());
 #endif

@@ -17,6 +17,7 @@
 #include "TestServices/AsyncDependencyTrackerService.h"
 #include "TestServices/AsyncBroadcastService.h"
 #include "TestServices/RemoveAfterAwaitedStopService.h"
+#include "TestServices/StopUsingDependencyService.h"
 #include "TestServices/AwaitingDependencyService.h"
 #include "TestServices/PrivateHandlersService.h"
 #include <ichor/events/RunFunctionEvent.h>
@@ -110,10 +111,10 @@ TEST_CASE("ServicesTests") {
         auto queue = std::make_unique<QIMPL>(500);
 #endif
         auto &dm = queue->getManager();
-        Ichor::Detail::_local_dm = nullptr;
+        Ichor::v1::Detail::_local_dm = nullptr;
 
         std::thread t([&]() {
-            Ichor::Detail::_local_dm = &dm;
+            Ichor::v1::Detail::_local_dm = &dm;
 #if defined(TEST_URING)
             REQUIRE(queue->createEventLoop());
 #elif defined(TEST_SDEVENT)
@@ -142,10 +143,10 @@ TEST_CASE("ServicesTests") {
         auto queue = std::make_unique<QIMPL>(500);
 #endif
         auto &dm = queue->getManager();
-        Ichor::Detail::_local_dm = nullptr;
+        Ichor::v1::Detail::_local_dm = nullptr;
 
         std::thread t([&]() {
-            Ichor::Detail::_local_dm = &dm;
+            Ichor::v1::Detail::_local_dm = &dm;
 #if defined(TEST_URING)
             REQUIRE(queue->createEventLoop());
 #elif defined(TEST_SDEVENT)
@@ -190,10 +191,10 @@ TEST_CASE("ServicesTests") {
         auto queue = std::make_unique<QIMPL>(500);
 #endif
         auto &dm = queue->getManager();
-        Ichor::Detail::_local_dm = nullptr;
+        Ichor::v1::Detail::_local_dm = nullptr;
 
         std::thread t([&]() {
-            Ichor::Detail::_local_dm = &dm;
+            Ichor::v1::Detail::_local_dm = &dm;
 #if defined(TEST_URING)
             REQUIRE(queue->createEventLoop());
 #elif defined(TEST_SDEVENT)
@@ -240,10 +241,10 @@ TEST_CASE("ServicesTests") {
 #endif
         auto &dm = queue->getManager();
         ServiceIdType secondUselessServiceId{};
-        Ichor::Detail::_local_dm = nullptr;
+        Ichor::v1::Detail::_local_dm = nullptr;
 
         std::thread t([&]() {
-            Ichor::Detail::_local_dm = &dm;
+            Ichor::v1::Detail::_local_dm = &dm;
 #if defined(TEST_URING)
             REQUIRE(queue->createEventLoop());
 #elif defined(TEST_SDEVENT)
@@ -301,10 +302,10 @@ TEST_CASE("ServicesTests") {
         auto &dm = queue->getManager();
         ServiceIdType firstUselessServiceId{};
         ServiceIdType secondUselessServiceId{};
-        Ichor::Detail::_local_dm = nullptr;
+        Ichor::v1::Detail::_local_dm = nullptr;
 
         std::thread t([&]() {
-            Ichor::Detail::_local_dm = &dm;
+            Ichor::v1::Detail::_local_dm = &dm;
 #if defined(TEST_URING)
             REQUIRE(queue->createEventLoop());
 #elif defined(TEST_SDEVENT)
@@ -383,10 +384,10 @@ TEST_CASE("ServicesTests") {
         auto &dm = queue->getManager();
         ServiceIdType firstUselessServiceId{};
         ServiceIdType secondUselessServiceId{};
-        Ichor::Detail::_local_dm = nullptr;
+        Ichor::v1::Detail::_local_dm = nullptr;
 
         std::thread t([&]() {
-            Ichor::Detail::_local_dm = &dm;
+            Ichor::v1::Detail::_local_dm = &dm;
 #if defined(TEST_URING)
             REQUIRE(queue->createEventLoop());
 #elif defined(TEST_SDEVENT)
@@ -460,10 +461,10 @@ TEST_CASE("ServicesTests") {
 #endif
         auto &dm = queue->getManager();
         ServiceIdType secondUselessServiceId{};
-        Ichor::Detail::_local_dm = nullptr;
+        Ichor::v1::Detail::_local_dm = nullptr;
 
         std::thread t([&]() {
-            Ichor::Detail::_local_dm = &dm;
+            Ichor::v1::Detail::_local_dm = &dm;
 #if defined(TEST_URING)
             REQUIRE(queue->createEventLoop());
 #elif defined(TEST_SDEVENT)
@@ -521,10 +522,10 @@ TEST_CASE("ServicesTests") {
         auto queue = std::make_unique<QIMPL>(500);
 #endif
         auto &dm = queue->getManager();
-        Ichor::Detail::_local_dm = nullptr;
+        Ichor::v1::Detail::_local_dm = nullptr;
 
         std::thread t([&]() {
-            Ichor::Detail::_local_dm = &dm;
+            Ichor::v1::Detail::_local_dm = &dm;
 #if defined(TEST_URING)
             REQUIRE(queue->createEventLoop());
 #elif defined(TEST_SDEVENT)
@@ -557,10 +558,10 @@ TEST_CASE("ServicesTests") {
 #endif
         auto &dm = queue->getManager();
         ServiceIdType svcId{};
-        Ichor::Detail::_local_dm = nullptr;
+        Ichor::v1::Detail::_local_dm = nullptr;
 
         std::thread t([&]() {
-            Ichor::Detail::_local_dm = &dm;
+            Ichor::v1::Detail::_local_dm = &dm;
 #if defined(TEST_URING)
             REQUIRE(queue->createEventLoop());
 #elif defined(TEST_SDEVENT)
@@ -606,10 +607,10 @@ TEST_CASE("ServicesTests") {
 #endif
         auto &dm = queue->getManager();
         ServiceIdType svcId{};
-        Ichor::Detail::_local_dm = nullptr;
+        Ichor::v1::Detail::_local_dm = nullptr;
 
         std::thread t([&]() {
-            Ichor::Detail::_local_dm = &dm;
+            Ichor::v1::Detail::_local_dm = &dm;
 #if defined(TEST_URING)
             REQUIRE(queue->createEventLoop());
 #elif defined(TEST_SDEVENT)
@@ -655,10 +656,10 @@ TEST_CASE("ServicesTests") {
 #endif
         auto &dm = queue->getManager();
         ServiceIdType svcId{};
-        Ichor::Detail::_local_dm = nullptr;
+        Ichor::v1::Detail::_local_dm = nullptr;
 
         std::thread t([&]() {
-            Ichor::Detail::_local_dm = &dm;
+            Ichor::v1::Detail::_local_dm = &dm;
 #if defined(TEST_URING)
             REQUIRE(queue->createEventLoop());
 #elif defined(TEST_SDEVENT)
@@ -732,10 +733,10 @@ TEST_CASE("ServicesTests") {
 #endif
         auto &dm = queue->getManager();
         ServiceIdType svcId{};
-        Ichor::Detail::_local_dm = nullptr;
+        Ichor::v1::Detail::_local_dm = nullptr;
 
         std::thread t([&]() {
-            Ichor::Detail::_local_dm = &dm;
+            Ichor::v1::Detail::_local_dm = &dm;
 #if defined(TEST_URING)
             REQUIRE(queue->createEventLoop());
 #elif defined(TEST_SDEVENT)
@@ -792,10 +793,10 @@ TEST_CASE("ServicesTests") {
 #endif
         auto &dm = queue->getManager();
         ServiceIdType svcId{};
-        Ichor::Detail::_local_dm = nullptr;
+        Ichor::v1::Detail::_local_dm = nullptr;
 
         std::thread t([&]() {
-            Ichor::Detail::_local_dm = &dm;
+            Ichor::v1::Detail::_local_dm = &dm;
 #if defined(TEST_URING)
             REQUIRE(queue->createEventLoop());
 #elif defined(TEST_SDEVENT)
@@ -845,11 +846,11 @@ TEST_CASE("ServicesTests") {
     SECTION("Destroying a running IOUringTimer") {
         auto queue = std::make_unique<QIMPL>(500, 100'000'000, emulateKernelVersion);
         auto &dm = queue->getManager();
-        Ichor::Detail::_local_dm = nullptr;
+        Ichor::v1::Detail::_local_dm = nullptr;
         std::atomic<uint64_t> fired{};
 
         std::thread t([&]() {
-            Ichor::Detail::_local_dm = &dm;
+            Ichor::v1::Detail::_local_dm = &dm;
             REQUIRE(queue->createEventLoop());
             dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>();
             queue->start(CaptureSigInt);
@@ -889,10 +890,10 @@ TEST_CASE("ServicesTests") {
         ServiceIdType creatingSvcId2{};
         ServiceIdType creatingSvcId3{};
         ServiceIdType tffSvcId{};
-        Ichor::Detail::_local_dm = nullptr;
+        Ichor::v1::Detail::_local_dm = nullptr;
 
         std::thread t([&]() {
-            Ichor::Detail::_local_dm = &dm;
+            Ichor::v1::Detail::_local_dm = &dm;
 #if defined(TEST_URING)
             REQUIRE(queue->createEventLoop());
 #elif defined(TEST_SDEVENT)
@@ -973,10 +974,10 @@ TEST_CASE("ServicesTests") {
         auto queue = std::make_unique<QIMPL>(500);
 #endif
         auto &dm = queue->getManager();
-        Ichor::Detail::_local_dm = nullptr;
+        Ichor::v1::Detail::_local_dm = nullptr;
 
         std::thread t([&]() {
-            Ichor::Detail::_local_dm = &dm;
+            Ichor::v1::Detail::_local_dm = &dm;
 #if defined(TEST_URING)
             REQUIRE(queue->createEventLoop());
 #elif defined(TEST_SDEVENT)
@@ -1013,10 +1014,10 @@ TEST_CASE("ServicesTests") {
         auto queue = std::make_unique<QIMPL>(500);
 #endif
         auto &dm = queue->getManager();
-        Ichor::Detail::_local_dm = nullptr;
+        Ichor::v1::Detail::_local_dm = nullptr;
 
         std::thread t([&]() {
-            Ichor::Detail::_local_dm = &dm;
+            Ichor::v1::Detail::_local_dm = &dm;
 #if defined(TEST_URING)
             REQUIRE(queue->createEventLoop());
 #elif defined(TEST_SDEVENT)
@@ -1065,10 +1066,10 @@ TEST_CASE("ServicesTests") {
 #endif
         auto &dm = queue->getManager();
         ServiceIdType svcId{};
-        Ichor::Detail::_local_dm = nullptr;
+        Ichor::v1::Detail::_local_dm = nullptr;
 
         std::thread t([&]() {
-            Ichor::Detail::_local_dm = &dm;
+            Ichor::v1::Detail::_local_dm = &dm;
 #if defined(TEST_URING)
             REQUIRE(queue->createEventLoop());
 #elif defined(TEST_SDEVENT)
@@ -1124,10 +1125,10 @@ TEST_CASE("ServicesTests") {
 #endif
         auto &dm = queue->getManager();
         ServiceIdType svcId{};
-        Ichor::Detail::_local_dm = nullptr;
+        Ichor::v1::Detail::_local_dm = nullptr;
 
         std::thread t([&]() {
-            Ichor::Detail::_local_dm = &dm;
+            Ichor::v1::Detail::_local_dm = &dm;
 #if defined(TEST_URING)
             REQUIRE(queue->createEventLoop());
 #elif defined(TEST_SDEVENT)
@@ -1197,10 +1198,10 @@ TEST_CASE("ServicesTests") {
         auto queue = std::make_unique<QIMPL>(500);
 #endif
         auto &dm = queue->getManager();
-        Ichor::Detail::_local_dm = nullptr;
+        Ichor::v1::Detail::_local_dm = nullptr;
 
         std::thread t([&]() {
-            Ichor::Detail::_local_dm = &dm;
+            Ichor::v1::Detail::_local_dm = &dm;
 #if defined(TEST_URING)
             REQUIRE(queue->createEventLoop());
 #elif defined(TEST_SDEVENT)
@@ -1294,9 +1295,9 @@ TEST_CASE("ServicesTests") {
         auto queue = std::make_unique<QIMPL>(500);
 #endif
         auto &dm = queue->getManager();
-        Ichor::Detail::_local_dm = nullptr;
+        Ichor::v1::Detail::_local_dm = nullptr;
         std::thread t([&]() {
-            Ichor::Detail::_local_dm = &dm;
+            Ichor::v1::Detail::_local_dm = &dm;
 #if defined(TEST_URING)
             REQUIRE(queue->createEventLoop());
 #elif defined(TEST_SDEVENT)
@@ -1338,9 +1339,9 @@ TEST_CASE("ServicesTests") {
         auto &dm = queue->getManager();
         ServiceIdType trackerSvcId{};
         ServiceIdType depSvcId{};
-        Ichor::Detail::_local_dm = nullptr;
+        Ichor::v1::Detail::_local_dm = nullptr;
         std::thread t([&]() {
-            Ichor::Detail::_local_dm = &dm;
+            Ichor::v1::Detail::_local_dm = &dm;
 #if defined(TEST_URING)
             REQUIRE(queue->createEventLoop());
 #elif defined(TEST_SDEVENT)
@@ -1439,9 +1440,9 @@ TEST_CASE("ServicesTests") {
         ServiceIdType trackerSvcId{};
         ServiceIdType depSvcId{};
         testEvt = std::make_unique<AsyncManualResetEvent>();
-        Ichor::Detail::_local_dm = nullptr;
+        Ichor::v1::Detail::_local_dm = nullptr;
         std::thread t([&]() {
-            Ichor::Detail::_local_dm = &dm;
+            Ichor::v1::Detail::_local_dm = &dm;
 #if defined(TEST_URING)
             REQUIRE(queue->createEventLoop());
 #elif defined(TEST_SDEVENT)
@@ -1573,9 +1574,9 @@ TEST_CASE("ServicesTests") {
         auto queue = std::make_unique<QIMPL>(500);
         auto &dm = queue->getManager();
         testEvt = std::make_unique<AsyncManualResetEvent>();
-        Ichor::Detail::_local_dm = nullptr;
+        Ichor::v1::Detail::_local_dm = nullptr;
         std::thread t([&]() {
-            Ichor::Detail::_local_dm = &dm;
+            Ichor::v1::Detail::_local_dm = &dm;
 #if defined(TEST_URING)
             REQUIRE(queue->createEventLoop());
 #elif defined(TEST_SDEVENT)
@@ -1656,9 +1657,9 @@ TEST_CASE("ServicesTests") {
         auto queue = std::make_unique<QIMPL>(500);
 #endif
         auto &dm = queue->getManager();
-        Ichor::Detail::_local_dm = nullptr;
+        Ichor::v1::Detail::_local_dm = nullptr;
         std::thread t([&]() {
-            Ichor::Detail::_local_dm = &dm;
+            Ichor::v1::Detail::_local_dm = &dm;
 #if defined(TEST_URING)
             REQUIRE(queue->createEventLoop());
 #elif defined(TEST_SDEVENT)
@@ -1684,9 +1685,9 @@ TEST_CASE("ServicesTests") {
         auto queue = std::make_unique<QIMPL>(500);
 #endif
         auto &dm = queue->getManager();
-        Ichor::Detail::_local_dm = nullptr;
+        Ichor::v1::Detail::_local_dm = nullptr;
         std::thread t([&]() {
-            Ichor::Detail::_local_dm = &dm;
+            Ichor::v1::Detail::_local_dm = &dm;
 #if defined(TEST_URING)
             REQUIRE(queue->createEventLoop());
 #elif defined(TEST_SDEVENT)
@@ -1706,6 +1707,39 @@ TEST_CASE("ServicesTests") {
         t.join();
     }
 
+    SECTION("Dependency going offline while a dependee's stop is suspended stays until that stop is done") {
+        StopUsingDependencyService::dependencyPresentAfterSuspending = false;
+        StopUsingDependencyService::removedWhileStopping = false;
+#if defined(TEST_URING)
+        auto queue = std::make_unique<QIMPL>(500, 100'000'000, emulateKernelVersion);
+#else
+        auto queue = std::make_unique<QIMPL>(500);
+#endif
+        auto &dm = queue->getManager();
+        Ichor::v1::Detail::_local_dm = nullptr;
+        std::thread t([&]() {
+            Ichor::v1::Detail::_local_dm = &dm;
+#if defined(TEST_URING)
+            REQUIRE(queue->createEventLoop());
+#elif defined(TEST_SDEVENT)
+            auto *loop = queue->createEventLoop();
+            REQUIRE(loop);
+#endif
+            dm.createServiceManager<StopUsingDependencyService>();
+            dm.createServiceManager<UselessService, IUselessService>();
+            queue->start(CaptureSigInt);
+#if defined(TEST_SDEVENT)
+            int r = sd_event_loop(loop);
+            REQUIRE(r >= 0);
+#endif
+        });
+
+        t.join();
+
+        REQUIRE(StopUsingDependencyService::dependencyPresentAfterSuspending);
+        REQUIRE(!StopUsingDependencyService::removedWhileStopping);
+    }
+
     SECTION("Dependency retains dependees while async dependencyOffline runs") {
         using namespace std::chrono_literals;
 
@@ -1718,9 +1752,9 @@ TEST_CASE("ServicesTests") {
         auto queue = std::make_unique<QIMPL>(500);
 #endif
         auto &dm = queue->getManager();
-        Ichor::Detail::_local_dm = nullptr;
+        Ichor::v1::Detail::_local_dm = nullptr;
         std::thread t([&]() {
-            Ichor::Detail::_local_dm = &dm;
+            Ichor::v1::Detail::_local_dm = &dm;
 #if defined(TEST_URING)
             REQUIRE(queue->createEventLoop());
 #elif defined(TEST_SDEVENT)

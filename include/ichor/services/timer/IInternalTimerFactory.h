@@ -2,7 +2,7 @@
 
 #include <ichor/coroutines/Task.h>
 
-namespace Ichor::Detail::v1 {
+namespace Ichor::v1::Detail {
     struct InternalTimerFactory {
         virtual Task<void> stopAllTimers() noexcept = 0;
 

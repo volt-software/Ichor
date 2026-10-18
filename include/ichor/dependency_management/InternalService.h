@@ -4,7 +4,7 @@
 #include <ichor/dependency_management/AdvancedService.h>
 #include <ichor/dependency_management/IService.h>
 
-namespace Ichor::Detail {
+namespace Ichor::v1::Detail {
 
     /// InternalService is meant to be used for Ichor internal services. This service does not actually own a service like the regular AdvancedService/ConstructorInjectionService, but "pretends" to be a service.
     /// This is especially useful for queues and the DM itself, as they are created outside of the regular dependency mechanism, but we still want services to request these as dependencies.
@@ -12,7 +12,7 @@ namespace Ichor::Detail {
     template <typename OriginalType>
     class InternalService : public IService {
     public:
-        InternalService() noexcept : IService(), _properties(), _serviceId(ServiceIdType{Detail::_serviceIdCounter.fetch_add(1, std::memory_order_relaxed)}), _serviceGid(sole::uuid4()) {
+        InternalService() noexcept : IService(), _properties(), _serviceId(ServiceIdType{v1::Detail::_serviceIdCounter.fetch_add(1, std::memory_order_relaxed)}), _serviceGid(sole::uuid4()) {
         }
 
         ~InternalService() noexcept override {

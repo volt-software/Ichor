@@ -5,6 +5,7 @@
 // #include "FakeLifecycleManager.h"
 // #include "Mocks/ServiceMock.h"
 #include <ichor/services/network/http/HttpHostService.h>
+#include <ichor/services/network/http/HttpRequestParser.h>
 
 #include <ichor/dependency_management/InternalServiceLifecycleManager.h>
 #include <ichor/events/RunFunctionEvent.h>
@@ -19,10 +20,10 @@ TEST_CASE("HttpConnectionTests") {
     props.emplace("Address", Ichor::v1::make_any<std::string>("192.168.10.10"));
     props.emplace("Port", Ichor::v1::make_any<std::string>("8080"));
     QueueMock qm{};
-    Ichor::Detail::InternalServiceLifecycleManager<IEventQueue> q{&qm};
-    Ichor::Detail::DependencyLifecycleManager<LoggerMock, ILogger> logger{{}};
-    Ichor::Detail::DependencyLifecycleManager<ConnectionServiceMock<IClientConnectionService>, IClientConnectionService> conn{{}};
-    Ichor::Detail::DependencyLifecycleManager<HttpConnectionService, IHttpConnectionService> svc{std::move(props)};
+    Ichor::v1::Detail::InternalServiceLifecycleManager<IEventQueue> q{&qm};
+    Ichor::v1::Detail::DependencyLifecycleManager<LoggerMock, ILogger> logger{{}};
+    Ichor::v1::Detail::DependencyLifecycleManager<ConnectionServiceMock<IClientConnectionService>, IClientConnectionService> conn{{}};
+    Ichor::v1::Detail::DependencyLifecycleManager<HttpConnectionService, IHttpConnectionService> svc{std::move(props)};
 
     conn.getService().is_client = true;
 
@@ -62,6 +63,42 @@ TEST_CASE("HttpConnectionTests") {
         REQUIRE(resp->status == HttpStatus::ok);
         REQUIRE(resp->body.size() == 1);
         REQUIRE(resp->body[0] == 0);
+    }
+
+    SECTION("responses to HEAD, 204 and 304 end after the header section") {
+        auto send = [&](HttpMethod method) -> AsyncGenerator<tl::expected<HttpResponse, HttpError>> {
+            co_return co_await svc.getService().sendAsync(method, "/some/route", {}, {});
+        };
+        auto headGen = send(HttpMethod::head);
+        auto headIt = headGen.begin();
+        auto noContentGen = send(HttpMethod::get);
+        auto noContentIt = noContentGen.begin();
+        auto notModifiedGen = send(HttpMethod::get);
+        auto notModifiedIt = notModifiedGen.begin();
+        auto getGen = send(HttpMethod::get);
+        auto getIt = getGen.begin();
+        REQUIRE(conn.getService().sentMessages.size() == 4);
+        std::string_view sentMsg{reinterpret_cast<const char *>(conn.getService().sentMessages[0].data()), conn.getService().sentMessages[0].size()};
+        REQUIRE(sentMsg == "HEAD /some/route HTTP/1.1\r\nHost: 192.168.10.10\r\n\r\n");
+
+        // The header fields of a GET response, Content-Length included
+        std::string resp{"HTTP/1.1 200 OK\r\nContent-Length: 5\r\n\r\n"
+                         "HTTP/1.1 204 No Content\r\nContent-Length: 5\r\n\r\n"
+                         "HTTP/1.1 304 Not Modified\r\nTransfer-Encoding: chunked\r\n\r\n"
+                         "HTTP/1.1 200 OK\r\nContent-Length: 5\r\n\r\nhello"};
+        conn.getService().rcvHandler(std::span<uint8_t const>{reinterpret_cast<uint8_t*>(resp.data()), resp.size()});
+
+        for(auto const &[pendingIt, expectedStatus] : {std::pair{&headIt, HttpStatus::ok}, std::pair{&noContentIt, HttpStatus::no_content}, std::pair{&notModifiedIt, HttpStatus::not_modified}}) {
+            REQUIRE(pendingIt->get_finished());
+            auto response = pendingIt->get_value<tl::expected<HttpResponse, HttpError>>();
+            REQUIRE(response);
+            REQUIRE(response->status == expectedStatus);
+            REQUIRE(response->body.size() == 1);
+        }
+        REQUIRE(getIt.get_finished());
+        auto response = getIt.get_value<tl::expected<HttpResponse, HttpError>>();
+        REQUIRE(response);
+        REQUIRE(std::string_view{reinterpret_cast<char const*>(response->body.data()), response->body.size()} == std::string_view{"hello\0", 6});
     }
 
     SECTION("GET basic in multiple receives") {
@@ -367,17 +404,26 @@ TEST_CASE("HttpConnectionTests") {
     }
 }
 
+/// Responses have a Date, which changes, this checks and removes it
+std::string withoutDate(std::string_view msg) {
+    auto const start = msg.find("\r\nDate: ");
+    REQUIRE(start != std::string_view::npos);
+    auto const end = msg.find("\r\n", start + 2);
+    REQUIRE(Ichor::v1::Detail::parseHttpDate(msg.substr(start + 8, end - start - 8)));
+    return std::string{msg.substr(0, start)} + std::string{msg.substr(end)};
+}
+
 TEST_CASE("HttpHostTests Missing properties") {
 
     Properties props{};
     props.emplace("Address", Ichor::v1::make_any<std::string>("192.168.10.10"));
     props.emplace("Port", Ichor::v1::make_any<std::string>("8080"));
     QueueMock qm{};
-    Ichor::Detail::InternalServiceLifecycleManager<IEventQueue> q{&qm};
-    Ichor::Detail::DependencyLifecycleManager<LoggerMock, ILogger> logger{{}};
-    Ichor::Detail::DependencyLifecycleManager<ConnectionServiceMock<IHostConnectionService>, IHostConnectionService> conn{{}};
-    Ichor::Detail::DependencyLifecycleManager<HostServiceMock, IHostService> host{Properties{props}};
-    Ichor::Detail::DependencyLifecycleManager<HttpHostService, IHttpHostService> svc{std::move(props)};
+    Ichor::v1::Detail::InternalServiceLifecycleManager<IEventQueue> q{&qm};
+    Ichor::v1::Detail::DependencyLifecycleManager<LoggerMock, ILogger> logger{{}};
+    Ichor::v1::Detail::DependencyLifecycleManager<ConnectionServiceMock<IHostConnectionService>, IHostConnectionService> conn{{}};
+    Ichor::v1::Detail::DependencyLifecycleManager<HostServiceMock, IHostService> host{Properties{props}};
+    Ichor::v1::Detail::DependencyLifecycleManager<HttpHostService, IHttpHostService> svc{std::move(props)};
 
     conn.getService().is_client = false;
 
@@ -403,11 +449,11 @@ TEST_CASE("HttpHostTests") {
     props.emplace("Address", Ichor::v1::make_any<std::string>("192.168.10.10"));
     props.emplace("Port", Ichor::v1::make_any<std::string>("8080"));
     QueueMock qm{};
-    Ichor::Detail::InternalServiceLifecycleManager<IEventQueue> q{&qm};
-    Ichor::Detail::DependencyLifecycleManager<LoggerMock, ILogger> logger{{}};
-    Ichor::Detail::DependencyLifecycleManager<HostServiceMock, IHostService> host{Properties{props}};
-    Ichor::Detail::DependencyLifecycleManager<ConnectionServiceMock<IHostConnectionService>, IHostConnectionService> conn{{{"TcpHostService", Ichor::v1::make_any<ServiceIdType>(host.getService().getServiceId())}}};
-    Ichor::Detail::DependencyLifecycleManager<HttpHostService, IHttpHostService> svc{std::move(props)};
+    Ichor::v1::Detail::InternalServiceLifecycleManager<IEventQueue> q{&qm};
+    Ichor::v1::Detail::DependencyLifecycleManager<LoggerMock, ILogger> logger{{}};
+    Ichor::v1::Detail::DependencyLifecycleManager<HostServiceMock, IHostService> host{Properties{props}};
+    Ichor::v1::Detail::DependencyLifecycleManager<ConnectionServiceMock<IHostConnectionService>, IHostConnectionService> conn{{{"TcpHostService", Ichor::v1::make_any<ServiceIdType>(host.getService().getServiceId())}}};
+    Ichor::v1::Detail::DependencyLifecycleManager<HttpHostService, IHttpHostService> svc{std::move(props)};
 
     conn.getService().is_client = false;
 
@@ -447,7 +493,7 @@ TEST_CASE("HttpHostTests") {
         auto _ = it2.get_value<IchorBehaviour>();
         REQUIRE(conn.getService().sentMessages.size() == 1);
         std::string_view sentMsg{reinterpret_cast<const char *>(conn.getService().sentMessages[0].data()), conn.getService().sentMessages[0].size()};
-        REQUIRE(sentMsg == "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n\r\n");
+        REQUIRE(withoutDate(sentMsg) == "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: 0\r\n\r\n");
 
         REQUIRE(reqCopy.headers.size() == 2);
         auto testheader = reqCopy.headers.find("testheader");
@@ -497,7 +543,7 @@ TEST_CASE("HttpHostTests") {
         auto _ = it2.get_value<IchorBehaviour>();
         REQUIRE(conn.getService().sentMessages.size() == 1);
         std::string_view sentMsg{reinterpret_cast<const char *>(conn.getService().sentMessages[0].data()), conn.getService().sentMessages[0].size()};
-        REQUIRE(sentMsg == "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n\r\n");
+        REQUIRE(withoutDate(sentMsg) == "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: 0\r\n\r\n");
 
         REQUIRE(reqCopy.headers.size() == 2);
         auto testheader = reqCopy.headers.find("testheader");
@@ -545,7 +591,7 @@ TEST_CASE("HttpHostTests") {
         REQUIRE(conn.getService().sentMessages.size() == 2);
         {
             std::string_view sentMsg{reinterpret_cast<const char *>(conn.getService().sentMessages[0].data()), conn.getService().sentMessages[0].size()};
-            REQUIRE(sentMsg == "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n\r\n");
+            REQUIRE(withoutDate(sentMsg) == "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: 0\r\n\r\n");
 
             REQUIRE(reqCopy.headers.size() == 2);
             auto testheader = reqCopy.headers.find("testheader");
@@ -563,7 +609,7 @@ TEST_CASE("HttpHostTests") {
         }
         {
             std::string_view sentMsg{reinterpret_cast<const char *>(conn.getService().sentMessages[1].data()), conn.getService().sentMessages[1].size()};
-            REQUIRE(sentMsg == "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n\r\n");
+            REQUIRE(withoutDate(sentMsg) == "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: 0\r\n\r\n");
 
             REQUIRE(reqCopy2.headers.size() == 2);
             auto testheader = reqCopy2.headers.find("testheader");
@@ -605,7 +651,7 @@ TEST_CASE("HttpHostTests") {
         auto _ = it2.get_value<IchorBehaviour>();
         REQUIRE(conn.getService().sentMessages.size() == 1);
         std::string_view sentMsg{reinterpret_cast<const char *>(conn.getService().sentMessages[0].data()), conn.getService().sentMessages[0].size()};
-        REQUIRE(sentMsg == "HTTP/1.1 200 OK\r\ntestres: buzz\r\nContent-Type: text/plain\r\nContent-Length: 50\r\n\r\n<html><body>This is my basic webpage</body></html>");
+        REQUIRE(withoutDate(sentMsg) == "HTTP/1.1 200 OK\r\ntestres: buzz\r\nContent-Type: text/plain\r\nContent-Length: 50\r\n\r\n<html><body>This is my basic webpage</body></html>");
 
         REQUIRE(reqCopy.headers.size() == 2);
         auto testheader = reqCopy.headers.find("testheader");
@@ -643,7 +689,7 @@ TEST_CASE("HttpHostTests") {
         auto _ = it2.get_value<IchorBehaviour>();
         REQUIRE(conn.getService().sentMessages.size() == 1);
         std::string_view sentMsg{reinterpret_cast<const char *>(conn.getService().sentMessages[0].data()), conn.getService().sentMessages[0].size()};
-        REQUIRE(sentMsg == "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n\r\n");
+        REQUIRE(withoutDate(sentMsg) == "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: 0\r\n\r\n");
 
         REQUIRE(reqCopy.headers.size() == 3);
         auto testheader = reqCopy.headers.find("testheader");
@@ -685,7 +731,7 @@ TEST_CASE("HttpHostTests") {
         auto _ = it2.get_value<IchorBehaviour>();
         REQUIRE(conn.getService().sentMessages.size() == 1);
         std::string_view sentMsg{reinterpret_cast<const char *>(conn.getService().sentMessages[0].data()), conn.getService().sentMessages[0].size()};
-        REQUIRE(sentMsg == "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n\r\n");
+        REQUIRE(withoutDate(sentMsg) == "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: 0\r\n\r\n");
 
         REQUIRE(reqCopy.headers.size() == 3);
         auto testheader = reqCopy.headers.find("testheader");
@@ -741,7 +787,7 @@ TEST_CASE("HttpHostTests") {
             auto _ = it2.get_value<IchorBehaviour>();
             REQUIRE(conn.getService().sentMessages.size() == 1);
             std::string_view sentMsg{reinterpret_cast<const char *>(conn.getService().sentMessages[0].data()), conn.getService().sentMessages[0].size()};
-            REQUIRE(sentMsg == "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n\r\n");
+            REQUIRE(withoutDate(sentMsg) == "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: 0\r\n\r\n");
 
             REQUIRE(reqCopy.headers.size() == 3);
             auto testheader = reqCopy.headers.find("testheader");
@@ -780,7 +826,7 @@ TEST_CASE("HttpHostTests") {
         auto _ = it2.get_value<IchorBehaviour>();
         REQUIRE(conn.getService().sentMessages.size() == 1);
         std::string_view sentMsg{reinterpret_cast<const char *>(conn.getService().sentMessages[0].data()), conn.getService().sentMessages[0].size()};
-        REQUIRE(sentMsg == "HTTP/1.1 400 Bad Request\r\n\r\n");
+        REQUIRE(withoutDate(sentMsg) == "HTTP/1.1 400 Bad Request\r\nContent-Length: 0\r\nConnection: close\r\n\r\n");
 
         REQUIRE(!handlerActivated);
     }
@@ -802,7 +848,7 @@ TEST_CASE("HttpHostTests") {
         auto _ = it2.get_value<IchorBehaviour>();
         REQUIRE(conn.getService().sentMessages.size() == 1);
         std::string_view sentMsg{reinterpret_cast<const char *>(conn.getService().sentMessages[0].data()), conn.getService().sentMessages[0].size()};
-        REQUIRE(sentMsg == "HTTP/1.1 404 Not Found\r\n\r\n");
+        REQUIRE(withoutDate(sentMsg) == "HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\n\r\n");
 
         REQUIRE(!handlerActivated);
     }

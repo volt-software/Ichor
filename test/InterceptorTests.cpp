@@ -18,7 +18,7 @@ TEST_CASE("InterceptorTests: Intercept TestEvent unprocessed") {
     auto &dm = queue->getManager();
 
     std::thread t([&]() {
-        Ichor::Detail::_local_dm = &dm;
+        Ichor::v1::Detail::_local_dm = &dm;
         dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>();
         dm.createServiceManager<InterceptorService<TestEvent>, IInterceptorService>();
         queue->start(CaptureSigInt);
@@ -58,7 +58,7 @@ TEST_CASE("InterceptorTests: Intercept TestEvent processed") {
     auto &dm = queue->getManager();
 
     std::thread t([&]() {
-        Ichor::Detail::_local_dm = &dm;
+        Ichor::v1::Detail::_local_dm = &dm;
         dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>();
         dm.createServiceManager<InterceptorService<TestEvent>, IInterceptorService>();
         dm.createServiceManager<EventHandlerService<TestEvent>, IEventHandlerService>();
@@ -99,7 +99,7 @@ TEST_CASE("InterceptorTests: Intercept prevent handling") {
     auto &dm = queue->getManager();
 
     std::thread t([&]() {
-        Ichor::Detail::_local_dm = &dm;
+        Ichor::v1::Detail::_local_dm = &dm;
         dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>();
         dm.createServiceManager<InterceptorService<TestEvent, false>, IInterceptorService>();
         dm.createServiceManager<EventHandlerService<TestEvent>, IEventHandlerService>();
@@ -144,7 +144,7 @@ TEST_CASE("InterceptorTests: Intercept all Events") {
     auto &dm = queue->getManager();
 
     std::thread t([&]() {
-        Ichor::Detail::_local_dm = &dm;
+        Ichor::v1::Detail::_local_dm = &dm;
         dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>();
         dm.createServiceManager<InterceptorService<Event>, IInterceptorService>();
         queue->start(CaptureSigInt);
@@ -187,7 +187,7 @@ TEST_CASE("InterceptorTests: Multiple interceptors") {
     auto &dm = queue->getManager();
 
     std::thread t([&]() {
-        Ichor::Detail::_local_dm = &dm;
+        Ichor::v1::Detail::_local_dm = &dm;
         dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>();
         dm.createServiceManager<InterceptorService<Event>, IInterceptorService>();
         dm.createServiceManager<InterceptorService<Event>, IInterceptorService>();
@@ -234,7 +234,7 @@ TEST_CASE("InterceptorTests: Add interceptors during intercept") {
     auto &dm = queue->getManager();
 
     std::thread t([&]() {
-        Ichor::Detail::_local_dm = &dm;
+        Ichor::v1::Detail::_local_dm = &dm;
         dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>();
         dm.createServiceManager<AddInterceptorDuringEventHandlingService>();
         queue->start(CaptureSigInt);
@@ -260,7 +260,7 @@ TEST_CASE("InterceptorTests: Remove interceptors during intercept") {
     auto &dm = queue->getManager();
 
     std::thread t([&]() {
-        Ichor::Detail::_local_dm = &dm;
+        Ichor::v1::Detail::_local_dm = &dm;
         dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>();
         dm.createServiceManager<AddInterceptorDuringEventHandlingService>();
         queue->start(CaptureSigInt);
@@ -287,7 +287,7 @@ TEST_CASE("InterceptorTests: Remove interceptors leaves others intact") {
     ServiceIdType svcId{};
 
     std::thread t([&]() {
-        Ichor::Detail::_local_dm = &dm;
+        Ichor::v1::Detail::_local_dm = &dm;
         dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>();
         svcId = dm.createServiceManager<InterceptorService<TestEvent>, IInterceptorService>()->getServiceId();
         dm.createServiceManager<InterceptorService<TestEvent>, IInterceptorService>();

@@ -201,7 +201,7 @@ namespace Ichor {
 #endif
     }  // namespace refl
 
-    namespace Detail {
+    namespace v1::Detail {
         extern std::atomic<uint64_t> _serviceIdCounter;
 
         template<class ServiceType, typename... IFaces>
@@ -229,7 +229,7 @@ namespace Ichor {
     class ConstructorInjectionService<T> final : public IService {
     public:
         // NOLINTNEXTLINE(bugprone-exception-escape): only libstdc++'s mutex lock errors can escape, which terminate
-        ConstructorInjectionService(DependencyRegister &reg, Properties props) noexcept : IService(), _properties(std::move(props)), _serviceId(ServiceIdType{Detail::_serviceIdCounter.fetch_add(1, std::memory_order_relaxed)}), _serviceGid(sole::uuid4()) {
+        ConstructorInjectionService(DependencyRegister &reg, Properties props) noexcept : IService(), _properties(std::move(props)), _serviceId(ServiceIdType{v1::Detail::_serviceIdCounter.fetch_add(1, std::memory_order_relaxed)}), _serviceGid(sole::uuid4()) {
             registerDependenciesSpecialSauce(reg, tl::optional<refl::as_variant<T>>());
         }
 
@@ -540,14 +540,14 @@ namespace Ichor {
 #if (!defined(WIN32) && !defined(_WIN32) && !defined(__WIN32)) || defined(__CYGWIN__)
         requires Derived<ServiceType, IService>
 #endif
-        friend class Detail::DependencyLifecycleManager;
+        friend class v1::Detail::DependencyLifecycleManager;
 
     };
 
     template <DoesNotHaveConstructorInjectionDependencies T>
     class ConstructorInjectionService<T> final : public IService {
     public:
-        ConstructorInjectionService(Properties props) noexcept : IService(), _properties(std::move(props)), _serviceId(ServiceIdType{Detail::_serviceIdCounter.fetch_add(1, std::memory_order_relaxed)}), _serviceGid(sole::uuid4()) {
+        ConstructorInjectionService(Properties props) noexcept : IService(), _properties(std::move(props)), _serviceId(ServiceIdType{v1::Detail::_serviceIdCounter.fetch_add(1, std::memory_order_relaxed)}), _serviceGid(sole::uuid4()) {
         }
 
         ~ConstructorInjectionService() noexcept final {
@@ -690,7 +690,7 @@ namespace Ichor {
 #if (!defined(WIN32) && !defined(_WIN32) && !defined(__WIN32)) || defined(__CYGWIN__)
         requires DerivedTemplated<ServiceType, AdvancedService> || IsConstructorInjector<ServiceType>
 #endif
-        friend class Detail::LifecycleManager;
+        friend class v1::Detail::LifecycleManager;
 
     };
 }

@@ -5,7 +5,7 @@
 
 namespace Ichor
 {
-    namespace Detail {
+    namespace v1::Detail {
         enum class DependencyChange : uint_fast16_t {
             NOT_FOUND,
             FOUND,
@@ -144,21 +144,21 @@ struct fmt::formatter<Ichor::state> {
 };
 
 template <>
-struct fmt::formatter<Ichor::Detail::DependencyChange> {
+struct fmt::formatter<Ichor::v1::Detail::DependencyChange> {
     constexpr auto parse(format_parse_context& ctx) {
         return ctx.end();
     }
 
     template <typename FormatContext>
-    auto format(const Ichor::Detail::DependencyChange& change, FormatContext& ctx) const {
+    auto format(const Ichor::v1::Detail::DependencyChange& change, FormatContext& ctx) const {
         switch(change) {
-            case Ichor::Detail::DependencyChange::NOT_FOUND:
+            case Ichor::v1::Detail::DependencyChange::NOT_FOUND:
                 return fmt::format_to(ctx.out(), "NOT_FOUND");
-            case Ichor::Detail::DependencyChange::FOUND:
+            case Ichor::v1::Detail::DependencyChange::FOUND:
                 return fmt::format_to(ctx.out(), "FOUND");
-            case Ichor::Detail::DependencyChange::FOUND_AND_START_ME:
+            case Ichor::v1::Detail::DependencyChange::FOUND_AND_START_ME:
                 return fmt::format_to(ctx.out(), "FOUND_AND_START_ME");
-            case Ichor::Detail::DependencyChange::FOUND_AND_STOP_ME:
+            case Ichor::v1::Detail::DependencyChange::FOUND_AND_STOP_ME:
                 return fmt::format_to(ctx.out(), "FOUND_AND_STOP_ME");
         }
         return fmt::format_to(ctx.out(), "error, please file a bug in Ichor");

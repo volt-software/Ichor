@@ -71,7 +71,7 @@ Ichor::AsyncGenerator<Ichor::IchorBehaviour> Ichor::v1::TimerFactoryFactory::han
         co_return {};
     }
 
-    _factories.emplace(evt.originatingService, GetThreadLocalManager().createServiceManager<TimerFactory<Timer, IEventQueue>, Ichor::Detail::v1::InternalTimerFactory, ITimerFactory>(Properties{{"requestingSvcId", Ichor::v1::make_any<ServiceIdType>(evt.originatingService)}, {"Filter", Ichor::v1::make_any<Filter>(ServiceIdFilterEntry{evt.originatingService})}}, evt.priority)->getServiceId());
+    _factories.emplace(evt.originatingService, GetThreadLocalManager().createServiceManager<TimerFactory<Timer, IEventQueue>, Ichor::v1::Detail::InternalTimerFactory, ITimerFactory>(Properties{{"requestingSvcId", Ichor::v1::make_any<ServiceIdType>(evt.originatingService)}, {"Filter", Ichor::v1::make_any<Filter>(ServiceIdFilterEntry{evt.originatingService})}}, evt.priority)->getServiceId());
 
     INTERNAL_IO_DEBUG("TimerFactoryFactory {} handleDependencyRequest for {} done3", getServiceId(), evt.originatingService, _quitting);
     co_return {};
@@ -108,7 +108,7 @@ Ichor::AsyncGenerator<Ichor::IchorBehaviour> Ichor::v1::TimerFactoryFactory::han
 
 Ichor::Task<void> Ichor::v1::TimerFactoryFactory::pushStopEventForTimerFactory(ServiceIdType requestingSvcId, ServiceIdType factoryId) noexcept {
     INTERNAL_IO_DEBUG("TimerFactoryFactory {} pushStopEventForTimerFactory for {}", getServiceId(), requestingSvcId);
-    auto svc = GetThreadLocalManager().getService<Ichor::Detail::v1::InternalTimerFactory>(factoryId);
+    auto svc = GetThreadLocalManager().getService<Ichor::v1::Detail::InternalTimerFactory>(factoryId);
 
     if(!svc) {
         INTERNAL_IO_DEBUG("TimerFactoryFactory {} pushStopEventForTimerFactory for {} done1", getServiceId(), requestingSvcId);

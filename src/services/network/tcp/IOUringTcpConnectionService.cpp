@@ -470,6 +470,14 @@ bool Ichor::v1::IOUringTcpConnectionService<InterfaceT>::isClient() const noexce
 }
 
 template <typename InterfaceT> requires Ichor::DerivedAny<InterfaceT, Ichor::v1::IConnectionService, Ichor::v1::IHostConnectionService, Ichor::v1::IClientConnectionService>
+void Ichor::v1::IOUringTcpConnectionService<InterfaceT>::shutdownSend() {
+    // Not through io_uring: it doesn't block, and the recv that is in flight has to keep going
+    if(_socket >= 0 && ::shutdown(_socket, SHUT_WR) != 0) {
+        ICHOR_LOG_TRACE(_logger, "[{}] shutdown SHUT_WR failed: {}", AdvancedService<IOUringTcpConnectionService>::getServiceId(), mapErrnoToError(errno));
+    }
+}
+
+template <typename InterfaceT> requires Ichor::DerivedAny<InterfaceT, Ichor::v1::IConnectionService, Ichor::v1::IHostConnectionService, Ichor::v1::IClientConnectionService>
 void Ichor::v1::IOUringTcpConnectionService<InterfaceT>::setReceiveHandler(std::function<void(std::span<uint8_t const>)> recvHandler) {
     _recvHandler = recvHandler;
 

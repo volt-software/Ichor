@@ -20,9 +20,9 @@ constinit std::atomic<uint64_t> Ichor::DependencyManager::_managerIdCounter = 0;
 std::atomic<uint64_t> Ichor::v1::_rfpCounter = 0;
 #endif
 // NOLINTNEXTLINE(bugprone-throwing-static-initialization): only allocation failure can throw, which terminates
-thread_local Ichor::unordered_set<Ichor::ServiceIdType, Ichor::ServiceIdHash> Ichor::Detail::emptyDependencies{}; // TODO modify ankerl's implementation to have enough constexpr functions to have this be constinit as well.
+thread_local Ichor::unordered_set<Ichor::ServiceIdType, Ichor::ServiceIdHash> Ichor::v1::Detail::emptyDependencies{}; // TODO modify ankerl's implementation to have enough constexpr functions to have this be constinit as well.
 
-constinit thread_local Ichor::DependencyManager *Ichor::Detail::_local_dm = nullptr;
+constinit thread_local Ichor::DependencyManager *Ichor::v1::Detail::_local_dm = nullptr;
 
 #ifdef ICHOR_USE_BACKWARD
 #include <backward/backward.h>
@@ -33,15 +33,15 @@ namespace backward {
 #endif
 
 Ichor::DependencyManager::DependencyManager(IEventQueue &eventQueue) : _eventQueue(eventQueue) {
-    if(Detail::_local_dm != nullptr) [[unlikely]] {
+    if(Ichor::v1::Detail::_local_dm != nullptr) [[unlikely]] {
         ICHOR_EMERGENCY_LOG1(_logger, "This thread already has a manager");
         std::terminate();
     }
 
-    Ichor::Detail::_local_dm = this;
+    Ichor::v1::Detail::_local_dm = this;
 
-    auto dmlm = std::make_unique<Detail::InternalServiceLifecycleManager<DependencyManager>>(this);
-    auto qlm = std::make_unique<Detail::InternalServiceLifecycleManager<IEventQueue>>(&_eventQueue);
+    auto dmlm = std::make_unique<Ichor::v1::Detail::InternalServiceLifecycleManager<DependencyManager>>(this);
+    auto qlm = std::make_unique<Ichor::v1::Detail::InternalServiceLifecycleManager<IEventQueue>>(&_eventQueue);
     _services.emplace(dmlm->serviceId(), std::move(dmlm));
     _services.emplace(qlm->serviceId(), std::move(qlm));
 }
@@ -367,7 +367,7 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &uniqueEvt) {
                 auto &cmpMgr = svcIt.first->second;
 
                 // If a service requests IService, we interpret it to mean a reference to itself, not just all services in existence.
-                Detail::IServiceInterestedLifecycleManager selfMgr{cmpMgr->getIService()};
+                Ichor::v1::Detail::IServiceInterestedLifecycleManager selfMgr{cmpMgr->getIService()};
                 {
                     auto startBehaviour = cmpMgr->dependencyOnline(&selfMgr);
 
@@ -856,7 +856,7 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &uniqueEvt) {
                             break;
                         }
 
-                        it_ret = static_cast<Detail::AsyncGeneratorBeginOperation<StartBehaviour>*>(it.get())->get_value();
+                        it_ret = static_cast<Ichor::v1::Detail::AsyncGeneratorBeginOperation<StartBehaviour>*>(it.get())->get_value();
                     } else {
                         it_ret = static_cast<AsyncGenerator<StartBehaviour>*>(genIt->second.generator.get())->get_value();
                     }
@@ -1133,7 +1133,7 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &uniqueEvt) {
 
 void Ichor::DependencyManager::stop() {
     if constexpr (DO_INTERNAL_DEBUG || DO_HARDENING) {
-        if (Ichor::Detail::_local_dm != nullptr && this != Detail::_local_dm) [[unlikely]] {
+        if (Ichor::v1::Detail::_local_dm != nullptr && this != Ichor::v1::Detail::_local_dm) [[unlikely]] {
             ICHOR_EMERGENCY_LOG1(_logger, "Function called from wrong thread.");
             std::terminate();
         }
@@ -1155,7 +1155,7 @@ void Ichor::DependencyManager::stop() {
     }
 
     _started.store(false, std::memory_order_release);
-    Ichor::Detail::_local_dm = nullptr;
+    Ichor::v1::Detail::_local_dm = nullptr;
 }
 
 void Ichor::DependencyManager::addInternalServiceManager(std::unique_ptr<ILifecycleManager> svc) {
@@ -1342,7 +1342,7 @@ bool Ichor::DependencyManager::existingCoroutineFor(ServiceIdType serviceId) con
 
 Ichor::Task<void> Ichor::DependencyManager::waitForService(ServiceIdType serviceId, uint64_t eventType) noexcept {
     if constexpr (DO_INTERNAL_DEBUG || DO_HARDENING) {
-        if (this != Detail::_local_dm) [[unlikely]] {
+        if (this != Ichor::v1::Detail::_local_dm) [[unlikely]] {
             ICHOR_EMERGENCY_LOG1(_logger, "Function called from wrong thread.");
             std::terminate();
         }
@@ -1442,7 +1442,7 @@ void Ichor::DependencyManager::checkIfCanQuit(std::vector<EventInterceptInfo> &a
 
 bool Ichor::DependencyManager::hasDependencyWaiter(ServiceIdType serviceId, uint64_t eventType) noexcept {
     if constexpr (DO_INTERNAL_DEBUG || DO_HARDENING) {
-        if (this != Detail::_local_dm) [[unlikely]] {
+        if (this != Ichor::v1::Detail::_local_dm) [[unlikely]] {
             ICHOR_EMERGENCY_LOG1(_logger, "Function called from wrong thread.");
             std::terminate();
         }
@@ -1563,7 +1563,7 @@ void Ichor::DependencyManager::runForOrQueueEmpty(std::chrono::milliseconds ms) 
 /// \return optional
 [[nodiscard]] tl::optional<Ichor::v1::NeverNull<const Ichor::IService*>> Ichor::DependencyManager::getIService(ServiceIdType id) const noexcept {
     if constexpr (DO_INTERNAL_DEBUG || DO_HARDENING) {
-        if (this != Detail::_local_dm) [[unlikely]] {
+        if (this != Ichor::v1::Detail::_local_dm) [[unlikely]] {
             ICHOR_EMERGENCY_LOG1(_logger, "Function called from wrong thread.");
             std::terminate();
         }
@@ -1580,7 +1580,7 @@ void Ichor::DependencyManager::runForOrQueueEmpty(std::chrono::milliseconds ms) 
 
 tl::optional<Ichor::v1::NeverNull<const Ichor::IService*>> Ichor::DependencyManager::getIService(sole::uuid id) const noexcept {
     if constexpr (DO_INTERNAL_DEBUG || DO_HARDENING) {
-        if (this != Detail::_local_dm) [[unlikely]] {
+        if (this != Ichor::v1::Detail::_local_dm) [[unlikely]] {
             ICHOR_EMERGENCY_LOG1(_logger, "Function called from wrong thread.");
             std::terminate();
         }
@@ -1599,7 +1599,7 @@ tl::optional<Ichor::v1::NeverNull<const Ichor::IService*>> Ichor::DependencyMana
 
 std::vector<Ichor::Dependency> Ichor::DependencyManager::getDependencyRequestsForService(ServiceIdType svcId) const noexcept {
     if constexpr (DO_INTERNAL_DEBUG || DO_HARDENING) {
-        if (this != Detail::_local_dm) [[unlikely]] {
+        if (this != Ichor::v1::Detail::_local_dm) [[unlikely]] {
             ICHOR_EMERGENCY_LOG1(_logger, "Function called from wrong thread.");
             std::terminate();
         }
@@ -1628,7 +1628,7 @@ std::vector<Ichor::Dependency> Ichor::DependencyManager::getDependencyRequestsFo
 
 Ichor::DependencyManager::DependentServicesView Ichor::DependencyManager::getDependentsForService(ServiceIdType svcId) const noexcept {
     if constexpr (DO_INTERNAL_DEBUG || DO_HARDENING) {
-        if (this != Detail::_local_dm) [[unlikely]] {
+        if (this != Ichor::v1::Detail::_local_dm) [[unlikely]] {
             ICHOR_EMERGENCY_LOG1(_logger, "Function called from wrong thread.");
             std::terminate();
         }
@@ -1645,7 +1645,7 @@ Ichor::DependencyManager::DependentServicesView Ichor::DependencyManager::getDep
 
 std::span<Ichor::Dependency const> Ichor::DependencyManager::getProvidedInterfacesForService(ServiceIdType svcId) const noexcept {
     if constexpr (DO_INTERNAL_DEBUG || DO_HARDENING) {
-        if (this != Detail::_local_dm) [[unlikely]] {
+        if (this != Ichor::v1::Detail::_local_dm) [[unlikely]] {
             ICHOR_EMERGENCY_LOG1(_logger, "Function called from wrong thread.");
             std::terminate();
         }
@@ -1662,7 +1662,7 @@ std::span<Ichor::Dependency const> Ichor::DependencyManager::getProvidedInterfac
 
 Ichor::DependencyManager::TrackersView Ichor::DependencyManager::getTrackersForService(ServiceIdType svcId) const noexcept {
     if constexpr (DO_INTERNAL_DEBUG || DO_HARDENING) {
-        if (this != Detail::_local_dm) [[unlikely]] {
+        if (this != Ichor::v1::Detail::_local_dm) [[unlikely]] {
             ICHOR_EMERGENCY_LOG1(_logger, "Function called from wrong thread.");
             std::terminate();
         }
@@ -1674,7 +1674,7 @@ Ichor::DependencyManager::TrackersView Ichor::DependencyManager::getTrackersForS
 #ifdef ICHOR_HAVE_STD_STACKTRACE
 std::vector<std::tuple<Ichor::Event const &, Ichor::ServiceIdType, std::stacktrace const &>> Ichor::DependencyManager::getServiceIdsWhichHaveActiveCoroutines() const noexcept {
     if constexpr (DO_INTERNAL_DEBUG || DO_HARDENING) {
-        if (this != Detail::_local_dm) [[unlikely]] {
+        if (this != Ichor::v1::Detail::_local_dm) [[unlikely]] {
             ICHOR_EMERGENCY_LOG1(_logger, "Function called from wrong thread.");
             std::terminate();
         }
@@ -1700,7 +1700,7 @@ std::vector<std::tuple<Ichor::Event const &, Ichor::ServiceIdType, std::stacktra
 
 Ichor::DependencyManager::ServicesView Ichor::DependencyManager::getAllServices() const noexcept {
     if constexpr (DO_INTERNAL_DEBUG || DO_HARDENING) {
-        if (this != Detail::_local_dm) [[unlikely]] {
+        if (this != Ichor::v1::Detail::_local_dm) [[unlikely]] {
             ICHOR_EMERGENCY_LOG1(_logger, "Function called from wrong thread.");
             std::terminate();
         }
@@ -1711,7 +1711,7 @@ Ichor::DependencyManager::ServicesView Ichor::DependencyManager::getAllServices(
 
 tl::optional<std::string_view> Ichor::DependencyManager::getImplementationNameFor(ServiceIdType serviceId) const noexcept {
     if constexpr (DO_INTERNAL_DEBUG || DO_HARDENING) {
-        if (this != Detail::_local_dm) [[unlikely]] {
+        if (this != Ichor::v1::Detail::_local_dm) [[unlikely]] {
             ICHOR_EMERGENCY_LOG1(_logger, "Function called from wrong thread.");
             std::terminate();
         }
@@ -1732,7 +1732,7 @@ ICHOR_PURE_FUNC_ATTR Ichor::IEventQueue& Ichor::DependencyManager::getEventQueue
 
 Ichor::Task<tl::expected<void, Ichor::WaitError>> Ichor::DependencyManager::waitForServiceStarted(v1::NeverNull<IService*> svc) {
     if constexpr (DO_INTERNAL_DEBUG || DO_HARDENING) {
-        if (this != Detail::_local_dm) [[unlikely]] {
+        if (this != Ichor::v1::Detail::_local_dm) [[unlikely]] {
             ICHOR_EMERGENCY_LOG1(_logger, "Function called from wrong thread.");
             std::terminate();
         }
@@ -1750,7 +1750,7 @@ Ichor::Task<tl::expected<void, Ichor::WaitError>> Ichor::DependencyManager::wait
 
 Ichor::Task<tl::expected<void, Ichor::WaitError>> Ichor::DependencyManager::waitForServiceStopped(v1::NeverNull<IService*> svc) {
     if constexpr (DO_INTERNAL_DEBUG || DO_HARDENING) {
-        if (this != Detail::_local_dm) [[unlikely]] {
+        if (this != Ichor::v1::Detail::_local_dm) [[unlikely]] {
             ICHOR_EMERGENCY_LOG1(_logger, "Function called from wrong thread.");
             std::terminate();
         }
@@ -1775,19 +1775,19 @@ void Ichor::DependencyManager::clearCommunicationChannel() {
 }
 
 [[nodiscard]] bool Ichor::HasThreadLocalManager() noexcept {
-    return Detail::_local_dm != nullptr;
+    return Ichor::v1::Detail::_local_dm != nullptr;
 }
 
 [[nodiscard]] Ichor::DependencyManager& Ichor::GetThreadLocalManager() noexcept {
-    return *Detail::_local_dm;
+    return *Ichor::v1::Detail::_local_dm;
 }
 
 // Instantiate the async generator
 template class Ichor::AsyncGenerator<void>;
 template class Ichor::AsyncGenerator<Ichor::IchorBehaviour>;
 template class Ichor::AsyncGenerator<Ichor::StartBehaviour>;
-template class Ichor::Detail::AsyncGeneratorPromise<Ichor::StartBehaviour>;
-template class Ichor::Detail::AsyncGeneratorPromise<Ichor::IchorBehaviour>;
+template class Ichor::v1::Detail::AsyncGeneratorPromise<Ichor::StartBehaviour>;
+template class Ichor::v1::Detail::AsyncGeneratorPromise<Ichor::IchorBehaviour>;
 
 // ugly hack to catch the place where an exception is thrown
 // boost asio/beast are absolutely terrible when it comes to debugging these things

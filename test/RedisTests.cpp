@@ -23,7 +23,7 @@ TEST_CASE("RedisTests") {
         auto &dm = queue->getManager();
 
         std::thread t([&]() {
-            Ichor::Detail::_local_dm = &dm;
+            Ichor::v1::Detail::_local_dm = &dm;
             dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>(Properties{{"LogLevel", Ichor::v1::make_any<LogLevel>(LogLevel::LOG_TRACE)}}, 10);
 #ifdef ICHOR_USE_SPDLOG
             dm.createServiceManager<SpdlogSharedService, ISpdlogSharedService>();

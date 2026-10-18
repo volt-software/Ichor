@@ -39,6 +39,13 @@ namespace Ichor::v1 {
 
         [[nodiscard]] virtual bool isClient() const noexcept = 0;
 
+        /**
+         * Closes the sending side of the connection (a TCP half-close): the peer receives the end of the stream, nothing can be sent anymore.
+         * What the peer still sends goes to the receive handler, until the peer closes its side, which stops this service. Lets a server close
+         * without the peer losing the last response to a reset, which closing a connection with unread data in it causes (RFC 9112 9.6).
+         */
+        virtual void shutdownSend() = 0;
+
         virtual void setReceiveHandler(std::function<void(std::span<uint8_t const>)>) = 0;
 
     protected:

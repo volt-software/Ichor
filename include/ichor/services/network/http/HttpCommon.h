@@ -181,13 +181,49 @@ namespace Ichor::v1 {
         network_connect_timeout_error       = 599
     };
 
+    /// Field names are case-insensitive (RFC 9110 5.1), so lookups ignore ASCII case.
+    struct HttpHeaderNameHash {
+        using is_transparent = void;
+
+        [[nodiscard]] uint64_t operator()(std::string_view name) const noexcept {
+            // FNV-1a over the lower case name, ankerl mixes it further
+            uint64_t hash = 14695981039346656037ULL;
+            for(char const c : name) {
+                hash ^= static_cast<uint8_t>(c >= 'A' && c <= 'Z' ? c - 'A' + 'a' : c);
+                hash *= 1099511628211ULL;
+            }
+            return hash;
+        }
+    };
+
+    struct HttpHeaderNameEqual {
+        using is_transparent = void;
+
+        [[nodiscard]] bool operator()(std::string_view lhs, std::string_view rhs) const noexcept {
+            if(lhs.size() != rhs.size()) {
+                return false;
+            }
+            for(size_t i = 0; i < lhs.size(); i++) {
+                char const l = lhs[i] >= 'A' && lhs[i] <= 'Z' ? static_cast<char>(lhs[i] - 'A' + 'a') : lhs[i];
+                char const r = rhs[i] >= 'A' && rhs[i] <= 'Z' ? static_cast<char>(rhs[i] - 'A' + 'a') : rhs[i];
+                if(l != r) {
+                    return false;
+                }
+            }
+            return true;
+        }
+    };
+
+    using HttpHeaders = Ichor::unordered_map<std::string, std::string, HttpHeaderNameHash, HttpHeaderNameEqual>;
+
     struct HttpRequest {
         std::vector<uint8_t> body;
         HttpMethod method;
         std::string_view route;
         std::vector<std::string> regex_params;
         std::string_view address;
-        Ichor::unordered_map<std::string, std::string> headers;
+        /// Field lines with the same name are combined into one, separated by ", " ("; " for Cookie)
+        HttpHeaders headers;
     };
 
     struct HttpResponse {

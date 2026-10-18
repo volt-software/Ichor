@@ -8,7 +8,7 @@
 #include <sys/eventfd.h>
 #include <mutex>
 
-namespace Ichor::Detail {
+namespace Ichor::v1::Detail {
     extern std::atomic<bool> sigintQuit;
     extern std::atomic<bool> registeredSignalHandler;
     void on_sigint([[maybe_unused]] int sig);
@@ -40,7 +40,7 @@ namespace Ichor {
             close(_eventfd);
         }
 
-        if(Detail::registeredSignalHandler) {
+        if(v1::Detail::registeredSignalHandler) {
             if (::signal(SIGINT, SIG_DFL) == SIG_ERR) {
                 fmt::print("Couldn't unset signal handler\n");
             }
@@ -209,14 +209,14 @@ namespace Ichor {
         }
 
         // this capture currently has no way to wake all queues. Multimap f.e. polls sigintQuit, but with sdevent the
-        if(captureSigInt && !Ichor::Detail::registeredSignalHandler.exchange(true)) {
-            if (::signal(SIGINT, Ichor::Detail::on_sigint) == SIG_ERR) {
+        if(captureSigInt && !Ichor::v1::Detail::registeredSignalHandler.exchange(true)) {
+            if (::signal(SIGINT, Ichor::v1::Detail::on_sigint) == SIG_ERR) {
                 fmt::println("Couldn't set signal");
                 return false;
             }
         }
 
-        addInternalServiceManager(std::make_unique<Detail::InternalServiceLifecycleManager<ISdeventQueue>>(this));
+        addInternalServiceManager(std::make_unique<v1::Detail::InternalServiceLifecycleManager<ISdeventQueue>>(this));
 
         startDm();
 
@@ -224,7 +224,7 @@ namespace Ichor {
     }
 
     bool SdeventQueue::shouldQuit() {
-        bool const shouldQuit = Detail::sigintQuit.load(std::memory_order_acquire);
+        bool const shouldQuit = v1::Detail::sigintQuit.load(std::memory_order_acquire);
 
         if (shouldQuit) [[unlikely]] {
             _quit.store(true, std::memory_order_release);
@@ -235,7 +235,7 @@ namespace Ichor {
 
     void SdeventQueue::quit() {
 #ifdef ICHOR_USE_HARDENING
-        if(&_dm != Detail::_local_dm) [[unlikely]] { // are we on the right thread?
+        if(&_dm != v1::Detail::_local_dm) [[unlikely]] { // are we on the right thread?
             std::terminate();
         }
 #endif

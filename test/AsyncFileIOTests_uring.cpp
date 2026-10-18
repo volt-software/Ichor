@@ -59,14 +59,14 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests_uring: Reading non
     ServiceIdType ioSvcId{};
 
     std::thread t([&]() {
-        Ichor::Detail::_local_dm = &dm;
+        Ichor::v1::Detail::_local_dm = &dm;
         REQUIRE(queue->createEventLoop());
         dm.createServiceManager<LoggerFactory<CoutLogger>, ILoggerFactory>(Properties{{"DefaultLogLevel", Ichor::v1::make_any<LogLevel>(LogLevel::LOG_TRACE)}});
         dbgSvcId = dm.createServiceManager<DebugService, IDebugService>()->getServiceId();
         ioSvcId = dm.createServiceManager<IOIMPL, IAsyncFileIO>()->getServiceId();
         queue->start(CaptureSigInt);
     });
-    Ichor::Detail::_local_dm = nullptr;
+    Ichor::v1::Detail::_local_dm = nullptr;
 
     waitForRunning(dm);
 
@@ -133,7 +133,7 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests_uring: Reading fil
     ServiceIdType ioSvcId{};
 
     std::thread t([&]() {
-        Ichor::Detail::_local_dm = &dm;
+        Ichor::v1::Detail::_local_dm = &dm;
         // moved to inside thread, because REQUIRE() isn't thread-safe -.-
         {
             std::remove("NoPermIO.txt"); // ignore error, each OS handles this differently and most of the time it's just because it didn't exist in the first place
@@ -152,7 +152,7 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests_uring: Reading fil
         ioSvcId = dm.createServiceManager<IOIMPL, IAsyncFileIO>()->getServiceId();
         queue->start(CaptureSigInt);
     });
-    Ichor::Detail::_local_dm = nullptr;
+    Ichor::v1::Detail::_local_dm = nullptr;
 
     waitForRunning(dm);
 
@@ -209,14 +209,14 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests_uring: Read whole 
     ServiceIdType ioSvcId{};
 
     std::thread t([&]() {
-        Ichor::Detail::_local_dm = &dm;
+        Ichor::v1::Detail::_local_dm = &dm;
         REQUIRE(queue->createEventLoop());
         dm.createServiceManager<LoggerFactory<CoutLogger>, ILoggerFactory>(Properties{{"DefaultLogLevel", Ichor::v1::make_any<LogLevel>(LogLevel::LOG_TRACE)}});
         ioSvcId = dm.createServiceManager<IOIMPL, IAsyncFileIO>()->getServiceId();
         fmt::print("section 3a\n");
         queue->start(CaptureSigInt);
     });
-    Ichor::Detail::_local_dm = nullptr;
+    Ichor::v1::Detail::_local_dm = nullptr;
 
     {
         std::ofstream out("AsyncFileIO.txt");
@@ -276,13 +276,13 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests_uring: Read whole 
     ServiceIdType ioSvcId{};
 
     std::thread t([&]() {
-        Ichor::Detail::_local_dm = &dm;
+        Ichor::v1::Detail::_local_dm = &dm;
         REQUIRE(queue->createEventLoop());
         dm.createServiceManager<LoggerFactory<CoutLogger>, ILoggerFactory>(Properties{{"DefaultLogLevel", Ichor::v1::make_any<LogLevel>(LogLevel::LOG_TRACE)}});
         ioSvcId = dm.createServiceManager<IOIMPL, IAsyncFileIO>()->getServiceId();
         queue->start(CaptureSigInt);
     });
-    Ichor::Detail::_local_dm = nullptr;
+    Ichor::v1::Detail::_local_dm = nullptr;
 
     waitForRunning(dm);
 
@@ -337,13 +337,13 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests_uring: Copying non
     ServiceIdType ioSvcId{};
 
     std::thread t([&]() {
-        Ichor::Detail::_local_dm = &dm;
+        Ichor::v1::Detail::_local_dm = &dm;
         REQUIRE(queue->createEventLoop());
         dm.createServiceManager<LoggerFactory<CoutLogger>, ILoggerFactory>(Properties{{"DefaultLogLevel", Ichor::v1::make_any<LogLevel>(LogLevel::LOG_TRACE)}});
         ioSvcId = dm.createServiceManager<IOIMPL, IAsyncFileIO>()->getServiceId();
         queue->start(CaptureSigInt);
     });
-    Ichor::Detail::_local_dm = nullptr;
+    Ichor::v1::Detail::_local_dm = nullptr;
 
     waitForRunning(dm);
 
@@ -394,13 +394,13 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests_uring: Copying fil
     ServiceIdType ioSvcId{};
 
     std::thread t([&]() {
-        Ichor::Detail::_local_dm = &dm;
+        Ichor::v1::Detail::_local_dm = &dm;
         REQUIRE(queue->createEventLoop());
         dm.createServiceManager<LoggerFactory<CoutLogger>, ILoggerFactory>(Properties{{"DefaultLogLevel", Ichor::v1::make_any<LogLevel>(LogLevel::LOG_TRACE)}});
         ioSvcId = dm.createServiceManager<IOIMPL, IAsyncFileIO>()->getServiceId();
         queue->start(CaptureSigInt);
     });
-    Ichor::Detail::_local_dm = nullptr;
+    Ichor::v1::Detail::_local_dm = nullptr;
 
     {
         std::ofstream out("AsyncFileIO.txt");
@@ -462,13 +462,13 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests_uring: Copying lar
     ServiceIdType ioSvcId{};
 
     std::thread t([&]() {
-        Ichor::Detail::_local_dm = &dm;
+        Ichor::v1::Detail::_local_dm = &dm;
         REQUIRE(queue->createEventLoop());
         dm.createServiceManager<LoggerFactory<CoutLogger>, ILoggerFactory>(Properties{{"DefaultLogLevel", Ichor::v1::make_any<LogLevel>(LogLevel::LOG_TRACE)}});
         ioSvcId = dm.createServiceManager<IOIMPL, IAsyncFileIO>()->getServiceId();
         queue->start(CaptureSigInt);
     });
-    Ichor::Detail::_local_dm = nullptr;
+    Ichor::v1::Detail::_local_dm = nullptr;
 
     std::remove("Destination.txt"); // ignore error, each OS handles this differently and most of the time it's just because it didn't exist in the first place
 
@@ -525,13 +525,13 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests_uring: Removing no
     ServiceIdType ioSvcId{};
 
     std::thread t([&]() {
-        Ichor::Detail::_local_dm = &dm;
+        Ichor::v1::Detail::_local_dm = &dm;
         REQUIRE(queue->createEventLoop());
         dm.createServiceManager<LoggerFactory<CoutLogger>, ILoggerFactory>(Properties{{"DefaultLogLevel", Ichor::v1::make_any<LogLevel>(LogLevel::LOG_TRACE)}});
         ioSvcId = dm.createServiceManager<IOIMPL, IAsyncFileIO>()->getServiceId();
         queue->start(CaptureSigInt);
     });
-    Ichor::Detail::_local_dm = nullptr;
+    Ichor::v1::Detail::_local_dm = nullptr;
 
     waitForRunning(dm);
 
@@ -581,13 +581,13 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests_uring: Removing fi
     ServiceIdType ioSvcId{};
 
     std::thread t([&]() {
-        Ichor::Detail::_local_dm = &dm;
+        Ichor::v1::Detail::_local_dm = &dm;
         REQUIRE(queue->createEventLoop());
         dm.createServiceManager<LoggerFactory<CoutLogger>, ILoggerFactory>(Properties{{"DefaultLogLevel", Ichor::v1::make_any<LogLevel>(LogLevel::LOG_TRACE)}});
         ioSvcId = dm.createServiceManager<IOIMPL, IAsyncFileIO>()->getServiceId();
         queue->start(CaptureSigInt);
     });
-    Ichor::Detail::_local_dm = nullptr;
+    Ichor::v1::Detail::_local_dm = nullptr;
 
     {
         std::ofstream out("AsyncFileIO.txt");
@@ -648,13 +648,13 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests_uring: Writing fil
     ServiceIdType ioSvcId{};
 
     std::thread t([&]() {
-        Ichor::Detail::_local_dm = &dm;
+        Ichor::v1::Detail::_local_dm = &dm;
         REQUIRE(queue->createEventLoop());
         dm.createServiceManager<LoggerFactory<CoutLogger>, ILoggerFactory>(Properties{{"DefaultLogLevel", Ichor::v1::make_any<LogLevel>(LogLevel::LOG_TRACE)}});
         ioSvcId = dm.createServiceManager<IOIMPL, IAsyncFileIO>()->getServiceId();
         queue->start(CaptureSigInt);
     });
-    Ichor::Detail::_local_dm = nullptr;
+    Ichor::v1::Detail::_local_dm = nullptr;
 
     {
         std::remove("AsyncFileIO.txt"); // ignore error, each OS handles this differently and most of the time it's just because it didn't exist in the first place
@@ -713,13 +713,13 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests_uring: Writing fil
     ServiceIdType ioSvcId{};
 
     std::thread t([&]() {
-        Ichor::Detail::_local_dm = &dm;
+        Ichor::v1::Detail::_local_dm = &dm;
         REQUIRE(queue->createEventLoop());
         dm.createServiceManager<LoggerFactory<CoutLogger>, ILoggerFactory>(Properties{{"DefaultLogLevel", Ichor::v1::make_any<LogLevel>(LogLevel::LOG_TRACE)}});
         ioSvcId = dm.createServiceManager<IOIMPL, IAsyncFileIO>()->getServiceId();
         queue->start(CaptureSigInt);
     });
-    Ichor::Detail::_local_dm = nullptr;
+    Ichor::v1::Detail::_local_dm = nullptr;
 
     {
         std::ofstream out("AsyncFileIO.txt");
@@ -782,13 +782,13 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests_uring: appending f
     ServiceIdType ioSvcId{};
 
     std::thread t([&]() {
-        Ichor::Detail::_local_dm = &dm;
+        Ichor::v1::Detail::_local_dm = &dm;
         REQUIRE(queue->createEventLoop());
         dm.createServiceManager<LoggerFactory<CoutLogger>, ILoggerFactory>(Properties{{"DefaultLogLevel", Ichor::v1::make_any<LogLevel>(LogLevel::LOG_TRACE)}});
         ioSvcId = dm.createServiceManager<IOIMPL, IAsyncFileIO>()->getServiceId();
         queue->start(CaptureSigInt);
     });
-    Ichor::Detail::_local_dm = nullptr;
+    Ichor::v1::Detail::_local_dm = nullptr;
 
     {
         std::ofstream out("AsyncFileIO.txt");

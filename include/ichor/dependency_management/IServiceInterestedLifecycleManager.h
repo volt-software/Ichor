@@ -9,7 +9,7 @@
 
 #define SELF_SERVICE_ID std::numeric_limits<ServiceIdType>::max();
 
-namespace Ichor::Detail {
+namespace Ichor::v1::Detail {
     /// implementation of ILifecycleManager purely to find out if another ILifecycleManager is interested in IService
     class IServiceInterestedLifecycleManager final : public ILifecycleManager {
     public:

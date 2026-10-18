@@ -51,7 +51,14 @@ namespace Ichor::v1 {
         void addDependencyInstance(Ichor::ScopedServiceProxy<IClientConnectionService*> c, IService &isvc);
         void removeDependencyInstance(Ichor::ScopedServiceProxy<IClientConnectionService*> c, IService &isvc);
 
-        tl::expected<HttpResponse, HttpParseError> parseResponse(std::string_view complete, size_t& len) const;
+        /// headRequest: a response to HEAD, which has the header fields of a GET response, Content-Length or Transfer-Encoding included, but no content
+        tl::expected<HttpResponse, HttpParseError> parseResponse(std::string_view complete, size_t& len, bool headRequest) const;
+
+        /// A request that was sent, waiting for its response
+        struct PendingResponse {
+            HttpMethod method{};
+            AsyncReturningManualResetEvent<tl::expected<HttpResponse, HttpParseError>> evt;
+        };
 
         friend DependencyRegister;
 
@@ -60,7 +67,7 @@ namespace Ichor::v1 {
         Ichor::ScopedServiceProxy<ILogger*> _logger {};
         Ichor::ScopedServiceProxy<IEventQueue*> _queue {};
         Ichor::ScopedServiceProxy<IClientConnectionService*> _connection {};
-        std::deque<AsyncReturningManualResetEvent<tl::expected<HttpResponse, HttpParseError>>> _events;
+        std::deque<PendingResponse> _events;
         std::string _buffer;
         std::string const *_address;
     };

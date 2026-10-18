@@ -261,6 +261,13 @@ bool Ichor::v1::TcpConnectionService<InterfaceT>::isClient() const noexcept {
 }
 
 template <typename InterfaceT> requires Ichor::DerivedAny<InterfaceT, Ichor::v1::IConnectionService, Ichor::v1::IHostConnectionService, Ichor::v1::IClientConnectionService>
+void Ichor::v1::TcpConnectionService<InterfaceT>::shutdownSend() {
+    if(_socket >= 0 && ::shutdown(_socket, SHUT_WR) != 0) {
+        ICHOR_LOG_TRACE(_logger, "[{}] shutdown SHUT_WR failed: {}", AdvancedService<TcpConnectionService>::getServiceId(), errno);
+    }
+}
+
+template <typename InterfaceT> requires Ichor::DerivedAny<InterfaceT, Ichor::v1::IConnectionService, Ichor::v1::IHostConnectionService, Ichor::v1::IClientConnectionService>
 void Ichor::v1::TcpConnectionService<InterfaceT>::setReceiveHandler(std::function<void(std::span<uint8_t const>)> recvHandler) {
     _recvHandler = recvHandler;
 

@@ -32,7 +32,7 @@ namespace Ichor {
     struct Empty;
 }
 
-namespace Ichor::Detail {
+namespace Ichor::v1::Detail {
     constinit thread_local extern DependencyManager *_local_dm;
 
     template<typename T>

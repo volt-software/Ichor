@@ -5,7 +5,7 @@
 #include <ichor/event_queues/IEventQueue.h>
 #include <ichor/stl/StaticVector.h>
 
-namespace Ichor::Detail {
+namespace Ichor::v1::Detail {
     template<class ServiceType, typename... IFaces>
 #if (!defined(WIN32) && !defined(_WIN32) && !defined(__WIN32)) || defined(__CYGWIN__)
     requires Derived<ServiceType, IService>
@@ -132,11 +132,6 @@ namespace Ichor::Detail {
                     INTERNAL_DEBUG("dependencyOffline() svc {}:{} UNINSTALLED?\n", serviceId(), implementationName());
                     std::terminate();
                 }
-
-                if(getServiceState() == ServiceState::STOPPING) [[unlikely]] {
-                    INTERNAL_DEBUG("dependencyOffline() svc {}:{} STOPPING?\n", serviceId(), implementationName());
-                    std::terminate();
-                }
             }
 
             auto interested = DependencyChange::NOT_FOUND;
@@ -152,6 +147,22 @@ namespace Ichor::Detail {
             }
 
             _serviceIdsOfInjectedDependenciesButGoingAway.insert(dependentService->serviceId());
+
+            // The service's stop() is still running (it suspended) and can still use the dependency. STOP_ME makes the DependencyManager finish
+            // the dependency going offline once that stop is done.
+            if(getServiceState() == ServiceState::STOPPING) {
+                INTERNAL_DEBUG("dependencyOffline() svc {}:{} STOPPING, removing the dependency after the stop", serviceId(), implementationName());
+                for(auto *dep : depInterfaces) {
+                    dep->satisfied--;
+
+                    if constexpr(DO_INTERNAL_DEBUG || DO_HARDENING) {
+                        if(dep->satisfied == std::numeric_limits<decltype(dep->satisfied)>::max()) [[unlikely]] {
+                            std::terminate();
+                        }
+                    }
+                }
+                co_return StartBehaviour::STOP_ME;
+            }
 
             for(auto *dep : depInterfaces) {
                 // dependency should not be marked as unsatisfied if there is at least one other of the same type present

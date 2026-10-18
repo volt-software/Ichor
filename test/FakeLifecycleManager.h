@@ -2,7 +2,7 @@
 
 #include <ichor/dependency_management/LifecycleManager.h>
 
-extern thread_local Ichor::unordered_set<ServiceIdType, ServiceIdHash> Ichor::Detail::emptyDependencies;
+extern thread_local Ichor::unordered_set<ServiceIdType, ServiceIdHash> Ichor::v1::Detail::emptyDependencies;
 
 class FakeLifecycleManager final : public ILifecycleManager {
 public:
@@ -19,7 +19,7 @@ public:
     void finishDependencyOffline(v1::NeverNull<ILifecycleManager*> dependentService, std::vector<Dependency*> const &deps) override {
     }
     unordered_set<ServiceIdType, ServiceIdHash> &getDependencies() noexcept override {
-        return Ichor::Detail::emptyDependencies;
+        return Ichor::v1::Detail::emptyDependencies;
     }
     unordered_set<ServiceIdType, ServiceIdHash> &getDependees() noexcept override {
         return _serviceIdsOfDependees;

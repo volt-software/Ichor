@@ -23,7 +23,7 @@ namespace Ichor {
     template<typename T>
     class ICHOR_CORO_AWAIT_ELIDABLE ICHOR_CORO_LIFETIME_BOUND AsyncGenerator;
 
-    namespace Detail {
+    namespace v1::Detail {
         template <typename T>
         class AsyncGeneratorAdvanceOperation {
         protected:
@@ -373,8 +373,8 @@ namespace Ichor {
     template<typename T>
     class ICHOR_CORO_AWAIT_ELIDABLE ICHOR_CORO_LIFETIME_BOUND AsyncGenerator final : public IGenerator {
     public:
-        using promise_type = Detail::AsyncGeneratorPromise<T>;
-        using iterator = Detail::AsyncGeneratorIterator<T>;
+        using promise_type = v1::Detail::AsyncGeneratorPromise<T>;
+        using iterator = v1::Detail::AsyncGeneratorIterator<T>;
 
         explicit ICHOR_COROUTINE_CONSTEXPR AsyncGenerator(promise_type& promise) noexcept
             : IGenerator(), _coroutine(std::coroutine_handle<promise_type>::from_promise(promise)) {
@@ -413,19 +413,19 @@ namespace Ichor {
         [[nodiscard]] ICHOR_COROUTINE_CONSTEXPR auto begin() noexcept {
             INTERNAL_COROUTINE_DEBUG("AsyncGenerator<{}>::begin() {}", typeName<T>(), debug_id());
             if (!_coroutine) {
-                return Detail::AsyncGeneratorBeginOperation<T>{ nullptr };
+                return v1::Detail::AsyncGeneratorBeginOperation<T>{ nullptr };
             }
 
-            return Detail::AsyncGeneratorBeginOperation<T>{ _coroutine };
+            return v1::Detail::AsyncGeneratorBeginOperation<T>{ _coroutine };
         }
 
         [[nodiscard]] AsyncGeneratorBeginOperationHolder begin_interface() noexcept final {
             INTERNAL_COROUTINE_DEBUG("AsyncGenerator<{}>::begin_interface() {}", typeName<T>(), debug_id());
             if (!_coroutine) {
-                return AsyncGeneratorBeginOperationHolder{ std::in_place_type<Detail::AsyncGeneratorBeginOperation<T>>, nullptr };
+                return AsyncGeneratorBeginOperationHolder{ std::in_place_type<v1::Detail::AsyncGeneratorBeginOperation<T>>, nullptr };
             }
 
-            return AsyncGeneratorBeginOperationHolder{ std::in_place_type<Detail::AsyncGeneratorBeginOperation<T>>, _coroutine };
+            return AsyncGeneratorBeginOperationHolder{ std::in_place_type<v1::Detail::AsyncGeneratorBeginOperation<T>>, _coroutine };
         }
 
         constexpr auto end() noexcept {
@@ -477,7 +477,7 @@ namespace Ichor {
 #endif
 
     private:
-        friend class Detail::AsyncGeneratorPromise<T>;
+        friend class v1::Detail::AsyncGeneratorPromise<T>;
 
         /// Called by the promise when the coroutine gets destroyed.
         constexpr void on_coroutine_destroyed() noexcept {
@@ -525,7 +525,7 @@ namespace Ichor {
         a.swap(b);
     }
 
-    namespace Detail {
+    namespace v1::Detail {
         template<typename T>
         inline AsyncGeneratorPromise<T>::~AsyncGeneratorPromise() {
             INTERNAL_COROUTINE_DEBUG("~AsyncGeneratorPromise<{}>()", typeName<T>());

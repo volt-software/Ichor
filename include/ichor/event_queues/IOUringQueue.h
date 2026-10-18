@@ -17,7 +17,7 @@
 #include <chrono>
 
 namespace Ichor {
-    namespace Detail {
+    namespace v1::Detail {
         /// Event used as user_data for sqe's requested through IIOUringQueue::getSqeWithData. Instances are pooled by TemplateIOUringQueue,
         /// when the pool is exhausted the queue allocates more, which are then re-used through the same free list.
         struct UringResponseEvent final : public Event {
@@ -136,7 +136,7 @@ namespace Ichor {
     /// Provides an io_uring based queue, expects the running OS to have at least kernel 5.4, but multithreading support is only available from 5.18 and later.
     /// \tparam RingSize amount of entries in the submission queue of the ring. Also the amount of in-flight requests created through getSqeWithData that use pre-allocated events, more in-flight requests allocate additional events.
     template <uint32_t RingSize>
-    class TemplateIOUringQueue final : private Detail::UringResponseEventStorage<RingSize>, public Detail::IOUringQueueBase {
+    class TemplateIOUringQueue final : private v1::Detail::UringResponseEventStorage<RingSize>, public v1::Detail::IOUringQueueBase {
         static_assert(RingSize > 0, "RingSize cannot be 0");
         static_assert(RingSize <= 32768, "RingSize cannot be larger than 32768");
         static_assert((RingSize & (RingSize - 1)) == 0, "RingSize has to be a power of two");

@@ -10,12 +10,12 @@ template <typename Promise, typename V>
 concept CanYield = requires(Promise &p, V &&v) { p.yield_value(std::forward<V>(v)); };
 template <typename Promise, typename V>
 concept CanReturn = requires(Promise &p, V &&v) { p.return_value(std::forward<V>(v)); };
-using MoveOnlyPromise = Ichor::Detail::AsyncGeneratorPromise<std::unique_ptr<int>>;
+using MoveOnlyPromise = Ichor::v1::Detail::AsyncGeneratorPromise<std::unique_ptr<int>>;
 static_assert(!CanYield<MoveOnlyPromise, std::unique_ptr<int>&>);
 static_assert(CanYield<MoveOnlyPromise, std::unique_ptr<int>&&>);
 static_assert(!CanReturn<MoveOnlyPromise, std::unique_ptr<int>&>);
 static_assert(CanReturn<MoveOnlyPromise, std::unique_ptr<int>&&>);
-using CopyablePromise = Ichor::Detail::AsyncGeneratorPromise<std::string>;
+using CopyablePromise = Ichor::v1::Detail::AsyncGeneratorPromise<std::string>;
 static_assert(CanYield<CopyablePromise, std::string const &>);
 static_assert(CanReturn<CopyablePromise, std::string const &>);
 
@@ -23,8 +23,8 @@ static_assert(CanReturn<CopyablePromise, std::string const &>);
 // Checked at compile time, because GCC without optimizations doesn't turn it into a tail call, so the stack test can't show it there.
 using TaskAwaitable = decltype(std::declval<Ichor::Task<uint64_t>>().operator co_await());
 static_assert(std::is_same_v<decltype(std::declval<TaskAwaitable&>().await_suspend(std::coroutine_handle<>{})), std::coroutine_handle<>>);
-using TaskFinalAwaitable = decltype(std::declval<Ichor::Detail::TaskPromise<uint64_t>&>().final_suspend());
-static_assert(std::is_same_v<decltype(std::declval<TaskFinalAwaitable&>().await_suspend(std::coroutine_handle<Ichor::Detail::TaskPromise<uint64_t>>{})), std::coroutine_handle<>>);
+using TaskFinalAwaitable = decltype(std::declval<Ichor::v1::Detail::TaskPromise<uint64_t>&>().final_suspend());
+static_assert(std::is_same_v<decltype(std::declval<TaskFinalAwaitable&>().await_suspend(std::coroutine_handle<Ichor::v1::Detail::TaskPromise<uint64_t>>{})), std::coroutine_handle<>>);
 
 namespace {
     // NOLINTNEXTLINE(bugprone-throwing-static-initialization): only allocation failure can throw, which terminates

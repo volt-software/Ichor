@@ -16,9 +16,9 @@
 TEST_CASE("OpenSSL Handshake Tests - supported server certificate only") {
     Properties props{};
     QueueMock qm{};
-    Ichor::Detail::InternalServiceLifecycleManager<IEventQueue> q{&qm};
-    Ichor::Detail::DependencyLifecycleManager<LoggerMock, ILogger> logger{{}};
-    Ichor::Detail::DependencyLifecycleManager<OpenSSLService, ISSL> sslService{std::move(props)};
+    Ichor::v1::Detail::InternalServiceLifecycleManager<IEventQueue> q{&qm};
+    Ichor::v1::Detail::DependencyLifecycleManager<LoggerMock, ILogger> logger{{}};
+    Ichor::v1::Detail::DependencyLifecycleManager<OpenSSLService, ISSL> sslService{std::move(props)};
 
     auto [test_cert, test_cert_size, test_private_key, test_private_key_size, certName, security_level] =
         GENERATE( table<const char*, uint64_t, const char*, uint64_t, std::string, TLSContextSecurityLevel>({
@@ -187,9 +187,9 @@ TEST_CASE("OpenSSL Handshake Tests - supported server certificate only") {
 TEST_CASE("OpenSSL Handshake Tests - rejects weaker certificates") {
     Properties props{};
     QueueMock qm{};
-    Ichor::Detail::InternalServiceLifecycleManager<IEventQueue> q{&qm};
-    Ichor::Detail::DependencyLifecycleManager<LoggerMock, ILogger> logger{{}};
-    Ichor::Detail::DependencyLifecycleManager<OpenSSLService, ISSL> sslService{std::move(props)};
+    Ichor::v1::Detail::InternalServiceLifecycleManager<IEventQueue> q{&qm};
+    Ichor::v1::Detail::DependencyLifecycleManager<LoggerMock, ILogger> logger{{}};
+    Ichor::v1::Detail::DependencyLifecycleManager<OpenSSLService, ISSL> sslService{std::move(props)};
 
     auto [test_cert, test_cert_size, test_private_key, test_private_key_size, certName, security_level] =
         GENERATE( table<const char*, uint64_t, const char*, uint64_t, std::string, TLSContextSecurityLevel>({

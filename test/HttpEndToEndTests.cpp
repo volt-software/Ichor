@@ -79,10 +79,10 @@ TEST_CASE("HttpEndToEndTests_boost") {
 #endif
         auto &dm = queue->getManager();
         evtGate = false;
-        Ichor::Detail::_local_dm = nullptr;
+        Ichor::v1::Detail::_local_dm = nullptr;
 
         std::thread t([&]() {
-            Ichor::Detail::_local_dm = &dm;
+            Ichor::v1::Detail::_local_dm = &dm;
 #ifdef TEST_URING
             REQUIRE(queue->createEventLoop());
 #endif
@@ -111,7 +111,7 @@ TEST_CASE("HttpEndToEndTests_boost") {
         }
 
         queue->pushEvent<RunFunctionEvent>(ServiceIdType{0}, [&]() {
-            REQUIRE(Ichor::Detail::_local_dm == &dm);
+            REQUIRE(Ichor::v1::Detail::_local_dm == &dm);
             REQUIRE(testThreadId != std::this_thread::get_id());
             REQUIRE(dmThreadId == std::this_thread::get_id());
             fmt::print("1 testEvt set\n");
@@ -128,10 +128,10 @@ TEST_CASE("HttpEndToEndTests_boost") {
         auto queue = std::make_unique<BoostAsioQueue>(true);
         auto &dm = queue->getManager();
         evtGate = false;
-        Ichor::Detail::_local_dm = nullptr;
+        Ichor::v1::Detail::_local_dm = nullptr;
 
         std::thread t([&]() {
-            Ichor::Detail::_local_dm = &dm;
+            Ichor::v1::Detail::_local_dm = &dm;
             dmThreadId = std::this_thread::get_id();
 
             std::string key = "-----BEGIN PRIVATE KEY-----\n"
@@ -239,7 +239,7 @@ TEST_CASE("HttpEndToEndTests_boost") {
         }
 
         queue->pushEvent<RunFunctionEvent>(ServiceIdType{0}, [&]() {
-            REQUIRE(Ichor::Detail::_local_dm == &dm);
+            REQUIRE(Ichor::v1::Detail::_local_dm == &dm);
             REQUIRE(testThreadId != std::this_thread::get_id());
             REQUIRE(dmThreadId == std::this_thread::get_id());
             fmt::print("2 testEvt set\n");

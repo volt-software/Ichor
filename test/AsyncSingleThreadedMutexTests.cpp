@@ -15,7 +15,7 @@ TEST_CASE("AsyncSingleThreadedMutexTests: Lock/unlock") {
     bool unlocked{};
 
     std::thread t([&]() {
-        Ichor::Detail::_local_dm = &dm;
+        Ichor::v1::Detail::_local_dm = &dm;
         AsyncSingleThreadedLockGuard lg2 = m.non_blocking_lock().value();
         lg = &lg2;
         queue->start(CaptureSigInt);
@@ -66,7 +66,7 @@ TEST_CASE("AsyncSingleThreadedMutexTests: Multiple waiters get the lock one at a
     std::vector<uint32_t> acquiredOrder;
 
     std::thread t([&]() {
-        Ichor::Detail::_local_dm = &dm;
+        Ichor::v1::Detail::_local_dm = &dm;
         queue->start(CaptureSigInt);
     });
 

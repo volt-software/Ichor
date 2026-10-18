@@ -82,9 +82,10 @@ Ichor::Task<tl::expected<Ichor::v1::HttpResponse, Ichor::v1::HttpError>> Ichor::
         co_return tl::unexpected(HttpError::IO_ERROR);
     }
 
-    auto &evt = _events.emplace_back();
+    auto &pending = _events.emplace_back();
+    pending.method = method;
 
-    auto &parseResp = co_await evt;
+    auto &parseResp = co_await pending.evt;
 
     if(!parseResp) {
         ICHOR_LOG_TRACE(_logger, "HttpConnection {} Failed to parse response: {}", getServiceId(), parseResp.error());
@@ -167,8 +168,8 @@ void Ichor::v1::HttpConnectionService::addDependencyInstance(Ichor::ScopedServic
             ICHOR_LOG_TRACE(_logger, "HttpConnection {} buffer size {} too big", getServiceId(), _buffer.size());
             _buffer.clear();
             tl::expected<HttpResponse, HttpParseError> err = tl::unexpected(HttpParseError::BUFFEROVERFLOW);
-            for(auto &evt : _events) {
-                evt.set(err);
+            for(auto &pending : _events) {
+                pending.evt.set(err);
             }
             return;
         }
@@ -184,7 +185,7 @@ void Ichor::v1::HttpConnectionService::addDependencyInstance(Ichor::ScopedServic
 
         while(pos != std::string_view::npos) {
             pos += 4;
-            auto resp = parseResponse(msg, pos);
+            auto resp = parseResponse(msg, pos, !_events.empty() && _events.front().method == HttpMethod::head);
 
             if(!resp) {
                 if(resp.error() == HttpParseError::INCOMPLETEREQUEST) {
@@ -200,7 +201,7 @@ void Ichor::v1::HttpConnectionService::addDependencyInstance(Ichor::ScopedServic
                 while(!_events.empty()) {
                     {
                         auto &front = _events.front();
-                        front.set(resp);
+                        front.evt.set(resp);
                     }
                     _events.pop_front();
                 }
@@ -210,7 +211,7 @@ void Ichor::v1::HttpConnectionService::addDependencyInstance(Ichor::ScopedServic
             if(!_events.empty()) {
                 {
                     auto &front = _events.front();
-                    front.set(resp);
+                    front.evt.set(resp);
                 }
                 _events.pop_front();
             }
@@ -241,8 +242,8 @@ void Ichor::v1::HttpConnectionService::removeDependencyInstance(Ichor::ScopedSer
     }
 
     _connection = nullptr;
-    for(auto &evt : _events) {
-        evt.set(tl::unexpected(HttpParseError::QUITTING));
+    for(auto &pending : _events) {
+        pending.evt.set(tl::unexpected(HttpParseError::QUITTING));
     }
     _events.clear();
 }
@@ -255,7 +256,7 @@ uint64_t Ichor::v1::HttpConnectionService::getPriority() {
     return _priority;
 }
 
-tl::expected<Ichor::v1::HttpResponse, Ichor::v1::HttpParseError> Ichor::v1::HttpConnectionService::parseResponse(std::string_view complete, size_t& len) const {
+tl::expected<Ichor::v1::HttpResponse, Ichor::v1::HttpParseError> Ichor::v1::HttpConnectionService::parseResponse(std::string_view complete, size_t& len, bool headRequest) const {
     HttpResponse resp{};
     uint64_t lineNo{};
     uint64_t crlfCounter{};
@@ -434,6 +435,14 @@ tl::expected<Ichor::v1::HttpResponse, Ichor::v1::HttpParseError> Ichor::v1::Http
             len = partial.size();
         }
         return tl::unexpected(HttpParseError::BADREQUEST);
+    }
+
+    // Responses to HEAD, 1xx, 204 and 304 responses end after the header section, whatever their Content-Length or Transfer-Encoding say (RFC 9112 6.3)
+    auto const status = static_cast<uint_fast16_t>(resp.status);
+    if(headRequest || status < 200 || status == 204 || status == 304) {
+        resp.body.clear();
+        resp.body.emplace_back(0);
+        return resp;
     }
 
     if(chunkedTransfer && chunkedStatus != ChunkParseStatus::DONE) {

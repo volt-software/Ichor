@@ -55,7 +55,7 @@ TEST_CASE("DependencyManager: QuitOnQuitEvent") {
     auto &dm = queue->getManager();
 
     std::thread t([&]() {
-        Ichor::Detail::_local_dm = &dm;
+        Ichor::v1::Detail::_local_dm = &dm;
         dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>();
         dm.createServiceManager<UselessService>();
         queue->start(CaptureSigInt);
@@ -77,7 +77,7 @@ TEST_CASE("DependencyManager: Check Registrations") {
     auto &dm = queue->getManager();
 
     std::thread t([&]() {
-        Ichor::Detail::_local_dm = &dm;
+        Ichor::v1::Detail::_local_dm = &dm;
         dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>();
         dm.createServiceManager<RegistrationCheckerService>();
         dm.createServiceManager<UselessService, IUselessService>();
@@ -111,7 +111,7 @@ TEST_CASE("DependencyManager: Get services functions") {
     sole::uuid loggerUuid{};
 
     std::thread t([&]() {
-        Ichor::Detail::_local_dm = &dm;
+        Ichor::v1::Detail::_local_dm = &dm;
         loggerUuid = dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>()->getServiceGid();
         uselessSvcId = dm.createServiceManager<UselessService, IUselessService>()->getServiceId();
         dm.createServiceManager<Ichor::UselessService, Ichor::IUselessService>();
@@ -157,7 +157,7 @@ TEST_CASE("DependencyManager: RunFunctionEventAsync thread") {
     // REQUIRE(Ichor::Detail::_local_dm == nullptr); TODO
 
     std::thread t([&]() {
-        Ichor::Detail::_local_dm = &dm;
+        Ichor::v1::Detail::_local_dm = &dm;
         dmThreadId = std::this_thread::get_id();
         dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>();
         dm.createServiceManager<UselessService>();
@@ -173,11 +173,11 @@ TEST_CASE("DependencyManager: RunFunctionEventAsync thread") {
     AsyncManualResetEvent evt;
 
     queue->pushEvent<RunFunctionEventAsync>(ServiceIdType{0}, [&]() -> AsyncGenerator<IchorBehaviour> {
-        REQUIRE(Ichor::Detail::_local_dm == &dm);
+        REQUIRE(Ichor::v1::Detail::_local_dm == &dm);
         REQUIRE(testThreadId != std::this_thread::get_id());
         REQUIRE(dmThreadId == std::this_thread::get_id());
         co_await evt;
-        REQUIRE(Ichor::Detail::_local_dm == &dm);
+        REQUIRE(Ichor::v1::Detail::_local_dm == &dm);
         REQUIRE(testThreadId != std::this_thread::get_id());
         REQUIRE(dmThreadId == std::this_thread::get_id());
         queue->pushEvent<QuitEvent>(ServiceIdType{0});
@@ -189,7 +189,7 @@ TEST_CASE("DependencyManager: RunFunctionEventAsync thread") {
     // REQUIRE(Ichor::Detail::_local_dm == nullptr); TODO
 
     queue->pushEvent<RunFunctionEvent>(ServiceIdType{0}, [&]() {
-        REQUIRE(Ichor::Detail::_local_dm == &dm);
+        REQUIRE(Ichor::v1::Detail::_local_dm == &dm);
         REQUIRE(testThreadId != std::this_thread::get_id());
         REQUIRE(dmThreadId == std::this_thread::get_id());
         evt.set();
@@ -204,7 +204,7 @@ TEST_CASE("DependencyManager: Registration classes reset") {
     auto queue = std::make_unique<PriorityQueue>();
     auto &dm = queue->getManager();
     std::thread t([&]() {
-        Ichor::Detail::_local_dm = &dm;
+        Ichor::v1::Detail::_local_dm = &dm;
         dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>();
         dm.createServiceManager<UselessService>();
         queue->start(CaptureSigInt);
@@ -254,7 +254,7 @@ TEST_CASE("DependencyManager: Registration classes move assign") {
     auto queue = std::make_unique<PriorityQueue>();
     auto &dm = queue->getManager();
     std::thread t([&]() {
-        Ichor::Detail::_local_dm = &dm;
+        Ichor::v1::Detail::_local_dm = &dm;
         dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>();
         dm.createServiceManager<UselessService>();
         queue->start(CaptureSigInt);
@@ -295,7 +295,7 @@ TEST_CASE("DependencyManager: Registration classes move construct") {
     auto queue = std::make_unique<PriorityQueue>();
     auto &dm = queue->getManager();
     std::thread t([&]() {
-        Ichor::Detail::_local_dm = &dm;
+        Ichor::v1::Detail::_local_dm = &dm;
         dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>();
         dm.createServiceManager<UselessService>();
         queue->start(CaptureSigInt);
@@ -338,7 +338,7 @@ TEST_CASE("DependencyManager: Global Interceptor") {
         postIntercepted++;
     });
     std::thread t([&]() {
-        Ichor::Detail::_local_dm = &dm;
+        Ichor::v1::Detail::_local_dm = &dm;
         dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>();
         dm.createServiceManager<UselessService>();
         queue->start(CaptureSigInt);

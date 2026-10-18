@@ -45,7 +45,7 @@ extern "C" void AnnotateHappensAfter(const char* f, int l, void* addr);
 #include <sanitizer/asan_interface.h>
 #endif
 
-namespace Ichor::Detail {
+namespace Ichor::v1::Detail {
     extern std::atomic<bool> sigintQuit;
     extern std::atomic<bool> registeredSignalHandler;
     void on_sigint([[maybe_unused]] int sig);
@@ -334,7 +334,7 @@ namespace Ichor {
     }
 }
 
-namespace Ichor::Detail {
+namespace Ichor::v1::Detail {
     namespace {
         constexpr unsigned int CROSS_THREAD_RING_ENTRIES = 64;
         // user_data of the IORING_OP_MSG_RING completions that wake up a queue for events pushed from other threads. Never a valid Event*.
@@ -444,7 +444,7 @@ namespace Ichor::Detail {
             }
         }
 
-        if(Detail::registeredSignalHandler) {
+        if(v1::Detail::registeredSignalHandler) {
             if(::signal(SIGINT, SIG_DFL) == SIG_ERR) {
 //                fmt::println("Couldn't unset signal handler");
             }
@@ -700,14 +700,14 @@ namespace Ichor::Detail {
         }
 //        fmt::println("start() {} {}", std::hash<std::thread::id>{}(std::this_thread::get_id()), std::hash<std::thread::id>{}(_threadId));
 
-        if(captureSigInt && !Ichor::Detail::registeredSignalHandler.exchange(true)) {
-            if(::signal(SIGINT, Ichor::Detail::on_sigint) == SIG_ERR) {
+        if(captureSigInt && !Ichor::v1::Detail::registeredSignalHandler.exchange(true)) {
+            if(::signal(SIGINT, Ichor::v1::Detail::on_sigint) == SIG_ERR) {
                 fmt::println("Couldn't set signal");
                 return false;
             }
         }
 
-        addInternalServiceManager(std::make_unique<Detail::InternalServiceLifecycleManager<IIOUringQueue>>(this));
+        addInternalServiceManager(std::make_unique<v1::Detail::InternalServiceLifecycleManager<IIOUringQueue>>(this));
 
         startDm();
 
@@ -1058,7 +1058,7 @@ namespace Ichor::Detail {
     }
 
     void IOUringQueueBase::shouldAddQuitEvent() {
-        bool const shouldQuit = Detail::sigintQuit.load(std::memory_order_acquire);
+        bool const shouldQuit = v1::Detail::sigintQuit.load(std::memory_order_acquire);
 
         if(shouldQuit && !_quitEventSent.load(std::memory_order_acquire)) {
             pushEventInternal(INTERNAL_EVENT_PRIORITY, std::make_unique<QuitEvent>(getNextEventId(), ServiceIdType{0}, INTERNAL_EVENT_PRIORITY));
@@ -1195,7 +1195,7 @@ namespace Ichor::Detail {
 }
 
 #ifdef ICHOR_ENABLE_INTERNAL_URING_DEBUGGING
-    void Ichor::Detail::IOUringQueueBase::beforeSubmitDebug(unsigned int space) {
+    void Ichor::v1::Detail::IOUringQueueBase::beforeSubmitDebug(unsigned int space) {
         fmt::println("going to submit {} {}", _entriesCount, space);
         _debugOpcodes = getToBeSubmittedOpcodes(_eventQueuePtr);
         for(auto &op : _debugOpcodes) {
@@ -1208,7 +1208,7 @@ namespace Ichor::Detail {
         }
     }
 
-    void Ichor::Detail::IOUringQueueBase::afterSubmitDebug(int ret, unsigned int space) {
+    void Ichor::v1::Detail::IOUringQueueBase::afterSubmitDebug(int ret, unsigned int space) {
         fmt::println("still left in queue {} {} {}", ret, _entriesCount, space);
         auto newSubmitLog = getToBeSubmittedOpcodes(_eventQueuePtr);
         for(auto &op : newSubmitLog) {

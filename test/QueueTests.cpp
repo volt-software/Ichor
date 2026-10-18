@@ -149,7 +149,7 @@ TEST_CASE("QueueTests") {
         auto queue = std::make_unique<SdeventQueue>();
         auto &dm = queue->getManager();
 
-        Ichor::Detail::_local_dm = &dm;
+        Ichor::v1::Detail::_local_dm = &dm;
 
 #if ICHOR_EXCEPTIONS_ENABLED
         REQUIRE_THROWS(queue->pushEventInternal(0, nullptr));
@@ -213,7 +213,7 @@ TEST_CASE("QueueTests") {
         auto queue = std::make_unique<BoostAsioQueue>();
         auto &dm = queue->getManager();
 
-        Ichor::Detail::_local_dm = &dm;
+        Ichor::v1::Detail::_local_dm = &dm;
 
         // REQUIRE_THROWS(queue->pushEventInternal(0, nullptr));
         // REQUIRE_THROWS(queue->empty());
@@ -270,7 +270,7 @@ TEST_CASE("QueueTests") {
         auto queue = std::make_unique<IOUringQueue>();
         auto &dm = queue->getManager();
 
-        Ichor::Detail::_local_dm = &dm;
+        Ichor::v1::Detail::_local_dm = &dm;
 
 //        REQUIRE_THROWS(queue->pushEventInternal(0, nullptr));
 //        REQUIRE_THROWS(queue->empty());
@@ -364,11 +364,11 @@ TEST_CASE("QueueTests") {
 
         auto queue = std::make_unique<IOUringQueue>(10, 10'000);
         std::atomic<DependencyManager*> _dm{};
-        Ichor::Detail::_local_dm = nullptr;
+        Ichor::v1::Detail::_local_dm = nullptr;
         std::thread t([&] {
             REQUIRE(queue->createEventLoop());
             auto &dm = queue->getManager();
-            Ichor::Detail::_local_dm = &dm;
+            Ichor::v1::Detail::_local_dm = &dm;
             _dm.store(&dm, std::memory_order_release);
 
             dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>();
@@ -409,11 +409,11 @@ TEST_CASE("QueueTests") {
     SECTION("IOUringQueue Sleep") {
         auto queue = std::make_unique<IOUringQueue>(10, 10'000);
         std::atomic<DependencyManager*> _dm{};
-        Ichor::Detail::_local_dm = nullptr;
+        Ichor::v1::Detail::_local_dm = nullptr;
         std::thread t([&] {
             REQUIRE(queue->createEventLoop());
             auto &dm = queue->getManager();
-            Ichor::Detail::_local_dm = &dm;
+            Ichor::v1::Detail::_local_dm = &dm;
             _dm.store(&dm, std::memory_order_release);
             dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>();
             dm.createServiceManager<IOUringSleepService>();
@@ -438,11 +438,11 @@ TEST_CASE("QueueTests") {
         ts.tv_nsec = 1'000'000;
         uint32_t completed{};
         uint32_t timedOut{};
-        Ichor::Detail::_local_dm = nullptr;
+        Ichor::v1::Detail::_local_dm = nullptr;
         std::thread t([&] {
             REQUIRE(queue->createEventLoop());
             auto &dm = queue->getManager();
-            Ichor::Detail::_local_dm = &dm;
+            Ichor::v1::Detail::_local_dm = &dm;
             dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>();
 
             // all timeouts are in flight at the same time, so the pool of ringSize events is exhausted
@@ -477,11 +477,11 @@ TEST_CASE("QueueTests") {
         std::vector<uint64_t> releasedOrder;
         std::vector<uint64_t> reacquiredOrder;
         uint32_t completedSecondRound{};
-        Ichor::Detail::_local_dm = nullptr;
+        Ichor::v1::Detail::_local_dm = nullptr;
         std::thread t([&] {
             REQUIRE(queue->createEventLoop());
             auto &dm = queue->getManager();
-            Ichor::Detail::_local_dm = &dm;
+            Ichor::v1::Detail::_local_dm = &dm;
             dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>();
 
             for(uint32_t i = 0; i < requests; ++i) {
@@ -521,12 +521,12 @@ TEST_CASE("QueueTests") {
         constexpr uint32_t events = 1'000;
         auto queue = std::make_unique<IOUringQueue>(10, 10'000);
         std::vector<uint32_t> order;
-        Ichor::Detail::_local_dm = nullptr;
+        Ichor::v1::Detail::_local_dm = nullptr;
         std::atomic<DependencyManager*> dmPtr{};
         std::thread t([&] {
             REQUIRE(queue->createEventLoop());
             auto &dm = queue->getManager();
-            Ichor::Detail::_local_dm = &dm;
+            Ichor::v1::Detail::_local_dm = &dm;
             dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>();
             dmPtr.store(&dm, std::memory_order_release);
             queue->start(DoNotCaptureSigInt);
@@ -556,16 +556,16 @@ TEST_CASE("QueueTests") {
         constexpr uint32_t events = 1'000;
         // a queue's manager registers itself for the thread constructing it, each queue's thread sets its own below
         auto source = std::make_unique<IOUringQueue>(10, 10'000);
-        Ichor::Detail::_local_dm = nullptr;
+        Ichor::v1::Detail::_local_dm = nullptr;
         auto target = std::make_unique<IOUringQueue>(10, 10'000);
-        Ichor::Detail::_local_dm = nullptr;
+        Ichor::v1::Detail::_local_dm = nullptr;
         std::vector<uint32_t> order;
         std::atomic<DependencyManager*> sourceDm{};
         std::atomic<DependencyManager*> targetDm{};
         std::thread targetThread([&] {
             REQUIRE(target->createEventLoop());
             auto &dm = target->getManager();
-            Ichor::Detail::_local_dm = &dm;
+            Ichor::v1::Detail::_local_dm = &dm;
             dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>();
             targetDm.store(&dm, std::memory_order_release);
             target->start(DoNotCaptureSigInt);
@@ -573,7 +573,7 @@ TEST_CASE("QueueTests") {
         std::thread sourceThread([&] {
             REQUIRE(source->createEventLoop());
             auto &dm = source->getManager();
-            Ichor::Detail::_local_dm = &dm;
+            Ichor::v1::Detail::_local_dm = &dm;
             dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>();
             sourceDm.store(&dm, std::memory_order_release);
             source->start(DoNotCaptureSigInt);
@@ -613,12 +613,12 @@ TEST_CASE("QueueTests") {
         __kernel_timespec ts{};
         ts.tv_nsec = 50'000;
         std::atomic<uint64_t> completions{};
-        Ichor::Detail::_local_dm = nullptr;
+        Ichor::v1::Detail::_local_dm = nullptr;
         std::atomic<DependencyManager*> dmPtr{};
         std::thread t([&] {
             REQUIRE(queue->createEventLoop());
             auto &dm = queue->getManager();
-            Ichor::Detail::_local_dm = &dm;
+            Ichor::v1::Detail::_local_dm = &dm;
             dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>();
             // keeps completing every 50 us, faster than the final loop's wait for no more completions (500 us)
             auto *sqe = queue->getSqeWithData(ServiceIdType{0}, [&completions](io_uring_cqe *) {
@@ -671,12 +671,12 @@ TEST_CASE("QueueTests") {
         CountedEvent::created = 0;
         CountedEvent::destroyed = 0;
         auto queue = std::make_unique<IOUringQueue>(10, 10'000);
-        Ichor::Detail::_local_dm = nullptr;
+        Ichor::v1::Detail::_local_dm = nullptr;
         std::atomic<DependencyManager*> dmPtr{};
         std::thread t([&] {
             REQUIRE(queue->createEventLoop());
             auto &dm = queue->getManager();
-            Ichor::Detail::_local_dm = &dm;
+            Ichor::v1::Detail::_local_dm = &dm;
             dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>();
             dm.createServiceManager<PushesEventOnStopService>();
             dmPtr.store(&dm, std::memory_order_release);

@@ -2,12 +2,12 @@
 #include <ichor/DependencyManager.h>
 #include <atomic>
 
-namespace Ichor::Detail {
+namespace Ichor::v1::Detail {
     std::atomic<bool> sigintQuit{false};
     std::atomic<bool> registeredSignalHandler{false};
 
     void on_sigint([[maybe_unused]] int sig) {
-        Ichor::Detail::sigintQuit.store(true, std::memory_order_release);
+        Ichor::v1::Detail::sigintQuit.store(true, std::memory_order_release);
     }
 }
 

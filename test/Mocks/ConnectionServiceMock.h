@@ -1,6 +1,7 @@
 #pragma once
 
 #include <ichor/services/network/IConnectionService.h>
+#include <string>
 
 template <typename T>
 struct ConnectionServiceMock : public T, public AdvancedService<ConnectionServiceMock<T>> {
@@ -27,11 +28,21 @@ struct ConnectionServiceMock : public T, public AdvancedService<ConnectionServic
         return is_client;
     }
 
+    void shutdownSend() override {
+        sendShutdown = true;
+    }
+
     void setReceiveHandler(std::function<void(std::span<uint8_t const>)> _rcvHandler) override {
         rcvHandler = std::move(_rcvHandler);
+        // Like a connection that received something before the handler was set
+        if(!receivedBeforeHandler.empty()) {
+            rcvHandler(std::span<uint8_t const>{reinterpret_cast<uint8_t const*>(receivedBeforeHandler.data()), receivedBeforeHandler.size()});
+        }
     }
 
     std::vector<std::vector<uint8_t>> sentMessages;
     std::function<void(std::span<uint8_t const>)> rcvHandler;
+    std::string receivedBeforeHandler;
+    bool sendShutdown{};
     bool is_client{};
 };

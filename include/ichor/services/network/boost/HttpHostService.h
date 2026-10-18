@@ -42,6 +42,7 @@ namespace Ichor::Boost::v1 {
      * - "RootCA" std::string - If ConnectOverSsl is true and this property is set, trust the given RootCA (default: not set)
      * - "TryConnectIntervalMs" uint64_t - with which interval in milliseconds to try (re)connecting (default: 100 ms)
      * - "TimeoutMs" uint64_t - with which interval in milliseconds to timeout for (re)connecting, after which the service stops itself (default: 10'000 ms)
+     * - "SendServerHeader" bool - Send a Server header with Boost.BEAST's version with each response. Off by default, it tells an attacker what software to target (default: false)
      * - "Debug" bool - Enable verbose logging of requests and responses (default: false)
      */
     class HttpHostService final : public Ichor::v1::IHttpHostService, public AdvancedService<HttpHostService> {
@@ -88,7 +89,7 @@ namespace Ichor::Boost::v1 {
         bool _useSsl{};
         uint64_t _streamIdCounter{};
         uint64_t _matchersIdCounter{};
-        bool _sendServerHeader{true};
+        bool _sendServerHeader{};
         bool _debug{};
         Ichor::ScopedServiceProxy<Ichor::v1::ILogger*> _logger {};
         unordered_map<Ichor::v1::HttpMethod, unordered_map<std::unique_ptr<Ichor::v1::RouteMatcher>, std::function<Task<Ichor::v1::HttpResponse>(Ichor::v1::HttpRequest&)>>> _handlers{};

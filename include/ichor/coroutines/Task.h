@@ -21,7 +21,7 @@ namespace Ichor
 {
     template<typename T> class ICHOR_CORO_AWAIT_ELIDABLE ICHOR_CORO_LIFETIME_BOUND Task;
 
-    namespace Detail
+    namespace v1::Detail
     {
         class [[nodiscard]] TaskPromiseBase
         {
@@ -281,7 +281,7 @@ namespace Ichor
     {
     public:
 
-        using promise_type = Detail::TaskPromise<T>;
+        using promise_type = Ichor::v1::Detail::TaskPromise<T>;
 
         using value_type = T;
 
@@ -402,7 +402,7 @@ namespace Ichor
         std::coroutine_handle<promise_type> m_coroutine;
     };
 
-    namespace Detail {
+    namespace v1::Detail {
         template<typename T>
         [[nodiscard]]
 #if __cpp_constexpr >= 202207L

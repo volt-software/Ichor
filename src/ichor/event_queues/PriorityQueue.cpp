@@ -3,7 +3,7 @@
 #include <ichor/event_queues/PriorityQueue.h>
 #include <ichor/DependencyManager.h>
 
-namespace Ichor::Detail {
+namespace Ichor::v1::Detail {
     extern std::atomic<bool> sigintQuit;
     extern std::atomic<bool> registeredSignalHandler;
     void on_sigint([[maybe_unused]] int sig);
@@ -20,7 +20,7 @@ namespace Ichor {
     TemplatePriorityQueue<COMPARE>::~TemplatePriorityQueue() {
         BaseEventQueue::stopDm();
 
-        if(Detail::registeredSignalHandler) {
+        if(v1::Detail::registeredSignalHandler) {
             if (::signal(SIGINT, SIG_DFL) == SIG_ERR) {
                 fmt::print("Couldn't unset signal handler\n");
             }
@@ -78,8 +78,8 @@ namespace Ichor {
 
     template <typename COMPARE>
     bool TemplatePriorityQueue<COMPARE>::start(bool captureSigInt) {
-        if(captureSigInt && !Ichor::Detail::registeredSignalHandler.exchange(true)) {
-            if (::signal(SIGINT, Ichor::Detail::on_sigint) == SIG_ERR) {
+        if(captureSigInt && !Ichor::v1::Detail::registeredSignalHandler.exchange(true)) {
+            if (::signal(SIGINT, Ichor::v1::Detail::on_sigint) == SIG_ERR) {
                 fmt::println("Couldn't set signal");
                 return false;
             }
@@ -131,7 +131,7 @@ namespace Ichor {
 
     template <typename COMPARE>
     bool TemplatePriorityQueue<COMPARE>::shouldQuit() {
-        bool const shouldQuit = Detail::sigintQuit.load(std::memory_order_acquire);
+        bool const shouldQuit = v1::Detail::sigintQuit.load(std::memory_order_acquire);
 
 //        INTERNAL_DEBUG("shouldQuit() {} {:L}", shouldQuit, (std::chrono::steady_clock::now() - _whenQuitEventWasSent).count());
         if (shouldQuit && _quitEventSent && std::chrono::steady_clock::now() - _whenQuitEventWasSent >= std::chrono::milliseconds(_quitTimeoutMs)) [[unlikely]] {
@@ -143,7 +143,7 @@ namespace Ichor {
 
     template <typename COMPARE>
     void TemplatePriorityQueue<COMPARE>::shouldAddQuitEvent() {
-        bool const shouldQuit = Detail::sigintQuit.load(std::memory_order_acquire);
+        bool const shouldQuit = v1::Detail::sigintQuit.load(std::memory_order_acquire);
 
         if(shouldQuit && !_quitEventSent) {
             // assume _eventQueueMutex is locked

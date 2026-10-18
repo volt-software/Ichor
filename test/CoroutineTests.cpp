@@ -84,7 +84,7 @@ TEST_CASE("CoroutineTests") {
         auto &dm = queue->getManager();
 
         std::thread t([&]() {
-            Ichor::Detail::_local_dm = &dm;
+            Ichor::v1::Detail::_local_dm = &dm;
 #if defined(TEST_URING)
             REQUIRE(queue->createEventLoop());
 #elif defined(TEST_SDEVENT)
@@ -99,7 +99,7 @@ TEST_CASE("CoroutineTests") {
             REQUIRE(r >= 0);
 #endif
         });
-        Ichor::Detail::_local_dm = nullptr;
+        Ichor::v1::Detail::_local_dm = nullptr;
 
         waitForRunning(dm);
 
@@ -145,7 +145,7 @@ TEST_CASE("CoroutineTests") {
         auto &dm = queue->getManager();
 
         std::thread t([&]() {
-            Ichor::Detail::_local_dm = &dm;
+            Ichor::v1::Detail::_local_dm = &dm;
 #if defined(TEST_URING)
             REQUIRE(queue->createEventLoop());
 #elif defined(TEST_SDEVENT)
@@ -160,7 +160,7 @@ TEST_CASE("CoroutineTests") {
             REQUIRE(r >= 0);
 #endif
         });
-        Ichor::Detail::_local_dm = nullptr;
+        Ichor::v1::Detail::_local_dm = nullptr;
 
         waitForRunning(dm);
 
@@ -209,7 +209,7 @@ TEST_CASE("CoroutineTests") {
         auto &dm = queue->getManager();
 
         std::thread t([&]() {
-            Ichor::Detail::_local_dm = &dm;
+            Ichor::v1::Detail::_local_dm = &dm;
 #if defined(TEST_URING)
             REQUIRE(queue->createEventLoop());
 #elif defined(TEST_SDEVENT)
@@ -224,7 +224,7 @@ TEST_CASE("CoroutineTests") {
             REQUIRE(r >= 0);
 #endif
         });
-        Ichor::Detail::_local_dm = nullptr;
+        Ichor::v1::Detail::_local_dm = nullptr;
 
         waitForRunning(dm);
 
@@ -255,7 +255,7 @@ TEST_CASE("CoroutineTests") {
         ServiceIdType svcId{};
 
         std::thread t([&]() {
-            Ichor::Detail::_local_dm = &dm;
+            Ichor::v1::Detail::_local_dm = &dm;
 #if defined(TEST_URING)
             REQUIRE(queue->createEventLoop());
 #elif defined(TEST_SDEVENT)
@@ -270,7 +270,7 @@ TEST_CASE("CoroutineTests") {
             REQUIRE(r >= 0);
 #endif
         });
-        Ichor::Detail::_local_dm = nullptr;
+        Ichor::v1::Detail::_local_dm = nullptr;
 
         waitForRunning(dm);
 
@@ -301,7 +301,7 @@ TEST_CASE("CoroutineTests") {
         ServiceIdType dbgSvcId{};
 
         std::thread t([&]() {
-            Ichor::Detail::_local_dm = &dm;
+            Ichor::v1::Detail::_local_dm = &dm;
 #if defined(TEST_URING)
             REQUIRE(queue->createEventLoop());
 #elif defined(TEST_SDEVENT)
@@ -319,7 +319,7 @@ TEST_CASE("CoroutineTests") {
             REQUIRE(r >= 0);
 #endif
         });
-        Ichor::Detail::_local_dm = nullptr;
+        Ichor::v1::Detail::_local_dm = nullptr;
 
         waitForRunning(dm);
 
@@ -376,7 +376,7 @@ TEST_CASE("CoroutineTests") {
         AwaitNoCopy::countMoved = 0;
 
         std::thread t([&]() {
-            Ichor::Detail::_local_dm = &dm;
+            Ichor::v1::Detail::_local_dm = &dm;
 #if defined(TEST_URING)
             REQUIRE(queue->createEventLoop());
 #elif defined(TEST_SDEVENT)
@@ -391,7 +391,7 @@ TEST_CASE("CoroutineTests") {
             REQUIRE(r >= 0);
 #endif
         });
-        Ichor::Detail::_local_dm = nullptr;
+        Ichor::v1::Detail::_local_dm = nullptr;
 
         waitForRunning(dm);
 
@@ -434,7 +434,7 @@ TEST_CASE("CoroutineTests") {
         AwaitNoCopy::countMoved = 0;
 
         std::thread t([&]() {
-            Ichor::Detail::_local_dm = &dm;
+            Ichor::v1::Detail::_local_dm = &dm;
 #if defined(TEST_URING)
             REQUIRE(queue->createEventLoop());
 #elif defined(TEST_SDEVENT)
@@ -449,7 +449,7 @@ TEST_CASE("CoroutineTests") {
             REQUIRE(r >= 0);
 #endif
         });
-        Ichor::Detail::_local_dm = nullptr;
+        Ichor::v1::Detail::_local_dm = nullptr;
 
         waitForRunning(dm);
 
@@ -489,7 +489,7 @@ TEST_CASE("CoroutineTests") {
         auto &dm = queue->getManager();
 
         std::thread t([&]() {
-            Ichor::Detail::_local_dm = &dm;
+            Ichor::v1::Detail::_local_dm = &dm;
 #if defined(TEST_URING)
             REQUIRE(queue->createEventLoop());
 #elif defined(TEST_SDEVENT)
@@ -504,7 +504,7 @@ TEST_CASE("CoroutineTests") {
             REQUIRE(r >= 0);
 #endif
         });
-        Ichor::Detail::_local_dm = nullptr;
+        Ichor::v1::Detail::_local_dm = nullptr;
 
         t.join();
 
@@ -521,7 +521,7 @@ TEST_CASE("CoroutineTests") {
         ServiceIdType svcId{};
 
         std::thread t([&]() {
-            Ichor::Detail::_local_dm = &dm;
+            Ichor::v1::Detail::_local_dm = &dm;
 #if defined(TEST_URING)
             REQUIRE(queue->createEventLoop());
 #elif defined(TEST_SDEVENT)
@@ -536,7 +536,7 @@ TEST_CASE("CoroutineTests") {
             REQUIRE(r >= 0);
 #endif
         });
-        Ichor::Detail::_local_dm = nullptr;
+        Ichor::v1::Detail::_local_dm = nullptr;
 
         waitForRunning(dm);
 
@@ -591,7 +591,7 @@ TEST_CASE("CoroutineTests") {
         ServiceIdType svcId{};
 
         std::thread t([&]() {
-            Ichor::Detail::_local_dm = &dm;
+            Ichor::v1::Detail::_local_dm = &dm;
 #if defined(TEST_URING)
             REQUIRE(queue->createEventLoop());
 #elif defined(TEST_SDEVENT)
@@ -606,7 +606,7 @@ TEST_CASE("CoroutineTests") {
             REQUIRE(r >= 0);
 #endif
         });
-        Ichor::Detail::_local_dm = nullptr;
+        Ichor::v1::Detail::_local_dm = nullptr;
 
         waitForRunning(dm);
 

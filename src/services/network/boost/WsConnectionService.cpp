@@ -269,6 +269,14 @@ bool Ichor::Boost::v1::WsConnectionService<InterfaceT>::isClient() const noexcep
 }
 
 template <typename InterfaceT> requires Ichor::DerivedAny<InterfaceT, Ichor::v1::IConnectionService, Ichor::v1::IHostConnectionService, Ichor::v1::IClientConnectionService>
+void Ichor::Boost::v1::WsConnectionService<InterfaceT>::shutdownSend() {
+    if(_ws != nullptr) {
+        beast::error_code ec;
+        beast::get_lowest_layer(*_ws).socket().shutdown(net::ip::tcp::socket::shutdown_send, ec);
+    }
+}
+
+template <typename InterfaceT> requires Ichor::DerivedAny<InterfaceT, Ichor::v1::IConnectionService, Ichor::v1::IHostConnectionService, Ichor::v1::IClientConnectionService>
 void Ichor::Boost::v1::WsConnectionService<InterfaceT>::setReceiveHandler(std::function<void(std::span<uint8_t const>)> recvHandler) {
 	_recvHandler = recvHandler;
 

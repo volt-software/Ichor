@@ -9,7 +9,7 @@
 
 #include <ichor/DependencyManager.h>
 
-namespace Ichor::Detail {
+namespace Ichor::v1::Detail {
     inline void AsyncGeneratorPromiseBase::terminate_if_on_wrong_thread() const noexcept {
 #ifdef ICHOR_USE_HARDENING
         // check if currently on a different thread than creation time (which would be undefined behaviour)
@@ -28,12 +28,12 @@ namespace Ichor::Detail {
 
         if constexpr(std::is_same_v<T, StartBehaviour>) {
             auto svcId = get_service_id();
-            [[maybe_unused]] auto evtId = Ichor::Detail::_local_dm->getEventQueue().pushPrioritisedEvent<Ichor::ContinuableStartEvent>(svcId, _priority, _id);
+            [[maybe_unused]] auto evtId = Ichor::v1::Detail::_local_dm->getEventQueue().pushPrioritisedEvent<Ichor::ContinuableStartEvent>(svcId, _priority, _id);
             INTERNAL_COROUTINE_DEBUG("push continuable {} {}", _id, evtId);
         }
         if constexpr(std::is_same_v<T, IchorBehaviour>) {
             auto svcId = get_service_id();
-            [[maybe_unused]] auto evtId = Ichor::Detail::_local_dm->getEventQueue().pushPrioritisedEvent<Ichor::ContinuableEvent>(svcId, _priority, _id);
+            [[maybe_unused]] auto evtId = Ichor::v1::Detail::_local_dm->getEventQueue().pushPrioritisedEvent<Ichor::ContinuableEvent>(svcId, _priority, _id);
             INTERNAL_COROUTINE_DEBUG("push {} {}", _id, evtId);
         }
     }
@@ -44,7 +44,7 @@ namespace Ichor::Detail {
         terminate_if_on_wrong_thread();
 
         auto svcId = get_service_id();
-        Ichor::Detail::_local_dm->getEventQueue().pushPrioritisedEvent<Ichor::ContinuableEvent>(svcId, _priority, _id);
+        Ichor::v1::Detail::_local_dm->getEventQueue().pushPrioritisedEvent<Ichor::ContinuableEvent>(svcId, _priority, _id);
 
         INTERNAL_COROUTINE_DEBUG("yield_value<{}>(const &) {} {}", typeName<T>(), _id, !!_consumerCoroutine);
         _currentValue.emplace(value);
@@ -60,7 +60,7 @@ namespace Ichor::Detail {
         auto svcId = get_service_id();
         // TODO refactor ContinuableEvent for stop events into its own event type, so that checking _pendingStopsDueToCoroutine doesn't happen for coroutines that have nothing to do with Ichor specific things
         // This probable requires introducing a new enum like IchorBehaviour, but specifically for _pendingStopsDueToCoroutine related things
-        Ichor::Detail::_local_dm->getEventQueue().pushPrioritisedEvent<Ichor::ContinuableEvent>(svcId, _priority, _id);
+        Ichor::v1::Detail::_local_dm->getEventQueue().pushPrioritisedEvent<Ichor::ContinuableEvent>(svcId, _priority, _id);
 
         INTERNAL_COROUTINE_DEBUG("yield_value<{}>(&&) {} {}", typeName<T>(), _id, !!_consumerCoroutine);
         _currentValue.emplace(std::move(value));

@@ -379,7 +379,7 @@ namespace Ichor {
 #endif
         Task<void> pushPrioritisedEventAsync(ServiceIdType originatingServiceId, uint64_t priority, bool coalesce, Args&&... args) {
             if constexpr (DO_INTERNAL_DEBUG || DO_HARDENING) {
-                if (this != Detail::_local_dm) [[unlikely]] {
+                if (this != v1::Detail::_local_dm) [[unlikely]] {
                     ICHOR_EMERGENCY_LOG1(_logger, "Function called from wrong thread.");
                     std::terminate();
                 }
@@ -443,7 +443,7 @@ namespace Ichor {
         /// \return RAII handler, removes registration upon destruction
         DependencyTrackerRegistration registerDependencyTracker(Impl *impl, IService *self) {
             if constexpr (DO_INTERNAL_DEBUG || DO_HARDENING) {
-                if (this != Detail::_local_dm) [[unlikely]] {
+                if (this != v1::Detail::_local_dm) [[unlikely]] {
                     ICHOR_EMERGENCY_LOG1(_logger, "Function called from wrong thread.");
                     std::terminate();
                 }
@@ -490,7 +490,7 @@ namespace Ichor {
         /// \return RAII handler, removes registration upon destruction
         EventHandlerRegistration registerEventHandler(Impl *impl, IService *self, tl::optional<ServiceIdType> targetServiceId = {}) {
             if constexpr (DO_INTERNAL_DEBUG || DO_HARDENING) {
-                if (this != Detail::_local_dm) [[unlikely]] {
+                if (this != v1::Detail::_local_dm) [[unlikely]] {
                     ICHOR_EMERGENCY_LOG1(_logger, "Function called from wrong thread.");
                     std::terminate();
                 }
@@ -535,7 +535,7 @@ namespace Ichor {
         /// \return RAII handler, removes registration upon destruction
         EventInterceptorRegistration registerEventInterceptor(Impl *impl, IService *self) {
             if constexpr (DO_INTERNAL_DEBUG || DO_HARDENING) {
-                if (this != Detail::_local_dm) [[unlikely]] {
+                if (this != v1::Detail::_local_dm) [[unlikely]] {
                     ICHOR_EMERGENCY_LOG1(_logger, "Function called from wrong thread.");
                     std::terminate();
                 }
@@ -574,7 +574,7 @@ namespace Ichor {
         /// \return RAII handler, removes registration upon destruction
         EventInterceptorRegistration registerGlobalEventInterceptor(std::function<bool(EventT const &)> preInterceptFn, std::function<void(EventT const &, bool)> postInterceptFn) {
             if constexpr (DO_INTERNAL_DEBUG || DO_HARDENING) {
-                if (_started.load(std::memory_order_acquire) && this != Detail::_local_dm) [[unlikely]] {
+                if (_started.load(std::memory_order_acquire) && this != v1::Detail::_local_dm) [[unlikely]] {
                     ICHOR_EMERGENCY_LOG1(_logger, "Function called from wrong thread.");
                     std::terminate();
                 }
@@ -616,7 +616,7 @@ namespace Ichor {
         /// \return Potentially nullptr
         [[nodiscard]] IFrameworkLogger* getLogger() const noexcept {
             if constexpr (DO_INTERNAL_DEBUG || DO_HARDENING) {
-                if (this != Detail::_local_dm) [[unlikely]] {
+                if (this != v1::Detail::_local_dm) [[unlikely]] {
                     ICHOR_EMERGENCY_LOG1(_logger, "Function called from wrong thread.");
                     std::terminate();
                 }
@@ -632,7 +632,7 @@ namespace Ichor {
         /// \return number
         [[nodiscard]] uint64_t getServiceCount() const noexcept {
             if constexpr (DO_INTERNAL_DEBUG || DO_HARDENING) {
-                if (this != Detail::_local_dm) [[unlikely]] {
+                if (this != v1::Detail::_local_dm) [[unlikely]] {
                     ICHOR_EMERGENCY_LOG1(_logger, "Function called from wrong thread.");
                     std::terminate();
                 }
@@ -654,7 +654,7 @@ namespace Ichor {
         template <typename Interface>
         [[nodiscard]] tl::optional<std::pair<Interface*, IService*>> getService(ServiceIdType id) const noexcept {
             if constexpr (DO_INTERNAL_DEBUG || DO_HARDENING) {
-                if (this != Detail::_local_dm) [[unlikely]] {
+                if (this != v1::Detail::_local_dm) [[unlikely]] {
                     ICHOR_EMERGENCY_LOG1(_logger, "Function called from wrong thread.");
                     std::terminate();
                 }
@@ -685,7 +685,7 @@ namespace Ichor {
         template <typename Interface>
         [[nodiscard]] std::vector<v1::NeverNull<Interface*>> getStartedServices() noexcept {
             if constexpr (DO_INTERNAL_DEBUG || DO_HARDENING) {
-                if (this != Detail::_local_dm) [[unlikely]] {
+                if (this != v1::Detail::_local_dm) [[unlikely]] {
                     ICHOR_EMERGENCY_LOG1(_logger, "Function called from wrong thread.");
                     std::terminate();
                 }
@@ -711,7 +711,7 @@ namespace Ichor {
         template <typename Interface>
         [[nodiscard]] std::vector<std::pair<Interface&, IService&>> getAllServicesOfType() noexcept {
             if constexpr (DO_INTERNAL_DEBUG || DO_HARDENING) {
-                if (this != Detail::_local_dm) [[unlikely]] {
+                if (this != v1::Detail::_local_dm) [[unlikely]] {
                     ICHOR_EMERGENCY_LOG1(_logger, "Function called from wrong thread.");
                     std::terminate();
                 }
@@ -772,7 +772,7 @@ namespace Ichor {
         template<typename Impl, typename ReturnImpl, typename... Interfaces>
         v1::ServiceProtectedPointer<ReturnImpl> internalCreateServiceManager(Properties&& properties, uint64_t priority = INTERNAL_EVENT_PRIORITY) {
             if constexpr (DO_INTERNAL_DEBUG || DO_HARDENING) {
-                if (_started.load(std::memory_order_acquire) && this != Detail::_local_dm) [[unlikely]] {
+                if (_started.load(std::memory_order_acquire) && this != v1::Detail::_local_dm) [[unlikely]] {
                     ICHOR_EMERGENCY_LOG1(_logger, "Function called from wrong thread.");
                     std::terminate();
                 }
@@ -780,7 +780,7 @@ namespace Ichor {
             if constexpr(RequestsDependencies<Impl>) {
                 static_assert(!std::is_default_constructible_v<Impl>, "Cannot have a dependencies constructor and a default constructor simultaneously.");
                 static_assert(!RequestsProperties<Impl>, "Cannot have a dependencies constructor and a properties constructor simultaneously.");
-                auto cmpMgr = Detail::DependencyLifecycleManager<Impl>::template create<>(std::forward<Properties>(properties), InterfacesList<Interfaces...>);
+                auto cmpMgr = v1::Detail::DependencyLifecycleManager<Impl>::template create<>(std::forward<Properties>(properties), InterfacesList<Interfaces...>);
                 auto serviceId = cmpMgr->serviceId();
 
                 if constexpr (sizeof...(Interfaces) > 0) {
@@ -825,7 +825,7 @@ namespace Ichor {
                 }
             } else {
                 static_assert(!(std::is_default_constructible_v<Impl> && RequestsProperties<Impl>), "Cannot have a properties constructor and a default constructor simultaneously.");
-                auto cmpMgr = Detail::LifecycleManager<Impl, Interfaces...>::template create<>(std::forward<Properties>(properties), InterfacesList<Interfaces...>);
+                auto cmpMgr = v1::Detail::LifecycleManager<Impl, Interfaces...>::template create<>(std::forward<Properties>(properties), InterfacesList<Interfaces...>);
                 auto serviceId = cmpMgr->serviceId();
 
                 if constexpr (sizeof...(Interfaces) > 0) {
@@ -971,7 +971,7 @@ namespace Ichor {
     };
 
 
-    namespace Detail {
+    namespace v1::Detail {
         // Used internally to insert events where passing around the DM isn't feasible
         // Only use if you know for sure you're on the correct thread.
         constinit thread_local extern DependencyManager *_local_dm;

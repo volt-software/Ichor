@@ -12,7 +12,7 @@ namespace Ichor {
     class AdvancedService;
     class DependencyManager;
 
-    namespace Detail {
+    namespace v1::Detail {
         template<class ServiceType, typename... IFaces>
 #if (!defined(WIN32) && !defined(_WIN32) && !defined(__WIN32)) || defined(__CYGWIN__)
         requires DerivedTemplated<ServiceType, AdvancedService> || IsConstructorInjector<ServiceType>
@@ -34,12 +34,12 @@ namespace Ichor {
         friend T;
 
         template <typename U = T> requires (!RequestsProperties<U> && !RequestsDependencies<U>)
-        AdvancedService() noexcept : IService(), _serviceId(ServiceIdType{Detail::_serviceIdCounter.fetch_add(1, std::memory_order_relaxed)}), _servicePriority(INTERNAL_EVENT_PRIORITY), _serviceGid(sole::uuid4()), _serviceState(ServiceState::INSTALLED) {
+        AdvancedService() noexcept : IService(), _serviceId(ServiceIdType{v1::Detail::_serviceIdCounter.fetch_add(1, std::memory_order_relaxed)}), _servicePriority(INTERNAL_EVENT_PRIORITY), _serviceGid(sole::uuid4()), _serviceState(ServiceState::INSTALLED) {
 
         }
 
         template <typename U = T> requires (RequestsProperties<U> || RequestsDependencies<U>)
-        AdvancedService(Properties&& props) noexcept : IService(), _properties(std::move(props)), _serviceId(ServiceIdType{Detail::_serviceIdCounter.fetch_add(1, std::memory_order_relaxed)}), _servicePriority(INTERNAL_EVENT_PRIORITY), _serviceGid(sole::uuid4()), _serviceState(ServiceState::INSTALLED) {
+        AdvancedService(Properties&& props) noexcept : IService(), _properties(std::move(props)), _serviceId(ServiceIdType{v1::Detail::_serviceIdCounter.fetch_add(1, std::memory_order_relaxed)}), _servicePriority(INTERNAL_EVENT_PRIORITY), _serviceGid(sole::uuid4()), _serviceState(ServiceState::INSTALLED) {
 
         }
 
@@ -190,13 +190,13 @@ namespace Ichor {
 #if (!defined(WIN32) && !defined(_WIN32) && !defined(__WIN32)) || defined(__CYGWIN__)
         requires DerivedTemplated<ServiceType, AdvancedService> || IsConstructorInjector<ServiceType>
 #endif
-        friend class Detail::LifecycleManager;
+        friend class v1::Detail::LifecycleManager;
 
         template<class ServiceType, typename... IFaces>
 #if (!defined(WIN32) && !defined(_WIN32) && !defined(__WIN32)) || defined(__CYGWIN__)
         requires Derived<ServiceType, IService>
 #endif
-        friend class Detail::DependencyLifecycleManager;
+        friend class v1::Detail::DependencyLifecycleManager;
 
         friend class DependencyManager;
     };

@@ -6,7 +6,7 @@
 #include <ichor/dependency_management/InternalService.h>
 #include <ichor/stl/StaticVector.h>
 
-namespace Ichor::Detail {
+namespace Ichor::v1::Detail {
     extern thread_local unordered_set<ServiceIdType, ServiceIdHash> emptyDependencies;
 
     /// InternalServiceLifecycleManager is meant to be used for Ichor internal services. This service does not actually own a service like the regular (Dependency)LifecycleManager, but "pretends" to be a LifecycleManager.

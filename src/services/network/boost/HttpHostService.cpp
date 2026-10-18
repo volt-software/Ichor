@@ -308,7 +308,7 @@ void Ichor::Boost::v1::HttpHostService::read(tcp::socket socket, net::yield_cont
         auto target = std::string{req.target()};
         ICHOR_LOG_TRACE(_logger, "New request for {} {}", (int)req.method(), target);
 
-        unordered_map<std::string, std::string> headers{};
+        Ichor::v1::HttpHeaders headers{};
         headers.reserve(static_cast<unsigned long>(std::distance(std::begin(req), std::end(req))));
         for (auto const& field : req) {
             headers.emplace(field.name_string(), field.value());

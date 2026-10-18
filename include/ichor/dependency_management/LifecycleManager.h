@@ -8,7 +8,7 @@
 #include <ichor/dependency_management/ConstructorInjectionService.h>
 #include <ichor/stl/StaticVector.h>
 
-namespace Ichor::Detail {
+namespace Ichor::v1::Detail {
     extern thread_local unordered_set<ServiceIdType, ServiceIdHash> emptyDependencies;
 
     /// This lifecycle manager is created when the underlying service requests 0 dependencies

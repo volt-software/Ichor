@@ -40,7 +40,7 @@ TEST_CASE("OpenSSLCertificate basic properties") {
 
     fmt::println("testing cert {} {} {}", expectedSubjectC, expectedSubjectCN, static_cast<void const*>(test_cert));
 
-    Ichor::Detail::DependencyLifecycleManager<LoggerMock, ILogger> logger{{}};
+    Ichor::v1::Detail::DependencyLifecycleManager<LoggerMock, ILogger> logger{{}};
 
     auto cert = OpenSSLCertificate::makeOpenSSLCertificate(&logger.getService(), test_cert, test_cert_size - 1, TLSCertificateIdType{1});
     REQUIRE(cert);
@@ -129,7 +129,7 @@ TEST_CASE("OpenSSLCertificate incorrect certificates") {
 
     fmt::println("testing cert {}", certName);
 
-    Ichor::Detail::DependencyLifecycleManager<LoggerMock, ILogger> logger{{}};
+    Ichor::v1::Detail::DependencyLifecycleManager<LoggerMock, ILogger> logger{{}};
 
     auto cert = OpenSSLCertificate::makeOpenSSLCertificate(&logger.getService(), test_cert, test_cert_size - 1, TLSCertificateIdType{1});
     REQUIRE(!cert);
@@ -144,7 +144,7 @@ TEST_CASE("OpenSSLCertificate incorrect combo certificates") {
 
     fmt::println("testing cert {}", certName);
 
-    Ichor::Detail::DependencyLifecycleManager<LoggerMock, ILogger> logger{{}};
+    Ichor::v1::Detail::DependencyLifecycleManager<LoggerMock, ILogger> logger{{}};
 
     auto cert = OpenSSLCertificate::makeOpenSSLCertificate(&logger.getService(), test_cert, test_cert_size - 1, TLSCertificateIdType{1});
     REQUIRE(cert); // only one cert is actually read, the second is effectively ignored.
