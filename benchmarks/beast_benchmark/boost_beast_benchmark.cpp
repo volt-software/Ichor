@@ -186,7 +186,11 @@ private:
         }
 
         std::string buf;
-        glz::write_json(msg, buf);
+        auto writeErr = glz::write_json(msg, buf);
+
+        if(writeErr) {
+            std::terminate();
+        }
 
         string_response_.emplace(
                 std::piecewise_construct,

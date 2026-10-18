@@ -190,6 +190,7 @@ Ichor::UringCallback Ichor::v1::IOUringTimer::createNewHandler() noexcept {
 Ichor::UringCallback Ichor::v1::IOUringTimer::createNewStopHandler() noexcept {
     INTERNAL_IO_DEBUG("IOUringTimer {} for {} createNewStopHandler", _timerId, _requestingServiceId);
     return [this, runFinished = _runFinished](io_uring_cqe *cqe) {
+        static_cast<void>(this); // only used by INTERNAL_IO_DEBUG
         if(cqe->res >= 0 || *runFinished) {
             // Removed, its -ECANCELED completion finishes stopping. Or the timeout already ended, in which case the timer may not exist anymore.
             return;
@@ -206,6 +207,7 @@ Ichor::UringCallback Ichor::v1::IOUringTimer::createNewStopHandler() noexcept {
 Ichor::UringCallback Ichor::v1::IOUringTimer::createNewUpdateHandler() noexcept {
     INTERNAL_IO_DEBUG("IOUringTimer {} for {} createNewUpdateHandler", _timerId, _requestingServiceId);
     return [this, runFinished = _runFinished](io_uring_cqe *cqe) {
+        static_cast<void>(this); // only used by INTERNAL_IO_DEBUG
         if(cqe->res >= 0 || *runFinished) {
             // Updated, or the timeout already ended, in which case the timer may not exist anymore.
             return;

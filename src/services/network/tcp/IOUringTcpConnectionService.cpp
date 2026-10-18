@@ -410,7 +410,7 @@ Ichor::Task<tl::expected<void, Ichor::v1::IOError>> Ichor::v1::IOUringTcpConnect
         iovec vecs[64];
         hdr.msg_iov = vecs;
         hdr.msg_iovlen = msgs.size();
-        for(uint64_t i = 0; i < msgs.size(); i++) {
+        for(std::size_t i = 0; i < msgs.size(); i++) {
             vecs[i].iov_base = msgs[i].data();
             vecs[i].iov_len = msgs[i].size();
             totalBytes += msgs[i].size();
@@ -426,7 +426,7 @@ Ichor::Task<tl::expected<void, Ichor::v1::IOError>> Ichor::v1::IOUringTcpConnect
         vecs.resize(msgs.size());
         hdr.msg_iov = vecs.data();
         hdr.msg_iovlen = msgs.size();
-        for(uint64_t i = 0; i < msgs.size(); i++) {
+        for(std::size_t i = 0; i < msgs.size(); i++) {
             vecs[i].iov_base = msgs[i].data();
             vecs[i].iov_len = msgs[i].size();
             totalBytes += msgs[i].size();

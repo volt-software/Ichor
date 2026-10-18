@@ -240,7 +240,7 @@ tl::expected<Ichor::v1::HttpRequest, Ichor::v1::HttpParseError> Ichor::v1::HttpH
 
     if(badRequest) {
         if(contentLengthSet && complete.size() < protocolLength + contentLength) {
-            len += contentLength;
+            len += static_cast<size_t>(contentLength);
         } else {
             len = partial.size();
         }
@@ -250,11 +250,13 @@ tl::expected<Ichor::v1::HttpRequest, Ichor::v1::HttpParseError> Ichor::v1::HttpH
     if(contentLengthSet && complete.size() < protocolLength + contentLength) {
         return tl::unexpected(HttpParseError::INCOMPLETEREQUEST);
     } else {
-        std::string_view content{complete.data() + len, contentLength};
-        req.body.reserve(contentLength + 1);
+        // fits in size_t, complete.size() >= protocolLength + contentLength
+        auto const bodyLength = static_cast<size_t>(contentLength);
+        std::string_view content{complete.data() + len, bodyLength};
+        req.body.reserve(bodyLength + 1);
         req.body.assign(content.begin(), content.end());
         req.body.emplace_back(0);
-        len += contentLength;
+        len += bodyLength;
     }
 
     ICHOR_LOG_TRACE(_logger, "HttpHostService {} parsed \"{}\" {} {} {} {}", getServiceId(), partial, ICHOR_REVERSE_METHOD_MATCHING[req.method], req.address, req.route, req.body.size());

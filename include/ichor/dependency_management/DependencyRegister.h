@@ -21,7 +21,11 @@ namespace Ichor {
             static_assert(!DerivedTemplated<Interface, AdvancedService>, "Interface needs to be a non-service class.");
             // Some weird bug in MSVC
 #if (!defined(WIN32) && !defined(_WIN32) && !defined(__WIN32)) || defined(__CYGWIN__)
-            static_assert(ImplementsDependencyInjection<Impl, Interface>, "Impl needs to implement the ImplementsDependencyInjection concept");
+            // Not a concept: clang 23+ checks access in a concept from the concept's context, which breaks services that keep these functions private and befriend DependencyRegister.
+            static_assert(requires(Impl impl, ScopedServiceProxy<Interface*> proxy, IService& isvc) {
+                { impl.addDependencyInstance(std::move(proxy), isvc) } -> std::same_as<void>;
+                { impl.removeDependencyInstance(std::move(proxy), isvc) } -> std::same_as<void>;
+            }, "Impl needs to implement addDependencyInstance(ScopedServiceProxy<Interface*>, IService&) and removeDependencyInstance(ScopedServiceProxy<Interface*>, IService&)");
 #endif
 
             _registrations.emplace(typeNameHash<Interface>(), std::make_tuple(

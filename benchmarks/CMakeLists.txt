@@ -19,7 +19,7 @@ foreach(filename ${PROJECT_BENCHMARK_SOURCES})
     target_link_libraries(${benchname} ichor)
 
     if(USE_RE2)
-        target_include_directories(${benchname} PUBLIC ${RE2_INCLUDE_DIRS})
+        target_include_directories(${benchname} SYSTEM PUBLIC ${RE2_INCLUDE_DIRS})
         target_link_libraries(${benchname} ${RE2_LIBRARIES})
         target_compile_definitions(${benchname} PUBLIC ICHOR_USE_RE2)
     endif()

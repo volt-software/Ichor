@@ -206,7 +206,7 @@ namespace Ichor::v1 {
     };
 
     template <typename T, std::size_t N>
-    class StaticVector : public IStaticVector<T> {
+    class StaticVector final : public IStaticVector<T> {
     public:
         using value_type = T;
         using pointer = T*;

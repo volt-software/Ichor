@@ -346,6 +346,25 @@ TEST_CASE("HttpConnectionTests") {
         std::string_view resBody{reinterpret_cast<const char *>(resp->body.data()), resp->body.size() - 1};
         REQUIRE(resBody == "abcdefghijklmnopqrstuvwxyz1234567890abcdef");
     }
+
+    SECTION("Chunked response with a chunk length larger than what was received") {
+        auto f = [&]() -> AsyncGenerator<tl::expected<HttpResponse, HttpError>> {
+            co_return co_await svc.getService().sendAsync(HttpMethod::get, "/some/route", {}, {});
+        };
+        auto gen2 = f();
+        auto it2 = gen2.begin();
+        REQUIRE(!it2.get_finished());
+        REQUIRE(conn.getService().sentMessages.size() == 1);
+
+        // used to reserve the chunk length up front, ~256 TiB here (and truncate it on 32-bit). The invalid chunk length after it ends the request.
+        std::string req{"HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\nffffffffffff\r\n\r\nzz\r\n\r\n"};
+        conn.getService().rcvHandler(std::span<uint8_t const>{reinterpret_cast<uint8_t*>(req.data()), req.size()});
+
+        REQUIRE(it2.get_finished());
+        auto resp = it2.get_value<tl::expected<HttpResponse, HttpError>>();
+        REQUIRE(!resp);
+        REQUIRE(resp.error() == HttpError::UNABLE_TO_PARSE_RESPONSE);
+    }
 }
 
 TEST_CASE("HttpHostTests Missing properties") {

@@ -46,8 +46,6 @@ namespace {
         ~Tracked() { REQUIRE(liveTracked.erase(this) == 1); }
 
         static bool isLive(void const *p) { return liveTracked.contains(p); }
-        friend bool operator==(Tracked const &a, Tracked const &b) noexcept { return a.i == b.i; }
-        friend bool operator<(Tracked const &a, Tracked const &b) noexcept { return a.i < b.i; }
 
         int i;
         // a heap allocated string, so that leaks/double frees show up in sanitizer builds as well
@@ -346,10 +344,10 @@ TEST_CASE("STL regression tests: StaticVector swap between different sizes") {
         swap(a, b); // found through ADL
         REQUIRE(toInts(a) == std::vector<int>{1, 2, 3, 4, 5});
         REQUIRE(toInts(b) == std::vector<int>{6});
-        StaticVector<Tracked, 8> empty;
-        a.swap(empty);
+        StaticVector<Tracked, 8> emptyVec;
+        a.swap(emptyVec);
         REQUIRE(a.empty());
-        REQUIRE(toInts(empty) == std::vector<int>{1, 2, 3, 4, 5});
+        REQUIRE(toInts(emptyVec) == std::vector<int>{1, 2, 3, 4, 5});
     }
 
     REQUIRE(liveTracked.empty());
@@ -399,12 +397,12 @@ TEST_CASE("STL regression tests: All StaticVector elements are destroyed") {
 
 TEST_CASE("STL regression tests: ReferenceCountedPointer copies of empty pointers") {
     {
-        ReferenceCountedPointer<int> empty;
-        ReferenceCountedPointer<int> copy{empty}; // used to dereference nullptr
+        ReferenceCountedPointer<int> emptyPtr;
+        ReferenceCountedPointer<int> copy{emptyPtr}; // used to dereference nullptr
         REQUIRE(!copy.has_value());
         REQUIRE(copy.use_count() == 0);
         ReferenceCountedPointer<int> other = make_reference_counted<int>(5);
-        other = empty;
+        other = emptyPtr;
         REQUIRE(!other.has_value());
         ReferenceCountedPointer<BaseA> base{ReferenceCountedPointer<Multi>{}};
         REQUIRE(!base.has_value());
@@ -578,8 +576,8 @@ TEST_CASE("STL regression tests: Any emplace returns a reference to the stored v
         REQUIRE(any_cast<float const*>(&ca) == nullptr);
         REQUIRE(any_cast<float*>(&a) == nullptr);
         REQUIRE(any_cast<int const*>(static_cast<any const*>(nullptr)) == nullptr);
-        any empty;
-        REQUIRE(any_cast<int*>(&empty) == nullptr);
+        any emptyAny;
+        REQUIRE(any_cast<int*>(&emptyAny) == nullptr);
 
         // identity comparison
         auto copy = a;
@@ -593,12 +591,12 @@ TEST_CASE("STL regression tests: Any emplace returns a reference to the stored v
 TEST_CASE("STL regression tests: EventStackUniquePtr moves events properly") {
     {
         {
-            EventStackUniquePtr empty;
-            EventStackUniquePtr fromEmpty{std::move(empty)};
+            EventStackUniquePtr emptyEvt;
+            EventStackUniquePtr fromEmpty{std::move(emptyEvt)};
             REQUIRE(fromEmpty.empty()); // used to become "non-empty" and destroy garbage
 
-            auto shortStr = EventStackUniquePtr::create<StringEvent>(1, "short");
-            auto longStr = EventStackUniquePtr::create<StringEvent>(2, std::string(100, 'l'));
+            auto shortStr = EventStackUniquePtr::create<StringEvent>(uint64_t{1}, "short");
+            auto longStr = EventStackUniquePtr::create<StringEvent>(uint64_t{2}, std::string(100, 'l'));
             REQUIRE(shortStr.getType() == StringEvent::TYPE);
             StringEvent::destroyed = 0; // returning from create may or may not have moved
 
@@ -615,7 +613,7 @@ TEST_CASE("STL regression tests: EventStackUniquePtr moves events properly") {
             auto &self = moved;
             moved = std::move(self);
             REQUIRE(moved.getT<StringEvent>()->str == std::string(100, 'l'));
-            moved = std::move(empty);
+            moved = std::move(emptyEvt);
             REQUIRE(moved.empty());
             REQUIRE(StringEvent::destroyed == 4);
         }
@@ -802,9 +800,9 @@ TEST_CASE("STL regression tests: StaticVector inserting nothing keeps the elemen
     // long enough to not fit in the small string buffer, a self-move-assignment would empty them
     std::string const longStr(64, 'a');
     StaticVector<std::string, 8> v{longStr, longStr + "b", longStr + "c"};
-    std::vector<std::string> const empty;
+    std::vector<std::string> const emptyStrings;
     v.insert(v.begin(), 0, longStr);
-    v.insert(v.begin() + 1, empty.begin(), empty.end());
+    v.insert(v.begin() + 1, emptyStrings.begin(), emptyStrings.end());
     REQUIRE(v.size() == 3);
     REQUIRE(v[0] == longStr);
     REQUIRE(v[1] == longStr + "b");

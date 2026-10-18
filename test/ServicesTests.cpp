@@ -18,6 +18,7 @@
 #include "TestServices/AsyncBroadcastService.h"
 #include "TestServices/RemoveAfterAwaitedStopService.h"
 #include "TestServices/AwaitingDependencyService.h"
+#include "TestServices/PrivateHandlersService.h"
 #include <ichor/events/RunFunctionEvent.h>
 #include <ichor/services/logging/LoggerFactory.h>
 #include <ichor/services/logging/CoutLogger.h>
@@ -1001,6 +1002,57 @@ TEST_CASE("ServicesTests") {
         runForOrQueueEmpty(dm);
 
         queue->pushEvent<QuitEvent>(ServiceIdType{0});
+
+        t.join();
+    }
+
+    SECTION("Services can keep the functions the framework calls private") {
+#if defined(TEST_URING)
+        auto queue = std::make_unique<QIMPL>(500, 100'000'000, emulateKernelVersion);
+#else
+        auto queue = std::make_unique<QIMPL>(500);
+#endif
+        auto &dm = queue->getManager();
+        Ichor::Detail::_local_dm = nullptr;
+
+        std::thread t([&]() {
+            Ichor::Detail::_local_dm = &dm;
+#if defined(TEST_URING)
+            REQUIRE(queue->createEventLoop());
+#elif defined(TEST_SDEVENT)
+            auto *loop = queue->createEventLoop();
+            REQUIRE(loop);
+#endif
+            dm.createServiceManager<PrivateHandlersService, IPrivateHandlersService>();
+            dm.createServiceManager<UselessService, IUselessService>();
+            dm.createServiceManager<DependencyService<IUselessService, DependencyFlags::ALLOW_MULTIPLE>, ICountService>();
+            queue->start(CaptureSigInt);
+#if defined(TEST_SDEVENT)
+            int r = sd_event_loop(loop);
+            REQUIRE(r >= 0);
+#endif
+        });
+
+        waitForRunning(dm);
+
+        runForOrQueueEmpty(dm);
+
+        queue->pushEvent<TestEvent>(ServiceIdType{0});
+
+        runForOrQueueEmpty(dm);
+
+        queue->pushEvent<RunFunctionEvent>(ServiceIdType{0}, [&]() {
+            auto services = dm.getStartedServices<IPrivateHandlersService>();
+
+            REQUIRE(services.size() == 1);
+            REQUIRE(services[0]->getDependencyCount() == 1);
+            REQUIRE(services[0]->getTrackerRequestCount() >= 1);
+            REQUIRE(services[0]->getHandledEventCount() == 1);
+            REQUIRE(services[0]->getPreInterceptedCount() == 1);
+            REQUIRE(services[0]->getPostInterceptedCount() == 1);
+
+            queue->pushEvent<QuitEvent>(ServiceIdType{0});
+        });
 
         t.join();
     }

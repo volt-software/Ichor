@@ -386,7 +386,10 @@ tl::expected<Ichor::v1::HttpResponse, Ichor::v1::HttpParseError> Ichor::v1::Http
                         resp.body.emplace_back(0);
                     } else {
                         chunkLength += 2;
-                        resp.body.reserve(resp.body.size() + chunkLength);
+                        // The chunk has to fit in what was received, don't let a bogus chunk length reserve a huge buffer (or get truncated on 32-bit)
+                        if(chunkLength <= complete.size()) {
+                            resp.body.reserve(resp.body.size() + static_cast<size_t>(chunkLength));
+                        }
                     }
                 }
             } else if(chunkedStatus == ChunkParseStatus::CONTENT) {
@@ -426,7 +429,7 @@ tl::expected<Ichor::v1::HttpResponse, Ichor::v1::HttpParseError> Ichor::v1::Http
 
     if(badRequest) {
         if(contentLengthSet && complete.size() < protocolLength + contentLength) {
-            len += contentLength;
+            len += static_cast<size_t>(contentLength);
         } else {
             len = partial.size();
         }
@@ -440,11 +443,13 @@ tl::expected<Ichor::v1::HttpResponse, Ichor::v1::HttpParseError> Ichor::v1::Http
         ICHOR_LOG_TRACE(_logger, "incomplete request due to not all content received {} {} {}", complete.size(), len, contentLength);
         return tl::unexpected(HttpParseError::INCOMPLETEREQUEST);
     } else if (!chunkedTransfer) {
-        std::string_view content{complete.data() + len, contentLength};
-        resp.body.reserve(contentLength + 1);
+        // fits in size_t, complete.size() >= protocolLength + contentLength
+        auto const bodyLength = static_cast<size_t>(contentLength);
+        std::string_view content{complete.data() + len, bodyLength};
+        resp.body.reserve(bodyLength + 1);
         resp.body.assign(content.begin(), content.end());
         resp.body.emplace_back(0);
-        len += contentLength;
+        len += bodyLength;
     }
 
     ICHOR_LOG_TRACE(_logger, "HttpConnection {} parsed \"{}\" {} {}", getServiceId(), partial, static_cast<uint_fast16_t>(resp.status), resp.body.size());

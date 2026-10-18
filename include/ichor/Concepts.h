@@ -61,32 +61,7 @@ namespace Ichor {
         { ImplT(properties) };
     };
 
-    template <class ImplT, class Interface>
-    concept ImplementsDependencyInjection = requires(ImplT impl, ScopedServiceProxy<Interface*> proxy, IService& isvc) {
-        { impl.addDependencyInstance(std::move(proxy), isvc) } -> std::same_as<void>;
-        { impl.removeDependencyInstance(std::move(proxy), isvc) } -> std::same_as<void>;
-    };
-
-    template <class ImplT, class EventT>
-    concept ImplementsEventCompletionHandlers = requires(ImplT impl, EventT const &evt) {
-        { impl.handleCompletion(evt) } -> std::same_as<void>;
-        { impl.handleError(evt) } -> std::same_as<void>;
-    };
-
-    template <class ImplT, class EventT>
-    concept ImplementsEventHandlers = requires(ImplT impl, EventT const &evt) {
-        { impl.handleEvent(evt) } -> std::same_as<AsyncGenerator<IchorBehaviour>>;
-    };
-
-    template <class ImplT, class EventT>
-    concept ImplementsEventInterceptors = requires(ImplT impl, EventT const &evt, bool processed, uint32_t handlerAmount) {
-        { impl.preInterceptEvent(evt) } -> std::same_as<bool>;
-        { impl.postInterceptEvent(evt, processed) } -> std::same_as<void>;
-    };
-
-    template <class ImplT, class Interface>
-    concept ImplementsTrackingHandlers = requires(ImplT impl, v1::AlwaysNull<Interface*> svc, DependencyRequestEvent const &reqEvt, DependencyUndoRequestEvent const &reqUndoEvt) {
-        { impl.handleDependencyRequest(svc, reqEvt) } -> std::same_as<AsyncGenerator<IchorBehaviour>>;
-        { impl.handleDependencyUndoRequest(svc, reqUndoEvt) } -> std::same_as<AsyncGenerator<IchorBehaviour>>;
-    };
+    // The checks for the dependency injection, event handler, event interceptor and dependency tracker functions are not concepts but are
+    // written inline in DependencyRegister and DependencyManager: clang 23+ checks access in a concept from the concept's context,
+    // so services that keep these functions private and befriend DependencyRegister/DependencyManager would not satisfy them.
 }

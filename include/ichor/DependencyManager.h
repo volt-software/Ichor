@@ -427,7 +427,11 @@ namespace Ichor {
 
         template <typename Interface, typename Impl>
 #if (!defined(WIN32) && !defined(_WIN32) && !defined(__WIN32)) || defined(__CYGWIN__)
-        requires ImplementsTrackingHandlers<Impl, Interface>
+        // Not concepts: clang 23+ checks access in a concept from the concept's context, which breaks services that keep these functions private and befriend DependencyManager.
+        requires requires(Impl impl, v1::AlwaysNull<Interface*> svc, DependencyRequestEvent const &reqEvt, DependencyUndoRequestEvent const &reqUndoEvt) {
+            { impl.handleDependencyRequest(svc, reqEvt) } -> std::same_as<AsyncGenerator<IchorBehaviour>>;
+            { impl.handleDependencyUndoRequest(svc, reqUndoEvt) } -> std::same_as<AsyncGenerator<IchorBehaviour>>;
+        }
 #endif
         [[nodiscard]]
         /// Register handlers for when dependencies get requested/unrequested
@@ -471,7 +475,9 @@ namespace Ichor {
 
         template <typename EventT, typename Impl>
 #if (!defined(WIN32) && !defined(_WIN32) && !defined(__WIN32)) || defined(__CYGWIN__)
-        requires Derived<EventT, Event> && ImplementsEventHandlers<Impl, EventT>
+        requires Derived<EventT, Event> && requires(Impl impl, EventT const &evt) {
+            { impl.handleEvent(evt) } -> std::same_as<AsyncGenerator<IchorBehaviour>>;
+        }
 #endif
         [[nodiscard]]
         /// Register an event handler
@@ -514,7 +520,10 @@ namespace Ichor {
 
         template <typename EventT, typename Impl>
 #if (!defined(WIN32) && !defined(_WIN32) && !defined(__WIN32)) || defined(__CYGWIN__)
-        requires Derived<EventT, Event> && ImplementsEventInterceptors<Impl, EventT>
+        requires Derived<EventT, Event> && requires(Impl impl, EventT const &evt, bool processed) {
+            { impl.preInterceptEvent(evt) } -> std::same_as<bool>;
+            { impl.postInterceptEvent(evt, processed) } -> std::same_as<void>;
+        }
 #endif
         [[nodiscard]]
         /// Register an event interceptor. If EventT equals Event, intercept all events. Otherwise only intercept given event.

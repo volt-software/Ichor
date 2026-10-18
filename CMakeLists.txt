@@ -663,7 +663,7 @@ if(ICHOR_USE_MIMALLOC)
             target_compile_options(ichor PUBLIC -fno-builtin-malloc -fno-builtin-calloc -fno-builtin-realloc -fno-builtin-free)
         endif()
         target_compile_definitions(ichor PUBLIC ICHOR_USE_MIMALLOC)
-        target_include_directories(ichor PUBLIC
+        target_include_directories(ichor SYSTEM PUBLIC
                 $<BUILD_INTERFACE:${ICHOR_EXTERNAL_DIR}/mimalloc/include>
                 $<INSTALL_INTERFACE:include/ichor/external>)
     endif()
@@ -687,11 +687,11 @@ if(ICHOR_USE_LIBURING)
     target_compile_definitions(ichor PUBLIC _GNU_SOURCE ICHOR_USE_LIBURING)
 
 
-    target_include_directories(ichor PUBLIC
+    target_include_directories(ichor SYSTEM PUBLIC
             $<BUILD_INTERFACE:${ICHOR_EXTERNAL_DIR}/liburing/src/arch>
             $<INSTALL_INTERFACE:include/ichor/external>)
 
-    target_include_directories(ichor PUBLIC
+    target_include_directories(ichor SYSTEM PUBLIC
             $<BUILD_INTERFACE:${ICHOR_EXTERNAL_DIR}/liburing/src/include>
             $<INSTALL_INTERFACE:include/ichor/external>)
 endif()
@@ -715,7 +715,7 @@ endif()
 
 if(ICHOR_USE_BOOST_BEAST) #beast
     find_package(Boost 1.70.0 REQUIRED COMPONENTS context coroutine fiber)
-    target_include_directories(ichor PUBLIC ${Boost_INCLUDE_DIRS})
+    target_include_directories(ichor SYSTEM PUBLIC ${Boost_INCLUDE_DIRS})
     target_link_directories(ichor PUBLIC ${Boost_LIBRARY_DIRS})
     target_link_libraries(ichor PUBLIC ${Boost_LIBRARIES})
 
@@ -744,7 +744,7 @@ endif()
 if(ICHOR_USE_OPENSSL)
     find_package(OpenSSL REQUIRED)
 
-    target_include_directories(ichor PUBLIC ${OPENSSL_INCLUDE_DIR})
+    target_include_directories(ichor SYSTEM PUBLIC ${OPENSSL_INCLUDE_DIR})
     target_link_libraries(ichor PUBLIC OpenSSL::SSL OpenSSL::Crypto)
     target_compile_definitions(ichor PUBLIC ICHOR_USE_OPENSSL OPENSSL_API_COMPAT=30000)
 
@@ -764,17 +764,23 @@ target_include_directories(ichor PUBLIC
         $<BUILD_INTERFACE:${ICHOR_TOP_DIR}/include>
         $<INSTALL_INTERFACE:include>)
 
-target_include_directories(ichor PUBLIC
+# External libraries are included as system headers, so that their warnings don't show up in Ichor's or its users' builds
+target_include_directories(ichor SYSTEM PUBLIC
         $<BUILD_INTERFACE:${ICHOR_EXTERNAL_DIR}/fmt/include>
         $<INSTALL_INTERFACE:include/ichor/external>)
 
+# Header-only libraries that are copied into Ichor instead of being submodules
+target_include_directories(ichor SYSTEM PUBLIC
+        $<BUILD_INTERFACE:${ICHOR_EXTERNAL_DIR}/vendored>
+        $<INSTALL_INTERFACE:include/ichor/external>)
+
 if(ICHOR_USE_SPDLOG)
-    target_include_directories(ichor PUBLIC
+    target_include_directories(ichor SYSTEM PUBLIC
             $<BUILD_INTERFACE:${ICHOR_EXTERNAL_DIR}/spdlog/include>
             $<INSTALL_INTERFACE:include/ichor/external>)
 endif()
 
-target_include_directories(ichor PUBLIC
+target_include_directories(ichor SYSTEM PUBLIC
         $<BUILD_INTERFACE:${ICHOR_EXTERNAL_DIR}/glaze/include>
         $<INSTALL_INTERFACE:include/ichor/external>)
 
@@ -825,7 +831,7 @@ if(ICHOR_USE_BACKWARD AND NOT ICHOR_MUSL)
         if(NOT ICHOR_COMPILER_ID STREQUAL "gnu")
             pkg_check_modules(LIBUNWIND libunwind-generic)
             if(LIBUNWIND_FOUND)
-                target_include_directories(ichor PRIVATE ${LIBUNWIND_INCLUDE_DIR})
+                target_include_directories(ichor SYSTEM PRIVATE ${LIBUNWIND_INCLUDE_DIR})
                 target_link_directories(ichor PRIVATE ${LIBUNWIND_LIBRARY_DIRS})
                 target_link_libraries(ichor PUBLIC ${LIBUNWIND_LIBRARIES})
                 target_compile_definitions(ichor PUBLIC BACKWARD_HAS_LIBUNWIND=1)
@@ -833,7 +839,7 @@ if(ICHOR_USE_BACKWARD AND NOT ICHOR_MUSL)
         endif()
         pkg_check_modules(LIBDW libdw)
         if(LIBDW_FOUND)
-            target_include_directories(ichor PRIVATE ${LIBDW_INCLUDE_DIR})
+            target_include_directories(ichor SYSTEM PRIVATE ${LIBDW_INCLUDE_DIR})
             target_link_directories(ichor PRIVATE ${LIBDW_LIBRARY_DIRS})
             target_link_libraries(ichor PUBLIC ${LIBDW_LIBRARIES})
             target_compile_definitions(ichor PUBLIC BACKWARD_HAS_DW=1)
@@ -869,40 +875,11 @@ install(DIRECTORY "${CMAKE_SOURCE_DIR}/external/fmt/include/fmt" # source direct
         PATTERN "*.h" # select header files
         )
 
-install(DIRECTORY "${CMAKE_SOURCE_DIR}/include/sole" # source directory
+install(DIRECTORY "${CMAKE_SOURCE_DIR}/external/vendored/" # source directory
         DESTINATION "include/ichor/external" # target directory
         FILES_MATCHING # install only matched files
         PATTERN "*.h" # select header files
-)
-
-install(DIRECTORY "${CMAKE_SOURCE_DIR}/include/base64" # source directory
-        DESTINATION "include/ichor/external" # target directory
-        FILES_MATCHING # install only matched files
-        PATTERN "*.h" # select header files
-)
-
-install(DIRECTORY "${CMAKE_SOURCE_DIR}/include/ankerl" # source directory
-        DESTINATION "include/ichor/external" # target directory
-        FILES_MATCHING # install only matched files
-        PATTERN "*.h" # select header files
-)
-
-install(DIRECTORY "${CMAKE_SOURCE_DIR}/include/ctre" # source directory
-        DESTINATION "include/ichor/external" # target directory
-        FILES_MATCHING # install only matched files
-        PATTERN "*.h" # select header files
-)
-
-install(DIRECTORY "${CMAKE_SOURCE_DIR}/include/tl" # source directory
-        DESTINATION "include/ichor/external" # target directory
-        FILES_MATCHING # install only matched files
-        PATTERN "*.h" # select header files
-)
-
-install(DIRECTORY "${CMAKE_SOURCE_DIR}/include/backward" # source directory
-        DESTINATION "include/ichor/external" # target directory
-        FILES_MATCHING # install only matched files
-        PATTERN "*.h" # select header files
+        PATTERN "*.hpp" # ctre
         )
 
 if(ICHOR_USE_SPDLOG)
@@ -980,6 +957,9 @@ if(ICHOR_BUILD_TESTING OR ICHOR_INCLUDE_CATCH2)
     endif()
     target_compile_definitions(Catch2 PRIVATE CATCH_CONFIG_EXPERIMENTAL_THREAD_SAFE_ASSERTIONS)
     target_compile_definitions(Catch2WithMain PRIVATE CATCH_CONFIG_EXPERIMENTAL_THREAD_SAFE_ASSERTIONS)
+    # Treat Catch2's headers as system headers in the tests, like the other external libraries. Otherwise clang 22+ also warns about every use of __COUNTER__ (a C2y extension) in the test macros
+    get_target_property(ICHOR_CATCH2_INCLUDE_DIRS Catch2 INTERFACE_INCLUDE_DIRECTORIES)
+    set_target_properties(Catch2 PROPERTIES INTERFACE_SYSTEM_INCLUDE_DIRECTORIES "${ICHOR_CATCH2_INCLUDE_DIRS}")
     list(APPEND CMAKE_MODULE_PATH "${ICHOR_EXTERNAL_DIR}/Catch2/extras")
 
     if(ICHOR_BUILD_TESTING)

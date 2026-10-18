@@ -58,6 +58,11 @@ while [[ $# -gt 0 ]]; do
       CXXCOMP=clang++-16
       shift # past value
       ;;
+    --newclang)
+      CCOMP=clang-23
+      CXXCOMP=clang++-23
+      shift # past value
+      ;;
     --tsan)
       ASAN=0
       TSAN=1

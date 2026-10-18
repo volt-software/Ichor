@@ -46,9 +46,9 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-ccompilers=("clang-16" "clang-19" "gcc-12" "gcc")
-cppcompilers=("clang++-16" "clang++-19" "g++-12" "g++")
-ldlibpath=("" "" "" "/opt/gcc/14/lib64/")
+ccompilers=("clang-16" "clang-19" "clang-23" "gcc-12" "gcc")
+cppcompilers=("clang++-16" "clang++-19" "clang++-23" "g++-12" "g++")
+ldlibpath=("" "" "" "" "/opt/gcc/14/lib64/")
 
 if [[ $DEV -eq 1 ]]; then
   ccompilers=("clang-19" "gcc")
