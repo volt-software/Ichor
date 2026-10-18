@@ -10,7 +10,7 @@ namespace Ichor::v1 {
         OpenSSLConnection(SSL* ctx, TLSConnectionIdType id);
         ~OpenSSLConnection() final;
 
-        SSL* getHandle() const;
+        [[nodiscard]] SSL* getHandle() const;
 
 #if defined(ICHOR_USE_HARDENING) || defined(ICHOR_ENABLE_INTERNAL_DEBUGGING)
         [[nodiscard]] TLSConnectionTypeType getType() const noexcept final;

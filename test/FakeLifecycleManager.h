@@ -39,37 +39,37 @@ public:
     bool setUninjected() override {
         return true;
     }
-    std::string_view implementationName() const noexcept override {
+    [[nodiscard]] std::string_view implementationName() const noexcept override {
         return "FakeLifecycleManager";
     }
-    uint64_t type() const noexcept override {
+    [[nodiscard]] uint64_t type() const noexcept override {
         return 0;
     }
-    ServiceIdType serviceId() const noexcept override {
+    [[nodiscard]] ServiceIdType serviceId() const noexcept override {
         return ServiceIdType{0};
     }
-    uint64_t getPriority() const noexcept override {
+    [[nodiscard]] uint64_t getPriority() const noexcept override {
         return 0;
     }
-    ServiceState getServiceState() const noexcept override {
+    [[nodiscard]] ServiceState getServiceState() const noexcept override {
         return {};
     }
     v1::NeverNull<IService *> getIService() noexcept override {
         std::terminate();
     }
-    v1::NeverNull<IService const *> getIService() const noexcept override {
+    [[nodiscard]] v1::NeverNull<IService const *> getIService() const noexcept override {
         std::terminate();
     }
-    std::span<Dependency const> getInterfaces() const noexcept override {
+    [[nodiscard]] std::span<Dependency const> getInterfaces() const noexcept override {
         return {};
     }
-    Properties const &getProperties() const noexcept override {
+    [[nodiscard]] Properties const &getProperties() const noexcept override {
         return _properties;
     }
-    DependencyRegister const *getDependencyRegistry() const noexcept override {
+    [[nodiscard]] DependencyRegister const *getDependencyRegistry() const noexcept override {
         return _dependencyRegistry;
     }
-    bool isInternalManager() const noexcept final {
+    [[nodiscard]] bool isInternalManager() const noexcept final {
         return false;
     }
     void insertSelfInto(uint64_t keyOfInterfaceToInject, ServiceIdType serviceIdOfOther, std::function<void(v1::NeverNull<void *>, IService &)> &) override {

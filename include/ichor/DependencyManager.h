@@ -1,5 +1,6 @@
 #pragma once
 
+#include <utility>
 #include <vector>
 #include <memory>
 #include <chrono>
@@ -87,7 +88,7 @@ namespace Ichor {
                 iterator(DependencyManager const *dm,
                             unordered_set<ServiceIdType, ServiceIdHash> const *dependees,
                             unordered_set<ServiceIdType, ServiceIdHash>::const_iterator it) noexcept
-                        : _dm(dm), _dependees(dependees), _it(it) {
+                        : _dm(dm), _dependees(dependees), _it(std::move(it)) {
                     advanceToValid();
                 }
 
@@ -162,7 +163,7 @@ namespace Ichor {
                 iterator(map_type const *map,
                          ServiceIdType svcId,
                          map_type::const_iterator it) noexcept
-                        : _map(map), _svcId(svcId), _it(it) {
+                        : _map(map), _svcId(svcId), _it(std::move(it)) {
                     advanceToValid();
                 }
 
@@ -240,7 +241,7 @@ namespace Ichor {
                 using value_type = ServicesView::value_type;
 
                 iterator() noexcept : _map(nullptr) {}
-                iterator(map_type const *map, map_type::const_iterator it) noexcept : _map(map), _it(it) {
+                iterator(map_type const *map, map_type::const_iterator it) noexcept : _map(map), _it(std::move(it)) {
                     advance();
                 }
 
@@ -418,7 +419,7 @@ namespace Ichor {
             }
 
             uint64_t eventId = _eventQueue.getNextEventId();
-            _eventQueue.pushEventInternal(priority, std::unique_ptr<Event>{new EventT(std::forward<uint64_t>(eventId), std::forward<ServiceIdType>(originatingServiceId), std::forward<uint64_t>(priority), std::forward<Args>(args)...)});
+            _eventQueue.pushEventInternal(priority, std::unique_ptr<Event>{new EventT(eventId, originatingServiceId, priority, std::forward<Args>(args)...)});
             auto it = _eventWaiters.emplace(eventId, EventWaiter(originatingServiceId, EventT::TYPE));
             INTERNAL_DEBUG("pushPrioritisedEventAsync {}:{} {} events.size {}", eventId, typeName<EventT>(), originatingServiceId, it.first->second.events.size());
             co_await *it.first->second.events.begin()->second.get();
@@ -499,18 +500,18 @@ namespace Ichor {
             if(existingHandlers == end(_eventCallbacks)) {
                 std::vector<EventCallbackInfo> v{};
                 v.template emplace_back<>(EventCallbackInfo{
-                        self->getServiceId(),
-                        targetServiceId,
-                        std::function<AsyncGenerator<IchorBehaviour>(Event const &)>{
+                        .listeningServiceId=self->getServiceId(),
+                        .filterServiceId=targetServiceId,
+                        .callback=std::function<AsyncGenerator<IchorBehaviour>(Event const &)>{
                             [impl](Event const &evt) { return impl->handleEvent(static_cast<EventT const &>(evt)); }
                         }
                 });
                 _eventCallbacks.emplace(EventT::TYPE, std::move(v));
             } else {
                 existingHandlers->second.emplace_back(EventCallbackInfo{
-                    self->getServiceId(),
-                    targetServiceId,
-                    std::function<AsyncGenerator<IchorBehaviour>(Event const &)>{
+                    .listeningServiceId=self->getServiceId(),
+                    .filterServiceId=targetServiceId,
+                    .callback=std::function<AsyncGenerator<IchorBehaviour>(Event const &)>{
                         [impl](Event const &evt) { return impl->handleEvent(static_cast<EventT const &>(evt)); }
                     }
                 });
@@ -548,14 +549,14 @@ namespace Ichor {
             auto existingHandlers = _eventInterceptors.find(targetEventId);
             if(existingHandlers == end(_eventInterceptors)) {
                 std::vector<EventInterceptInfo> v{};
-                v.template emplace_back<>(EventInterceptInfo{interceptorId, self->getServiceId(),
-                                   std::function<bool(Event const &)>{[impl](Event const &evt){ return impl->preInterceptEvent(static_cast<EventT const &>(evt)); }},
-                                   std::function<void(Event const &, bool)>{[impl](Event const &evt, bool processed){ impl->postInterceptEvent(static_cast<EventT const &>(evt), processed); }}});
+                v.template emplace_back<>(EventInterceptInfo{.interceptorId=interceptorId, .listeningServiceId=self->getServiceId(),
+                                   .preIntercept=std::function<bool(Event const &)>{[impl](Event const &evt){ return impl->preInterceptEvent(static_cast<EventT const &>(evt)); }},
+                                   .postIntercept=std::function<void(Event const &, bool)>{[impl](Event const &evt, bool processed){ impl->postInterceptEvent(static_cast<EventT const &>(evt), processed); }}});
                 _eventInterceptors.emplace(targetEventId, std::move(v));
             } else {
-                existingHandlers->second.template emplace_back<>(EventInterceptInfo{interceptorId, self->getServiceId(),
-                                                      std::function<bool(Event const &)>{[impl](Event const &evt){ return impl->preInterceptEvent(static_cast<EventT const &>(evt)); }},
-                                                      std::function<void(Event const &, bool)>{[impl](Event const &evt, bool processed){ impl->postInterceptEvent(static_cast<EventT const &>(evt), processed); }}});
+                existingHandlers->second.template emplace_back<>(EventInterceptInfo{.interceptorId=interceptorId, .listeningServiceId=self->getServiceId(),
+                                                      .preIntercept=std::function<bool(Event const &)>{[impl](Event const &evt){ return impl->preInterceptEvent(static_cast<EventT const &>(evt)); }},
+                                                      .postIntercept=std::function<void(Event const &, bool)>{[impl](Event const &evt, bool processed){ impl->postInterceptEvent(static_cast<EventT const &>(evt), processed); }}});
             }
             return {self->getServiceId(), interceptorId, targetEventId, self->getServicePriority()};
         }
@@ -939,7 +940,7 @@ namespace Ichor {
             std::unique_ptr<IGenerator> generator;
             v1::ReferenceCountedPointer<Event> event;
 
-            ScopedGenerator(std::unique_ptr<IGenerator> _generator, v1::ReferenceCountedPointer<Event> _event) : generator(std::move(_generator)), event(_event) {}
+            ScopedGenerator(std::unique_ptr<IGenerator> _generator, v1::ReferenceCountedPointer<Event> _event) : generator(std::move(_generator)), event(std::move(_event)) {}
         };
 
         unordered_map<ServiceIdType, std::unique_ptr<ILifecycleManager>, ServiceIdHash> _services{}; // key = service id

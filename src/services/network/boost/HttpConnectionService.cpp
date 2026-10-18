@@ -128,7 +128,7 @@ Ichor::Task<tl::expected<Ichor::v1::HttpResponse, Ichor::v1::HttpError>> Ichor::
         if(_outbox.full()) {
             _outbox.set_capacity(std::max<uint64_t>(_outbox.capacity() * 2, 10ul));
         }
-        _outbox.push_back({method, route, &event, &headers, &msg});
+        _outbox.push_back({.method=method, .route=route, .event=&event, .headers=&headers, .body=&msg});
         if(_outbox.size() > 1) {
             // handled by existing net::spawn
             return;
@@ -229,7 +229,7 @@ Ichor::Task<tl::expected<Ichor::v1::HttpResponse, Ichor::v1::HttpError>> Ichor::
 
             response = Ichor::v1::HttpResponse{};
 
-            response->status = (Ichor::v1::HttpStatus) (int) res.result();
+            response->status = static_cast<Ichor::v1::HttpStatus>(static_cast<int>(res.result()));
             response->headers.reserve(static_cast<unsigned long>(std::distance(std::begin(res), std::end(res))));
             for (auto const &header: res) {
                 response->headers.emplace(header.name_string(), header.value());
@@ -309,7 +309,7 @@ void Ichor::Boost::v1::HttpConnectionService::connect(tcp::endpoint endpoint, ne
         _sslContext->set_verify_mode(net::ssl::verify_peer);
 
         if(auto propIt = getProperties().find("RootCA"); propIt != getProperties().end()) {
-            std::string &ca = Ichor::v1::any_cast<std::string&>(propIt->second);
+            auto &ca = Ichor::v1::any_cast<std::string&>(propIt->second);
             _sslContext->add_certificate_authority(boost::asio::const_buffer(ca.c_str(), ca.size()), ec);
         }
 

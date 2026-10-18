@@ -13,7 +13,7 @@ namespace Ichor::v1 {
         TimerFactoryFactory() = default;
         ~TimerFactoryFactory() final = default;
 
-        std::vector<ServiceIdType> getCreatedTimerFactoryIds() const noexcept final;
+        [[nodiscard]] std::vector<ServiceIdType> getCreatedTimerFactoryIds() const noexcept final;
 
     private:
         Task<tl::expected<void, Ichor::StartError>> start() final;

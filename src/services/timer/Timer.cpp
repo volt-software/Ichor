@@ -89,7 +89,7 @@ bool Ichor::v1::Timer::startTimer(bool fireImmediately) {
     return false;
 }
 
-bool Ichor::v1::Timer::stopTimer(std::function<void(void)> cb) {
+bool Ichor::v1::Timer::stopTimer(std::function<void()> cb) {
     std::unique_lock l{_m};
     INTERNAL_IO_DEBUG("timer {} for {} stop {}", _timerId, _requestingServiceId, _state);
     if(_state == TimerState::RUNNING || _state == TimerState::STOPPING) {

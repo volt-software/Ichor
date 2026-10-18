@@ -50,7 +50,7 @@ int main(int argc, char *argv[]) {
 #if defined(URING_EXAMPLE)
     auto version = Ichor::v1::kernelVersion();
 
-    if(version < v1::Version{5, 18, 0}) {
+    if(version < v1::Version{.major=5, .minor=18, .patch=0}) {
         fmt::print("{} kernel version of {} too old to support multithreading. Requires 5.18.0 or newer.\n", argv[0], *version);
         return 0;
     }

@@ -20,7 +20,7 @@ struct AsyncFileIOExpensiveSetup {
         }
         REQUIRE(!out.fail());
         bigFileFilesize = out.tellp();
-        REQUIRE(bigFileFilesize >= 8192*1024);
+        REQUIRE(bigFileFilesize >= 8192LL*1024);
         out.close();
     }
 

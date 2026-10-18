@@ -33,7 +33,7 @@ namespace Ichor::v1 {
         /// Thread-safe.
         bool startTimer(bool fireImmediately) final;
         /// Thread-safe.
-        bool stopTimer(std::function<void(void)> cb) final;
+        bool stopTimer(std::function<void()> cb) final;
 
         /// Thread-safe.
         [[nodiscard]] TimerState getState() const noexcept final;
@@ -80,13 +80,13 @@ namespace Ichor::v1 {
         TimerState _state{};
         bool _fireOnce{};
         // same default as Timer
-        __kernel_timespec _timespec{1, 0};
+        __kernel_timespec _timespec{.tv_sec=1, .tv_nsec=0};
         std::function<AsyncGenerator<IchorBehaviour>()> _fnAsync{};
         std::function<void()> _fn{};
         uint64_t _priority{INTERNAL_EVENT_PRIORITY};
         ServiceIdType _requestingServiceId{};
         uint64_t _uringTimerId{};
-        std::vector<std::function<void(void)>> _quitCbs;
+        std::vector<std::function<void()>> _quitCbs;
         // Shared with the handlers of in-flight requests, which can outlive the timer. Set when the timer stops, after which
         // it can be destroyed. Every startTimer() creates a new one, so handlers of a previous run never touch the timer.
         ReferenceCountedPointer<bool> _runFinished{make_reference_counted<bool>(true)};

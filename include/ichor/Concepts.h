@@ -27,16 +27,16 @@ namespace Ichor {
     struct ListContainsInterface<T, U> : std::integral_constant<bool, std::is_base_of_v<U, T>> {};
 
     template <class T, class U>
-    concept Derived = std::is_base_of<U, T>::value;
+    concept Derived = std::is_base_of_v<U, T>;
 
     template <class T, class U, class V>
-    concept DerivedEither = std::is_base_of<U, T>::value || std::is_base_of<V, T>::value;
+    concept DerivedEither = std::is_base_of_v<U, T> || std::is_base_of_v<V, T>;
 
     template <class T, class U, class V, class X>
-    concept DerivedAny = std::is_base_of<U, T>::value || std::is_base_of<V, T>::value;
+    concept DerivedAny = std::is_base_of_v<U, T> || std::is_base_of_v<V, T> || std::is_base_of_v<X, T>;
 
     template <class T, template <class> class U>
-    concept DerivedTemplated = std::is_base_of<U<T>, T>::value;
+    concept DerivedTemplated = std::is_base_of_v<U<T>, T>;
 
     template <class T, class... U>
     concept ImplementsAll = sizeof...(U) == 0 || DerivedTrait<T, U...>::value;

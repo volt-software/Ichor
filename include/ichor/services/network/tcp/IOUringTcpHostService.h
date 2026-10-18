@@ -49,15 +49,15 @@ namespace Ichor::v1 {
         friend DependencyRegister;
         friend DependencyManager;
 
-        int _socket;
-        int _bindFd;
-        uint64_t _priority;
+        int _socket{-1};
+        int _bindFd{};
+        uint64_t _priority{INTERNAL_EVENT_PRIORITY};
         uint16_t _listenBacklogSize{100};
         int64_t _sendTimeout{250'000};
         int64_t _recvTimeout{250'000};
 		tl::optional<uint32_t> _bufferEntries{};
 		tl::optional<uint32_t> _bufferEntrySize{};
-        bool _quit;
+        bool _quit{};
         Ichor::ScopedServiceProxy<IIOUringQueue*> _q {};
         Ichor::ScopedServiceProxy<ILogger*> _logger {};
         std::vector<ServiceIdType> _connections;

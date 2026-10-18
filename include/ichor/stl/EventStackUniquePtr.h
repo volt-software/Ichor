@@ -1,6 +1,7 @@
 #pragma once
 
 #include <concepts>
+#include <array>
 #include <cstddef>
 #include <cstdint>
 #include <exception>
@@ -25,7 +26,7 @@ namespace Ichor::v1 {
             static_assert(T::TYPE != 0, "type of T cannot be 0");
             static_assert(std::is_move_constructible_v<T>, "T has to be move constructible");
             EventStackUniquePtr ptr;
-            ::new(static_cast<void*>(ptr._buffer)) T(std::forward<Args>(args)...);
+            ::new(static_cast<void*>(ptr._buffer.data())) T(std::forward<Args>(args)...);
             ptr._type = T::TYPE;
             ptr._moveFn = [](void *dst, void *src) noexcept {
                 // Move-construct into dst and destroy the source, a plain byte copy is not valid for non-trivially copyable types.
@@ -64,7 +65,7 @@ namespace Ichor::v1 {
                 std::terminate();
             }
 
-            return std::launder(reinterpret_cast<T *>(_buffer));
+            return std::launder(reinterpret_cast<T *>(_buffer.data()));
         }
 
         [[nodiscard]] Event *get() {
@@ -72,7 +73,7 @@ namespace Ichor::v1 {
                 std::terminate();
             }
 
-            return std::launder(reinterpret_cast<Event *>(_buffer));
+            return std::launder(reinterpret_cast<Event *>(_buffer.data()));
         }
 
         [[nodiscard]] uint64_t getType() const noexcept {
@@ -88,7 +89,7 @@ namespace Ichor::v1 {
 
         void reset() noexcept {
             if (_moveFn != nullptr) {
-                std::destroy_at(std::launder(reinterpret_cast<Event *>(_buffer)));
+                std::destroy_at(std::launder(reinterpret_cast<Event *>(_buffer.data())));
                 _moveFn = nullptr;
                 _type = 0;
             }
@@ -98,14 +99,14 @@ namespace Ichor::v1 {
             if(other._moveFn == nullptr) {
                 return;
             }
-            other._moveFn(_buffer, other._buffer);
+            other._moveFn(_buffer.data(), other._buffer.data());
             _moveFn = other._moveFn;
             _type = other._type;
             other._moveFn = nullptr;
             other._type = 0;
         }
 
-        alignas(std::max_align_t) std::byte _buffer[bufferSize];
+        alignas(std::max_align_t) std::array<std::byte, bufferSize> _buffer;
         uint64_t _type{0};
         MoveFn _moveFn{nullptr}; // nullptr means empty
     };

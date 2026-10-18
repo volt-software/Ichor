@@ -176,6 +176,7 @@ namespace Ichor::v1 {
             decrement();
         }
 
+        // NOLINTNEXTLINE(bugprone-unhandled-self-assignment): o is incremented before this is decremented, which leaves self-assignment unchanged
         constexpr ReferenceCountedPointer& operator=(const ReferenceCountedPointer &o) noexcept {
             // o might be owned by the object we're releasing (e.g. node = node->next), so copy and increment before decrementing, o may be gone afterwards.
             auto *ptr = o._ptr;

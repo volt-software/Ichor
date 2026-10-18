@@ -11,10 +11,10 @@ template<uint64_t requestAmount>
 class CreateTimerService final {
 public:
     CreateTimerService(ScopedServiceProxy<ITimerFactory> factory) {
-        constexpr_for<(size_t)0, requestAmount, (size_t)1>([factory](auto i) {
+        constexpr_for<static_cast<size_t>(0), requestAmount, static_cast<size_t>(1)>([factory](auto i) {
             auto timer = factory->createTimer();
             evtGate++;
-            fmt::println("createTimerService<{}> {}", requestAmount, (size_t)i);
+            fmt::println("createTimerService<{}> {}", requestAmount, static_cast<size_t>(i));
         });
     }
 };

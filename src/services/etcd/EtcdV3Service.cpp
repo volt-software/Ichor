@@ -1058,9 +1058,9 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> EtcdService::start() {
         ICHOR_LOG_ERROR(_logger, "Couldn't get version from etcd: {}", ver.error());
     }
 
-    if((*ver).etcdserver < Version{3, 3, 0}) {
+    if((*ver).etcdserver < Version{.major=3, .minor=3, .patch=0}) {
         _versionSpecificUrl = "/v3alpha";
-    } else if((*ver).etcdserver < Version{3, 4, 0}) {
+    } else if((*ver).etcdserver < Version{.major=3, .minor=4, .patch=0}) {
         _versionSpecificUrl = "/v3beta";
     }
     _detectedVersion = (*ver).etcdserver;
@@ -1172,15 +1172,15 @@ static Ichor::Task<tl::expected<RespT, EtcdError>> execute_request(std::string u
 }
 
 Ichor::Task<tl::expected<EtcdPutResponse, EtcdError>> EtcdService::put(EtcdPutRequest const &req) {
-    if(req.prev_kv && _detectedVersion < Version{3, 1, 0}) {
+    if(req.prev_kv && _detectedVersion < Version{.major=3, .minor=1, .patch=0}) {
         ICHOR_LOG_ERROR(_logger, "Cannot request prevKv for etcd server for etcdserver version {}, minimum 3.1.0 required", _detectedVersion);
         co_return tl::unexpected(EtcdError::ETCD_SERVER_DOES_NOT_SUPPORT);
     }
-    if(req.ignore_value && _detectedVersion < Version{3, 2, 0}) {
+    if(req.ignore_value && _detectedVersion < Version{.major=3, .minor=2, .patch=0}) {
         ICHOR_LOG_ERROR(_logger, "Cannot request ignoreValue for etcd server for etcdserver version {}, minimum 3.2.0 required", _detectedVersion);
         co_return tl::unexpected(EtcdError::ETCD_SERVER_DOES_NOT_SUPPORT);
     }
-    if(req.ignore_lease && _detectedVersion < Version{3, 2, 0}) {
+    if(req.ignore_lease && _detectedVersion < Version{.major=3, .minor=2, .patch=0}) {
         ICHOR_LOG_ERROR(_logger, "Cannot request ignoreLease for etcd server for etcdserver version {}, minimum 3.2.0 required", _detectedVersion);
         co_return tl::unexpected(EtcdError::ETCD_SERVER_DOES_NOT_SUPPORT);
     }
@@ -1189,19 +1189,19 @@ Ichor::Task<tl::expected<EtcdPutResponse, EtcdError>> EtcdService::put(EtcdPutRe
 }
 
 Ichor::Task<tl::expected<EtcdRangeResponse, EtcdError>> EtcdService::range(EtcdRangeRequest const &req) {
-    if(req.min_mod_revision && _detectedVersion < Version{3, 1, 0}) {
+    if(req.min_mod_revision && _detectedVersion < Version{.major=3, .minor=1, .patch=0}) {
         ICHOR_LOG_ERROR(_logger, "Cannot request min_mod_revision for etcd server for etcdserver version {}, minimum 3.1.0 required", _detectedVersion);
         co_return tl::unexpected(EtcdError::ETCD_SERVER_DOES_NOT_SUPPORT);
     }
-    if(req.max_mod_revision && _detectedVersion < Version{3, 1, 0}) {
+    if(req.max_mod_revision && _detectedVersion < Version{.major=3, .minor=1, .patch=0}) {
         ICHOR_LOG_ERROR(_logger, "Cannot request max_mod_revision for etcd server for etcdserver version {}, minimum 3.1.0 required", _detectedVersion);
         co_return tl::unexpected(EtcdError::ETCD_SERVER_DOES_NOT_SUPPORT);
     }
-    if(req.min_create_revision && _detectedVersion < Version{3, 1, 0}) {
+    if(req.min_create_revision && _detectedVersion < Version{.major=3, .minor=1, .patch=0}) {
         ICHOR_LOG_ERROR(_logger, "Cannot request min_create_revision for etcd server for etcdserver version {}, minimum 3.1.0 required", _detectedVersion);
         co_return tl::unexpected(EtcdError::ETCD_SERVER_DOES_NOT_SUPPORT);
     }
-    if(req.max_create_revision && _detectedVersion < Version{3, 1, 0}) {
+    if(req.max_create_revision && _detectedVersion < Version{.major=3, .minor=1, .patch=0}) {
         ICHOR_LOG_ERROR(_logger, "Cannot request max_create_revision for etcd server for etcdserver version {}, minimum 3.1.0 required", _detectedVersion);
         co_return tl::unexpected(EtcdError::ETCD_SERVER_DOES_NOT_SUPPORT);
     }
@@ -1210,7 +1210,7 @@ Ichor::Task<tl::expected<EtcdRangeResponse, EtcdError>> EtcdService::range(EtcdR
 }
 
 Ichor::Task<tl::expected<EtcdDeleteRangeResponse, EtcdError>> EtcdService::deleteRange(EtcdDeleteRangeRequest const &req) {
-    if(req.prev_kv && _detectedVersion < Version{3, 1, 0}) {
+    if(req.prev_kv && _detectedVersion < Version{.major=3, .minor=1, .patch=0}) {
         ICHOR_LOG_ERROR(_logger, "Cannot request prev_kv for etcd server for etcdserver version {}, minimum 3.1.0 required", _detectedVersion);
         co_return tl::unexpected(EtcdError::ETCD_SERVER_DOES_NOT_SUPPORT);
     }
@@ -1220,31 +1220,31 @@ Ichor::Task<tl::expected<EtcdDeleteRangeResponse, EtcdError>> EtcdService::delet
 
 Ichor::Task<tl::expected<EtcdTxnResponse, EtcdError>> EtcdService::txn(EtcdTxnRequest const &req) {
     for(auto const &comp : req.compare) {
-        if(comp.result == EtcdCompareResult::NOT_EQUAL && _detectedVersion < Version{3, 1, 0}) {
+        if(comp.result == EtcdCompareResult::NOT_EQUAL && _detectedVersion < Version{.major=3, .minor=1, .patch=0}) {
             ICHOR_LOG_ERROR(_logger, "Cannot request EtcdCompareResult::NOT_EQUAL for etcd server for etcdserver version {}, minimum 3.1.0 required", _detectedVersion);
             co_return tl::unexpected(EtcdError::ETCD_SERVER_DOES_NOT_SUPPORT);
         }
-        if(comp.target == EtcdCompareTarget::LEASE && _detectedVersion < Version{3, 3, 0}) {
+        if(comp.target == EtcdCompareTarget::LEASE && _detectedVersion < Version{.major=3, .minor=3, .patch=0}) {
             ICHOR_LOG_ERROR(_logger, "Cannot request EtcdCompareTarget::LEASE for etcd server for etcdserver version {}, minimum 3.3.0 required", _detectedVersion);
             co_return tl::unexpected(EtcdError::ETCD_SERVER_DOES_NOT_SUPPORT);
         }
-        if(comp.lease && _detectedVersion < Version{3, 3, 0}) {
+        if(comp.lease && _detectedVersion < Version{.major=3, .minor=3, .patch=0}) {
             ICHOR_LOG_ERROR(_logger, "Cannot request lease for etcd server for etcdserver version {}, minimum 3.3.0 required", _detectedVersion);
             co_return tl::unexpected(EtcdError::ETCD_SERVER_DOES_NOT_SUPPORT);
         }
-        if(comp.range_end && _detectedVersion < Version{3, 3, 0}) {
+        if(comp.range_end && _detectedVersion < Version{.major=3, .minor=3, .patch=0}) {
             ICHOR_LOG_ERROR(_logger, "Cannot request range_end for etcd server for etcdserver version {}, minimum 3.3.0 required", _detectedVersion);
             co_return tl::unexpected(EtcdError::ETCD_SERVER_DOES_NOT_SUPPORT);
         }
     }
     for(auto const &op : req.success) {
-        if(op.request_txn && _detectedVersion < Version{3, 3, 0}) {
+        if(op.request_txn && _detectedVersion < Version{.major=3, .minor=3, .patch=0}) {
             ICHOR_LOG_ERROR(_logger, "Cannot request request_txn for etcd server for etcdserver version {}, minimum 3.3.0 required", _detectedVersion);
             co_return tl::unexpected(EtcdError::ETCD_SERVER_DOES_NOT_SUPPORT);
         }
     }
     for(auto const &op : req.failure) {
-        if(op.request_txn && _detectedVersion < Version{3, 3, 0}) {
+        if(op.request_txn && _detectedVersion < Version{.major=3, .minor=3, .patch=0}) {
             ICHOR_LOG_ERROR(_logger, "Cannot request request_txn for etcd server for etcdserver version {}, minimum 3.3.0 required", _detectedVersion);
             co_return tl::unexpected(EtcdError::ETCD_SERVER_DOES_NOT_SUPPORT);
         }
@@ -1268,7 +1268,7 @@ Ichor::Task<tl::expected<LeaseRevokeResponse, EtcdError>> EtcdService::leaseRevo
 }
 
 Ichor::Task<tl::expected<LeaseKeepAliveResponse, EtcdError>> EtcdService::leaseKeepAlive(LeaseKeepAliveRequest const &req) {
-    if(_detectedVersion < Version{3, 1, 0}) {
+    if(_detectedVersion < Version{.major=3, .minor=1, .patch=0}) {
         ICHOR_LOG_ERROR(_logger, "Cannot use leaseKeepAlive for etcdserver version {}, minimum 3.1.0 required", _detectedVersion);
         co_return tl::unexpected(EtcdError::ETCD_SERVER_DOES_NOT_SUPPORT);
     }
@@ -1278,7 +1278,7 @@ Ichor::Task<tl::expected<LeaseKeepAliveResponse, EtcdError>> EtcdService::leaseK
 }
 
 Ichor::Task<tl::expected<LeaseTimeToLiveResponse, EtcdError>> EtcdService::leaseTimeToLive(LeaseTimeToLiveRequest const &req) {
-    if(_detectedVersion < Version{3, 1, 0}) {
+    if(_detectedVersion < Version{.major=3, .minor=1, .patch=0}) {
         ICHOR_LOG_ERROR(_logger, "Cannot use leaseTimeToLive for etcdserver version {}, minimum 3.1.0 required", _detectedVersion);
         co_return tl::unexpected(EtcdError::ETCD_SERVER_DOES_NOT_SUPPORT);
     }
@@ -1288,7 +1288,7 @@ Ichor::Task<tl::expected<LeaseTimeToLiveResponse, EtcdError>> EtcdService::lease
 }
 
 Ichor::Task<tl::expected<LeaseLeasesResponse, EtcdError>> EtcdService::leaseLeases(LeaseLeasesRequest const &req) {
-    if(_detectedVersion < Version{3, 3, 0}) {
+    if(_detectedVersion < Version{.major=3, .minor=3, .patch=0}) {
         ICHOR_LOG_ERROR(_logger, "Cannot use leaseLeases for etcdserver version {}, minimum 3.3.0 required", _detectedVersion);
         co_return tl::unexpected(EtcdError::ETCD_SERVER_DOES_NOT_SUPPORT);
     }
@@ -1298,7 +1298,7 @@ Ichor::Task<tl::expected<LeaseLeasesResponse, EtcdError>> EtcdService::leaseLeas
 }
 
 Ichor::Task<tl::expected<AuthEnableResponse, EtcdError>> EtcdService::authEnable(AuthEnableRequest const &req) {
-    if(_detectedVersion < Version{3, 3, 0}) {
+    if(_detectedVersion < Version{.major=3, .minor=3, .patch=0}) {
         ICHOR_LOG_ERROR(_logger, "Cannot use authEnable for etcdserver version {}, minimum 3.3.0 required, see https://github.com/etcd-io/etcd/issues/6643", _detectedVersion);
         co_return tl::unexpected(EtcdError::ETCD_SERVER_DOES_NOT_SUPPORT);
     }
@@ -1307,7 +1307,7 @@ Ichor::Task<tl::expected<AuthEnableResponse, EtcdError>> EtcdService::authEnable
 }
 
 Ichor::Task<tl::expected<AuthDisableResponse, EtcdError>> EtcdService::authDisable(AuthDisableRequest const &req) {
-    if(_detectedVersion < Version{3, 3, 0}) {
+    if(_detectedVersion < Version{.major=3, .minor=3, .patch=0}) {
         ICHOR_LOG_ERROR(_logger, "Cannot use authDisable for etcdserver version {}, minimum 3.3.0 required, see https://github.com/etcd-io/etcd/issues/6643", _detectedVersion);
         co_return tl::unexpected(EtcdError::ETCD_SERVER_DOES_NOT_SUPPORT);
     }
@@ -1321,7 +1321,7 @@ Ichor::Task<tl::expected<AuthDisableResponse, EtcdError>> EtcdService::authDisab
 }
 
 Ichor::Task<tl::expected<AuthStatusResponse, EtcdError>> EtcdService::authStatus(AuthStatusRequest const &req) {
-    if(_detectedVersion < Version{3, 5, 0}) {
+    if(_detectedVersion < Version{.major=3, .minor=5, .patch=0}) {
         ICHOR_LOG_ERROR(_logger, "Cannot use AuthStatus for etcdserver version {}, minimum 3.5.0 required", _detectedVersion);
         co_return tl::unexpected(EtcdError::ETCD_SERVER_DOES_NOT_SUPPORT);
     }
@@ -1330,7 +1330,7 @@ Ichor::Task<tl::expected<AuthStatusResponse, EtcdError>> EtcdService::authStatus
 }
 
 Ichor::Task<tl::expected<AuthenticateResponse, EtcdError>> EtcdService::authenticate(AuthenticateRequest const &req) {
-    if(_detectedVersion < Version{3, 3, 0}) {
+    if(_detectedVersion < Version{.major=3, .minor=3, .patch=0}) {
         ICHOR_LOG_ERROR(_logger, "Cannot use authenticate for etcdserver version {}, minimum 3.3.0 required, see https://github.com/etcd-io/etcd/issues/6643", _detectedVersion);
         co_return tl::unexpected(EtcdError::ETCD_SERVER_DOES_NOT_SUPPORT);
     }
@@ -1344,11 +1344,11 @@ Ichor::Task<tl::expected<AuthenticateResponse, EtcdError>> EtcdService::authenti
 }
 
 Ichor::Task<tl::expected<AuthUserAddResponse, EtcdError>> EtcdService::userAdd(AuthUserAddRequest const &req) {
-    if(req.options && _detectedVersion < Version{3, 4, 0}) {
+    if(req.options && _detectedVersion < Version{.major=3, .minor=4, .patch=0}) {
         ICHOR_LOG_ERROR(_logger, "Cannot request options for etcd server for etcdserver version {}, minimum 3.4.0 required", _detectedVersion);
         co_return tl::unexpected(EtcdError::ETCD_SERVER_DOES_NOT_SUPPORT);
     }
-    if(req.hashedPassword && _detectedVersion < Version{3, 5, 0}) {
+    if(req.hashedPassword && _detectedVersion < Version{.major=3, .minor=5, .patch=0}) {
         ICHOR_LOG_ERROR(_logger, "Cannot request hashedPassword for etcd server for etcdserver version {}, minimum 3.5.0 required", _detectedVersion);
         co_return tl::unexpected(EtcdError::ETCD_SERVER_DOES_NOT_SUPPORT);
     }
@@ -1369,7 +1369,7 @@ Ichor::Task<tl::expected<AuthUserDeleteResponse, EtcdError>> EtcdService::userDe
 }
 
 Ichor::Task<tl::expected<AuthUserChangePasswordResponse, EtcdError>> EtcdService::userChangePassword(AuthUserChangePasswordRequest const &req) {
-    if(req.hashedPassword && _detectedVersion < Version{3, 5, 0}) {
+    if(req.hashedPassword && _detectedVersion < Version{.major=3, .minor=5, .patch=0}) {
         ICHOR_LOG_ERROR(_logger, "Cannot request hashedPassword for etcd server for etcdserver version {}, minimum 3.5.0 required", _detectedVersion);
         co_return tl::unexpected(EtcdError::ETCD_SERVER_DOES_NOT_SUPPORT);
     }
@@ -1406,7 +1406,7 @@ Ichor::Task<tl::expected<AuthRoleGrantPermissionResponse, EtcdError>> EtcdServic
 }
 
 Ichor::Task<tl::expected<AuthRoleRevokePermissionResponse, EtcdError>> EtcdService::roleRevokePermission(AuthRoleRevokePermissionRequest const &req) {
-    if(_detectedVersion < Version{3, 4, 0}) {
+    if(_detectedVersion < Version{.major=3, .minor=4, .patch=0}) {
         ICHOR_LOG_WARN(_logger, "Etcd version 3.3.X and lower contain a bug regarding parsing Key/RangeEnd. Results might not be what you expect due to not supporting UTF-8 nor binary. See https://github.com/etcd-io/etcd/issues/9424 for more information.");
         co_return co_await execute_request<AuthRoleRevokePermissionRequestBugWorkaround, AuthRoleRevokePermissionResponse>(fmt::format("{}/auth/role/revoke", _versionSpecificUrl), _auth, _logger, _mainConn, AuthRoleRevokePermissionRequestBugWorkaround{req});
     } else {
@@ -1468,7 +1468,7 @@ Ichor::Task<tl::expected<EtcdVersionReply, EtcdError>> EtcdService::version() {
         }
     }
 
-    co_return EtcdVersionReply{*etcdserverver, *etcdclusterver, etcdstoragever};
+    co_return EtcdVersionReply{.etcdserver=*etcdserverver, .etcdcluster=*etcdclusterver, .storage=etcdstoragever};
 }
 
 Ichor::v1::Version EtcdService::getDetectedVersion() const {

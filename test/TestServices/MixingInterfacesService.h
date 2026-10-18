@@ -86,7 +86,7 @@ struct CheckMixService final : public ICountService, public AdvancedService<Chec
 
             check(svc, existingMixTwo);
         } else {
-            _services.emplace(isvc.getServiceId(), Handle{&isvc, svc});
+            _services.emplace(isvc.getServiceId(), Handle{.isvc=&isvc, .iface=svc});
         }
 
         if(svcCount == 12) {
@@ -112,7 +112,7 @@ struct CheckMixService final : public ICountService, public AdvancedService<Chec
 
             check(existingMixOne, svc);
         } else {
-            _services.emplace(isvc.getServiceId(), Handle{&isvc, svc});
+            _services.emplace(isvc.getServiceId(), Handle{.isvc=&isvc, .iface=svc});
         }
 
         if(svcCount == 12) {

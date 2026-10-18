@@ -434,7 +434,7 @@ TEST_CASE("HttpHostTests") {
             reqCopy = req;
             address = req.address;
             route = req.route;
-            co_return HttpResponse{HttpStatus::ok, "text/plain", {}, {}};
+            co_return HttpResponse{.status=HttpStatus::ok, .contentType="text/plain", .body={}, .headers={}};
         });
         std::string req{"GET /some/route HTTP/1.1\r\ntestheader: test\r\nHost: 192.168.10.10\r\n\r\n"};
         conn.getService().rcvHandler(std::span<uint8_t const>{reinterpret_cast<uint8_t*>(req.data()), req.size()});
@@ -472,7 +472,7 @@ TEST_CASE("HttpHostTests") {
             reqCopy = req;
             address = req.address;
             route = req.route;
-            co_return HttpResponse{HttpStatus::ok, "text/plain", {}, {}};
+            co_return HttpResponse{.status=HttpStatus::ok, .contentType="text/plain", .body={}, .headers={}};
         });
         std::string req{"GET /some/route HTTP/1.1\r\ntestheader: test\r\n"};
         conn.getService().rcvHandler(std::span<uint8_t const>{reinterpret_cast<uint8_t*>(req.data()), req.size()});
@@ -525,13 +525,13 @@ TEST_CASE("HttpHostTests") {
             reqCopy = req;
             address = req.address;
             route = req.route;
-            co_return HttpResponse{HttpStatus::ok, "text/plain", {}, {}};
+            co_return HttpResponse{.status=HttpStatus::ok, .contentType="text/plain", .body={}, .headers={}};
         });
         auto reg2 = svc.getService().addRoute(HttpMethod::get, "/some/route2", [&reqCopy2, &address2, &route2](HttpRequest &req) -> Task<HttpResponse> {
             reqCopy2 = req;
             address2 = req.address;
             route2 = req.route;
-            co_return HttpResponse{HttpStatus::ok, "text/plain", {}, {}};
+            co_return HttpResponse{.status=HttpStatus::ok, .contentType="text/plain", .body={}, .headers={}};
         });
         std::string req{"GET /some/route HTTP/1.1\r\ntestheader: test\r\nHost: 192.168.10.10\r\n\r\nGET /some/route2 HTTP/1.1\r\ntestheader: test2\r\nHost: 192.168.10.11\r\n\r\n"};
         conn.getService().rcvHandler(std::span<uint8_t const>{reinterpret_cast<uint8_t*>(req.data()), req.size()});
@@ -592,7 +592,7 @@ TEST_CASE("HttpHostTests") {
             route = req.route;
             std::string_view body_view = "<html><body>This is my basic webpage</body></html>";
             std::vector<uint8_t> body{body_view.begin(), body_view.end()};
-            co_return HttpResponse{HttpStatus::ok, "text/plain", std::move(body), std::move(resHeaders)};
+            co_return HttpResponse{.status=HttpStatus::ok, .contentType="text/plain", .body=std::move(body), .headers=std::move(resHeaders)};
         });
         std::string req{"GET /some/route HTTP/1.1\r\ntestheader: test\r\nHost: 192.168.10.10\r\n\r\n"};
         conn.getService().rcvHandler(std::span<uint8_t const>{reinterpret_cast<uint8_t*>(req.data()), req.size()});
@@ -630,7 +630,7 @@ TEST_CASE("HttpHostTests") {
             reqCopy = req;
             address = req.address;
             route = req.route;
-            co_return HttpResponse{HttpStatus::ok, "text/plain", {}, {}};
+            co_return HttpResponse{.status=HttpStatus::ok, .contentType="text/plain", .body={}, .headers={}};
         });
         std::string req{"POST /some/route HTTP/1.1\r\ntestheader: test\r\nContent-Length: 50\r\nHost: 192.168.10.10\r\n\r\n<html><body>This is my basic webpage</body></html>"};
         conn.getService().rcvHandler(std::span<uint8_t const>{reinterpret_cast<uint8_t*>(req.data()), req.size()});
@@ -672,7 +672,7 @@ TEST_CASE("HttpHostTests") {
             reqCopy = req;
             address = req.address;
             route = req.route;
-            co_return HttpResponse{HttpStatus::ok, "text/plain", {}, {}};
+            co_return HttpResponse{.status=HttpStatus::ok, .contentType="text/plain", .body={}, .headers={}};
         });
         std::string req{"POST /some/route HTTP/1.1\r\ntestheader: test\r\nHost: 192.168.10.10\r\nContent-Length: 50\r\n\r\n<html><body>This is my basic webpa\r\n</body></html>"};
         conn.getService().rcvHandler(std::span<uint8_t const>{reinterpret_cast<uint8_t*>(req.data()), req.size()});
@@ -714,7 +714,7 @@ TEST_CASE("HttpHostTests") {
             reqCopy = req;
             address = req.address;
             route = req.route;
-            co_return HttpResponse{HttpStatus::ok, "text/plain", {}, {}};
+            co_return HttpResponse{.status=HttpStatus::ok, .contentType="text/plain", .body={}, .headers={}};
         });
         std::string req{"POST /some/route HTTP/1.1\r\ntestheader: test\r\nHost: 192.168.10.10\r\nContent-Length: 50\r\n\r\n<html><body>This"};
         conn.getService().rcvHandler(std::span<uint8_t const>{reinterpret_cast<uint8_t*>(req.data()), req.size()});
@@ -767,7 +767,7 @@ TEST_CASE("HttpHostTests") {
         bool handlerActivated{};
         auto reg = svc.getService().addRoute(HttpMethod::post, "/some/route", [&handlerActivated](HttpRequest &req) -> Task<HttpResponse> {
             handlerActivated = true;
-            co_return HttpResponse{HttpStatus::ok, "text/plain", {}, {}};
+            co_return HttpResponse{.status=HttpStatus::ok, .contentType="text/plain", .body={}, .headers={}};
         });
         std::string req{"POST /some/route HTTP/1.1\r\ntestheader: test\r\nContent-Length: 50\r\nContent-Length: 50\r\nHost: 192.168.10.10\r\n\r\n<html><body>This is my basic webpage</body></html>"};
         conn.getService().rcvHandler(std::span<uint8_t const>{reinterpret_cast<uint8_t*>(req.data()), req.size()});
@@ -781,6 +781,28 @@ TEST_CASE("HttpHostTests") {
         REQUIRE(conn.getService().sentMessages.size() == 1);
         std::string_view sentMsg{reinterpret_cast<const char *>(conn.getService().sentMessages[0].data()), conn.getService().sentMessages[0].size()};
         REQUIRE(sentMsg == "HTTP/1.1 400 Bad Request\r\n\r\n");
+
+        REQUIRE(!handlerActivated);
+    }
+
+    SECTION("GET route without handler, while the method has one") {
+        bool handlerActivated{};
+        auto reg = svc.getService().addRoute(HttpMethod::get, "/some/route", [&handlerActivated](HttpRequest &req) -> Task<HttpResponse> {
+            handlerActivated = true;
+            co_return HttpResponse{.status=HttpStatus::ok, .contentType="text/plain", .body={}, .headers={}};
+        });
+        std::string req{"GET /other/route HTTP/1.1\r\nHost: 192.168.10.10\r\n\r\n"};
+        conn.getService().rcvHandler(std::span<uint8_t const>{reinterpret_cast<uint8_t*>(req.data()), req.size()});
+        REQUIRE(qm.events.size() == 1);
+        REQUIRE(qm.events[0]->get_type() == RunFunctionEventAsync::TYPE);
+        auto *evt = qm.events[0].get();
+        auto gen2 = static_cast<RunFunctionEventAsync*>(evt)->fun();
+        auto it2 = gen2.begin();
+        REQUIRE(it2.get_finished());
+        auto _ = it2.get_value<IchorBehaviour>();
+        REQUIRE(conn.getService().sentMessages.size() == 1);
+        std::string_view sentMsg{reinterpret_cast<const char *>(conn.getService().sentMessages[0].data()), conn.getService().sentMessages[0].size()};
+        REQUIRE(sentMsg == "HTTP/1.1 404 Not Found\r\n\r\n");
 
         REQUIRE(!handlerActivated);
     }

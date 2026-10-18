@@ -6,7 +6,7 @@ using namespace Ichor;
 using namespace Ichor::v1;
 
 struct IConstructorInjectionTestService {
-    virtual ~IConstructorInjectionTestService() {}
+    virtual ~IConstructorInjectionTestService() = default;
     [[nodiscard]] virtual ServiceIdType getServiceId() const noexcept = 0;
 };
 

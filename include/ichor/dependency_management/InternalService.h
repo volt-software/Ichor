@@ -12,7 +12,7 @@ namespace Ichor::Detail {
     template <typename OriginalType>
     class InternalService : public IService {
     public:
-        InternalService() noexcept : IService(), _properties(), _serviceId(ServiceIdType{Detail::_serviceIdCounter.fetch_add(1, std::memory_order_relaxed)}), _servicePriority(INTERNAL_EVENT_PRIORITY), _serviceGid(sole::uuid4()), _serviceState(ServiceState::INSTALLED) {
+        InternalService() noexcept : IService(), _properties(), _serviceId(ServiceIdType{Detail::_serviceIdCounter.fetch_add(1, std::memory_order_relaxed)}), _serviceGid(sole::uuid4()) {
         }
 
         ~InternalService() noexcept override {
@@ -79,8 +79,8 @@ namespace Ichor::Detail {
     private:
 
         ServiceIdType _serviceId;
-        uint64_t _servicePriority;
+        uint64_t _servicePriority{INTERNAL_EVENT_PRIORITY};
         sole::uuid _serviceGid;
-        ServiceState _serviceState;
+        ServiceState _serviceState{ServiceState::INSTALLED};
     };
 }

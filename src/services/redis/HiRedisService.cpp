@@ -9,7 +9,7 @@
 
 using namespace std::literals;
 
-#define FMT_INLINE_BUFFER_SIZE 1024
+static constexpr size_t INLINE_BUFFER_SIZE = 1024;
 
 #define ICHOR_WAIT_IF_NOT_CONNECTED \
 if(_redisContext == nullptr) { \
@@ -76,8 +76,10 @@ namespace Ichor {
                     _printReply(r->element[i], "\t");
                 }
                 break;
+            default:
+                fmt::print("{}Unknown reply type {} from redis\n", indent, r->type);
+                break;
         }
-        fmt::print("{}Unknown reply from redis type {}\n", indent, r->type);
     }
 
     // this function assumes it is being called from the correct ichor thread.
@@ -100,8 +102,8 @@ namespace Ichor {
         ichorReply->evt.set();
     }
 
-    static fmt::basic_memory_buffer<char, FMT_INLINE_BUFFER_SIZE> _formatSet(std::string_view const &key, std::string_view const &value, Ichor::v1::RedisSetOptions const &opts) {
-        fmt::basic_memory_buffer<char, FMT_INLINE_BUFFER_SIZE> buf{};
+    static fmt::basic_memory_buffer<char, INLINE_BUFFER_SIZE> _formatSet(std::string_view const &key, std::string_view const &value, Ichor::v1::RedisSetOptions const &opts) {
+        fmt::basic_memory_buffer<char, INLINE_BUFFER_SIZE> buf{};
         fmt::format_to(std::back_inserter(buf), "SET {} {}", key, value);
         uint32_t timeOptsSet{};
         if(opts.NX && opts.XX) [[unlikely]] {
@@ -346,7 +348,7 @@ Ichor::Task<tl::expected<Ichor::v1::RedisSetReply, Ichor::v1::RedisError>> Ichor
         co_return tl::unexpected(RedisError::QUEUED);
     }
 
-    co_return RedisSetReply{true, evt.reply->str};
+    co_return RedisSetReply{.executed=true, .oldValue=evt.reply->str};
 }
 
 Ichor::Task<tl::expected<Ichor::v1::RedisSetReply, Ichor::v1::RedisError>> Ichor::v1::HiredisService::set(std::string_view key, std::string_view value, RedisSetOptions const &opts) {
@@ -374,7 +376,7 @@ Ichor::Task<tl::expected<Ichor::v1::RedisSetReply, Ichor::v1::RedisError>> Ichor
         co_return tl::unexpected(RedisError::QUEUED);
     }
 
-    co_return RedisSetReply{true, evt.reply->str};
+    co_return RedisSetReply{.executed=true, .oldValue=evt.reply->str};
 }
 
 Ichor::Task<tl::expected<Ichor::v1::RedisGetReply, Ichor::v1::RedisError>> Ichor::v1::HiredisService::get(std::string_view key) {
@@ -410,7 +412,7 @@ Ichor::Task<tl::expected<Ichor::v1::RedisGetReply, Ichor::v1::RedisError>> Ichor
 Ichor::Task<tl::expected<Ichor::v1::RedisGetReply, Ichor::v1::RedisError>> Ichor::v1::HiredisService::getdel(std::string_view key) {
     ICHOR_WAIT_IF_NOT_CONNECTED;
 
-    if(*_redisVersion < Version{6, 2, 0}) {
+    if(*_redisVersion < Version{.major=6, .minor=2, .patch=0}) {
         co_return tl::unexpected(RedisError::FUNCTION_NOT_AVAILABLE_IN_SERVER);
     }
 
@@ -518,7 +520,7 @@ Ichor::Task<tl::expected<Ichor::v1::RedisIntegerReply, Ichor::v1::RedisError>> I
 Ichor::Task<tl::expected<Ichor::v1::RedisIntegerReply, Ichor::v1::RedisError>> Ichor::v1::HiredisService::incrByFloat(std::string_view keys, double incr) {
     ICHOR_WAIT_IF_NOT_CONNECTED;
 
-    if(*_redisVersion < Version{2, 6, 0}) {
+    if(*_redisVersion < Version{.major=2, .minor=6, .patch=0}) {
         co_return tl::unexpected(RedisError::FUNCTION_NOT_AVAILABLE_IN_SERVER);
     }
 
@@ -600,7 +602,7 @@ Ichor::Task<tl::expected<Ichor::v1::RedisIntegerReply, Ichor::v1::RedisError>> I
 Ichor::Task<tl::expected<Ichor::v1::RedisIntegerReply, Ichor::v1::RedisError>> Ichor::v1::HiredisService::strlen(std::string_view key) {
     ICHOR_WAIT_IF_NOT_CONNECTED;
 
-    if(*_redisVersion < Version{2, 2, 0}) {
+    if(*_redisVersion < Version{.major=2, .minor=2, .patch=0}) {
         co_return tl::unexpected(RedisError::FUNCTION_NOT_AVAILABLE_IN_SERVER);
     }
 
@@ -630,7 +632,7 @@ Ichor::Task<tl::expected<Ichor::v1::RedisIntegerReply, Ichor::v1::RedisError>> I
 Ichor::Task<tl::expected<void, Ichor::v1::RedisError>> Ichor::v1::HiredisService::multi() {
     ICHOR_WAIT_IF_NOT_CONNECTED;
 
-    if(*_redisVersion < Version{1, 2, 0}) {
+    if(*_redisVersion < Version{.major=1, .minor=2, .patch=0}) {
         co_return tl::unexpected(RedisError::FUNCTION_NOT_AVAILABLE_IN_SERVER);
     }
 
@@ -660,7 +662,7 @@ Ichor::Task<tl::expected<std::vector<std::variant<Ichor::v1::RedisGetReply, Icho
 
     ICHOR_WAIT_IF_NOT_CONNECTED;
 
-    if(*_redisVersion < Version{1, 2, 0}) {
+    if(*_redisVersion < Version{.major=1, .minor=2, .patch=0}) {
         co_return tl::unexpected(RedisError::FUNCTION_NOT_AVAILABLE_IN_SERVER);
     }
 
@@ -704,7 +706,7 @@ Ichor::Task<tl::expected<std::vector<std::variant<Ichor::v1::RedisGetReply, Icho
                     ICHOR_LOG_ERROR(_logger, "Please open a bug report, queued responses does not match");
                     std::terminate();
                 }
-                ret.emplace_back(RedisSetReply{true, element->str});
+                ret.emplace_back(RedisSetReply{.executed=true, .oldValue=element->str});
                 break;
             case typeNameHash<RedisAuthReply>():
                 if(element->type != REDIS_REPLY_STRING) [[unlikely]] {
@@ -736,7 +738,7 @@ Ichor::Task<tl::expected<void, Ichor::v1::RedisError>> Ichor::v1::HiredisService
 
     ICHOR_WAIT_IF_NOT_CONNECTED;
 
-    if(*_redisVersion < Version{2, 0, 0}) {
+    if(*_redisVersion < Version{.major=2, .minor=0, .patch=0}) {
         co_return tl::unexpected(RedisError::FUNCTION_NOT_AVAILABLE_IN_SERVER);
     }
 
@@ -858,7 +860,9 @@ bool Ichor::v1::HiredisService::getDebug() const noexcept {
 tl::expected<void, Ichor::StartError> Ichor::v1::HiredisService::connect(std::string const &addr, uint16_t port) {
     redisOptions opts{};
     REDIS_OPTIONS_SET_TCP(&opts, addr.c_str(), port);
+    // NOLINTNEXTLINE(bugprone-signed-bitwise): hiredis defines its options as int
     opts.options |= REDIS_OPT_REUSEADDR;
+    // NOLINTNEXTLINE(bugprone-signed-bitwise): hiredis defines its options as int
     opts.options |= REDIS_OPT_NOAUTOFREEREPLIES;
     _redisContext = redisAsyncConnectWithOptions(&opts);
     if (_redisContext->err) [[unlikely]] {

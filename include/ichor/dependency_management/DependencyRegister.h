@@ -49,11 +49,7 @@ namespace Ichor {
             _registrations.emplace(typeNameHash<Interface>(), std::make_tuple(
                     Dependency{typeNameHash<Interface>(), typeName<Interface>(), DependencyFlags::REQUIRED, 0},
                     std::function<void(v1::NeverNull<void*>, IService&)>{[svc](v1::NeverNull<void*> dep, IService& isvc){
-                        if constexpr (std::is_same_v<Interface, std::remove_pointer_t<DependencyManager>>) {
-                            svc->addDependencyInstance(reinterpret_cast<Interface*>(dep.get()), &isvc);
-                        } else if constexpr (std::is_same_v<Interface, std::remove_pointer_t<IService>>) {
-                            svc->addDependencyInstance(reinterpret_cast<Interface*>(dep.get()), &isvc);
-                        } else if constexpr (std::is_same_v<Interface, std::remove_pointer_t<IEventQueue>>) {
+                        if constexpr (std::is_same_v<Interface, std::remove_pointer_t<DependencyManager>> || std::is_same_v<Interface, std::remove_pointer_t<IService>> || std::is_same_v<Interface, std::remove_pointer_t<IEventQueue>>) {
                             svc->addDependencyInstance(reinterpret_cast<Interface*>(dep.get()), &isvc);
                         } else {
                             ScopedServiceProxy<Interface> proxy{v1::NeverNull<Interface*>(reinterpret_cast<Interface*>(dep.get())), isvc.getServiceId()};
@@ -61,11 +57,7 @@ namespace Ichor {
                         }
                     }},
                     std::function<void(v1::NeverNull<void*>, IService&)>{[svc](v1::NeverNull<void*> dep, IService& isvc){
-                        if constexpr (std::is_same_v<Interface, std::remove_pointer_t<DependencyManager>>) {
-                            svc->removeDependencyInstance(reinterpret_cast<Interface*>(dep.get()), &isvc);
-                        } else if constexpr (std::is_same_v<Interface, std::remove_pointer_t<IService>>) {
-                            svc->removeDependencyInstance(reinterpret_cast<Interface*>(dep.get()), &isvc);
-                        } else if constexpr (std::is_same_v<Interface, std::remove_pointer_t<IEventQueue>>) {
+                        if constexpr (std::is_same_v<Interface, std::remove_pointer_t<DependencyManager>> || std::is_same_v<Interface, std::remove_pointer_t<IService>> || std::is_same_v<Interface, std::remove_pointer_t<IEventQueue>>) {
                             svc->removeDependencyInstance(reinterpret_cast<Interface*>(dep.get()), &isvc);
                         } else {
                             ScopedServiceProxy<Interface> proxy{v1::NeverNull<Interface*>(reinterpret_cast<Interface*>(dep.get())), isvc.getServiceId()};

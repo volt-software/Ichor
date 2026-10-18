@@ -110,7 +110,7 @@ namespace Ichor {
 
         Task<void> get_delete_test() const {
             ICHOR_LOG_INFO(_logger, "running test");
-            if(_v >= Version{6, 2, 0}) {
+            if(_v >= Version{.major=6, .minor=2, .patch=0}) {
                 auto setReply = co_await _redis->set("get_delete_key", "get_delete");
                 if(!setReply) {
                     fmt::println("set");

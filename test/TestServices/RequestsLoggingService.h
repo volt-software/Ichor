@@ -13,7 +13,7 @@ namespace Ichor {
             reg.registerDependency<ILogger>(this, DependencyFlags::REQUIRED);
         }
 
-        ~RequestsLoggingService() = default;
+        ~RequestsLoggingService() override = default;
 
         void addDependencyInstance(Ichor::ScopedServiceProxy<ILogger*>, IService&) {
         }

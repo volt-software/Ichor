@@ -12,7 +12,7 @@
 #include <ichor/ichor_liburing.h>
 #include <ichor/ScopedServiceProxy.h>
 
-Ichor::v1::IOUringTcpHostService::IOUringTcpHostService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)), _socket(-1), _bindFd(), _priority(INTERNAL_EVENT_PRIORITY), _quit() {
+Ichor::v1::IOUringTcpHostService::IOUringTcpHostService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {
     reg.registerDependency<ILogger>(this, DependencyFlags::REQUIRED);
     reg.registerDependency<IIOUringQueue>(this, DependencyFlags::REQUIRED);
 }
@@ -32,7 +32,7 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::v1::IOUringTcpHostServ
 	}
 
 
-    if(_q->getKernelVersion() >= Version{5, 19, 0}) {
+    if(_q->getKernelVersion() >= Version{.major=5, .minor=19, .patch=0}) {
         AsyncManualResetEvent evt;
 
         int res{};
@@ -53,7 +53,7 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::v1::IOUringTcpHostServ
         _socket = socket(AF_INET, SOCK_STREAM | SOCK_CLOEXEC, 0);
     }
 
-    if(_q->getKernelVersion() >= Version{6, 7, 0}) {
+    if(_q->getKernelVersion() >= Version{.major=6, .minor=7, .patch=0}) {
         int resReuse{};
         int resNodelay{};
         AsyncManualResetEvent evtSockopt;
@@ -114,7 +114,7 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::v1::IOUringTcpHostServ
     address.sin_port = ::htons(Ichor::v1::any_cast<uint16_t>((getProperties())["Port"]));
 
     // io_uring_prep_bind is not yet available in the kernel.
-    _bindFd = ::bind(_socket, (sockaddr *)&address, sizeof(address));
+    _bindFd = ::bind(_socket, reinterpret_cast<sockaddr *>(&address), sizeof(address));
 
     if(_bindFd == -1) {
         close(_socket);
@@ -130,7 +130,7 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::v1::IOUringTcpHostServ
         co_return tl::unexpected(StartError::FAILED);
     }
 
-    if(_q->getKernelVersion() >= Version{5, 19, 0}) {
+    if(_q->getKernelVersion() >= Version{.major=5, .minor=19, .patch=0}) {
         auto *sqe = _q->getSqeWithData(this, createAcceptHandler());
         io_uring_prep_multishot_accept(sqe, _socket, nullptr, nullptr, SOCK_CLOEXEC);
     } else {
@@ -146,7 +146,7 @@ Ichor::Task<void> Ichor::v1::IOUringTcpHostService::stop() {
     INTERNAL_IO_DEBUG("quit");
 
     if(_socket >= 0) {
-        if(_q->getKernelVersion() >= Version{5, 19, 0}) {
+        if(_q->getKernelVersion() >= Version{.major=5, .minor=19, .patch=0}) {
             int shutdownRes{};
             int closeRes{};
             AsyncManualResetEvent evt;
@@ -243,7 +243,7 @@ Ichor::UringCallback Ichor::v1::IOUringTcpHostService::createAcceptHandler() noe
         if(_logger->getLogLevel() == LogLevel::LOG_TRACE) {
             sockaddr_in client_addr{};
             socklen_t addr_size = sizeof(client_addr);
-            if(getpeername(cqe->res, (struct sockaddr *)&client_addr, &addr_size) != 0) {
+            if(getpeername(cqe->res, reinterpret_cast<struct sockaddr *>(&client_addr), &addr_size) != 0) {
                 ICHOR_LOG_ERROR(_logger, "new connection, but could not get peername");
             } else {
                 auto *ip = ::inet_ntoa(client_addr.sin_addr);
@@ -266,7 +266,7 @@ Ichor::UringCallback Ichor::v1::IOUringTcpHostService::createAcceptHandler() noe
 		}
         _connections.emplace_back(GetThreadLocalManager().template createServiceManager<IOUringTcpConnectionService<IHostConnectionService>, IConnectionService, IHostConnectionService>(std::move(props))->getServiceId());
 
-        if(_q->getKernelVersion() < Version{5, 19, 0}) {
+        if(_q->getKernelVersion() < Version{.major=5, .minor=19, .patch=0}) {
             auto *sqe = _q->getSqeWithData(this, createAcceptHandler());
             io_uring_prep_accept(sqe, _socket, nullptr, nullptr, SOCK_CLOEXEC);
         } else if((cqe->flags & IORING_CQE_F_MORE) != IORING_CQE_F_MORE) {

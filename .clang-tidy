@@ -1,0 +1,40 @@
+# clang-tidy configuration, run on every C++ source of Ichor as it compiles when ICHOR_RUN_CLANG_TIDY
+# is on (CMakeLists.txt), and read by clangd. A finding fails that compile. Written against
+# clang-tidy 23; CMakeLists.txt refuses an older one.
+#
+# Every bugprone and modernize check, except:
+# - modernize-use-trailing-return-type: a style, not a modernisation. It would rewrite every
+#   function signature to `auto f() -> T`.
+# - bugprone-easily-swappable-parameters: what it finds are pairs such as key and value, or user
+#   and password, whose order is the API. Telling them apart takes a type per parameter, an API
+#   break with no bug behind it.
+#
+# Options:
+# - bugprone-exception-escape.CheckMain: an exception escaping main terminates the program, which
+#   is all the examples and benchmarks would do with it.
+# - bugprone-signed-bitwise.IgnorePositiveIntegerLiterals: shifting or masking by a positive literal
+#   is well defined, `x << 8` needs no 8u.
+# - modernize-avoid-c-arrays.AllowStringArrays: a char array of deduced size initialised from a
+#   string literal is that literal, std::array would make its length something to keep in sync.
+#
+# A finding that is only wrong at one place gets a NOLINT comment with the reason next to it
+# instead.
+#
+# Headers are checked when their path has an include/, src/, test/, examples/ or benchmarks/
+# directory in it, unless they are the vendored code in those. That would match a third party
+# library's include/ as well, but the libraries in external/ and the system's are included as
+# system headers, which clang-tidy never checks. CMakeLists.txt marks the vendored sources
+# SKIP_LINTING.
+Checks: >-
+  -*,
+  bugprone-*,
+  modernize-*,
+  -modernize-use-trailing-return-type,
+  -bugprone-easily-swappable-parameters
+WarningsAsErrors: '*'
+HeaderFilterRegex: '/(include|src|test|examples|benchmarks)/'
+ExcludeHeaderFilterRegex: '/external/|/common/lyra\.hpp$|/gsm_enc/|/beast_benchmark/fields_alloc\.hpp$'
+CheckOptions:
+  bugprone-exception-escape.CheckMain: false
+  bugprone-signed-bitwise.IgnorePositiveIntegerLiterals: true
+  modernize-avoid-c-arrays.AllowStringArrays: true

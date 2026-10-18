@@ -30,7 +30,7 @@ namespace Ichor::v1 {
         /// Thread-safe.
         bool startTimer(bool fireImmediately) final;
         /// Thread-safe.
-        bool stopTimer(std::function<void(void)> cb) final;
+        bool stopTimer(std::function<void()> cb) final;
 
         /// Thread-safe.
         [[nodiscard]] TimerState getState() const noexcept final;
@@ -75,7 +75,7 @@ namespace Ichor::v1 {
         std::function<void()> _fn{};
         uint64_t _priority{INTERNAL_EVENT_PRIORITY};
         ServiceIdType _requestingServiceId{};
-        std::vector<std::function<void(void)>> _quitCbs;
+        std::vector<std::function<void()>> _quitCbs;
         mutable RealtimeMutex _m;
     };
 }

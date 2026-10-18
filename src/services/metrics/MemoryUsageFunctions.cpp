@@ -100,14 +100,15 @@ size_t getCurrentRSS( )
     long rss = 0L;
     FILE* fp = fopen( "/proc/self/statm", "re" );
     if ( fp == nullptr )
-        return (size_t)0L;      /* Can't open? */
+        return static_cast<size_t>(0L);      /* Can't open? */
+    // NOLINTNEXTLINE(bugprone-unchecked-string-to-number-conversion): the kernel writes /proc/self/statm, the number is always valid
     if ( fscanf( fp, "%*s%ld", &rss ) != 1 )
     {
         fclose( fp );
-        return (size_t)0L;      /* Can't read? */
+        return static_cast<size_t>(0L);      /* Can't read? */
     }
     fclose( fp );
-    return (size_t)rss * (size_t)sysconf( _SC_PAGESIZE);
+    return static_cast<size_t>(rss) * static_cast<size_t>(sysconf( _SC_PAGESIZE));
 
 #else
     /* AIX, BSD, Solaris, and Unknown OS ------------------------ */

@@ -8,12 +8,15 @@
 #include <ichor/dependency_management/InternalServiceLifecycleManager.h>
 
 #include <fmt/core.h>
+#include <bit>
+#include <limits>
 #include <unistd.h>
 #include <sys/mman.h>
 #include <cstdlib>
 #include <algorithm>
 #include <memory>
 #include <mutex>
+#include <utility>
 #include <ichor/event_queues/IIOUringQueue.h>
 #include <ichor/stl/LinuxUtils.h>
 #include <ichor/stl/CompilerSpecific.h>
@@ -190,7 +193,7 @@ struct fmt::formatter<io_uring_op> {
             case io_uring_op::IORING_OP_LAST:
                 return fmt::format_to(ctx.out(), "io_uring_op::IORING_OP_LAST");
         }
-        return fmt::format_to(ctx.out(), "io_uring_op:: {} ???  report bug!", (uint32_t)input);
+        return fmt::format_to(ctx.out(), "io_uring_op:: {} ???  report bug!", static_cast<uint32_t>(input));
     }
 };
 
@@ -312,21 +315,21 @@ namespace Ichor {
 
     std::string_view IOUringBuf::readMemory(unsigned int entry) const noexcept {
 #if defined(ICHOR_USE_HARDENING) || defined(ICHOR_ENABLE_INTERNAL_DEBUGGING)
-        if(entry > _entries) {
+        if(entry >= _entries) {
             std::terminate();
         }
 #endif
 
-        return std::string_view{_entriesBuf + _entryBufferSize * entry, _entryBufferSize};
+        return std::string_view{_entriesBuf + static_cast<size_t>(_entryBufferSize) * entry, _entryBufferSize};
     }
 
     void IOUringBuf::markEntryAvailableAgain(unsigned short entry) noexcept {
 #if defined(ICHOR_USE_HARDENING) || defined(ICHOR_ENABLE_INTERNAL_DEBUGGING)
-        if(entry > _entries) {
+        if(entry >= _entries) {
             std::terminate();
         }
 #endif
-        io_uring_buf_ring_add(_bufRing, _entriesBuf + _entryBufferSize * entry, _entryBufferSize, entry, _mask, entry);
+        io_uring_buf_ring_add(_bufRing, _entriesBuf + static_cast<size_t>(_entryBufferSize) * entry, _entryBufferSize, entry, _mask, entry);
         io_uring_buf_ring_advance(_bufRing, 1);
     }
 }
@@ -364,10 +367,10 @@ namespace Ichor::Detail {
             }
 
             io_uring_params p{};
-            if(kernelVersion >= v1::Version{5, 19, 0}) {
+            if(kernelVersion >= v1::Version{.major=5, .minor=19, .patch=0}) {
                 p.flags |= IORING_SETUP_COOP_TASKRUN;
             }
-            if(kernelVersion >= v1::Version{6, 0, 0}) {
+            if(kernelVersion >= v1::Version{.major=6, .minor=0, .patch=0}) {
                 p.flags |= IORING_SETUP_SINGLE_ISSUER;
             }
             auto ret = io_uring_queue_init_params(CROSS_THREAD_RING_ENTRIES, &r.ring, &p);
@@ -405,12 +408,12 @@ namespace Ichor::Detail {
             std::terminate();
         }
 
-        if(*version < v1::Version{5, 4, 0}) {
+        if(*version < v1::Version{.major=5, .minor=4, .patch=0}) {
             fmt::println("Kernel version {} is too old, use at least 5.4.0 or newer.", *version);
             std::terminate();
         }
 
-        if(*version < v1::Version{5, 18, 0}) {
+        if(*version < v1::Version{.major=5, .minor=18, .patch=0}) {
             fmt::println("WARNING! Kernel version {} is too old to support inserting events from other threads, use at least 5.18.0 or newer.", *version);
         }
 
@@ -476,14 +479,14 @@ namespace Ichor::Detail {
         Event *procEvent = event.release();
 //        fmt::println("pushEventInternal {} {}", procEvent->get_name(), reinterpret_cast<void*>(procEvent));
         if(std::this_thread::get_id() != _threadId) [[unlikely]] {
-            if(_kernelVersion < v1::Version{5, 18, 0}) [[unlikely]] {
+            if(_kernelVersion < v1::Version{.major=5, .minor=18, .patch=0}) [[unlikely]] {
                 fmt::println("Ignored previous warning about kernel too old for inserting events from other threads. Terminating.");
                 std::terminate();
             }
 
             TSAN_ANNOTATE_HAPPENS_BEFORE(procEvent);
             {
-                std::lock_guard const l{_crossThreadEventsMutex};
+                std::scoped_lock const l{_crossThreadEventsMutex};
                 _crossThreadEvents.push_back(procEvent);
             }
 
@@ -599,22 +602,22 @@ namespace Ichor::Detail {
         _eventQueue = std::make_unique<io_uring>();
         _eventQueuePtr = _eventQueue.get();
         io_uring_params p{};
-        if(_kernelVersion >= v1::Version{5, 19, 0}) {
+        if(_kernelVersion >= v1::Version{.major=5, .minor=19, .patch=0}) {
             p.flags |= IORING_SETUP_COOP_TASKRUN;
         } else {
             fmt::println("IORING_SETUP_COOP_TASKRUN not supported, requires kernel >= 5.19.0, expect reduced performance.");
         }
-        if(_kernelVersion >= v1::Version{6, 0, 0}) {
+        if(_kernelVersion >= v1::Version{.major=6, .minor=0, .patch=0}) {
             p.flags |= IORING_SETUP_SINGLE_ISSUER;
         } else {
             fmt::println("IORING_SETUP_SINGLE_ISSUER not supported, requires kernel >= 6.0.0, expect reduced performance.");
         }
-        if(_kernelVersion >= v1::Version{6, 1, 0}) {
+        if(_kernelVersion >= v1::Version{.major=6, .minor=1, .patch=0}) {
             p.flags |= IORING_SETUP_DEFER_TASKRUN;
         } else {
             fmt::println("IORING_SETUP_DEFER_TASKRUN not supported, requires kernel >= 6.1.0, expect reduced performance.");
         }
-        if(_kernelVersion >= v1::Version{5, 5, 0}) {
+        if(_kernelVersion >= v1::Version{.major=5, .minor=5, .patch=0}) {
             // A larger completion queue avoids the (slow) kernel overflow list when bursts of completions exceed the default of 2 * _entriesCount
             p.flags |= IORING_SETUP_CQSIZE;
             p.cq_entries = std::min(_entriesCount * CQ_ENTRIES_MULTIPLIER, MAX_CQ_ENTRIES);
@@ -720,7 +723,7 @@ namespace Ichor::Detail {
                 fmt::println("io_uring_submit() failed, ret {}.", -ret);
                 std::terminate();
             }
-            if((unsigned)ret != _entriesCount - space) [[unlikely]] {
+            if(static_cast<unsigned>(ret) != _entriesCount - space) [[unlikely]] {
 //                fmt::println("io_uring_submit {}", ret);
                 fmt::println("submit wrong amount1 {} {} {}", ret, _entriesCount, space);
 #ifdef ICHOR_ENABLE_INTERNAL_URING_DEBUGGING
@@ -816,7 +819,7 @@ namespace Ichor::Detail {
 
         // Cancel everything still in flight (e.g. multishot recvs/accepts that keep completing), otherwise the loop below wouldn't end.
         auto cancelAllInFlight = [this]() {
-            if(_kernelVersion < v1::Version{5, 19, 0}) {
+            if(_kernelVersion < v1::Version{.major=5, .minor=19, .patch=0}) {
                 return;
             }
             auto *sqe = getSqe();
@@ -886,7 +889,7 @@ namespace Ichor::Detail {
 
         {
             // events pushed from other threads that weren't processed anymore
-            std::lock_guard const l{_crossThreadEventsMutex};
+            std::scoped_lock const l{_crossThreadEventsMutex};
             for(auto *evt : _crossThreadEvents) {
                 delete evt;
                 _pendingEvents.fetch_sub(1, std::memory_order_acq_rel);
@@ -971,7 +974,7 @@ namespace Ichor::Detail {
                 fmt::println("io_uring_submit() failed, ret {}", -ret);
                 std::terminate();
             }
-            if((unsigned int)ret != _entriesCount) [[unlikely]] {
+            if(std::cmp_not_equal(ret, _entriesCount)) [[unlikely]] {
                 fmt::println("submit wrong amount3 {} {} {}", ret, _entriesCount, space);
 #ifdef ICHOR_ENABLE_INTERNAL_URING_DEBUGGING
                 afterSubmitDebug(ret, space);
@@ -991,7 +994,7 @@ namespace Ichor::Detail {
             fmt::println("io_uring_submit() failed, ret {}", -ret);
             std::terminate();
         }
-        if((unsigned int)ret != _entriesCount - space) [[unlikely]] {
+        if(static_cast<unsigned int>(ret) != _entriesCount - space) [[unlikely]] {
             fmt::println("submit wrong amount4 {} {} {}", ret, _entriesCount, space);
 #ifdef ICHOR_ENABLE_INTERNAL_URING_DEBUGGING
             afterSubmitDebug(ret, space);
@@ -1014,7 +1017,7 @@ namespace Ichor::Detail {
             std::terminate();
         }
 
-        if((unsigned int)ret != _entriesCount - space) [[unlikely]] {
+        if(static_cast<unsigned int>(ret) != _entriesCount - space) [[unlikely]] {
             fmt::println("submit wrong amount5 {} {} {}", ret, _entriesCount, space);
 #ifdef ICHOR_ENABLE_INTERNAL_URING_DEBUGGING
             afterSubmitDebug(ret, space);
@@ -1042,13 +1045,13 @@ namespace Ichor::Detail {
             // it seems all code in Ichor so far keeps state stable until completion, so return false shouldn't be necessary.
 //            return false;
         }
-        if(_kernelVersion < v1::Version{6, 7, 0}) {
+        if(_kernelVersion < v1::Version{.major=6, .minor=7, .patch=0}) {
             fmt::println("SOCKET_URING_OP_GETSOCKOPT/SOCKET_URING_OP_SETSOCKOPT not supported, requires kernel >= 6.7.0, expect reduced socket creation performance.");
         }
-        if(_kernelVersion < v1::Version{6, 0, 0}) {
+        if(_kernelVersion < v1::Version{.major=6, .minor=0, .patch=0}) {
             fmt::println("io_uring_prep_recv_multishot not supported, requires kernel >= 6.0.0, expect reduced socket performance.");
         }
-        if(_kernelVersion < v1::Version{5, 19, 0}) {
+        if(_kernelVersion < v1::Version{.major=5, .minor=19, .patch=0}) {
             fmt::println("io_uring_prep_multishot_accept not supported, requires kernel >= 5.19.0, expect reduced socket performance.");
         }
         return true;
@@ -1068,7 +1071,7 @@ namespace Ichor::Detail {
         // Cleared before taking the events: a push after this sends a new wake-up, a push before it is taken below.
         _crossThreadWakeupPending.store(false, std::memory_order_release);
         {
-            std::lock_guard const l{_crossThreadEventsMutex};
+            std::scoped_lock const l{_crossThreadEventsMutex};
             std::swap(_crossThreadEvents, _crossThreadEventsProcessing);
         }
 
@@ -1124,31 +1127,48 @@ namespace Ichor::Detail {
             return tl::unexpected(v1::IOError::MESSAGE_SIZE_TOO_BIG);
         }
 
-        if((entries & (entries - 1)) != 0) {
+        if(!std::has_single_bit(entries)) {
             fmt::println("createProvidedBuffer entries not a power of two.");
             return tl::unexpected(v1::IOError::NOT_SUPPORTED);
         }
 
-        if(_kernelVersion < v1::Version{5, 19, 0}) {
+        // Does not fit in size_t on 32-bit platforms
+        if(entryBufferSize > std::numeric_limits<size_t>::max() / entries) {
+            return tl::unexpected(v1::IOError::MESSAGE_SIZE_TOO_BIG);
+        }
+        size_t const entriesBufSize = static_cast<size_t>(entries) * entryBufferSize;
+
+        if(_kernelVersion < v1::Version{.major=5, .minor=19, .patch=0}) {
             return tl::unexpected(v1::IOError::KERNEL_TOO_OLD);
         }
 
-        char *entriesBuf = static_cast<char *>(aligned_alloc(static_cast<size_t>(_pageSize), entries * entryBufferSize));
+        char *entriesBuf = static_cast<char *>(aligned_alloc(static_cast<size_t>(_pageSize), entriesBufSize));
         if(entriesBuf == nullptr) {
             return tl::unexpected(v1::IOError::NO_MEMORY_AVAILABLE);
         }
-        if(madvise(entriesBuf, entries * entryBufferSize, MADV_DONTDUMP) != 0) {
+        io_uring_buf_ring *bufRing{};
+        auto id = _uringBufIdCounter++;
+        bool created{};
+        ScopeGuard freeIfNotCreated{[&]() noexcept {
+            if(created) {
+                return;
+            }
+            if(bufRing != nullptr) {
+                io_uring_free_buf_ring(_eventQueuePtr, bufRing, entries, id);
+            }
+            free(entriesBuf);
+        }};
+        if(madvise(entriesBuf, entriesBufSize, MADV_DONTDUMP) != 0) {
             fmt::println("createProvidedBuffer madvise entriesBuf MADV_DONTDUMP failed.");
             return tl::unexpected(v1::IOError::NOT_SUPPORTED);
         }
-        if(madvise(entriesBuf, entries * entryBufferSize, MADV_DONTFORK) != 0) {
+        if(madvise(entriesBuf, entriesBufSize, MADV_DONTFORK) != 0) {
             fmt::println("createProvidedBuffer madvise entriesBuf MADV_DONTFORK failed.");
             return tl::unexpected(v1::IOError::NOT_SUPPORTED);
         }
 
         int ret;
-        auto id = _uringBufIdCounter++;
-        auto *bufRing = io_uring_setup_buf_ring(_eventQueuePtr, entries, id, 0, &ret);
+        bufRing = io_uring_setup_buf_ring(_eventQueuePtr, entries, id, 0, &ret);
         if(bufRing == nullptr) {
             return tl::unexpected(v1::mapErrnoToError(-ret));
         }
@@ -1169,6 +1189,7 @@ namespace Ichor::Detail {
         }
         io_uring_buf_ring_advance(bufRing, entries);
 
+        created = true;
         return IOUringBuf(_eventQueuePtr, bufRing, entriesBuf, entries, entryBufferSize, id);
     }
 }

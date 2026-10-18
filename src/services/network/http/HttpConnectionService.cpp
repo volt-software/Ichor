@@ -163,7 +163,7 @@ void Ichor::v1::HttpConnectionService::addDependencyInstance(Ichor::ScopedServic
     _connection->setReceiveHandler([this](std::span<uint8_t const> buffer) {
         std::string_view msg{reinterpret_cast<char const*>(buffer.data()), buffer.size()};
         _buffer.append(msg.data(), msg.size());
-        if(_buffer.size() > 1024*1024*512) {
+        if(_buffer.size() > 1024ULL*1024*512) {
             ICHOR_LOG_TRACE(_logger, "HttpConnection {} buffer size {} too big", getServiceId(), _buffer.size());
             _buffer.clear();
             tl::expected<HttpResponse, HttpParseError> err = tl::unexpected(HttpParseError::BUFFEROVERFLOW);
@@ -263,7 +263,7 @@ tl::expected<Ichor::v1::HttpResponse, Ichor::v1::HttpParseError> Ichor::v1::Http
     uint64_t contentLength{};
     uint64_t chunkLength{};
     ChunkParseStatus chunkedStatus{};
-    std::string_view partial{complete.data(), len};
+    std::string_view partial = complete.substr(0, len);
     bool badRequest{};
     bool contentLengthHeader{};
     bool contentLengthSet{};
@@ -295,7 +295,7 @@ tl::expected<Ichor::v1::HttpResponse, Ichor::v1::HttpParseError> Ichor::v1::Http
                         ICHOR_LOG_TRACE(_logger, "HttpConnection {} BadRequest version !all_of digits {}", getServiceId(), word);
                         badRequest = true;
                     } else {
-                        auto status = FastAtoiu(word.data());
+                        auto status = FastAtoiu(word);
                         if(status < 100 || status > 599) {
                             ICHOR_LOG_TRACE(_logger, "HttpConnection {} BadRequest HTTP status out of range {}", getServiceId(), status);
                             badRequest = true;

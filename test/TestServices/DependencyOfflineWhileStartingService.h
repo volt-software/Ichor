@@ -4,7 +4,7 @@
 #include "UselessService.h"
 #include <ichor/ScopedServiceProxy.h>
 
-extern std::unique_ptr<Ichor::AsyncManualResetEvent> _evt;
+extern std::unique_ptr<Ichor::AsyncManualResetEvent> testEvt;
 
 namespace Ichor {
     struct IDependencyOfflineWhileStartingService {
@@ -17,7 +17,7 @@ namespace Ichor {
         ~DependencyOfflineWhileStartingService() final = default;
 
         Task<tl::expected<void, Ichor::StartError>> start() final {
-            co_await *_evt;
+            co_await *testEvt;
 
             co_return {};
         }

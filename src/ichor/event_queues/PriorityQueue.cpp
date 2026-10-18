@@ -48,7 +48,7 @@ namespace Ichor {
 //#endif
 
         {
-            std::lock_guard const l(_eventQueueMutex);
+            std::scoped_lock const l(_eventQueueMutex);
             _eventQueue.push(std::move(event));
         }
         _wakeup.notify_all();

@@ -193,6 +193,7 @@ TEST_CASE("StlTests: Any basics") {
     REQUIRE_THROWS_MATCHES(any_cast<float>(someString), bad_any_cast, ExceptionMatcher());
 #endif
     REQUIRE(someMovedFloat.to_string() == "4.5");
+    // NOLINTNEXTLINE(bugprone-use-after-move): tests the moved-from state
     REQUIRE(someString.to_string() == "Unprintable value");
 
     auto someCopiedInt = someInt;
@@ -214,6 +215,7 @@ TEST_CASE("StlTests: Any basics") {
 #endif
     REQUIRE(any_cast<uint64_t>(someMovedInt) == 10u);
     REQUIRE(someMovedInt.to_string() == "10");
+    // NOLINTNEXTLINE(bugprone-use-after-move): tests the moved-from state
     REQUIRE(someInt.to_string() == "Unprintable value");
 #if ICHOR_EXCEPTIONS_ENABLED
     REQUIRE_THROWS_MATCHES(any_cast<uint64_t>(someInt), bad_any_cast, ExceptionMatcher());
@@ -269,6 +271,7 @@ TEST_CASE("StlTests: Any basics") {
     REQUIRE_THROWS_MATCHES(any_cast<float>(movedNoneAny), bad_any_cast, ExceptionMatcher());
 #endif
     REQUIRE(movedNoneAny.to_string() == "Unprintable value");
+    // NOLINTNEXTLINE(bugprone-use-after-move): tests the moved-from state
     REQUIRE(noneAny.to_string() == "Unprintable value");
 
 
@@ -279,6 +282,7 @@ TEST_CASE("StlTests: Any basics") {
     (void)any_cast<nonmoveable_sbo_buster>(someNonmoveableSboBuster);
 #endif
     auto someMovedNonmoveableSboBuster = std::move(someNonmoveableSboBuster);
+    // NOLINTNEXTLINE(bugprone-use-after-move): someNonmoveableSboBuster is const, so std::move copies it
     auto someMoveConstructedNonmoveableSboBuster = Ichor::v1::any(std::move(someNonmoveableSboBuster));
 
     auto emptyAny = Ichor::v1::any();
@@ -462,6 +466,7 @@ TEST_CASE("StlTests: ReferenceCountedPointer tests") {
     {
         ReferenceCountedPointer<int> i{new int(7)};
         ReferenceCountedPointer<int> i2{std::move(i)};
+        // NOLINTNEXTLINE(bugprone-use-after-move): tests the moved-from state
         REQUIRE(!i.has_value());
         REQUIRE(i2.has_value());
         REQUIRE(i.use_count() == 0);
@@ -480,6 +485,7 @@ TEST_CASE("StlTests: ReferenceCountedPointer tests") {
         ReferenceCountedPointer<int> i2{};
         REQUIRE(i2.use_count() == 0);
         i2 = std::move(i);
+        // NOLINTNEXTLINE(bugprone-use-after-move): tests the moved-from state
         REQUIRE(!i.has_value());
         REQUIRE(i2.has_value());
         REQUIRE(i.use_count() == 0);
@@ -707,7 +713,7 @@ TEST_CASE("StlTests: Version parse tests") {
 }
 
 TEST_CASE("StlTests: Version tests") {
-    Version v1{1, 2, 3};
+    Version v1{.major=1, .minor=2, .patch=3};
     Version emptyV{};
     REQUIRE(Version{1, 2, 4} > v1);
     REQUIRE(Version{1, 3, 3} > v1);
@@ -992,6 +998,7 @@ TEST_CASE("StlTests: StaticVector tests") {
     StaticVector<int, 5> defaultInitSv{5};
 
     StaticVector<int, 10> moveSv{std::move(copySv)};
+    // NOLINTNEXTLINE(bugprone-use-after-move): tests the moved-from state
     REQUIRE(copySv.empty());
     REQUIRE(!moveSv.empty());
     REQUIRE(moveSv.size() == 10);
@@ -1017,6 +1024,7 @@ TEST_CASE("StlTests: StaticVector tests") {
 
     StaticVector<int, 10> tempCopySv{moveSv};
     moveSv = std::move(copySv);
+    // NOLINTNEXTLINE(bugprone-use-after-move): tests the moved-from state
     REQUIRE(copySv.empty());
     REQUIRE(moveSv.empty());
     REQUIRE(moveSv.size() == 0);
@@ -1169,7 +1177,7 @@ TEST_CASE("StlTests: StaticVector tests") {
         eraseSv.pop_back();
         REQUIRE(eraseSv.empty());
 
-        eraseSv.assign((std::size_t)3, 3);
+        eraseSv.assign(static_cast<std::size_t>(3), 3);
         REQUIRE(eraseSv.size() == 3);
         REQUIRE(eraseSv[0] == 3);
         REQUIRE(eraseSv[1] == 3);
@@ -1204,7 +1212,7 @@ TEST_CASE("StlTests: StaticVector tests") {
         REQUIRE(eraseNTSv.empty());
         REQUIRE(destructed == 4);
 
-        eraseNTSv.assign((std::size_t)3, 3);
+        eraseNTSv.assign(static_cast<std::size_t>(3), 3);
         REQUIRE(eraseNTSv.size() == 3);
         REQUIRE(eraseNTSv[0] == 3);
         REQUIRE(eraseNTSv[1] == 3);
@@ -1239,7 +1247,7 @@ TEST_CASE("StlTests: StaticVector tests") {
         REQUIRE(eraseNTSv.empty());
         REQUIRE(destructed == 4);
 
-        eraseNTSv.assign((std::size_t)3, 3);
+        eraseNTSv.assign(static_cast<std::size_t>(3), 3);
         REQUIRE(eraseNTSv.size() == 3);
         REQUIRE(eraseNTSv[0] == 3);
         REQUIRE(eraseNTSv[1] == 3);

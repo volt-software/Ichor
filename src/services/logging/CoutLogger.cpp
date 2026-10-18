@@ -2,7 +2,7 @@
 #include <ichor/stl/StringUtils.h>
 #include <fmt/format.h>
 #include <iostream>
-#define FMT_INLINE_BUFFER_SIZE 1024
+static constexpr size_t INLINE_BUFFER_SIZE = 1024;
 
 Ichor::v1::CoutLogger::CoutLogger(Properties props) : AdvancedService(std::move(props)) {
     auto logLevelProp = getProperties().find("LogLevel");
@@ -15,7 +15,7 @@ void Ichor::v1::CoutLogger::trace(const char * ICHOR_RESTRICT filename_in, int l
                                          std::string_view format_str, fmt::format_args args) ICHOR_RESTRICT_THIS {
     ICHOR_CONTRACT_ASSERT(_level <= LogLevel::LOG_TRACE);
 
-    fmt::basic_memory_buffer<char, FMT_INLINE_BUFFER_SIZE> buf{};
+    fmt::basic_memory_buffer<char, INLINE_BUFFER_SIZE> buf{};
 #ifndef ICHOR_REMOVE_SOURCE_NAMES_FROM_LOGGING
     if(filename_in != nullptr) {
         const char *base = Ichor::v1::basename(filename_in);
@@ -30,7 +30,7 @@ void Ichor::v1::CoutLogger::debug(const char * ICHOR_RESTRICT filename_in, int l
                                          std::string_view format_str, fmt::format_args args) ICHOR_RESTRICT_THIS {
     ICHOR_CONTRACT_ASSERT(_level <= LogLevel::LOG_DEBUG);
 
-    fmt::basic_memory_buffer<char, FMT_INLINE_BUFFER_SIZE> buf{};
+    fmt::basic_memory_buffer<char, INLINE_BUFFER_SIZE> buf{};
 #ifndef ICHOR_REMOVE_SOURCE_NAMES_FROM_LOGGING
     if(filename_in != nullptr) {
         const char *base = Ichor::v1::basename(filename_in);
@@ -45,7 +45,7 @@ void Ichor::v1::CoutLogger::info(const char * ICHOR_RESTRICT filename_in, int li
                                         std::string_view format_str, fmt::format_args args) ICHOR_RESTRICT_THIS {
     ICHOR_CONTRACT_ASSERT(_level <= LogLevel::LOG_INFO);
 
-    fmt::basic_memory_buffer<char, FMT_INLINE_BUFFER_SIZE> buf{};
+    fmt::basic_memory_buffer<char, INLINE_BUFFER_SIZE> buf{};
 #ifndef ICHOR_REMOVE_SOURCE_NAMES_FROM_LOGGING
     if(filename_in != nullptr) {
         const char *base = Ichor::v1::basename(filename_in);
@@ -60,7 +60,7 @@ void Ichor::v1::CoutLogger::warn(const char * ICHOR_RESTRICT filename_in, int li
                                         std::string_view format_str, fmt::format_args args) ICHOR_RESTRICT_THIS {
     ICHOR_CONTRACT_ASSERT(_level <= LogLevel::LOG_WARN);
 
-    fmt::basic_memory_buffer<char, FMT_INLINE_BUFFER_SIZE> buf{};
+    fmt::basic_memory_buffer<char, INLINE_BUFFER_SIZE> buf{};
 #ifndef ICHOR_REMOVE_SOURCE_NAMES_FROM_LOGGING
     if(filename_in != nullptr) {
         const char *base = Ichor::v1::basename(filename_in);
@@ -75,7 +75,7 @@ void Ichor::v1::CoutLogger::error(const char * ICHOR_RESTRICT filename_in, int l
                                          std::string_view format_str, fmt::format_args args) ICHOR_RESTRICT_THIS {
     ICHOR_CONTRACT_ASSERT(_level <= LogLevel::LOG_ERROR);
 
-    fmt::basic_memory_buffer<char, FMT_INLINE_BUFFER_SIZE> buf{};
+    fmt::basic_memory_buffer<char, INLINE_BUFFER_SIZE> buf{};
 #ifndef ICHOR_REMOVE_SOURCE_NAMES_FROM_LOGGING
     if(filename_in != nullptr) {
         const char *base = Ichor::v1::basename(filename_in);

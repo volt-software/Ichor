@@ -43,6 +43,7 @@ namespace {
         Tracked(Tracked &&o) noexcept : i(o.i), s(std::move(o.s)) { REQUIRE(isLive(&o)); REQUIRE(liveTracked.insert(this).second); o.i = -1; }
         Tracked& operator=(Tracked const &o) { REQUIRE(isLive(this)); REQUIRE(isLive(&o)); i = o.i; s = o.s; return *this; }
         Tracked& operator=(Tracked &&o) noexcept { REQUIRE(isLive(this)); REQUIRE(isLive(&o)); i = o.i; s = std::move(o.s); o.i = -1; return *this; }
+        // NOLINTNEXTLINE(bugprone-exception-escape): a failing REQUIRE ends the test run
         ~Tracked() { REQUIRE(liveTracked.erase(this) == 1); }
 
         static bool isLive(void const *p) { return liveTracked.contains(p); }
@@ -224,7 +225,7 @@ TEST_CASE("STL regression tests: StaticVector assign replaces the contents") {
         REQUIRE(v[0] == 9);
         v.assign(std::size_t{4}, 7);
         REQUIRE(v.size() == 4);
-        REQUIRE(std::all_of(v.begin(), v.end(), [](int i) { return i == 7; }));
+        REQUIRE(std::ranges::all_of(v, [](int i) { return i == 7; }));
 
         StaticVector<Tracked, 6> t{1, 2, 3};
         std::vector<Tracked> src{Tracked{4}, Tracked{5}, Tracked{6}, Tracked{7}, Tracked{8}};
@@ -245,7 +246,7 @@ TEST_CASE("STL regression tests: StaticVector constructors with integral argumen
     {
         StaticVector<int, 10> v(3, 5);
         REQUIRE(v.size() == 3);
-        REQUIRE(std::all_of(v.begin(), v.end(), [](int i) { return i == 5; }));
+        REQUIRE(std::ranges::all_of(v, [](int i) { return i == 5; }));
 
         // the count used to be narrowed to the storage size type (unsigned char for small N)
         StaticVector<unsigned char, 300> big(std::size_t{260});
@@ -433,6 +434,7 @@ TEST_CASE("STL regression tests: ReferenceCountedPointer adjusts pointers for mu
         b2 = new Multi();
         REQUIRE(b2->b == 2);
         ReferenceCountedPointer<BaseB> moved{std::move(multi)};
+        // NOLINTNEXTLINE(bugprone-use-after-move): tests the moved-from state
         REQUIRE(!multi.has_value());
         REQUIRE(moved->b == 2);
         REQUIRE(moved.use_count() == 2);
@@ -540,10 +542,12 @@ TEST_CASE("STL regression tests: Any moves destroy the moved-from inline object"
             smallDestroyed = 0; // returning from make_any may or may not have moved
             auto b{std::move(a)};
             REQUIRE(smallDestroyed == 1); // a's moved-from object
+            // NOLINTNEXTLINE(bugprone-use-after-move): tests the moved-from state
             REQUIRE(!a.has_value());
             REQUIRE(a.type_hash() == 0);
             c = std::move(b);
             REQUIRE(smallDestroyed == 3); // c's previous value and b's moved-from object
+            // NOLINTNEXTLINE(bugprone-use-after-move): tests the moved-from state
             REQUIRE(!b.has_value());
             REQUIRE(b.type_hash() == 0);
             REQUIRE(b.type_name().empty());
@@ -556,6 +560,7 @@ TEST_CASE("STL regression tests: Any moves destroy the moved-from inline object"
         REQUIRE(any_cast<std::string&>(movedBig).size() == 100);
         big = std::move(movedBig);
         REQUIRE(any_cast<std::string&>(big).size() == 100);
+        // NOLINTNEXTLINE(bugprone-use-after-move): tests the moved-from state
         REQUIRE(!movedBig.has_value());
     }
 
@@ -602,6 +607,7 @@ TEST_CASE("STL regression tests: EventStackUniquePtr moves events properly") {
 
             // libstdc++'s std::string points into itself for short strings, so a byte copy would leave a dangling pointer
             EventStackUniquePtr moved{std::move(shortStr)};
+            // NOLINTNEXTLINE(bugprone-use-after-move): tests the moved-from state
             REQUIRE(shortStr.empty());
             REQUIRE(moved.getT<StringEvent>()->str == "short");
             REQUIRE(moved.get()->id == 1);
@@ -613,6 +619,7 @@ TEST_CASE("STL regression tests: EventStackUniquePtr moves events properly") {
             auto &self = moved;
             moved = std::move(self);
             REQUIRE(moved.getT<StringEvent>()->str == std::string(100, 'l'));
+            // NOLINTNEXTLINE(bugprone-use-after-move): tests the moved-from state
             moved = std::move(emptyEvt);
             REQUIRE(moved.empty());
             REQUIRE(StringEvent::destroyed == 4);

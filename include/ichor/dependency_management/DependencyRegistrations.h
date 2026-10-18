@@ -25,7 +25,7 @@ namespace Ichor {
 
         void reset();
     private:
-        CallbackKey _key{ServiceIdType{0}, 0};
+        CallbackKey _key{.id=ServiceIdType{0}, .type=0};
         uint64_t _priority{0};
     };
 

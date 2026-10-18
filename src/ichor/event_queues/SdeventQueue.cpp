@@ -76,7 +76,7 @@ namespace Ichor {
 
         if(std::this_thread::get_id() != _threadId) [[unlikely]] {
             {
-                std::lock_guard const l(_eventQueueMutex);
+                std::scoped_lock const l(_eventQueueMutex);
                 _otherThreadEventQueue.emplace(priority, std::move(event));
             }
 
@@ -90,7 +90,7 @@ namespace Ichor {
 
         {
             sd_event_source *src;
-            auto *procEvent = new ProcessableEvent{this, std::move(event)};
+            auto *procEvent = new ProcessableEvent{.queue=this, .event=std::move(event)};
             int ret = sd_event_add_defer(_eventQueue, &src, [](sd_event_source *source, void *userdata) {
                 auto *e = reinterpret_cast<ProcessableEvent*>(userdata);
 

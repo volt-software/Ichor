@@ -1,6 +1,7 @@
 #pragma once
 
 #include <atomic>
+#include <array>
 #include <ichor/Concepts.h>
 #include <ichor/coroutines/Task.h>
 #include <ichor/dependency_management/DependencyRegister.h>
@@ -158,6 +159,7 @@ namespace Ichor {
         // Uses list initialization. Won't work for types with user-provided constructors.
         // In C++17 there is std::is_aggregate which can be added later.
         template <typename T, int... Ns>
+        // NOLINTNEXTLINE(modernize-avoid-variadic-functions): the fallback overload, the ellipsis ranks it below fields_number(int)
         constexpr int fields_number(...) { return sizeof...(Ns) - 1; }
 
         template <typename T, int... Ns>
@@ -174,6 +176,7 @@ namespace Ichor {
         }
 
         template <typename T, int... Ns>
+        // NOLINTNEXTLINE(modernize-avoid-variadic-functions): the fallback overload, the ellipsis ranks it below fields_number_ctor(int)
         constexpr int fields_number_ctor(...) {
             static_assert(sizeof...(Ns) < 64,
                   "Constructor injection supports at most 64 dependencies");
@@ -225,7 +228,8 @@ namespace Ichor {
     template <HasConstructorInjectionDependencies T>
     class ConstructorInjectionService<T> final : public IService {
     public:
-        ConstructorInjectionService(DependencyRegister &reg, Properties props) noexcept : IService(), _properties(std::move(props)), _serviceId(ServiceIdType{Detail::_serviceIdCounter.fetch_add(1, std::memory_order_relaxed)}), _servicePriority(INTERNAL_EVENT_PRIORITY), _serviceGid(sole::uuid4()), _serviceState(ServiceState::INSTALLED) {
+        // NOLINTNEXTLINE(bugprone-exception-escape): only libstdc++'s mutex lock errors can escape, which terminate
+        ConstructorInjectionService(DependencyRegister &reg, Properties props) noexcept : IService(), _properties(std::move(props)), _serviceId(ServiceIdType{Detail::_serviceIdCounter.fetch_add(1, std::memory_order_relaxed)}), _serviceGid(sole::uuid4()) {
             registerDependenciesSpecialSauce(reg, tl::optional<refl::as_variant<T>>());
         }
 
@@ -329,7 +333,7 @@ namespace Ichor {
 #ifdef ICHOR_ENABLE_INTERNAL_DEBUGGING
                 logEmplaceService<CO_ARGS...>();
 #endif
-                new(buf) T((std::get<refl::wrap_only_if_not_known_types_t<CO_ARGS>>(_deps.at(typeNameHash<refl::wrap_only_if_not_known_types_t<CO_ARGS>>())))...);
+                new(buf.data()) T((std::get<refl::wrap_only_if_not_known_types_t<CO_ARGS>>(_deps.at(typeNameHash<refl::wrap_only_if_not_known_types_t<CO_ARGS>>())))...);
 #if ICHOR_EXCEPTIONS_ENABLED
             } catch (std::exception const &e) {
                 fmt::print("Std exception while starting svc {}:{} : \"{}\".\n\nLikely user error, but printing extra information anyway: Stored dependencies:\n", getServiceId(), getServiceName(), e.what());
@@ -389,7 +393,7 @@ namespace Ichor {
 
             INTERNAL_DEBUG("internal_stop service {}:{} state {} -> {}", getServiceId(), typeName<T>(), getState(), ServiceState::STOPPING);
             _serviceState = ServiceState::STOPPING;
-            reinterpret_cast<T*>(buf)->~T();
+            reinterpret_cast<T*>(buf.data())->~T();
 
             INTERNAL_DEBUG("internal_stop service {}:{} state {} -> {}", getServiceId(), typeName<T>(), getState(), ServiceState::INSTALLED);
             _serviceState = ServiceState::INSTALLED;
@@ -519,16 +523,16 @@ namespace Ichor {
             if(_serviceState < ServiceState::INJECTING) {
                 std::terminate();
             }
-            return reinterpret_cast<T*>(buf);
+            return reinterpret_cast<T*>(buf.data());
         }
 
 
         ServiceIdType const _serviceId;
-        uint64_t _servicePriority;
+        uint64_t _servicePriority{INTERNAL_EVENT_PRIORITY};
         sole::uuid const _serviceGid;
-        ServiceState _serviceState;
+        ServiceState _serviceState{ServiceState::INSTALLED};
         unordered_map<uint64_t, refl::rewrap_dependencies_t<refl::as_variant<T>>> _deps{};
-        alignas(T) std::byte buf[sizeof(T)];
+        alignas(T) std::array<std::byte, sizeof(T)> buf;
 
         friend struct DependencyRegister;
 
@@ -543,7 +547,7 @@ namespace Ichor {
     template <DoesNotHaveConstructorInjectionDependencies T>
     class ConstructorInjectionService<T> final : public IService {
     public:
-        ConstructorInjectionService(Properties props) noexcept : IService(), _properties(std::move(props)), _serviceId(ServiceIdType{Detail::_serviceIdCounter.fetch_add(1, std::memory_order_relaxed)}), _servicePriority(INTERNAL_EVENT_PRIORITY), _serviceGid(sole::uuid4()), _serviceState(ServiceState::INSTALLED) {
+        ConstructorInjectionService(Properties props) noexcept : IService(), _properties(std::move(props)), _serviceId(ServiceIdType{Detail::_serviceIdCounter.fetch_add(1, std::memory_order_relaxed)}), _serviceGid(sole::uuid4()) {
         }
 
         ~ConstructorInjectionService() noexcept final {
@@ -601,7 +605,7 @@ namespace Ichor {
             if(_serviceState < ServiceState::INJECTING) {
                 std::terminate();
             }
-            return reinterpret_cast<T*>(buf);
+            return reinterpret_cast<T*>(buf.data());
         }
 
         // checked by IsConstructorInjector concept, to help with function overload resolution
@@ -620,7 +624,7 @@ namespace Ichor {
 
             INTERNAL_DEBUG("internal_start service {}:{} state {} -> {}", getServiceId(), typeName<T>(), getState(), ServiceState::STARTING);
             _serviceState = ServiceState::STARTING;
-            new (buf) T();
+            new (buf.data()) T();
 
             INTERNAL_DEBUG("internal_start service {}:{} state {} -> {}", getServiceId(), typeName<T>(), getState(), ServiceState::INJECTING);
             _serviceState = ServiceState::INJECTING;
@@ -638,7 +642,7 @@ namespace Ichor {
 
             INTERNAL_DEBUG("internal_stop service {}:{} state {} -> {}", getServiceId(), typeName<T>(), getState(), ServiceState::STOPPING);
             _serviceState = ServiceState::STOPPING;
-            reinterpret_cast<T*>(buf)->~T();
+            reinterpret_cast<T*>(buf.data())->~T();
 
             INTERNAL_DEBUG("internal_stop service {}:{} state {} -> {}", getServiceId(), typeName<T>(), getState(), ServiceState::INSTALLED);
             _serviceState = ServiceState::INSTALLED;
@@ -675,10 +679,10 @@ namespace Ichor {
         }
 
         ServiceIdType _serviceId;
-        uint64_t _servicePriority;
+        uint64_t _servicePriority{INTERNAL_EVENT_PRIORITY};
         sole::uuid _serviceGid;
-        ServiceState _serviceState;
-        alignas(T) std::byte buf[sizeof(T)];
+        ServiceState _serviceState{ServiceState::INSTALLED};
+        alignas(T) std::array<std::byte, sizeof(T)> buf;
 
         friend struct DependencyRegister;
 

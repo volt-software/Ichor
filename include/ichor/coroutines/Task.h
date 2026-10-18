@@ -29,7 +29,7 @@ namespace Ichor
 
             struct final_awaitable
             {
-                constexpr bool await_ready() const noexcept { return false; }
+                [[nodiscard]] constexpr bool await_ready() const noexcept { return false; }
 
                 // Symmetric transfer: returning the continuation instead of calling resume() on it
                 // prevents the stack from growing when tasks complete synchronously in a loop.
@@ -43,8 +43,7 @@ namespace Ichor
 
         public:
 
-            constexpr TaskPromiseBase() noexcept
-            {}
+            constexpr TaskPromiseBase() noexcept = default;
 
             constexpr auto initial_suspend() noexcept {
                 return std::suspend_always{};
@@ -54,7 +53,7 @@ namespace Ichor
                 return final_awaitable{};
             }
 
-            constexpr uint64_t get_id() const noexcept {
+            [[nodiscard]] constexpr uint64_t get_id() const noexcept {
                 return _promise_id;
             };
 
@@ -74,6 +73,7 @@ namespace Ichor
         };
 
         template<typename T>
+        // NOLINTNEXTLINE(bugprone-tagged-union-member-count): result_type has a tag for each union member plus empty, clang-tidy 23 miscounts the enumerators of an enum nested in a class template
         class [[nodiscard]] TaskPromise final : public TaskPromiseBase
         {
         public:
@@ -110,10 +110,9 @@ namespace Ichor
             }
 
             template<
-                    typename VALUE,
-                    typename = std::enable_if_t<std::is_convertible_v<VALUE&&, T>>>
+                    typename VALUE>
             constexpr void return_value(VALUE&& value)
-            noexcept(std::is_nothrow_constructible_v<T, VALUE&&>) {
+            noexcept(std::is_nothrow_constructible_v<T, VALUE&&>) requires (std::is_convertible_v<VALUE&&, T>) {
                 ::new (static_cast<void*>(std::addressof(m_value))) T(std::forward<VALUE>(value));
                 m_resultType = result_type::value;
             }
@@ -296,7 +295,7 @@ namespace Ichor
                     : m_coroutine(coroutine)
             {}
 
-            constexpr bool await_ready() const noexcept {
+            [[nodiscard]] constexpr bool await_ready() const noexcept {
                 return !m_coroutine || m_coroutine.done();
             }
 
@@ -350,7 +349,7 @@ namespace Ichor
         /// Query if the Task result is complete.
         ///
         /// Awaiting a Task that is ready is guaranteed not to block/suspend.
-        constexpr bool is_ready() const noexcept {
+        [[nodiscard]] constexpr bool is_ready() const noexcept {
             return m_coroutine && m_coroutine.done();
         }
 
@@ -389,7 +388,7 @@ namespace Ichor
         /// \brief
         /// Returns an awaitable that will await completion of the Task without
         /// attempting to retrieve the result.
-        constexpr auto when_ready() const noexcept {
+        [[nodiscard]] constexpr auto when_ready() const noexcept {
             struct awaitable : awaitable_base {
                 using awaitable_base::awaitable_base;
 

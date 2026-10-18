@@ -3,7 +3,7 @@
 using namespace Ichor;
 using namespace Ichor::v1;
 
-extern std::unique_ptr<Ichor::AsyncManualResetEvent> _evt;
+extern std::unique_ptr<Ichor::AsyncManualResetEvent> testEvt;
 extern std::atomic<uint64_t> evtGate;
 
 struct CustomDoWorkEvent final : public Event {
@@ -59,7 +59,7 @@ struct AsyncBroadcastService final : public IAsyncBroadcastService, public Advan
     }
 
     AsyncGenerator<IchorBehaviour> handleEvent(CustomDoWorkEvent const &) {
-        co_await *_evt;
+        co_await *testEvt;
 
         _finishedCalls++;
 

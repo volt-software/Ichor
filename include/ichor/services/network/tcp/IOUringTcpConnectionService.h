@@ -58,7 +58,7 @@ namespace Ichor::v1 {
 
         friend DependencyRegister;
 
-        int _socket;
+        int _socket{-1};
         int64_t _sendTimeout{250'000};
         int64_t _recvTimeout{250'000};
         uint32_t _bufferEntries{16};

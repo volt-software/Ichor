@@ -74,8 +74,8 @@ namespace Ichor {
         mutable bool m_set;
 
         // FIFO queue of waiters, linked through AsyncAutoResetEventOperation::m_next.
-        mutable AsyncAutoResetEventOperation* m_waitersHead;
-        mutable AsyncAutoResetEventOperation* m_waitersTail;
+        mutable AsyncAutoResetEventOperation* m_waitersHead{nullptr};
+        mutable AsyncAutoResetEventOperation* m_waitersTail{nullptr};
     };
 
     class AsyncAutoResetEventOperation {
@@ -87,7 +87,7 @@ namespace Ichor {
 
         AsyncAutoResetEventOperation(const AsyncAutoResetEventOperation& other) noexcept;
 
-        bool await_ready() const noexcept { return m_event == nullptr; }
+        [[nodiscard]] bool await_ready() const noexcept { return m_event == nullptr; }
         void await_suspend(std::coroutine_handle<> awaiter) noexcept;
         void await_resume() const noexcept {}
 

@@ -145,7 +145,7 @@
 /*
  *  Default secret parameters.
  */
-  RAPIDHASH_CONSTEXPR uint64_t rapid_secret[8] = {
+  RAPIDHASH_CONSTEXPR std::array<uint64_t, 8> rapid_secret = {
     0x2d358dccaa6c78a5ull,
     0x8bb84b93962eacc9ull,
     0x4b33a62ed433d4a3ull,
@@ -182,7 +182,7 @@ RAPIDHASH_INLINE_CONSTEXPR void rapid_mum(uint64_t * ICHOR_RESTRICT A, uint64_t 
   #ifdef RAPIDHASH_PROTECTED
   *A^=(uint64_t)r; *B^=(uint64_t)(r>>64);
   #else
-  *A=(uint64_t)r; *B=(uint64_t)(r>>64);
+  *A=static_cast<uint64_t>(r); *B=static_cast<uint64_t>(r>>64);
   #endif
 #elif defined(_MSC_VER) && (defined(_WIN64) || defined(_M_HYBRID_CHPE_ARM64))
   #if defined(_M_X64)
@@ -237,14 +237,14 @@ RAPIDHASH_INLINE_CONSTEXPR void rapid_mum(uint64_t * ICHOR_RESTRICT A, uint64_t 
 RAPIDHASH_INLINE_CONSTEXPR uint64_t rapid_read64(const uint8_t *p) RAPIDHASH_NOEXCEPT {
 #if defined(RAPIDHASH_LITTLE_ENDIAN)
   if (std::is_constant_evaluated()) { // TODO __cpp_if_consteval
-    return (uint64_t)p[0]
-         | ((uint64_t)p[1] << 8)
-         | ((uint64_t)p[2] << 16)
-         | ((uint64_t)p[3] << 24)
-         | ((uint64_t)p[4] << 32)
-         | ((uint64_t)p[5] << 40)
-         | ((uint64_t)p[6] << 48)
-         | ((uint64_t)p[7] << 56);
+    return static_cast<uint64_t>(p[0])
+         | (static_cast<uint64_t>(p[1]) << 8)
+         | (static_cast<uint64_t>(p[2]) << 16)
+         | (static_cast<uint64_t>(p[3]) << 24)
+         | (static_cast<uint64_t>(p[4]) << 32)
+         | (static_cast<uint64_t>(p[5]) << 40)
+         | (static_cast<uint64_t>(p[6]) << 48)
+         | (static_cast<uint64_t>(p[7]) << 56);
   } else {
     uint64_t v;
     memcpy(&v, p, sizeof(uint64_t));
@@ -304,10 +304,10 @@ RAPIDHASH_INLINE_CONSTEXPR uint64_t rapid_read64(const uint8_t *p) RAPIDHASH_NOE
 RAPIDHASH_INLINE_CONSTEXPR uint64_t rapid_read32(const uint8_t *p) RAPIDHASH_NOEXCEPT {
 #if defined(RAPIDHASH_LITTLE_ENDIAN)
   if (std::is_constant_evaluated()) {
-    return (uint32_t)p[0]
-         | ((uint32_t)p[1] << 8)
-         | ((uint32_t)p[2] << 16)
-         | ((uint32_t)p[3] << 24);
+    return static_cast<uint32_t>(p[0])
+         | (static_cast<uint32_t>(p[1]) << 8)
+         | (static_cast<uint32_t>(p[2]) << 16)
+         | (static_cast<uint32_t>(p[3]) << 24);
   } else {
     uint32_t v;
     memcpy(&v, p, sizeof(uint32_t));
@@ -399,7 +399,7 @@ RAPIDHASH_INLINE_CONSTEXPR uint64_t rapidhash_internal(const uint8_t * ICHOR_RES
          b = rapid_read32(plast);
        }
      } else if (len > 0) {
-       a = (((uint64_t)p[0])<<45)|p[len-1];
+       a = ((static_cast<uint64_t>(p[0]))<<45)|p[len-1];
        b = p[len>>1];
      } else
        a = b = 0;
@@ -495,7 +495,7 @@ RAPIDHASH_INLINE_CONSTEXPR uint64_t rapidhash_internal(const uint8_t * ICHOR_RES
  *  Returns a 64-bit hash.
  */
  RAPIDHASH_INLINE_CONSTEXPR uint64_t rapidhashMicro_internal(const uint8_t * ICHOR_RESTRICT key, size_t len, uint64_t seed, const uint64_t * ICHOR_RESTRICT secret) RAPIDHASH_NOEXCEPT {
-   const uint8_t *p=(const uint8_t *)key;
+   const auto *p=key;
    seed ^= rapid_mix(seed ^ secret[2], secret[1]);
    uint64_t a=0, b=0;
    size_t i = len;
@@ -512,7 +512,7 @@ RAPIDHASH_INLINE_CONSTEXPR uint64_t rapidhash_internal(const uint8_t * ICHOR_RES
          b = rapid_read32(plast);
        }
      } else if (len > 0) {
-       a = (((uint64_t)p[0])<<45)|p[len-1];
+       a = ((static_cast<uint64_t>(p[0]))<<45)|p[len-1];
        b = p[len>>1];
      } else
        a = b = 0;
@@ -565,7 +565,7 @@ RAPIDHASH_INLINE_CONSTEXPR uint64_t rapidhash_internal(const uint8_t * ICHOR_RES
  *  Returns a 64-bit hash.
  */
  RAPIDHASH_INLINE_CONSTEXPR uint64_t rapidhashNano_internal(const uint8_t * ICHOR_RESTRICT key, size_t len, uint64_t seed, const uint64_t * ICHOR_RESTRICT secret) RAPIDHASH_NOEXCEPT {
-   const uint8_t *p=(const uint8_t *)key;
+   const auto *p=key;
    seed ^= rapid_mix(seed ^ secret[2], secret[1]);
    uint64_t a=0, b=0;
    size_t i = len;
@@ -582,7 +582,7 @@ RAPIDHASH_INLINE_CONSTEXPR uint64_t rapidhash_internal(const uint8_t * ICHOR_RES
          b = rapid_read32(plast);
        }
      } else if (len > 0) {
-       a = (((uint64_t)p[0])<<45)|p[len-1];
+       a = ((static_cast<uint64_t>(p[0]))<<45)|p[len-1];
        b = p[len>>1];
      } else
        a = b = 0;
@@ -625,7 +625,7 @@ RAPIDHASH_INLINE_CONSTEXPR uint64_t rapidhash_internal(const uint8_t * ICHOR_RES
 *  Returns a 64-bit hash.
 */
 RAPIDHASH_INLINE_CONSTEXPR uint64_t rapidhash_withSeed(const uint8_t *key, size_t len, uint64_t seed) RAPIDHASH_NOEXCEPT {
- return rapidhash_internal(key, len, seed, rapid_secret);
+ return rapidhash_internal(key, len, seed, rapid_secret.data());
 }
 
 /*
@@ -661,7 +661,7 @@ RAPIDHASH_INLINE uint64_t rapidhash(const char *key, size_t len) RAPIDHASH_NOEXC
 *  Returns a 64-bit hash.
 */
 RAPIDHASH_INLINE_CONSTEXPR uint64_t rapidhashMicro_withSeed(const uint8_t *key, size_t len, uint64_t seed) RAPIDHASH_NOEXCEPT {
- return rapidhashMicro_internal(key, len, seed, rapid_secret);
+ return rapidhashMicro_internal(key, len, seed, rapid_secret.data());
 }
 
 /*
@@ -690,7 +690,7 @@ RAPIDHASH_INLINE_CONSTEXPR uint64_t rapidhashMicro(const uint8_t *key, size_t le
 *  Returns a 64-bit hash.
 */
 RAPIDHASH_INLINE_CONSTEXPR uint64_t rapidhashNano_withSeed(const uint8_t *key, size_t len, uint64_t seed) RAPIDHASH_NOEXCEPT {
- return rapidhashNano_internal(key, len, seed, rapid_secret);
+ return rapidhashNano_internal(key, len, seed, rapid_secret.data());
 }
 
 /*

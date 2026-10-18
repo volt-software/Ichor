@@ -139,7 +139,7 @@ struct fmt::formatter<Ichor::state> {
             case Ichor::state::cancelled:
                 return fmt::format_to(ctx.out(), "cancelled");
         }
-        return fmt::format_to(ctx.out(), "error, please file a bug in Ichor, val: {}", (int)state);
+        return fmt::format_to(ctx.out(), "error, please file a bug in Ichor, val: {}", static_cast<int>(state));
     }
 };
 

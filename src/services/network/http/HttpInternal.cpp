@@ -1,6 +1,7 @@
 #include <ichor/services/network/http/HttpInternal.h>
 
 namespace Ichor::v1 {
+    // NOLINTNEXTLINE(bugprone-throwing-static-initialization): only allocation failure can throw, which terminates
     unordered_map<std::string_view, HttpMethod> ICHOR_METHOD_MATCHING {
         {"DELETE", HttpMethod::delete_},
         {"GET", HttpMethod::get},
@@ -36,6 +37,7 @@ namespace Ichor::v1 {
         {"LINK", HttpMethod::link},
         {"UNLINK", HttpMethod::unlink},
     };
+    // NOLINTNEXTLINE(bugprone-throwing-static-initialization): only allocation failure can throw, which terminates
     unordered_map<HttpMethod, std::string_view> ICHOR_REVERSE_METHOD_MATCHING {
         {HttpMethod::delete_, "DELETE"},
         {HttpMethod::get, "GET"},
@@ -71,6 +73,7 @@ namespace Ichor::v1 {
         {HttpMethod::link, "LINK"},
         {HttpMethod::unlink, "UNLINK"},
     };
+    // NOLINTNEXTLINE(bugprone-throwing-static-initialization): only allocation failure can throw, which terminates
     unordered_map<HttpStatus, std::string_view> ICHOR_STATUS_MATCHING {
         {HttpStatus::continue_, "Continue"},
         {HttpStatus::switching_protocols, "Switching Protocols"},

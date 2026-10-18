@@ -8,7 +8,7 @@
 using namespace Ichor;
 using namespace Ichor::v1;
 
-extern std::unique_ptr<Ichor::AsyncManualResetEvent> _evt;
+extern std::unique_ptr<Ichor::AsyncManualResetEvent> testEvt;
 
 struct AwaitNoCopy{
     AwaitNoCopy() {
@@ -30,7 +30,7 @@ struct AwaitNoCopy{
 };
 
 struct IAwaitReturnService {
-    virtual uint64_t getCount() const = 0;
+    [[nodiscard]] virtual uint64_t getCount() const = 0;
     virtual AsyncGenerator<AwaitNoCopy> Await() = 0;
     virtual Task<AwaitNoCopy> AwaitTask() = 0;
 };
@@ -40,16 +40,16 @@ struct AwaitReturnService final : public IAwaitReturnService, public AdvancedSer
     ~AwaitReturnService() final = default;
 
     AsyncGenerator<AwaitNoCopy> Await() final {
-        co_await *_evt;
+        co_await *testEvt;
         co_return AwaitNoCopy{};
     }
 
     Task<AwaitNoCopy> AwaitTask() final {
-        co_await *_evt;
+        co_await *testEvt;
         co_return AwaitNoCopy{};
     }
 
-    uint64_t getCount() const final {
+    [[nodiscard]] uint64_t getCount() const final {
         return count;
     }
 

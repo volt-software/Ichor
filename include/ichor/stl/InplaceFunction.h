@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstddef>
+#include <array>
 #include <exception>
 #include <functional>
 #include <memory>
@@ -47,13 +48,13 @@ namespace Ichor::v1 {
             static_assert(sizeof(F) <= Capacity, "Callable too large for InplaceFunction, reduce the captured state or increase the capacity");
             static_assert(alignof(F) <= alignof(std::max_align_t), "Callable over-aligned for InplaceFunction");
             static_assert(std::is_nothrow_move_constructible_v<F>, "InplaceFunction requires nothrow move constructible callables");
-            std::construct_at(reinterpret_cast<F*>(_storage), std::forward<Fn>(fn));
+            std::construct_at(reinterpret_cast<F*>(_storage.data()), std::forward<Fn>(fn));
             _vtable = &vtableFor<F>;
         }
 
         InplaceFunction(InplaceFunction &&o) noexcept : _vtable(o._vtable) {
             if(_vtable != nullptr) {
-                _vtable->moveAndDestroy(_storage, o._storage);
+                _vtable->moveAndDestroy(_storage.data(), o._storage.data());
                 o._vtable = nullptr;
             }
         }
@@ -62,7 +63,7 @@ namespace Ichor::v1 {
             if(this != &o) {
                 reset();
                 if(o._vtable != nullptr) {
-                    o._vtable->moveAndDestroy(_storage, o._storage);
+                    o._vtable->moveAndDestroy(_storage.data(), o._storage.data());
                     _vtable = o._vtable;
                     o._vtable = nullptr;
                 }
@@ -86,7 +87,7 @@ namespace Ichor::v1 {
             if(_vtable == nullptr) [[unlikely]] {
                 std::terminate();
             }
-            return _vtable->invoke(_storage, std::forward<Args>(args)...);
+            return _vtable->invoke(_storage.data(), std::forward<Args>(args)...);
         }
 
         [[nodiscard]] explicit operator bool() const noexcept {
@@ -95,13 +96,13 @@ namespace Ichor::v1 {
 
         void reset() noexcept {
             if(_vtable != nullptr) {
-                _vtable->destroy(_storage);
+                _vtable->destroy(_storage.data());
                 _vtable = nullptr;
             }
         }
 
     private:
         VTable const *_vtable{};
-        alignas(std::max_align_t) std::byte _storage[Capacity];
+        alignas(std::max_align_t) std::array<std::byte, Capacity> _storage;
     };
 }

@@ -41,7 +41,7 @@ using namespace std::string_literals;
 
 using namespace Ichor;
 
-std::unique_ptr<Ichor::AsyncManualResetEvent> _evt;
+std::unique_ptr<Ichor::AsyncManualResetEvent> testEvt;
 std::thread::id testThreadId;
 std::thread::id dmThreadId;
 std::atomic<bool> evtGate;
@@ -53,14 +53,14 @@ TEST_CASE("HttpEndToEndTests_uring") {
     auto version = Ichor::v1::kernelVersion();
 
     REQUIRE(version);
-    if(version < v1::Version{5, 18, 0}) {
+    if(version < v1::Version{.major=5, .minor=18, .patch=0}) {
         return;
     }
 
     auto gen_i = GENERATE(1, 2);
 
     if(gen_i == 2) {
-        emulateKernelVersion = v1::Version{5, 18, 0};
+        emulateKernelVersion = v1::Version{.major=5, .minor=18, .patch=0};
         fmt::println("emulating kernel version {}", *emulateKernelVersion);
     } else {
         fmt::println("kernel version {}", *version);
@@ -71,7 +71,7 @@ TEST_CASE("HttpEndToEndTests_boost") {
 
     SECTION("Http events on same thread") {
         testThreadId = std::this_thread::get_id();
-        _evt = std::make_unique<Ichor::AsyncManualResetEvent>();
+        testEvt = std::make_unique<Ichor::AsyncManualResetEvent>();
 #if defined(TEST_URING)
         auto queue = std::make_unique<QIMPL>(500, 100'000'000, emulateKernelVersion);
 #else
@@ -114,8 +114,8 @@ TEST_CASE("HttpEndToEndTests_boost") {
             REQUIRE(Ichor::Detail::_local_dm == &dm);
             REQUIRE(testThreadId != std::this_thread::get_id());
             REQUIRE(dmThreadId == std::this_thread::get_id());
-            fmt::print("1 _evt set\n");
-            _evt->set();
+            fmt::print("1 testEvt set\n");
+            testEvt->set();
         });
 
         t.join();
@@ -124,7 +124,7 @@ TEST_CASE("HttpEndToEndTests_boost") {
 #ifdef TEST_BOOST
     SECTION("Https events on same thread") {
         testThreadId = std::this_thread::get_id();
-        _evt = std::make_unique<Ichor::AsyncManualResetEvent>();
+        testEvt = std::make_unique<Ichor::AsyncManualResetEvent>();
         auto queue = std::make_unique<BoostAsioQueue>(true);
         auto &dm = queue->getManager();
         evtGate = false;
@@ -242,8 +242,8 @@ TEST_CASE("HttpEndToEndTests_boost") {
             REQUIRE(Ichor::Detail::_local_dm == &dm);
             REQUIRE(testThreadId != std::this_thread::get_id());
             REQUIRE(dmThreadId == std::this_thread::get_id());
-            fmt::print("2 _evt set\n");
-            _evt->set();
+            fmt::print("2 testEvt set\n");
+            testEvt->set();
         });
 
         t.join();

@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <thread>
 #include <ichor/DependencyManager.h>
 #include <ichor/CommunicationChannel.h>
@@ -18,6 +19,7 @@ constinit std::atomic<uint64_t> Ichor::DependencyManager::_managerIdCounter = 0;
 #ifdef ICHOR_ENABLE_INTERNAL_STL_DEBUGGING
 std::atomic<uint64_t> Ichor::v1::_rfpCounter = 0;
 #endif
+// NOLINTNEXTLINE(bugprone-throwing-static-initialization): only allocation failure can throw, which terminates
 thread_local Ichor::unordered_set<Ichor::ServiceIdType, Ichor::ServiceIdHash> Ichor::Detail::emptyDependencies{}; // TODO modify ankerl's implementation to have enough constexpr functions to have this be constinit as well.
 
 constinit thread_local Ichor::DependencyManager *Ichor::Detail::_local_dm = nullptr;
@@ -994,9 +996,7 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &uniqueEvt) {
                         if(it_ret == StartBehaviour::STOP_ME) {
                             INTERNAL_DEBUG("ContinuableDependencyOfflineEvent {} {} {}:{} state {} dependee {}:{} state {} dependee requesting stop.", evt->id, evt->priority, originatingOfflineServiceIt->second->serviceId(), originatingOfflineServiceIt->second->implementationName(), originatingOfflineServiceIt->second->getServiceState(), serviceIt->second->serviceId(), serviceIt->second->implementationName(), serviceIt->second->getServiceState());
                             auto& waitingSvcs = _pendingStopsDueToDependencies[origEvt->originatingService];
-                            if(waitingSvcs.empty()) {
-                                _eventQueue.pushPrioritisedEvent<StopServiceEvent>(evt->originatingService, evt->priority, origEvt->originatingService, origEvt->removeOriginatingOfflineServiceAfterStop);
-                            } else if(serviceIt->second->getServiceState() == ServiceState::UNINJECTING && serviceIt->second->getDependees().empty()) {
+                            if(waitingSvcs.empty() || (serviceIt->second->getServiceState() == ServiceState::UNINJECTING && serviceIt->second->getDependees().empty())) {
                                 _eventQueue.pushPrioritisedEvent<StopServiceEvent>(evt->originatingService, evt->priority, origEvt->originatingService, origEvt->removeOriginatingOfflineServiceAfterStop);
                             }
                             waitingSvcs.emplace_back(origEvt->originatingOfflineServiceId, evt->priority, origEvt->removeOriginatingOfflineServiceAfterStop, std::move(origEvt->dependencyIterators));
@@ -1126,6 +1126,7 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &uniqueEvt) {
     }
 
     if(uniqueEvt) {
+        // NOLINTNEXTLINE(bugprone-use-after-move): a moved-from unique_ptr is null, which the if checks
         handleEventCompletion(*uniqueEvt);
     }
 }
@@ -1226,7 +1227,7 @@ void Ichor::DependencyManager::removeInternalService(std::vector<EventInterceptI
             std::terminate();
         }
 
-        auto existingCoroutineEvent = std::find_if(_scopedGenerators.begin(), _scopedGenerators.end(), [svcId](const std::pair<uint64_t, ScopedGenerator> &t) {
+        auto existingCoroutineEvent = std::ranges::find_if(_scopedGenerators, [svcId](const std::pair<uint64_t, ScopedGenerator> &t) {
             auto evtType = t.second.event->get_type();
             switch(evtType) {
                 case StartServiceEvent::TYPE:
@@ -1326,7 +1327,7 @@ void Ichor::DependencyManager::removeInternalService(std::vector<EventInterceptI
 }
 
 bool Ichor::DependencyManager::existingCoroutineFor(ServiceIdType serviceId) const noexcept {
-    auto existingGenerator = std::find_if(_scopedGenerators.begin(), _scopedGenerators.end(), [serviceId](const std::pair<uint64_t, ScopedGenerator> &t) {
+    auto existingGenerator = std::ranges::find_if(_scopedGenerators, [serviceId](const std::pair<uint64_t, ScopedGenerator> &t) {
         return t.second.generator->get_service_id() == serviceId;
     });
 
@@ -1585,7 +1586,7 @@ tl::optional<Ichor::v1::NeverNull<const Ichor::IService*>> Ichor::DependencyMana
         }
     }
 
-    auto svc = std::find_if(_services.begin(), _services.end(), [&id](const auto &svcPair) {
+    auto svc = std::ranges::find_if(_services, [&id](const auto &svcPair) {
         return svcPair.second->getIService()->getServiceGid() == id;
     });
 
@@ -1636,10 +1637,10 @@ Ichor::DependencyManager::DependentServicesView Ichor::DependencyManager::getDep
     auto const svc = _services.find(svcId);
 
     if(svc == _services.end()) {
-        return Ichor::DependencyManager::DependentServicesView{this, nullptr};
+        return Ichor::DependencyManager::DependentServicesView{._dm=this, ._dependees=nullptr};
     }
 
-    return Ichor::DependencyManager::DependentServicesView{this, &svc->second->getDependees()};
+    return Ichor::DependencyManager::DependentServicesView{._dm=this, ._dependees=&svc->second->getDependees()};
 }
 
 std::span<Ichor::Dependency const> Ichor::DependencyManager::getProvidedInterfacesForService(ServiceIdType svcId) const noexcept {
@@ -1667,7 +1668,7 @@ Ichor::DependencyManager::TrackersView Ichor::DependencyManager::getTrackersForS
         }
     }
 
-    return TrackersView{&_dependencyRequestTrackers, svcId};
+    return TrackersView{._map=&_dependencyRequestTrackers, ._svcId=svcId};
 }
 
 #ifdef ICHOR_HAVE_STD_STACKTRACE

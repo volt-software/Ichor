@@ -63,7 +63,7 @@ private:
 
     AsyncGenerator<IchorBehaviour> handleEvent(DoWorkEvent const &) {
         ICHOR_LOG_ERROR(_logger, "handling DoWorkEvent");
-        TestMsg msg{20, "five hundred"};
+        TestMsg msg{.id=20, .val="five hundred"};
         sizeof_test = _serializer->serialize(msg).size();
         auto start = std::chrono::steady_clock::now();
         for(uint64_t i = 0; i < SERDE_COUNT; i++) {

@@ -18,7 +18,7 @@ namespace Ichor::v1 {
 #if (defined(WIN32) || defined(_WIN32) || defined(__WIN32)) && !defined(__CYGWIN__)
         typedef SRWLOCK native_handle_type;
 #else
-        typedef pthread_rwlock_t native_handle_type;
+        using native_handle_type = pthread_rwlock_t;
 #endif
 
         RealtimeReadWriteMutex() noexcept {

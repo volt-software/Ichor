@@ -18,6 +18,6 @@ namespace Ichor::v1 {
 
         void setLogLevel(LogLevel level) noexcept final {}
         [[nodiscard]] LogLevel getLogLevel() const noexcept final { return LogLevel::LOG_ERROR; }
-        ServiceIdType getFrameworkServiceId() const noexcept final { return getServiceId(); };
+        [[nodiscard]] ServiceIdType getFrameworkServiceId() const noexcept final { return getServiceId(); };
     };
 }

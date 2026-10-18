@@ -27,7 +27,7 @@ public:
         }
     }
 
-    uint64_t getCount() const noexcept final {
+    [[nodiscard]] uint64_t getCount() const noexcept final {
         return count;
     }
 

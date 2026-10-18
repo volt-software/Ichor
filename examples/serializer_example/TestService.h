@@ -22,7 +22,7 @@ public:
 
 private:
     AsyncGenerator<IchorBehaviour> handleEvent(DoWorkEvent const &) {
-        TestMsg msg{20, "five hundred"};
+        TestMsg msg{.id=20, .val="five hundred"};
         auto res = _serializer->serialize(msg);
         auto msg2 = _serializer->deserialize(res);
         if(msg2->id != msg.id || msg2->val != msg.val) {

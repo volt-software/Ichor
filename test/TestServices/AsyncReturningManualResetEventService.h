@@ -19,8 +19,8 @@ struct NoCopyNoMove {
     static uint64_t countDestructed;
 };
 
-extern AsyncReturningManualResetEvent<int> _evtInt;
-extern AsyncReturningManualResetEvent<NoCopyNoMove> _evtNoCopyNoMove;
+extern AsyncReturningManualResetEvent<int> testEvtInt;
+extern AsyncReturningManualResetEvent<NoCopyNoMove> testEvtNoCopyNoMove;
 
 struct IAwaitReturningManualResetService {
     virtual Task<int> AwaitInt() = 0;
@@ -35,10 +35,10 @@ struct AwaitReturningManualResetService final : public IAwaitReturningManualRese
     ~AwaitReturningManualResetService() final = default;
 
     Task<int> AwaitInt() final {
-        co_return co_await _evtInt;
+        co_return co_await testEvtInt;
     }
 
     Task<NoCopyNoMove const &> AwaitNoCopyNoMove() final {
-        co_return co_await _evtNoCopyNoMove;
+        co_return co_await testEvtNoCopyNoMove;
     }
 };

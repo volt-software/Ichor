@@ -15,10 +15,12 @@
 
 template<size_t N>
 struct StringLiteral {
+    // NOLINTNEXTLINE(modernize-avoid-c-arrays): deduces N from the string literal
     constexpr StringLiteral(const char (&str)[N]) {
         std::copy_n(str, N, value);
     }
 
+    // NOLINTNEXTLINE(modernize-avoid-c-arrays): passed on as a string literal, to ctre among others
     char value[N];
 };
 
@@ -64,7 +66,7 @@ struct Re2RegexRouteMatch final : public Ichor::v1::RouteMatcher {
     ~Re2RegexRouteMatch() noexcept final = default;
 
     bool matches(std::string_view route) noexcept final {
-        std::size_t args_count = static_cast<size_t>(_r.NumberOfCapturingGroups());
+        auto args_count = static_cast<size_t>(_r.NumberOfCapturingGroups());
         _params.resize(static_cast<unsigned long>(args_count));
         std::vector<RE2::Arg> args{args_count};
         std::vector<RE2::Arg*> arg_ptrs{args_count};
@@ -86,7 +88,7 @@ private:
 };
 #endif
 
-#define FMT_INLINE_BUFFER_SIZE 1024
+static constexpr size_t INLINE_BUFFER_SIZE = 1024;
 
 #if defined(ICHOR_ENABLE_INTERNAL_DEBUGGING) || (defined(ICHOR_BUILDING_DEBUG) && (defined(__SANITIZE_ADDRESS__) || defined(__SANITIZE_THREAD__)))
 const uint64_t ITERATION_COUNT = 100;
@@ -217,7 +219,7 @@ int main(int argc, char *argv[]) {
         auto endFmt = std::chrono::steady_clock::now();
         auto startCout = std::chrono::steady_clock::now();
         for(uint64_t j = 0; j < ITERATION_COUNT; j++) {
-            fmt::basic_memory_buffer<char, FMT_INLINE_BUFFER_SIZE> buf{};
+            fmt::basic_memory_buffer<char, INLINE_BUFFER_SIZE> buf{};
             fmt::format_to(std::back_inserter(buf), "This is a test! {} {} {}", i, d, s);
             std::cout.write(buf.data(), static_cast<int64_t>(buf.size()));
         }

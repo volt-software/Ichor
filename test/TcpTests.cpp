@@ -8,7 +8,7 @@
 
 using namespace Ichor;
 
-std::unique_ptr<Ichor::AsyncManualResetEvent> _evt;
+std::unique_ptr<Ichor::AsyncManualResetEvent> testEvt;
 std::atomic<uint64_t> evtGate;
 
 #ifdef TEST_URING
@@ -42,14 +42,14 @@ TEST_CASE("TcpTests_uring") {
     auto version = Ichor::v1::kernelVersion();
 
     REQUIRE(version);
-    if(version < v1::Version{5, 18, 0}) {
+    if(version < v1::Version{.major=5, .minor=18, .patch=0}) {
         return;
     }
 
     auto gen_i = GENERATE(1, 2);
 
     if(gen_i == 2) {
-        emulateKernelVersion = v1::Version{5, 18, 0};
+        emulateKernelVersion = v1::Version{.major=5, .minor=18, .patch=0};
         fmt::println("emulating kernel version {}", *emulateKernelVersion);
     } else {
         fmt::println("kernel version {}", *version);
@@ -59,7 +59,7 @@ TEST_CASE("TcpTests_uring") {
 TEST_CASE("TcpTests") {
 #endif
     SECTION("Send message") {
-        _evt = std::make_unique<Ichor::AsyncManualResetEvent>();
+        testEvt = std::make_unique<Ichor::AsyncManualResetEvent>();
 #if defined(TEST_URING)
         auto queue = std::make_unique<QIMPL>(500, 100'000'000, emulateKernelVersion);
 #else
@@ -124,8 +124,7 @@ TEST_CASE("TcpTests") {
             REQUIRE(svc);
             auto& msgs = (*svc).first->getMsgs();
             REQUIRE(msgs.size() == 2);
-            std::span<uint8_t> msg{msgs[0].begin(), msgs[0].end()};
-            std::string_view str{reinterpret_cast<char*>(msg.data()), msg.size()};
+            std::string_view str{reinterpret_cast<char const *>(msgs[0].data()), msgs[0].size()};
             REQUIRE(str == "This is a message\n");
 
             queue->pushEvent<QuitEvent>(ServiceIdType{0});
@@ -143,7 +142,7 @@ TEST_CASE("TcpTests") {
     }
 
     SECTION("Send huge message") {
-        _evt = std::make_unique<Ichor::AsyncManualResetEvent>();
+        testEvt = std::make_unique<Ichor::AsyncManualResetEvent>();
         auto queue = std::make_unique<QIMPL>(true);
         ServiceIdType tcpClientId;
         evtGate = 0;
@@ -221,7 +220,7 @@ TEST_CASE("TcpTests") {
     }
 
     SECTION("Send multiple message") {
-        _evt = std::make_unique<Ichor::AsyncManualResetEvent>();
+        testEvt = std::make_unique<Ichor::AsyncManualResetEvent>();
         auto queue = std::make_unique<QIMPL>(true);
         ServiceIdType tcpClientId;
         evtGate = 0;
@@ -292,13 +291,11 @@ TEST_CASE("TcpTests") {
             auto& msgs = (*svc).first->getMsgs();
             REQUIRE(msgs.size() == 3);
             {
-                std::span<uint8_t> msg{msgs[0].begin(), msgs[0].end()};
-                std::string_view str{reinterpret_cast<char *>(msg.data()), msg.size()};
+                std::string_view str{reinterpret_cast<char const *>(msgs[0].data()), msgs[0].size()};
                 REQUIRE(str == "This is a message\n");
             }
             {
-                std::span<uint8_t> msg{msgs[1].begin(), msgs[1].end()};
-                std::string_view str{reinterpret_cast<char *>(msg.data()), msg.size()};
+                std::string_view str{reinterpret_cast<char const *>(msgs[1].data()), msgs[1].size()};
                 REQUIRE(str == "This is a message\n");
             }
 
@@ -310,7 +307,7 @@ TEST_CASE("TcpTests") {
     }
 
     SECTION("Send multiple message in one go") {
-        _evt = std::make_unique<Ichor::AsyncManualResetEvent>();
+        testEvt = std::make_unique<Ichor::AsyncManualResetEvent>();
         auto queue = std::make_unique<QIMPL>(true);
         ServiceIdType tcpClientId;
         evtGate = 0;
@@ -376,8 +373,7 @@ TEST_CASE("TcpTests") {
             REQUIRE(svc);
             auto& msgs = (*svc).first->getMsgs();
             REQUIRE(msgs.size() == 2);
-            std::span<uint8_t> msg{msgs[0].begin(), msgs[0].end()};
-            std::string_view str{reinterpret_cast<char *>(msg.data()), msg.size()};
+            std::string_view str{reinterpret_cast<char const *>(msgs[0].data()), msgs[0].size()};
             REQUIRE(str == "This is a messageThis is a message\n");
 
             queue->pushEvent<QuitEvent>(ServiceIdType{0});
@@ -388,7 +384,7 @@ TEST_CASE("TcpTests") {
     }
 
     SECTION("Send multiple message in one go huge") {
-        _evt = std::make_unique<Ichor::AsyncManualResetEvent>();
+        testEvt = std::make_unique<Ichor::AsyncManualResetEvent>();
         auto queue = std::make_unique<QIMPL>(true);
         ServiceIdType tcpClientId;
         evtGate = 0;
@@ -421,7 +417,7 @@ TEST_CASE("TcpTests") {
         }
 
         evtGate.store(0, std::memory_order_release);
-#define TEST_SIZE 128'00
+        static constexpr size_t TEST_SIZE = 128'00;
 
         queue->pushEvent<RunFunctionEventAsync>(ServiceIdType{0}, [&]() -> AsyncGenerator<IchorBehaviour> {
             auto &dm = GetThreadLocalManager();
@@ -473,7 +469,7 @@ TEST_CASE("TcpTests") {
     }
 
     SECTION("Closing connection removes services") {
-        _evt = std::make_unique<Ichor::AsyncManualResetEvent>();
+        testEvt = std::make_unique<Ichor::AsyncManualResetEvent>();
         auto queue = std::make_unique<QIMPL>(true);
         ServiceIdType tcpClientId;
         evtGate = 0;

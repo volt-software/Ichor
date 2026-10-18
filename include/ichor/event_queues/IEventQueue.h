@@ -52,7 +52,7 @@ namespace Ichor {
             static_assert(EventT::NAME == typeName<EventT>(), "Event typeName wrong");
 
             uint64_t eventId = getNextEventId();
-            pushEventInternal(INTERNAL_EVENT_PRIORITY, std::unique_ptr<Event>{new EventT(std::forward<uint64_t>(eventId), std::forward<ServiceIdType>(originatingServiceId), INTERNAL_EVENT_PRIORITY, std::forward<Args>(args)...)});
+            pushEventInternal(INTERNAL_EVENT_PRIORITY, std::unique_ptr<Event>{new EventT(eventId, originatingServiceId, INTERNAL_EVENT_PRIORITY, std::forward<Args>(args)...)});
             return eventId;
         }
 
@@ -71,7 +71,7 @@ namespace Ichor {
             static_assert(EventT::NAME == typeName<EventT>(), "Event typeName wrong");
 
             uint64_t eventId = getNextEventId();
-            pushEventInternal(priority, std::unique_ptr<Event>{new EventT(std::forward<uint64_t>(eventId), std::forward<ServiceIdType>(originatingServiceId), std::forward<uint64_t>(priority), std::forward<Args>(args)...)});
+            pushEventInternal(priority, std::unique_ptr<Event>{new EventT(eventId, originatingServiceId, priority, std::forward<Args>(args)...)});
             return eventId;
         }
 

@@ -70,7 +70,8 @@ The second option Ichor provides is to requests dependencies through a special c
 The code generally follows this pattern:
 
 ```c++
-class MyService final : public AdvancedService<TestService> {
+// AdvancedService takes the deriving class as its template argument, only that class can construct it
+class MyService final : public AdvancedService<MyService> {
 public:
     // Creating instances of a service includes properties, and these need to be stored in the parent class. Be careful to move them each time and don't use the props variable but instead call getProperties(), if you need them.
     MyService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {

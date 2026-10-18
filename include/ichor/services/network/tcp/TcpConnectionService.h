@@ -52,11 +52,11 @@ namespace Ichor::v1 {
 
         friend DependencyRegister;
 
-        int _socket;
-        uint64_t _attempts;
-        uint64_t _priority;
+        int _socket{-1};
+        uint64_t _attempts{};
+        uint64_t _priority{INTERNAL_EVENT_PRIORITY};
         int64_t _sendTimeout{250'000};
-        bool _quit;
+        bool _quit{};
         Ichor::ScopedServiceProxy<ILogger*> _logger {};
         Ichor::ScopedServiceProxy<ITimerFactory*> _timerFactory {};
         tl::optional<TimerRef> _timer{};

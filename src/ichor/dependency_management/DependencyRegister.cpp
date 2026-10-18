@@ -27,14 +27,14 @@ namespace Ichor {
 
     [[nodiscard]]
     bool DependencyRegister::contains(const Dependency &dependency) const noexcept {
-        return end() != std::find_if(begin(), end(), [&dependency](PairType const& dep) noexcept {
+        return end() != std::ranges::find_if(*this, [&dependency](PairType const& dep) noexcept {
             return std::get<Dependency>(dep.second).interfaceNameHash == dependency.interfaceNameHash;
         });
     }
 
     [[nodiscard]]
     auto DependencyRegister::find(const Dependency &dependency, bool satisfied) const noexcept -> typename decltype(_registrations)::const_iterator  {
-        return std::find_if(begin(), end(), [&dependency, satisfied](PairType const& node) noexcept {
+        return std::ranges::find_if(*this, [&dependency, satisfied](PairType const& node) noexcept {
             auto const &dep = std::get<Dependency>(node.second);
             return dep.interfaceNameHash == dependency.interfaceNameHash && ((dep.flags & DependencyFlags::ALLOW_MULTIPLE) == DependencyFlags::ALLOW_MULTIPLE || (satisfied && dep.satisfied > 0) || (!satisfied && dep.satisfied == 0));
         });
@@ -42,7 +42,7 @@ namespace Ichor {
 
     [[nodiscard]]
     auto DependencyRegister::find(const Dependency &dependency, bool satisfied) noexcept -> typename decltype(_registrations)::iterator  {
-        return std::find_if(begin(), end(), [&dependency, satisfied](PairType const& node) noexcept {
+        return std::ranges::find_if(*this, [&dependency, satisfied](PairType const& node) noexcept {
             auto const &dep = std::get<Dependency>(node.second);
             return dep.interfaceNameHash == dependency.interfaceNameHash && ((dep.flags & DependencyFlags::ALLOW_MULTIPLE) == DependencyFlags::ALLOW_MULTIPLE || (satisfied && dep.satisfied > 0) || (!satisfied && dep.satisfied == 0));
         });
@@ -50,7 +50,7 @@ namespace Ichor {
 
     [[nodiscard]]
     auto DependencyRegister::find(NameHashType hash, bool satisfied) const noexcept -> typename decltype(_registrations)::const_iterator  {
-        return std::find_if(begin(), end(), [hash, satisfied](PairType const& node) noexcept {
+        return std::ranges::find_if(*this, [hash, satisfied](PairType const& node) noexcept {
             auto const &dep = std::get<Dependency>(node.second);
             return dep.interfaceNameHash == hash && ((dep.flags & DependencyFlags::ALLOW_MULTIPLE) == DependencyFlags::ALLOW_MULTIPLE || (satisfied && dep.satisfied > 0) || (!satisfied && dep.satisfied == 0));
         });
@@ -58,7 +58,7 @@ namespace Ichor {
 
     [[nodiscard]]
     auto DependencyRegister::find(NameHashType hash, bool satisfied) noexcept -> typename decltype(_registrations)::iterator  {
-        return std::find_if(begin(), end(), [hash, satisfied](PairType const& node) noexcept {
+        return std::ranges::find_if(*this, [hash, satisfied](PairType const& node) noexcept {
             auto const &dep = std::get<Dependency>(node.second);
             return dep.interfaceNameHash == hash && ((dep.flags & DependencyFlags::ALLOW_MULTIPLE) == DependencyFlags::ALLOW_MULTIPLE || (satisfied && dep.satisfied > 0) || (!satisfied && dep.satisfied == 0));
         });
@@ -66,7 +66,7 @@ namespace Ichor {
 
     [[nodiscard]]
     auto DependencyRegister::find(NameHashType hash) const noexcept -> typename decltype(_registrations)::const_iterator  {
-        return std::find_if(begin(), end(), [hash](PairType const& node) noexcept {
+        return std::ranges::find_if(*this, [hash](PairType const& node) noexcept {
             auto const &dep = std::get<Dependency>(node.second);
             return dep.interfaceNameHash == hash;
         });
@@ -74,7 +74,7 @@ namespace Ichor {
 
     [[nodiscard]]
     auto DependencyRegister::find(NameHashType hash) noexcept -> typename decltype(_registrations)::iterator  {
-        return std::find_if(begin(), end(), [hash](PairType const& node) noexcept {
+        return std::ranges::find_if(*this, [hash](PairType const& node) noexcept {
             auto const &dep = std::get<Dependency>(node.second);
             return dep.interfaceNameHash == hash;
         });
@@ -92,7 +92,7 @@ namespace Ichor {
 
     [[nodiscard]]
     bool DependencyRegister::allSatisfied() const noexcept {
-        return std::all_of(begin(), end(), [](PairType const &node) noexcept {
+        return std::ranges::all_of(*this, [](PairType const &node) noexcept {
             auto const &dep = std::get<Dependency>(node.second);
             return dep.satisfied > 0 || (dep.flags & DependencyFlags::REQUIRED) == DependencyFlags::NONE;
         });

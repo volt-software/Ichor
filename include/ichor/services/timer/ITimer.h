@@ -25,7 +25,7 @@ namespace Ichor::v1 {
 
         /// \param cb called when timer is stopped, after which it is safe to destroy. Also gets called if timer already stopping/stopped.
         /// \return false if timer could not stop (maybe already stopped or currently stopping/starting), true otherwise
-        virtual bool stopTimer(std::function<void(void)> cb) = 0;
+        virtual bool stopTimer(std::function<void()> cb) = 0;
 
         [[nodiscard]] virtual TimerState getState() const noexcept = 0;
 

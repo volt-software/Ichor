@@ -1,5 +1,6 @@
 #include <ichor/services/metrics/EventStatisticsService.h>
 #include <ichor/DependencyManager.h>
+#include <algorithm>
 #include <numeric>
 #include <ichor/ScopedServiceProxy.h>
 
@@ -55,8 +56,8 @@ Ichor::Task<void> Ichor::v1::EventStatisticsService::stop() {
                 continue;
             }
 
-            auto min = std::min_element(begin(statistics), end(statistics), [](const AveragedStatisticEntry &a, const AveragedStatisticEntry &b){return a.minProcessingTimeRequired < b.minProcessingTimeRequired; })->minProcessingTimeRequired;
-            auto max = std::max_element(begin(statistics), end(statistics), [](const AveragedStatisticEntry &a, const AveragedStatisticEntry &b){return a.maxProcessingTimeRequired < b.maxProcessingTimeRequired; })->maxProcessingTimeRequired;
+            auto min = std::ranges::min_element(statistics, [](const AveragedStatisticEntry &a, const AveragedStatisticEntry &b){return a.minProcessingTimeRequired < b.minProcessingTimeRequired; })->minProcessingTimeRequired;
+            auto max = std::ranges::max_element(statistics, [](const AveragedStatisticEntry &a, const AveragedStatisticEntry &b){return a.maxProcessingTimeRequired < b.maxProcessingTimeRequired; })->maxProcessingTimeRequired;
             auto avg = std::accumulate(begin(statistics), end(statistics), 0L, [](int64_t i, const AveragedStatisticEntry &entry) -> int64_t { return i + entry.avgProcessingTimeRequired; }) / static_cast<int64_t>(statistics.size());
             auto occ = std::accumulate(begin(statistics), end(statistics), 0L, [](int64_t i, const AveragedStatisticEntry &entry){ return i + entry.occurrences; });
             total_occ += occ;
@@ -77,7 +78,7 @@ bool Ichor::v1::EventStatisticsService::preInterceptEvent(Event const &evt) {
         _eventTypeToNameMapper.emplace(evtType, evt.get_name());
     }
 
-    return (bool)AllowOthersHandling;
+    return AllowOthersHandling;
 }
 
 void Ichor::v1::EventStatisticsService::postInterceptEvent(Event const &evt, bool processed) {
@@ -142,8 +143,8 @@ void Ichor::v1::EventStatisticsService::calculateAverage() {
 
         auto avgStatistics = _averagedStatistics.find(key);
 
-        auto min = std::min_element(begin(statistics), end(statistics), [](const StatisticEntry &a, const StatisticEntry &b){return a.processingTimeRequired < b.processingTimeRequired; })->processingTimeRequired;
-        auto max = std::max_element(begin(statistics), end(statistics), [](const StatisticEntry &a, const StatisticEntry &b){return a.processingTimeRequired < b.processingTimeRequired; })->processingTimeRequired;
+        auto min = std::ranges::min_element(statistics, [](const StatisticEntry &a, const StatisticEntry &b){return a.processingTimeRequired < b.processingTimeRequired; })->processingTimeRequired;
+        auto max = std::ranges::max_element(statistics, [](const StatisticEntry &a, const StatisticEntry &b){return a.processingTimeRequired < b.processingTimeRequired; })->processingTimeRequired;
         auto avg = std::accumulate(begin(statistics), end(statistics), 0L, [](int64_t i, const StatisticEntry &entry){ return i + entry.processingTimeRequired; }) / static_cast<int64_t>(statistics.size());
 
         if(avgStatistics == end(_averagedStatistics)) {

@@ -54,7 +54,7 @@
 
 bool AddEventHandlerDuringEventHandlingService::_addedReg{};
 std::atomic<uint64_t> evtGate;
-std::unique_ptr<Ichor::AsyncManualResetEvent> _evt;
+std::unique_ptr<Ichor::AsyncManualResetEvent> testEvt;
 std::atomic<bool> constructorInjectedTargetDestroyed{false};
 std::atomic<bool> removeCalled{false};
 std::atomic<ServiceIdType> svcIdToPassAround{ServiceIdType{0}};
@@ -77,14 +77,14 @@ TEST_CASE("ServicesTests_uring") {
     auto version = Ichor::v1::kernelVersion();
 
     REQUIRE(version);
-    if(version < v1::Version{5, 18, 0}) {
+    if(version < v1::Version{.major=5, .minor=18, .patch=0}) {
         return;
     }
 
     auto gen_i = GENERATE(1, 2);
 
     if(gen_i == 2) {
-        emulateKernelVersion = v1::Version{5, 18, 0};
+        emulateKernelVersion = v1::Version{.major=5, .minor=18, .patch=0};
         fmt::println("emulating kernel version {}", *emulateKernelVersion);
     } else {
         fmt::println("kernel version {}", *version);
@@ -100,7 +100,7 @@ TEST_CASE("ServicesTests") {
 #endif
 #endif
 
-    _evt.reset();
+    testEvt.reset();
     evtGate.store(0, std::memory_order_release);
 
     SECTION("QuitOnQuitEvent") {
@@ -1139,7 +1139,7 @@ TEST_CASE("ServicesTests") {
             dm.createServiceManager<DependencyService<IUselessService, DependencyFlags::ALLOW_MULTIPLE>, ICountService>();
             auto service = dm.createServiceManager<ConstructorInjectionTestService, IConstructorInjectionTestService>();
             svcId = service->getServiceId();
-            static_assert(std::is_same_v<decltype(service), ServiceProtectedPointer<IService>>, "");
+            static_assert(std::is_same_v<decltype(service), ServiceProtectedPointer<IService>>);
             queue->start(CaptureSigInt);
 #if defined(TEST_SDEVENT)
             int r = sd_event_loop(loop);
@@ -1438,7 +1438,7 @@ TEST_CASE("ServicesTests") {
         auto &dm = queue->getManager();
         ServiceIdType trackerSvcId{};
         ServiceIdType depSvcId{};
-        _evt = std::make_unique<AsyncManualResetEvent>();
+        testEvt = std::make_unique<AsyncManualResetEvent>();
         Ichor::Detail::_local_dm = nullptr;
         std::thread t([&]() {
             Ichor::Detail::_local_dm = &dm;
@@ -1475,7 +1475,7 @@ TEST_CASE("ServicesTests") {
             REQUIRE(services[0]->isRunning());
             REQUIRE(services[0]->getSvcCount() == 0);
 
-            _evt->set();
+            testEvt->set();
         });
 
         runForOrQueueEmpty(dm);
@@ -1493,7 +1493,7 @@ TEST_CASE("ServicesTests") {
             REQUIRE(services[0]->isRunning());
             REQUIRE(services[0]->getSvcCount() == 2);
 
-            _evt->reset();
+            testEvt->reset();
 
             queue->pushEvent<StopServiceEvent>(ServiceIdType{0}, depSvcId, true);
         });
@@ -1511,7 +1511,7 @@ TEST_CASE("ServicesTests") {
 
             REQUIRE(services.size() == 0);
 
-            _evt->set();
+            testEvt->set();
         });
 
         runForOrQueueEmpty(dm);
@@ -1572,7 +1572,7 @@ TEST_CASE("ServicesTests") {
     SECTION("Async Multiple Broadcast Handlers") {
         auto queue = std::make_unique<QIMPL>(500);
         auto &dm = queue->getManager();
-        _evt = std::make_unique<AsyncManualResetEvent>();
+        testEvt = std::make_unique<AsyncManualResetEvent>();
         Ichor::Detail::_local_dm = nullptr;
         std::thread t([&]() {
             Ichor::Detail::_local_dm = &dm;
@@ -1625,7 +1625,7 @@ TEST_CASE("ServicesTests") {
                 REQUIRE(svc->getFinishedPosts() == 0);
             }
 
-            _evt->set();
+            testEvt->set();
             for (auto &svc: services) {
                 REQUIRE(svc->getFinishedCalls() == 1);
                 REQUIRE(svc->getFinishedPosts() == 0);
@@ -1710,7 +1710,7 @@ TEST_CASE("ServicesTests") {
         using namespace std::chrono_literals;
 
         ServiceIdType providerId{};
-        _evt = std::make_unique<AsyncManualResetEvent>();
+        testEvt = std::make_unique<AsyncManualResetEvent>();
 
 #if defined(TEST_URING)
         auto queue = std::make_unique<QIMPL>(500, 100'000'000, emulateKernelVersion);
@@ -1754,7 +1754,7 @@ TEST_CASE("ServicesTests") {
         queue->pushEvent<RunFunctionEvent>(ServiceIdType{0}, [&]() {
             auto deps = dm.getDependentsForService(providerId);
             REQUIRE_FALSE(deps.empty());
-            _evt->set();
+            testEvt->set();
 
             queue->pushEvent<RunFunctionEvent>(ServiceIdType{0}, [&dm, providerId]() {
                 auto deps2 = dm.getDependentsForService(providerId);

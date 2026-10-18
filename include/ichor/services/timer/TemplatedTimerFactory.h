@@ -21,7 +21,7 @@ namespace Ichor::v1 {
         }
         ~TimerFactory() final = default;
 
-        Task<void> stop() {
+        Task<void> stop() override {
             INTERNAL_IO_DEBUG("TimerFactory<{}, {}> {} stopping {}", typeName<TIMER>(), typeName<QUEUE>(), AdvancedService<TimerFactory<TIMER, QUEUE>>::getServiceId(), _stoppingTimers);
             if(!_stoppingTimers) {
                 co_await stopAllTimers();
@@ -93,7 +93,7 @@ namespace Ichor::v1 {
             return VectorView<ITimer>{_timers};
         }
 
-        [[nodiscard]] virtual ServiceIdType getRequestingServiceId() const noexcept final {
+        [[nodiscard]] ServiceIdType getRequestingServiceId() const noexcept final {
             return _requestingSvcId;
         }
 

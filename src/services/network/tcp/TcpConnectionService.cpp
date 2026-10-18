@@ -15,7 +15,7 @@
 
 
 template <typename InterfaceT> requires Ichor::DerivedAny<InterfaceT, Ichor::v1::IConnectionService, Ichor::v1::IHostConnectionService, Ichor::v1::IClientConnectionService>
-Ichor::v1::TcpConnectionService<InterfaceT>::TcpConnectionService(DependencyRegister &reg, Properties props) : AdvancedService<TcpConnectionService<InterfaceT>>(std::move(props)), _socket(-1), _attempts(), _priority(INTERNAL_EVENT_PRIORITY), _quit() {
+Ichor::v1::TcpConnectionService<InterfaceT>::TcpConnectionService(DependencyRegister &reg, Properties props) : AdvancedService<TcpConnectionService<InterfaceT>>(std::move(props)) {
     reg.registerDependency<ILogger>(this, DependencyFlags::REQUIRED);
     reg.registerDependency<ITimerFactory>(this, DependencyFlags::REQUIRED);
 }
@@ -82,9 +82,9 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::v1::TcpConnectionServi
             co_return tl::unexpected(Ichor::StartError::FAILED);
         }
 
-        bool connected = connect(_socket, (struct sockaddr *)&address, sizeof(address)) == 0;
+        bool connected = connect(_socket, reinterpret_cast<struct sockaddr *>(&address), sizeof(address)) == 0;
         while(!connected && _attempts < 50) {
-            connected = connect(_socket, (struct sockaddr *)&address, sizeof(address)) == 0;
+            connected = connect(_socket, reinterpret_cast<struct sockaddr *>(&address), sizeof(address)) == 0;
             if(connected) {
                 break;
             }
@@ -106,10 +106,13 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::v1::TcpConnectionServi
                     continue;
                 }
 
+                // NOLINTNEXTLINE(bugprone-signed-bitwise): poll defines revents and its flags as short and int
                 if(pfd.revents & POLLERR) {
                     ICHOR_LOG_ERROR(_logger, "[{}] POLLERR {}", AdvancedService<TcpConnectionService>::getServiceId(), pfd.revents);
+                // NOLINTNEXTLINE(bugprone-signed-bitwise): poll defines revents and its flags as short and int
                 } else if(pfd.revents & POLLHUP) {
                     ICHOR_LOG_ERROR(_logger, "[{}] POLLHUP {}", AdvancedService<TcpConnectionService>::getServiceId(), pfd.revents);
+                // NOLINTNEXTLINE(bugprone-signed-bitwise): poll defines revents and its flags as short and int
                 } else if(pfd.revents & POLLOUT) {
                     int connect_result{};
                     socklen_t result_len = sizeof(connect_result);

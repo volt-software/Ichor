@@ -29,7 +29,7 @@ namespace Ichor::v1 {
             return _ensureTimer().startTimer(fireImmediately);
         }
 
-        bool stopTimer(std::function<void(void)> cb) final {
+        bool stopTimer(std::function<void()> cb) final {
             return _ensureTimer().stopTimer(std::move(cb));
         }
 
@@ -75,7 +75,7 @@ namespace Ichor::v1 {
 
     private:
         // Helper to resolve the underlying timer; terminates in debug/hardening if not found.
-        ITimer& _ensureTimer() const noexcept {
+        [[nodiscard]] ITimer& _ensureTimer() const noexcept {
             auto t = _factory->getTimerById(_timerId);
             if constexpr (DO_INTERNAL_DEBUG || DO_HARDENING) {
                 if (!t) [[unlikely]] {

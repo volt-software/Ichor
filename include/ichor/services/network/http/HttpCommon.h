@@ -191,7 +191,7 @@ namespace Ichor::v1 {
     };
 
     struct HttpResponse {
-        HttpStatus status;
+        HttpStatus status{HttpStatus::ok};
         tl::optional<std::string> contentType;
         std::vector<uint8_t> body;
         Ichor::unordered_map<std::string, std::string> headers;

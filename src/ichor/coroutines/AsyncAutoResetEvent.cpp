@@ -11,8 +11,6 @@
 
 Ichor::AsyncAutoResetEvent::AsyncAutoResetEvent(bool initiallySet) noexcept
         : m_set(initiallySet)
-        , m_waitersHead(nullptr)
-        , m_waitersTail(nullptr)
 {
 }
 

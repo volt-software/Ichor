@@ -45,8 +45,6 @@ namespace Ichor::Detail {
     public:
 
         AsyncGeneratorPromiseBase() noexcept
-                : _state(state::value_ready_producer_suspended)
-                , _id(_idCounter++)
         {
             // 0 has a special meaning. Maybe eventually turn this into an optional?
             // See TaskPromise f.e.
@@ -62,7 +60,7 @@ namespace Ichor::Detail {
         AsyncGeneratorPromiseBase(const AsyncGeneratorPromiseBase& other) = delete;
         AsyncGeneratorPromiseBase& operator=(const AsyncGeneratorPromiseBase& other) = delete;
 
-        ICHOR_COROUTINE_CONSTEXPR std::suspend_always initial_suspend() const noexcept {
+        [[nodiscard]] ICHOR_COROUTINE_CONSTEXPR std::suspend_always initial_suspend() const noexcept {
             INTERNAL_COROUTINE_DEBUG("AsyncGeneratorPromiseBase::initial_suspend {} {}", _id, _state);
             return {};
         }
@@ -152,9 +150,9 @@ namespace Ichor::Detail {
 
         // Ichor forces everything to be on the same thread (or terminates the program)
         // Therefore, we don't need atomic state, like is used in cppcoro
-        state _state;
+        state _state{state::value_ready_producer_suspended};
         std::coroutine_handle<> _consumerCoroutine;
-        uint64_t _id;
+        uint64_t _id{_idCounter++};
         uint64_t _priority{100}; // TODO: use INTERNAL_DEPENDENCY_EVENT_PRIORITY by refactoring headers
 #ifdef ICHOR_HAVE_STD_STACKTRACE
         std::stacktrace _trace;
@@ -180,7 +178,7 @@ namespace Ichor::Detail {
         {
         }
 
-        ICHOR_COROUTINE_CONSTEXPR bool await_ready() const noexcept {
+        [[nodiscard]] ICHOR_COROUTINE_CONSTEXPR bool await_ready() const noexcept {
             INTERNAL_COROUTINE_DEBUG("AsyncGeneratorYieldOperation::await_ready {} {}", _initialState, _promise._id);
             return _initialState == state::value_not_ready_consumer_suspended;
         }
@@ -225,7 +223,10 @@ namespace Ichor::Detail {
 
         ICHOR_COROUTINE_CONSTEXPR T& value() noexcept {
             INTERNAL_COROUTINE_DEBUG("request value {}, {}", _id, _currentValue.has_value());
-            return _currentValue.value();
+            if(!_currentValue.has_value()) [[unlikely]] {
+                std::terminate();
+            }
+            return *_currentValue;
         }
 
         [[nodiscard]] constexpr bool finished() const noexcept final {

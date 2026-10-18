@@ -3,7 +3,7 @@
 using namespace Ichor;
 using namespace Ichor::v1;
 
-extern std::unique_ptr<Ichor::AsyncManualResetEvent> _evt;
+extern std::unique_ptr<Ichor::AsyncManualResetEvent> testEvt;
 
 struct IAsyncDependencyTrackerService {
     [[nodiscard]] virtual unordered_map<ServiceIdType, ServiceIdType, ServiceIdHash> getCreatedServices() noexcept = 0;
@@ -26,7 +26,7 @@ struct AsyncDependencyTrackerService final : public IAsyncDependencyTrackerServi
     }
 
     AsyncGenerator<IchorBehaviour> handleDependencyRequest(v1::AlwaysNull<TrackingServiceType*>, DependencyRequestEvent const &evt) {
-        co_await *_evt;
+        co_await *testEvt;
 
         auto svc = _services.find(evt.originatingService);
 
@@ -42,7 +42,7 @@ struct AsyncDependencyTrackerService final : public IAsyncDependencyTrackerServi
     }
 
     AsyncGenerator<IchorBehaviour> handleDependencyUndoRequest(v1::AlwaysNull<TrackingServiceType*>, DependencyUndoRequestEvent const &evt) {
-        co_await *_evt;
+        co_await *testEvt;
 
         auto service = _services.find(evt.originatingService);
 

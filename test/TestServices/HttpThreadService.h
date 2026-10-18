@@ -15,7 +15,7 @@
 using namespace Ichor;
 using namespace Ichor::v1;
 
-extern std::unique_ptr<Ichor::AsyncManualResetEvent> _evt;
+extern std::unique_ptr<Ichor::AsyncManualResetEvent> testEvt;
 extern std::atomic<bool> evtGate;
 extern std::thread::id testThreadId;
 extern std::thread::id dmThreadId;
@@ -33,7 +33,7 @@ public:
 private:
     Task<tl::expected<void, Ichor::StartError>> start() final {
         GetThreadLocalEventQueue().pushEvent<RunFunctionEventAsync>(getServiceId(), [this]() -> AsyncGenerator<IchorBehaviour> {
-            auto toSendMsg = _testSerializer->serialize(TestMsg{11, "hello"});
+            auto toSendMsg = _testSerializer->serialize(TestMsg{.id=11, .val="hello"});
 
             if(dmThreadId != std::this_thread::get_id()) {
                 fmt::println("dmThreadId id incorrect");
@@ -102,7 +102,7 @@ private:
             auto msg = _testSerializer->deserialize(req.body);
             evtGate = true;
 
-            co_await *_evt;
+            co_await *testEvt;
 
             if(dmThreadId != std::this_thread::get_id()) {
                 fmt::println("dmThreadId id incorrect");
@@ -113,7 +113,7 @@ private:
                 std::terminate();
             }
 
-            co_return HttpResponse{HttpStatus::ok, "application/json", _testSerializer->serialize(TestMsg{11, "hello"}), {}};
+            co_return HttpResponse{.status=HttpStatus::ok, .contentType="application/json", .body=_testSerializer->serialize(TestMsg{.id=11, .val="hello"}), .headers={}};
         });
         _regexRouteRegistration = svc->addRoute(HttpMethod::get, std::make_unique<RegexRouteMatch<R"(\/regex_test\/([a-zA-Z0-9]*)\?*([a-zA-Z0-9]+=[a-zA-Z0-9]+)*&*([a-zA-Z0-9]+=[a-zA-Z0-9]+)*)">>(), [this](HttpRequest &req) -> Task<HttpResponse> {
             fmt::println("/regex_test POST");
@@ -126,7 +126,7 @@ private:
                 std::terminate();
             }
 
-            co_return HttpResponse{HttpStatus::ok, "application/json", _regexSerializer->serialize(RegexJsonMsg{std::move(req.regex_params)}), {}};
+            co_return HttpResponse{.status=HttpStatus::ok, .contentType="application/json", .body=_regexSerializer->serialize(RegexJsonMsg{std::move(req.regex_params)}), .headers={}};
         });
     }
 
@@ -196,7 +196,7 @@ private:
         }
 
         if(response->status != HttpStatus::ok) {
-            fmt::println("regex1 status not ok {}", (int)response->status);
+            fmt::println("regex1 status not ok {}", static_cast<int>(response->status));
             std::terminate();
         }
 
@@ -229,7 +229,7 @@ private:
         }
 
         if(response->status != HttpStatus::ok) {
-            fmt::println("regex2 status not ok {}", (int)response->status);
+            fmt::println("regex2 status not ok {}", static_cast<int>(response->status));
             std::terminate();
         }
 
@@ -262,7 +262,7 @@ private:
         }
 
         if(response->status != HttpStatus::ok) {
-            fmt::println("regex3 status not ok {}", (int)response->status);
+            fmt::println("regex3 status not ok {}", static_cast<int>(response->status));
             std::terminate();
         }
 
@@ -299,7 +299,7 @@ private:
         }
 
         if(response->status != HttpStatus::ok) {
-            fmt::println("regex4 status not ok {}", (int)response->status);
+            fmt::println("regex4 status not ok {}", static_cast<int>(response->status));
             std::terminate();
         }
 

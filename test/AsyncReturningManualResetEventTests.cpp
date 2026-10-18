@@ -15,8 +15,8 @@ namespace {
     }
 }
 
-AsyncReturningManualResetEvent<int> _evtInt;
-AsyncReturningManualResetEvent<NoCopyNoMove> _evtNoCopyNoMove;
+AsyncReturningManualResetEvent<int> testEvtInt;
+AsyncReturningManualResetEvent<NoCopyNoMove> testEvtNoCopyNoMove;
 uint64_t NoCopyNoMove::countConstructed{};
 uint64_t NoCopyNoMove::countDestructed{};
 
@@ -61,8 +61,8 @@ TEST_CASE("AsyncReturningManualResetEvent: set and reset") {
 }
 
 TEST_CASE("AsyncReturningManualResetEvent: awaiting a no copy/no move class should work and return a reference.") {
-    _evtInt.reset();
-    _evtNoCopyNoMove.reset();
+    testEvtInt.reset();
+    testEvtNoCopyNoMove.reset();
     auto queue = std::make_unique<PriorityQueue>();
     auto &dm = queue->getManager();
     ServiceIdType id{};
@@ -82,17 +82,17 @@ TEST_CASE("AsyncReturningManualResetEvent: awaiting a no copy/no move class shou
         REQUIRE(svc);
 
         queue->pushEvent<RunFunctionEvent>(ServiceIdType{0}, [&]() {
-            _evtInt.set(5);
+            testEvtInt.set(5);
         });
 
-        auto intRet = co_await _evtInt;
+        auto intRet = co_await testEvtInt;
         REQUIRE(intRet == 5);
 
         queue->pushEvent<RunFunctionEvent>(ServiceIdType{0}, [&]() {
-            _evtNoCopyNoMove.set(nocopy);
+            testEvtNoCopyNoMove.set(nocopy);
         });
 
-        auto const &awaitedNocopy = co_await _evtNoCopyNoMove;
+        auto const &awaitedNocopy = co_await testEvtNoCopyNoMove;
         REQUIRE(awaitedNocopy.countConstructed == 1);
         REQUIRE(awaitedNocopy.countDestructed == 0);
 

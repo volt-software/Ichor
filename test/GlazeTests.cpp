@@ -47,7 +47,7 @@ TEST_CASE("GlazeTests: compare overrides") {
 }
 
 TEST_CASE("GlazeTests: read keys of overridden lengths") {
-    KeyLengthsMsg msg{1, 2, 3, 4};
+    KeyLengthsMsg msg{.abc=1, .abcde=2, .abcdef=3, .abcdefg=4};
     std::string buf;
     REQUIRE(!glz::write_json(msg, buf));
 

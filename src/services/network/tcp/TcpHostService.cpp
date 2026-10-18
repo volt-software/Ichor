@@ -14,7 +14,7 @@
 #include <fcntl.h>
 #include <ichor/ScopedServiceProxy.h>
 
-Ichor::v1::TcpHostService::TcpHostService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)), _socket(-1), _bindFd(), _priority(INTERNAL_EVENT_PRIORITY), _quit() {
+Ichor::v1::TcpHostService::TcpHostService(DependencyRegister &reg, Properties props) : AdvancedService(std::move(props)) {
     reg.registerDependency<ILogger>(this, DependencyFlags::REQUIRED);
     reg.registerDependency<ITimerFactory>(this, DependencyFlags::REQUIRED);
 }
@@ -36,6 +36,7 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::v1::TcpHostService::st
     ::setsockopt(_socket, SOL_SOCKET, SO_REUSEADDR, &setting, sizeof(setting));
     ::setsockopt(_socket, IPPROTO_TCP, TCP_NODELAY, &setting, sizeof(setting));
     auto flags = ::fcntl(_socket, F_GETFL, 0);
+    // NOLINTNEXTLINE(bugprone-signed-bitwise): fcntl takes and returns its flags as int
     ::fcntl(_socket, F_SETFL, flags | O_NONBLOCK);
 
     sockaddr_in address{};
@@ -61,7 +62,7 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::v1::TcpHostService::st
     }
     address.sin_port = ::htons(Ichor::v1::any_cast<uint16_t>((getProperties())["Port"]));
 
-    _bindFd = ::bind(_socket, (sockaddr *)&address, sizeof(address));
+    _bindFd = ::bind(_socket, reinterpret_cast<sockaddr *>(&address), sizeof(address));
 
     if(_bindFd == -1) {
         close(_socket);
@@ -148,7 +149,7 @@ void Ichor::v1::TcpHostService::acceptHandler() {
             ICHOR_LOG_TRACE(_logger, "quitting, no push");
         }
     }};
-    int newConnection = ::accept(_socket, (sockaddr *) &client_addr, &client_addr_size);
+    int newConnection = ::accept(_socket, reinterpret_cast<sockaddr *>(&client_addr), &client_addr_size);
 
     if(_quit) {
         ICHOR_LOG_TRACE(_logger, "quitting");

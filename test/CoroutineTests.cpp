@@ -11,8 +11,8 @@
 #include "../examples/common/DebugService.h"
 #include <memory>
 
-std::unique_ptr<Ichor::AsyncManualResetEvent> _evt;
-std::unique_ptr<Ichor::AsyncAutoResetEvent> _autoEvt;
+std::unique_ptr<Ichor::AsyncManualResetEvent> testEvt;
+std::unique_ptr<Ichor::AsyncAutoResetEvent> testAutoEvt;
 uint64_t AwaitNoCopy::countConstructed{};
 uint64_t AwaitNoCopy::countDestructed{};
 uint64_t AwaitNoCopy::countMoved{};
@@ -50,14 +50,14 @@ TEST_CASE("CoroutineTests_uring") {
     auto version = Ichor::v1::kernelVersion();
 
     REQUIRE(version);
-    if(version < v1::Version{5, 18, 0}) {
+    if(version < v1::Version{.major=5, .minor=18, .patch=0}) {
         return;
     }
 
     auto gen_i = GENERATE(1, 2);
 
     if(gen_i == 2) {
-        emulateKernelVersion = v1::Version{5, 18, 0};
+        emulateKernelVersion = v1::Version{.major=5, .minor=18, .patch=0};
         fmt::println("emulating kernel version {}", *emulateKernelVersion);
     } else {
         fmt::println("kernel version {}", *version);
@@ -73,7 +73,7 @@ TEST_CASE("CoroutineTests") {
 #endif
 #endif
 
-    _evt = std::make_unique<Ichor::AsyncManualResetEvent>();
+    testEvt = std::make_unique<Ichor::AsyncManualResetEvent>();
 
     SECTION("Required dependencies") {
 #if defined(TEST_URING)
@@ -192,7 +192,7 @@ TEST_CASE("CoroutineTests") {
 
         queue->pushEvent<RunFunctionEvent>(ServiceIdType{0}, []() {
             INTERNAL_DEBUG("set");
-            _evt->set();
+            testEvt->set();
         });
 
         t.join();
@@ -236,7 +236,7 @@ TEST_CASE("CoroutineTests") {
 
         queue->pushEvent<RunFunctionEvent>(ServiceIdType{0}, []() {
             INTERNAL_DEBUG("set");
-            _evt->set();
+            testEvt->set();
         });
 
         t.join();
@@ -251,7 +251,7 @@ TEST_CASE("CoroutineTests") {
         auto queue = std::make_unique<QIMPL>(500);
 #endif
         auto &dm = queue->getManager();
-        _autoEvt = std::make_unique<Ichor::AsyncAutoResetEvent>();
+        testAutoEvt = std::make_unique<Ichor::AsyncAutoResetEvent>();
         ServiceIdType svcId{};
 
         std::thread t([&]() {
@@ -280,7 +280,7 @@ TEST_CASE("CoroutineTests") {
             INTERNAL_DEBUG("set");
             auto svc = dm.getService<IMultipleAwaitService>(svcId);
             REQUIRE(svc);
-            _autoEvt->set_all();
+            testAutoEvt->set_all();
             REQUIRE((*svc).first->getCount() == 2);
             dm.getEventQueue().pushEvent<QuitEvent>(ServiceIdType{0});
         });
@@ -327,7 +327,7 @@ TEST_CASE("CoroutineTests") {
 
         queue->pushEvent<RunFunctionEvent>(ServiceIdType{0}, []() {
             INTERNAL_DEBUG("set");
-            _evt->set();
+            testEvt->set();
         });
 
 
@@ -408,7 +408,7 @@ TEST_CASE("CoroutineTests") {
 
         queue->pushEvent<RunFunctionEvent>(ServiceIdType{0}, [&dm = dm]() {
             INTERNAL_DEBUG("set");
-            _evt->set();
+            testEvt->set();
             dm.getEventQueue().pushEvent<QuitEvent>(ServiceIdType{0});
         });
 
@@ -467,7 +467,7 @@ TEST_CASE("CoroutineTests") {
 
         queue->pushEvent<RunFunctionEvent>(ServiceIdType{0}, [&dm = dm]() {
             INTERNAL_DEBUG("set");
-            _evt->set();
+            testEvt->set();
             dm.getEventQueue().pushEvent<QuitEvent>(ServiceIdType{0});
         });
 
@@ -557,7 +557,7 @@ TEST_CASE("CoroutineTests") {
 
             REQUIRE(svcs.find(svcId)->second->getServiceState() == Ichor::ServiceState::STARTING);
 
-            _evt->set();
+            testEvt->set();
 
             REQUIRE(svcs.find(svcId)->second->getServiceState() == Ichor::ServiceState::INJECTING);
         });
@@ -627,7 +627,7 @@ TEST_CASE("CoroutineTests") {
 
             REQUIRE(svcs.find(svcId)->second->getServiceState() == Ichor::ServiceState::STOPPING);
 
-            _evt->set();
+            testEvt->set();
 
             REQUIRE(svcs.find(svcId)->second->getServiceState() == Ichor::ServiceState::INSTALLED);
         });
@@ -656,5 +656,5 @@ TEST_CASE("CoroutineTests") {
         REQUIRE_FALSE(dm.isRunning());
     }
 
-    _evt.reset();
+    testEvt.reset();
 }

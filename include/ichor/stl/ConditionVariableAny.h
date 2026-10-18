@@ -37,7 +37,7 @@ namespace Ichor::v1 {
 
         void notify_all() noexcept
         {
-            std::lock_guard const lock(_cvMutex);
+            std::scoped_lock const lock(_cvMutex);
             pthread_cond_broadcast(&_cond);
         }
 

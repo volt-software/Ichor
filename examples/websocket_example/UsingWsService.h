@@ -74,7 +74,7 @@ private:
         if(_clientService != nullptr && _hostService != nullptr) {
             ICHOR_LOG_ERROR(_logger, "addDependencyInstance push event");
             GetThreadLocalEventQueue().pushEvent<RunFunctionEventAsync>(getServiceId(), [this]() -> AsyncGenerator<IchorBehaviour> {
-                auto ser = _serializer->serialize(TestMsg{11, "Hello World"});
+                auto ser = _serializer->serialize(TestMsg{.id=11, .val="Hello World"});
                 auto ret = co_await _clientService->sendAsync(std::move(ser));
                 if(!ret) {
                     ICHOR_LOG_ERROR(_logger, "send error: {}", (int)ret.error());

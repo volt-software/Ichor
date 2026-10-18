@@ -29,8 +29,8 @@ namespace Ichor::v1 {
             auto ns = std::chrono::duration_cast<std::chrono::nanoseconds>(atime - s);
 
             return timespec{
-                static_cast<std::time_t>(s.time_since_epoch().count()),
-                static_cast<long>(ns.count())
+                .tv_sec=static_cast<std::time_t>(s.time_since_epoch().count()),
+                .tv_nsec=static_cast<long>(ns.count())
             };
         }
 

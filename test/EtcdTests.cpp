@@ -47,14 +47,14 @@ TEST_CASE("EtcdTests_uring") {
     auto version = Ichor::v1::kernelVersion();
 
     REQUIRE(version);
-    if(version < v1::Version{5, 18, 0}) {
+    if(version < v1::Version{.major=5, .minor=18, .patch=0}) {
         return;
     }
 
     auto gen_i = GENERATE(1, 2);
 
     if(gen_i == 2) {
-        emulateKernelVersion = v1::Version{5, 18, 0};
+        emulateKernelVersion = v1::Version{.major=5, .minor=18, .patch=0};
         fmt::println("emulating kernel version {}", *emulateKernelVersion);
     } else {
         fmt::println("kernel version {}", *version);

@@ -28,7 +28,8 @@ public:
                 for (auto const &[key, prop] : *props) {
                     fmt::print("depprop {} {}\n", key, prop);
 
-                    if(key == "scope" && Ichor::v1::any_cast<const std::string&>(prop) == scope) {
+                    auto const *scopeVal = Ichor::v1::any_cast<std::string const *>(&prop);
+                    if(key == "scope" && scopeVal != nullptr && *scopeVal == scope) {
                         fmt::print("ScopeFilter matches {}:{}\n", manager.serviceId(), manager.implementationName());
                         return true;
                     }
@@ -216,7 +217,7 @@ TEST_CASE("DependencyManager: Registration classes reset") {
     queue->pushEvent<RunFunctionEvent>(ServiceIdType{0}, [&]() {
         REQUIRE(queue->size() == 1);
         {
-            EventHandlerRegistration reg{CallbackKey{ServiceIdType{234}, 345}, 123};
+            EventHandlerRegistration reg{CallbackKey{.id=ServiceIdType{234}, .type=345}, 123};
             REQUIRE(queue->size() == 1);
             reg.reset();
             REQUIRE(queue->size() == 2);
@@ -266,8 +267,8 @@ TEST_CASE("DependencyManager: Registration classes move assign") {
     queue->pushEvent<RunFunctionEvent>(ServiceIdType{0}, [&]() {
         REQUIRE(queue->size() == 1);
         {
-            EventHandlerRegistration reg{CallbackKey{ServiceIdType{234}, 345}, 123};
-            reg = EventHandlerRegistration{CallbackKey{ServiceIdType{345}, 456}, 234};
+            EventHandlerRegistration reg{CallbackKey{.id=ServiceIdType{234}, .type=345}, 123};
+            reg = EventHandlerRegistration{CallbackKey{.id=ServiceIdType{345}, .type=456}, 234};
             REQUIRE(queue->size() == 2);
         }
         REQUIRE(queue->size() == 3);
@@ -307,7 +308,7 @@ TEST_CASE("DependencyManager: Registration classes move construct") {
     queue->pushEvent<RunFunctionEvent>(ServiceIdType{0}, [&]() {
         REQUIRE(queue->size() == 1);
         {
-            EventHandlerRegistration reg{EventHandlerRegistration{CallbackKey{ServiceIdType{345}, 456}, 234}};
+            EventHandlerRegistration reg{EventHandlerRegistration{CallbackKey{.id=ServiceIdType{345}, .type=456}, 234}};
         }
         REQUIRE(queue->size() == 2);
         {

@@ -16,7 +16,7 @@ public:
         ICHOR_LOG_INFO(_logger, "OtherService stopped with dependency");
     }
 
-    AsyncGenerator<IchorBehaviour> handleEvent(CustomEvent const &) const {
+    [[nodiscard]] AsyncGenerator<IchorBehaviour> handleEvent(CustomEvent const &) const {
         ICHOR_LOG_INFO(_logger, "Handling custom event");
         _dm->getEventQueue().pushEvent<QuitEvent>(_self->getServiceId());
         _dm->getCommunicationChannel()->broadcastEvent<QuitEvent>(GetThreadLocalManager(), _self->getServiceId());

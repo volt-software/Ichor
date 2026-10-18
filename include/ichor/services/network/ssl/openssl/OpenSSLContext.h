@@ -12,6 +12,7 @@
 #define REFCOUNT_INC _serviceContextRefCount++;
 #define REFCOUNT_DEC _serviceContextRefCount--;
 #else
+// NOLINTNEXTLINE(bugprone-macro-parentheses): a parameter declaration, it cannot be parenthesised
 #define REFCOUNT_PARAM [[maybe_unused]] uint64_t &serviceContextRefCount
 #define REFCOUNT_INITIALISER
 #define REFCOUNT_MEMBER
@@ -25,8 +26,8 @@ namespace Ichor::v1 {
         OpenSSLContext(SSL_CTX* ctx, TLSContextIdType id, REFCOUNT_PARAM, OpenSSLService &svc);
         ~OpenSSLContext() final;
 
-        SSL_CTX* getHandle() const;
-        Ichor::ScopedServiceProxy<ILogger*> getLogger() const;
+        [[nodiscard]] SSL_CTX* getHandle() const;
+        [[nodiscard]] Ichor::ScopedServiceProxy<ILogger*> getLogger() const;
 
 #if defined(ICHOR_USE_HARDENING) || defined(ICHOR_ENABLE_INTERNAL_DEBUGGING)
         [[nodiscard]] TLSContextTypeType getType() const noexcept final;

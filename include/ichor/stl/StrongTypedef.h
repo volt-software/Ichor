@@ -4,6 +4,7 @@
 
 namespace Ichor {
     template <typename ValueType, typename Tag>
+    // NOLINTNEXTLINE(bugprone-crtp-constructor-accessibility): an aggregate, so that Tag{value} works, which a private constructor would prevent
     struct StrongTypedef {
         auto operator<=>(const StrongTypedef&) const = default;
 

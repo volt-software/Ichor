@@ -49,17 +49,21 @@ done
 ccompilers=("clang-16" "clang-19" "clang-23" "gcc-12" "gcc")
 cppcompilers=("clang++-16" "clang++-19" "clang++-23" "g++-12" "g++")
 ldlibpath=("" "" "" "" "/opt/gcc/14/lib64/")
+# Which compilers also run clang-tidy (ICHOR_RUN_CLANG_TIDY): one clang is enough, and clang-tidy 23+ is required
+clangtidy=(0 0 1 0 0)
 
 if [[ $DEV -eq 1 ]]; then
   ccompilers=("clang-19" "gcc")
   cppcompilers=("clang++-19" "g++")
   ldlibpath=("" "/opt/gcc/14/lib64/")
+  clangtidy=(1 0)
 fi
 
 if [[ $GCC -eq 1 ]]; then
   ccompilers=("gcc")
   cppcompilers=("g++")
   ldlibpath=("/opt/gcc/14/lib64/")
+  clangtidy=(0)
 fi
 
 if [[ $DOCKER -eq 1 ]]; then
@@ -140,30 +144,34 @@ run_examples 0 1 1
 
 for i in ${!ccompilers[@]}; do
   export LD_LIBRARY_PATH=${ldlibpath[i]}
+  build=ninja
+  if [[ ${clangtidy[i]} -eq 1 ]]; then
+    build=ninja_clang_tidy
+  fi
   rm -rf ./* ../bin/*
-  CC=${ccompilers[i]} CXX=${cppcompilers[i]} cmake -GNinja -DCMAKE_BUILD_TYPE=Debug -DICHOR_USE_SANITIZERS=1 -DICHOR_ENABLE_INTERNAL_DEBUGGING=1 -DICHOR_ENABLE_INTERNAL_IO_DEBUGGING=1 -DICHOR_ENABLE_INTERNAL_STL_DEBUGGING=1 -DICHOR_ENABLE_INTERNAL_COROUTINE_DEBUGGING=1 -DICHOR_USE_MOLD=1 -DICHOR_USE_BOOST_BEAST=0 -DICHOR_USE_LIBCPP=0 -DICHOR_USE_HIREDIS=1 -DICHOR_USE_SDEVENT=1 .. || exit 1
-  ninja || exit 1
+  CC=${ccompilers[i]} CXX=${cppcompilers[i]} cmake -GNinja -DCMAKE_BUILD_TYPE=Debug -DICHOR_USE_SANITIZERS=1 -DICHOR_ENABLE_INTERNAL_DEBUGGING=1 -DICHOR_ENABLE_INTERNAL_IO_DEBUGGING=1 -DICHOR_ENABLE_INTERNAL_STL_DEBUGGING=1 -DICHOR_ENABLE_INTERNAL_COROUTINE_DEBUGGING=1 -DICHOR_USE_MOLD=1 -DICHOR_USE_BOOST_BEAST=0 -DICHOR_USE_LIBCPP=0 -DICHOR_USE_HIREDIS=1 -DICHOR_USE_SDEVENT=1 -DICHOR_RUN_CLANG_TIDY=${clangtidy[i]} .. || exit 1
+  $build || exit 1
   ninja test || exit 1
   run_examples 0 1 1
   run_benchmarks
 
   rm -rf ./* ../bin/*
-  CC=${ccompilers[i]} CXX=${cppcompilers[i]} cmake -GNinja -DCMAKE_BUILD_TYPE=Debug -DICHOR_USE_SANITIZERS=1 -DICHOR_ENABLE_INTERNAL_DEBUGGING=0 -DICHOR_ENABLE_INTERNAL_IO_DEBUGGING=0 -DICHOR_ENABLE_INTERNAL_STL_DEBUGGING=0 -DICHOR_ENABLE_INTERNAL_COROUTINE_DEBUGGING=0 -DICHOR_USE_MOLD=1 -DICHOR_USE_BOOST_BEAST=0 -DICHOR_USE_LIBCPP=0 -DICHOR_USE_HIREDIS=1 -DICHOR_USE_SDEVENT=1 -DICHOR_DISABLE_EXCEPTIONS=1 .. || exit 1
-  ninja || exit 1
+  CC=${ccompilers[i]} CXX=${cppcompilers[i]} cmake -GNinja -DCMAKE_BUILD_TYPE=Debug -DICHOR_USE_SANITIZERS=1 -DICHOR_ENABLE_INTERNAL_DEBUGGING=0 -DICHOR_ENABLE_INTERNAL_IO_DEBUGGING=0 -DICHOR_ENABLE_INTERNAL_STL_DEBUGGING=0 -DICHOR_ENABLE_INTERNAL_COROUTINE_DEBUGGING=0 -DICHOR_USE_MOLD=1 -DICHOR_USE_BOOST_BEAST=0 -DICHOR_USE_LIBCPP=0 -DICHOR_USE_HIREDIS=1 -DICHOR_USE_SDEVENT=1 -DICHOR_DISABLE_EXCEPTIONS=1 -DICHOR_RUN_CLANG_TIDY=${clangtidy[i]} .. || exit 1
+  $build || exit 1
   ninja test || exit 1
   run_examples 0 1 1
   run_benchmarks
 
   rm -rf ./* ../bin/*
-  CC=${ccompilers[i]} CXX=${cppcompilers[i]} cmake -GNinja -DCMAKE_BUILD_TYPE=Debug -DICHOR_USE_SANITIZERS=1 -DICHOR_ENABLE_INTERNAL_DEBUGGING=1 -DICHOR_DISABLE_RTTI=0 -DICHOR_USE_MOLD=1 -DICHOR_USE_BOOST_BEAST=0 -DICHOR_USE_LIBCPP=0 -DICHOR_USE_SPDLOG=1 -DICHOR_USE_HIREDIS=1 -DICHOR_USE_SDEVENT=1 .. || exit 1
-  ninja || exit 1
+  CC=${ccompilers[i]} CXX=${cppcompilers[i]} cmake -GNinja -DCMAKE_BUILD_TYPE=Debug -DICHOR_USE_SANITIZERS=1 -DICHOR_ENABLE_INTERNAL_DEBUGGING=1 -DICHOR_DISABLE_RTTI=0 -DICHOR_USE_MOLD=1 -DICHOR_USE_BOOST_BEAST=0 -DICHOR_USE_LIBCPP=0 -DICHOR_USE_SPDLOG=1 -DICHOR_USE_HIREDIS=1 -DICHOR_USE_SDEVENT=1 -DICHOR_RUN_CLANG_TIDY=${clangtidy[i]} .. || exit 1
+  $build || exit 1
   ninja test || exit 1
   run_examples 0 1 1
   run_benchmarks
 
   rm -rf ./* ../bin/*
-  CC=${ccompilers[i]} CXX=${cppcompilers[i]} cmake -GNinja -DCMAKE_BUILD_TYPE=Release -DICHOR_REMOVE_SOURCE_NAMES=0 -DICHOR_USE_SANITIZERS=0 -DICHOR_ENABLE_INTERNAL_DEBUGGING=1 -DICHOR_USE_MOLD=1 -DICHOR_USE_BOOST_BEAST=1 -DICHOR_USE_LIBCPP=0 -DICHOR_USE_HIREDIS=1 -DICHOR_USE_SDEVENT=1 .. || exit 1
-  ninja || exit 1
+  CC=${ccompilers[i]} CXX=${cppcompilers[i]} cmake -GNinja -DCMAKE_BUILD_TYPE=Release -DICHOR_REMOVE_SOURCE_NAMES=0 -DICHOR_USE_SANITIZERS=0 -DICHOR_ENABLE_INTERNAL_DEBUGGING=1 -DICHOR_USE_MOLD=1 -DICHOR_USE_BOOST_BEAST=1 -DICHOR_USE_LIBCPP=0 -DICHOR_USE_HIREDIS=1 -DICHOR_USE_SDEVENT=1 -DICHOR_RUN_CLANG_TIDY=${clangtidy[i]} .. || exit 1
+  $build || exit 1
   ninja test || exit 1
   run_examples 1 1 1
   run_benchmarks

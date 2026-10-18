@@ -52,7 +52,7 @@ namespace Ichor {
         Task<void> put_get_delete_test() const {
             ICHOR_LOG_INFO(_logger, "running test");
             int64_t revision{};
-            Etcdv3::v1::EtcdPutRequest putReq{"v3_test_key", "test_value", 0, tl::nullopt, tl::nullopt, tl::nullopt};
+            Etcdv3::v1::EtcdPutRequest putReq{.key="v3_test_key", .value="test_value", .lease=0, .prev_kv=tl::nullopt, .ignore_value=tl::nullopt, .ignore_lease=tl::nullopt};
 
             auto putReply = co_await _etcd->put(putReq);
             if (!putReply) {
@@ -105,7 +105,7 @@ namespace Ichor {
         Task<void> txn_test() const {
             ICHOR_LOG_INFO(_logger, "running test");
             int64_t revision{};
-            Etcdv3::v1::EtcdPutRequest putReq{"v3_txn_key", "txn_value", tl::nullopt, tl::nullopt, tl::nullopt, tl::nullopt};
+            Etcdv3::v1::EtcdPutRequest putReq{.key="v3_txn_key", .value="txn_value", .lease=tl::nullopt, .prev_kv=tl::nullopt, .ignore_value=tl::nullopt, .ignore_lease=tl::nullopt};
 
             auto putReply = co_await _etcd->put(putReq);
             if (!putReply) {
@@ -148,7 +148,7 @@ namespace Ichor {
 
         Task<void> leases_test() const {
             ICHOR_LOG_INFO(_logger, "running test");
-            Etcdv3::v1::LeaseGrantRequest grantReq{100, 101};
+            Etcdv3::v1::LeaseGrantRequest grantReq{.ttl_in_seconds=100, .id=101};
 
             auto grantReply = co_await _etcd->leaseGrant(grantReq);
             if (!grantReply) {
@@ -171,14 +171,14 @@ namespace Ichor {
                 std::terminate();
             }
 
-            Etcdv3::v1::EtcdPutRequest putReq{"v3_lease_key", "lease_value", 101, tl::nullopt, tl::nullopt, tl::nullopt};
+            Etcdv3::v1::EtcdPutRequest putReq{.key="v3_lease_key", .value="lease_value", .lease=101, .prev_kv=tl::nullopt, .ignore_value=tl::nullopt, .ignore_lease=tl::nullopt};
             auto putReply = co_await _etcd->put(putReq);
             if (!putReply) {
                 fmt::println("put");
                 std::terminate();
             }
 
-            Etcdv3::v1::LeaseTimeToLiveRequest ttlReq{101, true};
+            Etcdv3::v1::LeaseTimeToLiveRequest ttlReq{.id=101, .keys=true};
             auto ttlReply = co_await _etcd->leaseTimeToLive(ttlReq);
             if (!ttlReply) {
                 fmt::println("ttl");
@@ -205,7 +205,7 @@ namespace Ichor {
                 std::terminate();
             }
 
-            if(_v >= Version{3, 3, 0}) {
+            if(_v >= Version{.major=3, .minor=3, .patch=0}) {
                 Etcdv3::v1::LeaseLeasesRequest leasesReq{};
                 auto leasesReply = co_await _etcd->leaseLeases(leasesReq);
                 if (!leasesReply) {
@@ -244,7 +244,7 @@ namespace Ichor {
                 }
             }
 
-            Etcdv3::v1::AuthUserAddRequest userAddReq{"v3_test_user", "v3_test_password", {}, {}};
+            Etcdv3::v1::AuthUserAddRequest userAddReq{.name="v3_test_user", .password="v3_test_password", .options={}, .hashedPassword={}};
             auto userAddReply = co_await _etcd->userAdd(userAddReq);
             if (!userAddReply) {
                 fmt::println("userAdd");
@@ -270,7 +270,7 @@ namespace Ichor {
                     std::terminate();
                 }
 
-                Etcdv3::v1::AuthUserGrantRoleRequest userGrantRoleReq{"root", "root"};
+                Etcdv3::v1::AuthUserGrantRoleRequest userGrantRoleReq{.user="root", .role="root"};
                 auto userGrantRoleReply = co_await _etcd->userGrantRole(userGrantRoleReq);
                 if(!userGrantRoleReply) {
                     fmt::println("grant role root");
@@ -278,7 +278,7 @@ namespace Ichor {
                 }
             }
 
-            Etcdv3::v1::AuthUserGrantRoleRequest userGrantRoleReq{"v3_test_user", "root"};
+            Etcdv3::v1::AuthUserGrantRoleRequest userGrantRoleReq{.user="v3_test_user", .role="root"};
             auto userGrantRoleReply = co_await _etcd->userGrantRole(userGrantRoleReq);
             if(!userGrantRoleReply) {
                 fmt::println("grant role");
@@ -298,42 +298,42 @@ namespace Ichor {
 
             Etcdv3::v1::AuthEnableRequest authEnableReq{};
             auto authEnableReply = co_await _etcd->authEnable(authEnableReq);
-            if(_v < Version{3, 3, 0} && authEnableReply) {
+            if(_v < Version{.major=3, .minor=3, .patch=0} && authEnableReply) {
                 fmt::println("auth enable");
                 std::terminate();
             }
-            if(_v >= Version{3, 3, 0} && !authEnableReply) {
+            if(_v >= Version{.major=3, .minor=3, .patch=0} && !authEnableReply) {
                 fmt::println("auth enable");
                 std::terminate();
             }
 
-            Etcdv3::v1::AuthenticateRequest userAuthReq{"v3_test_user", "v3_test_password"};
+            Etcdv3::v1::AuthenticateRequest userAuthReq{.name="v3_test_user", .password="v3_test_password"};
             auto userAuthReply = co_await _etcd->authenticate(userAuthReq);
-            if(_v < Version{3, 3, 0} && userAuthReply) {
+            if(_v < Version{.major=3, .minor=3, .patch=0} && userAuthReply) {
                 fmt::println("authenticate");
                 std::terminate();
             }
-            if(_v >= Version{3, 3, 0} && !userAuthReply) {
+            if(_v >= Version{.major=3, .minor=3, .patch=0} && !userAuthReply) {
                 fmt::println("authenticate");
                 std::terminate();
             }
-            if(_v >= Version{3, 3, 0} && _etcd->getAuthenticationUser() != "v3_test_user") {
+            if(_v >= Version{.major=3, .minor=3, .patch=0} && _etcd->getAuthenticationUser() != "v3_test_user") {
                 fmt::println("authenticate user");
                 std::terminate();
             }
 
             Etcdv3::v1::AuthDisableRequest authDisableReq{};
             auto authDisableReply = co_await _etcd->authDisable(authDisableReq);
-            if(_v < Version{3, 3, 0} && authDisableReply) {
+            if(_v < Version{.major=3, .minor=3, .patch=0} && authDisableReply) {
                 fmt::println("auth disable");
                 std::terminate();
             }
-            if(_v >= Version{3, 3, 0} && !authDisableReply) {
+            if(_v >= Version{.major=3, .minor=3, .patch=0} && !authDisableReply) {
                 fmt::println("auth disable");
                 std::terminate();
             }
 
-            Etcdv3::v1::AuthUserChangePasswordRequest authChangePassReq{"v3_test_user", "v3_test_password2", {}};
+            Etcdv3::v1::AuthUserChangePasswordRequest authChangePassReq{.name="v3_test_user", .password="v3_test_password2", .hashedPassword={}};
             auto authChangePassReply = co_await _etcd->userChangePassword(authChangePassReq);
             if(!authChangePassReply) {
                 fmt::println("auth change pass");
@@ -341,43 +341,43 @@ namespace Ichor {
             }
 
             authEnableReply = co_await _etcd->authEnable(authEnableReq);
-            if(_v < Version{3, 3, 0} && authEnableReply) {
+            if(_v < Version{.major=3, .minor=3, .patch=0} && authEnableReply) {
                 fmt::println("auth enable2");
                 std::terminate();
             }
-            if(_v >= Version{3, 3, 0} && !authEnableReply) {
+            if(_v >= Version{.major=3, .minor=3, .patch=0} && !authEnableReply) {
                 fmt::println("auth enable2");
                 std::terminate();
             }
 
             userAuthReq.password = "v3_test_password2";
             userAuthReply = co_await _etcd->authenticate(userAuthReq);
-            if(_v < Version{3, 3, 0} && userAuthReply) {
+            if(_v < Version{.major=3, .minor=3, .patch=0} && userAuthReply) {
                 fmt::println("authenticate2");
                 std::terminate();
             }
-            if(_v >= Version{3, 3, 0} && !userAuthReply) {
+            if(_v >= Version{.major=3, .minor=3, .patch=0} && !userAuthReply) {
                 fmt::println("authenticate2");
                 std::terminate();
             }
-            if(_v >= Version{3, 3, 0} && _etcd->getAuthenticationUser() != "v3_test_user") {
+            if(_v >= Version{.major=3, .minor=3, .patch=0} && _etcd->getAuthenticationUser() != "v3_test_user") {
                 fmt::println("authenticate user2");
                 std::terminate();
             }
 
             authDisableReply = co_await _etcd->authDisable(authDisableReq);
-            if(_v < Version{3, 3, 0} && authDisableReply) {
+            if(_v < Version{.major=3, .minor=3, .patch=0} && authDisableReply) {
                 fmt::println("auth disable2");
                 std::terminate();
             }
-            if(_v >= Version{3, 3, 0} && !authDisableReply) {
+            if(_v >= Version{.major=3, .minor=3, .patch=0} && !authDisableReply) {
                 fmt::println("auth disable2");
                 std::terminate();
             }
 
 
 
-            Etcdv3::v1::AuthUserRevokeRoleRequest userRevokeRoleReq{"v3_test_user", "root"};
+            Etcdv3::v1::AuthUserRevokeRoleRequest userRevokeRoleReq{.name="v3_test_user", .role="root"};
             auto userRevokeRoleReply = co_await _etcd->userRevokeRole(userRevokeRoleReq);
             if(!userRevokeRoleReply) {
                 fmt::println("revoke role");
@@ -435,7 +435,7 @@ namespace Ichor {
                 std::terminate();
             }
 
-            Etcdv3::v1::AuthRoleGrantPermissionRequest roleGrantPermissionReq{"v3_test_role", Etcdv3::v1::AuthPermission{Etcdv3::v1::EtcdAuthPermissionType::WRITE, "v3_test_role_permission", {}}};
+            Etcdv3::v1::AuthRoleGrantPermissionRequest roleGrantPermissionReq{.name="v3_test_role", .perm=Etcdv3::v1::AuthPermission{.permType=Etcdv3::v1::EtcdAuthPermissionType::WRITE, .key="v3_test_role_permission", .range_end={}}};
             auto roleGrantPermissionReply = co_await _etcd->roleGrantPermission(roleGrantPermissionReq);
             if(!roleGrantPermissionReply) {
                 fmt::println("role grant permission");
@@ -455,7 +455,7 @@ namespace Ichor {
                 std::terminate();
             }
 
-            Etcdv3::v1::AuthRoleRevokePermissionRequest roleRevokePermissionReq{"v3_test_role", "v3_test_role_permission", {}};
+            Etcdv3::v1::AuthRoleRevokePermissionRequest roleRevokePermissionReq{.role="v3_test_role", .key="v3_test_role_permission", .range_end={}};
             auto roleRevokeRoleReply = co_await _etcd->roleRevokePermission(roleRevokePermissionReq);
             if(!roleRevokeRoleReply) {
                 fmt::println("role revoke permission");
@@ -486,7 +486,7 @@ namespace Ichor {
         Task<void> compact_test() const {
             ICHOR_LOG_INFO(_logger, "running test");
             int64_t revision{};
-            Etcdv3::v1::EtcdPutRequest putReq{"v3_compaction_key", "compaction_value", tl::nullopt, tl::nullopt, tl::nullopt, tl::nullopt};
+            Etcdv3::v1::EtcdPutRequest putReq{.key="v3_compaction_key", .value="compaction_value", .lease=tl::nullopt, .prev_kv=tl::nullopt, .ignore_value=tl::nullopt, .ignore_lease=tl::nullopt};
 
             auto putReply = co_await _etcd->put(putReq);
             if (!putReply) {
@@ -496,7 +496,7 @@ namespace Ichor {
 
             revision = putReply->header.revision;
 
-            Etcdv3::v1::EtcdCompactionRequest compactionRequest{revision, tl::nullopt};
+            Etcdv3::v1::EtcdCompactionRequest compactionRequest{.revision=revision, .physical=tl::nullopt};
 
             auto compactionReply = co_await _etcd->compact(compactionRequest);
             if (!compactionReply) {

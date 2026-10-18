@@ -173,17 +173,57 @@ endif()
 
 set(BUILD_TESTING OFF) #disable Catch 2 testing
 
-if(ICHOR_COMPILER_ID STREQUAL "clang")
-    # clang tidy requires the same compiler arguments as clang
-    # some gcc arguments cause it to error out
-    option(ICHOR_RUN_CLANG_TIDY "Runs clang-tidy every compile" OFF)
+# clang-tidy parses each source with the compiler's arguments, and some of gcc's are unknown to it
+cmake_dependent_option(ICHOR_RUN_CLANG_TIDY "Run clang-tidy on every C++ source of Ichor as it compiles; a finding fails that compile" OFF "ICHOR_COMPILER_ID STREQUAL \"clang\"" OFF)
+if("$CACHE{ICHOR_RUN_CLANG_TIDY}" AND NOT ICHOR_COMPILER_ID STREQUAL "clang")
+    message(FATAL_ERROR "ICHOR_RUN_CLANG_TIDY requires clang, not ${CMAKE_CXX_COMPILER_ID}")
 endif()
 
 set(ICHOR_ARCH_OPTIMIZATION OFF CACHE STRING "Tell compiler to optimize for target")
 set_property(CACHE ICHOR_ARCH_OPTIMIZATION PROPERTY STRINGS OFF NATIVE X86_64 X86_64_SSE4 X86_64_AVX2 X86_64_AVX512 MODERN_ARM_GENERIC RASPBERRY_PI_ONE RASPBERRY_PI_TWO RASPBERRY_PI_THREE RASPBERRY_PI_FOUR RASPBERRY_PI_FIVE)
 
-if(ICHOR_COMPILER_ID STREQUAL "clang" AND ICHOR_RUN_CLANG_TIDY)
-    set(CMAKE_CXX_CLANG_TIDY "clang-tidy;-checks=*,-llvmlibc-*,-readability-function-cognitive-complexity,-altera-*,-modernize-use-trailing-return-type,-concurrency-mt-unsafe,-fuchsia-default-arguments-calls,-android-*,-readability-identifier-length,-clang-analyzer-optin.cplusplus.UninitializedObject")
+#  clang-tidy runs before the compiler on every C++ source of a target created from here on: ichor,
+#  the examples, benchmarks and tests. Catch2's targets are left out, and so are the vendored
+#  sources (SKIP_LINTING) and headers (ExcludeHeaderFilterRegex in .clang-tidy). The checks are in
+#  .clang-tidy, which makes every finding an error, so a finding fails that compile. The files that
+#  decide the outcome without being a source's dependency (clang-tidy itself and .clang-tidy)
+#  reconfigure the build when they change, and a hash of them is on the command line, so ninja then
+#  checks every source again. It also recompiles them: the compile and the check share the command.
+#  The checks and the NOLINTs were written against clang-tidy 23. An older one is refused; with a
+#  newer one, expect new findings from the checks it adds.
+if(ICHOR_RUN_CLANG_TIDY)
+    if(CMAKE_VERSION VERSION_LESS 3.27)
+        message(FATAL_ERROR "ICHOR_RUN_CLANG_TIDY requires CMake 3.27+ for SKIP_LINTING")
+    endif()
+    find_program(ICHOR_CLANG_TIDY_EXECUTABLE NAMES clang-tidy-23 clang-tidy REQUIRED)
+    execute_process(
+            COMMAND "${ICHOR_CLANG_TIDY_EXECUTABLE}" --version
+            OUTPUT_VARIABLE ICHOR_CLANG_TIDY_VERSION_OUTPUT
+            COMMAND_ERROR_IS_FATAL ANY)
+    if(NOT ICHOR_CLANG_TIDY_VERSION_OUTPUT MATCHES "LLVM version ([0-9]+\\.[0-9]+)")
+        message(FATAL_ERROR "cannot read clang-tidy's version from: ${ICHOR_CLANG_TIDY_VERSION_OUTPUT}")
+    endif()
+    if(CMAKE_MATCH_1 VERSION_LESS 23)
+        message(FATAL_ERROR "clang-tidy ${CMAKE_MATCH_1} (${ICHOR_CLANG_TIDY_EXECUTABLE}) is older than 23, which .clang-tidy is for; "
+                "set ICHOR_CLANG_TIDY_EXECUTABLE to a newer one or ICHOR_RUN_CLANG_TIDY=OFF")
+    endif()
+
+    set(ICHOR_CLANG_TIDY_STAMP_INPUTS "${ICHOR_CLANG_TIDY_EXECUTABLE}" "${ICHOR_TOP_DIR}/.clang-tidy")
+    set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${ICHOR_CLANG_TIDY_STAMP_INPUTS})
+    set(ICHOR_CLANG_TIDY_STAMP)
+    foreach(input IN LISTS ICHOR_CLANG_TIDY_STAMP_INPUTS)
+        file(SHA256 "${input}" input_hash)
+        string(APPEND ICHOR_CLANG_TIDY_STAMP "${input_hash}")
+    endforeach()
+    string(SHA256 ICHOR_CLANG_TIDY_STAMP "${ICHOR_CLANG_TIDY_STAMP}")
+
+    set(CMAKE_CXX_CLANG_TIDY
+            "${ICHOR_CLANG_TIDY_EXECUTABLE}"
+            "--config-file=${ICHOR_TOP_DIR}/.clang-tidy"
+            --quiet
+            # Only there to change the command line, nothing reads the define
+            "--extra-arg=-DICHOR_CLANG_TIDY_STAMP=${ICHOR_CLANG_TIDY_STAMP}"
+    )
 endif()
 
 set(FMT_SOURCES ${ICHOR_EXTERNAL_DIR}/fmt/src/format.cc ${ICHOR_EXTERNAL_DIR}/fmt/src/os.cc)
@@ -233,6 +273,10 @@ file(GLOB SPDLOG_SOURCES ${ICHOR_EXTERNAL_DIR}/spdlog/src/*.cpp ${ICHOR_TOP_DIR}
 if(ICHOR_USE_MIMALLOC AND NOT ICHOR_USE_SYSTEM_MIMALLOC)
     set(ICHOR_FRAMEWORK_SOURCES ${ICHOR_FRAMEWORK_SOURCES} ${ICHOR_TOP_DIR}/external/mimalloc/src/static.c)
 endif()
+
+# Vendored C++ sources compiled into ichor, not ours to fix (ICHOR_RUN_CLANG_TIDY)
+file(GLOB ICHOR_SPDLOG_VENDORED_SOURCES ${ICHOR_EXTERNAL_DIR}/spdlog/src/*.cpp)
+set_source_files_properties(${FMT_SOURCES} ${ICHOR_SPDLOG_VENDORED_SOURCES} ${ICHOR_BASE64_SOURCES} PROPERTIES SKIP_LINTING ON)
 
 add_library(ichor ${FMT_SOURCES} ${ICHOR_FRAMEWORK_SOURCES} ${ICHOR_FRAMEWORK_QUEUE_SOURCES} ${ICHOR_LOGGING_SOURCES} ${ICHOR_TCP_SOURCES} ${ICHOR_HTTP_SOURCES} ${ICHOR_METRICS_SOURCES} ${ICHOR_TIMER_SOURCES} ${ICHOR_IO_SOURCES} ${ICHOR_BASE64_SOURCES} ${ICHOR_STL_SOURCES} ${ICHOR_ETCD_SOURCES})
 
@@ -938,6 +982,7 @@ if(ICHOR_BUILD_BENCHMARKS)
 endif()
 if(ICHOR_BUILD_TESTING OR ICHOR_INCLUDE_CATCH2)
     add_subdirectory(${ICHOR_EXTERNAL_DIR}/Catch2)
+    set_target_properties(Catch2 Catch2WithMain PROPERTIES CXX_CLANG_TIDY "")
     #enable string_view support in catch2
     if(ICHOR_CXX_STANDARD STREQUAL "20")
         target_compile_features(Catch2 PRIVATE cxx_std_20)

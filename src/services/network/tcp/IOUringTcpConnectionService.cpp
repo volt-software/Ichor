@@ -7,18 +7,20 @@
 #include <netinet/tcp.h>
 #include <unistd.h>
 #include <thread>
+#include <array>
+#include <utility>
 #include <ichor/ichor_liburing.h>
 #include <ichor/ScopedServiceProxy.h>
 
 template <typename InterfaceT> requires Ichor::DerivedAny<InterfaceT, Ichor::v1::IConnectionService, Ichor::v1::IHostConnectionService, Ichor::v1::IClientConnectionService>
-Ichor::v1::IOUringTcpConnectionService<InterfaceT>::IOUringTcpConnectionService(DependencyRegister &reg, Properties props) : AdvancedService<IOUringTcpConnectionService>(std::move(props)), _socket(-1) {
+Ichor::v1::IOUringTcpConnectionService<InterfaceT>::IOUringTcpConnectionService(DependencyRegister &reg, Properties props) : AdvancedService<IOUringTcpConnectionService>(std::move(props)) {
     reg.registerDependency<ILogger>(this, DependencyFlags::REQUIRED);
     reg.registerDependency<IIOUringQueue>(this, DependencyFlags::REQUIRED);
 }
 
 template <typename InterfaceT> requires Ichor::DerivedAny<InterfaceT, Ichor::v1::IConnectionService, Ichor::v1::IHostConnectionService, Ichor::v1::IClientConnectionService>
 Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::v1::IOUringTcpConnectionService<InterfaceT>::start() {
-    if(_q->getKernelVersion() < Version{5, 5, 0}) {
+    if(_q->getKernelVersion() < Version{.major=5, .minor=5, .patch=0}) {
         fmt::println("Kernel version too old to use IOUringTcpConnectionService. Requires >= 5.5.0");
         co_return tl::unexpected(StartError::FAILED);
     }
@@ -57,7 +59,7 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::v1::IOUringTcpConnecti
         }
 
 
-        if(_q->getKernelVersion() >= Version{5, 19, 0}) {
+        if(_q->getKernelVersion() >= Version{.major=5, .minor=19, .patch=0}) {
             AsyncManualResetEvent evt;
 
             int res{};
@@ -81,7 +83,7 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::v1::IOUringTcpConnecti
         }
     }
 
-    if(_q->getKernelVersion() >= Version{6, 7, 0}) {
+    if(_q->getKernelVersion() >= Version{.major=6, .minor=7, .patch=0}) {
         int setting = 1;
         int resNodelay{-1};
         int resRcvtimeo{-1};
@@ -173,7 +175,7 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::v1::IOUringTcpConnecti
                 res = cqe->res;
                 evt.set();
             });
-            io_uring_prep_connect(sqe, _socket, (struct sockaddr *)&address, sizeof(address));
+            io_uring_prep_connect(sqe, _socket, reinterpret_cast<struct sockaddr *>(&address), sizeof(address));
             co_await evt;
 
             if(res != -ECONNREFUSED) {
@@ -192,7 +194,7 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::v1::IOUringTcpConnecti
     }
 
     bool armedMultishot{};
-    if(_q->getKernelVersion() >= Version{6, 0, 0}) {
+    if(_q->getKernelVersion() >= Version{.major=6, .minor=0, .patch=0}) {
         auto buffer = _q->createProvidedBuffer(static_cast<unsigned short>(_bufferEntries), _bufferEntrySize);
         if(buffer) {
             _buffer = std::move(*buffer);
@@ -227,7 +229,7 @@ Ichor::Task<void> Ichor::v1::IOUringTcpConnectionService<InterfaceT>::stop() {
     INTERNAL_IO_DEBUG("quit");
 
     if(_socket >= 0) {
-        if(_q->getKernelVersion() >= Version{5, 19, 0}) {
+        if(_q->getKernelVersion() >= Version{.major=5, .minor=19, .patch=0}) {
             int shutdownRes{};
             int closeRes{};
             AsyncManualResetEvent evt;
@@ -407,8 +409,8 @@ Ichor::Task<tl::expected<void, Ichor::v1::IOError>> Ichor::v1::IOUringTcpConnect
     uint64_t totalBytes{};
     msghdr hdr{};
     if(msgs.size() < 64) {
-        iovec vecs[64];
-        hdr.msg_iov = vecs;
+        std::array<iovec, 64> vecs;
+        hdr.msg_iov = vecs.data();
         hdr.msg_iovlen = msgs.size();
         for(std::size_t i = 0; i < msgs.size(); i++) {
             vecs[i].iov_base = msgs[i].data();
@@ -444,7 +446,7 @@ Ichor::Task<tl::expected<void, Ichor::v1::IOError>> Ichor::v1::IOUringTcpConnect
         co_return tl::unexpected(ret);
     }
 //    fmt::println("sent {} bytes, expected to send {} bytes", res, totalBytes);
-    if(static_cast<uint64_t>(res) != totalBytes) {
+    if(std::cmp_not_equal(res, totalBytes)) {
         std::terminate();
     }
 

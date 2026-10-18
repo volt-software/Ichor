@@ -24,7 +24,7 @@ namespace Ichor {
         explicit constexpr AsyncReturningManualResetEventOperation(const AsyncReturningManualResetEvent<T>& event) noexcept : _event(event) {
         }
 
-        bool await_ready() const noexcept {
+        [[nodiscard]] bool await_ready() const noexcept {
             return _event.is_set();
         }
         bool await_suspend(std::coroutine_handle<> awaiter) noexcept{
@@ -45,7 +45,7 @@ namespace Ichor {
             // Successfully queued this waiter to the list.
             return true;
         }
-        constexpr T const & await_resume() const noexcept {
+        [[nodiscard]] constexpr T const & await_resume() const noexcept {
             // An event constructed as initially set has no value to return.
             assert(_event._ret != nullptr);
 #ifdef ICHOR_USE_HARDENING

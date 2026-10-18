@@ -15,7 +15,7 @@ namespace Ichor::v1 {
         };
 
         template <typename T>
-        struct is_comparable_to_nullptr<T, std::enable_if_t<std::is_convertible<decltype(std::declval<T>() != nullptr), bool>::value>> : std::true_type {
+        struct is_comparable_to_nullptr<T, std::enable_if_t<std::is_convertible_v<decltype(std::declval<T>() != nullptr), bool>>> : std::true_type {
         };
 
         // Resolves to the more efficient of `const T` or `const T&`, in the context of returning a const-qualified value
@@ -23,7 +23,7 @@ namespace Ichor::v1 {
         //
         // Copied from cppfront's implementation of the CppCoreGuidelines F.16 (https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#Rf-in)
         template<typename T>
-        using value_or_reference_return_t = std::conditional_t<sizeof(T) < 2*sizeof(void*) && std::is_trivially_copy_constructible<T>::value, const T, const T&>;
+        using value_or_reference_return_t = std::conditional_t<sizeof(T) < 2*sizeof(void*) && std::is_trivially_copy_constructible_v<T>, const T, const T&>;
     }
 
     template <typename T>
@@ -32,25 +32,24 @@ namespace Ichor::v1 {
         static_assert(Detail::is_comparable_to_nullptr<T>::value, "T cannot be compared to nullptr.");
         static_assert(std::is_pointer_v<T>, "T has to be a pointer.");
 
-        template <typename U, typename = std::enable_if_t<std::is_convertible<U, T>::value>>
-        constexpr NeverNull(U&& u) : ptr_(std::forward<U>(u))
+        template <typename U>
+        constexpr NeverNull(U&& u) requires (std::is_convertible_v<U, T>) : ptr_(std::forward<U>(u))
         {
             ensureNotNull();
         }
 
-        template <typename = std::enable_if_t<!std::is_same<std::nullptr_t, T>::value>>
-        constexpr NeverNull(T u) : ptr_(std::move(u))
+        constexpr NeverNull(T u) requires (!std::is_same_v<std::nullptr_t, T>) : ptr_(std::move(u))
         {
             ensureNotNull();
         }
 
-        template <typename U, typename = std::enable_if_t<std::is_convertible<U, T>::value>>
-        constexpr NeverNull(const NeverNull<U>& other) : NeverNull(other.get())
+        template <typename U>
+        constexpr NeverNull(const NeverNull<U>& other) requires (std::is_convertible_v<U, T>) : NeverNull(other.get())
         {}
 
         NeverNull(const NeverNull& other) = default;
         NeverNull& operator=(const NeverNull& other) = default;
-        constexpr Detail::value_or_reference_return_t<T> get() const
+        [[nodiscard]] constexpr Detail::value_or_reference_return_t<T> get() const
         {
             return ptr_;
         }

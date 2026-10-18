@@ -1,5 +1,7 @@
 #pragma once
 
+#include <algorithm>
+#include <array>
 #include <vector>
 #include <string>
 #include <string_view>
@@ -31,13 +33,13 @@ namespace Ichor::v1 {
         uint64_t const neg = str[0] == '-';
         str += neg;
         // Peeling off the first digit saves a multiply and benchmarks faster on both gcc and clang.
-        uint64_t val = uint8_t(*str - '0');
+        uint64_t val = static_cast<uint8_t>(*str - '0');
         if(val > 9) {
             return 0;
         }
         ++str;
         uint8_t x;
-        while ((x = uint8_t(*str++ - '0')) <= 9) val = val * 10 + x;
+        while ((x = static_cast<uint8_t>(*str++ - '0')) <= 9) val = val * 10 + x;
         // Branchless conditional two's complement negation, (val ^ ~0) + 1 == -val. Converting to int64_t is well-defined modulo 2^64 since C++20.
         return static_cast<int64_t>((val ^ (0 - neg)) + neg);
     }
@@ -47,21 +49,21 @@ namespace Ichor::v1 {
     ICHOR_PURE_FUNC_ATTR inline constexpr uint64_t FastAtoiu(const char* str) noexcept {
         uint64_t val = 0;
         uint8_t  x;
-        while ((x = uint8_t(*str++ - '0')) <= 9) val = val * 10 + x;
+        while ((x = static_cast<uint8_t>(*str++ - '0')) <= 9) val = val * 10 + x;
         return val;
     }
     ICHOR_PURE_FUNC_ATTR inline constexpr uint64_t FastAtoiu(std::string_view str) noexcept {
         uint64_t val = 0;
         uint8_t  x;
         size_t pos{};
-        while (pos < str.size() && (x = uint8_t(str[pos] - '0')) <= 9) {
+        while (pos < str.size() && (x = static_cast<uint8_t>(str[pos] - '0')) <= 9) {
             val = val * 10 + x;
             pos++;
         }
         return val;
     }
 
-    inline constexpr signed char digittoval[256] = {
+    inline constexpr std::array<signed char, 256> digittoval = {
         -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
         -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
         -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 0,  1,  2,  3,  4,  5,  6,  7,  8,
@@ -178,7 +180,7 @@ namespace Ichor::v1 {
     }
 
     inline constexpr bool IsOnlyDigits(std::string_view str) {
-        return std::all_of(str.cbegin(), str.cend(), [](char const c) {
+        return std::ranges::all_of(str, [](char const c) {
             return c >= '0' && c <= '9';
         });
     }
@@ -207,7 +209,7 @@ namespace Ichor::v1 {
             return {};
         }
 
-        auto wrongLetterCount = std::any_of(str.cbegin(), str.cend(), [](char const c) {
+        auto wrongLetterCount = std::ranges::any_of(str, [](char const c) {
             return c != '0' && c != '1' && c != '2' && c != '3' && c != '4' && c != '5' && c != '6' && c != '7' && c != '8' && c != '9' && c != '.';
         });
 
@@ -233,7 +235,7 @@ namespace Ichor::v1 {
             return {};
         }
 
-        return Version{*major, *minor, *patch};
+        return Version{.major=*major, .minor=*minor, .patch=*patch};
     }
 
     // Copied and modified from spdlog

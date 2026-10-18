@@ -38,7 +38,7 @@ TEST_CASE("OpenSSLCertificate basic properties") {
             std::make_tuple(rsa2048_eku_codesign_cert, sizeof(rsa2048_eku_codesign_cert), "", "", "", "", "CodeSign-Test", "", "", "", "", "CodeSign-Test", std::string{"\x7F\x6B\xB9\x4F\x53\xE2\x25\x2A\x03\x3E\x7E\x6B\xB3\xCB\x9C\x45\xCF\x34\x54\xB1s", 20}, "RSA-SHA256", 2025, 8, 23, 16, 51, 26, 3024, 12, 24, 16, 51, 26),
         } ) );
 
-    fmt::println("testing cert {} {} {}", expectedSubjectC, expectedSubjectCN, (void*)test_cert);
+    fmt::println("testing cert {} {} {}", expectedSubjectC, expectedSubjectCN, static_cast<void const*>(test_cert));
 
     Ichor::Detail::DependencyLifecycleManager<LoggerMock, ILogger> logger{{}};
 

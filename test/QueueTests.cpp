@@ -21,10 +21,26 @@
 #ifdef ICHOR_USE_LIBURING
 #include <ichor/events/RunFunctionEvent.h>
 #include <ichor/dependency_management/AdvancedService.h>
+#include <ichor/ichor_liburing.h>
 #include <vector>
 #include <algorithm>
+#include <csignal>
+#include <sys/wait.h>
 
 namespace {
+    /// Runs fn in a forked child, true if the child aborted (e.g. std::terminate from a hardening check).
+    template <typename F>
+    bool abortsInChild(F &&fn) {
+        pid_t const pid = fork();
+        if(pid == 0) {
+            fn();
+            _exit(0);
+        }
+        int status{};
+        waitpid(pid, &status, 0);
+        return WIFSIGNALED(status) && WTERMSIG(status) == SIGABRT;
+    }
+
     struct CountedEvent final : public Event {
         explicit CountedEvent(uint64_t _id, ServiceIdType _originatingService, uint64_t _priority) noexcept :
                 Event(_id, _originatingService, _priority) {
@@ -266,11 +282,83 @@ TEST_CASE("QueueTests") {
         REQUIRE(!queue->shouldQuit());
     }
 
+    SECTION("IOUringQueue provided buffer of 4 GiB") {
+        auto version = Ichor::v1::kernelVersion();
+        REQUIRE(version);
+        if(version < Version{.major=5, .minor=19, .patch=0}) {
+            SKIP("provided buffer rings require kernel 5.19");
+        }
+
+        auto queue = std::make_unique<IOUringQueue>(10, 10'000);
+        REQUIRE(queue->createEventLoop());
+
+        {
+            // 32768 entries of 128 KiB: the size of the whole buffer does not fit in 32 bits
+            constexpr unsigned short entries = 32768;
+            constexpr unsigned int entryBufferSize = 128 * 1024;
+            auto buf = queue->createProvidedBuffer(entries, entryBufferSize);
+            if constexpr (sizeof(size_t) < 8) {
+                REQUIRE(!buf);
+                REQUIRE(buf.error() == IOError::MESSAGE_SIZE_TOO_BIG);
+            } else {
+                REQUIRE(buf);
+                auto lastEntry = buf->readMemory(entries - 1);
+                REQUIRE(lastEntry.size() == entryBufferSize);
+                // Only readable if the last entry is part of the allocation
+                volatile char lastByte = lastEntry.back();
+                (void)lastByte;
+            }
+        }
+    }
+
+    SECTION("IOUringQueue provided buffer entries outside of the buffer terminate") {
+        auto version = Ichor::v1::kernelVersion();
+        REQUIRE(version);
+        if(version < Version{.major=5, .minor=19, .patch=0}) {
+            SKIP("provided buffer rings require kernel 5.19");
+        }
+
+        auto queue = std::make_unique<IOUringQueue>(10, 10'000);
+        REQUIRE(queue->createEventLoop());
+
+        {
+            constexpr unsigned short entries = 8;
+            auto buf = queue->createProvidedBuffer(entries, 4096);
+            REQUIRE(buf);
+            REQUIRE(!abortsInChild([&]() { (void)buf->readMemory(entries - 1); }));
+            REQUIRE(abortsInChild([&]() { (void)buf->readMemory(entries); }));
+            REQUIRE(abortsInChild([&]() { buf->markEntryAvailableAgain(entries); }));
+        }
+    }
+
+    SECTION("IOUringQueue provided buffer frees its memory when registering it fails") {
+        auto version = Ichor::v1::kernelVersion();
+        REQUIRE(version);
+        if(version < Version{.major=5, .minor=19, .patch=0}) {
+            SKIP("provided buffer rings require kernel 5.19");
+        }
+
+        auto queue = std::make_unique<IOUringQueue>(10, 10'000);
+        auto ring = queue->createEventLoop();
+        REQUIRE(ring);
+
+        // Take the buffer group id createProvidedBuffer will use next, so that registering its ring fails. A leak shows up in the sanitizer builds.
+        constexpr unsigned short entries = 8;
+        int ret{};
+        auto *takenBufRing = io_uring_setup_buf_ring(ring->get(), entries, 1, 0, &ret);
+        REQUIRE(takenBufRing != nullptr);
+
+        auto buf = queue->createProvidedBuffer(entries, 4096);
+        REQUIRE(!buf);
+
+        io_uring_free_buf_ring(ring->get(), takenBufRing, entries, 1);
+    }
+
     SECTION("IOUringQueue Live") {
         auto version = Ichor::v1::kernelVersion();
 
         REQUIRE(version);
-        if(version < Version{5, 18, 0}) {
+        if(version < Version{.major=5, .minor=18, .patch=0}) {
             return;
         }
 
@@ -459,7 +547,7 @@ TEST_CASE("QueueTests") {
         t.join();
 
         REQUIRE(order.size() == events);
-        REQUIRE(std::is_sorted(order.begin(), order.end()));
+        REQUIRE(std::ranges::is_sorted(order));
     }
 
     SECTION("IOUringQueue keeps the order of events pushed from another IOUringQueue's thread") {
@@ -511,13 +599,13 @@ TEST_CASE("QueueTests") {
         sourceThread.join();
 
         REQUIRE(order.size() == events);
-        REQUIRE(std::is_sorted(order.begin(), order.end()));
+        REQUIRE(std::ranges::is_sorted(order));
     }
 
     SECTION("IOUringQueue quits while a multishot request keeps completing") {
         auto version = Ichor::v1::kernelVersion();
         REQUIRE(version);
-        if(version < Version{6, 4, 0}) {
+        if(version < Version{.major=6, .minor=4, .patch=0}) {
             SKIP("multishot timeouts require kernel 6.4");
         }
         // a long quit timeout, so that only cancelling the request on quit can make it quit quickly

@@ -51,7 +51,7 @@ namespace Ichor::v1 {
         std::string ret;
         ret.reserve(REGEX.size());
         for(char32_t const &c : REGEX) {
-            ret.push_back((char)c);
+            ret.push_back(static_cast<char>(c));
         }
         return ret;
     }
@@ -75,7 +75,7 @@ namespace Ichor::v1 {
             }
 
             _params.reserve(result.count() - 1);
-            constexpr_for<(size_t)1, result.count(), (size_t)1>([this, &result](auto i) {
+            constexpr_for<static_cast<size_t>(1), result.count(), static_cast<size_t>(1)>([this, &result](auto i) {
                 if(!result.template get<i>()) {
                     ICHOR_REGEX_DEBUG("not matched {}\n", (size_t)i);
                     return;

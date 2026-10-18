@@ -19,6 +19,7 @@
 
 #include <boost/beast/http.hpp>
 #include <boost/asio.hpp>
+#include <charconv>
 #include <chrono>
 #include <cstdlib>
 #include <cstring>
@@ -255,8 +256,16 @@ int main(int argc, char* argv[])
         }
 
         auto const address = net::ip::make_address(argv[1]);
-        unsigned short port = static_cast<unsigned short>(std::atoi(argv[2]));
-        int num_workers = std::atoi(argv[3]);
+        auto parseNumber = [](char const *arg, auto &out) {
+            auto const [ptr, ec] = std::from_chars(arg, arg + std::strlen(arg), out);
+            return ec == std::errc{} && *ptr == '\0';
+        };
+        unsigned short port{};
+        int num_workers{};
+        if(!parseNumber(argv[2], port) || !parseNumber(argv[3], num_workers)) {
+            std::cerr << "<port> and <num_workers> have to be numbers\n";
+            return EXIT_FAILURE;
+        }
         bool spin = (std::strcmp(argv[4], "spin") == 0);
 
         net::io_context ioc{1};

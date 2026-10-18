@@ -63,19 +63,19 @@ namespace Ichor::v1 {
         constexpr VectorView() noexcept : _data(nullptr), _get(nullptr), _size(0) {}
 
         /// The view refers to v's storage, it is invalidated when v is destroyed or reallocates.
-        template <typename T, typename = std::enable_if_t<std::is_base_of_v<VecT, T>>>
+        template <typename T>
         explicit constexpr VectorView(std::vector<T> const &v ICHOR_LIFETIME_BOUND) noexcept
-                : _data(v.data()), _get(&VectorView::template getAt<T>), _size(v.size()) {}
+                requires (std::is_base_of_v<VecT, T>) : _data(v.data()), _get(&VectorView::template getAt<T>), _size(v.size()) {}
         // A view over a temporary would dangle immediately.
-        template <typename T, typename = std::enable_if_t<std::is_base_of_v<VecT, T>>>
-        explicit VectorView(std::vector<T> const &&v) = delete;
+        template <typename T>
+        explicit VectorView(std::vector<T> const &&v) requires (std::is_base_of_v<VecT, T>) = delete;
 
         /// View over the objects owned by a vector of unique_ptrs. Invalidated when v is destroyed or reallocates.
-        template <typename T, typename = std::enable_if_t<std::is_base_of_v<VecT, T>>>
+        template <typename T>
         explicit constexpr VectorView(std::vector<std::unique_ptr<T>> const &v ICHOR_LIFETIME_BOUND) noexcept
-                : _data(v.data()), _get(&VectorView::template getAtUniquePtr<T>), _size(v.size()) {}
-        template <typename T, typename = std::enable_if_t<std::is_base_of_v<VecT, T>>>
-        explicit VectorView(std::vector<std::unique_ptr<T>> const &&v) = delete;
+                requires (std::is_base_of_v<VecT, T>) : _data(v.data()), _get(&VectorView::template getAtUniquePtr<T>), _size(v.size()) {}
+        template <typename T>
+        explicit VectorView(std::vector<std::unique_ptr<T>> const &&v) requires (std::is_base_of_v<VecT, T>) = delete;
 
         [[nodiscard]] constexpr iterator begin() const noexcept { return iterator{_data, _get, 0}; }
         [[nodiscard]] constexpr iterator end() const noexcept { return iterator{_data, _get, _size}; }

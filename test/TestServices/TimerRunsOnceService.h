@@ -9,7 +9,7 @@ extern std::atomic<uint64_t> evtGate;
 
 class ITimerRunsOnceService {
 public:
-    virtual uint64_t getCount() const noexcept = 0;
+    [[nodiscard]] virtual uint64_t getCount() const noexcept = 0;
 protected:
     ~ITimerRunsOnceService() = default;
 };
@@ -27,7 +27,7 @@ public:
         timer.startTimer(true);
     }
 
-    uint64_t getCount() const noexcept final {
+    [[nodiscard]] uint64_t getCount() const noexcept final {
         return count;
     }
 

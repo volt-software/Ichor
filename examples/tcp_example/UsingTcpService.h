@@ -73,7 +73,7 @@ private:
 
         if(_clientService != nullptr && _hostService != nullptr) {
             GetThreadLocalEventQueue().pushEvent<RunFunctionEventAsync>(getServiceId(), [this]() -> AsyncGenerator<IchorBehaviour> {
-				auto ser = _serializer->serialize(TestMsg{11, "hello world"});
+				auto ser = _serializer->serialize(TestMsg{.id=11, .val="hello world"});
 				auto ret = co_await _clientService->sendAsync(std::move(ser));
 				if(!ret) {
 					ICHOR_LOG_ERROR(_logger, "start() send error: {}", (int)ret.error());

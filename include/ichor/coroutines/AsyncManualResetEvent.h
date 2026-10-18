@@ -20,7 +20,7 @@ namespace Ichor {
         explicit constexpr AsyncManualResetEventOperation(const AsyncManualResetEvent& event) noexcept : _event(event) {
         }
 
-        bool await_ready() const noexcept;
+        [[nodiscard]] bool await_ready() const noexcept;
         bool await_suspend(std::coroutine_handle<> _awaiter) noexcept;
         constexpr void await_resume() const noexcept {}
 

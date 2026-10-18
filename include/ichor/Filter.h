@@ -21,11 +21,13 @@ namespace Ichor {
                 return MissingOk;
             }
 
-            if(propVal->second.type_hash() != typeNameHash<T>()) {
+            auto const *typedVal = Ichor::v1::any_cast<T const *>(&propVal->second);
+
+            if(typedVal == nullptr) {
                 return MissingOk;
             }
 
-            return Ichor::v1::any_cast<T const &>(propVal->second) == val;
+            return *typedVal == val;
         }
 
         [[nodiscard]] std::string getDescription() const noexcept {
@@ -68,11 +70,13 @@ namespace Ichor {
                 return MissingOk;
             }
 
-            if(propVal->second.type_hash() != typeNameHash<PropT>()) {
+            auto const *typedVal = Ichor::v1::any_cast<PropT const *>(&propVal->second);
+
+            if(typedVal == nullptr) {
                 return MissingOk;
             }
 
-            return Ichor::v1::any_cast<PropT const &>(propVal->second) == val;
+            return *typedVal == val;
         }
 
         [[nodiscard]] std::string getDescription() const noexcept {
@@ -112,7 +116,8 @@ namespace Ichor {
     template <typename T>
     class TemplatedFilter final : public ITemplatedFilter {
     public:
-        TemplatedFilter(T&& _entries) noexcept : entry(std::forward<T>(_entries)) {}
+        template <typename U> requires (!std::is_same_v<std::remove_cvref_t<U>, TemplatedFilter>)
+        explicit TemplatedFilter(U&& _entries) noexcept : entry(std::forward<U>(_entries)) {}
         ~TemplatedFilter() noexcept final = default;
 
         TemplatedFilter(const TemplatedFilter&) = default;
@@ -124,7 +129,7 @@ namespace Ichor {
             return entry.matches(manager);
         }
 
-        [[nodiscard]] virtual std::string getDescription() const noexcept {
+        [[nodiscard]] std::string getDescription() const noexcept override {
             return entry.getDescription();
         }
 
@@ -134,8 +139,9 @@ namespace Ichor {
 
     class Filter final {
     public:
-        template <typename T>
-        Filter(T&& entries) noexcept : _templatedFilter(new TemplatedFilter<T>(std::forward<T>(entries))) {}
+        template <typename T> requires (!std::is_same_v<std::remove_cvref_t<T>, Filter>)
+        // NOLINTNEXTLINE(bugprone-unhandled-exception-at-new): Ichor terminates on allocation failure
+        Filter(T&& entries) noexcept : _templatedFilter(new TemplatedFilter<std::remove_cvref_t<T>>(std::forward<T>(entries))) {}
 
         Filter(Filter&) = default;
         Filter(const Filter&) = default;

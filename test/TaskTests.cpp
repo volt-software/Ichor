@@ -27,6 +27,7 @@ using TaskFinalAwaitable = decltype(std::declval<Ichor::Detail::TaskPromise<uint
 static_assert(std::is_same_v<decltype(std::declval<TaskFinalAwaitable&>().await_suspend(std::coroutine_handle<Ichor::Detail::TaskPromise<uint64_t>>{})), std::coroutine_handle<>>);
 
 namespace {
+    // NOLINTNEXTLINE(bugprone-throwing-static-initialization): only allocation failure can throw, which terminates
     std::unique_ptr<Ichor::AsyncManualResetEvent> _evt = std::make_unique<Ichor::AsyncManualResetEvent>();
     bool started{};
     bool ran{};
@@ -162,6 +163,7 @@ TEST_CASE("TaskTests: moving a suspended generator transfers ownership") {
     REQUIRE(!it.get_finished());
 
     Ichor::AsyncGenerator<void> moved{std::move(gen)};
+    // NOLINTNEXTLINE(bugprone-use-after-move): tests the moved-from state
     CHECK(gen.done());
     CHECK(!moved.done());
 

@@ -6,6 +6,7 @@
 #include <ichor/ScopeGuard.h>
 #include <ichor/stl/TypeTraits.h>
 #include <openssl/ssl.h>
+#include <array>
 #include <openssl/bio.h>
 #include <openssl/err.h>
 #include <openssl/x509_vfy.h>
@@ -36,9 +37,9 @@ namespace {
         const char* err_msg = X509_verify_cert_error_string(err);
 
         X509* cert = X509_STORE_CTX_get_current_cert(storeCtx);
-        char subject[256] = "<unknown>";
+        std::array<char, 256> subject{"<unknown>"};
         if(cert) {
-            X509_NAME_oneline(X509_get_subject_name(cert), subject, sizeof(subject));
+            X509_NAME_oneline(X509_get_subject_name(cert), subject.data(), subject.size());
         }
         auto sslContext = static_cast<Ichor::v1::OpenSSLContext*>(userArg);
 
@@ -49,7 +50,7 @@ namespace {
         }
 #endif
         auto logger = sslContext->getLogger();
-        ICHOR_LOG_DEBUG(logger, "cert default verify failed, using custom callback: {} (subject: {})", err_msg, subject);
+        ICHOR_LOG_DEBUG(logger, "cert default verify failed, using custom callback: {} (subject: {})", err_msg, subject.data());
 
         if(sslContext->certificateVerifyCallback) {
 #if ICHOR_EXCEPTIONS_ENABLED
@@ -128,7 +129,7 @@ tl::expected<std::unique_ptr<Ichor::v1::TLSContext>, Ichor::v1::TLSContextError>
     ScopeGuard sgCertBio{[cert_bio] {
         ::BIO_free(cert_bio);
     }};
-    X509* certx509 = ::PEM_read_bio_X509(cert_bio, nullptr, 0, nullptr);
+    X509* certx509 = ::PEM_read_bio_X509(cert_bio, nullptr, nullptr, nullptr);
 
     if(certx509 == nullptr) {
         printAllSslErrors(NullStruct{}, __LINE__);
@@ -166,7 +167,7 @@ tl::expected<std::unique_ptr<Ichor::v1::TLSContext>, Ichor::v1::TLSContextError>
         ::BIO_free(key_bio);
     }};
 
-    EVP_PKEY* pkey = ::PEM_read_bio_PrivateKey(key_bio, nullptr, 0, nullptr);
+    EVP_PKEY* pkey = ::PEM_read_bio_PrivateKey(key_bio, nullptr, nullptr, nullptr);
 
     if(pkey == nullptr) {
         printAllSslErrors(NullStruct{}, __LINE__);
@@ -271,7 +272,7 @@ tl::expected<void, bool> Ichor::v1::OpenSSLService::TLSWrite(TLSConnection &conn
 
     int data_size = static_cast<int>(data.size());
 
-    OpenSSLConnection &sslConn = static_cast<OpenSSLConnection &>(conn);
+    auto &sslConn = static_cast<OpenSSLConnection &>(conn);
     char *out{};
     int chunk = BIO_nwrite0(sslConn.externalBio, &out);
 
@@ -334,7 +335,7 @@ Ichor::v1::TLSHandshakeStatus Ichor::v1::OpenSSLService::TLSDoHandshake(TLSConne
     }
 #endif
 
-    OpenSSLConnection &sslConn = static_cast<OpenSSLConnection &>(conn);
+    auto &sslConn = static_cast<OpenSSLConnection &>(conn);
 
     int ret = ::SSL_do_handshake(sslConn.getHandle());
 

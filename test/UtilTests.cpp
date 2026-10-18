@@ -21,12 +21,21 @@ namespace Ichor {
     }
 }
 
+namespace {
+    struct DerivedAnyFirst {};
+    struct DerivedAnySecond {};
+    struct DerivedAnyThird {};
+    struct DerivesFromThird : DerivedAnyThird {};
+    static_assert(Ichor::DerivedAny<DerivesFromThird, DerivedAnyFirst, DerivedAnySecond, DerivedAnyThird>);
+    static_assert(!Ichor::DerivedAny<DerivesFromThird, DerivedAnyFirst, DerivedAnySecond, DerivedAnySecond>);
+}
+
 TEST_CASE("UtilTests: CTRE tests") {
     std::string_view input = "/some/http/10/11/12/test";
-    auto result = ctre::match<"\\/some\\/http\\/(\\d{1,2})\\/(\\d{1,2})\\/(\\d{1,2})\\/test">(input);
+    auto result = ctre::match<R"(\/some\/http\/(\d{1,2})\/(\d{1,2})\/(\d{1,2})\/test)">(input);
     REQUIRE(result);
     REQUIRE(result.count() == 4);
-    Ichor::constexpr_for<(size_t)0, result.count(), (size_t)1>([&result](auto i) {
+    Ichor::constexpr_for<static_cast<size_t>(0), result.count(), static_cast<size_t>(1)>([&result](auto i) {
         fmt::print("ctre match {}\n", result.get<i>().to_view());
         if constexpr (i == 1) {
             REQUIRE(result.get<i>() == "10");

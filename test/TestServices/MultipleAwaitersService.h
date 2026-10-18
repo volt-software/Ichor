@@ -8,10 +8,10 @@
 using namespace Ichor;
 using namespace Ichor::v1;
 
-extern std::unique_ptr<Ichor::AsyncAutoResetEvent> _autoEvt;
+extern std::unique_ptr<Ichor::AsyncAutoResetEvent> testAutoEvt;
 
 struct IMultipleAwaitService {
-    virtual uint64_t getCount() const = 0;
+    [[nodiscard]] virtual uint64_t getCount() const = 0;
 };
 
 struct MultipleAwaitService final : public IMultipleAwaitService, public AdvancedService<MultipleAwaitService> {
@@ -20,12 +20,12 @@ struct MultipleAwaitService final : public IMultipleAwaitService, public Advance
 
     Task<tl::expected<void, Ichor::StartError>> start() final {
         GetThreadLocalEventQueue().pushEvent<RunFunctionEventAsync>(getServiceId(), [this]() -> AsyncGenerator<IchorBehaviour> {
-            co_await *_autoEvt;
+            co_await *testAutoEvt;
             count++;
             co_return {};
         });
         GetThreadLocalEventQueue().pushEvent<RunFunctionEventAsync>(getServiceId(), [this]() -> AsyncGenerator<IchorBehaviour> {
-            co_await *_autoEvt;
+            co_await *testAutoEvt;
             count++;
             co_return {};
         });
@@ -36,7 +36,7 @@ struct MultipleAwaitService final : public IMultipleAwaitService, public Advance
         co_return;
     }
 
-    uint64_t getCount() const final {
+    [[nodiscard]] uint64_t getCount() const final {
         return count;
     }
 

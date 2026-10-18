@@ -13,7 +13,7 @@ Ichor::v1::IOUringAsyncFileIO::IOUringAsyncFileIO(DependencyRegister &reg, Prope
 
 
 Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::v1::IOUringAsyncFileIO::start() {
-    if(_q->getKernelVersion() < Version{5, 5, 0}) {
+    if(_q->getKernelVersion() < Version{.major=5, .minor=5, .patch=0}) {
         fmt::println("Kernel version too old to use IOUringAsyncFileIO. Requires >= 5.5.0");
         co_return tl::unexpected(StartError::FAILED);
     }
@@ -379,6 +379,7 @@ void Ichor::v1::IOUringAsyncFileIO::recursiveSubmitReadWholeFile(AsyncManualRese
 
 Ichor::UringCallback Ichor::v1::IOUringAsyncFileIO::createNewEventHandlerReadWholeFile(AsyncManualResetEvent &evt, int &res, std::string &contents, uint64_t &sizeLeft, uint64_t fileSize, int fd, uint32_t maxSubmissions, uint64_t offset, char *buf, bool isLastInBatch) {
     return [this, &evt, &res, &contents, &sizeLeft, fileSize, fd, buf, offset, isLastInBatch, maxSubmissions](io_uring_cqe *cqe) {
+        // NOLINTNEXTLINE(modernize-avoid-c-arrays): owns the new[] buffer the read was submitted with
         std::unique_ptr<char[]> uniqueBuf{buf};
         INTERNAL_IO_DEBUG("read response {} {} {} {} {} {}", cqe->res, cqe->res < 0 ? strerror(-cqe->res) : "", _shouldStop, evt.is_set(), contents.size(), fileSize);
         if(_shouldStop || res < 0) {
@@ -457,6 +458,7 @@ void Ichor::v1::IOUringAsyncFileIO::recursiveSubmitCopyFile(AsyncManualResetEven
 
 Ichor::UringCallback Ichor::v1::IOUringAsyncFileIO::createNewEventHandlerCopyFileReadPart(AsyncManualResetEvent &evt, int &res, uint64_t &sizeLeft, uint64_t fileSize, int fromFd, int toFd, uint32_t maxSubmissions, uint64_t offset, char *buf, bool isLastInBatch) {
     return [this, &evt, &res, &sizeLeft, fileSize, fromFd, toFd, buf, offset, isLastInBatch, maxSubmissions](io_uring_cqe *cqe) {
+        // NOLINTNEXTLINE(modernize-avoid-c-arrays): owns the new[] buffer the read was submitted with
         std::unique_ptr<char[]> uniqueBuf{buf};
         INTERNAL_IO_DEBUG("read response {} {} {} {} {}", cqe->res, cqe->res < 0 ? strerror(-cqe->res) : "", _shouldStop, evt.is_set(), fileSize);
         if(_shouldStop || res < 0) {
@@ -502,6 +504,7 @@ Ichor::UringCallback Ichor::v1::IOUringAsyncFileIO::createNewEventHandlerCopyFil
 
 Ichor::UringCallback Ichor::v1::IOUringAsyncFileIO::createNewEventHandlerCopyFileWritePart(AsyncManualResetEvent &evt, int &res, char *buf, bool isLastInBatch) {
     return [this, &evt, &res, buf, isLastInBatch](io_uring_cqe *cqe) {
+        // NOLINTNEXTLINE(modernize-avoid-c-arrays): owns the new[] buffer the write was submitted with
         std::unique_ptr<char[]> uniqueBuf{buf};
         INTERNAL_IO_DEBUG("write response {} {} {} {}", cqe->res, cqe->res < 0 ? strerror(-cqe->res) : "", _shouldStop, evt.is_set());
         if(_shouldStop || res < 0) {

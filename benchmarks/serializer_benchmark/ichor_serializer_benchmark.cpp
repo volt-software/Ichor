@@ -6,6 +6,7 @@
 #include <ichor/services/logging/NullFrameworkLogger.h>
 #include <ichor/services/metrics/MemoryUsageFunctions.h>
 #include <ichor/ichor-mimalloc.h>
+#include <algorithm>
 #include <iostream>
 #include <thread>
 #include <array>
@@ -81,7 +82,7 @@ int main(int argc, char *argv[]) {
         // Report the median thread instead of the wall time of all threads. How fast a thread runs depends on where its
         // stack and heap end up in memory (e.g. Zen 4 L1D/store forwarding address hashes colliding), which is random
         // per thread and per run. The wall time is that of the slowest thread, which made the results bimodal.
-        std::sort(threadDurations.begin(), threadDurations.end());
+        std::ranges::sort(threadDurations);
         auto median = (threadDurations[threadCount / 2 - 1] + threadDurations[threadCount / 2]) / 2;
         fmt::println("{} multi threaded glaze ran for {:L} µs (median thread, fastest {:L} µs, slowest {:L} µs) with {:L} peak memory usage {:L} MB/s",
                      argv[0], median, threadDurations.front(), threadDurations.back(), getPeakRSS(),

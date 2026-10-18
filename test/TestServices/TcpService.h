@@ -18,8 +18,8 @@ struct ITcpService {
     virtual Ichor::Task<tl::expected<void, IOError>> sendClientAsync(std::vector<std::vector<uint8_t>>&& msgs) = 0;
     virtual Ichor::Task<tl::expected<void, IOError>> sendHostAsync(std::vector<uint8_t>&& msg) = 0;
     virtual Ichor::Task<tl::expected<void, IOError>> sendHostAsync(std::vector<std::vector<uint8_t>>&& msgs) = 0;
-    virtual ServiceIdType getClientId() const noexcept = 0;
-    virtual ServiceIdType getHostId() const noexcept = 0;
+    [[nodiscard]] virtual ServiceIdType getClientId() const noexcept = 0;
+    [[nodiscard]] virtual ServiceIdType getHostId() const noexcept = 0;
     virtual std::vector<std::vector<uint8_t>>& getMsgs() noexcept = 0;
 protected:
     ~ITcpService() = default;
@@ -82,11 +82,11 @@ public:
         co_return co_await _hostService->sendAsync(std::move(_msgs));
     }
 
-    ServiceIdType getClientId() const noexcept final {
+    [[nodiscard]] ServiceIdType getClientId() const noexcept final {
         return _clientId;
     }
 
-    ServiceIdType getHostId() const noexcept final {
+    [[nodiscard]] ServiceIdType getHostId() const noexcept final {
         return _hostId;
     }
 

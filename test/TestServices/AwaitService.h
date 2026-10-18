@@ -8,7 +8,7 @@
 using namespace Ichor;
 using namespace Ichor::v1;
 
-extern std::unique_ptr<Ichor::AsyncManualResetEvent> _evt;
+extern std::unique_ptr<Ichor::AsyncManualResetEvent> testEvt;
 
 struct AwaitEvent final : public Event {
     constexpr AwaitEvent(uint64_t _id, ServiceIdType _originatingService, uint64_t _priority) noexcept : Event(_id, _originatingService, _priority) {}
@@ -35,7 +35,7 @@ struct AwaitService final : public IAwaitService, public AdvancedService<AwaitSe
 
     Task<void> await_something() final
     {
-        co_await *_evt;
+        co_await *testEvt;
         co_return;
     }
 };
@@ -55,7 +55,7 @@ struct EventAwaitService final : public AdvancedService<EventAwaitService> {
     }
 
     AsyncGenerator<IchorBehaviour> handleEvent(AwaitEvent const &evt) {
-        co_await *_evt;
+        co_await *testEvt;
         co_yield {};
 
         GetThreadLocalEventQueue().pushEvent<QuitEvent>(getServiceId());

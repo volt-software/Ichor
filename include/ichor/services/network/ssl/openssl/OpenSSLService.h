@@ -37,7 +37,7 @@ namespace Ichor::v1 {
         template <typename TLSObjectT>
         void printAllSslErrors(TLSObjectT const &obj, int line_in) const;
 
-        Ichor::ScopedServiceProxy<ILogger*> getLogger () const;
+        [[nodiscard]] Ichor::ScopedServiceProxy<ILogger*> getLogger () const;
 
         Ichor::ScopedServiceProxy<ILogger*> _logger {};
         TLSContextIdType _contextIdCounter{};

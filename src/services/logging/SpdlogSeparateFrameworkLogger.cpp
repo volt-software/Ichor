@@ -5,7 +5,7 @@
 #include <ichor/DependencyManager.h>
 
 
-Ichor::v1::SpdlogSeparateFrameworkLogger::SpdlogSeparateFrameworkLogger(Properties props) : AdvancedService(std::move(props)), _level(LogLevel::LOG_WARN) {
+Ichor::v1::SpdlogSeparateFrameworkLogger::SpdlogSeparateFrameworkLogger(Properties props) : AdvancedService(std::move(props)) {
     if(auto propIt = getProperties().find("SpdlogLog"); propIt == getProperties().end()) {
         auto console_sink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
 

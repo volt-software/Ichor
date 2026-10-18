@@ -23,7 +23,7 @@ struct AsyncFileIOExpensiveSetup {
         }
         REQUIRE(!out.fail());
         bigFileFilesize = out.tellp();
-        REQUIRE(bigFileFilesize >= 8192*1024);
+        REQUIRE(bigFileFilesize >= 8192LL*1024);
         out.close();
     }
 
@@ -38,7 +38,7 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests_uring: Reading non
     auto version = Ichor::v1::kernelVersion();
 
     REQUIRE(version);
-    if(version < v1::Version{5, 18, 0}) {
+    if(version < v1::Version{.major=5, .minor=18, .patch=0}) {
         SKIP("Kernel version too old to run test.");
         return;
     }
@@ -46,7 +46,7 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests_uring: Reading non
     auto gen_i = GENERATE(1, 2);
 
     if(gen_i == 2) {
-        emulateKernelVersion = v1::Version{5, 18, 0};
+        emulateKernelVersion = v1::Version{.major=5, .minor=18, .patch=0};
         fmt::println("emulating kernel version {}", *emulateKernelVersion);
     } else {
         fmt::println("kernel version {}", *version);
@@ -113,7 +113,7 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests_uring: Reading fil
     auto version = Ichor::v1::kernelVersion();
 
     REQUIRE(version);
-    if(version < v1::Version{5, 18, 0}) {
+    if(version < v1::Version{.major=5, .minor=18, .patch=0}) {
         SKIP("Kernel version too old to run test.");
         return;
     }
@@ -121,7 +121,7 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests_uring: Reading fil
     auto gen_i = GENERATE(1, 2);
 
     if(gen_i == 2) {
-        emulateKernelVersion = v1::Version{5, 18, 0};
+        emulateKernelVersion = v1::Version{.major=5, .minor=18, .patch=0};
         fmt::println("emulating kernel version {}", *emulateKernelVersion);
     } else {
         fmt::println("kernel version {}", *version);
@@ -189,7 +189,7 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests_uring: Read whole 
     auto version = Ichor::v1::kernelVersion();
 
     REQUIRE(version);
-    if(version < v1::Version{5, 18, 0}) {
+    if(version < v1::Version{.major=5, .minor=18, .patch=0}) {
         SKIP("Kernel version too old to run test.");
         return;
     }
@@ -197,7 +197,7 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests_uring: Read whole 
     auto gen_i = GENERATE(1, 2);
 
     if(gen_i == 2) {
-        emulateKernelVersion = v1::Version{5, 18, 0};
+        emulateKernelVersion = v1::Version{.major=5, .minor=18, .patch=0};
         fmt::println("emulating kernel version {}", *emulateKernelVersion);
     } else {
         fmt::println("kernel version {}", *version);
@@ -256,7 +256,7 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests_uring: Read whole 
     auto version = Ichor::v1::kernelVersion();
 
     REQUIRE(version);
-    if(version < v1::Version{5, 18, 0}) {
+    if(version < v1::Version{.major=5, .minor=18, .patch=0}) {
         SKIP("Kernel version too old to run test.");
         return;
     }
@@ -264,7 +264,7 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests_uring: Read whole 
     auto gen_i = GENERATE(1, 2);
 
     if(gen_i == 2) {
-        emulateKernelVersion = v1::Version{5, 18, 0};
+        emulateKernelVersion = v1::Version{.major=5, .minor=18, .patch=0};
         fmt::println("emulating kernel version {}", *emulateKernelVersion);
     } else {
         fmt::println("kernel version {}", *version);
@@ -317,7 +317,7 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests_uring: Copying non
     auto version = Ichor::v1::kernelVersion();
 
     REQUIRE(version);
-    if(version < v1::Version{5, 18, 0}) {
+    if(version < v1::Version{.major=5, .minor=18, .patch=0}) {
         SKIP("Kernel version too old to run test.");
         return;
     }
@@ -325,7 +325,7 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests_uring: Copying non
     auto gen_i = GENERATE(1, 2);
 
     if(gen_i == 2) {
-        emulateKernelVersion = v1::Version{5, 18, 0};
+        emulateKernelVersion = v1::Version{.major=5, .minor=18, .patch=0};
         fmt::println("emulating kernel version {}", *emulateKernelVersion);
     } else {
         fmt::println("kernel version {}", *version);
@@ -374,7 +374,7 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests_uring: Copying fil
     auto version = Ichor::v1::kernelVersion();
 
     REQUIRE(version);
-    if(version < v1::Version{5, 18, 0}) {
+    if(version < v1::Version{.major=5, .minor=18, .patch=0}) {
         SKIP("Kernel version too old to run test.");
         return;
     }
@@ -382,7 +382,7 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests_uring: Copying fil
     auto gen_i = GENERATE(1, 2);
 
     if(gen_i == 2) {
-        emulateKernelVersion = v1::Version{5, 18, 0};
+        emulateKernelVersion = v1::Version{.major=5, .minor=18, .patch=0};
         fmt::println("emulating kernel version {}", *emulateKernelVersion);
     } else {
         fmt::println("kernel version {}", *version);
@@ -442,7 +442,7 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests_uring: Copying lar
     auto version = Ichor::v1::kernelVersion();
 
     REQUIRE(version);
-    if(version < v1::Version{5, 18, 0}) {
+    if(version < v1::Version{.major=5, .minor=18, .patch=0}) {
         SKIP("Kernel version too old to run test.");
         return;
     }
@@ -450,7 +450,7 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests_uring: Copying lar
     auto gen_i = GENERATE(1, 2);
 
     if(gen_i == 2) {
-        emulateKernelVersion = v1::Version{5, 18, 0};
+        emulateKernelVersion = v1::Version{.major=5, .minor=18, .patch=0};
         fmt::println("emulating kernel version {}", *emulateKernelVersion);
     } else {
         fmt::println("kernel version {}", *version);
@@ -505,7 +505,7 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests_uring: Removing no
     auto version = Ichor::v1::kernelVersion();
 
     REQUIRE(version);
-    if(version < v1::Version{5, 18, 0}) {
+    if(version < v1::Version{.major=5, .minor=18, .patch=0}) {
         SKIP("Kernel version too old to run test.");
         return;
     }
@@ -513,7 +513,7 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests_uring: Removing no
     auto gen_i = GENERATE(1, 2);
 
     if(gen_i == 2) {
-        emulateKernelVersion = v1::Version{5, 18, 0};
+        emulateKernelVersion = v1::Version{.major=5, .minor=18, .patch=0};
         fmt::println("emulating kernel version {}", *emulateKernelVersion);
     } else {
         fmt::println("kernel version {}", *version);
@@ -561,7 +561,7 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests_uring: Removing fi
     auto version = Ichor::v1::kernelVersion();
 
     REQUIRE(version);
-    if(version < v1::Version{5, 18, 0}) {
+    if(version < v1::Version{.major=5, .minor=18, .patch=0}) {
         SKIP("Kernel version too old to run test.");
         return;
     }
@@ -569,7 +569,7 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests_uring: Removing fi
     auto gen_i = GENERATE(1, 2);
 
     if(gen_i == 2) {
-        emulateKernelVersion = v1::Version{5, 18, 0};
+        emulateKernelVersion = v1::Version{.major=5, .minor=18, .patch=0};
         fmt::println("emulating kernel version {}", *emulateKernelVersion);
     } else {
         fmt::println("kernel version {}", *version);
@@ -628,7 +628,7 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests_uring: Writing fil
     auto version = Ichor::v1::kernelVersion();
 
     REQUIRE(version);
-    if(version < v1::Version{5, 18, 0}) {
+    if(version < v1::Version{.major=5, .minor=18, .patch=0}) {
         SKIP("Kernel version too old to run test.");
         return;
     }
@@ -636,7 +636,7 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests_uring: Writing fil
     auto gen_i = GENERATE(1, 2);
 
     if(gen_i == 2) {
-        emulateKernelVersion = v1::Version{5, 18, 0};
+        emulateKernelVersion = v1::Version{.major=5, .minor=18, .patch=0};
         fmt::println("emulating kernel version {}", *emulateKernelVersion);
     } else {
         fmt::println("kernel version {}", *version);
@@ -693,7 +693,7 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests_uring: Writing fil
     auto version = Ichor::v1::kernelVersion();
 
     REQUIRE(version);
-    if(version < v1::Version{5, 18, 0}) {
+    if(version < v1::Version{.major=5, .minor=18, .patch=0}) {
         SKIP("Kernel version too old to run test.");
         return;
     }
@@ -701,7 +701,7 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests_uring: Writing fil
     auto gen_i = GENERATE(1, 2);
 
     if(gen_i == 2) {
-        emulateKernelVersion = v1::Version{5, 18, 0};
+        emulateKernelVersion = v1::Version{.major=5, .minor=18, .patch=0};
         fmt::println("emulating kernel version {}", *emulateKernelVersion);
     } else {
         fmt::println("kernel version {}", *version);
@@ -762,7 +762,7 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests_uring: appending f
     auto version = Ichor::v1::kernelVersion();
 
     REQUIRE(version);
-    if(version < v1::Version{5, 18, 0}) {
+    if(version < v1::Version{.major=5, .minor=18, .patch=0}) {
         SKIP("Kernel version too old to run test.");
         return;
     }
@@ -770,7 +770,7 @@ TEST_CASE_METHOD(AsyncFileIOExpensiveSetup, "AsyncFileIOTests_uring: appending f
     auto gen_i = GENERATE(1, 2);
 
     if(gen_i == 2) {
-        emulateKernelVersion = v1::Version{5, 18, 0};
+        emulateKernelVersion = v1::Version{.major=5, .minor=18, .patch=0};
         fmt::println("emulating kernel version {}", *emulateKernelVersion);
     } else {
         fmt::println("kernel version {}", *version);

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstddef>
+#include <array>
 #include <cstdint>
 #include <ichor/Enums.h>
 #include <memory>
@@ -40,7 +41,7 @@ namespace Ichor {
             static_assert(sizeof(Op) <= sizeof(_storage), "Op does not fit in the inline storage");
             static_assert(alignof(Op) <= alignof(std::max_align_t), "Op is over-aligned");
             static_assert(std::is_nothrow_constructible_v<Op, Args&&...>, "Op construction needs to be noexcept");
-            _op = ::new (static_cast<void*>(_storage)) Op(std::forward<Args>(args)...);
+            _op = ::new (static_cast<void*>(_storage.data())) Op(std::forward<Args>(args)...);
         }
 
         ~AsyncGeneratorBeginOperationHolder() {
@@ -65,7 +66,7 @@ namespace Ichor {
         }
 
     private:
-        alignas(std::max_align_t) std::byte _storage[6 * sizeof(void*)];
+        alignas(std::max_align_t) std::array<std::byte, 6 * sizeof(void*)> _storage;
         // Needed because the interface is not necessarily at offset 0 of Op.
         IAsyncGeneratorBeginOperation* _op;
     };

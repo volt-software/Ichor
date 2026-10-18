@@ -5,6 +5,7 @@
 #include <ichor/dependency_management/AdvancedService.h>
 #include "OptionalService.h"
 #include "gsm_enc/gsm_enc.h"
+#include <algorithm>
 #include <array>
 #include <numeric>
 #include <ichor/ScopedServiceProxy.h>
@@ -97,8 +98,8 @@ private:
         if(_finishedWorkloads == ITERATIONS) {
             GetThreadLocalEventQueue().pushEvent<QuitEvent>(getServiceId());
 
-            int64_t min = *std::min_element(begin(_executionTimes), end(_executionTimes), [](int64_t &a, int64_t &b){return a < b; });
-			int64_t max = *std::max_element(begin(_executionTimes), end(_executionTimes), [](int64_t &a, int64_t &b){return a < b; });
+            int64_t min = *std::ranges::min_element(_executionTimes, [](int64_t &a, int64_t &b){return a < b; });
+			int64_t max = *std::ranges::max_element(_executionTimes, [](int64_t &a, int64_t &b){return a < b; });
 			int64_t avg = std::accumulate(begin(_executionTimes), end(_executionTimes), 0L, [](int64_t i, int64_t &entry){ return i + entry; }) / static_cast<long>(_executionTimes.size());
 
             fmt::print("duration min/max/avg: {:L}/{:L}/{:L} µs\n", min, max, avg);

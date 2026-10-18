@@ -58,7 +58,7 @@ namespace Ichor {
             }
 
         public:
-            ICHOR_COROUTINE_CONSTEXPR bool await_ready() const noexcept {
+            [[nodiscard]] ICHOR_COROUTINE_CONSTEXPR bool await_ready() const noexcept {
                 INTERNAL_COROUTINE_DEBUG("AsyncGeneratorAdvanceOperation::await_ready {} {}", _initialState, _promise->_id);
                 return _initialState == state::value_ready_producer_suspended;
             }
@@ -215,7 +215,7 @@ namespace Ichor {
 
             constexpr ~AsyncGeneratorBeginOperation() final = default;
 
-            ICHOR_COROUTINE_CONSTEXPR bool await_ready() const noexcept {
+            [[nodiscard]] ICHOR_COROUTINE_CONSTEXPR bool await_ready() const noexcept {
                 INTERNAL_COROUTINE_DEBUG("AsyncGeneratorBeginOperation<{}>::await_ready {}", typeName<T>(), this->_promise == nullptr ? 0u : this->_promise->_id);
                 return this->_promise == nullptr || AsyncGeneratorAdvanceOperation<T>::await_ready();
             }
@@ -460,7 +460,7 @@ namespace Ichor {
             promise().set_priority(priority);
         }
 
-        constexpr const ServiceIdType get_service_id() const noexcept final {
+        [[nodiscard]] constexpr const ServiceIdType get_service_id() const noexcept final {
             INTERNAL_COROUTINE_DEBUG("AsyncGenerator<{}>::get_service_id() {} {}", typeName<T>(), debug_id(), debug_state());
             return promise().get_service_id();
         }
@@ -471,7 +471,7 @@ namespace Ichor {
         }
 
 #ifdef ICHOR_HAVE_STD_STACKTRACE
-        [[nodiscard]] constexpr virtual std::stacktrace const &get_stacktrace() const noexcept final {
+        [[nodiscard]] constexpr std::stacktrace const &get_stacktrace() const noexcept final {
             return promise().get_stacktrace();
         }
 #endif

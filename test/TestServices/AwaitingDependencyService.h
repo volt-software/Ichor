@@ -1,6 +1,6 @@
 #pragma once
 extern std::atomic<uint64_t> evtGate;
-extern std::unique_ptr<Ichor::AsyncManualResetEvent> _evt;
+extern std::unique_ptr<Ichor::AsyncManualResetEvent> testEvt;
 
 struct AwaitingDependencyService final : public AdvancedService<AwaitingDependencyService> {
     AwaitingDependencyService(DependencyRegister &reg, Properties props)
@@ -14,7 +14,7 @@ struct AwaitingDependencyService final : public AdvancedService<AwaitingDependen
         fmt::println("1");
         evtGate.fetch_add(1, std::memory_order_release);
         fmt::println("2");
-        co_await *_evt;
+        co_await *testEvt;
         fmt::println("3");
         co_return;
     }

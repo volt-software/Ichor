@@ -19,7 +19,12 @@ public:
     [[nodiscard]] bool matches(ILifecycleManager const &manager) const noexcept {
         auto const scopeProp = manager.getProperties().find("scope");
 
-        return scopeProp != cend(manager.getProperties()) && Ichor::v1::any_cast<const std::string&>(scopeProp->second) == scope;
+        if(scopeProp == cend(manager.getProperties())) {
+            return false;
+        }
+
+        auto const *scopeVal = Ichor::v1::any_cast<std::string const *>(&scopeProp->second);
+        return scopeVal != nullptr && *scopeVal == scope;
     }
 
     [[nodiscard]] std::string getDescription() const noexcept {

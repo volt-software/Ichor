@@ -61,6 +61,10 @@ Requires Boost.BEAST to be installed as a system dependency (version >= 1.70). U
 For clang compilers, add the `-fuse-ld=mold` linker flag. This speeds up the linking stage.
 Usage with gcc 12+ is technically possible, but it might throw off [Catch2 unit test detection](https://github.com/catchorg/Catch2/issues/2507).
 
+## ICHOR_RUN_CLANG_TIDY (optional compile-time dependency)
+
+Clang only. Runs clang-tidy, version 23 or newer, on every C++ source of Ichor, its tests, examples and benchmarks as it compiles, with the checks in [.clang-tidy](../.clang-tidy): every bugprone and modernize check, bar the few listed there. A finding fails the compile. Requires CMake 3.27+. Set `ICHOR_CLANG_TIDY_EXECUTABLE` to pick a specific clang-tidy.
+
 ## ICHOR_USE_SDEVENT (optional dependency)
 
 Enables the use of the [sdevent event queue](../include/ichor/event_queues/SdeventQueue.h). Requires having sdevent headers and libraries installed on your system to compile.

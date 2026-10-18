@@ -52,3 +52,27 @@ run_fast_benchmarks ()
   ../bin/ichor_serializer_benchmark || exit 1
   ../bin/ichor_utils_benchmark -r || exit 1
 }
+
+# What a clang-tidy finding looks like in a build log (ICHOR_RUN_CLANG_TIDY, .clang-tidy makes every finding an error)
+CLANG_TIDY_FINDING_RE=': error: .* \[[a-z0-9.-]+,-warnings-as-errors\]$'
+
+# ninja for a build with ICHOR_RUN_CLANG_TIDY on. -k 0 keeps building past a failed edge, so one run shows every
+# clang-tidy finding rather than only those of the first sources to fail. A finding in a header fails every source
+# that includes it, so on failure each distinct finding is listed once more at the end.
+ninja_clang_tidy ()
+{
+  # In the build directory, so that the next build's cleanup removes it if this one is interrupted
+  local log=clang-tidy-build.log
+  ninja -k 0 2>&1 | tee "$log"
+  local rc=${PIPESTATUS[0]}
+  if [[ $rc -ne 0 ]]; then
+    local findings
+    findings=$(grep -E "$CLANG_TIDY_FINDING_RE" "$log" | sort -u)
+    if [[ -n "$findings" ]]; then
+      echo "-- $(wc -l <<< "$findings") distinct clang-tidy finding(s):"
+      echo "$findings"
+    fi
+  fi
+  rm -f "$log"
+  return $rc
+}

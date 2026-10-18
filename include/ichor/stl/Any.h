@@ -135,6 +135,7 @@ namespace Ichor::v1 {
             if constexpr (sizeof(T) <= bufferTypeSize && std::is_nothrow_move_constructible_v<T>) {
                 _ptr = new (_buffer.data()) T(std::forward<Args>(args)...);
             } else {
+                // NOLINTNEXTLINE(bugprone-unhandled-exception-at-new): Ichor terminates on allocation failure
                 _ptr = new T(std::forward<Args>(args)...);
             }
             _typeHash = typeNameHash<std::remove_cvref_t<T>>();
@@ -152,12 +153,14 @@ namespace Ichor::v1 {
                     }
                 } else {
                     if(op == any_op::CLONE) {
+                        // NOLINTNEXTLINE(bugprone-unhandled-exception-at-new): Ichor terminates on allocation failure
                         return new T(*static_cast<T *>(value));
                     } else if(op == any_op::DELETE_) {
                         delete static_cast<T*>(value);
                         return nullptr;
                     } else if(op == any_op::MOVE) {
                         if constexpr (std::is_nothrow_move_constructible_v<T>) {
+                            // NOLINTNEXTLINE(bugprone-unhandled-exception-at-new): Ichor terminates on allocation failure
                             return new T(std::move(*static_cast<T *>(value)));
                         }
                     }

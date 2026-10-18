@@ -32,8 +32,8 @@ public:
         auto err = glz::read_json(msg, stream);
 
         if(err) {
-            fmt::print("Glaze error {} at {}\n", (int)err.ec, err.location);
-            fmt::print("json {}\n", (char*)stream.data());
+            fmt::print("Glaze error {} at {}\n", static_cast<int>(err.ec), err.location);
+            fmt::print("json {}\n", std::string_view{reinterpret_cast<char const *>(stream.data()), stream.size()});
             return tl::nullopt;
         }
 

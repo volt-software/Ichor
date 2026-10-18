@@ -1,6 +1,7 @@
 #include "Common.h"
 #include "FakeLifecycleManager.h"
 #include <ichor/Filter.h>
+#include "../examples/factory_example/FactoryService.h"
 
 struct Interface1{};
 struct Interface2{};
@@ -37,6 +38,28 @@ TEST_CASE("FilterTests: PropertiesFilterEntry") {
         REQUIRE(f.matches(fm));
         fm._properties.clear();
     }
+}
+
+TEST_CASE("FilterTests: Filter copies an lvalue entry") {
+    PropertiesFilterEntry<int, false> entry{"TestProp", 5};
+    Filter filter{entry};
+    entry.val = 6;
+
+    FakeLifecycleManager fm;
+    fm._properties.emplace("TestProp", Ichor::v1::make_any<int>(5));
+    REQUIRE(filter.compareTo(fm));
+}
+
+TEST_CASE("FilterTests: factory example ScopeFilterEntry") {
+    ScopeFilterEntry entry{"scope_one"};
+    FakeLifecycleManager fm;
+    REQUIRE(!entry.matches(fm));
+    // A scope that isn't a string doesn't match, rather than throw out of the noexcept matches()
+    fm._properties.emplace("scope", Ichor::v1::make_any<int>(5));
+    REQUIRE(!entry.matches(fm));
+    fm._properties.clear();
+    fm._properties.emplace("scope", Ichor::v1::make_any<std::string>("scope_one"));
+    REQUIRE(entry.matches(fm));
 }
 
 TEST_CASE("FilterTests: DependencyPropertiesFilterEntry") {

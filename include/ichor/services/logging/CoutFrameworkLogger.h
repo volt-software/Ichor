@@ -25,6 +25,6 @@ namespace Ichor::v1 {
 
         friend DependencyRegister;
 
-        LogLevel _level;
+        LogLevel _level{LogLevel::LOG_WARN};
     };
 }

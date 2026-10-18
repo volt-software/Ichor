@@ -65,8 +65,8 @@ int main(int argc, char *argv[]) {
                 q.start(CaptureSigInt);
             });
         }
-        for (uint_fast32_t i = 0; i < threads.size(); i++) {
-            threads[i].join();
+        for (auto & thread : threads) {
+            thread.join();
         }
         auto end = std::chrono::steady_clock::now();
         fmt::println("{} multi threaded ran for {:L} µs with {:L} peak memory usage {:L} coroutines/s",

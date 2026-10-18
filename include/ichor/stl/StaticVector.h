@@ -25,7 +25,7 @@ namespace Ichor::v1 {
 
         template <typename T, std::size_t N>
         struct AlignedByteArray {
-            alignas(T) std::byte buff[N];
+            alignas(T) std::array<std::byte, N> buff;
         };
         template<typename T>
         struct AlignedByteArray<T, 0> {
@@ -38,14 +38,14 @@ namespace Ichor::v1 {
                 if constexpr (is_sufficiently_trivial<T>) {
                     return static_cast<T *>(_storage.data());
                 } else {
-                    return reinterpret_cast<T *>(_storage.buff);
+                    return reinterpret_cast<T *>(_storage.buff.data());
                 }
             }
-            constexpr auto data() const noexcept ICHOR_LIFETIME_BOUND -> T const * {
+            [[nodiscard]] constexpr auto data() const noexcept ICHOR_LIFETIME_BOUND -> T const * {
                 if constexpr (is_sufficiently_trivial<T>) {
                     return static_cast<T const *>(_storage.data());
                 } else {
-                    return reinterpret_cast<T const *>(_storage.buff);
+                    return reinterpret_cast<T const *>(_storage.buff.data());
                 }
             }
 
@@ -58,7 +58,7 @@ namespace Ichor::v1 {
             constexpr auto data() noexcept ICHOR_LIFETIME_BOUND -> T * {
                 return nullptr;
             }
-            constexpr auto data() const noexcept ICHOR_LIFETIME_BOUND -> T const * {
+            [[nodiscard]] constexpr auto data() const noexcept ICHOR_LIFETIME_BOUND -> T const * {
                 return nullptr;
             }
         };
@@ -141,17 +141,17 @@ namespace Ichor::v1 {
         virtual constexpr void assign(size_type n, const_reference u) = 0;
 
         virtual constexpr iterator               begin()         noexcept ICHOR_LIFETIME_BOUND = 0;
-        virtual constexpr const_iterator         begin()   const noexcept ICHOR_LIFETIME_BOUND = 0;
+        [[nodiscard]] virtual constexpr const_iterator         begin()   const noexcept ICHOR_LIFETIME_BOUND = 0;
         virtual constexpr iterator               end()           noexcept ICHOR_LIFETIME_BOUND = 0;
-        virtual constexpr const_iterator         end()     const noexcept ICHOR_LIFETIME_BOUND = 0;
+        [[nodiscard]] virtual constexpr const_iterator         end()     const noexcept ICHOR_LIFETIME_BOUND = 0;
         virtual constexpr reverse_iterator       rbegin()        noexcept ICHOR_LIFETIME_BOUND = 0;
-        virtual constexpr const_reverse_iterator rbegin()  const noexcept ICHOR_LIFETIME_BOUND = 0;
+        [[nodiscard]] virtual constexpr const_reverse_iterator rbegin()  const noexcept ICHOR_LIFETIME_BOUND = 0;
         virtual constexpr reverse_iterator       rend()          noexcept ICHOR_LIFETIME_BOUND = 0;
-        virtual constexpr const_reverse_iterator rend()    const noexcept ICHOR_LIFETIME_BOUND = 0;
-        virtual constexpr const_iterator         cbegin()  const noexcept ICHOR_LIFETIME_BOUND = 0;
-        virtual constexpr const_iterator         cend()    const noexcept ICHOR_LIFETIME_BOUND = 0;
-        virtual constexpr const_reverse_iterator crbegin() const noexcept ICHOR_LIFETIME_BOUND = 0;
-        virtual constexpr const_reverse_iterator crend()   const noexcept ICHOR_LIFETIME_BOUND = 0;
+        [[nodiscard]] virtual constexpr const_reverse_iterator rend()    const noexcept ICHOR_LIFETIME_BOUND = 0;
+        [[nodiscard]] virtual constexpr const_iterator         cbegin()  const noexcept ICHOR_LIFETIME_BOUND = 0;
+        [[nodiscard]] virtual constexpr const_iterator         cend()    const noexcept ICHOR_LIFETIME_BOUND = 0;
+        [[nodiscard]] virtual constexpr const_reverse_iterator crbegin() const noexcept ICHOR_LIFETIME_BOUND = 0;
+        [[nodiscard]] virtual constexpr const_reverse_iterator crend()   const noexcept ICHOR_LIFETIME_BOUND = 0;
 
         [[nodiscard]] virtual constexpr bool empty() const noexcept = 0;
         [[nodiscard]] virtual constexpr size_type size() const noexcept = 0;
@@ -175,11 +175,11 @@ namespace Ichor::v1 {
         virtual constexpr reference       operator[](size_type n) ICHOR_LIFETIME_BOUND = 0;
         virtual constexpr const_reference operator[](size_type n) const ICHOR_LIFETIME_BOUND = 0;
         virtual constexpr reference       front() ICHOR_LIFETIME_BOUND = 0;
-        virtual constexpr const_reference front() const ICHOR_LIFETIME_BOUND = 0;
+        [[nodiscard]] virtual constexpr const_reference front() const ICHOR_LIFETIME_BOUND = 0;
         virtual constexpr reference       back() ICHOR_LIFETIME_BOUND = 0;
-        virtual constexpr const_reference back() const ICHOR_LIFETIME_BOUND = 0;
+        [[nodiscard]] virtual constexpr const_reference back() const ICHOR_LIFETIME_BOUND = 0;
         virtual constexpr pointer         data()       noexcept ICHOR_LIFETIME_BOUND = 0;
-        virtual constexpr const_pointer   data() const noexcept ICHOR_LIFETIME_BOUND = 0;
+        [[nodiscard]] virtual constexpr const_pointer   data() const noexcept ICHOR_LIFETIME_BOUND = 0;
 
         virtual constexpr iterator insert(const_iterator const_position, const_reference x) ICHOR_LIFETIME_BOUND = 0;
         virtual constexpr iterator insert(const_iterator const_position, value_type&& x) ICHOR_LIFETIME_BOUND = 0;
@@ -330,37 +330,37 @@ namespace Ichor::v1 {
         constexpr iterator               begin()         noexcept ICHOR_LIFETIME_BOUND final {
             return iterator{_data.data()};
         }
-        constexpr const_iterator         begin()   const noexcept ICHOR_LIFETIME_BOUND final {
+        [[nodiscard]] constexpr const_iterator         begin()   const noexcept ICHOR_LIFETIME_BOUND final {
             return const_iterator{_data.data()};
         }
         constexpr iterator               end()           noexcept ICHOR_LIFETIME_BOUND final {
             return iterator{_data.data() + _size};
         }
-        constexpr const_iterator         end()     const noexcept ICHOR_LIFETIME_BOUND final {
+        [[nodiscard]] constexpr const_iterator         end()     const noexcept ICHOR_LIFETIME_BOUND final {
             return const_iterator{_data.data() + _size};
         }
         constexpr reverse_iterator       rbegin()        noexcept ICHOR_LIFETIME_BOUND final {
             return reverse_iterator{end()};
         }
-        constexpr const_reverse_iterator rbegin()  const noexcept ICHOR_LIFETIME_BOUND final {
+        [[nodiscard]] constexpr const_reverse_iterator rbegin()  const noexcept ICHOR_LIFETIME_BOUND final {
             return const_reverse_iterator{end()};
         }
         constexpr reverse_iterator       rend()          noexcept ICHOR_LIFETIME_BOUND final {
             return reverse_iterator{begin()};
         }
-        constexpr const_reverse_iterator rend()    const noexcept ICHOR_LIFETIME_BOUND final {
+        [[nodiscard]] constexpr const_reverse_iterator rend()    const noexcept ICHOR_LIFETIME_BOUND final {
             return const_reverse_iterator{begin()};
         }
-        constexpr const_iterator         cbegin()  const noexcept ICHOR_LIFETIME_BOUND final {
+        [[nodiscard]] constexpr const_iterator         cbegin()  const noexcept ICHOR_LIFETIME_BOUND final {
             return const_iterator{_data.data()};
         }
-        constexpr const_iterator         cend()    const noexcept ICHOR_LIFETIME_BOUND final {
+        [[nodiscard]] constexpr const_iterator         cend()    const noexcept ICHOR_LIFETIME_BOUND final {
             return const_iterator{_data.data() + _size};
         }
-        constexpr const_reverse_iterator crbegin() const noexcept ICHOR_LIFETIME_BOUND final {
+        [[nodiscard]] constexpr const_reverse_iterator crbegin() const noexcept ICHOR_LIFETIME_BOUND final {
             return const_reverse_iterator{cend()};
         }
-        constexpr const_reverse_iterator crend()   const noexcept ICHOR_LIFETIME_BOUND final {
+        [[nodiscard]] constexpr const_reverse_iterator crend()   const noexcept ICHOR_LIFETIME_BOUND final {
             return const_reverse_iterator{cbegin()};
         }
 
@@ -398,7 +398,7 @@ namespace Ichor::v1 {
             assert(_size > 0);
             return *_data.data();
         }
-        constexpr const_reference front() const ICHOR_LIFETIME_BOUND final {
+        [[nodiscard]] constexpr const_reference front() const ICHOR_LIFETIME_BOUND final {
             assert(_size > 0);
             return *_data.data();
         }
@@ -406,14 +406,14 @@ namespace Ichor::v1 {
             assert(_size > 0);
             return *(_data.data() + (_size - 1));
         }
-        constexpr const_reference back() const ICHOR_LIFETIME_BOUND final {
+        [[nodiscard]] constexpr const_reference back() const ICHOR_LIFETIME_BOUND final {
             assert(_size > 0);
             return *(_data.data() + (_size - 1));
         }
         constexpr pointer         data()       noexcept ICHOR_LIFETIME_BOUND final {
             return _data.data();
         }
-        constexpr const_pointer   data() const noexcept ICHOR_LIFETIME_BOUND final {
+        [[nodiscard]] constexpr const_pointer   data() const noexcept ICHOR_LIFETIME_BOUND final {
             return _data.data();
         }
 

@@ -30,7 +30,9 @@ namespace Ichor {
 
     template <typename T>
     class AdvancedService : public IService {
-    public:
+        // Only T, the service deriving from this, constructs it
+        friend T;
+
         template <typename U = T> requires (!RequestsProperties<U> && !RequestsDependencies<U>)
         AdvancedService() noexcept : IService(), _serviceId(ServiceIdType{Detail::_serviceIdCounter.fetch_add(1, std::memory_order_relaxed)}), _servicePriority(INTERNAL_EVENT_PRIORITY), _serviceGid(sole::uuid4()), _serviceState(ServiceState::INSTALLED) {
 
@@ -41,12 +43,14 @@ namespace Ichor {
 
         }
 
+        AdvancedService(const AdvancedService&) = default;
+        AdvancedService(AdvancedService&&) noexcept = default;
+
+    public:
         ~AdvancedService() noexcept override {
             _serviceState = ServiceState::UNINSTALLED;
         }
 
-        AdvancedService(const AdvancedService&) = default;
-        AdvancedService(AdvancedService&&) noexcept = default;
         AdvancedService& operator=(const AdvancedService&) = default;
         AdvancedService& operator=(AdvancedService&&) noexcept = default;
 

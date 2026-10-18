@@ -23,6 +23,7 @@ using namespace std::chrono_literals;
 
 std::atomic<bool> Ichor::v1::SharedOverThreadsAsyncFileIO::_initialized;
 std::mutex Ichor::v1::SharedOverThreadsAsyncFileIO::_io_mutex;
+// NOLINTNEXTLINE(bugprone-throwing-static-initialization): only allocation failure can throw, which terminates
 std::queue<std::shared_ptr<Ichor::v1::io_operation_submission>> Ichor::v1::SharedOverThreadsAsyncFileIO::_evts;
 
 Ichor::v1::SharedOverThreadsAsyncFileIO::SharedOverThreadsAsyncFileIO(Properties props) : AdvancedService<SharedOverThreadsAsyncFileIO>(std::move(props)) {
@@ -88,7 +89,7 @@ Ichor::Task<tl::expected<std::string, Ichor::v1::IOError>> Ichor::v1::SharedOver
 
         file.seekg(0, std::ios::end);
 
-        if((unsigned long)file.tellg() > contents.max_size()) {
+        if(static_cast<unsigned long>(file.tellg()) > contents.max_size()) {
             res = tl::unexpected(IOError::FILE_SIZE_TOO_BIG);
             return;
         }
@@ -298,6 +299,7 @@ Ichor::Task<tl::expected<void, Ichor::v1::IOError>> Ichor::v1::SharedOverThreads
         try {
 #endif
             // TODO fmt default permissions are S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH. Maybe make it consistent accross AsyncFileIO impl?
+            // NOLINTNEXTLINE(bugprone-signed-bitwise): fmt defines these flags as int
             auto out = fmt::output_file(file.string(), fmt::file::WRONLY | fmt::file::CREATE | fmt::file::APPEND);
             out.print("{}", contents);
 #if ICHOR_EXCEPTIONS_ENABLED

@@ -56,7 +56,7 @@ bool Ichor::v1::IOUringTimer::startTimer(bool fireImmediately) {
     return true;
 }
 
-bool Ichor::v1::IOUringTimer::stopTimer(std::function<void(void)> cb) {
+bool Ichor::v1::IOUringTimer::stopTimer(std::function<void()> cb) {
     INTERNAL_IO_DEBUG("Stopping timer {} for {} _uringTimerId 0x{:X} state {}", _timerId, _requestingServiceId, _uringTimerId, _state);
     if(_state == TimerState::RUNNING) {
         submitRemove();

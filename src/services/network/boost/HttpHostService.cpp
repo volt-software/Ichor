@@ -178,6 +178,7 @@ void Ichor::Boost::v1::HttpHostService::listen(tcp::endpoint endpoint, net::yiel
                     });
         }
 
+        // NOLINTNEXTLINE(bugprone-signed-bitwise): asio defines these options as long
         _sslContext->set_options(boost::asio::ssl::context::default_workarounds |
                                  boost::asio::ssl::context::no_tlsv1 |
                                  boost::asio::ssl::context::no_tlsv1_1 |
@@ -316,7 +317,7 @@ void Ichor::Boost::v1::HttpHostService::read(tcp::socket socket, net::yield_cont
         if (!req.body().empty() && *req.body().rbegin() != 0) {
             req.body().push_back(0);
         }
-        Ichor::v1::HttpRequest httpReq{ std::move(req.body()), static_cast<Ichor::v1::HttpMethod>(req.method()), target, {}, addr, std::move(headers) };
+        Ichor::v1::HttpRequest httpReq{ .body=std::move(req.body()), .method=static_cast<Ichor::v1::HttpMethod>(req.method()), .route=target, .regex_params={}, .address=addr, .headers=std::move(headers) };
         // Compiler bug prevents using named captures for now: https://www.reddit.com/r/cpp_questions/comments/17lc55f/coroutine_msvc_compiler_bug/
 #if (defined(WIN32) || defined(_WIN32) || defined(__WIN32)) && !defined(__CYGWIN__)
         auto version = req.version();

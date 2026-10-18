@@ -93,8 +93,10 @@ static constexpr bool DO_HARDENING = false;
 #endif
 
 #if defined(__cpp_exceptions) || defined(__EXCEPTIONS) || defined(_CPPUNWIND)
+// NOLINTNEXTLINE(modernize-macro-to-enum): tested by #if
 #define ICHOR_EXCEPTIONS_ENABLED 1
 #else
+// NOLINTNEXTLINE(modernize-macro-to-enum): tested by #if
 #define ICHOR_EXCEPTIONS_ENABLED 0
 #endif
 

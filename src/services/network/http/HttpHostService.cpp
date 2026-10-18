@@ -134,7 +134,7 @@ tl::expected<Ichor::v1::HttpRequest, Ichor::v1::HttpParseError> Ichor::v1::HttpH
     uint64_t crlfCounter{};
     uint64_t protocolLength{};
     uint64_t contentLength{};
-    std::string_view partial{complete.data(), len};
+    std::string_view partial = complete.substr(0, len);
     bool badRequest{};
     bool contentLengthHeader{};
     bool contentLengthSet{};
@@ -268,7 +268,7 @@ Ichor::Task<void> Ichor::v1::HttpHostService::receiveRequestHandler(ServiceIdTyp
     std::string_view msg;
     {
         auto &string = _connectionBuffers[id];
-        if(string.size() > 1024*1024*512) {
+        if(string.size() > 1024ULL*1024*512) {
             string.clear();
             HttpResponse resp{};
             resp.status = HttpStatus::internal_server_error;
@@ -297,10 +297,10 @@ Ichor::Task<void> Ichor::v1::HttpHostService::receiveRequestHandler(ServiceIdTyp
             pos = std::string_view::npos;
         } else {
             auto routes = _handlers.find(req->method);
+            // Not found, unless a handler for this method matches the route
+            resp.status = HttpStatus::not_found;
 
-            if(routes == _handlers.end()) {
-                resp.status = HttpStatus::not_found;
-            } else {
+            if(routes != _handlers.end()) {
                 for(auto const &[matcher, handler] : routes->second) {
                     if(matcher->matches(req->route)) {
                         req->regex_params = matcher->route_params();

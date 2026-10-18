@@ -53,7 +53,7 @@ int main(int argc, char *argv[]) {
             eventTypeToNameMapper.emplace(evtType, evt.get_name());
         }
 
-        return (bool)AllowOthersHandling;
+        return AllowOthersHandling;
     }, [&](Event const &evt, bool processed) {
         if(!processed) {
             return;
@@ -65,7 +65,7 @@ int main(int argc, char *argv[]) {
         auto statistics = globalEventStatistics.find(evtType);
 
         if(statistics == end(globalEventStatistics)) {
-            globalEventStatistics.emplace(evtType, GlobalEventStatistics{1, std::chrono::duration_cast<std::chrono::nanoseconds>(processingTime).count(), std::chrono::duration_cast<std::chrono::nanoseconds>(processingTime).count()});
+            globalEventStatistics.emplace(evtType, GlobalEventStatistics{.occ=1, .min=std::chrono::duration_cast<std::chrono::nanoseconds>(processingTime).count(), .max=std::chrono::duration_cast<std::chrono::nanoseconds>(processingTime).count()});
         } else {
             if(statistics->second.min > std::chrono::duration_cast<std::chrono::nanoseconds>(processingTime).count()) {
                 statistics->second.min = std::chrono::duration_cast<std::chrono::nanoseconds>(processingTime).count();
