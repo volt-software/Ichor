@@ -269,14 +269,12 @@ namespace Ichor::v1 {
             return *this;
         }
 
+        // The accessors only log a null dereference with INTERNAL_STL_DEBUG: they don't change the reference count and are called so often
+        // (e.g. for every service a Filter is compared to) that a line per call made up most of the output.
         [[nodiscard]] constexpr T& operator*() const noexcept ICHOR_LIFETIME_BOUND {
-            if constexpr (std::is_same_v<T, bool>) {
-                INTERNAL_STL_DEBUG("ReferenceCountedPointer<{}> operator*() {} {} bool! {}", typeName<T>(), ICHOR_RFP_ID _block == nullptr, *_ptr);
-            } else {
-                INTERNAL_STL_DEBUG("ReferenceCountedPointer<{}> operator*() {} {}", typeName<T>(), ICHOR_RFP_ID _block == nullptr);
-            }
             if constexpr (DO_INTERNAL_STL_DEBUG || DO_HARDENING) {
                 if (_ptr == nullptr) [[unlikely]] {
+                    INTERNAL_STL_DEBUG("ReferenceCountedPointer<{}> operator*() null dereference {} {}", typeName<T>(), ICHOR_RFP_ID _block == nullptr);
                     std::terminate();
                 }
             }
@@ -284,9 +282,9 @@ namespace Ichor::v1 {
         }
 
         [[nodiscard]] constexpr T* operator->() const noexcept ICHOR_LIFETIME_BOUND {
-            INTERNAL_STL_DEBUG("ReferenceCountedPointer<{}> operator->() {} {}", typeName<T>(), ICHOR_RFP_ID _block == nullptr);
             if constexpr (DO_INTERNAL_STL_DEBUG || DO_HARDENING) {
                 if (_ptr == nullptr) [[unlikely]] {
+                    INTERNAL_STL_DEBUG("ReferenceCountedPointer<{}> operator->() null dereference {} {}", typeName<T>(), ICHOR_RFP_ID _block == nullptr);
                     std::terminate();
                 }
             }
@@ -325,9 +323,9 @@ namespace Ichor::v1 {
         }
 
         [[nodiscard]] constexpr T* get() const noexcept ICHOR_LIFETIME_BOUND {
-            INTERNAL_STL_DEBUG("ReferenceCountedPointer<{}> get() {} {}", typeName<T>(), ICHOR_RFP_ID _block == nullptr);
             if constexpr (DO_INTERNAL_STL_DEBUG || DO_HARDENING) {
                 if (_ptr == nullptr) [[unlikely]] {
+                    INTERNAL_STL_DEBUG("ReferenceCountedPointer<{}> get() null dereference {} {}", typeName<T>(), ICHOR_RFP_ID _block == nullptr);
                     std::terminate();
                 }
             }

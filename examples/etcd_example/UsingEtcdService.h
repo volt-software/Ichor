@@ -2,6 +2,7 @@
 
 #include <ichor/services/logging/Logger.h>
 #include <ichor/services/etcd/IEtcdV2.h>
+#include <ichor/services/timer/ITimerFactory.h>
 #include <ichor/dependency_management/IService.h>
 #include <ichor/event_queues/IEventQueue.h>
 #include <ichor/events/RunFunctionEvent.h>
@@ -12,7 +13,7 @@ using namespace Ichor::Etcdv2::v1;
 
 class UsingEtcdV2Service final {
 public:
-    UsingEtcdV2Service(IService *self, IEventQueue *queue, ScopedServiceProxy<ILogger> logger, ScopedServiceProxy<IEtcd> EtcdV2Service) {
+    UsingEtcdV2Service(IService *self, IEventQueue *queue, ScopedServiceProxy<ILogger> logger, ScopedServiceProxy<IEtcd> EtcdV2Service, ScopedServiceProxy<ITimerFactory> timerFactory) {
         ICHOR_LOG_INFO(logger, "UsingEtcdV2Service started");
 
         // standard put/get
@@ -34,21 +35,17 @@ public:
         });
 
         // wait for update and set
-        queue->pushEvent<RunFunctionEventAsync>(ServiceIdType{0}, [logger, EtcdV2Service, queue, self]() -> AsyncGenerator<IchorBehaviour> {
+        queue->pushEvent<RunFunctionEventAsync>(ServiceIdType{0}, [logger, EtcdV2Service, timerFactory, queue, self]() -> AsyncGenerator<IchorBehaviour> {
             auto ret = co_await EtcdV2Service->put("watch", "3", 10u); // set value
             if(!ret) {
                 std::terminate();
             }
 
-            // update the "test" key in 250 ms
-            auto start = std::chrono::steady_clock::now();
-            queue->pushEvent<RunFunctionEventAsync>(ServiceIdType{0}, [EtcdV2Service, start]() -> AsyncGenerator<IchorBehaviour> {
-                auto now = std::chrono::steady_clock::now();
-                while(now - start < std::chrono::milliseconds(250)) {
-                    co_yield IchorBehaviour::DONE;
-                    now = std::chrono::steady_clock::now();
-                }
-
+            // update the "watch" key in 250 ms
+            auto timer = timerFactory->createTimer();
+            timer.setChronoInterval(std::chrono::milliseconds(250));
+            timer.setFireOnce(true);
+            timer.setCallbackAsync([EtcdV2Service]() -> AsyncGenerator<IchorBehaviour> {
                 auto ret2 = co_await EtcdV2Service->put("watch", "4", 10u); // update value, this should trigger the watch
                 if(!ret2) {
                     std::terminate();
@@ -56,6 +53,7 @@ public:
 
                 co_return {};
             });
+            timer.startTimer();
 
             // wait for a reply, this blocks this async event (hence why we need to update the key in another async event).
             // Note that this does not block the thread, just this event.

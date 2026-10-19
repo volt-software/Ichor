@@ -5,7 +5,10 @@
 #include <ichor/dependency_management/DependencyRegister.h>
 #include <ichor/event_queues/IEventQueue.h>
 #include <ichor/ScopedServiceProxy.h>
-#if defined(ICHOR_ENABLE_INTERNAL_DEBUGGING) || (defined(ICHOR_BUILDING_DEBUG) && (defined(__SANITIZE_ADDRESS__) || defined(__SANITIZE_THREAD__) || defined(_GLIBCXX_DEBUG)))
+// Internal debugging logs every step of starting a service, so even 100 makes for hundreds of megabytes of output per build.sh configuration
+#if defined(ICHOR_ENABLE_INTERNAL_DEBUGGING)
+constexpr uint32_t SERVICES_COUNT = 10;
+#elif defined(ICHOR_BUILDING_DEBUG) && (defined(__SANITIZE_ADDRESS__) || defined(__SANITIZE_THREAD__) || defined(_GLIBCXX_DEBUG))
 constexpr uint32_t SERVICES_COUNT = 100;
 #elif defined(__SANITIZE_ADDRESS__) || defined(__SANITIZE_THREAD__) || defined(ICHOR_BUILDING_DEBUG)
 constexpr uint32_t SERVICES_COUNT = 1'000;

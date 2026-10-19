@@ -24,6 +24,14 @@ thread_local Ichor::unordered_set<Ichor::ServiceIdType, Ichor::ServiceIdHash> Ic
 
 constinit thread_local Ichor::DependencyManager *Ichor::v1::Detail::_local_dm = nullptr;
 
+namespace {
+    // Whether dependent requests one of the interfaces provider offers, i.e. whether a filter rejecting the pair is worth an internal debug line
+    [[nodiscard]] bool requestsAnyInterfaceOf(Ichor::ILifecycleManager const &dependent, Ichor::ILifecycleManager const &provider) noexcept {
+        auto const *registry = dependent.getDependencyRegistry();
+        return registry != nullptr && std::ranges::any_of(provider.getInterfaces(), [registry](Ichor::Dependency const &dep) noexcept { return registry->contains(dep); });
+    }
+}
+
 #ifdef ICHOR_USE_BACKWARD
 #include <backward/backward.h>
 
@@ -147,9 +155,21 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &uniqueEvt) {
                         filter = Ichor::v1::any_cast<Filter const *>(&filterProp->second);
                     }
 
+                    // Every service is visited, so a line per rejected service would be quadratic in the number of services. Only those that
+                    // request one of manager's interfaces get one, the others are counted.
+                    [[maybe_unused]] uint64_t filteredOut{};
                     for (auto const &[serviceId, possibleDependentLifecycleManager] : _services) {
-                        if (serviceId == depOnlineEvt->originatingService || (filter != nullptr && !filter->compareTo(*possibleDependentLifecycleManager))) {
-                            INTERNAL_DEBUG("DependencyOnlineEvent {} {}:{} interested service is {}:{} skipping {} {}", evt->id, manager->serviceId(), manager->implementationName(), serviceId, possibleDependentLifecycleManager->implementationName(), serviceId == depOnlineEvt->originatingService, filter != nullptr);
+                        if (serviceId == depOnlineEvt->originatingService) {
+                            continue;
+                        }
+                        if (filter != nullptr && !filter->compareTo(*possibleDependentLifecycleManager)) {
+                            if constexpr (DO_INTERNAL_DEBUG) {
+                                if (requestsAnyInterfaceOf(*possibleDependentLifecycleManager, *manager)) {
+                                    INTERNAL_DEBUG("DependencyOnlineEvent {} {}:{} filter '{}' rejected interested service {}:{}", evt->id, manager->serviceId(), manager->implementationName(), filter->getDescription(), serviceId, possibleDependentLifecycleManager->implementationName());
+                                } else {
+                                    filteredOut++;
+                                }
+                            }
                             continue;
                         }
 
@@ -179,6 +199,12 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &uniqueEvt) {
                             // _scopedEvents.emplace(it.get_promise_id(), v1::make_reference_counted<DependencyOnlineEvent>(_eventQueue.getNextEventId(), serviceId, std::min(INTERNAL_DEPENDENCY_EVENT_PRIORITY, evt->priority)));
                         } else if(it.get_value() == StartBehaviour::STARTED) {
                             _eventQueue.pushPrioritisedEvent<DependencyOnlineEvent>(serviceId, std::min(INTERNAL_DEPENDENCY_EVENT_PRIORITY, evt->priority));
+                        }
+                    }
+
+                    if constexpr (DO_INTERNAL_DEBUG) {
+                        if (filter != nullptr) {
+                            INTERNAL_DEBUG("DependencyOnlineEvent {} {}:{} filter '{}' rejected {} services not interested in it", evt->id, manager->serviceId(), manager->implementationName(), filter->getDescription(), filteredOut);
                         }
                     }
                 }
@@ -392,9 +418,15 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &uniqueEvt) {
                 }
 
                 // loop over all services, check if cmpMgr is interested in the active ones and inject them if so
+                // Services that aren't active yet are only counted, a line per service would be quadratic in the number of services. They
+                // get injected later on, when their own DependencyOnlineEvent visits cmpMgr.
+                [[maybe_unused]] uint64_t notActive{};
                 for (auto &[key, mgr] : _services) {
-                    if (mgr->getServiceState() != ServiceState::ACTIVE || mgr->getInterfaces().empty()) {
-                        INTERNAL_DEBUG("InsertServiceEvent {} {}:{} interested service is {}:{} skipping {}", evt->id, cmpMgr->serviceId(), cmpMgr->implementationName(), key, mgr->implementationName(), mgr->getServiceState());
+                    if (mgr->getInterfaces().empty()) {
+                        continue;
+                    }
+                    if (mgr->getServiceState() != ServiceState::ACTIVE) {
+                        notActive++;
                         continue;
                     }
 
@@ -405,6 +437,11 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &uniqueEvt) {
                     }
 
                     if (filter != nullptr && !filter->compareTo(*cmpMgr.get())) {
+                        if constexpr (DO_INTERNAL_DEBUG) {
+                            if (requestsAnyInterfaceOf(*cmpMgr, *mgr)) {
+                                INTERNAL_DEBUG("InsertServiceEvent {} {}:{} is interested in {}:{} but rejected by its filter '{}'", evt->id, cmpMgr->serviceId(), cmpMgr->implementationName(), key, mgr->implementationName(), filter->getDescription());
+                            }
+                        }
                         continue;
                     }
 
@@ -429,6 +466,8 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &uniqueEvt) {
                         _eventQueue.pushPrioritisedEvent<DependencyOnlineEvent>(cmpMgr->serviceId(), std::min(INTERNAL_DEPENDENCY_EVENT_PRIORITY, evt->priority));
                     }
                 }
+
+                INTERNAL_DEBUG("InsertServiceEvent {} {}:{} skipped {} services with interfaces that are not active yet", evt->id, cmpMgr->serviceId(), cmpMgr->implementationName(), notActive);
             }
                 break;
             case StopServiceEvent::TYPE: {
