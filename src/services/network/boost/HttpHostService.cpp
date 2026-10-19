@@ -1,3 +1,4 @@
+#include <ichor/stl/StringUtils.h>
 #include <ichor/DependencyManager.h>
 #include <ichor/services/network/boost/HttpHostService.h>
 #include <ichor/services/network/http/HttpScopeGuards.h>
@@ -311,7 +312,7 @@ void Ichor::Boost::v1::HttpHostService::read(tcp::socket socket, net::yield_cont
         Ichor::v1::HttpHeaders headers{};
         headers.reserve(static_cast<unsigned long>(std::distance(std::begin(req), std::end(req))));
         for (auto const& field : req) {
-            headers.emplace(field.name_string(), field.value());
+            Ichor::v1::addHttpField(headers, field.name_string(), field.value());
         }
         // rapidjson f.e. expects a null terminator
         if (!req.body().empty() && *req.body().rbegin() != 0) {
@@ -355,7 +356,14 @@ void Ichor::Boost::v1::HttpHostService::read(tcp::socket socket, net::yield_cont
                         res.set(http::field::content_type, *httpRes.contentType);
                     }
                     for (auto const& header : httpRes.headers) {
-                        res.set(header.first, header.second);
+                        // Each Set-Cookie is its own field (Ichor::v1::HttpResponse::headers)
+                        if (Ichor::v1::HttpHeaderNameEqual{}(header.first, "Set-Cookie")) {
+                            Ichor::v1::split(header.second, "\n", false, [&res](std::string_view cookie) {
+                                res.insert(http::field::set_cookie, cookie);
+                            });
+                        } else {
+                            res.set(header.first, header.second);
+                        }
                     }
                     res.keep_alive(keep_alive);
                     ICHOR_LOG_TRACE(_logger, "sending http response {} - {}", (int)httpRes.status,

@@ -338,7 +338,7 @@ tl::expected<Ichor::v1::HttpResponse, Ichor::v1::HttpParseError> Ichor::v1::Http
                             transferEncodingHeader = true;
                         }
                     } else if(wordNo == 1) {
-                        resp.headers.emplace(key, word);
+                        addHttpField(resp.headers, key, word);
                         matchedValue = true;
                         if(contentLengthHeader) {
                             if(!IsOnlyDigits(word)) {

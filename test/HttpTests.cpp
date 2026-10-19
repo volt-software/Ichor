@@ -14,6 +14,20 @@
 #include "Mocks/ConnectionServiceMock.h"
 #include "Mocks/HostServiceMock.h"
 
+TEST_CASE("HttpTests: addHttpField") {
+    HttpHeaders headers;
+    addHttpField(headers, "Vary", "Accept");
+    addHttpField(headers, "vary", "Origin");
+    addHttpField(headers, "Cookie", "a=1");
+    addHttpField(headers, "COOKIE", "b=2");
+    addHttpField(headers, "Set-Cookie", "c=3; Expires=Wed, 21 Oct 2026 07:28:00 GMT");
+    addHttpField(headers, "set-cookie", "d=4");
+    REQUIRE(headers.size() == 3);
+    REQUIRE(headers.find("VARY")->second == "Accept, Origin");
+    REQUIRE(headers.find("cookie")->second == "a=1; b=2");
+    REQUIRE(headers.find("Set-Cookie")->second == "c=3; Expires=Wed, 21 Oct 2026 07:28:00 GMT\nd=4");
+}
+
 TEST_CASE("HttpConnectionTests") {
 
     Properties props{};
@@ -99,6 +113,22 @@ TEST_CASE("HttpConnectionTests") {
         auto response = getIt.get_value<tl::expected<HttpResponse, HttpError>>();
         REQUIRE(response);
         REQUIRE(std::string_view{reinterpret_cast<char const*>(response->body.data()), response->body.size()} == std::string_view{"hello\0", 6});
+    }
+
+    SECTION("fields received more than once are one list, Set-Cookie fields are separated by LF") {
+        auto f = [&]() -> AsyncGenerator<tl::expected<HttpResponse, HttpError>> {
+            co_return co_await svc.getService().sendAsync(HttpMethod::get, "/some/route", {}, {});
+        };
+        auto gen2 = f();
+        auto it2 = gen2.begin();
+        std::string req{"HTTP/1.1 200 OK\r\nSet-Cookie: a=1\r\nVary: Accept\r\nset-cookie: b=2\r\nvary: Origin\r\n\r\n"};
+        conn.getService().rcvHandler(std::span<uint8_t const>{reinterpret_cast<uint8_t*>(req.data()), req.size()});
+        REQUIRE(it2.get_finished());
+        auto resp = it2.get_value<tl::expected<HttpResponse, HttpError>>();
+        REQUIRE(resp);
+        REQUIRE(resp->headers.size() == 2);
+        REQUIRE(resp->headers.find("set-cookie")->second == "a=1\nb=2");
+        REQUIRE(resp->headers.find("VARY")->second == "Accept, Origin");
     }
 
     SECTION("GET basic in multiple receives") {
@@ -632,7 +662,7 @@ TEST_CASE("HttpHostTests") {
         std::string address{};
         std::string route{};
         auto reg = svc.getService().addRoute(HttpMethod::get, "/some/route", [&reqCopy, &address, &route](HttpRequest &req) -> Task<HttpResponse> {
-            unordered_map<std::string, std::string> resHeaders{{"testres", "buzz"}};
+            HttpHeaders resHeaders{{"testres", "buzz"}};
             reqCopy = req;
             address = req.address;
             route = req.route;

@@ -232,7 +232,7 @@ Ichor::Task<tl::expected<Ichor::v1::HttpResponse, Ichor::v1::HttpError>> Ichor::
             response->status = static_cast<Ichor::v1::HttpStatus>(static_cast<int>(res.result()));
             response->headers.reserve(static_cast<unsigned long>(std::distance(std::begin(res), std::end(res))));
             for (auto const &header: res) {
-                response->headers.emplace(header.name_string(), header.value());
+                Ichor::v1::addHttpField(response->headers, header.name_string(), header.value());
             }
 
             // need to use move iterator instead of std::move directly, to prevent leaks.

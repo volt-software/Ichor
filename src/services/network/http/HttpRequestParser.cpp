@@ -522,11 +522,7 @@ namespace {
                 hostFields++;
             }
             // Field lines with the same name form one comma separated list (RFC 9110 5.3)
-            auto [it, inserted] = req.headers.try_emplace(std::string{field->name}, field->value);
-            if(!inserted) {
-                it->second += equalsIgnoreCase(field->name, "Cookie") ? "; " : ", ";
-                it->second += field->value;
-            }
+            addHttpField(req.headers, field->name, field->value);
         }
 
         if(req.method == HttpMethod::trace) {

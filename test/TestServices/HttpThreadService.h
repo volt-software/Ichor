@@ -113,7 +113,8 @@ private:
                 std::terminate();
             }
 
-            co_return HttpResponse{.status=HttpStatus::ok, .contentType="application/json", .body=_testSerializer->serialize(TestMsg{.id=11, .val="hello"}), .headers={}};
+            // Two cookies: each is sent as its own Set-Cookie field, and the client puts them back together
+            co_return HttpResponse{.status=HttpStatus::ok, .contentType="application/json", .body=_testSerializer->serialize(TestMsg{.id=11, .val="hello"}), .headers={{"Set-Cookie", "a=1\nb=2"}}};
         });
         _regexRouteRegistration = svc->addRoute(HttpMethod::get, std::make_unique<RegexRouteMatch<R"(\/regex_test\/([a-zA-Z0-9]*)\?*([a-zA-Z0-9]+=[a-zA-Z0-9]+)*&*([a-zA-Z0-9]+=[a-zA-Z0-9]+)*)">>(), [this](HttpRequest &req) -> Task<HttpResponse> {
             fmt::println("/regex_test POST");
@@ -157,6 +158,11 @@ private:
         if(response->status != HttpStatus::ok) {
             fmt::println("test status not ok {}", static_cast<uint_fast16_t>(response->status));
             fmt::println("test status not ok");
+            std::terminate();
+        }
+
+        if(auto cookies = response->headers.find("set-cookie"); cookies == response->headers.end() || cookies->second != "a=1\nb=2") {
+            fmt::println("test cookies not ok");
             std::terminate();
         }
 

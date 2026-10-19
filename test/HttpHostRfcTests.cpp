@@ -1994,9 +1994,15 @@ TEST_CASE("HttpHostRfcTests: transfer coding parameters and syntax") {
 
 TEST_CASE("HttpHostRfcTests: fields a handler has twice") {
     HttpHostFixture f;
-    // Names that only differ in case are sent as they are, that's how two Set-Cookie fields are set (RFC 9110 5.3)
+    // Set-Cookie fields can't be combined into one (RFC 6265 3): cookies are separated by LF, which a field value can't have
     f.addRoute(HttpMethod::get, "/cookies", [](HttpRequest &) -> Task<HttpResponse> {
-        co_return HttpResponse{.status = HttpStatus::ok, .contentType = {}, .body = {}, .headers = {{"Set-Cookie", "a=1"}, {"set-cookie", "b=2"}}};
+        co_return HttpResponse{.status = HttpStatus::ok, .contentType = {}, .body = {}, .headers = {{"Set-Cookie", "a=1; Path=/\nb=2; Expires=Wed, 21 Oct 2026 07:28:00 GMT"}}};
+    });
+    f.addRoute(HttpMethod::get, "/emptycookie", [](HttpRequest &) -> Task<HttpResponse> {
+        co_return HttpResponse{.status = HttpStatus::ok, .contentType = {}, .body = {}, .headers = {{"Set-Cookie", "a=1\n\nb=2"}}};
+    });
+    f.addRoute(HttpMethod::get, "/lf", [](HttpRequest &) -> Task<HttpResponse> {
+        co_return HttpResponse{.status = HttpStatus::ok, .contentType = {}, .body = {}, .headers = {{"X-A", "1\n2"}}};
     });
     // The host would add a second Content-Type
     f.addRoute(HttpMethod::get, "/both", [](HttpRequest &) -> Task<HttpResponse> {
@@ -2006,17 +2012,28 @@ TEST_CASE("HttpHostRfcTests: fields a handler has twice") {
     f.addRoute(HttpMethod::get, "/nocontent", [](HttpRequest &) -> Task<HttpResponse> {
         co_return HttpResponse{.status = HttpStatus::no_content, .contentType = "text/plain", .body = {}, .headers = {{"content-type", "text/html"}}};
     });
-    // Stripped by the host, which sends its own
-    f.addRoute(HttpMethod::get, "/connection", [](HttpRequest &) -> Task<HttpResponse> {
-        co_return HttpResponse{.status = HttpStatus::ok, .contentType = {}, .body = {}, .headers = {{"Connection", "close"}, {"connection", "close"}}};
-    });
 
-    SECTION("Set-Cookie twice") {
+    SECTION("names ignore case, a field can't be there twice") {
+        HttpResponse response{};
+        response.headers.emplace("Cache-Control", "no-store");
+        REQUIRE(!response.headers.emplace("cache-control", "no-cache").second);
+        REQUIRE(response.headers.size() == 1);
+    }
+
+    SECTION("each cookie is its own Set-Cookie field") {
         f.receive("GET /cookies HTTP/1.1\r\nHost: example.org\r\n\r\n");
         auto const sent = f.allSent();
         REQUIRE(sent.starts_with("HTTP/1.1 200 OK\r\n"));
-        REQUIRE((sent.find("\r\nSet-Cookie: a=1\r\n") != std::string::npos || sent.find("\r\nset-cookie: a=1\r\n") != std::string::npos));
-        REQUIRE((sent.find("\r\nSet-Cookie: b=2\r\n") != std::string::npos || sent.find("\r\nset-cookie: b=2\r\n") != std::string::npos));
+        REQUIRE(sent.find("\r\nSet-Cookie: a=1; Path=/\r\n") != std::string::npos);
+        REQUIRE(sent.find("\r\nSet-Cookie: b=2; Expires=Wed, 21 Oct 2026 07:28:00 GMT\r\n") != std::string::npos);
+    }
+
+    SECTION("an empty cookie, or LF in another field, is 500") {
+        f.receive("GET /emptycookie HTTP/1.1\r\nHost: example.org\r\n\r\nGET /lf HTTP/1.1\r\nHost: example.org\r\n\r\n");
+        auto resps = f.responses();
+        REQUIRE(resps.size() == 2);
+        REQUIRE(resps[0].status == 500);
+        REQUIRE(resps[1].status == 500);
     }
 
     SECTION("contentType and a Content-Type field is 500") {
@@ -2025,12 +2042,8 @@ TEST_CASE("HttpHostRfcTests: fields a handler has twice") {
     }
 
     SECTION("only one of them sent is fine") {
-        f.receive("GET /nocontent HTTP/1.1\r\nHost: example.org\r\n\r\nGET /connection HTTP/1.1\r\nHost: example.org\r\n\r\n");
-        auto resps = f.responses();
-        REQUIRE(resps.size() == 2);
-        REQUIRE(resps[0].status == 204);
-        REQUIRE(resps[1].status == 200);
-        REQUIRE(resps[1].headers.find("Connection")->second == "close");
+        f.receive("GET /nocontent HTTP/1.1\r\nHost: example.org\r\n\r\n");
+        REQUIRE(f.response().status == 204);
     }
 }
 

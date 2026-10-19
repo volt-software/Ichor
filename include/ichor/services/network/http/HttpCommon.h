@@ -230,6 +230,19 @@ namespace Ichor::v1 {
         HttpStatus status{HttpStatus::ok};
         tl::optional<std::string> contentType;
         std::vector<uint8_t> body;
-        Ichor::unordered_map<std::string, std::string> headers;
+        /// Field names ignore case, so a field can't be in here twice. A field sent more than once is one list, separated by ", " (RFC 9110 5.3).
+        /// Set-Cookie fields can't be combined like that (RFC 6265 3): separate cookies with "\n", a character field values can't have, and each is
+        /// sent as its own Set-Cookie field.
+        HttpHeaders headers;
     };
+
+    /// Adds a received field to headers. A field that's there already gets the value added to its list (RFC 9110 5.3): with ", ", "; " for Cookie
+    /// (RFC 6265 5.4) or "\n" for Set-Cookie (see HttpResponse::headers).
+    inline void addHttpField(HttpHeaders &headers, std::string_view name, std::string_view value) {
+        auto [it, inserted] = headers.try_emplace(std::string{name}, value);
+        if(!inserted) {
+            it->second += HttpHeaderNameEqual{}(name, "Set-Cookie") ? "\n" : HttpHeaderNameEqual{}(name, "Cookie") ? "; " : ", ";
+            it->second += value;
+        }
+    }
 }

@@ -36,14 +36,6 @@ namespace {
 
     constexpr std::string_view CONTINUE_RESPONSE = "HTTP/1.1 100 Continue\r\n\r\n";
 
-    /// Finds a field in a response's headers, ignoring the case of the name
-    template <typename Headers>
-    auto findField(Headers &headers, std::string_view name) {
-        return std::ranges::find_if(headers, [name](auto const &field) {
-            return HttpHeaderNameEqual{}(field.first, name);
-        });
-    }
-
     std::string_view trimOws(std::string_view str) noexcept {
         while(!str.empty() && (str.front() == ' ' || str.front() == '\t')) {
             str.remove_prefix(1);
@@ -104,10 +96,10 @@ namespace {
     }
 
     /// Evaluates the preconditions of a GET or HEAD request against its 2xx response, in the order of RFC 9110 13.2.2
-    tl::optional<HttpStatus> evaluatePreconditions(HttpHeaders const &request, Ichor::unordered_map<std::string, std::string> const &response) {
-        auto const etagIt = findField(response, "ETag");
+    tl::optional<HttpStatus> evaluatePreconditions(HttpHeaders const &request, HttpHeaders const &response) {
+        auto const etagIt = response.find("ETag");
         auto const etag = etagIt == response.end() ? tl::nullopt : parseEntityTag(etagIt->second);
-        auto const lastModifiedIt = findField(response, "Last-Modified");
+        auto const lastModifiedIt = response.find("Last-Modified");
         auto const lastModified = lastModifiedIt == response.end() ? tl::nullopt : Ichor::v1::Detail::parseHttpDate(lastModifiedIt->second);
 
         auto const ifMatch = request.find("If-Match");
@@ -136,6 +128,18 @@ namespace {
         }
 
         return tl::nullopt;
+    }
+
+    /// A handler's field value: one that doesn't split the response (RFC 9112 5), except that Set-Cookie separates its cookies with LF
+    bool isValidFieldValue(std::string_view name, std::string_view value) {
+        if(!HttpHeaderNameEqual{}(name, "Set-Cookie")) {
+            return Detail::isHttpFieldValue(value);
+        }
+        bool valid{!value.empty()};
+        split(value, "\n", false, [&valid](std::string_view cookie) {
+            valid = valid && !cookie.empty() && Detail::isHttpFieldValue(cookie);
+        });
+        return valid;
     }
 
     /// A response the host generates for an error, with content explaining it and whether it's temporary (RFC 9110 15.5, 15.6)
@@ -784,9 +788,7 @@ Ichor::Task<bool> Ichor::v1::HttpHostService::handleRequest(ServiceIdType id, De
             response.status = *precondition;
             // A Content-Length the handler set for content it did send isn't the host's to pass on, only a HEAD route's (RFC 9110 8.6)
             if(!response.body.empty()) {
-                std::erase_if(response.headers, [](auto const &field) {
-                    return HttpHeaderNameEqual{}(field.first, "Content-Length");
-                });
+                response.headers.erase("Content-Length");
             }
             response.body.clear();
             if(*precondition == HttpStatus::precondition_failed) {
@@ -825,7 +827,7 @@ bool Ichor::v1::HttpHostService::canSwitchProtocols(HttpResponse const &response
     }
     auto const requested = context.requestHeaders->find("Upgrade");
     auto const connection = context.requestHeaders->find("Connection");
-    auto const switchTo = findField(response.headers, "Upgrade");
+    auto const switchTo = response.headers.find("Upgrade");
     if(requested == context.requestHeaders->end() || connection == context.requestHeaders->end() || switchTo == response.headers.end() ||
        !Detail::httpListContains(connection->second, "upgrade")) {
         return false;
@@ -857,7 +859,7 @@ Ichor::v1::HttpHostService::SerializedResponse Ichor::v1::HttpHostService::seria
             (status >= 200 || (status == 101 && streaming && canSwitchProtocols(response, context))) &&
             (!response.contentType || Detail::isHttpFieldValue(*response.contentType)) &&
             std::ranges::all_of(response.headers, [](auto const &field) {
-                return Detail::isHttpToken(field.first) && Detail::isHttpFieldValue(field.second);
+                return Detail::isHttpToken(field.first) && isValidFieldValue(field.first, field.second);
             });
     if(!valid) {
         ICHOR_LOG_ERROR(_logger, "HttpHostService {} handler responded with an invalid status {} or header, responding with 500 instead", getServiceId(), status);
@@ -867,14 +869,14 @@ Ichor::v1::HttpHostService::SerializedResponse Ichor::v1::HttpHostService::seria
     bool const replaced = !valid;
 
     // A 405 has to say what is allowed (RFC 9110 15.5.6), which the host knows
-    if(status == 405 && findField(response.headers, "Allow") == response.headers.end()) {
+    if(status == 405 && response.headers.find("Allow") == response.headers.end()) {
         auto methods = allowedMethods(context.target);
         std::erase(methods, context.method);
         response.headers.emplace("Allow", joinMethods(methods));
     }
     // Fields these have to have, which only the handler can know (RFC 9110 11.6.1, 11.7.1, 15.5.22)
     for(auto const &[requiringStatus, field] : {std::pair{HttpStatus::unauthorized, "WWW-Authenticate"}, std::pair{HttpStatus::proxy_authentication_required, "Proxy-Authenticate"}, std::pair{HttpStatus::upgrade_required, "Upgrade"}}) {
-        if(response.status == requiringStatus && findField(response.headers, field) == response.headers.end()) {
+        if(response.status == requiringStatus && response.headers.find(field) == response.headers.end()) {
             ICHOR_LOG_ERROR(_logger, "HttpHostService {} handler responded with {} without the required {} header", getServiceId(), status, field);
         }
     }
@@ -889,7 +891,7 @@ Ichor::v1::HttpHostService::SerializedResponse Ichor::v1::HttpHostService::seria
     bool const sendsContentType = response.contentType && status >= 200 && status != 204 && status != 304 && !tunnel;
     // contentType and a Content-Type field would send Content-Type twice (RFC 9110 5.3). Other fields the handler has twice, with names that only
     // differ in case, are sent twice: that's how a handler sets two Set-Cookie fields, and how list fields can be sent.
-    if(sendsContentType && findField(response.headers, "Content-Type") != response.headers.end()) {
+    if(sendsContentType && response.headers.find("Content-Type") != response.headers.end()) {
         ICHOR_LOG_ERROR(_logger, "HttpHostService {} handler responded with both contentType and a Content-Type header, responding with 500 instead", getServiceId());
         response = errorResponse(HttpStatus::internal_server_error);
         auto serialized = serializeResponse(response, context, streaming, close);
@@ -897,7 +899,7 @@ Ichor::v1::HttpHostService::SerializedResponse Ichor::v1::HttpHostService::seria
         return serialized;
     }
     if(!switching) {
-        if(auto connection = findField(response.headers, "Connection"); connection != response.headers.end() && Detail::httpListContains(connection->second, "close")) {
+        if(auto connection = response.headers.find("Connection"); connection != response.headers.end() && Detail::httpListContains(connection->second, "close")) {
             close = true;
         }
     }
@@ -928,10 +930,10 @@ Ichor::v1::HttpHostService::SerializedResponse Ichor::v1::HttpHostService::seria
     // The reason phrase can be empty (RFC 9112 4)
     fmt::format_to(FmtU8Inserter(msg), "HTTP/1.1 {} {}\r\n", status, statusText == ICHOR_STATUS_MATCHING.end() ? ""sv : statusText->second);
     // An origin server with a clock has to send Date (RFC 9110 6.6.1)
-    if(findField(response.headers, "Date") == response.headers.end()) {
+    if(response.headers.find("Date") == response.headers.end()) {
         fmt::format_to(FmtU8Inserter(msg), "Date: {}\r\n", Detail::formatHttpDate(std::chrono::system_clock::now()));
     }
-    if(_sendServerHeader && findField(response.headers, "Server") == response.headers.end()) {
+    if(_sendServerHeader && response.headers.find("Server") == response.headers.end()) {
         fmt::format_to(FmtU8Inserter(msg), "Server: Ichor\r\n");
     }
 
@@ -945,6 +947,13 @@ Ichor::v1::HttpHostService::SerializedResponse Ichor::v1::HttpHostService::seria
             continue;
         }
         if(HttpHeaderNameEqual{}(k, "Transfer-Encoding") || HttpHeaderNameEqual{}(k, "Connection")) {
+            continue;
+        }
+        // Each cookie is its own field, they can't be combined (RFC 6265 3)
+        if(HttpHeaderNameEqual{}(k, "Set-Cookie")) {
+            split(v, "\n", false, [&msg, &k](std::string_view cookie) {
+                fmt::format_to(FmtU8Inserter(msg), "{}: {}\r\n", k, cookie);
+            });
             continue;
         }
         fmt::format_to(FmtU8Inserter(msg), "{}: {}\r\n", k, v);
@@ -980,7 +989,7 @@ Ichor::v1::HttpHostService::SerializedResponse Ichor::v1::HttpHostService::seria
     if(switching) {
         fmt::format_to(FmtU8Inserter(msg), "Connection: Upgrade\r\n");
     } else {
-        bool const upgrade = findField(response.headers, "Upgrade") != response.headers.end();
+        bool const upgrade = response.headers.find("Upgrade") != response.headers.end();
         std::string_view const persistence = close ? "close"sv : context.minorVersion == 0 ? "keep-alive"sv : ""sv;
         if(upgrade && !persistence.empty()) {
             fmt::format_to(FmtU8Inserter(msg), "Connection: Upgrade, {}\r\n", persistence);

@@ -56,7 +56,7 @@ Some requirements are on the content of a response, which only a route's handler
 | 2.5 | Respond with the highest version conformant to, of the request's major version | SHOULD | Always HTTP/1.1, later 1.x minor versions are handled as 1.1 | request line |
 | 5.1 | Field names are case-insensitive | MUST | `HttpRequest::headers` ignores case | header fields |
 | 5.3 | Field lines with the same name are one list | MUST | Combined with `, ` (`; ` for Cookie) | header fields |
-| 5.3 | Don't send a field twice, unless it's a list or Set-Cookie | MUST | `contentType` and a Content-Type field is a 500. Fields a handler has with names that only differ in case are sent as they are, which is how two Set-Cookie fields are set: whether a field can be sent twice is *handler* | fields a handler has twice |
+| 5.3 | Don't send a field twice, unless it's a list or Set-Cookie | MUST | A response's names ignore case, so it can't have a field twice, `contentType` and a Content-Type field is a 500. Cookies separated by LF are sent as separate Set-Cookie fields | fields a handler has twice |
 | 5.4 | A field section larger than the server wants is a 4xx | MUST | MaxHeaderSize (64 KiB): 431 | request line, limits from properties |
 | 5.5 | Field values with CR, LF or NUL: reject or replace | MUST | Rejected: 400, as are other control characters | header fields |
 | 5.6.1.2 | Accept empty list elements | MUST | Ignored in Connection, Transfer-Encoding, Expect, Upgrade, If-Match and If-None-Match | Expect is a list, transfer coding parameters and syntax |
