@@ -409,6 +409,7 @@ Ichor::Task<tl::expected<void, Ichor::v1::IOError>> Ichor::v1::IOUringTcpConnect
     uint64_t totalBytes{};
     msghdr hdr{};
     if(msgs.size() < 64) {
+        // NOLINTNEXTLINE(cppcoreguidelines-pro-type-member-init): filled up to msgs.size() below, which is all sendmsg reads
         std::array<iovec, 64> vecs;
         hdr.msg_iov = vecs.data();
         hdr.msg_iovlen = msgs.size();

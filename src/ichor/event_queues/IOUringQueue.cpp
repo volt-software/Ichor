@@ -226,8 +226,8 @@ static inline std::vector<std::pair<io_uring_op, Ichor::Event*>> getToBeSubmitte
 
 static int io_uring_ring_dontdump(struct io_uring *ring)
 {
-    size_t len;
-    int ret;
+    size_t len{};
+    int ret{};
 
     if (!ring->sq.ring_ptr || !ring->sq.sqes || !ring->cq.ring_ptr)
         return -EINVAL;
@@ -257,8 +257,8 @@ static int io_uring_ring_dontdump(struct io_uring *ring)
 
 static int io_uring_ring_mlock(struct io_uring *ring)
 {
-    size_t len;
-    int ret;
+    size_t len{};
+    int ret{};
 
     if (!ring->sq.ring_ptr || !ring->sq.sqes || !ring->cq.ring_ptr)
         return -EINVAL;
@@ -309,6 +309,7 @@ namespace Ichor {
     IOUringBuf::~IOUringBuf() {
         if(_eventQueue != nullptr) {
             io_uring_free_buf_ring(_eventQueue, _bufRing, _entries, _bgid);
+            // NOLINTNEXTLINE(cppcoreguidelines-no-malloc): this is the RAII owner of the aligned_alloc'd buffer that backs the buffer ring
             free(_entriesBuf);
         }
     }
@@ -1156,6 +1157,7 @@ namespace Ichor::v1::Detail {
             if(bufRing != nullptr) {
                 io_uring_free_buf_ring(_eventQueuePtr, bufRing, entries, id);
             }
+            // NOLINTNEXTLINE(cppcoreguidelines-no-malloc): freed here until IOUringBuf, its RAII owner, takes it over
             free(entriesBuf);
         }};
         if(madvise(entriesBuf, entriesBufSize, MADV_DONTDUMP) != 0) {
@@ -1167,7 +1169,7 @@ namespace Ichor::v1::Detail {
             return tl::unexpected(v1::IOError::NOT_SUPPORTED);
         }
 
-        int ret;
+        int ret{};
         bufRing = io_uring_setup_buf_ring(_eventQueuePtr, entries, id, 0, &ret);
         if(bufRing == nullptr) {
             return tl::unexpected(v1::mapErrnoToError(-ret));

@@ -12,6 +12,9 @@ using namespace Ichor::v1;
 
 struct IDebugService {
     virtual void printServices() = 0;
+
+protected:
+    ~IDebugService() = default;
 };
 
 class DebugService final : public IDebugService, public AdvancedService<DebugService> {

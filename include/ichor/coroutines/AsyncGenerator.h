@@ -27,7 +27,7 @@ namespace Ichor {
         template <typename T>
         class AsyncGeneratorAdvanceOperation {
         protected:
-            constexpr AsyncGeneratorAdvanceOperation(std::nullptr_t) noexcept
+            explicit constexpr AsyncGeneratorAdvanceOperation(std::nullptr_t) noexcept
                 : _promise(nullptr)
                 , _producerCoroutine(nullptr)
             {
@@ -128,7 +128,7 @@ namespace Ichor {
         template<typename T>
         class AsyncGeneratorIncrementOperation final : public AsyncGeneratorAdvanceOperation<T> {
         public:
-            constexpr AsyncGeneratorIncrementOperation(AsyncGeneratorIterator<T>& iterator) noexcept
+            explicit constexpr AsyncGeneratorIncrementOperation(AsyncGeneratorIterator<T>& iterator) noexcept
                 : AsyncGeneratorAdvanceOperation<T>(iterator._coroutine.promise(), iterator._coroutine)
                 , _iterator(iterator)
             {
@@ -155,11 +155,11 @@ namespace Ichor {
             using reference = std::add_lvalue_reference_t<T>;
             using pointer = std::add_pointer_t<value_type>;
 
-            constexpr AsyncGeneratorIterator(std::nullptr_t) noexcept
+            explicit constexpr AsyncGeneratorIterator(std::nullptr_t) noexcept
                 : _coroutine(nullptr)
             {}
 
-            constexpr AsyncGeneratorIterator(handle_type coroutine) noexcept
+            explicit constexpr AsyncGeneratorIterator(handle_type coroutine) noexcept
                 : _coroutine(coroutine)
             {}
 
@@ -203,12 +203,12 @@ namespace Ichor {
 
         public:
 
-            ICHOR_COROUTINE_CONSTEXPR AsyncGeneratorBeginOperation(std::nullptr_t) noexcept
+            explicit ICHOR_COROUTINE_CONSTEXPR AsyncGeneratorBeginOperation(std::nullptr_t) noexcept
                 : AsyncGeneratorAdvanceOperation<T>(nullptr) {
                 INTERNAL_COROUTINE_DEBUG("AsyncGeneratorBeginOperation<{}>(nullptr) {}", typeName<T>(), this->_initialState);
             }
 
-            ICHOR_COROUTINE_CONSTEXPR AsyncGeneratorBeginOperation(handle_type producerCoroutine) noexcept
+            explicit ICHOR_COROUTINE_CONSTEXPR AsyncGeneratorBeginOperation(handle_type producerCoroutine) noexcept
                 : AsyncGeneratorAdvanceOperation<T>(producerCoroutine.promise(), producerCoroutine) {
                 INTERNAL_COROUTINE_DEBUG("AsyncGeneratorBeginOperation<{}>(producerCoroutine) {} {}", typeName<T>(), this->_initialState, this->_promise->_state);
             }

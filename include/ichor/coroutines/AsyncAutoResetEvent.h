@@ -25,7 +25,7 @@ namespace Ichor {
     public:
 
         /// Initialise the event to either 'set' or 'not set' state.
-        AsyncAutoResetEvent(bool initiallySet = false) noexcept;
+        explicit AsyncAutoResetEvent(bool initiallySet = false) noexcept;
 
         ~AsyncAutoResetEvent();
 
@@ -86,6 +86,8 @@ namespace Ichor {
         explicit AsyncAutoResetEventOperation(const AsyncAutoResetEvent& event) noexcept;
 
         AsyncAutoResetEventOperation(const AsyncAutoResetEventOperation& other) noexcept;
+        AsyncAutoResetEventOperation& operator=(const AsyncAutoResetEventOperation&) = delete;
+        ~AsyncAutoResetEventOperation() = default;
 
         [[nodiscard]] bool await_ready() const noexcept { return m_event == nullptr; }
         void await_suspend(std::coroutine_handle<> awaiter) noexcept;

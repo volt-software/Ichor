@@ -41,12 +41,12 @@ namespace Ichor {
         }
     private:
         io_uring *_eventQueue{};
-        io_uring_buf_ring* _bufRing;
-        char *_entriesBuf;
-        unsigned short _entries;
-        unsigned int _entryBufferSize;
-        ProvidedBufferIdType _bgid;
-        int _mask;
+        io_uring_buf_ring* _bufRing{};
+        char *_entriesBuf{};
+        unsigned short _entries{};
+        unsigned int _entryBufferSize{};
+        ProvidedBufferIdType _bgid{};
+        int _mask{};
     };
 
     static_assert(std::is_default_constructible_v<IOUringBuf>, "IOUringBuf is required to be default constructible");

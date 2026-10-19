@@ -12,6 +12,9 @@ extern std::unique_ptr<Ichor::AsyncAutoResetEvent> testAutoEvt;
 
 struct IMultipleAwaitService {
     [[nodiscard]] virtual uint64_t getCount() const = 0;
+
+protected:
+    ~IMultipleAwaitService() = default;
 };
 
 struct MultipleAwaitService final : public IMultipleAwaitService, public AdvancedService<MultipleAwaitService> {

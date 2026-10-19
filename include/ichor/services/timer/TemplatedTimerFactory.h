@@ -15,8 +15,8 @@ namespace Ichor::v1 {
     template <typename TIMER, typename QUEUE>
     class TimerFactory final : public ITimerFactory, public Ichor::v1::Detail::InternalTimerFactory, public AdvancedService<TimerFactory<TIMER, QUEUE>> {
     public:
-        TimerFactory(DependencyRegister &reg, Properties props) : AdvancedService<TimerFactory<TIMER, QUEUE>>(std::move(props)) {
-            _requestingSvcId = any_cast<ServiceIdType>(AdvancedService<TimerFactory<TIMER, QUEUE>>::getProperties()["requestingSvcId"]);
+        TimerFactory(DependencyRegister &reg, Properties props) : AdvancedService<TimerFactory<TIMER, QUEUE>>(std::move(props)),
+                _requestingSvcId(any_cast<ServiceIdType>(AdvancedService<TimerFactory<TIMER, QUEUE>>::getProperties()["requestingSvcId"])) {
             reg.registerDependency<QUEUE>(this, DependencyFlags::REQUIRED);
         }
         ~TimerFactory() final = default;

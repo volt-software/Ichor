@@ -81,7 +81,7 @@ namespace Ichor::Etcdv3::v1 {
     };
 
     struct EtcdEvent final {
-        EtcdEventType type;
+        EtcdEventType type{};
         EtcdKeyValue kv;
         EtcdKeyValue prev_kv;
     };
@@ -170,7 +170,7 @@ namespace Ichor::Etcdv3::v1 {
 
     struct EtcdTxnResponse final {
         EtcdResponseHeader header;
-        bool succeeded;
+        bool succeeded{};
         std::vector<EtcdResponseOp> responses;
     };
 
@@ -210,8 +210,8 @@ namespace Ichor::Etcdv3::v1 {
 
     struct LeaseGrantResponse final {
         EtcdResponseHeader header;
-        int64_t id;
-        int64_t ttl_in_seconds;
+        int64_t id{};
+        int64_t ttl_in_seconds{};
         tl::optional<std::string> error;
     };
 
@@ -229,8 +229,8 @@ namespace Ichor::Etcdv3::v1 {
 
     struct LeaseKeepAliveWrapper final {
         EtcdResponseHeader header;
-        int64_t id;
-        int64_t ttl_in_seconds;
+        int64_t id{};
+        int64_t ttl_in_seconds{};
     };
 
     struct LeaseKeepAliveResponse final {
@@ -244,9 +244,9 @@ namespace Ichor::Etcdv3::v1 {
 
     struct LeaseTimeToLiveResponse final {
         EtcdResponseHeader header;
-        int64_t id;
-        int64_t ttl_in_seconds;
-        int64_t granted_ttl;
+        int64_t id{};
+        int64_t ttl_in_seconds{};
+        int64_t granted_ttl{};
         std::vector<std::string> keys;
     };
 
@@ -281,8 +281,8 @@ namespace Ichor::Etcdv3::v1 {
 
     struct AuthStatusResponse final {
         EtcdResponseHeader header;
-        bool enabled;
-        uint64_t authRevision;
+        bool enabled{};
+        uint64_t authRevision{};
     };
 
     struct AuthenticateRequest final {
@@ -300,7 +300,7 @@ namespace Ichor::Etcdv3::v1 {
     };
 
     struct AuthPermission final {
-        EtcdAuthPermissionType permType;
+        EtcdAuthPermissionType permType{};
         std::string key;
         std::string range_end;
     };

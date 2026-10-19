@@ -295,6 +295,7 @@ void Ichor::v1::TcpConnectionService<InterfaceT>::recvHandler() {
 	std::vector<uint8_t> msg{};
 	ssize_t ret{};
 	{
+        // NOLINTNEXTLINE(cppcoreguidelines-pro-type-member-init): recv fills it, zeroing 4 KiB for every receive would be wasted
         std::array<uint8_t, 4096> buf;
 		do {
 			ret = recv(_socket, buf.data(), buf.size(), MSG_DONTWAIT);

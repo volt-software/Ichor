@@ -292,7 +292,7 @@ void Ichor::Boost::v1::HttpConnectionService::fail(beast::error_code ec, const c
     _queue->pushPrioritisedEvent<StopServiceEvent>(getServiceId(), _priority, getServiceId());
 }
 
-void Ichor::Boost::v1::HttpConnectionService::connect(tcp::endpoint endpoint, net::yield_context yield) {
+void Ichor::Boost::v1::HttpConnectionService::connect(tcp::endpoint const &endpoint, net::yield_context yield) {
     Ichor::v1::ScopeGuardAtomicCount guard{_finishedListenAndRead};
     beast::error_code ec;
 

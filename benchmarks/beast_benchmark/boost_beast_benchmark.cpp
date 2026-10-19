@@ -54,8 +54,9 @@ class http_worker
 public:
     http_worker(http_worker const&) = delete;
     http_worker& operator=(http_worker const&) = delete;
+    ~http_worker() = default;
 
-    http_worker(tcp::acceptor& acceptor) :
+    explicit http_worker(tcp::acceptor& acceptor) :
             acceptor_(acceptor)
     {
     }
@@ -285,7 +286,7 @@ int main(int argc, char* argv[])
     }
     catch (const std::exception& e)
     {
-        std::cerr << "Error: " << e.what() << std::endl;
+        std::cerr << "Error: " << e.what() << '\n';
         return EXIT_FAILURE;
     }
 }

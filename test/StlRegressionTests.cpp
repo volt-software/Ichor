@@ -38,6 +38,7 @@ namespace {
 
     struct Tracked {
         Tracked() : Tracked(0) {}
+        // NOLINTNEXTLINE(cppcoreguidelines-explicit-constructor): the tests fill containers of it with ints
         Tracked(int _i) : i(_i) { REQUIRE(liveTracked.insert(this).second); }
         Tracked(Tracked const &o) : i(o.i), s(o.s) { REQUIRE(isLive(&o)); REQUIRE(liveTracked.insert(this).second); }
         Tracked(Tracked &&o) noexcept : i(o.i), s(std::move(o.s)) { REQUIRE(isLive(&o)); REQUIRE(liveTracked.insert(this).second); o.i = -1; }
@@ -54,11 +55,13 @@ namespace {
     };
 
     struct CopyOnly {
+        // NOLINTNEXTLINE(cppcoreguidelines-explicit-constructor): the tests fill containers of it with ints
         CopyOnly(int _i) : i(_i) {}
         CopyOnly(CopyOnly const &) = default;
         CopyOnly(CopyOnly &&) = delete;
         CopyOnly& operator=(CopyOnly const &) = default;
         CopyOnly& operator=(CopyOnly &&) = delete;
+        ~CopyOnly() = default;
         friend bool operator==(CopyOnly const &a, CopyOnly const &b) noexcept { return a.i == b.i; }
         friend void swap(CopyOnly &a, CopyOnly &b) noexcept { std::swap(a.i, b.i); }
         int i;
@@ -78,6 +81,7 @@ namespace {
     struct Multi final : BaseA, BaseB { };
 
     int nodesDestroyed{};
+    // NOLINTNEXTLINE(cppcoreguidelines-special-member-functions): an aggregate, declaring its copy would make it not one
     struct Node {
         ~Node() { ++nodesDestroyed; }
         ReferenceCountedPointer<Node> next;
@@ -399,7 +403,7 @@ TEST_CASE("STL regression tests: All StaticVector elements are destroyed") {
 TEST_CASE("STL regression tests: ReferenceCountedPointer copies of empty pointers") {
     {
         ReferenceCountedPointer<int> emptyPtr;
-        ReferenceCountedPointer<int> copy{emptyPtr}; // used to dereference nullptr
+        ReferenceCountedPointer<int> copy{emptyPtr}; // NOLINT(performance-unnecessary-copy-initialization): the copy is what this tests, used to dereference nullptr
         REQUIRE(!copy.has_value());
         REQUIRE(copy.use_count() == 0);
         ReferenceCountedPointer<int> other = make_reference_counted<int>(5);
@@ -508,7 +512,7 @@ TEST_CASE("STL regression tests: ReferenceCountedPointer swap and bool") {
         REQUIRE(*b == 2);
 
         ReferenceCountedPointer<bool> t{true};
-        ReferenceCountedPointer<bool> copy{t}; // non-const lvalue used to construct a new bool from the pointer
+        ReferenceCountedPointer<bool> copy{t}; // NOLINT(performance-unnecessary-copy-initialization): the copy is what this tests, non-const lvalue used to construct a new bool from the pointer
         REQUIRE(copy.use_count() == 2);
         REQUIRE(*copy);
     }

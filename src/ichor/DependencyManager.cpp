@@ -433,7 +433,7 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &uniqueEvt) {
                 break;
             case StopServiceEvent::TYPE: {
                 auto *stopServiceEvt = static_cast<StopServiceEvent *>(evt);
-                ILifecycleManager *toStopService;
+                ILifecycleManager *toStopService{};
 
                 {
                     auto const toStopServiceIt = _services.find(stopServiceEvt->serviceId);
@@ -841,7 +841,7 @@ void Ichor::DependencyManager::processEvent(std::unique_ptr<Event> &uniqueEvt) {
                 if (genIt != _scopedGenerators.end()) {
                     INTERNAL_DEBUG("ContinuableStartEvent {}", genIt->second.generator->done());
 
-                    StartBehaviour it_ret;
+                    StartBehaviour it_ret{};
                     if (!genIt->second.generator->done()) {
                         auto it = genIt->second.generator->begin_interface();
                         INTERNAL_DEBUG("ContinuableStartEvent it {} {} {}", it->get_finished(), it->get_op_state(), it->get_promise_state());

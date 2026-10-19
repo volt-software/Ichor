@@ -72,6 +72,7 @@ namespace Ichor {
         DependencyRegister(DependencyRegister&&) noexcept = default;
         DependencyRegister& operator=(const DependencyRegister&) = delete;
         DependencyRegister& operator=(DependencyRegister&&) noexcept = default;
+        ~DependencyRegister() = default;
 
         std::unordered_multimap<uint64_t, std::tuple<Dependency, std::function<void(v1::NeverNull<void*>, IService&)>, std::function<void(v1::NeverNull<void*>, IService&)>, tl::optional<Properties>>> _registrations;
 

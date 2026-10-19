@@ -63,7 +63,7 @@ Usage with gcc 12+ is technically possible, but it might throw off [Catch2 unit 
 
 ## ICHOR_RUN_CLANG_TIDY (optional compile-time dependency)
 
-Clang only. Runs clang-tidy, version 23 or newer, on every C++ source of Ichor, its tests, examples and benchmarks as it compiles, with the checks in [.clang-tidy](../.clang-tidy): every bugprone and modernize check, bar the few listed there. A finding fails the compile. Requires CMake 3.27+. Set `ICHOR_CLANG_TIDY_EXECUTABLE` to pick a specific clang-tidy.
+Clang only. Runs clang-tidy, version 23 or newer, on every C++ source of Ichor, its tests, examples and benchmarks as it compiles, with the checks in [.clang-tidy](../.clang-tidy): every bugprone, modernize, performance and cppcoreguidelines check, bar the ones listed there with the reason they don't fit Ichor. A finding fails the compile. Requires CMake 3.27+. Set `ICHOR_CLANG_TIDY_EXECUTABLE` to pick a specific clang-tidy.
 
 ## ICHOR_USE_SDEVENT (optional dependency)
 

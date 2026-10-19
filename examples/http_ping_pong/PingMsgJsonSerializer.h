@@ -28,7 +28,7 @@ public:
         return buf;
     }
     tl::optional<PingMsg> deserialize(std::span<uint8_t const> stream) final {
-        PingMsg msg;
+        PingMsg msg{};
         auto err = glz::read_json(msg, stream);
 
         if(err) {

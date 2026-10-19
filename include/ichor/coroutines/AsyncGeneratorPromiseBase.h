@@ -203,6 +203,10 @@ namespace Ichor::v1::Detail {
             INTERNAL_COROUTINE_DEBUG("AsyncGeneratorPromise<{}>()", typeName<T>());
         }
         // Defined in AsyncGenerator.h, as it needs the complete AsyncGenerator type.
+        AsyncGeneratorPromise(const AsyncGeneratorPromise&) = delete;
+        AsyncGeneratorPromise(AsyncGeneratorPromise&&) = delete;
+        AsyncGeneratorPromise& operator=(const AsyncGeneratorPromise&) = delete;
+        AsyncGeneratorPromise& operator=(AsyncGeneratorPromise&&) = delete;
         ~AsyncGeneratorPromise() final;
 
         ICHOR_COROUTINE_CONSTEXPR AsyncGenerator<T> get_return_object() noexcept {
@@ -265,6 +269,10 @@ namespace Ichor::v1::Detail {
             INTERNAL_COROUTINE_DEBUG("AsyncGeneratorPromise<>()");
         }
         // Defined in AsyncGenerator.h, as it needs the complete AsyncGenerator type.
+        AsyncGeneratorPromise(const AsyncGeneratorPromise&) = delete;
+        AsyncGeneratorPromise(AsyncGeneratorPromise&&) = delete;
+        AsyncGeneratorPromise& operator=(const AsyncGeneratorPromise&) = delete;
+        AsyncGeneratorPromise& operator=(AsyncGeneratorPromise&&) = delete;
         ~AsyncGeneratorPromise() final;
 
         ICHOR_COROUTINE_CONSTEXPR AsyncGenerator<void> get_return_object() noexcept;

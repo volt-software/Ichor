@@ -69,6 +69,6 @@ namespace Ichor::v1 {
         Ichor::ScopedServiceProxy<IClientConnectionService*> _connection {};
         std::deque<PendingResponse> _events;
         std::string _buffer;
-        std::string const *_address;
+        std::string const *_address{};
     };
 }

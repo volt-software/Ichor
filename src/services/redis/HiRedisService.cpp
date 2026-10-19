@@ -785,7 +785,7 @@ Ichor::Task<tl::expected<std::unordered_map<std::string, std::string>, Ichor::v1
     std::unordered_map<std::string, std::string> ret;
     ret.reserve(infoSplit.size());
     for(auto const &i : infoSplit) {
-        if(i.find(":") != std::string_view::npos) {
+        if(i.find(':') != std::string_view::npos) {
             auto lineSplit = split(i, ":", false);
             if(lineSplit.size() != 2) {
                 continue;

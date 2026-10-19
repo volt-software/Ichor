@@ -54,6 +54,7 @@ namespace Ichor {
         EventWaiter(EventWaiter &&o) noexcept = default;
         EventWaiter& operator=(EventWaiter const &) = delete;
         EventWaiter& operator=(EventWaiter&&) = default;
+        ~EventWaiter() = default;
 
         std::vector<std::pair<uint64_t, std::unique_ptr<AsyncManualResetEvent>>> events{};
         ServiceIdType waitingSvcId;
@@ -64,7 +65,7 @@ namespace Ichor {
         WaitingStopService() = default;
         WaitingStopService(ServiceIdType _originatingServiceId, uint64_t _priority, bool _removeAfter, std::vector<Dependency*> _deps) : originatingServiceId(_originatingServiceId), priority(_priority), removeAfter(_removeAfter), deps(std::move(_deps)) {}
 
-        ServiceIdType originatingServiceId;
+        ServiceIdType originatingServiceId{};
         uint64_t priority{};
         bool removeAfter{};
         std::vector<Dependency*> deps;
@@ -315,6 +316,8 @@ namespace Ichor {
 
         // An implementation would be very thread un-safe. Moving the event queue would require no modification by any thread.
         DependencyManager(DependencyManager&&) = delete;
+        DependencyManager& operator=(const DependencyManager&) = delete;
+        DependencyManager& operator=(DependencyManager&&) = delete;
 
         ~DependencyManager() {
             stop();

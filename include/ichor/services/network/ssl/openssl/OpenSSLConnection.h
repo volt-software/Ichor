@@ -8,6 +8,10 @@ namespace Ichor::v1 {
     class OpenSSLConnection final : public TLSConnection {
     public:
         OpenSSLConnection(SSL* ctx, TLSConnectionIdType id);
+        OpenSSLConnection(const OpenSSLConnection&) = delete;
+        OpenSSLConnection(OpenSSLConnection&&) = delete;
+        OpenSSLConnection& operator=(const OpenSSLConnection&) = delete;
+        OpenSSLConnection& operator=(OpenSSLConnection&&) = delete;
         ~OpenSSLConnection() final;
 
         [[nodiscard]] SSL* getHandle() const;

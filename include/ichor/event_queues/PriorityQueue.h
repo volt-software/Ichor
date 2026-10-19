@@ -35,6 +35,10 @@ namespace Ichor {
         /// \param spinlock Spinlock 10ms before going to sleep, improves latency in high workload cases at the expense of CPU usage
         TemplatePriorityQueue();
         explicit TemplatePriorityQueue(uint64_t quitTimeoutMs, bool spinlock = false);
+        TemplatePriorityQueue(const TemplatePriorityQueue&) = delete;
+        TemplatePriorityQueue(TemplatePriorityQueue&&) = delete;
+        TemplatePriorityQueue& operator=(const TemplatePriorityQueue&) = delete;
+        TemplatePriorityQueue& operator=(TemplatePriorityQueue&&) = delete;
         ~TemplatePriorityQueue() final;
 
         void pushEventInternal(uint64_t priority, std::unique_ptr<Event> &&event) final;

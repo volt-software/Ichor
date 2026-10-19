@@ -83,6 +83,10 @@ namespace Ichor::v1 {
             constexpr explicit ReferenceCountedPointerDeleter(U *p, DeleterType fn) noexcept(std::is_nothrow_move_constructible_v<DeleterType>) : ptr(p), deleteFn(std::move(fn)) {
             }
 
+            ReferenceCountedPointerDeleter(const ReferenceCountedPointerDeleter&) = delete;
+            ReferenceCountedPointerDeleter(ReferenceCountedPointerDeleter&&) = delete;
+            ReferenceCountedPointerDeleter& operator=(const ReferenceCountedPointerDeleter&) = delete;
+            ReferenceCountedPointerDeleter& operator=(ReferenceCountedPointerDeleter&&) = delete;
             constexpr ~ReferenceCountedPointerDeleter() noexcept final {
                 deleteFn(ptr);
             }
@@ -120,6 +124,7 @@ namespace Ichor::v1 {
             increment();
         }
         template <typename U> requires (!std::is_same_v<T, U> && PointerConvertible<U, T>)
+        // NOLINTNEXTLINE(cppcoreguidelines-explicit-constructor): like std::shared_ptr, converts to a pointer to a base
         constexpr ReferenceCountedPointer(const ReferenceCountedPointer<U> &o) noexcept : _ptr(o._ptr), _block(o._block) {
             INTERNAL_STL_DEBUG("ReferenceCountedPointer<{}>(const ReferenceCountedPointer<{}> &o) {} {}", typeName<T>(), typeName<U>(), ICHOR_RFP_ID _block == nullptr);
             increment();
@@ -129,6 +134,7 @@ namespace Ichor::v1 {
             o._block = nullptr;
         }
         template <typename U> requires (!std::is_same_v<T, U> && PointerConvertible<U, T>)
+        // NOLINTNEXTLINE(cppcoreguidelines-explicit-constructor): like std::shared_ptr, converts to a pointer to a base
         constexpr ReferenceCountedPointer(ReferenceCountedPointer<U> &&o) noexcept : _ptr(o._ptr), _block(o._block) {
             INTERNAL_STL_DEBUG("ReferenceCountedPointer<{}>(ReferenceCountedPointer<{}> &&o) {} {}", typeName<T>(), typeName<U>(), ICHOR_RFP_ID _block == nullptr);
             o._ptr = nullptr;
@@ -166,6 +172,7 @@ namespace Ichor::v1 {
 
         /// Takes ownership of the unique_ptr. An empty unique_ptr results in an empty ReferenceCountedPointer.
         template <typename U, typename UniqueDeleter> requires PointerConvertible<U, T>
+        // NOLINTNEXTLINE(cppcoreguidelines-explicit-constructor): like std::shared_ptr, a unique_ptr converts to it
         ICHOR_CXX23_CONSTEXPR ReferenceCountedPointer(std::unique_ptr<U, UniqueDeleter> unique) {
             INTERNAL_STL_DEBUG("ReferenceCountedPointer<{}>(unique) {} {}", typeName<T>(), ICHOR_RFP_ID unique == nullptr);
             adoptUnique(std::move(unique));

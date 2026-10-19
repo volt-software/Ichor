@@ -45,8 +45,8 @@ namespace Ichor::Etcdv2::v1 {
     };
 
     struct EtcdReplyNode final {
-        uint64_t createdIndex;
-        uint64_t modifiedIndex;
+        uint64_t createdIndex{};
+        uint64_t modifiedIndex{};
         std::string key;
         std::optional<std::string> value;
         std::optional<uint64_t> ttl;
@@ -83,8 +83,8 @@ namespace Ichor::Etcdv2::v1 {
         std::string state;
         std::string startTime;
         EtcdLeaderInfoStats leaderInfo;
-        uint64_t recvAppendRequestCnt;
-        uint64_t sendAppendRequestCnt;
+        uint64_t recvAppendRequestCnt{};
+        uint64_t sendAppendRequestCnt{};
     };
 
     struct EtcdStoreStats final {

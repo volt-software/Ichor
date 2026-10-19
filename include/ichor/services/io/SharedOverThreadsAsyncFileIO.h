@@ -18,7 +18,7 @@ namespace Ichor::v1 {
 
     class SharedOverThreadsAsyncFileIO final : public IAsyncFileIO, public AdvancedService<SharedOverThreadsAsyncFileIO> {
     public:
-        SharedOverThreadsAsyncFileIO(Properties props);
+        explicit SharedOverThreadsAsyncFileIO(Properties props);
 
         Task<tl::expected<std::string, IOError>> readWholeFile(std::filesystem::path const &file) final;
         Task<tl::expected<void, IOError>> copyFile(std::filesystem::path const &from, std::filesystem::path const &to) final;

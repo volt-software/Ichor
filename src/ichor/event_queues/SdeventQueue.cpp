@@ -20,13 +20,11 @@ namespace Ichor {
         std::unique_ptr<Event> event;
     };
 
-    SdeventQueue::SdeventQueue() {
-        _eventfd = eventfd(0, EFD_NONBLOCK | EFD_SEMAPHORE);
+    SdeventQueue::SdeventQueue() : _eventfd(eventfd(0, EFD_NONBLOCK | EFD_SEMAPHORE)) {
         _threadId = std::this_thread::get_id(); // re-set in functions below, because adding events when the queue isn't running yet cannot be done from another thread.
     }
 
-    SdeventQueue::SdeventQueue(uint64_t unused) {
-        _eventfd = eventfd(0, EFD_NONBLOCK | EFD_SEMAPHORE);
+    SdeventQueue::SdeventQueue(uint64_t unused) : _eventfd(eventfd(0, EFD_NONBLOCK | EFD_SEMAPHORE)) {
         _threadId = std::this_thread::get_id(); // re-set in functions below, because adding events when the queue isn't running yet cannot be done from another thread.
     }
 
@@ -89,7 +87,7 @@ namespace Ichor {
         }
 
         {
-            sd_event_source *src;
+            sd_event_source *src{};
             auto *procEvent = new ProcessableEvent{.queue=this, .event=std::move(event)};
             int ret = sd_event_add_defer(_eventQueue, &src, [](sd_event_source *source, void *userdata) {
                 auto *e = reinterpret_cast<ProcessableEvent*>(userdata);
@@ -244,7 +242,7 @@ namespace Ichor {
             return; // already handled
         }
 
-        sd_event_source *src;
+        sd_event_source *src{};
         int ret = sd_event_add_defer(_eventQueue, &src, [](sd_event_source *source, void *userdata) {
             auto *q = reinterpret_cast<SdeventQueue*>(userdata);
 
@@ -268,7 +266,7 @@ namespace Ichor {
     void SdeventQueue::registerEventFd() {
         int ret = sd_event_add_io(_eventQueue, &_eventfdSource, _eventfd, EPOLLIN,
                                   [](sd_event_source *s, int fd, uint32_t revents, void *userdata) {
-                                      uint64_t val;
+                                      uint64_t val{};
                                       auto *q = static_cast<SdeventQueue*>(userdata);
 
                                       std::unique_lock lck(q->_eventQueueMutex);

@@ -28,6 +28,7 @@ namespace Ichor {
         Dependency(Dependency &&other) noexcept = default;
         Dependency& operator=(const Dependency &other) noexcept = default;
         Dependency& operator=(Dependency &&other) noexcept = default;
+        ~Dependency() = default;
         bool operator==(const Dependency &other) const noexcept {
             return interfaceNameHash == other.interfaceNameHash && flags == other.flags;
         }

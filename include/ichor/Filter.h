@@ -141,13 +141,14 @@ namespace Ichor {
     public:
         template <typename T> requires (!std::is_same_v<std::remove_cvref_t<T>, Filter>)
         // NOLINTNEXTLINE(bugprone-unhandled-exception-at-new): Ichor terminates on allocation failure
-        Filter(T&& entries) noexcept : _templatedFilter(new TemplatedFilter<std::remove_cvref_t<T>>(std::forward<T>(entries))) {}
+        explicit Filter(T&& entries) noexcept : _templatedFilter(new TemplatedFilter<std::remove_cvref_t<T>>(std::forward<T>(entries))) {}
 
         Filter(Filter&) = default;
         Filter(const Filter&) = default;
         Filter(Filter&&) noexcept = default;
         Filter& operator=(const Filter&) = default;
         Filter& operator=(Filter&&) noexcept = default;
+        ~Filter() = default;
 
         [[nodiscard]] bool compareTo(ILifecycleManager const &manager) const noexcept {
             return _templatedFilter->compareTo(manager);

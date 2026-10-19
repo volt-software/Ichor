@@ -152,6 +152,7 @@ namespace Ichor {
             static auto ins(int) -> char;
 
             template <typename U, int = sizeof(fn_def<T, U, N, sizeof(ins<U, N>(0)) == sizeof(char)>)>
+            // NOLINTNEXTLINE(cppcoreguidelines-explicit-constructor): converts to any constructor parameter, which is how the parameters are deduced
             operator U();
         };
 
@@ -547,7 +548,7 @@ namespace Ichor {
     template <DoesNotHaveConstructorInjectionDependencies T>
     class ConstructorInjectionService<T> final : public IService {
     public:
-        ConstructorInjectionService(Properties props) noexcept : IService(), _properties(std::move(props)), _serviceId(ServiceIdType{v1::Detail::_serviceIdCounter.fetch_add(1, std::memory_order_relaxed)}), _serviceGid(sole::uuid4()) {
+        explicit ConstructorInjectionService(Properties props) noexcept : IService(), _properties(std::move(props)), _serviceId(ServiceIdType{v1::Detail::_serviceIdCounter.fetch_add(1, std::memory_order_relaxed)}), _serviceGid(sole::uuid4()) {
         }
 
         ~ConstructorInjectionService() noexcept final {

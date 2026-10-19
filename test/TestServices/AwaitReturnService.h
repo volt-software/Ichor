@@ -33,6 +33,9 @@ struct IAwaitReturnService {
     [[nodiscard]] virtual uint64_t getCount() const = 0;
     virtual AsyncGenerator<AwaitNoCopy> Await() = 0;
     virtual Task<AwaitNoCopy> AwaitTask() = 0;
+
+protected:
+    ~IAwaitReturnService() = default;
 };
 
 struct AwaitReturnService final : public IAwaitReturnService, public AdvancedService<AwaitReturnService> {

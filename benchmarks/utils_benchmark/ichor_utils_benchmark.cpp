@@ -15,13 +15,13 @@
 
 template<size_t N>
 struct StringLiteral {
-    // NOLINTNEXTLINE(modernize-avoid-c-arrays): deduces N from the string literal
+    // NOLINTNEXTLINE(modernize-avoid-c-arrays, cppcoreguidelines-explicit-constructor): deduces N from a string literal, which converts to this as a template argument
     constexpr StringLiteral(const char (&str)[N]) {
         std::copy_n(str, N, value);
     }
 
     // NOLINTNEXTLINE(modernize-avoid-c-arrays): passed on as a string literal, to ctre among others
-    char value[N];
+    char value[N]{};
 };
 
 template <StringLiteral REGEX, decltype(std::regex::ECMAScript) flags>

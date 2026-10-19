@@ -23,7 +23,7 @@ namespace Ichor::Boost::v1 {
 
         template <typename SocketT>
         struct Connection {
-            Connection(tcp::socket &&_socket) : socket(std::move(_socket)) {}
+            explicit Connection(tcp::socket &&_socket) : socket(std::move(_socket)) {}
             Connection(tcp::socket &&_socket, net::ssl::context &ctx) : socket(std::move(_socket), ctx) {}
             SocketT socket;
             boost::circular_buffer<HostOutboxMessage> outbox{10};
@@ -67,7 +67,7 @@ namespace Ichor::Boost::v1 {
         void removeDependencyInstance(Ichor::ScopedServiceProxy<IBoostAsioQueue*> q, IService&);
 
         void fail(beast::error_code, char const* what, bool stopSelf);
-        void listen(tcp::endpoint endpoint, net::yield_context yield);
+        void listen(tcp::endpoint const &endpoint, net::yield_context yield);
 
         template <typename SocketT>
         void read(tcp::socket socket, net::yield_context yield);

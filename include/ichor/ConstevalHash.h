@@ -246,7 +246,7 @@ RAPIDHASH_INLINE_CONSTEXPR uint64_t rapid_read64(const uint8_t *p) RAPIDHASH_NOE
          | (static_cast<uint64_t>(p[6]) << 48)
          | (static_cast<uint64_t>(p[7]) << 56);
   } else {
-    uint64_t v;
+    uint64_t v{};
     memcpy(&v, p, sizeof(uint64_t));
     return v;
   }
@@ -309,7 +309,7 @@ RAPIDHASH_INLINE_CONSTEXPR uint64_t rapid_read32(const uint8_t *p) RAPIDHASH_NOE
          | (static_cast<uint32_t>(p[2]) << 16)
          | (static_cast<uint32_t>(p[3]) << 24);
   } else {
-    uint32_t v;
+    uint32_t v{};
     memcpy(&v, p, sizeof(uint32_t));
     return v;
   }

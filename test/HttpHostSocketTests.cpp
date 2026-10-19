@@ -186,6 +186,7 @@ TEST_CASE("HttpHostSocketTests") {
     });
 
     // So that the stop below happens, also when a REQUIRE fails
+    // NOLINTNEXTLINE(cppcoreguidelines-special-member-functions): an aggregate of references, declaring its copy would make it not one
     struct Quit {
         ~Quit() {
             q.pushEvent<QuitEvent>(ServiceIdType{0});

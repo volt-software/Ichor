@@ -35,6 +35,7 @@ namespace Ichor {
     /// Neither copyable nor movable: it is only ever returned as a prvalue.
     class AsyncGeneratorBeginOperationHolder final {
     public:
+        // NOLINTBEGIN(cppcoreguidelines-pro-type-member-init, cppcoreguidelines-prefer-member-initializer): _storage is where the operation is constructed, set in the body after checking that it fits
         template <typename Op, typename... Args>
         explicit AsyncGeneratorBeginOperationHolder(std::in_place_type_t<Op>, Args&&... args) noexcept {
             static_assert(std::is_base_of_v<IAsyncGeneratorBeginOperation, Op>, "Op needs to implement IAsyncGeneratorBeginOperation");
@@ -43,6 +44,7 @@ namespace Ichor {
             static_assert(std::is_nothrow_constructible_v<Op, Args&&...>, "Op construction needs to be noexcept");
             _op = ::new (static_cast<void*>(_storage.data())) Op(std::forward<Args>(args)...);
         }
+        // NOLINTEND(cppcoreguidelines-pro-type-member-init, cppcoreguidelines-prefer-member-initializer)
 
         ~AsyncGeneratorBeginOperationHolder() {
             _op->~IAsyncGeneratorBeginOperation();

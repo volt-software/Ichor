@@ -28,6 +28,7 @@ namespace Ichor {
 
         ScopedServiceProxy(ScopedServiceProxy &&) noexcept = default;
         ScopedServiceProxy &operator=(ScopedServiceProxy &&) noexcept = default;
+        ~ScopedServiceProxy() = default;
         ScopedServiceProxy &operator=(std::nullptr_t) noexcept {
             reset();
             return *this;

@@ -167,6 +167,7 @@ TEST_CASE("TcpTests") {
             queue->start(CaptureSigInt);
         });
         std::vector<uint8_t> data;
+        data.reserve(256'001);
         for(uint64_t i = 0; i < 256'000; i++) {
             data.emplace_back('a');
         }

@@ -63,6 +63,7 @@ TEST_CASE("CommunicationChannelTests") {
         std::latch created{queues.size()};
         std::latch broadcasted{1};
         std::vector<std::thread> threads;
+        threads.reserve(queues.size());
         for(RecordingQueue *&queuePtr : queues) {
             threads.emplace_back([&channel, &created, &broadcasted, &queuePtr]() {
                 RecordingQueue queue;

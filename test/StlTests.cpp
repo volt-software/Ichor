@@ -21,6 +21,7 @@ struct nonmoveable final {
     nonmoveable(nonmoveable&&) = delete;
     nonmoveable& operator=(const nonmoveable&) = default;
     nonmoveable& operator=(nonmoveable&&) = delete;
+    ~nonmoveable() = default;
 };
 
 struct nonmoveable_sbo_buster final {
@@ -29,6 +30,7 @@ struct nonmoveable_sbo_buster final {
     nonmoveable_sbo_buster(nonmoveable_sbo_buster&&) = delete;
     nonmoveable_sbo_buster& operator=(const nonmoveable_sbo_buster&) = default;
     nonmoveable_sbo_buster& operator=(nonmoveable_sbo_buster&&) = delete;
+    ~nonmoveable_sbo_buster() = default;
 
     std::array<std::byte, 32> buf;
 };
@@ -39,12 +41,14 @@ struct noncopyable final {
     noncopyable(noncopyable&&) = default;
     noncopyable& operator=(const noncopyable&) = delete;
     noncopyable& operator=(noncopyable&&) = default;
+    ~noncopyable() = default;
 };
 
 uint64_t destructed{};
 
 struct sufficiently_non_trivial {
     sufficiently_non_trivial() = default;
+    // NOLINTNEXTLINE(cppcoreguidelines-explicit-constructor): the tests fill containers of it with ints
     sufficiently_non_trivial(int _i) : i(_i) { }
     ~sufficiently_non_trivial() { ++destructed; }
     sufficiently_non_trivial(const sufficiently_non_trivial& o) = default;
@@ -69,6 +73,7 @@ struct sufficiently_non_trivial {
 
 struct sufficiently_non_trivial_non_moveable {
     sufficiently_non_trivial_non_moveable() = default;
+    // NOLINTNEXTLINE(cppcoreguidelines-explicit-constructor): the tests fill containers of it with ints
     sufficiently_non_trivial_non_moveable(int _i) : i(_i) { }
     ~sufficiently_non_trivial_non_moveable() { ++destructed; }
     sufficiently_non_trivial_non_moveable(const sufficiently_non_trivial_non_moveable& o) = default;
@@ -88,7 +93,7 @@ struct sufficiently_non_trivial_non_moveable {
         return os;
     }
 
-    friend void swap(sufficiently_non_trivial_non_moveable& x, sufficiently_non_trivial_non_moveable& y) {
+    friend void swap(sufficiently_non_trivial_non_moveable& x, sufficiently_non_trivial_non_moveable& y) noexcept {
         using std::swap;
         std::swap(x.i, y.i);
     }
@@ -118,6 +123,7 @@ struct rc_test_class final : parent_test_class {
     rc_test_class(rc_test_class&&) = delete;
     rc_test_class& operator=(const rc_test_class&) = default;
     rc_test_class& operator=(rc_test_class&&) = delete;
+    ~rc_test_class() = default;
 
     int i;
     float f;
@@ -256,7 +262,7 @@ TEST_CASE("StlTests: Any basics") {
     (void)any_cast<nonmoveable>(someNonmoveable);
 #endif
     REQUIRE(someNonmoveable.to_string() == "nonmoveable");
-    auto someMovedNonMoveable = std::move(someNonmoveable);
+    auto someMovedNonMoveable = std::move(someNonmoveable); // NOLINT(performance-move-const-arg): moving a const non-movable copies it, which is what this tests
     REQUIRE(someMovedNonMoveable.to_string() == "nonmoveable");
 
     any noneAny;
@@ -281,9 +287,9 @@ TEST_CASE("StlTests: Any basics") {
 #else
     (void)any_cast<nonmoveable_sbo_buster>(someNonmoveableSboBuster);
 #endif
-    auto someMovedNonmoveableSboBuster = std::move(someNonmoveableSboBuster);
+    auto someMovedNonmoveableSboBuster = std::move(someNonmoveableSboBuster); // NOLINT(performance-move-const-arg): moving a const non-movable copies it, which is what this tests
     // NOLINTNEXTLINE(bugprone-use-after-move): someNonmoveableSboBuster is const, so std::move copies it
-    auto someMoveConstructedNonmoveableSboBuster = Ichor::v1::any(std::move(someNonmoveableSboBuster));
+    auto someMoveConstructedNonmoveableSboBuster = Ichor::v1::any(std::move(someNonmoveableSboBuster)); // NOLINT(performance-move-const-arg): moving a const non-movable copies it, which is what this tests
 
     auto emptyAny = Ichor::v1::any();
     auto copyAssignedEmptyAny = emptyAny;

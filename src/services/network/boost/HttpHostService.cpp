@@ -164,7 +164,7 @@ void Ichor::Boost::v1::HttpHostService::fail(beast::error_code ec, const char *w
     }
 }
 
-void Ichor::Boost::v1::HttpHostService::listen(tcp::endpoint endpoint, net::yield_context yield) {
+void Ichor::Boost::v1::HttpHostService::listen(tcp::endpoint const &endpoint, net::yield_context yield) {
     Ichor::v1::ScopeGuardAtomicCount guard{_finishedListenAndRead};
     beast::error_code ec;
 

@@ -11,7 +11,7 @@ extern std::atomic<uint64_t> evtGate;
 /// Starts a timer and then creates many more, which used to reallocate the factory's storage of the running timer.
 class TimerWhileCreatingTimersService final : public ITimerRunsOnceService {
 public:
-    TimerWhileCreatingTimersService(ScopedServiceProxy<ITimerFactory> factory) {
+    explicit TimerWhileCreatingTimersService(ScopedServiceProxy<ITimerFactory> factory) {
         auto timer = factory->createTimer();
         timer.setChronoInterval(std::chrono::milliseconds(1));
         timer.setCallback([this]() {

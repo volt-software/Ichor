@@ -1421,7 +1421,7 @@ TEST_CASE("HttpHostRfcTests: upgrade") {
     HttpHostFixture f;
     std::shared_ptr<IHttpUpgradedConnection> upgraded;
     std::string received;
-    auto upgradingHandler = [&](HttpResponse response) {
+    auto upgradingHandler = [&](HttpResponse const &response) {
         return [&upgraded, &received, response](HttpRequest &, IHttpResponseWriter &writer) -> Task<void> {
             co_await writer.start(response);
             auto connection = writer.upgrade();

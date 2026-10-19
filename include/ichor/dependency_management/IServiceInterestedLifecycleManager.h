@@ -13,7 +13,7 @@ namespace Ichor::v1::Detail {
     /// implementation of ILifecycleManager purely to find out if another ILifecycleManager is interested in IService
     class IServiceInterestedLifecycleManager final : public ILifecycleManager {
     public:
-        IServiceInterestedLifecycleManager(IService *self) : _self(self) {
+        explicit IServiceInterestedLifecycleManager(IService *self) : _self(self) {
             _interfaces.emplace_back(typeNameHash<IService>(), typeName<IService>(), DependencyFlags::NONE, false);
         }
         ~IServiceInterestedLifecycleManager() final = default;

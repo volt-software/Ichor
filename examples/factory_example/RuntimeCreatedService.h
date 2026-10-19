@@ -16,6 +16,10 @@ public:
         ICHOR_LOG_INFO(_logger, "RuntimeCreatedService started with scope {}", scope);
     }
 
+    RuntimeCreatedService(const RuntimeCreatedService&) = delete;
+    RuntimeCreatedService(RuntimeCreatedService&&) = delete;
+    RuntimeCreatedService& operator=(const RuntimeCreatedService&) = delete;
+    RuntimeCreatedService& operator=(RuntimeCreatedService&&) = delete;
     ~RuntimeCreatedService() {
         ICHOR_LOG_INFO(_logger, "RuntimeCreatedService stopped");
     }

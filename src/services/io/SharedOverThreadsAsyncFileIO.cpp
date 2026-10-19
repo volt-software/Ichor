@@ -150,8 +150,8 @@ Ichor::Task<tl::expected<void, Ichor::v1::IOError>> Ichor::v1::SharedOverThreads
             return;
         }
 #else
-        struct stat stat;
-        off_t len, ret;
+        struct stat stat{};
+        off_t len{}, ret{};
         int fd_in = open(from.c_str(), O_RDONLY | O_CLOEXEC);
         if (fd_in == -1) {
             INTERNAL_IO_DEBUG("open from errno {} {}", errno, strerror(errno));

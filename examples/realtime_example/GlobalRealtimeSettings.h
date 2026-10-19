@@ -9,6 +9,10 @@
 class GlobalRealtimeSettings {
 public:
     GlobalRealtimeSettings();
+    GlobalRealtimeSettings(const GlobalRealtimeSettings&) = delete;
+    GlobalRealtimeSettings(GlobalRealtimeSettings&&) = delete;
+    GlobalRealtimeSettings& operator=(const GlobalRealtimeSettings&) = delete;
+    GlobalRealtimeSettings& operator=(GlobalRealtimeSettings&&) = delete;
     ~GlobalRealtimeSettings();
 
 private:

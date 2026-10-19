@@ -14,6 +14,7 @@
 
 namespace Ichor::v1 {
     namespace Detail {
+        // NOLINTNEXTLINE(cppcoreguidelines-virtual-class-destructor): final, and IHttpResponseWriter's destructor is protected: nothing deletes it through another type
         class HttpHostResponseWriter;
         class HttpHostUpgradedConnection;
     }

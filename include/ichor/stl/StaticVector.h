@@ -94,6 +94,7 @@ namespace Ichor::v1 {
         constexpr explicit SVIterator(pointer ptr ICHOR_LIFETIME_BOUND) noexcept : _ptr(ptr) {}
         // iterator -> const_iterator conversion, like every std container offers
         template <bool OtherConst> requires (Const && !OtherConst)
+        // NOLINTNEXTLINE(cppcoreguidelines-explicit-constructor): an iterator converts to a const_iterator
         constexpr SVIterator(SVIterator<T, OtherConst> const &o) noexcept : _ptr(o.operator->()) {}
 
         constexpr reference operator*() const noexcept ICHOR_LIFETIME_BOUND { return *_ptr; }
@@ -222,6 +223,7 @@ namespace Ichor::v1 {
         using const_reverse_iterator = std::reverse_iterator<const_iterator>;
         using IStaticVector<T>::resize;
 
+        // NOLINTNEXTLINE(cppcoreguidelines-pro-type-member-init): _data is the storage the elements are constructed in, only up to size() is initialised
         constexpr StaticVector() noexcept = default;
         constexpr explicit StaticVector(size_type n) noexcept(Detail::is_sufficiently_trivial<T>) {
             assert(n <= N);
@@ -291,6 +293,7 @@ namespace Ichor::v1 {
 
         /// Replaces the contents with [first, last). Like std::vector, the range must not point into this vector.
         template <std::input_iterator InputIterator>
+        // NOLINTNEXTLINE(performance-unnecessary-value-param): iterators are passed by value, like the standard library's. Only debug iterators are expensive to copy.
         constexpr void assign(InputIterator first, InputIterator last) {
             size_type i = 0;
             // re-use already constructed elements, then either construct the remainder or destroy the leftovers
@@ -436,7 +439,7 @@ namespace Ichor::v1 {
         constexpr iterator insert(const_iterator const_position, size_type n, const_reference x) ICHOR_LIFETIME_BOUND final {
             if(isElement(std::addressof(x))) {
                 // x would be moved around while making space for it, so take a copy first.
-                T const tmp(x);
+                T const tmp(x); // NOLINT(performance-unnecessary-copy-initialization): see above
                 return insertWith(const_position, n, [&tmp](T *slot, bool alive, size_type) { fillSlot(slot, alive, tmp); });
             }
             return insertWith(const_position, n, [&x](T *slot, bool alive, size_type) { fillSlot(slot, alive, x); });

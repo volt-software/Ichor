@@ -37,7 +37,7 @@ tl::expected<OpenSSLCertificate, OpenSSLMakeCertificateError> OpenSSLCertificate
 
     if(x509 == nullptr) {
         if(logger) {
-            unsigned long err;
+            unsigned long err{};
             while ((err = ERR_get_error()) != 0) {
                 ICHOR_LOG_ERROR((*logger), "Error reading certificate: {}", ERR_error_string(err, nullptr));
             }

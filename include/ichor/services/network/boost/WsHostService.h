@@ -40,7 +40,7 @@ namespace Ichor::Boost::v1 {
         friend DependencyManager;
 
         void fail(beast::error_code, char const* what);
-        void listen(tcp::endpoint endpoint, net::yield_context yield);
+        void listen(tcp::endpoint const &endpoint, net::yield_context yield);
 
         std::unique_ptr<tcp::acceptor> _wsAcceptor{};
         std::unique_ptr<net::strand<net::io_context::executor_type>> _strand{};

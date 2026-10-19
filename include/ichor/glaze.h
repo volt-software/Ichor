@@ -21,7 +21,7 @@
 namespace glz {
     template <>
     inline bool compare<3, char>(const char *lhs, const char *rhs) noexcept {
-        uint16_t l, r;
+        uint16_t l{}, r{};
         std::memcpy(&l, lhs, 2);
         std::memcpy(&r, rhs, 2);
         return (l == r) & (lhs[2] == rhs[2]);
@@ -29,7 +29,7 @@ namespace glz {
 
     template <>
     inline bool compare<5, char>(const char *lhs, const char *rhs) noexcept {
-        uint32_t l, r;
+        uint32_t l{}, r{};
         std::memcpy(&l, lhs, 4);
         std::memcpy(&r, rhs, 4);
         return (l == r) & (lhs[4] == rhs[4]);
@@ -37,10 +37,10 @@ namespace glz {
 
     template <>
     inline bool compare<6, char>(const char *lhs, const char *rhs) noexcept {
-        uint32_t l, r;
+        uint32_t l{}, r{};
         std::memcpy(&l, lhs, 4);
         std::memcpy(&r, rhs, 4);
-        uint16_t l2, r2;
+        uint16_t l2{}, r2{};
         std::memcpy(&l2, lhs + 4, 2);
         std::memcpy(&r2, rhs + 4, 2);
         return (l == r) & (l2 == r2);
@@ -48,10 +48,10 @@ namespace glz {
 
     template <>
     inline bool compare<7, char>(const char *lhs, const char *rhs) noexcept {
-        uint32_t l, r;
+        uint32_t l{}, r{};
         std::memcpy(&l, lhs, 4);
         std::memcpy(&r, rhs, 4);
-        uint32_t l2, r2;
+        uint32_t l2{}, r2{};
         std::memcpy(&l2, lhs + 3, 4);
         std::memcpy(&r2, rhs + 3, 4);
         return (l == r) & (l2 == r2);

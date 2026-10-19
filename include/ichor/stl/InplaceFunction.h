@@ -39,17 +39,19 @@ namespace Ichor::v1 {
         };
 
     public:
+        // NOLINTNEXTLINE(cppcoreguidelines-pro-type-member-init): _storage is where the callable is constructed, zeroing it would cost every function a memset
         InplaceFunction() noexcept = default;
+        // NOLINTNEXTLINE(cppcoreguidelines-explicit-constructor): like std::function, nullptr is an empty function
         InplaceFunction(std::nullptr_t) noexcept {}
 
         template <typename Fn, typename F = std::decay_t<Fn>>
         requires (!std::is_same_v<F, InplaceFunction> && std::is_invocable_r_v<R, F&, Args...>)
-        InplaceFunction(Fn &&fn) noexcept(std::is_nothrow_constructible_v<F, Fn&&>) {
+        // NOLINTNEXTLINE(cppcoreguidelines-explicit-constructor): like std::function, a callable converts to it
+        InplaceFunction(Fn &&fn) noexcept(std::is_nothrow_constructible_v<F, Fn&&>) : _vtable(&vtableFor<F>) {
             static_assert(sizeof(F) <= Capacity, "Callable too large for InplaceFunction, reduce the captured state or increase the capacity");
             static_assert(alignof(F) <= alignof(std::max_align_t), "Callable over-aligned for InplaceFunction");
             static_assert(std::is_nothrow_move_constructible_v<F>, "InplaceFunction requires nothrow move constructible callables");
             std::construct_at(reinterpret_cast<F*>(_storage.data()), std::forward<Fn>(fn));
-            _vtable = &vtableFor<F>;
         }
 
         InplaceFunction(InplaceFunction &&o) noexcept : _vtable(o._vtable) {

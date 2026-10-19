@@ -27,6 +27,7 @@ Ichor::v1::Timer::~Timer() noexcept {
     }
 }
 
+// NOLINTBEGIN(cppcoreguidelines-prefer-member-initializer): o's members are read under o's lock, which a member initializer would read before
 Ichor::v1::Timer::Timer(Ichor::v1::Timer &&o) noexcept {
     std::unique_lock l{o._m};
     _queue = o._queue;
@@ -41,6 +42,7 @@ Ichor::v1::Timer::Timer(Ichor::v1::Timer &&o) noexcept {
     _requestingServiceId = o._requestingServiceId;
     _quitCbs = std::move(o._quitCbs);
 }
+// NOLINTEND(cppcoreguidelines-prefer-member-initializer)
 
 Ichor::v1::Timer& Ichor::v1::Timer::operator=(Ichor::v1::Timer &&o) noexcept {
     if(this == &o) [[unlikely]] {

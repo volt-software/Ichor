@@ -46,6 +46,11 @@ namespace {
                 Event(_id, _originatingService, _priority) {
             created++;
         }
+        // Events are moved into the queue, the copy isn't counted as created either
+        CountedEvent(const CountedEvent&) = default;
+        CountedEvent(CountedEvent&&) noexcept = default;
+        CountedEvent& operator=(const CountedEvent&) = delete;
+        CountedEvent& operator=(CountedEvent&&) = delete;
         ~CountedEvent() final {
             destroyed++;
         }

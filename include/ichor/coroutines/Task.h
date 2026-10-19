@@ -80,6 +80,10 @@ namespace Ichor
 
             constexpr TaskPromise() noexcept {}
 
+            TaskPromise(const TaskPromise&) = delete;
+            TaskPromise(TaskPromise&&) = delete;
+            TaskPromise& operator=(const TaskPromise&) = delete;
+            TaskPromise& operator=(TaskPromise&&) = delete;
             ~TaskPromise() {
                 switch (m_resultType) {
                     case result_type::value:
@@ -291,7 +295,7 @@ namespace Ichor
         {
             std::coroutine_handle<promise_type> m_coroutine;
 
-            constexpr awaitable_base(std::coroutine_handle<promise_type> coroutine) noexcept
+            explicit constexpr awaitable_base(std::coroutine_handle<promise_type> coroutine) noexcept
                     : m_coroutine(coroutine)
             {}
 

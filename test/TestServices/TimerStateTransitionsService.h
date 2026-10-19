@@ -22,7 +22,7 @@ protected:
 /// A repeating timer that stops itself from its callback, and a fire-once timer.
 class TimerStateTransitionsService final : public ITimerStateTransitionsService {
 public:
-    TimerStateTransitionsService(ScopedServiceProxy<ITimerFactory> factory) : _selfStopping(factory->createTimer()), _fireOnce(factory->createTimer()), _fast(factory->createTimer()) {
+    explicit TimerStateTransitionsService(ScopedServiceProxy<ITimerFactory> factory) : _selfStopping(factory->createTimer()), _fireOnce(factory->createTimer()), _fast(factory->createTimer()) {
         _selfStopping.setChronoInterval(std::chrono::milliseconds(1));
         _selfStopping.setCallback([this]() {
             // Expiries queued before the timer stopped can still run (a slow queue, e.g. with internal debug logging), only stop once.

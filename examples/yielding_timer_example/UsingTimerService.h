@@ -40,6 +40,10 @@ public:
             });
             timer.startTimer();
     }
+    UsingTimerService(const UsingTimerService&) = delete;
+    UsingTimerService(UsingTimerService&&) = delete;
+    UsingTimerService& operator=(const UsingTimerService&) = delete;
+    UsingTimerService& operator=(UsingTimerService&&) = delete;
     ~UsingTimerService() {
         ICHOR_LOG_INFO(_logger, "UsingTimerService stopped");
     }

@@ -39,20 +39,21 @@ namespace Ichor {
         }
 
         template <typename U = T> requires (RequestsProperties<U> || RequestsDependencies<U>)
-        AdvancedService(Properties&& props) noexcept : IService(), _properties(std::move(props)), _serviceId(ServiceIdType{v1::Detail::_serviceIdCounter.fetch_add(1, std::memory_order_relaxed)}), _servicePriority(INTERNAL_EVENT_PRIORITY), _serviceGid(sole::uuid4()), _serviceState(ServiceState::INSTALLED) {
+        explicit AdvancedService(Properties&& props) noexcept : IService(), _properties(std::move(props)), _serviceId(ServiceIdType{v1::Detail::_serviceIdCounter.fetch_add(1, std::memory_order_relaxed)}), _servicePriority(INTERNAL_EVENT_PRIORITY), _serviceGid(sole::uuid4()), _serviceState(ServiceState::INSTALLED) {
 
         }
 
-        AdvancedService(const AdvancedService&) = default;
-        AdvancedService(AdvancedService&&) noexcept = default;
-
     public:
+        // A service is one instance, managed by its lifecycle manager, other services refer to it by its id
+        AdvancedService(const AdvancedService&) = delete;
+        AdvancedService(AdvancedService&&) = delete;
+
         ~AdvancedService() noexcept override {
             _serviceState = ServiceState::UNINSTALLED;
         }
 
-        AdvancedService& operator=(const AdvancedService&) = default;
-        AdvancedService& operator=(AdvancedService&&) noexcept = default;
+        AdvancedService& operator=(const AdvancedService&) = delete;
+        AdvancedService& operator=(AdvancedService&&) = delete;
 
         /// Process-local unique service id
         /// \return id

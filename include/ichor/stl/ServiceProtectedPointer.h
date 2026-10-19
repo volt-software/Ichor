@@ -18,6 +18,7 @@ namespace Ichor::v1 {
         ServiceProtectedPointer(ServiceProtectedPointer &&) = delete;
         ServiceProtectedPointer& operator=(ServiceProtectedPointer const &) = delete;
         ServiceProtectedPointer& operator=(ServiceProtectedPointer &&) = delete;
+        ~ServiceProtectedPointer() = default;
 
         [[nodiscard]] constexpr auto operator->() const noexcept ICHOR_LIFETIME_BOUND {
             return ::Ichor::ScopedServiceProxy<T*>{_ptr, _ptr->getServiceId()};

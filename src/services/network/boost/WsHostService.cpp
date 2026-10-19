@@ -131,7 +131,7 @@ void Ichor::Boost::v1::WsHostService::fail(beast::error_code ec, const char *wha
     _startStopEvent.set();
 }
 
-void Ichor::Boost::v1::WsHostService::listen(tcp::endpoint endpoint, net::yield_context yield)
+void Ichor::Boost::v1::WsHostService::listen(tcp::endpoint const &endpoint, net::yield_context yield)
 {
     beast::error_code ec;
 

@@ -38,7 +38,7 @@ namespace Ichor::v1 {
             return 0;
         }
         ++str;
-        uint8_t x;
+        uint8_t x{};
         while ((x = static_cast<uint8_t>(*str++ - '0')) <= 9) val = val * 10 + x;
         // Branchless conditional two's complement negation, (val ^ ~0) + 1 == -val. Converting to int64_t is well-defined modulo 2^64 since C++20.
         return static_cast<int64_t>((val ^ (0 - neg)) + neg);
@@ -48,13 +48,13 @@ namespace Ichor::v1 {
     /// converts a string to an unsigned integer with little error checking. Only use if you're very sure that the string is actually a number.
     ICHOR_PURE_FUNC_ATTR inline constexpr uint64_t FastAtoiu(const char* str) noexcept {
         uint64_t val = 0;
-        uint8_t  x;
+        uint8_t  x{};
         while ((x = static_cast<uint8_t>(*str++ - '0')) <= 9) val = val * 10 + x;
         return val;
     }
     ICHOR_PURE_FUNC_ATTR inline constexpr uint64_t FastAtoiu(std::string_view str) noexcept {
         uint64_t val = 0;
-        uint8_t  x;
+        uint8_t  x{};
         size_t pos{};
         while (pos < str.size() && (x = static_cast<uint8_t>(str[pos] - '0')) <= 9) {
             val = val * 10 + x;
@@ -255,7 +255,7 @@ namespace Ichor::v1 {
         using difference_type = std::ptrdiff_t;
         using pointer = void;
         using reference = void;
-        FmtU8Inserter(std::vector<uint8_t>& vv) : v(&vv) {}
+        explicit FmtU8Inserter(std::vector<uint8_t>& vv) : v(&vv) {}
         FmtU8Inserter& operator=(char c) { v->push_back(static_cast<uint8_t>(c)); return *this; }
         FmtU8Inserter& operator*()  { return *this; }
         FmtU8Inserter& operator++() { return *this; }

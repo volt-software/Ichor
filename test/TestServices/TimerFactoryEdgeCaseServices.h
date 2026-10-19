@@ -20,7 +20,7 @@ protected:
 /// keep running after the service stopped.
 class CountingTimerService final {
 public:
-    CountingTimerService(ScopedServiceProxy<ITimerFactory> factory) {
+    explicit CountingTimerService(ScopedServiceProxy<ITimerFactory> factory) {
         auto timer = factory->createTimer();
         timer.setChronoInterval(std::chrono::milliseconds(1));
         timer.setCallback([]() {
@@ -33,7 +33,7 @@ public:
 /// A fire-once timer restarting itself from its callback, and a timer whose stop callback destroys it.
 class TimerEdgeCaseService final : public ITimerEdgeCaseService {
 public:
-    TimerEdgeCaseService(ScopedServiceProxy<ITimerFactory> factory) : _factory(factory), _restarting(factory->createTimer()), _destroyedOnStop(factory->createTimer()) {
+    explicit TimerEdgeCaseService(ScopedServiceProxy<ITimerFactory> factory) : _factory(factory), _restarting(factory->createTimer()), _destroyedOnStop(factory->createTimer()) {
         _restarting.setChronoInterval(std::chrono::milliseconds(1));
         _restarting.setFireOnce(true);
         _restarting.setCallback([this]() {

@@ -4,6 +4,7 @@
 #include <ichor/stl/Spans.h>
 
 namespace Ichor::v1 {
+    // NOLINTNEXTLINE(cppcoreguidelines-virtual-class-destructor): final, and ITimer's destructor is protected: nothing deletes it through another type
     class TimerRef; // forward declaration to avoid circular include
     struct ITimerFactory {
         [[nodiscard]] virtual TimerRef createTimer() = 0;

@@ -33,27 +33,32 @@ namespace Ichor::v1 {
         static_assert(std::is_pointer_v<T>, "T has to be a pointer.");
 
         template <typename U>
+        // NOLINTNEXTLINE(cppcoreguidelines-explicit-constructor): like gsl::not_null, a pointer converts to it (checked)
         constexpr NeverNull(U&& u) requires (std::is_convertible_v<U, T>) : ptr_(std::forward<U>(u))
         {
             ensureNotNull();
         }
 
+        // NOLINTNEXTLINE(cppcoreguidelines-explicit-constructor): like gsl::not_null, a pointer converts to it (checked)
         constexpr NeverNull(T u) requires (!std::is_same_v<std::nullptr_t, T>) : ptr_(std::move(u))
         {
             ensureNotNull();
         }
 
         template <typename U>
+        // NOLINTNEXTLINE(cppcoreguidelines-explicit-constructor): like gsl::not_null, converts to a NeverNull of a base
         constexpr NeverNull(const NeverNull<U>& other) requires (std::is_convertible_v<U, T>) : NeverNull(other.get())
         {}
 
         NeverNull(const NeverNull& other) = default;
         NeverNull& operator=(const NeverNull& other) = default;
+        ~NeverNull() = default;
         [[nodiscard]] constexpr Detail::value_or_reference_return_t<T> get() const
         {
             return ptr_;
         }
 
+        // NOLINTNEXTLINE(cppcoreguidelines-explicit-constructor): like gsl::not_null, used where the pointer is
         constexpr operator T() const { return get(); }
         constexpr decltype(auto) operator->() const { return get(); }
         constexpr decltype(auto) operator*() const { return *get(); }
@@ -134,6 +139,7 @@ namespace Ichor::v1 {
         constexpr AlwaysNull() = default;
         AlwaysNull(const AlwaysNull& other) = default;
         AlwaysNull& operator=(const AlwaysNull& other) = default;
+        ~AlwaysNull() = default;
 
         constexpr operator T() const = delete;
         constexpr decltype(auto) operator->() const = delete;

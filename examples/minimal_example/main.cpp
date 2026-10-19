@@ -15,7 +15,7 @@ void siginthandler(int) {
 
 class SigIntService final {
 public:
-    SigIntService(ScopedServiceProxy<ITimerFactory> factory) {
+    explicit SigIntService(ScopedServiceProxy<ITimerFactory> factory) {
         // Setup a timer that fires every 100 milliseconds
         auto timer = factory->createTimer();
         timer.setChronoInterval(100ms);

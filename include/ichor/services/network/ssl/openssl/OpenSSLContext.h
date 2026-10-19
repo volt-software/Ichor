@@ -24,6 +24,10 @@ namespace Ichor::v1 {
     class OpenSSLContext final : public TLSContext {
     public:
         OpenSSLContext(SSL_CTX* ctx, TLSContextIdType id, REFCOUNT_PARAM, OpenSSLService &svc);
+        OpenSSLContext(const OpenSSLContext&) = delete;
+        OpenSSLContext(OpenSSLContext&&) = delete;
+        OpenSSLContext& operator=(const OpenSSLContext&) = delete;
+        OpenSSLContext& operator=(OpenSSLContext&&) = delete;
         ~OpenSSLContext() final;
 
         [[nodiscard]] SSL_CTX* getHandle() const;

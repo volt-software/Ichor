@@ -48,29 +48,27 @@ GlobalRealtimeSettings::GlobalRealtimeSettings() {
         if(smt_file == -1) {
             fmt::print("Could not disable SMT\n");
             reenable_smt = false;
-            close(smt_file);
-            goto end_smt;
-        }
-
-        auto size = read(smt_file, control_read.data(), 4);
-        if(size == -1) {
-            fmt::print("smt_file read\n");
-            std::terminate();
-        }
-
-        if(lseek(smt_file, 0, SEEK_SET) == -1) {
-            fmt::print("smt_file lseek\n");
-            std::terminate();
-        }
-
-        if(strncmp(control_read.data(), "off", 3) == 0 || strncmp(control_read.data(), "noti", 4) == 0) {
-            reenable_smt = false;
-            close(smt_file);
         } else {
-            auto ret = write(smt_file, target_control, 3);
-            if (ret == -1) {
-                fmt::print("smt_file write\n");
+            auto size = read(smt_file, control_read.data(), 4);
+            if(size == -1) {
+                fmt::print("smt_file read\n");
                 std::terminate();
+            }
+
+            if(lseek(smt_file, 0, SEEK_SET) == -1) {
+                fmt::print("smt_file lseek\n");
+                std::terminate();
+            }
+
+            if(strncmp(control_read.data(), "off", 3) == 0 || strncmp(control_read.data(), "noti", 4) == 0) {
+                reenable_smt = false;
+                close(smt_file);
+            } else {
+                auto ret = write(smt_file, target_control, 3);
+                if (ret == -1) {
+                    fmt::print("smt_file write\n");
+                    std::terminate();
+                }
             }
         }
     } else {
@@ -78,7 +76,6 @@ GlobalRealtimeSettings::GlobalRealtimeSettings() {
         fmt::print("SMT missing\n");
     }
 
-    end_smt:
     if(setpriority(PRIO_PROCESS, 0, -20) != 0) {
         fmt::print("setpriority failed\n");
     }

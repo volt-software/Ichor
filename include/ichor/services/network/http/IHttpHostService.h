@@ -34,7 +34,7 @@ namespace Ichor::v1 {
     };
 
     struct StringRouteMatcher final : public RouteMatcher {
-        StringRouteMatcher(std::string_view route) : _route(route) {}
+        explicit StringRouteMatcher(std::string_view route) : _route(route) {}
         ~StringRouteMatcher() noexcept final = default;
 
         [[nodiscard]] bool matches(std::string_view route) noexcept final {
@@ -200,11 +200,7 @@ namespace Ichor::v1 {
         HttpRouteRegistration() = default;
         HttpRouteRegistration(HttpMethod method, RouteIdType id, IHttpHostService *service) : _method(method), _id(id), _service(service) {}
         HttpRouteRegistration(const HttpRouteRegistration&) = delete;
-        HttpRouteRegistration(HttpRouteRegistration&& o) noexcept {
-            reset();
-            _method = o._method;
-            _id = o._id;
-            _service = o._service;
+        HttpRouteRegistration(HttpRouteRegistration&& o) noexcept : _method(o._method), _id(o._id), _service(o._service) {
             o._service = nullptr;
         }
 

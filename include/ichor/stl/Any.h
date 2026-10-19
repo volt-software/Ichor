@@ -43,6 +43,7 @@ namespace Ichor::v1 {
 
     /// Type-safe container for single values for any copy constructible type. Differs from std::any by not requiring RTTI for any operation, as well as supplying things like size, type_name and to_string() functions.
     /// By default, requires the type to have an existing fmt::formatter. Use Ichor::make_unformattable_any if it is not feasible to implement one.
+    // NOLINTBEGIN(cppcoreguidelines-pro-type-member-init): _buffer is the storage the value is constructed in, zeroing it would cost every any a memset
     struct any final {
         constexpr any() noexcept = default;
 
@@ -68,6 +69,7 @@ namespace Ichor::v1 {
             }
             o.reset();
         }
+    // NOLINTEND(cppcoreguidelines-pro-type-member-init)
 
         constexpr any& operator=(const any& o) noexcept {
             if(this == &o) [[unlikely]] {

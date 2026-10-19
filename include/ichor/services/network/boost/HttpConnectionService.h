@@ -63,7 +63,7 @@ namespace Ichor::Boost::v1 {
         void removeDependencyInstance(Ichor::ScopedServiceProxy<IBoostAsioQueue*> q, IService&);
 
         void fail(beast::error_code, char const* what);
-        void connect(tcp::endpoint endpoint, net::yield_context yield);
+        void connect(tcp::endpoint const &endpoint, net::yield_context yield);
 
         friend DependencyRegister;
 

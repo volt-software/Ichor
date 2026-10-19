@@ -17,6 +17,10 @@ public:
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
         dm->getCommunicationChannel()->broadcastEvent<CustomEvent>(GetThreadLocalManager(), self->getServiceId());
     }
+    OneService(const OneService&) = delete;
+    OneService(OneService&&) = delete;
+    OneService& operator=(const OneService&) = delete;
+    OneService& operator=(OneService&&) = delete;
     ~OneService() {
         ICHOR_LOG_INFO(_logger, "OneService stopped with dependency");
     }

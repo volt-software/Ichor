@@ -2,12 +2,60 @@
 # is on (CMakeLists.txt), and read by clangd. A finding fails that compile. Written against
 # clang-tidy 23; CMakeLists.txt refuses an older one.
 #
-# Every bugprone and modernize check, except:
+# Every bugprone, modernize, performance and cppcoreguidelines check, except:
 # - modernize-use-trailing-return-type: a style, not a modernisation. It would rewrite every
 #   function signature to `auto f() -> T`.
 # - bugprone-easily-swappable-parameters: what it finds are pairs such as key and value, or user
 #   and password, whose order is the API. Telling them apart takes a type per parameter, an API
 #   break with no bug behind it.
+# - performance-enum-size: Ichor's enums deliberately use the fast integer types, they are passed
+#   around one at a time (in registers, tl::expected) rather than stored in bulk. A smaller base
+#   type changes the API for nothing measurable.
+# - cppcoreguidelines aliases of checks that are already on, which would report the same finding
+#   twice, without the options of the original: avoid-c-arrays (modernize-avoid-c-arrays),
+#   explicit-virtual-functions (modernize-use-override), macro-to-enum (modernize-macro-to-enum),
+#   narrowing-conversions (bugprone-narrowing-conversions), noexcept-destructor,
+#   noexcept-move-operations and noexcept-swap (performance-noexcept-*) and use-default-member-init
+#   (modernize-use-default-member-init).
+# - cppcoreguidelines-avoid-magic-numbers: ports, sizes, priorities and test data. Naming each of
+#   them makes the code longer, not clearer.
+# - cppcoreguidelines-pro-bounds-*, -owning-memory: written for the Guidelines Support Library
+#   (gsl::at, gsl::span, gsl::owner), which Ichor doesn't use. It wraps C APIs (io_uring, sockets,
+#   OpenSSL, hiredis) that take pointers and lengths, and its containers are bounds checked by the
+#   hardened builds (_GLIBCXX_ASSERTIONS, ICHOR_USE_HARDENING) instead.
+# - cppcoreguidelines-pro-type-reinterpret-cast: bytes received or sent are viewed as char, uint8_t
+#   or a C struct (sockaddr, io_uring completions), which takes a reinterpret_cast.
+# - cppcoreguidelines-pro-type-static-cast-downcast: Ichor works without RTTI. Events and services
+#   are downcast with static_cast after checking their type id.
+# - cppcoreguidelines-pro-type-vararg: the C APIs Ichor wraps (fcntl, ioctl, hiredis commands) are
+#   variadic.
+# - cppcoreguidelines-avoid-reference-coroutine-parameters and
+#   cppcoreguidelines-avoid-capturing-lambda-coroutines: Ichor's tasks are lazy and awaited by their
+#   caller, which keeps what the references refer to alive, and the lambdas of events are owned by
+#   the event while their coroutine runs. A lambda that's invoked as a temporary does lose its
+#   captures; that's the case to look out for.
+# - cppcoreguidelines-avoid-non-const-global-variables: the DependencyManager of each thread is
+#   thread_local state by design, as are the signal handling flags, and tests share state with the
+#   services they test.
+# - cppcoreguidelines-avoid-const-or-ref-data-members: a reference member is a dependency that's
+#   never null and outlives the object, e.g. a response writer's host.
+# - cppcoreguidelines-macro-usage: Ichor's macros do what a function can't: the logging macros pass
+#   the source location and skip evaluating their arguments when the level is off, the others are
+#   compile time switches.
+# - cppcoreguidelines-non-private-member-variables-in-classes: Ichor's base classes share state with
+#   the classes deriving from them (AdvancedService's properties, ISSL's context and id), and mocks
+#   and plain structs are public. Accessors for those are an API change with no bug behind it.
+# - cppcoreguidelines-missing-std-forward: a callable taken as F&& is called more than once (split's
+#   callback, constexpr_for's body), and arguments used for more than one call are copied on purpose
+#   (broadcastEvent's, one copy per manager). Forwarding them would be the bug.
+# - cppcoreguidelines-rvalue-reference-param-not-moved: an interface that takes T&& says the data is
+#   handed over (IConnectionService::sendAsync), the implementation can send it without moving it.
+#   Ownership is also taken with release() or by stealing pointers (ReferenceCountedPointer), and
+#   glaze's read signature takes the value being read into as T&&.
+# - cppcoreguidelines-pro-type-union-access: the C structs Ichor uses have their fields in unions
+#   (rusage, io_uring_sqe), and Task's result is a union of the value and the exception by design.
+# - cppcoreguidelines-avoid-do-while: a style. Retrying until a call stops failing with EINTR or
+#   EAGAIN is what do-while is for.
 #
 # Options:
 # - bugprone-exception-escape.CheckMain: an exception escaping main terminates the program, which
@@ -16,6 +64,15 @@
 #   is well defined, `x << 8` needs no 8u.
 # - modernize-avoid-c-arrays.AllowStringArrays: a char array of deduced size initialised from a
 #   string literal is that literal, std::array would make its length something to keep in sync.
+# - performance-move-const-arg.CheckTriviallyCopyableMove: a dependency's ScopedServiceProxy is
+#   moved into the service that uses it. It's trivially copyable today, the move keeps that code
+#   right if it ever owns something.
+# - performance-unnecessary-value-param.AllowedTypes: Boost.Asio passes a yield_context by value,
+#   it's a handle to the coroutine.
+# - cppcoreguidelines-special-member-functions: a destructor that's only declared to make it
+#   virtual (or final) doesn't need the other four, nor do classes whose copy is deleted, explicitly
+#   or by a member. A class that only declares its copy is moved by copying, which NeverNull relies
+#   on: a moved-from NeverNull has to stay non-null.
 #
 # A finding that is only wrong at one place gets a NOLINT comment with the reason next to it
 # instead.
@@ -29,8 +86,35 @@ Checks: >-
   -*,
   bugprone-*,
   modernize-*,
+  performance-*,
+  cppcoreguidelines-*,
   -modernize-use-trailing-return-type,
-  -bugprone-easily-swappable-parameters
+  -bugprone-easily-swappable-parameters,
+  -performance-enum-size,
+  -cppcoreguidelines-avoid-c-arrays,
+  -cppcoreguidelines-explicit-virtual-functions,
+  -cppcoreguidelines-macro-to-enum,
+  -cppcoreguidelines-narrowing-conversions,
+  -cppcoreguidelines-noexcept-destructor,
+  -cppcoreguidelines-noexcept-move-operations,
+  -cppcoreguidelines-noexcept-swap,
+  -cppcoreguidelines-use-default-member-init,
+  -cppcoreguidelines-avoid-magic-numbers,
+  -cppcoreguidelines-pro-bounds-*,
+  -cppcoreguidelines-owning-memory,
+  -cppcoreguidelines-pro-type-reinterpret-cast,
+  -cppcoreguidelines-pro-type-static-cast-downcast,
+  -cppcoreguidelines-pro-type-vararg,
+  -cppcoreguidelines-avoid-reference-coroutine-parameters,
+  -cppcoreguidelines-avoid-capturing-lambda-coroutines,
+  -cppcoreguidelines-avoid-non-const-global-variables,
+  -cppcoreguidelines-avoid-const-or-ref-data-members,
+  -cppcoreguidelines-macro-usage,
+  -cppcoreguidelines-avoid-do-while,
+  -cppcoreguidelines-non-private-member-variables-in-classes,
+  -cppcoreguidelines-missing-std-forward,
+  -cppcoreguidelines-pro-type-union-access,
+  -cppcoreguidelines-rvalue-reference-param-not-moved
 WarningsAsErrors: '*'
 HeaderFilterRegex: '/(include|src|test|examples|benchmarks)/'
 ExcludeHeaderFilterRegex: '/external/|/common/lyra\.hpp$|/gsm_enc/|/beast_benchmark/fields_alloc\.hpp$'
@@ -38,3 +122,9 @@ CheckOptions:
   bugprone-exception-escape.CheckMain: false
   bugprone-signed-bitwise.IgnorePositiveIntegerLiterals: true
   modernize-avoid-c-arrays.AllowStringArrays: true
+  performance-move-const-arg.CheckTriviallyCopyableMove: false
+  performance-unnecessary-value-param.AllowedTypes: 'yield_context$;basic_yield_context'
+  cppcoreguidelines-special-member-functions.AllowSoleDefaultDtor: true
+  cppcoreguidelines-special-member-functions.AllowMissingMoveFunctionsWhenCopyIsDeleted: true
+  cppcoreguidelines-special-member-functions.AllowImplicitlyDeletedCopyOrMove: true
+  cppcoreguidelines-special-member-functions.AllowMissingMoveFunctions: true

@@ -55,6 +55,10 @@ public:
 
         queue->pushEvent<QuitEvent>(self->getServiceId());
     }
+    IntrospectionService(const IntrospectionService&) = delete;
+    IntrospectionService(IntrospectionService&&) = delete;
+    IntrospectionService& operator=(const IntrospectionService&) = delete;
+    IntrospectionService& operator=(IntrospectionService&&) = delete;
     ~IntrospectionService() {
         ICHOR_LOG_INFO(_logger, "IntrospectionService stopped");
     }

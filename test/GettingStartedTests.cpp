@@ -29,17 +29,17 @@ struct MyDependencyService final : public IMyDependencyService, public AdvancedS
     ~MyDependencyService() final = default;
 
     void addDependencyInstance(ScopedServiceProxy<IMyService*>, IService&) {
-        std::cout << "Got MyService!" << std::endl;
+        std::cout << "Got MyService!" << '\n';
     }
     void removeDependencyInstance(ScopedServiceProxy<IMyService*>, IService&) {
-        std::cout << "Removed MyService!" << std::endl;
+        std::cout << "Removed MyService!" << '\n';
     }
 };
 
 struct IMyTimerService {};
 
 struct MyTimerService final : public IMyTimerService {
-    MyTimerService(ScopedServiceProxy<ITimerFactory> factory) {
+    explicit MyTimerService(ScopedServiceProxy<ITimerFactory> factory) {
         auto timer = factory->createTimer();
         timer.setChronoInterval(std::chrono::seconds(1));
         timer.setCallback([]() {

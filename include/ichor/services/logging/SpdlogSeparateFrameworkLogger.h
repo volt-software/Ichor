@@ -8,7 +8,7 @@ namespace Ichor::v1 {
 
     class SpdlogSeparateFrameworkLogger final : public IFrameworkLogger, public AdvancedService<SpdlogSeparateFrameworkLogger> {
     public:
-        SpdlogSeparateFrameworkLogger(Properties props);
+        explicit SpdlogSeparateFrameworkLogger(Properties props);
         ~SpdlogSeparateFrameworkLogger() final = default;
 
         void trace(const char * ICHOR_RESTRICT filename_in, int line_in, const char * ICHOR_RESTRICT funcname_in, std::string_view format_str, fmt::format_args args) ICHOR_RESTRICT_THIS final;

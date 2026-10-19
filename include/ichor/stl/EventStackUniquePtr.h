@@ -12,6 +12,7 @@
 
 namespace Ichor::v1 {
     /// Owns a single Event (or derived type) stored inline, without heap allocation.
+    // NOLINTBEGIN(cppcoreguidelines-pro-type-member-init): _buffer is the storage the event is constructed in, zeroing it would cost every event a memset
     class [[nodiscard]] EventStackUniquePtr final {
     public:
         static constexpr std::size_t bufferSize = 128;
@@ -42,6 +43,7 @@ namespace Ichor::v1 {
         EventStackUniquePtr(EventStackUniquePtr &&other) noexcept {
             takeFrom(other);
         }
+    // NOLINTEND(cppcoreguidelines-pro-type-member-init)
 
         EventStackUniquePtr &operator=(const EventStackUniquePtr &) = delete;
 

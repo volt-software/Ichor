@@ -56,7 +56,7 @@ struct ConstructorInjectionQuitService final {
 };
 
 struct ConstructorInjectionQuitService2 final {
-    ConstructorInjectionQuitService2(IEventQueue *q) {
+    explicit ConstructorInjectionQuitService2(IEventQueue *q) {
         if(q == nullptr) {
             std::terminate();
         }
@@ -65,7 +65,7 @@ struct ConstructorInjectionQuitService2 final {
 };
 
 struct ConstructorInjectionQuitService3 final {
-    ConstructorInjectionQuitService3(DependencyManager *dm) {
+    explicit ConstructorInjectionQuitService3(DependencyManager *dm) {
         if(dm == nullptr) {
             std::terminate();
         }
@@ -74,7 +74,7 @@ struct ConstructorInjectionQuitService3 final {
 };
 
 struct ConstructorInjectionQuitService4 final {
-    ConstructorInjectionQuitService4(IService *self) {
+    explicit ConstructorInjectionQuitService4(IService *self) {
         if(self == nullptr) {
             std::terminate();
         }
