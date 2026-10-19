@@ -138,6 +138,48 @@ namespace {
         return tl::nullopt;
     }
 
+    /// A response the host generates for an error, with content explaining it and whether it's temporary (RFC 9110 15.5, 15.6)
+    HttpResponse errorResponse(HttpStatus status) {
+        std::string_view explanation;
+        switch(status) {
+            case HttpStatus::bad_request: explanation = "The request is not valid HTTP/1.1, sending it again won't help."; break;
+            case HttpStatus::not_found: explanation = "There is nothing at this target."; break;
+            case HttpStatus::method_not_allowed: explanation = "This method is not allowed for this target, the Allow field lists the ones that are."; break;
+            case HttpStatus::request_timeout: explanation = "The request did not arrive in time. It can be sent again on a new connection."; break;
+            case HttpStatus::payload_too_large: explanation = "The content is larger than this server accepts."; break;
+            case HttpStatus::uri_too_long: explanation = "The request target is longer than this server accepts."; break;
+            case HttpStatus::expectation_failed: explanation = "This server only supports the 100-continue expectation."; break;
+            case HttpStatus::misdirected_request: explanation = "This server does not serve https resources over this connection."; break;
+            case HttpStatus::request_header_fields_too_large: explanation = "The header section is larger than this server accepts."; break;
+            case HttpStatus::internal_server_error: explanation = "The server could not produce a valid response."; break;
+            case HttpStatus::not_implemented: explanation = "This server does not implement the request's method or transfer coding."; break;
+            case HttpStatus::http_version_not_supported: explanation = "This server supports HTTP/1.0 and HTTP/1.1."; break;
+            default: break;
+        }
+        HttpResponse response{.status = status, .contentType = {}, .body = {}, .headers = {}};
+        if(!explanation.empty()) {
+            response.contentType = "text/plain; charset=utf-8";
+            response.body.assign(explanation.begin(), explanation.end());
+            response.body.push_back('\n');
+        }
+        return response;
+    }
+
+    /// Fields that would be sent more than once: names that only differ in case, or a Content-Type field next to contentType (RFC 9110 5.3)
+    bool hasDuplicateFields(HttpResponse const &response) {
+        for(auto it = response.headers.begin(); it != response.headers.end(); ++it) {
+            if(response.contentType && HttpHeaderNameEqual{}(it->first, "Content-Type")) {
+                return true;
+            }
+            for(auto other = std::next(it); other != response.headers.end(); ++other) {
+                if(HttpHeaderNameEqual{}(it->first, other->first)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
     /// Without operator[], which would add unknown methods to the map that other threads read
     std::string_view methodName(HttpMethod method) noexcept {
         auto const name = ICHOR_REVERSE_METHOD_MATCHING.find(method);
@@ -622,7 +664,7 @@ Ichor::Task<void> Ichor::v1::HttpHostService::receiveRequestHandler(ServiceIdTyp
             ICHOR_LOG_TRACE(_logger, "HttpHostService {} connection {} invalid request, responding with {}", getServiceId(), id, static_cast<uint_fast16_t>(result.errorStatus));
             state.closing = true;
             state.clearBuffer();
-            HttpResponse response{.status = result.errorStatus, .contentType = {}, .body = {}, .headers = {}};
+            auto response = errorResponse(result.errorStatus);
             co_await sendResponse(id, response, ResponseContext{}, false);
             closeConnection(id);
             break;
@@ -663,7 +705,13 @@ Ichor::Task<bool> Ichor::v1::HttpHostService::handleRequest(ServiceIdType id, De
                             .owesContinue = request.expectContinue && !sentContinue};
 
     if(request.method == HttpMethod::unknown) {
-        HttpResponse response{.status = HttpStatus::not_implemented, .contentType = {}, .body = {}, .headers = {}};
+        auto response = errorResponse(HttpStatus::not_implemented);
+        co_return co_await sendResponse(id, response, context, request.keepAlive);
+    }
+
+    // A request for an https resource has to come over a connection secured for it (RFC 9110 7.4), the connections of this host are plain TCP
+    if(request.httpsTarget) {
+        auto response = errorResponse(HttpStatus::misdirected_request);
         co_return co_await sendResponse(id, response, context, request.keepAlive);
     }
 
@@ -720,10 +768,10 @@ Ichor::Task<bool> Ichor::v1::HttpHostService::handleRequest(ServiceIdType id, De
 
     if(route.first == nullptr) {
         auto methods = allowedMethods(request.target);
-        HttpResponse response{.status = HttpStatus::not_found, .contentType = {}, .body = {}, .headers = {}};
+        auto response = errorResponse(HttpStatus::not_found);
         if(!methods.empty()) {
             // 405 has to list the allowed methods (RFC 9110 15.5.6), as does a response to OPTIONS
-            response.status = request.method == HttpMethod::options ? HttpStatus::ok : HttpStatus::method_not_allowed;
+            response = request.method == HttpMethod::options ? HttpResponse{.status = HttpStatus::ok, .contentType = {}, .body = {}, .headers = {}} : errorResponse(HttpStatus::method_not_allowed);
             response.headers.emplace("Allow", joinMethods(methods));
         }
         co_return co_await sendResponse(id, response, context, request.keepAlive);
@@ -827,10 +875,10 @@ Ichor::v1::HttpHostService::SerializedResponse Ichor::v1::HttpHostService::seria
             (!response.contentType || Detail::isHttpFieldValue(*response.contentType)) &&
             std::ranges::all_of(response.headers, [](auto const &field) {
                 return Detail::isHttpToken(field.first) && Detail::isHttpFieldValue(field.second);
-            });
+            }) && !hasDuplicateFields(response);
     if(!valid) {
-        ICHOR_LOG_ERROR(_logger, "HttpHostService {} handler responded with an invalid status {} or header, responding with 500 instead", getServiceId(), status);
-        response = HttpResponse{.status = HttpStatus::internal_server_error, .contentType = {}, .body = {}, .headers = {}};
+        ICHOR_LOG_ERROR(_logger, "HttpHostService {} handler responded with an invalid status {}, an invalid header or the same header twice, responding with 500 instead", getServiceId(), status);
+        response = errorResponse(HttpStatus::internal_server_error);
         status = 500;
     }
     bool const replaced = !valid;
@@ -1095,7 +1143,7 @@ void Ichor::v1::HttpHostService::checkTimeouts() {
         state.clearBuffer();
         // The client can't know when the server gave up on its request, the connection is closed after this (RFC 9110 15.5.9)
         _queue->pushPrioritisedEvent<RunFunctionEventAsync>(getServiceId(), _priority, [this, id]() -> AsyncGenerator<IchorBehaviour> {
-            HttpResponse response{.status = HttpStatus::request_timeout, .contentType = {}, .body = {}, .headers = {}};
+            auto response = errorResponse(HttpStatus::request_timeout);
             co_await sendResponse(id, response, ResponseContext{}, false);
             closeConnection(id);
             co_return {};

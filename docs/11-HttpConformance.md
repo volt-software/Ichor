@@ -56,11 +56,14 @@ Some requirements are on the content of a response, which only a route's handler
 | 2.5 | Respond with the highest version conformant to, of the request's major version | SHOULD | Always HTTP/1.1, later 1.x minor versions are handled as 1.1 | request line |
 | 5.1 | Field names are case-insensitive | MUST | `HttpRequest::headers` ignores case | header fields |
 | 5.3 | Field lines with the same name are one list | MUST | Combined with `, ` (`; ` for Cookie) | header fields |
+| 5.3 | Don't send a field twice | MUST | A handler's response with names that only differ in case, or `contentType` and a Content-Type field, is a 500 | a handler's response with the same field twice is 500 |
 | 5.4 | A field section larger than the server wants is a 4xx | MUST | MaxHeaderSize (64 KiB): 431 | request line, limits from properties |
 | 5.5 | Field values with CR, LF or NUL: reject or replace | MUST | Rejected: 400, as are other control characters | header fields |
+| 5.6.1.2 | Accept empty list elements | MUST | Ignored in Connection, Transfer-Encoding, Expect, Upgrade, If-Match and If-None-Match | Expect is a list, transfer coding parameters and syntax |
 | 5.6.7 | Accept all three HTTP-date formats | MUST | IMF-fixdate, RFC 850 (two-digit years as the RFC says) and asctime | HTTP-date, conditional requests |
 | 6.6.1 | An origin server with a clock sends Date | MUST | Every response, unless the handler sets one | responses |
 | 7.2 | Host, see RFC 9112 3.2 | MUST | | header fields |
+| 7.4 | A request for an https resource over a connection not secured for it is rejected | MUST | 421 for an absolute-form https target: the host's connections are plain TCP | an https target over a plain connection is 421 |
 | 7.4 | Requests for another authority can be 421 | MAY | Not done: the host doesn't know its names | - |
 | 7.6.1 | Connection options | MUST | `close`, `keep-alive` and `upgrade` are acted on. A handler's Connection field is replaced by the host's, after its `close` is taken into account | persistence, upgrade |
 | 7.8 | Upgrade: ignore it in HTTP/1.0, switch only to a protocol the client asked for, send Upgrade and Connection: upgrade with 101 | MUST | Streaming routes can switch, anything else is 500 | upgrade, HttpHostSocketTests |
@@ -74,6 +77,7 @@ Some requirements are on the content of a response, which only a route's handler
 | 9.1 | A method the resource doesn't allow is 405 | SHOULD | 405 when another method has a route for it | routing |
 | 9.1 | GET and HEAD are supported | MUST | HEAD uses the GET route | routing |
 | 9.3.2 | HEAD: the header fields of GET, no content | SHOULD | The GET route's response without content | routing |
+| 9.3.6 | CONNECT to an empty or invalid port is 400 | MUST | Ports outside 1-65535 are 400 | CONNECT to an invalid port is 400 |
 | 9.3.6 | CONNECT: 2xx starts a tunnel without Content-Length or Transfer-Encoding | MUST | Streaming routes can take the tunnel over, other routes' 2xx closes the connection | upgrade, a 2xx to CONNECT has no framing and closes |
 | 9.3.7 | OPTIONS: Allow, Content-Length: 0 without content | SHOULD / MUST | Without an OPTIONS route | routing |
 | 9.3.8 | TRACE: reflect the request without sensitive fields | SHOULD | Off by default (EnableTrace), as reflecting requests is a known risk | TRACE |
@@ -89,6 +93,7 @@ Some requirements are on the content of a response, which only a route's handler
 | 15.3.5 | 204 has no content | MUST | Content and Content-Length are dropped | responses, streaming responses |
 | 15.3.6 | 205 has no content | MUST | Content dropped, Content-Length: 0 | 205 has no content |
 | 15.4.5 | 304 has no content, keeps the fields a 200 would have | MUST | Content and Content-Type dropped, as is a Content-Length the handler set for content it sent | responses, conditional requests, a 304 doesn't pass on the Content-Length a handler set for its content |
+| 15.5, 15.6 | Error responses explain the error and whether it's temporary, a 505 what versions are supported | SHOULD | The errors the host responds with have a text/plain explanation, the content of a handler's error responses is the handler's | the errors the host responds with explain themselves |
 | 15.5.6 | 405 has Allow | MUST | Added by the host when the handler's 405 has none | routing, required fields of a handler's response |
 | 15.5.9 | 408: close the connection | SHOULD | Closed after the 408 | timeouts, HttpHostSocketTests |
 | 15.5.14 | 413: can close the connection | MAY | Closed: the content that's still coming can't be framed | limits from properties |
@@ -97,6 +102,19 @@ Some requirements are on the content of a response, which only a route's handler
 ## RFC 9111: caching
 
 An origin server's part in caching is the fields it sends (Cache-Control, Expires, ETag, Last-Modified, Vary), which are the handler's, and answering conditional requests, see RFC 9110 13 above. RFC 9111 has no requirements on origin servers beyond that.
+
+## How this was checked
+
+- Every sentence with a MUST or MUST NOT in RFC 9112 (84), RFC 9110 (200) and RFC 9111 (59) was taken from the RFC text and checked against the
+  implementation, leaving out those only for clients, proxies, caches and registrations. That found four requirements that weren't met (duplicate
+  fields, empty list elements in Expect, https targets, CONNECT ports), which have their rows and tests now. The same for every SHOULD in RFC 9112 (18)
+  and RFC 9110 (88) found that the errors the host responded with had no explanation. The requirements left to a handler are marked *handler* in the
+  tables, the deliberate deviations are TRACE being off by default and the unsupported features below.
+- curl and Python's http.client, independent HTTP/1.1 implementations, against a running HttpHostService: GET, HEAD, a 2 MB chunked upload, Expect:
+  100-continue, chunked and close-delimited streaming, conditional requests, connection reuse, OPTIONS * and 405. Raw requests for pipelining and
+  the usual request smuggling variants (Content-Length with Transfer-Encoding, obfuscated or repeated Transfer-Encoding, obs-fold, whitespace before
+  the colon, two Content-Lengths, a signed Content-Length, chunk-size overflow), a bare LF, a missing Host, HTTP/2.0, a header section over the
+  limit and a body that never completes (408).
 
 ## Not supported
 

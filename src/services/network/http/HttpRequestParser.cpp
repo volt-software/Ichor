@@ -213,7 +213,12 @@ namespace {
     /// authority-form = uri-host ":" port (RFC 9112 3.2.3)
     bool isValidAuthorityForm(std::string_view target) noexcept {
         auto const hostAndPort = parseHostAndPort(target);
-        return hostAndPort && !hostAndPort->host.empty() && hostAndPort->port && !hostAndPort->port->empty();
+        if(!hostAndPort || hostAndPort->host.empty() || !hostAndPort->port || hostAndPort->port->empty() || hostAndPort->port->size() > 5) {
+            return false;
+        }
+        // CONNECT to an empty or invalid port is rejected (RFC 9110 9.3.6)
+        auto const port = parseUint64(*hostAndPort->port);
+        return port && *port >= 1 && *port <= 65'535;
     }
 
     /// chunk-size = 1*HEXDIG, nothing if it's empty or doesn't fit
@@ -483,6 +488,7 @@ namespace {
                 }
             }
             state.absoluteFormAuthority = std::string{authority};
+            req.httpsTarget = equalsIgnoreCase(target.substr(0, schemeEnd), "https");
         }
         return tl::nullopt;
     }
@@ -598,11 +604,25 @@ namespace {
 
         // Expect (RFC 9110 10.1.1)
         if(auto const expectIt = req.headers.find("Expect"); expectIt != req.headers.end()) {
-            if(!equalsIgnoreCase(expectIt->second, "100-continue")) {
+            // Expect = #expectation, empty list elements are ignored (RFC 9110 5.6.1.2)
+            bool unknown{};
+            bool expectsContinue{};
+            split(expectIt->second, ",", false, [&](std::string_view expectation) {
+                expectation = trimOws(expectation);
+                if(expectation.empty()) {
+                    return;
+                }
+                if(equalsIgnoreCase(expectation, "100-continue")) {
+                    expectsContinue = true;
+                } else {
+                    unknown = true;
+                }
+            });
+            if(unknown) {
                 return invalid(HttpStatus::expectation_failed);
             }
             // A 100-continue expectation in an HTTP/1.0 request has to be ignored
-            req.expectContinue = http11;
+            req.expectContinue = expectsContinue && http11;
         }
 
         state.contentStart = headerEnd;
