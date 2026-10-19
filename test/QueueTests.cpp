@@ -524,6 +524,11 @@ TEST_CASE("QueueTests") {
     }
 
     SECTION("IOUringQueue keeps the order of events pushed from another thread") {
+        auto version = Ichor::v1::kernelVersion();
+        REQUIRE(version);
+        if(version < Version{.major=5, .minor=18, .patch=0}) {
+            SKIP("pushing events from other threads requires kernel 5.18");
+        }
         // Pushes from a thread without an IOUringQueue wait for the delivery of each msg_ring. With DEFER_TASKRUN targets the messages
         // are delivered through task_work, which runs newest-first on kernels 6.2 - 6.10, so not waiting reorders them there.
         // On other kernels this passes either way.
@@ -560,6 +565,11 @@ TEST_CASE("QueueTests") {
     }
 
     SECTION("IOUringQueue keeps the order of events pushed from another IOUringQueue's thread") {
+        auto version = Ichor::v1::kernelVersion();
+        REQUIRE(version);
+        if(version < Version{.major=5, .minor=18, .patch=0}) {
+            SKIP("pushing events from other threads requires kernel 5.18");
+        }
         // Same as above, from another IOUringQueue's thread, which can't wait for the delivery (two queues pushing to each other would
         // deadlock). Events go through a FIFO, msg_ring only wakes up the target. Only reorders on kernels 6.2 - 6.10 without that.
         constexpr uint32_t events = 1'000;
@@ -677,6 +687,11 @@ TEST_CASE("QueueTests") {
     }
 
     SECTION("IOUringQueue destroys events pushed while handling its last batch") {
+        auto version = Ichor::v1::kernelVersion();
+        REQUIRE(version);
+        if(version < Version{.major=5, .minor=18, .patch=0}) {
+            SKIP("pushing events from other threads requires kernel 5.18");
+        }
         CountedEvent::created = 0;
         CountedEvent::destroyed = 0;
         auto queue = std::make_unique<IOUringQueue>(10, 10'000);
