@@ -6,6 +6,14 @@ cleanup ()
   exit 0
 }
 
+# Runs the tests of the build in the current directory, as many at a time as there are cores. Each test case is its own process, which runs in a
+# directory of its own (test/Support/TestEnvironment.cpp) and picks free ports (test/Support/FreePort.h). The ones that share an external server
+# (etcd, redis) have a RESOURCE_LOCK, so they don't run at the same time.
+run_tests ()
+{
+  ctest -j"$(nproc)" --output-on-failure --timeout 600
+}
+
 run_examples ()
 {
   BOOST=${1}

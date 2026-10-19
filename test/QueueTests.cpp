@@ -650,11 +650,11 @@ TEST_CASE("QueueTests") {
         queue->pushEvent<QuitEvent>(ServiceIdType{0});
         while(queue->is_running() || dmPtr.load(std::memory_order_acquire)->isRunning()) {
             std::this_thread::sleep_for(1ms);
-            REQUIRE(std::chrono::steady_clock::now() - start < 2s);
+            REQUIRE(std::chrono::steady_clock::now() - start < 5s);
         }
         t.join();
         // well below the 10 second quit timeout: the final loop must not wait for the multishot request to stop by itself
-        REQUIRE(std::chrono::steady_clock::now() - start < 2s);
+        REQUIRE(std::chrono::steady_clock::now() - start < 5s);
     }
 
     SECTION("IOUringQueue rejects SQPOLL rings") {

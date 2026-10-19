@@ -759,7 +759,7 @@ TEST_CASE("ServicesTests") {
         auto start = std::chrono::steady_clock::now();
         while(countingTimerCallbacks.load(std::memory_order_acquire) < 3) {
             std::this_thread::sleep_for(500us);
-            REQUIRE(std::chrono::steady_clock::now() - start < 1s);
+            REQUIRE(std::chrono::steady_clock::now() - start < 5s);
         }
 
         // stopped, not removed: its timer keeps running, but the callbacks shouldn't be called anymore
@@ -772,7 +772,7 @@ TEST_CASE("ServicesTests") {
                 }
             });
             std::this_thread::sleep_for(1ms);
-            REQUIRE(std::chrono::steady_clock::now() - start < 1s);
+            REQUIRE(std::chrono::steady_clock::now() - start < 5s);
         }
         // callbacks pushed before the service stopped
         std::this_thread::sleep_for(10ms);
@@ -786,10 +786,11 @@ TEST_CASE("ServicesTests") {
     }
 
     SECTION("Fire-once timers can restart themselves and stop callbacks can destroy their timer") {
+        // a long quit timeout, so that a miscount that makes quitting wait for it stands out from a slow quit (the tests run in parallel)
 #if defined(TEST_URING)
-        auto queue = std::make_unique<QIMPL>(2'000, 100'000'000, emulateKernelVersion);
+        auto queue = std::make_unique<QIMPL>(10'000, 100'000'000, emulateKernelVersion);
 #else
-        auto queue = std::make_unique<QIMPL>(2'000);
+        auto queue = std::make_unique<QIMPL>(10'000);
 #endif
         auto &dm = queue->getManager();
         ServiceIdType svcId{};
@@ -820,7 +821,7 @@ TEST_CASE("ServicesTests") {
         auto start = std::chrono::steady_clock::now();
         while(evtGate.load(std::memory_order_acquire) < 1) {
             std::this_thread::sleep_for(500us);
-            REQUIRE(std::chrono::steady_clock::now() - start < 1s);
+            REQUIRE(std::chrono::steady_clock::now() - start < 5s);
         }
 
         queue->pushEvent<RunFunctionEvent>(ServiceIdType{0}, [&]() {
@@ -835,8 +836,8 @@ TEST_CASE("ServicesTests") {
         auto quitStart = std::chrono::steady_clock::now();
         while(queue->is_running()) {
             std::this_thread::sleep_for(1ms);
-            // well below the 2 second quit timeout of the queue
-            REQUIRE(std::chrono::steady_clock::now() - quitStart < 1s);
+            // well below the 10 second quit timeout of the queue
+            REQUIRE(std::chrono::steady_clock::now() - quitStart < 5s);
         }
 
         t.join();
@@ -1782,7 +1783,7 @@ TEST_CASE("ServicesTests") {
         auto start = std::chrono::steady_clock::now();
         while(evtGate.load(std::memory_order_acquire) == 0) {
             std::this_thread::sleep_for(100us);
-            REQUIRE(std::chrono::steady_clock::now() - start < 1s);
+            REQUIRE(std::chrono::steady_clock::now() - start < 5s);
         }
 
         queue->pushEvent<RunFunctionEvent>(ServiceIdType{0}, [&]() {

@@ -1,4 +1,5 @@
 #include "Common.h"
+#include "Support/FreePort.h"
 #include <ichor/events/RunFunctionEvent.h>
 #include <ichor/coroutines/AsyncManualResetEvent.h>
 #include <ichor/services/logging/LoggerFactory.h>
@@ -59,6 +60,7 @@ TEST_CASE("TcpTests_uring") {
 TEST_CASE("TcpTests") {
 #endif
     SECTION("Send message") {
+        auto const port = freeTcpPort();
         testEvt = std::make_unique<Ichor::AsyncManualResetEvent>();
 #if defined(TEST_URING)
         auto queue = std::make_unique<QIMPL>(500, 100'000'000, emulateKernelVersion);
@@ -78,12 +80,12 @@ TEST_CASE("TcpTests") {
             uint64_t priorityToEnsureHostStartingFirst = 51;
             dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>(Properties{{"DefaultLogLevel", Ichor::v1::make_any<LogLevel>(LogLevel::LOG_TRACE)}}, priorityToEnsureHostStartingFirst);
             dm.createServiceManager<LoggerFactory<CoutLogger>, ILoggerFactory>(Properties{{"DefaultLogLevel", Ichor::v1::make_any<LogLevel>(LogLevel::LOG_TRACE)}}, priorityToEnsureHostStartingFirst);
-            dm.createServiceManager<HOSTIMPL, IHostService>(Properties{{"Address", Ichor::v1::make_any<std::string>("127.0.0.1"s)}, {"Port", Ichor::v1::make_any<uint16_t>(static_cast<uint16_t>(8001))}}, priorityToEnsureHostStartingFirst);
+            dm.createServiceManager<HOSTIMPL, IHostService>(Properties{{"Address", Ichor::v1::make_any<std::string>("127.0.0.1"s)}, {"Port", Ichor::v1::make_any<uint16_t>(port)}}, priorityToEnsureHostStartingFirst);
             dm.createServiceManager<ClientFactory<CONNIMPL<IClientConnectionService>>, IClientFactory<IConnectionService>>();
 #ifndef TEST_URING
             dm.createServiceManager<TimerFactoryFactory>(Properties{}, priorityToEnsureHostStartingFirst);
 #endif
-            tcpClientId = dm.createServiceManager<TcpService, ITcpService>(Properties{{"Address", Ichor::v1::make_any<std::string>("127.0.0.1"s)}, {"Port", Ichor::v1::make_any<uint16_t>(static_cast<uint16_t>(8001))}})->getServiceId();
+            tcpClientId = dm.createServiceManager<TcpService, ITcpService>(Properties{{"Address", Ichor::v1::make_any<std::string>("127.0.0.1"s)}, {"Port", Ichor::v1::make_any<uint16_t>(port)}})->getServiceId();
 
             queue->start(CaptureSigInt);
         });
@@ -142,6 +144,7 @@ TEST_CASE("TcpTests") {
     }
 
     SECTION("Send huge message") {
+        auto const port = freeTcpPort();
         testEvt = std::make_unique<Ichor::AsyncManualResetEvent>();
         auto queue = std::make_unique<QIMPL>(true);
         ServiceIdType tcpClientId;
@@ -157,12 +160,12 @@ TEST_CASE("TcpTests") {
             uint64_t priorityToEnsureHostStartingFirst = 51;
             dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>(Properties{{"DefaultLogLevel", Ichor::v1::make_any<LogLevel>(LogLevel::LOG_DEBUG)}}, priorityToEnsureHostStartingFirst);
             dm.createServiceManager<LoggerFactory<CoutLogger>, ILoggerFactory>(Properties{{"DefaultLogLevel", Ichor::v1::make_any<LogLevel>(LogLevel::LOG_DEBUG)}}, priorityToEnsureHostStartingFirst);
-            dm.createServiceManager<HOSTIMPL, IHostService>(Properties{{"Address", Ichor::v1::make_any<std::string>("127.0.0.1"s)}, {"Port", Ichor::v1::make_any<uint16_t>(static_cast<uint16_t>(8001))}, {"BufferEntries", Ichor::v1::make_any<uint32_t>(static_cast<uint16_t>(16))}, {"BufferEntrySize", Ichor::v1::make_any<uint32_t>(static_cast<uint16_t>(16'384))}}, priorityToEnsureHostStartingFirst);
+            dm.createServiceManager<HOSTIMPL, IHostService>(Properties{{"Address", Ichor::v1::make_any<std::string>("127.0.0.1"s)}, {"Port", Ichor::v1::make_any<uint16_t>(port)}, {"BufferEntries", Ichor::v1::make_any<uint32_t>(static_cast<uint16_t>(16))}, {"BufferEntrySize", Ichor::v1::make_any<uint32_t>(static_cast<uint16_t>(16'384))}}, priorityToEnsureHostStartingFirst);
             dm.createServiceManager<ClientFactory<CONNIMPL<IClientConnectionService>>, IClientFactory<IConnectionService>>();
 #ifndef TEST_URING
             dm.createServiceManager<TimerFactoryFactory>(Properties{}, priorityToEnsureHostStartingFirst);
 #endif
-            tcpClientId = dm.createServiceManager<TcpService, ITcpService>(Properties{{"Address", Ichor::v1::make_any<std::string>("127.0.0.1"s)}, {"Port", Ichor::v1::make_any<uint16_t>(static_cast<uint16_t>(8001))}})->getServiceId();
+            tcpClientId = dm.createServiceManager<TcpService, ITcpService>(Properties{{"Address", Ichor::v1::make_any<std::string>("127.0.0.1"s)}, {"Port", Ichor::v1::make_any<uint16_t>(port)}})->getServiceId();
 
             queue->start(CaptureSigInt);
         });
@@ -221,6 +224,7 @@ TEST_CASE("TcpTests") {
     }
 
     SECTION("Send multiple message") {
+        auto const port = freeTcpPort();
         testEvt = std::make_unique<Ichor::AsyncManualResetEvent>();
         auto queue = std::make_unique<QIMPL>(true);
         ServiceIdType tcpClientId;
@@ -236,12 +240,12 @@ TEST_CASE("TcpTests") {
             uint64_t priorityToEnsureHostStartingFirst = 51;
             dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>(Properties{{"DefaultLogLevel", Ichor::v1::make_any<LogLevel>(LogLevel::LOG_TRACE)}}, priorityToEnsureHostStartingFirst);
             dm.createServiceManager<LoggerFactory<CoutLogger>, ILoggerFactory>(Properties{{"DefaultLogLevel", Ichor::v1::make_any<LogLevel>(LogLevel::LOG_TRACE)}}, priorityToEnsureHostStartingFirst);
-            dm.createServiceManager<HOSTIMPL, IHostService>(Properties{{"Address", Ichor::v1::make_any<std::string>("127.0.0.1"s)}, {"Port", Ichor::v1::make_any<uint16_t>(static_cast<uint16_t>(8001))}}, priorityToEnsureHostStartingFirst);
+            dm.createServiceManager<HOSTIMPL, IHostService>(Properties{{"Address", Ichor::v1::make_any<std::string>("127.0.0.1"s)}, {"Port", Ichor::v1::make_any<uint16_t>(port)}}, priorityToEnsureHostStartingFirst);
             dm.createServiceManager<ClientFactory<CONNIMPL<IClientConnectionService>>, IClientFactory<IConnectionService>>();
 #ifndef TEST_URING
             dm.createServiceManager<TimerFactoryFactory>(Properties{}, priorityToEnsureHostStartingFirst);
 #endif
-            tcpClientId = dm.createServiceManager<TcpService, ITcpService>(Properties{{"Address", Ichor::v1::make_any<std::string>("127.0.0.1"s)}, {"Port", Ichor::v1::make_any<uint16_t>(static_cast<uint16_t>(8001))}})->getServiceId();
+            tcpClientId = dm.createServiceManager<TcpService, ITcpService>(Properties{{"Address", Ichor::v1::make_any<std::string>("127.0.0.1"s)}, {"Port", Ichor::v1::make_any<uint16_t>(port)}})->getServiceId();
 
             queue->start(CaptureSigInt);
         });
@@ -308,6 +312,7 @@ TEST_CASE("TcpTests") {
     }
 
     SECTION("Send multiple message in one go") {
+        auto const port = freeTcpPort();
         testEvt = std::make_unique<Ichor::AsyncManualResetEvent>();
         auto queue = std::make_unique<QIMPL>(true);
         ServiceIdType tcpClientId;
@@ -323,12 +328,12 @@ TEST_CASE("TcpTests") {
             uint64_t priorityToEnsureHostStartingFirst = 51;
             dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>(Properties{{"DefaultLogLevel", Ichor::v1::make_any<LogLevel>(LogLevel::LOG_TRACE)}}, priorityToEnsureHostStartingFirst);
             dm.createServiceManager<LoggerFactory<CoutLogger>, ILoggerFactory>(Properties{{"DefaultLogLevel", Ichor::v1::make_any<LogLevel>(LogLevel::LOG_TRACE)}}, priorityToEnsureHostStartingFirst);
-            dm.createServiceManager<HOSTIMPL, IHostService>(Properties{{"Address", Ichor::v1::make_any<std::string>("127.0.0.1"s)}, {"Port", Ichor::v1::make_any<uint16_t>(static_cast<uint16_t>(8001))}}, priorityToEnsureHostStartingFirst);
+            dm.createServiceManager<HOSTIMPL, IHostService>(Properties{{"Address", Ichor::v1::make_any<std::string>("127.0.0.1"s)}, {"Port", Ichor::v1::make_any<uint16_t>(port)}}, priorityToEnsureHostStartingFirst);
             dm.createServiceManager<ClientFactory<CONNIMPL<IClientConnectionService>>, IClientFactory<IConnectionService>>();
 #ifndef TEST_URING
             dm.createServiceManager<TimerFactoryFactory>(Properties{}, priorityToEnsureHostStartingFirst);
 #endif
-            tcpClientId = dm.createServiceManager<TcpService, ITcpService>(Properties{{"Address", Ichor::v1::make_any<std::string>("127.0.0.1"s)}, {"Port", Ichor::v1::make_any<uint16_t>(static_cast<uint16_t>(8001))}})->getServiceId();
+            tcpClientId = dm.createServiceManager<TcpService, ITcpService>(Properties{{"Address", Ichor::v1::make_any<std::string>("127.0.0.1"s)}, {"Port", Ichor::v1::make_any<uint16_t>(port)}})->getServiceId();
 
             queue->start(CaptureSigInt);
         });
@@ -385,6 +390,7 @@ TEST_CASE("TcpTests") {
     }
 
     SECTION("Send multiple message in one go huge") {
+        auto const port = freeTcpPort();
         testEvt = std::make_unique<Ichor::AsyncManualResetEvent>();
         auto queue = std::make_unique<QIMPL>(true);
         ServiceIdType tcpClientId;
@@ -400,12 +406,12 @@ TEST_CASE("TcpTests") {
             uint64_t priorityToEnsureHostStartingFirst = 51;
             dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>(Properties{{"DefaultLogLevel", Ichor::v1::make_any<LogLevel>(LogLevel::LOG_TRACE)}}, priorityToEnsureHostStartingFirst);
             dm.createServiceManager<LoggerFactory<CoutLogger>, ILoggerFactory>(Properties{{"DefaultLogLevel", Ichor::v1::make_any<LogLevel>(LogLevel::LOG_TRACE)}}, priorityToEnsureHostStartingFirst);
-            dm.createServiceManager<HOSTIMPL, IHostService>(Properties{{"Address", Ichor::v1::make_any<std::string>("127.0.0.1"s)}, {"Port", Ichor::v1::make_any<uint16_t>(static_cast<uint16_t>(8001))}, {"BufferEntries", Ichor::v1::make_any<uint32_t>(static_cast<uint16_t>(512))}, {"BufferEntrySize", Ichor::v1::make_any<uint32_t>(static_cast<uint16_t>(32))}}, priorityToEnsureHostStartingFirst);
+            dm.createServiceManager<HOSTIMPL, IHostService>(Properties{{"Address", Ichor::v1::make_any<std::string>("127.0.0.1"s)}, {"Port", Ichor::v1::make_any<uint16_t>(port)}, {"BufferEntries", Ichor::v1::make_any<uint32_t>(static_cast<uint16_t>(512))}, {"BufferEntrySize", Ichor::v1::make_any<uint32_t>(static_cast<uint16_t>(32))}}, priorityToEnsureHostStartingFirst);
             dm.createServiceManager<ClientFactory<CONNIMPL<IClientConnectionService>>, IClientFactory<IConnectionService>>();
 #ifndef TEST_URING
             dm.createServiceManager<TimerFactoryFactory>(Properties{}, priorityToEnsureHostStartingFirst);
 #endif
-            tcpClientId = dm.createServiceManager<TcpService, ITcpService>(Properties{{"Address", Ichor::v1::make_any<std::string>("127.0.0.1"s)}, {"Port", Ichor::v1::make_any<uint16_t>(static_cast<uint16_t>(8001))}})->getServiceId();
+            tcpClientId = dm.createServiceManager<TcpService, ITcpService>(Properties{{"Address", Ichor::v1::make_any<std::string>("127.0.0.1"s)}, {"Port", Ichor::v1::make_any<uint16_t>(port)}})->getServiceId();
 
             queue->start(CaptureSigInt);
         });
@@ -470,6 +476,7 @@ TEST_CASE("TcpTests") {
     }
 
     SECTION("Closing connection removes services") {
+        auto const port = freeTcpPort();
         testEvt = std::make_unique<Ichor::AsyncManualResetEvent>();
         auto queue = std::make_unique<QIMPL>(true);
         ServiceIdType tcpClientId;
@@ -485,12 +492,12 @@ TEST_CASE("TcpTests") {
             uint64_t priorityToEnsureHostStartingFirst = 51;
             dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>(Properties{{"DefaultLogLevel", Ichor::v1::make_any<LogLevel>(LogLevel::LOG_TRACE)}}, priorityToEnsureHostStartingFirst);
             dm.createServiceManager<LoggerFactory<CoutLogger>, ILoggerFactory>(Properties{{"DefaultLogLevel", Ichor::v1::make_any<LogLevel>(LogLevel::LOG_TRACE)}}, priorityToEnsureHostStartingFirst);
-            dm.createServiceManager<HOSTIMPL, IHostService>(Properties{{"Address", Ichor::v1::make_any<std::string>("127.0.0.1"s)}, {"Port", Ichor::v1::make_any<uint16_t>(static_cast<uint16_t>(8001))}}, priorityToEnsureHostStartingFirst);
+            dm.createServiceManager<HOSTIMPL, IHostService>(Properties{{"Address", Ichor::v1::make_any<std::string>("127.0.0.1"s)}, {"Port", Ichor::v1::make_any<uint16_t>(port)}}, priorityToEnsureHostStartingFirst);
             dm.createServiceManager<ClientFactory<CONNIMPL<IClientConnectionService>>, IClientFactory<IConnectionService>>();
 #ifndef TEST_URING
             dm.createServiceManager<TimerFactoryFactory>(Properties{}, priorityToEnsureHostStartingFirst);
 #endif
-            tcpClientId = dm.createServiceManager<TcpService, ITcpService>(Properties{{"Address", Ichor::v1::make_any<std::string>("127.0.0.1"s)}, {"Port", Ichor::v1::make_any<uint16_t>(static_cast<uint16_t>(8001))}})->getServiceId();
+            tcpClientId = dm.createServiceManager<TcpService, ITcpService>(Properties{{"Address", Ichor::v1::make_any<std::string>("127.0.0.1"s)}, {"Port", Ichor::v1::make_any<uint16_t>(port)}})->getServiceId();
 
             queue->start(CaptureSigInt);
         });

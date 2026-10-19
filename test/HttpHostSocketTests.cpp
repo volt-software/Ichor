@@ -1,5 +1,6 @@
 // HttpHostService over real sockets, with a raw socket as client: what only shows up in the TCP stack, such as closing gracefully.
 #include "Common.h"
+#include "Support/FreePort.h"
 #include <ichor/events/RunFunctionEvent.h>
 #include <ichor/services/logging/LoggerFactory.h>
 #include <ichor/services/logging/NullLogger.h>
@@ -19,7 +20,6 @@
 #define QIMPL IOUringQueue
 #define HOSTIMPL IOUringTcpHostService
 #define TFFIMPL IOUringTimerFactoryFactory
-constexpr uint16_t PORT = 8014;
 #else
 #include <ichor/services/network/tcp/TcpHostService.h>
 #include <ichor/services/timer/TimerFactoryFactory.h>
@@ -28,12 +28,14 @@ constexpr uint16_t PORT = 8014;
 #define QIMPL PriorityQueue
 #define HOSTIMPL TcpHostService
 #define TFFIMPL TimerFactoryFactory
-constexpr uint16_t PORT = 8013;
 #endif
 
 using namespace std::string_literals;
 
 namespace {
+    /// Picked again each time the test case runs (for each section), see freeTcpPort
+    uint16_t port{};
+
     std::vector<uint8_t> toBody(std::string_view str) {
         return {str.begin(), str.end()};
     }
@@ -91,14 +93,18 @@ namespace {
         std::shared_ptr<IHttpUpgradedConnection> _echo;
     };
 
+    /// How long a test waits for what should happen, before failing. Long, as the tests run alongside each other (ctest -j): the ones that pass
+    /// don't wait for it.
+    constexpr auto patience = 10s;
+
     int connectToServer() {
         auto const start = std::chrono::steady_clock::now();
-        while(std::chrono::steady_clock::now() - start < 2s) {
+        while(std::chrono::steady_clock::now() - start < patience) {
             int fd = ::socket(AF_INET, SOCK_STREAM | SOCK_CLOEXEC, 0);
             REQUIRE(fd >= 0);
             sockaddr_in address{};
             address.sin_family = AF_INET;
-            address.sin_port = htons(PORT);
+            address.sin_port = htons(port);
             REQUIRE(inet_pton(AF_INET, "127.0.0.1", &address.sin_addr) == 1);
             if(::connect(fd, reinterpret_cast<sockaddr *>(&address), sizeof(address)) == 0) {
                 return fd;
@@ -126,7 +132,7 @@ namespace {
 
     /// Receives until until() is satisfied, the server closes or a timeout
     template <typename Until>
-    Received receive(int fd, Until &&until, std::chrono::milliseconds timeout = 2'000ms) {
+    Received receive(int fd, Until &&until, std::chrono::milliseconds timeout = patience) {
         Received ret;
         auto const start = std::chrono::steady_clock::now();
         while(!until(ret.data) && std::chrono::steady_clock::now() - start < timeout) {
@@ -148,7 +154,7 @@ namespace {
         return ret;
     }
 
-    Received receiveUntilClosed(int fd, std::chrono::milliseconds timeout = 2'000ms) {
+    Received receiveUntilClosed(int fd, std::chrono::milliseconds timeout = patience) {
         return receive(fd, [](std::string const &) { return false; }, timeout);
     }
 }
@@ -160,9 +166,11 @@ TEST_CASE("HttpHostSocketTests_uring") {
     if(version < v1::Version{.major=5, .minor=18, .patch=0}) {
         return;
     }
+    port = freeTcpPort();
     auto queue = std::make_unique<QIMPL>(500, 100'000'000);
 #else
 TEST_CASE("HttpHostSocketTests") {
+    port = freeTcpPort();
     auto queue = std::make_unique<QIMPL>(500, true);
 #endif
     Ichor::v1::Detail::_local_dm = nullptr;
@@ -177,8 +185,8 @@ TEST_CASE("HttpHostSocketTests") {
         dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>({}, priorityToEnsureHostStartingFirst);
         dm.createServiceManager<LoggerFactory<NullLogger>, ILoggerFactory>({}, priorityToEnsureHostStartingFirst);
         dm.createServiceManager<TFFIMPL>(Properties{}, priorityToEnsureHostStartingFirst);
-        dm.createServiceManager<HOSTIMPL, IHostService>(Properties{{"Address", Ichor::v1::make_any<std::string>("127.0.0.1"s)}, {"Port", Ichor::v1::make_any<uint16_t>(PORT)}}, priorityToEnsureHostStartingFirst);
-        dm.createServiceManager<HttpHostService, IHttpHostService>(Properties{{"Address", Ichor::v1::make_any<std::string>("127.0.0.1"s)}, {"Port", Ichor::v1::make_any<uint16_t>(PORT)},
+        dm.createServiceManager<HOSTIMPL, IHostService>(Properties{{"Address", Ichor::v1::make_any<std::string>("127.0.0.1"s)}, {"Port", Ichor::v1::make_any<uint16_t>(port)}}, priorityToEnsureHostStartingFirst);
+        dm.createServiceManager<HttpHostService, IHttpHostService>(Properties{{"Address", Ichor::v1::make_any<std::string>("127.0.0.1"s)}, {"Port", Ichor::v1::make_any<uint16_t>(port)},
                                                                               {"IdleTimeoutMs", Ichor::v1::make_any<uint64_t>(300ULL)}, {"RequestTimeoutMs", Ichor::v1::make_any<uint64_t>(300ULL)},
                                                                               {"LingerTimeoutMs", Ichor::v1::make_any<uint64_t>(2'000ULL)}});
         dm.createServiceManager<RoutesService>();
@@ -207,7 +215,7 @@ TEST_CASE("HttpHostSocketTests") {
         bool reset{};
         auto const start = std::chrono::steady_clock::now();
         tl::optional<std::chrono::steady_clock::time_point> eofAt;
-        while(!reset && std::chrono::steady_clock::now() - start < 2s && (!eofAt || std::chrono::steady_clock::now() - *eofAt < 100ms)) {
+        while(!reset && std::chrono::steady_clock::now() - start < patience && (!eofAt || std::chrono::steady_clock::now() - *eofAt < 100ms)) {
             if(::send(fd, filler.data(), filler.size(), MSG_NOSIGNAL | MSG_DONTWAIT) < 0 && errno != EAGAIN && errno != EWOULDBLOCK) {
                 reset = true;
                 break;

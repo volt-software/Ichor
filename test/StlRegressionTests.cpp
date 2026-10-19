@@ -706,7 +706,7 @@ TEST_CASE("STL regression tests: ConditionVariable wait_for doesn't extend its t
         // keeps notifying, without ever making the predicate true
         std::thread notifier([&]() {
             // stops by itself as well, so that a broken wait_for fails the test instead of hanging it
-            auto const notifyUntil = std::chrono::steady_clock::now() + 1s;
+            auto const notifyUntil = std::chrono::steady_clock::now() + 10s;
             while(!stop.load(std::memory_order_acquire) && std::chrono::steady_clock::now() < notifyUntil) {
                 cv.notify_all();
                 std::this_thread::sleep_for(5ms);
@@ -722,7 +722,8 @@ TEST_CASE("STL regression tests: ConditionVariable wait_for doesn't extend its t
         stop.store(true, std::memory_order_release);
         notifier.join();
         REQUIRE(elapsed >= 100ms);
-        REQUIRE(elapsed < 900ms); // used to wait until the notifications stopped
+        // used to wait until the notifications stopped. Well below that, but with room for running alongside the other tests (ctest -j)
+        REQUIRE(elapsed < 5s);
     }
 
     REQUIRE(liveTracked.empty());
@@ -735,7 +736,7 @@ TEST_CASE("STL regression tests: ConditionVariableAny wait_for doesn't extend it
         std::atomic<bool> stop{};
         std::thread notifier([&]() {
             // stops by itself as well, so that a broken wait_for fails the test instead of hanging it
-            auto const notifyUntil = std::chrono::steady_clock::now() + 1s;
+            auto const notifyUntil = std::chrono::steady_clock::now() + 10s;
             while(!stop.load(std::memory_order_acquire) && std::chrono::steady_clock::now() < notifyUntil) {
                 cv.notify_all();
                 std::this_thread::sleep_for(5ms);
@@ -751,7 +752,7 @@ TEST_CASE("STL regression tests: ConditionVariableAny wait_for doesn't extend it
         stop.store(true, std::memory_order_release);
         notifier.join();
         REQUIRE(elapsed >= 100ms);
-        REQUIRE(elapsed < 900ms);
+        REQUIRE(elapsed < 5s);
 
         cv_status status = cv_status::timeout; // available on all platforms
         REQUIRE(status == cv_status::timeout);

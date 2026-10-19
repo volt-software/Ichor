@@ -981,6 +981,10 @@ if(ICHOR_BUILD_BENCHMARKS)
     add_subdirectory(benchmarks)
 endif()
 if(ICHOR_BUILD_TESTING OR ICHOR_INCLUDE_CATCH2)
+    # The tests assert from more than one thread (an event loop's and the test's), which takes Catch2's thread safe assertions. Catch2's CMake option
+    # puts it in its generated configuration header, so Catch2 and the tests can't disagree about it. (The CATCH_CONFIG_EXPERIMENTAL_ define
+    # this used before is no longer read since Catch2 3.12, which left the assertions unsynchronised.)
+    set(CATCH_CONFIG_THREAD_SAFE_ASSERTIONS ON CACHE BOOL "Ichor's tests assert from more than one thread" FORCE)
     add_subdirectory(${ICHOR_EXTERNAL_DIR}/Catch2)
     set_target_properties(Catch2 Catch2WithMain PROPERTIES CXX_CLANG_TIDY "")
     #enable string_view support in catch2
@@ -1000,8 +1004,6 @@ if(ICHOR_BUILD_TESTING OR ICHOR_INCLUDE_CATCH2)
         target_compile_definitions(Catch2 PRIVATE _FILE_OFFSET_BITS=64 _TIME_BITS=64)
         target_compile_definitions(Catch2WithMain PRIVATE _FILE_OFFSET_BITS=64 _TIME_BITS=64)
     endif()
-    target_compile_definitions(Catch2 PRIVATE CATCH_CONFIG_EXPERIMENTAL_THREAD_SAFE_ASSERTIONS)
-    target_compile_definitions(Catch2WithMain PRIVATE CATCH_CONFIG_EXPERIMENTAL_THREAD_SAFE_ASSERTIONS)
     # Treat Catch2's headers as system headers in the tests, like the other external libraries. Otherwise clang 22+ also warns about every use of __COUNTER__ (a C2y extension) in the test macros
     get_target_property(ICHOR_CATCH2_INCLUDE_DIRS Catch2 INTERFACE_INCLUDE_DIRECTORIES)
     set_target_properties(Catch2 PROPERTIES INTERFACE_SYSTEM_INCLUDE_DIRECTORIES "${ICHOR_CATCH2_INCLUDE_DIRS}")

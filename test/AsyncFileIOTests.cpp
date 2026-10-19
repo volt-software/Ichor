@@ -13,15 +13,18 @@
 
 struct AsyncFileIOExpensiveSetup {
     AsyncFileIOExpensiveSetup() {
-        std::ofstream out("BigFile.txt", std::ios::app);
-        while(out.tellp() < 8192ll*1024ll) {
-            REQUIRE(!out.fail());
-            out << "This is a test123";
+        // Each test process starts in an empty directory of its own (test/Support/TestEnvironment.cpp), so this writes the whole file every time:
+        // in one go, as a REQUIRE per line takes Catch2's assertion lock half a million times
+        std::string contents;
+        contents.reserve(8192ULL*1024ULL + 16);
+        while(contents.size() < 8192ULL*1024ULL) {
+            contents += "This is a test123";
         }
-        REQUIRE(!out.fail());
-        bigFileFilesize = out.tellp();
-        REQUIRE(bigFileFilesize >= 8192LL*1024);
+        std::ofstream out("BigFile.txt", std::ios::binary | std::ios::trunc);
+        out.write(contents.data(), static_cast<std::streamsize>(contents.size()));
         out.close();
+        REQUIRE(!out.fail());
+        bigFileFilesize = static_cast<int64_t>(contents.size());
     }
 
     int64_t bigFileFilesize{};

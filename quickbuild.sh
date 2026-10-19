@@ -208,7 +208,7 @@ if [[ "$NO_BUILD" -ne 1 ]]; then
 fi
 
 if [[ $RUN_TESTS -eq 1 ]]; then
-  ninja test || exit 1
+  run_tests || exit 1
 fi
 
 if [[ $RUN_EXAMPLES -eq 1 ]]; then

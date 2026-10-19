@@ -59,6 +59,7 @@ Ichor is a C++20 framework for building microservices with an event-loop archite
 
 3. **Review Tests**
     - Tests under `test/` show real-world use of the event system, dependency manager, and services. They’re compact and informative.
+    - `build.sh` and `quickbuild.sh` run the tests in parallel (`ctest -j$(nproc)`), each test case in its own process. A test that starts a server takes its port from `freeTcpPort()` (`test/Support/FreePort.h`) instead of a fixed one, and can use relative file names: each test process runs in a directory of its own (`test/Support/TestEnvironment.cpp`). Tests that share an external server (etcd, redis) get a `RESOURCE_LOCK` in `test/CMakeLists.txt`.
 
 4. **Inspect Existing Services**
     - Look at `src/services/timer` or `src/services/network` to see how optional services are implemented and registered.

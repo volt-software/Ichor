@@ -133,13 +133,13 @@ rm -rf ./* ../bin/*
 CC=clang-19 CXX=clang++-19 cmake -GNinja -DCMAKE_BUILD_TYPE=Debug -DICHOR_USE_SANITIZERS=0 -DICHOR_ENABLE_INTERNAL_DEBUGGING=0 -DICHOR_USE_MOLD=1 -DICHOR_USE_BOOST_BEAST=1 -DICHOR_USE_SPDLOG=1 -DICHOR_USE_HIREDIS=1 -DICHOR_USE_LIBURING=1 -DICHOR_USE_SDEVENT=1 -DICHOR_VERIFY_INTERFACE_HEADERS=1 .. || exit 1
 ninja || exit 1
 ninja all_verify_interface_header_sets || exit 1
-ninja test || exit 1
+run_tests || exit 1
 run_examples 1 1 1
 
 rm -rf ./* ../bin/*
 CC=gcc-12 CXX=g++-12 cmake -GNinja -DCMAKE_BUILD_TYPE=Debug -DICHOR_FORCE_32_BIT=1 -DCMAKE_TOOLCHAIN_FILE=../toolchain-i386.cmake -DICHOR_USE_SANITIZERS=0 -DICHOR_ENABLE_INTERNAL_DEBUGGING=0 -DICHOR_USE_MOLD=1 -DICHOR_USE_BOOST_BEAST=0 -DICHOR_USE_SPDLOG=1 -DICHOR_USE_HIREDIS=0 -DICHOR_USE_LIBURING=1 -DICHOR_USE_SDEVENT=1 -DICHOR_DISABLE_EXCEPTIONS=1 .. || exit 1
 ninja || exit 1
-ninja test || exit 1
+run_tests || exit 1
 run_examples 0 1 1
 
 for i in ${!ccompilers[@]}; do
@@ -151,28 +151,28 @@ for i in ${!ccompilers[@]}; do
   rm -rf ./* ../bin/*
   CC=${ccompilers[i]} CXX=${cppcompilers[i]} cmake -GNinja -DCMAKE_BUILD_TYPE=Debug -DICHOR_USE_SANITIZERS=1 -DICHOR_ENABLE_INTERNAL_DEBUGGING=1 -DICHOR_ENABLE_INTERNAL_IO_DEBUGGING=1 -DICHOR_ENABLE_INTERNAL_STL_DEBUGGING=1 -DICHOR_ENABLE_INTERNAL_COROUTINE_DEBUGGING=1 -DICHOR_USE_MOLD=1 -DICHOR_USE_BOOST_BEAST=0 -DICHOR_USE_LIBCPP=0 -DICHOR_USE_HIREDIS=1 -DICHOR_USE_SDEVENT=1 -DICHOR_RUN_CLANG_TIDY=${clangtidy[i]} .. || exit 1
   $build || exit 1
-  ninja test || exit 1
+  run_tests || exit 1
   run_examples 0 1 1
   run_benchmarks
 
   rm -rf ./* ../bin/*
   CC=${ccompilers[i]} CXX=${cppcompilers[i]} cmake -GNinja -DCMAKE_BUILD_TYPE=Debug -DICHOR_USE_SANITIZERS=1 -DICHOR_ENABLE_INTERNAL_DEBUGGING=0 -DICHOR_ENABLE_INTERNAL_IO_DEBUGGING=0 -DICHOR_ENABLE_INTERNAL_STL_DEBUGGING=0 -DICHOR_ENABLE_INTERNAL_COROUTINE_DEBUGGING=0 -DICHOR_USE_MOLD=1 -DICHOR_USE_BOOST_BEAST=0 -DICHOR_USE_LIBCPP=0 -DICHOR_USE_HIREDIS=1 -DICHOR_USE_SDEVENT=1 -DICHOR_DISABLE_EXCEPTIONS=1 -DICHOR_RUN_CLANG_TIDY=${clangtidy[i]} .. || exit 1
   $build || exit 1
-  ninja test || exit 1
+  run_tests || exit 1
   run_examples 0 1 1
   run_benchmarks
 
   rm -rf ./* ../bin/*
   CC=${ccompilers[i]} CXX=${cppcompilers[i]} cmake -GNinja -DCMAKE_BUILD_TYPE=Debug -DICHOR_USE_SANITIZERS=1 -DICHOR_ENABLE_INTERNAL_DEBUGGING=1 -DICHOR_DISABLE_RTTI=0 -DICHOR_USE_MOLD=1 -DICHOR_USE_BOOST_BEAST=0 -DICHOR_USE_LIBCPP=0 -DICHOR_USE_SPDLOG=1 -DICHOR_USE_HIREDIS=1 -DICHOR_USE_SDEVENT=1 -DICHOR_RUN_CLANG_TIDY=${clangtidy[i]} .. || exit 1
   $build || exit 1
-  ninja test || exit 1
+  run_tests || exit 1
   run_examples 0 1 1
   run_benchmarks
 
   rm -rf ./* ../bin/*
   CC=${ccompilers[i]} CXX=${cppcompilers[i]} cmake -GNinja -DCMAKE_BUILD_TYPE=Release -DICHOR_REMOVE_SOURCE_NAMES=0 -DICHOR_USE_SANITIZERS=0 -DICHOR_ENABLE_INTERNAL_DEBUGGING=1 -DICHOR_USE_MOLD=1 -DICHOR_USE_BOOST_BEAST=1 -DICHOR_USE_LIBCPP=0 -DICHOR_USE_HIREDIS=1 -DICHOR_USE_SDEVENT=1 -DICHOR_RUN_CLANG_TIDY=${clangtidy[i]} .. || exit 1
   $build || exit 1
-  ninja test || exit 1
+  run_tests || exit 1
   run_examples 1 1 1
   run_benchmarks
 done
@@ -180,6 +180,6 @@ done
 rm -rf ./* ../bin/*
 CC=clang-19 CXX=clang++-19 cmake -GNinja -DCMAKE_BUILD_TYPE=Release -DICHOR_USE_SANITIZERS=0 -DICHOR_USE_MOLD=1 -DICHOR_USE_BOOST_BEAST=1 -DICHOR_USE_HIREDIS=1 -DICHOR_USE_SDEVENT=1 .. || exit 1
 ninja || exit 1
-ninja test || exit 1
+run_tests || exit 1
 run_examples 1 1 1
 run_benchmarks
