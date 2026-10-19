@@ -142,7 +142,7 @@ namespace {
     HttpResponse errorResponse(HttpStatus status) {
         std::string_view explanation;
         switch(status) {
-            case HttpStatus::bad_request: explanation = "The request is not valid HTTP/1.1, sending it again won't help."; break;
+            case HttpStatus::bad_request: explanation = "The request is malformed or ambiguous, sending it again unchanged won't help."; break;
             case HttpStatus::not_found: explanation = "There is nothing at this target."; break;
             case HttpStatus::method_not_allowed: explanation = "This method is not allowed for this target, the Allow field lists the ones that are."; break;
             case HttpStatus::request_timeout: explanation = "The request did not arrive in time. It can be sent again on a new connection."; break;
@@ -153,7 +153,7 @@ namespace {
             case HttpStatus::request_header_fields_too_large: explanation = "The header section is larger than this server accepts."; break;
             case HttpStatus::internal_server_error: explanation = "The server could not produce a valid response."; break;
             case HttpStatus::not_implemented: explanation = "This server does not implement the request's method or transfer coding."; break;
-            case HttpStatus::http_version_not_supported: explanation = "This server supports HTTP/1.0 and HTTP/1.1."; break;
+            case HttpStatus::http_version_not_supported: explanation = "This server supports HTTP/1.x."; break;
             default: break;
         }
         HttpResponse response{.status = status, .contentType = {}, .body = {}, .headers = {}};
@@ -163,21 +163,6 @@ namespace {
             response.body.push_back('\n');
         }
         return response;
-    }
-
-    /// Fields that would be sent more than once: names that only differ in case, or a Content-Type field next to contentType (RFC 9110 5.3)
-    bool hasDuplicateFields(HttpResponse const &response) {
-        for(auto it = response.headers.begin(); it != response.headers.end(); ++it) {
-            if(response.contentType && HttpHeaderNameEqual{}(it->first, "Content-Type")) {
-                return true;
-            }
-            for(auto other = std::next(it); other != response.headers.end(); ++other) {
-                if(HttpHeaderNameEqual{}(it->first, other->first)) {
-                    return true;
-                }
-            }
-        }
-        return false;
     }
 
     /// Without operator[], which would add unknown methods to the map that other threads read
@@ -284,6 +269,7 @@ namespace Ichor::v1::Detail {
     };
 
     /// Sends the response of a streaming route
+    // NOLINTNEXTLINE(cppcoreguidelines-virtual-class-destructor): final, and IHttpResponseWriter's destructor is protected: nothing deletes it through another type. Also on the forward declaration in HttpHostService.h, where clang-tidy reports it.
     class HttpHostResponseWriter final : public IHttpResponseWriter {
     public:
         HttpHostResponseWriter(HttpHostService &host, ServiceIdType id, HttpHostService::ResponseContext const &context, bool keepAlive) noexcept :
@@ -663,9 +649,11 @@ Ichor::Task<void> Ichor::v1::HttpHostService::receiveRequestHandler(ServiceIdTyp
         if(result.status == Detail::HttpRequestParseStatus::INVALID) {
             ICHOR_LOG_TRACE(_logger, "HttpHostService {} connection {} invalid request, responding with {}", getServiceId(), id, static_cast<uint_fast16_t>(result.errorStatus));
             state.closing = true;
+            // The method, if the request line was read: an error to a HEAD request has no content either
+            ResponseContext const context{.method = state.parse.request.method, .target = {}, .minorVersion = 1, .requestHeaders = nullptr, .owesContinue = false};
             state.clearBuffer();
             auto response = errorResponse(result.errorStatus);
-            co_await sendResponse(id, response, ResponseContext{}, false);
+            co_await sendResponse(id, response, context, false);
             closeConnection(id);
             break;
         }
@@ -709,11 +697,6 @@ Ichor::Task<bool> Ichor::v1::HttpHostService::handleRequest(ServiceIdType id, De
         co_return co_await sendResponse(id, response, context, request.keepAlive);
     }
 
-    // A request for an https resource has to come over a connection secured for it (RFC 9110 7.4), the connections of this host are plain TCP
-    if(request.httpsTarget) {
-        auto response = errorResponse(HttpStatus::misdirected_request);
-        co_return co_await sendResponse(id, response, context, request.keepAlive);
-    }
 
     // OPTIONS * is about the server, not a resource (RFC 9110 9.3.7)
     if(request.target == "*") {
@@ -768,10 +751,10 @@ Ichor::Task<bool> Ichor::v1::HttpHostService::handleRequest(ServiceIdType id, De
 
     if(route.first == nullptr) {
         auto methods = allowedMethods(request.target);
-        auto response = errorResponse(HttpStatus::not_found);
+        auto response = methods.empty() ? errorResponse(HttpStatus::not_found) :
+                        request.method == HttpMethod::options ? HttpResponse{.status = HttpStatus::ok, .contentType = {}, .body = {}, .headers = {}} : errorResponse(HttpStatus::method_not_allowed);
         if(!methods.empty()) {
             // 405 has to list the allowed methods (RFC 9110 15.5.6), as does a response to OPTIONS
-            response = request.method == HttpMethod::options ? HttpResponse{.status = HttpStatus::ok, .contentType = {}, .body = {}, .headers = {}} : errorResponse(HttpStatus::method_not_allowed);
             response.headers.emplace("Allow", joinMethods(methods));
         }
         co_return co_await sendResponse(id, response, context, request.keepAlive);
@@ -875,9 +858,9 @@ Ichor::v1::HttpHostService::SerializedResponse Ichor::v1::HttpHostService::seria
             (!response.contentType || Detail::isHttpFieldValue(*response.contentType)) &&
             std::ranges::all_of(response.headers, [](auto const &field) {
                 return Detail::isHttpToken(field.first) && Detail::isHttpFieldValue(field.second);
-            }) && !hasDuplicateFields(response);
+            });
     if(!valid) {
-        ICHOR_LOG_ERROR(_logger, "HttpHostService {} handler responded with an invalid status {}, an invalid header or the same header twice, responding with 500 instead", getServiceId(), status);
+        ICHOR_LOG_ERROR(_logger, "HttpHostService {} handler responded with an invalid status {} or header, responding with 500 instead", getServiceId(), status);
         response = errorResponse(HttpStatus::internal_server_error);
         status = 500;
     }
@@ -903,6 +886,16 @@ Ichor::v1::HttpHostService::SerializedResponse Ichor::v1::HttpHostService::seria
     bool const switching = status == 101;
     // A 2xx to CONNECT starts a tunnel, which has no framing (RFC 9110 8.6, 9.3.6)
     bool const tunnel = context.method == HttpMethod::connect && status >= 200 && status < 300;
+    bool const sendsContentType = response.contentType && status >= 200 && status != 204 && status != 304 && !tunnel;
+    // contentType and a Content-Type field would send Content-Type twice (RFC 9110 5.3). Other fields the handler has twice, with names that only
+    // differ in case, are sent twice: that's how a handler sets two Set-Cookie fields, and how list fields can be sent.
+    if(sendsContentType && findField(response.headers, "Content-Type") != response.headers.end()) {
+        ICHOR_LOG_ERROR(_logger, "HttpHostService {} handler responded with both contentType and a Content-Type header, responding with 500 instead", getServiceId());
+        response = errorResponse(HttpStatus::internal_server_error);
+        auto serialized = serializeResponse(response, context, streaming, close);
+        serialized.replaced = true;
+        return serialized;
+    }
     if(!switching) {
         if(auto connection = findField(response.headers, "Connection"); connection != response.headers.end() && Detail::httpListContains(connection->second, "close")) {
             close = true;
@@ -957,7 +950,7 @@ Ichor::v1::HttpHostService::SerializedResponse Ichor::v1::HttpHostService::seria
         fmt::format_to(FmtU8Inserter(msg), "{}: {}\r\n", k, v);
     }
 
-    if(response.contentType && status >= 200 && status != 204 && status != 304 && !tunnel) {
+    if(sendsContentType) {
         fmt::format_to(FmtU8Inserter(msg), "Content-Type: {}\r\n", *response.contentType);
     }
 
@@ -1140,11 +1133,12 @@ void Ichor::v1::HttpHostService::checkTimeouts() {
         ICHOR_LOG_TRACE(_logger, "HttpHostService {} connection {} request took too long, responding with 408", getServiceId(), id);
         auto &state = _connectionStates.find(id)->second;
         state.closing = true;
+        auto const method = state.parse.request.method;
         state.clearBuffer();
         // The client can't know when the server gave up on its request, the connection is closed after this (RFC 9110 15.5.9)
-        _queue->pushPrioritisedEvent<RunFunctionEventAsync>(getServiceId(), _priority, [this, id]() -> AsyncGenerator<IchorBehaviour> {
+        _queue->pushPrioritisedEvent<RunFunctionEventAsync>(getServiceId(), _priority, [this, id, method]() -> AsyncGenerator<IchorBehaviour> {
             auto response = errorResponse(HttpStatus::request_timeout);
-            co_await sendResponse(id, response, ResponseContext{}, false);
+            co_await sendResponse(id, response, ResponseContext{.method = method, .target = {}, .minorVersion = 1, .requestHeaders = nullptr, .owesContinue = false}, false);
             closeConnection(id);
             co_return {};
         });

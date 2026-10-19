@@ -9,6 +9,7 @@ namespace Ichor::v1 {
     // Stores only a timer id and a reference to the factory and delegates all
     // ITimer calls by looking up the timer on each call.
     // This is to have a stable reference to a container that may invalidate references.
+    // NOLINTNEXTLINE(cppcoreguidelines-virtual-class-destructor): final, and ITimer's destructor is protected: nothing deletes it through another type. Also on the forward declaration in ITimerFactory.h, where clang-tidy reports it when that comes first.
     class TimerRef final : public ITimer {
     public:
         TimerRef(ITimerFactory &factory, uint64_t timerId) noexcept : _factory(&factory), _timerId(timerId) {}

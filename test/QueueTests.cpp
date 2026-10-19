@@ -46,9 +46,13 @@ namespace {
                 Event(_id, _originatingService, _priority) {
             created++;
         }
-        // Events are moved into the queue, the copy isn't counted as created either
-        CountedEvent(const CountedEvent&) = default;
-        CountedEvent(CountedEvent&&) noexcept = default;
+        // Every instance is counted, so a queue that copies or moves an event doesn't look like it leaks or destroys one twice
+        CountedEvent(const CountedEvent &o) : Event(o) {
+            created++;
+        }
+        CountedEvent(CountedEvent &&o) noexcept : Event(std::move(o)) {
+            created++;
+        }
         CountedEvent& operator=(const CountedEvent&) = delete;
         CountedEvent& operator=(CountedEvent&&) = delete;
         ~CountedEvent() final {

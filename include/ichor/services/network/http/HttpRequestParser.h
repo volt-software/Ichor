@@ -33,8 +33,6 @@ namespace Ichor::v1::Detail {
         bool keepAlive{true};
         /// An HTTP/1.1 request with Expect: 100-continue, whose client waits for a 100 Continue before sending the content
         bool expectContinue{};
-        /// An absolute-form request target with the https scheme
-        bool httpsTarget{};
         /// The request line and field lines as received, only for TRACE, which reflects them
         std::string head;
     };

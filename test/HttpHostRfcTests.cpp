@@ -1992,29 +1992,46 @@ TEST_CASE("HttpHostRfcTests: transfer coding parameters and syntax") {
     }
 }
 
-TEST_CASE("HttpHostRfcTests: a handler's response with the same field twice is 500") {
-    for(auto const &headers : {unordered_map<std::string, std::string>{{"X-A", "1"}, {"x-a", "2"}}, unordered_map<std::string, std::string>{{"Cache-Control", "no-store"}, {"cache-control", "no-cache"}}}) {
-        HttpHostFixture f;
-        f.addRoute(HttpMethod::get, "/r", [headers](HttpRequest &) -> Task<HttpResponse> {
-            co_return HttpResponse{.status = HttpStatus::ok, .contentType = {}, .body = {}, .headers = headers};
-        });
-        f.receive("GET /r HTTP/1.1\r\nHost: example.org\r\n\r\n");
+TEST_CASE("HttpHostRfcTests: fields a handler has twice") {
+    HttpHostFixture f;
+    // Names that only differ in case are sent as they are, that's how two Set-Cookie fields are set (RFC 9110 5.3)
+    f.addRoute(HttpMethod::get, "/cookies", [](HttpRequest &) -> Task<HttpResponse> {
+        co_return HttpResponse{.status = HttpStatus::ok, .contentType = {}, .body = {}, .headers = {{"Set-Cookie", "a=1"}, {"set-cookie", "b=2"}}};
+    });
+    // The host would add a second Content-Type
+    f.addRoute(HttpMethod::get, "/both", [](HttpRequest &) -> Task<HttpResponse> {
+        co_return HttpResponse{.status = HttpStatus::ok, .contentType = "text/plain", .body = {}, .headers = {{"content-type", "text/html"}}};
+    });
+    // No content, so no Content-Type from the host
+    f.addRoute(HttpMethod::get, "/nocontent", [](HttpRequest &) -> Task<HttpResponse> {
+        co_return HttpResponse{.status = HttpStatus::no_content, .contentType = "text/plain", .body = {}, .headers = {{"content-type", "text/html"}}};
+    });
+    // Stripped by the host, which sends its own
+    f.addRoute(HttpMethod::get, "/connection", [](HttpRequest &) -> Task<HttpResponse> {
+        co_return HttpResponse{.status = HttpStatus::ok, .contentType = {}, .body = {}, .headers = {{"Connection", "close"}, {"connection", "close"}}};
+    });
+
+    SECTION("Set-Cookie twice") {
+        f.receive("GET /cookies HTTP/1.1\r\nHost: example.org\r\n\r\n");
+        auto const sent = f.allSent();
+        REQUIRE(sent.starts_with("HTTP/1.1 200 OK\r\n"));
+        REQUIRE((sent.find("\r\nSet-Cookie: a=1\r\n") != std::string::npos || sent.find("\r\nset-cookie: a=1\r\n") != std::string::npos));
+        REQUIRE((sent.find("\r\nSet-Cookie: b=2\r\n") != std::string::npos || sent.find("\r\nset-cookie: b=2\r\n") != std::string::npos));
+    }
+
+    SECTION("contentType and a Content-Type field is 500") {
+        f.receive("GET /both HTTP/1.1\r\nHost: example.org\r\n\r\n");
         REQUIRE(f.response().status == 500);
     }
 
-    HttpHostFixture f;
-    f.addRoute(HttpMethod::get, "/r", [](HttpRequest &) -> Task<HttpResponse> {
-        co_return HttpResponse{.status = HttpStatus::ok, .contentType = "text/plain", .body = {}, .headers = {{"content-type", "text/html"}}};
-    });
-    f.addRoute(HttpMethod::get, "/one", [](HttpRequest &) -> Task<HttpResponse> {
-        co_return HttpResponse{.status = HttpStatus::ok, .contentType = {}, .body = {}, .headers = {{"content-type", "text/html"}}};
-    });
-    f.receive("GET /r HTTP/1.1\r\nHost: example.org\r\n\r\nGET /one HTTP/1.1\r\nHost: example.org\r\n\r\n");
-    auto resps = f.responses();
-    REQUIRE(resps.size() == 2);
-    REQUIRE(resps[0].status == 500);
-    REQUIRE(resps[1].status == 200);
-    REQUIRE(resps[1].headers.find("Content-Type")->second == "text/html");
+    SECTION("only one of them sent is fine") {
+        f.receive("GET /nocontent HTTP/1.1\r\nHost: example.org\r\n\r\nGET /connection HTTP/1.1\r\nHost: example.org\r\n\r\n");
+        auto resps = f.responses();
+        REQUIRE(resps.size() == 2);
+        REQUIRE(resps[0].status == 204);
+        REQUIRE(resps[1].status == 200);
+        REQUIRE(resps[1].headers.find("Connection")->second == "close");
+    }
 }
 
 TEST_CASE("HttpHostRfcTests: Expect is a list") {
@@ -2033,20 +2050,35 @@ TEST_CASE("HttpHostRfcTests: Expect is a list") {
 }
 
 TEST_CASE("HttpHostRfcTests: an https target over a plain connection is 421") {
-    HttpHostFixture f;
     RecordedRequest req{};
-    f.addRoute(HttpMethod::get, "/r", recordingHandler(req));
-    f.receive("GET https://example.org/r HTTP/1.1\r\nHost: example.org\r\n\r\nGET http://example.org/r HTTP/1.1\r\nHost: example.org\r\n\r\n");
-    auto resps = f.responses();
-    REQUIRE(resps.size() == 2);
-    REQUIRE(resps[0].status == 421);
-    REQUIRE(resps[1].status == 200);
-    REQUIRE(!f.closed());
+    for(auto const scheme : {"https"sv, "HTTPS"sv}) {
+        HttpHostFixture f;
+        f.addRoute(HttpMethod::get, "/r", recordingHandler(req));
+        f.receive("GET " + std::string{scheme} + "://example.org/r HTTP/1.1\r\nHost: example.org\r\n\r\n");
+        INFO(scheme);
+        REQUIRE(f.response().status == 421);
+        REQUIRE(f.closed());
+    }
+
+    SECTION("before the content, without asking for it") {
+        HttpHostFixture f;
+        f.addRoute(HttpMethod::post, "/r", recordingHandler(req));
+        f.receive("POST https://example.org/r HTTP/1.1\r\nHost: example.org\r\nExpect: 100-continue\r\nContent-Length: 5\r\n\r\n");
+        REQUIRE(f.response().status == 421);
+    }
+
+    SECTION("http is fine") {
+        HttpHostFixture f;
+        f.addRoute(HttpMethod::get, "/r", recordingHandler(req));
+        f.receive("GET http://example.org/r HTTP/1.1\r\nHost: example.org\r\n\r\n");
+        REQUIRE(f.response().status == 200);
+    }
 }
 
 TEST_CASE("HttpHostRfcTests: CONNECT to an invalid port is 400") {
     for(auto const &[authority, status] : {std::pair{"example.org:0"sv, 400U}, std::pair{"example.org:65536"sv, 400U}, std::pair{"example.org:99999"sv, 400U},
-                                           std::pair{"example.org:123456"sv, 400U}, std::pair{"example.org:65535"sv, 404U}, std::pair{"[::1]:1"sv, 404U}}) {
+                                           std::pair{"example.org:123456"sv, 400U}, std::pair{"example.org:65535"sv, 404U}, std::pair{"[::1]:1"sv, 404U},
+                                           std::pair{"example.org:000443"sv, 404U}, std::pair{"example.org:00000000000000000000065536"sv, 400U}}) {
         HttpHostFixture f;
         f.receive("CONNECT " + std::string{authority} + " HTTP/1.1\r\nHost: " + std::string{authority} + "\r\n\r\n");
         INFO(authority);
@@ -2056,8 +2088,8 @@ TEST_CASE("HttpHostRfcTests: CONNECT to an invalid port is 400") {
 
 TEST_CASE("HttpHostRfcTests: the errors the host responds with explain themselves") {
     // RFC 9110 15.5, 15.6: what the error is and whether it's temporary, 15.6.6: what versions are supported
-    for(auto const &[request, status, explanation] : {std::tuple{"GET /r HTTP/1.1\r\n\r\n"sv, 400U, "The request is not valid HTTP/1.1, sending it again won't help.\n"sv},
-                                                      std::tuple{"GET /r HTTP/2.0\r\nHost: example.org\r\n\r\n"sv, 505U, "This server supports HTTP/1.0 and HTTP/1.1.\n"sv},
+    for(auto const &[request, status, explanation] : {std::tuple{"GET /r HTTP/1.1\r\n\r\n"sv, 400U, "The request is malformed or ambiguous, sending it again unchanged won't help.\n"sv},
+                                                      std::tuple{"GET /r HTTP/2.0\r\nHost: example.org\r\n\r\n"sv, 505U, "This server supports HTTP/1.x.\n"sv},
                                                       std::tuple{"FOO /r HTTP/1.1\r\nHost: example.org\r\n\r\n"sv, 501U, "This server does not implement the request's method or transfer coding.\n"sv},
                                                       std::tuple{"DELETE /r HTTP/1.1\r\nHost: example.org\r\n\r\n"sv, 405U, "This method is not allowed for this target, the Allow field lists the ones that are.\n"sv}}) {
         HttpHostFixture f;
@@ -2078,4 +2110,28 @@ TEST_CASE("HttpHostRfcTests: the errors the host responds with explain themselve
     REQUIRE(resp.status == 404);
     REQUIRE(resp.body.empty());
     REQUIRE(resp.headers.find("Content-Length")->second == "33");
+}
+
+TEST_CASE("HttpHostRfcTests: errors to HEAD requests have no content") {
+    // The method is known before the error is: the request line was read
+    for(auto const &[request, status] : {std::pair{"HEAD /r HTTP/2.0\r\nHost: example.org\r\n\r\n"sv, 505U}, std::pair{"HEAD /r HTTP/1.1\r\n\r\n"sv, 400U},
+                                         std::pair{"HEAD /r HTTP/1.1\r\nHost: example.org\r\nExpect: something\r\n\r\n"sv, 417U},
+                                         std::pair{"HEAD https://example.org/r HTTP/1.1\r\nHost: example.org\r\n\r\n"sv, 421U}}) {
+        HttpHostFixture f;
+        f.receive(request);
+        INFO(request);
+        auto resp = f.response();
+        REQUIRE(resp.status == status);
+        REQUIRE(resp.body.empty());
+    }
+
+    SECTION("a HEAD request that takes too long") {
+        HttpHostFixture f{timeouts(60'000, 5, 60'000), {}, true};
+        f.receive("HEAD /r HTTP/1.1\r\nHost: exa");
+        std::this_thread::sleep_for(20ms);
+        f.tick();
+        auto resp = f.response();
+        REQUIRE(resp.status == 408);
+        REQUIRE(resp.body.empty());
+    }
 }

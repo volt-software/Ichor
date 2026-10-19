@@ -56,14 +56,14 @@ Some requirements are on the content of a response, which only a route's handler
 | 2.5 | Respond with the highest version conformant to, of the request's major version | SHOULD | Always HTTP/1.1, later 1.x minor versions are handled as 1.1 | request line |
 | 5.1 | Field names are case-insensitive | MUST | `HttpRequest::headers` ignores case | header fields |
 | 5.3 | Field lines with the same name are one list | MUST | Combined with `, ` (`; ` for Cookie) | header fields |
-| 5.3 | Don't send a field twice | MUST | A handler's response with names that only differ in case, or `contentType` and a Content-Type field, is a 500 | a handler's response with the same field twice is 500 |
+| 5.3 | Don't send a field twice, unless it's a list or Set-Cookie | MUST | `contentType` and a Content-Type field is a 500. Fields a handler has with names that only differ in case are sent as they are, which is how two Set-Cookie fields are set: whether a field can be sent twice is *handler* | fields a handler has twice |
 | 5.4 | A field section larger than the server wants is a 4xx | MUST | MaxHeaderSize (64 KiB): 431 | request line, limits from properties |
 | 5.5 | Field values with CR, LF or NUL: reject or replace | MUST | Rejected: 400, as are other control characters | header fields |
 | 5.6.1.2 | Accept empty list elements | MUST | Ignored in Connection, Transfer-Encoding, Expect, Upgrade, If-Match and If-None-Match | Expect is a list, transfer coding parameters and syntax |
 | 5.6.7 | Accept all three HTTP-date formats | MUST | IMF-fixdate, RFC 850 (two-digit years as the RFC says) and asctime | HTTP-date, conditional requests |
 | 6.6.1 | An origin server with a clock sends Date | MUST | Every response, unless the handler sets one | responses |
 | 7.2 | Host, see RFC 9112 3.2 | MUST | | header fields |
-| 7.4 | A request for an https resource over a connection not secured for it is rejected | MUST | 421 for an absolute-form https target: the host's connections are plain TCP | an https target over a plain connection is 421 |
+| 7.4 | A request for an https resource over a connection not secured for it is rejected | MUST | 421 for an absolute-form https target, at the request line, before any content or 100 Continue, and closed: the host's connections are plain TCP | an https target over a plain connection is 421 |
 | 7.4 | Requests for another authority can be 421 | MAY | Not done: the host doesn't know its names | - |
 | 7.6.1 | Connection options | MUST | `close`, `keep-alive` and `upgrade` are acted on. A handler's Connection field is replaced by the host's, after its `close` is taken into account | persistence, upgrade |
 | 7.8 | Upgrade: ignore it in HTTP/1.0, switch only to a protocol the client asked for, send Upgrade and Connection: upgrade with 101 | MUST | Streaming routes can switch, anything else is 500 | upgrade, HttpHostSocketTests |
@@ -93,7 +93,7 @@ Some requirements are on the content of a response, which only a route's handler
 | 15.3.5 | 204 has no content | MUST | Content and Content-Length are dropped | responses, streaming responses |
 | 15.3.6 | 205 has no content | MUST | Content dropped, Content-Length: 0 | 205 has no content |
 | 15.4.5 | 304 has no content, keeps the fields a 200 would have | MUST | Content and Content-Type dropped, as is a Content-Length the handler set for content it sent | responses, conditional requests, a 304 doesn't pass on the Content-Length a handler set for its content |
-| 15.5, 15.6 | Error responses explain the error and whether it's temporary, a 505 what versions are supported | SHOULD | The errors the host responds with have a text/plain explanation, the content of a handler's error responses is the handler's | the errors the host responds with explain themselves |
+| 15.5, 15.6 | Error responses explain the error and whether it's temporary, a 505 what versions are supported | SHOULD | The errors the host responds with have a text/plain explanation, except to HEAD. The content of a handler's error responses is the handler's | the errors the host responds with explain themselves, errors to HEAD requests have no content |
 | 15.5.6 | 405 has Allow | MUST | Added by the host when the handler's 405 has none | routing, required fields of a handler's response |
 | 15.5.9 | 408: close the connection | SHOULD | Closed after the 408 | timeouts, HttpHostSocketTests |
 | 15.5.14 | 413: can close the connection | MAY | Closed: the content that's still coming can't be framed | limits from properties |

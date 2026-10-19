@@ -11,6 +11,7 @@
 #include <unistd.h>
 #include <array>
 #include <cstring>
+#include <string_view>
 #endif
 
 GlobalRealtimeSettings::GlobalRealtimeSettings() {
@@ -43,16 +44,20 @@ GlobalRealtimeSettings::GlobalRealtimeSettings() {
     // disable smt if possible
     if(::stat("/sys/devices/system/cpu/smt/control", &statbuf) == 0) {
         const char *target_control = "off";
-        std::array<char, 4> control_read{};
+        std::array<char, 32> control_read{};
         smt_file = open("/sys/devices/system/cpu/smt/control", O_RDWR);
         if(smt_file == -1) {
             fmt::print("Could not disable SMT\n");
             reenable_smt = false;
         } else {
-            auto size = read(smt_file, control_read.data(), 4);
+            auto size = read(smt_file, control_read.data(), control_read.size() - 1);
             if(size == -1) {
                 fmt::print("smt_file read\n");
                 std::terminate();
+            }
+            std::string_view control{control_read.data(), static_cast<size_t>(size)};
+            if(control.ends_with('\n')) {
+                control.remove_suffix(1);
             }
 
             if(lseek(smt_file, 0, SEEK_SET) == -1) {
@@ -60,9 +65,11 @@ GlobalRealtimeSettings::GlobalRealtimeSettings() {
                 std::terminate();
             }
 
-            if(strncmp(control_read.data(), "off", 3) == 0 || strncmp(control_read.data(), "noti", 4) == 0) {
+            // Only "on" can be turned off, the others are off already or can't be changed: off, forceoff, notsupported, notimplemented
+            if(control != "on") {
                 reenable_smt = false;
                 close(smt_file);
+                smt_file = -1;
             } else {
                 auto ret = write(smt_file, target_control, 3);
                 if (ret == -1) {
@@ -103,7 +110,7 @@ GlobalRealtimeSettings::~GlobalRealtimeSettings() {
         close(smt_file);
     }
 
-    if(::stat("/dev/cpu_dma_latency", &statbuf) == 0) {
+    if(dma_latency_file >= 0) {
         close(dma_latency_file);
     }
 #endif

@@ -24,8 +24,10 @@ namespace Ichor {
     class AsyncAutoResetEvent {
     public:
 
+        /// Not set. Not explicit, so `AsyncAutoResetEvent e = {};` and members initialised with {} work.
+        AsyncAutoResetEvent() noexcept : AsyncAutoResetEvent(false) {}
         /// Initialise the event to either 'set' or 'not set' state.
-        explicit AsyncAutoResetEvent(bool initiallySet = false) noexcept;
+        explicit AsyncAutoResetEvent(bool initiallySet) noexcept;
 
         ~AsyncAutoResetEvent();
 

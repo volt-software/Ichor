@@ -213,7 +213,7 @@ namespace {
     /// authority-form = uri-host ":" port (RFC 9112 3.2.3)
     bool isValidAuthorityForm(std::string_view target) noexcept {
         auto const hostAndPort = parseHostAndPort(target);
-        if(!hostAndPort || hostAndPort->host.empty() || !hostAndPort->port || hostAndPort->port->empty() || hostAndPort->port->size() > 5) {
+        if(!hostAndPort || hostAndPort->host.empty() || !hostAndPort->port || hostAndPort->port->empty()) {
             return false;
         }
         // CONNECT to an empty or invalid port is rejected (RFC 9110 9.3.6)
@@ -431,6 +431,10 @@ namespace {
         if(!isHttpToken(method) || target.empty()) {
             return invalid(HttpStatus::bad_request);
         }
+        // Known before the rest is checked: an error response to HEAD has no content
+        if(auto const methodIt = ICHOR_METHOD_MATCHING.find(method); methodIt != ICHOR_METHOD_MATCHING.end()) {
+            req.method = methodIt->second;
+        }
 
         // HTTP-version = "HTTP" "/" DIGIT "." DIGIT (RFC 9112 2.3)
         if(version.size() != 8 || !version.starts_with("HTTP/") || !isDigit(version[5]) || version[6] != '.' || !isDigit(version[7])) {
@@ -440,10 +444,6 @@ namespace {
             return invalid(HttpStatus::http_version_not_supported);
         }
         req.minorVersion = static_cast<uint8_t>(version[7] - '0');
-
-        if(auto const methodIt = ICHOR_METHOD_MATCHING.find(method); methodIt != ICHOR_METHOD_MATCHING.end()) {
-            req.method = methodIt->second;
-        }
 
         // request-target forms (RFC 9112 3.2)
         if(target == "*") {
@@ -487,8 +487,12 @@ namespace {
                     return invalid(HttpStatus::bad_request);
                 }
             }
+            // A request for an https resource has to come over a connection secured for it (RFC 9110 7.4), which HttpHostService's aren't.
+            // Rejected before its content arrives or a 100 Continue asks for it.
+            if(equalsIgnoreCase(target.substr(0, schemeEnd), "https")) {
+                return invalid(HttpStatus::misdirected_request);
+            }
             state.absoluteFormAuthority = std::string{authority};
-            req.httpsTarget = equalsIgnoreCase(target.substr(0, schemeEnd), "https");
         }
         return tl::nullopt;
     }

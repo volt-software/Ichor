@@ -5,6 +5,12 @@
 static_assert(!std::is_copy_constructible_v<Ichor::AsyncAutoResetEvent>);
 static_assert(!std::is_move_constructible_v<Ichor::AsyncAutoResetEvent>);
 
+// Copy-list-initialisation needs a default constructor that isn't explicit: a member initialised with = {} doesn't compile otherwise
+struct HoldsAnEvent {
+    Ichor::AsyncAutoResetEvent evt = {};
+};
+static_assert(std::is_default_constructible_v<HoldsAnEvent>);
+
 namespace {
     EagerCoroutine awaitAndRecord(Ichor::AsyncAutoResetEvent &evt, std::vector<int> &order, int id) {
         co_await evt;

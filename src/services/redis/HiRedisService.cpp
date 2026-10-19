@@ -785,12 +785,9 @@ Ichor::Task<tl::expected<std::unordered_map<std::string, std::string>, Ichor::v1
     std::unordered_map<std::string, std::string> ret;
     ret.reserve(infoSplit.size());
     for(auto const &i : infoSplit) {
-        if(i.find(':') != std::string_view::npos) {
-            auto lineSplit = split(i, ":", false);
-            if(lineSplit.size() != 2) {
-                continue;
-            }
-            ret.emplace(lineSplit[0], lineSplit[1]);
+        // field:value, where the value can have colons in it (IPv6 addresses, Redis 7's listener lines)
+        if(auto const colon = i.find(':'); colon != std::string_view::npos) {
+            ret.emplace(i.substr(0, colon), i.substr(colon + 1));
         }
     }
 

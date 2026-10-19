@@ -826,7 +826,7 @@ TEST_CASE("HttpHostTests") {
         auto _ = it2.get_value<IchorBehaviour>();
         REQUIRE(conn.getService().sentMessages.size() == 1);
         std::string_view sentMsg{reinterpret_cast<const char *>(conn.getService().sentMessages[0].data()), conn.getService().sentMessages[0].size()};
-        REQUIRE(withoutDate(sentMsg) == "HTTP/1.1 400 Bad Request\r\nContent-Type: text/plain; charset=utf-8\r\nContent-Length: 64\r\nConnection: close\r\n\r\nThe request is not valid HTTP/1.1, sending it again won't help.\n");
+        REQUIRE(withoutDate(sentMsg) == "HTTP/1.1 400 Bad Request\r\nContent-Type: text/plain; charset=utf-8\r\nContent-Length: 78\r\nConnection: close\r\n\r\nThe request is malformed or ambiguous, sending it again unchanged won't help.\n");
 
         REQUIRE(!handlerActivated);
     }

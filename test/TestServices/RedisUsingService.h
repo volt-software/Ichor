@@ -15,6 +15,7 @@ namespace Ichor {
 
         Task<tl::expected<void, Ichor::StartError>> start() final {
             co_await version_test();
+            co_await info_test();
             co_await set_test();
             co_await strlen_test();
             co_await delete_test();
@@ -54,6 +55,20 @@ namespace Ichor {
                 std::terminate();
             }
             _v = versionReply.value();
+        }
+
+        Task<void> info_test() const {
+            ICHOR_LOG_INFO(_logger, "running test");
+            auto infoReply = co_await _redis->info();
+            if(!infoReply || !infoReply->contains("redis_version")) {
+                fmt::println("info");
+                std::terminate();
+            }
+            // Values can have colons in them: listener0:name=tcp,bind=*,bind=-::*,port=6379 (Redis 8)
+            if(_v >= Version{.major=8, .minor=0, .patch=0} && (!infoReply->contains("listener0") || !infoReply->at("listener0").starts_with("name="))) {
+                fmt::println("info listener0");
+                std::terminate();
+            }
         }
 
         Task<void> set_test() const {

@@ -20,8 +20,8 @@ private:
     //TODO
 #else
     struct stat statbuf{};
-    int smt_file;
-    int dma_latency_file;
+    int smt_file{-1};
+    int dma_latency_file{-1};
 #endif
     bool reenable_smt{true};
 };
