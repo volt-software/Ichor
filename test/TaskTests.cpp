@@ -61,9 +61,10 @@ namespace {
 
     uint64_t deepSum{};
 
-#if defined(__GNUC__) && !defined(__clang__) && !defined(__OPTIMIZE__)
-    // GCC (checked 12 and 15) only turns the symmetric transfer into a tail call with optimizations enabled (GCC PR100897),
+#if defined(__GNUC__) && !defined(__clang__) && (!defined(__OPTIMIZE__) || defined(__SANITIZE_ADDRESS__))
+    // GCC (checked 12 to 15) only turns the symmetric transfer into a tail call with optimizations enabled (GCC PR100897),
     // so without them every iteration still adds a stack frame, no matter how Task is implemented.
+    // The sanitizer builds disable that tail call even with optimizations, through -fno-optimize-sibling-calls.
     // Still run the symmetric transfer path, but with a depth that fits on the stack.
     constexpr uint64_t manyIterations = 1'000;
 #else
