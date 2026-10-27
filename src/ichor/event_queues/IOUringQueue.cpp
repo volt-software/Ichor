@@ -1197,11 +1197,16 @@ namespace Ichor::v1::Detail {
 }
 
 #ifdef ICHOR_ENABLE_INTERNAL_URING_DEBUGGING
-    void Ichor::v1::Detail::IOUringQueueBase::beforeSubmitDebug(unsigned int space) {
-        fmt::println("going to submit {} {}", _entriesCount, space);
-        _debugOpcodes = getToBeSubmittedOpcodes(_eventQueuePtr);
-        for(auto &op : _debugOpcodes) {
-            auto svc = _dm->getIService(op.second->originatingService);
+namespace {
+    void printOpcodes(Ichor::DependencyManager &dm, std::vector<std::pair<io_uring_op, Ichor::Event*>> const &opcodes) {
+        for(auto const &op : opcodes) {
+            // same as for completions: requests without an event (e.g. from getSqe() or msg_ring wake-ups) have no Event* as user_data
+            auto data = reinterpret_cast<uint64_t>(op.second);
+            if(data == 0 || data == Ichor::v1::Detail::CROSS_THREAD_WAKEUP_DATA) {
+                fmt::println("{} without event, user_data {}", op.first, data);
+                continue;
+            }
+            auto svc = dm.getIService(op.second->originatingService);
             std::string_view svcName = "UNKNOWN";
             if(svc) {
                 svcName = (*svc)->getServiceName();
@@ -1209,18 +1214,18 @@ namespace Ichor::v1::Detail {
             fmt::println("{} from {}:{} with event type {}", op.first, op.second->originatingService, svcName, op.second->get_name());
         }
     }
+}
+
+    void Ichor::v1::Detail::IOUringQueueBase::beforeSubmitDebug(unsigned int space) {
+        fmt::println("going to submit {} {}", _entriesCount, space);
+        _debugOpcodes = getToBeSubmittedOpcodes(_eventQueuePtr);
+        printOpcodes(_dm, _debugOpcodes);
+    }
 
     void Ichor::v1::Detail::IOUringQueueBase::afterSubmitDebug(int ret, unsigned int space) {
         fmt::println("still left in queue {} {} {}", ret, _entriesCount, space);
         auto newSubmitLog = getToBeSubmittedOpcodes(_eventQueuePtr);
-        for(auto &op : newSubmitLog) {
-            auto svc = _dm->getIService(op.second->originatingService);
-            std::string_view svcName = "UNKNOWN";
-            if(svc) {
-                svcName = (*svc)->getServiceName();
-            }
-            fmt::println("{} from {}:{} with event type {}", op.first, op.second->originatingService, svcName, op.second->get_name());
-        }
+        printOpcodes(_dm, newSubmitLog);
         fmt::println("");
         auto diff = _debugOpcodes.size() - newSubmitLog.size();
         for(decltype(diff) i = 0; i < diff; i++) {
