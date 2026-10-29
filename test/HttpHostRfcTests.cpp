@@ -1641,6 +1641,21 @@ TEST_CASE("HttpHostRfcTests: stopping while the timer factory stops") {
     REQUIRE(f.svc->setUninjected());
     auto stopGen = f.svc->stop();
     REQUIRE(stopGen.begin().get_finished());
+    REQUIRE(f.timerFactory->getService().released == 0);
+}
+
+TEST_CASE("HttpHostRfcTests: stopping releases the timeout timer") {
+    HttpHostFixture f{{}, {}, true};
+    auto &factory = f.timerFactory->getService();
+    REQUIRE(factory.timers.size() == 1);
+    REQUIRE(factory.timers[0]->running);
+    REQUIRE(f.svc->setInjected());
+    REQUIRE(f.svc->setUninjected());
+    auto stopGen = f.svc->stop();
+    REQUIRE(stopGen.begin().get_finished());
+    // the host doesn't leave a running timer behind in a factory that keeps existing
+    REQUIRE(factory.released == 1);
+    REQUIRE(!factory.timers[0]->running);
 }
 
 TEST_CASE("HttpHostRfcTests: chunk framing") {

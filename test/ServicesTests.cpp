@@ -26,6 +26,8 @@
 #include <ichor/services/logging/CoutLogger.h>
 #include <ichor/services/logging/CoutFrameworkLogger.h>
 #include "../examples/common/DebugService.h"
+#include <ichor/services/metrics/EventStatisticsService.h>
+#include <ichor/services/timer/ITimerTimerFactory.h>
 
 
 #if defined(TEST_URING)
@@ -40,12 +42,14 @@
 #elif defined(TEST_SDEVENT)
 #include <ichor/event_queues/SdeventQueue.h>
 #include <ichor/services/timer/TimerFactoryFactory.h>
+#include <ichor/services/timer/Timer.h>
 
 #define QIMPL SdeventQueue
 #define TFFIMPL TimerFactoryFactory
 #else
 #include <ichor/event_queues/PriorityQueue.h>
 #include <ichor/services/timer/TimerFactoryFactory.h>
+#include <ichor/services/timer/Timer.h>
 #define TFFIMPL TimerFactoryFactory
 #ifdef TEST_ORDERED
 #define QIMPL OrderedPriorityQueue
@@ -68,6 +72,38 @@ static void DisplayServices(DependencyManager &dm) {
         for(auto &[pk, pv] : v->getProperties()) {
             fmt::println("\tprop: {} {}", pk, pv);
         }
+    }
+}
+
+/// Runs fn on the thread of the dm and waits for it to finish
+template <typename Queue, typename Fn>
+static void runOnDm(Queue &queue, Fn &&fn) {
+    std::atomic<bool> done{};
+    queue.template pushEvent<RunFunctionEvent>(ServiceIdType{0}, [&]() {
+        fn();
+        done.store(true, std::memory_order_release);
+    });
+    auto const start = std::chrono::steady_clock::now();
+    while(!done.load(std::memory_order_acquire)) {
+        std::this_thread::sleep_for(500us);
+        REQUIRE(std::chrono::steady_clock::now() - start < 10s);
+    }
+}
+
+/// Waits until pred, evaluated on the thread of the dm, returns true
+template <typename Queue, typename Pred>
+static void waitOnDm(Queue &queue, Pred &&pred) {
+    auto const start = std::chrono::steady_clock::now();
+    while(true) {
+        bool satisfied{};
+        runOnDm(queue, [&]() {
+            satisfied = pred();
+        });
+        if(satisfied) {
+            return;
+        }
+        std::this_thread::sleep_for(1ms);
+        REQUIRE(std::chrono::steady_clock::now() - start < 10s);
     }
 }
 
@@ -915,7 +951,8 @@ TEST_CASE("ServicesTests") {
         std::atomic<bool> svcStarted{};
         while(!svcStarted.load(std::memory_order_acquire)) {
             queue->pushEvent<RunFunctionEvent>(ServiceIdType{0}, [&]() {
-                if(dm.getService<ITimerFactoryUserService>(svcId)) {
+                auto svc = dm.getIService(svcId);
+                if(svc && (*svc)->getServiceState() == ServiceState::ACTIVE) {
                     svcStarted.store(true, std::memory_order_release);
                 }
             });
@@ -1066,6 +1103,286 @@ TEST_CASE("ServicesTests") {
 
         t.join();
     }
+
+    SECTION("Timer factory factories can be restarted") {
+#if defined(TEST_URING)
+        auto queue = std::make_unique<QIMPL>(500, 100'000'000, emulateKernelVersion);
+#else
+        auto queue = std::make_unique<QIMPL>(500);
+#endif
+        auto &dm = queue->getManager();
+        ServiceIdType svcId{};
+        ServiceIdType tffId{};
+        Ichor::v1::Detail::_local_dm = nullptr;
+
+        std::thread t([&]() {
+            Ichor::v1::Detail::_local_dm = &dm;
+#if defined(TEST_URING)
+            REQUIRE(queue->createEventLoop());
+#elif defined(TEST_SDEVENT)
+            auto *loop = queue->createEventLoop();
+            REQUIRE(loop);
+#endif
+            dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>();
+            svcId = dm.createServiceManager<TimerFactoryUserService, ITimerFactoryUserService>()->getServiceId();
+            tffId = dm.createServiceManager<TFFIMPL>()->getServiceId();
+            queue->start(CaptureSigInt);
+#if defined(TEST_SDEVENT)
+            int r = sd_event_loop(loop);
+            REQUIRE(r >= 0);
+#endif
+        });
+
+        waitForRunning(dm);
+
+        auto isActive = [&](ServiceIdType id) {
+            auto svc = dm.getIService(id);
+            return svc && (*svc)->getServiceState() == ServiceState::ACTIVE;
+        };
+
+        waitOnDm(*queue, [&]() {
+            return isActive(svcId);
+        });
+
+        // Stopping it stops and removes the factories it created, which stops the services using them. Depending on the queue, the DM
+        // also removes those services.
+        queue->pushEvent<StopServiceEvent>(ServiceIdType{0}, tffId);
+        waitOnDm(*queue, [&]() {
+            return dm.getIService(tffId).value()->getServiceState() == ServiceState::INSTALLED && !isActive(svcId);
+        });
+
+        // started again, it creates factories for services requesting one again
+        queue->pushEvent<StartServiceEvent>(ServiceIdType{0}, tffId);
+        waitOnDm(*queue, [&]() {
+            return isActive(tffId);
+        });
+        runOnDm(*queue, [&]() {
+            svcId = dm.createServiceManager<TimerFactoryUserService, ITimerFactoryUserService>()->getServiceId();
+        });
+        waitOnDm(*queue, [&]() {
+            return isActive(svcId);
+        });
+        runOnDm(*queue, [&]() {
+            auto timer = dm.getService<ITimerFactoryUserService>(svcId)->first->getTimerFactory().createTimer();
+            REQUIRE(timer.getState() == TimerState::STOPPED);
+        });
+
+        queue->pushEvent<QuitEvent>(ServiceIdType{0});
+
+        t.join();
+    }
+
+    SECTION("Restarting a service doesn't leave its old timers behind") {
+#if defined(TEST_URING)
+        auto queue = std::make_unique<QIMPL>(500, 100'000'000, emulateKernelVersion);
+#else
+        auto queue = std::make_unique<QIMPL>(500);
+#endif
+        auto &dm = queue->getManager();
+        ServiceIdType statsId{};
+        ServiceIdType tffId{};
+        Ichor::v1::Detail::_local_dm = nullptr;
+
+        std::thread t([&]() {
+            Ichor::v1::Detail::_local_dm = &dm;
+#if defined(TEST_URING)
+            REQUIRE(queue->createEventLoop());
+#elif defined(TEST_SDEVENT)
+            auto *loop = queue->createEventLoop();
+            REQUIRE(loop);
+#endif
+            dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>();
+            dm.createServiceManager<LoggerFactory<CoutLogger>, ILoggerFactory>();
+            statsId = dm.createServiceManager<EventStatisticsService, IEventStatisticsService>(Properties{{"ShowStatisticsOnStop", Ichor::v1::make_any<bool>(false)}})->getServiceId();
+            tffId = dm.createServiceManager<TFFIMPL, ITimerTimerFactory>()->getServiceId();
+            queue->start(CaptureSigInt);
+#if defined(TEST_SDEVENT)
+            int r = sd_event_loop(loop);
+            REQUIRE(r >= 0);
+#endif
+        });
+
+        waitForRunning(dm);
+
+        // only to be called on the thread of the dm
+        auto timersOfStatsService = [&]() -> size_t {
+            auto tff = dm.getService<ITimerTimerFactory>(tffId);
+            REQUIRE(tff);
+            for(auto factoryId : tff->first->getCreatedTimerFactoryIds()) {
+                auto factory = dm.getService<ITimerFactory>(factoryId);
+                if(factory && factory->first->getRequestingServiceId() == statsId) {
+                    return factory->first->getCreatedTimers().size();
+                }
+            }
+            return 0;
+        };
+        auto statsServiceState = [&]() {
+            return dm.getIService(statsId).value()->getServiceState();
+        };
+
+        waitOnDm(*queue, [&]() {
+            return statsServiceState() == ServiceState::ACTIVE;
+        });
+        runOnDm(*queue, [&]() {
+            REQUIRE(timersOfStatsService() == 1);
+        });
+
+        // stopped, not removed: its timer factory stays, the timer of the service goes
+        queue->pushEvent<StopServiceEvent>(ServiceIdType{0}, statsId);
+        waitOnDm(*queue, [&]() {
+            return statsServiceState() == ServiceState::INSTALLED && timersOfStatsService() == 0;
+        });
+
+        queue->pushEvent<StartServiceEvent>(ServiceIdType{0}, statsId);
+        waitOnDm(*queue, [&]() {
+            return statsServiceState() == ServiceState::ACTIVE;
+        });
+        runOnDm(*queue, [&]() {
+            REQUIRE(timersOfStatsService() == 1);
+        });
+
+        queue->pushEvent<QuitEvent>(ServiceIdType{0});
+
+        t.join();
+    }
+
+#if !defined(TEST_URING)
+    SECTION("Stopping or destroying a Timer right after starting it") {
+        auto queue = std::make_unique<QIMPL>(500);
+        auto &dm = queue->getManager();
+        Ichor::v1::Detail::_local_dm = nullptr;
+
+        std::thread t([&]() {
+            Ichor::v1::Detail::_local_dm = &dm;
+#if defined(TEST_SDEVENT)
+            auto *loop = queue->createEventLoop();
+            REQUIRE(loop);
+#endif
+            dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>();
+            queue->start(CaptureSigInt);
+#if defined(TEST_SDEVENT)
+            int r = sd_event_loop(loop);
+            REQUIRE(r >= 0);
+#endif
+        });
+
+        waitForRunning(dm);
+
+        auto makeTimer = [&]() {
+            auto timer = std::make_unique<Timer>(ScopedServiceProxy<IEventQueue*>{queue.get(), ServiceIdType{0}}, 1, ServiceIdType{0});
+            timer->setChronoInterval(10s);
+            timer->setCallback([]() {});
+            return timer;
+        };
+
+        // Its thread may not have gotten to run yet, the timer is then STARTING. Repeated to make that likely.
+        constexpr uint64_t repeats = 200;
+        std::atomic<uint64_t> stopped{};
+        std::vector<std::unique_ptr<Timer>> timers;
+        runOnDm(*queue, [&]() {
+            for(uint64_t i = 0; i < repeats; i++) {
+                auto &timer = timers.emplace_back(makeTimer());
+                REQUIRE(timer->startTimer());
+                REQUIRE(timer->stopTimer([&stopped]() {
+                    stopped.fetch_add(1, std::memory_order_acq_rel);
+                }));
+            }
+        });
+        auto const stoppedAt = std::chrono::steady_clock::now();
+        while(stopped.load(std::memory_order_acquire) < repeats) {
+            std::this_thread::sleep_for(500us);
+            REQUIRE(std::chrono::steady_clock::now() - stoppedAt < 5s);
+        }
+        runOnDm(*queue, [&]() {
+            for(auto &timer : timers) {
+                REQUIRE(timer->getState() == TimerState::STOPPED);
+            }
+            timers.clear();
+        });
+
+        // destroying it doesn't wait for the thread forever
+        runOnDm(*queue, [&]() {
+            for(uint64_t i = 0; i < repeats; i++) {
+                auto destroyed = makeTimer();
+                REQUIRE(destroyed->startTimer());
+            }
+        });
+
+        queue->pushEvent<QuitEvent>(ServiceIdType{0});
+
+        t.join();
+    }
+
+    SECTION("Timer stop callbacks given while earlier ones are pending run after them") {
+        auto queue = std::make_unique<QIMPL>(500);
+        auto &dm = queue->getManager();
+        Ichor::v1::Detail::_local_dm = nullptr;
+
+        std::thread t([&]() {
+            Ichor::v1::Detail::_local_dm = &dm;
+#if defined(TEST_SDEVENT)
+            auto *loop = queue->createEventLoop();
+            REQUIRE(loop);
+#endif
+            dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>();
+            queue->start(CaptureSigInt);
+#if defined(TEST_SDEVENT)
+            int r = sd_event_loop(loop);
+            REQUIRE(r >= 0);
+#endif
+        });
+
+        waitForRunning(dm);
+
+        std::unique_ptr<Timer> timer;
+        // only used on the thread of the dm
+        std::vector<int> order;
+        std::atomic<uint64_t> called{};
+        runOnDm(*queue, [&]() {
+            timer = std::make_unique<Timer>(ScopedServiceProxy<IEventQueue*>{queue.get(), ServiceIdType{0}}, 1, ServiceIdType{0});
+            timer->setChronoInterval(10s);
+            timer->setCallback([]() {});
+            REQUIRE(timer->startTimer());
+            REQUIRE(timer->stopTimer([&]() {
+                order.push_back(1);
+                called.fetch_add(1, std::memory_order_acq_rel);
+            }));
+
+            // The thread stops and pushes an event calling the stop callback, which can't run while this event runs.
+            auto const start = std::chrono::steady_clock::now();
+            while(timer->getState() != TimerState::STOPPED) {
+                std::this_thread::sleep_for(100us);
+                REQUIRE(std::chrono::steady_clock::now() - start < 1s);
+            }
+
+            REQUIRE(!timer->stopTimer([&]() {
+                order.push_back(2);
+                called.fetch_add(1, std::memory_order_acq_rel);
+            }));
+            REQUIRE(order.empty());
+        });
+
+        auto const start = std::chrono::steady_clock::now();
+        while(called.load(std::memory_order_acquire) < 2) {
+            std::this_thread::sleep_for(500us);
+            REQUIRE(std::chrono::steady_clock::now() - start < 1s);
+        }
+        runOnDm(*queue, [&]() {
+            REQUIRE(order == std::vector<int>{1, 2});
+            // once they ran, stop callbacks are called right away again
+            bool calledRightAway{};
+            REQUIRE(!timer->stopTimer([&calledRightAway]() {
+                calledRightAway = true;
+            }));
+            REQUIRE(calledRightAway);
+            timer.reset();
+        });
+
+        queue->pushEvent<QuitEvent>(ServiceIdType{0});
+
+        t.join();
+    }
+#endif
 
     SECTION("Created timers can be requested") {
 #if defined(TEST_URING)
