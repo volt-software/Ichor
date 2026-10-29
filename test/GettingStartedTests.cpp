@@ -39,16 +39,15 @@ struct MyDependencyService final : public IMyDependencyService, public AdvancedS
 struct IMyTimerService {};
 
 struct MyTimerService final : public IMyTimerService {
-    explicit MyTimerService(ScopedServiceProxy<ITimerFactory> factory) {
-        auto timer = factory->createTimer();
-        timer.setChronoInterval(std::chrono::seconds(1));
-        timer.setCallback([]() {
+    explicit MyTimerService(ScopedServiceProxy<ITimerFactory> factory) : _timer(factory->createTimer()) {
+        _timer.setChronoInterval(std::chrono::seconds(1));
+        _timer.setCallback([]() {
             fmt::print("Timer fired\n");
         });
-        timer.startTimer();
+        _timer.startTimer();
     }
 
-    EventHandlerRegistration _timerEventRegistration{};
+    TimerRef _timer;
 };
 
 int example() {

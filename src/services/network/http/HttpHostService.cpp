@@ -1105,8 +1105,8 @@ void Ichor::v1::HttpHostService::startTimeoutTimer() {
 }
 
 void Ichor::v1::HttpHostService::stopTimeoutTimer() {
-    // Not stopped through the factory: it stops all timers of this service when this service stops, and can't be asked for a timer while it
-    // does, which can be before this. checkTimeouts() does nothing once stopped.
+    // Releasing the TimerRef stops and destroys the timer, unless the factory is stopping already, in which case it does that by itself.
+    // checkTimeouts() does nothing once stopped.
     _timeoutTimer.reset();
 }
 

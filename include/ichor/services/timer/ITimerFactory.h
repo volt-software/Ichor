@@ -1,17 +1,25 @@
 #pragma once
 
 #include <ichor/services/timer/ITimer.h>
-#include <ichor/stl/Spans.h>
+#include <ichor/stl/NeverAlwaysNull.h>
+#include <tl/optional.h>
+#include <vector>
 
 namespace Ichor::v1 {
     // NOLINTNEXTLINE(cppcoreguidelines-virtual-class-destructor): final, and ITimer's destructor is protected: nothing deletes it through another type
     class TimerRef; // forward declaration to avoid circular include
     struct ITimerFactory {
+        /// The timer lives as long as a TimerRef to it exists, see TimerRef.
         [[nodiscard]] virtual TimerRef createTimer() = 0;
         // Retrieve a timer by its id. Returns nullptr when not found.
         [[nodiscard]] virtual tl::optional<NeverNull<ITimer*>> getTimerById(uint64_t timerId) noexcept = 0;
+        /// Using a TimerRef to the timer after this destroyed it terminates the program.
         virtual bool destroyTimerIfStopped(uint64_t timerId) = 0;
-        [[nodiscard]] virtual VectorView<ITimer> getCreatedTimers() const noexcept = 0;
+        /// Stops the timer and destroys it once it has stopped. Called when the last TimerRef to a timer is destroyed.
+        virtual void releaseTimer(uint64_t timerId) noexcept = 0;
+        /// Snapshot of the timers of the requesting service. The pointers are invalidated when the timers are destroyed (e.g. when their
+        /// last TimerRef is destroyed or when the factory stops), so don't keep them around.
+        [[nodiscard]] virtual std::vector<NeverNull<ITimer const*>> getCreatedTimers() const = 0;
         [[nodiscard]] virtual ServiceIdType getRequestingServiceId() const noexcept = 0;
 
     protected:

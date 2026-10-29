@@ -71,5 +71,6 @@ namespace Ichor::v1 {
         EventInterceptorRegistration _interceptorRegistration{};
         Ichor::ScopedServiceProxy<ILogger*> _logger {};
         Ichor::ScopedServiceProxy<ITimerFactory*> _timerFactory {};
+        tl::optional<TimerRef> _timer{};
     };
 }

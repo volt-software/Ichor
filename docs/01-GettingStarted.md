@@ -272,16 +272,19 @@ Before we get to the point where we are able to start and stop the program, let'
 #include <ichor/services/timer/ITimerFactory.h>
 
 struct MyTimerService final {
-    MyTimerService(ScopedServiceProxy<ITimerFactory> factory) {
-        auto timer = factory->createTimer();
-        timer.setChronoInterval(std::chrono::seconds(1));
-        timer.setCallback([this]() {
+    MyTimerService(ScopedServiceProxy<ITimerFactory> factory) : _timer(factory->createTimer()) {
+        _timer.setChronoInterval(std::chrono::seconds(1));
+        _timer.setCallback([this]() {
             fmt::print("Timer callback\n"); // this line gets executed once every second
         });
-        timer.startTimer();
+        _timer.startTimer();
     }
+
+    TimerRef _timer;
 };
 ```
+
+`createTimer()` returns a `TimerRef`, which owns the timer much like a `std::shared_ptr`: when the last `TimerRef` to a timer is destroyed, the timer is stopped and destroyed. That's why `MyTimerService` keeps it as a member. If a timer should keep running without keeping a `TimerRef` around, call `detach()` on it; it then runs until the timer factory stops, which happens when the requesting service is removed.
 
 ```c++
 // main.cpp
@@ -352,25 +355,26 @@ struct AwaitService final : public IAwaitService {
 #include "AwaitService.h"
 
 struct MyCoroutineTimerService final {
-    MyCoroutineTimerService(ScopedServiceProxy<ITimerFactory> factory, ScopedServiceProxy<IAwaitService> awaitService) {
-        auto timer = factory->createTimer();
-        timer.setChronoInterval(std::chrono::seconds(1));
-        timer.setCallbackAsync([awaitService]() {
+    MyCoroutineTimerService(ScopedServiceProxy<ITimerFactory> factory, ScopedServiceProxy<IAwaitService> awaitService) : _timer(factory->createTimer()), _timer2(factory->createTimer()) {
+        _timer.setChronoInterval(std::chrono::seconds(1));
+        _timer.setCallbackAsync([awaitService]() {
             fmt::print("Timer callback\n");
             uint64_t i = co_await awaitService->waitOneSecond(); // the callback goes into waiting here, but other events can still be processed
             fmt::print("Waiting finished, ret {}\n", i);
             co_return {};
         });
-        timer.startTimer();
+        _timer.startTimer();
         
-        auto timer2 = factory->createTimer();
-        timer2.setChronoInterval(std::chrono::milliseconds(500));
-        timer2.setCallbackAsync([]() {
+        _timer2.setChronoInterval(std::chrono::milliseconds(500));
+        _timer2.setCallbackAsync([]() {
             fmt::print("Timer2 callback\n"); // this will print a couple times until 
             co_return {};
         });
-        timer2.startTimer();
+        _timer2.startTimer();
     }
+
+    TimerRef _timer;
+    TimerRef _timer2;
 };
 ```
 
@@ -405,14 +409,15 @@ At some point in your program, the only thing left to do is tell Ichor to stop. 
 #include <ichor/event_queues/IEventQueue.h>
 
 struct MyQuittingTimerService final {
-    MyQuittingTimerService(ScopedServiceProxy<ITimerFactory> factory, IEventQueue *queue) {
-        auto timer = factory->createTimer();
-        timer.setChronoInterval(std::chrono::seconds(1));
-        timer.setCallback([queue]() {
+    MyQuittingTimerService(ScopedServiceProxy<ITimerFactory> factory, IEventQueue *queue) : _timer(factory->createTimer()) {
+        _timer.setChronoInterval(std::chrono::seconds(1));
+        _timer.setCallback([queue]() {
             queue->pushEvent<QuitEvent>(ServiceIdType{0});
         });
-        timer.startTimer();
+        _timer.startTimer();
     }
+
+    TimerRef _timer;
 };
 ```
 

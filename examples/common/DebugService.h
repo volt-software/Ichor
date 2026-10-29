@@ -26,13 +26,13 @@ public:
     ~DebugService() final = default;
 private:
     Task<tl::expected<void, Ichor::StartError>> start() final {
-        auto _timer = _timerFactory->createTimer();
-        _timer.setCallback([this]() {
+        _timer = _timerFactory->createTimer();
+        _timer->setCallback([this]() {
             printServices();
             std::terminate();
         });
-        _timer.setChronoInterval(1000ms);
-        _timer.startTimer();
+        _timer->setChronoInterval(1000ms);
+        _timer->startTimer();
 
         // printServices();
 
@@ -40,7 +40,7 @@ private:
     }
 
     Task<void> stop() final {
-        // the timer factory also stops all timers registered to this service
+        _timer.reset();
         co_return;
     }
 
@@ -128,5 +128,6 @@ private:
 
     Ichor::ScopedServiceProxy<ILogger*> _logger {};
     Ichor::ScopedServiceProxy<ITimerFactory*> _timerFactory {};
+    tl::optional<TimerRef> _timer{};
 
 };

@@ -76,10 +76,16 @@ private:
 
 struct TimerFactoryMock final : public ITimerFactory, public AdvancedService<TimerFactoryMock> {
     TimerFactoryMock(DependencyRegister &, Properties props) : AdvancedService<TimerFactoryMock>(std::move(props)) {}
+    ~TimerFactoryMock() final {
+        for(auto &state : states) {
+            state->timer = nullptr;
+        }
+    }
 
     [[nodiscard]] TimerRef createTimer() final {
         auto &timer = timers.emplace_back(std::make_unique<TimerMock>(timers.size() + 1));
-        return TimerRef{*this, timer->getTimerId()};
+        auto &state = states.emplace_back(std::make_shared<Detail::TimerRefState>(*timer, *this, timer->getTimerId()));
+        return TimerRef{state};
     }
 
     [[nodiscard]] tl::optional<NeverNull<ITimer*>> getTimerById(uint64_t timerId) noexcept final {
@@ -97,8 +103,22 @@ struct TimerFactoryMock final : public ITimerFactory, public AdvancedService<Tim
         return true;
     }
 
-    [[nodiscard]] VectorView<ITimer> getCreatedTimers() const noexcept final {
-        return VectorView<ITimer>{timers};
+    void releaseTimer(uint64_t timerId) noexcept final {
+        // Like the real factory, which leaves stopping and destroying the timers to stopAllTimers while stopping
+        if(stopping) {
+            return;
+        }
+        // Stopped but kept around, so that tests can still inspect it
+        timers[timerId - 1]->running = false;
+        released++;
+    }
+
+    [[nodiscard]] std::vector<NeverNull<ITimer const*>> getCreatedTimers() const final {
+        std::vector<NeverNull<ITimer const*>> ret;
+        for(auto const &timer : timers) {
+            ret.emplace_back(timer.get());
+        }
+        return ret;
     }
 
     [[nodiscard]] ServiceIdType getRequestingServiceId() const noexcept final {
@@ -115,6 +135,9 @@ struct TimerFactoryMock final : public ITimerFactory, public AdvancedService<Tim
     }
 
     std::vector<std::unique_ptr<TimerMock>> timers;
+    std::vector<std::shared_ptr<Detail::TimerRefState>> states;
     /// Like a factory that is stopping or stopped, which stops and destroys the timers of the service by itself
     bool stopping{};
+    /// Amount of timers whose last TimerRef was destroyed
+    uint64_t released{};
 };

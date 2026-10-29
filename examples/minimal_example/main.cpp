@@ -15,19 +15,18 @@ void siginthandler(int) {
 
 class SigIntService final {
 public:
-    explicit SigIntService(ScopedServiceProxy<ITimerFactory> factory) {
+    explicit SigIntService(ScopedServiceProxy<ITimerFactory> factory) : _timer(factory->createTimer()) {
         // Setup a timer that fires every 100 milliseconds
-        auto timer = factory->createTimer();
-        timer.setChronoInterval(100ms);
+        _timer.setChronoInterval(100ms);
 
-        timer.setCallback([]() {
+        _timer.setCallback([]() {
             // If sigint has been fired, send a quit to the event loop.
             // This can't be done from within the siginthandler itself, as the mutex surrounding pushEvent might already be locked, resulting in a deadlock!
             if(quit) {
                 GetThreadLocalEventQueue().pushEvent<QuitEvent>(ServiceIdType{});
             }
         });
-        timer.startTimer();
+        _timer.startTimer();
 
         // Register sigint handler
         auto r = ::signal(SIGINT, siginthandler);
@@ -35,6 +34,10 @@ public:
             std::terminate();
         }
     }
+
+private:
+    // The timer is stopped and destroyed together with the last TimerRef to it
+    TimerRef _timer;
 };
 
 int main(int argc, char *argv[]) {

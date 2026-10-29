@@ -6,12 +6,15 @@
 
 #include <ichor/services/timer/ITimerFactory.h>
 #include <ichor/services/timer/ITimerTimerFactory.h>
+#include <ichor/services/timer/TimerFactoryTracker.h>
 #include <ichor/dependency_management/AdvancedService.h>
 #include <ichor/event_queues/IIOUringQueue.h>
 #include <ichor/DependencyManager.h>
 #include <ichor/ScopedServiceProxy.h>
 
 namespace Ichor::v1 {
+    class IOUringTimer;
+
     /// This class creates timer factories for requesting services, providing the requesting services' serviceId to the factory/timers
     class IOUringTimerFactoryFactory final :  public ITimerTimerFactory, public AdvancedService<IOUringTimerFactoryFactory> {
     public:
@@ -34,9 +37,6 @@ namespace Ichor::v1 {
 
         Ichor::ScopedServiceProxy<IIOUringQueue*> _q {};
         DependencyTrackerRegistration _trackerRegistration{};
-        unordered_map<ServiceIdType, ServiceIdType, ServiceIdHash> _factories;
-        bool _quitting{};
-
-        Task<void> pushStopEventForTimerFactory(ServiceIdType requestingSvcId, ServiceIdType factoryId) noexcept;
+        Detail::TimerFactoryTracker<IOUringTimer, IIOUringQueue> _tracker;
     };
 }

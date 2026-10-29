@@ -1,6 +1,8 @@
 #pragma once
 
 #include <thread>
+#include <condition_variable>
+#include <memory>
 #include <ichor/services/timer/ITimer.h>
 #include <ichor/event_queues/IEventQueue.h>
 #include <ichor/stl/RealtimeMutex.h>
@@ -9,21 +11,30 @@ namespace Ichor::v1 {
     template <typename TIMER, typename QUEUE>
     class TimerFactory;
 
-    // Rather shoddy implementation, setting the interval does not reset the insertEventLoop function and the sleep_for is sketchy at best.
+    namespace Detail {
+        /// The callbacks given to stopTimer for one run of a Timer, called from an event after the thread stopped.
+        struct TimerQuitCallbacks final {
+            RealtimeMutex m;
+            bool ran{};
+            std::vector<std::function<void()>> cbs;
+        };
+    }
+
+    /// Timer with a thread per running timer, that pushes the callback as an event into the queue on every expiry.
     class Timer final : public ITimer {
     public:
         ///
         /// \param timerId unique identifier for timer
         /// \param svcId unique identifier for svc using this timer
         Timer(Ichor::ScopedServiceProxy<IEventQueue*> queue, uint64_t timerId, ServiceIdType svcId) noexcept;
+        // Not movable: the thread of a running timer references the timer.
         Timer(Timer const &) = delete;
-        // The mutex itself is not moved (native mutexes cannot be), the new Timer gets its own.
-        Timer(Timer &&) noexcept;
+        Timer(Timer &&) = delete;
 
         ~Timer() noexcept;
 
         Timer& operator=(Timer const &) = delete;
-        Timer& operator=(Timer &&o) noexcept;
+        Timer& operator=(Timer &&o) = delete;
 
         /// Thread-safe.
         bool startTimer() final;
@@ -76,6 +87,10 @@ namespace Ichor::v1 {
         uint64_t _priority{INTERNAL_EVENT_PRIORITY};
         ServiceIdType _requestingServiceId{};
         std::vector<std::function<void()>> _quitCbs;
+        // The callbacks of the last run, until their event ran. Shared with that event, which can run after the timer is destroyed.
+        std::shared_ptr<Detail::TimerQuitCallbacks> _pendingQuitCbs;
         mutable RealtimeMutex _m;
+        // Wakes up the thread when the timer stops or its interval changes
+        std::condition_variable_any _wakeup;
     };
 }

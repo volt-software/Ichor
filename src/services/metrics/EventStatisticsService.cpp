@@ -21,16 +21,16 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::v1::EventStatisticsSer
 
 //    fmt::print("evt stats {}:{} {} {}\n", getServiceId(), getServiceName(), _showStatisticsOnStop, _averagingIntervalMs);
 
-    auto timer = _timerFactory->createTimer();
-    timer.setChronoInterval(std::chrono::milliseconds(_averagingIntervalMs));
+    _timer = _timerFactory->createTimer();
+    _timer->setChronoInterval(std::chrono::milliseconds(_averagingIntervalMs));
 
-    timer.setCallbackAsync([this]() -> AsyncGenerator<IchorBehaviour> {
+    _timer->setCallbackAsync([this]() -> AsyncGenerator<IchorBehaviour> {
         calculateAverage();
         co_return {};
     });
 
     _interceptorRegistration = GetThreadLocalManager().registerEventInterceptor<Event>(this, this);
-    timer.startTimer();
+    _timer->startTimer();
 
     // Try to get stopped after all other default priority services, to catch more events. We'll probably still miss services with a lower priority, but alas...
     this->setServicePriority(1'001);
@@ -40,6 +40,7 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::v1::EventStatisticsSer
 
 Ichor::Task<void> Ichor::v1::EventStatisticsService::stop() {
     _interceptorRegistration.reset();
+    _timer.reset();
 
     if(_logger == nullptr) {
         std::terminate();

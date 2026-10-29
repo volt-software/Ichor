@@ -17,7 +17,7 @@ protected:
 };
 
 /// Has a repeating timer that only counts its callbacks, without touching the service, so that it is safe even if callbacks wrongly
-/// keep running after the service stopped.
+/// keep running after the service stopped. The timer is detached, so that only its factory stops it.
 class CountingTimerService final {
 public:
     explicit CountingTimerService(ScopedServiceProxy<ITimerFactory> factory) {
@@ -27,6 +27,7 @@ public:
             countingTimerCallbacks++;
         });
         timer.startTimer();
+        timer.detach();
     }
 };
 
@@ -47,7 +48,7 @@ public:
         });
         _restarting.startTimer();
 
-        // The thread based Timer is STOPPING for up to a tenth of its interval, long enough for stopAllTimers to start in between.
+        // The thread based Timer is STOPPING until its thread wakes up, which may be long enough for stopAllTimers to start in between.
         _destroyedOnStop.setChronoInterval(std::chrono::milliseconds(200));
         _destroyedOnStop.setCallback([]() {});
         _destroyedOnStop.startTimer();

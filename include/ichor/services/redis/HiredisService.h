@@ -78,6 +78,7 @@ namespace Ichor::v1 {
         Ichor::ScopedServiceProxy<ITimerFactory*> _timerFactory {};
         Ichor::ScopedServiceProxy<IEventQueue*> _queue {};
         tl::optional<TimerRef> _timeoutTimer{};
+        tl::optional<TimerRef> _pollTimer{};
         std::vector<NameHashType> _queuedResponseTypes{};
         bool _timeoutTimerRunning{};
         bool _debug{};

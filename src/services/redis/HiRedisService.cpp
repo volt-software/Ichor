@@ -245,14 +245,14 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::v1::HiredisService::st
     });
     _timeoutTimer->setChronoInterval(std::chrono::milliseconds(_tryConnectIntervalMs));
 
-    auto pollTimer = _timerFactory->createTimer();
-    pollTimer.setCallback([this]() {
+    _pollTimer = _timerFactory->createTimer();
+    _pollTimer->setCallback([this]() {
         if(_redisContext != nullptr) {
             redisPollTick(_redisContext, 0);
         }
     });
-    pollTimer.setChronoInterval(std::chrono::milliseconds(_pollIntervalMs));
-    pollTimer.startTimer();
+    _pollTimer->setChronoInterval(std::chrono::milliseconds(_pollIntervalMs));
+    _pollTimer->startTimer();
     _timeoutTimer->startTimer();
 
     co_await _startEvt;
@@ -269,6 +269,7 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::v1::HiredisService::st
 Ichor::Task<void> Ichor::v1::HiredisService::stop() {
     redisAsyncDisconnect(_redisContext);
     _timeoutTimer.reset();
+    _pollTimer.reset();
 
     INTERNAL_DEBUG("HiredisService::stop() co_return");
 

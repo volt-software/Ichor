@@ -18,49 +18,14 @@ Ichor::v1::Timer::Timer(Ichor::ScopedServiceProxy<IEventQueue*> queue, uint64_t 
 Ichor::v1::Timer::~Timer() noexcept {
     {
         std::unique_lock l{_m};
-        if(_state == TimerState::RUNNING) {
+        if(_state == TimerState::RUNNING || _state == TimerState::STARTING) {
             _state = TimerState::STOPPING;
         }
+        _wakeup.notify_all();
     }
     if(_eventInsertionThread && _eventInsertionThread->joinable()) {
         _eventInsertionThread->join();
     }
-}
-
-// NOLINTBEGIN(cppcoreguidelines-prefer-member-initializer): o's members are read under o's lock, which a member initializer would read before
-Ichor::v1::Timer::Timer(Ichor::v1::Timer &&o) noexcept {
-    std::unique_lock l{o._m};
-    _queue = o._queue;
-    _timerId = o._timerId;
-    _state = o._state;
-    _fireOnce = o._fireOnce;
-    _intervalNanosec = o._intervalNanosec;
-    _eventInsertionThread = std::move(o._eventInsertionThread);
-    _fnAsync = std::move(o._fnAsync);
-    _fn = std::move(o._fn);
-    _priority = o._priority;
-    _requestingServiceId = o._requestingServiceId;
-    _quitCbs = std::move(o._quitCbs);
-}
-// NOLINTEND(cppcoreguidelines-prefer-member-initializer)
-
-Ichor::v1::Timer& Ichor::v1::Timer::operator=(Ichor::v1::Timer &&o) noexcept {
-    if(this == &o) [[unlikely]] {
-        return *this;
-    }
-    std::scoped_lock l{_m, o._m};
-    _queue = o._queue;
-    _timerId = o._timerId;
-    _state = o._state;
-    _fireOnce = o._fireOnce;
-    _intervalNanosec = o._intervalNanosec;
-    _eventInsertionThread = std::move(o._eventInsertionThread);
-    _fnAsync = std::move(o._fnAsync);
-    _fn = std::move(o._fn);
-    _priority = o._priority;
-    _requestingServiceId = o._requestingServiceId;
-    _quitCbs = std::move(o._quitCbs);
-    return *this;
 }
 
 bool Ichor::v1::Timer::startTimer() {
@@ -94,13 +59,24 @@ bool Ichor::v1::Timer::startTimer(bool fireImmediately) {
 bool Ichor::v1::Timer::stopTimer(std::function<void()> cb) {
     std::unique_lock l{_m};
     INTERNAL_IO_DEBUG("timer {} for {} stop {}", _timerId, _requestingServiceId, _state);
-    if(_state == TimerState::RUNNING || _state == TimerState::STOPPING) {
+    // STARTING too: the thread hasn't started waiting yet, and quits when it sees the timer isn't STARTING anymore
+    if(_state == TimerState::RUNNING || _state == TimerState::STARTING || _state == TimerState::STOPPING) {
         if(cb) {
             _quitCbs.emplace_back(std::move(cb));
         }
         _state = TimerState::STOPPING;
+        _wakeup.notify_all();
         return true;
     } else if(cb) {
+        if(_pendingQuitCbs) {
+            std::unique_lock pl{_pendingQuitCbs->m};
+            if(!_pendingQuitCbs->ran) {
+                // The callbacks of the last stop didn't run yet. Run this one after them instead of before, e.g. a factory waiting for
+                // its timers to be stopped could otherwise be destroyed before the earlier callbacks run.
+                _pendingQuitCbs->cbs.emplace_back(std::move(cb));
+                return false;
+            }
+        }
         // Not while holding the lock, the callback may use the timer (e.g. getState() or destroying it)
         l.unlock();
         cb();
@@ -136,6 +112,8 @@ void Ichor::v1::Timer::setCallback(std::function<void()> fn) {
 void Ichor::v1::Timer::setInterval(uint64_t nanoseconds) noexcept {
     std::unique_lock l{_m};
     _intervalNanosec = nanoseconds;
+    // the next expiry is relative to the previous one, using the new interval
+    _wakeup.notify_all();
 }
 
 
@@ -178,39 +156,55 @@ void Ichor::v1::Timer::insertEventLoop(bool fireImmediately) {
 
     ScopeGuard sg{[this]() {
         std::unique_lock l{_m};
-        _queue->pushPrioritisedEvent<RunFunctionEvent>(ServiceIdType{0}, _priority, [quitCbs = std::move(_quitCbs)](){
+        auto pending = std::make_shared<Detail::TimerQuitCallbacks>();
+        pending->cbs = std::move(_quitCbs);
+        _quitCbs.clear();
+        _pendingQuitCbs = pending;
+        _queue->pushPrioritisedEvent<RunFunctionEvent>(ServiceIdType{0}, _priority, [pending = std::move(pending)](){
+            std::vector<std::function<void()>> quitCbs;
+            {
+                std::unique_lock pl{pending->m};
+                pending->ran = true;
+                quitCbs = std::move(pending->cbs);
+            }
             for(auto &cb : quitCbs) {
                 cb();
             }
         });
         _state = TimerState::STOPPED;
-        _quitCbs.clear();
     }};
-    auto now = std::chrono::steady_clock::now();
-    auto next = now;
     std::unique_lock l{_m};
-    if(!fireImmediately) {
-        next += std::chrono::nanoseconds(_intervalNanosec);
-    }
     if(_state != TimerState::STARTING) {
         INTERNAL_IO_DEBUG("timer {} for {} insertEventLoop quit before start??", _timerId, _requestingServiceId);
         return;
     }
     _state = TimerState::RUNNING;
+    // Expiries are relative to the previous one instead of to when the callback got pushed, so that the interval doesn't drift.
+    auto previous = std::chrono::steady_clock::now();
+    bool fireNow = fireImmediately;
     while(_state == TimerState::RUNNING) {
-        while(now < next) {
-            auto ns = _intervalNanosec/10;
-            l.unlock();
-            INTERNAL_IO_DEBUG("timer {} for {} sleeping for {}", _timerId, _requestingServiceId, ns);
-            std::this_thread::sleep_for(std::chrono::nanoseconds(ns));
-            now = std::chrono::steady_clock::now();
-            l.lock();
+        if(!fireNow) {
+            // Woken up early by stopTimer(), setInterval() or the destructor
+            while(_state == TimerState::RUNNING) {
+                auto const interval = std::chrono::nanoseconds(_intervalNanosec);
+                auto const next = previous + interval;
+                auto const now = std::chrono::steady_clock::now();
+                if(now >= next) {
+                    // If we're behind by more than an interval (e.g. the interval got shortened), skip the missed expiries instead of firing them all at once.
+                    previous = now - next >= interval ? now : next;
+                    break;
+                }
+                INTERNAL_IO_DEBUG("timer {} for {} waiting for {}", _timerId, _requestingServiceId, (next - now).count());
+                _wakeup.wait_until(l, next);
+            }
 
             if(_state != TimerState::RUNNING) {
                 INTERNAL_IO_DEBUG("timer {} for {} stopping because state is {}", _timerId, _requestingServiceId, _state);
                 return;
             }
         }
+        fireNow = false;
+
         INTERNAL_IO_DEBUG("timer {} for {} pushing event", _timerId, _requestingServiceId);
         // Make copy of function, in case setCallback() gets called during async stuff.
         if(_fnAsync) {
@@ -224,7 +218,5 @@ void Ichor::v1::Timer::insertEventLoop(bool fireImmediately) {
             _state = TimerState::STOPPING;
             break;
         }
-
-        next += std::chrono::nanoseconds(_intervalNanosec);
     }
 }

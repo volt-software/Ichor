@@ -9,6 +9,7 @@
 #include "TestServices/TimerStateTransitionsService.h"
 #include "TestServices/TimerFactoryEdgeCaseServices.h"
 #include "TestServices/CreateTimerService.h"
+#include "TestServices/TimerFactoryUserService.h"
 #include "TestServices/AddEventHandlerDuringEventHandlingService.h"
 #include "TestServices/RequestsLoggingService.h"
 #include "TestServices/ConstructorInjectionTestServices.h"
@@ -879,6 +880,192 @@ TEST_CASE("ServicesTests") {
         t.join();
     }
 #endif
+
+    SECTION("TimerRefs own their timer") {
+#if defined(TEST_URING)
+        auto queue = std::make_unique<QIMPL>(500, 100'000'000, emulateKernelVersion);
+#else
+        auto queue = std::make_unique<QIMPL>(500);
+#endif
+        auto &dm = queue->getManager();
+        ServiceIdType svcId{};
+        Ichor::v1::Detail::_local_dm = nullptr;
+
+        std::thread t([&]() {
+            Ichor::v1::Detail::_local_dm = &dm;
+#if defined(TEST_URING)
+            REQUIRE(queue->createEventLoop());
+#elif defined(TEST_SDEVENT)
+            auto *loop = queue->createEventLoop();
+            REQUIRE(loop);
+#endif
+            dm.createServiceManager<CoutFrameworkLogger, IFrameworkLogger>();
+            svcId = dm.createServiceManager<TimerFactoryUserService, ITimerFactoryUserService>()->getServiceId();
+            dm.createServiceManager<TFFIMPL>();
+            queue->start(CaptureSigInt);
+#if defined(TEST_SDEVENT)
+            int r = sd_event_loop(loop);
+            REQUIRE(r >= 0);
+#endif
+        });
+
+        waitForRunning(dm);
+
+        auto const start = std::chrono::steady_clock::now();
+        std::atomic<bool> svcStarted{};
+        while(!svcStarted.load(std::memory_order_acquire)) {
+            queue->pushEvent<RunFunctionEvent>(ServiceIdType{0}, [&]() {
+                if(dm.getService<ITimerFactoryUserService>(svcId)) {
+                    svcStarted.store(true, std::memory_order_release);
+                }
+            });
+            std::this_thread::sleep_for(1ms);
+            REQUIRE(std::chrono::steady_clock::now() - start < 10s);
+        }
+
+        // Runs fn on the thread of the dm, the TimerRefs are only used there
+        auto onDm = [&](auto fn) {
+            std::atomic<bool> done{};
+            queue->pushEvent<RunFunctionEvent>(ServiceIdType{0}, [&]() {
+                auto svc = dm.getService<ITimerFactoryUserService>(svcId);
+                REQUIRE(svc);
+                fn(svc->first->getTimerFactory());
+                done.store(true, std::memory_order_release);
+            });
+            while(!done.load(std::memory_order_acquire)) {
+                std::this_thread::sleep_for(500us);
+                REQUIRE(std::chrono::steady_clock::now() - start < 10s);
+            }
+        };
+        auto createdTimers = [&]() {
+            size_t amount{};
+            onDm([&](ITimerFactory &factory) {
+                amount = factory.getCreatedTimers().size();
+            });
+            return amount;
+        };
+        auto waitForCreatedTimers = [&](size_t amount) {
+            while(createdTimers() != amount) {
+                std::this_thread::sleep_for(1ms);
+                REQUIRE(std::chrono::steady_clock::now() - start < 10s);
+            }
+        };
+        std::atomic<uint64_t> fired{};
+        auto waitForFired = [&](uint64_t amount, std::chrono::milliseconds timeout) {
+            auto const waitStart = std::chrono::steady_clock::now();
+            while(fired.load(std::memory_order_acquire) < amount) {
+                std::this_thread::sleep_for(500us);
+                REQUIRE(std::chrono::steady_clock::now() - waitStart < timeout);
+            }
+        };
+        auto createCountingTimer = [&fired](ITimerFactory &factory, std::chrono::milliseconds interval) {
+            auto timer = factory.createTimer();
+            timer.setChronoInterval(interval);
+            timer.setCallback([&fired]() {
+                fired.fetch_add(1, std::memory_order_acq_rel);
+            });
+            return timer;
+        };
+
+        tl::optional<TimerRef> timer;
+        tl::optional<TimerRef> copy;
+
+        // copies share ownership
+        onDm([&](ITimerFactory &factory) {
+            timer = createCountingTimer(factory, 1ms);
+            REQUIRE(timer->startTimer());
+            copy = *timer;
+        });
+        waitForFired(fired.load(std::memory_order_acquire) + 3, 5'000ms);
+        REQUIRE(createdTimers() == 1);
+
+        onDm([&](ITimerFactory &) {
+            timer.reset();
+        });
+        waitForFired(fired.load(std::memory_order_acquire) + 3, 5'000ms);
+        REQUIRE(createdTimers() == 1);
+
+        // the last one stops and destroys it
+        onDm([&](ITimerFactory &) {
+            copy.reset();
+        });
+        waitForCreatedTimers(0);
+        auto const firedWhenDestroyed = fired.load(std::memory_order_acquire);
+        std::this_thread::sleep_for(20ms);
+        REQUIRE(fired.load(std::memory_order_acquire) == firedWhenDestroyed);
+
+        // also when it was only just started
+        onDm([&](ITimerFactory &factory) {
+            auto justStarted = createCountingTimer(factory, 1ms);
+            REQUIRE(justStarted.startTimer());
+        });
+        waitForCreatedTimers(0);
+
+        // a stopped one is destroyed right away
+        onDm([&](ITimerFactory &factory) {
+            static_cast<void>(createCountingTimer(factory, 1ms));
+            REQUIRE(factory.getCreatedTimers().empty());
+        });
+
+        // a timer destroyed through its factory leaves its TimerRefs without a timer
+        onDm([&](ITimerFactory &factory) {
+            timer = createCountingTimer(factory, 1ms);
+            REQUIRE(factory.destroyTimerIfStopped(timer->getTimerId()));
+            REQUIRE(factory.getCreatedTimers().empty());
+            timer.reset();
+        });
+
+        // a detached timer keeps running until its factory stops
+        onDm([&](ITimerFactory &factory) {
+            auto detached = createCountingTimer(factory, 1ms);
+            REQUIRE(detached.startTimer());
+            detached.detach();
+        });
+        waitForFired(fired.load(std::memory_order_acquire) + 3, 5'000ms);
+        REQUIRE(createdTimers() == 1);
+
+        // changing the interval and stopping a running timer take effect right away, not after the old interval
+        // the detached timer keeps incrementing fired, so this one counts by itself
+        std::atomic<uint64_t> shortenedFired{};
+        onDm([&](ITimerFactory &factory) {
+            timer = factory.createTimer();
+            timer->setChronoInterval(10'000ms);
+            timer->setCallback([&shortenedFired]() {
+                shortenedFired.fetch_add(1, std::memory_order_acq_rel);
+            });
+            REQUIRE(timer->startTimer());
+        });
+        onDm([&](ITimerFactory &) {
+            timer->setChronoInterval(1ms);
+        });
+        auto const shortenedAt = std::chrono::steady_clock::now();
+        while(shortenedFired.load(std::memory_order_acquire) == 0) {
+            std::this_thread::sleep_for(500us);
+            REQUIRE(std::chrono::steady_clock::now() - shortenedAt < 2s);
+        }
+
+        std::atomic<bool> stopped{};
+        onDm([&](ITimerFactory &) {
+            timer->setChronoInterval(10'000ms);
+            REQUIRE(timer->stopTimer([&stopped]() {
+                stopped.store(true, std::memory_order_release);
+            }));
+        });
+        auto const stoppedAt = std::chrono::steady_clock::now();
+        while(!stopped.load(std::memory_order_acquire)) {
+            std::this_thread::sleep_for(500us);
+            REQUIRE(std::chrono::steady_clock::now() - stoppedAt < 500ms);
+        }
+
+        onDm([&](ITimerFactory &) {
+            timer.reset();
+        });
+        REQUIRE(createdTimers() == 1);
+
+        queue->pushEvent<QuitEvent>(ServiceIdType{0});
+
+        t.join();
+    }
 
     SECTION("Created timers can be requested") {
 #if defined(TEST_URING)

@@ -30,8 +30,8 @@ private:
     Task<tl::expected<void, Ichor::StartError>> start() final {
         ICHOR_LOG_INFO(_logger, "PingService started");
 
-        auto timer = _timerFactory->createTimer();
-        timer.setCallbackAsync([this, &timer = timer]() -> AsyncGenerator<IchorBehaviour> {
+        _timer = _timerFactory->createTimer();
+        _timer->setCallbackAsync([this]() -> AsyncGenerator<IchorBehaviour> {
             auto toSendMsg = _serializer->serialize(PingMsg{_sequence});
 
             _sequence++;
@@ -48,21 +48,23 @@ private:
             }
 
             // prevent sending more than we can handle
-            if(std::chrono::duration_cast<std::chrono::microseconds>(end - start) > _timerTimeout) {
+            // _timer is reset when we stop while waiting for the response
+            if(_timer && std::chrono::duration_cast<std::chrono::microseconds>(end - start) > _timerTimeout) {
                 _timerTimeout = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-                timer.setChronoInterval(_timerTimeout);
+                _timer->setChronoInterval(_timerTimeout);
             }
 
             co_return {};
         });
-        timer.setChronoInterval(_timerTimeout);
-        timer.startTimer();
+        _timer->setChronoInterval(_timerTimeout);
+        _timer->startTimer();
 
         co_return {};
     }
 
     Task<void> stop() final {
         ICHOR_LOG_INFO(_logger, "PingService stopped");
+        _timer.reset();
         co_return;
     }
 
@@ -128,6 +130,7 @@ private:
 
     Ichor::ScopedServiceProxy<ILogger*> _logger {};
     Ichor::ScopedServiceProxy<ITimerFactory*> _timerFactory {};
+    tl::optional<TimerRef> _timer{};
     Ichor::ScopedServiceProxy<ISerializer<PingMsg>*> _serializer {};
     Ichor::ScopedServiceProxy<IHttpConnectionService*> _connectionService {};
     uint64_t _sequence{};
