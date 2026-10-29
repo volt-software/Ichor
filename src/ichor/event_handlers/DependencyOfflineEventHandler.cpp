@@ -1,0 +1,100 @@
+#include <ichor/DependencyManager.h>
+
+void Ichor::DependencyManager::handleEvent(DependencyOfflineEvent &evt, ProcessEventContext &ctx) {
+    _pendingDependencyOfflines.erase(evt.originatingService);
+    auto const managerIt = _services.find(evt.originatingService);
+
+    if (managerIt == end(_services)) [[unlikely]] {
+        return;
+    }
+
+    auto &manager = managerIt->second;
+    INTERNAL_DEBUG("DependencyOfflineEvent {} {} {}:{} {} {}", evt.id, evt.priority, evt.originatingService, manager->implementationName(), manager->getServiceState(), evt.removeOriginatingServiceAfterStop);
+
+    if (!manager->setUninjected()) {
+        // DependencyOfflineEvent already started or processed
+        INTERNAL_DEBUG("Couldn't set uninjected for {} {} {}", manager->serviceId(), manager->implementationName(), manager->getServiceState());
+        return;
+    }
+
+    // copy dependees as it will be modified during this loop
+    auto dependees = manager->getDependees();
+    for (auto &serviceId : dependees) {
+        auto const depIt = _services.find(serviceId);
+
+        if constexpr (DO_INTERNAL_DEBUG || DO_HARDENING) {
+            if (depIt == _services.end()) [[unlikely]] {
+                ICHOR_EMERGENCY_LOG2(_logger, "Couldn't find dependendee {}.", serviceId);
+                std::terminate();
+            }
+        }
+
+        auto priority = std::min(depIt->second->getPriority(), INTERNAL_DEPENDENCY_EVENT_PRIORITY);
+        auto depIts = depIt->second->interestedInDependencyGoingOffline(manager.get());
+
+        if(depIts.empty()) {
+            continue;
+        }
+
+        auto gen = depIt->second->dependencyOffline(manager.get(), depIts);
+        gen.set_service_id(depIt->second->serviceId());
+        gen.set_priority(priority);
+        auto it = gen.begin();
+
+        if(!it.get_finished()) {
+            if constexpr (DO_INTERNAL_DEBUG) {
+                if (!it.get_has_suspended()) [[unlikely]] {
+                    INTERNAL_DEBUG("{}", it.get_promise_id());
+                    std::terminate();
+                }
+            }
+            _scopedGenerators.emplace(it.get_promise_id(), ScopedGenerator{std::make_unique<AsyncGenerator<StartBehaviour>>(std::move(gen)), v1::make_reference_counted<ContinuableDependencyOfflineEvent>(_eventQueue.getNextEventId(), serviceId, priority, evt.originatingService, evt.removeOriginatingServiceAfterStop, std::move(depIts))});
+            // create new event that will be inserted upon finish of coroutine in ContinuableStartEvent
+            // _scopedEvents.emplace(it.get_promise_id(), v1::make_reference_counted<ContinuableDependencyOfflineEvent>(_eventQueue.getNextEventId(), serviceId, priority, evt.originatingService, evt.removeOriginatingServiceAfterStop, std::move(depIts)));
+            continue;
+        }
+
+        if constexpr (DO_INTERNAL_DEBUG) {
+            if (it.get_has_suspended()) [[unlikely]] {
+                INTERNAL_DEBUG("{}", it.get_promise_id());
+                std::terminate();
+            }
+        }
+
+        // Dependee needs to be stopped, we need to keep originatingService alive until all dependees that need to be stopped are stopped.
+        if(it.get_value() == StartBehaviour::STOP_ME) {
+            INTERNAL_DEBUG("DependencyOfflineEvent {} {} {}:{} state {} dependee {}:{} state {} dependee requesting stop", evt.id, evt.priority, evt.originatingService, manager->implementationName(), manager->getServiceState(), serviceId, depIt->second->implementationName(), depIt->second->getServiceState());
+            auto& waitingSvcs = _pendingStopsDueToDependencies[serviceId];
+            if(waitingSvcs.empty()) {
+                _eventQueue.pushPrioritisedEvent<StopServiceEvent>(evt.originatingService, priority, serviceId, evt.removeOriginatingServiceAfterStop);
+            }
+            waitingSvcs.emplace_back(evt.originatingService, priority, evt.removeOriginatingServiceAfterStop, std::move(depIts));
+            continue;
+        }
+
+        if(it.get_value() == StartBehaviour::STOPPED) [[unlikely]] {
+            INTERNAL_DEBUG("DependencyOfflineEvent {} {} {}:{} state {} dependee {}:{} state {} dependee stopped?", evt.id, evt.priority, evt.originatingService, manager->implementationName(), manager->getServiceState(), serviceId, depIt->second->implementationName(), depIt->second->getServiceState());
+            // depIt->second->finishDependencyOffline(manager.get(), depIts);
+            // clearServiceRegistrations(ctx.allEventInterceptorsCopy, ctx.eventInterceptorsCopy, serviceId);
+            // //finishWaitingService(serviceId, StopServiceEvent::TYPE, StopServiceEvent::NAME);
+            // _eventQueue.pushPrioritisedEvent<DependencyOfflineEvent>(serviceId, priority, false);
+            std::terminate();
+        }
+
+        if(it.get_value() == StartBehaviour::DONE) {
+            INTERNAL_DEBUG("DependencyOfflineEvent {} {} {}:{} state {} dependee {}:{} state {} dependee removed", evt.id, evt.priority, evt.originatingService, manager->implementationName(), manager->getServiceState(), serviceId, depIt->second->implementationName(), depIt->second->getServiceState());
+            depIt->second->finishDependencyOffline(manager.get(), depIts);
+        }
+
+        if constexpr (DO_INTERNAL_DEBUG) {
+            if(it.get_value() == StartBehaviour::STARTED) [[unlikely]] {
+                INTERNAL_DEBUG("DependencyOfflineEvent {} {} {}:{} state {} dependee {}:{} state {} dependee catastrophic failure", evt.id, evt.priority, evt.originatingService, manager->implementationName(), manager->getServiceState(), serviceId, depIt->second->implementationName(), depIt->second->getServiceState());
+                std::terminate();
+            }
+        }
+    }
+    if(manager->getDependees().empty()) {
+        finishWaitingService(evt.originatingService, DependencyOfflineEvent::TYPE, DependencyOfflineEvent::NAME);
+        _eventQueue.pushPrioritisedEvent<StopServiceEvent>(evt.originatingService, std::min(evt.priority, INTERNAL_DEPENDENCY_EVENT_PRIORITY), evt.originatingService, evt.removeOriginatingServiceAfterStop);
+    }
+}

@@ -27,6 +27,8 @@ using namespace std::chrono_literals;
 namespace Ichor {
     class CommunicationChannel;
     class BaseEventQueue;
+    struct RunFunctionEvent;
+    struct RunFunctionEventAsync;
 
     // Moved here from InternalEvents.h to prevent circular includes
     /// Used to prevent modifying the _services container while iterating over it through f.e. DependencyOnline()
@@ -915,6 +917,33 @@ namespace Ichor {
         void start();
         /// Called from the queue implementation
         void processEvent(std::unique_ptr<Event> &evt);
+
+        /// State of processEvent() that the handlers of internal events need access to
+        struct ProcessEventContext final {
+            /// Null after a handler moved the event into _scopedGenerators, to keep it alive for a coroutine
+            std::unique_ptr<Event> &uniqueEvt;
+            /// The event being processed. A handler that moves uniqueEvt has to repoint this to wherever the event lives now, the post interceptors use it.
+            Event *evt;
+            std::vector<EventInterceptInfo> &allEventInterceptorsCopy;
+            std::vector<EventInterceptInfo> &eventInterceptorsCopy;
+        };
+        // processEvent() dispatches every internal event type to one of these, each is implemented in its own file in src/ichor/event_handlers
+        void handleEvent(DependencyOnlineEvent &evt, ProcessEventContext &ctx);
+        void handleEvent(DependencyOfflineEvent &evt, ProcessEventContext &ctx);
+        void handleEvent(DependencyRequestEvent &evt, ProcessEventContext &ctx);
+        void handleEvent(QuitEvent &evt, ProcessEventContext &ctx);
+        void handleEvent(InsertServiceEvent &evt, ProcessEventContext &ctx);
+        void handleEvent(StopServiceEvent &evt, ProcessEventContext &ctx);
+        void handleEvent(StartServiceEvent &evt, ProcessEventContext &ctx);
+        void handleEvent(RemoveServiceEvent &evt, ProcessEventContext &ctx);
+        void handleEvent(RemoveEventHandlerEvent &evt, ProcessEventContext &ctx);
+        void handleEvent(RemoveEventInterceptorEvent &evt, ProcessEventContext &ctx);
+        void handleEvent(AddTrackerEvent &evt, ProcessEventContext &ctx);
+        void handleEvent(RemoveTrackerEvent &evt, ProcessEventContext &ctx);
+        void handleEvent(ContinuableEvent &evt, ProcessEventContext &ctx);
+        void handleEvent(ContinuableStartEvent &evt, ProcessEventContext &ctx);
+        void handleEvent(RunFunctionEvent &evt, ProcessEventContext &ctx);
+        void handleEvent(RunFunctionEventAsync &evt, ProcessEventContext &ctx);
         /// Called from the queue implementation
         void stop();
         /// Called from the queue implementation
