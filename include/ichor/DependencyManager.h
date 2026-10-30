@@ -944,6 +944,15 @@ namespace Ichor {
         void handleEvent(ContinuableStartEvent &evt, ProcessEventContext &ctx);
         void handleEvent(RunFunctionEvent &evt, ProcessEventContext &ctx);
         void handleEvent(RunFunctionEventAsync &evt, ProcessEventContext &ctx);
+        // The ContinuableStartEvent handler calls these when the coroutine started while handling origEvt finishes, implemented next to the handler of origEvt
+        void finishAsyncEvent(StartServiceEvent &origEvt, ContinuableStartEvent const &evt, StartBehaviour result, ProcessEventContext &ctx);
+        void finishAsyncEvent(StopServiceEvent &origEvt, ContinuableStartEvent const &evt, StartBehaviour result, ProcessEventContext &ctx);
+        void finishAsyncEvent(DependencyOnlineEvent &origEvt, ContinuableStartEvent const &evt, StartBehaviour result, ProcessEventContext &ctx);
+        void finishAsyncEvent(ContinuableDependencyOfflineEvent &origEvt, ContinuableStartEvent const &evt, StartBehaviour result, ProcessEventContext &ctx);
+        /// Cleanup once svc has stopped, whether stop() finished immediately or asynchronously. Removes svc if evt.removeAfter is set.
+        void finishStoppingService(StopServiceEvent const &evt, ILifecycleManager &svc, ProcessEventContext &ctx);
+        /// Runs svc's start coroutine now that its dependencies are online. Pushes a DependencyOnlineEvent for it once started, parks the coroutine in _scopedGenerators if it suspends.
+        void startAfterDependencyOnline(ILifecycleManager &svc, uint64_t priority);
         /// Called from the queue implementation
         void stop();
         /// Called from the queue implementation

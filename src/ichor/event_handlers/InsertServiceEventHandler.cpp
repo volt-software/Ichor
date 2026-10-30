@@ -11,23 +11,8 @@ void Ichor::DependencyManager::handleEvent(InsertServiceEvent &evt, ProcessEvent
 
     // If a service requests IService, we interpret it to mean a reference to itself, not just all services in existence.
     Ichor::v1::Detail::IServiceInterestedLifecycleManager selfMgr{cmpMgr->getIService()};
-    {
-        auto startBehaviour = cmpMgr->dependencyOnline(&selfMgr);
-
-        if(startBehaviour == StartBehaviour::STARTED) {
-            auto gen = cmpMgr->startAfterDependencyOnline();
-            gen.set_service_id(cmpMgr->serviceId());
-            gen.set_priority(std::min(cmpMgr->getPriority(), INTERNAL_DEPENDENCY_EVENT_PRIORITY));
-            auto it = gen.begin();
-
-            if(!it.get_finished()) {
-                _scopedGenerators.emplace(it.get_promise_id(), ScopedGenerator{std::make_unique<AsyncGenerator<StartBehaviour>>(std::move(gen)), v1::make_reference_counted<DependencyOnlineEvent>(_eventQueue.getNextEventId(), cmpMgr->serviceId(), std::min(INTERNAL_DEPENDENCY_EVENT_PRIORITY, evt.priority))});
-                // create new event that will be inserted upon finish of coroutine in ContinuableStartEvent
-                // _scopedEvents.emplace(it.get_promise_id(), v1::make_reference_counted<DependencyOnlineEvent>(_eventQueue.getNextEventId(), cmpMgr->serviceId(), std::min(INTERNAL_DEPENDENCY_EVENT_PRIORITY, evt.priority)));
-            } else if(it.get_value() == StartBehaviour::STARTED) {
-                _eventQueue.pushPrioritisedEvent<DependencyOnlineEvent>(cmpMgr->serviceId(), std::min(INTERNAL_DEPENDENCY_EVENT_PRIORITY, evt.priority));
-            }
-        }
+    if(cmpMgr->dependencyOnline(&selfMgr) == StartBehaviour::STARTED) {
+        startAfterDependencyOnline(*cmpMgr, evt.priority);
     }
 
     if(cmpMgr->getDependencyRegistry() == nullptr || cmpMgr->getDependencyRegistry()->empty()) {
@@ -70,18 +55,7 @@ void Ichor::DependencyManager::handleEvent(InsertServiceEvent &evt, ProcessEvent
             continue;
         }
 
-        auto gen = cmpMgr->startAfterDependencyOnline();
-        gen.set_service_id(cmpMgr->serviceId());
-        gen.set_priority(std::min(cmpMgr->getPriority(), INTERNAL_DEPENDENCY_EVENT_PRIORITY));
-        auto it = gen.begin();
-
-        if(!it.get_finished()) {
-            _scopedGenerators.emplace(it.get_promise_id(), ScopedGenerator{std::make_unique<AsyncGenerator<StartBehaviour>>(std::move(gen)), v1::make_reference_counted<DependencyOnlineEvent>(_eventQueue.getNextEventId(), cmpMgr->serviceId(), std::min(INTERNAL_DEPENDENCY_EVENT_PRIORITY, evt.priority))});
-            // create new event that will be inserted upon finish of coroutine in ContinuableStartEvent
-            // _scopedEvents.emplace(it.get_promise_id(), v1::make_reference_counted<DependencyOnlineEvent>(_eventQueue.getNextEventId(), cmpMgr->serviceId(), std::min(INTERNAL_DEPENDENCY_EVENT_PRIORITY, evt.priority)));
-        } else if(it.get_value() == StartBehaviour::STARTED) {
-            _eventQueue.pushPrioritisedEvent<DependencyOnlineEvent>(cmpMgr->serviceId(), std::min(INTERNAL_DEPENDENCY_EVENT_PRIORITY, evt.priority));
-        }
+        startAfterDependencyOnline(*cmpMgr, evt.priority);
     }
 
     INTERNAL_DEBUG("InsertServiceEvent {} {}:{} skipped {} services with interfaces that are not active yet", evt.id, cmpMgr->serviceId(), cmpMgr->implementationName(), notActive);

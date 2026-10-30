@@ -99,54 +99,9 @@ void Ichor::DependencyManager::handleEvent(StopServiceEvent &evt, ProcessEventCo
         INTERNAL_DEBUG("service->stop() {}:{} state {}", evt.serviceId, toStopService->implementationName(), toStopService->getServiceState());
         if (toStopService->getServiceState() != ServiceState::INSTALLED) [[unlikely]] {
             std::terminate();
-            return;
         }
 
-        auto pendingSvcIt = _pendingStopsDueToDependencies.find(evt.serviceId);
-
-        if(pendingSvcIt != _pendingStopsDueToDependencies.end()) {
-            for(auto const &pendingSvcInfo : pendingSvcIt->second) {
-                auto pendingSvc = _services.find(pendingSvcInfo.originatingServiceId);
-
-                if constexpr(DO_INTERNAL_DEBUG || DO_HARDENING) {
-                    if(pendingSvc == _services.end()) [[unlikely]] {            
-                        INTERNAL_DEBUG("StopServiceEvent {} {} {}:-- state -- dependee {}:{} state {} pending service {} missing. Catastrophic error.", evt.id, evt.priority, pendingSvcInfo.originatingServiceId, toStopService->serviceId(), toStopService->implementationName(), toStopService->getServiceState(), pendingSvcInfo.originatingServiceId);
-                        std::terminate();
-                    }
-                }
-
-                toStopService->finishDependencyOffline(pendingSvc->second.get(), pendingSvcInfo.deps);
-
-                if(pendingSvc->second->getDependees().empty()) {
-                    INTERNAL_DEBUG("StopServiceEvent {} {} {}:{} state {} dependee {}:{} state {} queueing stop for {}:{}", evt.id, evt.priority, pendingSvc->second->serviceId(), pendingSvc->second->implementationName(), pendingSvc->second->getServiceState(), toStopService->serviceId(), toStopService->implementationName(), toStopService->getServiceState(), pendingSvc->second->serviceId(), pendingSvc->second->implementationName());
-                    _eventQueue.pushPrioritisedEvent<StopServiceEvent>(evt.serviceId, std::min(INTERNAL_COROUTINE_EVENT_PRIORITY, evt.priority), pendingSvcInfo.originatingServiceId, pendingSvcInfo.removeAfter);
-                }
-            }
-
-            _pendingStopsDueToDependencies.erase(pendingSvcIt);
-        }
-
-        for (auto serviceId : dependencies) {
-            auto const depIt = _services.find(serviceId);
-
-            if (depIt == _services.end()) {
-                continue;
-            }
-
-            depIt->second->getDependees().erase(evt.serviceId);
-        }
-        dependencies.clear();
-        clearServiceRegistrations(ctx.allEventInterceptorsCopy, ctx.eventInterceptorsCopy, evt.serviceId);
-        // service is stopped, a stop that was postponed due to existing coroutines is no longer relevant
-        _pendingStopsDueToCoroutine.erase(evt.serviceId);
-
-        //finishWaitingService(evt.serviceId, StopServiceEvent::TYPE, StopServiceEvent::NAME);
-
-        INTERNAL_DEBUG("service->stop() {}:{} removeAfter {}", evt.serviceId, toStopService->implementationName(), evt.removeAfter);
-        if(evt.removeAfter) {
-            removeInternalService(ctx.allEventInterceptorsCopy, ctx.eventInterceptorsCopy, evt.serviceId);
-        }
-
+        finishStoppingService(evt, *toStopService, ctx);
         checkIfCanQuit(ctx.allEventInterceptorsCopy, ctx.eventInterceptorsCopy);
     } else if(toStopService->getServiceState() != ServiceState::UNINJECTING) {
         // Trigger dependency offline handling once; StopServiceEvent will be (re)scheduled
@@ -155,5 +110,79 @@ void Ichor::DependencyManager::handleEvent(StopServiceEvent &evt, ProcessEventCo
         if(_pendingDependencyOfflines.emplace(evt.serviceId).second) {
             _eventQueue.pushPrioritisedEvent<DependencyOfflineEvent>(evt.serviceId, evt.priority, evt.removeAfter);
         }
+    }
+}
+
+void Ichor::DependencyManager::finishAsyncEvent(StopServiceEvent &origEvt, ContinuableStartEvent const &, StartBehaviour, ProcessEventContext &ctx) {
+    INTERNAL_DEBUG("Finishing handling StopServiceEvent {} {} {} {} {}", origEvt.id, origEvt.priority, origEvt.originatingService, origEvt.serviceId, origEvt.removeAfter);
+
+    //finishWaitingService(origEvt.serviceId, StopServiceEvent::TYPE, StopServiceEvent::NAME);
+    auto const serviceIt = _services.find(origEvt.serviceId);
+
+    if constexpr (DO_INTERNAL_DEBUG || DO_HARDENING) {
+        if(serviceIt == _services.end()) [[unlikely]] {
+            ICHOR_EMERGENCY_LOG2(_logger, "When trying to finish stopping an async service, couldn't find the service by its id. {}", origEvt.serviceId);
+            std::terminate();
+        }
+        if(serviceIt->second->getServiceState() != ServiceState::INSTALLED) [[unlikely]] {
+            ICHOR_EMERGENCY_LOG2(_logger, "When trying to finish stopping async service {}:{}, service wasn't in the correct state {}", origEvt.serviceId, serviceIt->second->implementationName(), serviceIt->second->getServiceState());
+            std::terminate();
+        }
+        if(!serviceIt->second->getDependees().empty()) [[unlikely]] {
+            ICHOR_EMERGENCY_LOG2(_logger, "When trying to finish stopping async service {}:{}, the service still had dependendees: ", origEvt.serviceId, serviceIt->second->implementationName());
+            for([[maybe_unused]] auto dep : serviceIt->second->getDependees()) {
+                INTERNAL_DEBUG("dep: {}", dep);
+            }
+            std::terminate();
+        }
+    }
+
+    finishStoppingService(origEvt, *serviceIt->second, ctx);
+}
+
+void Ichor::DependencyManager::finishStoppingService(StopServiceEvent const &evt, ILifecycleManager &svc, ProcessEventContext &ctx) {
+    auto pendingSvcIt = _pendingStopsDueToDependencies.find(evt.serviceId);
+
+    if(pendingSvcIt != _pendingStopsDueToDependencies.end()) {
+        for(auto const &pendingSvcInfo : pendingSvcIt->second) {
+            auto pendingSvc = _services.find(pendingSvcInfo.originatingServiceId);
+
+            if constexpr(DO_INTERNAL_DEBUG || DO_HARDENING) {
+                if(pendingSvc == _services.end()) [[unlikely]] {
+                    INTERNAL_DEBUG("StopServiceEvent {} {} {}:-- state -- dependee {}:{} state {} pending service {} missing. Catastrophic error.", evt.id, evt.priority, pendingSvcInfo.originatingServiceId, svc.serviceId(), svc.implementationName(), svc.getServiceState(), pendingSvcInfo.originatingServiceId);
+                    std::terminate();
+                }
+            }
+
+            svc.finishDependencyOffline(pendingSvc->second.get(), pendingSvcInfo.deps);
+
+            if(pendingSvc->second->getDependees().empty()) {
+                INTERNAL_DEBUG("StopServiceEvent {} {} {}:{} state {} dependee {}:{} state {} queueing stop for {}:{}", evt.id, evt.priority, pendingSvc->second->serviceId(), pendingSvc->second->implementationName(), pendingSvc->second->getServiceState(), svc.serviceId(), svc.implementationName(), svc.getServiceState(), pendingSvc->second->serviceId(), pendingSvc->second->implementationName());
+                _eventQueue.pushPrioritisedEvent<StopServiceEvent>(evt.serviceId, std::min(INTERNAL_COROUTINE_EVENT_PRIORITY, evt.priority), pendingSvcInfo.originatingServiceId, pendingSvcInfo.removeAfter);
+            }
+        }
+
+        _pendingStopsDueToDependencies.erase(pendingSvcIt);
+    }
+
+    auto &dependencies = svc.getDependencies();
+    for (auto serviceId : dependencies) {
+        auto const depIt = _services.find(serviceId);
+
+        if (depIt == _services.end()) {
+            continue;
+        }
+
+        depIt->second->getDependees().erase(evt.serviceId);
+    }
+    dependencies.clear();
+    clearServiceRegistrations(ctx.allEventInterceptorsCopy, ctx.eventInterceptorsCopy, evt.serviceId);
+    // service is stopped, a stop that was postponed due to existing coroutines is no longer relevant
+    _pendingStopsDueToCoroutine.erase(evt.serviceId);
+
+    INTERNAL_DEBUG("service->stop() {}:{} removeAfter {}", evt.serviceId, svc.implementationName(), evt.removeAfter);
+    // removes svc, it must not be used after this
+    if(evt.removeAfter) {
+        removeInternalService(ctx.allEventInterceptorsCopy, ctx.eventInterceptorsCopy, evt.serviceId);
     }
 }

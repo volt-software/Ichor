@@ -64,3 +64,13 @@ void Ichor::DependencyManager::handleEvent(StartServiceEvent &evt, ProcessEventC
         _eventQueue.pushPrioritisedEvent<StopServiceEvent>(toStartService->serviceId(), std::min(INTERNAL_DEPENDENCY_EVENT_PRIORITY, evt.priority), toStartService->serviceId(), true);
     }
 }
+
+void Ichor::DependencyManager::finishAsyncEvent(StartServiceEvent &origEvt, ContinuableStartEvent const &evt, StartBehaviour, ProcessEventContext &) {
+    INTERNAL_DEBUG("Finishing handling StartServiceEvent {} {} {} {}", origEvt.id, origEvt.priority, origEvt.originatingService, origEvt.serviceId);
+
+    _eventQueue.pushPrioritisedEvent<DependencyOnlineEvent>(origEvt.serviceId, std::min(INTERNAL_COROUTINE_EVENT_PRIORITY, evt.priority));
+    // If we're quitting, ensure newly started services are also stopped
+    if(_quitEventReceived) {
+        _eventQueue.pushPrioritisedEvent<StopServiceEvent>(origEvt.serviceId, std::min(INTERNAL_DEPENDENCY_EVENT_PRIORITY, evt.priority), origEvt.serviceId, true);
+    }
+}

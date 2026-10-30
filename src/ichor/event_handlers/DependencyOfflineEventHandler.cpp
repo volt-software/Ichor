@@ -98,3 +98,67 @@ void Ichor::DependencyManager::handleEvent(DependencyOfflineEvent &evt, ProcessE
         _eventQueue.pushPrioritisedEvent<StopServiceEvent>(evt.originatingService, std::min(evt.priority, INTERNAL_DEPENDENCY_EVENT_PRIORITY), evt.originatingService, evt.removeOriginatingServiceAfterStop);
     }
 }
+
+void Ichor::DependencyManager::finishAsyncEvent(ContinuableDependencyOfflineEvent &origEvt, ContinuableStartEvent const &evt, StartBehaviour result, ProcessEventContext &) {
+    INTERNAL_DEBUG("Finishing handling ContinuableDependencyOfflineEvent {} {} {} {} {}", origEvt.id, origEvt.priority, origEvt.originatingService, origEvt.originatingOfflineServiceId, origEvt.removeOriginatingOfflineServiceAfterStop);
+
+    // the originatingService is actually from a dependee of the originatingOfflineServiceId, so originatingOfflineServiceId is the service that is interested in this dependency going offline
+    // We need to check if all its dependees are handled and if so, finish its offline waiter
+    auto const originatingOfflineServiceIt = _services.find(origEvt.originatingOfflineServiceId);
+    auto const serviceIt = _services.find(origEvt.originatingService);
+
+    if constexpr(DO_INTERNAL_DEBUG || DO_HARDENING) {
+        if(originatingOfflineServiceIt == _services.end()) [[unlikely]] {
+            std::terminate();
+        }
+
+        if(serviceIt == _services.end()) [[unlikely]] {
+            std::terminate();
+        }
+    }
+
+#ifdef ICHOR_ENABLE_INTERNAL_DEBUGGING
+    auto &deps = originatingOfflineServiceIt->second->getDependees();
+    INTERNAL_DEBUG("originatingOfflineService {}:{} {} {}", origEvt.originatingOfflineServiceId, originatingOfflineServiceIt->second->implementationName(), originatingOfflineServiceIt->second->getServiceState(), deps.size());
+    for(auto dep : deps) {
+        INTERNAL_DEBUG("dep: {}", dep);
+    }
+#endif
+
+    if(result == StartBehaviour::STOP_ME) {
+        INTERNAL_DEBUG("ContinuableDependencyOfflineEvent {} {} {}:{} state {} dependee {}:{} state {} dependee requesting stop.", evt.id, evt.priority, originatingOfflineServiceIt->second->serviceId(), originatingOfflineServiceIt->second->implementationName(), originatingOfflineServiceIt->second->getServiceState(), serviceIt->second->serviceId(), serviceIt->second->implementationName(), serviceIt->second->getServiceState());
+        auto& waitingSvcs = _pendingStopsDueToDependencies[origEvt.originatingService];
+        if(waitingSvcs.empty() || (serviceIt->second->getServiceState() == ServiceState::UNINJECTING && serviceIt->second->getDependees().empty())) {
+            _eventQueue.pushPrioritisedEvent<StopServiceEvent>(evt.originatingService, evt.priority, origEvt.originatingService, origEvt.removeOriginatingOfflineServiceAfterStop);
+        }
+        waitingSvcs.emplace_back(origEvt.originatingOfflineServiceId, evt.priority, origEvt.removeOriginatingOfflineServiceAfterStop, std::move(origEvt.dependencyIterators));
+        return;
+    }
+
+    if constexpr (DO_INTERNAL_DEBUG) {
+        if(result == StartBehaviour::STOPPED) [[unlikely]] {
+            INTERNAL_DEBUG("ContinuableDependencyOfflineEvent {} {} {}:{} state {} dependee {}:{} state {} dependee stopped?", evt.id, evt.priority, originatingOfflineServiceIt->second->serviceId(), originatingOfflineServiceIt->second->implementationName(), originatingOfflineServiceIt->second->getServiceState(), serviceIt->second->serviceId(), serviceIt->second->implementationName(), serviceIt->second->getServiceState());
+            // serviceIt->second->finishDependencyOffline(originatingOfflineServiceIt->second.get(), origEvt.dependencyIterators);
+            // clearServiceRegistrations(ctx.allEventInterceptorsCopy, ctx.eventInterceptorsCopy, origEvt.originatingService);
+            // //finishWaitingService(origEvt.originatingService, StopServiceEvent::TYPE, StopServiceEvent::NAME);
+            // // The dependee of originatingOfflineServiceId went offline during the async handling of the original
+            // // DependencyOfflineEvent. Add a proper DependencyOfflineEvent to handle that.
+            // _eventQueue.pushPrioritisedEvent<DependencyOfflineEvent>(origEvt.originatingService, std::min(INTERNAL_COROUTINE_EVENT_PRIORITY, evt.priority), origEvt.removeOriginatingOfflineServiceAfterStop);
+            std::terminate();
+        }
+        if(result == StartBehaviour::STARTED) [[unlikely]] {
+            INTERNAL_DEBUG("ContinuableDependencyOfflineEvent {} {} {}:{} state {} dependee {}:{} state {} dependee somehow started. Catastrophic failure.", evt.id, evt.priority, originatingOfflineServiceIt->second->serviceId(), originatingOfflineServiceIt->second->implementationName(), originatingOfflineServiceIt->second->getServiceState(), serviceIt->second->serviceId(), serviceIt->second->implementationName(), serviceIt->second->getServiceState());
+            std::terminate();
+        }
+    }
+
+    INTERNAL_DEBUG("ContinuableDependencyOfflineEvent {} {} {}:{} state {} dependee {}:{} state {} dependee DONE", evt.id, evt.priority, originatingOfflineServiceIt->second->serviceId(), originatingOfflineServiceIt->second->implementationName(), originatingOfflineServiceIt->second->getServiceState(), serviceIt->second->serviceId(), serviceIt->second->implementationName(), serviceIt->second->getServiceState());
+    serviceIt->second->finishDependencyOffline(originatingOfflineServiceIt->second.get(), origEvt.dependencyIterators);
+
+    if(originatingOfflineServiceIt->second->getDependees().empty()) {
+        INTERNAL_DEBUG("originatingOfflineService found waiting service {} {}", origEvt.originatingOfflineServiceId, originatingOfflineServiceIt->second->getServiceState());
+        // Service needs to be stopped to complete the sequence
+        _eventQueue.pushPrioritisedEvent<StopServiceEvent>(origEvt.originatingOfflineServiceId, std::min(INTERNAL_COROUTINE_EVENT_PRIORITY, evt.priority), origEvt.originatingOfflineServiceId, origEvt.removeOriginatingOfflineServiceAfterStop);
+        finishWaitingService(origEvt.originatingOfflineServiceId, DependencyOfflineEvent::TYPE, DependencyOfflineEvent::NAME);
+    }
+}

@@ -55,25 +55,7 @@ void Ichor::DependencyManager::handleEvent(DependencyOnlineEvent &evt, ProcessEv
                 continue;
             }
 
-            auto gen = possibleDependentLifecycleManager->startAfterDependencyOnline();
-            gen.set_service_id(possibleDependentLifecycleManager->serviceId());
-            gen.set_priority(std::min(possibleDependentLifecycleManager->getPriority(), INTERNAL_DEPENDENCY_EVENT_PRIORITY));
-            auto it = gen.begin();
-
-            INTERNAL_DEBUG("DependencyOnlineEvent {} {}:{} interested service is {}:{} {} {}", evt.id, manager->serviceId(), manager->implementationName(), serviceId, possibleDependentLifecycleManager->implementationName(), it.get_promise_id(), it.get_finished());
-
-            if(!it.get_finished()) {
-                if constexpr (DO_INTERNAL_DEBUG) {
-                    if (!it.get_has_suspended()) [[unlikely]] {
-                        std::terminate();
-                    }
-                }
-                _scopedGenerators.emplace(it.get_promise_id(), ScopedGenerator{std::make_unique<AsyncGenerator<StartBehaviour>>(std::move(gen)), v1::make_reference_counted<DependencyOnlineEvent>(_eventQueue.getNextEventId(), serviceId, std::min(INTERNAL_DEPENDENCY_EVENT_PRIORITY, evt.priority))});
-                // create new event that will be inserted upon finish of coroutine in ContinuableStartEvent
-                // _scopedEvents.emplace(it.get_promise_id(), v1::make_reference_counted<DependencyOnlineEvent>(_eventQueue.getNextEventId(), serviceId, std::min(INTERNAL_DEPENDENCY_EVENT_PRIORITY, evt.priority)));
-            } else if(it.get_value() == StartBehaviour::STARTED) {
-                _eventQueue.pushPrioritisedEvent<DependencyOnlineEvent>(serviceId, std::min(INTERNAL_DEPENDENCY_EVENT_PRIORITY, evt.priority));
-            }
+            startAfterDependencyOnline(*possibleDependentLifecycleManager, evt.priority);
         }
 
         if constexpr (DO_INTERNAL_DEBUG) {
@@ -86,5 +68,37 @@ void Ichor::DependencyManager::handleEvent(DependencyOnlineEvent &evt, ProcessEv
     // If we're quitting, ensure newly started services are also stopped
     if(_quitEventReceived) {
         _eventQueue.pushPrioritisedEvent<StopServiceEvent>(manager->serviceId(), std::min(INTERNAL_DEPENDENCY_EVENT_PRIORITY, evt.priority), manager->serviceId(), true);
+    }
+}
+
+void Ichor::DependencyManager::finishAsyncEvent(DependencyOnlineEvent &origEvt, ContinuableStartEvent const &evt, StartBehaviour result, ProcessEventContext &) {
+    INTERNAL_DEBUG("Finishing handling DependencyOnlineEvent {} {} {}", origEvt.id, origEvt.priority, origEvt.originatingService);
+
+    if(result == StartBehaviour::STARTED) {
+        // The dependee went offline during the async handling of the original
+        // DependencyOnlineEvent. Add a proper DependencyOfflineEvent to handle that.
+        // That is, originatingService points to the dependee, not the original service that went offline.
+        _eventQueue.pushPrioritisedEvent<DependencyOnlineEvent>(origEvt.originatingService, std::min(INTERNAL_COROUTINE_EVENT_PRIORITY, evt.priority));
+    }
+}
+
+void Ichor::DependencyManager::startAfterDependencyOnline(ILifecycleManager &svc, uint64_t priority) {
+    auto gen = svc.startAfterDependencyOnline();
+    gen.set_service_id(svc.serviceId());
+    gen.set_priority(std::min(svc.getPriority(), INTERNAL_DEPENDENCY_EVENT_PRIORITY));
+    auto it = gen.begin();
+
+    INTERNAL_DEBUG("startAfterDependencyOnline {}:{} {} {}", svc.serviceId(), svc.implementationName(), it.get_promise_id(), it.get_finished());
+
+    if(!it.get_finished()) {
+        if constexpr (DO_INTERNAL_DEBUG) {
+            if (!it.get_has_suspended()) [[unlikely]] {
+                std::terminate();
+            }
+        }
+        // the DependencyOnlineEvent gets pushed by the ContinuableStartEvent handler once the coroutine finishes
+        _scopedGenerators.emplace(it.get_promise_id(), ScopedGenerator{std::make_unique<AsyncGenerator<StartBehaviour>>(std::move(gen)), v1::make_reference_counted<DependencyOnlineEvent>(_eventQueue.getNextEventId(), svc.serviceId(), std::min(INTERNAL_DEPENDENCY_EVENT_PRIORITY, priority))});
+    } else if(it.get_value() == StartBehaviour::STARTED) {
+        _eventQueue.pushPrioritisedEvent<DependencyOnlineEvent>(svc.serviceId(), std::min(INTERNAL_DEPENDENCY_EVENT_PRIORITY, priority));
     }
 }
