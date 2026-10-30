@@ -1,5 +1,6 @@
 #pragma once
 
+#include <ichor/Assert.h>
 #include <ichor/services/timer/TemplatedTimerFactory.h>
 #include <ichor/services/timer/IInternalTimerFactory.h>
 #include <ichor/DependencyManager.h>
@@ -63,9 +64,7 @@ namespace Ichor::v1::Detail {
 
         /// Stops all created factories, after which no new ones get created.
         Task<void> stop(ServiceIdType selfId) {
-            if(_quitting) {
-                std::terminate();
-            }
+            ICHOR_ASSERT_ALWAYS(!_quitting, "timer factory factory {} stopped while it was already stopping", selfId);
             INTERNAL_IO_DEBUG("TimerFactoryTracker {} stop", selfId);
 
             _quitting = true;
@@ -81,12 +80,7 @@ namespace Ichor::v1::Detail {
                 _factories.erase(reqSvcId);
             }
 
-            if constexpr(DO_INTERNAL_DEBUG || DO_HARDENING) {
-                if(!_factories.empty()) {
-                    fmt::println("_factories not empty. Please file a bug.");
-                    std::terminate();
-                }
-            }
+            ICHOR_ASSERT(_factories.empty(), "timer factory factory {} still has {} factories after stopping them. Please file a bug.", selfId, _factories.size());
             INTERNAL_IO_DEBUG("TimerFactoryTracker {} stop done", selfId);
 
             co_return;

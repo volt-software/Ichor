@@ -1,3 +1,4 @@
+#include <ichor/Assert.h>
 #include <ichor/event_queues/IIOUringQueue.h>
 #include <ichor/services/io/IOUringAsyncFileIO.h>
 #include <ichor/ichor_liburing.h>
@@ -412,11 +413,7 @@ Ichor::UringCallback Ichor::v1::IOUringAsyncFileIO::createNewEventHandlerReadWho
         contents.append(buf, readBytes);
 
         if(contents.size() == fileSize) {
-            if constexpr (DO_INTERNAL_DEBUG || DO_HARDENING) {
-                if (!isLastInBatch) {
-                    std::terminate();
-                }
-            }
+            ICHOR_ASSERT(isLastInBatch, "read the complete file of {} bytes before the last read of the batch completed", fileSize);
             evt.set();
             return;
         }

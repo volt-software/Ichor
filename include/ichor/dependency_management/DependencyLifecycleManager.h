@@ -1,5 +1,7 @@
 #pragma once
 
+#include <ichor/Assert.h>
+#include <fmt/ranges.h>
 #include <ichor/coroutines/AsyncGenerator.h>
 #include <ichor/dependency_management/ILifecycleManager.h>
 #include <ichor/event_queues/IEventQueue.h>
@@ -114,24 +116,10 @@ namespace Ichor::v1::Detail {
             INTERNAL_DEBUG("dependencyOffline() svc {}:{} {} dependent {}:{}", serviceId(), implementationName(), getServiceState(), dependentService->serviceId(), dependentService->implementationName());
 
             if constexpr(DO_INTERNAL_DEBUG) {
-                if(depInterfaces.empty()) [[unlikely]] {
-                    std::terminate();
-                }
-
-                if(!_serviceIdsOfInjectedDependencies.contains(dependentService->serviceId())) [[unlikely]] {
-                    INTERNAL_DEBUG("dependencyOffline() svc {}:{} not injected\n", serviceId(), implementationName());
-                    std::terminate();
-                }
-
-                if(_serviceIdsOfInjectedDependenciesButGoingAway.contains(dependentService->serviceId())) [[unlikely]] {
-                    INTERNAL_DEBUG("dependencyOffline() svc {}:{} already uninjecting\n", serviceId(), implementationName());
-                    std::terminate();
-                }
-
-                if(getServiceState() == ServiceState::UNINSTALLED) [[unlikely]] {
-                    INTERNAL_DEBUG("dependencyOffline() svc {}:{} UNINSTALLED?\n", serviceId(), implementationName());
-                    std::terminate();
-                }
+                ICHOR_ASSERT_ALWAYS(!depInterfaces.empty(), "dependencyOffline() svc {}:{} for dependency {}:{} without interfaces", serviceId(), implementationName(), dependentService->serviceId(), dependentService->implementationName());
+                ICHOR_ASSERT_ALWAYS(_serviceIdsOfInjectedDependencies.contains(dependentService->serviceId()), "dependencyOffline() svc {}:{} for dependency {}:{} that isn't injected", serviceId(), implementationName(), dependentService->serviceId(), dependentService->implementationName());
+                ICHOR_ASSERT_ALWAYS(!_serviceIdsOfInjectedDependenciesButGoingAway.contains(dependentService->serviceId()), "dependencyOffline() svc {}:{} for dependency {}:{} that is already uninjecting", serviceId(), implementationName(), dependentService->serviceId(), dependentService->implementationName());
+                ICHOR_ASSERT_ALWAYS(getServiceState() != ServiceState::UNINSTALLED, "dependencyOffline() svc {}:{} for dependency {}:{} while UNINSTALLED", serviceId(), implementationName(), dependentService->serviceId(), dependentService->implementationName());
             }
 
             auto interested = DependencyChange::NOT_FOUND;
@@ -155,11 +143,7 @@ namespace Ichor::v1::Detail {
                 for(auto *dep : depInterfaces) {
                     dep->satisfied--;
 
-                    if constexpr(DO_INTERNAL_DEBUG || DO_HARDENING) {
-                        if(dep->satisfied == std::numeric_limits<decltype(dep->satisfied)>::max()) [[unlikely]] {
-                            std::terminate();
-                        }
-                    }
+                    ICHOR_ASSERT(dep->satisfied != std::numeric_limits<decltype(dep->satisfied)>::max(), "svc {}:{} dependency {} went offline more often than it came online", serviceId(), implementationName(), dep->getInterfaceName());
                 }
                 co_return StartBehaviour::STOP_ME;
             }
@@ -168,11 +152,7 @@ namespace Ichor::v1::Detail {
                 // dependency should not be marked as unsatisfied if there is at least one other of the same type present
                 dep->satisfied--;
 
-                if constexpr(DO_INTERNAL_DEBUG || DO_HARDENING) {
-                    if(dep->satisfied == std::numeric_limits<decltype(dep->satisfied)>::max()) [[unlikely]] {
-                        std::terminate();
-                    }
-                }
+                ICHOR_ASSERT(dep->satisfied != std::numeric_limits<decltype(dep->satisfied)>::max(), "svc {}:{} dependency {} went offline more often than it came online", serviceId(), implementationName(), dep->getInterfaceName());
 
                 bool const requiredDepWentAway = (dep->flags & DependencyFlags::REQUIRED) == DependencyFlags::REQUIRED && dep->satisfied == 0;
 
@@ -181,10 +161,7 @@ namespace Ichor::v1::Detail {
                     co_await waitForService(serviceId(), DependencyOnlineEvent::TYPE);
 
 
-                    if(getServiceState() != ServiceState::ACTIVE) [[unlikely]] {
-                        INTERNAL_DEBUG("dependencyOffline() svc {}:{} not ACTIVE?\n", serviceId(), implementationName());
-                        std::terminate();
-                    }
+                    ICHOR_ASSERT_ALWAYS(getServiceState() == ServiceState::ACTIVE, "dependencyOffline() svc {}:{} is {} instead of ACTIVE after waiting for it to start", serviceId(), implementationName(), getServiceState());
                 }
 
                 if(requiredDepWentAway && interested != DependencyChange::FOUND_AND_STOP_ME && (getServiceState() == ServiceState::ACTIVE || getServiceState() == ServiceState::UNINJECTING)) {
@@ -197,14 +174,7 @@ namespace Ichor::v1::Detail {
                         co_await waitForService(serviceId(), DependencyOfflineEvent::TYPE);
                         INTERNAL_DEBUG("{}:{}:{} dependencyOffline stopping {} pushPrioritisedEventAsync done", serviceId(), _service.getServiceName(), getServiceState(), interested);
 
-                        if constexpr(DO_INTERNAL_DEBUG || DO_HARDENING) {
-                            if(!_serviceIdsOfDependees.empty()) [[unlikely]] {
-                                for(auto d : _serviceIdsOfDependees) {
-                                    fmt::print("{}\n", d);
-                                }
-                                std::terminate();
-                            }
-                        }
+                        ICHOR_ASSERT(_serviceIdsOfDependees.empty(), "dependencyOffline() svc {}:{} still has dependees {} after stopping", serviceId(), implementationName(), fmt::join(_serviceIdsOfDependees, ", "));
                     } else {
                         if(hasDependencyWaiter(serviceId(), DependencyOfflineEvent::TYPE)) {
                             co_await waitForService(serviceId(), DependencyOfflineEvent::TYPE);
@@ -232,9 +202,7 @@ namespace Ichor::v1::Detail {
             INTERNAL_DEBUG("finishDependencyOffline() svc {}:{} {} dependent {}:{}", serviceId(), implementationName(), getServiceState(), dependentService->serviceId(), dependentService->implementationName());
 
             if constexpr(DO_INTERNAL_DEBUG) {
-                if(!_serviceIdsOfInjectedDependenciesButGoingAway.contains(dependentService->serviceId())) [[unlikely]] {
-                    std::terminate();
-                }
+                ICHOR_ASSERT_ALWAYS(_serviceIdsOfInjectedDependenciesButGoingAway.contains(dependentService->serviceId()), "finishDependencyOffline() svc {}:{} for dependency {}:{} that isn't going away", serviceId(), implementationName(), dependentService->serviceId(), dependentService->implementationName());
                 //
                 // if(getServiceState() < ServiceState::INJECTING) [[unlikely]] {
                 //     INTERNAL_DEBUG("{}:{}:{} finishDependencyOffline tried to finish dependency offline but the service itself is already (un)installed. If this is a ConstructorInjectionService, it will have no implementation in this case.", serviceId(), _service.getServiceName(), getServiceState());
@@ -264,11 +232,7 @@ namespace Ichor::v1::Detail {
             INTERNAL_DEBUG("injectIntoSelfDoubleDispatch() svc {} adding dependency {}", serviceId(), dependentService->serviceId());
             auto dep = _registry._registrations.find(keyOfInterfaceToInject);
 
-            if constexpr(DO_INTERNAL_DEBUG || DO_HARDENING) {
-                if(dep == end(_registry._registrations)) [[unlikely]] {
-                    std::terminate();
-                }
-            }
+            ICHOR_ASSERT(dep != end(_registry._registrations), "svc {}:{} has no registration for the interface {} of dependency {}", serviceId(), implementationName(), keyOfInterfaceToInject, dependentService->serviceId());
 
             dependentService->insertSelfInto(keyOfInterfaceToInject, serviceId(), std::get<1>(dep->second));
         }
@@ -306,11 +270,7 @@ namespace Ichor::v1::Detail {
             INTERNAL_DEBUG("removeSelfIntoDoubleDispatch() svc {} removing dependency {}", serviceId(), dependentService->serviceId());
             auto dep = _registry._registrations.find(keyOfInterfaceToInject);
 
-            if constexpr(DO_INTERNAL_DEBUG || DO_HARDENING) {
-                if(dep == end(_registry._registrations)) [[unlikely]] {
-                    std::terminate();
-                }
-            }
+            ICHOR_ASSERT(dep != end(_registry._registrations), "svc {}:{} has no registration for the interface {} of dependency {}", serviceId(), implementationName(), keyOfInterfaceToInject, dependentService->serviceId());
 
             dependentService->removeSelfInto(keyOfInterfaceToInject, serviceId(), std::get<2>(dep->second));
         }

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <ichor/Assert.h>
 #include <ichor/coroutines/AsyncGenerator.h>
 #include <ichor/stl/NeverAlwaysNull.h>
 #include <ichor/dependency_management/ILifecycleManager.h>
@@ -32,13 +33,11 @@ namespace Ichor::v1::Detail {
         }
 
         AsyncGenerator<StartBehaviour> dependencyOffline(v1::NeverNull<ILifecycleManager*> dependentService, std::vector<Dependency*> const &deps) final {
-            // this function should never be called
-            std::terminate();
+            ICHOR_ASSERT_ALWAYS(false, "{}::{}() should never be called", "InternalServiceLifecycleManager", __func__);
         }
 
         void finishDependencyOffline(v1::NeverNull<ILifecycleManager*> dependentService, std::vector<Dependency*> const &deps) final {
-            // this function should never be called
-            std::terminate();
+            ICHOR_ASSERT_ALWAYS(false, "{}::{}() should never be called", "InternalServiceLifecycleManager", __func__);
         }
 
         [[nodiscard]]
@@ -53,8 +52,7 @@ namespace Ichor::v1::Detail {
 
         [[nodiscard]]
         AsyncGenerator<StartBehaviour> startAfterDependencyOnline() final {
-            // this function should never be called
-            std::terminate();
+            ICHOR_ASSERT_ALWAYS(false, "{}::{}() should never be called", "InternalServiceLifecycleManager", __func__);
         }
 
         [[nodiscard]]

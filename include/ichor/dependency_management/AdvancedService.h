@@ -1,5 +1,6 @@
 #pragma once
 
+#include <ichor/Assert.h>
 #include <ichor/Concepts.h>
 #include <ichor/coroutines/Task.h>
 #include <ichor/dependency_management/DependencyRegister.h>
@@ -134,11 +135,7 @@ namespace Ichor {
         ///
         /// \return true if stopped or already stopped
         [[nodiscard]] Task<StartBehaviour> internal_stop() {
-#ifdef ICHOR_USE_HARDENING
-            if(_serviceState != ServiceState::UNINJECTING) [[unlikely]] {
-                std::terminate();
-            }
-#endif
+            ICHOR_ASSERT(_serviceState == ServiceState::UNINJECTING, "internal_stop() service {}:{} is {} instead of UNINJECTING", getServiceId(), typeName<T>(), _serviceState);
 
             INTERNAL_DEBUG("internal_stop service {}:{} state {} -> {}", getServiceId(), typeName<T>(), getState(), ServiceState::STOPPING);
             _serviceState = ServiceState::STOPPING;

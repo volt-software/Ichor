@@ -1,5 +1,6 @@
 #pragma once
 
+#include <ichor/Assert.h>
 #include <ichor/DependencyManager.h>
 #include <ichor/stl/RealtimeReadWriteMutex.h>
 #include <shared_mutex>
@@ -54,7 +55,7 @@ namespace Ichor {
 #if ICHOR_EXCEPTIONS_ENABLED
                 throw std::runtime_error("Couldn't find manager");
 #else
-                std::terminate();
+                ICHOR_ASSERT_ALWAYS(false, "sendEventTo() couldn't find manager {}", id);
 #endif
             }
 

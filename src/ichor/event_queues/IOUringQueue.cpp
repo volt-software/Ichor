@@ -2,6 +2,7 @@
 #error "Uring not enabled."
 #endif
 
+#include <ichor/Assert.h>
 #include <ichor/event_queues/IOUringQueue.h>
 #include <ichor/ScopeGuard.h>
 #include <ichor/DependencyManager.h>
@@ -315,21 +316,13 @@ namespace Ichor {
     }
 
     std::string_view IOUringBuf::readMemory(unsigned int entry) const noexcept {
-#if defined(ICHOR_USE_HARDENING) || defined(ICHOR_ENABLE_INTERNAL_DEBUGGING)
-        if(entry >= _entries) {
-            std::terminate();
-        }
-#endif
+        ICHOR_ASSERT(entry < _entries, "readMemory() of buffer entry {}, it only has {} entries", entry, _entries);
 
         return std::string_view{_entriesBuf + static_cast<size_t>(_entryBufferSize) * entry, _entryBufferSize};
     }
 
     void IOUringBuf::markEntryAvailableAgain(unsigned short entry) noexcept {
-#if defined(ICHOR_USE_HARDENING) || defined(ICHOR_ENABLE_INTERNAL_DEBUGGING)
-        if(entry >= _entries) {
-            std::terminate();
-        }
-#endif
+        ICHOR_ASSERT(entry < _entries, "markEntryAvailableAgain() of buffer entry {}, it only has {} entries", entry, _entries);
         io_uring_buf_ring_add(_bufRing, _entriesBuf + static_cast<size_t>(_entryBufferSize) * entry, _entryBufferSize, entry, _mask, entry);
         io_uring_buf_ring_advance(_bufRing, 1);
     }
@@ -405,9 +398,7 @@ namespace Ichor::v1::Detail {
 
         auto version = v1::kernelVersion();
 
-        if(!version) {
-            std::terminate();
-        }
+        ICHOR_ASSERT_ALWAYS(version, "couldn't determine the kernel version, which io_uring support depends on");
 
         if(*version < v1::Version{.major=5, .minor=4, .patch=0}) {
             fmt::println("Kernel version {} is too old, use at least 5.4.0 or newer.", *version);
@@ -916,11 +907,7 @@ namespace Ichor::v1::Detail {
     }
 
     v1::NeverNull<io_uring*> IOUringQueueBase::getRing() noexcept {
-        if constexpr (DO_INTERNAL_DEBUG || DO_HARDENING) {
-            if(_eventQueuePtr == nullptr) [[unlikely]] {
-                std::terminate();
-            }
-        }
+        ICHOR_ASSERT(_eventQueuePtr != nullptr, "getRing() before createEventLoop() or after the queue stopped");
         return _eventQueuePtr;
     }
 

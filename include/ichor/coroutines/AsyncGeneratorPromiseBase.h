@@ -7,6 +7,7 @@
 
 #pragma once
 
+#include <ichor/Assert.h>
 #include <ichor/CoreTypes.h>
 #include <coroutine>
 #include <cassert>
@@ -72,9 +73,7 @@ namespace Ichor::v1::Detail {
         /// would silently swallow it.
         void unhandled_exception() noexcept {
             // Don't bother if we have been cancelled as there is no consumer that will see it.
-            if (_state != state::cancelled) {
-                std::terminate();
-            }
+            ICHOR_ASSERT_ALWAYS(_state == state::cancelled, "an exception escaped generator {}, which is fatal: nothing can rethrow it", _id);
         }
 
         /// Query if the generator has reached the end of the sequence.
@@ -227,9 +226,7 @@ namespace Ichor::v1::Detail {
 
         ICHOR_COROUTINE_CONSTEXPR T& value() noexcept {
             INTERNAL_COROUTINE_DEBUG("request value {}, {}", _id, _currentValue.has_value());
-            if(!_currentValue.has_value()) [[unlikely]] {
-                std::terminate();
-            }
+            ICHOR_ASSERT_ALWAYS(_currentValue.has_value(), "value() of generator {} that has no value", get_id());
             return *_currentValue;
         }
 
@@ -248,11 +245,7 @@ namespace Ichor::v1::Detail {
         ICHOR_COROUTINE_CONSTEXPR void set_finished() noexcept final {
             INTERNAL_COROUTINE_DEBUG("set_finished {} {}", _id, typeName<T>());
 
-#ifdef ICHOR_USE_HARDENING
-            if(!_currentValue) [[unlikely]] {
-                std::terminate();
-            }
-#endif
+            ICHOR_ASSERT(_currentValue, "generator {} of {} finished without a value", get_id(), typeName<T>());
             _finished = true;
         }
 

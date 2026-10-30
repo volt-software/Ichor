@@ -7,6 +7,7 @@
 
 #pragma once
 
+#include <ichor/Assert.h>
 #include <cstdint>
 #include <coroutine>
 #include <cassert>
@@ -47,12 +48,7 @@ namespace Ichor {
         }
         [[nodiscard]] constexpr T const & await_resume() const noexcept {
             // An event constructed as initially set has no value to return.
-            assert(_event._ret != nullptr);
-#ifdef ICHOR_USE_HARDENING
-            if(_event._ret == nullptr) [[unlikely]] {
-                std::terminate();
-            }
-#endif
+            ICHOR_ASSERT(_event._ret != nullptr, "co_await on an AsyncReturningManualResetEvent that was constructed as set, it has no value to return");
             return *_event._ret;
         }
 

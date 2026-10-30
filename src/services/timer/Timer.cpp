@@ -1,3 +1,4 @@
+#include <ichor/Assert.h>
 #include <ichor/services/timer/Timer.h>
 #include <ichor/events/RunFunctionEvent.h>
 #include <ichor/ScopeGuard.h>
@@ -33,10 +34,7 @@ bool Ichor::v1::Timer::startTimer() {
 }
 
 bool Ichor::v1::Timer::startTimer(bool fireImmediately) {
-    if(!_fn && !_fnAsync) [[unlikely]] {
-        fmt::println("No callback set.");
-        std::terminate();
-    }
+    ICHOR_ASSERT_ALWAYS(_fn || _fnAsync, "timer {} for service {} started without a callback", _timerId, _requestingServiceId);
     std::unique_lock l{_m};
     INTERNAL_IO_DEBUG("timer {} for {} startTimer({}) {} {}", _timerId, _requestingServiceId, fireImmediately, _state, _quitCbs.size());
     if(_state == TimerState::STOPPED || _state == TimerState::STOPPING) {
@@ -91,9 +89,7 @@ Ichor::v1::TimerState Ichor::v1::Timer::getState() const noexcept {
 
 void Ichor::v1::Timer::setCallbackAsync(std::function<AsyncGenerator<IchorBehaviour>()> fn) {
     std::unique_lock l{_m};
-    if(_state != TimerState::STOPPED) {
-        std::terminate();
-    }
+    ICHOR_ASSERT_ALWAYS(_state == TimerState::STOPPED, "setCallbackAsync() on timer {} for service {} while it is {}, the callback can only be changed while stopped", _timerId, _requestingServiceId, _state);
 
     _fnAsync = std::move(fn);
     _fn = {};
@@ -101,9 +97,7 @@ void Ichor::v1::Timer::setCallbackAsync(std::function<AsyncGenerator<IchorBehavi
 
 void Ichor::v1::Timer::setCallback(std::function<void()> fn) {
     std::unique_lock l{_m};
-    if(_state != TimerState::STOPPED) {
-        std::terminate();
-    }
+    ICHOR_ASSERT_ALWAYS(_state == TimerState::STOPPED, "setCallback() on timer {} for service {} while it is {}, the callback can only be changed while stopped", _timerId, _requestingServiceId, _state);
 
     _fnAsync = {};
     _fn = std::move(fn);

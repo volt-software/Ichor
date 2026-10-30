@@ -1,5 +1,6 @@
 #pragma once
 
+#include <ichor/Assert.h>
 #include <atomic>
 #include <array>
 #include <ichor/Concepts.h>
@@ -386,11 +387,7 @@ namespace Ichor {
                 co_return {};
             }
 
-            if constexpr (DO_INTERNAL_DEBUG || DO_HARDENING) {
-                if(_serviceState != ServiceState::UNINJECTING) [[unlikely]] {
-                    std::terminate();
-                }
-            }
+            ICHOR_ASSERT(_serviceState == ServiceState::UNINJECTING, "internal_stop() service {}:{} is {} instead of UNINJECTING", getServiceId(), typeName<T>(), _serviceState);
 
             INTERNAL_DEBUG("internal_stop service {}:{} state {} -> {}", getServiceId(), typeName<T>(), getState(), ServiceState::STOPPING);
             _serviceState = ServiceState::STOPPING;
@@ -521,9 +518,7 @@ namespace Ichor {
         }
 
         [[nodiscard]] T* getImplementation() noexcept {
-            if(_serviceState < ServiceState::INJECTING) {
-                std::terminate();
-            }
+            ICHOR_ASSERT_ALWAYS(_serviceState >= ServiceState::INJECTING, "getImplementation() of service {}:{} while it is {}, it only exists while injecting or later", getServiceId(), typeName<T>(), _serviceState);
             return reinterpret_cast<T*>(buf.data());
         }
 
@@ -603,9 +598,7 @@ namespace Ichor {
         }
 
         [[nodiscard]] T* getImplementation() noexcept {
-            if(_serviceState < ServiceState::INJECTING) {
-                std::terminate();
-            }
+            ICHOR_ASSERT_ALWAYS(_serviceState >= ServiceState::INJECTING, "getImplementation() of service {}:{} while it is {}, it only exists while injecting or later", getServiceId(), typeName<T>(), _serviceState);
             return reinterpret_cast<T*>(buf.data());
         }
 
@@ -635,11 +628,7 @@ namespace Ichor {
         ///
         /// \return true if stopped or already stopped
         [[nodiscard]] Task<StartBehaviour> internal_stop() {
-#ifdef ICHOR_USE_HARDENING
-            if(_serviceState != ServiceState::UNINJECTING) [[unlikely]] {
-                std::terminate();
-            }
-#endif
+            ICHOR_ASSERT(_serviceState == ServiceState::UNINJECTING, "internal_stop() service {}:{} is {} instead of UNINJECTING", getServiceId(), typeName<T>(), _serviceState);
 
             INTERNAL_DEBUG("internal_stop service {}:{} state {} -> {}", getServiceId(), typeName<T>(), getState(), ServiceState::STOPPING);
             _serviceState = ServiceState::STOPPING;

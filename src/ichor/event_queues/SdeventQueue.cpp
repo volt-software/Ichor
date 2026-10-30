@@ -2,6 +2,7 @@
 #error "Sdevent not enabled."
 #endif
 
+#include <ichor/Assert.h>
 #include <ichor/event_queues/SdeventQueue.h>
 #include <ichor/DependencyManager.h>
 #include <ichor/dependency_management/InternalServiceLifecycleManager.h>
@@ -232,11 +233,7 @@ namespace Ichor {
     }
 
     void SdeventQueue::quit() {
-#ifdef ICHOR_USE_HARDENING
-        if(&_dm != v1::Detail::_local_dm) [[unlikely]] { // are we on the right thread?
-            std::terminate();
-        }
-#endif
+        ICHOR_ASSERT(&_dm == v1::Detail::_local_dm, "quit() called from another thread than the one running the queue");
         bool expected{};
         if(!_quit.compare_exchange_strong(expected, true, std::memory_order_acq_rel)) {
             return; // already handled

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <ichor/Assert.h>
 #include <utility>
 #include <vector>
 #include <memory>
@@ -309,9 +310,7 @@ namespace Ichor {
         /// Only implemented so that the manager can be easily used in STL containers before anything is using it.
         [[deprecated("DANGEROUS COPY, EFFECTIVELY MAKES A NEW MANAGER AND STARTS OVER!! The moved-from manager cannot be registered with a CommunicationChannel, or UB occurs.")]]
         DependencyManager(const DependencyManager& other) : _eventQueue(other._eventQueue) {
-            if(other._started.load(std::memory_order_acquire)) [[unlikely]] {
-                std::terminate();
-            }
+            ICHOR_ASSERT_ALWAYS(!other._started.load(std::memory_order_acquire), "copying a DependencyManager that has already been started");
         };
 
         // An implementation would be very thread un-safe. Moving the event queue would require no modification by any thread.

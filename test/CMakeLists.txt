@@ -112,3 +112,17 @@ foreach(filename ${PROJECT_TEST_SOURCES})
         endif()
     endif()
 endforeach()
+
+# A failing assertion terminates the process, which Catch2 can't test: these check what AssertFailure prints instead.
+add_executable(AssertFailure ${ICHOR_TOP_DIR}/test/Support/AssertFailure.cpp)
+target_link_libraries(AssertFailure ichor)
+set(ICHOR_ASSERT_FAILURE_MESSAGE "Assertion (`value == 1` )?failed: value is 2 instead of 1")
+add_test(NAME "AssertTests: ICHOR_ASSERT_ALWAYS prints the condition and message"
+        COMMAND ${CMAKE_COMMAND} -DEXE=$<TARGET_FILE:AssertFailure> -DMODE=always "-DEXPECTED=${ICHOR_ASSERT_FAILURE_MESSAGE}" -P ${ICHOR_TOP_DIR}/test/Support/CheckAssertFailure.cmake)
+add_test(NAME "AssertTests: ICHOR_ASSERT prints the condition and message when hardening"
+        COMMAND ${CMAKE_COMMAND} -DEXE=$<TARGET_FILE:AssertFailure> -DMODE=hardened "-DEXPECTED=${ICHOR_ASSERT_FAILURE_MESSAGE}|isn't checked without hardening" -P ${ICHOR_TOP_DIR}/test/Support/CheckAssertFailure.cmake)
+if(ICHOR_HAVE_STD_STACKTRACE AND NOT ICHOR_USE_LIBCPP)
+    # " 0# " is the first frame of libstdc++'s formatting of a std::stacktrace
+    add_test(NAME "AssertTests: failed assertions print a stack trace"
+            COMMAND ${CMAKE_COMMAND} -DEXE=$<TARGET_FILE:AssertFailure> -DMODE=always "-DEXPECTED= 0# " -P ${ICHOR_TOP_DIR}/test/Support/CheckAssertFailure.cmake)
+endif()

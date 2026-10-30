@@ -71,5 +71,6 @@ Ichor is a C++20 framework for building microservices with an event-loop archite
 - **Implement a new service**: Use `AdvancedService` or `ConstructorInjectionService` as a base and register it with the `DependencyManager`.
 - **Experiment with configuration**: Toggle CMake options to enable logging or networking; note how services are compiled in conditionally.
 - **Study concurrency approach**: Read about thread confinement and `RealtimeMutex` in `include/ichor/stl` for performance and safety insights.
+- **Check invariants with `ICHOR_ASSERT`**: instead of a bare `std::terminate()`, use `ICHOR_ASSERT(cond, "message {}", args...)` (only checked in debug and hardened builds) or `ICHOR_ASSERT_ALWAYS` from `include/ichor/Assert.h`. A failing assertion prints the condition, the message and a stack trace when the compiler supports `std::stacktrace`, so say what went wrong and why it isn't allowed.
 
 This should give you a solid footing to begin exploring and extending Ichor. Happy hacking!

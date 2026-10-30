@@ -1,5 +1,6 @@
 #pragma once
 
+#include <ichor/Assert.h>
 #include <ichor/coroutines/AsyncManualResetEvent.h>
 #include <ichor/dependency_management/AdvancedService.h>
 #include <ichor/services/timer/ITimer.h>
@@ -43,14 +44,8 @@ namespace Ichor::v1 {
         }
 
         [[nodiscard]] TimerRef createTimer() final {
-            if constexpr (DO_INTERNAL_DEBUG || DO_HARDENING) {
-                if(!AdvancedService<TimerFactory<TIMER, QUEUE>>::isStarted()) {
-                    std::terminate();
-                }
-                if(_stoppingTimers) {
-                    std::terminate();
-                }
-            }
+            ICHOR_ASSERT(this->isStarted(), "createTimer() for service {} while its timer factory isn't started, timers need the queue of the factory", _requestingSvcId);
+            ICHOR_ASSERT(!_stoppingTimers, "createTimer() for service {} while its timer factory is stopping its timers", _requestingSvcId);
             auto id = _timerIdCounter.fetch_add(1, std::memory_order_relaxed);
             auto timer = std::make_unique<TIMER>(_q, id, _requestingSvcId);
             auto state = std::make_shared<Detail::TimerRefState>(*timer, *this, id);
@@ -60,14 +55,8 @@ namespace Ichor::v1 {
         }
 
         [[nodiscard]] tl::optional<NeverNull<ITimer*>> getTimerById(uint64_t timerId) noexcept final {
-            if constexpr (DO_INTERNAL_DEBUG || DO_HARDENING) {
-                if(!AdvancedService<TimerFactory<TIMER, QUEUE>>::isStarted()) {
-                    std::terminate();
-                }
-                if(_stoppingTimers) {
-                    std::terminate();
-                }
-            }
+            ICHOR_ASSERT(this->isStarted(), "getTimerById({}) for service {} while its timer factory isn't started", timerId, _requestingSvcId);
+            ICHOR_ASSERT(!_stoppingTimers, "getTimerById({}) for service {} while its timer factory is stopping its timers", timerId, _requestingSvcId);
 
             auto idx = findTimer(timerId);
 
@@ -84,11 +73,7 @@ namespace Ichor::v1 {
                 return false;
             }
 
-            if constexpr (DO_INTERNAL_DEBUG || DO_HARDENING) {
-                if(!AdvancedService<TimerFactory<TIMER, QUEUE>>::isStarted()) {
-                    std::terminate();
-                }
-            }
+            ICHOR_ASSERT(this->isStarted(), "destroyTimerIfStopped({}) for service {} while its timer factory isn't started, the factory might not have a queue anymore", timerId, _requestingSvcId);
 
             auto idx = findTimer(timerId);
 

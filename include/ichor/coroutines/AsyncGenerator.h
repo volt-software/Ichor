@@ -7,6 +7,7 @@
 
 #pragma once
 
+#include <ichor/Assert.h>
 #include <coroutine>
 #include <cassert>
 #include <functional>
@@ -306,7 +307,7 @@ namespace Ichor {
                     return true;
                 }
 
-                std::terminate();
+                ICHOR_ASSERT_ALWAYS(false, "generator {} couldn't suspend in state {}, it changed to {}", _promise.get_id(), currentState, _promise._state);
             }
 
             // By this point the consumer has been resumed if required and is now active.
@@ -330,7 +331,7 @@ namespace Ichor {
                     return true;
                 }
 
-                std::terminate();
+                ICHOR_ASSERT_ALWAYS(false, "generator {} couldn't suspend in state {}, it changed to {}", _promise.get_id(), currentState, _promise._state);
             }
 
             assert(currentState == state::cancelled);
@@ -499,12 +500,7 @@ namespace Ichor {
         }
 
         [[nodiscard]] constexpr promise_type& promise() const noexcept {
-            assert(_coroutine);
-#ifdef ICHOR_USE_HARDENING
-            if(!_coroutine) [[unlikely]] {
-                std::terminate();
-            }
-#endif
+            ICHOR_ASSERT(_coroutine, "promise() of an empty AsyncGenerator (moved from or default constructed)");
             return _coroutine.promise();
         }
 

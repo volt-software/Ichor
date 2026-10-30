@@ -1,3 +1,4 @@
+#include <ichor/Assert.h>
 #include <ichor/services/metrics/EventStatisticsService.h>
 #include <ichor/DependencyManager.h>
 #include <algorithm>
@@ -13,7 +14,7 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::v1::EventStatisticsSer
     if(auto propIt = getProperties().find("ShowStatisticsOnStop"); propIt != getProperties().end()) {
         _showStatisticsOnStop = Ichor::v1::any_cast<bool>(propIt->second);
     } else {
-        std::terminate();
+        ICHOR_ASSERT_ALWAYS(false, "EventStatisticsService {} requires the ShowStatisticsOnStop property", getServiceId());
     }
     if(auto propIt = getProperties().find("AveragingIntervalMs"); propIt != getProperties().end()) {
         _averagingIntervalMs = Ichor::v1::any_cast<uint64_t>(propIt->second);
@@ -42,9 +43,7 @@ Ichor::Task<void> Ichor::v1::EventStatisticsService::stop() {
     _interceptorRegistration.reset();
     _timer.reset();
 
-    if(_logger == nullptr) {
-        std::terminate();
-    }
+    ICHOR_ASSERT_ALWAYS(_logger != nullptr, "EventStatisticsService {} stopping without a logger", getServiceId());
 
     int64_t total_occ{};
 

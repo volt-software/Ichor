@@ -1,5 +1,6 @@
 #if (!defined(WIN32) && !defined(_WIN32) && !defined(__WIN32) && !defined(__APPLE__)) || defined(__CYGWIN__)
 
+#include <ichor/Assert.h>
 #include <ichor/DependencyManager.h>
 #include <ichor/services/network/tcp/TcpConnectionService.h>
 #include <ichor/events/RunFunctionEvent.h>
@@ -283,9 +284,8 @@ void Ichor::v1::TcpConnectionService<InterfaceT>::recvHandler() {
         if(!_quit) {
             if(!_timer->startTimer()) {
                 GetThreadLocalEventQueue().pushEvent<RunFunctionEvent>(AdvancedService<TcpConnectionService>::getServiceId(), [this]() {
-                    if(!_timer->startTimer()) {
-                        std::terminate();
-                    }
+                    bool const started = _timer->startTimer();
+                    ICHOR_ASSERT_ALWAYS(started, "TcpConnectionService {} couldn't restart its receive timer, which is {}", AdvancedService<TcpConnectionService>::getServiceId(), _timer->getState());
                 });
             }
         } else {

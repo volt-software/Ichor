@@ -1,5 +1,6 @@
 #pragma once
 
+#include <ichor/Assert.h>
 #include <ichor/stl/StaticVector.h>
 #include <ichor/coroutines/AsyncGenerator.h>
 #include <limits>
@@ -27,55 +28,46 @@ namespace Ichor::v1::Detail {
         }
 
         AsyncGenerator<StartBehaviour> dependencyOffline(v1::NeverNull<ILifecycleManager*> dependentService, std::vector<Dependency*> const &deps) final {
-            // this function should never be called
-            std::terminate();
+            ICHOR_ASSERT_ALWAYS(false, "{}::{}() should never be called", "IServiceInterestedLifecycleManager", __func__);
         }
 
         void finishDependencyOffline(v1::NeverNull<ILifecycleManager*> dependentService, std::vector<Dependency*> const &deps) final {
-            // this function should never be called
-            std::terminate();
+            ICHOR_ASSERT_ALWAYS(false, "{}::{}() should never be called", "IServiceInterestedLifecycleManager", __func__);
         }
 
         [[nodiscard]]
         unordered_set<ServiceIdType, ServiceIdHash> &getDependencies() noexcept final {
-            // this function should never be called
-            std::terminate();
+            ICHOR_ASSERT_ALWAYS(false, "{}::{}() should never be called", "IServiceInterestedLifecycleManager", __func__);
         }
 
         [[nodiscard]]
         unordered_set<ServiceIdType, ServiceIdHash> &getDependees() noexcept final {
-            // this function should never be called
-            std::terminate();
+            ICHOR_ASSERT_ALWAYS(false, "{}::{}() should never be called", "IServiceInterestedLifecycleManager", __func__);
         }
 
         [[nodiscard]]
         AsyncGenerator<StartBehaviour> startAfterDependencyOnline() final {
-            // this function should never be called
-            std::terminate();
+            ICHOR_ASSERT_ALWAYS(false, "{}::{}() should never be called", "IServiceInterestedLifecycleManager", __func__);
         }
 
         [[nodiscard]]
         AsyncGenerator<StartBehaviour> start() final {
-            // this function should never be called
-            std::terminate();
+            ICHOR_ASSERT_ALWAYS(false, "{}::{}() should never be called", "IServiceInterestedLifecycleManager", __func__);
         }
 
         [[nodiscard]]
         AsyncGenerator<StartBehaviour> stop() final {
-            // this function should never be called
-            std::terminate();
+            ICHOR_ASSERT_ALWAYS(false, "{}::{}() should never be called", "IServiceInterestedLifecycleManager", __func__);
         }
 
         [[nodiscard]]
         bool setInjected() final {
-            // this function should never be called
-            std::terminate();
+            ICHOR_ASSERT_ALWAYS(false, "{}::{}() should never be called", "IServiceInterestedLifecycleManager", __func__);
         }
 
         [[nodiscard]]
         bool setUninjected() final {
-            // this function should never be called
-            std::terminate();
+            ICHOR_ASSERT_ALWAYS(false, "{}::{}() should never be called", "IServiceInterestedLifecycleManager", __func__);
         }
 
         [[nodiscard]] ICHOR_PURE_FUNC_ATTR std::string_view implementationName() const noexcept final {
@@ -91,23 +83,19 @@ namespace Ichor::v1::Detail {
         }
 
         [[nodiscard]] uint64_t getPriority() const noexcept final {
-            // this function should never be called
-            std::terminate();
+            ICHOR_ASSERT_ALWAYS(false, "{}::{}() should never be called", "IServiceInterestedLifecycleManager", __func__);
         }
 
         [[nodiscard]] ServiceState getServiceState() const noexcept final {
-            // this function should never be called
-            std::terminate();
+            ICHOR_ASSERT_ALWAYS(false, "{}::{}() should never be called", "IServiceInterestedLifecycleManager", __func__);
         }
 
         [[nodiscard]] v1::NeverNull<IService*> getIService() noexcept final {
-            // this function should never be called
-            std::terminate();
+            ICHOR_ASSERT_ALWAYS(false, "{}::{}() should never be called", "IServiceInterestedLifecycleManager", __func__);
         }
 
         [[nodiscard]] v1::NeverNull<IService const*> getIService() const noexcept final {
-            // this function should never be called
-            std::terminate();
+            ICHOR_ASSERT_ALWAYS(false, "{}::{}() should never be called", "IServiceInterestedLifecycleManager", __func__);
         }
 
         [[nodiscard]] std::span<Dependency const> getInterfaces() const noexcept final {
@@ -115,13 +103,11 @@ namespace Ichor::v1::Detail {
         }
 
         [[nodiscard]] Properties const & getProperties() const noexcept final {
-            // this function should never be called
-            std::terminate();
+            ICHOR_ASSERT_ALWAYS(false, "{}::{}() should never be called", "IServiceInterestedLifecycleManager", __func__);
         }
 
         [[nodiscard]] DependencyRegister const * getDependencyRegistry() const noexcept final {
-            // this function should never be called
-            std::terminate();
+            ICHOR_ASSERT_ALWAYS(false, "{}::{}() should never be called", "IServiceInterestedLifecycleManager", __func__);
         }
 
         [[nodiscard]] bool isInternalManager() const noexcept final {

@@ -1,3 +1,4 @@
+#include <ichor/Assert.h>
 #include <ichor/services/timer/IOUringTimer.h>
 #include <ichor/events/RunFunctionEvent.h>
 
@@ -7,12 +8,7 @@ using namespace std::chrono_literals;
 Ichor::v1::IOUringTimer::IOUringTimer(Ichor::ScopedServiceProxy<IIOUringQueue*> queue, uint64_t timerId, ServiceIdType svcId) noexcept : _q(queue), _timerId(timerId), _requestingServiceId(svcId) {
     INTERNAL_IO_DEBUG("[{:L}][{}] IOUringTimer for {}", std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now().time_since_epoch()).count(), __LINE__, _requestingServiceId);
 
-    if constexpr(DO_INTERNAL_DEBUG || DO_HARDENING) {
-        if (_timerId > std::numeric_limits<unsigned int>::max()) {
-            fmt::println("timerId overflow for io_uring");
-            std::terminate();
-        }
-    }
+    ICHOR_ASSERT(_timerId <= std::numeric_limits<unsigned int>::max(), "timerId {} overflow for io_uring", _timerId);
 
 }
 
@@ -33,10 +29,7 @@ bool Ichor::v1::IOUringTimer::startTimer() {
 }
 
 bool Ichor::v1::IOUringTimer::startTimer(bool fireImmediately) {
-    if(!_fn && !_fnAsync) [[unlikely]] {
-        fmt::println("No callback set.");
-        std::terminate();
-    }
+    ICHOR_ASSERT_ALWAYS(_fn || _fnAsync, "timer {} for service {} started without a callback", _timerId, _requestingServiceId);
 
     if(_state != TimerState::STOPPED) {
         return false;
@@ -80,30 +73,21 @@ Ichor::v1::TimerState Ichor::v1::IOUringTimer::getState() const noexcept {
 };
 
 void Ichor::v1::IOUringTimer::setCallbackAsync(std::function<AsyncGenerator<IchorBehaviour>()> fn) {
-    if(_state != TimerState::STOPPED) {
-        std::terminate();
-    }
+    ICHOR_ASSERT_ALWAYS(_state == TimerState::STOPPED, "setCallbackAsync() on timer {} for service {} while it is {}, the callback can only be changed while stopped", _timerId, _requestingServiceId, _state);
 
     _fnAsync = std::move(fn);
     _fn = {};
 }
 
 void Ichor::v1::IOUringTimer::setCallback(std::function<void()> fn) {
-    if(_state != TimerState::STOPPED) {
-        std::terminate();
-    }
+    ICHOR_ASSERT_ALWAYS(_state == TimerState::STOPPED, "setCallback() on timer {} for service {} while it is {}, the callback can only be changed while stopped", _timerId, _requestingServiceId, _state);
 
     _fnAsync = {};
     _fn = std::move(fn);
 }
 
 void Ichor::v1::IOUringTimer::setInterval(uint64_t nanoseconds) noexcept {
-    if constexpr(DO_INTERNAL_DEBUG || DO_HARDENING) {
-        if(nanoseconds > std::numeric_limits<decltype(_timespec.tv_nsec)>::max()) {
-            fmt::println("timer {} for {} given nanoseconds {} is greater than allowed by type {}", _timerId, _requestingServiceId, nanoseconds, std::numeric_limits<decltype(_timespec.tv_nsec)>::max());
-            std::terminate();
-        }
-    }
+    ICHOR_ASSERT(nanoseconds <= static_cast<uint64_t>(std::numeric_limits<decltype(_timespec.tv_nsec)>::max()), "timer {} for {} given nanoseconds {} is greater than allowed by type {}", _timerId, _requestingServiceId, nanoseconds, std::numeric_limits<decltype(_timespec.tv_nsec)>::max());
 
     _timespec.tv_sec = static_cast<decltype(_timespec.tv_sec)>(nanoseconds / 1'000'000'000);
     _timespec.tv_nsec = static_cast<decltype(_timespec.tv_nsec)>(nanoseconds % 1'000'000'000);
@@ -190,7 +174,6 @@ Ichor::UringCallback Ichor::v1::IOUringTimer::createNewHandler() noexcept {
 Ichor::UringCallback Ichor::v1::IOUringTimer::createNewStopHandler() noexcept {
     INTERNAL_IO_DEBUG("IOUringTimer {} for {} createNewStopHandler", _timerId, _requestingServiceId);
     return [this, runFinished = _runFinished](io_uring_cqe *cqe) {
-        static_cast<void>(this); // only used by INTERNAL_IO_DEBUG
         if(cqe->res >= 0 || *runFinished) {
             // Removed, its -ECANCELED completion finishes stopping. Or the timeout already ended, in which case the timer may not exist anymore.
             return;
@@ -200,14 +183,13 @@ Ichor::UringCallback Ichor::v1::IOUringTimer::createNewStopHandler() noexcept {
             // The timeout expired (-ENOENT) or is expiring right now (-EALREADY), its -ETIME completion finishes stopping.
             return;
         }
-        std::terminate();
+        ICHOR_ASSERT_ALWAYS(false, "timeout_remove of timer {} for service {} failed with {}", _timerId, _requestingServiceId, cqe->res);
     };
 }
 
 Ichor::UringCallback Ichor::v1::IOUringTimer::createNewUpdateHandler() noexcept {
     INTERNAL_IO_DEBUG("IOUringTimer {} for {} createNewUpdateHandler", _timerId, _requestingServiceId);
     return [this, runFinished = _runFinished](io_uring_cqe *cqe) {
-        static_cast<void>(this); // only used by INTERNAL_IO_DEBUG
         if(cqe->res >= 0 || *runFinished) {
             // Updated, or the timeout already ended, in which case the timer may not exist anymore.
             return;
@@ -217,7 +199,7 @@ Ichor::UringCallback Ichor::v1::IOUringTimer::createNewUpdateHandler() noexcept 
             // The timeout expired (or is expiring), it gets re-armed with the new interval.
             return;
         }
-        std::terminate();
+        ICHOR_ASSERT_ALWAYS(false, "timeout_update of timer {} for service {} failed with {}", _timerId, _requestingServiceId, cqe->res);
     };
 }
 

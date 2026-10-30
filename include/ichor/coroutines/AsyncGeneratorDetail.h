@@ -7,16 +7,13 @@
 
 #pragma once
 
+#include <ichor/Assert.h>
 #include <ichor/DependencyManager.h>
 
 namespace Ichor::v1::Detail {
     inline void AsyncGeneratorPromiseBase::terminate_if_on_wrong_thread() const noexcept {
-#ifdef ICHOR_USE_HARDENING
         // check if currently on a different thread than creation time (which would be undefined behaviour)
-        if(_dmAtTimeOfCreation != _local_dm) [[unlikely]] {
-            std::terminate();
-        }
-#endif
+        ICHOR_ASSERT(_dmAtTimeOfCreation == _local_dm, "generator {} used on another thread than the one it was created on", get_id());
     }
 
     template <typename T>

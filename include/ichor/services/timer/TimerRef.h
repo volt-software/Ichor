@@ -1,5 +1,6 @@
 #pragma once
 
+#include <ichor/Assert.h>
 #include <ichor/Defines.h>
 #include <ichor/services/timer/ITimer.h>
 #include <ichor/services/timer/ITimerFactory.h>
@@ -131,9 +132,8 @@ namespace Ichor::v1 {
         }
 
         [[nodiscard]] ITimer& _ensureTimer() const noexcept {
-            if(!_state || _state->timer == nullptr) [[unlikely]] {
-                std::terminate();
-            }
+            ICHOR_ASSERT_ALWAYS(_state, "TimerRef to timer {} used after detach() or after being moved from", _timerId);
+            ICHOR_ASSERT_ALWAYS(_state->timer != nullptr, "TimerRef to timer {} used after its factory destroyed the timer (destroyTimerIfStopped() or the factory stopping)", _timerId);
             return *_state->timer;
         }
 

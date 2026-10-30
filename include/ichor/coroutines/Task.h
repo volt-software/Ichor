@@ -8,6 +8,7 @@
 #pragma once
 
 // #include <ichor/Common.h>
+#include <ichor/Assert.h>
 #include <ichor/Defines.h>
 #include <ichor/stl/CompilerSpecific.h>
 #include <cstdint>
@@ -362,9 +363,7 @@ namespace Ichor
                 using awaitable_base::awaitable_base;
 
                 decltype(auto) await_resume() {
-                    if (!this->m_coroutine) {
-                        std::terminate();
-                    }
+                    ICHOR_ASSERT_ALWAYS(this->m_coroutine, "co_await on an empty Task (moved from or default constructed)");
 
                     return this->m_coroutine.promise().result();
                 }
@@ -378,9 +377,7 @@ namespace Ichor
                 using awaitable_base::awaitable_base;
 
                 decltype(auto) await_resume() {
-                    if (!this->m_coroutine) {
-                        std::terminate();
-                    }
+                    ICHOR_ASSERT_ALWAYS(this->m_coroutine, "co_await on an empty Task (moved from or default constructed)");
 
                     return std::move(this->m_coroutine.promise()).result();
                 }

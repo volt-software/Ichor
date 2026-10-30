@@ -1,3 +1,4 @@
+#include <ichor/Assert.h>
 #include <iterator>
 #include <fmt/base.h>
 
@@ -1481,9 +1482,7 @@ Ichor::Task<tl::expected<EtcdVersionReply, EtcdError>> EtcdService::version() {
 }
 
 Ichor::v1::Version EtcdService::getDetectedVersion() const {
-    if(!isStarted()) [[unlikely]] {
-        std::terminate();
-    }
+    ICHOR_ASSERT_ALWAYS(isStarted(), "getDetectedVersion() of EtcdService {} while it isn't started, the version is detected when starting", getServiceId());
     return _detectedVersion;
 }
 

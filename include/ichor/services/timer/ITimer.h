@@ -1,5 +1,6 @@
 #pragma once
 
+#include <ichor/Assert.h>
 #include <ichor/coroutines/AsyncGenerator.h>
 #include <functional>
 #include <chrono>
@@ -58,11 +59,7 @@ namespace Ichor::v1 {
         void setChronoInterval(Dur duration) noexcept {
             int64_t val = std::chrono::nanoseconds(duration).count();
 
-#ifdef ICHOR_USE_HARDENING
-            if(val < 0) [[unlikely]] {
-                std::terminate();
-            }
-#endif
+            ICHOR_ASSERT(val >= 0, "timer {} given a negative interval of {} ns", getTimerId(), val);
 
             setInterval(static_cast<uint64_t>(val));
         }

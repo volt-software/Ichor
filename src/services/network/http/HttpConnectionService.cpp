@@ -1,3 +1,4 @@
+#include <ichor/Assert.h>
 #include <ichor/services/network/http/HttpConnectionService.h>
 #include <ichor/stl/StringUtils.h>
 #include <ichor/ScopedServiceProxy.h>
@@ -126,9 +127,7 @@ Ichor::Task<tl::expected<void, Ichor::StartError>> Ichor::v1::HttpConnectionServ
 }
 
 Ichor::Task<void> Ichor::v1::HttpConnectionService::stop() {
-    if(!_events.empty()) {
-        std::terminate();
-    }
+    ICHOR_ASSERT_ALWAYS(_events.empty(), "HttpConnectionService {} stopping while {} requests are still waiting for a response", getServiceId(), _events.size());
     _address = nullptr;
     ICHOR_LOG_TRACE(_logger, "HttpConnection {} stopped", getServiceId());
 
@@ -406,7 +405,7 @@ tl::expected<Ichor::v1::HttpResponse, Ichor::v1::HttpParseError> Ichor::v1::Http
                     }
                 }
             } else {
-                std::terminate();
+                ICHOR_ASSERT_ALWAYS(false, "HttpConnectionService {} parsing a chunk in state {}", getServiceId(), chunkedStatus);
             }
 
             crlfCounter = 1;
