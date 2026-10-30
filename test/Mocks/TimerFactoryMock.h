@@ -113,12 +113,8 @@ struct TimerFactoryMock final : public ITimerFactory, public AdvancedService<Tim
         released++;
     }
 
-    [[nodiscard]] std::vector<NeverNull<ITimer const*>> getCreatedTimers() const final {
-        std::vector<NeverNull<ITimer const*>> ret;
-        for(auto const &timer : timers) {
-            ret.emplace_back(timer.get());
-        }
-        return ret;
+    [[nodiscard]] VectorView<ITimer> getCreatedTimers() const noexcept final {
+        return VectorView<ITimer>{timers};
     }
 
     [[nodiscard]] ServiceIdType getRequestingServiceId() const noexcept final {

@@ -2,8 +2,8 @@
 
 #include <ichor/services/timer/ITimer.h>
 #include <ichor/stl/NeverAlwaysNull.h>
+#include <ichor/stl/Spans.h>
 #include <tl/optional.h>
-#include <vector>
 
 namespace Ichor::v1 {
     // NOLINTNEXTLINE(cppcoreguidelines-virtual-class-destructor): final, and ITimer's destructor is protected: nothing deletes it through another type
@@ -17,9 +17,10 @@ namespace Ichor::v1 {
         virtual bool destroyTimerIfStopped(uint64_t timerId) = 0;
         /// Stops the timer and destroys it once it has stopped. Called when the last TimerRef to a timer is destroyed.
         virtual void releaseTimer(uint64_t timerId) noexcept = 0;
-        /// Snapshot of the timers of the requesting service. The pointers are invalidated when the timers are destroyed (e.g. when their
-        /// last TimerRef is destroyed or when the factory stops), so don't keep them around.
-        [[nodiscard]] virtual std::vector<NeverNull<ITimer const*>> getCreatedTimers() const = 0;
+        /// View over the timers of the requesting service, without copying them. The view is invalidated by any timer being created or
+        /// destroyed: using it after createTimer(), destroyTimerIfStopped(), destroying the last TimerRef of a timer (which may destroy it
+        /// later, from a stop callback) or the factory stopping is undefined behaviour. Use it right away, don't keep it around.
+        [[nodiscard]] virtual VectorView<ITimer> getCreatedTimers() const noexcept = 0;
         [[nodiscard]] virtual ServiceIdType getRequestingServiceId() const noexcept = 0;
 
     protected:

@@ -10,6 +10,7 @@
 #include <memory>
 #include <vector>
 #include <ichor/ScopedServiceProxy.h>
+#include <ichor/stl/Spans.h>
 
 namespace Ichor::v1 {
     extern std::atomic<uint64_t> _timerIdCounter;
@@ -21,8 +22,8 @@ namespace Ichor::v1 {
             reg.registerDependency<QUEUE>(this, DependencyFlags::REQUIRED);
         }
         ~TimerFactory() final {
-            for(auto &entry : _timers) {
-                entry.state->timer = nullptr;
+            for(auto &state : _states) {
+                state->timer = nullptr;
             }
             // Destroying the timers can destroy TimerRefs held by their callbacks, which then don't touch _timers anymore.
             auto timers = std::move(_timers);
@@ -53,7 +54,8 @@ namespace Ichor::v1 {
             auto id = _timerIdCounter.fetch_add(1, std::memory_order_relaxed);
             auto timer = std::make_unique<TIMER>(_q, id, _requestingSvcId);
             auto state = std::make_shared<Detail::TimerRefState>(*timer, *this, id);
-            _timers.emplace_back(TimerEntry{std::move(timer), state});
+            _timers.emplace_back(std::move(timer));
+            _states.emplace_back(state);
             return TimerRef{std::move(state)};
         }
 
@@ -67,12 +69,12 @@ namespace Ichor::v1 {
                 }
             }
 
-            auto it = findTimer(timerId);
+            auto idx = findTimer(timerId);
 
-            if(it == _timers.end()) {
+            if(idx == _timers.size()) {
                 return {};
             }
-            return it->timer.get();
+            return _timers[idx].get();
         }
 
         bool destroyTimerIfStopped(uint64_t timerId) final {
@@ -88,14 +90,14 @@ namespace Ichor::v1 {
                 }
             }
 
-            auto it = findTimer(timerId);
+            auto idx = findTimer(timerId);
 
             // not while STOPPING, requests of the timer can still be in flight
-            if(it == _timers.end() || it->timer->getState() != TimerState::STOPPED) {
+            if(idx == _timers.size() || _timers[idx]->getState() != TimerState::STOPPED) {
                 return false;
             }
 
-            destroyTimer(it);
+            destroyTimer(idx);
             return true;
         }
 
@@ -106,16 +108,16 @@ namespace Ichor::v1 {
                 return;
             }
 
-            auto it = findTimer(timerId);
+            auto idx = findTimer(timerId);
 
-            if(it == _timers.end()) {
+            if(idx == _timers.size()) {
                 return;
             }
 
             // Also when already stopped: the stop callbacks of the thread based Timer run from an event, the callback is then called after
             // those instead of right away. Destroying the timer before them would let this factory stop without waiting for them.
             // That event can run after this factory is destroyed, which also destroys the state.
-            it->timer->stopTimer([weakState = std::weak_ptr<Detail::TimerRefState>{it->state}]() {
+            _timers[idx]->stopTimer([weakState = std::weak_ptr<Detail::TimerRefState>{_states[idx]}]() {
                 auto state = weakState.lock();
                 if(state && state->timer != nullptr) {
                     // only this factory creates these states
@@ -124,13 +126,8 @@ namespace Ichor::v1 {
             });
         }
 
-        [[nodiscard]] std::vector<NeverNull<ITimer const*>> getCreatedTimers() const final {
-            std::vector<NeverNull<ITimer const*>> ret;
-            ret.reserve(_timers.size());
-            for(auto const &entry : _timers) {
-                ret.emplace_back(entry.timer.get());
-            }
-            return ret;
+        [[nodiscard]] VectorView<ITimer> getCreatedTimers() const noexcept final {
+            return VectorView<ITimer>{_timers};
         }
 
         [[nodiscard]] ServiceIdType getRequestingServiceId() const noexcept final {
@@ -148,8 +145,8 @@ namespace Ichor::v1 {
             _stoppingTimers = true;
             _stoppedTimers = 0;
 
-            for(auto& entry : _timers) {
-                entry.timer->stopTimer([this]() {
+            for(auto& timer : _timers) {
+                timer->stopTimer([this]() {
                     _stoppedTimers++;
                     INTERNAL_IO_DEBUG("TimerFactory<{}, {}> {} for {} _stoppedTimers {} {}", typeName<TIMER>(), typeName<QUEUE>(), AdvancedService<TimerFactory<TIMER, QUEUE>>::getServiceId(), _requestingSvcId, _stoppedTimers, _timers.size());
                     if(_stoppedTimers == _timers.size()) {
@@ -178,16 +175,12 @@ namespace Ichor::v1 {
         }
 
     private:
-        struct TimerEntry final {
-            // Timers are referenced by their own threads/in-flight requests while running and by TimerRefs, so they need stable addresses.
-            std::unique_ptr<TIMER> timer;
-            std::shared_ptr<Detail::TimerRefState> state;
-        };
-
-        [[nodiscard]] typename std::vector<TimerEntry>::iterator findTimer(uint64_t timerId) noexcept {
-            return std::find_if(_timers.begin(), _timers.end(), [timerId](TimerEntry const &entry) {
-                return entry.timer->getTimerId() == timerId;
+        /// Index of the timer in _timers and _states, _timers.size() when not found
+        [[nodiscard]] std::size_t findTimer(uint64_t timerId) const noexcept {
+            auto it = std::find_if(_timers.begin(), _timers.end(), [timerId](std::unique_ptr<TIMER> const &timer) {
+                return timer->getTimerId() == timerId;
             });
+            return static_cast<std::size_t>(std::distance(_timers.begin(), it));
         }
 
         /// Like destroyTimerIfStopped, but for a released timer, which may be stopping while this factory isn't started anymore
@@ -196,21 +189,26 @@ namespace Ichor::v1 {
                 return;
             }
 
-            auto it = findTimer(timerId);
+            auto idx = findTimer(timerId);
 
-            if(it != _timers.end() && it->timer->getState() == TimerState::STOPPED) {
-                destroyTimer(it);
+            if(idx != _timers.size() && _timers[idx]->getState() == TimerState::STOPPED) {
+                destroyTimer(idx);
             }
         }
 
-        void destroyTimer(typename std::vector<TimerEntry>::iterator it) noexcept {
+        void destroyTimer(std::size_t idx) noexcept {
             // Erase before destroying, the destructor of the timer may destroy TimerRefs held by its callbacks, which end up in releaseTimer.
-            auto timer = std::move(it->timer);
-            it->state->timer = nullptr;
-            _timers.erase(it);
+            auto timer = std::move(_timers[idx]);
+            _states[idx]->timer = nullptr;
+            _timers.erase(_timers.begin() + static_cast<std::ptrdiff_t>(idx));
+            _states.erase(_states.begin() + static_cast<std::ptrdiff_t>(idx));
         }
 
-        std::vector<TimerEntry> _timers;
+        // Timers are referenced by their own threads/in-flight requests while running and by TimerRefs, so they need stable addresses.
+        // Not a vector of structs, so that getCreatedTimers() can return a view over it.
+        std::vector<std::unique_ptr<TIMER>> _timers;
+        // The state shared with the TimerRefs of the timer at the same index in _timers
+        std::vector<std::shared_ptr<Detail::TimerRefState>> _states;
         ServiceIdType _requestingSvcId{};
         Ichor::ScopedServiceProxy<QUEUE*> _q;
         std::size_t _stoppedTimers{};
